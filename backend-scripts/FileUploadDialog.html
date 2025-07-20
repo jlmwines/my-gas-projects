@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 10px; }
+      #status { margin-top: 10px; font-style: italic; color: #888; }
+      button { margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <p>Select a CSV or text file from your computer:</p>
+    <input type="file" id="fileInput" accept=".csv,.txt">
+    <button onclick="uploadFile()">Import</button>
+    <div id="status"></div>
+
+    <script>
+      function uploadFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) {
+          alert('Please select a file first.');
+          return;
+        }
+
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = 'Reading file...';
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const fileContent = e.target.result;
+          statusDiv.innerHTML = 'Processing...';
+          google.script.run
+            .withSuccessHandler(showSuccessAndClose)
+            .withFailureHandler(showError)
+            .processUploadedFile(fileContent);
+        };
+        reader.readAsText(file);
+      }
+
+      function showSuccessAndClose(successMessage) {
+        // Show the success message from the server, then close the dialog.
+        alert(successMessage);
+        google.script.host.close();
+      }
+
+      function showError(error) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = ''; // Clear status
+        alert(error.message);
+      }
+    </script>
+  </body>
+</html>

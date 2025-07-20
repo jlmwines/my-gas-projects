@@ -1,0 +1,17 @@
+{
+  "timeZone": "Asia/Jerusalem",
+  "dependencies": {
+    "enabledAdvancedServices": [{
+      "userSymbol": "DriveV2",
+      "serviceId": "drive",
+      "version": "v2"
+    }]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+  ]
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Google Sans', 'Roboto', Arial, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; margin: 0; background-color: #f8f9fa; color: #3c4043; text-align: center; }
+    .container { padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); background-color: #ffffff; max-width: 400px; width: 100%; box-sizing: border-box; }
+    h2 { color: #1a73e8; margin-bottom: 20px; }
+    button { background-color: #1a73e8; color: white; border: none; border-radius: 4px; padding: 10px 20px; font-size: 16px; cursor: pointer; transition: background-color 0.2s ease; width: 100%; margin-bottom: 10px; text-decoration: none; display: inline-block; }
+    button:hover { background-color: #1764cc; }
+    a { text-decoration: none; width: 100%; }
+    .close-button { background-color: #e8f0fe; color: #1967d2; }
+    .close-button:hover { background-color: #d2e3fc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Download Backup</h2>
+    <p>Your CSV backup file is ready.</p>
+    <a id="downloadLink" href="#">
+      <button>Download Now</button>
+    </a>
+    <button class="close-button" onclick="google.script.host.close()">Close</button>
+  </div>
+
+  <script>
+    // Use a templated scriptlet to get the data passed from the server-side script
+    const encodedCsvData = '<?!= csvData ?>';
+    
+    // Decode the data and create a Blob (a file-like object)
+    const decodedCsv = decodeURIComponent(encodedCsvData);
+    const blob = new Blob([decodedCsv], { type: 'text/csv;charset=utf-8;' });
+    
+    // Create a temporary URL for the Blob
+    const url = URL.createObjectURL(blob);
+    
+    const downloadLink = document.getElementById('downloadLink');
+    downloadLink.href = url;
+
+    // Create a dynamic filename with the current date
+    const date = new Date();
+    const dateString = date.getFullYear() + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + ('0' + date.getDate()).slice(-2);
+    downloadLink.download = `Vinsync_Backup_${dateString}.csv`;
+  </script>
+</body>
+</html>
