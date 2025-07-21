@@ -1,16 +1,16 @@
 /**
  * @file HandleExceptions.gs
  * @description Contains all backend functions for the exception handling sidebar.
- * @version 25-07-04-1215
+ * @version 2025-07-20
  */
 
-const REFERENCE_ID_FOR_SIDEBAR = '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc';
-const BACKEND_ID_FOR_SIDEBAR = '1QCRBJ9geKYLSA1xHEKoF5YEkHCQUQyYfUolEVs-rRwI';
+// MODIFIED: Removed hardcoded IDs to use the central Globals.gs config.
 const TASK_QUEUE_SHEET_NAME = 'TaskQ';
 const USERS_SHEET_NAME = 'Users';
 
 function getWorkflowSummary() {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const queueSheet = referenceSS.getSheetByName(TASK_QUEUE_SHEET_NAME);
     if (!queueSheet || queueSheet.getLastRow() < 2) {
         return { activeTaskCount: 0 };
@@ -33,7 +33,8 @@ function getWorkflowSummary() {
 }
 
 function getUsers() {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const usersSheet = referenceSS.getSheetByName(USERS_SHEET_NAME);
     if (!usersSheet || usersSheet.getLastRow() < 2) return [];
     
@@ -43,7 +44,8 @@ function getUsers() {
 }
 
 function getTasks() {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const sheet = referenceSS.getSheetByName(TASK_QUEUE_SHEET_NAME);
     if (!sheet || sheet.getLastRow() < 2) return [];
 
@@ -51,17 +53,20 @@ function getTasks() {
     const values = range.getValues();
 
     const tasks = values.map((row, index) => {
+        // **UPDATED LOGIC**: All returned properties are explicitly converted to Strings.
+        // This prevents Date objects or other non-serializable types from breaking
+        // the communication with the sidebar.
         return {
             rowNum: index + 2,
-            entity: row[5],
-            sourceSheet: row[3],
-            testId: row[2],
-            priority: row[7],
-            description: row[4],
-            details: `Entity: ${row[5]}`, 
+            entity: String(row[5] || ''),
+            sourceSheet: String(row[3] || ''),
+            testId: String(row[2] || ''),
+            priority: String(row[7] || ''),
+            description: String(row[4] || ''),
+            details: `Entity: ${String(row[5] || '')}`, 
             status: String(row[6] || '').trim() || 'Open',
-            assignee: row[8],
-            notes: row[12],
+            assignee: String(row[8] || ''),
+            notes: String(row[12] || ''),
         };
     });
     
@@ -69,7 +74,8 @@ function getTasks() {
 }
 
 function updateTaskLifecycle(rowNum, newStatus) {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const sheet = referenceSS.getSheetByName(TASK_QUEUE_SHEET_NAME);
     const timestamp = new Date();
     
@@ -90,7 +96,8 @@ function updateTaskLifecycle(rowNum, newStatus) {
 }
 
 function assignTask(rowNum, assignee) {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const sheet = referenceSS.getSheetByName(TASK_QUEUE_SHEET_NAME);
     const ASSIGNED_TO_COL = 9;
 
@@ -100,13 +107,13 @@ function assignTask(rowNum, assignee) {
 }
 
 function addTaskNote(rowNum, noteWithTimestamp) {
-    const referenceSS = SpreadsheetApp.openById(REFERENCE_ID_FOR_SIDEBAR);
+    // MODIFIED: Uses the global activeConfig for the file ID.
+    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const sheet = referenceSS.getSheetByName(TASK_QUEUE_SHEET_NAME);
     const NOTES_COL = 13;
     const noteRange = sheet.getRange(rowNum, NOTES_COL);
     const existingNotes = noteRange.getValue();
 
-    // The 'noteWithTimestamp' from the sidebar is now used directly.
     const updatedNotes = existingNotes ? `${existingNotes}\n\n${noteWithTimestamp}` : noteWithTimestamp;
 
     noteRange.setValue(updatedNotes);

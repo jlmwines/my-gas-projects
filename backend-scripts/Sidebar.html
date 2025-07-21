@@ -18,9 +18,19 @@
             margin-bottom: 12px; 
         }
         .workflow-step button {
-            width: 100%; text-align: left; padding: 8px; margin-bottom: 2px;
-            background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;
-            position: relative;
+        width: 100%;
+        text-align: left;
+        padding: 8px;
+        margin-bottom: 2px;
+        background-color: #ffffff; /* Neutral white default */
+        border: 1px solid #ccc;      /* Neutral gray border */
+        border-radius: 4px;
+        position: relative;
+        }
+
+        .btn-primary {
+        background-color: #d4edda !important; /* Light green */
+        border-color: #c3e6cb !important;
         }
         .workflow-step button:hover:not(:disabled) { background-color: #e0e0e0; }
         .workflow-step button.completed { background-color: #d4edda; border-color: #c3e6cb; }
@@ -62,6 +72,7 @@
     <div id="main-dashboard-view" class="view main-view active">
         <button class="refresh-button" onclick="refreshDashboard()" title="Refresh">&#x21bb;</button>
         <h3>Workflow Dashboard</h3>
+
         <div class="workflow-step">
             <button id="btn-backup" onclick="runBackup()">1. Backup</button>
             <div id="status-backup" class="status-line"><div class="status-dot pending"></div><span>Pending</span></div>
@@ -94,24 +105,86 @@
             <button id="btn-new-batch" onclick="startNewBatch()" disabled>Start New Batch</button>
             <div id="status-new-batch" class="status-line"><div class="status-dot pending"></div><span></span></div>
         </div>
-        <div class="workflow-step"><button onclick="google.script.run.showAdvancedRestoreDialog()">Restore Data</button></div>
+        <hr>
+        <div class="workflow-step">
+            <button onclick="showView('task-panel')" class="completed">Tasks</button>
+        </div>
+        <hr>
+        <div class="workflow-step">
+            <button onclick="google.script.run.showAdvancedRestoreDialog()">Restore Data</button>
+        </div>
     </div>
 
-    <div id="process-orders-view" class="view main-view">
-        <div class="header" style="margin-bottom: 20px;"><button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button></div>
-        <h4>Process Orders</h4>
-        <div id="order-sub-tasks"></div>
+    <div id="task-panel" class="view main-view" style="padding:10px;">
+        <div class="header" style="margin-bottom: 10px;">
+            <button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button>
+            <h4>Task Panel</h4>
+        </div>
+        <div id="settings-panel" style="margin-bottom: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+        
+        <div class="setting-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label>Current Tasks Assigned:</label>
+            <span id="info-task-count" style="font-weight: bold;">...</span>
+        </div>
+
+        <div class="setting-row" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="input-low-stock">Low Stock Limit:</label>
+            <input type="number" id="input-low-stock" min="1" step="1" style="width: 60px; text-align: right;">
+        </div>
+        <div class="setting-row" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="input-periodic-days">Days Since Count:</label>
+            <input type="number" id="input-periodic-days" min="1" step="1" style="width: 60px; text-align: right;">
+        </div>
+        <div class="setting-row" style="display: none; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <label for="select-assignee">Assign To:</label>
+            <select id="select-assignee" style="width: 120px;"></select>
+        </div>
+        <button onclick="saveTaskSettings()" style="display: none; width: 100%; padding: 6px; background-color: #007bff; color: white; border: none; border-radius: 4px;">Save Settings</button>
     </div>
-    <div id="import-products-view" class="view main-view">
-        <div class="header" style="margin-bottom: 20px;"><button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button></div>
-        <h4>Import Products</h4>
-        <!-- NEW: Placeholder for file date status -->
-        <div id="file-date-status" style="margin-bottom: 15px; font-size: 12px; min-height: 16px; padding: 4px 8px; border-radius: 4px; background-color: #e9ecef;"></div>
-        <div id="product-sub-tasks"></div>
+
+        <hr>
+
+        <div class="workflow-step">
+            <button class="btn-primary" onclick="startSidebarTaskCreation('Low Stock')">Create Low Stock Tasks</button>
+        </div>
+        <div class="workflow-step">
+            <button class="btn-primary" onclick="startSidebarTaskCreation('Periodic Review')">Create Periodic Review Tasks</button>
+        </div>
+
+        <hr>
+
+        <div class="workflow-step">
+            <button onclick="google.script.run.populateReviewSheet()">Load Items for Review</button>
+        </div>
+        <div class="workflow-step">
+            <button onclick="google.script.run.markAllAsAccepted()">Mark All Loaded as Accepted</button>
+        </div>
+        <div class="workflow-step">
+            <button onclick="google.script.run.processAndExportReviewedInventory()">Update & Export Accepted Items</button>
+        </div>
     </div>
-    
-    <div id="exceptions-view" class="view layout-container">
-        <div class="header">
+
+    <div id="process-orders-view" class="view" style="padding:10px;">
+        <div class="header" style="margin-bottom: 10px;">
+            <button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button>
+            <h4>Process Orders</h4>
+        </div>
+        <div id="order-sub-tasks">
+        </div>
+    </div>
+
+    <div id="import-products-view" class="view" style="padding:10px;">
+        <div class="header" style="margin-bottom: 10px;">
+            <button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button>
+            <h4>Import Products</h4>
+        </div>
+        <div id="file-date-status" style="margin-bottom: 10px; color: #333;"></div>
+        <div id="product-sub-tasks">
+            </div>
+    </div>
+
+    <div id="exceptions-view" class="view" style="padding: 10px;">
+        <div class="header" style="margin-bottom: 10px;">
             <button class="back-button" onclick="showView('main-dashboard-view')"><span>&larr;</span> Dashboard</button>
             <h4 id="exceptions-header">Exceptions</h4>
         </div>
@@ -124,12 +197,14 @@
             <div class="filter-bar" style="margin-top: 5px;">
                 <select id="priority-filter" onchange="applyFilters()"><option value="">All Priorities</option></select>
                 <select id="assignee-filter" onchange="applyFilters()"><option value="">All Assignees</option></select>
-                <label class="filter-label"><input type="checkbox" id="closed-checkbox" onchange="applyFilters()">Closed</label>
+                <label class="filter-label">
+                    <input type="checkbox" id="closed-checkbox" onchange="applyFilters()">Closed
+                </label>
             </div>
         </div>
-        <div id="taskList"><p>Loading tasks...</p></div>
+        <div id="taskList">
+            </div>
     </div>
-
 <script>
     // --- Color mapping for task types ---
     const TASK_TYPE_COLORS = {
@@ -161,14 +236,12 @@
     ];
 
     // --- Initial Load ---
-    document.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener("load", () => {
         google.script.run.withSuccessHandler(state => {
             workflowState = state || {};
             renderDashboardUI();
             google.script.run.withSuccessHandler(users => userList = users).getUsers();
         }).getUiState();
-        renderSubTaskList(orderProcessJobs, 'order-sub-tasks', 'runOrderTask');
-        renderSubTaskList(productImportJobs, 'product-sub-tasks', 'runProductTask');
         showView('main-dashboard-view');
     });
 
@@ -176,12 +249,19 @@
     function showView(viewId) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
-        
+
+        if (viewId === 'process-orders-view') {
+            renderSubTaskList(orderProcessJobs, 'order-sub-tasks', 'runOrderTask');
+        }
+        if (viewId === 'import-products-view') {
+            renderSubTaskList(productImportJobs, 'product-sub-tasks', 'runProductTask');
+        }
+        if (viewId === 'task-panel') {
+            loadTaskPanelInfo();
+        }
         if (viewId === 'exceptions-view') {
             loadTasks();
         }
-
-        // --- NEW: Fetch and display file dates when showing the import view ---
         if (viewId === 'import-products-view') {
             const dateStatusEl = document.getElementById('file-date-status');
             dateStatusEl.innerHTML = '<i>Checking file dates...</i>';
@@ -192,7 +272,10 @@
                         dateStatusEl.innerHTML = '<span style="color: red;">Error retrieving file dates.</span>';
                         return;
                     }
-                    const { webDate, comaxDate } = dates;
+                    const {
+                        webDate,
+                        comaxDate
+                    } = dates;
 
                     if (webDate === comaxDate && webDate !== 'Not found') {
                         dateStatusEl.style.color = '#333';
@@ -581,6 +664,77 @@
         const body = document.getElementById(`task-body-${rowNum}`);
         body.style.display = body.style.display === 'block' ? 'none' : 'block';
     }
+    function startSidebarTaskCreation(type) {
+  // Show a visual indicator that something is happening
+  document.body.style.cursor = 'wait';
+  
+  google.script.run
+    .withSuccessHandler(result => {
+      // Revert the cursor when done
+      document.body.style.cursor = 'default';
+      // The pop-up alert from your script will show the final message
+      console.log(result); // Optional: log the final message to the console
+    })
+    .withFailureHandler(err => {
+      document.body.style.cursor = 'default';
+      alert('An unexpected error occurred: ' + err.message);
+    })
+    .createTasksFromSidebar(type);
+}
+/**
+ * Populates the settings panel with data from the server.
+ */
+function loadTaskPanelInfo() {
+  google.script.run
+    .withSuccessHandler(data => {
+      if (data.error) {
+        alert("Error loading panel info: " + data.error);
+        return;
+      }
+
+      // Populate the info and input fields
+      document.getElementById('info-task-count').textContent = data.assignedTaskCount;
+      document.getElementById('input-low-stock').value = data.settings.lowStock;
+      document.getElementById('input-periodic-days').value = data.settings.periodicDays;
+
+      // Populate the assignee dropdown
+      const assigneeSelect = document.getElementById('select-assignee');
+      assigneeSelect.innerHTML = ''; // Clear existing options
+      data.userList.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        if (user.id === data.settings.defaultAssignee) {
+          option.selected = true;
+        }
+        assigneeSelect.appendChild(option);
+      });
+    })
+    .getTaskPanelInfo();
+}
+/**
+ * Saves the new settings from the input fields back to the server.
+ */
+function saveTaskSettings() {
+  const newSettings = {
+    lowStock: document.getElementById('input-low-stock').value,
+    periodicDays: document.getElementById('input-periodic-days').value,
+    defaultAssignee: document.getElementById('select-assignee').value
+  };
+
+  document.body.style.cursor = 'wait';
+
+  google.script.run
+    .withSuccessHandler(response => {
+      document.body.style.cursor = 'default';
+      alert(response.message);
+      // Refresh the panel to confirm changes
+      if (response.success) {
+        loadTaskPanelInfo();
+      }
+    })
+    .saveTaskSettings(newSettings);
+}
 </script>
 </body>
 </html>

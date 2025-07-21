@@ -195,3 +195,127 @@ function getConfig_() {
     }
     return config;
 }
+/**
+ * Handles the task creation workflow initiated from the sidebar.
+ * This version uses ui.alert() for confirmation.
+ * @param {string} type The type of task to create ('Low Stock' or 'Periodic Review').
+ * @returns {string} A final status message for the user.
+ */
+function createTasksFromSidebar(type) {
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    // Stage 1: Get the review data from your existing core function
+    const reviewOptions = { type: type, stage: 'review' };
+    const reviewResult = createTasks(reviewOptions);
+
+    // If there's an error or no tasks to create, stop here.
+    if (reviewResult.status === 'error' || reviewResult.status === 'done') {
+      ui.alert(reviewResult.message);
+      return reviewResult.message;
+    }
+
+    // Stage 2: Show the working `ui.alert` for confirmation
+    const confirmResponse = ui.alert('Confirm Task Creation', reviewResult.message, ui.ButtonSet.YES_NO);
+    if (confirmResponse !== ui.Button.YES) {
+      return 'Task creation cancelled by user.';
+    }
+
+    // Stage 3: Execute the task creation
+    const executeOptions = {
+      stage: 'execute',
+      tasksPayload: reviewResult.tasksPayload,
+      assignee: reviewResult.assignee
+    };
+    const finalResult = createTasks(executeOptions);
+
+    // Show and return the final message
+    ui.alert(finalResult.message);
+    return finalResult.message;
+
+  } catch (e) {
+    const errorMessage = `An error occurred: ${e.message}`;
+    ui.alert(errorMessage);
+    return errorMessage;
+  }
+}
+/**
+ * Gathers all necessary information for the Task Panel display.
+ * @returns {object} An object containing settings, task count, and a list of users.
+ */
+/**
+ * Gathers all necessary information for the Task Panel display.
+ * @returns {object} An object containing settings, task count, and a list of users.
+ */
+/**
+ * Gathers all necessary information for the Task Panel display.
+ * @returns {object} An object containing settings, task count, and a list of users.
+ */
+function getTaskPanelInfo() {
+  try {
+    // Get settings from the Config sheet
+    const config = getConfig_();
+    const settings = {
+      lowStock: config.TaskCreator_LowStockThreshold,
+      periodicDays: config.TaskCreator_PeriodicDays,
+      defaultAssignee: config.TaskCreator_DefaultAssignee
+    };
+
+    const refSs = SpreadsheetApp.openById(activeConfig.referenceFileId);
+
+    // Get user list to find the default assignee's name
+    const usersSheet = refSs.getSheetByName('Users');
+    const userList = usersSheet.getRange('A2:B' + usersSheet.getLastRow()).getValues();
+    const userMap = new Map(userList.map(row => [row[0], row[1]])); // Map of ID -> Name
+    const defaultAssigneeName = userMap.get(settings.defaultAssignee);
+
+    // Get inventory task count FOR THE DEFAULT ASSIGNEE
+    const taskQSheet = refSs.getSheetByName('TaskQ');
+    const taskData = taskQSheet.getRange('G2:I' + taskQSheet.getLastRow()).getValues(); // Get Status (G) and Assignee (I)
+    
+    const assignedTaskCount = taskData.filter(row => {
+      const status = row[0];   // Column G
+      const assignee = row[2]; // Column I
+      return status === 'Assigned' && assignee === defaultAssigneeName;
+    }).length;
+
+    const formattedUserList = userList.map(row => ({ id: row[0], name: row[1] }));
+
+    return { settings, assignedTaskCount, userList: formattedUserList };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * Saves updated settings from the sidebar to the Config sheet.
+ * @param {object} newSettings An object with the settings to update.
+ */
+function saveTaskSettings(newSettings) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const configSheet = ss.getSheetByName('Config');
+    const data = configSheet.getRange("A2:B" + configSheet.getLastRow()).getValues();
+
+    // Create a map of setting name to its row index (2-based)
+    const settingRowMap = new Map();
+    data.forEach((row, index) => {
+      if (row[0]) settingRowMap.set(row[0], index + 2);
+    });
+
+    // Update values based on the map
+    if (newSettings.lowStock && settingRowMap.has('TaskCreator_LowStockThreshold')) {
+      configSheet.getRange(settingRowMap.get('TaskCreator_LowStockThreshold'), 2).setValue(newSettings.lowStock);
+    }
+    if (newSettings.periodicDays && settingRowMap.has('TaskCreator_PeriodicDays')) {
+      configSheet.getRange(settingRowMap.get('TaskCreator_PeriodicDays'), 2).setValue(newSettings.periodicDays);
+    }
+    if (newSettings.defaultAssignee && settingRowMap.has('TaskCreator_DefaultAssignee')) {
+      configSheet.getRange(settingRowMap.get('TaskCreator_DefaultAssignee'), 2).setValue(newSettings.defaultAssignee);
+    }
+
+    return { success: true, message: "Settings saved successfully." };
+  } catch (e) {
+    return { success: false, message: e.message };
+  }
+}
