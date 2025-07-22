@@ -4,7 +4,8 @@
 
 const G = {
   FILE_IDS: {
-    REFERENCE: '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc' // Update if Reference file changes
+    REFERENCE: '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc', // Update if Reference file changes
+    PRINT_FOLDER: '1ptdfhaan6tVMQ4INAoFYRE6RULkxMEch' // ID for the 'PrintMe' folder
   },
   SHEET_NAMES: {
     DASHBOARD: 'Dashboard',
@@ -14,7 +15,8 @@ const G = {
     COMAX_M: 'ComaxM',
     AUDIT: 'Audit',
     BRURYA: 'Brurya',
-    INVENTORY: 'Inventory'
+    INVENTORY: 'Inventory',
+    PACKING_DISPLAY: 'PackingDisplay' // Added for clarity, though used as string previously
   },
   CELL_REFS: {
     USER_DROPDOWN: 'A2',

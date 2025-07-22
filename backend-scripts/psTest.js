@@ -1,14 +1,43 @@
 /**
- * @file PackingSlipCreator.gs
+ * @file psSheetTest.gs
  * @description Creates packing slips and optional customer notes as separate PDFs from a Google Sheet template.
- * @version 25-07-22-1621
+ * @version 25-07-22-1613
  */
 
 /**
+ * A test harness to simulate the full process of creating a packing slip and an optional note.
+ */
+function runFullProcess_TEST() {
+    // --- Get Test Data ---
+    const SHEET_PACKING_QUEUE = 'PackingQueue';
+    const SHEET_PACKING_ROWS = 'PackingRows';
+    const TEST_ORDER_ROW_IN_QUEUE = 2;
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const packingQueueSheet = ss.getSheetByName(SHEET_PACKING_QUEUE);
+    const packingRowsSheet = ss.getSheetByName(SHEET_PACKING_ROWS);
+
+    if (!packingQueueSheet || !packingRowsSheet) {
+        SpreadsheetApp.getUi().alert(`Error: Could not find ${SHEET_PACKING_QUEUE} or ${SHEET_PACKING_ROWS} sheet.`);
+        return;
+    }
+    const orderQueueEntry = packingQueueSheet.getRange(TEST_ORDER_ROW_IN_QUEUE, 1, 1, packingQueueSheet.getLastColumn()).getValues()[0];
+    const orderNumberForFilter = orderQueueEntry[0];
+    const orderRowsEntries = packingRowsSheet.getDataRange().getValues().filter(row => row[0] === orderNumberForFilter);
+
+    if (!orderQueueEntry || orderRowsEntries.length === 0) {
+        SpreadsheetApp.getUi().alert(`Test Aborted: No data found for test.`);
+        return;
+    }
+
+    // --- Run Process ---
+    createPackingSlipPDF(orderQueueEntry, orderRowsEntries);
+    createCustomerNotePDF(orderQueueEntry);
+}
+
+
+/**
  * Creates the main packing slip PDF from the 'DefaultTemplate' sheet.
- * @param {Array} orderQueueEntry A single row from PackingQueue.
- * @param {Array[]} orderRowsEntries An array of product rows for the order.
- * @returns {string | null} The File ID of the newly created packing slip PDF, or null on failure.
  */
 function createPackingSlipPDF(orderQueueEntry, orderRowsEntries) {
     const TEMPLATE_SPREADSHEET_ID = '1O78ecsvwG21YzwhB4-ujYY5yOgXIy8vW0qlaWK7wAVg';
@@ -16,22 +45,23 @@ function createPackingSlipPDF(orderQueueEntry, orderRowsEntries) {
     const TABLE_START_ROW = 9;
 
     let tempSheet;
-    let fileIdToReturn = null;
-
     try {
         const orderNumber = orderQueueEntry[0];
         const totalItemCount = orderRowsEntries.reduce((sum, item) => sum + (Number(item[3]) || 0), 0);
+
         const templateSpreadsheet = SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID);
         const templateSheet = templateSpreadsheet.getSheetByName(TEMPLATE_SHEET_NAME);
         const tempSheetName = `SLIP_${orderNumber}_${new Date().getTime()}`;
         tempSheet = templateSheet.copyTo(templateSpreadsheet).setName(tempSheetName);
 
-        // ... (The rest of this function is unchanged, only including the final return for completeness)
+        // Populate Placeholders
         tempSheet.createTextFinder('{{ORDER_NUMBER}}').replaceAllWith(orderNumber || '');
         tempSheet.createTextFinder('{{ORDER_DATE}}').replaceAllWith(Utilities.formatDate(new Date(orderQueueEntry[1]), Session.getScriptTimeZone(), "yyyy-MM-dd") || '');
         tempSheet.createTextFinder('{{SHIPPING_NAME}}').replaceAllWith(orderQueueEntry[2] || '');
         tempSheet.createTextFinder('{{SHIPPING_ADDRESS}}').replaceAllWith(orderQueueEntry[5] || '');
         tempSheet.createTextFinder('{{SHIPPING_PHONE}}').replaceAllWith(orderQueueEntry[3] || '');
+
+        // Prepare and Write Product Table Data
         const productData = [];
         orderRowsEntries.forEach(itemRow => {
             const englishDetails = [itemRow[5] || '', [itemRow[6] ? `Intensity (1-5): ${itemRow[6]}` : null, itemRow[7] ? `Complexity (1-5): ${itemRow[7]}` : null, itemRow[8] ? `Acidity (1-5): ${itemRow[8]}` : null].filter(p => p).join(', '), itemRow[10] ? `Harmonize with ${String(itemRow[10]).trim()} flavors` : '', itemRow[11] ? `Contrast with ${String(itemRow[11]).trim()} flavors` : '', itemRow[9] ? `Recommended decanting – ${itemRow[9]} minutes.` : ''].filter(line => line && line.trim()).join('\n');
@@ -45,50 +75,51 @@ function createPackingSlipPDF(orderQueueEntry, orderRowsEntries) {
                 tempSheet.getRange(TABLE_START_ROW + i, 1, 1, tempSheet.getLastColumn()).setFontWeight('bold');
             }
         }
+
+        // Add Totals Row
         const tableEndRow = (TABLE_START_ROW - 1) + productData.length;
         tempSheet.getRange(tableEndRow + 2, 1, 1, 3).setValues([['Total', totalItemCount, 'סה"כ']]);
+
+        // Final Cleanup and PDF Generation
         const lastRowWithContent = tempSheet.getLastRow();
         const maxRows = tempSheet.getMaxRows();
         if (maxRows > lastRowWithContent) {
             tempSheet.deleteRows(lastRowWithContent + 1, maxRows - lastRowWithContent);
         }
         SpreadsheetApp.flush();
+
         const outputFolder = DriveApp.getFolderById(activeConfig.packingSlipFolderId);
         const pdfFileName = `PackingSlip_${orderNumber}.pdf`;
         const url = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SPREADSHEET_ID}/export?gid=${tempSheet.getSheetId()}&format=pdf&portrait=true&fitw=true&sheetnames=false&printtitle=false&gridlines=false`;
         const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() } });
         const pdfFile = outputFolder.createFile(response.getBlob()).setName(pdfFileName);
         Logger.log(`Created Packing Slip: ${pdfFile.getName()}`);
-        fileIdToReturn = pdfFile.getId();
+        return pdfFile.getId(); // THIS LINE SHOULD NOW SUCCEED
 
     } catch (e) {
-        Logger.log(`Error in createPackingSlipPDF for Order #${orderQueueEntry[0]}: ${e.stack}`);
-        throw e;
+        Logger.log(`Error in createPackingSlipPDF: ${e.toString()}\n${e.stack}`);
+        throw e; // Re-throw the error
     } finally {
-        if (tempSheet) {
-            SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID).deleteSheet(tempSheet);
-        }
+        // --- CLEANUP DISABLED FOR TESTING ---
+        // if (tempSheet) {
+        //     SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID).deleteSheet(tempSheet);
+        // }
     }
-    return fileIdToReturn;
 }
 
 /**
  * Creates a separate customer note PDF from the 'MessageDefault' sheet, if a note exists.
- * @param {Array} orderQueueEntry A single row from PackingQueue.
- * @returns {string | null} The File ID of the newly created PDF, or null.
  */
 function createCustomerNotePDF(orderQueueEntry) {
     const customerNote = orderQueueEntry[6];
     if (!customerNote || String(customerNote).trim() === '') {
-        return null;
+        return;
     }
 
     const TEMPLATE_SPREADSHEET_ID = '1O78ecsvwG21YzwhB4-ujYY5yOgXIy8vW0qlaWK7wAVg';
     const TEMPLATE_SHEET_NAME = 'MessageDefault';
     
     let tempSheet;
-    let fileIdToReturn = null;
-
     try {
         const orderNumber = orderQueueEntry[0];
         const templateSpreadsheet = SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID);
@@ -117,17 +148,16 @@ function createCustomerNotePDF(orderQueueEntry) {
         const url = `https://docs.google.com/spreadsheets/d/${TEMPLATE_SPREADSHEET_ID}/export?gid=${tempSheet.getSheetId()}&format=pdf&portrait=true&fitw=true&sheetnames=false&printtitle=false&gridlines=false`;
         const response = UrlFetchApp.fetch(url, { headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() } });
         const pdfFile = outputFolder.createFile(response.getBlob()).setName(pdfFileName);
-        
         Logger.log(`Created Customer Note: ${pdfFile.getName()}`);
-        fileIdToReturn = pdfFile.getId();
+        return pdfFile.getId(); // THIS LINE SHOULD NOW SUCCEED
 
     } catch (e) {
-        Logger.log(`Error in createCustomerNotePDF for Order #${orderQueueEntry[0]}: ${e.stack}`);
-        throw e;
+        Logger.log(`Error in createCustomerNotePDF: ${e.toString()}\n${e.stack}`);
+        throw e; // Re-throw the error
     } finally {
-        if (tempSheet) {
-            SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID).deleteSheet(tempSheet);
-        }
+        // --- CLEANUP DISABLED FOR TESTING ---
+        // if (tempSheet) {
+        //     SpreadsheetApp.openById(TEMPLATE_SPREADSHEET_ID).deleteSheet(tempSheet);
+        // }
     }
-    return fileIdToReturn;
 }

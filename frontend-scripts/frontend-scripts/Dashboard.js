@@ -1,7 +1,6 @@
 /**
- * Dashboard.gs — Core UI and State Controller (v2025-07-16)
- * Change: Simplified to only handle user selection. All dashboard
- * rendering has been disabled to ensure stability.
+ * @file Dashboard.gs — Core UI and State Controller (v2025-07-22)
+ * @description Handles onOpen triggers, menu creation, and user selection.
  */
 
 function onOpenInstallable() {
@@ -14,12 +13,21 @@ function onOpenInstallable() {
         dashboard.getRange(G.CELL_REFS.USER_DROPDOWN).clearContent();
     }
     
-    SpreadsheetApp.getUi().createMenu('JLM Wines')
-        .addSubMenu(SpreadsheetApp.getUi().createMenu('Inventory')
+    const ui = SpreadsheetApp.getUi();
+    ui.createMenu('JLM Wines')
+        .addSubMenu(ui.createMenu('Orders')
+            .addItem('Display Orders', 'updatePackingDisplay')
+            .addSeparator()
+            .addItem('Select All', 'selectAllRows')
+            .addItem('Clear All', 'clearAllRows')
+            .addSeparator()
+            .addItem('Create Print Batch', 'createPrintBatch'))
+        .addSeparator()
+        .addSubMenu(ui.createMenu('Inventory')
             .addItem('Load Inventory Tasks', 'populateInventorySheetFromTasks')
             .addItem('Submit Inventory Counts', 'submitInventoryToAudit'))
         .addSeparator()
-        .addSubMenu(SpreadsheetApp.getUi().createMenu('Brurya')
+        .addSubMenu(ui.createMenu('Brurya')
             .addItem('Load Brurya Sheet', 'populateBruryaSheetFromAudit')
             .addItem('Submit Brurya Counts', 'submitBruryaToAudit'))
         .addToUi();
@@ -36,11 +44,9 @@ function onEditInstallable(e) {
 }
 
 function handleDashboardEdit(e) {
-    // This function now ONLY sets the active user in the Config sheet.
     const selectedName = e.range.getValue()?.toString().trim();
     setActiveUser(selectedName);
     
-    // Also update Brurya access rights in the background
     try {
         if (selectedName) {
             const refSS = SpreadsheetApp.openById(G.FILE_IDS.REFERENCE);
@@ -68,7 +74,61 @@ function populateUserDropdown() {
         const rule = SpreadsheetApp.newDataValidation().requireValueInList(names, true).setAllowInvalid(false).build();
         cell.setDataValidation(rule);
     } catch (err) {
-        // Fail silently on open to avoid disruptive errors for user.
         console.error(`Could not populate user list: ${err.message}`);
     }
+}
+
+// --- Implemented functions for the Orders menu ---
+
+/**
+ * Selects all checkboxes in the 'PackingDisplay' sheet.
+ */
+function selectAllRows() {
+    const ui = SpreadsheetApp.getUi();
+    const displaySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(G.SHEET_NAMES.PACKING_DISPLAY);
+    if (!displaySheet) {
+        ui.alert("Error: 'PackingDisplay' sheet not found.");
+        return;
+    }
+
+    const lastRow = displaySheet.getLastRow();
+    if (lastRow <= 1) { // Only header row or empty
+        ui.alert("No orders to select.");
+        return;
+    }
+
+    // Assuming checkbox is always in column A (index 1)
+    const checkboxRange = displaySheet.getRange(2, 1, lastRow - 1, 1);
+    checkboxRange.setValue(true);
+    SpreadsheetApp.getActiveSpreadsheet().toast("All orders selected.", "", 2);
+}
+
+/**
+ * Clears all checkboxes in the 'PackingDisplay' sheet.
+ */
+function clearAllRows() {
+    const ui = SpreadsheetApp.getUi();
+    const displaySheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(G.SHEET_NAMES.PACKING_DISPLAY);
+    if (!displaySheet) {
+        ui.alert("Error: 'PackingDisplay' sheet not found.");
+        return;
+    }
+
+    const lastRow = displaySheet.getLastRow();
+    if (lastRow <= 1) { // Only header row or empty
+        ui.alert("No orders to clear.");
+        return;
+    }
+
+    // Assuming checkbox is always in column A (index 1)
+    const checkboxRange = displaySheet.getRange(2, 1, lastRow - 1, 1);
+    checkboxRange.setValue(false);
+    SpreadsheetApp.getActiveSpreadsheet().toast("All selections cleared.", "", 2);
+}
+
+/**
+ * Calls the printSelectedDocuments function from updatePackingDisplay.gs.
+ */
+function createPrintBatch() {
+    printSelectedDocuments();
 }
