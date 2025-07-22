@@ -33,11 +33,11 @@ function createMenuAndShowSidebar() {
         .addItem('Export Inventory to CSV', 'exportInventoryAdjustments')
         .addItem('Audit Low Inventory', 'AuditLowProducts')
         .addSeparator()
-        .addItem('Create Manual Snapshot', 'createManualSnapshot')
+        .addItem('Generate Packing Slips', 'generatePackingSlipsAll') // NEW ITEM FOR TESTING
         .addSeparator()
         .addSubMenu(resetMenu) // Add the reset sub-menu
         .addToUi();
-    
+
     // Show the sidebar on open
     try {
         showWorkflowSidebar();

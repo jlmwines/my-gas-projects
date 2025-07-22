@@ -73,7 +73,7 @@ function mergeOrders() {
     Logger.log(`Failed to update on-hold inventory summary: ${e.message}`);
     SpreadsheetApp.getUi().alert("Warning: Order merge succeeded, but failed to update the on-hold inventory summary.");
   }
-
+  generatePackingSlipsAll();
   return `Merge complete. Master sheet ('OrdersM') now contains ${masterMap.size} records.`;
 }
 
