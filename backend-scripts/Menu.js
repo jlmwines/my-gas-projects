@@ -33,8 +33,6 @@ function createMenuAndShowSidebar() {
         .addItem('Export Inventory to CSV', 'exportInventoryAdjustments')
         .addItem('Audit Low Inventory', 'AuditLowProducts')
         .addSeparator()
-        .addItem('Generate Packing Slips', 'generatePackingSlipsAll') // NEW ITEM FOR TESTING
-        .addSeparator()
         .addSubMenu(resetMenu) // Add the reset sub-menu
         .addToUi();
 

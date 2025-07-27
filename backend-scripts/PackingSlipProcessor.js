@@ -31,11 +31,11 @@ function generatePackingSlipsAll() {
     
     const logOrderIdCol = orderLog_headers.indexOf("order_id");
     const logStatusCol = orderLog_headers.indexOf("packing_slip_status"); // UPDATED
-    const logDocIdCol = orderLog_headers.indexOf("packing_slip_doc_id");
-    const logNoteDocIdCol = orderLog_headers.indexOf("customer_note_doc_id"); // NEW
+    const logDocIdCol = orderLog_headers.indexOf("packing_print_date");
+    const logNoteDocIdCol = orderLog_headers.indexOf("comax_export_status"); // NEW
 
     if ([logOrderIdCol, logStatusCol, logDocIdCol, logNoteDocIdCol].includes(-1)) {
-        throw new Error("A required header was not found in the OrderLog sheet. Check: order_id, packing_slip_status, packing_slip_doc_id, customer_note_doc_id.");
+        throw new Error("A required header was not found in the OrderLog sheet. Check: order_id, packing_slip_status, packing_print_date, comax_export_status.");
     }
 
     const orderLogMap = new Map();

@@ -1,17 +1,26 @@
 {
   "timeZone": "Asia/Jerusalem",
   "dependencies": {
-    "enabledAdvancedServices": [{
-      "userSymbol": "DriveV2",
-      "serviceId": "drive",
-      "version": "v2"
-    }]
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "DriveV2",
+        "serviceId": "drive",
+        "version": "v2"
+      },
+      {
+        "userSymbol": "Docs",
+        "version": "v1",
+        "serviceId": "docs"
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/script.container.ui",
     "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/script.external_request"
   ]
 }
