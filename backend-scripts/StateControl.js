@@ -54,13 +54,40 @@ function resetStateToStart() {
 }
 
 /**
- * Sets the state to after the 'Backup' step is complete.
+ * Sets the state to after the 'Backup' step is complete and clears
+ * staging sheet statuses to allow re-importing.
  */
 function resetStatePostBackup() {
-  _setWorkflowState(
-    { lastBackupDate: true }, 
-    'State set to: Backup complete. Please refresh the sidebar.'
-  );
+    const stateSet = _setWorkflowState(
+        { lastBackupDate: true },
+        'State set to: Backup complete. Import statuses cleared.'
+    );
+
+    // Only proceed to clear sheets if the state was set successfully
+    if (stateSet) {
+        try {
+            const backendSS = SpreadsheetApp.getActiveSpreadsheet();
+            const sheetsToClear = ["OrdersS", "ProductsS"]; // Add any other staging sheets here
+            const statusColumnName = 'import_status'; // ASSUMPTION: This is the name of the status column
+
+            sheetsToClear.forEach(sheetName => {
+                const sheet = backendSS.getSheetByName(sheetName);
+                if (sheet && sheet.getLastRow() > 1) {
+                    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+                    const statusColIndex = headers.indexOf(statusColumnName);
+
+                    if (statusColIndex > -1) {
+                        // Clear the content of the status column for all data rows
+                        sheet.getRange(2, statusColIndex + 1, sheet.getLastRow() - 1, 1).clearContent();
+                        Logger.log(`Cleared '${statusColumnName}' column in '${sheetName}'.`);
+                    }
+                }
+            });
+        } catch (e) {
+            Logger.log(`Could not clear staging sheet statuses: ${e.message}`);
+            SpreadsheetApp.getUi().alert("Warning: State was reset, but failed to clear statuses from staging sheets.");
+        }
+    }
 }
 
 /**

@@ -1,11 +1,12 @@
 /**
  * @file Globals.gs
  * @description Centralized Project Constants & State Helpers for the Frontend.
- * @version 25-07-23-1127
+ * @version 2025-07-27-1042
  * @environment Frontend
  */
 
 const G = {
+    WEB_APP_URL: 'https://script.google.com/a/macros/jlmwines.com/s/AKfycbze93HFqmZ9wZSsho_SyN1e2i4363yRQDK_YZqGqitddf32RtjySl-klmId7TvEDzzQdw/exec',
     FILE_IDS: {
         REFERENCE: '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc',
         PRINT_FOLDER: '1ptdfhaan6tVMQ4INAoFYRE6RULkxMEch',
@@ -31,8 +32,8 @@ const G = {
         COMAX_DIRECTORY: 'Comax'
     },
     HEADERS: {
-        ORDER_ID: 'order_id', // This is for OrdersM and OrderLog
-        ORDER_NUMBER: 'order_number', // Correct header for OrdersM
+        ORDER_ID: 'order_id',
+        ORDER_NUMBER: 'order_number',
         PACKING_QUEUE_ORDER_NUMBER: 'Order Number'
     },
     CELL_REFS: {
@@ -41,44 +42,10 @@ const G = {
     },
     COLUMN_INDICES: {
         USERS: { NAME: 1, BRURYA_ACCESS: 5 },
-        AUDIT: {
-            ID: 1,
-            SKU: 2,
-            LAST_COUNT: 3,
-            COMAX_QTY: 4,
-            NEW_QTY: 5,
-            BRURYA_QTY: 6,
-            STORAGE_QTY: 7,
-            OFFICE_QTY: 8,
-            SHOP_QTY: 9
-        },
-        TASKQ: {
-            TIMESTAMP: 1,
-            SESSION_ID: 2,
-            TYPE: 3,
-            SOURCE: 4,
-            DETAILS: 5,
-            RELATED_ENTITY: 6,
-            STATUS: 7,
-            PRIORITY: 8,
-            ASSIGNED_TO: 9,
-            START_DATE: 10,
-            END_DATE: 11,
-            DONE_DATE: 12,
-            NOTES: 13
-        },
-        REFERENCE_CONFIG: {
-            SETTING: 1,
-            VALUE: 2,
-            NOTES: 3
-        },
-        ORDERLOG: {
-            ORDER_ID: 1,
-            ORDER_DATE: 2,
-            PACKING_PRINT_DATE: 3,
-            CUSTOMER_NOTE_DOC_ID: 4,
-            EXPORT_DATE: 5
-        }
+        AUDIT: { ID: 1, SKU: 2, LAST_COUNT: 3, COMAX_QTY: 4, NEW_QTY: 5, BRURYA_QTY: 6, STORAGE_QTY: 7, OFFICE_QTY: 8, SHOP_QTY: 9 },
+        TASKQ: { TIMESTAMP: 1, SESSION_ID: 2, TYPE: 3, SOURCE: 4, DETAILS: 5, RELATED_ENTITY: 6, STATUS: 7, PRIORITY: 8, ASSIGNED_TO: 9, START_DATE: 10, END_DATE: 11, DONE_DATE: 12, NOTES: 13 },
+        REFERENCE_CONFIG: { SETTING: 1, VALUE: 2, NOTES: 3 },
+        ORDERLOG: { ORDER_ID: 1, ORDER_DATE: 2, PACKING_PRINT_DATE: 3, CUSTOMER_NOTE_DOC_ID: 4, EXPORT_DATE: 5 }
     },
     SETTINGS: {
         PACKING_DATA_CREATED: 'PackingDataCreated'
@@ -90,11 +57,6 @@ const G = {
 };
 
 // --- CONFIG SHEET UTILITY ---
-
-/**
- * Gets the local Config sheet in the Frontend spreadsheet.
- * @returns {GoogleAppsScript.Spreadsheet.Sheet}
- */
 function getConfigSheet_() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let sheet = ss.getSheetByName(G.SHEET_NAMES.CONFIG);
@@ -106,7 +68,6 @@ function getConfigSheet_() {
 }
 
 // --- ACTIVE USER STATE ---
-
 function setActiveUser(name) {
     const sheet = getConfigSheet_();
     sheet.getRange(G.CELL_REFS.ACTIVE_USER).setValue(name);
@@ -123,12 +84,6 @@ function clearActiveUser() {
 }
 
 // --- REFERENCE FILE SHEET ACCESS ---
-
-/**
- * Gets a sheet from the reference spreadsheet by its name.
- * @param {string} name - The name of the sheet to retrieve.
- * @returns {GoogleAppsScript.Spreadsheet.Sheet} - The requested sheet object.
- */
 function getReferenceSheet(name) {
     const refSS = SpreadsheetApp.openById(G.FILE_IDS.REFERENCE);
     const sheet = refSS.getSheetByName(name);
@@ -138,11 +93,6 @@ function getReferenceSheet(name) {
     return sheet;
 }
 
-/**
- * Gets a specific setting value from the Reference Config sheet.
- * @param {string} settingName - The name of the setting to retrieve.
- * @returns {any} - The value of the setting.
- */
 function getReferenceSetting(settingName) {
     const configSheet = getReferenceSheet(G.SHEET_NAMES.REFERENCE_CONFIG);
     const data = configSheet.getDataRange().getValues();

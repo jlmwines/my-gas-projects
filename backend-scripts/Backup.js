@@ -1,7 +1,7 @@
 /**
  * @file Backup.gs
  * @description Manages "Latest" and "Previous" backup sets and manual snapshots.
- * @version 25-07-07-1415
+ * @version 25-08-10-1300
  */
 
 // --- CONFIGURATION ---
@@ -11,7 +11,41 @@ const PREVIOUS_BACKEND_NAME = 'Previous Backend Backup';
 const PREVIOUS_REFERENCE_NAME = 'Previous Reference Backup';
 
 /**
- * Main backup function that rotates the backup sets.
+ * WORKER: Contains the core backup rotation logic without UI prompts.
+ * This is the function our new sidebar will call.
+ */
+function _executeBackupRotation() {
+  try {
+    const backupFolder = DriveApp.getFolderById(activeConfig.backupFolderId);
+    if (!backupFolder) {
+      throw new Error(`Backup folder with ID "${activeConfig.backupFolderId}" not found.`);
+    }
+    
+    // 1. Delete "Previous"
+    deleteFileByName(backupFolder, PREVIOUS_BACKEND_NAME);
+    deleteFileByName(backupFolder, PREVIOUS_REFERENCE_NAME);
+    
+    // 2. Rename "Latest" to "Previous"
+    renameFile(backupFolder, LATEST_BACKEND_NAME, PREVIOUS_BACKEND_NAME);
+    renameFile(backupFolder, LATEST_REFERENCE_NAME, PREVIOUS_REFERENCE_NAME);
+    
+    // 3. Create new "Latest"
+    const backendFile = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId());
+    backendFile.makeCopy(LATEST_BACKEND_NAME, backupFolder);
+
+    const referenceFile = DriveApp.getFileById(activeConfig.referenceFileId);
+    referenceFile.makeCopy(LATEST_REFERENCE_NAME, backupFolder);
+    
+    Logger.log('Backup rotation complete.');
+  } catch (e) {
+    Logger.log(e);
+    throw e; // Re-throw to be caught by the calling function
+  }
+}
+
+/**
+ * LAUNCHER: Main backup function that handles UI and calls the worker.
+ * This function remains for your old sidebar and menu items.
  */
 function backupSheets() {
   const ui = SpreadsheetApp.getUi();
@@ -26,35 +60,12 @@ function backupSheets() {
   }
 
   try {
-    const backupFolder = DriveApp.getFolderById(activeConfig.backupFolderId);
-    if (!backupFolder) {
-      throw new Error(`Backup folder with ID "${activeConfig.backupFolderId}" not found.`);
-    }
-    
     SpreadsheetApp.getActiveSpreadsheet().toast('Starting backup rotation...', 'Backup', 30);
-
-    // 1. Delete the "Previous" backup files
-    deleteFileByName(backupFolder, PREVIOUS_BACKEND_NAME);
-    deleteFileByName(backupFolder, PREVIOUS_REFERENCE_NAME);
-    
-    // 2. Rename "Latest" files to "Previous"
-    renameFile(backupFolder, LATEST_BACKEND_NAME, PREVIOUS_BACKEND_NAME);
-    renameFile(backupFolder, LATEST_REFERENCE_NAME, PREVIOUS_REFERENCE_NAME);
-    
-    // 3. Create new "Latest" backups
-    const backendFile = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId());
-    backendFile.makeCopy(LATEST_BACKEND_NAME, backupFolder);
-
-    const referenceFile = DriveApp.getFileById(activeConfig.referenceFileId);
-    referenceFile.makeCopy(LATEST_REFERENCE_NAME, backupFolder);
-    
-    Logger.log('Backup rotation complete.');
+    _executeBackupRotation(); // Call the worker
     return "Backup rotation completed successfully.";
-
   } catch (e) {
-    Logger.log(e);
     SpreadsheetApp.getUi().alert('Backup Failed', `An error occurred: ${e.message}`, SpreadsheetApp.getUi().ButtonSet.OK);
-    throw e; // Re-throw to allow sidebar to catch it
+    throw e;
   }
 }
 

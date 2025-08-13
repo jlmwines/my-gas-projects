@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        /* --- Core Styles --- */
+        html, body {
+            height: 100%; margin: 0; padding: 10px;
+            font-family: Arial, sans-serif; color: #333; background-color: #f8f9fa;
+        }
+        h3 {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        button {
+            width: 100%;
+            text-align: left;
+            padding: 8px;
+            margin-bottom: 4px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        button:hover:not(:disabled) {
+            background-color: #e9ecef;
+        }
+        button:disabled {
+            cursor: not-allowed;
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+        .status-line {
+            font-size: 11px;
+            color: #6c757d;
+            padding: 0 4px;
+            min-height: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h3>Operations Hub - Test Platform</h3>
+
+    <div id="daily-sync-section" class="section">
+        
+        <button id="btn-step-beginSync" onclick="runStep('beginSync', 'This will reset the workflow state and create a new backup. Proceed?')">1. Begin Sync</button>
+        <div id="status-beginSync" class="status-line"></div>
+
+        <button id="btn-step-ordersSync" onclick="runStep('ordersSync', 'This will import and merge new orders. Proceed?')">2. Orders Sync</button>
+        <div id="status-ordersSync" class="status-line"></div>
+
+        <button id="btn-step-productSync" onclick="runStep('productSync', 'This will import and process product files. Proceed?')">3. Product Sync</button>
+        <div id="status-productSync" class="status-line"></div>
+
+    </div>
+
+<script>
+    /**
+     * Generic function to run a specific workflow step.
+     * @param {string} stepName The name of the step to run.
+     * @param {string} [confirmationMessage] An optional message to confirm with the user first.
+     */
+    function runStep(stepName, confirmationMessage) {
+        if (confirmationMessage) {
+            if (!confirm(confirmationMessage)) {
+                return; // User cancelled
+            }
+        }
+
+        const button = document.getElementById('btn-step-' + stepName);
+        const status = document.getElementById('status-' + stepName);
+
+        button.disabled = true;
+        status.textContent = "Processing...";
+
+        const functionName = 'run' + stepName.charAt(0).toUpperCase() + stepName.slice(1) + 'Step';
+
+        google.script.run
+            .withSuccessHandler(result => handleSuccess(result, status, button))
+            .withFailureHandler(error => handleFailure(error, status, button))
+            [functionName]();
+    }
+
+    /**
+     * Handles a successful response from the server.
+     */
+    function handleSuccess(result, statusElement, buttonElement) {
+        if (result.status === 'success') {
+            statusElement.textContent = result.message;
+            buttonElement.disabled = false;
+        } else if (result.status === 'confirmation_required') {
+            const userConfirmed = confirm(result.message);
+            if (userConfirmed) {
+                statusElement.textContent = "User confirmed. Exporting...";
+                google.script.run
+                    .withSuccessHandler(exportResult => handleSuccess(exportResult, statusElement, buttonElement))
+                    .withFailureHandler(error => handleFailure(error, statusElement, buttonElement))
+                    .runConfirmedExport(result.step);
+            } else {
+                statusElement.textContent = "Action cancelled by user.";
+                buttonElement.disabled = false;
+            }
+        }
+    }
+
+    /**
+     * Handles a failed response from the server.
+     */
+    function handleFailure(error, statusElement, buttonElement) {
+        statusElement.textContent = "Error: " + error.message;
+        buttonElement.disabled = false;
+    }
+</script>
+<!-- End of Client-side Script -->
+</body>
+</html>

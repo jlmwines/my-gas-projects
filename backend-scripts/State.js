@@ -63,3 +63,11 @@ function resetUiState() {
     Logger.log("Could not reset UI state: " + e.message);
   }
 }
+
+/**
+ * WORKER: Resets the UI state without any popups.
+ * This is the function our new Admin Sidebar will call.
+ */
+function _executeAdminReset() {
+    resetUiState();
+}

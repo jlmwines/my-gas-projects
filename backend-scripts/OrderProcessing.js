@@ -1,177 +1,121 @@
 /**
  * @file OrderProcessing.gs
- * @description Handles merging of staging orders, on-hold inventory calculation, and aggregated export for Comax.
- * @version 25-07-23-0627
+ * @description Handles merging orders, updating logs, and exporting for Comax.
+ * @version 2025-07-27-1425
  */
 
 /**
- * Merges orders from the staging sheet (OrdersS) to the master sheet (OrdersM),
- * then updates the on-hold inventory summary.
- *
- * @returns {string} A summary of the operation.
+ * Merges staging orders to the master sheet, updates the OrderLog,
+ * and then triggers the preparation of packing data.
  */
 function mergeOrders() {
     const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const backendSS = SpreadsheetApp.getActiveSpreadsheet();
+
     const ordersS_sheet = backendSS.getSheetByName("OrdersS");
     const ordersM_sheet = referenceSS.getSheetByName("OrdersM");
-    const sRange = ordersS_sheet.getDataRange();
-    const mRange = ordersM_sheet.getDataRange();
-    const ordersS_data = sRange.getValues();
-    const ordersM_data = mRange.getValues();
+    const orderLog_sheet = referenceSS.getSheetByName("OrderLog");
 
+    const ordersS_data = ordersS_sheet.getDataRange().getValues();
     if (ordersS_data.length < 2) {
         return "Staging sheet 'OrdersS' is empty. No orders to merge.";
     }
 
+    // --- Merge OrdersS into OrdersM ---
+    const ordersM_data = ordersM_sheet.getDataRange().getValues();
     const s_headers = ordersS_data.shift();
     const m_headers = ordersM_data.shift();
     const s_orderIdCol = s_headers.indexOf('order_id');
-    const s_orderNumCol = s_headers.indexOf('order_number');
     const m_orderIdCol = m_headers.indexOf('order_id');
-    const m_orderNumCol = m_headers.indexOf('order_number');
-    const m_statusCol = m_headers.indexOf('status');
+    const masterMap = new Map(ordersM_data.map(row => [row[m_orderIdCol], row]));
+    ordersS_data.forEach(row => {
+        masterMap.set(row[s_orderIdCol], row);
+    });
+    const finalMasterData = [m_headers, ...Array.from(masterMap.values())];
+    ordersM_sheet.getRange(1, 1, finalMasterData.length, finalMasterData[0].length).setValues(finalMasterData);
 
-    const stagingOrderNumbers = ordersS_data.map(row => row[s_orderNumCol]).filter(n => n);
-    const stagingIdSet = new Set(ordersS_data.map(row => row[s_orderIdCol]));
+    // --- Update OrderLog with new orders ---
+    const orderLog_data = orderLog_sheet.getDataRange().getValues();
+    const log_headers = orderLog_data.shift();
+    const log_orderIdCol = log_headers.indexOf('order_id');
+    const log_orderDateCol = log_headers.indexOf('order_date'); // Assuming 'order_date' exists for new entries
 
-    if (stagingOrderNumbers.length === 0) {
-        return "No valid order numbers found in staging sheet.";
-    }
+    const existingLogIds = new Set(orderLog_data.map(row => row[log_orderIdCol]));
+    const newLogEntries = [];
 
-    const minOrderNum = Math.min(...stagingOrderNumbers);
-    const maxOrderNum = Math.max(...stagingOrderNumbers);
-    const masterMap = new Map();
-
-    ordersM_data.forEach(row => {
-        const masterOrderNum = row[m_orderNumCol];
-        const masterOrderId = row[m_orderIdCol];
-        if (masterOrderNum >= minOrderNum && masterOrderNum <= maxOrderNum && !stagingIdSet.has(masterOrderId)) {
-            let newRow = [...row];
-            newRow[m_statusCol] = 'deleted';
-            masterMap.set(masterOrderId, newRow);
-        } else {
-            masterMap.set(masterOrderId, row);
+    ordersS_data.forEach(s_row => {
+        const orderId = s_row[s_orderIdCol];
+        if (!existingLogIds.has(orderId)) {
+            const orderDate = s_row[s_headers.indexOf('order_date')];
+            const newEntry = Array(log_headers.length).fill('');
+            newEntry[log_orderIdCol] = orderId;
+            newEntry[log_orderDateCol] = orderDate;
+            newLogEntries.push(newEntry);
         }
     });
 
-    ordersS_data.forEach(row => {
-        const stagingOrderId = row[s_orderIdCol];
-        masterMap.set(stagingOrderId, row);
-    });
-    
-    const finalMasterData = [m_headers, ...Array.from(masterMap.values())];
-    mRange.clearContent();
-    ordersM_sheet.getRange(1, 1, finalMasterData.length, finalMasterData[0].length).setValues(finalMasterData);
-    
-    // --- NEW: Update the On-Hold Inventory Summary ---
-    try {
-        updateOnHoldInventorySummary();
-        Logger.log("On-hold inventory summary updated successfully.");
-    } catch(e) {
-        Logger.log(`Failed to update on-hold inventory summary: ${e.message}`);
-        SpreadsheetApp.getUi().alert("Warning: Order merge succeeded, but failed to update the on-hold inventory summary.");
+    if (newLogEntries.length > 0) {
+        orderLog_sheet.getRange(orderLog_sheet.getLastRow() + 1, 1, newLogEntries.length, newLogEntries[0].length).setValues(newLogEntries);
     }
-    // REVISED: Call the new data preparation function instead of the old generation function
+
+    // --- Trigger subsequent processes ---
     try {
-        preparePackingData();
+        preparePackingData(); // This function prepares data for the frontend
         Logger.log("Packing slip data prepared successfully.");
     } catch (e) {
         Logger.log(`Failed to prepare packing slip data: ${e.message}`);
         SpreadsheetApp.getUi().alert("Warning: Order merge succeeded, but failed to prepare packing slip data.");
     }
-    
-    return `Merge complete. Master sheet ('OrdersM') now contains ${masterMap.size} records.`;
+
+    return `Merge complete. ${ordersS_data.length} orders processed. ${newLogEntries.length} new entries added to OrderLog.`;
 }
+
 
 /**
- * Scans the master orders sheet, aggregates all items from 'on-hold' orders,
- * and overwrites the 'OnHoldInventory' sheet with the summary.
+ * Aggregates and exports orders that have not been previously exported for Comax.
  */
-function updateOnHoldInventorySummary() {
-    const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
-    const ordersM_sheet = referenceSS.getSheetByName("OrdersM");
-    const onHoldSheet = referenceSS.getSheetByName("OnHoldInventory");
-
-    if (!onHoldSheet) {
-        throw new Error("The 'OnHoldInventory' summary sheet was not found.");
-    }
-
-    const ordersM_data = ordersM_sheet.getDataRange().getValues();
-    const m_headers = ordersM_data.shift();
-
-    const statusCol = m_headers.indexOf('status');
-    
-    // Find all orders with 'on-hold' status
-    const onHoldOrders = ordersM_data.filter(row => row[statusCol] === 'on-hold');
-
-    const skuTotals = new Map();
-    // Find SKU and Quantity column indices dynamically
-    const skuQtyCols = [];
-    for (let i = 1; i <= 24; i++) {
-        const skuCol = m_headers.indexOf(`Product Item ${i} SKU`);
-        const qtyCol = m_headers.indexOf(`Product Item ${i} Quantity`);
-        if (skuCol > -1 && qtyCol > -1) {
-            skuQtyCols.push({ sku: skuCol, qty: qtyCol });
-        }
-    }
-
-    // Aggregate quantities for each SKU from on-hold orders
-    onHoldOrders.forEach(order => {
-        skuQtyCols.forEach(cols => {
-            const sku = order[cols.sku];
-            const quantity = parseInt(order[cols.qty], 10);
-            if (sku && !isNaN(quantity) && quantity > 0) {
-                skuTotals.set(sku, (skuTotals.get(sku) || 0) + quantity);
-            }
-        });
-    });
-
-    const summaryData = [["SKU", "OnHoldQuantity"]];
-    skuTotals.forEach((qty, sku) => {
-        summaryData.push([sku, qty]);
-    });
-    
-    // Overwrite the summary sheet with the new data
-    onHoldSheet.clear();
-    onHoldSheet.getRange(1, 1, summaryData.length, 2).setValues(summaryData);
-}
-
-// The export function remains unchanged, but is included for completeness
 function exportOrdersForComax() {
     try {
         const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
         const ordersM_sheet = referenceSS.getSheetByName("OrdersM");
         const orderLog_sheet = referenceSS.getSheetByName("OrderLog");
-        const ordersM_data = ordersM_sheet.getDataRange().getValues();
-        const orderLog_data = orderLog_sheet.getDataRange().getValues();
-        const m_headers = ordersM_data.shift();
-        const exportedOrderIdSet = new Set(orderLog_data.slice(1).map(row => row[0]));
-        const statusCol = m_headers.indexOf('status');
-        const orderIdCol = m_headers.indexOf('order_id');
-        const orderDateCol = m_headers.indexOf('order_date');
 
-        const eligibleOrders = ordersM_data.filter(row => {
-            const isProcessOrComp = row[statusCol] === 'processing' || row[statusCol] === 'completed';
-            const notExported = !exportedOrderIdSet.has(row[orderIdCol]);
-            return isProcessOrComp && notExported;
+        const orderLog_data = orderLog_sheet.getDataRange().getValues();
+        const log_headers = orderLog_data.shift();
+        const log_orderIdCol = log_headers.indexOf('order_id');
+        const log_exportStatusCol = log_headers.indexOf('comax_export_status');
+
+        if (log_exportStatusCol === -1) {
+            throw new Error("Missing 'comax_export_status' column in OrderLog.");
+        }
+
+        const eligibleLogEntries = orderLog_data.filter(row => row[log_exportStatusCol] === '');
+        const eligibleOrderIdSet = new Set(eligibleLogEntries.map(row => row[log_orderIdCol]));
+
+        if (eligibleOrderIdSet.size === 0) {
+            SpreadsheetApp.getUi().alert("No new orders are ready for export.");
+            return;
+        }
+
+        const ordersM_data = ordersM_sheet.getDataRange().getValues();
+        const m_headers = ordersM_data.shift();
+        const m_orderIdCol = m_headers.indexOf('order_id');
+        const m_statusCol = m_headers.indexOf('status');
+
+        const ordersToExport = ordersM_data.filter(row => {
+            const status = row[m_statusCol];
+            const isEligible = eligibleOrderIdSet.has(row[m_orderIdCol]);
+            return isEligible && (status === 'processing' || status === 'completed');
         });
 
-        if (eligibleOrders.length === 0) {
-            SpreadsheetApp.getUi().alert("No new orders are ready for export.");
-            return "No new orders with status 'processing' or 'completed' to export.";
+        if (ordersToExport.length === 0) {
+            SpreadsheetApp.getUi().alert("No new orders with status 'processing' or 'completed' to export.");
+            return;
         }
 
         const ui = SpreadsheetApp.getUi();
-        const response = ui.alert(
-            'Confirm Comax Export',
-            `This will export a summary for ${eligibleOrders.length} orders and mark them as exported. Are you sure you want to continue?`,
-            ui.ButtonSet.YES_NO
-        );
-
-        if (response !== ui.Button.YES) {
-            throw new Error("User cancelled the export.");
-        }
+        const response = ui.alert('Confirm Comax Export',`This will export a summary for ${ordersToExport.length} orders. Continue?`, ui.ButtonSet.YES_NO);
+        if (response !== ui.Button.YES) return "User cancelled export.";
 
         const skuTotals = new Map();
         const skuQtyCols = [];
@@ -183,7 +127,7 @@ function exportOrdersForComax() {
             }
         }
 
-        eligibleOrders.forEach(order => {
+        ordersToExport.forEach(order => {
             skuQtyCols.forEach(cols => {
                 const sku = order[cols.sku];
                 const quantity = parseInt(order[cols.qty], 10);
@@ -193,32 +137,32 @@ function exportOrdersForComax() {
             });
         });
 
-        if (skuTotals.size === 0) {
-            throw new Error("No valid line items with quantity found in the eligible orders.");
-        }
+        if (skuTotals.size === 0) throw new Error("No valid line items found in the eligible orders.");
 
         const csvData = [["SKU", "Quantity"]];
-        skuTotals.forEach((qty, sku) => {
-            csvData.push([sku, qty]);
-        });
+        skuTotals.forEach((qty, sku) => csvData.push([sku, qty]));
         const csvContent = csvData.map(e => e.join(",")).join("\n");
         const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM-dd-HH-mm");
         const filename = `OrderEx-${timestamp}.csv`;
         const exportFolder = DriveApp.getFolderById(activeConfig.comaxExportFolderId);
         exportFolder.createFile(filename, csvContent, MimeType.CSV);
 
-        const newLogEntries = eligibleOrders.map(order => {
-            const orderId = order[orderIdCol];
-            const orderDate = order[orderDateCol];
-            return [orderId, orderDate, null, null, new Date()];
+        // Update the OrderLog in memory
+        const exportedIdsThisRun = new Set(ordersToExport.map(row => row[m_orderIdCol]));
+        const now = new Date();
+        orderLog_data.forEach(row => {
+            if (exportedIdsThisRun.has(row[log_orderIdCol])) {
+                row[log_exportStatusCol] = now;
+            }
         });
 
-        orderLog_sheet.getRange(orderLog_sheet.getLastRow() + 1, 1, newLogEntries.length, newLogEntries[0].length).setValues(newLogEntries);
+        // Write the entire updated log back to the sheet
+        orderLog_sheet.getRange(2, 1, orderLog_data.length, log_headers.length).setValues(orderLog_data);
 
-        return `Export successful. ${eligibleOrders.length} orders aggregated into ${filename}.`;
+        return `Export successful. ${ordersToExport.length} orders aggregated into ${filename}.`;
 
     } catch (e) {
         Logger.log(`exportOrdersForComax failed: ${e.message}`);
-        throw new Error(e.message);
+        SpreadsheetApp.getUi().alert(`Export failed: ${e.message}`);
     }
 }

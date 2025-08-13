@@ -15,7 +15,7 @@ const C_SHEETS = {
 
 const C_COLS = {
     REVIEW: { ID: 1, NAME: 2, SKU: 3, COMAX_QTY: 4, NEW_QTY: 5, BRURYA: 6, STORAGE: 7, OFFICE: 8, SHOP: 9, ACCEPT: 10, NOTES: 11 },
-    TASKQ: { RELATED_ENTITY: 6, STATUS: 7, DONE_DATE: 12, NOTES: 13 },
+    TASKQ: { TYPE: 3, RELATED_ENTITY: 6, STATUS: 7, DONE_DATE: 12, NOTES: 13 },
     AUDIT: { SKU: 2, LAST_COUNT: 3, COMAX_QTY: 4, NEW_QTY: 5 },
     COMAX_M: { ID: 1, SKU: 2, NAME: 3, STOCK: 16 }
 };
@@ -60,12 +60,14 @@ function populateReviewSheet() {
         const auditMap = new Map(auditData.slice(1).map(r => [r[C_COLS.AUDIT.SKU - 1], r]));
         const comaxMap = new Map(comaxData.slice(1).map(r => [r[C_COLS.COMAX_M.SKU - 1], r]));
 
-        const reviewTasks = taskqData.filter(row => row[C_COLS.TASKQ.STATUS - 1] === 'Review');
+        const reviewTasks = taskqData.filter(row => row[C_COLS.TASKQ.STATUS - 1] === 'Review' && row[C_COLS.TASKQ.TYPE - 1] === 'Inventory Count');
 
         if (reviewTasks.length === 0) {
-            reviewSheet.getRange("A2").setValue("No items are currently awaiting review.");
-            return;
-        }
+          reviewSheet.getRange("A2").setValue("No items are currently awaiting review.");
+          SpreadsheetApp.setActiveSheet(reviewSheet);
+          ui.alert('No items are currently awaiting review.');
+          return;
+      }
 
         const rowsToWrite = reviewTasks.map(taskRow => {
             const sku = taskRow[C_COLS.TASKQ.RELATED_ENTITY - 1];

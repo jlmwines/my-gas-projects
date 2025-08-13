@@ -1,17 +1,15 @@
 /**
  * @file Menu.gs
  * @description Creates the main menu, shows the sidebar, and includes a sub-menu for state management.
- * @version 25-07-16-1521
+ * @version 25-08-10-0940
  */
 function createMenuAndShowSidebar() {
     const ui = SpreadsheetApp.getUi();
 
-    // Create the sub-menu for the new Inventory Review workflow
-    const reviewMenu = ui.createMenu('Inventory Review')
-        .addItem('1. Load Inventory for Review', 'populateReviewSheet')
-        .addSeparator()
-        .addItem('2. Mark All as Accepted', 'markAllAsAccepted')
-        .addItem('3. Update & Export Reviewed Items', 'processAndExportReviewedInventory');
+    // Create the sub-menu for Backup/Restore
+    const backupMenu = ui.createMenu('Backup')
+        .addItem('Snapshot', 'createManualSnapshot')
+        .addItem('Restore Snapshot', 'showAdvancedRestoreDialog');
 
     // Create the sub-menu for resetting the workflow state
     const resetMenu = ui.createMenu('Reset Workflow To...')
@@ -22,18 +20,17 @@ function createMenuAndShowSidebar() {
         .addItem('After Review', 'resetStatePostReview')
         .addItem('After Finalize', 'resetStatePostFinalize');
 
-    // Create the main menu and add all sub-menus
-    ui.createMenu('VinSync')
-        .addItem('Show Workflow Sidebar', 'showWorkflowSidebar')
+    // Create the main menu and add all items and sub-menus
+    ui.createMenu('JLM Wines')
+        .addItem('Show Sidebar', 'showWorkflowSidebar')
+        .addItem('Admin Sidebar', 'showAdminSidebar') // <-- NEW ITEM ADDED HERE
         .addSeparator()
-        .addSubMenu(reviewMenu) // Add the new Inventory Review sub-menu
+        .addItem('Review Product Details', 'loadProductDetailReviews')
+        .addItem('Approve Selected Details', 'processProductDetailApprovals')
         .addSeparator()
-        .addItem('Run Finalize Now', 'finalizeProductData')
+        .addSubMenu(backupMenu)
         .addSeparator()
-        .addItem('Export Inventory to CSV', 'exportInventoryAdjustments')
-        .addItem('Audit Low Inventory', 'AuditLowProducts')
-        .addSeparator()
-        .addSubMenu(resetMenu) // Add the reset sub-menu
+        .addSubMenu(resetMenu)
         .addToUi();
 
     // Show the sidebar on open
@@ -49,6 +46,15 @@ function createMenuAndShowSidebar() {
  */
 function showWorkflowSidebar() {
     const html = HtmlService.createHtmlOutputFromFile('Sidebar')
-        .setTitle('VinSync Workflow');
+        .setTitle('JLM Wines Workflow');
+    SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Opens the new admin workflow sidebar.
+ */
+function showAdminSidebar() {
+    const html = HtmlService.createHtmlOutputFromFile('AdminSidebar')
+        .setTitle('Operations Hub');
     SpreadsheetApp.getUi().showSidebar(html);
 }

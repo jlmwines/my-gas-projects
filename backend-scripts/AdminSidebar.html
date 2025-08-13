@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body { font-family: sans-serif; padding: 0; margin: 0; font-size: 14px; background-color: #f8f9fa;}
+        .accordion-section { border-bottom: 1px solid #ccc; }
+        .accordion-header { background-color: #f1f1f1; padding: 10px; cursor: pointer; font-weight: bold; position: relative; }
+        .accordion-header:hover { background-color: #e1e1e1; }
+        .accordion-content { display: none; padding: 15px; border-top: 1px solid #ccc; background-color: #fff;}
+        .accordion-header.active + .accordion-content { display: block; }
+        .sub-section-title { font-weight: bold; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        .sub-section-title:first-child { margin-top: 0; }
+        .loading { color: #888; }
+        label { display: block; margin-bottom: 5px; }
+        input, select, button { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 14px; }
+        button { background-color: #4285f4; color: white; border: none; cursor: pointer; text-align: center; border-radius: 4px;}
+        button.utility-btn { background-color: #6c757d; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        ul a { text-decoration: none; color: #0000EE; cursor: pointer; }
+        ul a:hover { text-decoration: underline; }
+        ul span { color: #555; }
+        
+        /* Styles for the Sync Panel */
+        #sync-buttons-container button {
+            text-align: left;
+            background-color: #ffffff;
+            color: #333;
+            border: 1px solid #ccc;
+            margin-bottom: 4px;
+        }
+        #sync-buttons-container button:hover:not(:disabled) {
+            background-color: #e9ecef;
+        }
+        #sync-buttons-container button:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+        }
+        .status-line {
+            font-size: 12px;
+            color: #6c757d;
+            padding: 0 4px 10px 4px;
+            min-height: 14px;
+        }
+        .indicator {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            transition: transform 0.2s ease-in-out;
+            border-top: 5px solid transparent;
+            border-left: 5px solid #555;
+            border-bottom: 5px solid transparent;
+            height: 0;
+            width: 0;
+        }
+        .accordion-header.active .indicator {
+            transform: translateY(-50%) rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sync-section" class="accordion-section">
+        <div class="accordion-header">Daily Sync<span class="indicator"></span></div>
+        <div class="accordion-content">
+            <div id="sync-buttons-container">
+                <button id="btn-step-beginSync" onclick="runSyncStep('beginSync', 'This will reset the workflow state and create a new backup. Proceed?')">1. Begin Sync</button>
+                <div id="status-beginSync" class="status-line"></div>
+
+                <button id="btn-step-ordersSync" onclick="runSyncStep('ordersSync', 'This will import and merge new orders. Proceed?')">2. Orders Sync</button>
+                <div id="status-ordersSync" class="status-line"></div>
+
+                <button id="btn-step-productSync" onclick="runSyncStep('productSync', 'This will import and process product files. Proceed?')">3. Product Sync</button>
+                <div id="status-productSync" class="status-line"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="review-section" class="accordion-section">
+        <div class="accordion-header">Review Tasks<span class="indicator"></span></div>
+        <div class="accordion-content">
+            <div id="review-tasks-list"><p class="loading">Loading...</p></div>
+        </div>
+    </div>
+
+    <div id="admin-tasks-section" class="accordion-section">
+        <div class="accordion-header">Admin Tasks<span class="indicator"></span></div>
+        <div class="accordion-content">
+            <div id="admin-assigned-tasks-list"><p class="loading">Loading...</p></div>
+        </div>
+    </div>
+
+    <div id="tasks-section" class="accordion-section">
+        <div class="accordion-header">Create Tasks <span class="indicator"></span></div>
+        <div class="accordion-content">
+            <p style="margin: 0 0 10px 0;">Assigned Inventory Tasks: <span id="task-count-display">...</span></p>
+            <button id="create-low-stock-btn">Create Low Stock Tasks</button>
+            <button id="create-periodic-btn">Create Periodic Review Tasks</button>
+        </div>
+    </div>
+
+    <div id="utilities-section" class="accordion-section">
+        <div class="accordion-header">Utilities & Settings <span class="indicator"></span></div>
+        <div class="accordion-content">
+            <div class="sub-section-title">General Utilities</div>
+            <button id="util-snapshot-btn">Create Manual Snapshot</button>
+            <button id="util-restore-btn">Restore from Snapshot</button>
+            <button id="util-archive-btn">Archive Old Orders</button>
+
+            <div class="sub-section-title">Workflow Reset</div>
+            <select id="util-reset-select">
+                <option value="" selected disabled>Select a reset point...</option>
+                <option value="resetStateToStart">Start of Workflow</option>
+                <option value="resetStatePostBackup">After Backup</option>
+                <option value="resetStatePostImportsAndOrders">After Imports & Orders</option>
+                <option value="resetStatePostReview">After Review</option>
+                <option value="resetStatePostFinalize">After Finalize</option>
+            </select>
+            <button id="util-reset-execute-btn" disabled>Execute Reset</button>
+
+            <div class="sub-section-title">Task Creation Settings</div>
+            <label for="setting-limit">Task Limit</label>
+            <input type="number" id="setting-limit">
+            <label for="setting-low-stock">Low Stock Threshold</label>
+            <input type="number" id="setting-low-stock">
+            <label for="setting-periodic">Periodic Review (Days)</label>
+            <input type="number" id="setting-periodic">
+            <button id="save-settings-btn">Save Settings</button>
+        </div>
+    </div>
+
+    <script>
+        // --- SYNC PANEL SCRIPT ---
+        function runSyncStep(stepName, confirmationMessage) {
+            if (confirmationMessage && !confirm(confirmationMessage)) return;
+            const button = document.getElementById('btn-step-' + stepName);
+            const status = document.getElementById('status-' + stepName);
+            button.disabled = true;
+            status.textContent = "Processing...";
+            
+            // Map stepName to backend function, now simplified
+            const functionMap = {
+                'beginSync': 'runInitialSyncStep',
+                'ordersSync': 'runOrdersStep',
+                'productSync': 'runProductsStep'
+            };
+            const functionName = functionMap[stepName];
+
+            google.script.run
+                .withSuccessHandler(result => {
+                    status.textContent = result;
+                    button.disabled = false;
+                })
+                .withFailureHandler(error => {
+                    status.textContent = "Error: " + error.message;
+                    button.disabled = false;
+                })
+                [functionName]();
+        }
+
+        // --- MAIN SIDEBAR SCRIPT ---
+        document.addEventListener("DOMContentLoaded", () => {
+            google.script.run
+                .withSuccessHandler(initializeSidebar)
+                .withFailureHandler(handleGenericFailure)
+                .getSidebarData();
+        });
+
+        function initializeSidebar(data) {
+            setupAccordion(data);
+            renderReviewTasks(data.adminTasks);
+            renderAdminAssignedTasks(data.bwTasks);
+            populateTaskCreatorPanel(data.taskPanel);
+            attachUtilityListeners();
+        }
+        
+        function setupAccordion(data) {
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const wasActive = header.classList.contains('active');
+                    
+                    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+                    document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+
+                    if (!wasActive) {
+                        content.style.display = 'block';
+                        header.classList.add('active');
+                    }
+                });
+            });
+
+            const reviewTasksExist = data.adminTasks && data.adminTasks.some(g => g.count > 0);
+            const adminTasksExist = data.bwTasks && data.bwTasks.some(g => g.count > 0);
+
+            let sectionToOpen = null;
+            if (data.isSyncCompletedToday === false) {
+                sectionToOpen = '#sync-section';
+            } else if (reviewTasksExist) {
+                sectionToOpen = '#review-section';
+            } else if (adminTasksExist) {
+                sectionToOpen = '#admin-tasks-section';
+            }
+
+            if (sectionToOpen) {
+                const header = document.querySelector(sectionToOpen + ' .accordion-header');
+                const content = document.querySelector(sectionToOpen + ' .accordion-content');
+                if (header && content) {
+                    header.classList.add('active');
+                    content.style.display = 'block';
+                }
+            }
+        }
+
+        function renderReviewTasks(tasks) {
+            const container = document.getElementById('review-tasks-list');
+            container.innerHTML = '';
+
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = '<p style="margin:0;">No review tasks defined.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.style.listStyleType = 'none';
+            list.style.margin = '0';
+            list.style.padding = '0';
+
+            tasks.forEach(group => {
+                const listItem = document.createElement('li');
+                listItem.style.marginBottom = '8px';
+                const text = `${group.label}: ${group.count}`;
+
+                if (group.count > 0 && group.functionName) {
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = text;
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        setLoadingState(true);
+                        google.script.run
+                            .withSuccessHandler(handleGenericSuccess)
+                            .withFailureHandler(handleGenericFailure)
+                            [group.functionName]();
+                    };
+                    listItem.appendChild(link);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = text;
+                    listItem.appendChild(span);
+                }
+                list.appendChild(listItem);
+            });
+            container.appendChild(list);
+        }
+
+        function renderAdminAssignedTasks(tasks) {
+            const container = document.getElementById('admin-assigned-tasks-list');
+            container.innerHTML = '';
+
+            if (!tasks) {
+                container.innerHTML = '<p style="margin:0;">Could not load admin tasks.</p>';
+                return;
+            }
+            if (tasks.length === 0) {
+                container.innerHTML = '<p style="margin:0;">No admin task types assigned.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.style.listStyleType = 'none';
+            list.style.margin = '0';
+            list.style.padding = '0';
+
+            tasks.forEach(group => {
+                const listItem = document.createElement('li');
+                listItem.style.marginBottom = '8px';
+                const span = document.createElement('span');
+                span.textContent = `${group.label}: ${group.count}`;
+                listItem.appendChild(span);
+                list.appendChild(listItem);
+            });
+            container.appendChild(list);
+        }
+        
+        function populateTaskCreatorPanel(data) {
+            if (!data || data.error) {
+                handleGenericFailure({ message: data ? data.error : "Failed to load task panel info." });
+                return;
+            }
+            document.getElementById('task-count-display').textContent = `${data.assignedTaskCount} / ${data.settings.defaultLimit}`;
+            document.getElementById('setting-limit').value = data.settings.defaultLimit;
+            document.getElementById('setting-low-stock').value = data.settings.lowStock;
+            document.getElementById('setting-periodic').value = data.settings.periodicDays;
+            
+            document.getElementById('create-low-stock-btn').addEventListener('click', () => createTask('Low Stock'));
+            document.getElementById('create-periodic-btn').addEventListener('click', () => createTask('Periodic Review'));
+        }
+
+        function attachUtilityListeners() {
+            document.getElementById('util-snapshot-btn').addEventListener('click', () => runUtility('createManualSnapshot', "Create a new manual snapshot?"));
+            document.getElementById('util-restore-btn').addEventListener('click', () => runUtility('showAdvancedRestoreDialog'));
+            document.getElementById('util-archive-btn').addEventListener('click', () => runUtility('archiveOldOrderLogRecords', "This will archive old order records. Proceed?"));
+
+            const resetSelect = document.getElementById('util-reset-select');
+            const resetExecuteBtn = document.getElementById('util-reset-execute-btn');
+            resetSelect.addEventListener('change', () => {
+                resetExecuteBtn.disabled = !resetSelect.value;
+            });
+            resetExecuteBtn.addEventListener('click', () => {
+                const functionToRun = resetSelect.value;
+                if (functionToRun) {
+                    const selectedText = resetSelect.options[resetSelect.selectedIndex].text;
+                    runUtility(functionToRun, `Are you sure you want to reset the workflow to: "${selectedText}"?`);
+                    resetSelect.value = '';
+                    resetExecuteBtn.disabled = true;
+                }
+            });
+            
+            document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
+        }
+        
+        function runUtility(functionName, confirmMessage) {
+            if (confirmMessage && !confirm(confirmMessage)) return;
+            setLoadingState(true);
+            google.script.run
+                .withSuccessHandler(handleGenericSuccess)
+                .withFailureHandler(handleGenericFailure)
+                [functionName]();
+        }
+
+        function createTask(type) {
+            setLoadingState(true);
+            google.script.run
+                .withSuccessHandler(handleGenericSuccess)
+                .withFailureHandler(handleGenericFailure)
+                .createTasksFromSidebar(type);
+        }
+
+        function saveSettings() {
+            setLoadingState(true);
+            const settings = {
+                defaultLimit: document.getElementById('setting-limit').value,
+                lowStock: document.getElementById('setting-low-stock').value,
+                periodicDays: document.getElementById('setting-periodic').value
+            };
+            google.script.run
+                .withSuccessHandler(handleGenericSuccess)
+                .withFailureHandler(handleGenericFailure)
+                .saveTaskSettings(settings);
+        }
+
+        function handleGenericSuccess(result) {
+            const message = (result && typeof result === 'string') ? result : 'Operation successful. Reloading...';
+            alert(message);
+            document.location.reload();
+        }
+
+        function handleGenericFailure(error) {
+            alert('Error: ' + error.message);
+            setLoadingState(false);
+        }
+        
+        function setLoadingState(isLoading) {
+            document.querySelectorAll('button, a').forEach(el => {
+                if (isLoading) {
+                    el.style.pointerEvents = 'none';
+                    el.style.opacity = '0.5';
+                } else {
+                    el.style.pointerEvents = 'auto';
+                    el.style.opacity = '1';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
