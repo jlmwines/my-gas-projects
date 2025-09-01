@@ -1,71 +1,14 @@
 /**
  * @file PackingSlipConsolidated.gs
- * @description Client-side functions for triggering packing slip generation via the Web App.
- * @version 2025-07-27-1032
+ * @description Server-side logic for generating consolidated packing slips.
+ * @version 2025-07-28-1125 // Updated version number
  * @environment Frontend
  */
 
-// --- CLIENT-SIDE FUNCTIONS ---
-function generateSelectedPackingDocs() {
-    const ui = SpreadsheetApp.getUi();
-    const frontendSS = SpreadsheetApp.getActiveSpreadsheet();
-    const displaySheet = frontendSS.getSheetByName(G.SHEET_NAMES.PACKING_DISPLAY);
-    if (!displaySheet) {
-        ui.alert("PackingDisplay sheet not found. Please run 'Refresh List' first.");
-        return;
-    }
-    const displayData = displaySheet.getDataRange().getValues();
-    const displayHeaders = displayData.shift();
-    const selectColIndex = displayHeaders.indexOf("Select");
-    const orderNumColIndex = displayHeaders.indexOf("Order Number");
-    if (selectColIndex === -1 || orderNumColIndex === -1) {
-        ui.alert("Could not find 'Select' or 'Order Number' columns in the PackingDisplay sheet.");
-        return;
-    }
-    const selectedOrderNumbers = displayData
-        .filter(row => row[selectColIndex] === true)
-        .map(row => String(row[orderNumColIndex]).trim());
-    if (selectedOrderNumbers.length === 0) {
-        ui.alert("No orders selected. Please check the boxes for the orders you wish to generate documents for.");
-        return;
-    }
-    callPackingDocsWebApp(selectedOrderNumbers);
-}
-
-function createConsolidatedPackingDocs() {
-    callPackingDocsWebApp([]);
-}
-
-function callPackingDocsWebApp(orderNumbers) {
-    const ui = SpreadsheetApp.getUi();
-    ui.showModalDialog(HtmlService.createHtmlOutput('<b>Processing...</b><br>Please wait.'), 'Generating Documents');
-    try {
-        const payload = { command: 'generatePackingDocs', data: orderNumbers };
-        const options = {
-            method: 'post',
-            contentType: 'application/json',
-            payload: JSON.stringify(payload),
-            headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() },
-            muteHttpExceptions: true
-        };
-        const apiResponse = UrlFetchApp.fetch(G.WEB_APP_URL, options);
-        const result = JSON.parse(apiResponse.getContentText());
-        if (result.status === 'success') {
-            const htmlOutput = HtmlService.createHtmlOutput(result.message).setWidth(400).setHeight(result.height || 150);
-            ui.showModalDialog(htmlOutput, 'Documents Created');
-        } else {
-            throw new Error(result.message);
-        }
-    } catch (err) {
-        Logger.log(`callPackingDocsWebApp client-side error: ${err.message}`);
-        SpreadsheetApp.getUi().alert(`An error occurred: ${err.message}`);
-    }
-}
-
 // --- SERVER-SIDE WORKER ---
 function _server_generatePackingDocs(orderNumbersToProcess) {
-    const IS_TEST_RUN = true;
-    const MAX_PRODUCTS_PER_PAGE = 7;
+    const IS_TEST_RUN = false;
+    const MAX_PRODUCTS_PER_PAGE = 6;
     const isValidLine = (line) => line && line.trim().replace(/\u200E|\u200F/g, '').length > 0;
 
     try {
@@ -75,8 +18,10 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
         const packingRows_sheet = referenceSS.getSheetByName(G.SHEET_NAMES.PACKING_ROWS);
         const orderLog_sheet = referenceSS.getSheetByName(G.SHEET_NAMES.ORDER_LOG);
         const detailsM_sheet = referenceSS.getSheetByName("DetailsM");
-        const detailsC_sheet = referenceSS.getSheetByName("DetailsC");
-        if (!ordersM_sheet || !packingQueue_sheet || !packingRows_sheet || !orderLog_sheet || !detailsM_sheet || !detailsC_sheet) throw new Error("One or more required sheets are missing in the Reference file.");
+        const detailsC_sheet = referenceSS.getSheetByName("DetailsC"); // CORRECTED
+        if (!ordersM_sheet || !packingQueue_sheet || !packingRows_sheet || !orderLog_sheet || !detailsM_sheet || !detailsC_sheet) {
+            throw new Error("One or more required sheets are missing in the Reference file.");
+        }
 
         let selectedOrderNumbers = [];
         if (orderNumbersToProcess && orderNumbersToProcess.length > 0) {
@@ -87,7 +32,9 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
             const col = packingQueueHeaders.indexOf(G.HEADERS.PACKING_QUEUE_ORDER_NUMBER);
             selectedOrderNumbers = packingQueueData.map(row => String(row[col]).trim()).filter(Boolean);
         }
-        if (selectedOrderNumbers.length === 0) return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'No orders were found to process.' })).setMimeType(ContentService.MimeType.JSON);
+        if (selectedOrderNumbers.length === 0) {
+            return { status: 'success', message: 'No orders were found to process.' };
+        }
 
         const ordersMData = ordersM_sheet.getDataRange().getValues();
         const ordersMHeaders = ordersMData.shift();
@@ -123,8 +70,8 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
             const detail = skuToDetailMap.get(sku) || {};
             const hebrewDetails = [detail.nameHE || '',
                 [ detail.intensity ? `עוצמה (1-5): ${detail.intensity}` : null,
-                  detail.complexity ? `מורכבות (1-5): ${detail.complexity}` : null,
-                  (detail.acidity && detail.acidity !== '') ? `חומציות (1-5): ${detail.acidity}` : null
+                    detail.complexity ? `מורכבות (1-5): ${detail.complexity}` : null,
+                    (detail.acidity && detail.acidity !== '') ? `חומציות (1-5): ${detail.acidity}` : null
                 ].filter(p => p).join(', '),
                 detail.harmonizeHE ? `הרמוניה עם: טעמי ${String(detail.harmonizeHE).trim()}` : '',
                 detail.contrastHE ? `קונטרסט עם: טעמי ${String(detail.contrastHE).trim()}` : '',
@@ -132,8 +79,8 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
             ].filter(isValidLine).join('\n');
             const englishDetails = [detail.nameEN || '',
                 [ detail.intensity ? `Intensity (1-5): ${detail.intensity}` : null,
-                  detail.complexity ? `Complexity (1-5): ${detail.complexity}` : null,
-                  (detail.acidity && detail.acidity !== '') ? `Acidity (1-5): ${detail.acidity}` : null
+                    detail.complexity ? `Complexity (1-5): ${detail.complexity}` : null,
+                    (detail.acidity && detail.acidity !== '') ? `Acidity (1-5): ${detail.acidity}` : null
                 ].filter(p => p).join(', '),
                 detail.harmonizeEN ? `Harmonize with ${String(detail.harmonizeEN).trim()} flavors` : '',
                 detail.contrastEN ? `Contrast with ${String(detail.contrastEN).trim()} flavors` : '',
@@ -156,7 +103,7 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
         const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd-HHmm");
         const newPackingSlipFile = DriveApp.getFileById(G.FILE_IDS.PACKING_SLIP_TEMPLATE).makeCopy(`Packing Slips ${timestamp}`);
         const packingSlipDoc = DocumentApp.openById(newPackingSlipFile.getId());
-        const packingSlipBody = packingSlipDoc.getBody(); // <-- ADD THIS LINE
+        const packingSlipBody = packingSlipDoc.getBody();
         packingSlipBody.clear();
         
         let notesDocUrl = null;
@@ -183,14 +130,14 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
         const ordersProcessedForLog = [];
         selectedOrderNumbers.forEach((orderNumber, orderIndex) => {
             const ordersMRow = ordersMMap.get(orderNumber);
-            const orderPageSplits = ordersPageSplits.get(orderNumber);
-            if (!ordersMRow || !orderPageSplits || orderPageSplits.length === 0) return;
-            orderPageSplits.forEach((productsForThisPage, pageNumIndex) => {
+            const splitsForThisOrder = ordersPageSplits.get(orderNumber); // CORRECTED
+            if (!ordersMRow || !splitsForThisOrder || splitsForThisOrder.length === 0) return;
+            splitsForThisOrder.forEach((productsForThisPage, pageNumIndex) => {
                 if (orderIndex > 0 || pageNumIndex > 0) packingSlipBody.appendPageBreak();
                 const firstName = ordersMRow[ordersMHeaders.indexOf("shipping_first_name")] || "";
                 const lastName = ordersMRow[ordersMHeaders.indexOf("shipping_last_name")] || "";
                 const shippingName = `${firstName} ${lastName}`.trim();
-                packingSlipBody.appendParagraph(`  ${shippingName}  `).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
+                packingSlipBody.appendParagraph(`   ${shippingName}   `).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
                 packingSlipBody.appendParagraph(`${ordersMRow[ordersMHeaders.indexOf("shipping_address_1")] || ""}` + (ordersMRow[ordersMHeaders.indexOf("shipping_address_2")] ? `, ${ordersMRow[ordersMHeaders.indexOf("shipping_address_2")]}` : '') + `, ${ordersMRow[ordersMHeaders.indexOf("shipping_city")] || ""}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(false).setFontSize(null);
                 packingSlipBody.appendParagraph(`Phone: ${ordersMRow[ordersMHeaders.indexOf("shipping_phone")] || ""}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
                 packingSlipBody.appendParagraph(`Order: ${orderNumber} הזמנה`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
@@ -224,7 +171,7 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
                         heLines.slice(1).forEach(line => cellHE.appendParagraph(line).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(false));
                     }
                 });
-                if (pageNumIndex + 1 === orderPageSplits.length) {
+                if (pageNumIndex + 1 === splitsForThisOrder.length) {
                     const totalQuantity = (packingRowsByOrder.get(orderNumber) || []).reduce((sum, r) => sum + (Number(r[packingRowsHeaders.indexOf("Quantity")]) || 0), 0);
                     const totalsRow = table.appendTableRow();
                     totalsRow.appendTableCell().appendParagraph(`Total`).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(true);
@@ -261,10 +208,28 @@ function _server_generatePackingDocs(orderNumbersToProcess) {
             htmlMessage += `<br><br>Customer notes document also created.<br><a href="${notesDocUrl}" target="_blank">Open Order Notes</a>`;
         }
         
-        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: htmlMessage, height: notesDocUrl ? 200 : 150 })).setMimeType(ContentService.MimeType.JSON);
+        // CORRECTED: Return a plain object for google.script.run
+        return { status: 'success', message: htmlMessage };
 
     } catch (e) {
         Logger.log(`_server_generatePackingDocs Error: ${e.message} Stack: ${e.stack}`);
+        // CORRECTED: Throw error for google.script.run to catch
         throw new Error(`Server-side error creating docs: ${e.message}`);
     }
+}
+/**
+ * Public function called by the client-side sidebar to generate documents.
+ * It calls the main worker function and handles returning results or errors.
+ */
+function generatePackingDocs(orderNumbersToProcess) {
+  // This function will be called directly from your sidebar's Javascript.
+  try {
+    Logger.log(`generatePackingDocs wrapper called with ${orderNumbersToProcess.length} orders.`);
+    const result = _server_generatePackingDocs(orderNumbersToProcess);
+    Logger.log('Wrapper function finished successfully.');
+    return result; // The result object is automatically sent to the client's success handler.
+  } catch (e) {
+    Logger.log(`ERROR in generatePackingDocs wrapper: ${e.message}`);
+    throw new Error(e.message); // This sends the error to the client's failure handler.
+  }
 }

@@ -13,15 +13,22 @@
  * @throws {Error} If the folder or file is not found.
  */
 function getFileFromImportFolder(fileName) {
-    const folders = DriveApp.getFoldersByName('Import');
-    if (!folders.hasNext()) {
-        throw new Error("The 'Import' folder was not found in your Google Drive.");
+    // Use the specific Folder ID from Globals.js for reliability
+    const importFolderId = activeConfig.importFolderId;
+    if (!importFolderId) {
+        throw new Error("The 'Import' folder ID is not defined in Globals.js.");
     }
-    const importFolder = folders.next();
+    let importFolder;
+    try {
+        importFolder = DriveApp.getFolderById(importFolderId);
+    } catch (e) {
+        Logger.log(`Failed to get folder by ID. Error: ${e.message}`);
+        throw new Error(`Could not access the 'Import' folder. Please check that the folder with ID "${importFolderId}" exists and you have access to it.`);
+    }
 
     const files = importFolder.getFilesByName(fileName);
     if (!files.hasNext()) {
-        throw new Error(`The file "${fileName}" was not found inside the "Import" folder.`);
+        throw new Error(`The file "${fileName}" was not found in the 'Import' folder with ID "${importFolderId}".`);
     }
     return files.next();
 }

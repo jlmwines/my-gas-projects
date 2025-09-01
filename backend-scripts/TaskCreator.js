@@ -159,9 +159,17 @@ function createTasks(options) {
             const auditMap = new Map(auditData.map(r => [r[1], r[2]])); // Map of SKU -> Last Audit Date
 
             let candidateProducts = [];
+            const periodicCutoff = new Date(new Date().setDate(new Date().getDate() - periodicDays)); // Uses periodicDays
+
             if (options.type === 'Low Stock') {
                 candidateProducts = allEligibleProducts
-                    .filter(r => r[CMX_STOCK_COL] !== '' && r[CMX_STOCK_COL] !== 0 && r[CMX_STOCK_COL] < lowStockThreshold) // Uses lowStockThreshold
+                    .filter(r => {
+                        const lastCountDate = auditMap.get(r[CMX_SKU_COL]);
+                        const stock = r[CMX_STOCK_COL];
+                        const isLowStock = stock !== '' && stock !== 0 && stock < lowStockThreshold;
+                        const isPastCutoff = !lastCountDate || (lastCountDate instanceof Date && lastCountDate < periodicCutoff);
+                        return isLowStock && isPastCutoff;
+                    })
                     .map(p => ({
                         sku: p[CMX_SKU_COL],
                         name: p[CMX_PRODUCT_NAME_COL],
@@ -171,7 +179,6 @@ function createTasks(options) {
                     .sort((a, b) => (b.isWeb - a.isWeb) || (a.lastCount || 0) - (b.lastCount || 0));
 
             } else { // Periodic Review
-                const periodicCutoff = new Date(new Date().setDate(new Date().getDate() - periodicDays)); // Uses periodicDays
                 candidateProducts = allEligibleProducts
                     .filter(r => {
                         const lastCountDate = auditMap.get(r[CMX_SKU_COL]);

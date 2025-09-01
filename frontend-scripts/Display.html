@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        h4 {
+            font-size: 13px;
+            font-weight: normal;
+            color: #2c4d32;
+            margin-top: 10px;
+            margin-bottom: 6px;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .container {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .user-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .user-row label {
+            margin-bottom: 0;
+            margin-right: 5px;
+            flex-shrink: 0;
+            font-weight: normal;
+        }
+        .user-row select {
+            margin-bottom: 0;
+            flex-grow: 1;
+        }
+        .refresh-icon {
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #6d213c;
+            transition: transform 0.5s ease;
+            line-height: 1;
+        }
+        .refresh-icon:hover {
+            color: #53192d;
+        }
+        .refresh-icon.spin {
+            transform: rotate(360deg);
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 13px;
+        }
+        select, button {
+            width: 100%;
+            padding: 4px 6px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        button {
+            background-color: #6d213c;
+            color: white;
+            border-color: #6d213c;
+            transition: background-color 0.2s ease;
+        }
+        button:hover {
+            background-color: #53192d;
+            border-color: #53192d;
+        }
+        button:disabled {
+            background-color: #f5f1e8;
+            color: #7a7163;
+            cursor: not-allowed;
+            border-color: #e6e0d4;
+        }
+        .message-area {
+            padding: 4px 6px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+            color: #495057;
+            font-size: 12px;
+            min-height: 16px;
+            margin-bottom: 6px;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="user-row">
+            <label for="user-dropdown">User:</label>
+            <select id="user-dropdown" onchange="onUserFilterSelected(this.value)">
+                <option value="All Users">-- All Users --</option>
+            </select>
+            <span id="refresh-icon" class="refresh-icon" onclick="globalRefresh()" title="Refresh All">&#x21bb;</span>
+        </div>
+        <div id="filter-message" class="message-area">All tasks displayed.</div>
+
+        <h4>Orders</h4>
+        <div id="packing-message" class="message-area"></div>
+        <button id="refresh-packing-btn" onclick="refreshPackingList()">Refresh Orders</button>
+        <button id="generate-packing-selected-btn" onclick="generatePackingSlips('selected')">Create Selected</button>
+        <button id="generate-packing-all-btn" onclick="generatePackingSlips('all')">Create All</button>
+
+        <h4>Inventory</h4>
+        <div id="inventory-message" class="message-area"></div>
+        <button id="sync-comax-btn" onclick="syncComaxDirectory()">Sync Comax</button>
+        <button id="load-brurya-btn" onclick="loadBruryaSheet()" style="margin-top: 5px;">Load Brurya Counts</button>
+        <button id="submit-brurya-btn" onclick="submitBruryaCounts()">Submit Brurya Counts</button>
+        <button id="load-inventory-btn" onclick="loadInventoryTasks()" style="margin-top: 5px;">Load Product Counts</button>
+        <button id="submit-inventory-btn" onclick="submitInventoryCounts()">Submit Product Counts</button>
+
+        <h4>Products</h4>
+        <div id="details-message" class="message-area"></div>
+        <button id="list-updates-btn" onclick="listProductDetailTasks()">List Updates</button>
+        <button id="view-details-btn" onclick="viewProductDetails()">View Details</button>
+        <button id="vintage-check-btn" onclick="runVintageCheck()" style="margin-top: 5px;">Vintage Check</button>
+        <button id="wines-to-add-btn" onclick="runWinesToAdd()">Add New Wines</button>
+
+    </div>
+
+    <script>
+    // --- Central Server Communication ---
+    function callServer(command, data, user) {
+        return new Promise((resolve, reject) => {
+            const payload = { command, data, user };
+            google.script.run
+                .withSuccessHandler(response => {
+                    if (response === null) {
+                        resolve({ status: 'success', message: 'Server task completed.' });
+                        return;
+                    }
+                    try {
+                        const result = JSON.parse(response);
+                        if (result.status === 'success') {
+                            resolve(result);
+                        } else {
+                            reject(new Error(result.message || 'An unknown server error occurred.'));
+                        }
+                    } catch (e) {
+                        reject(new Error('Failed to parse server response: ' + e.message));
+                    }
+                })
+                .withFailureHandler(reject)
+                .doPost({ postData: { contents: JSON.stringify(payload) } });
+        });
+    }
+
+    // --- Global State ---
+    let selectedFilterUser = 'All Users';
+
+    // --- Initialization and Global Actions ---
+    window.onload = function() {
+        setInitialButtonStates();
+        google.script.run
+            .withSuccessHandler(populateUserFilterDropdown)
+            .withFailureHandler(showErrorInFilterSection)
+            .getUsersForSidebar();
+    };
+
+    function setInitialButtonStates() {
+        document.getElementById('submit-inventory-btn').disabled = true;
+        document.getElementById('submit-brurya-btn').disabled = true;
+        document.getElementById('generate-packing-selected-btn').disabled = true;
+        document.getElementById('generate-packing-all-btn').disabled = true;
+        document.getElementById('view-details-btn').disabled = true;
+    }
+
+    function globalRefresh() {
+        const icon = document.getElementById('refresh-icon');
+        icon.classList.add('spin');
+        setInitialButtonStates();
+        listProductDetailTasks();
+        loadInventoryTasks();
+        refreshPackingList();
+        setTimeout(() => icon.classList.remove('spin'), 500);
+    }
+
+    // --- UI Helpers ---
+    function populateUserFilterDropdown(users) {
+        const dropdown = document.getElementById('user-dropdown');
+        users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user;
+            option.textContent = user;
+            dropdown.appendChild(option);
+        });
+        document.getElementById('filter-message').textContent = 'Displaying tasks for all users.';
+    }
+
+    function onUserFilterSelected(user) {
+        selectedFilterUser = user;
+        document.getElementById('filter-message').textContent = user === 'All Users' ? 'Displaying tasks for all users.' : `Displaying tasks for: ${selectedFilterUser}.`;
+        globalRefresh();
+    }
+
+    function showMessage(elementId, message, isError = false) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = message;
+        element.className = 'message-area ' + (isError ? 'error-message' : 'success-message');
+    }
+
+    function clearMessage(elementId) {
+        const element = document.getElementById(elementId);
+        element.textContent = '';
+        element.className = 'message-area';
+    }
+
+    function showErrorInFilterSection(error) {
+        showMessage('filter-message', `Error loading users: ${error.message}`, true);
+    }
+
+    // --- Packing Slip Workflow ---
+    function refreshPackingList() {
+        document.getElementById('generate-packing-selected-btn').disabled = true;
+        document.getElementById('generate-packing-all-btn').disabled = true;
+        clearMessage('packing-message');
+        document.body.style.cursor = 'wait';
+        showMessage('packing-message', 'Refreshing packing list...');
+        google.script.run
+            .withSuccessHandler(function(result) {
+                document.body.style.cursor = 'default';
+                showMessage('packing-message', result.message, result.status !== 'success');
+                if (result.status === 'success') {
+                    document.getElementById('generate-packing-selected-btn').disabled = false;
+                    document.getElementById('generate-packing-all-btn').disabled = false;
+                }
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('packing-message', `Error refreshing list: ${error.message}`, true);
+            })
+            .refreshAndWritePackingListServer();
+    }
+
+    function generatePackingSlips(type) {
+        showMessage('packing-message', `Generating packing slips for ${type} orders...`);
+        document.body.style.cursor = 'wait';
+
+        function handleSuccess(result) {
+            document.body.style.cursor = 'default';
+            if (result.status !== 'success') {
+                showMessage('packing-message', result.message, true);
+                return;
+            }
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = result.message;
+            const links = tempDiv.querySelectorAll('a');
+            if (links.length > 0) {
+                links.forEach(link => window.open(link.href, '_blank'));
+                showMessage('packing-message', 'Documents created. Check pop-ups.', false);
+            } else {
+                showMessage('packing-message', result.message, false);
+            }
+            refreshPackingList();
+        }
+
+        function handleError(error) {
+            document.body.style.cursor = 'default';
+            showMessage('packing-message', `Error generating slips: ${error.message}`, true);
+        }
+
+        if (type === 'all') {
+            callServer('generatePackingDocs', [])
+                .then(handleSuccess)
+                .catch(handleError);
+        } else { // 'selected'
+            google.script.run
+                .withSuccessHandler(handleSuccess)
+                .withFailureHandler(handleError)
+                .processSelectedOrdersServer();
+        }
+    }
+
+    // --- Other Feature Workflows ---
+    function syncComaxDirectory() {
+        clearMessage('inventory-message');
+        document.body.style.cursor = 'wait';
+        showMessage('inventory-message', 'Syncing Comax directory...');
+        google.script.run
+            .withSuccessHandler(function(result) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', result.message, result.status !== 'success');
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', `Error syncing Comax: ${error.message}`, true);
+            })
+            ._server_getComaxData();
+    }
+
+    function loadBruryaSheet() {
+        document.getElementById('submit-brurya-btn').disabled = true;
+        clearMessage('inventory-message');
+        document.body.style.cursor = 'wait';
+        showMessage('inventory-message', 'Loading Brurya sheet...');
+        google.script.run
+            .withSuccessHandler(function(result) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', result.message, result.status !== 'success');
+                if (result.status === 'success') {
+                    document.getElementById('submit-brurya-btn').disabled = false;
+                }
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', `Error loading Brurya sheet: ${error.message}`, true);
+            })
+            .loadBruryaSheetServer();
+    }
+
+    async function submitBruryaCounts() {
+        clearMessage('inventory-message');
+        document.body.style.cursor = 'wait';
+        showMessage('inventory-message', 'Submitting Brurya counts...');
+        try {
+            const sheetData = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getBruryaSheetData();
+            });
+            const dataToSubmit = sheetData.filter(row => row[0]);
+            if (dataToSubmit.length === 0) {
+                throw new Error("No items found in Brurya sheet to submit.");
+            }
+            const result = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).submitBruryaCountsViaUrlFetchServer(dataToSubmit);
+            });
+            document.body.style.cursor = 'default';
+            showMessage('inventory-message', result.message, result.status !== 'success');
+            if (result.submissionOccurred) {
+                loadBruryaSheet();
+            }
+        } catch (error) {
+            document.body.style.cursor = 'default';
+            showMessage('inventory-message', `Error submitting Brurya counts: ${error.message}`, true);
+        }
+    }
+
+    function loadInventoryTasks() {
+        document.getElementById('submit-inventory-btn').disabled = true;
+        clearMessage('inventory-message');
+        document.body.style.cursor = 'wait';
+        showMessage('inventory-message', 'Loading inventory tasks...');
+        google.script.run
+            .withSuccessHandler(function(result) {
+                if (result.status === 'success') {
+                    google.script.run
+                        .withSuccessHandler(function() {
+                            document.body.style.cursor = 'default';
+                            showMessage('inventory-message', result.message || 'Inventory tasks loaded.', false);
+                            if (result.data && result.data.length > 0) {
+                                document.getElementById('submit-inventory-btn').disabled = false;
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            document.body.style.cursor = 'default';
+                            showMessage('inventory-message', `Error writing to sheet: ${error.message}`, true);
+                        })
+                        .writeInventoryDataToSheet(result.data);
+                } else {
+                    document.body.style.cursor = 'default';
+                    showMessage('inventory-message', result.message || 'Failed to load tasks.', true);
+                }
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', `Error loading tasks: ${error.message}`, true);
+            })
+            .loadInventoryTasksServer(selectedFilterUser);
+    }
+
+    function submitInventoryCounts() {
+        clearMessage('inventory-message');
+        document.body.style.cursor = 'wait';
+        showMessage('inventory-message', 'Submitting inventory counts...');
+        google.script.run
+            .withSuccessHandler(function(sheetData) {
+                const inventoryUpdates = sheetData.map(row => ({
+                    sku: row[2],
+                    brurya: row[6],
+                    storage: row[7],
+                    office: row[8],
+                    shop: row[9]
+                })).filter(item => item.sku && (item.storage !== '' || item.office !== '' || item.shop !== ''));
+
+                if (inventoryUpdates.length === 0) {
+                    document.body.style.cursor = 'default';
+                    showMessage('inventory-message', 'No new quantities entered. Submission cancelled.', true);
+                    return;
+                }
+
+                google.script.run
+                    .withSuccessHandler(function(result) {
+                        document.body.style.cursor = 'default';
+                        showMessage('inventory-message', result.message, result.status !== 'success');
+                        if (result.status === 'success') {
+                            loadInventoryTasks();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        document.body.style.cursor = 'default';
+                        showMessage('inventory-message', `Error submitting counts: ${error.message}`, true);
+                    })
+                    .submitInventoryCountsServer(inventoryUpdates);
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('inventory-message', `Error reading sheet for submission: ${error.message}`, true);
+            })
+            .getInventorySheetData();
+    }
+
+    function listProductDetailTasks() {
+        document.getElementById('view-details-btn').disabled = true;
+        clearMessage('details-message');
+        document.body.style.cursor = 'wait';
+        showMessage('details-message', 'Fetching product update tasks...');
+        google.script.run
+            .withSuccessHandler(function(result) {
+                document.body.style.cursor = 'default';
+                showMessage('details-message', result.message || 'Task list processed.', result.status !== 'success');
+                if (result.status === 'success' && result.data && result.data.length > 0) {
+                    document.getElementById('view-details-btn').disabled = false;
+                }
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('details-message', `Error fetching tasks: ${error.message}`, true);
+            })
+            ._server_getProductDetailTasks(selectedFilterUser);
+    }
+
+    function viewProductDetails() {
+        showMessage('details-message', 'Getting selected product...', false);
+        document.body.style.cursor = 'wait';
+        google.script.run
+            .withSuccessHandler(function(result) {
+                if (result.status === 'success' && result.sku) {
+                    showMessage('details-message', `Opening editor for ${result.sku}...`, false);
+                    google.script.run
+                        .withSuccessHandler(function() {
+                            document.body.style.cursor = 'default';
+                            const pollInterval = setInterval(function() {
+                                google.script.run
+                                    .withSuccessHandler(function(isComplete) {
+                                        if (isComplete) {
+                                            clearInterval(pollInterval);
+                                            listProductDetailTasks();
+                                        }
+                                    })
+                                    ._server_checkModalStatus();
+                            }, 2000);
+                        })
+                        .withFailureHandler(function(error) {
+                            document.body.style.cursor = 'default';
+                            showMessage('details-message', `Error opening form: ${error.message}`, true);
+                        })
+                        .showDetailsForm(result.sku, selectedFilterUser);
+                } else {
+                    document.body.style.cursor = 'default';
+                    showMessage('details-message', result.message, true);
+                }
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('details-message', `Error getting selection: ${error.message}`, true);
+            })
+            ._server_getSkuFromActiveCell();
+    }
+    
+    // --- Product Reports ---
+    function runVintageCheck() {
+        handleReportRequest('Vintage Check', '_server_getVintageCheckData');
+    }
+
+    function runWinesToAdd() {
+        handleReportRequest('Wines to Add', '_server_getWinesToAddData');
+    }
+
+    function handleReportRequest(reportName, serverFunction) {
+        clearMessage('details-message');
+        document.body.style.cursor = 'wait';
+        showMessage('details-message', `Running ${reportName} report...`);
+        google.script.run
+            .withSuccessHandler(function(result) {
+                document.body.style.cursor = 'default';
+                showMessage('details-message', result.message, result.status !== 'success');
+            })
+            .withFailureHandler(function(error) {
+                document.body.style.cursor = 'default';
+                showMessage('details-message', `Error running report: ${error.message}`, true);
+            })
+            [serverFunction]();
+    }
+</script>
+</body>
+</html>

@@ -1,171 +1,196 @@
 /**
- * Brurya.gs — Sheet Controller (v2025-07-16)
- * Complete script with all helper functions restored and logic corrected.
+ * @file Brurya.gs — Sheet Controller
+ * @description Manages the Brurya counting workflow using a client/server model.
+ * @version 2025-07-30-1645 // Final stable version
  */
 
-const ENABLE_PROTECTION = true;
-
-// --- SESSION STATE HELPERS ---
-
-function setBruryaSessionActive() {
-    PropertiesService.getUserProperties().setProperty(G.SESSION_FLAGS.BRURYA_ACTIVE, 'true');
-}
-
-function clearBruryaSessionState() {
-    PropertiesService.getUserProperties().deleteProperty(G.SESSION_FLAGS.BRURYA_ACTIVE);
-}
-
-function isBruryaSessionActive() {
-    return PropertiesService.getUserProperties().getProperty(G.SESSION_FLAGS.BRURYA_ACTIVE) === 'true';
-}
-
-// --- CORE FUNCTIONS ---
-
-function populateBruryaSheetFromAudit() {
-    const ui = SpreadsheetApp.getUi();
-    const selectedUser = getActiveUser();
-
-    if (!selectedUser) {
-        ui.alert('Please select a user from the Dashboard first.');
-        return;
-    }
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(G.SHEET_NAMES.BRURYA);
-    if (!sheet) {
-        ui.alert(`Sheet "${G.SHEET_NAMES.BRURYA}" not found.`);
-        return;
-    }
-    
-    ss.setActiveSheet(sheet);
-
-    try {
-        if (sheet.getLastRow() > 1) {
-            sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent().setBackground(null);
-        }
-
-        const auditSheet = getReferenceSheet(G.SHEET_NAMES.AUDIT);
-        const comaxSheet = getReferenceSheet(G.SHEET_NAMES.COMAX_M);
-
-        const auditData = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, 6).getValues(); // Read through Column F
-        const comaxData = comaxSheet.getRange(2, 1, comaxSheet.getLastRow() - 1, 3).getValues();
-
-        const nameMap = new Map(comaxData.map(row => [row[0]?.toString().trim(), row[2]?.toString().trim()]).filter(([id]) => id));
-
-        const rows = auditData.reduce((acc, row) => {
-            const id = row[0]?.toString().trim();
-            const sku = row[1]?.toString().trim();
-            const qty = parseFloat(row[5]); // Read BruryaQty from Column F (index 5)
-            const name = nameMap.get(id) || '';
-            if (id && qty > 0) {
-                acc.push([id, name, sku, qty]);
-            }
-            return acc;
-        }, []);
-
-        if (rows.length > 0) {
-            sheet.getRange(2, 1, rows.length, 4).setValues(rows);
-        } else {
-            sheet.getRange(2, 1).setValue("No items with Brurya quantity > 0 found in the Audit sheet.");
-        }
-
-        updateBruryaProtection();
-    } catch (err) {
-        ui.alert(`Could not populate Brurya sheet: ${err.message}`);
-    }
-}
+// --- TRIGGERS & HELPERS ---
 
 function handleBruryaEdit(e) {
-    if (!e || !e.range) return;
+    // This lock prevents this onEdit trigger from running during a script-led data load.
+    const lock = PropertiesService.getScriptProperties().getProperty('BRURYA_EDIT_LOCK');
+    if (lock) return;
+
+    if (!e || !e.value || !e.range) return;
+
     const sheet = e.range.getSheet();
     const row = e.range.getRow();
     const col = e.range.getColumn();
-    
-    // Only trigger if editing the quantity in Column D
-    if (sheet.getName() === G.SHEET_NAMES.BRURYA && row > 1 && col === 4) {
-        setBruryaSessionActive();
+    const sku = e.value.toString().trim();
+
+    // Trigger only when adding a new SKU in Column C
+    if (sheet.getName() === G.SHEET_NAMES.BRURYA && row > 1 && col === 3 && sku !== '') {
+        try {
+            const payload = { command: 'getItemDetailsBySku', data: sku };
+            const options = {
+                method: 'post',
+                contentType: 'application/json',
+                payload: JSON.stringify(payload),
+                headers: { 'Authorization': 'Bearer ' + ScriptApp.getOAuthToken() },
+                muteHttpExceptions: true
+            };
+            const apiResponse = UrlFetchApp.fetch(G.WEB_APP_URL, options);
+            const result = JSON.parse(apiResponse.getContentText());
+
+            if (result.status === 'success' && result.data) {
+                e.range.offset(0, -2).setValue(result.data.id);
+                e.range.offset(0, -1).setValue(result.data.name);
+            }
+        } catch (err) {
+            SpreadsheetApp.getActiveSpreadsheet().toast(`Could not find details for SKU ${sku}: ${err.message}`, "Error", 5);
+        }
     }
 }
 
-function updateBruryaProtection() {
-    if (!ENABLE_PROTECTION) return;
+/**
+ * Reads data from the Brurya sheet for submission.
+ */
+function getBruryaSheetData() {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(G.SHEET_NAMES.BRURYA);
+    if (!sheet || sheet.getLastRow() < 2) return [];
+    return sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+}
 
+/**
+ * Writes data to the Brurya sheet.
+ */
+function writeBruryaDataToSheet(data) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(G.SHEET_NAMES.BRURYA);
+    if (!sheet) throw new Error(`Sheet "${G.SHEET_NAMES.BRURYA}" not found.`);
+
+    ss.setActiveSheet(sheet);
+
+    // --- FIX: Clear all previous data and formatting below the header ---
+    if (sheet.getLastRow() > 1) {
+        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent().setBackground(null);
+    }
+    // --- END FIX ---
+ 
+    if (data && data.length > 0) {
+        sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+    } else {
+        sheet.getRange(2, 1).setValue("No items with Brurya quantity > 0 found.");
+    }
+    updateBruryaProtection();
+    SpreadsheetApp.flush();
+}
+function updateBruryaProtection() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(G.SHEET_NAMES.BRURYA);
-    if (!sheet || sheet.getLastRow() < 2) return;
+    if (!sheet) return;
 
     sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE).forEach(p => p.remove());
 
-    const dataRangeHeight = sheet.getLastRow() - 1;
-    const grayBackground = "#f3f3f3";
+    const lastRow = sheet.getLastRow();
 
-    // Protect non-editable columns A, B, and C
-    sheet.getRange(2, 1, dataRangeHeight, 3)
-        .setBackground(grayBackground)
-        .protect()
-        .setWarningOnly(true);
+    if (lastRow > 1) {
+        const rangeToProtect = sheet.getRange(2, 1, lastRow - 1, 3); // Columns A, B, C
+        rangeToProtect.protect().setWarningOnly(true);
+        rangeToProtect.setBackground("#e0e0e0"); // Add this line for light gray background
+    }
 }
 
-function submitBruryaToAudit() {
-    const ui = SpreadsheetApp.getUi();
-    const props = PropertiesService.getUserProperties();
-    const hasAccess = props.getProperty('bruryaAccess') === 'y';
+// --- SERVER-SIDE WORKERS ---
 
-    if (!hasAccess) {
-        ui.alert('You do not have permission to submit Brurya counts.');
-        return;
-    }
-    
-    if (!isBruryaSessionActive()) {
-        ui.alert('No pending Brurya changes to submit.');
-        return;
-    }
-
-    const response = ui.alert('Submit Brurya Counts to Audit?', 'This action cannot be undone.', ui.ButtonSet.YES_NO);
-    if (response !== ui.Button.YES) return;
-
-    const lock = LockService.getScriptLock();
-    if (!lock.tryLock(30000)) {
-        ui.alert('Another submission is in progress. Please try again.');
-        return;
-    }
+function _server_populateBruryaSheet() {
+    const lock = PropertiesService.getScriptProperties();
+    lock.setProperty('BRURYA_EDIT_LOCK', 'true');
 
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const sheet = ss.getSheetByName(G.SHEET_NAMES.BRURYA);
-        if (!sheet || sheet.getLastRow() < 2) {
-            ui.alert('Nothing to submit.');
-            return;
-        }
-
         const auditSheet = getReferenceSheet(G.SHEET_NAMES.AUDIT);
-        const bruryaData = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
-
-        const bruryaMap = new Map();
-        bruryaData.forEach(row => {
-            const id = row[0]?.toString().trim();
-            const qty = (row[3] === '' || row[3] === null) ? 0 : parseFloat(row[3]);
-            if (id) bruryaMap.set(id, qty);
-        });
-
-        const auditRange = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, 6); // Read through Column F
-        const auditValues = auditRange.getValues();
-
-        const newBruryaQtys = auditValues.map(row => {
-            const id = row[0]?.toString().trim();
-            return bruryaMap.has(id) ? [bruryaMap.get(id)] : [row[5]]; // Write back to Column F (index 5)
-        });
+        const comaxSheet = getReferenceSheet(G.SHEET_NAMES.COMAX_M);
+        const auditData = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, 6).getValues();
+        const comaxData = comaxSheet.getRange(2, 1, comaxSheet.getLastRow() - 1, 3).getValues();
+        const nameMap = new Map(comaxData.map(row => [row[0]?.toString().trim(), row[2]?.toString().trim()]).filter(([id]) => id));
         
-        if (newBruryaQtys.length > 0) {
-            auditSheet.getRange(2, 6, newBruryaQtys.length, 1).setValues(newBruryaQtys); // Write to Column F
+        const rows = auditData.reduce((acc, row) => {
+            const id = row[0]?.toString().trim();
+            const sku = row[1]?.toString().trim();
+            const qty = parseFloat(row[5]);
+            const name = nameMap.get(id) || '';
+            if (id && qty > 0) acc.push([id, name, sku, qty]);
+            return acc;
+        }, []);
+
+        writeBruryaDataToSheet(rows);
+
+        return { status: 'success', message: `${rows.length} Brurya items loaded.` };
+    } catch (err) {
+        return { status: 'error', message: err.message };
+    } finally {
+        lock.deleteProperty('BRURYA_EDIT_LOCK');
+    }
+}
+
+function _server_submitBruryaWithCheck(currentData) {
+    try {
+        const auditSheet = getReferenceSheet(G.SHEET_NAMES.AUDIT);
+        const auditData = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, auditSheet.getLastColumn()).getValues();
+        const auditMap = new Map(auditData.map((row, index) => [row[0]?.toString().trim(), { rowData: row, index: index }]));
+        let changesFound = false;
+        const newRowsToAdd = [];
+
+        currentData.forEach(currentRow => {
+            const currentId = currentRow[0]?.toString().trim();
+            if (!currentId) return;
+            const currentSku = currentRow[2];
+            const currentQty = (currentRow[3] === '' || currentRow[3] === null) ? 0 : parseFloat(currentRow[3]);
+            const existingEntry = auditMap.get(currentId);
+            if (existingEntry) {
+                const originalQty = parseFloat(existingEntry.rowData[5]) || 0;
+                if (originalQty !== currentQty) {
+                    auditData[existingEntry.index][5] = currentQty;
+                    changesFound = true;
+                }
+            } else {
+                changesFound = true;
+                const newAuditRow = Array(auditSheet.getLastColumn()).fill('');
+                newAuditRow[0] = currentId;
+                newAuditRow[1] = currentSku;
+                newAuditRow[2] = new Date();
+                newAuditRow[5] = currentQty;
+                newRowsToAdd.push(newAuditRow);
+            }
+        });
+
+        if (!changesFound) {
+            return { status: 'success', message: 'No pending changes to submit.', submissionOccurred: false };
         }
 
-        clearBruryaSessionState();
-        populateBruryaSheetFromAudit(); // Refresh the sheet after submission
-        ui.alert(`Brurya submission complete.`);
-    } catch (e) {
-        ui.alert(`An error occurred during submission: ${e.message}`);
-    } finally {
-        lock.releaseLock();
+        if (auditData.length > 0) {
+            auditSheet.getRange(2, 1, auditData.length, auditData[0].length).setValues(auditData);
+        }
+        if (newRowsToAdd.length > 0) {
+            auditSheet.getRange(auditSheet.getLastRow() + 1, 1, newRowsToAdd.length, newRowsToAdd[0].length).setValues(newRowsToAdd);
+        }
+        return { status: 'success', message: 'DEBUG_TEST_OK', submissionOccurred: true };
+    } catch (err) {
+        return { status: 'error', message: err.message, stack: err.stack };
+    }
+}
+
+function _server_getItemDetailsBySku(sku) {
+    try {
+        if (!sku) throw new Error("SKU was not provided.");
+        const comaxSheet = getReferenceSheet(G.SHEET_NAMES.COMAX_M);
+        const data = comaxSheet.getDataRange().getValues();
+        const skuCol = 1; // Column B
+        const idCol = 0; // Column A
+        const nameCol = 2; // Column C
+
+        const foundRow = data.find(row => row[skuCol]?.toString().trim() === sku);
+
+        if (foundRow) {
+            const details = {
+                id: foundRow[idCol],
+                name: foundRow[nameCol]
+            };
+            return { status: 'success', data: details };
+        } else {
+            return { status: 'success', data: null };
+        }
+    } catch (err) {
+        return { status: 'error', message: err.message };
     }
 }

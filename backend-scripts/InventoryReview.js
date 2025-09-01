@@ -46,8 +46,30 @@ function getOrCreateReviewSheet_() {
 function populateReviewSheet() {
     const ui = SpreadsheetApp.getUi();
     try {
-        const reviewSheet = getOrCreateReviewSheet_();
-        reviewSheet.getRange(2, 1, reviewSheet.getMaxRows() - 1, reviewSheet.getMaxColumns()).clearContent().clearDataValidations();
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheetName = C_SHEETS.REVIEW;
+        let reviewSheet = ss.getSheetByName(sheetName);
+
+        if (!reviewSheet) {
+            const allSheets = ss.getSheets();
+            for (let i = 0; i < allSheets.length; i++) {
+                if (allSheets[i].getName().trim() === sheetName) {
+                    reviewSheet = allSheets[i];
+                    break;
+                }
+            }
+        }
+
+        if (!reviewSheet) {
+            reviewSheet = ss.insertSheet(sheetName);
+            const headers = ["ID", "Name", "SKU", "ComaxQty", "NewQty", "BruryaQty", "StorageQty", "OfficeQty", "ShopQty", "Accept", "Notes"];
+            reviewSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+            reviewSheet.setFrozenColumns(2); // Freeze Name and SKU
+        } else {
+            reviewSheet.getRange(2, 1, reviewSheet.getMaxRows() - 1, reviewSheet.getMaxColumns()).clearContent().clearDataValidations();
+        }
+
+        SpreadsheetApp.setActiveSheet(reviewSheet);
 
         const taskqSheet = getReferenceSheet_(C_SHEETS.TASKQ);
         const auditSheet = getReferenceSheet_(C_SHEETS.AUDIT);
@@ -60,13 +82,12 @@ function populateReviewSheet() {
         const auditMap = new Map(auditData.slice(1).map(r => [r[C_COLS.AUDIT.SKU - 1], r]));
         const comaxMap = new Map(comaxData.slice(1).map(r => [r[C_COLS.COMAX_M.SKU - 1], r]));
 
-        const reviewTasks = taskqData.filter(row => row[C_COLS.TASKQ.STATUS - 1] === 'Review' && row[C_COLS.TASKQ.TYPE - 1] === 'Inventory Count');
+        const reviewTasks = taskqData.filter(row => row[C_COLS.TASKQ.STATUS - 1] === 'Review' && (row[C_COLS.TASKQ.TYPE - 1] === 'Inventory Count' || row[C_COLS.TASKQ.TYPE - 1] === 'Inventory Exception D2'));
 
         if (reviewTasks.length === 0) {
           reviewSheet.getRange("A2").setValue("No items are currently awaiting review.");
           SpreadsheetApp.setActiveSheet(reviewSheet);
-          ui.alert('No items are currently awaiting review.');
-          return;
+          return 'No items are currently awaiting review.';
       }
 
         const rowsToWrite = reviewTasks.map(taskRow => {
@@ -91,7 +112,7 @@ function populateReviewSheet() {
         }
         
         SpreadsheetApp.setActiveSheet(reviewSheet);
-        ui.alert('Inventory Review sheet is ready.');
+        return 'Inventory Review sheet is ready.';
 
     } catch (e) {
         ui.alert(`Failed to build the review sheet: ${e.message}`);
@@ -116,7 +137,7 @@ function markAllAsAccepted() {
         values[i][0] = 'Accepted';
     }
     range.setValues(values);
-    ui.alert('All items have been marked as "Accepted".');
+    return 'All items have been marked as "Accepted".';
 }
 
 
@@ -131,15 +152,23 @@ function processAndExportReviewedInventory() {
     if (confirmation !== ui.Button.YES) return;
 
     try {
-        const reviewSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(C_SHEETS.REVIEW);
-        if (!reviewSheet) throw new Error("Inventory Review sheet not found.");
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const reviewSheet = ss.getSheetByName(C_SHEETS.REVIEW);
 
+        if (!reviewSheet) {
+            return `Error: The expected sheet "${expectedSheetName}" was not found. Please re-run the report.`;
+        }
+
+        SpreadsheetApp.setActiveSheet(reviewSheet);
+
+        if (reviewSheet.getLastRow() < 2) {
+            return 'Review sheet is not open or has no items.';
+        }
         const reviewData = reviewSheet.getDataRange().getValues();
         const acceptedItems = reviewData.slice(1).filter(r => r[C_COLS.REVIEW.ACCEPT - 1] === 'Accepted');
 
         if (acceptedItems.length === 0) {
-            ui.alert('No items were marked as "Accepted". Nothing to process.');
-            return;
+            return 'No items were marked as "Accepted". Nothing to process.';
         }
 
         const taskqSheet = getReferenceSheet_(C_SHEETS.TASKQ);
@@ -182,10 +211,10 @@ function processAndExportReviewedInventory() {
         rangeToClear.clearContent().clearDataValidations();
         reviewSheet.getRange("A2").setValue("Processed items have been cleared.");
         
-        ui.alert('Processing Complete', `${acceptedItems.length} items were accepted and exported.\nThe export file "${fileName}" has been created.`, ui.ButtonSet.OK);
+        return `Processing Complete. ${acceptedItems.length} items were accepted and exported. The export file "${fileName}" has been created.`;
 
     } catch (e) {
-        ui.alert(`Processing Failed: ${e.message}`);
+        return `Processing Failed: ${e.message}`;
     }
 }
 

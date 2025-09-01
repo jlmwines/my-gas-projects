@@ -25,18 +25,31 @@ function loadProductDetailReviews() {
     try {
         SpreadsheetApp.flush();
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        let reviewSheet = ss.getSheetByName(PR_SHEETS.REVIEW);
+        const sheetName = PR_SHEETS.REVIEW;
+        let reviewSheet = ss.getSheetByName(sheetName);
+
+        if (!reviewSheet) {
+            const allSheets = ss.getSheets();
+            for (let i = 0; i < allSheets.length; i++) {
+                if (allSheets[i].getName().trim() === sheetName) {
+                    reviewSheet = allSheets[i];
+                    break;
+                }
+            }
+        }
 
         // 1. Create or clear the review sheet
         if (!reviewSheet) {
-            reviewSheet = ss.insertSheet(PR_SHEETS.REVIEW);
+            reviewSheet = ss.insertSheet(expectedSheetName);
+            const headers = ["Approve", "SKU", "Product Name", "Short Description", "English Preview", "Hebrew Preview", "תיאור קצר"];
+            reviewSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
         } else {
             reviewSheet.getRange(2, 1, reviewSheet.getMaxRows() - 1, reviewSheet.getMaxColumns()).clearContent();
         }
-        const headers = ["Approve", "SKU", "Product Name", "Short Description", "English Preview", "Hebrew Preview", "תיאור קצר"];
-        reviewSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
         reviewSheet.setFrozenRows(1);
         reviewSheet.setFrozenColumns(2);
+
+        SpreadsheetApp.setActiveSheet(reviewSheet);
 
         // 2. Get data from all necessary reference sheets
         const referenceSs = SpreadsheetApp.openById(activeConfig.referenceFileId);
@@ -58,16 +71,13 @@ function loadProductDetailReviews() {
         const skuColTaskq = taskqHeaders.indexOf('RelatedEntity');
 
         const reviewTasks = taskqData.filter(row => 
-            row[statusCol] === 'Review' && row[typeCol] === 'Product Exception C6'
+            row[statusCol] === 'Review' && (row[typeCol] === 'Product Exception C6' || row[typeCol] === 'New Product')
         );
 
         if (reviewTasks.length === 0) {
             reviewSheet.getRange("A2").setValue("No product detail updates are currently awaiting review.");
             SpreadsheetApp.setActiveSheet(reviewSheet);
-        reviewSheet.getRange("A1").activate(); // Moves the cursor to the top
-        
-        ui.alert('Final Review Sheet Ready', `${rowsToWrite.length} "Accepted" item(s) loaded for final review and closure.`, ui.ButtonSet.OK);
-            return;
+            return 'No product detail updates are currently awaiting review.';
         }
 
         // 4. Prepare all lookup data
@@ -129,7 +139,7 @@ function loadProductDetailReviews() {
         }
         
         SpreadsheetApp.setActiveSheet(reviewSheet);
-        ui.alert('Load Complete', `${rowsToWrite.length} item(s) have been loaded for review.`, ui.ButtonSet.OK);
+        return `${rowsToWrite.length} item(s) have been loaded for review.`;
 
     } catch (e) {
         Logger.log(`CRITICAL ERROR: ${e.message}\nStack: ${e.stack}`);
@@ -144,13 +154,23 @@ function processProductDetailApprovals() {
     const ui = SpreadsheetApp.getUi();
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const referenceSs = SpreadsheetApp.openById(activeConfig.referenceFileId);
+        const currentActiveSheet = ss.getActiveSheet();
+        const currentActiveSheetName = currentActiveSheet.getName();
+        const reviewSheet = ss.getSheetByName(PR_SHEETS.REVIEW);
+
+        if (!reviewSheet) {
+            return `Error: The expected sheet "${PR_SHEETS.REVIEW}" was not found. Please re-run the report.`;
+        }
+
+        if (currentActiveSheetName !== PR_SHEETS.REVIEW) {
+            SpreadsheetApp.setActiveSheet(reviewSheet);
+            // Note: We can't show an alert here as it would interrupt the flow.
+            // The calling function in the sidebar should handle this.
+        }
 
         // 1. Get approved rows from review sheet
-        const reviewSheet = _getSheetOrThrow(ss, PR_SHEETS.REVIEW);
         if (reviewSheet.getLastRow() < 2) {
-            ui.alert('Review sheet is empty.');
-            return;
+            return 'Review sheet is empty.';
         }
         const reviewData = reviewSheet.getRange(2, 1, reviewSheet.getLastRow() - 1, reviewSheet.getLastColumn()).getValues();
         const reviewHeaders = reviewSheet.getRange(1, 1, 1, reviewSheet.getLastColumn()).getValues()[0];
@@ -160,8 +180,7 @@ function processProductDetailApprovals() {
         const approvedRows = reviewData.filter(row => row[approveColIdx] === true);
 
         if (approvedRows.length === 0) {
-            ui.alert('No items were selected for approval.', ui.ButtonSet.OK);
-            return;
+            return 'No items were selected for approval.';
         }
 
         // 2. Prepare all data sources
@@ -173,6 +192,7 @@ function processProductDetailApprovals() {
         }
         webOutSheet.getRange('A1:D1').setValues([['CODE', 'ID', 'Short Description', 'Description']]);
         
+        const referenceSs = SpreadsheetApp.openById(activeConfig.referenceFileId);
         const detailsSSheet = _getSheetOrThrow(referenceSs, PR_SHEETS.DETAILS_S);
         const detailsMSheet = _getSheetOrThrow(referenceSs, PR_SHEETS.DETAILS_M);
         const comaxMSheet = _getSheetOrThrow(referenceSs, PR_SHEETS.COMAX_M);
@@ -293,15 +313,23 @@ function processProductDetailApprovals() {
 
         // --- Refresh the review sheet to show remaining items ---
         loadProductDetailReviews();
-        let successMessage = `${approvedSKUs.size} item(s) were approved and processed:\n\n` +
-                           `• Master records were updated.\n` +
-                           `• Submission rows were removed.\n` +
+        let successMessage = `${approvedSKUs.size} item(s) were approved and processed:
+
+` +
+                           `• Master records were updated.
+` +
+                           `• Submission rows were removed.
+` +
                            `• Task statuses were set to 'Accepted'.`;
 
         if (createdFileName) {
-            successMessage += `\n\nA CSV export file named "${createdFileName}" was also created.`;
+            successMessage += `
+
+A CSV export file named "${createdFileName}" was also created.`;
         } else if (approvedSKUs.size > 0) {
-            successMessage += `\n\nNo CSV file was created as there was no exportable data.`;
+            successMessage += `
+
+No CSV file was created as there was no exportable data.`;
         }
         ui.alert('Approval Process Complete', successMessage, ui.ButtonSet.OK);
 
@@ -769,6 +797,29 @@ function loadAcceptedDetailReviews() {
 
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
+        let reviewSheet = ss.getSheetByName(FINAL_REVIEW_SHEET_NAME);
+
+        if (!reviewSheet) {
+            const allSheets = ss.getSheets();
+            for (let i = 0; i < allSheets.length; i++) {
+                if (allSheets[i].getName().trim() === FINAL_REVIEW_SHEET_NAME) {
+                    reviewSheet = allSheets[i];
+                    break;
+                }
+            }
+        }
+
+        if (!reviewSheet) {
+            reviewSheet = ss.insertSheet(FINAL_REVIEW_SHEET_NAME);
+        } else {
+            // Delete all rows after the header to ensure a clean slate, including validations
+            if (reviewSheet.getLastRow() > 1) {
+                reviewSheet.deleteRows(2, reviewSheet.getLastRow() - 1);
+            }
+        }
+
+        SpreadsheetApp.setActiveSheet(reviewSheet);
+
         const referenceSs = SpreadsheetApp.openById(activeConfig.referenceFileId);
 
         // 1. Get data from TaskQ and DetailsM (master)
@@ -787,12 +838,11 @@ function loadAcceptedDetailReviews() {
         const skuColTaskq = _findHeaderIndex(taskqHeaders, 'RelatedEntity');
 
         const acceptedTasks = taskqData.filter(row => 
-            row[statusCol] === 'Accepted' && row[typeCol] === 'Product Exception C6'
+            row[statusCol] === 'Accepted' && (row[typeCol] === 'Product Exception C6' || row[typeCol] === 'New Product')
         );
 
         if (acceptedTasks.length === 0) {
-            ui.alert('No "Accepted" tasks found to load for final review.');
-            return;
+            return 'No "Accepted" tasks found to load for final review.';
         }
 
         const acceptedSkus = new Set(acceptedTasks.map(row => String(row[skuColTaskq]).trim()));
@@ -839,16 +889,7 @@ function loadAcceptedDetailReviews() {
         rowsToWrite.sort((a, b) => a[1].localeCompare(b[1]));
 
         // 5. Create/clear and populate the sheet
-        let reviewSheet = ss.getSheetByName(FINAL_REVIEW_SHEET_NAME);
-        if (!reviewSheet) {
-            reviewSheet = ss.insertSheet(FINAL_REVIEW_SHEET_NAME);
-        } else {
-            // Delete all rows after the header to ensure a clean slate, including validations
-            if (reviewSheet.getLastRow() > 1) {
-                reviewSheet.deleteRows(2, reviewSheet.getLastRow() - 1);
-            }
-        }
-
+        
         reviewSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
         if (rowsToWrite.length > 0) {
             reviewSheet.getRange(2, 1, rowsToWrite.length, headers.length).setValues(rowsToWrite);
@@ -864,7 +905,7 @@ function loadAcceptedDetailReviews() {
         reviewSheet.autoResizeColumns(1, headers.length);
         
         SpreadsheetApp.setActiveSheet(reviewSheet);
-        ui.alert('Final Review Sheet Ready', `${rowsToWrite.length} "Accepted" item(s) loaded for final review and closure.`, ui.ButtonSet.OK);
+        return `${rowsToWrite.length} "Accepted" item(s) loaded for final review and closure.`;
 
     } catch (e) {
         Logger.log(`CRITICAL ERROR in loadAcceptedDetailReviews: ${e.message}\nStack: ${e.stack}`);
@@ -886,9 +927,14 @@ function processFinalDetailClosures() {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         const reviewSheet = ss.getSheetByName(FINAL_REVIEW_SHEET_NAME);
 
-        if (!reviewSheet || reviewSheet.getLastRow() < 2) {
-            ui.alert('The final review sheet is empty or not found. Nothing to process.');
-            return;
+        if (!reviewSheet) {
+            return `Error: The expected sheet "${FINAL_REVIEW_SHEET_NAME}" was not found. Please re-run the report.`;
+        }
+
+        SpreadsheetApp.setActiveSheet(reviewSheet);
+
+        if (reviewSheet.getLastRow() < 2) {
+            return 'The final review sheet is empty or not found. Nothing to process.';
         }
 
         // 1. Find rows marked for closure
@@ -905,8 +951,7 @@ function processFinalDetailClosures() {
         });
 
         if (skusToClose.size === 0) {
-            ui.alert('No items were marked as "Closed". Nothing to process.');
-            return;
+            return 'No items were marked as "Closed". Nothing to process.';
         }
 
         // 2. Prepare reference sheets for updates
@@ -955,10 +1000,10 @@ function processFinalDetailClosures() {
         // 5. Refresh the final review sheet to show remaining items
         loadAcceptedDetailReviews();
 
-        ui.alert('Process Complete', `${updatedTaskCount} item(s) were successfully closed and cleaned up.`, ui.ButtonSet.OK);
+        return `${updatedTaskCount} item(s) were successfully closed and cleaned up.`;
 
     } catch (e) {
         Logger.log(`CRITICAL ERROR in processFinalDetailClosures: ${e.message}\nStack: ${e.stack}`);
-        ui.alert('Error', `An error occurred while closing tasks: ${e.message}`, ui.ButtonSet.OK);
+        return `An error occurred while closing tasks: ${e.message}`;
     }
 }

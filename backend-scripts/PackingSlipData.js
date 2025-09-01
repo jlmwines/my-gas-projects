@@ -15,6 +15,11 @@ function preparePackingData() {
     // Get all necessary sheets from the Reference file
     const ordersM_sheet = referenceSS.getSheetByName("OrdersM");
     const detailsM_sheet = referenceSS.getSheetByName("DetailsM");
+    const comaxM_sheet = referenceSS.getSheetByName("ComaxM");
+
+    if (!comaxM_sheet) {
+        throw new Error("Error: Required sheet 'ComaxM' not found in the Reference File.");
+    }
     const detailsC_sheet = referenceSS.getSheetByName("DetailsC");
     const orderLog_sheet = referenceSS.getSheetByName(SHEET_ORDER_LOG); // Use constant
     const orderLogArchive_sheet = referenceSS.getSheetByName(SHEET_ORDER_LOG_ARCHIVE); // Get archive sheet
@@ -79,6 +84,18 @@ function preparePackingData() {
     const colStatus = ordersM_headers.indexOf("status");
     const colOrderId = ordersM_headers.indexOf("order_id");
     
+    // Build SKU to CMX DIV map from ComaxM
+    const skuToCmxDivMap = new Map();
+    const comaxM_data = comaxM_sheet.getDataRange().getValues();
+    comaxM_data.shift(); // Remove headers
+    comaxM_data.forEach(row => {
+        const sku = (row[1] || "").toString().trim(); // CMX SKU is Column 2 (index 1)
+        const cmxDiv = row[3]; // CMX DIV is Column 4 (index 3)
+        if (sku) {
+            skuToCmxDivMap.set(sku, cmxDiv);
+        }
+    });
+
     // Build SKU details map
     const skuToDetailMap = new Map();
     const detailsM_data = detailsM_sheet.getDataRange().getValues();
@@ -86,25 +103,16 @@ function preparePackingData() {
     detailsM_data.forEach(row => {
         const sku = (row[0] || "").toString().trim();
         if(sku) {
+            const cmxDiv = skuToCmxDivMap.get(sku);
+            const isWine = cmxDiv === 1;
+
             skuToDetailMap.set(sku, {
                 nameEN: (row[2] || ""), nameHE: (row[1] || ""), shortEN: (row[4] || ""), shortHE: (row[3] || ""),
-                intensity: (row[9] || ""), complexity: (row[10] || ""), acidity: (row[11] || ""), decant: (row[20] || "")
+                intensity: (row[9] || ""), complexity: (row[10] || ""), acidity: (row[11] || ""), decant: (row[20] || ""),
+                isWine: isWine
             });
         }
     });
-    const detailsC_data = detailsC_sheet.getDataRange().getValues();
-    detailsC_data.shift();
-    detailsC_data.forEach(row => {
-        const sku = (row[0] || "").toString().trim();
-        if(sku) {
-            const existing = skuToDetailMap.get(sku) || {};
-            skuToDetailMap.set(sku, { ...existing,
-                harmonizeEN: (row[3] || ""), contrastEN: (row[4] || ""),
-                harmonizeHE: (row[5] || ""), contrastHE: (row[6] || "")
-            });
-        }
-    });
-
     const ordersToProcessForDocs = [];
     ordersM_data.forEach(orderM_row => {
         const orderId = String(orderM_row[colOrderId]);
@@ -140,13 +148,20 @@ function preparePackingData() {
                 const qty = Number(orderM_row[ordersM_headers.indexOf(`Product Item ${j} Quantity`)]);
                 if (sku && qty > 0) {
                     const detail = skuToDetailMap.get(sku) || {};
+                    const isWine = detail.isWine || false;
+
                     currentOrderProductRows.push([
                         orderNumber, orderDate, sku, qty,
                         detail.nameEN || '', detail.shortEN || '',
-                        detail.intensity || '', detail.complexity || '', detail.acidity || '', detail.decant || '',
-                        detail.harmonizeEN || '', detail.contrastEN || '',
+                        isWine ? (detail.intensity || '') : '',
+                        isWine ? (detail.complexity || '') : '',
+                        isWine ? (detail.acidity || '') : '',
+                        isWine ? (detail.decant || '') : '',
+                        isWine ? (detail.harmonizeEN || '') : '',
+                        isWine ? (detail.contrastEN || '') : '',
                         detail.nameHE || '', detail.shortHE || '',
-                        detail.harmonizeHE || '', detail.contrastHE || ''
+                        isWine ? (detail.harmonizeHE || '') : '',
+                        isWine ? (detail.contrastHE || '') : ''
                     ]);
                 }
             }

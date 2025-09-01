@@ -22,8 +22,8 @@ function createMenuAndShowSidebar() {
 
     // Create the main menu and add all items and sub-menus
     ui.createMenu('JLM Wines')
-        .addItem('Show Sidebar', 'showWorkflowSidebar')
-        .addItem('Admin Sidebar', 'showAdminSidebar') // <-- NEW ITEM ADDED HERE
+        .addItem('Admin Sidebar', 'showAdminSidebar')
+        .addItem('Show Legacy Sidebar', 'showWorkflowSidebar') 
         .addSeparator()
         .addItem('Review Product Details', 'loadProductDetailReviews')
         .addItem('Approve Selected Details', 'processProductDetailApprovals')
@@ -35,7 +35,7 @@ function createMenuAndShowSidebar() {
 
     // Show the sidebar on open
     try {
-        showWorkflowSidebar();
+        showAdminSidebar();
     } catch (err) {
         Logger.log('Could not open sidebar automatically: ' + err.message);
     }

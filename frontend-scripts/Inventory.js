@@ -1,46 +1,14 @@
 /**
- * Inventory.gs — Grouped Inventory Task Controller (v2025-07-18.2)
- *
- * Manages the inventory counting workflow for tasks assigned in TaskQ.
- * Submission logic is based on the presence of data, not edit monitoring.
+ * @file Inventory.gs — Grouped Inventory Task Controller
+ * @description Manages the inventory counting workflow for tasks assigned in TaskQ.
+ * @version 2025-07-29-1730 // Updated version number
  */
 
-// --- CONSTANTS ---
-const INV_COL = {
-    NAME: 1, ID: 2, SKU: 3, STOCK: 4, DIFF: 5, TOTAL: 6,
-    BRURYA: 7, STORAGE: 8, OFFICE: 9, SHOP: 10
-};
-const EDITABLE_INV_COLS = [INV_COL.STORAGE, INV_COL.OFFICE, INV_COL.SHOP];
-
-// --- DATA POPULATION ---
-
-function populateInventorySheetFromTasks() {
-    const ui = SpreadsheetApp.getUi();
-    const selectedUser = getActiveUser(); // Assumes getActiveUser() exists elsewhere
-    if (!selectedUser) {
-        ui.alert('Please select a user from the Dashboard first.');
-        return;
-    }
-
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName(G.SHEET_NAMES.INVENTORY); // Assumes G.SHEET_NAMES.INVENTORY exists
-    if (!sheet) {
-        ui.alert(`Sheet "${G.SHEET_NAMES.INVENTORY}" not found.`);
-        return;
-    }
-
-    ss.setActiveSheet(sheet);
-
-    sheet.clear();
-    const oldPrintArea = ss.getRangeByName('Print_Area');
-    if (oldPrintArea && oldPrintArea.getSheet().getName() === sheet.getName()) {
-        ss.removeNamedRange('Print_Area');
-    }
-
-    sheet.getRange("A1:J1").setValues([
-        ["Name", "ID", "SKU", "Stock", "Difference", "TotalQty", "BruryaQty", "StorageQty", "OfficeQty", "ShopQty"]
-    ]).setFontWeight("bold");
-
+/**
+ * Populates the Inventory sheet with tasks from TaskQ.
+ * RENAMED: Removed leading underscore to make it callable from the client.
+ */
+function server_populateInventory(selectedFilterUser) {
     try {
         const taskqSheet = getReferenceSheet(G.SHEET_NAMES.TASKQ);
         const comaxSheet = getReferenceSheet(G.SHEET_NAMES.COMAX_M);
@@ -51,179 +19,140 @@ function populateInventorySheetFromTasks() {
         const auditData = auditSheet.getDataRange().getValues();
 
         const inventoryTasks = taskqData.filter(taskRow => {
-            const assignedTo = taskRow[G.COLUMN_INDICES.TASKQ.ASSIGNED_TO - 1]?.toString().trim().toLowerCase();
-            const status = taskRow[G.COLUMN_INDICES.TASKQ.STATUS - 1]?.toString().trim().toLowerCase();
-            const type = taskRow[G.COLUMN_INDICES.TASKQ.TYPE - 1]?.toString().trim().toLowerCase();
-            return (assignedTo === selectedUser.toLowerCase() && status === 'assigned' && type.startsWith('inventory'));
+            const assignedTo = String(taskRow[G.COLUMN_INDICES.TASKQ.ASSIGNED_TO - 1] || '').trim().toLowerCase();
+            const status = String(taskRow[G.COLUMN_INDICES.TASKQ.STATUS - 1] || '').trim().toLowerCase();
+            const type = String(taskRow[G.COLUMN_INDICES.TASKQ.TYPE - 1] || '').trim().toLowerCase();
+
+            const userMatch = (selectedFilterUser && selectedFilterUser.toLowerCase() !== 'all users') ?
+                (assignedTo === selectedFilterUser.toLowerCase()) : true;
+
+            const relevantTypes = ['inventory count', 'inventory exception d2'];
+            const typeMatch = relevantTypes.includes(type);
+
+            return userMatch && status === 'assigned' && typeMatch;
         });
 
         if (inventoryTasks.length === 0) {
-            sheet.getRange("A2").setValue("No open inventory tasks assigned to you.");
-            updateInventoryProtection();
-            return;
+            return { status: 'success', data: [], message: `No open inventory tasks assigned to ${selectedFilterUser || 'all users'}.` };
         }
 
-        const requiredSkus = new Set(inventoryTasks.map(task => task[G.COLUMN_INDICES.TASKQ.RELATED_ENTITY - 1].toString().trim().toLowerCase()));
-
+        const requiredSkus = new Set(inventoryTasks.map(task => String(task[G.COLUMN_INDICES.TASKQ.RELATED_ENTITY - 1] || '').trim().toLowerCase()));
         const comaxMap = new Map(comaxData.slice(1).map(r => {
-            const sku = r[1]?.toString().trim().toLowerCase();
-            if (sku) return [sku, { id: r[0], name: r[2], stock: r[15] || 0 }];
-            return null;
+            const sku = String(r[1] || '').trim().toLowerCase();
+            return sku ? [sku, { id: r[0], name: r[2], stock: r[15] || 0 }] : null;
         }).filter(Boolean));
-        
+
         const auditMap = new Map(auditData.slice(1).map(r => {
-            const sku = r[G.COLUMN_INDICES.AUDIT.SKU - 1]?.toString().trim().toLowerCase();
-            if (sku) return [sku, { brurya: r[G.COLUMN_INDICES.AUDIT.BRURYA_QTY - 1] || 0 }];
-            return null;
+            const sku = String(r[G.COLUMN_INDICES.AUDIT.SKU - 1] || '').trim().toLowerCase();
+            return sku ? [sku, { brurya: r[G.COLUMN_INDICES.AUDIT.BRURYA_QTY - 1] || 0 }] : null;
         }).filter(Boolean));
 
         let rowsToWrite = Array.from(requiredSkus).map(sku => {
             const comaxProduct = comaxMap.get(sku);
             const auditInfo = auditMap.get(sku);
-            if (!comaxProduct) return null;
-            return [
-                comaxProduct.name, comaxProduct.id, sku, comaxProduct.stock,
-                '', '', auditInfo?.brurya || 0, '', '', ''
-            ];
+            if (comaxProduct) {
+                // Headers: ["Name", "ID", "SKU", "Stock", "Difference", "TotalQty", "BruryaQty", "StorageQty", "OfficeQty", "ShopQty"]
+                // We provide data for: Name, ID, SKU, Stock, (skip 3), BruryaQty, (skip 3)
+                return [comaxProduct.name, comaxProduct.id, sku, comaxProduct.stock, '', '', auditInfo?.brurya || 0, '', '', ''];
+            }
+            return null;
         }).filter(Boolean);
 
-        rowsToWrite.sort((a, b) => a[0].localeCompare(b[0]));
+        rowsToWrite.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
-        if (rowsToWrite.length > 0) {
-            const numRows = rowsToWrite.length;
-            const numCols = rowsToWrite[0].length;
-            
-            sheet.getRange(2, 1, numRows, numCols).setValues(rowsToWrite);
-            for (let i = 2; i < numRows + 2; i++) {
-                sheet.getRange(i, INV_COL.TOTAL).setFormula(`=SUM(G${i}:J${i})`);
-                sheet.getRange(i, INV_COL.DIFF).setFormula(`=F${i}-D${i}`);
-            }
-
-            for (let i = 0; i < numRows; i++) {
-                if (i % 2 === 1) { 
-                    sheet.getRange(i + 2, 1, 1, numCols).setBackground("#f3f3f3");
-                }
-            }
-            const editableRange = sheet.getRange(2, INV_COL.STORAGE, numRows, 3);
-            editableRange.setBorder(true, true, true, true, true, true, '#666666', SpreadsheetApp.BorderStyle.SOLID);
-            const printRange = sheet.getRange(1, 1, numRows + 1, numCols);
-            ss.setNamedRange('Print_Area', printRange);
-
-        } else {
-            sheet.getRange("A2").setValue("Tasks were found, but their products could not be located in ComaxM.");
-        }
-
-        updateInventoryProtection();
-        SpreadsheetApp.flush();
-
+        return { status: 'success', data: rowsToWrite };
     } catch (e) {
-        ui.alert(`Failed to populate inventory sheet: ${e.message}\n${e.stack}`);
+        Logger.log(`[ERROR] server_populateInventory: ${e.message} Stack: ${e.stack}`);
+        return { status: 'error', message: e.message };
     }
 }
 
 /**
- * Placeholder for a function that might manage sheet protections.
+ * Submits inventory counts and updates task statuses.
+ * LOGIC UPDATED: No longer depends on activeUser. Updates any matching assigned task.
  */
-function updateInventoryProtection() {
-    Logger.log("updateInventoryProtection called.");
-}
-
-
-// --- SUBMISSION LOGIC ---
-
-function submitInventoryToAudit() {
-    const ui = SpreadsheetApp.getUi();
-
-    const confirmation = ui.alert('Submit Inventory Counts?', 'Are you sure you want to submit these counts? This action cannot be undone.', ui.ButtonSet.YES_NO);
-    if (confirmation !== ui.Button.YES) {
-        ui.alert('Submission cancelled.');
-        return;
-    }
-
-    const activeUser = getActiveUser();
-    if (!activeUser) {
-        ui.alert("Cannot identify active user. Please re-select your name on the Dashboard.");
-        return;
-    }
-
+function server_submitInventory(inventoryUpdates) {
     try {
-        const ss = SpreadsheetApp.getActiveSpreadsheet();
-        const inventorySheet = ss.getSheetByName(G.SHEET_NAMES.INVENTORY);
+        if (!inventoryUpdates || inventoryUpdates.length === 0) throw new Error('No Inventory data was provided.');
+
         const auditSheet = getReferenceSheet(G.SHEET_NAMES.AUDIT);
         const taskqSheet = getReferenceSheet(G.SHEET_NAMES.TASKQ);
 
-        const AUDIT_COLS = G.COLUMN_INDICES.AUDIT;
-        const TQ_COLS = G.COLUMN_INDICES.TASKQ;
-
-        const inventoryData = inventorySheet.getRange(2, 1, inventorySheet.getLastRow() - 1, INV_COL.SHOP).getValues();
-
-        // **UPDATED LOGIC**: Map now includes BruryaQty, and filter checks all four quantity columns.
-        const inventoryUpdates = inventoryData.map(row => ({
-            sku: row[INV_COL.SKU - 1],
-            brurya: row[INV_COL.BRURYA - 1],
-            storage: row[INV_COL.STORAGE - 1],
-            office: row[INV_COL.OFFICE - 1],
-            shop: row[INV_COL.SHOP - 1]
-        })).filter(item => item.sku && (item.brurya !== '' || item.storage !== '' || item.office !== '' || item.shop !== ''));
-
-        if (inventoryUpdates.length === 0) {
-            ui.alert("No new quantities were entered. Submission cancelled.");
-            return;
-        }
-
-        const submittedSkus = new Set(inventoryUpdates.map(item => item.sku.toString().toLowerCase()));
-
+        // --- 1. Update Audit Sheet ---
+        const submittedSkus = new Set(inventoryUpdates.map(item => String(item.sku).trim().toLowerCase()));
         const auditData = auditSheet.getDataRange().getValues();
-        const auditSkuMap = new Map(auditData.slice(1).map((row, i) => [row[AUDIT_COLS.SKU - 1].toString().toLowerCase(), i + 1]));
+        const auditSkuMap = new Map(auditData.slice(1).map((row, i) => [String(row[G.COLUMN_INDICES.AUDIT.SKU - 1]).trim().toLowerCase(), i + 1]));
 
         inventoryUpdates.forEach(update => {
-            const skuLower = update.sku.toString().toLowerCase();
+            const skuLower = String(update.sku).trim().toLowerCase();
             if (auditSkuMap.has(skuLower)) {
                 const rowIndex = auditSkuMap.get(skuLower);
-                
-                // **UPDATED LOGIC**: Coerce blank values to 0 for calculation and writing.
-                const bruryaQty = Number(update.brurya) || 0;
-                const storageQty = Number(update.storage) || 0;
-                const officeQty = Number(update.office) || 0;
-                const shopQty = Number(update.shop) || 0;
-
-                // **NEW**: Calculate the total new quantity.
-                const newTotalQty = bruryaQty + storageQty + officeQty + shopQty;
-
-                // Update all individual location counts AND the total NewQty in the Audit sheet data array.
-                auditData[rowIndex][AUDIT_COLS.BRURYA_QTY - 1] = bruryaQty;
-                auditData[rowIndex][AUDIT_COLS.STORAGE_QTY - 1] = storageQty;
-                auditData[rowIndex][AUDIT_COLS.OFFICE_QTY - 1] = officeQty;
-                auditData[rowIndex][AUDIT_COLS.SHOP_QTY - 1] = shopQty;
-                auditData[rowIndex][AUDIT_COLS.NEW_QTY - 1] = newTotalQty; // Write the new total.
+                const newTotalQty = (Number(update.brurya) || 0) + (Number(update.storage) || 0) + (Number(update.office) || 0) + (Number(update.shop) || 0);
+                auditData[rowIndex][G.COLUMN_INDICES.AUDIT.BRURYA_QTY - 1] = Number(update.brurya) || 0;
+                auditData[rowIndex][G.COLUMN_INDICES.AUDIT.STORAGE_QTY - 1] = Number(update.storage) || 0;
+                auditData[rowIndex][G.COLUMN_INDICES.AUDIT.OFFICE_QTY - 1] = Number(update.office) || 0;
+                auditData[rowIndex][G.COLUMN_INDICES.AUDIT.SHOP_QTY - 1] = Number(update.shop) || 0;
+                auditData[rowIndex][G.COLUMN_INDICES.AUDIT.NEW_QTY - 1] = newTotalQty;
             }
         });
         auditSheet.getRange(1, 1, auditData.length, auditData[0].length).setValues(auditData);
+        Logger.log('Audit sheet updated successfully.');
 
-        // Update TaskQ Sheet
+        // --- 2. Update TaskQ Sheet ---
         const taskqData = taskqSheet.getDataRange().getValues();
         let tasksUpdated = false;
-        for (let i = 1; i < taskqData.length; i++) {
-            const assignedTo = taskqData[i][TQ_COLS.ASSIGNED_TO - 1]?.toString().toLowerCase();
-            const relatedSku = taskqData[i][TQ_COLS.RELATED_ENTITY - 1]?.toString().toLowerCase();
-            const status = taskqData[i][TQ_COLS.STATUS - 1]?.toString().toLowerCase();
 
-            if (assignedTo === activeUser.toLowerCase() && status === 'assigned' && submittedSkus.has(relatedSku)) {
-                taskqData[i][TQ_COLS.STATUS - 1] = 'Review';
-                tasksUpdated = true;
+        for (let i = 1; i < taskqData.length; i++) {
+            const taskRow = taskqData[i];
+            const assignedTo = String(taskRow[G.COLUMN_INDICES.TASKQ.ASSIGNED_TO - 1] || '').trim().toLowerCase();
+            const relatedSku = String(taskRow[G.COLUMN_INDICES.TASKQ.RELATED_ENTITY - 1] || '').trim().toLowerCase();
+            const status = String(taskRow[G.COLUMN_INDICES.TASKQ.STATUS - 1] || '').trim().toLowerCase();
+
+            if (submittedSkus.has(relatedSku)) {
+                Logger.log(`Checking TaskQ row ${i + 1}: SKU='${relatedSku}', AssignedTo='${assignedTo}', Status='${status}'`);
+                // UPDATED CONDITION: Only checks for status, ignoring the user.
+                if (status === 'assigned') {
+                    taskRow[G.COLUMN_INDICES.TASKQ.STATUS - 1] = 'Review';
+                    tasksUpdated = true;
+                    Logger.log(`  ✅ SUCCESS: Matched SKU and status. Updated status to 'Review'.`);
+                } else {
+                    Logger.log(`  ⚠️ MISMATCH: SKU matched, but status was not 'assigned'.`);
+                }
             }
         }
 
         if (tasksUpdated) {
             taskqSheet.getRange(1, 1, taskqData.length, taskqData[0].length).setValues(taskqData);
+            Logger.log('TaskQ sheet updated successfully.');
+            return { status: 'success', message: 'Inventory counts submitted and tasks moved to Review.' };
+        } else {
+            Logger.log('No matching tasks were found in TaskQ to update.');
+            return { status: 'success', message: 'Counts submitted, but no open tasks were found for this user and these products.' };
         }
 
-        // Finalize and Cleanup
-        populateInventorySheetFromTasks();
+    } catch (e) {
+        Logger.log(`[ERROR] server_submitInventory: ${e.message} Stack: ${e.stack}`);
+        return { status: 'error', message: e.message };
+    }
+}
 
-        ui.alert('Success', "Inventory counts have been submitted for review.");
+/**
+ * Quickly gets the count of available product count tasks for all users.
+ * Used to initialize the sidebar. This is a lightweight wrapper.
+ */
+function _server_getProductCountTasks() {
+    try {
+        // This calls the main server function that gathers the full list of inventory tasks for all users.
+        const fullTaskList = server_populateInventory('All Users'); 
+
+        // We check the 'data' property of the returned object...
+        const count = fullTaskList.data ? fullTaskList.data.length : 0;
+        
+        // ...and only return the count, not the full dataset.
+        return { status: 'success', data: { count: count } };
 
     } catch (e) {
-        ui.alert('Submission Error', `An error occurred: ${e.message}\n${e.stack}`);
+        Logger.log(`_server_getProductCountTasks Error: ${e.message}`);
+        return { status: 'error', message: e.message, data: { count: 0 } };
     }
 }

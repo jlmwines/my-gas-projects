@@ -12,8 +12,10 @@ const IS_TEST_ENVIRONMENT = false;
 const CONFIG = {
     live: {
         referenceFileId: '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc',
+        importFolderId: '1bPsgqtH2Wcd_vuLGFQGQiYP85TKHD-3j',
         backupFolderId: '18BXSaYp7SOQauMpXJ9AWCpE1SDcsgyGQ',
         comaxExportFolderId: "1ZNCnL6ryYOyhFaErbZlGW_eTKoR6nUU5",
+        invoiceFolderId: '1VNKUGl1tgrV-cdj0KiM5SQ8Kvsw9WoNb',
         packingSlipFolderId: '1iVX07R1qK0aEGz1x2smZYAbaXRneyowA',
         packingSlipTemplateId: '1QmdebRD-vk0gsbN5jRz5klE8ttW5KUjSbfl9ql-9VqU',
         customerNoteTemplateId: '1muXXF2gQUeIM1MALbkZINwZPcS2SXXbiGqKL3841gPw',
@@ -27,6 +29,7 @@ const CONFIG = {
         referenceFileId: '1D-zMEuAJQ3ATR0edIZKDSf71KkF3h7EgXrfTRaRQ8FU',
         backupFolderId: '1L9f7o1RSIxDGQjJ6L5BsszEtK2zYQEFD',
         comaxExportFolderId: "YOUR_TEST_COMAX_EXPORT_FOLDER_ID",
+        invoiceFolderId: 'YOUR_TEST_INVOICE_FOLDER_ID',
         packingSlipFolderId: 'YOUR_TEST_PACKING_SLIP_FOLDER_ID',
         packingSlipTemplateId: 'YOUR_TEST_PACKING_SLIP_TEMPLATE_ID',
         customerNoteTemplateId: 'YOUR_TEST_CUSTOMER_NOTE_TEMPLATE_ID',

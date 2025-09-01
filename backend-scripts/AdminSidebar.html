@@ -3,25 +3,24 @@
 <head>
     <base target="_top">
     <style>
-        body { font-family: sans-serif; padding: 0; margin: 0; font-size: 14px; background-color: #f8f9fa;}
+        body { font-family: sans-serif; padding: 0; margin: 0; font-size: 12px; background-color: #f8f9fa;}
         .accordion-section { border-bottom: 1px solid #ccc; }
-        .accordion-header { background-color: #f1f1f1; padding: 10px; cursor: pointer; font-weight: bold; position: relative; }
+        .accordion-header { background-color: #f1f1f1; padding: 6px 10px; cursor: pointer; font-weight: bold; position: relative; font-size: 12px; }
         .accordion-header:hover { background-color: #e1e1e1; }
-        .accordion-content { display: none; padding: 15px; border-top: 1px solid #ccc; background-color: #fff;}
-        .accordion-header.active + .accordion-content { display: block; }
-        .sub-section-title { font-weight: bold; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-top: 1px solid #ccc; background-color: #fff;}
+        .accordion-inner { padding: 10px; }
+        .sub-section-title { font-weight: bold; margin-top: 10px; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px;}
         .sub-section-title:first-child { margin-top: 0; }
         .loading { color: #888; }
-        label { display: block; margin-bottom: 5px; }
-        input, select, button { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 14px; }
+        label { display: block; margin-bottom: 4px; }
+        input, select, button { width: 100%; padding: 6px; margin-bottom: 8px; box-sizing: border-box; font-size: 12px; }
         button { background-color: #4285f4; color: white; border: none; cursor: pointer; text-align: center; border-radius: 4px;}
+        .review-task-button { padding: 4px; } /* Reduced padding for review task buttons */
         button.utility-btn { background-color: #6c757d; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         ul a { text-decoration: none; color: #0000EE; cursor: pointer; }
         ul a:hover { text-decoration: underline; }
         ul span { color: #555; }
-        
-        /* Styles for the Sync Panel */
         #sync-buttons-container button {
             text-align: left;
             background-color: #ffffff;
@@ -37,10 +36,9 @@
             color: #6c757d;
         }
         .status-line {
-            font-size: 12px;
+            font-size: 11px;
             color: #6c757d;
-            padding: 0 4px 10px 4px;
-            min-height: 14px;
+            padding: 0 4px 8px 4px;
         }
         .indicator {
             position: absolute;
@@ -57,22 +55,41 @@
         .accordion-header.active .indicator {
             transform: translateY(-50%) rotate(90deg);
         }
+        .active-review-link {
+            font-weight: bold;
+        }
+        #review-section .accordion-inner {
+            max-height: 600px; /* Adjust as needed */
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
 
+    <div id="invoices-section" class="accordion-section">
+        <div class="accordion-header">Invoices<span class="indicator"></span></div>
+        <div class="accordion-content">
+            <div class="accordion-inner">
+                <p style="margin: 0 0 10px 0;">Files in folder: <span id="invoice-file-count">...</span></p>
+                <a href="https://drive.google.com/drive/folders/1VNKUGl1tgrV-cdj0KiM5SQ8Kvsw9WoNb" target="_blank">Open Invoices Folder</a>
+            </div>
+        </div>
+    </div>
+
     <div id="sync-section" class="accordion-section">
         <div class="accordion-header">Daily Sync<span class="indicator"></span></div>
         <div class="accordion-content">
-            <div id="sync-buttons-container">
-                <button id="btn-step-beginSync" onclick="runSyncStep('beginSync', 'This will reset the workflow state and create a new backup. Proceed?')">1. Begin Sync</button>
-                <div id="status-beginSync" class="status-line"></div>
+            <div class="accordion-inner">
+                <div id="sync-buttons-container">
+                    <button id="btn-step-beginSync" onclick="runSyncStep('beginSync', 'This will reset the workflow state and create a new backup. Proceed?')">1. Begin Sync</button>
+                    <div id="status-beginSync" class="status-line"></div>
 
-                <button id="btn-step-ordersSync" onclick="runSyncStep('ordersSync', 'This will import and merge new orders. Proceed?')">2. Orders Sync</button>
-                <div id="status-ordersSync" class="status-line"></div>
+                    <button id="btn-step-ordersSync" onclick="runSyncStep('ordersSync', 'This will import and merge new orders. Proceed?')">2. Orders Sync</button>
+                    <div id="status-ordersSync" class="status-line"></div>
 
-                <button id="btn-step-productSync" onclick="runSyncStep('productSync', 'This will import and process product files. Proceed?')">3. Product Sync</button>
-                <div id="status-productSync" class="status-line"></div>
+                    <button id="btn-step-productSync" onclick="runSyncStep('productSync', 'This will import and process product files. Proceed?')">3. Product Sync</button>
+                    <div id="status-productSync" class="status-line"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -80,54 +97,72 @@
     <div id="review-section" class="accordion-section">
         <div class="accordion-header">Review Tasks<span class="indicator"></span></div>
         <div class="accordion-content">
-            <div id="review-tasks-list"><p class="loading">Loading...</p></div>
+            <div class="accordion-inner">
+                <div id="review-tasks-list"><p class="loading">Loading...</p></div>
+                <div id="review-status" style="margin-top: 15px; padding: 10px; border: 1px solid #ccc; background-color: #f8f9fa; display: none;"></div>
+                
+                <button class="review-task-button" onclick="runUtility('processNewProductApprovals', 'Are you sure you want to process approved products?', 'ProductsNew')">Process New Product Approvals</button>
+                <button class="review-task-button" onclick="runUtility('markAllAsAccepted')">Mark All Inventory as Accepted</button>
+                <button class="review-task-button" onclick="runUtility('processAndExportReviewedInventory')">Process & Export Inventory</button>
+                <button class="review-task-button" onclick="runUtility('processProductDetailApprovals')">Process Product Detail Approvals</button>
+                <button class="review-task-button" onclick="runUtility('processFinalDetailClosures')">Process Final Detail Closures</button>
+            </div>
         </div>
     </div>
 
     <div id="admin-tasks-section" class="accordion-section">
         <div class="accordion-header">Admin Tasks<span class="indicator"></span></div>
         <div class="accordion-content">
-            <div id="admin-assigned-tasks-list"><p class="loading">Loading...</p></div>
+            <div class="accordion-inner">
+                <div id="admin-assigned-tasks-list"><p class="loading">Loading...</p></div>
+            </div>
         </div>
     </div>
 
     <div id="tasks-section" class="accordion-section">
         <div class="accordion-header">Create Tasks <span class="indicator"></span></div>
         <div class="accordion-content">
-            <p style="margin: 0 0 10px 0;">Assigned Inventory Tasks: <span id="task-count-display">...</span></p>
-            <button id="create-low-stock-btn">Create Low Stock Tasks</button>
-            <button id="create-periodic-btn">Create Periodic Review Tasks</button>
+            <div class="accordion-inner">
+                <p style="margin: 0 0 10px 0;">Assigned Inventory Tasks: <span id="task-count-display">...</span></p>
+                <button id="create-low-stock-btn">Create Low Stock Tasks</button>
+                <button id="create-periodic-btn">Create Periodic Review Tasks</button>
+
+                <div class="sub-section-title">Task Creation Settings</div>
+                <label for="setting-limit">Task Limit</label>
+                <input type="number" id="setting-limit">
+                <label for="setting-low-stock">Low Stock Threshold</label>
+                <input type="number" id="setting-low-stock">
+                <label for="setting-periodic">Periodic Review (Days)</label>
+                <input type="number" id="setting-periodic">
+                <button id="save-settings-btn">Save Settings</button>
+            </div>
         </div>
     </div>
 
     <div id="utilities-section" class="accordion-section">
         <div class="accordion-header">Utilities & Settings <span class="indicator"></span></div>
         <div class="accordion-content">
-            <div class="sub-section-title">General Utilities</div>
-            <button id="util-snapshot-btn">Create Manual Snapshot</button>
-            <button id="util-restore-btn">Restore from Snapshot</button>
-            <button id="util-archive-btn">Archive Old Orders</button>
+            <div class="accordion-inner">
+                <button id="util-snapshot-btn">Create Manual Snapshot</button>
+                <button id="util-restore-btn">Restore from Snapshot</button>
+                <button id="util-archive-btn">Archive Old Orders</button>
 
-            <div class="sub-section-title">Workflow Reset</div>
-            <select id="util-reset-select">
-                <option value="" selected disabled>Select a reset point...</option>
-                <option value="resetStateToStart">Start of Workflow</option>
-                <option value="resetStatePostBackup">After Backup</option>
-                <option value="resetStatePostImportsAndOrders">After Imports & Orders</option>
-                <option value="resetStatePostReview">After Review</option>
-                <option value="resetStatePostFinalize">After Finalize</option>
-            </select>
-            <button id="util-reset-execute-btn" disabled>Execute Reset</button>
-
-            <div class="sub-section-title">Task Creation Settings</div>
-            <label for="setting-limit">Task Limit</label>
-            <input type="number" id="setting-limit">
-            <label for="setting-low-stock">Low Stock Threshold</label>
-            <input type="number" id="setting-low-stock">
-            <label for="setting-periodic">Periodic Review (Days)</label>
-            <input type="number" id="setting-periodic">
-            <button id="save-settings-btn">Save Settings</button>
+                <div class="sub-section-title">Workflow Reset</div>
+                <select id="util-reset-select">
+                    <option value="" selected disabled>Select a reset point...</option>
+                    <option value="resetStateToStart">Start of Workflow</option>
+                    <option value="resetStatePostBackup">After Backup</option>
+                    <option value="resetStatePostImportsAndOrders">After Imports & Orders</option>
+                    <option value="resetStatePostReview">After Review</option>
+                    <option value="resetStatePostFinalize">After Finalize</option>
+                </select>
+                <button id="util-reset-execute-btn" disabled>Execute Reset</button>
+            </div>
         </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button class="action" onclick="refreshSidebar()">Refresh Sidebar</button>
     </div>
 
     <script>
@@ -139,7 +174,6 @@
             button.disabled = true;
             status.textContent = "Processing...";
             
-            // Map stepName to backend function, now simplified
             const functionMap = {
                 'beginSync': 'runInitialSyncStep',
                 'ordersSync': 'runOrdersStep',
@@ -160,10 +194,12 @@
         }
 
         // --- MAIN SIDEBAR SCRIPT ---
+        let currentActiveLinkElement = null;
+
         document.addEventListener("DOMContentLoaded", () => {
             google.script.run
                 .withSuccessHandler(initializeSidebar)
-                .withFailureHandler(handleGenericFailure)
+                .withFailureHandler(handleError)
                 .getSidebarData();
         });
 
@@ -172,44 +208,35 @@
             renderReviewTasks(data.adminTasks);
             renderAdminAssignedTasks(data.bwTasks);
             populateTaskCreatorPanel(data.taskPanel);
+            document.getElementById('invoice-file-count').textContent = data.invoiceFileCount;
             attachUtilityListeners();
         }
         
         function setupAccordion(data) {
-            document.querySelectorAll('.accordion-header').forEach(header => {
-                header.addEventListener('click', () => {
-                    const content = header.nextElementSibling;
-                    const wasActive = header.classList.contains('active');
-                    
-                    document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
-                    document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+            const allHeaders = document.querySelectorAll('.accordion-header');
+            
+            allHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    const isActive = this.classList.contains('active');
 
-                    if (!wasActive) {
-                        content.style.display = 'block';
-                        header.classList.add('active');
+                    allHeaders.forEach(h => {
+                        h.classList.remove('active');
+                        h.nextElementSibling.style.maxHeight = null;
+                    });
+
+                    if (!isActive) {
+                        this.classList.add('active');
+                        content.style.maxHeight = content.scrollHeight + 'px';
                     }
                 });
             });
 
-            const reviewTasksExist = data.adminTasks && data.adminTasks.some(g => g.count > 0);
-            const adminTasksExist = data.bwTasks && data.bwTasks.some(g => g.count > 0);
-
-            let sectionToOpen = null;
-            if (data.isSyncCompletedToday === false) {
-                sectionToOpen = '#sync-section';
-            } else if (reviewTasksExist) {
-                sectionToOpen = '#review-section';
-            } else if (adminTasksExist) {
-                sectionToOpen = '#admin-tasks-section';
-            }
-
-            if (sectionToOpen) {
-                const header = document.querySelector(sectionToOpen + ' .accordion-header');
-                const content = document.querySelector(sectionToOpen + ' .accordion-content');
-                if (header && content) {
-                    header.classList.add('active');
-                    content.style.display = 'block';
-                }
+            const invoicesHeader = document.querySelector('#invoices-section .accordion-header');
+            if (invoicesHeader) {
+                const invoicesContent = invoicesHeader.nextElementSibling;
+                invoicesHeader.classList.add('active');
+                invoicesContent.style.maxHeight = invoicesContent.scrollHeight + 'px';
             }
         }
 
@@ -239,9 +266,17 @@
                     link.onclick = (e) => {
                         e.preventDefault();
                         setLoadingState(true);
+                        showReviewStatus('Loading sheet...');
+
+                        if (currentActiveLinkElement) {
+                            currentActiveLinkElement.classList.remove('active-review-link');
+                        }
+                        e.target.classList.add('active-review-link');
+                        currentActiveLinkElement = e.target;
+
                         google.script.run
-                            .withSuccessHandler(handleGenericSuccess)
-                            .withFailureHandler(handleGenericFailure)
+                            .withSuccessHandler(showReviewStatus)
+                            .withFailureHandler(handleError)
                             [group.functionName]();
                     };
                     listItem.appendChild(link);
@@ -286,7 +321,7 @@
         
         function populateTaskCreatorPanel(data) {
             if (!data || data.error) {
-                handleGenericFailure({ message: data ? data.error : "Failed to load task panel info." });
+                handleError({ message: data ? data.error : "Failed to load task panel info." });
                 return;
             }
             document.getElementById('task-count-display').textContent = `${data.assignedTaskCount} / ${data.settings.defaultLimit}`;
@@ -321,20 +356,30 @@
             document.getElementById('save-settings-btn').addEventListener('click', saveSettings);
         }
         
-        function runUtility(functionName, confirmMessage) {
+        function runUtility(functionName, confirmMessage, arg1) {
             if (confirmMessage && !confirm(confirmMessage)) return;
             setLoadingState(true);
-            google.script.run
-                .withSuccessHandler(handleGenericSuccess)
-                .withFailureHandler(handleGenericFailure)
-                [functionName]();
+            showReviewStatus(`Running ${functionName}...`);
+            
+            const runner = google.script.run
+                .withSuccessHandler(result => {
+                    showReviewStatus(result);
+                    refreshSidebar();
+                })
+                .withFailureHandler(handleError);
+
+            if (arg1 !== undefined) {
+                runner[functionName](arg1);
+            } else {
+                runner[functionName]();
+            }
         }
 
         function createTask(type) {
             setLoadingState(true);
             google.script.run
-                .withSuccessHandler(handleGenericSuccess)
-                .withFailureHandler(handleGenericFailure)
+                .withSuccessHandler(showReviewStatus)
+                .withFailureHandler(handleError)
                 .createTasksFromSidebar(type);
         }
 
@@ -346,19 +391,26 @@
                 periodicDays: document.getElementById('setting-periodic').value
             };
             google.script.run
-                .withSuccessHandler(handleGenericSuccess)
-                .withFailureHandler(handleGenericFailure)
+                .withSuccessHandler(showReviewStatus)
+                .withFailureHandler(handleError)
                 .saveTaskSettings(settings);
         }
 
-        function handleGenericSuccess(result) {
-            const message = (result && typeof result === 'string') ? result : 'Operation successful. Reloading...';
-            alert(message);
-            document.location.reload();
+        function showReviewStatus(message) {
+            const statusDiv = document.getElementById('review-status');
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#f8f9fa';
+            statusDiv.style.borderColor = '#ccc';
+            setLoadingState(false);
         }
 
-        function handleGenericFailure(error) {
-            alert('Error: ' + error.message);
+        function handleError(error) {
+            const statusDiv = document.getElementById('review-status');
+            statusDiv.textContent = 'Error: ' + error.message;
+            statusDiv.style.display = 'block';
+            statusDiv.style.backgroundColor = '#f8d7da';
+            statusDiv.style.borderColor = '#f5c6cb';
             setLoadingState(false);
         }
         
@@ -372,6 +424,20 @@
                     el.style.opacity = '1';
                 }
             });
+        }
+
+        function refreshSidebar() {
+            setLoadingState(true);
+            google.script.run
+                .withSuccessHandler(result => {
+                    initializeSidebar(result);
+                    setLoadingState(false);
+                })
+                .withFailureHandler(error => {
+                    handleError(error);
+                    setLoadingState(false);
+                })
+                .getSidebarData();
         }
     </script>
 </body>
