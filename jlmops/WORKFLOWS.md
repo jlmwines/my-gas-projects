@@ -115,10 +115,10 @@ This workflow covers the end-to-end process for adding new products, updating ex
     *   It populates `WebDetM` (Web Details Master) with detailed, language-dependent data.
     *   It populates `WebXlt` (Web Translate) with translation links.
     *   It populates `WebBundles` with bundle compositions.
-3.  **Data Validation:** The `ProductService` performs validation checks:
-    *   **SKU Compliance:** Ensures `wpm_SKU` exists in `CmxProdM`.
-    *   **Translation Completeness:** Ensures each `WebIdEn` has a corresponding `WebIdHe` in `WebXlt`.
-    *   Any discrepancies generate tasks in `SysTasks`.
+3.  **Data Validation & Integrity:** The `ProductService` performs validation checks based on the system's data ownership rules. The principle is that **Comax is the owner of primary product data** (price, stock), while the **JLM Ops Hub is the authority for all descriptive and marketing data,** which it expands upon using some base data from Comax. The key integrity checks are:
+    *   **SKU Compliance:** Ensures a product's `wpm_SKU` in the web system has a valid, corresponding entry in the `CmxProdM` (Comax master) sheet. This is the primary link between the systems.
+    *   **Translation Completeness:** Ensures each original language product in `WebProdM` has a corresponding translated product linked in the `WebXlt` sheet.
+    *   Any discrepancies found during these validation steps will automatically generate a task in `SysTasks` for manual review and correction.
 
 ### 3.2. Product Detail Verification
 
@@ -130,13 +130,44 @@ This workflow ensures the accuracy and freshness of web product details.
     *   These tasks are created in `SysTasks`.
 
 2.  **Manager Action:** A manager accesses their assigned "Verify Product Details" tasks.
-    *   They are presented with a form to review and edit the product's details (names, descriptions, attributes, pairings) in both English and Hebrew.
+    *   They are presented with a form to review and edit the product's details (names, descriptions, attributes, pairings, and sales rules like 'Sold Individually') in both English and Hebrew.
     *   Upon completion, the `ProductService` updates the `WebDetM` sheet and sets the `wdm_LastVerifiedTimestamp`.
     *   The task in `SysTasks` is marked as 'Completed'.
 
 ---
 
-## 4. Content Creation Workflow (Editorial Hub)
+## 4. Advanced Product Management Workflows
+
+These workflows handle complex scenarios where the relationships between products in Comax and WooCommerce change. They are designed around a "Detect -> Task -> Manual Action -> Verify" principle to ensure data integrity.
+
+### 4.1. Handling Comax SKU Changes
+
+This workflow safely manages the process when a SKU for a product sold online is changed in Comax.
+
+1.  **Detection:** During a Comax import, the `ProductService` identifies any product flagged as "sold online" whose SKU has changed since the last import (keyed by the stable Comax Product ID).
+2.  **Task Generation:** The service automatically creates a high-priority task: *"The Comax SKU for product '[Product Name]' has changed to '[New SKU]'. Please manually update the SKU for this product in WooCommerce."
+3.  **Manual Action:** An admin performs the SKU update in the WooCommerce admin panel.
+4.  **Verification:** The task remains open. The JLM Ops Hub monitors subsequent WooCommerce imports. When it detects that the SKU for the corresponding WooCommerce product has been updated to match, it automatically marks the task as 'Completed'.
+
+### 4.2. Onboarding New Web Products
+
+This workflow coordinates the multi-step, multi-user process of bringing a new product to the web, ensuring data integrity at each stage.
+
+1.  **Initiation (Manager):** A manager creates a new "Onboard New Product" task to begin the process.
+2.  **Approval & Naming (Admin):** An admin receives a task to approve the suggestion. If approved, they provide the official English and Hebrew names, which creates a placeholder record in the system.
+3.  **Add Details (Manager):** A task is generated for the manager to enter all descriptive and marketing data (tasting notes, pairings, etc.) into the JLM Ops Hub UI.
+4.  **Confirm Details (Admin):** The admin gets a task to review and confirm the manager's data entry.
+5.  **Create in WooCommerce & Link (Admin):** A critical task instructs the admin to:
+    a. Manually create the draft product and its translation in WooCommerce.
+    b. Return to the task in the JLM Ops Hub and paste the new English and Hebrew WooCommerce Product IDs into the task form.
+6.  **System Verification of Link:** The system waits for the next WooCommerce import, then verifies that the provided IDs match the product SKU for the task. The workflow is halted if a mismatch is detected.
+7.  **Update Data (Admin):** A task is generated for the admin to push all the rich data to the new WooCommerce drafts, either via a system-generated export or manually.
+8.  **Flag in Comax (Admin):** A task instructs the admin to set the "Sell Online" flag for the product in Comax.
+9.  **Final Reconciliation (System):** The parent "Onboard" task is only closed after the system verifies that the Comax "Sell Online" flag is active AND the product is marked as "Published" in WooCommerce, ensuring the entire process is complete and reconciled.
+
+---
+
+## 5. Content Creation Workflow (Editorial Hub)
 
 This workflow facilitates the creation of content like blog posts, managed via the Publishing section of the dashboard.
 
@@ -147,16 +178,16 @@ This workflow facilitates the creation of content like blog posts, managed via t
 
 ---
 
-## 5. Campaign Management Workflow
+## 6. Campaign Management Workflow
 
 This workflow provides a central hub for planning, executing, and tracking multi-faceted promotional campaigns.
 
-### 5.1. Campaign Creation
+### 6.1. Campaign Creation
 
 1.  **Initiate Campaign:** A manager navigates to the "Campaigns" dashboard widget and creates a new campaign (e.g., "Summer Reds 2025").
 2.  **Define Campaign:** The manager provides a name, topic, start date, and end date. This creates a new entry in the `SysCampaigns` sheet with a status of 'Planning'.
 
-### 5.2. Asset Assembly & Task Generation
+### 6.2. Asset Assembly & Task Generation
 
 1.  **Access Campaign Hub:** The manager enters the specific hub for the new campaign.
 2.  **Link Assets:** The manager links all components (assets) to the campaign. For each asset, a new row is created in `SysCampaignAssets`.
@@ -165,7 +196,7 @@ This workflow provides a central hub for planning, executing, and tracking multi
     *   **Create Email/Coupon:** The manager creates entries for planned emails or coupons, linking them to the campaign for tracking.
 3.  **Task Integration:** The creation of each asset automatically generates the necessary "scaffolding" of tasks in `SysTasks`, ensuring that every part of the campaign is tracked and assigned from the very beginning.
 
-### 5.3. Coordinated Execution & Monitoring
+### 6.3. Coordinated Execution & Monitoring
 
 1.  **Unified View:** The Campaign Hub provides a single dashboard to track the status of all assets for the promotion. The manager can see at a glance what is on track and what is falling behind.
 2.  **Timeline Management:** By setting due dates for each asset (`sca_DueDate`), the manager can ensure that content is created, reviewed, and published in the correct sequence to coincide with the campaign's launch date.
@@ -173,7 +204,7 @@ This workflow provides a central hub for planning, executing, and tracking multi
 
 ---
 
-## 6. System Configuration Management
+## 7. System Configuration Management
 
 This workflow describes how system settings and business rules are managed.
 
@@ -187,7 +218,7 @@ This workflow describes how system settings and business rules are managed.
 
 ---
 
-## 6. Key Performance Indicator (KPI) Reporting
+## 8. Key Performance Indicator (KPI) Reporting
 
 This workflow describes how the system calculates and displays key performance metrics.
 

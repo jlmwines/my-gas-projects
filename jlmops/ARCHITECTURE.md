@@ -31,7 +31,7 @@ The backend is designed as a collection of services that are controlled by a sin
 *   **API Endpoint:** A single `doPost(e)` function acts as the router for all incoming requests from the frontend. It inspects the request (`{action: '...', payload: {...}}`) and routes it to the appropriate service.
 *   **Service Layer:** The core logic is broken down into the following services:
     *   **`OrchestratorService`**: Manages the time-driven trigger, scans for new files, checks the `FileRegistry`, and initiates the correct workflows.
-    *   **`ProductService`**: Handles core product data management and the "Product Relationship Manager" for linking/unlinking products.
+    *   **`ProductService`**: Handles core product data management, including the validation and integrity checks for the product onboarding and SKU change workflows.
     *   **`OrderService`**: Manages the entire order lifecycle, including import, status merging, and preparing data for the Comax export.
     *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
     *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
@@ -41,14 +41,15 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.
     *   **`InventoryManagementService`**: Manages physical inventory at managed locations (e.g., BruryaStock).
         *   **`KpiService`**: Calculates and stores Key Performance Indicators (KPIs) based on configurable definitions.
-    *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
+        *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
+    *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
 
 ### 2.3. Data Adapters & Formatters
 
 To keep the core services clean, we use an adapter/formatter pattern to handle messy external data.
 
 *   **`ComaxAdapter`**: Ingests raw, Hebrew-language CSV data from Comax. It cleans the data (e.g., handles `null` inventory), translates headers, and produces clean, standardized product objects for the rest of the system to use.
-*   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import.
+*   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import. This includes handling special flags like `IsSoldIndividually`.
 
 ### 2.4. Data Store: Google Sheets
 

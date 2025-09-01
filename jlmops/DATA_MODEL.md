@@ -107,6 +107,8 @@ The following sheets represent the core data model for managing products.
         31. `wdm_KashrutK5`
         32. `wdm_HeterMechira`
         33. `wdm_IsMevushal`
+    *   **Sales Rules**
+        34. `wdm_IsSoldIndividually`
 
 ### `CmxProdM` (Comax Products Master)
 *   **Purpose:** Contains master product data imported from the Comax ERP.

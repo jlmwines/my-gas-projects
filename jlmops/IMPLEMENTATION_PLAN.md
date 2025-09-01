@@ -31,7 +31,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   `InventoryManagementService` (for Brurya and other managed stock)
         *   `KpiService` (for calculating and storing KPIs)
         *   `CampaignService` (for managing promotions)
-    *   `LoggerService` (for centralized logging and alerting)
+        *   `LoggerService` (for centralized logging and alerting)
 2.  **Implement Adapters:** Build the `ComaxAdapter` to clean incoming data and the `WooCommerceFormatter` to create the complex export files.
 3.  **Activate the Orchestrator:** Implement the file-watching `OrchestratorService` and set up the time-driven trigger.
 
@@ -50,7 +50,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
         *   Task Management Interface
                 *   Bundle Planning Hub
                 *   Campaigns Hub (for coordinating promotions)
-        *   System Health & Recovery Interface
+                *   System Health & Recovery Interface
 
 ## Phase 4: Testing, Integration & Deployment
 
