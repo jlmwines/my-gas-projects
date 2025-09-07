@@ -81,13 +81,13 @@
         <div class="accordion-content">
             <div class="accordion-inner">
                 <div id="sync-buttons-container">
-                    <button id="btn-step-beginSync" onclick="runSyncStep('beginSync', 'This will reset the workflow state and create a new backup. Proceed?')">1. Begin Sync</button>
+                    <button id="btn-step-beginSync" onclick="runSyncStep('beginSync', 'Begin Daily Sync')">1. Begin Sync</button>
                     <div id="status-beginSync" class="status-line"></div>
 
-                    <button id="btn-step-ordersSync" onclick="runSyncStep('ordersSync', 'This will import and merge new orders. Proceed?')">2. Orders Sync</button>
+                    <button id="btn-step-ordersSync" onclick="runSyncStep('ordersSync', 'Begin Order Processing')">2. Orders Sync</button>
                     <div id="status-ordersSync" class="status-line"></div>
 
-                    <button id="btn-step-productSync" onclick="runSyncStep('productSync', 'This will import and process product files. Proceed?')">3. Product Sync</button>
+                    <button id="btn-step-productSync" onclick="runSyncStep('productSync', 'Begin Product Processing')">3. Product Sync</button>
                     <div id="status-productSync" class="status-line"></div>
                 </div>
             </div>
@@ -169,6 +169,13 @@
         // --- SYNC PANEL SCRIPT ---
         function runSyncStep(stepName, confirmationMessage) {
             if (confirmationMessage && !confirm(confirmationMessage)) return;
+
+            // Clear subsequent statuses if starting over
+            if (stepName === 'beginSync') {
+                document.getElementById('status-ordersSync').textContent = '';
+                document.getElementById('status-productSync').textContent = '';
+            }
+
             const button = document.getElementById('btn-step-' + stepName);
             const status = document.getElementById('status-' + stepName);
             button.disabled = true;

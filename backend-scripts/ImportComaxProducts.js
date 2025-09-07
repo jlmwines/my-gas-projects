@@ -43,15 +43,7 @@ function importComaxProducts() {
     const sourceFileName = activeConfig.importFileNames.comaxProducts; // Get filename from Globals
 
     try {
-        const response = ui.alert(
-            'Confirm Comax Import',
-            `This will replace all data in 'ComaxS' with the contents of '${sourceFileName}'.\n\nContinue?`,
-            ui.ButtonSet.YES_NO
-        );
-
-        if (response !== ui.Button.YES) {
-            throw new Error("User cancelled the import.");
-        }
+        
 
         // --- Execute the main import logic ---
         const message = executeComaxImport(sourceFileName, ui);

@@ -44,15 +44,7 @@ function importWebProducts() {
     const sourceFileName = activeConfig.importFileNames.webProducts; // Get filename from Globals
 
     try {
-        const response = ui.alert(
-            'Confirm Web Products Import',
-            `This will replace all data in the 'WebS' sheet with the contents of '${sourceFileName}'.\n\nAre you sure you want to continue?`,
-            ui.ButtonSet.YES_NO
-        );
-
-        if (response !== ui.Button.YES) {
-            throw new Error("User cancelled the import.");
-        }
+        
 
         const successMessage = executeWebImport(sourceFileName, ui);
         // On success, return a status object for the sidebar to handle.

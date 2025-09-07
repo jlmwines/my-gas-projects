@@ -43,15 +43,7 @@ function importWebOrders() {
     const sourceFileName = activeConfig.importFileNames.webOrders; // Get filename from Globals
 
     try {
-        const response = ui.alert(
-            'Confirm Web Orders Import',
-            `This will replace all data in the 'OrdersS' sheet with the contents of '${sourceFileName}'.\n\nAre you sure you want to continue?`,
-            ui.ButtonSet.YES_NO
-        );
-
-        if (response !== ui.Button.YES) {
-            throw new Error("User cancelled the import.");
-        }
+        
 
         const successMessage = executeWebOrdersImport(sourceFileName, ui);
         // On success, return a status object for the sidebar to handle.

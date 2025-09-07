@@ -91,7 +91,7 @@ function finalizeProductData() {
             holdSource.getRange('A1').setValue(`Last Finalized: ${new Date().toISOString()}`);
         }
 
-        ui.alert('Finalize Complete', 'Master product sheets have been updated successfully.', ui.ButtonSet.OK);
+        
         return true;
     } catch (err) {
         ui.alert('Finalize Failed', `An error occurred: ${err.message}`, ui.ButtonSet.OK);

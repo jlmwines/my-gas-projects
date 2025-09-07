@@ -6,13 +6,7 @@
 
 function exportInventoryAdjustments() {
   const ui = SpreadsheetApp.getUi();
-  const confirm = ui.alert(
-    'Confirm Export',
-    'Export will calculate inventory differences between Comax and Website Master, and create a CSV file in your Exports folder. Proceed?',
-    ui.ButtonSet.YES_NO
-  );
-  // FIX: Changed return to return false to be consistent with other functions.
-  if (confirm !== ui.Button.YES) return false;
+  
 
   try {
     const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
@@ -66,7 +60,7 @@ function exportInventoryAdjustments() {
     });
 
     if (exportRows.length === 0) {
-      ui.alert('Export Skipped', 'No inventory or price differences found. No file created.', ui.ButtonSet.OK);
+      
       // FIX: Return true because the operation completed successfully, even if no file was created.
       return true;
     }
@@ -104,6 +98,16 @@ function buildOnHoldMap(sheet) {
   if (lastRow < 2) {
     return {}; // Return an empty map if no data exists
   }
+  const rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  const map = {};
+  rows.forEach(r => {
+    const sku = String(r[0] || '').trim();
+    const qty = Number(r[1]) || 0;
+    if (sku) map[sku] = qty;
+  });
+  return map;
+}
+
   const rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
   const map = {};
   rows.forEach(r => {

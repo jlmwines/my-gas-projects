@@ -102,7 +102,7 @@ function runProductsStep() {
 
     importWebProducts();
     importComaxProducts();
-    reviewProducts();
+    
     finalizeProductData();
     exportInventoryAdjustments();
 

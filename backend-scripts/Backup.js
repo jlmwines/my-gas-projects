@@ -49,15 +49,7 @@ function _executeBackupRotation() {
  */
 function backupSheets() {
   const ui = SpreadsheetApp.getUi();
-  const confirmationResponse = ui.alert(
-    'Confirm Backup',
-    'This will create a new "Latest" backup and rotate the existing "Latest" to "Previous". The old "Previous" backup will be deleted. Proceed?',
-    ui.ButtonSet.YES_NO
-  );
-
-  if (confirmationResponse !== ui.Button.YES) {
-    throw new Error("User cancelled the backup.");
-  }
+  
 
   try {
     SpreadsheetApp.getActiveSpreadsheet().toast('Starting backup rotation...', 'Backup', 30);
