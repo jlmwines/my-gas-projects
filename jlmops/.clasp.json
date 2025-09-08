@@ -13,6 +13,25 @@
   "jsonExtensions": [
     ".json"
   ],
-  "filePushOrder": [],
+  "filePushOrder": [
+    "config.js",
+    "LoggerService.js",
+    "HousekeepingService.js",
+    "WpmlService.js",
+    "CategoryService.js",
+    "WooCommerceFormatter.js",
+    "ComaxAdapter.js",
+    "ProductService.js",
+    "BundleService.js",
+    "PromotionsEngineService.js",
+    "InventoryManagementService.js",
+    "KpiService.js",
+    "CampaignService.js",
+    "TaskService.js",
+    "OrderService.js",
+    "OrchestratorService.js",
+    "migration.js",
+    "setup.js"
+  ],
   "skipSubdirectories": false
 }

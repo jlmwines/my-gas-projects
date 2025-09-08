@@ -8,10 +8,12 @@ This section details the granular steps being undertaken in the current phase of
 
 ### Phase 1: Foundation & Data Normalization - Detailed Steps
 
-1.  **Project Setup & Environment Configuration:**
-    *   Verify `clasp` setup for both Staging and Production environments as per `TESTING_AND_VERSIONING.md`.
-    *   Ensure the central Reference Spreadsheet is created and accessible.
-    *   Populate `SysConfig` with initial settings (file IDs, folder IDs, thresholds) as per `DATA_MODEL.md`.
+**1. Project Setup & Environment Configuration (COMPLETED)**
+    *   **Reference Spreadsheet:** The central Reference Spreadsheet (`1a4aAreab8IdSZjgpNDf0Wj8Rl2UOTwlD525d4Zpc874`) has been designated and its ID stored in script properties.
+    *   **Core Sheets Created:** The `setup.js` script has been created to programmatically create all necessary sheets as per `DATA_MODEL.md`.
+    *   **System Configuration:** The `SysConfig` sheet has been populated with initial settings for the Comax product import, including input and processed folder IDs.
+    *   **File Registry:** The `SysFileRegistry` sheet has been created to ensure idempotent file processing.
+    *   **Development Workflow:** The `clasp` and `git` workflows have been established for local development and deployment.
 
 2.  **Address Critical Backend Script Issues (Refactoring for Robustness):**
     *   **Centralize Sheet Names and Column Indices:**
