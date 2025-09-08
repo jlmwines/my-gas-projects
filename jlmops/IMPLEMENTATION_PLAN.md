@@ -2,6 +2,38 @@
 
 This document outlines the high-level, phased plan for building the JLM Operations Hub.
 
+## Current Implementation Progress
+
+This section details the granular steps being undertaken in the current phase of the implementation. Each step should be a small, verifiable unit of work.
+
+### Phase 1: Foundation & Data Normalization - Detailed Steps
+
+1.  **Project Setup & Environment Configuration:**
+    *   Verify `clasp` setup for both Staging and Production environments as per `TESTING_AND_VERSIONING.md`.
+    *   Ensure the central Reference Spreadsheet is created and accessible.
+    *   Populate `SysConfig` with initial settings (file IDs, folder IDs, thresholds) as per `DATA_MODEL.md`.
+
+2.  **Address Critical Backend Script Issues (Refactoring for Robustness):**
+    *   **Centralize Sheet Names and Column Indices:**
+        *   **Goal:** Define all sheet names and column indices in `backend-scripts/Globals.js` (e.g., `G.SHEET_NAMES`, `G.COLUMN_INDICES`).
+        *   **Verification:** Ensure all relevant backend scripts (`AdminWorkflow.js`, `AuditLowProducts.js`, `ExportInventory.js`, etc.) are updated to use these global constants instead of hardcoded values.
+        *   **Priority:** High (as per `backend-scripts-review.md` point 3).
+    *   **Remove Duplicate Code:**
+        *   **Goal:** Centralize `restoreSheetsToFile()` (from `Restore.js`) and `setReferenceSetting()` (from `Housekeeping.js` and `PackingSlipData.js`) into a shared utility file (e.g., `backend-scripts/Utils.js`).
+        *   **Verification:** Confirm that all call sites are updated to use the centralized functions.
+        *   **Priority:** High (as per `backend-scripts-review.md` points 2 and 5).
+    *   **Verify `getImportFileDates()`:**
+        *   **Goal:** Implement or correct `getImportFileDates()` in `backend-scripts/AdminWorkflow.js` to ensure `runProductsStep` functions correctly.
+        *   **Verification:** Test the product import workflow in the staging environment.
+        *   **Priority:** Critical (as per `backend-scripts-review.md` point 1).
+
+3.  **Core Data Sheet Creation (Manual/Scripted):**
+    *   Create the following sheets in the Reference Spreadsheet, ensuring correct headers as per `DATA_MODEL.md`:
+        *   `WebProdM`, `WebDetM`, `CmxProdM`, `WebXlt`, `WebBundles`
+        *   `WebOrdS`, `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `SysPackingCache`, `SysInventoryOnHold`
+        *   `SysTasks`, `SysTaskTypes`, `SysTaskStatusWorkflow`
+    *   **Verification:** Visually inspect sheets for correct creation and initial headers.
+
 ## Phase 1: Foundation & Data Normalization
 
 **Goal:** To prepare the environment and establish the new, robust data structures before writing any new workflow logic. This is the most critical phase.
