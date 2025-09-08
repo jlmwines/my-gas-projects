@@ -15,20 +15,21 @@ To guarantee a successful implementation, I will follow these directives without
 
 4.  **PRECISION IN NAMING IS PARAMOUNT.** I will enforce the naming conventions from `DATA_MODEL.md` for all sheets and columns (`wpm_`, `cpm_`, `scf_`, etc.) to ensure data integrity and code clarity.
 
+5.  **PERSISTING PROGRESS IS MANDATORY.** After a significant feature is implemented or a major step is completed, I **MUST** propose a "Persist Progress" action plan. This plan will include:
+    *   Updating all relevant documentation (`IMPLEMENTATION_PLAN.md`, `README.md`, etc.) to reflect the changes.
+    *   Pushing the changes to the Google Apps Script project using `clasp push`.
+    *   Committing the changes to the GitHub repository with a clear and descriptive message.
+    This must be done **before** the end of a session to prevent loss of work.
+
 ## **CURRENT IMPLEMENTATION STATUS**
 
 *   **Phase:** Backend Engine & Automation.
 *   **Workflow:** `Comax Products Import`.
-*   **Status:** Project setup and initial configuration are complete. All required sheets and configuration values are in place.
-*   **Immediate Task:** Implement the `ComaxAdapter.js` module.
+*   **Status:** The detailed implementation plan has been updated and is ready for execution.
+*   **Immediate Task:** Begin implementation of the `setup.js` file to create the correct `SysFileRegistry` structure and `SysConfig` values.
 
 ## **MY IMMEDIATE ACTION PLAN**
 
-I will now implement `ComaxAdapter.js`. My implementation will:
+I will now formulate a precise action plan to implement the `setup.js` file changes as detailed in the `IMPLEMENTATION_PLAN.md`.
 
-1.  **Be Config-Driven:** It will retrieve the folder ID, file name, and encoding from `SysConfig`.
-2.  **Be Robust:** It will correct the known blank header issue in column O of the source CSV.
-3.  **Be Self-Contained:** It will use an internal mapping object to translate the raw CSV columns into the clean `cpm_` data model.
-4.  **Produce Clean Data:** It will return a perfectly structured array of product objects, ready for the next service in the chain.
-
-I am ready to proceed with this action plan.
+**CRITICAL: I will present this action plan and await your explicit "yes" or "proceed" before I write a single line of code.**

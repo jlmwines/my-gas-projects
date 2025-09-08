@@ -52,8 +52,22 @@ This section details the granular steps being undertaken in the current phase of
 
 **Goal:** To build the core automated engine. At the end of this phase, the system will be able to perform its automated syncs "headless," without a UI.
 
-1.  **Build Core Services:** Implement the backend logic for all the services:
-    *   `OrchestratorService`
+**1. Implement Comax Products Import Workflow**
+    *   **`setup.js`:**
+        *   **Action:** Create a `setupSysConfig` function to populate the `SysConfig` sheet with structured configuration for the Comax import (folder IDs, file name, encoding).
+        *   **Action:** Create a `createFileRegistrySheet` function to create the `SysFileRegistry` sheet with the correct columns (`sfr_FileType`, `sfr_FileID`, `sfr_LastUpdated`, `sfr_ProcessedTimestamp`).
+        *   **Status:** Design complete.
+    *   **`ComaxAdapter.js`:**
+        *   **Action:** Implement a `processComaxProductFile` function that is self-contained and config-driven.
+        *   **Detail:** The adapter will be responsible for fetching the raw CSV, patching the known blank header in column O, and transforming the data into clean objects based on an internal column-to-field map.
+        *   **Status:** Awaiting implementation.
+    *   **`OrchestratorService.js`:**
+        *   **Action:** Implement a `processNewComaxProducts` function to manage the import workflow.
+        *   **Detail:** The service will use a timestamp-based registry to identify new file versions. It will read the file's last-updated timestamp and compare it to the last-processed timestamp for the "COMAX_PRODUCTS" file type in the `SysFileRegistry`.
+        *   **Detail:** The service will be non-destructive and will not move or alter the source file.
+        *   **Status:** Awaiting implementation.
+
+**2. Build Core Services (Remaining)**
     *   `ProductService`
     *   `OrderService`
     *   `CategoryService`
@@ -62,12 +76,16 @@ This section details the granular steps being undertaken in the current phase of
     *   `PromotionsEngineService`
     *   `TaskService`
     *   `HousekeepingService`
-    *   `InventoryManagementService` (for Brurya and other managed stock)
-        *   `KpiService` (for calculating and storing KPIs)
-        *   `CampaignService` (for managing promotions)
-        *   `LoggerService` (for centralized logging and alerting)
-2.  **Implement Adapters:** Build the `ComaxAdapter` to clean incoming data and the `WooCommerceFormatter` to create the complex export files.
-3.  **Activate the Orchestrator:** Implement the file-watching `OrchestratorService` and set up the time-driven trigger.
+    *   `InventoryManagementService`
+    *   `KpiService`
+    *   `CampaignService`
+    *   `LoggerService`
+
+**3. Implement Remaining Adapters**
+    *   `WooCommerceFormatter`
+
+**4. Activate the Orchestrator Trigger**
+    *   Set up the time-driven trigger to run the orchestration services automatically.
 
 ## Phase 3: The Dashboard-Driven Web App (Frontend)
 
