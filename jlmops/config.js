@@ -1,86 +1,106 @@
 /**
  * @file config.js
- * @description This file manages the application configuration.
+ * @description Provides a centralized service for reading and accessing system configuration.
  */
 
 const ConfigService = (function() {
   let configCache = null;
-  const SCRIPT_PROPERTY_KEY = 'spreadsheetId';
+
+  const DATA_SPREADSHEET_NAME = 'JLMops_Data';
 
   /**
-   * Loads the configuration from the SysConfig sheet into an in-memory cache.
+   * Finds the JLMops_Data spreadsheet by name.
+   * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The spreadsheet object.
+   */
+  function findDataSpreadsheet() {
+    console.log(`Searching for spreadsheet named '${DATA_SPREADSHEET_NAME}'...`);
+    const files = DriveApp.getFilesByName(DATA_SPREADSHEET_NAME);
+    if (!files.hasNext()) {
+      throw new Error(`No spreadsheet found with the name '${DATA_SPREADSHEET_NAME}'.`);
+    }
+    const file = files.next();
+    if (files.hasNext()) {
+      console.warn(`Multiple spreadsheets found with the name '${DATA_SPREADSHEET_NAME}'. Using the first one found.`);
+    }
+    console.log(`Found spreadsheet with ID: ${file.getId()}`);
+    return SpreadsheetApp.open(file);
+  }
+
+  /**
+   * Reads the SysConfig sheet and parses it into a structured cache.
    */
   function loadConfig() {
-    const spreadsheetId = PropertiesService.getScriptProperties().getProperty(SCRIPT_PROPERTY_KEY);
-    if (!spreadsheetId) {
-      console.error("Spreadsheet ID not found in script properties. Please run saveInitialConfig() first.");
+    if (configCache) {
       return;
     }
 
-    try {
-      const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-      const sheet = spreadsheet.getSheetByName("SysConfig");
-      const data = sheet.getDataRange().getValues();
-      configCache = {};
-
-      data.forEach(row => {
-        const key = row[0];
-        const value = row[1];
-        if (key) {
-          configCache[key] = value;
-        }
-      });
-
-      console.log("Configuration loaded successfully.");
-    } catch (e) {
-      console.error(`Failed to load configuration: ${e.message}`);
+    const spreadsheet = findDataSpreadsheet();
+    const sheet = spreadsheet.getSheetByName('SysConfig');
+    if (!sheet) {
+      throw new Error("Sheet 'SysConfig' not found in the JLMops_Data spreadsheet.");
     }
+
+    const data = sheet.getDataRange().getValues();
+    data.shift(); // Remove header row
+
+    const parsedConfig = {};
+
+    data.forEach(row => {
+      const settingName = row[0];
+      // CORRECTED: Read property name from column B (index 1) and value from C (index 2)
+      const propName = row[1]; 
+      const propValue = row[2];
+
+      if (!settingName || !propName) {
+        return; // Skip empty or invalid rows
+      }
+
+      if (!parsedConfig[settingName]) {
+        parsedConfig[settingName] = {};
+      }
+
+      parsedConfig[settingName][propName] = propValue;
+    });
+
+    configCache = parsedConfig;
+    console.log('Configuration loaded and parsed successfully.');
   }
 
   /**
-   * Saves the initial configuration.
-   * @param {string} spreadsheetId The ID of the spreadsheet to be used for configuration.
+   * Public method to get a configuration block.
+   * @param {string} settingName The name of the configuration block to retrieve.
+   * @returns {object} The configuration object, or null if not found.
    */
-  function saveInitialConfig(spreadsheetId) {
-    if (!spreadsheetId) {
-      console.error("Spreadsheet ID is required to save initial configuration.");
-      return;
-    }
-    PropertiesService.getScriptProperties().setProperty(SCRIPT_PROPERTY_KEY, spreadsheetId);
-    console.log(`Initial configuration saved. Spreadsheet ID: ${spreadsheetId}`);
-    // Attempt to load the configuration immediately after saving
-    loadConfig();
-  }
-
-  /**
-   * Gets a configuration value by key.
-   * @param {string} key The key of the configuration value to retrieve.
-   * @returns {any} The configuration value, or null if not found.
-   */
-  function get(key) {
+  function getConfig(settingName) {
     if (!configCache) {
-      loadConfig();
+      try {
+        loadConfig();
+      } catch (e) {
+        console.error(`Failed to load configuration: ${e.message}`);
+        return null;
+      }
     }
-    return configCache ? configCache[key] : null;
+    return configCache[settingName] || null;
   }
-
+  
   /**
-   * Gets the entire configuration object.
+   * Public method to get all configurations.
    * @returns {object} The entire configuration object.
    */
-  function getAll() {
+  function getAllConfig() {
     if (!configCache) {
-      loadConfig();
+      try {
+        loadConfig();
+      } catch (e) {
+        console.error(`Failed to load configuration: ${e.message}`);
+        return null;
+      }
     }
     return configCache;
   }
 
   return {
-    saveInitialConfig,
-    get,
-    getAll
+    getConfig: getConfig,
+    getAllConfig: getAllConfig
   };
 })();
-
-// Global instance for easy access
-const config = ConfigService;

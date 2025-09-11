@@ -7,9 +7,10 @@ This document provides a detailed overview of the technical architecture for the
 The system is designed around four core principles:
 
 1.  **Separation of Concerns:** Logic is separated into distinct layers (UI, Business Logic, Data Access), making the system easier to maintain.
-2.  **Configuration as Data:** Hardcoded values are eliminated. All settings, rules, and mappings are stored in Google Sheets, allowing for updates without code changes.
-3.  **Service-Oriented Design:** The backend is composed of modular, independent services that each handle one specific area of responsibility.
-4.  **Event-Driven Automation:** The system is proactive, driven by automated triggers that watch for events (like new files) rather than waiting for manual user input.
+2.  **Configuration as Data:** Hardcoded values are eliminated. All settings, rules, and mappings are stored in a central Google Sheet (`SysConfig`), allowing for updates without code changes.
+3.  **Configuration-Driven Logic:** The system is driven by its configuration. The logic for handling different data sources (e.g., file imports vs. API imports) is determined by parsing the structured names of the configuration records, rather than being hardcoded.
+4.  **Service-Oriented Design:** The backend is composed of modular, independent services that each handle one specific area of responsibility.
+5.  **Event-Driven Automation:** The system is proactive, driven by automated triggers that watch for events (like new files) rather than waiting for manual user input.
 
 ## 2. Architectural Components
 
@@ -51,21 +52,61 @@ To keep the core services clean, we use an adapter/formatter pattern to handle m
 *   **`ComaxAdapter`**: Ingests raw, Hebrew-language CSV data from Comax. It cleans the data (e.g., handles `null` inventory), translates headers, and produces clean, standardized product objects for the rest of the system to use.
 *   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import. This includes handling special flags like `IsSoldIndividually`.
 
-### 2.4. Data Store: Google Sheets
+### 2.4. Data & Workflow Architecture
 
-Google Sheets serves as the system's primary database. A central **Reference Spreadsheet** contains all master data, logs, and configuration.
+The system's architecture is designed to be entirely driven by its configuration.
 
-*   **Master Data:** `WebProdM`, `CmxProdM`, `WebOrdM`, etc.
-*   **Business Logic as Data:** `CategoryMapping`, `BundleComposition`, `ProductLinks`.
-*   **System State & Logs:** `TaskQ`, `FileRegistry`, `OrderLog`.
-*   **Configuration:** A central `Config` sheet holds all system settings.
+#### 2.4.1. Configuration Discovery & Schema
 
-### 2.5. Triggering Mechanism: The Orchestrator
+*   **Dynamic Discovery:** At runtime, the system bootstraps itself by searching Google Drive for the `JLMops_Data` spreadsheet by its exact name. It then reads the `SysConfig` sheet within it to load all settings.
+*   **Universal Schema:** The `SysConfig` sheet uses a universal, block-based schema. This allows it to define simple key-value settings or complex, multi-row configurations in a consistent way.
+    *   **`scf_SettingName` (Grouping Key):** All rows belonging to a single configuration share the same `SettingName`.
+    *   **`scf_P01` (Property / Block Type):** This column defines the specific property or type of block this row represents within the group.
+    *   **`scf_P02` onwards (Values):** These columns hold the values for the given property.
+*   **Example:** A file import is defined by multiple rows sharing the `SettingName` `import.drive.comax_products`. One row might have `P01` set to `source_folder_id` and `P02` as the folder ID, while another row has `P01` set to `file_pattern` and `P02` as the file name. This schema is flexible enough to define any configuration the system needs, from business rules to document templates.
 
-The system is initiated by a single, time-driven trigger that runs the `OrchestratorService` every 5-15 minutes. This makes the entire system event-driven and removes the need for manual initiation of routine tasks.
+#### 2.4.2. Two-Spreadsheet Data Store
 
-*   **File Watching:** The orchestrator scans Google Drive folders for new or modified files.
-*   **Idempotency:** The `FileRegistry` sheet ensures that the same file is never processed more than once, making the system safe to re-run.
+To ensure high performance, the system utilizes two separate Google Spreadsheets:
+
+1.  **`JLMops_Data` (Main Data Spreadsheet):**
+    *   **Purpose:** Stores core business data and the master `SysConfig` sheet.
+    *   **Contents:** Master data sheets (`WebProdM`, `CmxProdM`), business rule definitions (`CategoryMapping`), and `SysConfig`.
+
+2.  **`JLMops_Logs` (Log & Job Spreadsheet):**
+    *   **Purpose:** Dedicated to high-volume, append-only data. Its ID is specified in the `SysConfig` sheet.
+    *   **Contents:** `SysJobQueue`, `SysFileRegistry`, `SysLog`.
+
+#### 2.4.3. Google Drive Folder Structure
+
+The system relies on a clear folder structure for managing files, with all folder IDs specified in the `SysConfig` sheet.
+
+*   **`Source Folder`**: The inbox for new files. The system treats this as **read-only**.
+*   **`Archive Folder`**: The system's permanent record for all ingested files.
+
+#### 2.4.4. Event-Driven Workflow Engine
+
+The system is driven by a time-based trigger that initiates a two-phase workflow.
+
+**Phase 1: Intake (Performed by `OrchestratorService`)**
+
+*   **Goal:** To securely discover, ingest, and queue new files.
+1.  **Load Config:** The service finds and parses the `SysConfig` sheet.
+2.  **Scan Sources:** It iterates through all `import.drive.*` configurations and scans the specified `Source Folder`.
+3.  **Check Registry:** It compares files against the `SysFileRegistry` to see if they are new.
+4.  **Copy to Archive:** New file versions are copied to the `Archive Folder`.
+5.  **Queue Job:** A new job is created in the `SysJobQueue`.
+6.  **Update Registry:** The `SysFileRegistry` is updated to prevent re-ingestion.
+
+**Phase 2: Execution (Performed by specific `ProcessingServices`)**
+
+*   **Goal:** To execute the business logic for a queued job.
+1.  **Query Queue:** A service (e.g., `ProductService`) queries the `SysJobQueue` for 'PENDING' jobs of its type.
+2.  **Claim Job:** It claims a job by updating its status to 'PROCESSING'.
+3.  **Process from Archive:** It performs all business logic using the data from the file in the **Archive Folder**.
+4.  **Handle Outcome:**
+    *   **On Success:** The job status is updated to 'COMPLETED'.
+    *   **On Failure:** The job status is updated to 'FAILED' and the error is logged. The file remains in the `Archive Folder`.
 
 ## 3. Security & Authentication
 
@@ -92,7 +133,7 @@ The system is designed to be resilient and transparent about failures, incorpora
 
 ### 4.1. Centralized Logging
 
-All significant operations and events are logged to a central `SysLog` sheet. This provides a comprehensive audit trail for debugging and performance monitoring. Key service functions are wrapped in `try/catch` blocks to ensure that both successful (`INFO`) and failed (`ERROR`) operations are captured.
+All significant operations and events are logged to the `SysLog` sheet in the dedicated `JLMops_Logs` spreadsheet. This provides a comprehensive audit trail for debugging and performance monitoring. Key service functions are wrapped in `try/catch` blocks to ensure that both successful (`INFO`) and failed (`ERROR`) operations are captured.
 
 ### 4.2. Real-Time Alerting
 
@@ -100,8 +141,20 @@ For critical failures, the system provides immediate notifications via Google Ch
 
 ### 4.3. Recovery & Dead Letter Queue
 
-To prevent automated workflows from being halted by a single bad file, the system uses a "Dead Letter Queue" pattern.
+To prevent a single bad file from halting a workflow, the system uses the **`SysJobQueue`** as a "Dead Letter Queue".
 
-*   **Quarantine:** If the `OrchestratorService` encounters a file it cannot process, it automatically moves the file to a designated "Quarantine" folder in Google Drive.
-*   **Failed Jobs Log:** A record of the failure is created in the `SysFailedJobs` sheet, detailing the error and the file that caused it.
-*   **Admin Dashboard:** A "System Health" widget on the main dashboard displays these failed jobs, allowing an admin to investigate the issue, correct the source file, and trigger a retry directly from the interface.
+*   **Failed Jobs Log:** The `SysJobQueue` sheet itself serves as the failed jobs log. If a `ProcessingService` fails to process a job, it updates that job's `status` to 'FAILED' and records the specific error message in the job's record.
+
+*   **File Inspection:** The problematic file remains untouched in its original location within the `Archive Folder`. An administrator must use the `archive_file_id` from the failed job record to locate the exact file for inspection.
+
+*   **Admin Dashboard:** A "System Health" widget on the main dashboard will query the `SysJobQueue` for any jobs with a 'FAILED' status, providing a centralized view of all processing failures.
+
+## 5. Design Decisions
+
+This section documents key design decisions to clarify the system's behavior and prevent misinterpretation.
+
+### 5.1. Non-Destructive File Processing
+
+To ensure the JLM Operations Hub can run in parallel with existing systems, all automated file processing is **non-destructive**. The system **will not** move, rename, or alter any input files. 
+
+Specifically for the Comax Products import, the workflow identifies new file versions by checking the file's last-updated timestamp against the `SysFileRegistry`. The `comax.products.processedFolder` setting found in previous versions of `setup.js` is deprecated and should not be used.
