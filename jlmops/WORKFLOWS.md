@@ -227,3 +227,19 @@ This workflow describes how the system calculates and displays key performance m
     *   It reads all KPI definitions from `SysConfig`.
     *   For each KPI, it executes the defined calculation against the relevant master data sheets (e.g., `CmxProdM`, `SysTasks`).
 3.  **Dashboard Display:** The dashboard widgets query the latest calculated KPI values to display them to the user, often with visual indicators of performance against targets.
+
+---
+
+## 9. System Administration Workflows
+
+This section describes workflows related to system maintenance and health monitoring.
+
+### 9.1. Configuration Health Check
+
+This workflow allows an administrator to proactively validate the integrity of the live system configuration.
+
+1.  **Initiation:** An administrator runs the `runHealthCheck()` function from the Google Apps Script editor.
+2.  **Validation:** The system compares the live `SysConfig` sheet against the master schema (`SYS_CONFIG_DEFINITIONS`) defined in the `setup.js` script.
+3.  **Reporting:** A report is generated in the execution logs. 
+    *   **On Success:** A confirmation message is logged.
+    *   **On Failure:** The report lists every setting or property that is missing from the live configuration, allowing the administrator to quickly identify and fix the problem.

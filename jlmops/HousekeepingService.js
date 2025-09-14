@@ -5,11 +5,70 @@
  */
 
 /**
+ * A global function to allow manual triggering of the configuration health check from the Apps Script editor.
+ */
+function runHealthCheck() {
+    housekeepingService.validateCurrentConfig();
+}
+
+/**
  * HousekeepingService provides methods for performing various maintenance tasks.
  */
 function HousekeepingService() {
   // Configuration for what constitutes "old" data (e.g., 30 days)
   const OLD_DATA_THRESHOLD_DAYS = 30;
+
+  /**
+   * Validates the live SysConfig sheet against the master schema in setup.js.
+   * @returns {{isValid: boolean, errors: Array<string>}} A report object.
+   */
+  this.validateCurrentConfig = function() {
+    console.log("--- Starting Configuration Health Check ---");
+    let isValid = true;
+    const errors = [];
+
+    try {
+      // Get the master schema and the live config
+      const masterConfig = SYS_CONFIG_DEFINITIONS; // Global constant from setup.js
+      const liveConfig = ConfigService.getAllConfig();
+
+      if (!liveConfig) {
+        throw new Error("Could not load live configuration from SysConfig sheet.");
+      }
+
+      // Check that all master settings exist in the live config
+      for (const settingName in masterConfig) {
+        if (!liveConfig[settingName]) {
+          isValid = false;
+          errors.push(`Missing setting: The entire block for '${settingName}' is missing.`);
+          continue;
+        }
+
+        // Check that all properties in the master setting exist in the live setting
+        for (const propName in masterConfig[settingName]) {
+          if (!liveConfig[settingName].hasOwnProperty(propName)) {
+            isValid = false;
+            errors.push(`Missing property: '${propName}' is missing from '${settingName}'.`);
+          }
+        }
+      }
+
+      if (isValid) {
+        console.log("✅ SUCCESS: Live configuration is valid and matches the master schema.");
+      } else {
+        console.error("❌ FAILED: Configuration has errors. See details below:");
+        errors.forEach(error => console.error(`- ${error}`));
+      }
+
+    } catch (e) {
+      isValid = false;
+      errors.push(e.message);
+      console.error(`❌ FAILED: An unexpected error occurred during the health check: ${e.message}`);
+    }
+
+    console.log("--- Configuration Health Check Complete ---");
+    return { isValid: isValid, errors: errors };
+  };
 
   /**
    * Cleans up old log entries from the system log sheet.

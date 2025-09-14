@@ -149,6 +149,16 @@ To prevent a single bad file from halting a workflow, the system uses the **`Sys
 
 *   **Admin Dashboard:** A "System Health" widget on the main dashboard will query the `SysJobQueue` for any jobs with a 'FAILED' status, providing a centralized view of all processing failures.
 
+### 4.4. Configuration Integrity Validation
+
+As a proactive and foundational layer of system health, the hub includes a configuration integrity validator. This tool protects against accidental or incorrect manual changes to the `SysConfig` sheet, which could otherwise lead to runtime failures.
+
+*   **Master Schema:** The `SYS_CONFIG_DEFINITIONS` object within the `setup.js` script acts as the master schema and single source of truth for the entire system's configuration.
+
+*   **Validation Mechanism:** An administrative function, `runHealthCheck()`, can be triggered at any time. It compares the live `SysConfig` sheet against the master schema in `setup.js`.
+
+*   **Reporting:** The health check verifies the presence of all required settings and their properties. Any discrepancies are logged in a clear report for the administrator. The overall status of the configuration can also be displayed in the "System Health" dashboard widget, complementing the view of failed jobs.
+
 ## 5. Design Decisions
 
 This section documents key design decisions to clarify the system's behavior and prevent misinterpretation.
