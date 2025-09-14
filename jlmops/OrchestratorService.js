@@ -69,7 +69,8 @@ const OrchestratorService = (function() {
           console.log(`New file version found: ${file.getName()}`);
           const archivedFile = archiveFile(file, archiveFolder);
           createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId());
-          registry.set(file.getId(), file.getLastUpdated());
+          // Update the registry map with the file's ID, name, and last updated time
+          registry.set(file.getId(), { name: file.getName(), lastUpdated: file.getLastUpdated() });
         }
       }
     });
@@ -81,8 +82,9 @@ const OrchestratorService = (function() {
   function isNewFile(file, registry) {
     const fileId = file.getId();
     const lastUpdated = file.getLastUpdated();
-    const registeredDate = registry.get(fileId);
-    return !registeredDate || lastUpdated.getTime() > registeredDate.getTime();
+    const registryEntry = registry.get(fileId);
+    // A file is new if it's not in the registry or its last update time is more recent.
+    return !registryEntry || lastUpdated.getTime() > registryEntry.lastUpdated.getTime();
   }
 
   function archiveFile(file, archiveFolder) {
@@ -112,22 +114,30 @@ const OrchestratorService = (function() {
 
   function getRegistryMap(sheet) {
     if (sheet.getLastRow() < 2) return new Map();
+    // Read all 3 columns: id, name, timestamp
     const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
     const map = new Map();
     data.forEach(row => {
-      if (row[0] && row[2]) { // fileId and timestamp
-        map.set(row[0], new Date(row[2]));
+      const fileId = row[0];
+      const fileName = row[1];
+      const timestamp = row[2];
+      if (fileId && timestamp) {
+        map.set(fileId, { name: fileName, lastUpdated: new Date(timestamp) });
       }
     });
     return map;
   }
 
   function updateRegistrySheet(sheet, registry, schema) {
-    sheet.clearContents();
+    sheet.clear(); // Clear the sheet to rewrite the entire registry
     const headers = schema.headers.split(',');
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    
     if (registry.size > 0) {
-      const data = Array.from(registry, ([fileId, lastUpdated]) => [fileId, '', lastUpdated]);
+      // Create an array of arrays from the map, matching the sheet columns
+      const data = Array.from(registry, ([fileId, entry]) => {
+        return [fileId, entry.name, entry.lastUpdated];
+      });
       sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
     }
     console.log('SysFileRegistry updated.');
