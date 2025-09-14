@@ -1,85 +1,119 @@
 /**
  * @file ProductService.js
- * @description This service manages products.
+ * @description Service for handling product-related business logic.
  */
 
-/**
- * ProductService provides methods for managing product data.
- */
-function ProductService() {
-  const PRODUCT_SHEET_NAME = "WebProdM"; // Assuming WebProdM is the master product sheet
+const ProductService = (function() {
 
   /**
-   * Retrieves all products from the product sheet.
-   * @returns {Array<Object>} An array of product objects.
+   * Processes a single product import job from the job queue.
+   * @param {Array} jobRow The row from the SysJobQueue sheet representing the job.
+   * @param {number} rowNumber The row number of the job in the sheet.
    */
-  this.getAllProducts = function() {
+  function processJob(jobRow, rowNumber) {
+    // Get headers from config to safely access jobRow columns by name
+    const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
+    const jobId = jobRow[jobQueueHeaders.indexOf('job_id')];
+    const jobType = jobRow[jobQueueHeaders.indexOf('job_type')];
+    const archiveFileId = jobRow[jobQueueHeaders.indexOf('archive_file_id')];
+
+    console.log(`ProductService: Starting processing for job ${jobId}`);
+
     try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(PRODUCT_SHEET_NAME);
+      const jobConfig = ConfigService.getConfig(jobType);
+      if (!jobConfig) throw new Error(`Configuration for job type ${jobType} not found.`);
 
-      if (!sheet) {
-        logger.error(`Product sheet '${PRODUCT_SHEET_NAME}' not found.`);
-        return [];
+      const file = DriveApp.getFileById(archiveFileId);
+      const encoding = jobConfig.file_encoding || 'UTF-8';
+      const csvContent = file.getBlob().getDataAsString(encoding);
+
+      const products = ComaxAdapter.processProductCsv(csvContent);
+      if (!products || products.length === 0) {
+        console.log('No products to process.');
+        updateJobStatus(rowNumber, 'COMPLETED', 'No products found in file.');
+        return;
       }
 
-      const dataRange = sheet.getDataRange();
-      const values = dataRange.getValues();
+      // Per the implementation plan, populate the CmxProdS (staging) sheet.
+      const dataSheetName = 'CmxProdS';
+      populateStagingSheet(products, dataSheetName);
 
-      if (values.length === 0) {
-        logger.info(`No data found in product sheet '${PRODUCT_SHEET_NAME}'.`);
-        return [];
-      }
+      // TODO: Add next step for data integrity validation against CmxProdM.
 
-      const headers = values[0];
-      const products = [];
-
-      for (let i = 1; i < values.length; i++) {
-        const row = values[i];
-        const product = {};
-        headers.forEach((header, index) => {
-          product[header] = row[index];
-        });
-        products.push(product);
-      }
-
-      logger.info(`Successfully retrieved ${products.length} products from '${PRODUCT_SHEET_NAME}'.`);
-      return products;
+      updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products.`);
+      console.log(`ProductService: Successfully completed job ${jobId}`);
 
     } catch (e) {
-      logger.error(`Error getting all products: ${e.message}`, e);
-      return [];
+      console.error(`ProductService: FAILED job ${jobId}. Error: ${e.message}`);
+      updateJobStatus(rowNumber, 'FAILED', e.message);
     }
-  };
+  }
 
   /**
-   * Retrieves a single product by its ID.
-   * @param {string} productId The ID of the product to retrieve.
-   * @returns {Object|null} The product object if found, otherwise null.
+   * Writes product data to a specified staging sheet, overwriting existing data.
+   * @param {Array<Object>} products An array of product objects from the adapter.
+   * @param {string} sheetName The name of the staging sheet to populate.
    */
-  this.getProductById = function(productId) {
-    try {
-      const products = this.getAllProducts(); // For simplicity, fetch all and filter
-      const product = products.find(p => p.ID === productId || p.SKU === productId); // Assuming 'ID' or 'SKU' as identifier
-
-      if (product) {
-        logger.info(`Found product with ID/SKU: ${productId}`);
-      } else {
-        logger.warn(`Product with ID/SKU: ${productId} not found.`);
-      }
-      return product || null;
-
-    } catch (e) {
-      logger.error(`Error getting product by ID ${productId}: ${e.message}`, e);
-      return null;
+  function populateStagingSheet(products, sheetName) {
+    console.log(`Writing ${products.length} products to staging sheet: ${sheetName}...`);
+    
+    const schema = ConfigService.getConfig(`schema.data.${sheetName}`);
+    if (!schema || !schema.headers) {
+        throw new Error(`Schema for sheet '${sheetName}' not found in configuration.`);
     }
+    const headers = schema.headers.split(',');
+
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const sheet = dataSpreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+        throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
+    }
+
+    const newData = products.map(product => {
+      return headers.map(header => product[header] || '');
+    });
+    
+    if (sheet.getLastRow() > 1) {
+        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    }
+    if (newData.length > 0) {
+        sheet.getRange(2, 1, newData.length, newData[0].length).setValues(newData);
+    }
+    console.log(`Staging sheet '${sheetName}' has been updated.`);
+  }
+
+
+  /**
+   * Updates the status of a job in the SysJobQueue.
+   * @param {number} rowNumber The row number of the job to update.
+   * @param {string} status The new status ('COMPLETED' or 'FAILED').
+   * @param {string} message An optional message.
+   */
+  function updateJobStatus(rowNumber, status, message = '') {
+    const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+    const sheetNames = ConfigService.getConfig('system.sheet_names');
+    const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
+    
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    
+    const statusCol = jobQueueHeaders.indexOf('status') + 1;
+    const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
+    const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
+
+    if (rowNumber && statusCol > 0) {
+        jobQueueSheet.getRange(rowNumber, statusCol).setValue(status);
+    }
+    if (rowNumber && messageCol > 0) {
+        jobQueueSheet.getRange(rowNumber, messageCol).setValue(message);
+    }
+    if (rowNumber && timestampCol > 0) {
+        jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
+    }
+  }
+
+  return {
+    processJob: processJob
   };
 
-  // TODO: Add methods for updating, creating, and deleting products
-  // this.updateProduct = function(productId, productData) { ... };
-  // this.createProduct = function(productData) { ... };
-  // this.deleteProduct = function(productId) { ... };
-}
-
-// Global instance for easy access throughout the project
-const productService = new ProductService();
+})();

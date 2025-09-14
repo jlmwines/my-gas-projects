@@ -5,43 +5,144 @@
 
 /**
  * The main entry point for the time-driven trigger.
- * This function is globally scoped so it can be selected in the Apps Script editor.
  */
 function runScheduledTasks() {
   OrchestratorService.run();
 }
 
-
 const OrchestratorService = (function() {
 
-  /**
-   * The main internal function for the orchestrator.
-   */
   function run() {
     console.log('Orchestrator running...');
     try {
-      // Phase 1: Intake new files
       processAllFileImports();
-
-      // Phase 2: Process pending jobs
       processPendingJobs();
-
     } catch (e) {
       console.error(`An unexpected error occurred in the orchestrator: ${e.message} (${e.stack})`);
     }
     console.log('Orchestrator finished.');
   }
 
-  /**
-   * Finds and processes all configured file imports.
-   */
+  // --- PHASE 1: FILE INTAKE ---
+
   function processAllFileImports() {
-    // ... (logic is the same as before, no changes here)
+    console.log('Checking for new files...');
+    const allConfig = ConfigService.getAllConfig();
+    if (!allConfig) {
+      console.error('Could not load configuration. Halting file import processing.');
+      return;
+    }
+
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const archiveFolderConfig = allConfig['system.folder.archive'];
+    const sheetNames = allConfig['system.sheet_names'];
+
+    if (!logSheetConfig || !logSheetConfig.id || !archiveFolderConfig || !archiveFolderConfig.id || !sheetNames) {
+      console.error('Essential system configuration is missing (log spreadsheet, archive folder, or sheet names).');
+      return;
+    }
+
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(sheetNames.SysFileRegistry);
+    const archiveFolder = DriveApp.getFolderById(archiveFolderConfig.id);
+
+    const registry = getRegistryMap(fileRegistrySheet);
+    const importConfigs = Object.keys(allConfig).filter(key => key.startsWith('import.drive'));
+
+    console.log(`Found ${importConfigs.length} drive import configuration(s).`);
+
+    importConfigs.forEach(configName => {
+      const config = allConfig[configName];
+      if (!config.source_folder_id || !config.file_pattern) {
+        console.error(`Configuration for '${configName}' is incomplete. Skipping.`);
+        return;
+      }
+
+      console.log(`Processing import: ${configName}`);
+      const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+      const files = sourceFolder.getFilesByName(config.file_pattern);
+
+      while (files.hasNext()) {
+        const file = files.next();
+        if (isNewFile(file, registry)) {
+          console.log(`New file version found: ${file.getName()}`);
+          const archivedFile = archiveFile(file, archiveFolder);
+          createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId());
+          registry.set(file.getId(), file.getLastUpdated());
+        }
+      }
+    });
+
+    updateRegistrySheet(fileRegistrySheet, registry, allConfig['schema.log.SysFileRegistry']);
+    console.log('File import check complete.');
   }
 
-  /**
-   * Queries the job queue and delegates pending jobs to the appropriate service.
-   */
+  function isNewFile(file, registry) {
+    const fileId = file.getId();
+    const lastUpdated = file.getLastUpdated();
+    const registeredDate = registry.get(fileId);
+    return !registeredDate || lastUpdated.getTime() > registeredDate.getTime();
+  }
+
+  function archiveFile(file, archiveFolder) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = ('0' + (now.getMonth() + 1)).slice(-2);
+    const day = ('0' + now.getDate()).slice(-2);
+
+    let yearFolder = getOrCreateFolder(archiveFolder, year.toString());
+    let monthFolder = getOrCreateFolder(yearFolder, month);
+    let dayFolder = getOrCreateFolder(monthFolder, day);
+
+    const timestamp = now.toISOString().replace(/:/g, '-');
+    const newFileName = `${file.getName()}_${timestamp}`;
+    
+    const newFile = file.makeCopy(newFileName, dayFolder);
+    console.log(`Archived file as: ${newFile.getName()}`);
+    return newFile;
+  }
+
+  function createJob(sheet, configName, serviceName, archiveFileId) {
+    const jobId = Utilities.getUuid();
+    const now = new Date();
+    sheet.appendRow([jobId, configName, 'PENDING', archiveFileId, now, '', '']);
+    console.log(`Created new job ${jobId} for ${configName}`);
+  }
+
+  function getRegistryMap(sheet) {
+    if (sheet.getLastRow() < 2) return new Map();
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    const map = new Map();
+    data.forEach(row => {
+      if (row[0] && row[2]) { // fileId and timestamp
+        map.set(row[0], new Date(row[2]));
+      }
+    });
+    return map;
+  }
+
+  function updateRegistrySheet(sheet, registry, schema) {
+    sheet.clearContents();
+    const headers = schema.headers.split(',');
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    if (registry.size > 0) {
+      const data = Array.from(registry, ([fileId, lastUpdated]) => [fileId, '', lastUpdated]);
+      sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+    }
+    console.log('SysFileRegistry updated.');
+  }
+
+  function getOrCreateFolder(parentFolder, folderName) {
+    const folders = parentFolder.getFoldersByName(folderName);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    return parentFolder.createFolder(folderName);
+  }
+
+  // --- PHASE 2: JOB EXECUTION ---
+
   function processPendingJobs() {
     console.log('Checking for pending jobs...');
     const allConfig = ConfigService.getAllConfig();
@@ -53,7 +154,7 @@ const OrchestratorService = (function() {
     }
 
     const sheetNames = allConfig['system.sheet_names'];
-    const jobQueueSheetName = sheetNames ? sheetNames.SysJobQueue : 'SysJobQueue'; // Fallback for safety
+    const jobQueueSheetName = sheetNames.SysJobQueue;
 
     const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
     if (!jobQueueSchema || !jobQueueSchema.headers) {
@@ -70,18 +171,17 @@ const OrchestratorService = (function() {
         return;
     }
 
-    const data = jobQueueSheet.getDataRange().getValues();
-    const headers = data.shift(); // Actual headers from the sheet
+    if (jobQueueSheet.getLastRow() < 2) {
+        console.log('No jobs found in the queue.');
+        console.log('Pending job check complete.');
+        return;
+    }
 
-    // Find column indices based on configured headers
+    const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+
     const statusColIdx = jobQueueHeaders.indexOf('status');
     const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
     const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-
-    if ([statusColIdx, jobTypeColIdx, errorMsgColIdx].includes(-1)) {
-        console.error('Could not find required columns (status, job_type, error_message) in configured schema.');
-        return;
-    }
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
@@ -97,22 +197,19 @@ const OrchestratorService = (function() {
         const serviceName = jobConfig.processing_service;
         console.log(`Delegating job ${row[0]} of type '${jobType}' to service: ${serviceName}`);
 
-        // Mark job as PROCESSING immediately to prevent re-processing
         jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('PROCESSING');
 
         try {
+          const rowNumber = i + 2; // The sheet row number (1-based index + header)
           switch (serviceName) {
             case 'ProductService':
-              ProductService.processJob(row);
+              ProductService.processJob(row, rowNumber);
               break;
-            // Add other services here in the future
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);
           }
-          // If the service succeeds, it will update the status to COMPLETED itself.
         } catch (e) {
           console.error(`Error processing job ${row[0]}: ${e.message}`);
-          // Mark job as FAILED
           jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('FAILED');
           jobQueueSheet.getRange(i + 2, errorMsgColIdx + 1).setValue(e.message);
         }
@@ -120,8 +217,6 @@ const OrchestratorService = (function() {
     }
     console.log('Pending job check complete.');
   }
-
-  // ... (all other helper functions: isNewFile, archiveFile, etc. remain the same)
 
   return {
     run: run
