@@ -99,8 +99,17 @@ const ConfigService = (function() {
     return configCache;
   }
 
+  /**
+   * Public method to invalidate the cache, forcing a reload on next access.
+   */
+  function forceReload() {
+    configCache = null;
+    console.log('Configuration cache invalidated.');
+  }
+
   return {
     getConfig: getConfig,
-    getAllConfig: getAllConfig
+    getAllConfig: getAllConfig,
+    forceReload: forceReload
   };
 })();

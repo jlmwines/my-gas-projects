@@ -15,11 +15,21 @@ To guarantee a successful implementation, I will follow these directives without
 
 4.  **PRECISION IN NAMING IS PARAMOUNT.** I will enforce the naming conventions from `DATA_MODEL.md` for all sheets and columns (`wpm_`, `cpm_`, `scf_`, etc.) to ensure data integrity and code clarity.
 
-5.  **PERSISTING PROGRESS IS MANDATORY.** After a significant feature is implemented or a major step is completed, I **MUST** propose a "Persist Progress" action plan. This plan will include:
+5.  **PERSISTING PROGRESS IS MANDATORY.** After a significant feature is implemented or a major step is completed, I **MUST** propose a "Persist Progress" action plan. This plan will follow a **"Commit, then Push"** strategy to ensure a safe rollback point. The steps are:
     *   Updating all relevant documentation (`IMPLEMENTATION_PLAN.md`, `README.md`, etc.) to reflect the changes.
-    *   Pushing the changes to the Google Apps Script project using `clasp push`.
-    *   Committing the changes to the GitHub repository with a clear and descriptive message.
+    *   Committing the changes to the local GitHub repository with a clear and descriptive message. This creates a safe, versioned checkpoint.
+    *   Pushing the changes to the Google Apps Script project using `clasp push`. This deploys the code for testing in the target environment.
     This must be done **before** the end of a session to prevent loss of work.
+
+### **Architectural Compliance Protocol**
+
+To ensure strict adherence to the "Configuration as Data" principle, I will follow this protocol for all future code modifications:
+
+1.  **Pre-Implementation Configuration Check:** Before writing or modifying any service, adapter, or workflow, I will first identify all required configuration values (e.g., sheet names, column mappings, business rules). I will then verify that these values are defined in the `SYS_CONFIG_DEFINITIONS` object within `setup.js`. If they are not, my first action will be to add them.
+
+2.  **No Hardcoded Values Mandate:** I will not use hardcoded string literals or "magic numbers" for any value that represents a system entity (like a sheet name, column name, or folder ID) or a business rule. All such values **MUST** be retrieved from the `ConfigService` at runtime.
+
+3.  **Post-Implementation Compliance Review:** Immediately after modifying a script, and before presenting it as complete, I will perform a compliance review on the code I just wrote. I will specifically scan it for any violations of the "No Hardcoded Values Mandate." If any are found, I will correct them before proceeding.
 
 ## **CURRENT IMPLEMENTATION STATUS**
 
