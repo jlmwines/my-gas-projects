@@ -60,7 +60,7 @@ const ProductService = (function() {
         const validationErrors = verifyDataIntegrity(products, jobId);
         if (validationErrors.length > 0) {
           const errorMessage = 'Data integrity checks failed. See SysLog for details.';
-          LoggerService.log('ProductService', 'processJob', 'ERROR', errorMessage, JSON.stringify(validationErrors));
+          LoggerService.error('ProductService', 'processJob', `${errorMessage} Details: ${JSON.stringify(validationErrors)}`, new Error(errorMessage));
           updateJobStatus(rowNumber, 'FAILED', errorMessage);
           return;
         }

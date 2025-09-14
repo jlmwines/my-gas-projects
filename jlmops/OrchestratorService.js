@@ -83,8 +83,16 @@ const OrchestratorService = (function() {
     const fileId = file.getId();
     const lastUpdated = file.getLastUpdated();
     const registryEntry = registry.get(fileId);
-    // A file is new if it's not in the registry or its last update time is more recent.
-    return !registryEntry || lastUpdated.getTime() > registryEntry.lastUpdated.getTime();
+
+    if (!registryEntry) {
+      return true; // It's new if it's not in the registry.
+    }
+
+    // Compare timestamps at the second level to avoid precision issues with Sheets.
+    const liveSeconds = Math.floor(lastUpdated.getTime() / 1000);
+    const registeredSeconds = Math.floor(new Date(registryEntry.lastUpdated).getTime() / 1000);
+
+    return liveSeconds > registeredSeconds;
   }
 
   function archiveFile(file, archiveFolder) {

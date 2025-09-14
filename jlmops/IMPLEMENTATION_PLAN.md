@@ -26,14 +26,14 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources (Comax, WooCommerce EN, WooCommerce HE), replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-### Part 1: Foundational Configuration (IN TESTING)
+### Part 1: Foundational Configuration (COMPLETED)
 *   **1.1. Define Web Product Import Configurations (COMPLETED):** Add two new configuration blocks (`import.drive.web_products_en`, `import.drive.web_products_he`) to the existing `SYS_CONFIG_DEFINITIONS` in `setup.js`. The configuration for `import.drive.comax_products` is already complete.
 *   **1.2. Define Staging Sheet Schemas (COMPLETED):** Add schemas for the new `WebProdS_EN` and `WebProdS_HE` staging sheets to `SYS_CONFIG_DEFINITIONS` in `setup.js` to enable automatic sheet creation and header validation.
-*   **1.3. Define Validation Task Types (IN TESTING):** Add new task type definitions (e.g., `SKU_NOT_IN_COMAX`, `TRANSLATION_MISSING`) to `SYS_CONFIG_DEFINITIONS` to allow for the creation of specific, actionable tasks when data discrepancies are found.
+*   **1.3. Define Validation Task Types (COMPLETED):** Add new task type definitions (e.g., `SKU_NOT_IN_COMAX`, `TRANSLATION_MISSING`) to `SYS_CONFIG_DEFINITIONS` to allow for the creation of specific, actionable tasks when data discrepancies are found.
 
-### Part 2: Automated Intake & Staging (IN TESTING)
-*   **2.1. Enhance `OrchestratorService` (IN TESTING):** The service will now automatically handle the three product-related file types based on the new configurations, creating a distinct job in `SysJobQueue` for each.
-*   **2.2. Enhance `ProductService` for Staging (IN TESTING):** The service will be updated to handle the new job types, routing the file content to the correct parser (`ComaxAdapter` or a new internal CSV parser) and populating the correct staging sheet (`CmxProdS`, `WebProdS_EN`, or `WebProdS_HE`).
+### Part 2: Automated Intake & Staging (COMPLETED)
+*   **2.1. Enhance `OrchestratorService` (COMPLETED):** The service will now automatically handle the three product-related file types based on the new configurations, creating a distinct job in `SysJobQueue` for each.
+*   **2.2. Enhance `ProductService` for Staging (COMPLETED):** The service will be updated to handle the new job types, routing the file content to the correct parser (`ComaxAdapter` or a new internal CSV parser) and populating the correct staging sheet (`CmxProdS`, `WebProdS_EN`, or `WebProdS_HE`).
 
 ### Part 3: Master Data Reconciliation & Validation (NEXT)
 *   **3.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXlt`), ensuring new products are added and existing ones are updated.
