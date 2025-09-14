@@ -22,26 +22,27 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   **Detail:** These functions use the `config.js` service to get the correct spreadsheet IDs and create/update all necessary sheets with the correct headers.
     *   **Verification:** When the script is run, all log and data sheets are correctly created and formatted.
 
-## Phase 2: Core Workflow Implementation
+## Phase 2: Product Workflow Engine (IN PROGRESS)
 
-**Goal:** To build the primary automated workflow for ingesting and processing Comax product data.
+**Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources (Comax, WooCommerce EN, WooCommerce HE), replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-**1. Implement Intake Workflow (`OrchestratorService`) (COMPLETED)**
-    *   **Action:** Implement the `OrchestratorService` to perform the "Intake" phase.
-    *   **Detail:** This service is fully driven by the `import.drive.*` settings from the `config.js` service.
-    *   **Verification:** The service correctly finds new files, archives them, and creates a 'PENDING' job in the `SysJobQueue`.
+### Part 1: Foundational Configuration (IN TESTING)
+*   **1.1. Define Web Product Import Configurations (COMPLETED):** Add two new configuration blocks (`import.drive.web_products_en`, `import.drive.web_products_he`) to the existing `SYS_CONFIG_DEFINITIONS` in `setup.js`. The configuration for `import.drive.comax_products` is already complete.
+*   **1.2. Define Staging Sheet Schemas (COMPLETED):** Add schemas for the new `WebProdS_EN` and `WebProdS_HE` staging sheets to `SYS_CONFIG_DEFINITIONS` in `setup.js` to enable automatic sheet creation and header validation.
+*   **1.3. Define Validation Task Types (IN TESTING):** Add new task type definitions (e.g., `SKU_NOT_IN_COMAX`, `TRANSLATION_MISSING`) to `SYS_CONFIG_DEFINITIONS` to allow for the creation of specific, actionable tasks when data discrepancies are found.
 
-**2. Implement Data Adapter (`ComaxAdapter.js`) (COMPLETED)**
-    *   **Action:** Implement the `ComaxAdapter` to parse the raw `ComaxProducts.csv` file.
+### Part 2: Automated Intake & Staging (IN TESTING)
+*   **2.1. Enhance `OrchestratorService` (IN TESTING):** The service will now automatically handle the three product-related file types based on the new configurations, creating a distinct job in `SysJobQueue` for each.
+*   **2.2. Enhance `ProductService` for Staging (IN TESTING):** The service will be updated to handle the new job types, routing the file content to the correct parser (`ComaxAdapter` or a new internal CSV parser) and populating the correct staging sheet (`CmxProdS`, `WebProdS_EN`, or `WebProdS_HE`).
 
-**3. Implement Execution Workflow (`ProductService`) (IN PROGRESS)**
-    *   **Action:** Implement the `ProductService` to handle the "Execution" phase for Comax product jobs.
-    *   **Detail:** The service is called by the Orchestrator for pending jobs. It uses the `ComaxAdapter` to get clean data and populates the `CmxProdS` staging sheet. The next sub-task is to implement the SKU-compliance and data integrity checks.
-    *   **Verification (Completed):** The pipeline from file detection to populating the `CmxProdS` staging sheet is functional.
+### Part 3: Master Data Reconciliation & Validation (NEXT)
+*   **3.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXlt`), ensuring new products are added and existing ones are updated.
+*   **3.2. Implement Comprehensive Data Validation:** Create a validation function in `ProductService` that runs after the master data is updated. This function will perform all critical checks (SKU Compliance, Translation Completeness, Archived with Stock, etc.) and use the `TaskService` to create tasks for any identified issues.
 
-**4. Implement Configuration Health Service**
-    *   **Action:** Implement the `runHealthCheck()` and `validateCurrentConfig()` functions.
-    *   **Detail:** The logic will reside in `HousekeepingService.js` and use the `SYS_CONFIG_DEFINITIONS` global constant to validate the live `SysConfig` sheet.
+### Part 4: Output Generation & Notification
+*   **4.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
+*   **4.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
+*   **4.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
 
 ## Phase 3: The Dashboard-Driven Web App (Frontend)
 
@@ -52,7 +53,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **2. Implement System Health Widget**
     *   **Action:** Create the UI for the "System Health" widget on the main dashboard.
-    *   **Detail:** The widget will display the count of failed jobs from `SysJobQueue` and the status from the last `runHealthCheck()`. It will include a button to trigger the health check function.
+    *   **Detail:** The widget will display the count of failed jobs from `SysJobQueue` and the status from the last configuration health check. It will include a button to trigger the health check function.
 
 ## Phase 4: Testing, Integration & Deployment
 
