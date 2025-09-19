@@ -8,17 +8,7 @@ To ensure clarity, consistency, and robust programmatic access, all sheets and c
 
 ### Sheet Names
 
-Sheet names follow a `Source_Topic_Type` pattern, modified for brevity and clarity. The official sheet names are:
-
-| Sheet Name   | Description                  |
-| :----------- | :--------------------------- |
-| `WebProdM`   | Web Products Master          |
-| `WebDetM`    | Web Details Master           |
-| `CmxProdM`   | Comax Products Master        |
-| `WebBundles` | Web Bundle Rules             |
-| `WebXlt`     | Web WPML Links (Translate)   |
-
-*(Other system, log, and configuration sheets will follow a similar clear-spoken pattern, e.g. `SysTasksQ`)*
+Sheet names follow a `Source_Topic_Type` pattern, modified for brevity and clarity.
 
 ### Column Names
 
@@ -32,10 +22,14 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | :----------- | :----- |
 | `WebProdM`   | `wpm_` |
 | `WebDetM`    | `wdm_` |
+| `CmxProdS`   | `cps_` |
 | `CmxProdM`   | `cpm_` |
-| `WebBundles` | `wbu_` |
 | `WebXlt`     | `wxl_` |
 | `BruryaStock`| `bru_` |
+| `SysBundlesM` | `sbm_` |
+| `SysBundleRows` | `sbr_` |
+| `SysBundleActiveComponents` | `sac_` |
+| `SysBundleComponentHistory` | `sbh_` |
 | `SysTasks`             | `st_`  |
 | `SysTaskTypes`         | `stt_` |
 | `SysTaskStatusWorkflow`| `stw_` |
@@ -52,13 +46,16 @@ This convention makes it immediately clear which sheet a given column belongs to
 
 ## Product Data Model
 
-The following sheets represent the core data model for managing products.
+The following sheets represent the core data model for managing simple products.
+
+### `CmxProdS` (Comax Products Staging)
+*   **Purpose:** A temporary holding area for the unprocessed product data from the Comax import. This sheet is cleared and re-populated with each import. Its structure mirrors `CmxProdM`.
+*   **Columns:** The columns are identical to `CmxProdM` but use the `cps_` prefix (e.g., `cps_CmxId`, `cps_SKU`, `cps_NameHe`, etc.).
 
 ### `WebProdM` (Web Products Master)
 *   **Purpose:** Contains a single row for each conceptual product, holding core data for identification and sorting.
 *   **Columns:**
     *   `wpm_WebIdEn`: **Primary Key.** The unique ID of the original (English) product.
-    *   `wpm_ProductType`: The type from WooCommerce (e.g., `Simple`, `Smart Bundle`). Used as the primary sort key.
     *   `wpm_SKU`: The SKU that links the product to Comax data.
     *   `wpm_NameEn`: The English product name, for easy identification.
     *   `wpm_PublishStatusEn`: The publication status of the English product.
@@ -66,7 +63,7 @@ The following sheets represent the core data model for managing products.
     *   `wpm_Price`: The product's price.
 
 ### `WebDetM` (Web Details Master)
-*   **Purpose:** Contains all detailed, language-dependent, and descriptive data for each product. The columns are ordered to group related fields.
+*   **Purpose:** Contains all detailed, language-dependent, and descriptive data for each product.
 *   **Columns:**
     *   **Core Identification**
         1.  `wdm_WebIdEn`
@@ -132,13 +129,6 @@ The following sheets represent the core data model for managing products.
     *   `cpm_IsWeb`: Flag indicating if the product should be sold online.
     *   `cpm_Exclude`: Flag to exclude the product from synchronization.
 
-### `WebBundles`
-*   **Purpose:** Defines the component products that make up a `Smart Bundle`. This data is parsed from the bundle's metadata during import.
-*   **Columns:**
-    *   `wbu_BundleWebIdEn`: The `WebIdEn` of the `Smart Bundle` product.
-    *   `wbu_ComponentWebIdEn`: The `WebIdEn` of a single product included in the bundle.
-    *   `wbu_Quantity`: The quantity of the component in the bundle.
-
 ### `WebXlt` (Web Translate)
 *   **Purpose:** Stores the relationship between original language and translated language products for WPML. This data is parsed from the product's WPML metadata during import.
 *   **Columns:**
@@ -146,6 +136,62 @@ The following sheets represent the core data model for managing products.
     *   `wxl_NameHe`: The Hebrew product name, for readability and debugging.
     *   `wxl_WebIdEn`: The ID of the original English product it's linked to.
     *   `wxl_SKU`: The SKU, for reference and data validation.
+
+## Bundle Management Data Model
+
+This data model uses a rules-engine approach to provide flexible and intelligent management of product bundles and packages.
+
+### 1. `SysBundlesM` (Bundles Master)
+*   **Purpose:** Defines the "header" information for each bundle or package. Each row represents one unique bundle product.
+*   **Prefix:** `sbm_`
+*   **Columns:**
+    *   `sbm_BundleWebIdEn`: **Primary Key.** The WooCommerce Product ID for the bundle.
+    *   `sbm_NameEn`: The bundle's display name in English.
+    *   `sbm_DescriptionEn`: The bundle's description in English.
+    *   `sbm_BundleWebIdHe`: The WooCommerce Product ID for the translated bundle.
+    *   `sbm_NameHe`: The bundle's display name in Hebrew.
+    *   `sbm_DescriptionHe`: The bundle's description in Hebrew.
+    *   `sbm_BundleType`: The type of bundle, e.g., `'Package'` (fixed components) or `'Bundle'` (customer-controlled components).
+    *   `sbm_Theme`: A theme name used for grouping or suggesting products (e.g., "Summer Reds").
+    *   `sbm_PackagePrice`: The special, discounted price if the `sbm_BundleType` is `'Package'`.
+
+### 2. `SysBundleRows` (Bundle Blueprint & Rules)
+*   **Purpose:** Defines the structure, layout, and eligibility rules for each row within a bundle.
+*   **Prefix:** `sbr_`
+*   **Columns:**
+    *   `sbr_RowId`: **Primary Key.** A unique ID for this specific row (e.g., `BUN-001-ROW-01`).
+    *   `sbr_BundleWebIdEn`: Links the row to a bundle in `SysBundlesM`.
+    *   `sbr_RowOrder`: A number (1, 2, 3...) to define the display order of the row within the bundle.
+    *   `sbr_RowType`: The type of row, either `'Product'` or `'Text'`.
+    *   **For 'Text' Rows:**
+        *   `sbr_TextContentEn`: The text to display in English.
+        *   `sbr_TextContentHe`: The text to display in Hebrew.
+    *   **For 'Product' Rows (Eligibility Rules):**
+        *   `sbr_EligibleCategory`: The product category a component must belong to.
+        *   `sbr_EligiblePriceMin`: The minimum price for an eligible component.
+        *   `sbr_EligiblePriceMax`: The maximum price for an eligible component.
+        *   `sbr_EligibleAttributes`: A delimited string of required attributes (e.g., 'Color=Red;Vintage=2020').
+        *   `sbr_MinStockThreshold`: A specific stock threshold for this product slot that triggers a warning.
+        *   `sbr_DefaultQuantity`: The default quantity for this product slot.
+        *   `sbr_IsCustomerControl`: A TRUE/FALSE flag indicating if the customer can change the quantity.
+
+### 3. `SysBundleActiveComponents` (Live Bundle Version)
+*   **Purpose:** Tracks the currently active, specific SKU filling each product slot in a bundle. This is the sheet the system actively monitors for stock levels.
+*   **Prefix:** `sac_`
+*   **Columns:**
+        *   `sac_RowId`: **Primary Key.** Links directly to a product row and its rules in `SysBundleRows`.
+        *   `sac_ActiveSKU`: The actual product SKU currently filling this slot.
+
+### 4. `SysBundleComponentHistory` (Audit Log)
+*   **Purpose:** An append-only log that provides a full audit trail of every component replacement.
+*   **Prefix:** `sbh_`
+*   **Columns:**
+    *   `sbh_Timestamp`: The exact date and time the change was made.
+    *   `sbh_RowId`: Which product slot (`sac_RowId`) was changed.
+    *   `sbh_OldSKU`: The SKU that was removed.
+    *   `sbh_NewSKU`: The new SKU that was added.
+    *   `sbh_ChangedBy`: The user or process that made the change.
+    *   `sbh_Reason`: The reason for the change (e.g., "Low Stock", "Seasonal Update").
 
 ## Order & Packing Workflow Data Model
 

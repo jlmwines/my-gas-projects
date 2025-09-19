@@ -16,7 +16,7 @@ const ProductService = (function() {
     const jobType = jobRow[jobQueueHeaders.indexOf('job_type')];
     const archiveFileId = jobRow[jobQueueHeaders.indexOf('archive_file_id')];
 
-    console.log(`ProductService: Starting processing for job ${jobId} of type ${jobType}`);
+    LoggerService.info('ProductService', 'processJob', `Starting processing for job ${jobId} of type ${jobType}`);
 
     try {
       const jobConfig = ConfigService.getConfig(jobType);
@@ -27,52 +27,259 @@ const ProductService = (function() {
       const csvContent = file.getBlob().getDataAsString(encoding);
 
       let products;
-      let dataSheetName;
+      let stagingSheetName;
 
       switch (jobType) {
         case 'import.drive.comax_products':
           products = ComaxAdapter.processProductCsv(csvContent);
-          dataSheetName = 'CmxProdS';
+          stagingSheetName = 'CmxProdS';
           break;
         case 'import.drive.web_products_en':
           products = _processGenericCsv(csvContent, 'schema.data.WebProdS_EN');
-          dataSheetName = 'WebProdS_EN';
+          stagingSheetName = 'WebProdS_EN';
           break;
         case 'import.drive.web_products_he':
           products = _processGenericCsv(csvContent, 'schema.data.WebProdS_HE');
-          dataSheetName = 'WebProdS_HE';
+          stagingSheetName = 'WebProdS_HE';
           break;
         default:
-          throw new Error(`Unsupported job type: ${jobType}`);
+          // This job is not a product import, so we can stop here.
+          LoggerService.info('ProductService', 'processJob', `Job type ${jobType} is not a product import. Skipping.`);
+          return;
       }
 
       if (!products || products.length === 0) {
-        console.log('No products to process.');
-        updateJobStatus(rowNumber, 'COMPLETED', 'No products found in file.');
+        LoggerService.info('ProductService', 'processJob', 'No products to process.');
+        _updateJobStatus(rowNumber, 'COMPLETED', 'No products found in file.');
         return;
       }
 
-      populateStagingSheet(products, dataSheetName);
+      _populateStagingSheet(products, stagingSheetName);
+      
+      // --- Run the validation engine after staging is complete ---
+      LoggerService.info('ProductService', 'processJob', `Staging complete. Starting validation engine.`);
+      _runValidationEngine();
+      LoggerService.info('ProductService', 'processJob', 'Validation engine finished.');
 
-      // Data validation will be enhanced in a future step.
-      // For now, we only validate Comax imports.
-      if (jobType === 'import.drive.comax_products') {
-        const validationErrors = verifyDataIntegrity(products, jobId);
-        if (validationErrors.length > 0) {
-          const errorMessage = 'Data integrity checks failed. See SysLog for details.';
-          LoggerService.error('ProductService', 'processJob', `${errorMessage} Details: ${JSON.stringify(validationErrors)}`, new Error(errorMessage));
-          updateJobStatus(rowNumber, 'FAILED', errorMessage);
-          return;
-        }
-      }
-
-      updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products.`);
-      console.log(`ProductService: Successfully completed job ${jobId}`);
+      _updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products. Validation complete.`);
+      LoggerService.info('ProductService', 'processJob', `Successfully completed job ${jobId}`);
 
     } catch (e) {
-      console.error(`ProductService: FAILED job ${jobId}. Error: ${e.message}`);
-      updateJobStatus(rowNumber, 'FAILED', e.message);
+      LoggerService.error('ProductService', 'processJob', `FAILED job ${jobId}. Error: ${e.message}`, e);
+      _updateJobStatus(rowNumber, 'FAILED', e.message);
     }
+  }
+
+  // =================================================================================
+  // VALIDATION ENGINE
+  // =================================================================================
+
+  /**
+   * Main entry point for the validation engine.
+   * Reads all validation rules and executes them.
+   */
+  function _runValidationEngine() {
+    const allConfig = ConfigService.getAllConfig();
+    const validationRules = Object.keys(allConfig).filter(k => k.startsWith('validation.rule.'));
+
+    if (validationRules.length === 0) {
+      LoggerService.warn('ProductService', '_runValidationEngine', 'No validation rules found in configuration.');
+      return;
+    }
+
+    const requiredSheets = new Set();
+    validationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if (rule.enabled !== 'TRUE') return;
+      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+      if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
+      if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
+      if(rule.join_against) requiredSheets.add(rule.join_against);
+    });
+
+    const dataMaps = {};
+    requiredSheets.forEach(sheetName => {
+      const schema = allConfig[`schema.data.${sheetName}`];
+      if (!schema) {
+        LoggerService.warn('ProductService', '_runValidationEngine', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+        return;
+      };
+      const headers = schema.headers.split(',');
+      dataMaps[sheetName] = _getSheetDataAsMap(sheetName, headers);
+    });
+
+    validationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if (rule.enabled !== 'TRUE') return;
+
+      try {
+        switch (rule.test_type) {
+          case 'EXISTENCE_CHECK':
+            _executeExistenceCheck(rule, dataMaps);
+            break;
+          case 'FIELD_COMPARISON':
+            _executeFieldComparison(rule, dataMaps);
+            break;
+          case 'INTERNAL_AUDIT':
+            _executeInternalAudit(rule, dataMaps);
+            break;
+          case 'CROSS_CONDITION_CHECK':
+            _executeCrossConditionCheck(rule, dataMaps);
+            break;
+          case 'CROSS_EXISTENCE_CHECK':
+            _executeCrossExistenceCheck(rule, dataMaps);
+            break;
+          default:
+            LoggerService.warn('ProductService', '_runValidationEngine', `Unknown test_type: '${rule.test_type}' for rule ${ruleKey}`);
+        }
+      } catch (e) {
+        LoggerService.error('ProductService', '_runValidationEngine', `Error executing rule ${ruleKey}: ${e.message}`, e);
+      }
+    });
+  }
+
+  function _executeExistenceCheck(rule, dataMaps) {
+    const sourceMap = dataMaps[rule.source_sheet].map;
+    const targetMap = dataMaps[rule.target_sheet].map;
+
+    for (const [key, sourceRow] of sourceMap.entries()) {
+      const existsInTarget = targetMap.has(key);
+      const shouldFail = rule.invert_result === 'TRUE' ? !existsInTarget : existsInTarget;
+
+      if (shouldFail) {
+        let passesFilter = true;
+        if (rule.source_filter) {
+            const [filterKey, filterValue] = rule.source_filter.split(',');
+            if (sourceRow[filterKey] !== filterValue) {
+                passesFilter = false;
+            }
+        }
+
+        if (passesFilter) {
+            _createTaskFromFailure(rule, sourceRow);
+        }
+      }
+    }
+  }
+  
+  function _executeFieldComparison(rule, dataMaps) {
+    const mapA = dataMaps[rule.sheet_A].map;
+    const mapB = dataMaps[rule.sheet_B].map;
+    const [fieldA, fieldB] = rule.compare_fields.split(',');
+
+    for (const [key, rowA] of mapA.entries()) {
+      if (mapB.has(key)) {
+        const rowB = mapB.get(key);
+        if (String(rowA[fieldA] || '') !== String(rowB[fieldB] || '')) {
+          _createTaskFromFailure(rule, { ...rowA, ...rowB });
+        }
+      }
+    }
+  }
+
+  function _executeInternalAudit(rule, dataMaps) {
+    const sourceMap = dataMaps[rule.source_sheet].map;
+    const conditionParts = rule.condition.split(',');
+    const [field, operator, value, logic, field2, op2, val2] = conditionParts;
+
+    for (const [key, row] of sourceMap.entries()) {
+        let conditionMet = _evaluateCondition(row[field], operator, value);
+
+        if (conditionMet && logic === 'AND') {
+            conditionMet = _evaluateCondition(row[field2], op2, val2);
+        }
+
+        if (conditionMet) {
+            _createTaskFromFailure(rule, row);
+        }
+    }
+  }
+
+  function _evaluateCondition(val1, operator, val2) {
+      switch(operator) {
+          case '<': return Number(val1) < Number(val2);
+          case '>': return Number(val1) > Number(val2);
+          case '=': return String(val1) === val2;
+          case '<>': return String(val1) !== val2;
+          default: return false;
+      }
+  }
+
+  function _executeCrossConditionCheck(rule, dataMaps) {
+    const mapA = dataMaps[rule.sheet_A].map;
+    const mapB = dataMaps[rule.sheet_B].map;
+    const [condFieldA, condValueA] = rule.condition_A.split(',');
+    const [condFieldB, condOpB, condValueB] = rule.condition_B.split(',');
+
+    for (const [key, rowA] of mapA.entries()) {
+      if (rowA[condFieldA] === condValueA && mapB.has(key)) {
+        const rowB = mapB.get(key);
+        if (_evaluateCondition(rowB[condFieldB], condOpB, condValueB)) {
+          _createTaskFromFailure(rule, { ...rowA, ...rowB });
+        }
+      }
+    }
+  }
+
+  function _executeCrossExistenceCheck(rule, dataMaps) {
+    const sourceMap = dataMaps[rule.source_sheet].map;
+    const targetMap = dataMaps[rule.target_sheet].map;
+    const joinMap = dataMaps[rule.join_against].map;
+    const [condField, condValue] = rule.source_condition.split(',');
+
+    for (const [key, row] of sourceMap.entries()) {
+      if (row[condField] === condValue) {
+        const existsInJoin = joinMap.has(key);
+        const existsInTarget = targetMap.has(key);
+
+        const joinCheck = rule.join_invert === 'TRUE' ? !existsInJoin : existsInJoin;
+        const targetCheck = rule.invert_result === 'TRUE' ? !existsInTarget : existsInTarget;
+
+        if (joinCheck && targetCheck) {
+          _createTaskFromFailure(rule, row);
+        }
+      }
+    }
+  }
+
+  function _createTaskFromFailure(rule, dataRow) {
+    const title = _formatString(rule.on_failure_title, dataRow);
+    const notes = _formatString(rule.on_failure_notes, dataRow);
+    const entityId = dataRow[rule.source_key] || dataRow[rule.key_A] || dataRow[Object.keys(dataRow)[1]] || 'N/A';
+
+    TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
+  }
+
+  function _formatString(template, dataRow) {
+    if (!template) return '';
+    return template.replace(/\${(.*?)}/g, (match, key) => {
+      return dataRow[key.trim()] || '';
+    });
+  }
+
+  function _getSheetDataAsMap(sheetName, headers) {
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const sheet = dataSpreadsheet.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 2) {
+      return { map: new Map(), headers: headers };
+    }
+    const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+    
+    const dataMap = new Map();
+    const keyHeader = headers.find(h => h.endsWith('_ID') || h.endsWith('_SKU') || h.endsWith('_IdEn'));
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName}`);
+
+    values.forEach(row => {
+      const rowObject = {};
+      headers.forEach((h, i) => rowObject[h] = row[i]);
+      const key = row[keyIndex];
+      if (key && String(key).trim()) {
+        dataMap.set(String(key).trim(), rowObject);
+      }
+    });
+    return { map: dataMap, headers: headers };
   }
 
   /**

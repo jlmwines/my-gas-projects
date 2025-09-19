@@ -36,7 +36,11 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`OrderService`**: Manages the entire order lifecycle, including import, status merging, and preparing data for the Comax export.
     *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
     *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
-    *   **`BundleService`**: Manages the Bundle Planning Hub, including checking component stock and sending notifications.
+    *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
+        *   Monitoring the stock levels of all SKUs listed in `SysBundleActiveComponents`.
+        *   If an active component is low on stock, it consults the eligibility rules for that bundle slot (defined in `SysBundleRows`) to find and suggest suitable replacements.
+        *   Creating tasks via the `TaskService` to alert users to low-stock situations and provide replacement suggestions.
+        *   Logging all component changes to the `SysBundleComponentHistory` sheet to provide a complete audit trail.
     *   **`PromotionsEngineService`**: Automatically calculates dynamic cross-sell and up-sell links during the sync process.
     *   **`TaskService`**: Manages the creation, updating, and assignment of all tasks (product, content, etc.) in the `TaskQ`.
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.

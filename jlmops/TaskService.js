@@ -1,155 +1,82 @@
 /**
  * @file TaskService.js
- * @description This service manages tasks.
+ * @description This service manages tasks, including creation with de-duplication.
  */
 
-/**
- * TaskService provides methods for managing tasks within the system.
- */
-function TaskService() {
-  const TASK_SHEET_NAME = "SysTasks"; // Assuming SysTasks is the master task sheet
+const TaskService = (function() {
 
   /**
-   * Creates a new task.
-   * @param {Object} taskData The data for the new task (e.g., { title: "...", description: "...", assignee: "...", type: "..." }).
-   * @returns {Object|null} The created task object with an ID, or null if creation fails.
+   * Creates a new task if an identical open task does not already exist.
+   * @param {string} taskTypeId The configuration name of the task type (e.g., 'task.validation.sku_not_in_comax').
+   * @param {string} linkedEntityId The primary identifier of the item this task is about (e.g., a SKU or Product ID).
+   * @param {string} title A short, descriptive title for the task.
+   * @param {string} notes Additional details or context for the task.
+   * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
-  this.createTask = function(taskData) {
+  function createTask(taskTypeId, linkedEntityId, title, notes) {
     try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(TASK_SHEET_NAME);
+      const taskTypeConfig = ConfigService.getConfig(taskTypeId);
+      if (!taskTypeConfig) {
+        throw new Error(`Task type configuration for '${taskTypeId}' not found.`);
+      }
 
+      const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+      const sheetNames = ConfigService.getConfig('system.sheet_names');
+      const taskSchema = ConfigService.getConfig('schema.log.SysTasks');
+      
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const sheet = logSpreadsheet.getSheetByName(sheetNames.SysTasks);
       if (!sheet) {
-        logger.error(`Task sheet '${TASK_SHEET_NAME}' not found.`);
-        return null;
+        throw new Error(`Task sheet '${sheetNames.SysTasks}' not found in spreadsheet ID ${logSheetConfig.id}.`);
       }
 
-      // Get headers to ensure correct column order
-      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      const newRow = [];
+      const headers = taskSchema.headers.split(',');
+      const typeIdCol = headers.indexOf('st_TaskTypeId');
+      const entityIdCol = headers.indexOf('st_LinkedEntityId');
+      const statusCol = headers.indexOf('st_Status');
 
-      // Map taskData to the correct column order
-      headers.forEach(header => {
-        newRow.push(taskData[header] !== undefined ? taskData[header] : '');
-      });
+      // --- De-duplication Check ---
+      if (sheet.getLastRow() > 1) {
+        const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+        const duplicateFound = data.some(row => 
+          row[typeIdCol] === taskTypeId &&
+          row[entityIdCol] === linkedEntityId &&
+          row[statusCol] !== 'Done' && row[statusCol] !== 'Closed' // Assuming terminal statuses
+        );
 
-      // Assign a simple unique ID (for demonstration, in real app use Utilities.getUuid() or similar)
-      const taskId = Utilities.getUuid();
-      // Assuming 'ID' is one of the headers
-      const idIndex = headers.indexOf('ID');
-      if (idIndex !== -1) {
-        newRow[idIndex] = taskId;
-      } else {
-        // If no 'ID' column, append it or handle as per sheet structure
-        newRow.push(taskId);
-        logger.warn("No 'ID' column found in task sheet. Appending ID to the end.");
-      }
-
-      sheet.appendRow(newRow);
-      logger.info(`Task '${taskData.title}' created successfully with ID: ${taskId}.`);
-
-      // Return the created task data including the new ID
-      return { ...taskData, ID: taskId };
-
-    } catch (e) {
-      logger.error(`Error creating task: ${e.message}`, e, taskData);
-      return null;
-    }
-  };
-
-  /**
-   * Retrieves all tasks from the task sheet.
-   * @returns {Array<Object>} An array of task objects.
-   */
-  this.getAllTasks = function() {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(TASK_SHEET_NAME);
-
-      if (!sheet) {
-        logger.error(`Task sheet '${TASK_SHEET_NAME}' not found.`);
-        return [];
-      }
-
-      const dataRange = sheet.getDataRange();
-      const values = dataRange.getValues();
-
-      if (values.length === 0) {
-        logger.info(`No data found in task sheet '${TASK_SHEET_NAME}'.`);
-        return [];
-      }
-
-      const headers = values[0];
-      const tasks = [];
-
-      for (let i = 1; i < values.length; i++) {
-        const row = values[i];
-        const task = {};
-        headers.forEach((header, index) => {
-          task[header] = row[index];
-        });
-        tasks.push(task);
-      }
-
-      logger.info(`Successfully retrieved ${tasks.length} tasks from '${TASK_SHEET_NAME}'.`);
-      return tasks;
-
-    } catch (e) {
-      logger.error(`Error getting all tasks: ${e.message}`, e);
-      return [];
-    }
-  };
-
-  /**
-   * Updates the status of a specific task.
-   * @param {string} taskId The ID of the task to update.
-   * @param {string} newStatus The new status for the task.
-   * @returns {boolean} True if the task was updated successfully, false otherwise.
-   */
-  this.updateTaskStatus = function(taskId, newStatus) {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const sheet = ss.getSheetByName(TASK_SHEET_NAME);
-
-      if (!sheet) {
-        logger.error(`Task sheet '${TASK_SHEET_NAME}' not found.`);
-        return false;
-      }
-
-      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-      const idColumnIndex = headers.indexOf('ID');
-      const statusColumnIndex = headers.indexOf('Status');
-
-      if (idColumnIndex === -1 || statusColumnIndex === -1) {
-        logger.error("Required 'ID' or 'Status' column not found in task sheet.");
-        return false;
-      }
-
-      const data = sheet.getDataRange().getValues();
-      let updated = false;
-
-      for (let i = 1; i < data.length; i++) { // Start from 1 to skip headers
-        if (data[i][idColumnIndex] === taskId) {
-          sheet.getRange(i + 1, statusColumnIndex + 1).setValue(newStatus);
-          logger.info(`Task ${taskId} status updated to: ${newStatus}.`);
-          updated = true;
-          break;
+        if (duplicateFound) {
+          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${linkedEntityId}. Aborting creation.`);
+          return null;
         }
       }
 
-      if (!updated) {
-        logger.warn(`Task with ID ${taskId} not found for status update.`);
-      }
-      return updated;
+      // --- Create New Task ---
+      const taskId = Utilities.getUuid();
+      const newRow = new Array(headers.length).fill('');
+      
+      newRow[headers.indexOf('st_TaskId')] = taskId;
+      newRow[headers.indexOf('st_TaskTypeId')] = taskTypeId;
+      newRow[headers.indexOf('st_Topic')] = taskTypeConfig.topic;
+      newRow[headers.indexOf('st_Title')] = title;
+      newRow[headers.indexOf('st_Status')] = taskTypeConfig.initial_status;
+      newRow[headers.indexOf('st_Priority')] = taskTypeConfig.default_priority;
+      newRow[headers.indexOf('st_LinkedEntityId')] = linkedEntityId;
+      newRow[headers.indexOf('st_CreatedDate')] = new Date();
+      newRow[headers.indexOf('st_Notes')] = notes;
+
+      sheet.appendRow(newRow);
+      LoggerService.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}.`);
+      
+      return { id: taskId }; // Return minimal confirmation
 
     } catch (e) {
-      logger.error(`Error updating task status for ID ${taskId}: ${e.message}`, e);
-      return false;
+      LoggerService.error('TaskService', 'createTask', `Error creating task: ${e.message}`, e);
+      return null;
     }
+  }
+
+  return {
+    createTask: createTask
   };
 
-  // TODO: Add methods for getting tasks by assignee/type, deleting tasks, etc.
-}
-
-// Global instance for easy access throughout the project
-const taskService = new TaskService();
+})();

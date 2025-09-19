@@ -243,3 +243,37 @@ This workflow allows an administrator to proactively validate the integrity of t
 3.  **Reporting:** A report is generated in the execution logs. 
     *   **On Success:** A confirmation message is logged.
     *   **On Failure:** The report lists every setting or property that is missing from the live configuration, allowing the administrator to quickly identify and fix the problem.
+
+---
+
+## 10. Bundle Management Workflow
+
+This workflow uses a rules-based engine to provide flexible, semi-automated management of product bundles, with a focus on proactively managing component stock.
+
+### 10.1. Bundle Definition (User-Managed)
+
+The entire bundle system is managed through a set of dedicated data sheets, not through code or complex configuration.
+
+1.  **Define the Bundle Header:** A user creates a new bundle by adding a row to the `SysBundlesM` sheet, defining its ID, name, type (`Package` or `Bundle`), and other top-level properties.
+2.  **Define the Blueprint:** The user defines the bundle's structure and layout by adding rows to the `SysBundleRows` sheet.
+    *   For a line of text, they create a `Text` row and enter the content.
+    *   For a product slot, they create a `Product` row and define the **eligibility rules** for that slot (e.g., Category, Price Range, Attributes).
+3.  **Assign Active Components:** The user assigns the initial, specific product to each product slot by adding a row to the `SysBundleActiveComponents` sheet, linking a `RowId` to a specific `ActiveSKU`.
+
+### 10.2. Automated Monitoring & Suggestion
+
+This is the core automated workflow performed by the `BundleService`.
+
+1.  **Monitor Active Components:** On a schedule, the `BundleService` iterates through every product in the `SysBundleActiveComponents` sheet.
+2.  **Check Stock Levels:** For each `sac_ActiveSKU`, it checks the current stock level in `CmxProdM`.
+3.  **Detect Low Stock:** It compares the stock level against the `sbr_MinStockThreshold` defined for that specific product row in `SysBundleRows`.
+4.  **Generate Suggestions:** If stock is below the threshold, the service initiates the suggestion logic:
+    a. It retrieves all eligibility rules for the product slot from `SysBundleRows`.
+    b. It scans all master products (`CmxProdM`) to find a list of alternate SKUs that match the same rules and have sufficient stock.
+5.  **Create Task:** The service creates a new, high-priority task in `SysTasks`: "Component [SKU] in bundle '[Bundle Name]' is low on stock. Suggested replacements: [SKU A, SKU B, SKU C]."
+
+### 10.3. Manual Update & Audit Trail
+
+1.  **User Action:** A user sees the task, reviews the suggestions, and decides on a replacement. They manually update the product bundle in the WooCommerce admin panel.
+2.  **Update System:** The user then updates the `sac_ActiveSKU` in the `SysBundleActiveComponents` sheet to reflect the new component.
+3.  **Automated Logging:** An `onEdit` trigger or a similar mechanism detects the change to `SysBundleActiveComponents`. It automatically creates a new row in the `SysBundleComponentHistory` sheet, logging the timestamp, the old SKU, the new SKU, the user who made the change, and the reason (which can be pulled from the related task). This provides a complete audit trail of all component swaps.

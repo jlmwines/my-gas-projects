@@ -74,7 +74,7 @@ const SYS_CONFIG_DEFINITIONS = {
     },
     'schema.data.WebProdM': {
         _description: 'Schema for Web Products Master sheet.',
-        headers: 'wpm_WebIdEn,wpm_ProductType,wpm_SKU,wpm_NameEn,wpm_PublishStatusEn,wpm_Stock,wpm_Price'
+        headers: 'wpm_WebIdEn,wpm_SKU,wpm_NameEn,wpm_PublishStatusEn,wpm_Stock,wpm_Price'
     },
     'schema.data.WebProdS_EN': {
         _description: 'Schema for English Web Products Staging sheet.',
@@ -95,6 +95,189 @@ const SYS_CONFIG_DEFINITIONS = {
         topic: 'Products',
         default_priority: 'High',
         initial_status: 'New'
+    },
+
+    // ---------------------------------------------------------------------------------
+    // NEW TASK TYPES FOR VALIDATION ENGINE
+    // ---------------------------------------------------------------------------------
+    'task.validation.web_new_product': {
+        _description: 'Task for a new web product found in staging that needs to be added to the master sheet.',
+        topic: 'Products',
+        default_priority: 'Medium',
+        initial_status: 'New'
+    },
+    'task.validation.web_missing_product': {
+        _description: 'Task for a web product in master that is missing from the latest web import.',
+        topic: 'Products',
+        default_priority: 'High',
+        initial_status: 'New'
+    },
+    'task.validation.field_mismatch': {
+        _description: 'Generic task for when a field does not match between a staging and master record.',
+        topic: 'Products',
+        default_priority: 'Medium',
+        initial_status: 'New'
+    },
+    'task.validation.comax_missing_product': {
+        _description: 'Task for a Comax product in master that is missing from the latest Comax import.',
+        topic: 'Products',
+        default_priority: 'Medium',
+        initial_status: 'New'
+    },
+    'task.validation.comax_internal_audit': {
+        _description: 'Generic task for data integrity issues within the Comax import file.',
+        topic: 'Products',
+        default_priority: 'Medium',
+        initial_status: 'New'
+    },
+    'task.validation.cross_file_error': {
+        _description: 'Generic task for reconciliation errors between Web and Comax data.',
+        topic: 'Products',
+        default_priority: 'High',
+        initial_status: 'New'
+    },
+
+    // ---------------------------------------------------------------------------------
+    // VALIDATION RULES (Based on legacy Compare.js)
+    // ---------------------------------------------------------------------------------
+
+    // --- A Rules: WebS vs WebM ---
+    'validation.rule.A1_WebS_NotIn_WebM': {
+        _description: '[A1] Checks for items in Web Staging (EN) that are missing from Web Master.',
+        enabled: 'TRUE',
+        test_type: 'EXISTENCE_CHECK',
+        source_sheet: 'WebProdS_EN',
+        target_sheet: 'WebProdM',
+        source_key: 'wps_ID',
+        target_key: 'wpm_WebIdEn',
+        invert_result: 'TRUE', // Fire if key is NOT found
+        on_failure_task_type: 'task.validation.web_new_product',
+        on_failure_title: 'New Web Product: ${wps_Name}',
+        on_failure_notes: 'Product ID ${wps_ID} (${wps_Name}) was found in the latest web import but does not exist in the master product list. It may need to be added.'
+    },
+    'validation.rule.A2_WebM_NotIn_WebS': {
+        _description: '[A2] Checks for items in Web Master that are missing from Web Staging (EN).',
+        enabled: 'TRUE',
+        test_type: 'EXISTENCE_CHECK',
+        source_sheet: 'WebProdM',
+        target_sheet: 'WebProdS_EN',
+        source_key: 'wpm_WebIdEn',
+        target_key: 'wps_ID',
+        invert_result: 'TRUE', // Fire if key is NOT found
+        on_failure_task_type: 'task.validation.web_missing_product',
+        on_failure_title: 'Missing Web Product: ${wpm_NameEn}',
+        on_failure_notes: 'Product ID ${wpm_WebIdEn} (${wpm_NameEn}) exists in the master list but was not found in the latest web import. It may have been deleted or its ID changed.'
+    },
+    'validation.rule.A3_Web_SkuMismatch': {
+        _description: '[A3] Compares the SKU for matching products in Web Master and Web Staging.',
+        enabled: 'TRUE',
+        test_type: 'FIELD_COMPARISON',
+        sheet_A: 'WebProdM',
+        sheet_B: 'WebProdS_EN',
+        key_A: 'wpm_WebIdEn',
+        key_B: 'wps_ID',
+        compare_fields: 'wpm_SKU,wps_SKU',
+        on_failure_task_type: 'task.validation.field_mismatch',
+        on_failure_title: 'Web SKU Mismatch: ${wpm_NameEn}',
+        on_failure_notes: 'Product ID ${wpm_WebIdEn} has a different SKU in master (${wpm_SKU}) versus staging (${wps_SKU}).'
+    },
+
+    // --- C Rules: ComaxS vs ComaxM ---
+    'validation.rule.C1_ComaxM_NotIn_ComaxS': {
+        _description: '[C1] Checks for active Comax Master products missing from Comax Staging.',
+        enabled: 'TRUE',
+        test_type: 'EXISTENCE_CHECK',
+        source_sheet: 'CmxProdM',
+        target_sheet: 'CmxProdS',
+        source_key: 'cpm_SKU',
+        target_key: 'cps_SKU',
+        source_filter: 'cpm_IsActive,כן', // Only check active products
+        invert_result: 'TRUE',
+        on_failure_task_type: 'task.validation.comax_missing_product',
+        on_failure_title: 'Missing Comax Product: ${cpm_NameHe}',
+        on_failure_notes: 'Active SKU ${cpm_SKU} (${cpm_NameHe}) exists in Comax master but was not in the latest import.'
+    },
+    'validation.rule.C3_Comax_NameMismatch': {
+        _description: '[C3] Compares the Name for matching products in Comax Master and Staging.',
+        enabled: 'TRUE',
+        test_type: 'FIELD_COMPARISON',
+        sheet_A: 'CmxProdM',
+        sheet_B: 'CmxProdS',
+        key_A: 'cpm_SKU',
+        key_B: 'cps_SKU',
+        compare_fields: 'cpm_NameHe,cps_NameHe',
+        on_failure_task_type: 'task.validation.field_mismatch',
+        on_failure_title: 'Comax Name Mismatch: ${cpm_SKU}',
+        on_failure_notes: 'SKU ${cpm_SKU} has a different name in master (${cpm_NameHe}) versus staging (${cps_NameHe}).'
+    },
+
+    // --- D Rules: ComaxS Internal Audit ---
+    'validation.rule.D2_ComaxS_NegativeStock': {
+        _description: '[D2] Checks for products with negative stock in Comax Staging.',
+        enabled: 'TRUE',
+        test_type: 'INTERNAL_AUDIT',
+        source_sheet: 'CmxProdS',
+        condition: 'cps_Stock,<,0',
+        on_failure_task_type: 'task.validation.comax_internal_audit',
+        on_failure_title: 'Negative Stock: ${cps_NameHe}',
+        on_failure_notes: 'SKU ${cps_SKU} (${cps_NameHe}) has a negative stock value of ${cps_Stock} in the latest Comax import.'
+    },
+    'validation.rule.D3_ComaxS_ArchivedWithStock': {
+        _description: '[D3] Checks for archived products with positive stock in Comax Staging.',
+        enabled: 'TRUE',
+        test_type: 'INTERNAL_AUDIT',
+        source_sheet: 'CmxProdS',
+        condition: 'cps_IsArchived,כן,AND,cps_Stock,>,0',
+        on_failure_task_type: 'task.validation.comax_internal_audit',
+        on_failure_title: 'Archived item with stock: ${cps_NameHe}',
+        on_failure_notes: 'SKU ${cps_SKU} (${cps_NameHe}) is marked as archived but has ${cps_Stock} units in stock.'
+    },
+
+    // --- E Rules: Cross-File WebS vs ComaxS ---
+    'validation.rule.E1_NewComaxOnline_NotIn_WebS': {
+        _description: '[E1] New Comax SKU is sell online but not in Web Staging.',
+        enabled: 'TRUE',
+        test_type: 'CROSS_EXISTENCE_CHECK',
+        source_sheet: 'CmxProdS',
+        target_sheet: 'WebProdS_EN',
+        source_key: 'cps_SKU',
+        target_key: 'wps_SKU',
+        source_condition: 'cps_IsWeb,כן', // Is sell online
+        join_against: 'CmxProdM', // ...and is new (not in master)
+        join_key_source: 'cps_SKU',
+        join_key_target: 'cpm_SKU',
+        join_invert: 'TRUE', // Fire if NOT in master
+        invert_result: 'TRUE', // Fire if NOT in target
+        on_failure_task_type: 'task.validation.cross_file_error',
+        on_failure_title: 'New online SKU missing from Web: ${cps_NameHe}',
+        on_failure_notes: 'New SKU ${cps_SKU} is marked \'Sell Online\' in Comax but does not exist in the web products import.'
+    },
+    'validation.rule.E2_WebS_SKU_NotIn_ComaxS': {
+        _description: '[E2] SKU from Web Staging is missing from Comax Staging.',
+        enabled: 'TRUE',
+        test_type: 'EXISTENCE_CHECK',
+        source_sheet: 'WebProdS_EN',
+        target_sheet: 'CmxProdS',
+        source_key: 'wps_SKU',
+        target_key: 'cps_SKU',
+        invert_result: 'TRUE',
+        on_failure_task_type: 'task.validation.sku_not_in_comax',
+        on_failure_title: 'Web SKU not in Comax: ${wps_Name}',
+        on_failure_notes: 'SKU ${wps_SKU} (${wps_Name}) exists in the web import but is missing from the Comax import.'
+    },
+    'validation.rule.E3_WebPublished_ComaxNotOnline': {
+        _description: '[E3] Web product is published but not marked Sell Online in Comax.',
+        enabled: 'TRUE',
+        test_type: 'CROSS_CONDITION_CHECK',
+        sheet_A: 'WebProdS_EN',
+        sheet_B: 'CmxProdS',
+        key_A: 'wps_SKU',
+        key_B: 'cps_SKU',
+        condition_A: 'wps_Published,published',
+        condition_B: 'cps_IsWeb,<>כן', // Not equal to 'Yes'
+        on_failure_task_type: 'task.validation.cross_file_error',
+        on_failure_title: 'Published item not for sale: ${wps_Name}',
+        on_failure_notes: 'SKU ${wps_SKU} (${wps_Name}) is published on the web, but is not marked \'Sell Online\' in Comax.'
     }
 };
 // =================================================================================
