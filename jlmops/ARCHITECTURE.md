@@ -81,6 +81,8 @@ To ensure stability and prevent accidental modifications to the live system duri
 
 *   **Configuration Loading:** The `ConfigService` is responsible for enforcing this state management. By default, it will only load records marked as `stable` or `locked`. During development, services can specifically request to include records with a certain implementation tag, allowing for safe, parallel development and testing.
 
+*   **Situational Awareness (The "Read First, Then Act" Principle):** To ensure safe and context-aware administrative actions (both manual and automated), the system adopts a **"Read First, Then Act"** principle. Before any operation that depends on system configuration is planned or executed, the agent or script must first retrieve a complete snapshot of the live `SysConfig` data (e.g., via `ConfigService.getSysConfigSnapshot()`). This ensures all actions are grounded in the current reality of the system's state, preventing errors caused by outdated assumptions.
+
 #### 2.4.2. Two-Spreadsheet Data Store
 
 To ensure high performance, the system utilizes two separate Google Spreadsheets:

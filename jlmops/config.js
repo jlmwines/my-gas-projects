@@ -5,8 +5,8 @@
 
 const ConfigService = (function() {
   let configCache = null;
-
   const DATA_SPREADSHEET_NAME = 'JLMops_Data';
+  const REQUIRED_SCHEMA_VERSION = 2; // The schema version this code is built for.
 
   /**
    * Finds the JLMops_Data spreadsheet by name.
@@ -28,6 +28,7 @@ const ConfigService = (function() {
 
   /**
    * Reads the SysConfig sheet and parses it into a structured cache.
+   * This function performs a critical schema version check on load.
    */
   function loadConfig() {
     if (configCache) {
@@ -47,16 +48,16 @@ const ConfigService = (function() {
 
     data.forEach(row => {
       const settingName = row[0];
-      // Per the documented schema:
-      // row[0] is scf_SettingName
-      // row[1] is scf_Description (ignored by parser)
-      // row[2] is scf_P01 (the property name)
-      // row[3] is scf_P02 (the property value)
+      
+      // 1. Ignore section headers and invalid rows
+      if (!settingName || String(settingName).startsWith('_section.')) {
+        return;
+      }
+
       const propName = row[2]; 
       const propValue = row[3];
 
-      // A row must have at least a setting name and a property name to be valid.
-      if (!settingName || propName === null || propName === undefined || propName === '') {
+      if (propName === null || propName === undefined || propName === '') {
         return;
       }
 
@@ -67,8 +68,46 @@ const ConfigService = (function() {
       parsedConfig[settingName][propName] = propValue;
     });
 
+    // 2. Perform Fail-Fast Schema Version Check
+    const liveVersionSetting = parsedConfig['sys.schema.version'];
+    // The property name for the version setting is 'value'.
+    const liveVersion = liveVersionSetting ? Number(liveVersionSetting['value']) : 0;
+
+    if (liveVersion !== REQUIRED_SCHEMA_VERSION) {
+        throw new Error(`Fatal Error: SysConfig schema mismatch. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please run migration scripts.`);
+    }
+
     configCache = parsedConfig;
-    console.log('Configuration loaded and parsed successfully.');
+    console.log(`Configuration loaded. Schema version ${liveVersion} validated.`);
+  }
+
+  /**
+   * Returns a snapshot of the current SysConfig as an array of objects.
+   * This is for planning and diagnostics by the development agent.
+   * @returns {Array<Object> | null}
+   */
+  function getSysConfigSnapshot() {
+    try {
+      const spreadsheet = findDataSpreadsheet();
+      const sheet = spreadsheet.getSheetByName('SysConfig');
+      if (!sheet) {
+        throw new Error("Sheet 'SysConfig' not found for snapshot.");
+      }
+      const data = sheet.getDataRange().getValues();
+      const headers = data.shift();
+
+      const snapshot = data.map(row => {
+        const rowObject = {};
+        headers.forEach((header, index) => {
+          rowObject[header] = row[index];
+        });
+        return rowObject;
+      });
+      return snapshot;
+    } catch (e) {
+      console.error(`Could not generate SysConfig snapshot: ${e.message}`);
+      return null;
+    }
   }
 
   /**
@@ -115,6 +154,7 @@ const ConfigService = (function() {
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
-    forceReload: forceReload
+    forceReload: forceReload,
+    getSysConfigSnapshot: getSysConfigSnapshot // Expose the new function
   };
 })();

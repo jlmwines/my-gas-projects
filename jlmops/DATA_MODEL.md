@@ -24,7 +24,7 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `WebDetM`    | `wdm_` |
 | `CmxProdS`   | `cps_` |
 | `CmxProdM`   | `cpm_` |
-| `WebXlt`     | `wxl_` |
+| `WebXltM`    | `wxl_` |
 | `WebXltS`    | `wxs_` |
 | `BruryaStock`| `bru_` |
 | `SysBundlesM` | `sbm_` |
@@ -193,8 +193,8 @@ The following sheets represent the core data model for managing simple products.
     *   `cpm_IsWeb`: Flag indicating if the product should be sold online.
     *   `cpm_Exclude`: Flag to exclude the product from synchronization.
 
-### `WebXlt` (Web Translate)
-*   **Purpose:** Stores the relationship between original language and translated language products for WPML. This data is parsed from the product's WPML metadata during import.
+### `WebXltM` (Web Translate Master)
+*   **Purpose:** Stores the master relationship between original language and translated language products for WPML. This data is populated from the `WebXltS` staging sheet.
 *   **Columns:**
     *   `wxl_WebIdHe`: The unique ID of the Hebrew (translated) product.
     *   `wxl_NameHe`: The Hebrew product name, for readability and debugging.

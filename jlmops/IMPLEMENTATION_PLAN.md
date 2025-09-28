@@ -51,6 +51,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **2.1. Update Data Model (`DATA_MODEL.md`):** Add a new column, `scf_status`, to the `SysConfig` table definition.
 *   **2.2. Modify Configuration Service (`config.js`):** Update the service to read and filter by the `scf_status` column.
 *   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
+*   **2.4. Enhance Configuration Service (`config.js`):** Add a `getSysConfigSnapshot()` function that reads and returns the entire sheet's data as JSON. This will be used by the development agent for planning and diagnostics.
 
 ### Part 3: Staging Data Validation (COMPLETED)
 *   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** In `setup.js`, define a comprehensive set of validation rules inspired by the legacy `Compare.js` script. Each rule defines a specific test, its parameters, and the task to create upon failure. The full list of 17 required tests has been identified and is detailed below.
@@ -79,7 +80,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **3.3. Implement Validation Execution (COMPLETED):** In `ProductService`, create a validation engine that reads the rules from the configuration and executes them against the staged data *after* the staging sheets are populated but *before* any data is written to the master sheets. The engine uses the `TaskService` to log all discrepancies.
 
 ### Part 4: Master Data Reconciliation (PLANNED)
-*   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXlt`), ensuring new products are added and existing ones are updated based on the staged data.
+*   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXltM`), ensuring new products are added and existing ones are updated based on the staged data.
 
 ### Part 5: Output Generation & Notification (PLANNED)
 *   **5.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.

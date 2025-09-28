@@ -112,13 +112,13 @@ This workflow covers the end-to-end process for adding new products, updating ex
     *   The main **WooCommerce product export (English)** is uploaded. The system lands this raw data into the `WebProdS_EN` staging sheet.
     *   The **`wehe.csv`** file, which contains the links between Hebrew translations and their English originals, is uploaded. The system lands this data into the `WebXltS` staging sheet.
 2.  **Automated Processing:** The `ProductService` is triggered to process the staged data.
-    *   It first processes the `WebXltS` sheet to populate the master `WebXlt` (Web Translate) table, establishing the relationships between products.
-    *   It then processes the `WebProdS_EN` sheet, using the information from `WebXlt` to correctly associate the data with the master product records.
+    *   It first processes the `WebXltS` sheet to populate the master `WebXltM` (Web Translate Master) table, establishing the relationships between products.
+    *   It then processes the `WebProdS_EN` sheet, using the information from `WebXltM` to correctly associate the data with the master product records.
     *   It populates `WebProdM` (Web Products Master) with core, language-independent data (price, stock) from the English product data.
     *   It updates the English-specific columns in `WebDetM` (Web Details Master). The Hebrew-specific columns in this sheet are preserved, not overwritten by the import.
 3.  **Data Validation & Integrity:** The `ProductService` performs validation checks based on the system's data ownership rules. The principle is that **Comax is the owner of primary product data** (price, stock), while the **JLM Ops Hub is the authority for all descriptive and marketing data,** which it expands upon using some base data from Comax. The key integrity checks are:
     *   **SKU Compliance:** Ensures a product's `wpm_SKU` in the web system has a valid, corresponding entry in the `CmxProdM` (Comax master) sheet. This is the primary link between the systems.
-    *   **Translation Completeness:** Ensures each original language product in `WebProdM` has a corresponding translated product linked in the `WebXlt` sheet.
+    *   **Translation Completeness:** Ensures each original language product in `WebProdM` has a corresponding translated product linked in the `WebXltM` sheet.
     *   Any discrepancies found during these validation steps will automatically generate a task in `SysTasks` for manual review and correction.
 
 ### 3.2. Product Detail Verification
