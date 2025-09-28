@@ -30,16 +30,27 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Phase 2: Product Workflow Engine (IN PROGRESS)
 
-**Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources (Comax, WooCommerce EN, WooCommerce HE), replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
+**Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-### Part 1: Foundational Configuration (COMPLETED)
-*   **1.1. Define Web Product Import Configurations (COMPLETED):** Add two new configuration blocks (`import.drive.web_products_en`, `import.drive.web_products_he`) to the existing `SYS_CONFIG_DEFINITIONS` in `setup.js`. The configuration for `import.drive.comax_products` is already complete.
-*   **1.2. Define Staging Sheet Schemas (IN PROGRESS):** Define comprehensive schemas for `WebProdS_EN` (49 columns) and `WebProdS_HE` (for future use, not directly imported) in `SysConfig_template.csv` to enable automatic sheet creation and header validation.
-*   **1.3. Define Validation Task Types (COMPLETED):** Add new task type definitions (e.g., `SKU_NOT_IN_COMAX`, `TRANSLATION_MISSING`) to `SYS_CONFIG_DEFINITIONS` to allow for the creation of specific, actionable tasks when data discrepancies are found.
+### Part 1: Correct Product Import Model (NEXT)
+**Goal:** To correct the flawed product import model to reflect the actual data sources: a single main product export and a separate translation link file (`wehe.csv`).
 
-### Part 2: Automated Intake & Staging (COMPLETED)
-*   **2.1. Enhance `OrchestratorService` (COMPLETED):** The service will now automatically handle the three product-related file types based on the new configurations, creating a distinct job in `SysJobQueue` for each.
-*   **2.2. Enhance `ProductService` for Staging (IN PROGRESS):** The service will be updated to handle the new job types, routing the file content to the correct parser (`ComaxAdapter` or `WebAdapter`) and populating the correct staging sheet (`CmxProdS`, `WebProdS_EN`). `ComaxAdapter` now uses header-name-based mapping.
+*   **1.1. Correct Data Model (`DATA_MODEL.md`):**
+    *   Action: Remove the incorrect `WebProdS_HE` sheet.
+    *   Action: Add the new `WebXltS` staging sheet for the `wehe.csv` file.
+*   **1.2. Correct Workflows (`WORKFLOWS.md`):** Action: Update the "Product Import & Data Processing" workflow to describe the new two-file process.
+*   **1.3. Correct Configuration Definitions:**
+    *   Action: In `setup.js`, remove the `import.drive.web_products_he` configuration.
+    *   Action: Add a new `import.drive.web_hebrew_links` configuration for the `wehe.csv` file.
+*   **1.4. Correct `ProductService` Staging Logic:** The service's staging function must be updated to handle the two distinct job types, routing the main export to `WebProdS_EN` and the translation links to `WebXltS`.
+*   **1.5. Correct `OrchestratorService` Logic:** The service must be updated to look for the two correct file types (`web_products_en` and `web_hebrew_links`).
+
+### Part 2: SysConfig State Management (PLANNED)
+**Goal:** To implement a state management system for `SysConfig` to ensure stability during development.
+
+*   **2.1. Update Data Model (`DATA_MODEL.md`):** Add a new column, `scf_status`, to the `SysConfig` table definition.
+*   **2.2. Modify Configuration Service (`config.js`):** Update the service to read and filter by the `scf_status` column.
+*   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
 
 ### Part 3: Staging Data Validation (COMPLETED)
 *   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** In `setup.js`, define a comprehensive set of validation rules inspired by the legacy `Compare.js` script. Each rule defines a specific test, its parameters, and the task to create upon failure. The full list of 17 required tests has been identified and is detailed below.
@@ -67,13 +78,13 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, add logic to prevent the creation of duplicate tasks for the same entity and exception type.
 *   **3.3. Implement Validation Execution (COMPLETED):** In `ProductService`, create a validation engine that reads the rules from the configuration and executes them against the staged data *after* the staging sheets are populated but *before* any data is written to the master sheets. The engine uses the `TaskService` to log all discrepancies.
 
-### Part 4: Master Data Reconciliation (NEXT)
-*   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`, `WebProdS_HE`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXlt`), ensuring new products are added and existing ones are updated based on the staged data.
+### Part 4: Master Data Reconciliation (PLANNED)
+*   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXlt`), ensuring new products are added and existing ones are updated based on the staged data.
 
-### Part 5: Output Generation & Notification
-*   **4.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **4.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
-*   **4.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
+### Part 5: Output Generation & Notification (PLANNED)
+*   **5.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
+*   **5.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
+*   **5.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
 
 ## Phase 3: Bundle Management Engine (PLANNED)
 

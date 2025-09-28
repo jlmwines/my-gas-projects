@@ -54,6 +54,7 @@ The backend is designed as a collection of services that are controlled by a sin
 To keep the core services clean, we use an adapter/formatter pattern to handle messy external data.
 
 *   **`ComaxAdapter`**: Ingests raw, Hebrew-language CSV data from Comax. It cleans the data (e.g., handles `null` inventory), translates headers, and produces clean, standardized product objects for the rest of the system to use.
+*   **`WebAdapter`**: Ingests raw data from WooCommerce CSV files. It is responsible for parsing the input file and mapping its columns to the wider schema of the corresponding staging sheet (e.g., `WebProdS_EN`). This adapter is key to the system's resilience, as it isolates the core logic from changes in the external file format.
 *   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import. This includes handling special flags like `IsSoldIndividually`.
 
 ### 2.4. Data & Workflow Architecture
@@ -68,6 +69,17 @@ The system's architecture is designed to be entirely driven by its configuration
     *   **`scf_P01` (Property / Block Type):** This column defines the specific property or type of block this row represents within the group.
     *   **`scf_P02` onwards (Values):** These columns hold the values for the given property.
 *   **Example:** A file import is defined by multiple rows sharing the `SettingName` `import.drive.comax_products`. One row might have `P01` set to `source_folder_id` and `P02` as the folder ID, while another row has `P01` set to `file_pattern` and `P02` as the file name. This schema is flexible enough to define any configuration the system needs, from business rules to document templates.
+
+##### 2.4.1.1. Configuration State Management
+
+To ensure stability and prevent accidental modifications to the live system during development, the `SysConfig` sheet includes a state management mechanism implemented via the `scf_status` column.
+
+*   **`scf_status`:** This column on each configuration row defines its state. The possible values are:
+    *   `stable`: The default state for a reliable, tested configuration record. These are loaded by default.
+    *   `locked`: A record that is considered final and should not be modified by any script. This provides an extra layer of protection for critical settings. Loaded by default.
+    *   **Implementation-Specific Tags (e.g., `dev_phase_2`, `test_feature_x`):** These tags are used to isolate new or modified configurations during development. Records with these tags are only loaded when explicitly requested by a script, ensuring that in-progress work does not affect the stable system.
+
+*   **Configuration Loading:** The `ConfigService` is responsible for enforcing this state management. By default, it will only load records marked as `stable` or `locked`. During development, services can specifically request to include records with a certain implementation tag, allowing for safe, parallel development and testing.
 
 #### 2.4.2. Two-Spreadsheet Data Store
 

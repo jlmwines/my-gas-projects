@@ -25,6 +25,7 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `CmxProdS`   | `cps_` |
 | `CmxProdM`   | `cpm_` |
 | `WebXlt`     | `wxl_` |
+| `WebXltS`    | `wxs_` |
 | `BruryaStock`| `bru_` |
 | `SysBundlesM` | `sbm_` |
 | `SysBundleRows` | `sbr_` |
@@ -35,6 +36,7 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysTaskStatusWorkflow`| `stw_` |
 | `SysCampaigns`         | `scamp_` |
 | `SysCampaignAssets`    | `sca_` |
+| `SysConfig`            | `scf_` |
 
 
 **Example:** The concept of a product's web ID (`WebIdEn`) would have a different column name in each sheet it appears in:
@@ -53,7 +55,7 @@ The following sheets represent the core data model for managing simple products.
 *   **Columns:** The columns are identical to `CmxProdM` but use the `cps_` prefix (e.g., `cps_CmxId`, `cps_SKU`, `cps_NameHe`, etc.).
 
 ### `WebProdS_EN` (Web Products Staging - English)
-*   **Purpose:** A temporary holding area for raw product data from the English WooCommerce export. This sheet is cleared and re-populated with each import. It contains all columns from the WooCommerce export, plus additional columns for future use.
+*   **Purpose:** A temporary holding area for raw product data from the English WooCommerce export. This sheet is cleared and re-populated with each import. Its schema is intentionally broader than the input file, containing all columns from the WooCommerce export plus additional columns for future use. This design decouples our system from the source format, allows for future extensibility without database changes, and provides a consistent structure for the `ProductService`.
 *   **Columns:**
     *   `wps_ID`
     *   `wps_Type`
@@ -105,58 +107,14 @@ The following sheets represent the core data model for managing simple products.
     *   `wps_MetaWpmlLanguage`
     *   `wps_MetaWpmlSourceId`
 
-### `WebProdS_HE` (Web Products Staging - Hebrew)
-*   **Purpose:** A temporary holding area for raw product data from the Hebrew WooCommerce export. This sheet is cleared and re-populated with each import. It contains all columns from the WooCommerce export, plus additional columns for future use.
-*   **Columns:** (Identical to `WebProdS_EN` for structural consistency)
-    *   `wps_ID`
-    *   `wps_Type`
-    *   `wps_SKU`
-    *   `wps_Name`
-    *   `wps_Published`
-    *   `wps_IsFeatured`
-    *   `wps_VisibilityInCatalog`
-    *   `wps_ShortDescription`
-    *   `wps_Description`
-    *   `wps_DateSalePriceStarts`
-    *   `wps_DateSalePriceEnds`
-    *   `wps_TaxStatus`
-    *   `wps_TaxClass`
-    *   `wps_InStock`
-    *   `wps_Stock`
-    *   `wps_BackordersAllowed`
-    *   `wps_SoldIndividually`
-    *   `wps_Weight`
-    *   `wps_Length`
-    *   `wps_Width`
-    *   `wps_Height`
-    *   `wps_AllowCustomerReviews`
-    *   `wps_PurchaseNote`
-    *   `wps_SalePrice`
-    *   `wps_RegularPrice`
-    *   `wps_Categories`
-    *   `wps_Tags`
-    *   `wps_ShippingClass`
-    *   `wps_Images`
-    *   `wps_DownloadLimit`
-    *   `wps_DownloadExpiry`
-    *   `wps_Parent`
-    *   `wps_GroupedProducts`
-    *   `wps_Upsells`
-    *   `wps_CrossSells`
-    *   `wps_ExternalURL`
-    *   `wps_ButtonText`
-    *   `wps_Position`
-    *   `wps_Attribute1Name`
-    *   `wps_Attribute1Value`
-    *   `wps_Attribute1Visible`
-    *   `wps_Attribute1Global`
-    *   `wps_Attribute2Name`
-    *   `wps_Attribute2Value`
-    *   `wps_Attribute2Visible`
-    *   `wps_Attribute2Global`
-    *   `wps_MetaWpmlTranslationHash`
-    *   `wps_MetaWpmlLanguage`
-    *   `wps_MetaWpmlSourceId`
+
+
+### `WebXltS` (Web Translate Staging)
+*   **Purpose:** A temporary holding area for the translation linking data from the `wehe.csv` import. This sheet is cleared and re-populated with each import. It provides the link between a translated Hebrew product and its original English product.
+*   **Prefix:** `wxs_`
+*   **Columns:**
+    *   `wxs_WebIdHe`: The unique ID of the Hebrew (translated) product.
+    *   `wxs_WebIdEn`: The ID of the original English product it's linked to.
 
 ### `WebProdM` (Web Products Master)
 *   **Purpose:** Contains a single row for each conceptual product, holding core data for identification and sorting.
@@ -442,6 +400,7 @@ This section defines the sheets used to coordinate multi-faceted promotional cam
 *   **Columns:**
     *   `scf_SettingName`: **Primary Key.** The unique name for the setting group (e.g., "InventoryThresholds").
     *   `scf_Description`: A human-readable explanation of what this row of settings controls.
+    *   `scf_status`: **(New)** The status of the configuration record. Used to protect stable configurations and manage implementation steps. Can be `stable`, `locked`, or a custom tag like `impl_step_1`.
     *   `scf_P01`: Generic Parameter 1.
     *   `scf_P02`: Generic Parameter 2.
     *   `scf_P03`: Generic Parameter 3.
