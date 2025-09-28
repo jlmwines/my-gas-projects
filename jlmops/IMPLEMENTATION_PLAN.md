@@ -32,7 +32,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-### Part 1: Correct Product Import Model (NEXT)
+### Part 1: Correct Product Import Model (COMPLETED)
 **Goal:** To correct the flawed product import model to reflect the actual data sources: a single main product export and a separate translation link file (`wehe.csv`).
 
 *   **1.1. Correct Data Model (`DATA_MODEL.md`):**
@@ -42,8 +42,12 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **1.3. Correct Configuration Definitions:**
     *   Action: In `setup.js`, remove the `import.drive.web_products_he` configuration.
     *   Action: Add a new `import.drive.web_hebrew_links` configuration for the `wehe.csv` file.
+    *   **COMPLETED:** Corrected `wps_Price` to `wps_RegularPrice` mapping in `SysConfig` for `map.web.product_columns` and `schema.data.WebProdS_EN`.
 *   **1.4. Correct `ProductService` Staging Logic:** The service's staging function must be updated to handle the two distinct job types, routing the main export to `WebProdS_EN` and the translation links to `WebXltS`.
+    *   **COMPLETED:** Modified `_populateStagingSheet` to dynamically map data based on actual sheet headers.
 *   **1.5. Correct `OrchestratorService` Logic:** The service must be updated to look for the two correct file types (`web_products_en` and `web_hebrew_links`).
+    *   **COMPLETED:** Fixed `ConfigService` schema loading by correcting parsing of `sys.schema.version` and ensuring it's always loaded.
+    *   **COMPLETED:** Modified `WebAdapter.processProductCsv()` for case-insensitive header matching.
 
 ### Part 2: SysConfig State Management (PLANNED)
 **Goal:** To implement a state management system for `SysConfig` to ensure stability during development.

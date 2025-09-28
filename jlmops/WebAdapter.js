@@ -25,7 +25,7 @@ const WebAdapter = (function() {
       return [];
     }
     
-    const headerRow = parsedData[0].map(h => String(h).trim());
+    const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
     const productObjects = [];
 
     // Start from row 1 to skip the header
@@ -36,7 +36,8 @@ const WebAdapter = (function() {
       const product = {};
       Object.keys(columnMap).forEach(csvHeader => {
         const internalFieldName = columnMap[csvHeader];
-        const columnIndex = headerRow.indexOf(csvHeader);
+        // Convert csvHeader from config to lowercase for comparison
+        const columnIndex = headerRow.indexOf(csvHeader.toLowerCase());
         
         if (columnIndex !== -1) {
           product[internalFieldName] = row[columnIndex];

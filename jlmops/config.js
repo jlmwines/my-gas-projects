@@ -48,16 +48,31 @@ const ConfigService = (function() {
 
     data.forEach(row => {
       const settingName = row[0];
+      const status = row[2]; // scf_status
       
       // 1. Ignore section headers and invalid rows
       if (!settingName || String(settingName).startsWith('_section.')) {
         return;
       }
 
-      const propName = row[2]; 
-      const propValue = row[3];
+      // Only load 'stable', 'locked', or 'testing_phase2_part1' records, 
+      // but ALWAYS load 'sys.schema.version'
+      if (settingName !== 'sys.schema.version' && status !== 'stable' && status !== 'locked' && status !== 'testing_phase2_part1') {
+          return;
+      }
 
-      if (propName === null || propName === undefined || propName === '') {
+      let propKey;
+      let propValue;
+
+      if (settingName === 'sys.schema.version') {
+        propKey = row[2]; // For sys.schema.version, scf_status is the key (e.g., 'value')
+        propValue = row[3]; // For sys.schema.version, scf_P01 is the value (e.g., '2')
+      } else {
+        propKey = row[3]; // scf_P01
+        propValue = row[4]; // scf_P02
+      }
+
+      if (propKey === null || propKey === undefined || propKey === '') {
         return;
       }
 
@@ -65,13 +80,15 @@ const ConfigService = (function() {
         parsedConfig[settingName] = {};
       }
 
-      parsedConfig[settingName][propName] = propValue;
+      parsedConfig[settingName][propKey] = propValue;
     });
 
     // 2. Perform Fail-Fast Schema Version Check
     const liveVersionSetting = parsedConfig['sys.schema.version'];
+    console.log('Debug: liveVersionSetting:', liveVersionSetting);
     // The property name for the version setting is 'value'.
     const liveVersion = liveVersionSetting ? Number(liveVersionSetting['value']) : 0;
+    console.log('Debug: liveVersion:', liveVersion);
 
     if (liveVersion !== REQUIRED_SCHEMA_VERSION) {
         throw new Error(`Fatal Error: SysConfig schema mismatch. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please run migration scripts.`);
