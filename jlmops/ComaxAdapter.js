@@ -11,53 +11,58 @@ const ComaxAdapter = (function() {
    * @returns {Array<Object>} An array of clean, standardized product objects.
    */
   function processProductCsv(csvContent) {
-    console.log('ComaxAdapter: Starting product CSV processing.');
+    console.log('ComaxAdapter: Starting robust, single-step transformation...');
 
-    const columnMap = ConfigService.getConfig('map.comax.product_columns');
-    if (!columnMap) {
-        throw new Error('Comax product column map not found in configuration. Please run setup.');
+    // 1. Get the necessary configurations
+    const sourceMap = ConfigService.getConfig('map.comax.product_columns');
+    const targetSchema = ConfigService.getConfig('schema.data.CmxProdS');
+
+    if (!sourceMap || !targetSchema || !targetSchema.headers) {
+        throw new Error('Required source map or target schema not found in configuration.');
     }
 
-    // 1. Fix the blank header issue
-    const lines = csvContent.split('\n');
-    if (lines.length < 2) {
-      console.warn('ComaxAdapter: File is empty or contains only a header.');
+    // 2. Use Drive API to convert CSV to a temporary Sheet for robust parsing
+    const patchedContent = csvContent; // No patching needed here as we remap everything.
+    const cleanBlob = Utilities.newBlob(patchedContent, MimeType.CSV, 'temp-comax-import.csv');
+    const tempSpreadsheetResource = { title: `[TEMP] Comax Import - ${new Date().toISOString()}` };
+    const tempSheetFile = Drive.Files.insert(tempSpreadsheetResource, cleanBlob, { convert: true });
+    let allData;
+
+    try {
+        const tempSpreadsheet = SpreadsheetApp.openById(tempSheetFile.id);
+        allData = tempSpreadsheet.getSheets()[0].getDataRange().getValues();
+    } finally {
+        DriveApp.getFileById(tempSheetFile.id).setTrashed(true);
+    }
+
+    if (!allData || allData.length < 2) {
+      console.warn('ComaxAdapter: File is empty or contains only a header after conversion.');
       return [];
     }
 
-    const headerCells = lines[0].split(',');
-    if (headerCells.length > 14 && (headerCells[14] === '' || headerCells[14] === undefined)) {
-      headerCells[14] = 'cpm_Price'; // Use our internal name to patch the header
-      lines[0] = headerCells.join(',');
-      console.log('ComaxAdapter: Successfully patched blank header in column O.');
-    }
-    const patchedContent = lines.join('\n');
+    // 3. Remap the data to match the target schema order in a single step
+    const targetHeaders = targetSchema.headers.split(',');
+    const dataRows = allData.slice(1);
 
-    // 2. Parse CSV and convert to clean objects
-    const parsedData = Utilities.parseCsv(patchedContent);
-    const productObjects = [];
+    // Create an inverted map for efficient lookup: { cpm_SKU: 1, cpm_Price: 14, ... }
+    const sourceIndexMap = {};
+    Object.keys(sourceMap).forEach(index => {
+        const fieldName = sourceMap[index];
+        if (fieldName) sourceIndexMap[fieldName] = parseInt(index, 10);
+    });
 
-    // Start from row 1 to skip the header
-    for (let i = 1; i < parsedData.length; i++) {
-      const row = parsedData[i];
-      if (row.join('').trim() === '') continue; // Skip empty rows
-
-      const product = {};
-      Object.keys(columnMap).forEach(colIndex => {
-        // Skip description property
-        if (colIndex === 'description') return;
-
-        const fieldName = columnMap[colIndex];
-        const value = row[parseInt(colIndex, 10)]; // Ensure colIndex is treated as a number
-        if (fieldName) {
-            product[fieldName] = value;
-        }
+    const finalData = dataRows.map(sourceRow => {
+      if (sourceRow.join('').trim() === '') return null;
+      // For each header in the target sheet, find the corresponding value in the source row
+      return targetHeaders.map(targetHeader => {
+        const sourceHeader = targetHeader.replace('cps_', 'cpm_');
+        const sourceIndex = sourceIndexMap[sourceHeader];
+        return sourceRow[sourceIndex] || ''; // Return the value from the source row at the correct index
       });
-      productObjects.push(product);
-    }
+    }).filter(row => row !== null); // Filter out any empty rows that were skipped
 
-    console.log(`ComaxAdapter: Successfully processed ${productObjects.length} products.`);
-    return productObjects;
+    console.log(`ComaxAdapter: Successfully transformed ${finalData.length} products.`);
+    return finalData; // Return the 2D array
   }
 
 

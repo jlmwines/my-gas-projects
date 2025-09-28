@@ -52,6 +52,112 @@ The following sheets represent the core data model for managing simple products.
 *   **Purpose:** A temporary holding area for the unprocessed product data from the Comax import. This sheet is cleared and re-populated with each import. Its structure mirrors `CmxProdM`.
 *   **Columns:** The columns are identical to `CmxProdM` but use the `cps_` prefix (e.g., `cps_CmxId`, `cps_SKU`, `cps_NameHe`, etc.).
 
+### `WebProdS_EN` (Web Products Staging - English)
+*   **Purpose:** A temporary holding area for raw product data from the English WooCommerce export. This sheet is cleared and re-populated with each import. It contains all columns from the WooCommerce export, plus additional columns for future use.
+*   **Columns:**
+    *   `wps_ID`
+    *   `wps_Type`
+    *   `wps_SKU`
+    *   `wps_Name`
+    *   `wps_Published`
+    *   `wps_IsFeatured`
+    *   `wps_VisibilityInCatalog`
+    *   `wps_ShortDescription`
+    *   `wps_Description`
+    *   `wps_DateSalePriceStarts`
+    *   `wps_DateSalePriceEnds`
+    *   `wps_TaxStatus`
+    *   `wps_TaxClass`
+    *   `wps_InStock`
+    *   `wps_Stock`
+    *   `wps_BackordersAllowed`
+    *   `wps_SoldIndividually`
+    *   `wps_Weight`
+    *   `wps_Length`
+    *   `wps_Width`
+    *   `wps_Height`
+    *   `wps_AllowCustomerReviews`
+    *   `wps_PurchaseNote`
+    *   `wps_SalePrice`
+    *   `wps_RegularPrice`
+    *   `wps_Categories`
+    *   `wps_Tags`
+    *   `wps_ShippingClass`
+    *   `wps_Images`
+    *   `wps_DownloadLimit`
+    *   `wps_DownloadExpiry`
+    *   `wps_Parent`
+    *   `wps_GroupedProducts`
+    *   `wps_Upsells`
+    *   `wps_CrossSells`
+    *   `wps_ExternalURL`
+    *   `wps_ButtonText`
+    *   `wps_Position`
+    *   `wps_Attribute1Name`
+    *   `wps_Attribute1Value`
+    *   `wps_Attribute1Visible`
+    *   `wps_Attribute1Global`
+    *   `wps_Attribute2Name`
+    *   `wps_Attribute2Value`
+    *   `wps_Attribute2Visible`
+    *   `wps_Attribute2Global`
+    *   `wps_MetaWpmlTranslationHash`
+    *   `wps_MetaWpmlLanguage`
+    *   `wps_MetaWpmlSourceId`
+
+### `WebProdS_HE` (Web Products Staging - Hebrew)
+*   **Purpose:** A temporary holding area for raw product data from the Hebrew WooCommerce export. This sheet is cleared and re-populated with each import. It contains all columns from the WooCommerce export, plus additional columns for future use.
+*   **Columns:** (Identical to `WebProdS_EN` for structural consistency)
+    *   `wps_ID`
+    *   `wps_Type`
+    *   `wps_SKU`
+    *   `wps_Name`
+    *   `wps_Published`
+    *   `wps_IsFeatured`
+    *   `wps_VisibilityInCatalog`
+    *   `wps_ShortDescription`
+    *   `wps_Description`
+    *   `wps_DateSalePriceStarts`
+    *   `wps_DateSalePriceEnds`
+    *   `wps_TaxStatus`
+    *   `wps_TaxClass`
+    *   `wps_InStock`
+    *   `wps_Stock`
+    *   `wps_BackordersAllowed`
+    *   `wps_SoldIndividually`
+    *   `wps_Weight`
+    *   `wps_Length`
+    *   `wps_Width`
+    *   `wps_Height`
+    *   `wps_AllowCustomerReviews`
+    *   `wps_PurchaseNote`
+    *   `wps_SalePrice`
+    *   `wps_RegularPrice`
+    *   `wps_Categories`
+    *   `wps_Tags`
+    *   `wps_ShippingClass`
+    *   `wps_Images`
+    *   `wps_DownloadLimit`
+    *   `wps_DownloadExpiry`
+    *   `wps_Parent`
+    *   `wps_GroupedProducts`
+    *   `wps_Upsells`
+    *   `wps_CrossSells`
+    *   `wps_ExternalURL`
+    *   `wps_ButtonText`
+    *   `wps_Position`
+    *   `wps_Attribute1Name`
+    *   `wps_Attribute1Value`
+    *   `wps_Attribute1Visible`
+    *   `wps_Attribute1Global`
+    *   `wps_Attribute2Name`
+    *   `wps_Attribute2Value`
+    *   `wps_Attribute2Visible`
+    *   `wps_Attribute2Global`
+    *   `wps_MetaWpmlTranslationHash`
+    *   `wps_MetaWpmlLanguage`
+    *   `wps_MetaWpmlSourceId`
+
 ### `WebProdM` (Web Products Master)
 *   **Purpose:** Contains a single row for each conceptual product, holding core data for identification and sorting.
 *   **Columns:**
@@ -332,7 +438,7 @@ This section defines the sheets used to coordinate multi-faceted promotional cam
 ## System Configuration
 
 ### `SysConfig`
-*   **Purpose:** A flexible, wide-format table to hold all system settings and business rules. The meaning of the generic `P-`columns is determined by the script based on the `SettingName`.
+*   **Purpose:** A flexible, wide-format table to hold all system settings and business rules. The meaning of the generic `P-`columns is determined by the script based on the `SettingName`. The live `SysConfig` sheet is synchronized with `SysConfig_template.csv`.
 *   **Columns:**
     *   `scf_SettingName`: **Primary Key.** The unique name for the setting group (e.g., "InventoryThresholds").
     *   `scf_Description`: A human-readable explanation of what this row of settings controls.

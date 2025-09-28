@@ -29,8 +29,7 @@ const LoggerService = (function() {
   function _log(level, serviceName, functionName, message, stackTrace = '') {
     const timestamp = new Date();
     const logEntry = [
-      timestamp,
-      getSessionId(),
+      `${timestamp.toLocaleString()} | ${getSessionId()}`,
       level,
       serviceName,
       functionName,
@@ -42,19 +41,24 @@ const LoggerService = (function() {
     console.log(logEntry.join(" | "));
 
     try {
-      const spreadsheetId = config.get("spreadsheetId");
-      if (!spreadsheetId) {
-        console.error("Spreadsheet ID not found in config. Cannot log to sheet.");
+      const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+      const sheetNames = ConfigService.getConfig('system.sheet_names');
+
+      if (!logSheetConfig || !logSheetConfig.id) {
+        console.error("Log Spreadsheet ID not found in SysConfig. Cannot log to sheet.");
         return;
       }
-      const ss = SpreadsheetApp.openById(spreadsheetId);
-      const sheet = ss.getSheetByName(LOG_SHEET_NAME);
+      const ss = SpreadsheetApp.openById(logSheetConfig.id);
+      const sheet = ss.getSheetByName(sheetNames.SysLog);
       if (sheet) {
-        sheet.appendRow(logEntry);
+        // Reconstruct the log entry to match the schema
+        const sheetLogEntry = [timestamp, getSessionId(), level, serviceName, functionName, message, stackTrace];
+        sheet.appendRow(sheetLogEntry);
       } else {
-        console.warn(`Log sheet '${LOG_SHEET_NAME}' not found.`);
+        console.warn(`Log sheet '${sheetNames.SysLog}' not found.`);
       }
     } catch (e) {
+      // Use console.error for logging failures to avoid an infinite loop
       console.error(`Failed to write to log sheet: ${e.message}`);
     }
   }

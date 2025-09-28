@@ -1,0 +1,12 @@
+docs(architecture): Redesign bundle management system
+
+Overhauls the system architecture to support a flexible, rules-based engine for managing product bundles, replacing the previous simplistic model.
+
+- Removes `wpm_ProductType` from the product data model as bundles are no longer identified from the main product import.
+- Introduces a new four-sheet data model for bundles:
+  - `SysBundlesM`: Defines the bundle headers.
+  - `SysBundleRows`: Defines the bundle layout and component eligibility rules.
+  - `SysBundleActiveComponents`: Tracks the current SKU for each bundle slot.
+  - `SysBundleComponentHistory`: Provides a full audit trail of component changes.
+- Updates the `BundleService` responsibilities and the `Bundle Management Workflow` to reflect the new design of defining, monitoring, and suggesting replacements for bundle components.
+- Adds the new implementation plan for the Bundle Management Engine to `IMPLEMENTATION_PLAN.md`.

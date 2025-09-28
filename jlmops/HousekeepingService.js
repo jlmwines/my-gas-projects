@@ -46,6 +46,8 @@ function HousekeepingService() {
 
         // Check that all properties in the master setting exist in the live setting
         for (const propName in masterConfig[settingName]) {
+          if (propName === '_description') continue; // Don't validate the description itself
+
           if (!liveConfig[settingName].hasOwnProperty(propName)) {
             isValid = false;
             errors.push(`Missing property: '${propName}' is missing from '${settingName}'.`);

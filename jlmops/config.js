@@ -47,12 +47,17 @@ const ConfigService = (function() {
 
     data.forEach(row => {
       const settingName = row[0];
-      // CORRECTED: Read property name from column B (index 1) and value from C (index 2)
-      const propName = row[1]; 
-      const propValue = row[2];
+      // Per the documented schema:
+      // row[0] is scf_SettingName
+      // row[1] is scf_Description (ignored by parser)
+      // row[2] is scf_P01 (the property name)
+      // row[3] is scf_P02 (the property value)
+      const propName = row[2]; 
+      const propValue = row[3];
 
-      if (!settingName || !propName) {
-        return; // Skip empty or invalid rows
+      // A row must have at least a setting name and a property name to be valid.
+      if (!settingName || propName === null || propName === undefined || propName === '') {
+        return;
       }
 
       if (!parsedConfig[settingName]) {

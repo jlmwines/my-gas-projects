@@ -150,7 +150,7 @@ function createTasks(options) {
                 const archived = String(row[CMX_ARCHIVE_COL]).trim(); // Ensure string and trim
                 const sku = row[CMX_SKU_COL];
 
-                return division === 1 && archived === '' && sku && !openTaskSkus.has(sku);
+                return archived === '' && sku && !openTaskSkus.has(sku) && String(row[CMX_WEB_COL]).trim() === 'כן';
             });
 
             const auditSheet = refSs.getSheetByName('Audit');

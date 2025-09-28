@@ -53,6 +53,12 @@ const OrchestratorService = (function() {
     console.log(`Found ${importConfigs.length} drive import configuration(s).`);
 
     importConfigs.forEach(configName => {
+      // Temporarily skip Comax import to focus on Web Products
+      if (configName === 'import.drive.comax_products') {
+        console.log(`Temporarily skipping Comax import: ${configName}`);
+        return;
+      }
+
       const config = allConfig[configName];
       if (!config.source_folder_id || !config.file_pattern) {
         console.error(`Configuration for '${configName}' is incomplete. Skipping.`);

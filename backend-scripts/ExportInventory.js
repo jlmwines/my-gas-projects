@@ -7,7 +7,6 @@
 function exportInventoryAdjustments() {
   const ui = SpreadsheetApp.getUi();
   
-
   try {
     const referenceSS = SpreadsheetApp.openById(activeConfig.referenceFileId);
     const comaxM = referenceSS.getSheetByName('ComaxM');
@@ -79,7 +78,6 @@ function exportInventoryAdjustments() {
     state.exportComplete = true; // Note: This was exportInventoryComplete in the original, corrected to match UI script
     saveUiState(state);
 
-    ui.alert('Export Complete', `${exportRows.length} products exported to file: ${filename}`, ui.ButtonSet.OK);
     return true; // FIX: Return true on success
   } catch (e) {
     Logger.log(e);
@@ -98,16 +96,6 @@ function buildOnHoldMap(sheet) {
   if (lastRow < 2) {
     return {}; // Return an empty map if no data exists
   }
-  const rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
-  const map = {};
-  rows.forEach(r => {
-    const sku = String(r[0] || '').trim();
-    const qty = Number(r[1]) || 0;
-    if (sku) map[sku] = qty;
-  });
-  return map;
-}
-
   const rows = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
   const map = {};
   rows.forEach(r => {

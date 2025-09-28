@@ -20,14 +20,13 @@ const TaskService = (function() {
         throw new Error(`Task type configuration for '${taskTypeId}' not found.`);
       }
 
-      const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
-      const sheetNames = ConfigService.getConfig('system.sheet_names');
-      const taskSchema = ConfigService.getConfig('schema.log.SysTasks');
-      
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const sheet = logSpreadsheet.getSheetByName(sheetNames.SysTasks);
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheetName = 'SysTasks'; // As per design decision
+
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
       if (!sheet) {
-        throw new Error(`Task sheet '${sheetNames.SysTasks}' not found in spreadsheet ID ${logSheetConfig.id}.`);
+        throw new Error(`Task sheet '${sheetName}' not found in spreadsheet JLMops_Data.`);
       }
 
       const headers = taskSchema.headers.split(',');
@@ -45,7 +44,7 @@ const TaskService = (function() {
         );
 
         if (duplicateFound) {
-          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${linkedEntityId}. Aborting creation.`);
+          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${entityId}. Aborting creation.`);
           return null;
         }
       }
