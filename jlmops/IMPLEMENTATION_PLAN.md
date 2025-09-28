@@ -51,7 +51,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **2.1. Update Data Model (`DATA_MODEL.md`):** Add a new column, `scf_status`, to the `SysConfig` table definition.
 *   **2.2. Modify Configuration Service (`config.js`):** Update the service to read and filter by the `scf_status` column.
 *   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
-*   **2.4. Enhance Configuration Service (`config.js`):** Add a `getSysConfigSnapshot()` function that reads and returns the entire sheet's data as JSON. This will be used by the development agent for planning and diagnostics.
+*   **2.4. Manual SysConfig Provision:** The `SysConfig` snapshot will be manually provided by the user at the start of each session, typically via a CSV file.
 
 ### Part 3: Staging Data Validation (COMPLETED)
 *   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** In `setup.js`, define a comprehensive set of validation rules inspired by the legacy `Compare.js` script. Each rule defines a specific test, its parameters, and the task to create upon failure. The full list of 17 required tests has been identified and is detailed below.
@@ -61,15 +61,15 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     | A1        | Web Staging product not in Web Master.                           | Implemented          |
     | A2        | Web Master product not in Web Staging.                           | Implemented          |
     | A3        | SKU mismatch between Web Master and Staging.                     | Implemented          |
-    | A4        | Name mismatch between Web Master and Staging.                    | **Missing**          |
-    | A5        | Publish status mismatch between Web Master and Staging.          | **Missing**          |
+    | A4        | Name mismatch between Web Master and Staging.                    | Defined (Disabled)   |
+    | A5        | Publish status mismatch between Web Master and Staging.          | Defined (Disabled)   |
     | C1        | Active Comax Master product not in Comax Staging.                | Implemented          |
-    | C2        | ID mismatch between Comax Master and Staging.                    | **Missing**          |
+    | C2        | ID mismatch between Comax Master and Staging.                    | Defined (Disabled)   |
     | C3        | Name mismatch between Comax Master and Staging.                  | Implemented          |
-    | C4        | Group mismatch between Comax Master and Staging.                 | **Missing**          |
-    | C5        | Size mismatch between Comax Master and Staging.                  | **Missing**          |
-    | C6        | Vintage mismatch between Comax Master and Staging.               | **Missing**          |
-    | D1        | "Excluded" but not "Sell Online" in Comax Staging.               | **Missing**          |
+    | C4        | Group mismatch between Comax Master and Staging.                 | Defined (Disabled)   |
+    | C5        | Size mismatch between Comax Master and Staging.                  | Defined (Disabled)   |
+    | C6        | Vintage mismatch between Comax Master and Staging.               | Defined (Disabled)   |
+    | D1        | "Excluded" but not "Sell Online" in Comax Staging.               | Defined (Disabled)   |
     | D2        | Negative inventory in Comax Staging.                             | Implemented          |
     | D3        | Archived item with positive stock in Comax Staging.              | Implemented          |
     | E1        | New "Sell Online" Comax SKU not in Web Staging.                  | Implemented          |

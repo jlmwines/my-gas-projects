@@ -325,9 +325,9 @@ const ProductService = (function() {
 
       _populateStagingSheet(products, stagingSheetName);
       
-      LoggerService.info('ProductService', 'processJob', `Staging complete. Skipping validation engine.`);
-      // _runValidationEngine(); // Temporarily commented out to focus on staging
-      // LoggerService.info('ProductService', 'processJob', 'Validation engine finished.');
+      LoggerService.info('ProductService', 'processJob', `Staging complete. Running validation engine.`);
+      _runValidationEngine();
+      LoggerService.info('ProductService', 'processJob', 'Validation engine finished.');
 
       _updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products. Validation complete.`);
       LoggerService.info('ProductService', 'processJob', `Successfully completed job ${jobId}`);

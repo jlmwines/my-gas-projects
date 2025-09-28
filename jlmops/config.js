@@ -81,34 +81,6 @@ const ConfigService = (function() {
     console.log(`Configuration loaded. Schema version ${liveVersion} validated.`);
   }
 
-  /**
-   * Returns a snapshot of the current SysConfig as an array of objects.
-   * This is for planning and diagnostics by the development agent.
-   * @returns {Array<Object> | null}
-   */
-  function getSysConfigSnapshot() {
-    try {
-      const spreadsheet = findDataSpreadsheet();
-      const sheet = spreadsheet.getSheetByName('SysConfig');
-      if (!sheet) {
-        throw new Error("Sheet 'SysConfig' not found for snapshot.");
-      }
-      const data = sheet.getDataRange().getValues();
-      const headers = data.shift();
-
-      const snapshot = data.map(row => {
-        const rowObject = {};
-        headers.forEach((header, index) => {
-          rowObject[header] = row[index];
-        });
-        return rowObject;
-      });
-      return snapshot;
-    } catch (e) {
-      console.error(`Could not generate SysConfig snapshot: ${e.message}`);
-      return null;
-    }
-  }
 
   /**
    * Public method to get a configuration block.
@@ -154,7 +126,6 @@ const ConfigService = (function() {
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
-    forceReload: forceReload,
-    getSysConfigSnapshot: getSysConfigSnapshot // Expose the new function
+    forceReload: forceReload
   };
 })();

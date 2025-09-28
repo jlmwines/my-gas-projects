@@ -9,6 +9,8 @@ To guarantee a successful implementation, I will follow these directives without
 
 **0. ALWAYS START WITH THE BLUEPRINT.** Before formulating any plan to create or modify code, my first action will **always** be to re-read the core documentation (`ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `WORKFLOWS.md`, `DATA_MODEL.md`). In my subsequent proposal, I **MUST** cite the specific document and section that justifies each part of my plan. Any deviation from the established architecture is prohibited unless we first agree to formally update the documentation.
 
+**0.1. MANUAL SYSCONFIG LOAD.** At the start of each session, you will manually download the `SysConfigSnapshot.csv` file from Google Drive and place it in the local `jlmops` directory. My first action will then be to read this local file to ensure I have the current `SysConfig` data.
+
 1.  **DOCUMENTATION IS MY BLUEPRINT.** I will treat `ARCHITECTURE.md`, `DATA_MODEL.md`, and `WORKFLOWS.md` as the authoritative specification. Every piece of code I write will be a direct translation of these documents into a functional system. Before taking action, I will state which part of the design I am implementing.
 
 2.  **I WILL FOLLOW THE PLAN.** I will execute the high-level strategy in `IMPLEMENTATION_PLAN.md` and the specific, granular steps we agree upon. I will not deviate from the current task or introduce unapproved steps. My focus is on completing the current objective perfectly.
