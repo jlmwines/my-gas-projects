@@ -61,16 +61,8 @@ const ConfigService = (function() {
           return;
       }
 
-      let propKey;
-      let propValue;
-
-      if (settingName === 'sys.schema.version') {
-        propKey = row[2]; // For sys.schema.version, scf_status is the key (e.g., 'value')
-        propValue = row[3]; // For sys.schema.version, scf_P01 is the value (e.g., '2')
-      } else {
-        propKey = row[3]; // scf_P01
-        propValue = row[4]; // scf_P02
-      }
+      const propKey = row[3]; // scf_P01
+      const propValue = row[4]; // scf_P02
 
       if (propKey === null || propKey === undefined || propKey === '') {
         return;

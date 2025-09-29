@@ -2,6 +2,10 @@
 
 This document outlines the high-level, phased plan for building the JLM Operations Hub. It is based on the formal design in `ARCHITECTURE.md`.
 
+## Next Task
+
+**Debug and verify why enabled validation rules (C6, D2) did not create tasks in `SysTasks` during a successful Comax import.**
+
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
 **Goal:** To establish the core technical foundation based on the user-managed configuration before any workflow logic is built.
@@ -17,16 +21,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   **Detail:** This service will find the `JLMops_Data` spreadsheet by name and parse the `SysConfig` sheet. It must be able to read multi-row configuration blocks (grouped by `scf_SettingName`) and return them as structured objects.
     *   **Verification:** The service can successfully read and provide a complete configuration block for any defined setting.
 
-**3. Implement Configuration Synchronization Script (`setup.js`) (IN PROGRESS)**
-    *   **Action:** The `setup.js` file will be revamped to act as a configuration synchronization tool.
-    *   **Detail:** It will read the `SysConfig_template.csv` (the single source of truth for configuration) and synchronize the live `SysConfig` sheet to match it. This ensures consistency and prevents configuration drift.
-    *   **Verification:** Running `syncSysConfigWithTemplate()` in `setup.js` reports no discrepancies.
+**3. Implement Configuration Synchronization Script (`setup.js`) (COMPLETED)**
+    *   **Action:** The `setup.js` file has been implemented to act as the authoritative source of truth for system configuration.
+    *   **Detail:** The `rebuildSysConfigFromSource()` function inside `setup.js` contains the master configuration as a hardcoded array and will overwrite the live `SysConfig` sheet to ensure it is always in the correct, version-controlled state.
+    *   **Verification:** Running `rebuildSysConfigFromSource()` in `setup.js` successfully synchronizes the live sheet.
 
-**4. Configuration Template (`SysConfig_template.csv`) (NEW)**
-    *   **Action:** Create and maintain `SysConfig_template.csv` as the single source of truth for all system configuration.
-    *   **Detail:** This CSV file will contain the complete, desired state of the `SysConfig` sheet. All schemas, maps, and rules will be defined here. `setup.js` will read this file to synchronize the live `SysConfig` sheet.
-    *   **Verification:** `SysConfig_template.csv` is up-to-date and accurately reflects the desired system configuration.
-    *   **NOTE ON FAILURE:** During a previous session, the attempt to programmatically update the `SysConfig_template.csv` file failed due to a communication breakdown regarding explicit tool execution approval. This highlights a critical point of friction in the interaction process.
 
 ## Phase 2: Product Workflow Engine (IN PROGRESS)
 
@@ -49,7 +48,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   **COMPLETED:** Fixed `ConfigService` schema loading by correcting parsing of `sys.schema.version` and ensuring it's always loaded.
     *   **COMPLETED:** Modified `WebAdapter.processProductCsv()` for case-insensitive header matching.
 
-### Part 2: SysConfig State Management (PLANNED)
+### Part 2: SysConfig State Management (COMPLETED)
 **Goal:** To implement a state management system for `SysConfig` to ensure stability during development.
 
 *   **2.1. Update Data Model (`DATA_MODEL.md`):** Add a new column, `scf_status`, to the `SysConfig` table definition.
@@ -82,6 +81,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 *   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, add logic to prevent the creation of duplicate tasks for the same entity and exception type.
 *   **3.3. Implement Validation Execution (COMPLETED):** In `ProductService`, create a validation engine that reads the rules from the configuration and executes them against the staged data *after* the staging sheets are populated but *before* any data is written to the master sheets. The engine uses the `TaskService` to log all discrepancies.
+    *   **NOTE:** While the import and staging process is now stable, the validation engine did not create tasks for enabled rules (C6, D2) as expected. This will be the focus of the next session.
 
 ### Part 4: Master Data Reconciliation (PLANNED)
 *   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXltM`), ensuring new products are added and existing ones are updated based on the staged data.
