@@ -4,7 +4,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Debug and verify why enabled validation rules (C6, D2) did not create tasks in `SysTasks` during a successful Comax import.**
+**Implement Master Data Reconciliation Logic.**
+
+With the validation engine now complete and verified, the next step is to implement the logic that reconciles the staged data with the master data sheets.
+
+*   **Next Step:** Implement the `upsert` functions in `ProductService` as defined in **Part 4: Master Data Reconciliation**.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -80,8 +84,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     | E3        | Published web product not "Sell Online" in Comax.                | Implemented          |
 
 *   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, add logic to prevent the creation of duplicate tasks for the same entity and exception type.
-*   **3.3. Implement Validation Execution (COMPLETED):** In `ProductService`, create a validation engine that reads the rules from the configuration and executes them against the staged data *after* the staging sheets are populated but *before* any data is written to the master sheets. The engine uses the `TaskService` to log all discrepancies.
-    *   **NOTE:** While the import and staging process is now stable, the validation engine did not create tasks for enabled rules (C6, D2) as expected. This will be the focus of the next session.
+*   **3.3. Implement and Verify Validation Execution (COMPLETED):** The validation engine in `ProductService` has been implemented. After extensive debugging, the engine now correctly executes all rule types (`EXISTENCE_CHECK`, `FIELD_COMPARISON`) and the `TaskService` correctly de-duplicates tasks. All identified validation rules are now working as expected.
 
 ### Part 4: Master Data Reconciliation (PLANNED)
 *   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXltM`), ensuring new products are added and existing ones are updated based on the staged data.

@@ -39,12 +39,12 @@ const TaskService = (function() {
         const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
         const duplicateFound = data.some(row => 
           row[typeIdCol] === taskTypeId &&
-          row[entityIdCol] === linkedEntityId &&
-          row[statusCol] !== 'Done' && row[statusCol] !== 'Closed' // Assuming terminal statuses
+          String(row[entityIdCol]) === String(linkedEntityId) &&
+          (row[statusCol] !== 'Done' && row[statusCol] !== 'Closed') // Assuming terminal statuses
         );
 
         if (duplicateFound) {
-          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${entityId}. Aborting creation.`);
+          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${linkedEntityId}. Aborting creation.`);
           return null;
         }
       }

@@ -10,7 +10,7 @@ const ProductService = (function() {
   // =================================================================================
 
   function _populateStagingSheet(productsOrData, sheetName) {
-    LoggerService.info('ProductService', '_populateStagingSheet', `Writing ${productsOrData.length} items to staging sheet: ${sheetName}...`);
+    // LoggerService.info('ProductService', '_populateStagingSheet', `Writing ${productsOrData.length} items to staging sheet: ${sheetName}...`);
     
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
@@ -29,19 +29,12 @@ const ProductService = (function() {
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration.`);
         }
-    const sheetHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const schemaHeaders = schema.headers.split(','); // These are the expected keys in product objects
+        const schemaHeaders = schema.headers.split(',');
 
-    finalData = productsOrData.map(product => {
-      const rowData = [];
-      for (let i = 0; i < sheetHeaders.length; i++) {
-        const sheetHeader = sheetHeaders[i];
-        // Find the corresponding value in the product object using the sheetHeader
-        // We assume sheetHeader (e.g., 'wps_ID') directly corresponds to the key in the product object
-        rowData.push(product[sheetHeader] || '');
-      }
-      return rowData;
-    });
+        finalData = productsOrData.map(product => {
+          // Use the canonical schema headers to ensure correct column order, ignoring the physical sheet headers.
+          return schemaHeaders.map(header => product[header] || '');
+        });
     }
     
     // Clear previous content and write new data
@@ -76,12 +69,14 @@ const ProductService = (function() {
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet || sheet.getLastRow() < 2) {
       LoggerService.warn('ProductService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty or not found.`);
-      return { map: new Map(), headers: headers };
+      return { map: new Map(), headers: headers, values: [] };
     }
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
     
     const dataMap = new Map();
-    const keyHeader = headers.find(h => h.endsWith('_ID') || h.endsWith('_SKU') || h.endsWith('_IdEn'));
+    // This key detection is still used by other functions, so we leave it for now.
+    const keyHeader = headers.find(h => h.endsWith('_ID') || h.includes('_Id') || h.endsWith('_SKU'));
+    
     const keyIndex = headers.indexOf(keyHeader);
     if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName}`);
 
@@ -94,7 +89,7 @@ const ProductService = (function() {
       }
     });
     LoggerService.info('ProductService', '_getSheetDataAsMap', `Loaded ${dataMap.size} rows from ${sheetName}.`);
-    return { map: dataMap, headers: headers };
+    return { map: dataMap, headers: headers, values: values };
   }
 
   function _formatString(template, dataRow) {
@@ -104,10 +99,10 @@ const ProductService = (function() {
     });
   }
 
-  function _createTaskFromFailure(rule, dataRow) {
+  function _createTaskFromFailure(rule, dataRow, joinKey) {
     const title = _formatString(rule.on_failure_title, dataRow);
     const notes = _formatString(rule.on_failure_notes, dataRow);
-    const entityId = dataRow[rule.source_key] || dataRow[rule.key_A] || dataRow[Object.keys(dataRow)[1]] || 'N/A';
+    const entityId = joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A';
 
     LoggerService.info('ProductService', '_createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
     TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
@@ -127,14 +122,39 @@ const ProductService = (function() {
   // VALIDATION ENGINE SUB-FUNCTIONS
   // =================================================================================
 
+  function _buildMapFromData(data, headers, keyHeader) {
+    const map = new Map();
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) {
+        throw new Error(`Key header '${keyHeader}' not found in headers: ${headers.join(', ')}`);
+    }
+    data.forEach(row => {
+        const rowObject = {};
+        headers.forEach((h, i) => rowObject[h] = row[i]);
+        const key = row[keyIndex];
+        if (key && String(key).trim()) {
+            map.set(String(key).trim(), rowObject);
+        }
+    });
+    return map;
+  }
+
   function _executeExistenceCheck(rule, dataMaps) {
     LoggerService.info('ProductService', '_executeExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
-    const sourceMap = dataMaps[rule.source_sheet].map;
-    const targetMap = dataMaps[rule.target_sheet].map;
+
+    // Build maps using the keys specified in the rule
+    const sourceData = dataMaps[rule.source_sheet];
+    const targetData = dataMaps[rule.target_sheet];
+
+    const sourceMap = _buildMapFromData(sourceData.values, sourceData.headers, rule.source_key);
+    const targetMap = _buildMapFromData(targetData.values, targetData.headers, rule.target_key);
 
     for (const [key, sourceRow] of sourceMap.entries()) {
       const existsInTarget = targetMap.has(key);
-      const shouldFail = rule.invert_result === 'TRUE' ? !existsInTarget : existsInTarget;
+      // Robust check for boolean true or string 'TRUE'
+      const shouldInvert = String(rule.invert_result).toUpperCase() === 'TRUE';
+
+      const shouldFail = shouldInvert ? !existsInTarget : existsInTarget;
 
       if (shouldFail) {
         let passesFilter = true;
@@ -153,17 +173,32 @@ const ProductService = (function() {
   
   function _executeFieldComparison(rule, dataMaps) {
     LoggerService.info('ProductService', '_executeFieldComparison', `Executing rule: ${rule.on_failure_title}`);
-    const mapA = dataMaps[rule.sheet_A].map;
-    const mapB = dataMaps[rule.sheet_B].map;
+
+    const dataA = dataMaps[rule.sheet_A];
+    const dataB = dataMaps[rule.sheet_B];
+
+    // Build maps using the keys specified in the rule
+    const mapA = _buildMapFromData(dataA.values, dataA.headers, rule.key_A);
+    const mapB = _buildMapFromData(dataB.values, dataB.headers, rule.key_B);
+
     const [fieldA, fieldB] = rule.compare_fields.split(',');
 
-    for (const [key, rowA] of mapA.entries()) {
-      if (mapB.has(key)) {
-        const rowB = mapB.get(key);
-        if (String(rowA[fieldA] || '') !== String(rowB[fieldB] || '')) {
-          _createTaskFromFailure(rule, { ...rowA, ...rowB });
+    if (!fieldA || !fieldB) {
+        throw new Error(`Invalid 'compare_fields' for rule: ${rule.on_failure_title}`);
+    }
+
+    for (const [key, rowB] of mapB.entries()) {
+        if (mapA.has(key)) {
+            const rowA = mapA.get(key);
+
+            const valueA = String(rowA[fieldA] || '').trim();
+            const valueB = String(rowB[fieldB] || '').trim();
+
+            if (valueA !== valueB) {
+                const mergedRow = { ...rowA, ...rowB };
+                _createTaskFromFailure(rule, mergedRow, key);
+            }
         }
-      }
     }
   }
 
@@ -235,7 +270,7 @@ const ProductService = (function() {
     const requiredSheets = new Set();
     validationRules.forEach(ruleKey => {
       const rule = allConfig[ruleKey];
-      if (rule.enabled !== 'TRUE') return;
+      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
       if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
       if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
       if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
@@ -337,7 +372,7 @@ const ProductService = (function() {
       _populateStagingSheet(products, stagingSheetName);
       
       LoggerService.info('ProductService', 'processJob', `Staging complete. Running validation engine.`);
-      // _runValidationEngine(); // Temporarily disabled for import testing
+      _runValidationEngine();
       LoggerService.info('ProductService', 'processJob', 'Validation engine finished.');
 
       _updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products. Validation complete.`);
