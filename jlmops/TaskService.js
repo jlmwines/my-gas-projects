@@ -22,7 +22,7 @@ const TaskService = (function() {
 
       const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
       const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-      const sheetName = 'SysTasks'; // As per design decision
+      const sheetName = 'SysTasks';
 
       const sheet = dataSpreadsheet.getSheetByName(sheetName);
       if (!sheet) {
@@ -36,15 +36,22 @@ const TaskService = (function() {
 
       // --- De-duplication Check ---
       if (sheet.getLastRow() > 1) {
-        const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-        const duplicateFound = data.some(row => 
+        const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+        const duplicateRow = existingRows.find(row => 
           row[typeIdCol] === taskTypeId &&
-          String(row[entityIdCol]) === String(linkedEntityId) &&
-          (row[statusCol] !== 'Done' && row[statusCol] !== 'Closed') // Assuming terminal statuses
+          String(row[entityIdCol]).trim() === String(linkedEntityId).trim() &&
+          (row[statusCol] !== 'Done' && row[statusCol] !== 'Closed')
         );
 
-        if (duplicateFound) {
-          LoggerService.info('TaskService', 'createTask', `Duplicate task detected. Type: ${taskTypeId}, Entity: ${linkedEntityId}. Aborting creation.`);
+        if (duplicateRow) {
+          const duplicateRowObject = {};
+          headers.forEach((header, index) => {
+              duplicateRowObject[header] = duplicateRow[index];
+          });
+          LoggerService.warn('TaskService', 'createTask', `Duplicate task detected. Aborting creation.`, {
+              newTask: { type: taskTypeId, entity: linkedEntityId },
+              existingDuplicate: duplicateRowObject
+          });
           return null;
         }
       }
@@ -64,13 +71,14 @@ const TaskService = (function() {
       newRow[headers.indexOf('st_Notes')] = notes;
 
       sheet.appendRow(newRow);
+      SpreadsheetApp.flush(); // Force the changes to be saved immediately.
       LoggerService.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}.`);
       
-      return { id: taskId }; // Return minimal confirmation
+      return { id: taskId };
 
     } catch (e) {
-      LoggerService.error('TaskService', 'createTask', `Error creating task: ${e.message}`, e);
-      return null;
+      LoggerService.error('TaskService', 'createTask', `CRITICAL: Error creating task: ${e.message}`, e);
+      throw e; // Re-throw the error to halt execution and notify admin
     }
   }
 

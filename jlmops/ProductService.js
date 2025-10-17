@@ -10,13 +10,14 @@ const ProductService = (function() {
   // =================================================================================
 
   function _populateStagingSheet(productsOrData, sheetName) {
-    // LoggerService.info('ProductService', '_populateStagingSheet', `Writing ${productsOrData.length} items to staging sheet: ${sheetName}...`);
+    LoggerService.info('ProductService', '_populateStagingSheet', `Attempting to populate sheet: ${sheetName} with ${productsOrData.length} items.`);
     
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
         throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
     }
+    LoggerService.info('ProductService', '_populateStagingSheet', `Successfully opened sheet: ${sheetName}. Current headers: ${JSON.stringify(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0])}`);
 
     let finalData;
 
@@ -32,19 +33,20 @@ const ProductService = (function() {
         const schemaHeaders = schema.headers.split(',');
 
         finalData = productsOrData.map(product => {
-          // Use the canonical schema headers to ensure correct column order, ignoring the physical sheet headers.
           return schemaHeaders.map(header => product[header] || '');
         });
+
+        LoggerService.info('ProductService', '_populateStagingSheet', `Mapping complete for ${sheetName}. Schema headers: ${JSON.stringify(schemaHeaders)}. First data row: ${finalData.length > 0 ? JSON.stringify(finalData[0]) : 'N/A'}`);
+        
+        // Clear previous content and write new data
+        if (sheet.getLastRow() > 1) {
+            sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
+        }
+        if (finalData.length > 0 && finalData[0].length > 0) {
+            sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+        }
+        LoggerService.info('ProductService', '_populateStagingSheet', `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`);
     }
-    
-    // Clear previous content and write new data
-    if (sheet.getLastRow() > 1) {
-        sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
-    }
-    if (finalData.length > 0 && finalData[0].length > 0) {
-        sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
-    }
-    LoggerService.info('ProductService', '_populateStagingSheet', `Staging sheet '${sheetName}' has been updated.`);
   }
 
   function _updateJobStatus(rowNumber, status, message = '') {
@@ -67,8 +69,17 @@ const ProductService = (function() {
   function _getSheetDataAsMap(sheetName, headers) {
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
-    if (!sheet || sheet.getLastRow() < 2) {
-      LoggerService.warn('ProductService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty or not found.`);
+    if (!sheet) {
+      // This is a critical error if the sheet is expected to exist
+      throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID: ${dataSpreadsheet.getId()}. This is a critical configuration error.`);
+    }
+    // If the sheet is WebXltM and it's empty, this is also a critical error
+    if (sheetName === 'WebXltM' && sheet.getLastRow() < 2) {
+      throw new Error(`Sheet 'WebXltM' is empty (only headers or less). This is a critical data integrity error as WebXltM is expected to be populated.`);
+    }
+    // For other sheets, or if WebXltM is not empty, proceed as before
+    if (sheet.getLastRow() < 2) {
+      LoggerService.warn('ProductService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty (only headers or less).`);
       return { map: new Map(), headers: headers, values: [] };
     }
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
@@ -102,7 +113,8 @@ const ProductService = (function() {
   function _createTaskFromFailure(rule, dataRow, joinKey) {
     const title = _formatString(rule.on_failure_title, dataRow);
     const notes = _formatString(rule.on_failure_notes, dataRow);
-    const entityId = joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A';
+    const skuKey = Object.keys(dataRow).find(k => k.endsWith('_SKU'));
+    const entityId = skuKey ? dataRow[skuKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
 
     LoggerService.info('ProductService', '_createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
     TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
@@ -151,6 +163,7 @@ const ProductService = (function() {
 
     for (const [key, sourceRow] of sourceMap.entries()) {
       const existsInTarget = targetMap.has(key);
+      LoggerService.info('ProductService', '_executeExistenceCheck', `Checking key: ${key}, Exists in target: ${existsInTarget}`);
       // Robust check for boolean true or string 'TRUE'
       const shouldInvert = String(rule.invert_result).toUpperCase() === 'TRUE';
 
@@ -260,10 +273,65 @@ const ProductService = (function() {
     }
   }
 
+  function _executeSchemaComparison(rule, dataMaps) {
+    LoggerService.info('ProductService', '_executeSchemaComparison', `Executing rule: ${rule.on_failure_title}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    const sourceSchemaHeaders = allConfig[rule.source_schema].headers.split(',');
+    const targetSchemaHeaders = allConfig[rule.target_schema].headers.split(',');
+
+    // Extract base names (e.g., 'wpm_SKU' -> 'SKU') to compare schemas correctly
+    const sourceBaseHeaders = sourceSchemaHeaders.map(h => h.substring(h.indexOf('_') + 1));
+    const targetBaseHeaders = targetSchemaHeaders.map(h => h.substring(h.indexOf('_') + 1));
+
+    const missingColumns = sourceBaseHeaders.filter(baseHeader => !targetBaseHeaders.includes(baseHeader));
+
+    if (missingColumns.length > 0) {
+      const errorMessage = `CRITICAL: Schema Mismatch Detected in rule '${rule.on_failure_title}'. Missing columns in target: ${missingColumns.join(', ')}`;
+      LoggerService.error('ProductService', '_executeSchemaComparison', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  function _executeRowCountComparison(rule, dataMaps) {
+    LoggerService.info('ProductService', '_executeRowCountComparison', `Executing rule: ${rule.on_failure_title}`);
+
+    const sourceSheetData = dataMaps[rule.source_sheet];
+    const targetSheetData = dataMaps[rule.target_sheet];
+
+    // Assuming first row is headers, so data rows are length - 1
+    const sourceRowCount = sourceSheetData.values.length;
+    const targetRowCount = targetSheetData.values.length;
+
+    if (targetRowCount < sourceRowCount) {
+      _createTaskFromFailure(rule, { sourceRowCount: sourceRowCount, targetRowCount: targetRowCount });
+    }
+  }
+
+  function _executeDataCompleteness(rule, dataMaps) {
+    LoggerService.info('ProductService', '_executeDataCompleteness', `Executing rule: ${rule.on_failure_title}`);
+
+    const sourceSheetData = dataMaps[rule.source_sheet];
+    const sourceSheetHeaders = sourceSheetData.headers;
+    const sourceSheetValues = sourceSheetData.values;
+
+    // Iterate through data (excluding headers)
+    for (let i = 0; i < sourceSheetValues.length; i++) { 
+      const row = sourceSheetValues[i];
+      for (let j = 0; j < row.length; j++) {
+        // Check if the column has a header (i.e., it's a populated column)
+        // and if the cell is empty (null or empty string)
+        if (sourceSheetHeaders[j] && (row[j] === null || String(row[j]).trim() === '')) {
+          _createTaskFromFailure(rule, { rowNum: i + 2, colName: sourceSheetHeaders[j], cellValue: row[j] });
+        }
+      }
+    }
+  }
+
   function _runValidationEngine() {
     const allConfig = ConfigService.getAllConfig();
-    const validationRules = Object.keys(allConfig).filter(k => k.startsWith('validation.rule.'));
-    LoggerService.info('ProductService', '_runValidationEngine', `Found ${validationRules.length} validation rules.`);
+    const validationRules = Object.keys(allConfig).filter(k => k.startsWith('validation.rule.') && !k.startsWith('validation.rule.WebXlt_')); // Exclude WebXlt rules
+    LoggerService.info('ProductService', '_runValidationEngine', `Found ${validationRules.length} general validation rules.`);
 
     if (validationRules.length === 0) return;
 
@@ -277,7 +345,7 @@ const ProductService = (function() {
       if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
       if(rule.join_against) requiredSheets.add(rule.join_against);
     });
-    LoggerService.info('ProductService', '_runValidationEngine', `Validation requires sheets: ${Array.from(requiredSheets).join(', ')}`);
+    LoggerService.info('ProductService', '_runValidationEngine', `General validation requires sheets: ${Array.from(requiredSheets).join(', ')}`);
 
     const dataMaps = {};
     requiredSheets.forEach(sheetName => {
@@ -320,72 +388,180 @@ const ProductService = (function() {
     });
   }
 
-  // =================================================================================
-  // PUBLIC METHODS
-  // =================================================================================
+  function _runWebXltValidationAndUpsert(jobRowNumber) {
+    LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', `Starting WebXlt specific validation and upsert process for job row: ${jobRowNumber}.`);
 
-  function processJob(jobRow, rowNumber) {
-    const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-    const jobId = jobRow[jobQueueHeaders.indexOf('job_id')];
-    const jobType = jobRow[jobQueueHeaders.indexOf('job_type')];
-    const archiveFileId = jobRow[jobQueueHeaders.indexOf('archive_file_id')];
-
-    LoggerService.info('ProductService', 'processJob', `Starting processing for job ${jobId} of type ${jobType}`);
-
+    // --- 1. Populate Staging Sheet ---
     try {
-      const jobConfig = ConfigService.getConfig(jobType);
-      if (!jobConfig) throw new Error(`Configuration for job type ${jobType} not found.`);
+        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+        const sheetNames = ConfigService.getConfig('system.sheet_names');
+        const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
+        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+        const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+        const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
+        const archiveFileId = jobQueueSheet.getRange(jobRowNumber, archiveFileIdCol).getValue();
 
-      const file = DriveApp.getFileById(archiveFileId);
-      const encoding = jobConfig.file_encoding || 'UTF-8';
-      const csvContent = file.getBlob().getDataAsString(encoding);
+        if (!archiveFileId) {
+            throw new Error(`Could not find archive_file_id for job row: ${jobRowNumber}`);
+        }
 
-      let products;
-      let stagingSheetName;
+        const file = DriveApp.getFileById(archiveFileId);
+        const csvContent = file.getBlob().getDataAsString('UTF-8');
 
-      switch (jobType) {
-        case 'import.drive.comax_products':
-          products = ComaxAdapter.processProductCsv(csvContent);
-          stagingSheetName = 'CmxProdS';
-          break;
-        case 'import.drive.web_products_en':
-          products = WebAdapter.processProductCsv(csvContent, 'map.web.product_columns');
-          stagingSheetName = 'WebProdS_EN';
-          break;
-        case 'import.drive.web_products_he':
-          // This import is intentionally not processed as there is no separate Hebrew source file.
-          // Hebrew data is synthesized from other sources after the English import.
-          LoggerService.info('ProductService', 'processJob', `Job type ${jobType} is not processed directly. Skipping.`);
-          _updateJobStatus(rowNumber, 'COMPLETED', 'Job type is not processed directly.');
-          return;
-        default:
-          LoggerService.info('ProductService', 'processJob', `Job type ${jobType} is not a product import. Skipping.`);
-          return;
-      }
+        const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.web.translation_columns');
 
-      if (!products || products.length === 0) {
-        LoggerService.info('ProductService', 'processJob', 'No products to process.');
-        _updateJobStatus(rowNumber, 'COMPLETED', 'No products found in file.');
-        return;
-      }
-
-      _populateStagingSheet(products, stagingSheetName);
-      
-      LoggerService.info('ProductService', 'processJob', `Staging complete. Running validation engine.`);
-      _runValidationEngine();
-      LoggerService.info('ProductService', 'processJob', 'Validation engine finished.');
-
-      _updateJobStatus(rowNumber, 'COMPLETED', `Processed and staged ${products.length} products. Validation complete.`);
-      LoggerService.info('ProductService', 'processJob', `Successfully completed job ${jobId}`);
+        _populateStagingSheet(translationObjects, 'WebXltS');
+        LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', 'Successfully populated WebXltS staging sheet.');
 
     } catch (e) {
-      LoggerService.error('ProductService', 'processJob', `FAILED job ${jobId}. Error: ${e.message}`, e);
-      _updateJobStatus(rowNumber, 'FAILED', e.message);
+        LoggerService.error('ProductService', '_runWebXltValidationAndUpsert', `Failed to populate staging sheet: ${e.message}`, e);
+        _updateJobStatus(jobRowNumber, 'FAILED', `Staging population failed: ${e.message}`);
+        return 'FAILED';
+    }
+
+    // --- 2. Run Validation and Upsert (existing logic) ---
+    const allConfig = ConfigService.getAllConfig();
+    const webXltValidationRules = Object.keys(allConfig).filter(k => k.startsWith('validation.rule.WebXlt_'));
+
+    if (webXltValidationRules.length === 0) {
+        LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', 'No WebXlt validation rules found. Skipping.');
+        return;
+    }
+
+    const requiredSheets = new Set();
+    webXltValidationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
+      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+      if(rule.source_schema) requiredSheets.add(rule.source_schema.replace('schema.data.', '')); // Extract sheet name from schema key
+      if(rule.target_schema) requiredSheets.add(rule.target_schema.replace('schema.data.', '')); // Extract sheet name from schema key
+    });
+    LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', `WebXlt validation requires sheets: ${Array.from(requiredSheets).join(', ')}`);
+
+    const dataMaps = {};
+    requiredSheets.forEach(sheetName => {
+      const schema = allConfig[`schema.data.${sheetName}`];
+      if (!schema) {
+        LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+        return;
+      };
+      const headers = schema.headers.split(',');
+      dataMaps[sheetName] = _getSheetDataAsMap(sheetName, headers);
+    });
+
+    let webXltValidationFailed = false;
+    webXltValidationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
+
+      try {
+        switch (rule.test_type) {
+          case 'SCHEMA_COMPARISON':
+            _executeSchemaComparison(rule, dataMaps);
+            break;
+          case 'ROW_COUNT_COMPARISON':
+            _executeRowCountComparison(rule, dataMaps);
+            break;
+          case 'DATA_COMPLETENESS':
+            _executeDataCompleteness(rule, dataMaps);
+            break;
+          default:
+            LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', `Unknown test_type: '${rule.test_type}' for rule ${ruleKey}`);
+        }
+      } catch (e) {
+        LoggerService.error('ProductService', '_runWebXltValidationAndUpsert', `Error executing rule ${ruleKey}: ${e.message}`, e);
+        webXltValidationFailed = true;
+      }
+    });
+
+    // After all WebXlt validations, check for specific tasks and update status
+    let webXltValidationStatus = 'COMPLETED';
+    if (webXltValidationFailed) {
+        webXltValidationStatus = 'QUARANTINED';
+        LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', `WebXlt data is QUARANTINED due to validation failures.`);
+    } else {
+        LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', 'WebXlt data passed all validations.');
+    }
+
+
+    if (!webXltValidationFailed) {
+        _upsertWebXltData();
+    } else {
+        LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', 'Skipping WebXltS to WebXltM upsert due to validation failures.');
+    }
+    return webXltValidationStatus;
+  }
+
+  function _upsertWebXltData() {
+    LoggerService.info('ProductService', '_upsertWebXltData', 'Starting WebXltS to WebXltM full replacement process.');
+
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const webXltMSheet = dataSpreadsheet.getSheetByName('WebXltM');
+    const webXltSSheet = dataSpreadsheet.getSheetByName('WebXltS');
+
+    if (!webXltMSheet) throw new Error('WebXltM sheet not found in JLMops_Data spreadsheet.');
+    if (!webXltSSheet) throw new Error('WebXltS sheet not found in JLMops_Data spreadsheet.');
+
+    const webXltSData = webXltSSheet.getDataRange().getValues();
+    const numRows = webXltSData.length;
+    const numCols = numRows > 0 ? webXltSData[0].length : 0;
+
+    // Clear the master sheet entirely
+    webXltMSheet.clear();
+    LoggerService.info('ProductService', '_upsertWebXltData', 'Cleared WebXltM sheet.');
+
+    if (numRows > 0 && numCols > 0) {
+        // Write the entire data block from staging (including headers) to master in one operation
+        webXltMSheet.getRange(1, 1, numRows, numCols).setValues(webXltSData);
+        LoggerService.info('ProductService', '_upsertWebXltData', `Wrote ${numRows} rows and ${numCols} columns from WebXltS to WebXltM.`);
+    } else {
+        // If staging is empty, we still need to restore the headers to the master sheet
+        const webXltMHeaders = ConfigService.getConfig('schema.data.WebXltM').headers.split(',');
+        if (webXltMHeaders.length > 0) {
+            webXltMSheet.getRange(1, 1, 1, webXltMHeaders.length).setValues([webXltMHeaders]).setFontWeight('bold');
+            LoggerService.info('ProductService', '_upsertWebXltData', 'WebXltS was empty. Restored headers to WebXltM.');
+        }
+    }
+
+    SpreadsheetApp.flush(); // Ensure all pending changes are applied
+    LoggerService.info('ProductService', '_upsertWebXltData', `Upsert complete. Final row count in WebXltM: ${webXltMSheet.getLastRow()}`);
+  }
+
+  function processJob(jobType, jobRowNumber) {
+    LoggerService.info('ProductService', 'processJob', `Starting job: ${jobType} (Row: ${jobRowNumber})`);
+    _updateJobStatus(jobRowNumber, 'PROCESSING');
+
+    try {
+      let finalJobStatus = 'COMPLETED'; // Default to COMPLETED
+      switch (jobType) {
+        case 'import.drive.comax_products':
+          // TODO: Implement Comax product staging and validation
+          LoggerService.info('ProductService', 'processJob', `Job type '${jobType}' received, placeholder implemented.`);
+          break;
+        case 'import.drive.web_products_en':
+          // TODO: Implement Web (EN) product staging and validation
+          LoggerService.info('ProductService', 'processJob', `Job type '${jobType}' received, placeholder implemented.`);
+          break;
+        case 'WEB_XLT_IMPORT':
+        case 'import.drive.web_translations_he':
+          finalJobStatus = _runWebXltValidationAndUpsert(jobRowNumber); // Capture the returned status
+          break;
+        default:
+          throw new Error(`Unknown job type: ${jobType}`);
+      }
+      _updateJobStatus(jobRowNumber, finalJobStatus);
+      LoggerService.info('ProductService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
+    } catch (e) {
+      LoggerService.error('ProductService', 'processJob', `Job ${jobType} failed: ${e.message}`, e);
+      _updateJobStatus(jobRowNumber, 'FAILED', e.message);
+      throw e; // Re-throw the error after logging and updating status
     }
   }
 
   return {
-    processJob: processJob
+    processJob: processJob,
+    runValidationEngine: _runValidationEngine,
+    runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert
   };
-
 })();

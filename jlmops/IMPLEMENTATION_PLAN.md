@@ -88,6 +88,8 @@ With the validation engine now complete and verified, the next step is to implem
 
 ### Part 4: Master Data Reconciliation (PLANNED)
 *   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXltM`), ensuring new products are added and existing ones are updated based on the staged data.
+    *   **COMPLETED:** The upsert logic for `WebXltS` to `WebXltM` has been implemented and verified. The logic uses a robust "full replacement" method, and the end-to-end workflow for processing the translation file is now fully functional.
+    *   **System Hardening:** During testing, the validation and error handling systems were significantly improved. This includes: fixing the schema comparison logic, making schema mismatches and task creation failures critical halting errors, standardizing job statuses to `COMPLETED`, and updating task creation to use the SKU for better readability.
 
 ### Part 5: Output Generation & Notification (PLANNED)
 *   **5.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
