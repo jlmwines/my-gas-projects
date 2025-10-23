@@ -4,11 +4,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Implement Master Data Reconciliation Logic.**
+**Implement Output Generation.**
 
-With the validation engine now complete and verified, the next step is to implement the logic that reconciles the staged data with the master data sheets.
+The next step is to build the services required to format and export data for external systems, specifically the `WooCommerceFormatter` service which will generate the CSV file needed for bulk updates on the website.
 
-*   **Next Step:** Implement the `upsert` functions in `ProductService` as defined in **Part 4: Master Data Reconciliation**.
+*   **Next Step:** Implement **Part 6: Output Generation & Notification**.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -60,41 +60,53 @@ With the validation engine now complete and verified, the next step is to implem
 *   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
 *   **2.4. Manual SysConfig Provision:** The `SysConfig` snapshot will be manually provided by the user at the start of each session, typically via a CSV file.
 
-### Part 3: Staging Data Validation (COMPLETED)
-*   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** In `setup.js`, define a comprehensive set of validation rules inspired by the legacy `Compare.js` script. Each rule defines a specific test, its parameters, and the task to create upon failure. The full list of 17 required tests has been identified and is detailed below.
+### Part 3: Staging Data Validation (IN PROGRESS)
+*   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** The core validation engine in `ProductService.js` is implemented and tested. It is capable of executing various types of rules defined in `SysConfig`.
 
-    | Legacy ID | Description                                                      | Status in `setup.js` |
-    | :-------- | :--------------------------------------------------------------- | :------------------- |
-    | A1        | Web Staging product not in Web Master.                           | Implemented          |
-    | A2        | Web Master product not in Web Staging.                           | Implemented          |
-    | A3        | SKU mismatch between Web Master and Staging.                     | Implemented          |
-    | A4        | Name mismatch between Web Master and Staging.                    | Defined (Disabled)   |
-    | A5        | Publish status mismatch between Web Master and Staging.          | Defined (Disabled)   |
-    | C1        | Active Comax Master product not in Comax Staging.                | Implemented          |
-    | C2        | ID mismatch between Comax Master and Staging.                    | Defined (Disabled)   |
-    | C3        | Name mismatch between Comax Master and Staging.                  | Implemented          |
-    | C4        | Group mismatch between Comax Master and Staging.                 | Defined (Disabled)   |
-    | C5        | Size mismatch between Comax Master and Staging.                  | Defined (Disabled)   |
-    | C6        | Vintage mismatch between Comax Master and Staging.               | Defined (Disabled)   |
-    | D1        | "Excluded" but not "Sell Online" in Comax Staging.               | Defined (Disabled)   |
-    | D2        | Negative inventory in Comax Staging.                             | Implemented          |
-    | D3        | Archived item with positive stock in Comax Staging.              | Implemented          |
-    | E1        | New "Sell Online" Comax SKU not in Web Staging.                  | Implemented          |
-    | E2        | Web Staging SKU not in Comax Staging.                            | Implemented          |
-    | E3        | Published web product not "Sell Online" in Comax.                | Implemented          |
+*   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, logic has been added to prevent the creation of duplicate tasks for the same entity and exception type.
 
-*   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, add logic to prevent the creation of duplicate tasks for the same entity and exception type.
-*   **3.3. Implement and Verify Validation Execution (COMPLETED):** The validation engine in `ProductService` has been implemented. After extensive debugging, the engine now correctly executes all rule types (`EXISTENCE_CHECK`, `FIELD_COMPARISON`) and the `TaskService` correctly de-duplicates tasks. All identified validation rules are now working as expected.
+*   **3.3. Define Validation Rules in `setup.js` (IN PROGRESS):** The master configuration in `setup.js` must define all required validation rules. The status of the 17 legacy rules is as follows:
 
-### Part 4: Master Data Reconciliation (PLANNED)
-*   **4.1. Implement Master Data Upsert Logic:** In `ProductService`, create functions to "upsert" data from the staging sheets (`CmxProdS`, `WebProdS_EN`) into the master data sheets (`CmxProdM`, `WebProdM`, `WebDetM`, `WebXltM`), ensuring new products are added and existing ones are updated based on the staged data.
-    *   **COMPLETED:** The upsert logic for `WebXltS` to `WebXltM` has been implemented and verified. The logic uses a robust "full replacement" method, and the end-to-end workflow for processing the translation file is now fully functional.
-    *   **System Hardening:** During testing, the validation and error handling systems were significantly improved. This includes: fixing the schema comparison logic, making schema mismatches and task creation failures critical halting errors, standardizing job statuses to `COMPLETED`, and updating task creation to use the SKU for better readability.
+    *   **A1: Web Staging product not in Web Master.** (Implemented & Enabled in `setup.js`)
+    *   **A2: Web Master product not in Web Staging.** (Implemented & Enabled in `setup.js`)
+    *   **A3: SKU mismatch between Web Master and Staging.** (Implemented & Enabled in `setup.js`)
+    *   **A4: Name mismatch between Web Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **A5: Publish status mismatch between Web Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **C1: Active Comax Master product not in Comax Staging.** (Implemented & Disabled in `setup.js` - Replaced by row count check)
+    *   **C2: ID mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **C3: Name mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **C4: Group mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **C5: Size mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
+    *   **C6: Vintage mismatch between Comax Master and Staging.** (Implemented & Enabled in `setup.js`)
+    *   **D1: "Excluded" but not "Sell Online" in Comax Staging.** (To Be Implemented in `setup.js`)
+    *   **D2: Negative inventory in Comax Staging.** (Implemented & Enabled in `setup.js`)
+    *   **D3: Archived item with positive stock in Comax Staging.** (To Be Implemented in `setup.js`)
+    *   **E1: New "Sell Online" Comax SKU not in Web Staging.** (To Be Implemented in `setup.js`)
+    *   **E2: Web Staging SKU not in Comax Staging.** (To Be Implemented in `setup.js`)
+    *   **E3: Published web product not "Sell Online" in Comax.** (To Be Implemented in `setup.js`)
+    *   **C_ComaxS_RowCountDecrease: Comax Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
+    *   **W_WebS_RowCountDecrease: Web Products Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
+    *   **X_WebXltS_RowCountDecrease: Web Translations Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
 
-### Part 5: Output Generation & Notification (PLANNED)
-*   **5.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **5.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
-*   **5.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
+*   **3.4. Implement Staging Workflows (COMPLETED):** The `processJob` function in `ProductService.js` now correctly calls dedicated functions to populate the `CmxProdS` and `WebProdS_EN` staging sheets from their respective import files.
+
+*   **3.5. Centralized Validation Trigger (COMPLETED):** The `OrchestratorService.run()` function is confirmed to call `ProductService.runValidationEngine()` after all import jobs are processed. This ensures validation runs centrally against all populated staging sheets.
+
+### Part 4: Refactor Validation Workflow (COMPLETED)
+**Goal:** To implement the hybrid validation approach, making the system more efficient and logical. Staging-related validation will be triggered by imports, while master-to-master validation will remain on a schedule.
+
+*   **4.1. Categorize Validation Rules in `setup.js`:** (COMPLETED)
+*   **4.2. Refactor `ProductService.js`:** (COMPLETED)
+*   **4.3. Update `OrchestratorService.js`:** (COMPLETED)
+*   **4.4. Test Refactored Workflow:** (COMPLETED)
+
+### Part 5: Master Data Reconciliation (COMPLETED)
+*   **5.1. Implement Master Data Upsert Logic:** (COMPLETED) The upsert logic for `WebXltS` to `WebXltM`, `CmxProdS` to `CmxProdM`, and `WebProdS_EN` to `WebProdM` has been implemented and verified. The logic follows an update-only strategy for existing products and does not automatically create new ones from imports.
+
+### Part 6: Output Generation & Notification (IN PROGRESS)
+*   **6.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
+*   **6.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
+*   **6.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
 
 ## Phase 3: Bundle Management Engine (PLANNED)
 
