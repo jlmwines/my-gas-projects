@@ -88,6 +88,7 @@ function getMasterConfiguration() {
         ['schema.data.CmxProdM', 'Schema for Comax Products Master sheet.', 'stable', 'headers', 'cpm_CmxId,cpm_SKU,cpm_NameHe,cpm_Division,cpm_Group,cpm_Vendor,cpm_Brand,cpm_Color,cpm_Size,cpm_Dryness,cpm_Vintage,cpm_IsNew,cpm_IsArchived,cpm_IsActive,cpm_Price,cpm_Stock,cpm_IsWeb,cpm_Exclude', '', '', '', '', '', '', '', ''],
         ['schema.data.CmxProdS', 'Schema for Comax Products Staging sheet.', 'stable', 'headers', 'cps_CmxId,cps_SKU,cps_NameHe,cps_Division,cps_Group,cps_Vendor,cps_Brand,cps_Color,cps_Size,cps_Dryness,cps_Vintage,cps_IsNew,cps_IsArchived,cps_IsActive,cps_Price,cps_Stock,cps_IsWeb,cps_Exclude', '', '', '', '', '', '', '', ''],
         ['schema.data.WebProdM', 'Schema for Web Products Master sheet.', 'stable', 'headers', 'wpm_WebIdEn,wpm_SKU,wpm_NameEn,wpm_PublishStatusEn,wpm_Stock,wpm_Price', '', '', '', '', '', '', '', ''],
+        ['schema.data.WebDetM', 'Schema for Web Details Master sheet.', 'stable', 'headers', 'wdm_WebIdEn,wdm_SKU,wdm_NameEn,wdm_NameHe,wdm_ShortDescrEn,wdm_ShortDescrHe,wdm_DescriptionEn,wdm_DescriptionHe,wdm_Region,wdm_Intensity,wdm_Complexity,wdm_Acidity,wdm_Decant,wdm_PairHarMild,wdm_PairHarRich,wdm_PairHarIntense,wdm_PairHarSweet,wdm_PairConMild,wdm_PairConRich,wdm_PairConIntense,wdm_PairConSweet,wdm_GrapeG1,wdm_GrapeG2,wdm_GrapeG3,wdm_GrapeG4,wdm_GrapeG5,wdm_KashrutK1,wdm_KashrutK2,wdm_KashrutK3,wdm_KashrutK4,wdm_KashrutK5,wdm_HeterMechira,wdm_IsMevushal,wdm_IsSoldIndividually', '', '', '', '', '', '', '', ''],
         ['schema.data.WebProdS_EN', 'Schema for Web Products Staging sheet (EN).', 'stable', 'headers', 'wps_ID,wps_Type,wps_SKU,wps_Name,wps_Published,wps_IsFeatured,wps_VisibilityInCatalog,wps_ShortDescription,wps_Description,wps_DateSalePriceStarts,wps_DateSalePriceEnds,wps_TaxStatus,wps_TaxClass,wps_InStock,wps_Stock,wps_BackordersAllowed,wps_SoldIndividually,wps_Weight,wps_Length,wps_Width,wps_Height,wps_AllowCustomerReviews,wps_PurchaseNote,wps_SalePrice,wps_RegularPrice,wps_Categories,wps_Tags,wps_ShippingClass,wps_Images,wps_DownloadLimit,wps_DownloadExpiry,wps_Parent,wps_GroupedProducts,wps_Upsells,wps_CrossSells,wps_ExternalURL,wps_ButtonText,wps_Position,wps_Attribute1Name,wps_Attribute1Value,wps_Attribute1Visible,wps_Attribute1Global,wps_Attribute2Name,wps_Attribute2Value,wps_Attribute2Visible,wps_Attribute2Global,wps_MetaWpmlTranslationHash,wps_MetaWpmlLanguage,wps_MetaWpmlSourceId', '', '', '', '', '', '', '', ''],
         ['schema.data.WebXltM', 'Schema for Web Translate Master sheet.', 'stable', 'headers', 'wxl_WebIdHe,wxl_NameHe,wxl_WebIdEn,wxl_SKU', '', '', '', '', '', '', '', ''],
         ['schema.data.WebXltS', 'Schema for Web Translate Staging sheet.', 'stable', 'headers', 'wxs_WebIdHe,wxs_NameHe,wxs_WebIdEn,wxs_SKU', '', '', '', '', '', '', '', ''],
@@ -222,7 +223,7 @@ function getMasterConfiguration() {
         ['validation.rule.A2_WebM_NotIn_WebS', '[A2] Web Master product not in Web Staging.', 'stable', 'on_failure_title', 'Web Product Missing from Import: ${wpm_NameEn}', '', '', '', '', '', '', '', ''],
         ['validation.rule.A2_WebM_NotIn_WebS', '[A2] Web Master product not in Web Staging.', 'stable', 'on_failure_notes', 'Product SKU ${wpm_SKU} (ID: ${wpm_WebIdEn}) exists in the Web Master sheet but was not found in the latest web import.', '', '', '', '', '', '', '', ''],
 
-        ['validation.rule.C1_CmxM_NotIn_CmxS', '[C1] Active Comax Master product not in Comax Staging.', 'stable', 'enabled', 'FALSE', '', '', '', '', '', '', '', ''],
+        ['validation.rule.C1_CmxM_NotIn_CmxS', '[C1] Active Comax Master product not in Comax Staging.', 'stable', 'enabled', 'TRUE', '', '', '', '', '', '', '', ''],
         ['validation.rule.C1_CmxM_NotIn_CmxS', '[C1] Active Comax Master product not in Comax Staging.', 'stable', 'validation_suite', 'comax_staging', '', '', '', '', '', '', '', ''],
         ['validation.rule.C1_CmxM_NotIn_CmxS', '[C1] Active Comax Master product not in Comax Staging.', 'stable', 'test_type', 'EXISTENCE_CHECK', '', '', '', '', '', '', '', ''],
         ['validation.rule.C1_CmxM_NotIn_CmxS', '[C1] Active Comax Master product not in Comax Staging.', 'stable', 'source_sheet', 'CmxProdM', '', '', '', '', '', '', '', ''],
@@ -364,10 +365,42 @@ function createWebXltHeaders() {
             console.log(`Headers written to '${sheetName}'.`);
         });
 
-        console.log(`${functionName} completed successfully.`);
+        SpreadsheetApp.getUi().alert('Headers for WebXltS and WebXltM have been synchronized.');
 
     } catch (error) {
         console.error(`A critical error occurred in ${functionName}: ${error.message}`);
         SpreadsheetApp.getUi().alert(`Error: ${error.message}`);
+    }
+}
+
+function createComaxStagingHeaders() {
+    const functionName = 'createComaxStagingHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'CmxProdS';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
     }
 }

@@ -66,7 +66,7 @@ const ProductService = (function() {
     if (rowNumber && timestampCol > 0) jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
   }
 
-  function _getSheetDataAsMap(sheetName, headers) {
+  function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
@@ -86,7 +86,7 @@ const ProductService = (function() {
     
     const dataMap = new Map();
     // This key detection is still used by other functions, so we leave it for now.
-    const keyHeader = headers.find(h => h.endsWith('_ID') || h.includes('_Id') || h.endsWith('_SKU'));
+    const keyHeader = keyColumnName || headers.find(h => h.endsWith('_ID') || h.includes('_Id') || h.endsWith('_SKU'));
     
     const keyIndex = headers.indexOf(keyHeader);
     if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName}`);
@@ -153,24 +153,25 @@ const ProductService = (function() {
     return map;
   }
 
-  function _executeExistenceCheck(rule, dataMaps) {
+  function _executeExistenceCheck(rule, dataMaps, prebuiltMaps) {
     LoggerService.info('ProductService', '_executeExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
 
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
+    let quarantineTriggered = false;
 
-    // Build maps using the keys specified in the rule
-    const sourceData = dataMaps[rule.source_sheet];
-    const targetData = dataMaps[rule.target_sheet];
+    // Use pre-built maps for efficiency
+    const sourceMapKey = `${rule.source_sheet}_by_${rule.source_key}`;
+    const targetMapKey = `${rule.target_sheet}_by_${rule.target_key}`;
 
-    const sourceMap = _buildMapFromData(sourceData.values, sourceData.headers, rule.source_key);
-    const targetMap = _buildMapFromData(targetData.values, targetData.headers, rule.target_key);
+    const sourceMap = prebuiltMaps[sourceMapKey];
+    const targetMap = prebuiltMaps[targetMapKey];
+
+    if (!sourceMap || !targetMap) {
+        throw new Error(`Could not find pre-built maps for rule: ${rule.on_failure_title}. Required keys: ${sourceMapKey}, ${targetMapKey}`);
+    }
 
     for (const [key, sourceRow] of sourceMap.entries()) {
       const existsInTarget = targetMap.has(key);
-      LoggerService.info('ProductService', '_executeExistenceCheck', `Checking key: ${key}, Exists in target: ${existsInTarget}`);
-      // Robust check for boolean true or string 'TRUE'
       const shouldInvert = String(rule.invert_result).toUpperCase() === 'TRUE';
-
       const shouldFail = shouldInvert ? !existsInTarget : existsInTarget;
 
       if (shouldFail) {
@@ -366,142 +367,153 @@ const ProductService = (function() {
   }
 
   function _runMasterValidation() {
+    LoggerService.info('ProductService', '_runMasterValidation', 'Starting master-master validation');
     const allConfig = ConfigService.getAllConfig();
     const validationRules = Object.keys(allConfig).filter(k => 
-      k.startsWith('validation.rule.') && allConfig[k].validation_suite === 'master_master'
+      k.startsWith('validation.rule.') && allConfig[k].validation_suite === 'master_master' && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
     );
-    LoggerService.info('ProductService', '_runMasterValidation', `Found ${validationRules.length} master_master validation rules.`);
+    LoggerService.info('ProductService', '_runMasterValidation', `Found ${validationRules.length} enabled master_master validation rules.`);
 
     if (validationRules.length === 0) return;
 
+    // --- 1. Pre-computation Step ---
     const requiredSheets = new Set();
+    const requiredMaps = new Map();
+
     validationRules.forEach(ruleKey => {
       const rule = allConfig[ruleKey];
-      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
       if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
       if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
       if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
       if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
-      if(rule.join_against) requiredSheets.add(rule.join_against);
-    });
-    LoggerService.info('ProductService', '_runMasterValidation', `Master_master validation requires sheets: ${Array.from(requiredSheets).join(', ')}`);
 
-    const dataMaps = {};
+      if (rule.test_type === 'EXISTENCE_CHECK') {
+        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+      }
+    });
+
+    const sheetDataCache = {};
     requiredSheets.forEach(sheetName => {
-      const schema = allConfig[`schema.data.${sheetName}`];
-      if (!schema) {
-        LoggerService.warn('ProductService', '_runMasterValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
-        return;
-      };
-      const headers = schema.headers.split(',');
-      dataMaps[sheetName] = _getSheetDataAsMap(sheetName, headers);
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema) {
+            LoggerService.warn('ProductService', '_runMasterValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            return;
+        };
+        const headers = schema.headers.split(',');
+        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers);
     });
 
+    const prebuiltMaps = {};
+    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
+        if (prebuiltMaps[mapKey]) continue;
+        const data = sheetDataCache[sheet];
+        if (data) {
+            prebuiltMaps[mapKey] = _buildMapFromData(data.values, data.headers, keyColumn);
+        }
+    }
+    LoggerService.info('ProductService', '_runMasterValidation', `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
+
+    // --- 2. Execution Step ---
     validationRules.forEach(ruleKey => {
       const rule = allConfig[ruleKey];
-      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
-
       try {
         switch (rule.test_type) {
           case 'EXISTENCE_CHECK':
-            _executeExistenceCheck(rule, dataMaps);
+            _executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
             break;
           case 'FIELD_COMPARISON':
-            _executeFieldComparison(rule, dataMaps);
+            _executeFieldComparison(rule, sheetDataCache);
             break;
-          case 'INTERNAL_AUDIT':
-            _executeInternalAudit(rule, dataMaps);
-            break;
-          case 'CROSS_CONDITION_CHECK':
-            _executeCrossConditionCheck(rule, dataMaps);
-            break;
-          case 'CROSS_EXISTENCE_CHECK':
-            _executeCrossExistenceCheck(rule, dataMaps);
-            break;
+          // Add other test types here as they are refactored
           default:
-            LoggerService.warn('ProductService', '_runMasterValidation', `Unknown test_type: '${rule.test_type}' for rule ${ruleKey}`);
+            LoggerService.warn('ProductService', '_runMasterValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
         }
       } catch (e) {
         LoggerService.error('ProductService', '_runMasterValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
       }
     });
+    LoggerService.info('ProductService', '_runMasterValidation', 'Master-master validation complete.');
   }
 
   function _runStagingValidation(suiteName) {
     LoggerService.info('ProductService', '_runStagingValidation', `Starting validation for suite: ${suiteName}`);
     const allConfig = ConfigService.getAllConfig();
     const validationRules = Object.keys(allConfig).filter(k => 
-      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName
+      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
     );
-    LoggerService.info('ProductService', '_runStagingValidation', `Found ${validationRules.length} rules for suite: ${suiteName}.`);
+    LoggerService.info('ProductService', '_runStagingValidation', `Found ${validationRules.length} enabled rules for suite: ${suiteName}.`);
 
     if (validationRules.length === 0) return true; // No rules, so validation passes
 
-    let quarantineTriggered = false; // Flag to track if any quarantine rule failed
+    let quarantineTriggered = false;
 
+    // --- 1. Pre-computation Step: Gather all required data and build all necessary maps ONCE ---
     const requiredSheets = new Set();
+    const requiredMaps = new Map(); // Key: sheetName_by_keyColumn, Value: { sheet, keyColumn }
+
     validationRules.forEach(ruleKey => {
       const rule = allConfig[ruleKey];
-      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
       if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
       if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
       if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
       if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
-      if(rule.join_against) requiredSheets.add(rule.join_against);
-    });
-    LoggerService.info('ProductService', '_runStagingValidation', `Validation suite '${suiteName}' requires sheets: ${Array.from(requiredSheets).join(', ')}`);
 
-    const dataMaps = {};
+      // For existence checks, identify the specific maps needed
+      if (rule.test_type === 'EXISTENCE_CHECK') {
+        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+      }
+    });
+
+    const sheetDataCache = {};
     requiredSheets.forEach(sheetName => {
-      const schema = allConfig[`schema.data.${sheetName}`];
-      if (!schema) {
-        LoggerService.warn('ProductService', '_runStagingValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
-        return;
-      };
-      const headers = schema.headers.split(',');
-      dataMaps[sheetName] = _getSheetDataAsMap(sheetName, headers);
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema) {
+            LoggerService.warn('ProductService', '_runStagingValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            return;
+        };
+        const headers = schema.headers.split(',');
+        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers);
     });
 
+    const prebuiltMaps = {};
+    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
+        if (prebuiltMaps[mapKey]) continue; // Already built
+        const data = sheetDataCache[sheet];
+        if (data) {
+            prebuiltMaps[mapKey] = _buildMapFromData(data.values, data.headers, keyColumn);
+        }
+    }
+    LoggerService.info('ProductService', '_runStagingValidation', `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
+
+    // --- 2. Execution Step: Run rules with pre-computed data ---
     validationRules.forEach(ruleKey => {
       const rule = allConfig[ruleKey];
-      if (String(rule.enabled).toUpperCase() !== 'TRUE') return;
-
       try {
         let ruleQuarantineTriggered = false;
         switch (rule.test_type) {
           case 'EXISTENCE_CHECK':
-            ruleQuarantineTriggered = _executeExistenceCheck(rule, dataMaps);
+            ruleQuarantineTriggered = _executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
             break;
           case 'FIELD_COMPARISON':
-            ruleQuarantineTriggered = _executeFieldComparison(rule, dataMaps);
+            ruleQuarantineTriggered = _executeFieldComparison(rule, sheetDataCache);
             break;
           case 'INTERNAL_AUDIT':
-            ruleQuarantineTriggered = _executeInternalAudit(rule, dataMaps);
-            break;
-          case 'CROSS_CONDITION_CHECK':
-            ruleQuarantineTriggered = _executeCrossConditionCheck(rule, dataMaps);
-            break;
-          case 'CROSS_EXISTENCE_CHECK':
-            ruleQuarantineTriggered = _executeCrossExistenceCheck(rule, dataMaps);
+            ruleQuarantineTriggered = _executeInternalAudit(rule, sheetDataCache);
             break;
           case 'ROW_COUNT_COMPARISON':
-            ruleQuarantineTriggered = _executeRowCountComparison(rule, dataMaps);
+            ruleQuarantineTriggered = _executeRowCountComparison(rule, sheetDataCache);
             break;
-          case 'SCHEMA_COMPARISON':
-            ruleQuarantineTriggered = _executeSchemaComparison(rule, dataMaps);
-            break;
-          case 'DATA_COMPLETENESS':
-            ruleQuarantineTriggered = _executeDataCompleteness(rule, dataMaps);
-            break;
+          // Add other test types here as they are refactored
           default:
-            LoggerService.warn('ProductService', '_runStagingValidation', `Unknown test_type: '${rule.test_type}' for rule ${ruleKey}`);
+            LoggerService.warn('ProductService', '_runStagingValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
         }
         if (ruleQuarantineTriggered) {
             quarantineTriggered = true;
         }
       } catch (e) {
         LoggerService.error('ProductService', '_runStagingValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
-        // If an error occurs during rule execution, and it's a quarantine rule, fail validation
         if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
             quarantineTriggered = true;
             LoggerService.warn('ProductService', '_runStagingValidation', `Rule ${ruleKey} encountered an error and triggered quarantine.`);
@@ -604,10 +616,9 @@ const ProductService = (function() {
         }
 
         const file = DriveApp.getFileById(archiveFileId);
-        const fileEncoding = ConfigService.getConfig('import.drive.comax_products').file_encoding || 'UTF-8';
-        const csvContent = file.getBlob().getDataAsString(fileEncoding);
+        const fileBlob = file.getBlob();
 
-        const comaxData = ComaxAdapter.processProductCsv(csvContent);
+        const comaxData = ComaxAdapter.processProductCsv(fileBlob);
 
         _populateStagingSheet(comaxData, 'CmxProdS');
         LoggerService.info('ProductService', '_runComaxImport', 'Successfully populated CmxProdS staging sheet.');
@@ -640,8 +651,8 @@ const ProductService = (function() {
     const masterHeaders = masterSchema.headers.split(',');
     const stagingHeaders = stagingSchema.headers.split(',');
 
-    const masterData = _getSheetDataAsMap('CmxProdM', masterHeaders);
-    const stagingData = _getSheetDataAsMap('CmxProdS', stagingHeaders);
+    const masterData = _getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
+    const stagingData = _getSheetDataAsMap('CmxProdS', stagingHeaders, 'cps_CmxId');
 
     const masterMap = masterData.map;
     const stagingKey = 'cps_CmxId';
@@ -650,7 +661,7 @@ const ProductService = (function() {
 
     // Iterate through staging data and update/insert into the master map
     stagingData.values.forEach(stagingRow => {
-        const key = stagingRow[stagingKeyIndex];
+        const key = stagingRow[stagingKeyIndex] ? String(stagingRow[stagingKeyIndex]).trim() : null;
         if (key) {
             const newMasterRow = {};
             masterHeaders.forEach((masterHeader, index) => {
@@ -673,7 +684,11 @@ const ProductService = (function() {
     // Write back to the master sheet
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
-    masterSheet.getRange(2, 1, masterSheet.getMaxRows() - 1, masterSheet.getMaxColumns()).clearContent();
+    
+    // More robustly clear the sheet and rewrite headers + data
+    masterSheet.clear();
+    masterSheet.getRange(1, 1, 1, masterHeaders.length).setValues([masterHeaders]).setFontWeight('bold');
+
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
     }

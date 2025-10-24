@@ -17,6 +17,7 @@ const OrchestratorService = (function() {
     try {
       processAllFileImports();
       processPendingJobs();
+      ProductService.runMasterValidation();
     } catch (e) {
       console.error(`An unexpected error occurred in the orchestrator: ${e.message} (${e.stack})`);
     }
@@ -91,6 +92,8 @@ const OrchestratorService = (function() {
     // Compare timestamps at the second level to avoid precision issues with Sheets.
     const liveSeconds = Math.floor(lastUpdated.getTime() / 1000);
     const registeredSeconds = Math.floor(new Date(registryEntry.lastUpdated).getTime() / 1000);
+
+    console.log(`isNewFile Check: File: ${file.getName()}, Live Timestamp: ${liveSeconds}, Registered Timestamp: ${registeredSeconds}`);
 
     return liveSeconds > registeredSeconds;
   }
@@ -221,7 +224,7 @@ const OrchestratorService = (function() {
           const rowNumber = i + 2; // The sheet row number (1-based index + header)
           switch (serviceName) {
             case 'ProductService':
-              ProductService.processJob(row, rowNumber);
+              ProductService.processJob(jobType, rowNumber);
               break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);

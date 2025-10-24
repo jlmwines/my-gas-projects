@@ -10,70 +10,63 @@ const ComaxAdapter = (function() {
    * @param {string} csvContent The raw string content of the CSV file.
    * @returns {Array<Object>} An array of clean, standardized product objects.
    */
-  function processProductCsv(csvContent) {
-    console.log('ComaxAdapter: Starting transformation with header patch and robust parsing...');
+  function processProductCsv(fileBlob) {
+    console.log('ComaxAdapter: Starting transformation using Google Sheets conversion engine...');
 
-    const sourceMap = ConfigService.getConfig('map.comax.product_columns');
-    const targetSchema = ConfigService.getConfig('schema.data.CmxProdS');
-
-    if (!sourceMap || !targetSchema || !targetSchema.headers) {
-        throw new Error('Required source map or target schema not found in configuration.');
+    const indexMap = ConfigService.getConfig('map.comax.product_columns');
+    if (!indexMap) {
+        throw new Error('Comax product column map not found in configuration.');
     }
 
-    // Step 1: Replicate legacy script's header patch for stability
-    const lines = csvContent.split('\n');
-    if (lines.length > 0) {
-        const headerCells = lines[0].split(',');
-        if (headerCells.length < 15 || !headerCells[14].trim()) {
-            headerCells[14] = 'CMX_PRICE_PATCHED';
-            lines[0] = headerCells.join(',');
-            console.log('ComaxAdapter: Patched corrupt header at index 14.');
-        }
-    }
-    const patchedContent = lines.join('\n');
-    const cleanBlob = Utilities.newBlob(patchedContent, MimeType.CSV, 'temp-comax-import.csv');
-
-    // Step 2: Replicate legacy script's robust parsing method
-    const tempSheetFile = Drive.Files.insert({ title: `[TEMP] Comax Import - ${new Date().toISOString()}` }, cleanBlob, { convert: true });
     let allData;
+    const tempFile = Drive.Files.insert({ title: `[TEMP] Comax Import - ${new Date().toISOString()}` }, fileBlob, { convert: true });
+
     try {
-        const tempSpreadsheet = SpreadsheetApp.openById(tempSheetFile.id);
+        const tempSpreadsheet = SpreadsheetApp.openById(tempFile.id);
         allData = tempSpreadsheet.getSheets()[0].getDataRange().getValues();
     } finally {
-        DriveApp.getFileById(tempSheetFile.id).setTrashed(true);
+        DriveApp.getFileById(tempFile.id).setTrashed(true);
     }
 
     if (!allData || allData.length < 2) {
       console.warn('ComaxAdapter: File is empty or contains only a header after conversion.');
       return [];
     }
+    
+    const productObjects = [];
+    const dataRows = allData.slice(1); // Skip header row
 
-    // Step 3: Map data using the reliable index map
-    const targetHeaders = targetSchema.headers.split(',');
-    const dataRows = allData.slice(1);
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      if (row.join('').trim() === '') continue; // Skip empty rows
 
-    const sourceIndexMap = {};
-    Object.keys(sourceMap).forEach(index => {
-        const fieldName = sourceMap[index];
-        if (fieldName) sourceIndexMap[fieldName] = parseInt(index, 10);
-    });
+      const product = {};
+      Object.keys(indexMap).forEach(index => {
+        const internalFieldName = indexMap[index];
+        const colIndex = parseInt(index, 10);
 
-    const finalData = dataRows.map(sourceRow => {
-      if (sourceRow.join('').trim() === '') return null;
-      return targetHeaders.map(targetHeader => {
-        const sourceFieldName = targetHeader.replace('cps_', 'cpm_');
-        const sourceIndex = sourceIndexMap[sourceFieldName];
-        if (typeof sourceIndex === 'number' && sourceIndex < sourceRow.length) {
-          return sourceRow[sourceIndex] || '';
+        if (colIndex < row.length) {
+          const targetFieldName = internalFieldName.replace('cpm_', 'cps_');
+          let cellValue = row[colIndex];
+
+          if (targetFieldName === 'cps_CmxId' && typeof cellValue === 'number') {
+            cellValue = new Number(cellValue).toFixed(0);
+          } else if (cellValue instanceof Date) {
+            cellValue = Utilities.formatDate(cellValue, "UTC", "dd/MM/yyyy");
+          }
+
+          product[targetFieldName] = String(cellValue || '').trim();
         }
-        return '';
       });
-    }).filter(row => row !== null);
+      productObjects.push(product);
+    }
 
-    console.log(`ComaxAdapter: Successfully transformed ${finalData.length} products.`);
-    return finalData;
-}
-
+    console.log(`ComaxAdapter: Successfully processed ${productObjects.length} products.`);
+    if (productObjects.length > 0) {
+      console.log(`ComaxAdapter: First processed product object: ${JSON.stringify(productObjects[0])}`);
+    }
+    return productObjects;
+  }
 
   // Public interface for the adapter
   return {

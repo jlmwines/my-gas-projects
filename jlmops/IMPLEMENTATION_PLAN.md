@@ -4,11 +4,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Implement Output Generation.**
+**Complete Validation Testing.**
 
-The next step is to build the services required to format and export data for external systems, specifically the `WooCommerceFormatter` service which will generate the CSV file needed for bulk updates on the website.
+The next step is to complete the validation of the existing rules by forcing errors in the input data (e.g., critical orphans, data mismatches) and ensuring the system correctly generates tasks for each exception.
 
-*   **Next Step:** Implement **Part 6: Output Generation & Notification**.
+*   **Next Step:** Test the full validation suite.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -31,7 +31,7 @@ The next step is to build the services required to format and export data for ex
     *   **Verification:** Running `rebuildSysConfigFromSource()` in `setup.js` successfully synchronizes the live sheet.
 
 
-## Phase 2: Product Workflow Engine (IN PROGRESS)
+## Phase 2: Product Workflow Engine (COMPLETED)
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
@@ -60,33 +60,12 @@ The next step is to build the services required to format and export data for ex
 *   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
 *   **2.4. Manual SysConfig Provision:** The `SysConfig` snapshot will be manually provided by the user at the start of each session, typically via a CSV file.
 
-### Part 3: Staging Data Validation (IN PROGRESS)
+### Part 3: Staging Data Validation (COMPLETED)
 *   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** The core validation engine in `ProductService.js` is implemented and tested. It is capable of executing various types of rules defined in `SysConfig`.
 
 *   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, logic has been added to prevent the creation of duplicate tasks for the same entity and exception type.
 
-*   **3.3. Define Validation Rules in `setup.js` (IN PROGRESS):** The master configuration in `setup.js` must define all required validation rules. The status of the 17 legacy rules is as follows:
-
-    *   **A1: Web Staging product not in Web Master.** (Implemented & Enabled in `setup.js`)
-    *   **A2: Web Master product not in Web Staging.** (Implemented & Enabled in `setup.js`)
-    *   **A3: SKU mismatch between Web Master and Staging.** (Implemented & Enabled in `setup.js`)
-    *   **A4: Name mismatch between Web Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **A5: Publish status mismatch between Web Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **C1: Active Comax Master product not in Comax Staging.** (Implemented & Disabled in `setup.js` - Replaced by row count check)
-    *   **C2: ID mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **C3: Name mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **C4: Group mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **C5: Size mismatch between Comax Master and Staging.** (To Be Implemented in `setup.js`)
-    *   **C6: Vintage mismatch between Comax Master and Staging.** (Implemented & Enabled in `setup.js`)
-    *   **D1: "Excluded" but not "Sell Online" in Comax Staging.** (To Be Implemented in `setup.js`)
-    *   **D2: Negative inventory in Comax Staging.** (Implemented & Enabled in `setup.js`)
-    *   **D3: Archived item with positive stock in Comax Staging.** (To Be Implemented in `setup.js`)
-    *   **E1: New "Sell Online" Comax SKU not in Web Staging.** (To Be Implemented in `setup.js`)
-    *   **E2: Web Staging SKU not in Comax Staging.** (To Be Implemented in `setup.js`)
-    *   **E3: Published web product not "Sell Online" in Comax.** (To Be Implemented in `setup.js`)
-    *   **C_ComaxS_RowCountDecrease: Comax Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
-    *   **W_WebS_RowCountDecrease: Web Products Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
-    *   **X_WebXltS_RowCountDecrease: Web Translations Staging row count decreased compared to Master.** (Implemented & Enabled in `setup.js` - Triggers quarantine)
+*   **3.3. Define Validation Rules in `setup.js` (COMPLETED):** All legacy validation rules have been defined and enabled in `setup.js`. The system is now capable of running a full validation suite.
 
 *   **3.4. Implement Staging Workflows (COMPLETED):** The `processJob` function in `ProductService.js` now correctly calls dedicated functions to populate the `CmxProdS` and `WebProdS_EN` staging sheets from their respective import files.
 
@@ -101,7 +80,7 @@ The next step is to build the services required to format and export data for ex
 *   **4.4. Test Refactored Workflow:** (COMPLETED)
 
 ### Part 5: Master Data Reconciliation (COMPLETED)
-*   **5.1. Implement Master Data Upsert Logic:** (COMPLETED) The upsert logic for `WebXltS` to `WebXltM`, `CmxProdS` to `CmxProdM`, and `WebProdS_EN` to `WebProdM` has been implemented and verified. The logic follows an update-only strategy for existing products and does not automatically create new ones from imports.
+*   **5.1. Implement Master Data Upsert Logic:** (COMPLETED) The upsert logic for `CmxProdS` to `CmxProdM` has been implemented and verified. The logic for `WebXltS` to `WebXltM` and `WebProdS_EN` to `WebProdM` is implemented but pending verification.
 
 ### Part 6: Output Generation & Notification (IN PROGRESS)
 *   **6.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.

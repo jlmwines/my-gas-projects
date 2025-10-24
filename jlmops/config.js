@@ -41,7 +41,10 @@ const ConfigService = (function() {
       throw new Error("Sheet 'SysConfig' not found in the JLMops_Data spreadsheet.");
     }
 
-    const data = sheet.getDataRange().getValues();
+    Logger.log(`SysConfig sheet dimensions: ${sheet.getLastRow()} rows, ${sheet.getLastColumn()} columns.`);
+
+    const data = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn()).getValues();
+    Logger.log(`SysConfig data read by getDataRange(): ${data.length} rows.`);
     data.shift(); // Remove header row
 
     const parsedConfig = {};
@@ -57,7 +60,7 @@ const ConfigService = (function() {
 
       // Only load 'stable', 'locked', or 'testing_phase2_part1' records, 
       // but ALWAYS load 'sys.schema.version'
-      if (settingName !== 'sys.schema.version' && status !== 'stable' && status !== 'locked' && status !== 'testing_phase2_part1') {
+      if (settingName !== 'sys.schema.version' && settingName !== 'system.spreadsheet.logs' && status !== 'stable' && status !== 'locked' && status !== 'testing_phase2_part1') {
           return;
       }
 
@@ -73,6 +76,7 @@ const ConfigService = (function() {
       }
 
       parsedConfig[settingName][propKey] = propValue;
+      Logger.log(`ConfigService: Loading setting: ${settingName}, Key: ${propKey}, Value: ${propValue}`);
     });
 
     // 2. Perform Fail-Fast Schema Version Check
