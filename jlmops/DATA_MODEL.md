@@ -37,6 +37,8 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysCampaigns`         | `scamp_` |
 | `SysCampaignAssets`    | `sca_` |
 | `SysConfig`            | `scf_` |
+| `WebOrdM_Archive`      | `woma_`|
+| `WebOrdItemsM_Archive` | `woia_`|
 
 
 **Example:** The concept of a product's web ID (`WebIdEn`) would have a different column name in each sheet it appears in:
@@ -276,6 +278,11 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   **Billing Fields:** `wom_BillingFirstName`, `wom_BillingLastName`, `wom_BillingEmail`, `wom_BillingPhone`
     *   **Shipping Fields:** `wom_ShippingFirstName`, `wom_ShippingLastName`, `wom_ShippingAddress1`, `wom_ShippingAddress2`, `wom_ShippingCity`, `wom_ShippingPhone`
 
+### `WebOrdM_Archive` (Web Orders Master - Archive)
+*   **Purpose:** An archive of historical, completed, or cancelled order-level data. Its structure mirrors `WebOrdM`.
+*   **Prefix:** `woma_`
+*   **Columns:** Identical to `WebOrdM`, but using the `woma_` prefix (e.g., `woma_OrderId`, `woma_OrderNumber`, etc.).
+
 ### 3. `WebOrdItemsM` (Web Order Items Master)
 *   **Purpose:** Stores the individual line items for each order in a normalized structure.
 *   **Columns:**
@@ -286,6 +293,11 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `woi_Name`: The name of the product as it appeared in the order.
     *   `woi_Quantity`
     *   `woi_ItemTotal`
+
+### `WebOrdItemsM_Archive` (Web Order Items Master - Archive)
+*   **Purpose:** An archive of line items corresponding to the orders in `WebOrdM_Archive`. Its structure mirrors `WebOrdItemsM`.
+*   **Prefix:** `woia_`
+*   **Columns:** Identical to `WebOrdItemsM`, but using the `woia_` prefix (e.g., `woia_OrderItemId`, `woia_OrderId`, etc.).
 
 ### 4. `SysOrdLog` (System Order Log)
 *   **Purpose:** Tracks the workflow status of each order.

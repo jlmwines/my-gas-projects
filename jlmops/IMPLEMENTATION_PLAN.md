@@ -4,11 +4,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Implement "Comax SKU Change" Validation.**
+**Implement `WooCommerceFormatter` Service.**
 
-The next step is to implement the validation rule that detects when a SKU for a product sold online has changed in Comax.
+The next step is to begin **Phase 4: Output Generation & Notification**.
 
-*   **Next Step:** Define and implement the `validation.rule.C7_Comax_SKUChange` rule.
+*   **Next Step:** Create the `WooCommerceFormatter.js` service file. This service will be responsible for taking clean system data and formatting it into the CSV format required by WooCommerce for bulk updates.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -40,65 +40,28 @@ The next step is to implement the validation rule that detects when a SKU for a 
 
 **Goal:** To build the complete, automated workflow for ingesting and processing web orders to enable accurate, real-time stock calculations.
 
-*   **Status:** All necessary configurations for the Order Workflow have been added to `setup.js`.
-    *   **Immediate Task:** Proceed to Phase 4: Output Generation & Notification.
+**Phase 3.1 - 3.7: Order Schema Setup (COMPLETED)**
+    *   **Action:** Added all required schemas for the order workflow (`WebOrdS`, `WebOrdM`, `WebOrdItemsM`, `SysInventoryOnHold`, `SysOrdLog`, `SysPackingCache`) and the `template.packing_slip` to `setup.js`.
+    *   **Action:** Created corresponding header-creation functions for all new sheets.
 
-**Phase 3.8: Add `OrderLogArchive` Support (Additional Step)**
+**Phase 3.8: Add `OrderLogArchive` Support (COMPLETED)**
     *   **Action:** In `setup.js`, add the `schema.data.OrderLogArchive` definition to `getMasterConfiguration`.
     *   **Action:** In `setup.js`, create a new function `createOrderLogArchiveHeaders()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `createOrderLogArchiveHeaders()` and verify the results.
 
-**Phase 3.9: Initial Order Data Population**
-    *   **Goal:** To populate the JLMops master order sheets (`WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `OrderLogArchive`) with existing web order data to enable comprehensive testing of downstream processes.
-    *   **Action:** Create a new function `populateInitialOrderData()` in `jlmops/setup.js`.
-    *   **Detail:** This function will read raw web order data from `WebOrdS`, transform it into the `WebOrdM` and `WebOrdItemsM` schemas, write the data to these sheets, create initial entries in `SysOrdLog`, and move older/completed orders to `OrderLogArchive`.
-**Phase 3.10: Initial Product Detail Data Population (New Phase)**
+**Phase 3.8.1: Add Order Detail Archive Support (COMPLETED)**
+    *   **Action:** In `DATA_MODEL.md`, add definitions for `WebOrdM_Archive` and `WebOrdItemsM_Archive`.
+    *   **Action:** In `setup.js`, add the schemas for `WebOrdM_Archive` and `WebOrdItemsM_Archive` to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create new functions `createWebOrdMArchiveHeaders()` and `createWebOrdItemsMArchiveHeaders()`.
 
-**Objective:** Migrate existing product detail data from the old system's reference sheets (or a file structured similarly) into the JLMops product master sheets.
+**Phase 3.9: Initial Order Data Population (COMPLETED)**
+    *   **Goal:** To populate the JLMops master order sheets with existing web order data.
+    *   **Action:** Created the `populateInitialOrderData()` function in `jlmops/setup.js`.
+    *   **Detail:** This function reads from the legacy `OrdersM`, `OrderLog`, and `OrderLogArchive` sheets, normalizes the data, separates active vs. archived records, and populates the new `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `WebOrdM_Archive`, and `WebOrdItemsM_Archive` sheets.
 
-1.  **Action: Create `populateInitialProductData()` function in `jlmops/setup.js`:**
-    *   This function will be designed to read data from sheets (or a file) with the following expected old system headers (inferred from `DetailsReview.gs`):
-        *   **For `DetailsM` (old system):** `SKU`, `NAME`, `Short`, `קצר`, `Description`, `תיאור ארוך`, `היתר מכירה`, `ABV`, `Intensity`, `Complexity`, `Acidity`, `Decant`, `G1`, `G2`, `G3`, `G4`, `G5`, `K1`, `K2`, `K3`, `K4`, `K5`, `Mild Har`, `Rich Har`, `Intense Har`, `Sweet Har`, `Mild Con`, `Rich Con`, `Intense Con`, `Intense Con`, `Sweet Con`, `אזור`.
-        *   **For `ComaxM` (old system):** `CMX SKU`, `CMX GROUP`, `CMX YEAR`, `CMX SIZE`.
-        *   **For `WeHe` (old system):** `wpml:original_product_sku`, `wpml:original_product_id`, `ID`.
-    *   It will implement logic to map these old system header names to the JLMops product master sheet headers (`wpm_`, `wdm_`, `cpm_`, `wxl_` prefixes).
-    *   It will process and transform this data into the JLMops product master sheets (`WebProdM`, `WebDetM`, `CmxProdM`, `WebXltM`).
-    *   It will write the transformed data to these sheets.
-2.  **Verification:** Manually run `populateInitialProductData()` and confirm that `WebProdM`, `WebDetM`, `CmxProdM`, and `WebXltM` are populated correctly.
-**Phase 3.1: Add `WebOrdS` (Web Order Staging) Support**
-    *   **Action:** In `setup.js`, add the `schema.data.WebOrdS` and relevant `map.web.order_columns` definitions to the `getMasterConfiguration` function.
-    *   **Action:** In `setup.js`, create a new, self-contained function `setupWebOrdSHeader()` to create the headers for the `WebOrdS` sheet. This function will not be called automatically.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and confirm the new records are in the `SysConfig` sheet. Manually run `setupWebOrdSHeader()` and confirm the sheet is created correctly.
-
-**Phase 3.2: Add `WebOrdM` (Web Orders Master) Support**
-    *   **Action:** In `setup.js`, add the `schema.data.WebOrdM` definition to `getMasterConfiguration`.
-    *   **Action:** In `setup.js`, create a new function `setupWebOrdMHeader()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupWebOrdMHeader()` and verify the results.
-
-**Phase 3.3: Add `WebOrdItemsM` (Web Order Items Master) Support**
-    *   **Action:** In `setup.js`, add the `schema.data.WebOrdItemsM` definition to `getMasterConfiguration`.
-    *   **Action:** In `setup.js`, create a new function `setupWebOrdItemsMHeader()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupWebOrdItemsMHeader()` and verify the results.
-
-**Phase 3.4: Add `SysInventoryOnHold` Support**
-    *   **Action:** In `setup.js`, add the `schema.data.SysInventoryOnHold` definition to `getMasterConfiguration`.
-    *   **Action:** In `setup.js`, create a new function `setupSysInventoryOnHoldHeader()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysInventoryOnHoldHeader()` and verify the results.
-
-**Phase 3.5: Add `SysOrdLog` (System Order Log) Support**
-    *   **Action:** In `setup.js`, add the `schema.data.SysOrdLog` definition to `getMasterConfiguration`.
-    *   **Action:** In `setup.js`, create a new function `setupSysOrdLogHeader()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysOrdLogHeader()` and verify the results.
-
-**Phase 3.6: Add `SysPackingCache` Support**
-    *   **Action:** In `setup.js`, add the `schema.data.SysPackingCache` definition to `getMasterConfiguration`.
-    *   **Action:** In `setup.js`, create a new function `setupSysPackingCacheHeader()`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysPackingCacheHeader()` and verify the results.
-
-**Phase 3.7: Add Packing Slip Template Support**
-    *   **Action:** In `setup.js`, add the `template.packing_slip` definition to `getMasterConfiguration`.
-    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and confirm the new records are in the `SysConfig` sheet.
-
+**Phase 3.10: Initial Product Detail Data Population (COMPLETED)**
+    *   **Goal:** Migrate existing product detail data from the old system's reference sheets into the JLMops product master sheets.
+    *   **Action:** Created the `populateInitialProductData()` function in `jlmops/setup.js`.
+    *   **Detail:** This function reads from the legacy `DetailsM`, `WeHe`, and `ComaxM` sheets to populate the `WebProdM`, `WebDetM`, and `WebXltM` sheets.
 
 ## Phase 4: Output Generation & Notification (PLANNED)
 
