@@ -96,6 +96,32 @@ function getMasterConfiguration() {
         ['schema.log.SysJobQueue', 'Schema for the job queue.', 'stable', 'headers', 'job_id,job_type,status,archive_file_id,created_timestamp,processed_timestamp,error_message', '', '', '', '', '', '', '', ''],
         ['schema.log.SysLog', 'Schema for the main system log sheet.', 'stable', 'headers', 'timestamp,level,service,function,message,details', '', '', '', '', '', '', '', ''],
         ['schema.data.SysTasks', 'Schema for the master task list.', 'stable', 'headers', 'st_TaskId,st_TaskTypeId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_CreatedDate,st_DueDate,st_DoneDate,st_Notes', '', '', '', '', '', '', '', ''],
+        ['schema.data.WebOrdS', 'Schema for Web Order Staging sheet.', 'stable', 'headers', 'wos_OrderId,wos_OrderNumber,wos_OrderDate,wos_Status,wos_BillingEmail,wos_ShippingFirstName,wos_ShippingLastName,wos_BillingPhone,wos_BillingEmail,wos_ShippingCompany,wos_ShippingAddress1,wos_ShippingAddress2,wos_ShippingCity,wos_CustomerNote,wos_ProductItem1SKU,wos_ProductItem1Quantity,wos_ProductItem2SKU,wos_ProductItem2Quantity,wos_ProductItem3SKU,wos_ProductItem3Quantity,wos_ProductItem4SKU,wos_ProductItem4Quantity,wos_ProductItem5SKU,wos_ProductItem5Quantity,wos_ProductItem6SKU,wos_ProductItem6Quantity,wos_ProductItem7SKU,wos_ProductItem7Quantity,wos_ProductItem8SKU,wos_ProductItem8Quantity,wos_ProductItem9SKU,wos_ProductItem9Quantity,wos_ProductItem10SKU,wos_ProductItem10Quantity,wos_ProductItem11SKU,wos_ProductItem11Quantity,wos_ProductItem12SKU,wos_ProductItem12Quantity,wos_ProductItem13SKU,wos_ProductItem13Quantity,wos_ProductItem14SKU,wos_ProductItem14Quantity,wos_ProductItem15SKU,wos_ProductItem15Quantity,wos_ProductItem16SKU,wos_ProductItem16Quantity,wos_ProductItem17SKU,wos_ProductItem17Quantity,wos_ProductItem18SKU,wos_ProductItem18Quantity,wos_ProductItem19SKU,wos_ProductItem19Quantity,wos_ProductItem20SKU,wos_ProductItem20Quantity,wos_ProductItem21SKU,wos_ProductItem21Quantity,wos_ProductItem22SKU,wos_ProductItem22Quantity,wos_ProductItem23SKU,wos_ProductItem23Quantity,wos_ProductItem24SKU,wos_ProductItem24Quantity', '', '', '', '', '', '', '', ''],
+        ['schema.data.WebOrdM', 'Schema for Web Orders Master sheet.', 'stable', 'headers', 'wom_OrderId,wom_OrderNumber,wom_OrderDate,wom_Status,wom_CustomerNote,wom_BillingFirstName,wom_BillingLastName,wom_BillingEmail,wom_BillingPhone,wom_ShippingFirstName,wom_ShippingLastName,wom_ShippingAddress1,wom_ShippingAddress2,wom_ShippingCity,wom_ShippingPhone', '', '', '', '', '', '', '', ''],
+        ['schema.data.WebOrdItemsM', 'Schema for Web Order Items Master sheet.', 'stable', 'headers', 'woi_OrderItemId,woi_OrderId,woi_WebIdEn,woi_SKU,woi_Name,woi_Quantity,woi_ItemTotal', '', '', '', '', '', '', '', ''],
+        ['schema.data.SysInventoryOnHold', 'Schema for System On-Hold Inventory sheet.', 'stable', 'headers', 'sio_SKU,sio_OnHoldQuantity', '', '', '', '', '', '', '', ''],
+        ['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'headers', 'sol_OrderId,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
+        ['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'headers', 'spc_OrderId,spc_WebIdEn,spc_SKU,spc_Quantity,spc_NameEn,spc_NameHe,spc_Intensity,spc_Complexity,spc_Acidity,spc_Decant,spc_PairHarMild,spc_PairHarRich,spc_PairHarIntense,spc_PairHarSweet,spc_PairConMild,spc_PairConRich,spc_PairConIntense,spc_PairConSweet', '', '', '', '', '', '', '', ''],
+
+        // Packing Slip Template
+        ['template.packing_slip', 'Packing Slip Header', 'stable', 'HEADER', 'JLM Operations Hub Packing Slip', '', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Order Number Label', 'stable', 'ORDER_DETAIL_LABEL', 'Order Number:', '', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Order Number Value', 'stable', 'ORDER_DETAIL_VALUE', '', 'wom_OrderNumber', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Order Date Label', 'stable', 'ORDER_DETAIL_LABEL', 'Order Date:', '', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Order Date Value', 'stable', 'ORDER_DETAIL_VALUE', '', 'wom_OrderDate', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Customer Name Label', 'stable', 'ORDER_DETAIL_LABEL', 'Customer Name:', '', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Customer Name Value', 'stable', 'ORDER_DETAIL_VALUE', '', 'wom_ShippingFirstName wom_ShippingLastName', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Shipping Address Label', 'stable', 'ORDER_DETAIL_LABEL', 'Shipping Address:', '', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Shipping Address Value', 'stable', 'ORDER_DETAIL_VALUE', '', 'wom_ShippingAddress1,wom_ShippingAddress2,wom_ShippingCity', 'multiline', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Header SKU', 'stable', 'TABLE_COLUMN_HEADER', 'SKU', 'spc_SKU', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Header Quantity', 'stable', 'TABLE_COLUMN_HEADER', 'Quantity', 'spc_Quantity', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Header Product Name EN', 'stable', 'TABLE_COLUMN_HEADER', 'Product Name (EN)', 'spc_NameEn', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Header Product Name HE', 'stable', 'TABLE_COLUMN_HEADER', 'Product Name (HE)', 'spc_NameHe', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Column SKU', 'stable', 'TABLE_COLUMN_DATA', '', 'spc_SKU', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Column Quantity', 'stable', 'TABLE_COLUMN_DATA', '', 'spc_Quantity', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Column Product Name EN', 'stable', 'TABLE_COLUMN_DATA', '', 'spc_NameEn', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Table Column Product Name HE', 'stable', 'TABLE_COLUMN_DATA', '', 'spc_NameHe', '', '', '', '', '', '', ''],
+        ['template.packing_slip', 'Packing Slip Footer', 'stable', 'FOOTER', 'Thank you for your order!', '', '', '', '', '', '', '', ''],
 
         // Mappings
         ['_section.04_Mappings', 'Header and value mappings for data transformation.', '', '', '', '', '', '', '', '', '', '', ''],
@@ -123,6 +149,68 @@ function getMasterConfiguration() {
         ['map.web.product_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Published', 'wps_Published', '', '', '', '', '', '', '', ''],
         ['map.web.product_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Stock', 'wps_Stock', '', '', '', '', '', '', '', ''],
         ['map.web.product_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Regular Price', 'wps_RegularPrice', '', '', '', '', '', '', '', ''],
+
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Order ID', 'wos_OrderId', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Order Number', 'wos_OrderNumber', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Order Date', 'wos_OrderDate', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Order Status', 'wos_Status', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping First Name', 'wos_ShippingFirstName', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping Last Name', 'wos_ShippingLastName', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Billing Phone', 'wos_BillingPhone', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Billing Email', 'wos_BillingEmail', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping Company', 'wos_ShippingCompany', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping Address 1', 'wos_ShippingAddress1', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping Address 2', 'wos_ShippingAddress2', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Shipping City', 'wos_ShippingCity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Customer Note', 'wos_CustomerNote', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 1 SKU', 'wos_ProductItem1SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 1 Quantity', 'wos_ProductItem1Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 2 SKU', 'wos_ProductItem2SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 2 Quantity', 'wos_ProductItem2Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 3 SKU', 'wos_ProductItem3SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 3 Quantity', 'wos_ProductItem3Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 4 SKU', 'wos_ProductItem4SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 4 Quantity', 'wos_ProductItem4Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 5 SKU', 'wos_ProductItem5SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 5 Quantity', 'wos_ProductItem5Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 6 SKU', 'wos_ProductItem6SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 6 Quantity', 'wos_ProductItem6Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 7 SKU', 'wos_ProductItem7SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 7 Quantity', 'wos_ProductItem7Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 8 SKU', 'wos_ProductItem8SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 8 Quantity', 'wos_ProductItem8Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 9 SKU', 'wos_ProductItem9SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 9 Quantity', 'wos_ProductItem9Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 10 SKU', 'wos_ProductItem10SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 10 Quantity', 'wos_ProductItem10Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 11 SKU', 'wos_ProductItem11SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 11 Quantity', 'wos_ProductItem11Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 12 SKU', 'wos_ProductItem12SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 12 Quantity', 'wos_ProductItem12Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 13 SKU', 'wos_ProductItem13SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 13 Quantity', 'wos_ProductItem13Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 14 SKU', 'wos_ProductItem14SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 14 Quantity', 'wos_ProductItem14Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 15 SKU', 'wos_ProductItem15SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 15 Quantity', 'wos_ProductItem15Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 16 SKU', 'wos_ProductItem16SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 16 Quantity', 'wos_ProductItem16Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 17 SKU', 'wos_ProductItem17SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 17 Quantity', 'wos_ProductItem17Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 18 SKU', 'wos_ProductItem18SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 18 Quantity', 'wos_ProductItem18Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 19 SKU', 'wos_ProductItem19SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 19 Quantity', 'wos_ProductItem19Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 20 SKU', 'wos_ProductItem20SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 20 Quantity', 'wos_ProductItem20Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 21 SKU', 'wos_ProductItem21SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 21 Quantity', 'wos_ProductItem21Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 22 SKU', 'wos_ProductItem22SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 22 Quantity', 'wos_ProductItem22Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 23 SKU', 'wos_ProductItem23SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 23 Quantity', 'wos_ProductItem23Quantity', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 24 SKU', 'wos_ProductItem24SKU', '', '', '', '', '', '', '', ''],
+        ['map.web.order_columns', 'Maps WooCommerce CSV headers to internal field names for staging.', 'stable', 'Product Item 24 Quantity', 'wos_ProductItem24Quantity', '', '', '', '', '', '', '', ''],
 
         ['map.web.translation_columns', 'Maps wehe.csv headers to internal field names for staging.', 'stable', 'id', 'wxs_WebIdHe', '', '', '', '', '', '', '', ''],
         ['map.web.translation_columns', 'Maps wehe.csv headers to internal field names for staging.', 'stable', 'post_title', 'wxs_NameHe', '', '', '', '', '', '', '', ''],
@@ -390,6 +478,198 @@ function createComaxStagingHeaders() {
         const schema = allConfig[`schema.data.${sheetName}`];
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createWebOrdSHeaders() {
+    const functionName = 'createWebOrdSHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebOrdS';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createWebOrdMHeaders() {
+    const functionName = 'createWebOrdMHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebOrdM';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createWebOrdItemsMHeaders() {
+    const functionName = 'createWebOrdItemsMHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebOrdItemsM';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysInventoryOnHoldHeaders() {
+    const functionName = 'createSysInventoryOnHoldHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysInventoryOnHold';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysOrdLogHeaders() {
+    const functionName = 'createSysOrdLogHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysOrdLog';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysPackingCacheHeaders() {
+    const functionName = 'createSysPackingCacheHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysPackingCache';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
         }
         const headers = schema.headers.split(',');
 

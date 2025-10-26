@@ -4,11 +4,11 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Complete Validation Testing.**
+**Implement "Comax SKU Change" Validation.**
 
-The next step is to complete the validation of the existing rules by forcing errors in the input data (e.g., critical orphans, data mismatches) and ensuring the system correctly generates tasks for each exception.
+The next step is to implement the validation rule that detects when a SKU for a product sold online has changed in Comax.
 
-*   **Next Step:** Test the full validation suite.
+*   **Next Step:** Define and implement the `validation.rule.C7_Comax_SKUChange` rule.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -35,59 +35,58 @@ The next step is to complete the validation of the existing rules by forcing err
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-### Part 1: Correct Product Import Model (COMPLETED)
-**Goal:** To correct the flawed product import model to reflect the actual data sources: a single main product export and a separate translation link file (`wehe.csv`).
 
-*   **1.1. Correct Data Model (`DATA_MODEL.md`):**
-    *   Action: Remove the incorrect `WebProdS_HE` sheet.
-    *   Action: Add the new `WebXltS` staging sheet for the `wehe.csv` file.
-*   **1.2. Correct Workflows (`WORKFLOWS.md`):** Action: Update the "Product Import & Data Processing" workflow to describe the new two-file process.
-*   **1.3. Correct Configuration Definitions:**
-    *   Action: In `setup.js`, remove the `import.drive.web_products_he` configuration.
-    *   Action: Add a new `import.drive.web_hebrew_links` configuration for the `wehe.csv` file.
-    *   **COMPLETED:** Corrected `wps_Price` to `wps_RegularPrice` mapping in `SysConfig` for `map.web.product_columns` and `schema.data.WebProdS_EN`.
-*   **1.4. Correct `ProductService` Staging Logic:** The service's staging function must be updated to handle the two distinct job types, routing the main export to `WebProdS_EN` and the translation links to `WebXltS`.
-    *   **COMPLETED:** Modified `_populateStagingSheet` to dynamically map data based on actual sheet headers.
-*   **1.5. Correct `OrchestratorService` Logic:** The service must be updated to look for the two correct file types (`web_products_en` and `web_hebrew_links`).
-    *   **COMPLETED:** Fixed `ConfigService` schema loading by correcting parsing of `sys.schema.version` and ensuring it's always loaded.
-    *   **COMPLETED:** Modified `WebAdapter.processProductCsv()` for case-insensitive header matching.
+## Phase 3: Order Workflow Engine (COMPLETED)
 
-### Part 2: SysConfig State Management (COMPLETED)
-**Goal:** To implement a state management system for `SysConfig` to ensure stability during development.
+**Goal:** To build the complete, automated workflow for ingesting and processing web orders to enable accurate, real-time stock calculations.
 
-*   **2.1. Update Data Model (`DATA_MODEL.md`):** Add a new column, `scf_status`, to the `SysConfig` table definition.
-*   **2.2. Modify Configuration Service (`config.js`):** Update the service to read and filter by the `scf_status` column.
-*   **2.3. Enhance Setup Script (`setup.js`):** Add a utility function, `setRecordStatus()`, for programmatic tagging.
-*   **2.4. Manual SysConfig Provision:** The `SysConfig` snapshot will be manually provided by the user at the start of each session, typically via a CSV file.
+*   **Status:** All necessary configurations for the Order Workflow have been added to `setup.js`.
+*   **Immediate Task:** Proceed to Phase 4: Output Generation & Notification.
 
-### Part 3: Staging Data Validation (COMPLETED)
-*   **3.1. Implement Configuration-Driven Validation Engine (COMPLETED):** The core validation engine in `ProductService.js` is implemented and tested. It is capable of executing various types of rules defined in `SysConfig`.
+**Phase 3.1: Add `WebOrdS` (Web Order Staging) Support**
+    *   **Action:** In `setup.js`, add the `schema.data.WebOrdS` and relevant `map.web.order_columns` definitions to the `getMasterConfiguration` function.
+    *   **Action:** In `setup.js`, create a new, self-contained function `setupWebOrdSHeader()` to create the headers for the `WebOrdS` sheet. This function will not be called automatically.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and confirm the new records are in the `SysConfig` sheet. Manually run `setupWebOrdSHeader()` and confirm the sheet is created correctly.
 
-*   **3.2. Implement Task De-duplication (COMPLETED):** In `TaskService`, logic has been added to prevent the creation of duplicate tasks for the same entity and exception type.
+**Phase 3.2: Add `WebOrdM` (Web Orders Master) Support**
+    *   **Action:** In `setup.js`, add the `schema.data.WebOrdM` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `setupWebOrdMHeader()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupWebOrdMHeader()` and verify the results.
 
-*   **3.3. Define Validation Rules in `setup.js` (COMPLETED):** All legacy validation rules have been defined and enabled in `setup.js`. The system is now capable of running a full validation suite.
+**Phase 3.3: Add `WebOrdItemsM` (Web Order Items Master) Support**
+    *   **Action:** In `setup.js`, add the `schema.data.WebOrdItemsM` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `setupWebOrdItemsMHeader()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupWebOrdItemsMHeader()` and verify the results.
 
-*   **3.4. Implement Staging Workflows (COMPLETED):** The `processJob` function in `ProductService.js` now correctly calls dedicated functions to populate the `CmxProdS` and `WebProdS_EN` staging sheets from their respective import files.
+**Phase 3.4: Add `SysInventoryOnHold` Support**
+    *   **Action:** In `setup.js`, add the `schema.data.SysInventoryOnHold` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `setupSysInventoryOnHoldHeader()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysInventoryOnHoldHeader()` and verify the results.
 
-*   **3.5. Centralized Validation Trigger (COMPLETED):** The `OrchestratorService.run()` function is confirmed to call `ProductService.runValidationEngine()` after all import jobs are processed. This ensures validation runs centrally against all populated staging sheets.
+**Phase 3.5: Add `SysOrdLog` (System Order Log) Support**
+    *   **Action:** In `setup.js`, add the `schema.data.SysOrdLog` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `setupSysOrdLogHeader()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysOrdLogHeader()` and verify the results.
 
-### Part 4: Refactor Validation Workflow (COMPLETED)
-**Goal:** To implement the hybrid validation approach, making the system more efficient and logical. Staging-related validation will be triggered by imports, while master-to-master validation will remain on a schedule.
+**Phase 3.6: Add `SysPackingCache` Support**
+    *   **Action:** In `setup.js`, add the `schema.data.SysPackingCache` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `setupSysPackingCacheHeader()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `setupSysPackingCacheHeader()` and verify the results.
 
-*   **4.1. Categorize Validation Rules in `setup.js`:** (COMPLETED)
-*   **4.2. Refactor `ProductService.js`:** (COMPLETED)
-*   **4.3. Update `OrchestratorService.js`:** (COMPLETED)
-*   **4.4. Test Refactored Workflow:** (COMPLETED)
+**Phase 3.7: Add Packing Slip Template Support**
+    *   **Action:** In `setup.js`, add the `template.packing_slip` definition to `getMasterConfiguration`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and confirm the new records are in the `SysConfig` sheet.
 
-### Part 5: Master Data Reconciliation (COMPLETED)
-*   **5.1. Implement Master Data Upsert Logic:** (COMPLETED) The upsert logic for `CmxProdS` to `CmxProdM` has been implemented and verified. The logic for `WebXltS` to `WebXltM` and `WebProdS_EN` to `WebProdM` is implemented but pending verification.
 
-### Part 6: Output Generation & Notification (IN PROGRESS)
-*   **6.1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **6.2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
-*   **6.3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
+## Phase 4: Output Generation & Notification (PLANNED)
 
-## Phase 3: Bundle Management Engine (PLANNED)
+**Goal:** To build the services required to format and export data for external systems like WooCommerce.
+
+*   **1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
+*   **2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
+*   **3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
+
+## Phase 5: Bundle Management Engine (PLANNED)
 
 **Goal:** To implement the rules-based engine for managing product bundles, monitoring component stock, and suggesting replacements.
 
