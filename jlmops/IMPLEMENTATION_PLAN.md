@@ -41,8 +41,12 @@ The next step is to implement the validation rule that detects when a SKU for a 
 **Goal:** To build the complete, automated workflow for ingesting and processing web orders to enable accurate, real-time stock calculations.
 
 *   **Status:** All necessary configurations for the Order Workflow have been added to `setup.js`.
-*   **Immediate Task:** Proceed to Phase 4: Output Generation & Notification.
+    *   **Immediate Task:** Proceed to Phase 4: Output Generation & Notification.
 
+**Phase 3.8: Add `OrderLogArchive` Support (Additional Step)**
+    *   **Action:** In `setup.js`, add the `schema.data.OrderLogArchive` definition to `getMasterConfiguration`.
+    *   **Action:** In `setup.js`, create a new function `createOrderLogArchiveHeaders()`.
+    *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `createOrderLogArchiveHeaders()` and verify the results.
 **Phase 3.1: Add `WebOrdS` (Web Order Staging) Support**
     *   **Action:** In `setup.js`, add the `schema.data.WebOrdS` and relevant `map.web.order_columns` definitions to the `getMasterConfiguration` function.
     *   **Action:** In `setup.js`, create a new, self-contained function `setupWebOrdSHeader()` to create the headers for the `WebOrdS` sheet. This function will not be called automatically.

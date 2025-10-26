@@ -102,6 +102,7 @@ function getMasterConfiguration() {
         ['schema.data.SysInventoryOnHold', 'Schema for System On-Hold Inventory sheet.', 'stable', 'headers', 'sio_SKU,sio_OnHoldQuantity', '', '', '', '', '', '', '', ''],
         ['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'headers', 'sol_OrderId,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
         ['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'headers', 'spc_OrderId,spc_WebIdEn,spc_SKU,spc_Quantity,spc_NameEn,spc_NameHe,spc_Intensity,spc_Complexity,spc_Acidity,spc_Decant,spc_PairHarMild,spc_PairHarRich,spc_PairHarIntense,spc_PairHarSweet,spc_PairConMild,spc_PairConRich,spc_PairConIntense,spc_PairConSweet', '', '', '', '', '', '', '', ''],
+        ['schema.data.OrderLogArchive', 'Schema for Order Log Archive sheet.', 'stable', 'headers', 'sol_OrderId,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
 
         // Packing Slip Template
         ['template.packing_slip', 'Packing Slip Header', 'stable', 'HEADER', 'JLM Operations Hub Packing Slip', '', '', '', '', '', '', '', ''],
@@ -660,6 +661,38 @@ function createSysPackingCacheHeaders() {
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
         const sheetName = 'SysPackingCache';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.clear();
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createOrderLogArchiveHeaders() {
+    const functionName = 'createOrderLogArchiveHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'OrderLogArchive';
         let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
             sheet = spreadsheet.insertSheet(sheetName);
