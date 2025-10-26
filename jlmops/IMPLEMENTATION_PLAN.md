@@ -47,6 +47,12 @@ The next step is to implement the validation rule that detects when a SKU for a 
     *   **Action:** In `setup.js`, add the `schema.data.OrderLogArchive` definition to `getMasterConfiguration`.
     *   **Action:** In `setup.js`, create a new function `createOrderLogArchiveHeaders()`.
     *   **Verification:** Manually run `rebuildSysConfigFromSource()` and `createOrderLogArchiveHeaders()` and verify the results.
+
+**Phase 3.9: Initial Order Data Population**
+    *   **Goal:** To populate the JLMops master order sheets (`WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `OrderLogArchive`) with existing web order data to enable comprehensive testing of downstream processes.
+    *   **Action:** Create a new function `populateInitialOrderData()` in `jlmops/setup.js`.
+    *   **Detail:** This function will read raw web order data from `WebOrdS`, transform it into the `WebOrdM` and `WebOrdItemsM` schemas, write the data to these sheets, create initial entries in `SysOrdLog`, and move older/completed orders to `OrderLogArchive`.
+    *   **Verification:** Manually run `populateInitialOrderData()` and confirm that `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, and `OrderLogArchive` are populated correctly.
 **Phase 3.1: Add `WebOrdS` (Web Order Staging) Support**
     *   **Action:** In `setup.js`, add the `schema.data.WebOrdS` and relevant `map.web.order_columns` definitions to the `getMasterConfiguration` function.
     *   **Action:** In `setup.js`, create a new, self-contained function `setupWebOrdSHeader()` to create the headers for the `WebOrdS` sheet. This function will not be called automatically.
