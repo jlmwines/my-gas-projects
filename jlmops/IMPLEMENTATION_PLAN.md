@@ -52,7 +52,19 @@ The next step is to implement the validation rule that detects when a SKU for a 
     *   **Goal:** To populate the JLMops master order sheets (`WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `OrderLogArchive`) with existing web order data to enable comprehensive testing of downstream processes.
     *   **Action:** Create a new function `populateInitialOrderData()` in `jlmops/setup.js`.
     *   **Detail:** This function will read raw web order data from `WebOrdS`, transform it into the `WebOrdM` and `WebOrdItemsM` schemas, write the data to these sheets, create initial entries in `SysOrdLog`, and move older/completed orders to `OrderLogArchive`.
-    *   **Verification:** Manually run `populateInitialOrderData()` and confirm that `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, and `OrderLogArchive` are populated correctly.
+**Phase 3.10: Initial Product Detail Data Population (New Phase)**
+
+**Objective:** Migrate existing product detail data from the old system's reference sheets (or a file structured similarly) into the JLMops product master sheets.
+
+1.  **Action: Create `populateInitialProductData()` function in `jlmops/setup.js`:**
+    *   This function will be designed to read data from sheets (or a file) with the following expected old system headers (inferred from `DetailsReview.gs`):
+        *   **For `DetailsM` (old system):** `SKU`, `NAME`, `Short`, `קצר`, `Description`, `תיאור ארוך`, `היתר מכירה`, `ABV`, `Intensity`, `Complexity`, `Acidity`, `Decant`, `G1`, `G2`, `G3`, `G4`, `G5`, `K1`, `K2`, `K3`, `K4`, `K5`, `Mild Har`, `Rich Har`, `Intense Har`, `Sweet Har`, `Mild Con`, `Rich Con`, `Intense Con`, `Intense Con`, `Sweet Con`, `אזור`.
+        *   **For `ComaxM` (old system):** `CMX SKU`, `CMX GROUP`, `CMX YEAR`, `CMX SIZE`.
+        *   **For `WeHe` (old system):** `wpml:original_product_sku`, `wpml:original_product_id`, `ID`.
+    *   It will implement logic to map these old system header names to the JLMops product master sheet headers (`wpm_`, `wdm_`, `cpm_`, `wxl_` prefixes).
+    *   It will process and transform this data into the JLMops product master sheets (`WebProdM`, `WebDetM`, `CmxProdM`, `WebXltM`).
+    *   It will write the transformed data to these sheets.
+2.  **Verification:** Manually run `populateInitialProductData()` and confirm that `WebProdM`, `WebDetM`, `CmxProdM`, and `WebXltM` are populated correctly.
 **Phase 3.1: Add `WebOrdS` (Web Order Staging) Support**
     *   **Action:** In `setup.js`, add the `schema.data.WebOrdS` and relevant `map.web.order_columns` definitions to the `getMasterConfiguration` function.
     *   **Action:** In `setup.js`, create a new, self-contained function `setupWebOrdSHeader()` to create the headers for the `WebOrdS` sheet. This function will not be called automatically.
