@@ -92,6 +92,104 @@ function InventoryManagementService() {
     }
   };
 
+  /**
+   * Calculates the total quantity of each SKU committed to 'On-Hold' orders
+   * and populates the SysInventoryOnHold sheet.
+   */
+  this.calculateOnHoldInventory = function() {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const webOrdMSheet = ss.getSheetByName("WebOrdM");
+      const webOrdItemsMSheet = ss.getSheetByName("WebOrdItemsM");
+      const sysInventoryOnHoldSheet = ss.getSheetByName("SysInventoryOnHold");
+
+      if (!webOrdMSheet || !webOrdItemsMSheet || !sysInventoryOnHoldSheet) {
+        logger.error("One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.");
+        return;
+      }
+
+      // Get headers for WebOrdM
+      const webOrdMHeaders = webOrdMSheet.getRange(1, 1, 1, webOrdMSheet.getLastColumn()).getValues()[0];
+      const womOrderIdCol = webOrdMHeaders.indexOf("wom_OrderId");
+      const womStatusCol = webOrdMHeaders.indexOf("wom_Status");
+
+      if (womOrderIdCol === -1 || womStatusCol === -1) {
+        logger.error("Required columns (wom_OrderId, wom_Status) not found in WebOrdM.");
+        return;
+      }
+
+      // Get WebOrdM data
+      const webOrdMData = webOrdMSheet.getDataRange().getValues();
+      const onHoldOrderIds = new Set();
+
+      // Identify 'On-Hold' order IDs
+      for (let i = 1; i < webOrdMData.length; i++) { // Skip header row
+        const row = webOrdMData[i];
+        if (row[womStatusCol] === 'On-Hold') {
+          onHoldOrderIds.add(row[womOrderIdCol]);
+        }
+      }
+
+      if (onHoldOrderIds.size === 0) {
+        logger.info("No 'On-Hold' orders found. Clearing SysInventoryOnHold sheet.");
+        // Clear existing content in SysInventoryOnHold (except headers)
+        if (sysInventoryOnHoldSheet.getLastRow() > 1) {
+          sysInventoryOnHoldSheet.getRange(2, 1, sysInventoryOnHoldSheet.getLastRow() - 1, sysInventoryOnHoldSheet.getLastColumn()).clearContent();
+        }
+        return;
+      }
+
+      // Get headers for WebOrdItemsM
+      const webOrdItemsMHeaders = webOrdItemsMSheet.getRange(1, 1, 1, webOrdItemsMSheet.getLastColumn()).getValues()[0];
+      const woiOrderIdCol = webOrdItemsMHeaders.indexOf("woi_OrderId");
+      const woiSkuCol = webOrdItemsMHeaders.indexOf("woi_SKU");
+      const woiQuantityCol = webOrdItemsMHeaders.indexOf("woi_Quantity");
+
+      if (woiOrderIdCol === -1 || woiSkuCol === -1 || woiQuantityCol === -1) {
+        logger.error("Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.");
+        return;
+      }
+
+      // Get WebOrdItemsM data
+      const webOrdItemsMData = webOrdItemsMSheet.getDataRange().getValues();
+      const onHoldInventory = {}; // { SKU: quantity }
+
+      // Aggregate quantities for 'On-Hold' items
+      for (let i = 1; i < webOrdItemsMData.length; i++) { // Skip header row
+        const row = webOrdItemsMData[i];
+        const orderId = row[woiOrderIdCol];
+        if (onHoldOrderIds.has(orderId)) {
+          const sku = row[woiSkuCol];
+          const quantity = parseFloat(row[woiQuantityCol]); // Ensure quantity is a number
+          if (!isNaN(quantity)) {
+            onHoldInventory[sku] = (onHoldInventory[sku] || 0) + quantity;
+          }
+        }
+      }
+
+      // Prepare data for SysInventoryOnHold
+      const onHoldData = [];
+      for (const sku in onHoldInventory) {
+        onHoldData.push([sku, onHoldInventory[sku]]);
+      }
+
+      // Clear existing content in SysInventoryOnHold (except headers)
+      if (sysInventoryOnHoldSheet.getLastRow() > 1) {
+        sysInventoryOnHoldSheet.getRange(2, 1, sysInventoryOnHoldSheet.getLastRow() - 1, sysInventoryOnHoldSheet.getLastColumn()).clearContent();
+      }
+
+      // Write new aggregated data to SysInventoryOnHold
+      if (onHoldData.length > 0) {
+        sysInventoryOnHoldSheet.getRange(2, 1, onHoldData.length, onHoldData[0].length).setValues(onHoldData);
+      }
+
+      logger.info("SysInventoryOnHold sheet updated successfully with on-hold inventory.");
+
+    } catch (e) {
+      logger.error("Error calculating on-hold inventory: " + e.message, e);
+    }
+  };
+
   // TODO: Add methods for:
   // - Reserving stock (e.g., for pending orders)
   // - Releasing reserved stock

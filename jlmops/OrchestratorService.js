@@ -49,9 +49,15 @@ const OrchestratorService = (function() {
     const archiveFolder = DriveApp.getFolderById(archiveFolderConfig.id);
 
     const registry = getRegistryMap(fileRegistrySheet);
-    const importConfigs = Object.keys(allConfig).filter(key => key.startsWith('import.drive'));
+    
+    const processingOrderConfig = allConfig['system.import.processing_order'];
+    if (!processingOrderConfig || !processingOrderConfig.order) {
+      console.error('system.import.processing_order is not defined in SysConfig. Halting file import processing.');
+      return;
+    }
+    const importConfigs = processingOrderConfig.order.split(',');
 
-    console.log(`Found ${importConfigs.length} drive import configuration(s).`);
+    console.log(`Found ${importConfigs.length} drive import configuration(s) in the specified processing order.`);
 
     importConfigs.forEach(configName => {
       const config = allConfig[configName];
@@ -225,6 +231,9 @@ const OrchestratorService = (function() {
           switch (serviceName) {
             case 'ProductService':
               ProductService.processJob(jobType, rowNumber);
+              break;
+            case 'OrderService':
+              orderService.processJob(jobType, rowNumber);
               break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);

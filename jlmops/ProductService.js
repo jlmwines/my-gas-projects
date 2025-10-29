@@ -820,9 +820,37 @@ const ProductService = (function() {
     }
   }
 
+  function getProductWebIdBySku(sku) {
+    const functionName = 'getProductWebIdBySku';
+    try {
+      const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const sheet = spreadsheet.getSheetByName('WebProdM');
+      if (!sheet) {
+        throw new Error('WebProdM sheet not found');
+      }
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const skuCol = headers.indexOf('wpm_SKU');
+      const webIdCol = headers.indexOf('wpm_WebIdEn');
+      if (skuCol === -1 || webIdCol === -1) {
+        throw new Error('Could not find SKU or WebIdEn columns in WebProdM');
+      }
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][skuCol] === sku) {
+          return data[i][webIdCol];
+        }
+      }
+      return null;
+    } catch (e) {
+      LoggerService.error('ProductService', functionName, `Error getting web id for sku ${sku}: ${e.message}`, e);
+      return null;
+    }
+  }
+
   return {
     processJob: processJob,
     runMasterValidation: _runMasterValidation,
-    runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert
+    runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
+    getProductWebIdBySku: getProductWebIdBySku
   };
 })();

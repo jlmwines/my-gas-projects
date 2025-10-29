@@ -1,12 +1,9 @@
-docs(architecture): Redesign bundle management system
+feat(ProductService): Implement master data reconciliation
 
-Overhauls the system architecture to support a flexible, rules-based engine for managing product bundles, replacing the previous simplistic model.
+Implements Part 5 of the implementation plan.
 
-- Removes `wpm_ProductType` from the product data model as bundles are no longer identified from the main product import.
-- Introduces a new four-sheet data model for bundles:
-  - `SysBundlesM`: Defines the bundle headers.
-  - `SysBundleRows`: Defines the bundle layout and component eligibility rules.
-  - `SysBundleActiveComponents`: Tracks the current SKU for each bundle slot.
-  - `SysBundleComponentHistory`: Provides a full audit trail of component changes.
-- Updates the `BundleService` responsibilities and the `Bundle Management Workflow` to reflect the new design of defining, monitoring, and suggesting replacements for bundle components.
-- Adds the new implementation plan for the Bundle Management Engine to `IMPLEMENTATION_PLAN.md`.
+- Adds `_upsertComaxData` and `_upsertWebProductsData` functions to `ProductService.js`.
+- The reconciliation logic follows an "update-only" strategy, where the import processes only update existing products in the master sheets (`CmxProdM`, `WebProdM`).
+- This change respects the principle that JLMops is the source of truth for all descriptive data, and new products are created only via the onboarding workflow.
+- Adds a new validation rule to `setup.js` to create a warning task when a product's name in a web import does not match the master data in `WebDetM`.
+- Updates `IMPLEMENTATION_PLAN.md` to mark Part 5 as complete.
