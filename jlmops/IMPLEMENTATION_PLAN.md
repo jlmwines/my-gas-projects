@@ -4,9 +4,9 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 ## Next Task
 
-**Phase 4.1b: Process Staged Orders to Master Sheets**
+**Phase 4.4: Implement Core Order Workflows**
 
-*   **Next Step:** To parse the raw, staged order data and upsert it into the normalized master order sheets. Implement a function in `OrderService.js` that reads from `WebOrdS`, normalizes the data, and populates `WebOrdM`, `WebOrdItemsM`, and `SysOrdLog`.
+*   **Next Step:** Begin implementing the core business logic for order processing, starting with On-Hold Inventory Calculation.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -48,40 +48,30 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   **Action:** Created the `populateInitialOrderData()` function in `jlmops/setup.js`.
     *   **Detail:** This function reads from the legacy `OrdersM`, `OrderLog`, and `OrderLogArchive` sheets, normalizes the data, separates active vs. archived records, and populates the new `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `WebOrdM_Archive`, and `WebOrdItemsM_Archive` sheets.
 
-## Phase 4: Order Workflow Logic (PLANNED)
+## Phase 4: Order Workflow & Parallel Implementation (IN PROGRESS)
 
-**Goal:** To implement the core business logic for processing orders, based on the analysis of the legacy system.
+**Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
 
-*   **Phase 4.1a: Order Import to Staging (COMPLETED)**
-    *   **Goal:** Implement the automated workflow for ingesting new web orders into a staging area.
-    *   **Action:** 
-        1. Added a new `import.drive.web_orders` configuration to `setup.js`.
-        2. Implemented the `importWebOrdersToStaging` function in `OrderService.js` to read data from the archived CSV and populate the `WebOrdS` staging sheet.
-    *   **Verification:** `WebOrdS` sheet successfully populated from `WebOrders.csv` via `runScheduledTasks()`.
+*   **Phase 4.1: Foundational Utilities for Parallel Operation (COMPLETED)**
+    *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
+    *   **Tasks:**
+        1.  **Refactored Setup Script (COMPLETED):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
+        2.  **Create Safe Header Update Function (COMPLETED):** Implemented a new `updateSheetHeaders` function in `SetupSheets.js` that only modifies the header row of a sheet, ensuring that it can be run safely on sheets containing data.
+        3.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
+        4.  **Build Generic Master Data Sync Utility (PLANNED):** Implement a generic `syncLegacyMasterData(dataType)` function in `migration.js`. This tool will be driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from any legacy master sheet to its `jlmops` counterpart.
 
-**Phase 4.1b: Process Staged Orders to Master Sheets (IN PROGRESS)**
+*   **Phase 4.4: Implement Core Order Workflows (PLANNED)**
+    *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
+    *   **Tasks:**
+        1.  **On-Hold Inventory Calculation:** Implement the logic in `InventoryManagementService.js`.
+        2.  **Comax Order Export:** Implement the export generation logic in `OrderService.js`.
+        3.  **Packing Slip Data Preparation:** Implement the `preparePackingData` function in `OrderService.js`.
 
-*   **Next Step:** To parse the raw, staged order data and upsert it into the normalized master order sheets. Implement a function in `OrderService.js` that reads from `WebOrdS`, normalizes the data, and populates `WebOrdM`, `WebOrdItemsM`, and `SysOrdLog`.
-
-**Testing Plan:**
-
-1.  **Execute `rebuildSysConfigFromSource()`:** Run the `rebuildSysConfigFromSource()` function in `setup.js` to update the `SysConfig` sheet with the corrected schema.
-2.  **Execute `importWebOrdersToStaging`:** Run the `importWebOrdersToStaging` function in `OrderService.js` to import the `WebOrders.csv` data into the `WebOrdS` sheet.
-3.  **Verify `WebOrdS` sheet:** Manually inspect the `WebOrdS` sheet to confirm that the headers are correct and the data has been imported successfully.
-4.  **Execute `processStagedOrders`:** Run the `processStagedOrders` function in `OrderService.js` to process the staged data.
-5.  **Verify master sheets:** Manually inspect the `WebOrdM`, `WebOrdItemsM`, and `SysOrdLog` sheets to confirm that the data has been correctly processed and inserted.
-
-*   **Phase 4.2: On-Hold Inventory Calculation**
-    *   **Goal:** To create a service that calculates the total quantity of each SKU committed to 'On-Hold' orders.
-    *   **Action:** Implement a function in `InventoryManagementService.js` that reads `WebOrdM` and `WebOrdItemsM`, filters for 'On-Hold' orders, aggregates the quantities for each SKU, and populates the `SysInventoryOnHold` sheet.
-
-*   **Phase 4.3: Comax Order Export**
-    *   **Goal:** To create a service that generates the aggregated SKU summary for Comax.
-    *   **Action:** Implement a function in `OrderService.js` that identifies export-eligible orders from `SysOrdLog` and `WebOrdM`, aggregates line items from `WebOrdItemsM`, and generates the summary CSV file.
-
-*   **Phase 4.4: Packing Slip Data Preparation**
-    *   **Goal:** To create a service that populates the `SysPackingCache` with enriched data for all pending packing slips.
-    *   **Action:** Implement the `preparePackingData` function in `OrderService.js`. This function will identify eligible orders based on their status in `WebOrdM` and `SysOrdLog`, gather data from `WebOrdM`, `WebOrdItemsM`, and `WebDetM`, and write the combined data to `SysPackingCache`.
+*   **Phase 4.2: Business Logic Validation Framework (PLANNED)**
+    *   **Goal:** Create a service dedicated to validating the outputs of `jlmops` business logic against the legacy system.
+    *   **Tasks:**
+        1.  **Implement `ValidationService.js`:** Create the new service file.
+        2.  **Implement Initial Validation Tools:** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`. 
 
 ## Phase 5: Output Generation & Notification (PLANNED)
 
@@ -113,36 +103,5 @@ This document outlines the high-level, phased plan for building the JLM Operatio
     *   **Detail:** The widget will display the count of failed jobs from `SysJobQueue` and the status from the last configuration health check. It will include a button to trigger the health check function.
 
 ## Phase 8: Testing, Integration & Deployment
-
-**Goal:** To connect, test, and launch the new system.
-
-**Goal:** To build the services required to format and export data for external systems like WooCommerce.
-
-*   **1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
-*   **3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
-
-## Phase 5: Bundle Management Engine (PLANNED)
-
-**Goal:** To implement the rules-based engine for managing product bundles, monitoring component stock, and suggesting replacements.
-
-*   **1. Update `setup.js`:** Add the new schemas for `SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`, and `SysBundleComponentHistory` to the `SYS_CONFIG_DEFINITIONS` object.
-*   **2. Implement `BundleService` Monitoring Logic:** Implement the scheduled function to monitor stock levels of all SKUs in the `SysBundleActiveComponents` sheet.
-*   **3. Implement `BundleService` Suggestion Logic:** Implement the core logic to find suitable replacement SKUs by matching the eligibility rules defined in `SysBundleRows` against the master product data.
-*   **4. Implement `BundleService` Task Creation:** Integrate with the `TaskService` to automatically create detailed tasks when low-stock situations are detected.
-*   **5. Implement `BundleService` Audit Trail:** Implement the `onEdit` trigger or an equivalent mechanism to automatically log all component changes from `SysBundleActiveComponents` into the `SysBundleComponentHistory` sheet.
-
-## Phase 4: The Dashboard-Driven Web App (Frontend)
-
-**Goal:** To build the user interface that sits on top of the powerful backend engine.
-
-**1. Build Core UI Framework**
-    *   **Action:** Set up the main HTML file, CSS framework, and client-side JavaScript for the Single Page Application (SPA).
-
-**2. Implement System Health Widget**
-    *   **Action:** Create the UI for the "System Health" widget on the main dashboard.
-    *   **Detail:** The widget will display the count of failed jobs from `SysJobQueue` and the status from the last configuration health check. It will include a button to trigger the health check function.
-
-## Phase 5: Testing, Integration & Deployment
 
 **Goal:** To connect, test, and launch the new system.

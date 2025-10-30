@@ -11,7 +11,7 @@ The JLM Operations Hub is a smart, automated system designed to streamline and u
 *   **Intelligent Inventory Management:** Proactive system for ensuring inventory accuracy. This includes direct management of specific locations like Brurya, automated physical count verification, and real-time tracking of on-hold stock.
 *   **Configurable Task Management:** A flexible, data-driven system for generating, assigning, and tracking all system and user-generated tasks, with customizable workflows and status paths.
 *   **Data-Driven Product Management:** A robust workflow for managing product data, including automated import, detail verification, and ensuring data consistency across platforms.
-*   **Flexible Configuration:** All system settings, business rules, and even KPI definitions are stored in a central, easily configurable sheet, allowing for updates without code changes.
+*   **Flexible Configuration:** All system settings, business rules, and even KPI definitions are stored in a central, easily configurable sheet. The setup process is now managed by specialized scripts (`SetupConfig.js`, `SetupSheets.js`, `SetupMigrate.js`) for better organization and maintainability.
 *   **Event-Driven Automation:** The system's core processes are driven by scheduled triggers and file monitoring, ensuring proactive and automated execution of routine tasks.
 *   **Campaign Planning & Coordination:** A central hub for planning and executing multi-faceted promotional campaigns, linking product bundles, blog posts, emails, and coupons to a unified timeline.
 *   **Secure Google Workspace Authentication:** Leverages Google accounts for secure, seamless login. Access is restricted to users within your organization's domain.
