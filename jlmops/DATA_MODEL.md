@@ -432,6 +432,17 @@ This section defines the sheets used to coordinate multi-faceted promotional cam
     *   `scf_P04` and beyond can hold optional parameters, like presentation hints (`align-center`) or conditions (`NON_SUBSCRIBERS_ONLY`).
     This allows for the creation of powerful, configuration-driven documents without changing any code.
 
+### `migration.sync.tasks` (New)
+*   **Purpose:** Defines the configuration for the generic master data synchronization utility (`migration.js`). Each row represents a sync-able data type from the legacy system to the JLMops system.
+*   **`scf_SettingName`:** `migration.sync.tasks`
+*   **Parameters:**
+    *   `scf_P01`: **Data Type Name.** A unique name for the sync task (e.g., `WebOrdM`, `CmxProdM`). This is the argument passed to the `syncLegacyMasterData` function.
+    *   `scf_P02`: **Legacy Spreadsheet ID.** The ID of the source Google Spreadsheet.
+    *   `scf_P03`: **Legacy Sheet Name.** The name of the source sheet in the legacy spreadsheet.
+    *   `scf_P04`: **JLMops Target Sheet Name.** The name of the target sheet in the `JLMops_Data` spreadsheet.
+    *   `scf_P05`: **Primary Key Column.** The name of the column in the source sheet to use as the primary key for matching records.
+    *   `scf_P06`: **Column Mappings.** A comma-separated list of `source_column:target_column` pairs (e.g., `order_id:wom_OrderId,order_number:wom_OrderNumber`).
+
 ## System Health & Logging
 
 This section defines the sheets used for monitoring system health and recovering from errors.

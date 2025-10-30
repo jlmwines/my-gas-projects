@@ -146,7 +146,7 @@ These workflows handle complex scenarios where the relationships between product
 This workflow safely manages the process when a SKU for a product sold online is changed in Comax.
 
 1.  **Detection:** During a Comax import, the `ProductService` identifies any product flagged as "sold online" whose SKU has changed since the last import (keyed by the stable Comax Product ID).
-2.  **Task Generation:** The service automatically creates a high-priority task: *"The Comax SKU for product '[Product Name]' has changed to '[New SKU]'. Please manually update the SKU for this product in WooCommerce."
+2.  **Task Generation:** The service automatically creates a high-priority task: *"The Comax SKU for product '[Product Name]' has changed to '[New SKU]'. Please manually update the SKU for this product in WooCommerce."*
 3.  **Manual Action:** An admin performs the SKU update in the WooCommerce admin panel.
 4.  **Verification:** The task remains open. The JLM Ops Hub monitors subsequent WooCommerce imports. When it detects that the SKU for the corresponding WooCommerce product has been updated to match, it automatically marks the task as 'Completed'.
 
@@ -236,10 +236,25 @@ This workflow describes how the system calculates and displays key performance m
 
 ---
 
-## 9. System Administration Workflows
+## 9. System Administration Workflows (New)
 
-This section describes workflows related to system maintenance and health monitoring.
+This section describes workflows related to system maintenance and health monitoring, particularly during the parallel implementation phase.
 
+### 9.1. Master Data Synchronization
+
+This workflow allows an administrator to keep the `jlmops` master data sheets synchronized with their counterparts in the legacy system.
+
+1.  **Configuration:** An administrator defines a synchronization task in `SysConfig` under the `migration.sync.tasks` setting name. This configuration specifies the source (legacy) and target (jlmops) sheets, the primary key for matching, and the column mappings.
+2.  **Execution:** From the Apps Script editor, the administrator runs the `syncLegacyMasterData(dataType)` function located in the `migration.js` script, passing the name of the configured sync task (e.g., 'WebOrdM') as the `dataType` argument.
+3.  **Process:** The script performs a non-destructive upsert, updating existing records and inserting new ones in the target `jlmops` sheet based on the data in the source legacy sheet.
+
+### 9.2. Business Logic Validation
+
+This workflow allows an administrator to validate that the outputs of `jlmops` business logic match the outputs of the legacy system.
+
+1.  **Execution:** From the Apps Script editor, the administrator runs the desired validation function from the `ValidationService.js` script (e.g., `validateOnHoldInventory()`, `validateComaxExport()`).
+2.  **Process:** The validation function will execute the relevant business logic in both the `jlmops` and legacy systems.
+3.  **Review:** The function will log a detailed comparison of the results, highlighting any discrepancies between the two systems. For validations that require visual inspection (like packing slips), it will provide links to both outputs.
 
 
 ## 10. Bundle Management Workflow
@@ -264,8 +279,8 @@ This is the core automated workflow performed by the `BundleService`.
 2.  **Check Stock Levels:** For each `sac_ActiveSKU`, it checks the current stock level in `CmxProdM`.
 3.  **Detect Low Stock:** It compares the stock level against the `sbr_MinStockThreshold` defined for that specific product row in `SysBundleRows`.
 4.  **Generate Suggestions:** If stock is below the threshold, the service initiates the suggestion logic:
-    a. It retrieves all eligibility rules for the product slot from `SysBundleRows`.
-    b. It scans all master products (`CmxProdM`) to find a list of alternate SKUs that match the same rules and have sufficient stock.
+    *   It retrieves all eligibility rules for the product slot from `SysBundleRows`.
+    *   It scans all master products (`CmxProdM`) to find a list of alternate SKUs that match the same rules and have sufficient stock.
 5.  **Create Task:** The service creates a new, high-priority task in `SysTasks`: "Component [SKU] in bundle '[Bundle Name]' is low on stock. Suggested replacements: [SKU A, SKU B, SKU C]."
 
 ### 10.3. Manual Update & Audit Trail

@@ -45,9 +45,10 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`TaskService`**: Manages the creation, updating, and assignment of all tasks (product, content, etc.) in the `TaskQ`.
     *   **`HousekeepingService`**: Contains all logic for scheduled data cleanup and archiving.
     *   **`InventoryManagementService`**: Manages physical inventory at managed locations (e.g., BruryaStock).
-        *   **`KpiService`**: Calculates and stores Key Performance Indicators (KPIs) based on configurable definitions.
-        *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
+    *   **`KpiService`**: Calculates and stores Key Performance Indicators (KPIs) based on configurable definitions.
+    *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
     *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
+    *   **`ValidationService` (New)**: Provides a suite of tools for validating the `jlmops` system against the legacy system. Its purpose is not to validate raw data, but to compare the final outputs of key business logic (e.g., on-hold inventory calculations, packing slip data, Comax export values) to ensure the new system produces identical results.
 
 ### 2.3. Data Adapters & Formatters
 
@@ -57,11 +58,16 @@ To keep the core services clean, we use an adapter/formatter pattern to handle m
 *   **`WebAdapter`**: Ingests raw data from WooCommerce CSV files. It is responsible for parsing the input file and mapping its columns to the wider schema of the corresponding staging sheet (e.g., `WebProdS_EN`). This adapter is key to the system's resilience, as it isolates the core logic from changes in the external file format.
 *   **`WooCommerceFormatter`**: Takes the clean, processed product objects from our system and formats them into the complex, multi-column CSV file required by WooCommerce for import. This includes handling special flags like `IsSoldIndividually`.
 
-### 2.4. Data & Workflow Architecture
+### 2.4. Migration Utilities (New)
+
+*   **`migration.js`**: This script contains utilities specifically for the parallel implementation phase, allowing for safe, on-demand data synchronization from the legacy system.
+    *   **`syncLegacyMasterData(dataType)`**: A generic function that performs a non-destructive upsert from a legacy master sheet to a `jlmops` master sheet. It is fully driven by `SysConfig` definitions (see `migration.sync.tasks` in `DATA_MODEL.md`) and is executed manually from the script editor.
+
+### 2.5. Data & Workflow Architecture
 
 The system's architecture is designed to be entirely driven by its configuration.
 
-#### 2.4.1. Configuration Discovery & Schema
+#### 2.5.1. Configuration Discovery & Schema
 
 *   **Dynamic Discovery:** At runtime, the system bootstraps itself by searching Google Drive for the `JLMops_Data` spreadsheet by its exact name. It then reads the `SysConfig` sheet within it to load all settings.
 *   **Universal Schema:** The `SysConfig` sheet uses a universal, block-based schema. This allows it to define simple key-value settings or complex, multi-row configurations in a consistent way.
@@ -70,7 +76,7 @@ The system's architecture is designed to be entirely driven by its configuration
     *   **`scf_P02` onwards (Values):** These columns hold the values for the given property.
 *   **Example:** A file import is defined by multiple rows sharing the `SettingName` `import.drive.comax_products`. One row might have `P01` set to `source_folder_id` and `P02` as the folder ID, while another row has `P01` set to `file_pattern` and `P02` as the file name. This schema is flexible enough to define any configuration the system needs, from business rules to document templates.
 
-##### 2.4.1.1. Configuration State Management
+##### 2.5.1.1. Configuration State Management
 
 To ensure stability and prevent accidental modifications to the live system during development, the `SysConfig` sheet includes a state management mechanism implemented via the `scf_status` column.
 
@@ -83,7 +89,7 @@ To ensure stability and prevent accidental modifications to the live system duri
 
 *   **Situational Awareness (The "Read First, Then Act" Principle):** To ensure safe and context-aware administrative actions (both manual and automated), the system adopts a **"Read First, Then Act"** principle. Before any operation that depends on system configuration is planned or executed, the agent or script must first retrieve a complete snapshot of the live `SysConfig` data (e.g., via `ConfigService.getSysConfigSnapshot()`). This ensures all actions are grounded in the current reality of the system's state, preventing errors caused by outdated assumptions.
 
-#### 2.4.2. Two-Spreadsheet Data Store
+#### 2.5.2. Two-Spreadsheet Data Store
 
 To ensure high performance, the system utilizes two separate Google Spreadsheets:
 
@@ -95,14 +101,14 @@ To ensure high performance, the system utilizes two separate Google Spreadsheets
     *   **Purpose:** Dedicated to high-volume, append-only data. Its ID is specified in the `SysConfig` sheet.
     *   **Contents:** `SysJobQueue`, `SysFileRegistry`, `SysLog`.
 
-#### 2.4.3. Google Drive Folder Structure
+#### 2.5.3. Google Drive Folder Structure
 
 The system relies on a clear folder structure for managing files, with all folder IDs specified in the `SysConfig` sheet.
 
 *   **`Source Folder`**: The inbox for new files. The system treats this as **read-only**.
 *   **`Archive Folder`**: The system's permanent record for all ingested files.
 
-#### 2.4.4. Event-Driven Workflow Engine
+#### 2.5.4. Event-Driven Workflow Engine
 
 The system is driven by a time-based trigger that initiates a two-phase workflow.
 

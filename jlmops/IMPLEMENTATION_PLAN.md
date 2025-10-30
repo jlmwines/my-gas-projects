@@ -60,10 +60,10 @@ This document outlines the high-level, phased plan for building the JLM Operatio
         3.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
         4.  **Build Generic Master Data Sync Utility (PLANNED):** Implement a generic `syncLegacyMasterData(dataType)` function in `migration.js`. This tool will be driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from any legacy master sheet to its `jlmops` counterpart.
 
-*   **Phase 4.4: Implement Core Order Workflows (PLANNED)**
+*   **Phase 4.4: Implement Core Order Workflows (IN PROGRESS)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
     *   **Tasks:**
-        1.  **On-Hold Inventory Calculation:** Implement the logic in `InventoryManagementService.js`.
+        1.  **On-Hold Inventory Calculation (COMPLETED):** Implement the logic in `InventoryManagementService.js`.
         2.  **Comax Order Export:** Implement the export generation logic in `OrderService.js`.
         3.  **Packing Slip Data Preparation:** Implement the `preparePackingData` function in `OrderService.js`.
 

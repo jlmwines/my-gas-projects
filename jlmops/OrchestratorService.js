@@ -17,7 +17,6 @@ const OrchestratorService = (function() {
     try {
       processAllFileImports();
       processPendingJobs();
-      ProductService.runMasterValidation();
     } catch (e) {
       console.error(`An unexpected error occurred in the orchestrator: ${e.message} (${e.stack})`);
     }
@@ -233,7 +232,9 @@ const OrchestratorService = (function() {
               ProductService.processJob(jobType, rowNumber);
               break;
             case 'OrderService':
-              orderService.processJob(jobType, rowNumber);
+              const currentProductService = ProductService; // ProductService is already an object with public methods
+              const orderServiceInstance = new OrderService(currentProductService);
+              orderServiceInstance.processJob(jobType, rowNumber, currentProductService);
               break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);
