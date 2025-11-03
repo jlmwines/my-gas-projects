@@ -9,8 +9,6 @@
  */
 function OrderService(productService) {
   const _productService = productService;
-  const ORDER_SHEET_NAME = "WebOrdM"; // Assuming WebOrdM is the master order sheet
-  const ORDER_ITEMS_SHEET_NAME = "WebOrdItemsM"; // Assuming WebOrdItemsM for order line items
 
   /**
    * Retrieves all orders from the order sheet.
@@ -18,6 +16,9 @@ function OrderService(productService) {
    */
   this.getAllOrders = function() {
     try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const ORDER_SHEET_NAME = sheetNames.WebOrdM;
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName(ORDER_SHEET_NAME);
 
@@ -85,6 +86,9 @@ function OrderService(productService) {
    * @returns {Array<Object>} An array of order item objects.
    */
   this.getOrderItems = function(orderId) {
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const ORDER_ITEMS_SHEET_NAME = sheetNames.WebOrdItemsM;
     logger.info(`Attempting to retrieve items for order ID: ${orderId}. (Placeholder: Full implementation needed)`);
     // TODO: Implement logic to fetch order items from ORDER_ITEMS_SHEET_NAME
     // Filter by orderId
@@ -113,8 +117,8 @@ function OrderService(productService) {
       const archiveFileId = jobQueueSheet.getRange(rowNumber, archiveFileIdColIdx + 1).getValue();
 
       if (jobType === 'import.drive.web_orders') {
-        this.importWebOrdersToStaging(archiveFileId);
-        this.processStagedOrders(productService);
+        const ordersWithLineItems = this.importWebOrdersToStaging(archiveFileId);
+        this.processStagedOrders(ordersWithLineItems, productService);
       }
       jobQueueSheet.getRange(rowNumber, jobQueueHeaders.indexOf('status') + 1).setValue('COMPLETED');
     } catch (e) {
@@ -139,24 +143,46 @@ function OrderService(productService) {
     logger.info(`Starting ${functionName} for file ID: ${archiveFileId}`);
 
     try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+
+      // 1. Parse raw CSV into structured objects
       const file = DriveApp.getFileById(archiveFileId);
       const csvContent = file.getBlob().getDataAsString(ConfigService.getConfig('import.drive.web_orders').file_encoding);
-      const data = Utilities.parseCsv(csvContent);
+      const ordersWithLineItems = WebAdapter.processOrderCsv(csvContent, 'map.web.order_columns', 'web.order.line_item_schema');
 
-      if (data.length === 0) {
-        logger.warn('Web orders file is empty. Nothing to import.');
-        return;
+      if (ordersWithLineItems.length === 0) {
+        logger.warn('Web orders file is empty or contains no valid orders. Nothing to import.');
+        return []; // Return empty array if no orders
+      }
+      logger.info(`Successfully parsed ${ordersWithLineItems.length} web orders with line items.`);
+
+      // 2. Write the structured data to the WebOrdS staging sheet
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const stagingSheet = spreadsheet.getSheetByName(sheetNames.WebOrdS);
+      if (!stagingSheet) {
+          throw new Error("Sheet 'WebOrdS' not found in the JLMops_Data spreadsheet.");
+      }
+      
+      const stagingHeaders = stagingSheet.getRange(1, 1, 1, stagingSheet.getLastColumn()).getValues()[0];
+      const stagingData = ordersWithLineItems.map(order => {
+        return stagingHeaders.map(header => order[header] || '');
+      });
+
+      // Clear only data rows
+      if (stagingSheet.getMaxRows() > 1) {
+        stagingSheet.getRange(2, 1, stagingSheet.getMaxRows() - 1, stagingSheet.getMaxColumns()).clearContent();
+      }
+      
+      // Write new data
+      if (stagingData.length > 0) {
+        stagingSheet.getRange(2, 1, stagingData.length, stagingData[0].length).setValues(stagingData);
+        logger.info(`Successfully wrote ${stagingData.length} processed orders to the WebOrdS staging sheet.`);
       }
 
-      const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-      const stagingSheet = spreadsheet.getSheetByName('WebOrdS');
-
-      // Clear existing data and write new data
-      stagingSheet.getRange(2, 1, stagingSheet.getMaxRows() -1, stagingSheet.getMaxColumns()).clearContent();
-      const headers = data.shift();
-      stagingSheet.getRange(2, 1, data.length, data[0].length).setValues(data);
-
-      logger.info(`Successfully imported ${data.length - 1} web orders into WebOrdS.`);
+      // 3. Return the in-memory object for immediate processing
+      return ordersWithLineItems;
 
     } catch (e) {
       logger.error(`Error in ${functionName}: ${e.message}`, e);
@@ -164,184 +190,211 @@ function OrderService(productService) {
     }
   };
 
-  /**
-   * Processes the staged orders from WebOrdS and upserts them into the master sheets.
-   */
-  this.processStagedOrders = function(productService) {
+
+
+  this.processStagedOrders = function(ordersWithLineItems, productService) {
     const functionName = 'processStagedOrders';
     logger.info(`Starting ${functionName}...`);
 
     try {
-      const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-      const stagingSheet = spreadsheet.getSheetByName('WebOrdS');
-      const masterOrderSheet = spreadsheet.getSheetByName('WebOrdM');
-      const masterItemSheet = spreadsheet.getSheetByName('WebOrdItemsM');
-      const logSheet = spreadsheet.getSheetByName('SysOrdLog');
-
-      // 1. Load Schemas and the new Explicit Mapping from SysConfig
       const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+      const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+      const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+      if (!ordersWithLineItems || ordersWithLineItems.length === 0) {
+        logger.warn('No staged orders to process.');
+        return;
+      }
+
+      // 1. Load Schemas and Mapping from SysConfig
       const webOrdMHeaders = allConfig['schema.data.WebOrdM'].headers.split(',');
       const webOrdItemsMHeaders = allConfig['schema.data.WebOrdItemsM'].headers.split(',');
       const stagingToMasterMap = allConfig['map.staging_to_master.web_orders'];
 
       if (!stagingToMasterMap) {
-        throw new Error('Configuration for \'map.staging_to_master.web_orders\' not found in SysConfig.');
+        throw new Error("Configuration for 'map.staging_to_master.web_orders' not found.");
       }
 
-      // 2. Find the staging header for the Order ID from the explicit map
-      let orderIdStagingHeader;
-      for (const key in stagingToMasterMap) {
-        if (stagingToMasterMap[key] === 'wom_OrderId') {
-          orderIdStagingHeader = key;
-          break;
+      // 2. Transform staged orders (wos_ keys) to master orders (wom_ keys)
+      const masterOrders = ordersWithLineItems.map(stagedOrder => {
+        const masterOrder = { lineItems: stagedOrder.lineItems }; // Preserve line items
+        for (const sKey in stagingToMasterMap) {
+          if (stagedOrder.hasOwnProperty(sKey)) {
+            const mKey = stagingToMasterMap[sKey];
+            let value = stagedOrder[sKey];
+
+            // Force string format for date to prevent auto-formatting
+            if (mKey === 'wom_OrderDate' && value) {
+              value = "'" + value;
+            }
+
+            masterOrder[mKey] = value;
+          }
         }
-      }
-      if (!orderIdStagingHeader) {
-        throw new Error('Could not find staging header for \'wom_OrderId\' in the SysConfig map.');
-      }
-      logger.info(functionName, `Identified Order ID staging header as: ${orderIdStagingHeader}`);
+        return masterOrder;
+      });
 
-      // 3. Create Header-to-Index Maps for both sheets from their live headers
-      const stagingSheetHeaders = stagingSheet.getRange(1, 1, 1, stagingSheet.getLastColumn()).getValues()[0];
-      const stagingHeaderMap = Object.fromEntries(stagingSheetHeaders.map((h, i) => [h, i]));
-      
+      if (masterOrders.length > 0) {
+        // No longer logging transformed keys, as it's not needed for production
+      }
+
+      // 3. Prepare for Upsert
+      const masterOrderIdHeader = allConfig['order.master_order_id_header'].header;
+      const masterStatusHeader = allConfig['order.master_status_header'].header;
+
+      const MUTABLE_STATUSES = allConfig['order.mutable_statuses'].statuses.split(',');
+      const STATUS_ONLY_UPDATE_STATUSES = allConfig['order.status_only_update_statuses'].statuses.split(',');
+
       const masterOrderRange = masterOrderSheet.getDataRange();
       const masterOrderData = masterOrderRange.getValues();
       const masterHeaderMap = Object.fromEntries(masterOrderData[0].map((h, i) => [h, i]));
 
-      // 4. Prepare for Upsert
-      const stagingData = stagingSheet.getDataRange().getValues();
-      stagingData.shift(); // Remove header row
-      logger.info(functionName, `Found ${stagingData.length} rows in the staging sheet.`);
-
-      const orderIdCol = masterHeaderMap['wom_OrderId'];
+      const orderIdCol = masterHeaderMap[masterOrderIdHeader];
+      const statusCol = masterHeaderMap[masterStatusHeader];
       const masterOrderMap = new Map();
       masterOrderData.slice(1).forEach((row, index) => {
-        masterOrderMap.set(String(row[orderIdCol]), index + 1); // Map ID to 1-based row index
+        const orderId = row[orderIdCol];
+        if (orderId) {
+          masterOrderMap.set(String(orderId), { rowIndex: index + 2, status: String(row[statusCol]).toLowerCase() });
+        }
       });
-      logger.info(functionName, `Found ${masterOrderMap.size} existing orders in the master sheet.`);
-      logger.info(functionName, `Master Order ID Map created. Sample IDs: ${Array.from(masterOrderMap.keys()).slice(0, 5).join(', ')}`);
 
       const newOrders = [];
+      const ordersToFullUpdate = [];
+      const ordersToStatusOnlyUpdate = [];
       const newOrderLogs = [];
       const allNewOrderItems = [];
-      let updatedOrderCount = 0;
       let itemMasterIdCounter = masterItemSheet.getLastRow();
 
-      // 5. Clear existing line items for all orders in the current import batch
-      const orderIdStagingCol = stagingHeaderMap[orderIdStagingHeader];
-      const stagingOrderIds = new Set(stagingData.map(row => String(row[orderIdStagingCol])).filter(id => id));
-      
-      const masterItemsRange = masterItemSheet.getDataRange();
-      const masterItemsData = masterItemsRange.getValues();
-      const masterItemsHeader = masterItemsData.shift() || [];
-      const woiOrderIdCol = masterItemsHeader.indexOf('woi_OrderId');
-      
-      const itemsToKeep = woiOrderIdCol === -1 ? masterItemsData : masterItemsData.filter(row => !stagingOrderIds.has(String(row[woiOrderIdCol])));
-      if (masterItemSheet.getLastRow() > 1) {
-        masterItemSheet.getRange(2, 1, masterItemSheet.getLastRow() - 1, masterItemSheet.getLastColumn()).clearContent();
-      }
-      if (itemsToKeep.length > 0) {
-        masterItemSheet.getRange(2, 1, itemsToKeep.length, itemsToKeep[0].length).setValues(itemsToKeep);
-      }
-      itemMasterIdCounter = masterItemSheet.getLastRow(); // Recalculate after clearing
-
-      logger.info(functionName, 'Starting to process staged orders...');
-      for (const row of stagingData) {
-        const orderId = row[orderIdStagingCol];
-        const foundInMaster = masterOrderMap.has(String(orderId));
-        logger.info(functionName, `Processing Staging Row. Order ID found: '${orderId}' (Type: ${typeof orderId}). Found in master map: ${foundInMaster}.`);
-
-        if (!orderId) continue;
-
-        // 6. Process Line Items using case-insensitive header search
-        for (let i = 1; i <= 24; i++) {
-            const skuHeader = Object.keys(stagingHeaderMap).find(h => h.toLowerCase() === `wos_product_item_${i}_sku`);
-            const qtyHeader = Object.keys(stagingHeaderMap).find(h => h.toLowerCase() === `wos_product_item_${i}_quantity`);
-            if (!skuHeader || !qtyHeader) continue;
-
-            const sku = row[stagingHeaderMap[skuHeader]];
-            const quantity = Number(row[stagingHeaderMap[qtyHeader]]);
-            
-            if (sku && quantity > 0) {
-              const totalHeader = Object.keys(stagingHeaderMap).find(h => h.toLowerCase() === `wos_product_item_${i}_total`);
-              const nameHeader = Object.keys(stagingHeaderMap).find(h => h.toLowerCase() === `wos_product_item_${i}_name`);
-              const total = row[stagingHeaderMap[totalHeader]];
-              const name = row[stagingHeaderMap[nameHeader]];
-              const webIdEn = productService.getProductWebIdBySku(sku) || '';
-
-              const newItemData = {
-                woi_OrderItemId: ++itemMasterIdCounter,
-                woi_OrderId: orderId,
-                woi_WebIdEn: webIdEn,
-                woi_SKU: sku,
-                woi_Name: name,
-                woi_Quantity: quantity,
-                woi_ItemTotal: total
-              };
-              const itemRow = webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : '');
-              allNewOrderItems.push(itemRow);
-            }
+      // 4. Categorize staged orders
+      logger.info(functionName, 'Starting to categorize staged orders...');
+      for (const order of masterOrders) {
+        const orderId = String(order[masterOrderIdHeader]).trim();
+        if (!orderId) {
+          continue;
         }
 
-        // 7. Segregate New vs. Update
-        const masterRowIndex = masterOrderMap.get(String(orderId));
-        if (masterRowIndex) {
-          // UPDATE: Surgically update the master data array in memory using the explicit map
-          const rowToUpdate = masterOrderData[masterRowIndex];
-          for (const sHeader in stagingToMasterMap) {
-            const mHeader = stagingToMasterMap[sHeader];
-            const mIndex = masterHeaderMap[mHeader];
-            const sIndex = stagingHeaderMap[sHeader];
-            if (mIndex !== undefined && sIndex !== undefined) {
-                rowToUpdate[mIndex] = row[sIndex];
-            }
-          }
-          updatedOrderCount++;
+        const masterOrderEntry = masterOrderMap.get(orderId);
+        const foundInMaster = masterOrderEntry !== undefined;
+        const currentMasterStatus = foundInMaster ? masterOrderEntry.status : '';
+        const stagedStatus = (order[masterStatusHeader] || '').toLowerCase();
+
+        if (!foundInMaster) {
+          const orderRow = webOrdMHeaders.map(header => order[header] || '');
+          newOrders.push({ data: order, masterRow: orderRow, orderId: orderId, lineItems: order.lineItems });
+          newOrderLogs.push([orderId, order['wom_OrderDate'], 'Pending', null, 'Pending', null]);
+        } else if (currentMasterStatus === stagedStatus) {
+            // Skipping order as status has not changed
+        } else if (MUTABLE_STATUSES.includes(currentMasterStatus)) {
+          ordersToFullUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId, lineItems: order.lineItems });
+        } else if (STATUS_ONLY_UPDATE_STATUSES.includes(stagedStatus)){
+          ordersToStatusOnlyUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId });
         } else {
-          // NEW ORDER: Build the row using the explicit map
-          const newOrderData = {};
-          for (const sHeader in stagingToMasterMap) {
-            const mHeader = stagingToMasterMap[sHeader];
-            const sIndex = stagingHeaderMap[sHeader];
-            if (sIndex !== undefined) {
-                newOrderData[mHeader] = row[sIndex];
-            }
-          }
-          const orderRow = webOrdMHeaders.map(header => newOrderData[header] || '');
-          newOrders.push(orderRow);
-          newOrderLogs.push([orderId, 'Pending', null, 'Pending', null]);
+          // Log unhandled status combinations for debugging if needed
         }
       }
 
-      logger.info(functionName, `Found ${newOrders.length} new orders to add.`);
-      logger.info(functionName, `Found ${updatedOrderCount} orders to update.`);
-      logger.info(functionName, `Found ${allNewOrderItems.length} new order items to add.`);
-      logger.info(functionName, `Found ${newOrderLogs.length} new order logs to add.`);
-
-      // 8. Perform Batch Writes
-      if (updatedOrderCount > 0) {
-        masterOrderRange.setValues(masterOrderData);
-        logger.info(`Updated ${updatedOrderCount} orders in WebOrdM.`);
+      // 5. Clear existing line items for orders that are new or fully mutable
+      const orderIdsToClearItems = new Set();
+      newOrders.forEach(o => orderIdsToClearItems.add(o.orderId));
+      ordersToFullUpdate.forEach(o => orderIdsToClearItems.add(o.orderId));
+      
+      if (orderIdsToClearItems.size > 0) {
+        const masterItemsRange = masterItemSheet.getDataRange();
+        const masterItemsData = masterItemsRange.getValues();
+        const masterItemsHeader = masterItemsData.shift() || [];
+        const woiOrderIdCol = masterItemsHeader.indexOf('woi_OrderId');
+        
+        const itemsToKeep = woiOrderIdCol === -1 ? masterItemsData : masterItemsData.filter(row => !orderIdsToClearItems.has(String(row[woiOrderIdCol]).trim()));
+        
+        if (masterItemSheet.getLastRow() > 1) {
+          masterItemSheet.getRange(2, 1, masterItemSheet.getLastRow() - 1, masterItemSheet.getMaxColumns()).clearContent();
+        }
+        if (itemsToKeep.length > 0) {
+          masterItemSheet.getRange(2, 1, itemsToKeep.length, itemsToKeep[0].length).setValues(itemsToKeep);
+        }
+        itemMasterIdCounter = masterItemSheet.getLastRow();
       }
+
+      // 6. Process line items for new and fully mutable orders
+      const processLineItems = (order) => {
+        if (!order.lineItems) return;
+        for (const item of order.lineItems) {
+          const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
+          const newItemData = {
+            woi_OrderItemId: ++itemMasterIdCounter,
+            woi_OrderId: order.orderId,
+            woi_WebIdEn: webIdEn,
+            woi_SKU: item.SKU,
+            woi_Name: item.Name,
+            woi_Quantity: item.Quantity,
+            woi_ItemTotal: item.Total
+          };
+          allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
+        }
+      };
+
+      newOrders.forEach(processLineItems);
+      ordersToFullUpdate.forEach(processLineItems);
+
+      // 7. Perform Batch Writes
+      const statusOnlyLogUpdates = [];
+      if (ordersToFullUpdate.length > 0) {
+          const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() -1, masterOrderSheet.getMaxColumns());
+          const values = range.getValues();
+          ordersToFullUpdate.forEach(order => {
+              const rowIndex = order.masterRowIndex - 2;
+              webOrdMHeaders.forEach((mHeader, mIndex) => {
+                  if (order.data[mHeader] !== undefined) {
+                      values[rowIndex][mIndex] = order.data[mHeader];
+                  }
+              });
+          });
+          range.setValues(values);
+          logger.info(`Batch updated ${ordersToFullUpdate.length} full-update orders in WebOrdM.`);
+      }
+      if (ordersToStatusOnlyUpdate.length > 0) {
+          const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() -1, masterOrderSheet.getMaxColumns());
+          const values = range.getValues();
+           ordersToStatusOnlyUpdate.forEach(order => {
+              const rowIndex = order.masterRowIndex - 2;
+              const newStatus = order.data[masterStatusHeader];
+              const statusColIdx = masterHeaderMap[masterStatusHeader];
+              if (statusColIdx !== undefined && newStatus !== undefined) {
+                  values[rowIndex][statusColIdx] = newStatus;
+              }
+              statusOnlyLogUpdates.push([order.orderId, order.data['wom_OrderDate'], newStatus, null, newStatus, null]);
+          });
+          range.setValues(values);
+          logger.info(`Batch updated ${ordersToStatusOnlyUpdate.length} status-only orders in WebOrdM.`);
+      }
+
       if (newOrders.length > 0) {
-        masterOrderSheet.getRange(masterOrderSheet.getLastRow() + 1, 1, newOrders.length, newOrders[0].length).setValues(newOrders);
+        const newOrderRows = newOrders.map(order => order.masterRow);
+        masterOrderSheet.getRange(masterOrderSheet.getLastRow() + 1, 1, newOrderRows.length, newOrderRows[0].length).setValues(newOrderRows);
         logger.info(`Added ${newOrders.length} new orders to WebOrdM.`);
       }
+
       if (allNewOrderItems.length > 0) {
         masterItemSheet.getRange(masterItemSheet.getLastRow() + 1, 1, allNewOrderItems.length, allNewOrderItems[0].length).setValues(allNewOrderItems);
-        logger.info(`Added ${allNewOrderItems.length} new order items to WebOrdItemsM.`);
+        logger.info(`Added ${allNewOrderItems.length} items to WebOrdItemsM.`);
       }
-      if (newOrderLogs.length > 0) {
-        logSheet.getRange(logSheet.getLastRow() + 1, 1, newOrderLogs.length, newOrderLogs[0].length).setValues(newOrderLogs);
-        logger.info(`Added ${newOrderLogs.length} new order logs to SysOrdLog.`);
+
+      const logsToAdd = [...newOrderLogs, ...statusOnlyLogUpdates];
+      if (logsToAdd.length > 0) {
+        logSheet.getRange(logSheet.getLastRow() + 1, 1, logsToAdd.length, logsToAdd[0].length).setValues(logsToAdd);
+        logger.info(`Added ${logsToAdd.length} logs to SysOrdLog.`);
       }
 
       logger.info(`${functionName} completed successfully.`);
 
     } catch (e) {
       logger.error(`Error in ${functionName}: ${e.message}`, e);
-      throw e; // Re-throw to be caught by processJob
+      throw e;
     }
   };
 }

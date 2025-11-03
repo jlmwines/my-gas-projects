@@ -97,10 +97,103 @@ const WebAdapter = (function() {
     return translationObjects;
   }
 
+  function processOrderCsv(csvContent, orderMapName, lineItemSchemaName) {
+    LoggerService.info('WebAdapter', 'processOrderCsv', `Starting order CSV processing using order map: ${orderMapName} and line item schema: ${lineItemSchemaName}`);
+
+    const orderColumnMap = ConfigService.getConfig(orderMapName);
+    if (!orderColumnMap) {
+        throw new Error(`Web order column map '${orderMapName}' not found in configuration.`);
+    }
+
+    const lineItemSchema = ConfigService.getConfig(lineItemSchemaName);
+    if (!lineItemSchema) {
+        throw new Error(`Line item schema '${lineItemSchemaName}' not found in configuration.`);
+    }
+
+    const parsedData = Utilities.parseCsv(csvContent);
+    if (parsedData.length < 2) {
+      LoggerService.warn('WebAdapter', 'processOrderCsv', 'File is empty or contains only a header.');
+      return [];
+    }
+    
+    const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase());
+    const orderObjects = [];
+
+    const lineItemPrefix = lineItemSchema.line_item_prefix;
+    const maxLineItems = parseInt(lineItemSchema.max_line_items, 10);
+
+    for (let i = 1; i < parsedData.length; i++) {
+      const row = parsedData[i];
+      if (row.join('').trim() === '') continue;
+
+      // Step 1: Build the full order object with all flat properties from the CSV
+      const order = {};
+      Object.keys(orderColumnMap).forEach(csvHeader => {
+        const internalFieldName = orderColumnMap[csvHeader];
+        const columnIndex = headerRow.indexOf(csvHeader.toLowerCase());
+        
+        if (columnIndex !== -1) {
+          order[internalFieldName] = row[columnIndex];
+        }
+      });
+
+      // Step 2: Parse line items using the configuration-driven schema
+      order.lineItems = [];
+      const productItemFields = lineItemSchema.product_item_fields.split(',');
+
+      for (let j = 1; j <= maxLineItems; j++) {
+        const propName = `${lineItemPrefix}${j}`;
+        
+        if (order.hasOwnProperty(propName) && order[propName]) {
+          const lineItemString = order[propName];
+          const lineItemData = {};
+          
+          const attributes = lineItemString.split('|');
+          attributes.forEach(attr => {
+            const firstColon = attr.indexOf(':');
+            if (firstColon > -1) {
+              const key = attr.substring(0, firstColon).trim().toLowerCase();
+              const value = attr.substring(firstColon + 1).trim();
+              lineItemData[key] = value;
+            }
+          });
+
+          // Use the schema from SysConfig to build the line item object
+          const lineItem = {};
+          let hasRequiredFields = true;
+          productItemFields.forEach(field => {
+            const fieldKey = field.trim().toLowerCase();
+            if (lineItemData.hasOwnProperty(fieldKey)) {
+              lineItem[field] = lineItemData[fieldKey];
+            } else {
+              // SKU and Quantity are essential
+              if (field === 'SKU' || field === 'Quantity') {
+                hasRequiredFields = false;
+              }
+            }
+          });
+
+          // Basic validation to ensure it's a real item
+          if (hasRequiredFields && lineItem[productItemFields[2]] && lineItem[productItemFields[3]]) {
+            order.lineItems.push(lineItem);
+          }
+        } else {
+          // Stop if a line item property is missing, assuming no more items.
+          break;
+        }
+      }
+      orderObjects.push(order);
+    }
+
+    LoggerService.info('WebAdapter', 'processOrderCsv', `Successfully processed ${orderObjects.length} orders.`);
+    return orderObjects;
+  }
+
   // Public interface for the adapter
   return {
     processProductCsv: processProductCsv,
-    processTranslationCsv: processTranslationCsv
+    processTranslationCsv: processTranslationCsv,
+    processOrderCsv: processOrderCsv
   };
 
 })();

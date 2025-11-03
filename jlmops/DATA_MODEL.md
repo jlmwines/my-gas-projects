@@ -299,14 +299,8 @@ This set of sheets manages the entire workflow from when an order is imported un
 *   **Prefix:** `woia_`
 *   **Columns:** Identical to `WebOrdItemsM`, but using the `woia_` prefix (e.g., `woia_OrderItemId`, `woia_OrderId`, etc.).
 
-### 4. `SysOrdLog` (System Order Log)
-*   **Purpose:** Tracks the workflow status of each order.
-*   **Columns:**
-    *   `sol_OrderId`: **Primary Key.** Links to `WebOrdM`.
-    *   `sol_PackingStatus`: e.g., 'Pending', 'Printed'.
-    *   `sol_PackingPrintedTimestamp`
-    *   `sol_ComaxExportStatus`: e.g., 'Pending', 'Exported'.
-    *   `sol_ComaxExportTimestamp`
+*   **`SysOrdLog`**: System Order Log. Tracks the status of orders as they move through the packing and export workflows.
+    *   **Headers**: `sol_OrderId`, `sol_OrderDate`, `sol_PackingStatus`, `sol_PackingPrintedTimestamp`, `sol_ComaxExportStatus`, `sol_ComaxExportTimestamp`
 
 ### 5. `SysPackingCache` (System Packing Cache)
 *   **Purpose:** A pre-processed sheet containing all the rich, combined data needed to print packing slips quickly. This sheet is populated by an automated background process.

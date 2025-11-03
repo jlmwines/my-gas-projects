@@ -200,11 +200,12 @@ function createSysOrdLogHeaders() {
         console.log(`Running ${functionName}...`);
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-        const sheetName = 'SysOrdLog';
-        let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
             sheet = spreadsheet.insertSheet(sheetName);
             console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        } else {
+            sheet.clear();
+            console.log(`Cleared existing content from '${sheetName}'.`);
         }
 
         const allConfig = ConfigService.getAllConfig();

@@ -76,7 +76,6 @@ const ConfigService = (function() {
       }
 
       parsedConfig[settingName][propKey] = propValue;
-      Logger.log(`ConfigService: Loading setting: ${settingName}, Key: ${propKey}, Value: ${propValue}`);
     });
 
     // 2. Perform Fail-Fast Schema Version Check

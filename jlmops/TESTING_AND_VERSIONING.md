@@ -30,3 +30,9 @@ This separation ensures that any new feature can be thoroughly tested end-to-end
 ## 3. Testing Strategy
 *   **Unit Testing:** For pure, data-transformation functions (e.g., a function that calculates a price based on rules), developers will be required to create a corresponding test function in a dedicated `Tests.gs` file. These tests will use sample data and `console.assert()` to verify the logic and will be run manually before submitting a pull request.
 *   **Integration Testing:** The primary method of testing will be integration testing within the Staging Environment. Before a feature is considered "complete," the developer must deploy it to the staging project and test the full user workflow to ensure it integrates correctly with the rest of the system.
+*   **User-Led Testing Workflow:** All testing is performed by the user. The user will:
+    1. Upload the code.
+    2. Execute the orchestration function to trigger scheduled tasks.
+    3. Prepare the test data.
+    4. Evaluate the results.
+    5. After each test, either provide the problem and execution log details, or confirm the test is passed.

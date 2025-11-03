@@ -10,9 +10,8 @@ const ProductService = (function() {
   // =================================================================================
 
   function _populateStagingSheet(productsOrData, sheetName) {
-    LoggerService.info('ProductService', '_populateStagingSheet', `Attempting to populate sheet: ${sheetName} with ${productsOrData.length} items.`);
-    
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
         throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
@@ -67,7 +66,8 @@ const ProductService = (function() {
   }
 
   function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
       // This is a critical error if the sheet is expected to exist
@@ -86,8 +86,11 @@ const ProductService = (function() {
     
     const dataMap = new Map();
     // This key detection is still used by other functions, so we leave it for now.
-    const keyHeader = keyColumnName || headers.find(h => h.endsWith('_ID') || h.includes('_Id') || h.endsWith('_SKU'));
-    
+    const keyHeader = ConfigService.getConfig(`schema.data.${sheetName}`).key_column;
+
+    // DEBUGGING: Log headers and key to diagnose mismatch
+    LoggerService.info('ProductService', '_getSheetDataAsMap', `DEBUG for sheet ${sheetName}: keyHeader = '${keyHeader}', headers = ${JSON.stringify(headers)}`);
+
     const keyIndex = headers.indexOf(keyHeader);
     if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName}`);
 
@@ -545,7 +548,7 @@ const ProductService = (function() {
 
         const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.web.translation_columns');
 
-        _populateStagingSheet(translationObjects, 'WebXltS');
+        _populateStagingSheet(translationObjects, sheetNames.WebXltS);
         LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', 'Successfully populated WebXltS staging sheet.');
 
     } catch (e) {
@@ -568,7 +571,8 @@ const ProductService = (function() {
   function _upsertWebXltData() {
     LoggerService.info('ProductService', '_upsertWebXltData', 'Starting WebXltS to WebXltM full replacement process.');
 
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const webXltMSheet = dataSpreadsheet.getSheetByName('WebXltM');
     const webXltSSheet = dataSpreadsheet.getSheetByName('WebXltS');
 
@@ -620,7 +624,7 @@ const ProductService = (function() {
 
         const comaxData = ComaxAdapter.processProductCsv(fileBlob);
 
-        _populateStagingSheet(comaxData, 'CmxProdS');
+        _populateStagingSheet(comaxData, sheetNames.CmxProdS);
         LoggerService.info('ProductService', '_runComaxImport', 'Successfully populated CmxProdS staging sheet.');
         
         if (!_runStagingValidation('comax_staging')) {
@@ -681,8 +685,8 @@ const ProductService = (function() {
         return masterHeaders.map(header => rowObject[header] || '');
     });
 
-    // Write back to the master sheet
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
     
     // More robustly clear the sheet and rewrite headers + data
@@ -716,7 +720,7 @@ const ProductService = (function() {
 
         const productObjects = WebAdapter.processProductCsv(csvContent, 'map.web.product_columns');
 
-        _populateStagingSheet(productObjects, 'WebProdS_EN');
+        _populateStagingSheet(productObjects, sheetNames.WebProdS_EN);
         LoggerService.info('ProductService', '_runWebProductsImport', 'Successfully populated WebProdS_EN staging sheet.');
         
         if (!_runStagingValidation('web_staging')) {
@@ -752,7 +756,8 @@ const ProductService = (function() {
     const masterData = _getSheetDataAsMap('WebProdM', masterHeaders);
     const masterMap = masterData.map;
 
-    const stagingKeyIndex = stagingHeaders.indexOf('wps_ID');
+    const stagingKey = ConfigService.getConfig('schema.data.WebProdS_EN').key_column;
+    const stagingKeyIndex = stagingHeaders.indexOf(stagingKey);
 
     let updatedCount = 0;
     stagingData.values.forEach(stagingRow => {
@@ -763,10 +768,13 @@ const ProductService = (function() {
             const stagingRowObject = {};
             stagingHeaders.forEach((h, i) => { stagingRowObject[h] = stagingRow[i]; });
 
-            // Update specific, non-descriptive fields
-            masterRow.wpm_Stock = stagingRowObject['wps_Stock'];
-            masterRow.wpm_Price = stagingRowObject['wps_RegularPrice'];
-            masterRow.wpm_PublishStatusEn = stagingRowObject['wps_Published'];
+            const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
+            for (const sKey in stagingToMasterMap) {
+              if (stagingRowObject.hasOwnProperty(sKey)) {
+                const mKey = stagingToMasterMap[sKey];
+                masterRow[mKey] = stagingRowObject[sKey];
+              }
+            }
 
             masterMap.set(key, masterRow); // Put the updated row back in the map
             updatedCount++;
@@ -823,8 +831,10 @@ const ProductService = (function() {
   function getProductWebIdBySku(sku) {
     const functionName = 'getProductWebIdBySku';
     try {
-      const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-      const sheet = spreadsheet.getSheetByName('WebProdM');
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const sheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!sheet) {
         throw new Error('WebProdM sheet not found');
       }

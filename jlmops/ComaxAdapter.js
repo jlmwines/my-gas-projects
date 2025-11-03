@@ -62,9 +62,7 @@ const ComaxAdapter = (function() {
     }
 
     console.log(`ComaxAdapter: Successfully processed ${productObjects.length} products.`);
-    if (productObjects.length > 0) {
-      console.log(`ComaxAdapter: First processed product object: ${JSON.stringify(productObjects[0])}`);
-    }
+
     return productObjects;
   }
 

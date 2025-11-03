@@ -6,7 +6,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Phase 4.4: Implement Core Order Workflows**
 
-*   **Next Step:** Begin implementing the core business logic for order processing, starting with On-Hold Inventory Calculation.
+*   **Next Step:** Begin implementing the post-upsert processes, starting with On-Hold Inventory Calculation and Comax Order Export.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -52,10 +52,10 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
 
-*   **Phase 4.1: Foundational Utilities for Parallel Operation (COMPLETED)**
+*   **Phase 4.1: Foundational Utilities for Parallel Operation (IN PROGRESS)**
     *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
     *   **Tasks:**
-        1.  **Refactored Setup Script (COMPLETED):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
+        1.  **Refactored Setup Script (IN PROGRESS):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
         2.  **Create Safe Header Update Function (COMPLETED):** Implemented a new `updateSheetHeaders` function in `SetupSheets.js` that only modifies the header row of a sheet, ensuring that it can be run safely on sheets containing data.
         3.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
         4.  **Build Generic Master Data Sync Utility (PLANNED):** Implement a generic `syncLegacyMasterData(dataType)` function in `migration.js`. This tool will be driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from any legacy master sheet to its `jlmops` counterpart.
@@ -63,15 +63,26 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 *   **Phase 4.4: Implement Core Order Workflows (IN PROGRESS)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
     *   **Tasks:**
-        1.  **On-Hold Inventory Calculation (COMPLETED):** Implement the logic in `InventoryManagementService.js`.
-        2.  **Comax Order Export:** Implement the export generation logic in `OrderService.js`.
-        3.  **Packing Slip Data Preparation:** Implement the `preparePackingData` function in `OrderService.js`.
+        1.  **On-Hold Inventory Calculation (PLANNED):** Implement the logic in `InventoryManagementService.js`.
+        2.  **Optimize Order Upsert (COMPLETED):** Implemented faster order handling in `OrderService.js` by categorizing orders and performing targeted updates.
+        3.  **Refactor WebAdapter for Configuration-Driven Line Item Parsing (COMPLETED):**
+            *   **Action:** Enhanced `SysConfig` with new entries to define WooCommerce line item column patterns (e.g., prefixes, suffixes, max items).
+            *   **Action:** Modified `WebAdapter` to use these `SysConfig` mappings to parse raw WooCommerce order data, extracting and structuring line items into a nested format.
+            *   **Action:** Updated `OrderService.processStagedOrders` to consume this pre-processed, structured data from `WebAdapter`, removing its direct parsing of line item columns.
+        4.  **Comax Order Export (PLANNED):** Implement the export generation logic in `OrderService.js`.
+        5.  **Packing Slip Data Preparation (PLANNED):** Implement the `preparePackingData` function in `OrderService.js`.
+
+*   **Phase 4.5: Testing and Validation (COMPLETED)**
+    *   **Goal:** To test and validate the implementation of the new services and configurations.
+    *   **Tasks:**
+        1.  **Web Order Import and Upsert (COMPLETED):** Testing the implementation of `WebAdapter.js` and `OrderService.js`.
+        2.  **Configuration Management (COMPLETED):** Testing the recent changes to `SetupConfig.js`.
 
 *   **Phase 4.2: Business Logic Validation Framework (PLANNED)**
     *   **Goal:** Create a service dedicated to validating the outputs of `jlmops` business logic against the legacy system.
     *   **Tasks:**
         1.  **Implement `ValidationService.js`:** Create the new service file.
-        2.  **Implement Initial Validation Tools:** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`. 
+        2.  **Implement Initial Validation Tools:** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`.  
 
 ## Phase 5: Output Generation & Notification (PLANNED)
 

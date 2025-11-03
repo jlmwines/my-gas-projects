@@ -15,45 +15,57 @@ const OLD_SYSTEM_CONFIG = {
 /**
  * Main function to orchestrate the data migration.
  */
-function migrateData() {
-    console.log("Starting data migration...");
-
+function migrateSysOrdLog() {
+    const functionName = 'migrateSysOrdLog';
     try {
+        console.log(`Running ${functionName}...`);
+
         const oldSpreadsheet = SpreadsheetApp.openById(OLD_SYSTEM_CONFIG.referenceFileId);
+        const oldSheet = oldSpreadsheet.getSheetByName('OrderLog'); // Assuming the old sheet is named 'OrderLog'
+        if (!oldSheet) {
+            throw new Error('Sheet \'OrderLog\' not found in the old spreadsheet.');
+        }
+
         const newSpreadsheetId = PropertiesService.getScriptProperties().getProperty("spreadsheetId");
         if (!newSpreadsheetId) {
             throw new Error("New spreadsheet ID not found in script properties.");
         }
         const newSpreadsheet = SpreadsheetApp.openById(newSpreadsheetId);
-
-        for (const oldSheetName in OLD_SYSTEM_CONFIG.sheetMappings) {
-            const newSheetName = OLD_SYSTEM_CONFIG.sheetMappings[oldSheetName];
-            console.log(`Migrating data from '${oldSheetName}' to '${newSheetName}'...`);
-
-            const oldSheet = oldSpreadsheet.getSheetByName(oldSheetName);
-            if (!oldSheet) {
-                console.warn(`Sheet '${oldSheetName}' not found in the old spreadsheet. Skipping.`);
-                continue;
-            }
-
-            const newData = oldSheet.getDataRange().getValues();
-
-            const newSheet = newSpreadsheet.getSheetByName(newSheetName);
-            if (!newSheet) {
-                console.warn(`Sheet '${newSheetName}' not found in the new spreadsheet. Skipping.`);
-                continue;
-            }
-
-            newSheet.clearContents();
-            newSheet.getRange(1, 1, newData.length, newData[0].length).setValues(newData);
-
-            console.log(`Successfully migrated ${newData.length} rows to '${newSheetName}'.`);
+        const newSheet = newSpreadsheet.getSheetByName('SysOrdLog');
+        if (!newSheet) {
+            throw new Error('Sheet \'SysOrdLog\' not found in the new spreadsheet.');
         }
 
-        console.log("Data migration completed successfully.");
+        const oldData = oldSheet.getDataRange().getValues();
+        const oldHeaders = oldData.shift(); // Remove headers
 
-    } catch (e) {
-        console.error(`Data migration failed: ${e.message}`);
-        throw e;
+        const orderIdIndex = oldHeaders.indexOf('order_id');
+        const orderDateIndex = oldHeaders.indexOf('order_date');
+        const packingStatusIndex = oldHeaders.indexOf('packing_slip_status');
+        const packingPrintDateIndex = oldHeaders.indexOf('packing_print_date');
+        const comaxExportStatusIndex = oldHeaders.indexOf('comax_export_status');
+
+        const newData = oldData.map(row => {
+            const legacyComaxExportValue = row[comaxExportStatusIndex];
+            const solComaxExportStatus = legacyComaxExportValue ? 'Exported' : 'Pending';
+            const solComaxExportTimestamp = legacyComaxExportValue || null;
+
+            return [
+                row[orderIdIndex],
+                row[orderDateIndex],
+                row[packingStatusIndex],
+                row[packingPrintDateIndex],
+                solComaxExportStatus,
+                solComaxExportTimestamp
+            ];
+        });
+
+        newSheet.getRange(2, 1, newData.length, newData[0].length).setValues(newData);
+
+        console.log(`Successfully migrated ${newData.length} rows to 'SysOrdLog'.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
     }
 }
