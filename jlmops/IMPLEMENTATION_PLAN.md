@@ -1,12 +1,8 @@
-# Implementation Plan
-
-This document outlines the high-level, phased plan for building the JLM Operations Hub. It is based on the formal design in `ARCHITECTURE.md`.
-
 ## Next Task
 
 **Phase 4.4: Implement Core Order Workflows**
 
-*   **Next Step:** Begin implementing the post-upsert processes, starting with On-Hold Inventory Calculation and Comax Order Export.
+*   **Next Step:** Implement On-Hold Inventory Calculation and Comax Order Export.
 
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
@@ -40,7 +36,7 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Phase 3.1: Product Detail Data Population (COMPLETED)**
     *   **Goal:** Migrate existing product detail data from the old system's reference sheets into the JLMops product master sheets.
-    *   **Action:** Created the `populateInitialProductData()` function in `jlmops/setup.js`.
+    *   **Action:** Created the `populateInitialProductData()` function in `jlmops/SetupMigrate.js`.
     *   **Detail:** This function reads from the legacy `DetailsM`, `WeHe`, and `ComaxM` sheets to populate the `WebProdM`, `WebDetM`, and `WebXltM` sheets.
 
 **Phase 3.2: Order Data Population (COMPLETED)**
@@ -52,44 +48,45 @@ This document outlines the high-level, phased plan for building the JLM Operatio
 
 **Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
 
-*   **Phase 4.1: Foundational Utilities for Parallel Operation (IN PROGRESS)**
+*   **Phase 4.1: Foundational Utilities for Parallel Operation (IMPLEMENTED - NEEDS TESTING)**
     *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
     *   **Tasks:**
-        1.  **Refactored Setup Script (IN PROGRESS):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
-        2.  **Create Safe Header Update Function (COMPLETED):** Implemented a new `updateSheetHeaders` function in `SetupSheets.js` that only modifies the header row of a sheet, ensuring that it can be run safely on sheets containing data.
-        3.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
-        4.  **Build Generic Master Data Sync Utility (PLANNED):** Implement a generic `syncLegacyMasterData(dataType)` function in `migration.js`. This tool will be driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from any legacy master sheet to its `jlmops` counterpart.
+        1.  **Refactored Setup Script (COMPLETED):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
+        2.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
+        3.  **Build Master Data Sync Functions (COMPLETED):** Implemented `syncLegacyMasterData(dataType)` functions in `SetupMigrate.js`. These functions are driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from specific legacy master sheets to their `jlmops` counterparts.
 
 *   **Phase 4.4: Implement Core Order Workflows (IN PROGRESS)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
     *   **Tasks:**
-        1.  **On-Hold Inventory Calculation (PLANNED):** Implement the logic in `InventoryManagementService.js`.
+        1.  **On-Hold Inventory Calculation (IMPLEMENTED - NEEDS TESTING):** Implement the logic in `InventoryManagementService.js`.
         2.  **Optimize Order Upsert (COMPLETED):** Implemented faster order handling in `OrderService.js` by categorizing orders and performing targeted updates.
         3.  **Refactor WebAdapter for Configuration-Driven Line Item Parsing (COMPLETED):**
             *   **Action:** Enhanced `SysConfig` with new entries to define WooCommerce line item column patterns (e.g., prefixes, suffixes, max items).
             *   **Action:** Modified `WebAdapter` to use these `SysConfig` mappings to parse raw WooCommerce order data, extracting and structuring line items into a nested format.
             *   **Action:** Updated `OrderService.processStagedOrders` to consume this pre-processed, structured data from `WebAdapter`, removing its direct parsing of line item columns.
-        4.  **Comax Order Export (PLANNED):** Implement the export generation logic in `OrderService.js`.
-        5.  **Packing Slip Data Preparation (PLANNED):** Implement the `preparePackingData` function in `OrderService.js`.
+        4.  **Comax Order Export (IMPLEMENTED - NEEDS TESTING):** Implement the export generation logic in `OrderService.js`.
+        5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
 
-*   **Phase 4.5: Testing and Validation (COMPLETED)**
+*   **Phase 4.5: Testing and Validation (IN PROGRESS)**
     *   **Goal:** To test and validate the implementation of the new services and configurations.
     *   **Tasks:**
         1.  **Web Order Import and Upsert (COMPLETED):** Testing the implementation of `WebAdapter.js` and `OrderService.js`.
         2.  **Configuration Management (COMPLETED):** Testing the recent changes to `SetupConfig.js`.
+        3.  **Business Logic Validation (IN PROGRESS):** Continued testing of the Business Logic Validation Framework.
+        4.  **Packing Slip Data Preparation (IN PROGRESS):** Continued testing of the Packing Slip Data Preparation.
 
-*   **Phase 4.2: Business Logic Validation Framework (PLANNED)**
+*   **Phase 4.2: Business Logic Validation Framework (IMPLEMENTED - NEEDS TESTING)**
     *   **Goal:** Create a service dedicated to validating the outputs of `jlmops` business logic against the legacy system.
     *   **Tasks:**
-        1.  **Implement `ValidationService.js`:** Create the new service file.
-        2.  **Implement Initial Validation Tools:** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`.  
+        1.  **Implement `ValidationService.js` (IMPLEMENTED - NEEDS TESTING):** Create the new service file.
+        2.  **Implement Initial Validation Tools (IMPLEMENTED - NEEDS TESTING):** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`.
 
-## Phase 5: Output Generation & Notification (PLANNED)
+## Phase 5: Output Generation & Notification (COMPLETED)
 
 **Goal:** To build the services required to format and export data for external systems like WooCommerce.
 
-*   **1. Implement `WooCommerceFormatter` Service:** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **2. Implement `generateWooCommerceUpdateExport()` function:** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
+*   **1. Implement `WooCommerceFormatter` Service (IN PROGRESS):** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
+*   **2. Implement `generateWooCommerceUpdateExport()` function (IN PROGRESS):** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
 *   **3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
 
 ## Phase 6: Bundle Management Engine (PLANNED)

@@ -34,6 +34,59 @@ function mergeOrders() {
     const finalMasterData = [m_headers, ...Array.from(masterMap.values())];
     ordersM_sheet.getRange(1, 1, finalMasterData.length, finalMasterData[0].length).setValues(finalMasterData);
 
+    // --- START: Update On-Hold Inventory ---
+    try {
+        Logger.log("Starting On-Hold Inventory update...");
+
+        const updatedOrdersM_data = ordersM_sheet.getDataRange().getValues();
+        const updated_m_headers = updatedOrdersM_data.shift();
+        const m_statusCol_idx = updated_m_headers.indexOf('status');
+        
+        const onHoldOrders = updatedOrdersM_data.filter(row => row[m_statusCol_idx] === 'on-hold');
+
+        const skuTotals = new Map();
+        const skuQtyCols = [];
+        for (let i = 1; i <= 24; i++) {
+            const skuCol = updated_m_headers.indexOf(`Product Item ${i} SKU`);
+            const qtyCol = updated_m_headers.indexOf(`Product Item ${i} Quantity`);
+            if (skuCol > -1 && qtyCol > -1) {
+                skuQtyCols.push({ sku: skuCol, qty: qtyCol });
+            }
+        }
+
+        onHoldOrders.forEach(order => {
+            skuQtyCols.forEach(cols => {
+                const sku = order[cols.sku];
+                const quantity = parseInt(order[cols.qty], 10);
+                if (sku && !isNaN(quantity) && quantity > 0) {
+                    skuTotals.set(sku, (skuTotals.get(sku) || 0) + quantity);
+                }
+            });
+        });
+
+        const onHoldSheetName = 'OnHoldInventory';
+        let onHoldSheet = referenceSS.getSheetByName(onHoldSheetName);
+        if (!onHoldSheet) {
+            onHoldSheet = referenceSS.insertSheet(onHoldSheetName);
+        }
+        
+        onHoldSheet.clear();
+        const onHoldHeaders = ["product SKU", "on hold quantity"];
+        onHoldSheet.getRange(1, 1, 1, onHoldHeaders.length).setValues([onHoldHeaders]).setFontWeight('bold');
+
+        if (skuTotals.size > 0) {
+            const outputData = Array.from(skuTotals, ([sku, qty]) => [sku, qty]);
+            onHoldSheet.getRange(2, 1, outputData.length, outputData[0].length).setValues(outputData);
+            Logger.log(`On-Hold Inventory updated with ${outputData.length} SKUs.`);
+        } else {
+            Logger.log("No on-hold inventory found.");
+        }
+
+    } catch (e) {
+        Logger.log(`ERROR during On-Hold Inventory update: ${e.message}`);
+    }
+    // --- END: Update On-Hold Inventory ---
+
     // --- Update OrderLog with new orders ---
     const orderLog_data = orderLog_sheet.getDataRange().getValues();
     const log_headers = orderLog_data.shift();

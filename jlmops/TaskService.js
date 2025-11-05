@@ -82,8 +82,36 @@ const TaskService = (function() {
     }
   }
 
+  function hasOpenTasks(taskTypeId) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheetName = 'SysTasks';
+
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) {
+        return false;
+      }
+
+      const headers = taskSchema.headers.split(',');
+      const typeIdCol = headers.indexOf('st_TaskTypeId');
+      const statusCol = headers.indexOf('st_Status');
+
+      const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+      return existingRows.some(row => 
+        row[typeIdCol] === taskTypeId &&
+        row[statusCol] !== 'Done' && row[statusCol] !== 'Closed'
+      );
+
+    } catch (e) {
+      LoggerService.error('TaskService', 'hasOpenTasks', `Error checking for open tasks of type ${taskTypeId}: ${e.message}`, e);
+      return false; // Assume no open tasks on error to avoid blocking workflows
+    }
+  }
+
   return {
-    createTask: createTask
+    createTask: createTask,
+    hasOpenTasks: hasOpenTasks
   };
 
 })();

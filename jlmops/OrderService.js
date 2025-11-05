@@ -104,7 +104,7 @@ function OrderService(productService) {
    * @param {string} jobType The type of job to process.
    * @param {number} rowNumber The row number of the job in the queue.
    */
-     this.processJob = function(jobType, rowNumber, productService) {    logger.info(`OrderService processing job '${jobType}' on row ${rowNumber}`);
+  this.processJob = function(jobType, rowNumber, productService) {    logger.info(`OrderService processing job '${jobType}' on row ${rowNumber}`);
     try {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
@@ -191,6 +191,250 @@ function OrderService(productService) {
   };
 
 
+
+  this.exportOrdersToComax = function() {
+    const functionName = 'exportOrdersToComax';
+    logger.info(`Starting ${functionName}...`);
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+      const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+
+      if (!logSheet || !masterItemSheet) {
+        throw new Error("One or more required sheets (SysOrdLog, WebOrdItemsM) not found.");
+      }
+
+      // 1. Find orders to export
+      const logData = logSheet.getDataRange().getValues();
+      const logHeaders = logData.shift();
+      const comaxExportStatusCol = logHeaders.indexOf('sol_ComaxExportStatus');
+      const orderIdCol = logHeaders.indexOf('sol_OrderId');
+
+      const ordersToExport = logData.filter(row => row[comaxExportStatusCol] !== 'Exported');
+      const orderIdsToExport = new Set(ordersToExport.map(row => row[orderIdCol]));
+
+      if (orderIdsToExport.size === 0) {
+        logger.info("No orders to export to Comax.");
+        return;
+      }
+
+      // 2. Aggregate line items
+      const itemData = masterItemSheet.getDataRange().getValues();
+      const itemHeaders = itemData.shift();
+      const itemOrderIdCol = itemHeaders.indexOf('woi_OrderId');
+      const itemSkuCol = itemHeaders.indexOf('woi_SKU');
+      const itemQuantityCol = itemHeaders.indexOf('woi_Quantity');
+
+      const comaxExportData = {}; // { SKU: quantity }
+
+      for (const itemRow of itemData) {
+        const orderId = itemRow[itemOrderIdCol];
+        if (orderIdsToExport.has(orderId)) {
+          const sku = itemRow[itemSkuCol];
+          const quantity = parseFloat(itemRow[itemQuantityCol]);
+          if (!isNaN(quantity)) {
+            comaxExportData[sku] = (comaxExportData[sku] || 0) + quantity;
+          }
+        }
+      }
+
+      // 3. Generate CSV
+      const csvRows = [['SKU', 'Quantity']];
+      for (const sku in comaxExportData) {
+        csvRows.push([sku, comaxExportData[sku]]);
+      }
+      const csvContent = csvRows.map(row => row.join(',')).join('\n');
+
+      // 4. Save CSV to Drive
+      const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+      const fileName = `ComaxExport_${new Date().toISOString().slice(0, 10)}.csv`;
+      const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
+      logger.info(`Comax export file created: ${file.getName()} (ID: ${file.getId()})`);
+
+      // 5. Update SysOrdLog
+      const now = new Date();
+      const comaxExportTimestampCol = logHeaders.indexOf('sol_ComaxExportTimestamp');
+      
+      for (const row of ordersToExport) {
+        const rowIndex = logData.indexOf(row) + 2; // +2 for header and 1-based index
+        logSheet.getRange(rowIndex, comaxExportStatusCol + 1).setValue('Exported');
+        logSheet.getRange(rowIndex, comaxExportTimestampCol + 1).setValue(now);
+      }
+      
+      logger.info(`Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`);
+
+      // Create a task for admin confirmation
+      const taskTitle = 'Confirm Comax Order Export';
+      const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
+      TaskService.createTask('task.confirmation.comax_export', file.getId(), taskTitle, taskNotes);
+
+      logger.info(`${functionName} completed successfully.`);
+
+    } catch (e) {
+      logger.error(`Error in ${functionName}: ${e.message}`, e);
+      throw e;
+    }
+  };
+
+  this.preparePackingData = function() {
+    const functionName = 'preparePackingData';
+    logger.info(`Starting ${functionName}...`);
+
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const sheetNames = allConfig['system.sheet_names'];
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+        const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+        const logArchiveSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM_Archive);
+        const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+        const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+        const detailSheet = spreadsheet.getSheetByName(sheetNames.WebDetM);
+        const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
+
+        if (!logSheet || !masterOrderSheet || !masterItemSheet || !detailSheet || !cacheSheet) {
+            throw new Error('One or more required sheets for packing data preparation are missing.');
+        }
+
+        // 1. Get all printed order IDs from SysOrdLog and WebOrdM_Archive
+        const allPrintedOrderIds = new Set();
+        const logData = logSheet.getDataRange().getValues();
+        const logHeaders = logData.shift();
+        const logOrderIdCol = logHeaders.indexOf('sol_OrderId');
+        const logPrintedDateCol = logHeaders.indexOf('sol_PackingPrintedTimestamp');
+
+        logData.forEach(row => {
+            if (row[logPrintedDateCol] !== null && String(row[logPrintedDateCol]).trim() !== '') {
+                allPrintedOrderIds.add(String(row[logOrderIdCol]));
+            }
+        });
+
+        if (logArchiveSheet && logArchiveSheet.getLastRow() > 1) {
+            const logArchiveData = logArchiveSheet.getDataRange().getValues();
+            const logArchiveHeaders = logArchiveData.shift();
+            const archiveOrderIdCol = logArchiveHeaders.indexOf('woma_OrderId');
+            if (archiveOrderIdCol !== -1) {
+                logArchiveData.forEach(row => {
+                    allPrintedOrderIds.add(String(row[archiveOrderIdCol]));
+                });
+            }
+        }
+        logger.info(`Found ${allPrintedOrderIds.size} printed order IDs.`);
+
+        // 2. Find eligible orders
+        const webOrdMData = masterOrderSheet.getDataRange().getValues();
+        const webOrdMHeaders = webOrdMData.shift();
+        const womOrderIdCol = webOrdMHeaders.indexOf('wom_OrderId');
+        const womStatusCol = webOrdMHeaders.indexOf('wom_Status');
+        logger.info(`Evaluating ${webOrdMData.length} orders from WebOrdM.`);
+
+        const eligibleOrders = webOrdMData.filter(row => {
+            const orderId = String(row[womOrderIdCol]);
+            const status = (row[womStatusCol] || '').toLowerCase().trim();
+            return status === 'on-hold' || (['processing', 'completed'].includes(status) && !allPrintedOrderIds.has(orderId));
+        });
+
+        logger.info(`Found ${eligibleOrders.length} eligible orders.`);
+        if (eligibleOrders.length === 0) {
+            logger.info('No eligible orders to prepare for packing. Exiting.');
+            return;
+        }
+        
+        const eligibleOrderIds = new Set(eligibleOrders.map(row => row[womOrderIdCol]));
+
+        // 3. Get data from other sheets
+        const webOrdItemsMData = masterItemSheet.getDataRange().getValues();
+        const webOrdItemsMHeaders = webOrdItemsMData.shift();
+
+        const webDetMData = detailSheet.getDataRange().getValues();
+        const webDetMHeaders = webDetMData.shift();
+        const webDetMMap = webDetMData.reduce((map, row) => {
+            map.set(row[webDetMHeaders.indexOf('wdm_WebIdEn')], row);
+            return map;
+        }, new Map());
+        logger.info(`webDetMMap keys: ${Array.from(webDetMMap.keys())}`);
+
+        // 4. Prepare cache data
+        const cacheData = [];
+        const cacheHeaders = cacheSheet.getRange(1, 1, 1, cacheSheet.getLastColumn()).getValues()[0];
+
+        // Get WebDetM headers for column indexing
+        const wdmWebIdEnCol = webDetMHeaders.indexOf('wdm_WebIdEn');
+        const wdmNameEnCol = webDetMHeaders.indexOf('wdm_NameEn');
+        const wdmNameHeCol = webDetMHeaders.indexOf('wdm_NameHe');
+        const wdmIntensityCol = webDetMHeaders.indexOf('wdm_Intensity');
+        const wdmComplexityCol = webDetMHeaders.indexOf('wdm_Complexity');
+        const wdmAcidityCol = webDetMHeaders.indexOf('wdm_Acidity');
+        const wdmDecantCol = webDetMHeaders.indexOf('wdm_Decant');
+        const wdmPairHarMildCol = webDetMHeaders.indexOf('wdm_PairHarMild');
+        const wdmPairHarRichCol = webDetMHeaders.indexOf('wdm_PairHarRich');
+        const wdmPairHarIntenseCol = webDetMHeaders.indexOf('wdm_PairHarIntense');
+        const wdmPairHarSweetCol = webDetMHeaders.indexOf('wdm_PairHarSweet');
+        const wdmPairConMildCol = webDetMHeaders.indexOf('wdm_PairConMild');
+        const wdmPairConRichCol = webDetMHeaders.indexOf('wdm_PairConRich');
+        const wdmPairConIntenseCol = webDetMHeaders.indexOf('wdm_PairConIntense');
+        const wdmPairConSweetCol = webDetMHeaders.indexOf('wdm_PairConSweet');
+
+
+        eligibleOrderIds.forEach(orderId => {
+            const orderItems = webOrdItemsMData.filter(item => String(item[webOrdItemsMHeaders.indexOf('woi_OrderId')]) === String(orderId));
+            logger.info(`Found ${orderItems.length} items for order ${orderId}.`);
+            orderItems.forEach(item => {
+                const webIdEn = item[webOrdItemsMHeaders.indexOf('woi_WebIdEn')];
+                logger.info(`Processing item with webIdEn: ${webIdEn}`);
+                const sku = item[webOrdItemsMHeaders.indexOf('woi_SKU')];
+                const quantity = item[webOrdItemsMHeaders.indexOf('woi_Quantity')];
+
+                const productDetails = webDetMMap.get(webIdEn) || []; // Get the full WebDetM row
+
+                const newRow = cacheHeaders.map(header => {
+                    switch (header) {
+                        case 'spc_OrderId': return orderId;
+                        case 'spc_WebIdEn': return webIdEn;
+                        case 'spc_SKU': return sku;
+                        case 'spc_Quantity': return quantity;
+                        case 'spc_NameEn': return productDetails[wdmNameEnCol] || '';
+                        case 'spc_NameHe': return productDetails[wdmNameHeCol] || '';
+                        case 'spc_Intensity': return productDetails[wdmIntensityCol] || '';
+                        case 'spc_Complexity': return productDetails[wdmComplexityCol] || '';
+                        case 'spc_Acidity': return productDetails[wdmAcidityCol] || '';
+                        case 'spc_Decant': return productDetails[wdmDecantCol] || '';
+                        case 'spc_PairHarMild': return productDetails[wdmPairHarMildCol] || '';
+                        case 'spc_PairHarRich': return productDetails[wdmPairHarRichCol] || '';
+                        case 'spc_PairHarIntense': return productDetails[wdmPairHarIntenseCol] || '';
+                        case 'spc_PairHarSweet': return productDetails[wdmPairHarSweetCol] || '';
+                        case 'spc_PairConMild': return productDetails[wdmPairConMildCol] || '';
+                        case 'spc_PairConRich': return productDetails[wdmPairConRichCol] || '';
+                        case 'spc_PairConIntense': return productDetails[wdmPairConIntenseCol] || '';
+                        case 'spc_PairConSweet': return productDetails[wdmPairConSweetCol] || '';
+                        default: return '';
+                    }
+                });
+                cacheData.push(newRow);
+            });
+        });
+        logger.info(`Prepared ${cacheData.length} rows for SysPackingCache.`);
+
+        // 5. Populate cache sheet
+        if (cacheSheet.getLastRow() > 1) {
+            cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getMaxColumns()).clearContent();
+        }
+        if (cacheData.length > 0) {
+            cacheSheet.getRange(2, 1, cacheData.length, cacheData[0].length).setValues(cacheData);
+        }
+
+        logger.info(`Successfully prepared packing data for ${eligibleOrders.length} orders.`);
+
+    } catch (e) {
+        logger.error(`Error in ${functionName}: ${e.message}`, e);
+        throw e;
+    }
+  };
 
   this.processStagedOrders = function(ordersWithLineItems, productService) {
     const functionName = 'processStagedOrders';
@@ -397,4 +641,6 @@ function OrderService(productService) {
       throw e;
     }
   };
-}
+
+
+} // Closing for OrderService

@@ -98,10 +98,13 @@ function InventoryManagementService() {
    */
   this.calculateOnHoldInventory = function() {
     try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      const webOrdMSheet = ss.getSheetByName("WebOrdM");
-      const webOrdItemsMSheet = ss.getSheetByName("WebOrdItemsM");
-      const sysInventoryOnHoldSheet = ss.getSheetByName("SysInventoryOnHold");
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+      const sheetNames = allConfig['system.sheet_names'];
+      const webOrdMSheet = ss.getSheetByName(sheetNames['WebOrdM']);
+      const webOrdItemsMSheet = ss.getSheetByName(sheetNames['WebOrdItemsM']);
+      const sysInventoryOnHoldSheet = ss.getSheetByName(sheetNames['SysInventoryOnHold']);
 
       if (!webOrdMSheet || !webOrdItemsMSheet || !sysInventoryOnHoldSheet) {
         logger.error("One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.");

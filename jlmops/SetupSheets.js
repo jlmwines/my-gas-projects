@@ -200,6 +200,8 @@ function createSysOrdLogHeaders() {
         console.log(`Running ${functionName}...`);
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysOrdLog';
+        let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
             sheet = spreadsheet.insertSheet(sheetName);
             console.log(`Sheet '${sheetName}' was not found and has been created.`);
@@ -232,6 +234,18 @@ function createSysPackingCacheHeaders() {
         console.log(`Running ${functionName}...`);
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysPackingCache';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
         const headers = schema.headers.split(',');
 
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -282,6 +296,18 @@ function createWebDetMHeaders() {
         console.log(`Running ${functionName}...`);
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebDetM';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
         const headers = schema.headers.split(',');
 
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');

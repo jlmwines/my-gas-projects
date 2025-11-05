@@ -4,6 +4,40 @@
  */
 
 const ProductService = (function() {
+  let skuToWebIdMap = null;
+
+  function _buildSkuToWebIdMap() {
+    const functionName = '_buildSkuToWebIdMap';
+    LoggerService.info('ProductService', functionName, 'Building SKU to WebIdEn map...');
+    skuToWebIdMap = new Map();
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const sheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      if (!sheet) {
+        throw new Error('WebProdM sheet not found');
+      }
+      const data = sheet.getDataRange().getValues();
+      const headers = data.shift();
+      const skuCol = headers.indexOf('wpm_SKU');
+      const webIdCol = headers.indexOf('wpm_WebIdEn');
+      if (skuCol === -1 || webIdCol === -1) {
+        throw new Error('Could not find SKU or WebIdEn columns in WebProdM');
+      }
+      data.forEach(row => {
+        const sku = String(row[skuCol]).trim();
+        if (sku) {
+          skuToWebIdMap.set(sku, row[webIdCol]);
+        }
+      });
+      LoggerService.info('ProductService', functionName, `Built SKU map with ${skuToWebIdMap.size} entries.`);
+    } catch (e) {
+      LoggerService.error('ProductService', functionName, `Error building SKU map: ${e.message}`, e);
+      // If the map fails to build, we leave it as an empty map to prevent repeated errors.
+      skuToWebIdMap = new Map();
+    }
+  }
 
   // =================================================================================
   // PRIVATE HELPER METHODS
@@ -829,31 +863,131 @@ const ProductService = (function() {
   }
 
   function getProductWebIdBySku(sku) {
-    const functionName = 'getProductWebIdBySku';
+    if (skuToWebIdMap === null) {
+      _buildSkuToWebIdMap();
+    }
+    const trimmedSku = String(sku).trim();
+    if (skuToWebIdMap.has(trimmedSku)) {
+      return skuToWebIdMap.get(trimmedSku);
+    }
+    LoggerService.warn('ProductService', 'getProductWebIdBySku', `SKU ${trimmedSku} not found in WebProdM cache.`);
+    return null;
+  }
+
+  function generateWooCommerceUpdateExport() {
+    const functionName = 'generateWooCommerceUpdateExport';
+    LoggerService.info('ProductService', functionName, 'Starting WooCommerce update export generation.');
+
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      const sheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
-      if (!sheet) {
-        throw new Error('WebProdM sheet not found');
-      }
-      const data = sheet.getDataRange().getValues();
-      const headers = data[0];
-      const skuCol = headers.indexOf('wpm_SKU');
-      const webIdCol = headers.indexOf('wpm_WebIdEn');
-      if (skuCol === -1 || webIdCol === -1) {
-        throw new Error('Could not find SKU or WebIdEn columns in WebProdM');
-      }
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][skuCol] === sku) {
-          return data[i][webIdCol];
+
+      // 1. Get CmxProdM data for stock and price
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      if (!cmxSheet) throw new Error('CmxProdM sheet not found');
+      const cmxData = _getSheetDataAsMap(allConfig['system.sheet_names'].CmxProdM, allConfig['schema.data.CmxProdM'].headers.split(','), 'cpm_SKU');
+      const cmxMap = cmxData.map;
+
+      // 2. Get On-Hold Inventory
+      const onHoldSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].SysInventoryOnHold);
+      const onHoldData = onHoldSheet.getLastRow() > 1 ? onHoldSheet.getRange(2, 1, onHoldSheet.getLastRow() - 1, 2).getValues() : [];
+      const onHoldMap = onHoldData.reduce((map, row) => {
+        map[row[0]] = row[1];
+        return map;
+      }, {});
+
+      // 3. Get WebProdM data
+      const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      if (!webProdMSheet) throw new Error('WebProdM sheet not found');
+      const webProdMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
+      const webProdMMap = webProdMData.map;
+
+      // 4. Get WebDetM data
+      const webDetMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      if (!webDetMSheet) throw new Error('WebDetM sheet not found');
+      const webDetMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebDetM, allConfig['schema.data.WebDetM'].headers.split(','), 'wdm_WebIdEn');
+      const webDetMMap = webDetMData.map;
+
+      // 5. Get WebXltM data for WPML translation hash and source ID
+      const webXltMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebXltM);
+      if (!webXltMSheet) throw new Error('WebXltM sheet not found');
+      const webXltMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebXltM, allConfig['schema.data.WebXltM'].headers.split(','), 'wxl_WebIdEn');
+      const webXltMMap = webXltMData.map;
+
+      // 6. Prepare export products conforming to WebProdS_EN schema
+      const exportProducts = [];
+      const webProdSEnSchemaHeaders = allConfig['schema.data.WebProdS_EN'].headers.split(',');
+
+      for (const [webIdEn, webProdMRow] of webProdMMap.entries()) {
+        const product = {};
+        const sku = webProdMRow.wpm_SKU;
+
+        // Only export products that have a corresponding Comax entry and are marked as 'IsWeb'
+        if (!cmxMap.has(sku) || !cmxMap.get(sku).cpm_IsWeb) {
+          continue;
         }
+        const cmxProduct = cmxMap.get(sku);
+
+        // Initialize all fields from WebProdS_EN schema to empty string
+        webProdSEnSchemaHeaders.forEach(header => {
+          product[header] = '';
+        });
+
+        // Populate fields from WebProdM
+        product.wps_ID = webProdMRow.wpm_WebIdEn;
+        product.wps_SKU = webProdMRow.wpm_SKU;
+        product.wps_Name = webProdMRow.wpm_NameEn;
+        product.wps_Published = webProdMRow.wpm_PublishStatusEn;
+
+        // Calculate stock
+        const comaxStock = Number(cmxProduct.cpm_Stock || 0);
+        const onHoldStock = Number(onHoldMap[sku] || 0);
+        product.wps_Stock = Math.max(0, comaxStock - onHoldStock);
+        product.wps_InStock = product.wps_Stock > 0 ? 1 : 0; // WooCommerce expects 1 for in stock, 0 for out of stock
+
+        // Price from Comax
+        product.wps_RegularPrice = cmxProduct.cpm_Price;
+
+        // Populate fields from WebDetM
+        if (webDetMMap.has(webIdEn)) {
+          const webDetMRow = webDetMMap.get(webIdEn);
+          product.wps_ShortDescription = webDetMRow.wdm_ShortDescrEn;
+          product.wps_Description = webDetMRow.wdm_DescriptionEn;
+          product.wps_SoldIndividually = webDetMRow.wdm_IsSoldIndividually;
+          // Add other WebDetM fields as needed, mapping to wps_
+        }
+
+        // Populate WPML fields from WebXltM
+        if (webXltMMap.has(webIdEn)) {
+          const webXltMRow = webXltMMap.get(webIdEn);
+          // These are placeholders, actual WPML hash and source ID logic might be more complex
+          product.wps_MetaWpmlTranslationHash = webXltMRow.wxl_WebIdHe; // Using Hebrew ID as a placeholder for hash
+          product.wps_MetaWpmlLanguage = 'en'; // Assuming this export is for English products
+          product.wps_MetaWpmlSourceId = webXltMRow.wxl_WebIdEn; // Source ID is the English product ID
+        }
+
+        // Set default values for other fields if not explicitly set
+        product.wps_Type = product.wps_Type || 'simple';
+        product.wps_VisibilityInCatalog = product.wps_VisibilityInCatalog || 'visible';
+        product.wps_TaxStatus = product.wps_TaxStatus || 'taxable';
+        product.wps_BackordersAllowed = product.wps_BackordersAllowed || 0; // 0 for no, 1 for yes
+        product.wps_AllowCustomerReviews = product.wps_AllowCustomerReviews || 1; // 1 for yes, 0 for no
+
+        exportProducts.push(product);
       }
-      return null;
+
+      LoggerService.info('ProductService', functionName, `Generated export for ${exportProducts.length} products.`);
+      const csvContent = WooCommerceFormatter.formatProductsForExport(exportProducts);
+
+      const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+      const fileName = `WooCommerceUpdate_${new Date().toISOString().slice(0, 10)}.csv`;
+      const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
+      LoggerService.info('ProductService', functionName, `WooCommerce update file created: ${file.getName()} (ID: ${file.getId()})`);
+
     } catch (e) {
-      LoggerService.error('ProductService', functionName, `Error getting web id for sku ${sku}: ${e.message}`, e);
-      return null;
+      LoggerService.error('ProductService', functionName, `Error generating WooCommerce update export: ${e.message}`, e);
+      throw e;
     }
   }
 
@@ -861,6 +995,7 @@ const ProductService = (function() {
     processJob: processJob,
     runMasterValidation: _runMasterValidation,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
-    getProductWebIdBySku: getProductWebIdBySku
+    getProductWebIdBySku: getProductWebIdBySku,
+    generateWooCommerceUpdateExport: generateWooCommerceUpdateExport
   };
 })();

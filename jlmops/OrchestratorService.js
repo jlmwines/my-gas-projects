@@ -73,6 +73,15 @@ const OrchestratorService = (function() {
         const file = files.next();
         if (isNewFile(file, registry)) {
           console.log(`New file version found: ${file.getName()}`);
+
+          // Workflow Gate for Comax Products
+          if (configName === 'import.drive.comax_products') {
+            if (TaskService.hasOpenTasks('task.confirmation.comax_export')) {
+              console.warn('A new Comax product file was found, but it will not be processed because an administrator has not yet confirmed the previous Comax order export. Please complete the open \'Confirm Comax Export\' task.');
+              continue; // Skip to the next file
+            }
+          }
+
           const archivedFile = archiveFile(file, archiveFolder);
           createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId());
           // Update the registry map with the file's ID, name, and last updated time
@@ -232,9 +241,11 @@ const OrchestratorService = (function() {
               ProductService.processJob(jobType, rowNumber);
               break;
             case 'OrderService':
-              const currentProductService = ProductService; // ProductService is already an object with public methods
-              const orderServiceInstance = new OrderService(currentProductService);
-              orderServiceInstance.processJob(jobType, rowNumber, currentProductService);
+              const orderServiceInstance = new OrderService(ProductService);
+              orderServiceInstance.processJob(jobType, rowNumber, ProductService);
+              if (jobType === 'import.drive.web_orders') {
+                orderServiceInstance.preparePackingData();
+              }
               break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);

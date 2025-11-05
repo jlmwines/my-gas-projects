@@ -440,6 +440,8 @@ function getMasterConfiguration() {
         ['task.validation.webxlt_data_integrity', 'Task definition for WebXlt data integrity issues.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
         ['task.validation.webxlt_data_integrity', 'Task definition for WebXlt data integrity issues.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
         ['system.folder.archive', 'The Google Drive Folder ID for archiving processed files.', 'stable', 'id', '15klv4UL_7KCKkMsneCwx4B56bH2tL7Zd', '', '', '', '', '', '', '', ''],
+        ['system.folder.jlmops_exports', 'The Google Drive Folder ID for JLMops exports.', 'stable', 'id', '1B_CTOlpFLesq5ZETomt4IrKkvPvF7Y0X', '', '', '', '', '', '', '', ''],
+        ['system.folder.exports', 'The Google Drive Folder ID for exporting files.', 'stable', 'id', 'YOUR_EXPORT_FOLDER_ID_HERE', '', '', '', '', '', '', '', ''],
         ['system.sheet_names', 'Canonical names for all system-managed sheets.', 'stable', 'SysLog', 'SysLog', '', '', '', '', '', '', '', ''],
         ['system.sheet_names', 'Canonical names for all system-managed sheets.', 'stable', 'SysJobQueue', 'SysJobQueue', '', '', '', '', '', '', '', ''],
         ['system.sheet_names', 'Canonical names for all system-managed sheets.', 'stable', 'SysFileRegistry', 'SysFileRegistry', '', '', '', '', '', '', '', ''],
@@ -491,12 +493,25 @@ function getMasterConfiguration() {
         ['task.validation.name_mismatch', 'Task for when a product name in a staging sheet does not match the master sheet.', 'stable', 'default_priority', 'Normal', '', '', '', '', '', '', '', ''],
         ['task.validation.name_mismatch', 'Task for when a product name in a staging sheet does not match the master sheet.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
 
+        ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'topic', 'System', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
+
         // Orders
         ['_section.06_Orders', 'Configurations for order processing workflows.', '', '', '', '', '', '', '', '', '', '', ''],
         ['system.spreadsheet.data', 'The Google Sheet ID for the JLMops_Data spreadsheet.', 'stable', 'id', '1a4aAreab8IdSZjgpNDf0Wj8Rl2UOTwlD525d4Zpc874', '', '', '', '', '', '', '', ''],
         ['order.mutable_statuses', 'Order statuses that allow for full updates.', 'stable', 'statuses', 'on-hold,pending', '', '', '', '', '', '', '', ''],
         ['order.status_only_update_statuses', 'Order statuses that only allow for status updates.', 'stable', 'statuses', 'trash,cancelled,processing,completed', '', '', '', '', '', '', '', ''],
         ['order.master_order_id_header', 'The header name for the master order ID.', 'stable', 'header', 'wom_OrderId', '', '', '', '', '', '', '', ''],
-        ['order.master_status_header', 'The header name for the master order status.', 'stable', 'header', 'wom_Status', '', '', '', '', '', '', '', '']
+        ['order.master_status_header', 'The header name for the master order status.', 'stable', 'header', 'wom_Status', '', '', '', '', '', '', '', ''],
+
+        // Migration Sync Tasks
+        ['_section.07_Migration', 'Configurations for migrating data from legacy systems.', '', '', '', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'data_type_name', 'SysOrdLog', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'legacy_spreadsheet_id', '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'legacy_sheet_name', 'OrderLog', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'jlmops_target_sheet_name', 'SysOrdLog', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'primary_key_column', 'order_id', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'column_mappings', 'order_id:sol_OrderId,order_date:sol_OrderDate,packing_slip_status:sol_PackingStatus,packing_print_date:sol_PackingPrintedTimestamp,comax_export_status:sol_ComaxExportStatus,comax_export_timestamp:sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
     ];
 }
