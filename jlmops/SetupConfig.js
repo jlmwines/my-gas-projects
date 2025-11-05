@@ -512,6 +512,6 @@ function getMasterConfiguration() {
         ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'legacy_sheet_name', 'OrderLog', '', '', '', '', '', '', '', ''],
         ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'jlmops_target_sheet_name', 'SysOrdLog', '', '', '', '', '', '', '', ''],
         ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'primary_key_column', 'order_id', '', '', '', '', '', '', '', ''],
-        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'column_mappings', 'order_id:sol_OrderId,order_date:sol_OrderDate,packing_slip_status:sol_PackingStatus,packing_print_date:sol_PackingPrintedTimestamp,comax_export_status:sol_ComaxExportStatus,comax_export_timestamp:sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
+        ['migration.sync.tasks', 'Configuration for migrating SysOrdLog.', 'stable', 'column_mappings', 'order_id:sol_OrderId,order_date:sol_OrderDate,packing_slip_status:sol_PackingStatus,packing_print_date:sol_PackingPrintedTimestamp', '', '', '', '', '', '', '', ''],
     ];
 }

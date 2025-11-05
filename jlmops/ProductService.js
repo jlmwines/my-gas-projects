@@ -119,14 +119,13 @@ const ProductService = (function() {
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
     
     const dataMap = new Map();
-    // This key detection is still used by other functions, so we leave it for now.
-    const keyHeader = ConfigService.getConfig(`schema.data.${sheetName}`).key_column;
+    const keyHeader = keyColumnName || ConfigService.getConfig(`schema.data.${sheetName}`).key_column;
 
     // DEBUGGING: Log headers and key to diagnose mismatch
     LoggerService.info('ProductService', '_getSheetDataAsMap', `DEBUG for sheet ${sheetName}: keyHeader = '${keyHeader}', headers = ${JSON.stringify(headers)}`);
 
     const keyIndex = headers.indexOf(keyHeader);
-    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName}`);
+    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName} using key '${keyHeader}'`);
 
     values.forEach(row => {
       const rowObject = {};
@@ -668,6 +667,15 @@ const ProductService = (function() {
 
         _upsertComaxData();
 
+        try {
+            LoggerService.info('ProductService', '_runComaxImport', 'Comax import successful. Triggering automatic WooCommerce update export.');
+            generateWooCommerceUpdateExport();
+        } catch (e) {
+            LoggerService.error('ProductService', '_runComaxImport', `The subsequent WooCommerce update export failed: ${e.message}`, e);
+            // We do not re-throw the error or change the job status.
+            // The primary Comax import was successful. The export failure is a separate issue.
+        }
+
         return 'COMPLETED';
 
     } catch (e) {
@@ -876,14 +884,14 @@ const ProductService = (function() {
 
   function generateWooCommerceUpdateExport() {
     const functionName = 'generateWooCommerceUpdateExport';
-    LoggerService.info('ProductService', functionName, 'Starting WooCommerce update export generation.');
+    LoggerService.info('ProductService', functionName, 'Starting WooCommerce inventory update export with change detection.');
 
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-      // 1. Get CmxProdM data for stock and price
+      // 1. Get CmxProdM data for new stock and price
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
       if (!cmxSheet) throw new Error('CmxProdM sheet not found');
       const cmxData = _getSheetDataAsMap(allConfig['system.sheet_names'].CmxProdM, allConfig['schema.data.CmxProdM'].headers.split(','), 'cpm_SKU');
@@ -893,100 +901,77 @@ const ProductService = (function() {
       const onHoldSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].SysInventoryOnHold);
       const onHoldData = onHoldSheet.getLastRow() > 1 ? onHoldSheet.getRange(2, 1, onHoldSheet.getLastRow() - 1, 2).getValues() : [];
       const onHoldMap = onHoldData.reduce((map, row) => {
-        map[row[0]] = row[1];
+        map[row[0]] = row[1]; // SKU -> OnHoldQuantity
         return map;
       }, {});
 
-      // 3. Get WebProdM data
+      // 3. Get WebProdM data for existing stock and price
       const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!webProdMSheet) throw new Error('WebProdM sheet not found');
       const webProdMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
       const webProdMMap = webProdMData.map;
 
-      // 4. Get WebDetM data
-      const webDetMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
-      if (!webDetMSheet) throw new Error('WebDetM sheet not found');
-      const webDetMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebDetM, allConfig['schema.data.WebDetM'].headers.split(','), 'wdm_WebIdEn');
-      const webDetMMap = webDetMData.map;
-
-      // 5. Get WebXltM data for WPML translation hash and source ID
-      const webXltMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebXltM);
-      if (!webXltMSheet) throw new Error('WebXltM sheet not found');
-      const webXltMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebXltM, allConfig['schema.data.WebXltM'].headers.split(','), 'wxl_WebIdEn');
-      const webXltMMap = webXltMData.map;
-
-      // 6. Prepare export products conforming to WebProdS_EN schema
+      // 4. Compare new values with existing and prepare export data for changed products
       const exportProducts = [];
-      const webProdSEnSchemaHeaders = allConfig['schema.data.WebProdS_EN'].headers.split(',');
+      let productsChecked = 0;
+      let productsSkipped = 0; // Skipped because not in Comax
 
       for (const [webIdEn, webProdMRow] of webProdMMap.entries()) {
-        const product = {};
-        const sku = webProdMRow.wpm_SKU;
+        productsChecked++;
+        const sku = String(webProdMRow.wpm_SKU || '').trim();
 
-        // Only export products that have a corresponding Comax entry and are marked as 'IsWeb'
-        if (!cmxMap.has(sku) || !cmxMap.get(sku).cpm_IsWeb) {
-          continue;
+        if (!cmxMap.has(sku)) {
+          productsSkipped++;
+          LoggerService.warn('ProductService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_NameEn}): Not found in Comax master data.`);
+          continue; // Cannot determine new price/stock, so skip.
         }
         const cmxProduct = cmxMap.get(sku);
 
-        // Initialize all fields from WebProdS_EN schema to empty string
-        webProdSEnSchemaHeaders.forEach(header => {
-          product[header] = '';
-        });
+        // Get existing values from WebProdM
+        const oldStock = Number(webProdMRow.wpm_Stock) || 0;
+        const oldPrice = webProdMRow.wpm_Price;
 
-        // Populate fields from WebProdM
-        product.wps_ID = webProdMRow.wpm_WebIdEn;
-        product.wps_SKU = webProdMRow.wpm_SKU;
-        product.wps_Name = webProdMRow.wpm_NameEn;
-        product.wps_Published = webProdMRow.wpm_PublishStatusEn;
-
-        // Calculate stock
-        const comaxStock = Number(cmxProduct.cpm_Stock || 0);
+        // Calculate new values
+        const newPrice = cmxProduct.cpm_Price;
+        let comaxStock = Number(cmxProduct.cpm_Stock || 0);
         const onHoldStock = Number(onHoldMap[sku] || 0);
-        product.wps_Stock = Math.max(0, comaxStock - onHoldStock);
-        product.wps_InStock = product.wps_Stock > 0 ? 1 : 0; // WooCommerce expects 1 for in stock, 0 for out of stock
 
-        // Price from Comax
-        product.wps_RegularPrice = cmxProduct.cpm_Price;
-
-        // Populate fields from WebDetM
-        if (webDetMMap.has(webIdEn)) {
-          const webDetMRow = webDetMMap.get(webIdEn);
-          product.wps_ShortDescription = webDetMRow.wdm_ShortDescrEn;
-          product.wps_Description = webDetMRow.wdm_DescriptionEn;
-          product.wps_SoldIndividually = webDetMRow.wdm_IsSoldIndividually;
-          // Add other WebDetM fields as needed, mapping to wps_
+        // Apply legacy exclude logic: if cpm_Exclude is true, stock becomes 0
+        if (String(cmxProduct.cpm_Exclude).toUpperCase() === 'TRUE') {
+            comaxStock = 0;
         }
+        
+        const newStock = Math.max(0, comaxStock - onHoldStock);
 
-        // Populate WPML fields from WebXltM
-        if (webXltMMap.has(webIdEn)) {
-          const webXltMRow = webXltMMap.get(webIdEn);
-          // These are placeholders, actual WPML hash and source ID logic might be more complex
-          product.wps_MetaWpmlTranslationHash = webXltMRow.wxl_WebIdHe; // Using Hebrew ID as a placeholder for hash
-          product.wps_MetaWpmlLanguage = 'en'; // Assuming this export is for English products
-          product.wps_MetaWpmlSourceId = webXltMRow.wxl_WebIdEn; // Source ID is the English product ID
+        // Compare and add to export list if changed
+        if (newStock !== oldStock || newPrice !== oldPrice) {
+          exportProducts.push({
+            ID: webProdMRow.wpm_WebIdEn,
+            SKU: sku,
+            WName: webProdMRow.wpm_NameEn,
+            Stock: newStock,
+            RegularPrice: newPrice
+          });
         }
-
-        // Set default values for other fields if not explicitly set
-        product.wps_Type = product.wps_Type || 'simple';
-        product.wps_VisibilityInCatalog = product.wps_VisibilityInCatalog || 'visible';
-        product.wps_TaxStatus = product.wps_TaxStatus || 'taxable';
-        product.wps_BackordersAllowed = product.wps_BackordersAllowed || 0; // 0 for no, 1 for yes
-        product.wps_AllowCustomerReviews = product.wps_AllowCustomerReviews || 1; // 1 for yes, 0 for no
-
-        exportProducts.push(product);
       }
 
-      LoggerService.info('ProductService', functionName, `Generated export for ${exportProducts.length} products.`);
-      const csvContent = WooCommerceFormatter.formatProductsForExport(exportProducts);
+      LoggerService.info('ProductService', functionName, `Checked ${productsChecked} products. Skipped ${productsSkipped} (not in Comax). Found ${exportProducts.length} products with changed stock or price.`);
+
+      if (exportProducts.length === 0) {
+        LoggerService.info('ProductService', functionName, 'No product changes detected. Export file will not be created.');
+        return; // Exit if there's nothing to export
+      }
+
+      // 5. Format and save the CSV
+      const csvContent = WooCommerceFormatter.formatInventoryUpdate(exportProducts);
 
       const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      const fileName = `WooCommerceUpdate_${new Date().toISOString().slice(0, 10)}.csv`;
+      const fileName = `ProductInventory_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
-      LoggerService.info('ProductService', functionName, `WooCommerce update file created: ${file.getName()} (ID: ${file.getId()})`);
+      LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
 
     } catch (e) {
-      LoggerService.error('ProductService', functionName, `Error generating WooCommerce update export: ${e.message}`, e);
+      LoggerService.error('ProductService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);
       throw e;
     }
   }

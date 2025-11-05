@@ -144,7 +144,32 @@ function populateInitialOrderData() {
         writeData(webOrdItemsMSheet, webOrdItemsM_Data, 'WebOrdItemsM');
         writeData(webOrdMArchiveSheet, webOrdM_Archive_Data, 'WebOrdM_Archive');
         writeData(webOrdItemsMArchiveSheet, webOrdItemsM_Archive_Data, 'WebOrdItemsM_Archive');
-        writeData(sysOrdLogSheet, orderLogData, 'SysOrdLog');
+        // Transform and write SysOrdLog data
+        const transformedOrderLogData = [];
+        const legacyStatusIndex = orderLogHeaders.indexOf('comax_export_status');
+        const legacyTimestampIndex = orderLogHeaders.indexOf('comax_export_timestamp'); // This might not exist, but good to check
+
+        // Define target indices based on SysConfig schema for SysOrdLog
+        const sysOrdLogSchema = ConfigService.getConfig('schema.data.SysOrdLog').headers.split(',');
+        const targetStatusIndex = sysOrdLogSchema.indexOf('sol_ComaxExportStatus');
+        const targetTimestampIndex = sysOrdLogSchema.indexOf('sol_ComaxExportTimestamp');
+
+        orderLogData.forEach(legacyRow => {
+            const newRow = [...legacyRow]; // Create a copy
+            const legacyStatusValue = legacyRow[legacyStatusIndex];
+
+            if (legacyStatusValue instanceof Date || (typeof legacyStatusValue === 'string' && legacyStatusValue.trim() !== '')) {
+                // If there is any value (date or otherwise), treat as exported
+                newRow[targetStatusIndex] = 'Exported';
+                newRow[targetTimestampIndex] = legacyStatusValue; // Place the original value in the timestamp column
+            } else {
+                newRow[targetStatusIndex] = 'Pending';
+                newRow[targetTimestampIndex] = '';
+            }
+            transformedOrderLogData.push(newRow);
+        });
+
+        writeData(sysOrdLogSheet, transformedOrderLogData, 'SysOrdLog');
         writeData(orderLogArchiveJLMopsSheet, orderLogArchiveData, 'OrderLogArchive (JLMops)');
 
         console.log(`${functionName} completed successfully.`);

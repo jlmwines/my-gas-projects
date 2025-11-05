@@ -208,13 +208,55 @@ function OrderService(productService) {
         throw new Error("One or more required sheets (SysOrdLog, WebOrdItemsM) not found.");
       }
 
-      // 1. Find orders to export
+      // 1. Get order statuses from WebOrdM for filtering
+      const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+      if (!masterOrderSheet) {
+        throw new Error("Sheet 'WebOrdM' not found.");
+      }
+      const webOrdMData = masterOrderSheet.getDataRange().getValues();
+      const webOrdMHeaders = webOrdMData.shift();
+      const womOrderIdCol = webOrdMHeaders.indexOf('wom_OrderId');
+      const womStatusCol = webOrdMHeaders.indexOf('wom_Status');
+
+      if (womOrderIdCol === -1 || womStatusCol === -1) {
+        throw new Error("Could not find 'wom_OrderId' or 'wom_Status' in WebOrdM sheet.");
+      }
+
+      const orderStatusMap = new Map();
+      webOrdMData.forEach(row => {
+        const orderId = row[womOrderIdCol];
+        const status = String(row[womStatusCol] || '').trim().toLowerCase();
+        if (orderId) {
+          orderStatusMap.set(String(orderId), status);
+        }
+      });
+      logger.info(`Created status map for ${orderStatusMap.size} orders from WebOrdM.`);
+
+      // 2. Find orders to export from SysOrdLog
       const logData = logSheet.getDataRange().getValues();
       const logHeaders = logData.shift();
       const comaxExportStatusCol = logHeaders.indexOf('sol_ComaxExportStatus');
       const orderIdCol = logHeaders.indexOf('sol_OrderId');
 
-      const ordersToExport = logData.filter(row => row[comaxExportStatusCol] !== 'Exported');
+      if (comaxExportStatusCol === -1 || orderIdCol === -1) {
+        throw new Error("Could not find required columns 'sol_ComaxExportStatus' or 'sol_OrderId' in SysOrdLog sheet. Please check sheet headers.");
+      }
+      
+      logger.info(`Found ${logData.length} total logs in SysOrdLog.`);
+
+      const ordersToExport = logData.filter(row => {
+        const orderId = String(row[orderIdCol]);
+        const exportStatus = String(row[comaxExportStatusCol] || '').trim().toLowerCase();
+        const orderStatus = orderStatusMap.get(orderId);
+
+        const isNotExported = exportStatus !== 'exported';
+        const isEligibleStatus = orderStatus === 'processing' || orderStatus === 'completed';
+        
+        return isNotExported && isEligibleStatus;
+      });
+      
+      logger.info(`Found ${ordersToExport.length} orders with eligible status ('processing' or 'completed') that have not been exported.`);
+
       const orderIdsToExport = new Set(ordersToExport.map(row => row[orderIdCol]));
 
       if (orderIdsToExport.size === 0) {
@@ -248,11 +290,20 @@ function OrderService(productService) {
         csvRows.push([sku, comaxExportData[sku]]);
       }
       const csvContent = csvRows.map(row => row.join(',')).join('\n');
+      logger.info(`Generated CSV content:\n${csvContent}`);
 
       // 4. Save CSV to Drive
       const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      const fileName = `ComaxExport_${new Date().toISOString().slice(0, 10)}.csv`;
-      const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
+      logger.info(`Using export folder ID: ${exportFolderId}`);
+
+      const exportFolder = DriveApp.getFolderById(exportFolderId);
+      if (!exportFolder) {
+        throw new Error(`Failed to find export folder with ID: ${exportFolderId}. Please check configuration and folder permissions.`);
+      }
+      logger.info(`Successfully retrieved export folder: ${exportFolder.getName()}`);
+
+      const fileName = `ComaxExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
+      const file = exportFolder.createFile(fileName, csvContent, MimeType.CSV);
       logger.info(`Comax export file created: ${file.getName()} (ID: ${file.getId()})`);
 
       // 5. Update SysOrdLog
@@ -644,3 +695,13 @@ function OrderService(productService) {
 
 
 } // Closing for OrderService
+
+/**
+ * Wrapper function to allow manual execution of the Comax export from the Apps Script editor.
+ */
+function run_exportOrdersToComax() {
+  // ProductService is a global singleton object, so we pass it directly.
+  const orderService = new OrderService(ProductService);
+  orderService.exportOrdersToComax();
+}
+

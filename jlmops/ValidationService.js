@@ -1,14 +1,16 @@
+const LEGACY_EXPORT_FOLDER_ID = '1ZNCnL6ryYOyhFaErbZlGW_eTKoR6nUU5';
+const LEGACY_REFERENCE_SPREADSHEET_ID = '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc';
+
 const ValidationService = {
   /**
    * Compares the on-hold inventory data between jlmops and the legacy system.
    */
   validateOnHoldInventory() {
-    const legacySpreadsheetId = '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc';
     const legacySheetName = 'OnHoldInventory';
     const jlmopsSheetName = 'SysInventoryOnHold'; // From DATA_MODEL.md
 
     try {
-      const legacyData = this._readSheetData(legacySpreadsheetId, legacySheetName);
+      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacySheetName);
       const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsSheetName); // Assuming jlmops data spreadsheet ID is configured
 
       // Convert arrays of objects to maps for easier comparison
@@ -79,24 +81,21 @@ const ValidationService = {
    * Compares the Comax order export from jlmops with the latest one from the legacy system.
    */
   validateComaxOrderExport() {
-    const legacyFolderId = '1cyvZ2ngdBLEoXGB-ckxl-JWHwrJXS0mp';
     const jlmopsFolderId = ConfigService.getConfig('system.folder.jlmops_exports').id; // Assuming this is configured
     const legacyFileNamePattern = /OrderEx-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
-    const jlmopsFileNamePattern = /OrderEx-\d{2}-\d{2}-\d{2}-\d{2}\.csv/; // Assuming same pattern
-
-    this._validateCsvExport(legacyFolderId, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Comax Order Export', 'SKU', ['Quantity']);
+    const jlmopsFileNamePattern = /ComaxExport_\d{2}-\d{2}-\d{2}-\d{2}\.csv/; // Updated pattern for jlmops export
+    this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Comax Order Export', 'SKU', ['Quantity']);
   },
 
   /**
    * Compares the web product update export from jlmops with the latest one from the legacy system.
    */
   validateWebProductUpdate() {
-    const legacyFolderId = '1cyvZ2ngdBLEoXGB-ckxl-JWHwrJXS0mp';
     const jlmopsFolderId = ConfigService.getConfig('system.folder.jlmops_exports').id; // Assuming this is configured
-    const legacyFileNamePattern = /ProductInventory-\d{2}-\d{2}-\d{2}\.csv/;
-    const jlmopsFileNamePattern = /ProductInventory-\d{2}-\d{2}-\d{2}\.csv/; // Assuming same pattern
+    const legacyFileNamePattern = /ProductInventory-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
+    const jlmopsFileNamePattern = /ProductInventory_\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
 
-    this._validateCsvExport(legacyFolderId, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Web Product Update', 'SKU', ['Stock', 'Regular Price']);
+    this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Web Product Update', 'SKU', ['Stock', 'Regular Price']);
   },
 
   /**
@@ -229,12 +228,11 @@ const ValidationService = {
    * Compares the highest order number between jlmops and the legacy system.
    */
   validateHighestOrderNumber() {
-    const legacySpreadsheetId = '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc'; // This ID should ideally come from SysConfig
     const legacySheetName = 'OrdersM';
     const jlmopsSheetName = 'WebOrdM'; // From DATA_MODEL.md
 
     try {
-      const legacyData = this._readSheetData(legacySpreadsheetId, legacySheetName);
+      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacySheetName);
       const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsSheetName);
 
       const legacyOrderNumbers = legacyData.map(row => parseInt(row['order_number'])).filter(num => !isNaN(num));
@@ -258,15 +256,14 @@ const ValidationService = {
    * Compares the prepared packing slip data between jlmops and the legacy system.
    */
   validatePackingSlipData() {
-    const legacySpreadsheetId = '1YLqfcX0zqXrRbJccduaWgcnY6qLjL39Y5bbD4Lu5tXc';
     const legacyQueueSheetName = 'PackingQueue';
     const legacyRowsSheetName = 'PackingRows';
     const jlmopsCacheSheetName = 'SysPackingCache';
 
     try {
       // 1. Read data from all sheets
-      const legacyQueueData = this._readSheetData(legacySpreadsheetId, legacyQueueSheetName);
-      const legacyRowsData = this._readSheetData(legacySpreadsheetId, legacyRowsSheetName);
+      const legacyQueueData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacyQueueSheetName);
+      const legacyRowsData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacyRowsSheetName);
       const jlmopsCacheData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsCacheSheetName);
 
       // 2. Normalize Legacy Data

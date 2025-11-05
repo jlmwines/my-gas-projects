@@ -1,18 +1,7 @@
-/**
- * @file WooCommerceFormatter.js
- * @description Service for formatting data into WooCommerce-compatible CSV.
- */
-
-/**
- * WooCommerceFormatter provides methods to format product data into a CSV
- * structure suitable for WooCommerce bulk updates.
- */
-function WooCommerceFormatter() {
+const WooCommerceFormatter = (function() {
 
   /**
    * Escapes a string for CSV output.
-   * Handles commas, double quotes, and newlines by enclosing the field in double quotes
-   * and doubling any existing double quotes.
    * @param {*} value The value to escape.
    * @returns {string} The CSV-escaped string.
    */
@@ -21,7 +10,7 @@ function WooCommerceFormatter() {
       return '';
     }
     let stringValue = String(value);
-    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    if (stringValue.includes(',') || stringValue.includes('\" ') || stringValue.includes('\n')) {
       return '"' + stringValue.replace(/"/g, '""') + '"';
     }
     return stringValue;
@@ -29,14 +18,11 @@ function WooCommerceFormatter() {
 
   /**
    * Generates a WooCommerce product CSV from an array of product objects.
-   * @param {Array<Object>} products An array of product objects, typically from ProductService.
+   * @param {Array<Object>} products An array of product objects.
    * @returns {string} The CSV content as a string.
    */
-  this.generateWooCommerceProductCsv = function(products) {
+  function formatProductsForExport(products) {
     const csvRows = [];
-
-    // Define WooCommerce CSV Headers (simplified for example, expand as needed)
-    // This should ideally come from a configuration or schema definition
     const headers = [
       'ID', 'Type', 'SKU', 'Name', 'Published', 'Is featured?', 'Visibility in catalog',
       'Short description', 'Description', 'Date sale price starts', 'Date sale price ends',
@@ -109,6 +95,33 @@ function WooCommerceFormatter() {
     });
 
     return csvRows.join("\n");
-  }; // Closing for generateWooCommerceProductCsv
+  }
 
-} // Closing for WooCommerceFormatter
+  return {
+    formatProductsForExport: formatProductsForExport,
+
+    /**
+     * Generates a simple WooCommerce inventory update CSV matching the legacy format.
+     * @param {Array<Object>} products An array of simple product objects with ID, SKU, WName, Stock, and RegularPrice.
+     * @returns {string} The CSV content as a string.
+     */
+    formatInventoryUpdate: function(products) {
+      const headers = ['ID', 'SKU', 'WName', 'Stock', 'Regular Price'];
+      const csvRows = [headers.join(',')];
+
+      products.forEach(product => {
+        const row = [
+          _csvEscape(product.ID),
+          _csvEscape(product.SKU),
+          _csvEscape(product.WName),
+          _csvEscape(product.Stock),
+          _csvEscape(product.RegularPrice)
+        ];
+        csvRows.push(row.join(','));
+      });
+
+      return csvRows.join('\n');
+    }
+  };
+
+})();

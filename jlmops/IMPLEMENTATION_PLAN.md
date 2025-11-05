@@ -48,7 +48,7 @@
 
 **Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
 
-*   **Phase 4.1: Foundational Utilities for Parallel Operation (IMPLEMENTED - NEEDS TESTING)**
+*   **Phase 4.1: Foundational Utilities for Parallel Operation (COMPLETED)**
     *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
     *   **Tasks:**
         1.  **Refactored Setup Script (COMPLETED):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
@@ -58,17 +58,20 @@
 *   **Phase 4.4: Implement Core Order Workflows (IN PROGRESS)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
     *   **Tasks:**
-        1.  **On-Hold Inventory Calculation (IMPLEMENTED - NEEDS TESTING):** Implement the logic in `InventoryManagementService.js`.
+        1.  **On-Hold Inventory Calculation (COMPLETED):** Implement the logic in `InventoryManagementService.js`.
         2.  **Optimize Order Upsert (COMPLETED):** Implemented faster order handling in `OrderService.js` by categorizing orders and performing targeted updates.
         3.  **Refactor WebAdapter for Configuration-Driven Line Item Parsing (COMPLETED):**
             *   **Action:** Enhanced `SysConfig` with new entries to define WooCommerce line item column patterns (e.g., prefixes, suffixes, max items).
             *   **Action:** Modified `WebAdapter` to use these `SysConfig` mappings to parse raw WooCommerce order data, extracting and structuring line items into a nested format.
             *   **Action:** Updated `OrderService.processStagedOrders` to consume this pre-processed, structured data from `WebAdapter`, removing its direct parsing of line item columns.
-        4.  **Comax Order Export (IMPLEMENTED - NEEDS TESTING):** Implement the export generation logic in `OrderService.js`.
+        4.  **Comax Order Export (COMPLETED - Monitoring Ongoing):** Implement the export generation logic in `OrderService.js`.
+            *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
         5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
+        6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
+            *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
-*   **Phase 4.5: Testing and Validation (IN PROGRESS)**
-    *   **Goal:** To test and validate the implementation of the new services and configurations.
+*   **Phase 4.5: Testing and Validation (COMPLETED - Monitoring Ongoing)**
+    *   **Goal:** To continuously monitor the outputs of the new services (Comax Export, Web Inventory Export) against the legacy system to ensure accuracy across many data cycles.
     *   **Tasks:**
         1.  **Web Order Import and Upsert (COMPLETED):** Testing the implementation of `WebAdapter.js` and `OrderService.js`.
         2.  **Configuration Management (COMPLETED):** Testing the recent changes to `SetupConfig.js`.
