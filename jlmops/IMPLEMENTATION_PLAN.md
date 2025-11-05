@@ -1,118 +1,70 @@
-## Next Task
-
-**Phase 4.4: Implement Core Order Workflows**
-
-*   **Next Step:** Implement On-Hold Inventory Calculation and Comax Order Export.
-
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
 **Goal:** To establish the core technical foundation based on the user-managed configuration before any workflow logic is built.
-
-**1. Manual Configuration Setup (User Action) (COMPLETED)**
-    *   **Action:** Create the necessary `Source` and `Archive` folders in Google Drive.
-    *   **Action:** Create the `JLMops_Logs` spreadsheet.
-    *   **Action:** Populate the `SysConfig` sheet in the `JLMops_Data` spreadsheet using the universal, block-based schema defined in `ARCHITECTURE.md`.
-    *   **Verification:** All required configuration blocks for spreadsheets, folders, and import types are present in the `SysConfig` sheet.
-
-**2. Implement Configuration Service (`config.js`) (COMPLETED)**
-    *   **Action:** Create a `config.js` script that provides a central service for reading and accessing configuration values.
-    *   **Detail:** This service will find the `JLMops_Data` spreadsheet by name and parse the `SysConfig` sheet. It must be able to read multi-row configuration blocks (grouped by `scf_SettingName`) and return them as structured objects.
-    *   **Verification:** The service can successfully read and provide a complete configuration block for any defined setting.
-
-**3. Implement Configuration Synchronization Script (`setup.js`) (COMPLETED)**
-    *   **Action:** The `setup.js` file has been implemented to act as the authoritative source of truth for system configuration.
-    *   **Detail:** The `rebuildSysConfigFromSource()` function inside `setup.js` contains the master configuration as a hardcoded array and will overwrite the live `SysConfig` sheet to ensure it is always in the correct, version-controlled state.
-    *   **Verification:** Running `rebuildSysConfigFromSource()` in `setup.js` successfully synchronizes the live sheet.
-
 
 ## Phase 2: Product Workflow Engine (COMPLETED)
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
-
 ## Phase 3: Initial Data Population (COMPLETED)
 
 **Goal:** To migrate all necessary product and order data from the legacy system into the new JLMops master sheets.
 
-**Phase 3.1: Product Detail Data Population (COMPLETED)**
-    *   **Goal:** Migrate existing product detail data from the old system's reference sheets into the JLMops product master sheets.
-    *   **Action:** Created the `populateInitialProductData()` function in `jlmops/SetupMigrate.js`.
-    *   **Detail:** This function reads from the legacy `DetailsM`, `WeHe`, and `ComaxM` sheets to populate the `WebProdM`, `WebDetM`, and `WebXltM` sheets.
-
-**Phase 3.2: Order Data Population (COMPLETED)**
-    *   **Goal:** To populate the JLMops master order sheets with existing web order data.
-    *   **Action:** Created the `populateInitialOrderData()` function in `jlmops/setup.js`.
-    *   **Detail:** This function reads from the legacy `OrdersM`, `OrderLog`, and `OrderLogArchive` sheets, normalizes the data, separates active vs. archived records, and populates the new `WebOrdM`, `WebOrdItemsM`, `SysOrdLog`, `WebOrdM_Archive`, and `WebOrdItemsM_Archive` sheets.
-
-## Phase 4: Order Workflow & Parallel Implementation (IN PROGRESS)
+## Phase 4: Order Workflow & Parallel Implementation (COMPLETED)
 
 **Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
 
 *   **Phase 4.1: Foundational Utilities for Parallel Operation (COMPLETED)**
     *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
-    *   **Tasks:**
-        1.  **Refactored Setup Script (COMPLETED):** The monolithic `setup.js` script has been refactored into three specialized scripts: `SetupConfig.js` (for configuration management), `SetupSheets.js` (for sheet creation and header management), and `SetupMigrate.js` (for data migration).
-        2.  **Create Sheet Initialization Functions (COMPLETED):** Added functions to `SetupSheets.js` to create all system sheets with headers based on `SysConfig` definitions. A master function `createJlmopsSystemSheets` was also added to run all sheet creation functions.
-        3.  **Build Master Data Sync Functions (COMPLETED):** Implemented `syncLegacyMasterData(dataType)` functions in `SetupMigrate.js`. These functions are driven by `migration.sync.tasks` configurations in `SysConfig` to perform non-destructive upserts from specific legacy master sheets to their `jlmops` counterparts.
 
-*   **Phase 4.4: Implement Core Order Workflows (IN PROGRESS)**
+*   **Phase 4.4: Implement Core Order Workflows (COMPLETED)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
     *   **Tasks:**
         1.  **On-Hold Inventory Calculation (COMPLETED):** Implement the logic in `InventoryManagementService.js`.
         2.  **Optimize Order Upsert (COMPLETED):** Implemented faster order handling in `OrderService.js` by categorizing orders and performing targeted updates.
         3.  **Refactor WebAdapter for Configuration-Driven Line Item Parsing (COMPLETED):**
-            *   **Action:** Enhanced `SysConfig` with new entries to define WooCommerce line item column patterns (e.g., prefixes, suffixes, max items).
-            *   **Action:** Modified `WebAdapter` to use these `SysConfig` mappings to parse raw WooCommerce order data, extracting and structuring line items into a nested format.
-            *   **Action:** Updated `OrderService.processStagedOrders` to consume this pre-processed, structured data from `WebAdapter`, removing its direct parsing of line item columns.
         4.  **Comax Order Export (COMPLETED - Monitoring Ongoing):** Implement the export generation logic in `OrderService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
         5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
         6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
-*   **Phase 4.5: Testing and Validation (COMPLETED - Monitoring Ongoing)**
-    *   **Goal:** To continuously monitor the outputs of the new services (Comax Export, Web Inventory Export) against the legacy system to ensure accuracy across many data cycles.
-    *   **Tasks:**
-        1.  **Web Order Import and Upsert (COMPLETED):** Testing the implementation of `WebAdapter.js` and `OrderService.js`.
-        2.  **Configuration Management (COMPLETED):** Testing the recent changes to `SetupConfig.js`.
-        3.  **Business Logic Validation (IN PROGRESS):** Continued testing of the Business Logic Validation Framework.
-        4.  **Packing Slip Data Preparation (IN PROGRESS):** Continued testing of the Packing Slip Data Preparation.
-
-*   **Phase 4.2: Business Logic Validation Framework (IMPLEMENTED - NEEDS TESTING)**
-    *   **Goal:** Create a service dedicated to validating the outputs of `jlmops` business logic against the legacy system.
-    *   **Tasks:**
-        1.  **Implement `ValidationService.js` (IMPLEMENTED - NEEDS TESTING):** Create the new service file.
-        2.  **Implement Initial Validation Tools (IMPLEMENTED - NEEDS TESTING):** Build the first set of validation tools, including `validateHighestOrderNumber()`, `validateOnHoldInventory()`, `validatePackingSlipData()`, and `validateComaxExport()`.
-
 ## Phase 5: Output Generation & Notification (COMPLETED)
 
 **Goal:** To build the services required to format and export data for external systems like WooCommerce.
 
-*   **1. Implement `WooCommerceFormatter` Service (IN PROGRESS):** Create a new `WooCommerceFormatter.js` service. Its purpose is to take clean, validated data from the system's master sheets and format it into the complex, multi-column CSV required by WooCommerce for bulk updates.
-*   **2. Implement `generateWooCommerceUpdateExport()` function (IN PROGRESS):** Create this function in `ProductService` to orchestrate the export process, using the `WooCommerceFormatter` to generate the final CSV file and save it to a designated "Exports" folder in Google Drive.
-*   **3. Enhance Notifications:** Ensure all new processes log detailed results to `SysLog` and that job statuses in `SysJobQueue` are updated correctly, with clear error messages pointing to generated tasks if applicable.
+## Upcoming Implementation Priorities
 
-## Phase 6: Bundle Management Engine (PLANNED)
+**Goal:** To implement the remaining core workflows from the legacy system to reach feature parity.
 
-**Goal:** To implement the rules-based engine for managing product bundles, monitoring component stock, and suggesting replacements.
+### 1. Packing Slip Workflow (PLANNED)
+*   **Goal:** Implement the dynamic, template-driven packing slip generation process.
+*   **Tasks:**
+    1.  **Implement `generatePackingSlips` function in `OrderService.js`:** This function will be triggered manually by the user from the frontend.
+    2.  **Template-Driven Content:** The function will read the `PackingSlipTemplate` definition from `SysConfig`.
+    3.  **Data Population:** It will use the pre-calculated data from the `SysPackingCache` sheet to populate the template for selected orders.
+    4.  **Document Generation:** It will generate a single HTML string containing all selected packing slips and create one Google Doc for easy review and bulk printing.
+    5.  **Status Update:** Upon successful generation, it will update the `sol_PackingStatus` in the `SysOrdLog` sheet to 'Printed'.
 
-*   **1. Update `setup.js`:** Add the new schemas for `SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`, and `SysBundleComponentHistory` to the `SYS_CONFIG_DEFINITIONS` object.
-*   **2. Implement `BundleService` Monitoring Logic:** Implement the scheduled function to monitor stock levels of all SKUs in the `SysBundleActiveComponents` sheet.
-*   **3. Implement `BundleService` Suggestion Logic:** Implement the core logic to find suitable replacement SKUs by matching the eligibility rules defined in `SysBundleRows` against the master product data.
-*   **4. Implement `BundleService` Task Creation:** Integrate with the `TaskService` to automatically create detailed tasks when low-stock situations are detected.
-*   **5. Implement `BundleService` Audit Trail:** Implement the `onEdit` trigger or an equivalent mechanism to automatically log all component changes from `SysBundleActiveComponents` into the `SysBundleComponentHistory` sheet.
+### 2. Product Detail Update Workflow (Vintage Discrepancy) (PLANNED)
+*   **Goal:** Automate the detection and task creation for vintage mismatches between Comax imports and the master data.
+*   **Tasks:**
+    1.  **Verify Validation Rule:** Ensure the `validation.rule.C6_Comax_VintageMismatch` rule in `SysConfig` is correctly configured.
+    2.  **Verify Rule Execution:** Confirm that the `_runStagingValidation` function in `ProductService.js` correctly executes this rule during a Comax import.
+    3.  **Verify Task Creation:** Ensure that the `TaskService` correctly creates a `task.validation.field_mismatch` task when a discrepancy is found.
 
-## Phase 7: The Dashboard-Driven Web App (Frontend)
+### 3. New Product Workflow (PLANNED)
+*   **Goal:** Create a guided, task-based workflow to manage the process of adding a new product to both Comax and WooCommerce.
+*   **Tasks:**
+    1.  **Detection:** Implement logic in `ProductService.js` to detect new products during a Comax import (i.e., products in the import file that do not exist in `CmxProdM`).
+    2.  **Candidate Management:** Create a new sheet (`NewProductCandidates`) or similar mechanism to hold these new products for review.
+    3.  **Task Generation:** Upon detection, create a parent task ("Onboard New Product: [Product Name]") and a sub-task for an admin to "Approve New Product Candidate".
+    4.  **Guided Workflow:** Once approved, the system will generate a series of linked tasks to guide an admin through the manual steps (e.g., "Add Product to WooCommerce", "Set 'IsWeb' Flag in Comax").
 
-**Goal:** To build the user interface that sits on top of the powerful backend engine.
-
-**1. Build Core UI Framework**
-    *   **Action:** Set up the main HTML file, CSS framework, and client-side JavaScript for the Single Page Application (SPA).
-
-**2. Implement System Health Widget**
-    *   **Action:** Create the UI for the "System Health" widget on the main dashboard.
-    *   **Detail:** The widget will display the count of failed jobs from `SysJobQueue` and the status from the last configuration health check. It will include a button to trigger the health check function.
-
-## Phase 8: Testing, Integration & Deployment
-
-**Goal:** To connect, test, and launch the new system.
+### 4. SKU Update Workflow (PLANNED)
+*   **Goal:** Create a guided, task-based workflow to safely manage SKU changes and prevent data mismatches between systems.
+*   **Tasks:**
+    1.  **Detection:** Implement logic in `ProductService.js` to detect when a product's SKU has changed during a Comax import (keyed by the stable `cpm_CmxId`).
+    2.  **Task Generation:** When a change is detected for a product that is sold online, create a high-priority task in `SysTasks` (e.g., "SKU Change Detected for [Product Name]").
+    3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the WooCommerce admin panel.
+    4.  **Automated Verification:** The system will monitor subsequent web product imports. When it detects that the SKU for the corresponding product has been updated in `WebProdM`, it will automatically mark the task as 'Completed'.

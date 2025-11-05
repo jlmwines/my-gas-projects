@@ -1,9 +1,0 @@
-feat(ProductService): Implement master data reconciliation
-
-Implements Part 5 of the implementation plan.
-
-- Adds `_upsertComaxData` and `_upsertWebProductsData` functions to `ProductService.js`.
-- The reconciliation logic follows an "update-only" strategy, where the import processes only update existing products in the master sheets (`CmxProdM`, `WebProdM`).
-- This change respects the principle that JLMops is the source of truth for all descriptive data, and new products are created only via the onboarding workflow.
-- Adds a new validation rule to `setup.js` to create a warning task when a product's name in a web import does not match the master data in `WebDetM`.
-- Updates `IMPLEMENTATION_PLAN.md` to mark Part 5 as complete.
