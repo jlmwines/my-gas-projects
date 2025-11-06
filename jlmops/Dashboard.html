@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <title>JLMops Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+      body {
+        display: flex;
+      }
+      .sidebar {
+        width: 250px;
+        height: 100vh;
+        position: fixed;
+        background: #f8f9fa;
+        padding: 20px;
+      }
+      .content {
+        margin-left: 270px;
+        padding: 20px;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <h3>JLMops</h3>
+      <ul class="nav flex-column">
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);" onclick="loadView('PackingSlips')">Packing Slips</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);" onclick="loadView('DisplayOrders')">Display Orders (Test)</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link disabled" href="#">Comax Actions</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link disabled" href="#">Web Actions</a>
+        </li>
+      </ul>
+    </div>
+
+    <div id="main-content" class="content">
+      <h1>Welcome to the JLMops Dashboard</h1>
+      <p>Select a workflow from the sidebar to begin.</p>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+      function loadView(viewName) {
+        const contentArea = document.getElementById('main-content');
+        contentArea.innerHTML = '<h2>Loading...</h2>';
+
+        google.script.run
+          .withSuccessHandler(html => {
+            contentArea.innerHTML = html;
+            // Find all script tags in the loaded HTML and execute them.
+            const scripts = Array.from(contentArea.getElementsByTagName('script'));
+            scripts.forEach(s => {
+                const newScript = document.createElement('script');
+                newScript.textContent = s.textContent;
+                s.parentNode.replaceChild(newScript, s);
+            });
+          })
+          .withFailureHandler(err => {
+            contentArea.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+          })
+          .getView(viewName); // A generic function to get any view
+      }
+    </script>
+  </body>
+</html>

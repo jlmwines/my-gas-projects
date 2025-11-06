@@ -608,4 +608,36 @@ function createJlmopsSystemSheets() {
     createSysTasksHeaders();
     createWebOrdMArchiveHeaders();
     createWebOrdItemsMArchiveHeaders();
+    createLookupSheets(); // Add new function to the main setup call
+}
+
+function createLookupSheets() {
+    const functionName = 'createLookupSheets';
+    try {
+        console.log(`Running ${functionName}...`);
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+
+        const sheetsToCreate = {
+            'SysLkp_Grapes': ['slg_Code', 'slg_TextEN', 'slg_TextHE'],
+            'SysLkp_Kashrut': ['slk_Type', 'slk_Code', 'slk_TextEN', 'slk_TextHE'],
+            'SysLkp_Texts': ['slt_Code', 'slt_TextEN', 'slt_TextHE', 'slt_Note']
+        };
+
+        for (const sheetName in sheetsToCreate) {
+            let sheet = spreadsheet.getSheetByName(sheetName);
+            if (!sheet) {
+                sheet = spreadsheet.insertSheet(sheetName);
+                console.log(`Sheet '${sheetName}' was not found and has been created.`);
+            }
+            const headers = sheetsToCreate[sheetName];
+            sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+            console.log(`Headers written to '${sheetName}'.`);
+        }
+
+        console.log('Lookup sheets have been created/verified.');
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
 }

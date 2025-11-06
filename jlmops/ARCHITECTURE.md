@@ -33,7 +33,9 @@ The backend is designed as a collection of services that are controlled by a sin
 *   **Service Layer:** The core logic is broken down into the following services:
     *   **`OrchestratorService`**: Manages the time-driven trigger, scans for new files, checks the `FileRegistry`, and initiates the correct workflows.
     *   **`ProductService`**: Handles core product data management, including the validation and integrity checks for the product onboarding and SKU change workflows.
-    *   **`OrderService`**: Manages the entire order lifecycle, including import, status merging, and preparing data for the Comax export.
+    *   **`OrderService`**: Manages the entire order lifecycle. It handles the import and upsert of order data into the master sheets and is the master controller of the processing state machine in `SysOrdLog`, setting the initial `Eligible` or `Ineligible` status based on defined business rules.
+    *   **`PackingSlipService`**: Acts as an enrichment engine. It scans `SysOrdLog` for `Eligible` orders, gathers all necessary data for printing, enriches it with descriptive text, and places the result in `SysPackingCache`. Upon completion, it updates the order's status in `SysOrdLog` to `Ready`.
+    *   **`PrintService`**: Handles the final output generation. It reads the pre-processed data from `SysPackingCache` for orders marked as `Ready`, generates the physical document, and then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
     *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
     *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
     *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
@@ -144,6 +146,19 @@ User authentication is handled entirely by Google's account system. The web app 
 
 *   **Identification:** Once a user is authenticated, the backend can reliably identify them on every request by calling `Session.getActiveUser().getEmail()`. This provides a secure, verified email address for the active user.
 *   **Authorization:** This user email serves as the primary key for all role-based access control (RBAC). When a user attempts an action, the relevant backend service checks their email against the system's configuration sheets (e.g., `SysTaskStatusWorkflow`) to determine if their role permits them to perform that action.
+
+### 3.2.1. Developer Impersonation (Development Only)
+
+To facilitate testing of different user roles without requiring multiple Google accounts, a development-only impersonation feature has been implemented.
+
+*   **`AuthService.js`**: A new centralized service has been created to handle user identification. All parts of the application that need to identify the current user **must** call `AuthService.getActiveUserEmail()` instead of `Session.getActiveUser().getEmail()`.
+
+*   **Impersonation Mechanism**: The `doGet(e)` function in `WebApp.js` calls `AuthService.handleImpersonation(e)`. This function checks for a URL parameter `test_user`.
+    *   If `?test_user=email@domain.com` is present in the web app's URL, the `AuthService` will store this email in the current user's `PropertiesService`.
+    *   The `AuthService.getActiveUserEmail()` function will then return this stored email for all subsequent backend calls, effectively impersonating that user for the current session.
+    *   To clear the impersonation, navigate to the web app URL with `?clear_impersonation=true`.
+
+*   **Security Warning**: This feature is intended **strictly for development and testing purposes**. It allows a developer to test the UI and permissions of different roles easily. It should be disabled or secured before the application is considered production-ready.
 
 ### 3.3. Deployment Configuration
 

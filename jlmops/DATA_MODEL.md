@@ -299,11 +299,21 @@ This set of sheets manages the entire workflow from when an order is imported un
 *   **Prefix:** `woia_`
 *   **Columns:** Identical to `WebOrdItemsM`, but using the `woia_` prefix (e.g., `woia_OrderItemId`, `woia_OrderId`, etc.).
 
-*   **`SysOrdLog`**: System Order Log. Tracks the status of orders as they move through the packing and export workflows.
-    *   **Headers**: `sol_OrderId`, `sol_OrderDate`, `sol_PackingStatus`, `sol_PackingPrintedTimestamp`, `sol_ComaxExportStatus`, `sol_ComaxExportTimestamp`
+*   **`SysOrdLog`**: System Order Log. This is the **single source of truth** for the processing state of an order. It tracks an order's status as it moves through the packing and export workflows.
+    *   **`sol_OrderId`**: The Order ID.
+    *   **`sol_OrderDate`**: The date the order was placed.
+    *   **`sol_OrderStatus`**: A snapshot of the order's main status (e.g., 'processing', 'on-hold', 'completed') at the time of the last update.
+    *   **`sol_PackingStatus`**: The status of the order within the packing slip workflow. This follows a strict state machine:
+        *   `Ineligible`: The order should not be packed (e.g., 'cancelled', 'refunded').
+        *   `Eligible`: The order is valid and waiting for its packing slip data to be enriched. This is the trigger for the `PackingSlipService`.
+        *   `Ready`: The data has been enriched and the order is ready to be displayed on the packing slip UI.
+        *   `Printed`: The packing slip has been printed.
+    *   **`sol_PackingPrintedTimestamp`**: Timestamp of when the packing slip was last printed.
+    *   **`sol_ComaxExportStatus`**: The status of the order within the Comax export workflow.
+    *   **`sol_ComaxExportTimestamp`**: Timestamp of when the order was last exported to Comax.
 
 ### 5. `SysPackingCache` (System Packing Cache)
-*   **Purpose:** A pre-processed sheet containing all the rich, combined data needed to print packing slips quickly. This sheet is populated by an automated background process.
+*   **Purpose:** A temporary data cache used by the `PackingSlipService` to gather and enrich all the descriptive data (e.g., pairing texts, grape info) needed for a packing slip. It is **not** a source of truth for order status; `SysOrdLog` holds that role.
 *   **Columns:**
     *   `spc_OrderId`
     *   `spc_WebIdEn`
@@ -312,7 +322,9 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `spc_NameEn` / `spc_NameHe`
     *   `spc_Intensity`, `spc_Complexity`, `spc_Acidity`, `spc_Decant`
     *   `spc_PairHarMild`, `spc_PairHarRich`, `spc_PairHarIntense`, `spc_PairHarSweet`
-    *   `spc_PairConMild`, `spc_PairConRich`, `spc_PairConIntense`, `spc_PairConSweet`
+    *   `spc_PairConIntense`
+    *   `spc_PairConSweet`
+
 
 ### 6. `SysInventoryOnHold` (System On-Hold Inventory)
 *   **Purpose:** Stores a pre-calculated summary of stock committed to 'On-Hold' orders to improve system performance.

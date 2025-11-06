@@ -64,18 +64,27 @@ const ConfigService = (function() {
           return;
       }
 
-      const propKey = row[3]; // scf_P01
-      const propValue = row[4]; // scf_P02
+      if (String(settingName).startsWith('template.')) {
+        // This is a template setting, so we treat it as an array of full rows.
+        if (!parsedConfig[settingName]) {
+            parsedConfig[settingName] = [];
+        }
+        // We push the entire row so the consumer can access any 'P' column.
+        parsedConfig[settingName].push(row);
+      } else {
+        // This is a standard key-value setting.
+        const propKey = row[3]; // scf_P01
+        const propValue = row[4]; // scf_P02
 
-      if (propKey === null || propKey === undefined || propKey === '') {
-        return;
+        if (propKey === null || propKey === undefined || propKey === '') {
+            return;
+        }
+
+        if (!parsedConfig[settingName]) {
+            parsedConfig[settingName] = {};
+        }
+        parsedConfig[settingName][propKey] = propValue;
       }
-
-      if (!parsedConfig[settingName]) {
-        parsedConfig[settingName] = {};
-      }
-
-      parsedConfig[settingName][propKey] = propValue;
     });
 
     // 2. Perform Fail-Fast Schema Version Check

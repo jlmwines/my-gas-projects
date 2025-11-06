@@ -6,42 +6,34 @@ This document describes the primary user and system workflows within the JLM Ope
 
 This workflow manages orders from import to packing and export, prioritizing speed and accuracy.
 
-### 1.1. Order Import & Data Processing
+### 1.1. Order Import & Status Management (`OrderService`)
 
 1.  **Raw Data Ingestion:** A user uploads the latest WooCommerce order CSV export. The system lands this raw data into the `WebOrdS` (Web Order Staging) sheet.
-2.  **Automated Processing:** The `OrderService` (triggered by the Orchestrator) processes the data from `WebOrdS`.
+2.  **Automated Upsert:** The `OrderService` processes the data from `WebOrdS`.
     *   It parses and normalizes the order and line item data.
-    *   It populates the `WebOrdM` (Web Orders Master) and `WebOrdItemsM` (Web Order Items Master) sheets.
-    *   For new orders, it creates a new entry in `SysOrdLog` (System Order Log) with a `sol_PackingStatus` of 'Pending'.
-    *   For existing orders that have been modified (e.g., status change, item change), it updates their records in `WebOrdM` and `WebOrdItemsM`. If the order is in a mutable status (e.g., 'On-Hold'), it also clears its entry in `SysPackingCache` and resets its `sol_PackingStatus` in `SysOrdLog` to 'Pending', signaling it needs reprocessing.
+    *   It performs an "upsert" into the `WebOrdM` (master) and `WebOrdItemsM` (line items) sheets.
+    *   Crucially, it also performs an "upsert" into `SysOrdLog`. For each order, it checks the business rules:
+        *   **Lock-in Rule:** If the order's previous `sol_OrderStatus` in the log was 'processing' or 'completed', its packing status is locked, and no further packing updates are made.
+        *   **Update Rule:** For all other orders (new, on-hold, etc.), it updates the `sol_OrderStatus` with the latest status from the import file and sets the `sol_PackingStatus` to either `Eligible` or `Ineligible`.
 
-### 1.2. Packing Slip Data Pre-processing (Automated)
+### 1.2. Packing Slip Workflow (Automated & User-Driven)
 
-1.  **Background Task:** A scheduled background process (part of the `OrderService` or a dedicated `PackingService`) continuously monitors `SysOrdLog` for orders with a `sol_PackingStatus` of 'Pending'.
-2.  **Data Enrichment:** For each 'Pending' order, the process gathers all necessary data for the packing slip:
-    *   Order details from `WebOrdM`.
-    *   Line item details from `WebOrdItemsM`.
-    *   Rich product details (names, attributes, pairings) from `WebDetM` (linked via `woi_WebIdEn`).
-3.  **Cache Population:** This fully enriched, ready-to-print data is then stored in the `SysPackingCache` sheet.
+This workflow is now a clean, state-driven process managed by `SysOrdLog`.
 
-### 1.3. Dynamic Packing Slip Generation (The "Generate and Finalize" Workflow)
+#### 1.2.1. Data Enrichment (`PackingSlipService`)
 
-This hybrid workflow is designed to provide maximum speed for the system and maximum flexibility for the manager, combining automated HTML generation with the familiar editing and printing power of Google Docs.
+1.  **Trigger:** The `PackingSlipService` is triggered after the `OrderService` completes.
+2.  **Find Eligible Orders:** The service scans `SysOrdLog` for all orders with a `sol_PackingStatus` of `Eligible`.
+3.  **Enrich and Cache:** For each eligible order, it gathers all required data from the master sheets, enriches it with descriptive text (e.g., pairing notes), and stores it in `SysPackingCache`.
+4.  **Set to Ready:** After successfully caching the data for an order, the service updates that order's `sol_PackingStatus` in `SysOrdLog` from `Eligible` to `Ready`.
 
-1.  **Initiate Generation:** On the "Order Packing" workflow page, a manager selects one or more orders and clicks "Generate Packing Slips".
+#### 1.2.2. Packing Slip Generation (UI & `PrintService`)
 
-2.  **Step 1: Automated Document Creation (Backend Process)**
-    *   **Context Gathering:** The `OrderService` is called and immediately gathers the current context, including any active campaigns from `SysCampaigns` and customer details from `WebOrdM`.
-    *   **Template Parsing:** The service reads and parses the `PackingSlipTemplate` definition from the `SysConfig` sheet.
-    *   **Dynamic HTML Assembly:** The service orchestrates the assembly of a single, rich HTML string containing all the selected packing slips. This HTML includes all line item details from `SysPackingCache` and any context-aware promotional messages (e.g., `CAMPAIGN_FOOTER` blocks).
-    *   **Conversion to Google Doc:** The `OrderService` creates a new Google Doc and programmatically inserts the generated HTML. Google Docs renders the HTML into a fully formatted, multi-page document.
-
-3.  **Step 2: Manager Finalization and Printing (User Action)**
-    *   **Review "Draft" Document:** The manager is presented with a link to the single, newly created "Packing Slip Batch" Google Doc.
-    *   **Final Edits (Optional):** The manager can quickly scroll through the document. Because the layout is based on fluid HTML, it is highly efficient. If any minor layout issues exist (e.g., a slip that spills onto a new page by one line), the manager can use the standard Google Docs editor to make small adjustments (e.g., tweaking a margin or font size) to perfect the layout.
-    *   **Bulk Printing:** Once satisfied, the manager uses the native Google Docs print function (`File > Print`) to print the entire batch in a single print job.
-
-4.  **Status Update:** After successfully generating and providing the link to the Google Doc, the `OrderService` updates the `sol_PackingStatus` to 'Printed' and records the `sol_PackingPrintedTimestamp` in `SysOrdLog`.
+1.  **Display Ready Orders:** On the "Order Packing" page, the web app queries `SysOrdLog` and displays a list of all orders that are in the `Ready` state.
+2.  **Initiate Generation (User Action):** A manager selects one or more `Ready` orders and clicks the print button.
+3.  **Data Retrieval & Generation (`PrintService`):** The `PrintService` reads the pre-enriched data from `SysPackingCache` and generates the Google Doc.
+4.  **Set to Printed:** Upon successful generation, the `PrintService` updates the `sol_PackingStatus` for the printed orders to `Printed` in `SysOrdLog` and records the `sol_PackingPrintedTimestamp`.
+5.  **Manager Finalization & Printing (User Action):** The manager is presented with a link to the newly created Google Doc for review, optional minor edits, and bulk printing using native Google Docs functionality.
 
 ### 1.4. Comax Export
 

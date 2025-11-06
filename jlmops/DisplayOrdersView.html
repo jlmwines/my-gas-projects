@@ -1,0 +1,34 @@
+<div>
+  <h2>Display Orders (Test)</h2>
+  <p>This is a test view to display packable orders.</p>
+  <div id="display-orders-list"></div>
+</div>
+
+<script>
+  function displayOrdersData() {
+    const ordersListDiv = document.getElementById('display-orders-list');
+    ordersListDiv.innerHTML = 'Loading packable orders...';
+
+    google.script.run
+      .withSuccessHandler(orders => {
+        if (orders.length === 0) {
+          ordersListDiv.innerHTML = '<p>No orders are currently ready for packing.</p>';
+          return;
+        }
+
+        let tableHtml = '<table class="table table-hover"><thead><tr><th>Order ID</th><th>Status</th></tr></thead><tbody>';
+        orders.forEach(order => {
+          tableHtml += `<tr><td>${order.orderId}</td><td>${order.status}</td></tr>`;
+        });
+        tableHtml += '</tbody></table>';
+        ordersListDiv.innerHTML = tableHtml;
+      })
+      .withFailureHandler(err => {
+        ordersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      })
+      .displayPackableOrders();
+  }
+
+  // Self-execute to load the data.
+  displayOrdersData();
+</script>

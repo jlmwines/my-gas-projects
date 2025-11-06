@@ -331,155 +331,72 @@ function OrderService(productService) {
     }
   };
 
-  this.preparePackingData = function() {
-    const functionName = 'preparePackingData';
-    logger.info(`Starting ${functionName}...`);
+  this.prepareInitialPackingData = function(orderIds) {
+    const functionName = 'prepareInitialPackingData';
+    logger.info(`Starting ${functionName} for ${orderIds.length} orders...`);
 
     try {
+        if (!orderIds || orderIds.length === 0) {
+            logger.info('No order IDs provided for initial packing data preparation. Exiting.');
+            return;
+        }
+
         const allConfig = ConfigService.getAllConfig();
         const sheetNames = allConfig['system.sheet_names'];
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
         const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-        const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-        const logArchiveSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM_Archive);
-        const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
         const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
-        const detailSheet = spreadsheet.getSheetByName(sheetNames.WebDetM);
         const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
+        const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
-        if (!logSheet || !masterOrderSheet || !masterItemSheet || !detailSheet || !cacheSheet) {
-            throw new Error('One or more required sheets for packing data preparation are missing.');
+        if (!masterItemSheet || !cacheSheet || !logSheet) {
+            throw new Error('One or more required sheets for initial packing data preparation are missing.');
         }
 
-        // 1. Get all printed order IDs from SysOrdLog and WebOrdM_Archive
-        const allPrintedOrderIds = new Set();
-        const logData = logSheet.getDataRange().getValues();
-        const logHeaders = logData.shift();
-        const logOrderIdCol = logHeaders.indexOf('sol_OrderId');
-        const logPrintedDateCol = logHeaders.indexOf('sol_PackingPrintedTimestamp');
+        const eligibleOrderIds = new Set(orderIds.map(String));
 
-        logData.forEach(row => {
-            if (row[logPrintedDateCol] !== null && String(row[logPrintedDateCol]).trim() !== '') {
-                allPrintedOrderIds.add(String(row[logOrderIdCol]));
-            }
-        });
+        // 1. Get all items for the eligible orders
+        const allItems = masterItemSheet.getDataRange().getValues();
+        const itemHeaders = allItems.shift();
+        const woiOrderIdCol = itemHeaders.indexOf('woi_OrderId');
+        const woiWebIdEnCol = itemHeaders.indexOf('woi_WebIdEn');
+        const woiSkuCol = itemHeaders.indexOf('woi_SKU');
+        const woiQuantityCol = itemHeaders.indexOf('woi_Quantity');
 
-        if (logArchiveSheet && logArchiveSheet.getLastRow() > 1) {
-            const logArchiveData = logArchiveSheet.getDataRange().getValues();
-            const logArchiveHeaders = logArchiveData.shift();
-            const archiveOrderIdCol = logArchiveHeaders.indexOf('woma_OrderId');
-            if (archiveOrderIdCol !== -1) {
-                logArchiveData.forEach(row => {
-                    allPrintedOrderIds.add(String(row[archiveOrderIdCol]));
-                });
-            }
-        }
-        logger.info(`Found ${allPrintedOrderIds.size} printed order IDs.`);
+        const itemsForEligibleOrders = allItems.filter(itemRow => eligibleOrderIds.has(String(itemRow[woiOrderIdCol])));
 
-        // 2. Find eligible orders
-        const webOrdMData = masterOrderSheet.getDataRange().getValues();
-        const webOrdMHeaders = webOrdMData.shift();
-        const womOrderIdCol = webOrdMHeaders.indexOf('wom_OrderId');
-        const womStatusCol = webOrdMHeaders.indexOf('wom_Status');
-        logger.info(`Evaluating ${webOrdMData.length} orders from WebOrdM.`);
-
-        const eligibleOrders = webOrdMData.filter(row => {
-            const orderId = String(row[womOrderIdCol]);
-            const status = (row[womStatusCol] || '').toLowerCase().trim();
-            return status === 'on-hold' || (['processing', 'completed'].includes(status) && !allPrintedOrderIds.has(orderId));
-        });
-
-        logger.info(`Found ${eligibleOrders.length} eligible orders.`);
-        if (eligibleOrders.length === 0) {
-            logger.info('No eligible orders to prepare for packing. Exiting.');
-            return;
-        }
-        
-        const eligibleOrderIds = new Set(eligibleOrders.map(row => row[womOrderIdCol]));
-
-        // 3. Get data from other sheets
-        const webOrdItemsMData = masterItemSheet.getDataRange().getValues();
-        const webOrdItemsMHeaders = webOrdItemsMData.shift();
-
-        const webDetMData = detailSheet.getDataRange().getValues();
-        const webDetMHeaders = webDetMData.shift();
-        const webDetMMap = webDetMData.reduce((map, row) => {
-            map.set(row[webDetMHeaders.indexOf('wdm_WebIdEn')], row);
-            return map;
-        }, new Map());
-        logger.info(`webDetMMap keys: ${Array.from(webDetMMap.keys())}`);
-
-        // 4. Prepare cache data
-        const cacheData = [];
+        // 2. Prepare the basic data for the cache
         const cacheHeaders = cacheSheet.getRange(1, 1, 1, cacheSheet.getLastColumn()).getValues()[0];
-
-        // Get WebDetM headers for column indexing
-        const wdmWebIdEnCol = webDetMHeaders.indexOf('wdm_WebIdEn');
-        const wdmNameEnCol = webDetMHeaders.indexOf('wdm_NameEn');
-        const wdmNameHeCol = webDetMHeaders.indexOf('wdm_NameHe');
-        const wdmIntensityCol = webDetMHeaders.indexOf('wdm_Intensity');
-        const wdmComplexityCol = webDetMHeaders.indexOf('wdm_Complexity');
-        const wdmAcidityCol = webDetMHeaders.indexOf('wdm_Acidity');
-        const wdmDecantCol = webDetMHeaders.indexOf('wdm_Decant');
-        const wdmPairHarMildCol = webDetMHeaders.indexOf('wdm_PairHarMild');
-        const wdmPairHarRichCol = webDetMHeaders.indexOf('wdm_PairHarRich');
-        const wdmPairHarIntenseCol = webDetMHeaders.indexOf('wdm_PairHarIntense');
-        const wdmPairHarSweetCol = webDetMHeaders.indexOf('wdm_PairHarSweet');
-        const wdmPairConMildCol = webDetMHeaders.indexOf('wdm_PairConMild');
-        const wdmPairConRichCol = webDetMHeaders.indexOf('wdm_PairConRich');
-        const wdmPairConIntenseCol = webDetMHeaders.indexOf('wdm_PairConIntense');
-        const wdmPairConSweetCol = webDetMHeaders.indexOf('wdm_PairConSweet');
-
-
-        eligibleOrderIds.forEach(orderId => {
-            const orderItems = webOrdItemsMData.filter(item => String(item[webOrdItemsMHeaders.indexOf('woi_OrderId')]) === String(orderId));
-            logger.info(`Found ${orderItems.length} items for order ${orderId}.`);
-            orderItems.forEach(item => {
-                const webIdEn = item[webOrdItemsMHeaders.indexOf('woi_WebIdEn')];
-                logger.info(`Processing item with webIdEn: ${webIdEn}`);
-                const sku = item[webOrdItemsMHeaders.indexOf('woi_SKU')];
-                const quantity = item[webOrdItemsMHeaders.indexOf('woi_Quantity')];
-
-                const productDetails = webDetMMap.get(webIdEn) || []; // Get the full WebDetM row
-
-                const newRow = cacheHeaders.map(header => {
-                    switch (header) {
-                        case 'spc_OrderId': return orderId;
-                        case 'spc_WebIdEn': return webIdEn;
-                        case 'spc_SKU': return sku;
-                        case 'spc_Quantity': return quantity;
-                        case 'spc_NameEn': return productDetails[wdmNameEnCol] || '';
-                        case 'spc_NameHe': return productDetails[wdmNameHeCol] || '';
-                        case 'spc_Intensity': return productDetails[wdmIntensityCol] || '';
-                        case 'spc_Complexity': return productDetails[wdmComplexityCol] || '';
-                        case 'spc_Acidity': return productDetails[wdmAcidityCol] || '';
-                        case 'spc_Decant': return productDetails[wdmDecantCol] || '';
-                        case 'spc_PairHarMild': return productDetails[wdmPairHarMildCol] || '';
-                        case 'spc_PairHarRich': return productDetails[wdmPairHarRichCol] || '';
-                        case 'spc_PairHarIntense': return productDetails[wdmPairHarIntenseCol] || '';
-                        case 'spc_PairHarSweet': return productDetails[wdmPairHarSweetCol] || '';
-                        case 'spc_PairConMild': return productDetails[wdmPairConMildCol] || '';
-                        case 'spc_PairConRich': return productDetails[wdmPairConRichCol] || '';
-                        case 'spc_PairConIntense': return productDetails[wdmPairConIntenseCol] || '';
-                        case 'spc_PairConSweet': return productDetails[wdmPairConSweetCol] || '';
-                        default: return '';
-                    }
-                });
-                cacheData.push(newRow);
-            });
+        const headerMap = Object.fromEntries(cacheHeaders.map((h, i) => [h, i]));
+        
+        const newCacheRows = itemsForEligibleOrders.map(item => {
+            const newRow = new Array(cacheHeaders.length).fill('');
+            newRow[headerMap['spc_OrderId']] = item[woiOrderIdCol];
+            newRow[headerMap['spc_WebIdEn']] = item[woiWebIdEnCol];
+            newRow[headerMap['spc_SKU']] = item[woiSkuCol];
+            newRow[headerMap['spc_Quantity']] = item[woiQuantityCol];
+            return newRow;
         });
-        logger.info(`Prepared ${cacheData.length} rows for SysPackingCache.`);
 
-        // 5. Populate cache sheet
+        // 3. Perform an "upsert" into the cache sheet
+        const existingCacheData = cacheSheet.getLastRow() > 1 ? cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getLastColumn()).getValues() : [];
+        const spcOrderIdColIdx = headerMap['spc_OrderId'];
+
+        const otherOrdersCacheData = existingCacheData.filter(row => !eligibleOrderIds.has(String(row[spcOrderIdColIdx])));
+        const finalCacheData = otherOrdersCacheData.concat(newCacheRows);
+
         if (cacheSheet.getLastRow() > 1) {
             cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getMaxColumns()).clearContent();
         }
-        if (cacheData.length > 0) {
-            cacheSheet.getRange(2, 1, cacheData.length, cacheData[0].length).setValues(cacheData);
+        if (finalCacheData.length > 0) {
+            cacheSheet.getRange(2, 1, finalCacheData.length, finalCacheData[0].length).setValues(finalCacheData);
         }
+        logger.info(`Upserted ${newCacheRows.length} item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
 
-        logger.info(`Successfully prepared packing data for ${eligibleOrders.length} orders.`);
+        // 4. Now, call the PackingSlipService to enrich this data
+        PackingSlipService.preparePackingData(orderIds);
+        logger.info(`Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`);
 
     } catch (e) {
         logger.error(`Error in ${functionName}: ${e.message}`, e);
@@ -492,204 +409,205 @@ function OrderService(productService) {
     logger.info(`Starting ${functionName}...`);
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const sheetNames = allConfig['system.sheet_names'];
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
-      const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
-      const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+        const allConfig = ConfigService.getAllConfig();
+        const sheetNames = allConfig['system.sheet_names'];
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+        const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+        const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
-      if (!ordersWithLineItems || ordersWithLineItems.length === 0) {
-        logger.warn('No staged orders to process.');
-        return;
-      }
+        if (!ordersWithLineItems || ordersWithLineItems.length === 0) {
+            logger.warn('No staged orders to process.');
+            return;
+        }
 
-      // 1. Load Schemas and Mapping from SysConfig
-      const webOrdMHeaders = allConfig['schema.data.WebOrdM'].headers.split(',');
-      const webOrdItemsMHeaders = allConfig['schema.data.WebOrdItemsM'].headers.split(',');
-      const stagingToMasterMap = allConfig['map.staging_to_master.web_orders'];
+        // --- 1. Load Schemas and Existing Data into Memory ---
+        const webOrdMHeaders = allConfig['schema.data.WebOrdM'].headers.split(',');
+        const webOrdItemsMHeaders = allConfig['schema.data.WebOrdItemsM'].headers.split(',');
+        const logHeaders = allConfig['schema.data.SysOrdLog'].headers.split(',');
+        const stagingToMasterMap = allConfig['map.staging_to_master.web_orders'];
+        const masterOrderIdHeader = allConfig['order.master_order_id_header'].header;
+        const masterStatusHeader = allConfig['order.master_status_header'].header;
+        const MUTABLE_STATUSES = allConfig['order.mutable_statuses'].statuses.split(',');
+        const INELIGIBLE_ORDER_STATUSES = ['pending', 'cancelled', 'refunded', 'failed', 'trash'];
+        const LOCKED_PACKING_STATUSES = ['processing', 'completed'];
 
-      if (!stagingToMasterMap) {
-        throw new Error("Configuration for 'map.staging_to_master.web_orders' not found.");
-      }
+        const masterOrderData = masterOrderSheet.getDataRange().getValues();
+        const masterHeaderMap = Object.fromEntries(masterOrderData[0].map((h, i) => [h, i]));
+        const masterOrderMap = new Map();
+        masterOrderData.slice(1).forEach((row, index) => {
+            const orderId = String(row[masterHeaderMap[masterOrderIdHeader]]);
+            if (orderId) {
+                masterOrderMap.set(orderId, { rowIndex: index + 2, status: String(row[masterHeaderMap[masterStatusHeader]]).toLowerCase() });
+            }
+        });
 
-      // 2. Transform staged orders (wos_ keys) to master orders (wom_ keys)
-      const masterOrders = ordersWithLineItems.map(stagedOrder => {
-        const masterOrder = { lineItems: stagedOrder.lineItems }; // Preserve line items
-        for (const sKey in stagingToMasterMap) {
-          if (stagedOrder.hasOwnProperty(sKey)) {
-            const mKey = stagingToMasterMap[sKey];
-            let value = stagedOrder[sKey];
+        const logData = logSheet.getLastRow() > 1 ? logSheet.getRange(2, 1, logSheet.getLastRow() - 1, logHeaders.length).getValues() : [];
+        const logHeaderMap = Object.fromEntries(logHeaders.map((h, i) => [h, i]));
+        const logOrderMap = new Map();
+        logData.forEach((row, index) => {
+            const orderId = String(row[logHeaderMap['sol_OrderId']]);
+            if (orderId) {
+                logOrderMap.set(orderId, { rowIndex: index, data: row });
+            }
+        });
 
-            // Force string format for date to prevent auto-formatting
-            if (mKey === 'wom_OrderDate' && value) {
-              value = "'" + value;
+        // --- 2. Transform and Categorize Staged Orders ---
+        const masterOrders = ordersWithLineItems.map(stagedOrder => {
+            const masterOrder = { lineItems: stagedOrder.lineItems };
+            for (const sKey in stagingToMasterMap) {
+                if (stagedOrder.hasOwnProperty(sKey)) {
+                    masterOrder[stagingToMasterMap[sKey]] = stagedOrder[sKey];
+                }
+            }
+            return masterOrder;
+        });
+
+        const newOrders = [];
+        const ordersToFullUpdate = [];
+        const ordersToStatusOnlyUpdate = [];
+        const orderIdsToRefresh = new Set();
+
+        for (const order of masterOrders) {
+            const orderId = String(order[masterOrderIdHeader]).trim();
+            if (!orderId) continue;
+
+            const masterOrderEntry = masterOrderMap.get(orderId);
+            const foundInMaster = !!masterOrderEntry;
+            const currentMasterStatus = foundInMaster ? masterOrderEntry.status : '';
+            const stagedStatus = (order[masterStatusHeader] || '').toLowerCase();
+
+            const existingLogEntry = logOrderMap.get(orderId);
+            const priorOrderStatusInLog = existingLogEntry ? existingLogEntry.data[logHeaderMap['sol_OrderStatus']] : '';
+
+            let shouldUpdatePackingStatus = true;
+            // Rule A: Lock-in Rule
+            if (LOCKED_PACKING_STATUSES.includes(priorOrderStatusInLog)) {
+                shouldUpdatePackingStatus = false;
             }
 
-            masterOrder[mKey] = value;
-          }
-        }
-        return masterOrder;
-      });
+            // Categorize order for master sheet update
+            if (!foundInMaster) {
+                newOrders.push({ data: order, orderId: orderId, lineItems: order.lineItems });
+            } else {
+                // Rule B (On-Hold) and general updates trigger a full update of line items
+                if (currentMasterStatus !== stagedStatus || MUTABLE_STATUSES.includes(currentMasterStatus) || priorOrderStatusInLog === 'on-hold') {
+                    ordersToFullUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId, lineItems: order.lineItems });
+                } else {
+                    ordersToStatusOnlyUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId });
+                }
+            }
 
-      if (masterOrders.length > 0) {
-        // No longer logging transformed keys, as it's not needed for production
-      }
+            // Create or update log entry in memory
+            if (shouldUpdatePackingStatus) {
+                const isEligibleForPacking = !INELIGIBLE_ORDER_STATUSES.includes(stagedStatus);
+                const newPackingStatus = isEligibleForPacking ? 'Eligible' : 'Ineligible';
 
-      // 3. Prepare for Upsert
-      const masterOrderIdHeader = allConfig['order.master_order_id_header'].header;
-      const masterStatusHeader = allConfig['order.master_status_header'].header;
-
-      const MUTABLE_STATUSES = allConfig['order.mutable_statuses'].statuses.split(',');
-      const STATUS_ONLY_UPDATE_STATUSES = allConfig['order.status_only_update_statuses'].statuses.split(',');
-
-      const masterOrderRange = masterOrderSheet.getDataRange();
-      const masterOrderData = masterOrderRange.getValues();
-      const masterHeaderMap = Object.fromEntries(masterOrderData[0].map((h, i) => [h, i]));
-
-      const orderIdCol = masterHeaderMap[masterOrderIdHeader];
-      const statusCol = masterHeaderMap[masterStatusHeader];
-      const masterOrderMap = new Map();
-      masterOrderData.slice(1).forEach((row, index) => {
-        const orderId = row[orderIdCol];
-        if (orderId) {
-          masterOrderMap.set(String(orderId), { rowIndex: index + 2, status: String(row[statusCol]).toLowerCase() });
-        }
-      });
-
-      const newOrders = [];
-      const ordersToFullUpdate = [];
-      const ordersToStatusOnlyUpdate = [];
-      const newOrderLogs = [];
-      const allNewOrderItems = [];
-      let itemMasterIdCounter = masterItemSheet.getLastRow();
-
-      // 4. Categorize staged orders
-      logger.info(functionName, 'Starting to categorize staged orders...');
-      for (const order of masterOrders) {
-        const orderId = String(order[masterOrderIdHeader]).trim();
-        if (!orderId) {
-          continue;
+                if (existingLogEntry) {
+                    const logRowIndex = existingLogEntry.rowIndex;
+                    logData[logRowIndex][logHeaderMap['sol_OrderStatus']] = stagedStatus;
+                    logData[logRowIndex][logHeaderMap['sol_PackingStatus']] = newPackingStatus;
+                } else {
+                    const newLog = new Array(logHeaders.length).fill('');
+                    newLog[logHeaderMap['sol_OrderId']] = orderId;
+                    newLog[logHeaderMap['sol_OrderDate']] = order['wom_OrderDate'];
+                    newLog[logHeaderMap['sol_OrderStatus']] = stagedStatus;
+                    newLog[logHeaderMap['sol_PackingStatus']] = newPackingStatus;
+                    newLog[logHeaderMap['sol_ComaxExportStatus']] = 'Pending';
+                    logData.push(newLog);
+                }
+                if (isEligibleForPacking) {
+                    orderIdsToRefresh.add(orderId);
+                }
+            } else if (existingLogEntry) {
+                // Still update the order status in the log, even if packing status is locked
+                const logRowIndex = existingLogEntry.rowIndex;
+                logData[logRowIndex][logHeaderMap['sol_OrderStatus']] = stagedStatus;
+            }
         }
 
-        const masterOrderEntry = masterOrderMap.get(orderId);
-        const foundInMaster = masterOrderEntry !== undefined;
-        const currentMasterStatus = foundInMaster ? masterOrderEntry.status : '';
-        const stagedStatus = (order[masterStatusHeader] || '').toLowerCase();
+        // --- 3. Perform Batch Updates (Master and Items) ---
+        const orderIdsToClearItems = new Set();
+        newOrders.forEach(o => orderIdsToClearItems.add(o.orderId));
+        ordersToFullUpdate.forEach(o => orderIdsToClearItems.add(o.orderId));
 
-        if (!foundInMaster) {
-          const orderRow = webOrdMHeaders.map(header => order[header] || '');
-          newOrders.push({ data: order, masterRow: orderRow, orderId: orderId, lineItems: order.lineItems });
-          newOrderLogs.push([orderId, order['wom_OrderDate'], 'Pending', null, 'Pending', null]);
-        } else if (currentMasterStatus === stagedStatus) {
-            // Skipping order as status has not changed
-        } else if (MUTABLE_STATUSES.includes(currentMasterStatus)) {
-          ordersToFullUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId, lineItems: order.lineItems });
-        } else if (STATUS_ONLY_UPDATE_STATUSES.includes(stagedStatus)){
-          ordersToStatusOnlyUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId });
-        } else {
-          // Log unhandled status combinations for debugging if needed
+        if (orderIdsToClearItems.size > 0) {
+            const masterItemsData = masterItemSheet.getDataRange().getValues();
+            const masterItemsHeader = masterItemsData.shift() || [];
+            const woiOrderIdCol = masterItemsHeader.indexOf('woi_OrderId');
+            const itemsToKeep = woiOrderIdCol === -1 ? masterItemsData : masterItemsData.filter(row => !orderIdsToClearItems.has(String(row[woiOrderIdCol]).trim()));
+            if (masterItemSheet.getLastRow() > 1) {
+                masterItemSheet.getRange(2, 1, masterItemSheet.getLastRow() - 1, masterItemSheet.getMaxColumns()).clearContent();
+            }
+            if (itemsToKeep.length > 0) {
+                masterItemSheet.getRange(2, 1, itemsToKeep.length, itemsToKeep[0].length).setValues(itemsToKeep);
+            }
         }
-      }
 
-      // 5. Clear existing line items for orders that are new or fully mutable
-      const orderIdsToClearItems = new Set();
-      newOrders.forEach(o => orderIdsToClearItems.add(o.orderId));
-      ordersToFullUpdate.forEach(o => orderIdsToClearItems.add(o.orderId));
-      
-      if (orderIdsToClearItems.size > 0) {
-        const masterItemsRange = masterItemSheet.getDataRange();
-        const masterItemsData = masterItemsRange.getValues();
-        const masterItemsHeader = masterItemsData.shift() || [];
-        const woiOrderIdCol = masterItemsHeader.indexOf('woi_OrderId');
-        
-        const itemsToKeep = woiOrderIdCol === -1 ? masterItemsData : masterItemsData.filter(row => !orderIdsToClearItems.has(String(row[woiOrderIdCol]).trim()));
-        
-        if (masterItemSheet.getLastRow() > 1) {
-          masterItemSheet.getRange(2, 1, masterItemSheet.getLastRow() - 1, masterItemSheet.getMaxColumns()).clearContent();
+        let itemMasterIdCounter = masterItemSheet.getLastRow();
+        const allNewOrderItems = [];
+        const processLineItems = (order) => {
+            if (!order.lineItems) return;
+            for (const item of order.lineItems) {
+                const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
+                const newItemData = { woi_OrderItemId: ++itemMasterIdCounter, woi_OrderId: order.orderId, woi_WebIdEn: webIdEn, woi_SKU: item.SKU, woi_Name: item.Name, woi_Quantity: item.Quantity, woi_ItemTotal: item.Total };
+                allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
+            }
+        };
+        newOrders.forEach(processLineItems);
+        ordersToFullUpdate.forEach(processLineItems);
+
+        if (ordersToFullUpdate.length > 0) {
+            const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() - 1, masterOrderSheet.getMaxColumns());
+            const values = range.getValues();
+            ordersToFullUpdate.forEach(order => {
+                const rowIndex = order.masterRowIndex - 2;
+                webOrdMHeaders.forEach((mHeader, mIndex) => {
+                    if (order.data[mHeader] !== undefined) {
+                        values[rowIndex][mIndex] = (mHeader === 'wom_OrderDate' && order.data[mHeader]) ? "'" + order.data[mHeader] : order.data[mHeader];
+                    }
+                });
+            });
+            range.setValues(values);
         }
-        if (itemsToKeep.length > 0) {
-          masterItemSheet.getRange(2, 1, itemsToKeep.length, itemsToKeep[0].length).setValues(itemsToKeep);
+        if (ordersToStatusOnlyUpdate.length > 0) {
+            const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() - 1, masterOrderSheet.getMaxColumns());
+            const values = range.getValues();
+            ordersToStatusOnlyUpdate.forEach(order => {
+                const rowIndex = order.masterRowIndex - 2;
+                values[rowIndex][masterHeaderMap[masterStatusHeader]] = order.data[masterStatusHeader];
+            });
+            range.setValues(values);
         }
-        itemMasterIdCounter = masterItemSheet.getLastRow();
-      }
-
-      // 6. Process line items for new and fully mutable orders
-      const processLineItems = (order) => {
-        if (!order.lineItems) return;
-        for (const item of order.lineItems) {
-          const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
-          const newItemData = {
-            woi_OrderItemId: ++itemMasterIdCounter,
-            woi_OrderId: order.orderId,
-            woi_WebIdEn: webIdEn,
-            woi_SKU: item.SKU,
-            woi_Name: item.Name,
-            woi_Quantity: item.Quantity,
-            woi_ItemTotal: item.Total
-          };
-          allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
+        if (newOrders.length > 0) {
+            const newOrderRows = newOrders.map(order => webOrdMHeaders.map(header => (header === 'wom_OrderDate' && order.data[header]) ? "'" + order.data[header] : order.data[header] || ''));
+            masterOrderSheet.getRange(masterOrderSheet.getLastRow() + 1, 1, newOrderRows.length, newOrderRows[0].length).setValues(newOrderRows);
         }
-      };
+        if (allNewOrderItems.length > 0) {
+            masterItemSheet.getRange(masterItemSheet.getLastRow() + 1, 1, allNewOrderItems.length, allNewOrderItems[0].length).setValues(allNewOrderItems);
+        }
 
-      newOrders.forEach(processLineItems);
-      ordersToFullUpdate.forEach(processLineItems);
+        // --- 4. Batch Write to SysOrdLog ---
+        if (logSheet.getLastRow() > 1) {
+            logSheet.getRange(2, 1, logSheet.getLastRow() - 1, logHeaders.length).clearContent();
+        }
+        if (logData.length > 0) {
+            logSheet.getRange(2, 1, logData.length, logHeaders.length).setValues(logData);
+            logger.info(`Upserted ${logData.length} total logs in SysOrdLog.`);
+        }
 
-      // 7. Perform Batch Writes
-      const statusOnlyLogUpdates = [];
-      if (ordersToFullUpdate.length > 0) {
-          const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() -1, masterOrderSheet.getMaxColumns());
-          const values = range.getValues();
-          ordersToFullUpdate.forEach(order => {
-              const rowIndex = order.masterRowIndex - 2;
-              webOrdMHeaders.forEach((mHeader, mIndex) => {
-                  if (order.data[mHeader] !== undefined) {
-                      values[rowIndex][mIndex] = order.data[mHeader];
-                  }
-              });
-          });
-          range.setValues(values);
-          logger.info(`Batch updated ${ordersToFullUpdate.length} full-update orders in WebOrdM.`);
-      }
-      if (ordersToStatusOnlyUpdate.length > 0) {
-          const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() -1, masterOrderSheet.getMaxColumns());
-          const values = range.getValues();
-           ordersToStatusOnlyUpdate.forEach(order => {
-              const rowIndex = order.masterRowIndex - 2;
-              const newStatus = order.data[masterStatusHeader];
-              const statusColIdx = masterHeaderMap[masterStatusHeader];
-              if (statusColIdx !== undefined && newStatus !== undefined) {
-                  values[rowIndex][statusColIdx] = newStatus;
-              }
-              statusOnlyLogUpdates.push([order.orderId, order.data['wom_OrderDate'], newStatus, null, newStatus, null]);
-          });
-          range.setValues(values);
-          logger.info(`Batch updated ${ordersToStatusOnlyUpdate.length} status-only orders in WebOrdM.`);
-      }
+        // --- 5. Trigger Enrichment for Eligible Orders ---
+        if (orderIdsToRefresh.size > 0) {
+            logger.info(`Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`);
+            this.prepareInitialPackingData(Array.from(orderIdsToRefresh));
+        }
 
-      if (newOrders.length > 0) {
-        const newOrderRows = newOrders.map(order => order.masterRow);
-        masterOrderSheet.getRange(masterOrderSheet.getLastRow() + 1, 1, newOrderRows.length, newOrderRows[0].length).setValues(newOrderRows);
-        logger.info(`Added ${newOrders.length} new orders to WebOrdM.`);
-      }
-
-      if (allNewOrderItems.length > 0) {
-        masterItemSheet.getRange(masterItemSheet.getLastRow() + 1, 1, allNewOrderItems.length, allNewOrderItems[0].length).setValues(allNewOrderItems);
-        logger.info(`Added ${allNewOrderItems.length} items to WebOrdItemsM.`);
-      }
-
-      const logsToAdd = [...newOrderLogs, ...statusOnlyLogUpdates];
-      if (logsToAdd.length > 0) {
-        logSheet.getRange(logSheet.getLastRow() + 1, 1, logsToAdd.length, logsToAdd[0].length).setValues(logsToAdd);
-        logger.info(`Added ${logsToAdd.length} logs to SysOrdLog.`);
-      }
-
-      logger.info(`${functionName} completed successfully.`);
+        logger.info(`${functionName} completed successfully.`);
 
     } catch (e) {
-      logger.error(`Error in ${functionName}: ${e.message}`, e);
-      throw e;
+        logger.error(`Error in ${functionName}: ${e.message}`, e);
+        throw e;
     }
   };
 

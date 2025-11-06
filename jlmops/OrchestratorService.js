@@ -243,9 +243,6 @@ const OrchestratorService = (function() {
             case 'OrderService':
               const orderServiceInstance = new OrderService(ProductService);
               orderServiceInstance.processJob(jobType, rowNumber, ProductService);
-              if (jobType === 'import.drive.web_orders') {
-                orderServiceInstance.preparePackingData();
-              }
               break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);
