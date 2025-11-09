@@ -39,6 +39,17 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysConfig`            | `scf_` |
 | `WebOrdM_Archive`      | `woma_`|
 | `WebOrdItemsM_Archive` | `woia_`|
+| `SystemAudit`          | `sa_`  |
+
+
+## System Audit Data Model
+
+### `SystemAudit`
+*   **Purpose:** Stores stock levels for various locations (Brurya, Storage, Office, Shop).
+*   **Prefix:** `sa_`
+*   **Columns:**
+    *   `sa_Item`: The name of the item (e.g., 'Brurya', 'Storage', 'Office', 'Shop').
+    *   `sa_StockLevel`: The current stock level for the item.
 
 
 **Example:** The concept of a product's web ID (`WebIdEn`) would have a different column name in each sheet it appears in:
@@ -321,9 +332,13 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `spc_Quantity`
     *   `spc_NameEn` / `spc_NameHe`
     *   `spc_Intensity`, `spc_Complexity`, `spc_Acidity`, `spc_Decant`
-    *   `spc_PairHarMild`, `spc_PairHarRich`, `spc_PairHarIntense`, `spc_PairHarSweet`
-    *   `spc_PairConIntense`
-    *   `spc_PairConSweet`
+    *   `spc_HarmonizeEn`, `spc_HarmonizeHe` (Formatted pairing text for harmonization)
+    *   `spc_ContrastEn`, `spc_ContrastHe` (Formatted pairing text for contrast)
+    *   `spc_ShippingFirstName`, `spc_ShippingLastName`
+    *   `spc_ShippingAddress1`, `spc_ShippingAddress2`, `spc_ShippingCity`
+    *   `spc_ShippingPhone`
+    *   `spc_OrderDate`
+    *   `spc_CustomerNote`
 
 
 ### 6. `SysInventoryOnHold` (System On-Hold Inventory)
@@ -332,19 +347,27 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `sio_SKU`: **Primary Key.**
     *   `sio_OnHoldQuantity`
 
+### 7. `SysProductAudit` (System Product Audit)
+*   **Purpose:** A central audit log for both inventory counts and product detail verifications across all locations.
+*   **Columns:**
+    *   `spa_AuditId`: **Primary Key.** (UUID).
+    *   `spa_SKU`: The SKU being audited.
+    *   `spa_AuditType`: 'Inventory Count', 'Product Detail Verification'.
+    *   `spa_Timestamp`: When the audit event occurred/was submitted.
+    *   `spa_CountValue`: (For Inventory Count) The submitted count.
+    *   `spa_Location`: (For Inventory Count) The location of the count ('Brurya', 'Storage', 'Office', 'Shop').
+    *   `spa_CountedBy`: (For Inventory Count) User who performed the count.
+    *   `spa_VerificationStatus`: (For Product Detail Verification) 'Verified', 'Issues Found', 'Pending Review'.
+    *   `spa_VerifiedBy`: (For Product Detail Verification) User who performed verification.
+    *   `spa_Notes`: Any additional notes from the auditor.
+    *   `spa_ReviewStatus`: 'Pending Admin Review', 'Approved', 'Rejected', 'Brurya - Manager Controlled'.
+    *   `spa_AdminNotes`: Notes from admin review.
+    *   `spa_AdminTimestamp`: Timestamp of admin review.
+    *   `spa_LinkedTaskId`: (Optional) Link to a `SysTasks` entry if the audit was part of a task.
+
 ## Managed Inventory Data Model
 
-This section defines the sheets used to directly manage physical inventory at non-Comax locations.
-
-### `BruryaStock`
-*   **Purpose:** The master list and user interface for managing inventory at the Brurya warehouse.
-*   **Prefix:** `bru_`
-*   **Columns:**
-    *   `bru_SKU`: The product SKU.
-    *   `bru_Name`: The product name, for readability.
-    *   `bru_CurrentQuantity`: The official, saved quantity for the location.
-    *   `bru_NewQuantity`: An editable column for the manager to input updates.
-    *   `bru_LastUpdated`: A timestamp of the last successful update for the row.
+This section defines the sheets used to manage physical inventory at non-Comax locations and their audit trails.
 
 ## Task Management Data Model
 

@@ -1,20 +1,50 @@
 /**
  * @file PrintService.js
- * @description Service for generating printable documents, such as packing slips.
+ * @description Service for generating printable documents from Google Sheet templates.
  */
-
-/**
- * @file PrintService.js
- * @description Service for generating printable documents, such as packing slips.
- */
-
 const PrintService = (function() {
 
   /**
-   * Generates a printable document for the given order IDs.
+   * Replicates the logic of the legacy getProductDetails function using jlmops data.
+   * @param {Object} item - A row object from SysPackingCache.
+   * @param {Object} cacheHeaderMap - A map of header names to column indices.
+   * @returns {Object} An object containing formatted englishDetails and hebrewDetails strings.
+   */
+  function _getJLMopsProductDetails(item, cacheHeaderMap) {
+    const isValidLine = (line) => line && line.trim().replace(/\u200E|\u200F/g, '').length > 0;
+
+    const hebrewDetails = [
+        item[cacheHeaderMap['spc_NameHe']] || '',
+        [
+            item[cacheHeaderMap['spc_Intensity']] ? `עוצמה (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
+            item[cacheHeaderMap['spc_Complexity']] ? `מורכבות (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
+            item[cacheHeaderMap['spc_Acidity']] ? `חומציות (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
+        ].filter(p => p).join(', '),
+        item[cacheHeaderMap['spc_HarmonizeHe']] || '', // Use pre-formatted value
+        item[cacheHeaderMap['spc_ContrastHe']] || '',  // Use pre-formatted value
+        item[cacheHeaderMap['spc_Decant']] ? `מומלץ לאוורור - ${item[cacheHeaderMap['spc_Decant']]} דקות` : ''
+    ].filter(isValidLine).join('\n');
+
+    const englishDetails = [
+        item[cacheHeaderMap['spc_NameEn']] || '',
+        [
+            item[cacheHeaderMap['spc_Intensity']] ? `Intensity (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
+            item[cacheHeaderMap['spc_Complexity']] ? `Complexity (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
+            item[cacheHeaderMap['spc_Acidity']] ? `Acidity (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
+        ].filter(p => p).join(', '),
+        item[cacheHeaderMap['spc_HarmonizeEn']] || '', // Use pre-formatted value
+        item[cacheHeaderMap['spc_ContrastEn']] || '',  // Use pre-formatted value
+        item[cacheHeaderMap['spc_Decant']] ? `Recommended decanting – ${item[cacheHeaderMap['spc_Decant']]} minutes.` : ''
+    ].filter(isValidLine).join('\n');
+
+    return { englishDetails, hebrewDetails };
+  }
+
+  /**
+   * Generates printable packing slips for the given order IDs using a Google Doc template.
    *
    * @param {Array<string>} orderIds - An array of Order IDs to print.
-   * @returns {string} The URL of the generated Google Doc.
+   * @returns {string} The URL of the folder containing the generated Google Docs.
    */
   function printPackingSlips(orderIds) {
     const functionName = 'printPackingSlips';
@@ -25,131 +55,182 @@ const PrintService = (function() {
         throw new Error('No order IDs provided to print.');
       }
 
+      // --- 1. Get Config and Data ---
       const allConfig = ConfigService.getAllConfig();
       const sheetNames = allConfig['system.sheet_names'];
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId); // This is JLMops_Data
 
-      // 1. Read data from SysPackingCache for the selected orders
+      const orderIdSet = new Set(orderIds.map(String));
+
+      const printConfig = {
+        templateId: allConfig['printing.packingslip.default_template_id'].id,
+        outputFolderId: allConfig['printing.output.folder_id'].id
+      };
+
+      if (!printConfig.templateId || !printConfig.outputFolderId) {
+        throw new Error('Printing template or output folder IDs are not configured in SysConfig.');
+      }
+
+      const outputFolder = DriveApp.getFolderById(printConfig.outputFolderId);
+      const templateFile = DriveApp.getFileById(printConfig.templateId); // This should now be a Google Doc template
+
+      // --- 2. Get Data for Printing ---
       const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
       if (!cacheSheet) throw new Error('Sheet SysPackingCache not found.');
-
       const cacheData = cacheSheet.getDataRange().getValues();
       const cacheHeaders = cacheData.shift();
       const cacheHeaderMap = Object.fromEntries(cacheHeaders.map((h, i) => [h, i]));
-      const orderIdSet = new Set(orderIds.map(String));
-
       const dataForPrinting = cacheData.filter(row => orderIdSet.has(String(row[cacheHeaderMap['spc_OrderId']])));
 
       if (dataForPrinting.length === 0) {
         throw new Error('No data found in SysPackingCache for the selected order IDs.');
       }
-      
-      // Group data by order ID
+
+      const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+      if (!orderMasterSheet) throw new Error('Sheet WebOrdM not found.');
+      const orderMasterData = orderMasterSheet.getDataRange().getValues();
+      const orderMasterHeaders = orderMasterData.shift();
+      const womHeaderMap = Object.fromEntries(orderMasterHeaders.map((h, i) => [h, i]));
+      const orderMasterMap = new Map(orderMasterData.map(row => [String(row[womHeaderMap['wom_OrderId']]), row]));
+
       const ordersData = dataForPrinting.reduce((acc, row) => {
-        const orderId = row[cacheHeaderMap['spc_OrderId']];
+        const orderId = String(row[cacheHeaderMap['spc_OrderId']]);
         if (!acc[orderId]) {
-          acc[orderId] = [];
+          acc[orderId] = {
+            items: [],
+            orderInfo: orderMasterMap.get(orderId)
+          };
         }
-        acc[orderId].push(row);
+        acc[orderId].items.push(row);
         return acc;
       }, {});
 
-
-      // 2. Read and parse the packing slip template from SysConfig
-      const templateRows = allConfig['template.packing_slip'];
-      if (!templateRows) throw new Error('Packing slip template not found in SysConfig.');
-
-      const headerContent = templateRows.find(r => r[3] === 'HEADER')?.[4] || 'Packing Slip';
-      const footerContent = templateRows.find(r => r[3] === 'FOOTER')?.[4] || 'Thank you for your order!';
-      const tableHeaders = templateRows.filter(r => r[3] === 'TABLE_COLUMN_HEADER').map(r => ({ label: r[4], field: r[5] }));
-
-      // 3. Generate a rich HTML string for the packing slips
-      let fullHtml = '<html><head><style>body { font-family: Arial, sans-serif; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; } th { background-color: #f2f2f2; }</style></head><body>';
-
+      const MAX_PRODUCTS_PER_PAGE = 6;
+      const ordersPageSplits = new Map();
       for (const orderId in ordersData) {
-        const items = ordersData[orderId];
-        fullHtml += `<h1>${headerContent}</h1>`;
-        fullHtml += `<h2>Order #${orderId}</h2>`;
-        
-        fullHtml += '<table>';
-        fullHtml += '<tr>';
-        tableHeaders.forEach(header => {
-            fullHtml += `<th>${header.label}</th>`;
-        });
-        fullHtml += '</tr>';
-
-        items.forEach(itemRow => {
-            fullHtml += '<tr>';
-            tableHeaders.forEach(header => {
-                 const cellValue = itemRow[cacheHeaderMap[header.field]] || '';
-                 fullHtml += `<td>${cellValue}</td>`;
-            });
-            fullHtml += '</tr>';
-        });
-
-        fullHtml += '</table>';
-        fullHtml += `<p>${footerContent}</p>`;
-        fullHtml += '<hr>';
+        const allProductsForOrder = ordersData[orderId].items;
+        const orderPages = [];
+        for (let i = 0; i < allProductsForOrder.length; i += MAX_PRODUCTS_PER_PAGE) {
+            orderPages.push(allProductsForOrder.slice(i, i + MAX_PRODUCTS_PER_PAGE));
+        }
+        if (orderPages.length === 0) orderPages.push([]);
+        ordersPageSplits.set(orderId, orderPages);
       }
-      fullHtml += '</body></html>';
 
+      const sortedOrderIds = Object.keys(ordersData).sort((a, b) => a - b);
 
-      // 4. Create a new Google Doc and insert the HTML
-      const docName = `PackingSlips_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd_HH-mm-ss')}`;
+      // --- 3. Generate a Google Doc for each order ---
+      const finalPackingSlipDocFile = templateFile.makeCopy(`Packing Slips ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd-HHmm")}`, outputFolder);
+      const packingSlipDoc = DocumentApp.openById(finalPackingSlipDocFile.getId());
+      const packingSlipBody = packingSlipDoc.getBody();
       
-      const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      const exportFolder = DriveApp.getFolderById(exportFolderId);
+      packingSlipBody.clear(); 
 
-      const htmlFile = exportFolder.createFile(`${docName}.html`, fullHtml, MimeType.HTML);
-      
-      const blob = htmlFile.getBlob();
-      const resource = {
-        title: docName,
-        mimeType: MimeType.GOOGLE_DOCS,
-        parents: [{ id: exportFolderId }]
-      };
-      const newDocFile = Drive.Files.insert(resource, blob);
-      const docUrl = newDocFile.alternateLink;
-      
-      htmlFile.setTrashed(true);
+      let firstOrder = true;
+      for (const orderId of sortedOrderIds) {
+        const orderData = ordersData[orderId];
+        const orderInfo = orderData.orderInfo;
+        const splitsForThisOrder = ordersPageSplits.get(orderId);
 
-      // 5. Update SysOrdLog to 'Printed' status
+        splitsForThisOrder.forEach((productsForThisPage, pageNumIndex) => {
+            if (!firstOrder) {
+              packingSlipBody.appendPageBreak();
+            }
+            firstOrder = false;
+
+            const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']] || '';
+            const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']] || '';
+            const shippingAddress1 = orderInfo[womHeaderMap['wom_ShippingAddress1']] || '';
+            const shippingAddress2 = orderInfo[womHeaderMap['wom_ShippingAddress2']] || '';
+            const shippingCity = orderInfo[womHeaderMap['wom_ShippingCity']] || '';
+            const shippingPhone = orderInfo[womHeaderMap['wom_ShippingPhone']] || '';
+            const orderNumber = orderInfo[womHeaderMap['wom_OrderNumber']] || '';
+            const orderDate = new Date(orderInfo[womHeaderMap['wom_OrderDate']]);
+            const formattedOrderDate = !isNaN(orderDate) ? Utilities.formatDate(orderDate, Session.getScriptTimeZone(), "yyyy-MM-dd") : 'Invalid Date';
+
+            packingSlipBody.appendParagraph(`   ${shippingFirstName} ${shippingLastName}   `).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
+            packingSlipBody.appendParagraph(`${shippingAddress1}` + (shippingAddress2 ? `, ${shippingAddress2}` : '') + `, ${shippingCity}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(false).setFontSize(null);
+            packingSlipBody.appendParagraph(`Phone ${shippingPhone} טלפון`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+            packingSlipBody.appendParagraph(`Order ${orderNumber} הזמנה`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+            packingSlipBody.appendParagraph(`Date ${formattedOrderDate} תאריך`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+            packingSlipBody.appendParagraph("");
+
+            const table = packingSlipBody.appendTable([["Item", "Qty.כמ", "פריט"]]);
+            table.setBorderWidth(0).setColumnWidth(0, 240).setColumnWidth(1, 55).setColumnWidth(2, 240);
+            const headerRow = table.getRow(0).setBold(true);
+            headerRow.getCell(0).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+            headerRow.getCell(1).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+            headerRow.getCell(2).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+
+            productsForThisPage.forEach(item => {
+              const { englishDetails, hebrewDetails } = _getJLMopsProductDetails(item, cacheHeaderMap);
+              const quantity = String(item[cacheHeaderMap['spc_Quantity']] || '0');
+              
+              const newRow = table.appendTableRow();
+              const cellEN = newRow.appendTableCell();
+              const cellQTY = newRow.appendTableCell();
+              const cellHE = newRow.appendTableCell();
+
+              cellEN.clear();
+              const enLines = englishDetails.trim().split('\n');
+              if (enLines.length > 0) {
+                  cellEN.appendParagraph(enLines[0]).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(true);
+                  enLines.slice(1).forEach(line => cellEN.appendParagraph(line).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(false));
+              }
+
+              cellQTY.clear().appendParagraph(quantity).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+              cellHE.clear();
+              const heLines = hebrewDetails.trim().split('\n');
+              if (heLines.length > 0) {
+                  cellHE.appendParagraph(heLines[0]).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(true);
+                  heLines.slice(1).forEach(line => cellHE.appendParagraph(line).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(false));
+              }
+            });
+
+            if (pageNumIndex + 1 === splitsForThisOrder.length) {
+              const totalQuantity = orderData.items.reduce((sum, item) => sum + (Number(item[cacheHeaderMap['spc_Quantity']]) || 0), 0);
+              const totalsRow = table.appendTableRow();
+              totalsRow.appendTableCell().appendParagraph(`Total`).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(true);
+              totalsRow.appendTableCell().appendParagraph(String(totalQuantity)).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true);
+              totalsRow.appendTableCell().appendParagraph("סה\"כ").setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(true);
+            }
+        });
+      }
+
+      packingSlipDoc.saveAndClose();
+      
+      // --- 4. Update SysOrdLog ---
       const now = new Date();
       const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-      if (!logSheet) {
-          logger.warn('SysOrdLog sheet not found. Could not update packing statuses to Printed.');
-      } else {
-          const logRange = logSheet.getDataRange();
-          const logData = logRange.getValues();
-          const logHeaders = logData.shift();
-          const logHeaderMap = Object.fromEntries(logHeaders.map((h, i) => [h, i]));
-          const logOrderIdCol = logHeaderMap['sol_OrderId'];
-          const logStatusCol = logHeaderMap['sol_PackingStatus'];
-          const logTimestampCol = logHeaderMap['sol_PackingPrintedTimestamp'];
-
-          let updatedCount = 0;
-          logData.forEach(row => {
-              if (orderIdSet.has(String(row[logOrderIdCol]))) {
-                  row[logStatusCol] = 'Printed';
-                  row[logTimestampCol] = now;
-                  updatedCount++;
-              }
-          });
-
-          if (updatedCount > 0) {
-              logSheet.getRange(2, 1, logData.length, logHeaders.length).setValues(logData);
-              logger.info(`Updated ${updatedCount} orders to 'Printed' status in SysOrdLog.`);
+      if (logSheet) {
+        const logRange = logSheet.getDataRange();
+        const logData = logRange.getValues();
+        const logHeaders = logData.shift();
+        const logHeaderMap = Object.fromEntries(logHeaders.map((h, i) => [h, i]));
+        let updatedCount = 0;
+        const logValuesToUpdate = logData.map(row => {
+          if (orderIdSet.has(String(row[logHeaderMap['sol_OrderId']]))) {
+            row[logHeaderMap['sol_PackingStatus']] = 'Printed';
+            row[logHeaderMap['sol_PackingPrintedTimestamp']] = now;
+            updatedCount++;
           }
+          return row;
+        });
+        if (updatedCount > 0) {
+          logSheet.getRange(2, 1, logValuesToUpdate.length, logHeaders.length).setValues(logValuesToUpdate);
+          logger.info(`Updated ${updatedCount} orders to 'Printed' status in SysOrdLog.`);
+        }
+      } else {
+        logger.warn('SysOrdLog sheet not found. Could not update packing statuses to Printed.');
       }
 
-
-      logger.info(`${functionName} completed successfully. Document URL: ${docUrl}`);
-      return docUrl;
+      logger.info(`${functionName} completed successfully. Document URL: ${packingSlipDoc.getUrl()}`);
+      return packingSlipDoc.getUrl();
 
     } catch (error) {
-      logger.error(`An error occurred in ${functionName}: ${error.message}`, error.stack);
-      LoggerService.logError(functionName, error.message, error.stack);
+      LoggerService.error('PrintService', functionName, error.message, error);
       throw error;
     }
   }

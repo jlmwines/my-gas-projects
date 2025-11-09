@@ -40,40 +40,48 @@ function getView(viewName) {
 function getPackableOrders() {
   try {
     const allConfig = ConfigService.getAllConfig();
-    const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-
-    if (!orderLogSheet) {
-      throw new Error('Sheet SysOrdLog not found.');
-    }
-
-    const orderLogData = orderLogSheet.getDataRange().getValues();
-    const orderLogHeaders = orderLogData.shift();
-    const headerMap = Object.fromEntries(orderLogHeaders.map((h, i) => [h, i]));
-
-    const packableOrders = [];
-    const readyStatus = 'Ready';
-
-    orderLogData.forEach(row => {
-      const orderId = row[headerMap['sol_OrderId']];
-      const packingStatus = row[headerMap['sol_PackingStatus']];
-      const printedTimestamp = row[headerMap['sol_PackingPrintedTimestamp']];
-
-      if (packingStatus === readyStatus) {
-        packableOrders.push({
-          orderId: orderId,
-          status: printedTimestamp ? 'Ready (Reprint)' : 'Ready to Print',
-          isReprint: !!printedTimestamp
-        });
-      }
-    });
-
+            const sheetNames = allConfig['system.sheet_names'];
+    
+            // --- START DEBUG LOGGING ---
+            console.log("DEBUG: Loaded sheetNames object:", JSON.stringify(sheetNames, null, 2));
+            // --- END DEBUG LOGGING ---
+    
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+    
+            if (!orderLogSheet) {
+              throw new Error('Sheet SysOrdLog not found.');
+            }
+    
+            const orderLogData = orderLogSheet.getDataRange().getValues();
+            const orderLogHeaders = orderLogData.shift();
+            const headerMap = Object.fromEntries(orderLogHeaders.map((h, i) => [h, i]));
+    
+            const packableOrders = [];
+            const readyStatus = 'Ready';
+    
+            orderLogData.forEach(row => {
+              const orderId = row[headerMap['sol_OrderId']];
+              const packingStatus = row[headerMap['sol_PackingStatus']];
+              const printedTimestamp = row[headerMap['sol_PackingPrintedTimestamp']];
+    
+              // --- START DEBUG LOGGING ---
+              console.log(`DEBUG: Processing Order ID: ${orderId}. Status read from sheet: '${packingStatus}'`);
+              // --- END DEBUG LOGGING ---
+    
+              if (packingStatus === readyStatus) {
+                packableOrders.push({
+                  orderId: orderId,
+                  status: printedTimestamp ? 'Ready (Reprint)' : 'Ready to Print',
+                  isReprint: !!printedTimestamp
+                });
+              }
+            });
     return packableOrders;
 
   } catch (error) {
-    LoggerService.logError('getPackableOrders', error.message, error.stack);
+    LoggerService.error('WebApp', 'getPackableOrders', error.message, error);
     return [];
   }
 }
@@ -91,7 +99,7 @@ function generatePackingSlips(orderIds) {
     const docUrl = PrintService.printPackingSlips(orderIds);
     return docUrl;
   } catch (error) {
-    LoggerService.logError('generatePackingSlips', error.message, error.stack);
+    LoggerService.error('WebApp', 'generatePackingSlips', error.message, error);
     throw error; // Re-throw to be caught by the client-side error handler
   }
 }
@@ -100,50 +108,3 @@ function generatePackingSlips(orderIds) {
  * [NEW] Fetches packable orders for the test display view.
  * @returns {Array<Object>} A list of orders with their IDs and statuses.
  */
-function displayPackableOrders() {
-  try {
-    const allConfig = ConfigService.getAllConfig();
-    const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-
-    if (!orderLogSheet) {
-      throw new Error('Sheet SysOrdLog not found.');
-    }
-
-    const orderLogData = orderLogSheet.getDataRange().getValues();
-
-    // Robustness check for an empty sheet
-    if (!orderLogData || orderLogData.length === 0) {
-      logger.info('displayPackableOrders', 'SysOrdLog sheet is empty. No orders to process.', '');
-      return [];
-    }
-
-    const orderLogHeaders = orderLogData.shift();
-    const headerMap = Object.fromEntries(orderLogHeaders.map((h, i) => [h, i]));
-
-    const packableOrders = [];
-    const readyStatus = 'Ready';
-
-    orderLogData.forEach(row => {
-      const orderId = row[headerMap['sol_OrderId']];
-      const packingStatus = row[headerMap['sol_PackingStatus']];
-      const printedTimestamp = row[headerMap['sol_PackingPrintedTimestamp']];
-
-      if (packingStatus === readyStatus) {
-        packableOrders.push({
-          orderId: orderId,
-          status: printedTimestamp ? 'Ready (Reprint)' : 'Ready to Print',
-          isReprint: !!printedTimestamp
-        });
-      }
-    });
-
-    return packableOrders;
-
-  } catch (error) {
-    logger.error('displayPackableOrders', error.message, error);
-    return [];
-  }
-}

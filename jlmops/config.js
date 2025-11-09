@@ -64,27 +64,20 @@ const ConfigService = (function() {
           return;
       }
 
-      if (String(settingName).startsWith('template.')) {
-        // This is a template setting, so we treat it as an array of full rows.
-        if (!parsedConfig[settingName]) {
-            parsedConfig[settingName] = [];
-        }
-        // We push the entire row so the consumer can access any 'P' column.
-        parsedConfig[settingName].push(row);
-      } else {
-        // This is a standard key-value setting.
-        const propKey = row[3]; // scf_P01
-        const propValue = row[4]; // scf_P02
+      if (!parsedConfig[settingName]) {
+        // First time seeing this setting. Check if it looks like a template or a key-value object.
+        // For now, we'll treat all multi-row settings as objects, which is more robust.
+        parsedConfig[settingName] = {};
+      }
 
-        if (propKey === null || propKey === undefined || propKey === '') {
-            return;
-        }
+      // Aggregate key-value pairs. This handles both single-line and multi-line object settings.
+      const propKey = row[3]; // scf_P01
+      const propValue = row[4]; // scf_P02
 
-        if (!parsedConfig[settingName]) {
-            parsedConfig[settingName] = {};
-        }
+      if (propKey !== null && propKey !== undefined && propKey !== '') {
         parsedConfig[settingName][propKey] = propValue;
       }
+
     });
 
     // 2. Perform Fail-Fast Schema Version Check

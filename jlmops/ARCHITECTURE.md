@@ -35,7 +35,7 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`ProductService`**: Handles core product data management, including the validation and integrity checks for the product onboarding and SKU change workflows.
     *   **`OrderService`**: Manages the entire order lifecycle. It handles the import and upsert of order data into the master sheets and is the master controller of the processing state machine in `SysOrdLog`, setting the initial `Eligible` or `Ineligible` status based on defined business rules.
     *   **`PackingSlipService`**: Acts as an enrichment engine. It scans `SysOrdLog` for `Eligible` orders, gathers all necessary data for printing, enriches it with descriptive text, and places the result in `SysPackingCache`. Upon completion, it updates the order's status in `SysOrdLog` to `Ready`.
-    *   **`PrintService`**: Handles the final output generation. It reads the pre-processed data from `SysPackingCache` for orders marked as `Ready`, generates the physical document, and then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
+    *   **`PrintService`**: Handles the final document generation. It reads pre-processed data from `SysPackingCache` for orders marked as `Ready`. For each order, it copies a designated Google Sheet template, populates the copy with the order's specific data, and saves the resulting Google Sheet in an output folder. It then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
     *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
     *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
     *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
@@ -51,6 +51,7 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
     *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
     *   **`ValidationService` (New)**: Provides a suite of tools for validating the `jlmops` system against the legacy system. Its purpose is not to validate raw data, but to compare the final outputs of key business logic (e.g., on-hold inventory calculations, packing slip data, Comax export values) to ensure the new system produces identical results.
+*   **`AuditService`**: Manages stock levels for various locations (Brurya, Storage, Office, Shop) in the `SystemAudit` sheet.
 
 ### 2.3. Data Adapters & Formatters
 

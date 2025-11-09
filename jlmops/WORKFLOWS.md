@@ -31,9 +31,14 @@ This workflow is now a clean, state-driven process managed by `SysOrdLog`.
 
 1.  **Display Ready Orders:** On the "Order Packing" page, the web app queries `SysOrdLog` and displays a list of all orders that are in the `Ready` state.
 2.  **Initiate Generation (User Action):** A manager selects one or more `Ready` orders and clicks the print button.
-3.  **Data Retrieval & Generation (`PrintService`):** The `PrintService` reads the pre-enriched data from `SysPackingCache` and generates the Google Doc.
+3.  **Data Retrieval & Generation (`PrintService`):** The `PrintService` reads the pre-enriched data from `SysPackingCache` and generates the main Google Doc packing slip. It also extracts any customer notes associated with the selected orders.
 4.  **Set to Printed:** Upon successful generation, the `PrintService` updates the `sol_PackingStatus` for the printed orders to `Printed` in `SysOrdLog` and records the `sol_PackingPrintedTimestamp`.
-5.  **Manager Finalization & Printing (User Action):** The manager is presented with a link to the newly created Google Doc for review, optional minor edits, and bulk printing using native Google Docs functionality.
+5.  **Manager Review & Action (User Action):**
+    *   The manager is presented with a link to the newly created main Google Doc packing slip for review, optional minor edits, and bulk printing.
+    *   If any selected orders contained customer notes, these notes are displayed in a dedicated UI section. For each note, the `orderId` and an excerpt of the `noteContent` are shown.
+    *   Next to each displayed customer note, a checkbox is provided, allowing the manager to select which notes to include in a gift message print.
+    *   A "Create Selected Gift Messages" button is available, enabled only when at least one note is selected.
+    *   When this button is clicked, for each selected note, a *separate, editable Google Doc* is created containing only that specific customer note. A link to each new gift message document is then displayed in the UI next to its corresponding note, and the checkbox for that note is disabled.
 
 ### 1.4. Comax Export
 
@@ -47,50 +52,60 @@ This workflow is now a clean, state-driven process managed by `SysOrdLog`.
 
 ## 2. Inventory Management Workflow
 
-This workflow ensures accurate inventory counts and proactive management of stock levels.
+This workflow ensures accurate inventory counts and proactive management of stock levels across all locations (Brurya, Storage, Office, Shop).
 
-### 2.1. Brurya Stock Management (Direct Control)
+### 2.1. Physical Inventory Count & Verification
 
-This workflow is designed for the manager to directly control Brurya inventory.
-
-1.  **Access:** The manager navigates to the "Brurya Stock Management" page (which uses the `BruryaStock` sheet as its data source).
-2.  **View & Edit:** The page displays products with `bru_SKU`, `bru_Name`, `bru_CurrentQuantity`, and an editable `bru_NewQuantity` column.
-3.  **Update Quantity:** The manager types the new total quantity into `bru_NewQuantity` for any product.
-4.  **Add Product:** The manager uses an "Add Product" button (in the sidebar) to search for and select a product by name. The system adds a new row for the product, auto-populating `bru_SKU` and `bru_Name`, ready for quantity input.
-5.  **Remove Product:** The manager enters `0` in `bru_NewQuantity` for a product.
-6.  **Submit Changes:** The manager clicks a "Submit Changes" button.
-    *   The `InventoryManagementService` processes the changes.
-    *   `bru_CurrentQuantity` is updated from `bru_NewQuantity`.
-    *   `bru_LastUpdated` is timestamped.
-    *   Rows with `0` quantity are removed.
-    *   `bru_NewQuantity` cells are cleared.
-
-### 2.2. Physical Inventory Count & Verification
-
-This workflow manages the process of verifying stock at other locations (Office, Storage, Shop) and updating the master Comax inventory.
+This workflow manages the process of verifying stock at all locations and preparing updates for the Comax system.
 
 1.  **Task Generation:** The `OrchestratorService` (or `TaskService`) generates "Verify Physical Count" tasks based on:
-    *   **Stale Counts:** Products whose `cpm_LastCountTimestamp` in `CmxProdM` is older than a configured threshold.
-    *   **Negative Stock:** Products with `cpm_Stock < 0`.
-    *   **Low Stock:** Products with `cpm_Stock` below a configured threshold.
+    *   **Stale Counts:** Products whose last verified count in `SysProductAudit` is older than a configured threshold.
+    *   **Negative Stock:** Products with `cpm_Stock < 0` (from `CmxProdM`).
+    *   **Low Stock:** Products with `cpm_Stock` below a configured threshold (from `CmxProdM`).
     *   These tasks are created in `SysTasks`.
 
-2.  **User Counting:** A user (e.g., a warehouse worker) accesses their assigned "Verify Physical Count" tasks.
-    *   They are presented with a form to enter counts for specific SKUs at various locations.
-    *   The submitted counts are recorded in the `SysInventoryAudit` sheet, along with `sia_LastCountTimestamp`, `sia_CountedBy`, and a `sia_ReviewStatus` of 'Pending Review'.
+2.  **User Counting & Brurya Management:**
+    *   **For Storage, Office, Shop:** A user (e.g., a warehouse worker) accesses their assigned "Verify Physical Count" tasks. They are presented with a form to enter counts for specific SKUs at various locations. The submitted counts are recorded in `SysProductAudit` with `spa_AuditType = 'Inventory Count'`, the `spa_CountValue`, `spa_Location`, `spa_CountedBy`, and `spa_ReviewStatus = 'Pending Admin Review'`.
+    *   **For Brurya (Manager Control):** A manager accesses a dedicated UI (e.g., a section within an Inventory Management dashboard) to manage Brurya stock.
+        *   The UI shows the current Brurya stock for each product (derived from the latest 'Brurya - Manager Controlled' entry in `SysProductAudit`).
+        *   Managers can change stock levels: A new entry is created in `SysProductAudit` with `spa_AuditType = 'Inventory Count'`, `spa_Location = 'Brurya'`, the new `spa_CountValue`, and `spa_ReviewStatus = 'Brurya - Manager Controlled'`.
+        *   Managers can add new products to Brurya: By searching for a product and entering an initial quantity, a new 'Inventory Count' entry is created in `SysProductAudit` for 'Brurya'.
+        *   Managers can remove items from Brurya: By setting the quantity to zero, a new 'Inventory Count' entry is created in `SysProductAudit` with `spa_CountValue = 0`. The UI then filters out items with a current quantity of zero.
 
-3.  **Admin Review & Approval:** An admin reviews the `SysInventoryAudit` sheet.
-    *   If approved, the `InventoryManagementService` updates the `cpm_Stock` in `CmxProdM` with the new total count.
-    *   The `cpm_LastCountTimestamp` in `CmxProdM` is updated.
-    *   The task in `SysTasks` is marked as 'Completed'.
+3.  **Admin Review & Approval (for Storage, Office, Shop counts):**
+    *   An admin reviews the `SysProductAudit` sheet for entries with `spa_AuditType = 'Inventory Count'` and `spa_ReviewStatus = 'Pending Admin Review'`.
+    *   If approved, the admin updates the `spa_ReviewStatus` to 'Approved' in `SysProductAudit`.
+    *   **Crucially:** The `InventoryManagementService` does *not* directly update `CmxProdM`. Instead, the approval triggers the preparation of data for the Comax Inventory Export.
 
-### 2.3. On-Hold Inventory Management
+4.  **Unified "Stock on Hand" Calculation:**
+    *   The `InventoryManagementService` provides a function (e.g., `calculateTotalStock(sku)`) that queries `SysProductAudit` for the latest *approved* (or 'Brurya - Manager Controlled') count for each SKU across *all four locations*. This sum represents the total "stock on hand".
+
+### 2.2. On-Hold Inventory Management
 
 This workflow ensures that stock committed to 'On-Hold' orders is correctly accounted for.
 
 1.  **Automated Calculation:** A background process (part of the `OrderService` or `InventoryManagementService`) continuously calculates the total quantity of each SKU currently in 'On-Hold' orders (by querying `WebOrdItemsM` and `WebOrdM`).
 2.  **Cache Population:** This calculated `sio_OnHoldQuantity` for each `sio_SKU` is stored in the `SysInventoryOnHold` sheet.
 3.  **System Use:** Other parts of the system (e.g., stock availability calculations for the web store) can quickly query `SysInventoryOnHold` to determine truly available stock.
+
+### 2.3. Comax Inventory Export
+
+This workflow generates a simple CSV file of the unified "stock on hand" inventory for export to the Comax system.
+
+1.  **Trigger:** An admin or manager triggers the Comax inventory export (e.g., via a UI button).
+2.  **Data Aggregation:** The system uses the `InventoryManagementService.calculateTotalStock(sku)` function to get the unified "stock on hand" for each SKU across all locations (Brurya, Storage, Office, Shop) from `SysProductAudit`.
+3.  **CSV Generation:** A CSV file is generated with two columns: `SKU` and `Count` (representing the total "stock on hand").
+4.  **File Creation:** The CSV file is saved to a designated Google Drive export folder.
+5.  **Comax Update:** This CSV file is then used by the admin to update the external Comax system. The `cpm_Stock` in `CmxProdM` will *only* be updated by the next Comax export, reflecting the change made in the external Comax system.
+
+### 2.5. Brurya Stock Management
+
+This workflow provides a dedicated user interface for managers to view and update Brurya stock levels.
+
+1.  **Access UI:** A manager navigates to the "Brurya Stock Management" page (e.g., via a link on the Dashboard).
+2.  **View Current Stock:** The UI displays the current stock level for Brurya, retrieved from the `SystemAudit` sheet via `AuditService.js`.
+3.  **Update Stock:** The manager enters a new stock level in an input field and clicks a "Save" button.
+4.  **Persist Changes:** The `WebApp.js` handles the form submission, calling `AuditService.js` to update the `sa_StockLevel` for 'Brurya' in the `SystemAudit` sheet.
 
 ---
 
@@ -109,13 +124,13 @@ This workflow covers the end-to-end process for adding new products, updating ex
     *   It populates `WebProdM` (Web Products Master) with core, language-independent data (price, stock) from the English product data.
     *   It updates the English-specific columns in `WebDetM` (Web Details Master). The Hebrew-specific columns in this sheet are preserved, not overwritten by the import.
 3.  **Data Validation & Integrity:** The `ProductService` performs validation checks based on the system's data ownership rules. The principle is that **Comax is the owner of primary product data** (price, stock), while the **JLM Ops Hub is the authority for all descriptive and marketing data,** which it expands upon using some base data from Comax. The key integrity checks are:
-    *   **SKU Compliance:** Ensures a product's `wpm_SKU` in the web system has a valid, corresponding entry in the `CmxProdM` (Comax master) sheet. This is the primary link between the systems.
+    *   **SKU Compliance:** Ensures a product's `wpm_SKU` in the web system has a valid, corresponding entry in the `CmxProdM` (Comax master) sheet.
     *   **Translation Completeness:** Ensures each original language product in `WebProdM` has a corresponding translated product linked in the `WebXltM` sheet.
     *   Any discrepancies found during these validation steps will automatically generate a task in `SysTasks` for manual review and correction.
 
 ### 3.2. Product Detail Verification
 
-This workflow ensures the accuracy and freshness of web product details.
+This workflow ensures the accuracy and freshness of web product details, including images and overall appearance.
 
 1.  **Task Generation:** The `OrchestratorService` (or `TaskService`) generates "Verify Product Details" tasks based on:
     *   **Stale Details:** Products whose `wdm_LastVerifiedTimestamp` in `WebDetM` is older than a configured threshold.
@@ -123,8 +138,11 @@ This workflow ensures the accuracy and freshness of web product details.
     *   These tasks are created in `SysTasks`.
 
 2.  **Manager Action:** A manager accesses their assigned "Verify Product Details" tasks.
-    *   They are presented with a form to review and edit the product's details (names, descriptions, attributes, pairings, and sales rules like 'Sold Individually') in both English and Hebrew.
-    *   Upon completion, the `ProductService` updates the `WebDetM` sheet and sets the `wdm_LastVerifiedTimestamp`.
+    *   They are presented with a UI with a list of items to examine and a checklist to identify problems with:
+        *   **Image:** Accuracy, quality, and relevance.
+        *   **Facts:** Correctness of names, descriptions, attributes, pairings, and sales rules (e.g., 'Sold Individually') in both English and Hebrew.
+        *   **Appearance:** Overall presentation and consistency on the web.
+    *   Upon completion, the `ProductService` updates the `WebDetM` sheet and sets the `wdm_LastVerifiedTimestamp` and potentially a new `wdm_VerificationStatus` field.
     *   The task in `SysTasks` is marked as 'Completed'.
 
 ---

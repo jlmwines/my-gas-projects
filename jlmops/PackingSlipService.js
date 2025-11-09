@@ -162,6 +162,39 @@ const PackingSlipService = (function() {
                 row[cacheHeaderMap['spc_Complexity']] = productDetails[webDetMHeaders.indexOf('wdm_Complexity')];
                 row[cacheHeaderMap['spc_Acidity']] = productDetails[webDetMHeaders.indexOf('wdm_Acidity')];
                 row[cacheHeaderMap['spc_Decant']] = productDetails[webDetMHeaders.indexOf('wdm_Decant')];
+
+                // --- Build Product Details String ---
+                const detailsEn = [];
+                const intensity = row[cacheHeaderMap['spc_Intensity']];
+                const complexity = row[cacheHeaderMap['spc_Complexity']];
+                const acidity = row[cacheHeaderMap['spc_Acidity']];
+                if (intensity || complexity || acidity) {
+                    detailsEn.push(`Intensity: ${intensity || 'N/A'}, Complexity: ${complexity || 'N/A'}, Acidity: ${acidity || 'N/A'}`);
+                }
+                const decant = row[cacheHeaderMap['spc_Decant']];
+                if (decant) {
+                    detailsEn.push(`Recommended decanting: ${decant}`);
+                }
+                const harmonizeEn = row[cacheHeaderMap['spc_HarmonizeEn']];
+                if (harmonizeEn) {
+                    detailsEn.push(harmonizeEn);
+                }
+                const contrastEn = row[cacheHeaderMap['spc_ContrastEn']];
+                if (contrastEn) {
+                    detailsEn.push(contrastEn);
+                }
+                row[cacheHeaderMap['spc_productDetailsEn']] = detailsEn.join('<br>');
+
+                const detailsHe = [];
+                const harmonizeHe = row[cacheHeaderMap['spc_HarmonizeHe']];
+                if (harmonizeHe) {
+                    detailsHe.push(harmonizeHe);
+                }
+                const contrastHe = row[cacheHeaderMap['spc_ContrastHe']];
+                if (contrastHe) {
+                    detailsHe.push(contrastHe);
+                }
+                row[cacheHeaderMap['spc_productDetailsHe']] = detailsHe.join('<br>');
             }
             return row;
         });
@@ -206,7 +239,6 @@ const PackingSlipService = (function() {
 
     } catch (error) {
         logger.error(`An error occurred in ${functionName}: ${error.message}`, error.stack);
-        LoggerService.logError(functionName, error.message, error.stack);
     }
   }
 
