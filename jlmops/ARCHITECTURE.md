@@ -77,6 +77,7 @@ The system's architecture is designed to be entirely driven by its configuration
     *   **`scf_SettingName` (Grouping Key):** All rows belonging to a single configuration share the same `SettingName`.
     *   **`scf_P01` (Property / Block Type):** This column defines the specific property or type of block this row represents within the group.
     *   **`scf_P02` onwards (Values):** These columns hold the values for the given property.
+*   **Robustness and Data Integrity:** Recent efforts have focused on solidifying the `SysConfig` implementation. This included resolving issues with `ConfigService.js` to ensure accurate parsing of all `scf_Pxx` parameters, correcting missing `system.sheet_names` entries, and deduplicating task definitions within `SetupConfig.js`. These improvements have successfully restored the full functionality of critical import processes, including Web Order, Web Product, Web Translation, and Comax Product imports, ensuring `SysConfig` remains the reliable source of truth.
 *   **Example:** A file import is defined by multiple rows sharing the `SettingName` `import.drive.comax_products`. One row might have `P01` set to `source_folder_id` and `P02` as the folder ID, while another row has `P01` set to `file_pattern` and `P02` as the file name. This schema is flexible enough to define any configuration the system needs, from business rules to document templates.
 
 ##### 2.5.1.1. Configuration State Management
@@ -202,3 +203,31 @@ This section documents key design decisions to clarify the system's behavior and
 To ensure the JLM Operations Hub can run in parallel with existing systems, all automated file processing is **non-destructive**. The system **will not** move, rename, or alter any input files. 
 
 Specifically for the Comax Products import, the workflow identifies new file versions by checking the file's last-updated timestamp against the `SysFileRegistry`. The `comax.products.processedFolder` setting found in previous versions of `setup.js` is deprecated and should not be used.
+
+## 6. Configuration Management & Data Handling
+
+This section outlines the critical rules and patterns for managing the system's configuration and handling spreadsheet data to ensure stability and prevent common errors.
+
+### 6.1. `SetupConfig.js` as the Single Source of Truth
+
+The `SysConfig` Google Sheet is the live configuration for the application, but it is not the master source of truth.
+
+*   **Master Source:** The JavaScript file `jlmops/SetupConfig.js` is the **single source of truth** for all system configuration. The master configuration is defined as a hardcoded array within the `getMasterConfiguration()` function.
+*   **Update Workflow:** To make any changes to the system's configuration (including UI templates, validation rules, or sheet names), you **must** edit the array in `SetupConfig.js`. After the script is updated and pushed, an administrator must run the `rebuildSysConfigFromSource()` function from the Apps Script editor. This function will completely overwrite the `SysConfig` sheet with the data from the script.
+*   **Warning:** Manual edits to the `SysConfig` sheet will be lost the next time `rebuildSysConfigFromSource()` is run. Do not edit the sheet directly.
+
+### 6.2. `ConfigService.js` and Caching
+
+The `ConfigService.js` is the universal service for accessing configuration values. It contains important caching behavior.
+
+*   **Parsing:** On its first run, `ConfigService` reads the entire `SysConfig` sheet into memory. It parses the multi-column format, respects the `scf_status` column (only loading `stable` or `locked` records by default), and builds a structured JavaScript object.
+*   **Caching:** The parsed configuration object is cached in a script-level variable for the duration of the script execution. All subsequent calls to `ConfigService.getConfig()` or `ConfigService.getAllConfig()` read from this cache, avoiding repeated spreadsheet reads.
+*   **Forcing a Reload:** If the `SysConfig` sheet is changed during a script's execution (which should only happen in specific admin/debug workflows), the cache can be invalidated by calling `ConfigService.forceReload()`. This will cause the service to re-read the spreadsheet on the next configuration request.
+
+### 6.3. Spreadsheet Read/Write Timing (`SpreadsheetApp.flush()`)
+
+Google Apps Script batches spreadsheet operations for performance. A `setValues()` call does not guarantee the data is immediately saved. This can create timing issues (race conditions) where a subsequent `getValues()` call reads stale data from before the write occurred.
+
+*   **The Rule:** If a script performs a write operation (e.g., `setValues()`) and a subsequent step in the *same execution* needs to read that data, you **must** call `SpreadsheetApp.flush()` immediately after the write operation.
+*   **Example:** The `OrderService` writes new line items to the `WebOrdItemsM` sheet and then immediately calls `prepareInitialPackingData`, which reads from that same sheet. A `SpreadsheetApp.flush()` is required after the write to `WebOrdItemsM` to guarantee `prepareInitialPackingData` reads the newly written items.
+*   **Impact of Not Flushing:** Failure to use `flush()` in these situations can lead to intermittent, hard-to-diagnose bugs where data appears to be missing, but the issue disappears when execution is slowed down by logging or debugging.

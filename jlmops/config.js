@@ -64,21 +64,29 @@ const ConfigService = (function() {
           return;
       }
 
-      if (!parsedConfig[settingName]) {
-        // First time seeing this setting. Check if it looks like a template or a key-value object.
-        // For now, we'll treat all multi-row settings as objects, which is more robust.
-        parsedConfig[settingName] = {};
-      }
+            if (!parsedConfig[settingName]) {
+              parsedConfig[settingName] = {};
+            }
 
-      // Aggregate key-value pairs. This handles both single-line and multi-line object settings.
-      const propKey = row[3]; // scf_P01
-      const propValue = row[4]; // scf_P02
+            // Always parse P01 and P02 as a key-value pair
+            const propKeyP01 = row[3]; // scf_P01
+            const propValueP02 = row[4]; // scf_P02
 
-      if (propKey !== null && propKey !== undefined && propKey !== '') {
-        parsedConfig[settingName][propKey] = propValue;
-      }
+            if (propKeyP01 !== null && propKeyP01 !== undefined && String(propKeyP01).trim() !== '') {
+              parsedConfig[settingName][String(propKeyP01).trim()] = propValueP02;
+            }
 
-    });
+            // For schema definitions, also parse P03 and P04 as another key-value pair
+            if (settingName.startsWith('schema.data.') || settingName.startsWith('schema.log.')) {
+              const propKeyP03 = row[5]; // scf_P03
+              const propValueP04 = row[6]; // scf_P04
+
+              if (propKeyP03 !== null && propKeyP03 !== undefined && String(propKeyP03).trim() !== '') {
+                parsedConfig[settingName][String(propKeyP03).trim()] = propValueP04;
+              }
+            }
+
+          });
 
     // 2. Perform Fail-Fast Schema Version Check
     const liveVersionSetting = parsedConfig['sys.schema.version'];

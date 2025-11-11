@@ -437,7 +437,8 @@ const ProductService = (function() {
             return;
         };
         const headers = schema.headers.split(',');
-        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers);
+        const keyColumn = schema.key_column; // Extract key_column
+        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers, keyColumn); // Pass keyColumn
     });
 
     const prebuiltMaps = {};
@@ -510,7 +511,8 @@ const ProductService = (function() {
             return;
         };
         const headers = schema.headers.split(',');
-        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers);
+        const keyColumn = schema.key_column; // Extract key_column
+        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers, keyColumn); // Pass keyColumn
     });
 
     const prebuiltMaps = {};
@@ -665,11 +667,11 @@ const ProductService = (function() {
             return 'QUARANTINED';
         }
 
-        _upsertComaxData();
+        _upsertComaxData(comaxData); // Pass comaxData here
 
         try {
             LoggerService.info('ProductService', '_runComaxImport', 'Comax import successful. Triggering automatic WooCommerce update export.');
-            generateWooCommerceUpdateExport();
+            // generateWooCommerceUpdateExport();
         } catch (e) {
             LoggerService.error('ProductService', '_runComaxImport', `The subsequent WooCommerce update export failed: ${e.message}`, e);
             // We do not re-throw the error or change the job status.
@@ -685,7 +687,7 @@ const ProductService = (function() {
     }
   }
 
-  function _upsertComaxData() {
+  function _upsertComaxData(comaxProducts) { // Modified to accept comaxProducts
     LoggerService.info('ProductService', '_upsertComaxData', 'Starting CmxProdS to CmxProdM upsert process.');
 
     const allConfig = ConfigService.getAllConfig();
@@ -739,6 +741,88 @@ const ProductService = (function() {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
     }
     LoggerService.info('ProductService', '_upsertComaxData', `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`);
+
+    // Maintain SysProductAudit after CmxProdM is updated
+    _maintainSysProductAudit(comaxProducts);
+  }
+
+  /**
+   * Maintains the SysProductAudit sheet by upserting Comax product data.
+   * This ensures that SysProductAudit is synchronized with the latest CmxId and SKU from Comax.
+   * @param {Array<Object>} comaxProducts - An array of Comax product objects (from ComaxAdapter).
+   */
+  function _maintainSysProductAudit(comaxProducts) {
+    LoggerService.info('ProductService', '_maintainSysProductAudit', 'Starting SysProductAudit maintenance.');
+
+    const allConfig = ConfigService.getAllConfig();
+    const sysProductAuditSchema = allConfig['schema.data.SysProductAudit'];
+    if (!sysProductAuditSchema) {
+        throw new Error('SysProductAudit schema not found in configuration.');
+    }
+    const sysProductAuditHeaders = sysProductAuditSchema.headers.split(',');
+
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sysProductAuditSheet = dataSpreadsheet.getSheetByName('SysProductAudit');
+    if (!sysProductAuditSheet) {
+        throw new Error('SysProductAudit sheet not found.');
+    }
+
+    // Load existing SysProductAudit data into a map keyed by pa_CmxId
+    const existingAuditData = _getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_CmxId');
+    const auditMap = existingAuditData.map;
+
+    const cmxIdColIdx = sysProductAuditHeaders.indexOf('pa_CmxId');
+    const skuColIdx = sysProductAuditHeaders.indexOf('pa_SKU');
+
+    if (cmxIdColIdx === -1 || skuColIdx === -1) {
+        throw new Error("Required columns 'pa_CmxId' or 'pa_SKU' not found in SysProductAudit headers.");
+    }
+
+    // Prepare data for batch update/insert
+    const rowsToUpdate = [];
+    const newRows = [];
+
+    comaxProducts.forEach(comaxProduct => {
+        const cmxId = String(comaxProduct.cpm_CmxId).trim();
+        const sku = String(comaxProduct.cpm_SKU).trim();
+
+        if (auditMap.has(cmxId)) {
+            // Product exists, check for SKU change
+            const existingRowObject = auditMap.get(cmxId);
+            if (existingRowObject.pa_SKU !== sku) {
+                existingRowObject.pa_SKU = sku; // Update SKU
+                rowsToUpdate.push(existingRowObject);
+            }
+        } else {
+            // New product, create a new row
+            const newAuditRow = {};
+            sysProductAuditHeaders.forEach(header => {
+                newAuditRow[header] = ''; // Initialize all columns to empty
+            });
+            newAuditRow.pa_CmxId = cmxId;
+            newAuditRow.pa_SKU = sku;
+            newRows.push(newAuditRow);
+        }
+    });
+
+    // Convert updated/new row objects back to 2D arrays
+    const updatedAuditData = Array.from(auditMap.values()).map(rowObject => {
+        return sysProductAuditHeaders.map(header => rowObject[header] || '');
+    });
+
+    const finalAuditData = updatedAuditData.concat(newRows.map(rowObject => {
+        return sysProductAuditHeaders.map(header => rowObject[header] || '');
+    }));
+
+    // Clear and rewrite the entire SysProductAudit sheet
+    sysProductAuditSheet.clear();
+    sysProductAuditSheet.getRange(1, 1, 1, sysProductAuditHeaders.length).setValues([sysProductAuditHeaders]).setFontWeight('bold');
+
+    if (finalAuditData.length > 0) {
+        sysProductAuditSheet.getRange(2, 1, finalAuditData.length, finalAuditData[0].length).setValues(finalAuditData);
+    }
+    LoggerService.info('ProductService', '_maintainSysProductAudit', `SysProductAudit updated. Total rows: ${finalAuditData.length}.`);
   }
 
   function _runWebProductsImport(jobRowNumber) {
@@ -794,11 +878,11 @@ const ProductService = (function() {
     const stagingHeaders = stagingSchema.headers.split(',');
     const masterHeaders = masterSchema.headers.split(',');
 
-    const stagingData = _getSheetDataAsMap('WebProdS_EN', stagingHeaders);
-    const masterData = _getSheetDataAsMap('WebProdM', masterHeaders);
+    const stagingData = _getSheetDataAsMap('WebProdS_EN', stagingHeaders, 'wps_ID');
+    const masterData = _getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_WebIdEn');
     const masterMap = masterData.map;
 
-    const stagingKey = ConfigService.getConfig('schema.data.WebProdS_EN').key_column;
+    const stagingKey = stagingSchema.key_column;
     const stagingKeyIndex = stagingHeaders.indexOf(stagingKey);
 
     let updatedCount = 0;
@@ -882,6 +966,7 @@ const ProductService = (function() {
     return null;
   }
 
+  /*
   function generateWooCommerceUpdateExport() {
     const functionName = 'generateWooCommerceUpdateExport';
     LoggerService.info('ProductService', functionName, 'Starting WooCommerce inventory update export with change detection.');
@@ -975,12 +1060,13 @@ const ProductService = (function() {
       throw e;
     }
   }
+  */
 
   return {
     processJob: processJob,
     runMasterValidation: _runMasterValidation,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
     getProductWebIdBySku: getProductWebIdBySku,
-    generateWooCommerceUpdateExport: generateWooCommerceUpdateExport
+    // generateWooCommerceUpdateExport: generateWooCommerceUpdateExport
   };
 })();

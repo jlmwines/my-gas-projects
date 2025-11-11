@@ -6,6 +6,15 @@
 
 **Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
 
+### SysConfig Data Integrity & Import Functionality Restoration (COMPLETED)
+*   **Goal:** Ensure the `SysConfig` sheet accurately reflects the `SetupConfig.js` source of truth and that all critical import processes are fully functional.
+*   **Details:**
+    *   Resolved issues with `ConfigService.js` failing to correctly parse `scf_Pxx` parameters from `SysConfig` rows.
+    *   Corrected missing `system.sheet_names` entries in `SetupConfig.js` for `WebXltM`, `CmxProdM`, and `SysInventoryOnHold`.
+    *   Addressed and deduplicated `task.validation.name_mismatch` and `task.validation.comax_internal_audit` task definitions in `SetupConfig.js`.
+    *   Ensured `_getTaskDefinitionsConfig()` is properly included in `getMasterConfiguration()`.
+    *   **Result:** Web Order Import, Web Product Import, Web Translation Import, and Comax Product Import functionalities are fully restored and operating as expected.
+
 ## Phase 3: Initial Data Population (COMPLETED)
 
 **Goal:** To migrate all necessary product and order data from the legacy system into the new JLMops master sheets.
@@ -26,6 +35,7 @@
         4.  **Comax Order Export (COMPLETED - Monitoring Ongoing):** Implement the export generation logic in `OrderService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
         5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
+            *   **Resolution:** `SysConfig`-related data access issues for packing slips resolved. This includes ensuring correct SKU-to-WebIdEn lookups and addressing a timing issue with spreadsheet updates.
         6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
@@ -41,6 +51,7 @@
     3.  **Refactor `PackingSlipService` (COMPLETED):** Logic updated to act on `Eligible` orders and set them to `Ready`.
     4.  **Refactor `PrintService` (COMPLETED):** Logic updated to act on `Ready` orders and set them to `Printed`.
     5.  **Update `WebApp.js` Backend (COMPLETED):** The `getPackableOrders` function was updated to fetch `Ready` orders from `SysOrdLog`.
+    *   **Resolution:** `spc_WebIdEn` population issue and underlying timing problem resolved, ensuring accurate packing slip data.
 
 ### 2. Frontend UI Development (IN PROGRESS)
 *   **Goal:** To build the dashboard-driven Single Page Application (SPA) that will serve as the main user interface for the JLMops system.
@@ -61,28 +72,34 @@
         1.  **Create `AuthService.js` (IN PROGRESS):** Service created to manage user identity and impersonation. Awaiting testing.
         2.  **Integrate Impersonation (IN PROGRESS):** `WebApp.js` updated to use the `AuthService` to set the user's identity based on URL parameters. Awaiting testing.
 
-### 3. Packing Slip Formatting & Generation (IN PROGRESS)
+### 3. Packing Slip Formatting & Generation (COMPLETED)
 *   **Goal:** To generate professional, readable, and consistent packing slips by leveraging robust Google Doc templates, ensuring continuity with the legacy system's output format.
 *   **Design Rationale (Correction):** The initial `jlmops` implementation incorrectly pivoted to using Google Sheet templates. This has been corrected. The system will now follow the true legacy method of using a pre-formatted **Google Doc** as a WYSIWYG template. This template will be copied and populated with data from `SysPackingCache`, combining the robust data assembly of the new system with the proven output format of the old system.
 *   **Tasks:**
     1.  **Data Preparation (`PackingSlipService.js`): (COMPLETED)**
         *   **Objective:** Ensure `SysPackingCache` contains all necessary order and product details for packing slip generation.
-    2.  **Packing Slip Generation (`PrintService.js`): (IN PROGRESS)**
+    2.  **Packing Slip Generation (`PrintService.js`): (COMPLETED)**
         *   **Objective:** Modify the `printPackingSlips` function to copy a **Google Doc** template, populate it with data from `SysPackingCache` by replacing placeholders and building tables, and save the result as a new Google Doc in the designated output folder.
 
-### 4. Customer Note Implementation (PLANNED)
+### 4. Customer Note Implementation (IN PROGRESS - Awaiting Data for Testing)
 *   **Goal:** To provide a UI for handling customer notes and creating individual, editable Google Docs for gift messages.
 *   **Tasks:
-    1.  **Gift Message Creation (`WebApp.js`):
+    1.  **Gift Message Creation (`WebApp.js`): (COMPLETED)**
         *   **Objective:** Add a new server-side function to create individual, editable Google Docs for gift messages.
         *   **Action:** Add a new global function `createGiftMessageDoc(orderId, noteContent)` to `WebApp.js`.
-    2.  **UI Updates (`WebApp.js` & `PackingSlipView.html`):
+    2.  **UI Updates (`WebApp.js` & `PackingSlipView.html`): (COMPLETED)**
         *   **Objective:** Adapt the client-side and server-side functions to handle the new return format and provide UI for customer notes and gift message creation.
 
-### 5. Comax Inventory Export (PLANNED)
+### 5. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
 *   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system.
-*   **Tasks:
-    1.  **Develop Export Logic:** Implement a new function (e.g., in `InventoryManagementService.js` or `PrintService.js`) that reads current inventory data from `CmxProdM` and generates a CSV string with `SKU` and `Count`.
+*   **Status Update:**
+    *   **Data Model Foundation (COMPLETED):** `SysProductAudit` sheet defined in `SetupConfig.js` with `pa_CmxId` and wide-format columns.
+    *   **Comax Product Import Integration (COMPLETED):** `ProductService.js` modified to maintain `SysProductAudit` with latest `pa_CmxId` and `pa_SKU` during Comax product imports.
+    *   **Brurya Inventory Management Backend (COMPLETED):** `InventoryManagementService.js` updated with `getBruryaStock()` and `setBruryaStock()` functions.
+    *   **Brurya Inventory Management UI (COMPLETED):** `BruryaInventoryView.html` and `WebApp.js` integration for manager-controlled Brurya stock updates.
+    *   **Testing (IN PROGRESS):** Currently testing the `SysProductAudit` maintenance and Brurya UI.
+*   **Tasks (Remaining):**
+    1.  **Develop Export Logic:** Implement a new function (e.g., in `InventoryManagementService.js` or `PrintService.js`) that reads current inventory data from `SysProductAudit` and generates a CSV string with `SKU` and `Count`.
     2.  **File Creation:** Create a new CSV file in a designated Google Drive export folder.
     3.  **UI Integration:** Provide a UI element (e.g., a button on an inventory management page) to trigger this export.
 
@@ -132,3 +149,48 @@
     2.  **Task Generation:** When a change is detected for a product that is sold online, create a high-priority task in `SysTasks` (e.g., "SKU Change Detected for [Product Name]").
     3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the WooCommerce admin panel.
     4.  **Automated Verification:** The system will monitor subsequent web product imports. When it detects that the SKU for the corresponding product has been updated in `WebProdM`, it will automatically mark the task as 'Completed'.
+
+## Identified SysConfig Additions (November 10, 2025)
+
+The following configuration settings were identified as legitimate additions to `SetupConfig.js` after the `6e5caba` commit and will be preserved during the restoration process. They will be formatted in the correct multi-line block structure.
+
+### 1. Printing Configuration
+
+```javascript
+['_section.08_Printing', 'Configurations for printing documents.', '', '', '', '', '', '', '', '', '', '', ''],
+['printing.templates.folder_id', 'The Google Drive Folder ID for printing templates.', 'stable', 'id', '1dUSbbkNCrGbVUpZnmoa0D_e5zib9HaXe', '', '', '', '', '', '', '', ''],
+['printing.packingslip.default_template_id', 'The Google Doc ID for the default packing slip template.', 'stable', 'id', '1z3VocTeR_PbLMtQp94dg2JuIb-Z3EOVoZVgS0zMmAMw', '', '', '', '', '', '', '', ''],
+['printing.note.default_template_id', 'The Google Doc ID for the default note template.', 'stable', 'id', '1_E2uUq0b5jsIfrdvMorUDF2Hweqm4JFvS-GkliEFXKg', '', '', '', '', '', '', '', ''],
+['printing.output.folder_id', 'The Google Drive Folder ID for printed documents output.', 'stable', 'id', '1eUQtr15O_NT0Ow4GUi1icBvpDwGJQf23', '', '', '', '', '', '', '', '']
+```
+
+### 2. Product Audit Schema
+
+```javascript
+['schema.data.SysProductAudit', 'Schema for the Product Audit sheet (wide format).', 'stable', 'headers', 'pa_CmxId,pa_SKU,pa_LastCount,pa_ComaxQty,pa_NewQty,pa_BruryaQty,pa_StorageQty,pa_OfficeQty,pa_ShopQty,pa_LastDetailUpdate,pa_LastDetailAudit', '', '', '', '', '', '', '', ''],
+['schema.data.SysProductAudit', 'Schema for the Product Audit sheet (wide format).', 'stable', 'key_column', 'pa_CmxId', '', '', '', '', '', '', '', '']
+```
+
+### 3. Updated Order Schemas
+
+#### `schema.data.SysOrdLog`
+
+```javascript
+['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'headers', 'sol_OrderId,sol_OrderDate,sol_OrderStatus,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
+['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'key_column', 'sol_OrderId', '', '', '', '', '', '', '', '']
+```
+
+#### `schema.data.SysPackingCache`
+
+```javascript
+['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'headers', 'spc_OrderId,spc_WebIdEn,spc_SKU,spc_Quantity,spc_NameEn,spc_NameHe,spc_Intensity,spc_Complexity,spc_Acidity,spc_Decant,spc_HarmonizeEn,spc_ContrastEn,spc_HarmonizeHe,spc_ContrastHe,spc_GrapeG1Text,spc_GrapeG2Text,spc_GrapeG3Text,spc_GrapeG4Text,spc_GrapeG5Text,spc_KashrutK1Text,spc_KashrutK2Text,spc_KashrutK3Text,spc_KashrutK4Text,spc_KashrutK5Text,spc_HeterMechiraText,spc_IsMevushalText,spc_PrintedFlag,spc_PrintedTimestamp,spc_ReprintCount', '', '', '', '', '', '', '', ''],
+['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'key_column', 'spc_OrderId', '', '', '', '', '', '', '', '']
+```
+
+### 4. Comax Export Confirmation Task
+
+```javascript
+['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'topic', 'System', '', '', '', '', '', '', '', ''],
+['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', '']
+```

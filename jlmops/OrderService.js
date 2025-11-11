@@ -495,7 +495,7 @@ function OrderService(productService) {
                 if (currentMasterStatus !== stagedStatus || MUTABLE_STATUSES.includes(currentMasterStatus) || priorOrderStatusInLog === 'on-hold') {
                     ordersToFullUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId, lineItems: order.lineItems });
                 } else {
-                    ordersToStatusOnlyUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId });
+                    ordersToStatusOnlyUpdate.push({ data: order, masterRowIndex: masterOrderEntry.rowIndex, orderId: orderId, lineItems: order.lineItems });
                 }
             }
 
@@ -508,7 +508,8 @@ function OrderService(productService) {
                     const logRowIndex = existingLogEntry.rowIndex;
                     logData[logRowIndex][logHeaderMap['sol_OrderStatus']] = stagedStatus;
                     logData[logRowIndex][logHeaderMap['sol_PackingStatus']] = newPackingStatus;
-                } else {
+                }
+                else {
                     const newLog = new Array(logHeaders.length).fill('');
                     newLog[logHeaderMap['sol_OrderId']] = orderId;
                     newLog[logHeaderMap['sol_OrderDate']] = order['wom_OrderDate'];
@@ -531,6 +532,7 @@ function OrderService(productService) {
         const orderIdsToClearItems = new Set();
         newOrders.forEach(o => orderIdsToClearItems.add(o.orderId));
         ordersToFullUpdate.forEach(o => orderIdsToClearItems.add(o.orderId));
+        ordersToStatusOnlyUpdate.forEach(o => orderIdsToClearItems.add(o.orderId));
 
         if (orderIdsToClearItems.size > 0) {
             const masterItemsData = masterItemSheet.getDataRange().getValues();
@@ -550,13 +552,20 @@ function OrderService(productService) {
         const processLineItems = (order) => {
             if (!order.lineItems) return;
             for (const item of order.lineItems) {
+                if (!item.SKU) {
+                    continue; 
+                }
                 const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
+                if (!webIdEn) {
+                    logger.warn(`OrderService:processLineItems`, `SKU-to-WebIdEn lookup failed for SKU [${item.SKU}] in Order ID [${order.orderId}].`);
+                }
                 const newItemData = { woi_OrderItemId: ++itemMasterIdCounter, woi_OrderId: order.orderId, woi_WebIdEn: webIdEn, woi_SKU: item.SKU, woi_Name: item.Name, woi_Quantity: item.Quantity, woi_ItemTotal: item.Total };
                 allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
             }
         };
         newOrders.forEach(processLineItems);
         ordersToFullUpdate.forEach(processLineItems);
+        ordersToStatusOnlyUpdate.forEach(processLineItems);
 
         if (ordersToFullUpdate.length > 0) {
             const range = masterOrderSheet.getRange(2, 1, masterOrderSheet.getLastRow() - 1, masterOrderSheet.getMaxColumns());
@@ -587,6 +596,7 @@ function OrderService(productService) {
         if (allNewOrderItems.length > 0) {
             masterItemSheet.getRange(masterItemSheet.getLastRow() + 1, 1, allNewOrderItems.length, allNewOrderItems[0].length).setValues(allNewOrderItems);
         }
+        SpreadsheetApp.flush(); // Force all pending spreadsheet changes to be written.
 
         // --- 4. Batch Write to SysOrdLog ---
         if (logSheet.getLastRow() > 1) {
