@@ -149,7 +149,7 @@ const PrintService = (function() {
             const orderDate = new Date(orderInfo[womHeaderMap['wom_OrderDate']]);
             const formattedOrderDate = !isNaN(orderDate) ? Utilities.formatDate(orderDate, Session.getScriptTimeZone(), "yyyy-MM-dd") : 'Invalid Date';
 
-            packingSlipBody.appendParagraph(`   ${shippingFirstName} ${shippingLastName}   `).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
+            packingSlipBody.appendParagraph(`${shippingFirstName} ${shippingLastName}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
             packingSlipBody.appendParagraph(`${shippingAddress1}` + (shippingAddress2 ? `, ${shippingAddress2}` : '') + `, ${shippingCity}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(false).setFontSize(null);
             packingSlipBody.appendParagraph(`Phone ${shippingPhone} טלפון`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
             packingSlipBody.appendParagraph(`Order ${orderNumber} הזמנה`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
@@ -157,7 +157,12 @@ const PrintService = (function() {
             packingSlipBody.appendParagraph("");
 
             const table = packingSlipBody.appendTable([["Item", "Qty.כמ", "פריט"]]);
-            table.setBorderWidth(0).setColumnWidth(0, 240).setColumnWidth(1, 55).setColumnWidth(2, 240);
+            const tableWidth = 550;
+            const indent = (packingSlipBody.getPageWidth() - tableWidth) / 2;
+            const attrs = {};
+            attrs[DocumentApp.Attribute.INDENT_START] = indent;
+            table.setAttributes(attrs);
+            table.setBorderWidth(0).setColumnWidth(0, 250).setColumnWidth(1, 50).setColumnWidth(2, 250);
             const headerRow = table.getRow(0).setBold(true);
             headerRow.getCell(0).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.LEFT);
             headerRow.getCell(1).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);

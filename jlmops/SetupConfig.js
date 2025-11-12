@@ -98,6 +98,7 @@ function _getSystemConfig() {
         ['system.sheet_names', 'Names of the sheets in the spreadsheets', 'stable', 'SysPackingCache', 'SysPackingCache', '', '', '', '', '', '', '', ''],
         ['system.sheet_names', 'Names of the sheets in the spreadsheets', 'stable', 'WebDetM', 'WebDetM', '', '', '', '', '', '', '', ''],
         ['system.sheet_names', 'Names of the sheets in the spreadsheets', 'stable', 'SysInventoryOnHold', 'SysInventoryOnHold', '', '', '', '', '', '', '', ''],
+        ['system.sheet_names', 'Names of the sheets in the spreadsheets', 'stable', 'SysTasks', 'SysTasks', '', '', '', '', '', '', '', ''],
         ['system.import.processing_order', 'Defines the processing order for file import configurations.', 'stable', 'order', 'import.drive.comax_products,import.drive.web_products_en,import.drive.web_translations_he,import.drive.web_orders', '', '', '', '', '', '', '', ''],
     ];
 }
@@ -489,6 +490,18 @@ function _getValidationCrossSystemReconciliationConfig() {
         ['validation.rule.B2_WebM_Translation_Missing', '[B2] Web Master product missing translation.', 'stable', 'on_failure_task_type', 'task.validation.translation_missing', '', '', '', '', '', '', '', ''],
         ['validation.rule.B2_WebM_Translation_Missing', '[B2] Web Master product missing translation.', 'stable', 'on_failure_title', 'Translation missing for ${wpm_NameEn}', '', '', '', '', '', '', '', ''],
         ['validation.rule.B2_WebM_Translation_Missing', '[B2] Web Master product missing translation.', 'stable', 'on_failure_notes', "Web product '${wpm_NameEn}' (ID: ${wpm_WebIdEn}) does not have a corresponding entry in the translation mapping sheet (WebXltM).", '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'enabled', 'TRUE', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'validation_suite', 'master_master', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'test_type', 'FIELD_COMPARISON', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'sheet_A', 'WebProdM', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'sheet_B', 'CmxProdM', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'key_A', 'wpm_SKU', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'key_B', 'cpm_SKU', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'compare_fields', 'wpm_SKU,cpm_IsWeb', '', '', '', '', '', '', '', ''], // wpm_SKU is a dummy here, we are checking cpm_IsWeb
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'compare_condition', 'B_NOT_EQUALS_VALUE,1', '', '', '', '', '', '', '', ''], // Triggers if cpm_IsWeb is not '1'
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'on_failure_task_type', 'task.validation.comax_not_web_product', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'on_failure_title', 'Web Product Not "Sold On Line" in Comax: ${wpm_NameEn}', '', '', '', '', '', '', '', ''],
+        ['validation.rule.B3_WebM_Not_WebInComaxM', '[B3] Web Master product not marked "sold on line" in Comax Master.', 'stable', 'on_failure_notes', "Web product '${wpm_NameEn}' (SKU: ${wpm_SKU}) is active on the web but its corresponding Comax entry is not marked as 'sold on line' (cpm_IsWeb is not '1').", '', '', '', '', '', '', '', ''],
     ];
 }
 
@@ -597,6 +610,12 @@ function _getTaskDefinitionsConfig() {
         ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'topic', 'System', '', '', '', '', '', '', '', ''],
         ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
         ['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.product_count_export', 'Task to confirm product count export has been processed.', 'stable', 'topic', 'System', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.product_count_export', 'Task to confirm product count export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.product_count_export', 'Task to confirm product count export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
+        ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'topic', 'Products', '', '', '', '', '', '', '', ''],
+        ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
     ];
 }
 

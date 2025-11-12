@@ -39,9 +39,40 @@
         6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
+## Phase 5: UI Overhaul & Workflow Screens (IN PROGRESS)
+
+**Goal:** To refactor the UI into a workflow-oriented design with separate screens for each major business area and user role, improving maintainability and clarity.
+
+### 5.1. Core Navigation & Shell Update
+*   **Goal:** Update the main application shell to support the new navigation structure.
+*   **Tasks:**
+    1.  **Home Button (IN PROGRESS):** The main "JLMops" title in the header will be converted into a "Home" link that reloads the application.
+    2.  **Role-Specific Sidebar (IN PROGRESS):** The sidebar in `Dashboard.html` will be updated to dynamically display links based on user role (`admin` or `manager`).
+    3.  **Cleanup (IN PROGRESS):** The "Display Orders (Test)" link will be removed. The "Comax Actions" and "Web Actions" links will be replaced by the new workflow screens.
+
+### 5.2. Admin Screen Implementation
+*   **Goal:** Build the dedicated screens for the admin user.
+*   **Tasks:**
+    1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
+    2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
+    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` to contain the Product Count Export workflow.
+    4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
+    5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
+
+### 5.3. Manager Screen Implementation
+*   **Goal:** Build the dedicated screens for the manager user.
+*   **Tasks:**
+    1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house the inventory count input workflow.
+
+### 5.4. Backend Refactoring
+*   **Goal:** Refactor the backend to support the new view-specific data loading model.
+*   **Tasks:**
+    1.  **Update `getView` (IN PROGRESS):** The `getView` function in `WebApp.js` will be updated to serve all the new HTML view files.
+    2.  **Create View-Specific Data Functions (IN PROGRESS):** Create new backend functions (`getSystemHealthData`, `getAdminOrdersData`, etc.) to provide data for each specific view, replacing the monolithic `getDashboardData` function.
+
 ## Upcoming Implementation Priorities
 
-**Goal:** To implement the remaining core workflows from the legacy system and build the user interface.
+**Goal:** To implement the remaining core workflows from the legacy system.
 
 ### 1. Packing Slip Workflow (Backend Completed)
 *   **Goal:** Implement a robust, state-aware packing slip generation system that ensures consistency and manages descriptive text enrichment.

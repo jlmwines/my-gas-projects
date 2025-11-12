@@ -1,0 +1,29 @@
+<div id="system-health-widget" style="padding: 0;">
+  <p>Loading...</p>
+</div>
+
+<script>
+  /**
+   * Populates the system health widget.
+   * @param {Object} data - The health data from the backend.
+   */
+  function updateSystemHealthView(data) {
+    const widget = document.getElementById('system-health-widget');
+    if (data.error) {
+      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      return;
+    }
+    widget.innerHTML = `
+      <h5>System Status</h5>
+      <p>Recent Failed Jobs: <span class="badge badge-danger">${data.recentFailedJobs}</span></p>
+      <p>Recent Quarantined Jobs: <span class="badge badge-warning">${data.recentQuarantinedJobs}</span></p>
+      <hr>
+      <p>Missing Translations: <span class="badge badge-secondary">${data.translationMissing}</span></p>
+      <p>SKUs not in Comax: <span class="badge badge-secondary">${data.skuNotInComax}</span></p>
+      <p>Not on Web in Comax: <span class="badge badge-secondary">${data.notOnWebInComax}</span></p>
+    `;
+  }
+
+  // Initial data load for this view
+  google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData();
+</script>

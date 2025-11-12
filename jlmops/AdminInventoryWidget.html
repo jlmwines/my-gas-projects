@@ -1,0 +1,50 @@
+<div id="inventory-widget" style="padding: 0;">
+  <p>Loading...</p>
+</div>
+
+<script>
+  /**
+   * Populates the inventory widget.
+   * @param {Object} result - The inventory data from the backend.
+   */
+  function updateInventoryView(result) {
+    const widget = document.getElementById('inventory-widget');
+    if (result.error) {
+      widget.innerHTML = `<p class="text-danger">${result.error}</p>`;
+      return;
+    }
+
+    const data = result.data;
+    let html = '<h5>Inventory Tasks</h5>';
+
+    const taskLabels = {
+      'task.validation.sku_not_in_comax': 'SKU Not in Comax',
+      'task.validation.translation_missing': 'Translation Missing',
+      'task.validation.comax_internal_audit': 'Comax Internal Audit',
+      'task.validation.field_mismatch': 'Field Mismatch',
+      'task.validation.name_mismatch': 'Name Mismatch',
+      'task.validation.web_master_discrepancy': 'Web Master Discrepancy',
+      'task.validation.comax_master_discrepancy': 'Comax Master Discrepancy',
+      'task.validation.row_count_decrease': 'Row Count Decrease',
+      'task.validation.comax_not_web_product': 'Comax Not Web Product'
+    };
+
+    let hasTasks = false;
+    for (const taskType in data) {
+      if (data.hasOwnProperty(taskType) && data[taskType] > 0) {
+        hasTasks = true;
+        const label = taskLabels[taskType] || taskType;
+        html += `<p>${label}: <span class="badge badge-warning">${data[taskType]}</span></p>`;
+      }
+    }
+
+    if (!hasTasks) {
+      html += '<p>No open inventory tasks.</p>';
+    }
+
+    widget.innerHTML = html;
+  }
+
+  // Initial data load for this view
+  google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+</script>

@@ -1,0 +1,35 @@
+<!-- Manager-only widgets -->
+<div id="manager-dashboard-widgets">
+  <div class="row">
+    <div class="col-12">
+      <div class="card mb-4">
+        <div class="card-header">Inventory Workflows</div>
+        <div class="card-body" id="inventory-workflow-widget-manager">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**
+   * Populates manager dashboard widgets with data from the backend.
+   * This function is called by the main dashboard shell.
+   * @param {Object} data - Object with various manager metrics.
+   */
+  function updateManagerDashboard(data) {
+    const inventoryWidget = document.getElementById('inventory-workflow-widget-manager');
+    let inventoryHtml = '<h6>Inventory Counts</h6>';
+    if (data.isInventoryCountNeeded) {
+      inventoryHtml += '<p>Brurya inventory counts are due.</p><button class="btn btn-primary" onclick="loadView(\'BruryaInventory\')">Go to Count Sheet</button>';
+    } else {
+      inventoryHtml += '<p>No inventory counts are currently needed.</p>';
+    }
+    inventoryWidget.innerHTML = inventoryHtml;
+  }
+
+  // Initial data load for the manager dashboard
+  google.script.run.withSuccessHandler(updateManagerDashboard).withFailureHandler(showError).getDashboardData();
+</script>
+

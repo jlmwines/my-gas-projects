@@ -1,0 +1,75 @@
+<div class="row">
+  <div class="col-md-3" id="system-widget-placeholder">
+    <p>Loading System Widget...</p>
+  </div>
+  <div class="col-md-3" id="orders-widget-placeholder">
+    <p>Placeholder for Orders Widget</p>
+  </div>
+  <div class="col-md-3" id="inventory-widget-placeholder">
+    <p>Placeholder for Inventory Widget</p>
+  </div>
+  <div class="col-md-3" id="products-widget-placeholder">
+    <p>Placeholder for Products Widget</p>
+  </div>
+</div>
+
+<script>
+  /**
+   * A generic function to execute scripts within a string of HTML.
+   * This function needs to be available in the global scope for the widgets.
+   * @param {HTMLElement} element - The element containing the new HTML.
+   */
+  function executeScriptsInElement(element) {
+    const scripts = Array.from(element.getElementsByTagName('script'));
+    scripts.forEach(s => {
+      const newScript = document.createElement('script');
+      newScript.textContent = s.textContent;
+      s.parentNode.replaceChild(newScript, s);
+    });
+  }
+
+  /**
+   * Displays an error message. This needs to be available for the widgets.
+   * @param {Error} err - The error object from a failed google.script.run call.
+   */
+  function showError(err) {
+    // This function relies on an 'error-display' element in the main Dashboard.html
+    // We are calling a function that should exist in the parent frame.
+    // This is not ideal, but it's the current architecture.
+    // A better solution would be a shared event bus.
+    if (window.parent && window.parent.showError) {
+      window.parent.showError(err);
+    } else {
+      console.error(err);
+    }
+  }
+
+  /**
+   * Loads a widget into a specified placeholder.
+   * @param {string} widgetName - The name of the widget view to load.
+   * @param {string} placeholderId - The ID of the div to load the widget into.
+   */
+  function loadWidget(widgetName, placeholderId) {
+    const placeholder = document.getElementById(placeholderId);
+    if (!placeholder) {
+      console.error('Placeholder not found:', placeholderId);
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(html => {
+        placeholder.innerHTML = html;
+        executeScriptsInElement(placeholder);
+      })
+      .withFailureHandler(err => {
+        placeholder.innerHTML = `<p class="text-danger">Error loading ${widgetName}: ${err.message}</p>`;
+      })
+      .getView(widgetName);
+  }
+
+  // Load Widgets
+  loadWidget('SystemHealthWidget', 'system-widget-placeholder');
+  loadWidget('AdminOrdersWidget', 'orders-widget-placeholder');
+  loadWidget('AdminInventoryWidget', 'inventory-widget-placeholder');
+  loadWidget('AdminProductsWidget', 'products-widget-placeholder');
+</script>

@@ -60,6 +60,7 @@ const OrchestratorService = (function() {
 
     importConfigs.forEach(configName => {
       const config = allConfig[configName];
+      console.log(`Config for ${configName}:`, config);
       if (!config.source_folder_id || !config.file_pattern) {
         console.error(`Configuration for '${configName}' is incomplete. Skipping.`);
         return;

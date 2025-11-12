@@ -44,12 +44,21 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 
 ## System Audit Data Model
 
-### `SystemAudit`
-*   **Purpose:** Stores stock levels for various locations (Brurya, Storage, Office, Shop).
-*   **Prefix:** `sa_`
+### `SysProductAudit`
+*   **Purpose:** Stores a single, human-friendly row per product, containing the latest inventory counts for various locations and timestamps for audit. This sheet is maintained by the Comax product import process.
+*   **Prefix:** `pa_`
 *   **Columns:**
-    *   `sa_Item`: The name of the item (e.g., 'Brurya', 'Storage', 'Office', 'Shop').
-    *   `sa_StockLevel`: The current stock level for the item.
+    *   `pa_CmxId`: **Primary Key.** The stable Comax Product ID.
+    *   `pa_SKU`: The current SKU from Comax. Updated if SKU changes in Comax.
+    *   `pa_LastCount`: Timestamp of the last inventory count update for any location.
+    *   `pa_ComaxQty`: The quantity reported by Comax (for reference).
+    *   `pa_NewQty`: A generic 'new' quantity field (purpose to be defined).
+    *   `pa_BruryaQty`: The current stock level at Brurya.
+    *   `pa_StorageQty`: The current stock level at Storage.
+    *   `pa_OfficeQty`: The current stock level at Office.
+    *   `pa_ShopQty`: The current stock level at Shop.
+    *   `pa_LastDetailUpdate`: Timestamp of the last product detail update.
+    *   `pa_LastDetailAudit`: Timestamp of the last product detail audit.
 
 
 **Example:** The concept of a product's web ID (`WebIdEn`) would have a different column name in each sheet it appears in:

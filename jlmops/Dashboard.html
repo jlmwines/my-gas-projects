@@ -8,10 +8,35 @@
     <style>
       body {
         display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      .header {
+        height: 60px;
+        background: #343a40;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1030;
+      }
+      .header a, .header a:hover {
+        color: white;
+        text-decoration: none;
+      }
+      .main-body {
+        display: flex;
+        flex-grow: 1;
+        margin-top: 60px; /* Height of the header */
       }
       .sidebar {
         width: 250px;
-        height: 100vh;
+        height: calc(100vh - 60px);
         position: fixed;
         background: #f8f9fa;
         padding: 20px;
@@ -21,30 +46,65 @@
         padding: 20px;
         width: 100%;
       }
+      .user-info {
+        font-size: 0.9rem;
+      }
     </style>
   </head>
   <body>
-    <div class="sidebar">
-      <h3>JLMops</h3>
-      <ul class="nav flex-column">
-        <li class="nav-item">
-          <a class="nav-link" href="javascript:void(0);" onclick="loadView('PackingSlips')">Packing Slips</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="javascript:void(0);" onclick="loadView('DisplayOrders')">Display Orders (Test)</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" href="#">Comax Actions</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" href="#">Web Actions</a>
-        </li>
-      </ul>
+    <div class="header">
+      <a href="<?= ScriptApp.getService().getUrl(); ?>">
+        <h3 class="mb-0">JLMops</h3>
+      </a>
+      <div class="user-info d-flex align-items-center">
+        <span id="user-display" class="mr-3">Loading...</span>
+        <div class="form-group mb-0">
+          <select id="role-switcher" class="form-control form-control-sm" disabled>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <div id="main-content" class="content">
-      <h1>Welcome to the JLMops Dashboard</h1>
-      <p>Select a workflow from the sidebar to begin.</p>
+    <div class="main-body">
+      <div class="sidebar">
+        <ul class="nav flex-column">
+          <!-- Admin Links -->
+          <li id="nav-system-health" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">System Health</a>
+          </li>
+          <li id="nav-admin-orders" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a>
+          </li>
+          <li id="nav-admin-inventory" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a>
+          </li>
+          <li id="nav-product-details" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ProductDetails')">Product Details</a>
+          </li>
+          <li id="nav-development" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a>
+          </li>
+
+          <!-- Manager Links -->
+          <li id="nav-manager-inventory" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a>
+          </li>
+
+          <!-- Shared Links -->
+          <li class="nav-item">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('PackingSlips')">Packing Slips</a>
+          </li>
+        </ul>
+      </div>
+
+      <div id="main-content" class="content">
+        <div id="error-display" style="display: none;" class="alert alert-danger"></div>
+        
+        <!-- Area for loading different views -->
+        <div id="view-content"></div>
+      </div>
     </div>
 
     <!-- Bootstrap JS and dependencies -->
@@ -53,26 +113,89 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
+      /**
+       * Displays an error message at the top of the content area.
+       * @param {Error} err - The error object from a failed google.script.run call.
+       */
+      function showError(err) {
+        const errorDiv = document.getElementById('error-display');
+        errorDiv.textContent = 'An error occurred: ' + err.message;
+        errorDiv.style.display = 'block';
+      }
+
+      /**
+       * A generic function to execute scripts within a string of HTML.
+       * @param {HTMLElement} element - The element containing the new HTML.
+       */
+      function executeScriptsInElement(element) {
+        const scripts = Array.from(element.getElementsByTagName('script'));
+        scripts.forEach(s => {
+          const newScript = document.createElement('script');
+          newScript.textContent = s.textContent;
+          s.parentNode.replaceChild(newScript, s);
+        });
+      }
+
+      /**
+       * Sets up the dashboard with user-specific data and role.
+       * @param {Object} bootstrapData - Object containing user email and role.
+       */
+      function setupDashboard(bootstrapData) {
+        const userDisplay = document.getElementById('user-display');
+        const roleSwitcher = document.getElementById('role-switcher');
+
+        if (bootstrapData && bootstrapData.email) {
+          userDisplay.textContent = `${bootstrapData.email} (${bootstrapData.role})`;
+          
+          // Show role-specific navigation
+          if (bootstrapData.role === 'admin') {
+            ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development'].forEach(id => {
+              document.getElementById(id).style.display = 'block';
+            });
+
+            // Load the main admin dashboard view
+            loadView('AdminDashboard');
+
+          } else if (bootstrapData.role === 'manager') {
+            ['nav-manager-inventory'].forEach(id => {
+              document.getElementById(id).style.display = 'block';
+            });
+          }
+
+        } else {
+          showError({ message: 'Could not retrieve user bootstrap data.' });
+          userDisplay.textContent = 'Error loading user data.';
+        }
+      }
+
+      /**
+       * Loads a specific sub-view into the main content area.
+       * @param {string} viewName - The name of the view to load.
+       */
       function loadView(viewName) {
-        const contentArea = document.getElementById('main-content');
-        contentArea.innerHTML = '<h2>Loading...</h2>';
+        const viewContent = document.getElementById('view-content');
+        viewContent.style.display = 'block';
+        viewContent.innerHTML = '<h2>Loading...</h2>';
 
         google.script.run
           .withSuccessHandler(html => {
-            contentArea.innerHTML = html;
-            // Find all script tags in the loaded HTML and execute them.
-            const scripts = Array.from(contentArea.getElementsByTagName('script'));
-            scripts.forEach(s => {
-                const newScript = document.createElement('script');
-                newScript.textContent = s.textContent;
-                s.parentNode.replaceChild(newScript, s);
-            });
+            viewContent.innerHTML = html;
+            executeScriptsInElement(viewContent);
           })
           .withFailureHandler(err => {
-            contentArea.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+            // Use the main error display for view loading errors
+            showError(err);
+            viewContent.innerHTML = ''; // Clear the loading message
           })
-          .getView(viewName); // A generic function to get any view
+          .getView(viewName);
       }
+
+      // Initial setup on page load
+      window.onload = function() {
+        // The role switcher is disabled because of the temporary workaround.
+        // document.getElementById('role-switcher').addEventListener('change', handleRoleChange);
+        google.script.run.withSuccessHandler(setupDashboard).withFailureHandler(showError).getAppBootstrapData();
+      };
     </script>
   </body>
 </html>

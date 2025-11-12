@@ -1,0 +1,46 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3>Development Tools</h3>
+      </div>
+      <div class="card-body">
+        <button class="btn btn-warning mr-2" onclick="runRebuild()">Rebuild SysConfig from Source</button>
+        <button class="btn btn-info" onclick="downloadSnapshot()">Download SysConfig Snapshot</button>
+        <div id="admin-tools-result" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function runRebuild() {
+    const resultDiv = document.getElementById('admin-tools-result');
+    resultDiv.innerHTML = '<p class="text-info">Rebuilding SysConfig...</p>';
+    google.script.run
+      .withSuccessHandler(message => {
+        resultDiv.innerHTML = `<p class="alert alert-success">${message}</p>`;
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
+      })
+      .runRebuildSysConfigFromSource();
+  }
+
+  function downloadSnapshot() {
+    const resultDiv = document.getElementById('admin-tools-result');
+    resultDiv.innerHTML = '<p class="text-info">Preparing download...</p>';
+    google.script.run
+      .withSuccessHandler(fileData => {
+        resultDiv.innerHTML = '';
+        const a = document.createElement("a");
+        a.href = "data:text/csv;base64," + fileData.content;
+        a.download = fileData.filename;
+        a.click();
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
+      })
+      .getSysConfigCsvAsBase64();
+  }
+</script>

@@ -1,6 +1,5 @@
 <div>
   <h2>Packing Slips</h2>
-  <p class="text-info"><b>Diagnostic Test:</b> Verification: Code Updated 06</p>
   <p>Select orders to print packing slips for.</p>
   <button class="btn btn-primary mb-3" onclick="generateSelectedPackingSlips()">Print Selected</button>
   <div id="orders-list"></div>
@@ -20,9 +19,13 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-hover"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order ID</th><th>Status</th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-hover"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order ID</th><th>Status</th><th>Customer Note</th><th></th></tr></thead><tbody>';
           orders.forEach(order => {
-            tableHtml += `<tr><td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td><td>${order.orderId}</td><td>${order.status}</td></tr>`;
+            let giftButton = '';
+            if (order.customerNote) {
+              giftButton = `<button class="btn btn-sm btn-secondary" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
+            }
+            tableHtml += `<tr><td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td><td>${order.orderId}</td><td>${order.status}</td><td>${order.customerNote || ''}</td><td>${giftButton}</td></tr>`;
           });
           tableHtml += '</tbody></table>';
           ordersListDiv.innerHTML = tableHtml;
@@ -41,6 +44,20 @@
     checkboxes.forEach(checkbox => {
       checkbox.checked = source.checked;
     });
+  }
+
+  function createGiftMessage(orderId, noteContent) {
+    const printResultDiv = document.getElementById('print-result');
+    printResultDiv.innerHTML = `Creating gift message for order ${orderId}...`;
+
+    google.script.run
+      .withSuccessHandler(docUrl => {
+        printResultDiv.innerHTML = `<div class="alert alert-success">Successfully created gift message. <a href="${docUrl}" target="_blank">Open Document</a></div>`;
+      })
+      .withFailureHandler(err => {
+        printResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+      })
+      .createGiftMessageDoc(orderId, noteContent);
   }
 
   function generateSelectedPackingSlips() {

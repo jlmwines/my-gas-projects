@@ -618,14 +618,61 @@ function OrderService(productService) {
     } catch (e) {
         logger.error(`Error in ${functionName}: ${e.message}`, e);
         throw e;
-    }
-  };
-
-
-} // Closing for OrderService
-
-/**
- * Wrapper function to allow manual execution of the Comax export from the Apps Script editor.
+        }
+      };
+    
+      this.getComaxExportOrderCount = function() {
+        const functionName = 'getComaxExportOrderCount';
+        try {
+          const allConfig = ConfigService.getAllConfig();
+          const sheetNames = allConfig['system.sheet_names'];
+          const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+          const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+          const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+          const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+    
+          if (!logSheet || !masterOrderSheet) {
+            throw new Error("One or more required sheets (SysOrdLog, WebOrdM) not found.");
+          }
+    
+          const webOrdMData = masterOrderSheet.getDataRange().getValues();
+          const webOrdMHeaders = webOrdMData.shift();
+          const womOrderIdCol = webOrdMHeaders.indexOf('wom_OrderId');
+          const womStatusCol = webOrdMHeaders.indexOf('wom_Status');
+          const orderStatusMap = new Map();
+          webOrdMData.forEach(row => {
+            const orderId = row[womOrderIdCol];
+            const status = String(row[womStatusCol] || '').trim().toLowerCase();
+            if (orderId) {
+              orderStatusMap.set(String(orderId), status);
+            }
+          });
+    
+          const logData = logSheet.getDataRange().getValues();
+          const logHeaders = logData.shift();
+          const comaxExportStatusCol = logHeaders.indexOf('sol_ComaxExportStatus');
+          const orderIdCol = logHeaders.indexOf('sol_OrderId');
+    
+          const ordersToExport = logData.filter(row => {
+            const orderId = String(row[orderIdCol]);
+            const exportStatus = String(row[comaxExportStatusCol] || '').trim().toLowerCase();
+            const orderStatus = orderStatusMap.get(orderId);
+            const isNotExported = exportStatus !== 'exported';
+            const isEligibleStatus = orderStatus === 'processing' || orderStatus === 'completed';
+            return isNotExported && isEligibleStatus;
+          });
+          
+          return ordersToExport.length;
+    
+        } catch (e) {
+          logger.error(`Error in ${functionName}: ${e.message}`, e);
+          return -1; // Return -1 to indicate an error to the frontend
+        }
+      };
+    } // Closing for OrderService
+    
+    /**
+     * Wrapper function to allow manual execution of the Comax export from the Apps Script editor.
  */
 function run_exportOrdersToComax() {
   // ProductService is a global singleton object, so we pass it directly.

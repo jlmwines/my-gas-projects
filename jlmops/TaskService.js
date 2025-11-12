@@ -109,9 +109,53 @@ const TaskService = (function() {
     }
   }
 
+  /**
+   * Marks a specific task as 'Done'.
+   * @param {string} taskId The UUID of the task to complete.
+   * @returns {boolean} True if the task was found and updated, otherwise false.
+   */
+  function completeTask(taskId) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheetName = 'SysTasks';
+
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) {
+        LoggerService.warn('TaskService', 'completeTask', `Task sheet '${sheetName}' not found or is empty.`);
+        return false;
+      }
+
+      const headers = taskSchema.headers.split(',');
+      const taskIdCol = headers.indexOf('st_TaskId');
+      const statusCol = headers.indexOf('st_Status');
+      const completedDateCol = headers.indexOf('st_CompletedDate');
+
+      const taskIds = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues().flat();
+      const rowIndex = taskIds.findIndex(id => id === taskId);
+
+      if (rowIndex === -1) {
+        LoggerService.warn('TaskService', 'completeTask', `Task with ID '${taskId}' not found.`);
+        return false;
+      }
+
+      const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
+      sheet.getRange(sheetRow, statusCol + 1).setValue('Done');
+      sheet.getRange(sheetRow, completedDateCol + 1).setValue(new Date());
+      
+      LoggerService.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
+      return true;
+
+    } catch (e) {
+      LoggerService.error('TaskService', 'completeTask', `Error completing task '${taskId}': ${e.message}`, e);
+      return false;
+    }
+  }
+
   return {
     createTask: createTask,
-    hasOpenTasks: hasOpenTasks
+    hasOpenTasks: hasOpenTasks,
+    completeTask: completeTask
   };
 
 })();

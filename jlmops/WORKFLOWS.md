@@ -65,12 +65,12 @@ This workflow manages the process of verifying stock at all locations and prepar
     *   These tasks are created in `SysTasks`.
 
 2.  **User Counting & Brurya Management:**
-    *   **For Storage, Office, Shop:** A user (e.g., a warehouse worker) accesses their assigned "Verify Physical Count" tasks. They are presented with a form to enter counts for specific SKUs at various locations. The submitted counts are recorded in `SysProductAudit` with `spa_AuditType = 'Inventory Count'`, the `spa_CountValue`, `spa_Location`, `spa_CountedBy`, and `spa_ReviewStatus = 'Pending Admin Review'`.
-    *   **For Brurya (Manager Control):** A manager accesses a dedicated UI (e.g., a section within an Inventory Management dashboard) to manage Brurya stock.
-        *   The UI shows the current Brurya stock for each product (derived from the latest 'Brurya - Manager Controlled' entry in `SysProductAudit`).
-        *   Managers can change stock levels: A new entry is created in `SysProductAudit` with `spa_AuditType = 'Inventory Count'`, `spa_Location = 'Brurya'`, the new `spa_CountValue`, and `spa_ReviewStatus = 'Brurya - Manager Controlled'`.
-        *   Managers can add new products to Brurya: By searching for a product and entering an initial quantity, a new 'Inventory Count' entry is created in `SysProductAudit` for 'Brurya'.
-        *   Managers can remove items from Brurya: By setting the quantity to zero, a new 'Inventory Count' entry is created in `SysProductAudit` with `spa_CountValue = 0`. The UI then filters out items with a current quantity of zero.
+    *   **For Storage, Office, Shop:** A user (e.g., a warehouse worker) accesses their assigned "Verify Physical Count" tasks. They are presented with a form to enter counts for specific SKUs at various locations. The submitted counts directly update the respective quantity columns (e.g., `pa_StorageQty`) in the `SysProductAudit` sheet for that SKU. The `pa_LastCount` timestamp is also updated.
+    *   **For Brurya (Manager Control):** A manager accesses a dedicated UI (the "Brurya Inventory" page) to manage Brurya stock.
+        *   The UI displays the current Brurya stock for each product (read directly from the `pa_BruryaQty` column in `SysProductAudit`).
+        *   Managers can change stock levels: The UI updates the `pa_BruryaQty` column for the relevant SKU in `SysProductAudit`. The `pa_LastCount` timestamp is updated.
+        *   Managers can add new products to Brurya: By searching for a product and entering an initial quantity, a new entry is created in `SysProductAudit` (if the product doesn't exist yet, via the Comax import ensuring `pa_CmxId` and `pa_SKU` are present), and its `pa_BruryaQty` is set.
+        *   Managers can remove items from Brurya: By setting the `pa_BruryaQty` to zero for a product.
 
 3.  **Admin Review & Approval (for Storage, Office, Shop counts):**
     *   An admin reviews the `SysProductAudit` sheet for entries with `spa_AuditType = 'Inventory Count'` and `spa_ReviewStatus = 'Pending Admin Review'`.
@@ -102,10 +102,10 @@ This workflow generates a simple CSV file of the unified "stock on hand" invento
 
 This workflow provides a dedicated user interface for managers to view and update Brurya stock levels.
 
-1.  **Access UI:** A manager navigates to the "Brurya Stock Management" page (e.g., via a link on the Dashboard).
-2.  **View Current Stock:** The UI displays the current stock level for Brurya, retrieved from the `SystemAudit` sheet via `AuditService.js`.
+1.  **Access UI:** A manager navigates to the "Brurya Inventory" page (via a link on the Dashboard).
+2.  **View Current Stock:** The UI displays the current stock level for Brurya, retrieved from the `SysProductAudit` sheet via `InventoryManagementService.js`.
 3.  **Update Stock:** The manager enters a new stock level in an input field and clicks a "Save" button.
-4.  **Persist Changes:** The `WebApp.js` handles the form submission, calling `AuditService.js` to update the `sa_StockLevel` for 'Brurya' in the `SystemAudit` sheet.
+4.  **Persist Changes:** The `WebApp.js` handles the form submission, calling `InventoryManagementService.js` to update the `pa_BruryaQty` for the relevant SKU in the `SysProductAudit` sheet.
 
 ---
 
@@ -123,6 +123,7 @@ This workflow covers the end-to-end process for adding new products, updating ex
     *   It then processes the `WebProdS_EN` sheet, using the information from `WebXltM` to correctly associate the data with the master product records.
     *   It populates `WebProdM` (Web Products Master) with core, language-independent data (price, stock) from the English product data.
     *   It updates the English-specific columns in `WebDetM` (Web Details Master). The Hebrew-specific columns in this sheet are preserved, not overwritten by the import.
+    *   **Crucially, during the Comax product import, the `ProductService` also maintains the `SysProductAudit` sheet, ensuring it contains the latest `pa_CmxId` and `pa_SKU` for all products.**
 3.  **Data Validation & Integrity:** The `ProductService` performs validation checks based on the system's data ownership rules. The principle is that **Comax is the owner of primary product data** (price, stock), while the **JLM Ops Hub is the authority for all descriptive and marketing data,** which it expands upon using some base data from Comax. The key integrity checks are:
     *   **SKU Compliance:** Ensures a product's `wpm_SKU` in the web system has a valid, corresponding entry in the `CmxProdM` (Comax master) sheet.
     *   **Translation Completeness:** Ensures each original language product in `WebProdM` has a corresponding translated product linked in the `WebXltM` sheet.
