@@ -4,24 +4,81 @@
 
 <script>
   /**
-   * Populates the system health widget.
+   * Populates the system health widget based on the final approved design.
    * @param {Object} data - The health data from the backend.
    */
   function updateSystemHealthView(data) {
     const widget = document.getElementById('system-health-widget');
+    const indicator = window.parent.document.getElementById('system-health-indicator');
+
     if (data.error) {
       widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      if (indicator) indicator.style.color = 'orange';
       return;
     }
-    widget.innerHTML = `
-      <h5>System Status</h5>
-      <p>Recent Failed Jobs: <span class="badge badge-danger">${data.recentFailedJobs}</span></p>
-      <p>Recent Quarantined Jobs: <span class="badge badge-warning">${data.recentQuarantinedJobs}</span></p>
-      <hr>
-      <p>Missing Translations: <span class="badge badge-secondary">${data.translationMissing}</span></p>
-      <p>SKUs not in Comax: <span class="badge badge-secondary">${data.skuNotInComax}</span></p>
-      <p>Not on Web in Comax: <span class="badge badge-secondary">${data.notOnWebInComax}</span></p>
-    `;
+
+    // Update main health indicator color in the parent dashboard
+    if (indicator) {
+      indicator.style.color = data.isHealthy ? 'green' : 'red';
+    }
+
+    let finalHtml = '<h5>System Health</h5>';
+
+    // 1. Alerts Area
+    if (data.isHealthy) {
+      finalHtml += '<p class="text-success"><strong>Healthy</strong></p>';
+    } else {
+      data.alerts.forEach(alert => {
+        finalHtml += `<p class="text-danger mb-1">${alert}</p>`;
+      });
+    }
+    finalHtml += '<hr class="my-2">';
+
+    // 2. Validation Status
+    const lastValidationColor = data.isValidationRecent ? 'text-success' : 'text-danger';
+    finalHtml += `<p class="${lastValidationColor} mb-2" style="font-size: 0.9rem;">Last Validation: ${data.lastValidationTimestamp}</p>`;
+    
+    // 3. Confirmed Critical Validations
+    if (data.passedValidations && data.passedValidations.length > 0) {
+      data.passedValidations.forEach(confirmation => {
+        finalHtml += `<p class="mb-1" style="font-size: 0.8rem;">${confirmation}</p>`;
+      });
+    }
+
+    // 4. Action Link
+    finalHtml += '<hr class="my-2">';
+    finalHtml += `<a href="#" onclick="runValidation(); return false;" style="font-size: 0.9rem;">Validate Now</a>`;
+    finalHtml += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
+    
+    widget.innerHTML = finalHtml;
+  }
+
+  /**
+   * Handles the 'validate now' link click.
+   */
+  function runValidation() {
+    const statusElement = document.getElementById('validation-status');
+    statusElement.innerText = 'Creating job...';
+    statusElement.className = 'text-info';
+
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response.success) {
+          statusElement.innerText = `Job created. Processing...`;
+          statusElement.className = 'text-success';
+          // Refresh the widget data after a short delay to allow the orchestrator to pick up the job
+          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData(), 3000);
+        } else {
+          statusElement.innerText = `Failed to create job: ${response.error}`;
+          statusElement.className = 'text-danger';
+        }
+      })
+      .withFailureHandler(error => {
+        statusElement.innerText = `Failed: ${error.message}`;
+        statusElement.className = 'text-danger';
+        showError(error);
+      })
+      .createMasterValidationJob();
   }
 
   // Initial data load for this view

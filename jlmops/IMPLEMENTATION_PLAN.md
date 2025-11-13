@@ -181,6 +181,14 @@
     3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the WooCommerce admin panel.
     4.  **Automated Verification:** The system will monitor subsequent web product imports. When it detects that the SKU for the corresponding product has been updated in `WebProdM`, it will automatically mark the task as 'Completed'.
 
+## Go-Live Readiness
+
+### 1. Failed Job Handling (PLANNED)
+*   **Goal:** To ensure that any failed job in the `SysJobQueue` automatically generates a high-priority task for an administrator to investigate.
+*   **Tasks:**
+    1.  **SysConfig:** Add a new task definition to `SetupConfig.js` for `task.system.job_failed`. This task should have a `High` priority.
+    2.  **OrchestratorService:** Modify the `processPendingJobs` function in `OrchestratorService.js`. In the `catch` block where a job's status is set to `FAILED`, add a call to `TaskService.createTask` to generate the new "Job Failed" task.
+
 ## Identified SysConfig Additions (November 10, 2025)
 
 The following configuration settings were identified as legitimate additions to `SetupConfig.js` after the `6e5caba` commit and will be preserved during the restoration process. They will be formatted in the correct multi-line block structure.

@@ -4,23 +4,45 @@
  */
 
 /**
- * The main entry point for the time-driven trigger.
+ * The main entry point for the hourly time-driven trigger.
  */
-function runScheduledTasks() {
-  OrchestratorService.run();
+function runHourlyTrigger() {
+  OrchestratorService.run('hourly');
+}
+
+/**
+ * The main entry point for the daily time-driven trigger.
+ */
+function runDailyTrigger() {
+  OrchestratorService.run('daily');
 }
 
 const OrchestratorService = (function() {
 
-  function run() {
-    console.log('Orchestrator running...');
+  function run(taskType) {
+    console.log(`Orchestrator running for task type: ${taskType}...`);
+    const allConfig = ConfigService.getAllConfig();
+    if (!allConfig) {
+      console.error('Could not load configuration in OrchestratorService.run(). Halting.');
+      return;
+    }
     try {
-      processAllFileImports();
-      processPendingJobs();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (taskType === 'hourly') {
+        processAllFileImports();
+        processPendingJobs();
+      } else if (taskType === 'daily') {
+        createPeriodicValidationJob(jobQueueSheet, allConfig);
+      }
+      
     } catch (e) {
       console.error(`An unexpected error occurred in the orchestrator: ${e.message} (${e.stack})`);
     }
-    console.log('Orchestrator finished.');
+    console.log(`Orchestrator finished for task type: ${taskType}.`);
   }
 
   // --- PHASE 1: FILE INTAKE ---
@@ -245,6 +267,9 @@ const OrchestratorService = (function() {
               const orderServiceInstance = new OrderService(ProductService);
               orderServiceInstance.processJob(jobType, rowNumber, ProductService);
               break;
+            case 'ValidationOrchestratorService': // New case for master validation
+              ValidationOrchestratorService.processJob(jobType, rowNumber);
+              break;
             default:
               throw new Error(`Unknown processing service: ${serviceName}`);
           }
@@ -256,6 +281,28 @@ const OrchestratorService = (function() {
       }
     }
     console.log('Pending job check complete.');
+  }
+
+
+  function createPeriodicValidationJob(jobQueueSheet, allConfig) {
+    const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
+    const jobQueueHeaders = jobQueueSchema.headers.split(',');
+    const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
+    const statusColIdx = jobQueueHeaders.indexOf('status');
+
+    if (jobQueueSheet.getLastRow() > 1) {
+      const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row[jobTypeColIdx] === 'periodic.validation.master' && (row[statusColIdx] === 'PENDING' || row[statusColIdx] === 'PROCESSING')) {
+          console.log('Periodic validation job already pending or processing. Skipping creation.');
+          return;
+        }
+      }
+    }
+
+    createJob(jobQueueSheet, 'periodic.validation.master', 'ValidationOrchestratorService', '');
+    console.log('Created new periodic validation job.');
   }
 
   return {

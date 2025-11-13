@@ -939,8 +939,9 @@ const ProductService = (function() {
           finalJobStatus = _runWebProductsImport(jobRowNumber);
           break;
         case 'WEB_XLT_IMPORT':
-        case 'import.drive.web_translations_he':
-          finalJobStatus = _runWebXltValidationAndUpsert(jobRowNumber); // Capture the returned status
+        case 'manual.validation.master':
+          _runMasterValidation();
+          finalJobStatus = 'COMPLETED';
           break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);

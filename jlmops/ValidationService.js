@@ -81,7 +81,11 @@ const ValidationService = {
    * Compares the Comax order export from jlmops with the latest one from the legacy system.
    */
   validateComaxOrderExport() {
-    const jlmopsFolderId = ConfigService.getConfig('system.folder.jlmops_exports').id; // Assuming this is configured
+    const jlmopsExportConfig = ConfigService.getConfig('system.folder.jlmops_exports');
+    if (!jlmopsExportConfig || !jlmopsExportConfig.id) {
+      throw new Error('Configuration "system.folder.jlmops_exports" is missing or incomplete in SysConfig. Please ensure SetupConfig.js is correct and rebuildSysConfigFromSource() has been run.');
+    }
+    const jlmopsFolderId = jlmopsExportConfig.id;
     const legacyFileNamePattern = /OrderEx-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
     const jlmopsFileNamePattern = /ComaxExport_\d{2}-\d{2}-\d{2}-\d{2}\.csv/; // Updated pattern for jlmops export
     this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Comax Order Export', 'SKU', ['Quantity']);
@@ -91,7 +95,11 @@ const ValidationService = {
    * Compares the web product update export from jlmops with the latest one from the legacy system.
    */
   validateWebProductUpdate() {
-    const jlmopsFolderId = ConfigService.getConfig('system.folder.jlmops_exports').id; // Assuming this is configured
+    const jlmopsExportConfig = ConfigService.getConfig('system.folder.jlmops_exports');
+    if (!jlmopsExportConfig || !jlmopsExportConfig.id) {
+      throw new Error('Configuration "system.folder.jlmops_exports" is missing or incomplete in SysConfig. Please ensure SetupConfig.js is correct and rebuildSysConfigFromSource() has been run.');
+    }
+    const jlmopsFolderId = jlmopsExportConfig.id;
     const legacyFileNamePattern = /ProductInventory-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
     const jlmopsFileNamePattern = /ProductInventory_\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
 
@@ -346,7 +354,90 @@ const ValidationService = {
 
     } catch (e) {
       Logger.log(`ValidationService: Error during Packing Slip Data validation: ${e.message}`);
-      Logger.log(e.stack);
+    }
+  },
+
+  /**
+   * Helper function to update job status in SysJobQueue.
+   * This is a simplified version for ValidationService.
+   * @param {number} rowNumber The row number in the SysJobQueue sheet for the current job.
+   * @param {string} status The status to set (e.g., 'PROCESSING', 'COMPLETED', 'FAILED').
+   * @param {string} [message=''] An optional error message.
+   */
+  _updateJobStatus(rowNumber, status, message = '') {
+    try {
+      const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+      const sheetNames = ConfigService.getConfig('system.sheet_names');
+      const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
+      
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+      
+      const statusCol = jobQueueHeaders.indexOf('status') + 1;
+      const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
+      const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
+
+      if (rowNumber && statusCol > 0) jobQueueSheet.getRange(rowNumber, statusCol).setValue(status);
+      if (rowNumber && messageCol > 0) jobQueueSheet.getRange(rowNumber, messageCol).setValue(message);
+      if (rowNumber && timestampCol > 0) jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
+    } catch (e) {
+      LoggerService.error('ValidationService', '_updateJobStatus', `Failed to update job status: ${e.message}`, e);
+    }
+  },
+
+  /**
+   * Executes a suite of critical validations based on SysConfig rules.
+   * @param {string} jobType The type of job being processed (e.g., 'manual.validation.master').
+   * @param {number} rowNumber The row number in the SysJobQueue sheet for the current job.
+   */
+  runCriticalValidations(jobType, rowNumber) {
+    LoggerService.info('ValidationService', 'runCriticalValidations', `Starting critical validation job: ${jobType} (Row: ${rowNumber})`);
+    this._updateJobStatus(rowNumber, 'PROCESSING'); // Set status to PROCESSING immediately
+
+    let overallStatus = 'COMPLETED';
+    let errorMessage = '';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const criticalValidationRules = Object.keys(allConfig)
+        .filter(key => key.startsWith('validation.rule.') &&
+                       String(allConfig[key].enabled).toUpperCase() === 'TRUE' &&
+                       String(allConfig[key].priority).toUpperCase() === 'HIGH')
+        .map(key => allConfig[key]);
+
+      if (criticalValidationRules.length === 0) {
+        LoggerService.warn('ValidationService', 'runCriticalValidations', 'No enabled high-priority validation rules found in SysConfig.');
+        this._updateJobStatus(rowNumber, 'COMPLETED', 'No high-priority rules to execute.');
+        return;
+      }
+
+      // Sort rules if a specific order is desired, e.g., by an 'order' property
+      // For now, execute in the order they are filtered.
+      
+      for (const rule of criticalValidationRules) {
+        const validationFunctionName = rule.validation_function_name; // Assuming this field exists in SysConfig
+        if (validationFunctionName && typeof this[validationFunctionName] === 'function') {
+          LoggerService.info('ValidationService', 'runCriticalValidations', `Executing critical validation: ${validationFunctionName}`);
+          try {
+            this[validationFunctionName]();
+          } catch (e) {
+            LoggerService.error('ValidationService', 'runCriticalValidations', `Error executing ${validationFunctionName}: ${e.message}`, e);
+            overallStatus = 'FAILED';
+            errorMessage += `Validation '${validationFunctionName}' failed: ${e.message}\n`;
+            // Continue to next validation even if one fails
+          }
+        } else {
+          LoggerService.warn('ValidationService', 'runCriticalValidations', `Validation function '${validationFunctionName}' not found or not a function in ValidationService for rule: ${rule.name}`);
+        }
+      }
+
+    } catch (e) {
+      LoggerService.error('ValidationService', 'runCriticalValidations', `Error during critical validation orchestration: ${e.message}`, e);
+      overallStatus = 'FAILED';
+      errorMessage = `Orchestration failed: ${e.message}`;
+    } finally {
+      this._updateJobStatus(rowNumber, overallStatus, errorMessage.trim());
+      LoggerService.info('ValidationService', 'runCriticalValidations', `Critical validation job ${jobType} finished with status: ${overallStatus}`);
     }
   },
 };

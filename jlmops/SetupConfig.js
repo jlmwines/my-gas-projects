@@ -123,6 +123,8 @@ function _getImportsConfig() {
         ['import.drive.web_orders', 'Configuration for the Web Orders CSV import from Google Drive.', 'stable', 'file_pattern', 'WebOrders.csv', '', '', '', '', '', '', '', ''],
         ['import.drive.web_orders', 'Configuration for the Web Orders CSV import from Google Drive.', 'stable', 'processing_service', 'OrderService', '', '', '', '', '', '', '', ''],
         ['import.drive.web_orders', 'Configuration for the Web Orders CSV import from Google Drive.', 'stable', 'file_encoding', 'UTF-8', '', '', '', '', '', '', '', ''],
+        ['job.manual.validation.master', 'Job type for manual master validation.', 'stable', 'processing_service', 'ValidationOrchestratorService', '', '', '', '', '', '', '', ''],
+        ['job.periodic.validation.master', 'Job type for periodic master validation.', 'stable', 'processing_service', 'ValidationOrchestratorService', '', '', '', '', '', '', '', ''],
     ];
 }
 
@@ -590,7 +592,7 @@ function _getTaskDefinitionsConfig() {
         ['task.validation.translation_missing', 'Task definition for when a product is missing its counterpart in the other language.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
         ['task.validation.translation_missing', 'Task for when a product is missing its counterpart in the other language.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
         ['task.validation.comax_internal_audit', 'Task for internal data consistency issues in Comax staging.', 'stable', 'topic', 'Products', '', '', '', '', '', '', '', ''],
-        ['task.validation.comax_internal_audit', 'Task for internal data consistency issues in Comax staging.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.validation.comax_internal_audit', 'Task for internal data consistency issues in Comax staging.', 'stable', 'default_priority', 'Normal', '', '', '', '', '', '', '', ''],
         ['task.validation.comax_internal_audit', 'Task for internal data consistency issues in Comax staging.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
         ['task.validation.field_mismatch', 'Task for when a field in a staging sheet does not match the master sheet.', 'stable', 'topic', 'Products', '', '', '', '', '', '', '', ''],
         ['task.validation.field_mismatch', 'Task for when a field in a staging sheet does not match the master sheet.', 'stable', 'default_priority', 'Normal', '', '', '', '', '', '', '', ''],
@@ -667,7 +669,10 @@ function getMasterConfiguration() {
         // Migration Sync Tasks
         ..._getMigrationSyncTasksConfig(),
         
-// Printing
-        ..._getPrintingConfig()
+        // Printing
+        ..._getPrintingConfig(),
+
+        // Other Settings
+        ..._getOtherSettingsConfig()
     ];
 }
