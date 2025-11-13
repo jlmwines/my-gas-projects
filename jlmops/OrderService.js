@@ -99,6 +99,23 @@ function OrderService(productService) {
   // this.updateOrderStatus = function(orderId, newStatus) { ... };
   // this.createOrder = function(orderData) { ... };
 
+  function _updateJobStatus(rowNumber, status, message = '') {
+    const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+    const sheetNames = ConfigService.getConfig('system.sheet_names');
+    const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
+    
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    
+    const statusCol = jobQueueHeaders.indexOf('status') + 1;
+    const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
+    const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
+
+    if (rowNumber && statusCol > 0) jobQueueSheet.getRange(rowNumber, statusCol).setValue(status);
+    if (rowNumber && messageCol > 0) jobQueueSheet.getRange(rowNumber, messageCol).setValue(message);
+    if (rowNumber && timestampCol > 0) jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
+  }
+
   /**
    * Processes an order-related job from the job queue.
    * @param {string} jobType The type of job to process.
@@ -118,21 +135,171 @@ function OrderService(productService) {
 
       if (jobType === 'import.drive.web_orders') {
         const ordersWithLineItems = this.importWebOrdersToStaging(archiveFileId);
+        
+        if (!_runOrderStagingValidation('order_staging')) {
+            logger.warn('OrderService', 'processJob', 'Order staging validation failed. Job will be QUARANTINED.');
+            _updateJobStatus(rowNumber, 'QUARANTINED');
+            return;
+        }
+
         this.processStagedOrders(ordersWithLineItems, productService);
       }
-      jobQueueSheet.getRange(rowNumber, jobQueueHeaders.indexOf('status') + 1).setValue('COMPLETED');
+      _updateJobStatus(rowNumber, 'COMPLETED');
     } catch (e) {
       logger.error(`Failed to process job on row ${rowNumber}: ${e.message}`);
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-      const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-      jobQueueSheet.getRange(rowNumber, jobQueueHeaders.indexOf('status') + 1).setValue('FAILED');
-      jobQueueSheet.getRange(rowNumber, jobQueueHeaders.indexOf('error_message') + 1).setValue(e.message);
+      _updateJobStatus(rowNumber, 'FAILED', e.message);
     }
   };
+  function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sheet = dataSpreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID: ${dataSpreadsheet.getId()}. This is a critical configuration error.`);
+    }
+    if (sheet.getLastRow() < 2) {
+      logger.warn('OrderService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty (only headers or less).`);
+      return { map: new Map(), headers: headers, values: [] };
+    }
+    const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+    
+    const dataMap = new Map();
+    const keyHeader = keyColumnName || ConfigService.getConfig(`schema.data.${sheetName}`).key_column;
+
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName} using key '${keyHeader}'`);
+
+    values.forEach(row => {
+      const rowObject = {};
+      headers.forEach((h, i) => rowObject[h] = row[i]);
+      const key = row[keyIndex];
+      if (key && String(key).trim()) {
+        dataMap.set(String(key).trim(), rowObject);
+      }
+    });
+    logger.info('OrderService', '_getSheetDataAsMap', `Loaded ${dataMap.size} rows from ${sheetName}.`);
+    return { map: dataMap, headers: headers, values: values };
+  }
+
+  function _buildMapFromData(data, headers, keyHeader) {
+    const map = new Map();
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) {
+        throw new Error(`Key header '${keyHeader}' not found in headers: ${headers.join(', ')}`);
+    }
+    data.forEach(row => {
+        const rowObject = {};
+        headers.forEach((h, i) => rowObject[h] = row[i]);
+        const key = row[keyIndex];
+        if (key && String(key).trim()) {
+            map.set(String(key).trim(), rowObject);
+        }
+    });
+    return map;
+  }
+
+  function _formatString(template, dataRow) {
+    if (!template) return '';
+    return template.replace(/\${(.*?)}/g, (match, key) => {
+      return dataRow[key.trim()] || '';
+    });
+  }
+
+  function _evaluateCondition(val1, operator, val2) {
+      switch(operator) {
+          case '<': return Number(val1) < Number(val2);
+          case '>': return Number(val1) > Number(val2);
+          case '=': return String(val1) === val2;
+          case '<>': return String(val1) !== val2;
+          default: return false;
+      }
+  }
+
+  function _createTaskFromFailure(rule, dataRow, joinKey) {
+    const title = _formatString(rule.on_failure_title, dataRow);
+    const notes = _formatString(rule.on_failure_notes, dataRow);
+    const orderIdKey = Object.keys(dataRow).find(k => k.endsWith('_OrderId'));
+    const entityId = orderIdKey ? dataRow[orderIdKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
+
+    logger.info('OrderService', '_createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
+    TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
+    
+    return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
+  }
+
+  function _executeRowCountComparison(rule, dataMaps) {
+    logger.info('OrderService', '_executeRowCountComparison', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+
+    const sourceSheetData = dataMaps[rule.source_sheet];
+    const targetSheetData = dataMaps[rule.target_sheet];
+
+    const sourceRowCount = sourceSheetData.values.length;
+    const targetRowCount = targetSheetData.values.length;
+
+    if (targetRowCount < sourceRowCount) {
+      if (_createTaskFromFailure(rule, { sourceRowCount: sourceRowCount, targetRowCount: targetRowCount })) {
+        quarantineTriggered = true;
+      }
+    }
+    return quarantineTriggered;
+  }
+
+  function _runOrderStagingValidation(suiteName) {
+    logger.info('OrderService', '_runOrderStagingValidation', `Starting validation for suite: ${suiteName}`);
+    const allConfig = ConfigService.getAllConfig();
+    const validationRules = Object.keys(allConfig).filter(k => 
+      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
+    );
+    logger.info('OrderService', '_runOrderStagingValidation', `Found ${validationRules.length} enabled rules for suite: ${suiteName}.`);
+
+    if (validationRules.length === 0) return true;
+
+    let quarantineTriggered = false;
+
+    const requiredSheets = new Set();
+    validationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+    });
+
+    const sheetDataCache = {};
+    requiredSheets.forEach(sheetName => {
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema) {
+            logger.warn('OrderService', '_runOrderStagingValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            return;
+        };
+        const headers = schema.headers.split(',');
+        const keyColumn = schema.key_column;
+        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers, keyColumn);
+    });
+
+    validationRules.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      try {
+        let ruleQuarantineTriggered = false;
+        switch (rule.test_type) {
+          case 'ROW_COUNT_COMPARISON':
+            ruleQuarantineTriggered = _executeRowCountComparison(rule, sheetDataCache);
+            break;
+          default:
+            logger.warn('OrderService', '_runOrderStagingValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
+        }
+        if (ruleQuarantineTriggered) {
+            quarantineTriggered = true;
+        }
+      } catch (e) {
+        logger.error('OrderService', '_runOrderStagingValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
+        if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
+            quarantineTriggered = true;
+            logger.warn('OrderService', '_runOrderStagingValidation', `Rule ${ruleKey} encountered an error and triggered quarantine.`);
+        }
+      }
+    });
+    return !quarantineTriggered;
+  }
 
   /**
    * Imports the content of a given CSV file into the WebOrdS staging sheet.

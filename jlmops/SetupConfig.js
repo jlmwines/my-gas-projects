@@ -393,6 +393,15 @@ function _getValidationDataSourceIntegrityConfig() {
         ['validation.rule.WebXlt_EmptyCells', '[WebXlt] Empty cells found in populated columns of WebXltS.', 'stable', 'on_failure_task_type', 'task.validation.webxlt_data_integrity', '', '', '', '', '', '', '', ''],
         ['validation.rule.WebXlt_EmptyCells', '[WebXlt] Empty cells found in populated columns of WebXltS.', 'stable', 'on_failure_title', 'WebXlt Data Incompleteness', '', '', '', '', '', '', '', ''],
         ['validation.rule.WebXlt_EmptyCells', '[WebXlt] Empty cells found in populated columns of WebXltS.', 'stable', 'on_failure_notes', 'Empty cells were found in populated columns of the WebXltS sheet.', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'enabled', 'TRUE', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'validation_suite', 'order_staging', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'test_type', 'ROW_COUNT_COMPARISON', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'source_sheet', 'WebOrdM', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'target_sheet', 'WebOrdS', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'on_failure_quarantine', 'TRUE', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'on_failure_task_type', 'task.validation.order_staging_failure', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'on_failure_title', 'Web Orders Import Row Count Decreased', '', '', '', '', '', '', '', ''],
+        ['validation.rule.O_WebOrdS_RowCountDecrease', '[O] Web Orders Staging row count decreased compared to Master.', 'stable', 'on_failure_notes', 'The number of rows in WebOrdS (${targetRowCount}) is less than the number of rows in WebOrdM (${sourceRowCount}). This may indicate a partial or damaged Web Orders import file.', '', '', '', '', '', '', '', ''],
     ];
 }
 
@@ -618,6 +627,9 @@ function _getTaskDefinitionsConfig() {
         ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'topic', 'Products', '', '', '', '', '', '', '', ''],
         ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
         ['task.validation.comax_not_web_product', 'Task for when a web product is not marked as "sold on line" in Comax.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
+        ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'topic', 'Orders', '', '', '', '', '', '', '', ''],
+        ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
     ];
 }
 

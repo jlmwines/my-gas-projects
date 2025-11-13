@@ -938,7 +938,9 @@ const ProductService = (function() {
         case 'import.drive.web_products_en':
           finalJobStatus = _runWebProductsImport(jobRowNumber);
           break;
-        case 'WEB_XLT_IMPORT':
+        case 'import.drive.web_translations_he':
+          finalJobStatus = _runWebXltValidationAndUpsert(jobRowNumber);
+          break;
         case 'manual.validation.master':
           _runMasterValidation();
           finalJobStatus = 'COMPLETED';
