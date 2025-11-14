@@ -2,12 +2,16 @@
 <html>
 <head>
     <base target="_top">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
     <style>
         body {
             display: flex;
             flex-direction: column;
             height: 100vh;
+        }
+        .header h1 {
+            /* color: white; Removed to allow default text color */
         }
         .header {
             display: flex;
@@ -16,17 +20,32 @@
             padding: 10px;
             border-bottom: 1px solid #ccc;
             height: 60px;
-            background: #343a40;
-            color: white;
+            background: #f8f9fa; /* Light background */
+            /* color: white; Removed to allow default text color */
             width: 100%;
             position: fixed;
             top: 0;
             left: 0;
             z-index: 1030;
         }
-        .role-switcher {
+        .jlmops-role-switcher {
             position: relative;
         }
+        .jlmops-role-switcher select {
+            /* color: white !important; Removed */
+            /* background-color: #212529 !important; Removed */
+            /* border: 1px solid #555; Removed */
+        }
+        .jlmops-role-switcher select option {
+            /* color: white !important; Removed */
+            /* background-color: #343a40 !important; Removed */
+        }
+        /* Force dark background for primary buttons */
+        /* .jlmops-btn-dark {
+            background-color: #212529 !important;
+            border-color: #212529 !important;
+            color: white !important; Removed */
+        /* } */
         .main-body {
             display: flex;
             flex-grow: 1;
@@ -39,6 +58,9 @@
             background: #f8f9fa;
             padding: 20px;
         }
+        .sidebar ul.nav li {
+            list-style-type: none; /* Remove bullet points */
+        }
         .content {
             margin-left: 270px;
             padding: 20px;
@@ -49,7 +71,7 @@
 <body>
     <div class="header">
         <h1>JLMops</h1>
-        <div class="role-switcher">
+        <div class="jlmops-role-switcher">
             <select id="roleSelect">
                 <? for (let r of availableRoles) { ?>
                     <option value="<?= r ?>" <?= r === initialRole ? 'selected' : '' ?>><?= r.charAt(0).toUpperCase() + r.slice(1) ?></option>
@@ -64,7 +86,7 @@
           <!-- Admin Links -->
           <li id="nav-system-health" class="nav-item" style="display: none;">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">
-              <span id="system-health-indicator" class="mr-2">●</span>System Health
+              System Health
             </a>
           </li>
           <li id="nav-admin-orders" class="nav-item" style="display: none;">

@@ -16,7 +16,7 @@
 
     let html = '<h5>Order Export</h5>';
     if (data.comaxExportOrderCount > 0) {
-      html += `<p>${data.comaxExportOrderCount} orders are ready for export.</p><button class="btn btn-success" onclick="runComaxExport()">Generate Comax Order Export</button>`;
+      html += `<p>${data.comaxExportOrderCount} orders are ready for export.</p><button onclick="runComaxExport()">Generate Comax Order Export</button>`;
     } else {
       html += '<p>No orders are currently ready for Comax export.</p>';
     }
