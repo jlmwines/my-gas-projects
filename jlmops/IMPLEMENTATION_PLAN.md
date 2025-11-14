@@ -64,11 +64,21 @@
 *   **Tasks:**
     1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house the inventory count input workflow.
 
-### 5.4. Backend Refactoring
-*   **Goal:** Refactor the backend to support the new view-specific data loading model.
+### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
+*   **Goal:** To refactor the UI controller layer to align with the formal architecture defined in `ARCHITECTURE.md, Section 2.1.1`.
+*   **Architectural Model:** All work follows the **View Controller / Data Provider** model.
 *   **Tasks:**
-    1.  **Update `getView` (IN PROGRESS):** The `getView` function in `WebApp.js` will be updated to serve all the new HTML view files.
-    2.  **Create View-Specific Data Functions (IN PROGRESS):** Create new backend functions (`getSystemHealthData`, `getAdminOrdersData`, etc.) to provide data for each specific view, replacing the monolithic `getDashboardData` function.
+    1.  **Create Data Provider (`WebAppTasks.js`) (COMPLETED):** Created a new data provider for task-related data and actions.
+    2.  **Create View Controller (`WebAppDashboard.js`) (COMPLETED):** Created a new view controller for the main dashboard.
+    3.  **Refactor `WebApp.js` (IN PROGRESS):** Moved `getDashboardData` to its view controller and refactored multiple functions to use the new `WebAppTasks.js` data provider.
+    4.  **Future Tasks (PLANNED):** Continue creating new View Controller and Data Provider scripts and migrating logic from `WebApp.js` as new UI views are developed.
+
+### 5.5. UI Authentication & User Switching (COMPLETED)
+*   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
+*   **Tasks:**
+    1.  **Refactor `AuthService.js` (COMPLETED):** Replaced the old, complex impersonation logic with a simplified service that reads user roles directly from `SysConfig`.
+    2.  **Implement UI Control (COMPLETED):** Integrated a role-switcher dropdown into `AppView.html` that dynamically loads content and adjusts navigation based on the selected user's role.
+    3.  **Resolve Known Issue (COMPLETED):** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
 ## Upcoming Implementation Priorities
 

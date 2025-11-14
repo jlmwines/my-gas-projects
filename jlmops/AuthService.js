@@ -1,42 +1,39 @@
 /**
  * @file AuthService.js
- * @description Handles user authentication and impersonation for testing.
+ * @description Handles user authentication and role management.
  */
 
 const AuthService = (function() {
 
-  // This map defines the roles for specific test users.
-  // In a production system, this would be replaced by a lookup from a user/group directory.
-  const ROLE_MAP = {
-    'accounts@jlmwines.com': 'admin',
-    'info@jlmwines.com': 'manager'
-  };
+  let _roleMap = null;
 
   /**
-   * Gets the role for a given email address.
-   * @param {string} email The email of the user.
-   * @returns {string} The user's role ('admin', 'manager', or 'viewer').
+   * Loads the role map from SysConfig.
    */
-  function _getRoleForEmail(email) {
-    return ROLE_MAP[email] || 'viewer'; // Default to 'viewer' if not in the map
+  function _loadRoleMapFromConfig() {
+    if (_roleMap) {
+      return;
+    }
+    
+    const allConfig = ConfigService.getAllConfig();
+    const userConfigs = allConfig['system.users'];
+    
+    _roleMap = {};
+    if (userConfigs && Array.isArray(userConfigs)) {
+      userConfigs.forEach(userConfig => {
+        if (userConfig.email && userConfig.role) {
+          _roleMap[userConfig.email.toLowerCase()] = userConfig.role.toLowerCase();
+        }
+      });
+    }
   }
 
   /**
-   * Gets the email of the active user, allowing for impersonation for testing.
-   * Checks UserProperties for an 'impersonated_user' value first.
-   * @returns {string} The email of the active or impersonated user.
+   * Gets the email of the active user.
+   * @returns {string} The email of the active user.
    */
   function getActiveUserEmail() {
-    // --- TEMPORARY WORKAROUND ---
-    // Force user to be admin to unblock frontend development.
-    return 'accounts@jlmwines.com';
-    
     try {
-      const impersonatedUser = PropertiesService.getUserProperties().getProperty('impersonated_user');
-      if (impersonatedUser) {
-        console.log(`IMPERSONATION: Running as ${impersonatedUser}`);
-        return impersonatedUser;
-      }
       return Session.getActiveUser().getEmail();
     } catch (e) {
       console.warn("Could not retrieve active user's email. This may be expected in a trigger-based execution.");
@@ -45,59 +42,39 @@ const AuthService = (function() {
   }
 
   /**
-   * Gets the role of the active user (real or impersonated).
+   * Gets the role of the active user.
    * @returns {string} The user's role.
    */
   function getActiveUserRole() {
-    // --- TEMPORARY WORKAROUND ---
-    // Force user to be admin to unblock frontend development.
-    return 'admin';
-
-    const email = getActiveUserEmail();
-    // For the actual system owner, grant admin role regardless of the map.
-    if (email === Session.getEffectiveUser().getEmail() && !PropertiesService.getUserProperties().getProperty('impersonated_user')) {
-        const ownerRole = _getRoleForEmail(email);
-        // If the owner is not in the map, default them to admin.
-        return ownerRole === 'viewer' ? 'admin' : ownerRole;
-    }
-    return _getRoleForEmail(email);
+    const email = getActiveUserEmail().toLowerCase();
+    _loadRoleMapFromConfig();
+    return _roleMap[email] || 'viewer'; // Default to 'viewer' if not in the map
   }
 
   /**
-   * Clears any active impersonation.
+   * Returns a map of all users and their roles for the UI.
+   * @returns {Object} An object where keys are emails and values are roles.
    */
-  function clearImpersonation() {
-    PropertiesService.getUserProperties().deleteProperty('impersonated_user');
-    console.log('IMPERSONATION: Cleared.');
+  function getUsersAndRoles() {
+    _loadRoleMapFromConfig();
+    return _roleMap;
   }
 
   /**
-   * Sets or clears the impersonated user for the current session based on URL parameters.
-   * To be called from doGet(e).
-   * @param {Object} e - The event object from doGet, which may contain URL parameters.
+   * Returns a list of unique, available roles.
+   * @returns {Array<string>} A list of unique roles.
    */
-  function handleImpersonation(e) {
-    if (!e || !e.parameter) {
-      return;
-    }
-
-    const userProperties = PropertiesService.getUserProperties();
-    const testUser = e.parameter.test_user;
-    const shouldClear = e.parameter.clear_impersonation;
-
-    if (shouldClear) {
-      clearImpersonation();
-    } else if (testUser) {
-      userProperties.setProperty('impersonated_user', testUser);
-      console.log(`IMPERSONATION: Session set to run as ${testUser}.`);
-    }
+  function getAvailableRoles() {
+    _loadRoleMapFromConfig();
+    const roles = Object.values(_roleMap);
+    return [...new Set(roles)]; // Return unique roles
   }
 
   return {
     getActiveUserEmail: getActiveUserEmail,
     getActiveUserRole: getActiveUserRole,
-    handleImpersonation: handleImpersonation,
-    clearImpersonation: clearImpersonation
+    getUsersAndRoles: getUsersAndRoles,
+    getAvailableRoles: getAvailableRoles
   };
 
 })();

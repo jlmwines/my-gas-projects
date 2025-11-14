@@ -645,6 +645,16 @@ function _getPrintingConfig() {
 }
 
 
+function _getUsersConfig() {
+    return [
+        // Users
+        ['_section.10_Users', 'User role assignments.', '', '', '', '', '', '', '', '', '', '', ''],
+        ['system.users', 'Defines an authorized user and their role.', 'stable', 'email', 'accounts@jlmwines.com', 'role', 'admin', '', '', '', '', '', ''],
+        ['system.users', 'Defines an authorized user and their role.', 'stable', 'email', 'info@jlmwines.com', 'role', 'manager', '', '', '', '', '', ''],
+    ];
+}
+
+
 /**
  * Contains the master source of truth for the SysConfig sheet.
  * @returns {Array<Array<string>>} A 2D array representing the SysConfig data.
@@ -683,6 +693,9 @@ function getMasterConfiguration() {
         
         // Printing
         ..._getPrintingConfig(),
+
+        // Users
+        ..._getUsersConfig(),
 
         // Other Settings
         ..._getOtherSettingsConfig()

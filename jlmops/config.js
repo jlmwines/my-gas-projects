@@ -64,29 +64,42 @@ const ConfigService = (function() {
           return;
       }
 
-            if (!parsedConfig[settingName]) {
-              parsedConfig[settingName] = {};
-            }
+      // Special handling for system.users to create an array of objects
+      if (settingName === 'system.users') {
+        if (!parsedConfig[settingName]) {
+          parsedConfig[settingName] = [];
+        }
+        const userObject = {
+          [row[3]]: row[4], // email: '...'
+          [row[5]]: row[6]  // role: '...'
+        };
+        parsedConfig[settingName].push(userObject);
+        return; // Skip to the next row
+      }
 
-            // Always parse P01 and P02 as a key-value pair
-            const propKeyP01 = row[3]; // scf_P01
-            const propValueP02 = row[4]; // scf_P02
+      if (!parsedConfig[settingName]) {
+        parsedConfig[settingName] = {};
+      }
 
-            if (propKeyP01 !== null && propKeyP01 !== undefined && String(propKeyP01).trim() !== '') {
-              parsedConfig[settingName][String(propKeyP01).trim()] = propValueP02;
-            }
+      // Always parse P01 and P02 as a key-value pair
+      const propKeyP01 = row[3]; // scf_P01
+      const propValueP02 = row[4]; // scf_P02
 
-            // For schema definitions, also parse P03 and P04 as another key-value pair
-            if (settingName.startsWith('schema.data.') || settingName.startsWith('schema.log.')) {
-              const propKeyP03 = row[5]; // scf_P03
-              const propValueP04 = row[6]; // scf_P04
+      if (propKeyP01 !== null && propKeyP01 !== undefined && String(propKeyP01).trim() !== '') {
+        parsedConfig[settingName][String(propKeyP01).trim()] = propValueP02;
+      }
 
-              if (propKeyP03 !== null && propKeyP03 !== undefined && String(propKeyP03).trim() !== '') {
-                parsedConfig[settingName][String(propKeyP03).trim()] = propValueP04;
-              }
-            }
+      // For schema definitions, also parse P03 and P04 as another key-value pair
+      if (settingName.startsWith('schema.data.') || settingName.startsWith('schema.log.')) {
+        const propKeyP03 = row[5]; // scf_P03
+        const propValueP04 = row[6]; // scf_P04
 
-          });
+        if (propKeyP03 !== null && propKeyP03 !== undefined && String(propKeyP03).trim() !== '') {
+          parsedConfig[settingName][String(propKeyP03).trim()] = propValueP04;
+        }
+      }
+
+    });
 
     // 2. Perform Fail-Fast Schema Version Check
     const liveVersionSetting = parsedConfig['sys.schema.version'];

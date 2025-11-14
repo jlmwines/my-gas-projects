@@ -14,16 +14,26 @@ The system is designed around four core principles:
 
 ## 2. Architectural Components
 
-### 2.1. Frontend: The Dashboard-Driven Web App
+### 2.1. Frontend: The Single-Page Application Shell
 
-The entire user interface is a modern, dashboard-driven Single Page Application (SPA) built on Google Apps Script's `HtmlService`. This design provides a centralized, at-a-glance overview of all system operations and guides the user to the most urgent tasks.
+The entire user interface is a modern, dashboard-driven Single Page Application (SPA) built on Google Apps Script's `HtmlService`. The main entry point is `AppView.html`, which serves as the application shell.
 
-*   **The Dashboard Paradigm:** The application opens to a main dashboard that acts as the central hub. The dashboard is composed of several "widgets," with each widget representing a major functional area of the system (e.g., Orders, Managed Inventory, Product Details).
-*   **"At-a-Glance" Health Status:** Each widget provides a high-level summary of its area and is designed to surface critical information immediately. Urgent matters, such as "5 New Orders to Pack" or "Critical items out of stock," are highlighted with clear visual cues like red banners or numbers.
-*   **Drill-Down Navigation:** The dashboard allows for two levels of navigation. Clicking on a widget's general area takes the user to a topic summary page. Clicking directly on an urgent notice takes the user straight into the specific "workflow action page" required to handle that task.
-*   **Standard Page Layout:** All workflow action pages share a consistent two-part layout:
-    *   **Main Content Area:** This area holds the data being acted upon, such as a list of orders or the inventory grid.
-    *   **Sidebar:** A persistent sidebar contains all controls for the current view (e.g., "Add Product," "Submit Changes" buttons), as well as relevant notifications and navigation links to return to the dashboard or other pages.
+*   **Application Shell:** `AppView.html` contains the persistent UI elements, including the main header and the navigation sidebar.
+*   **Dynamic Content:** The main content area within the shell is dynamically populated by loading other HTML files (e.g., `AdminDashboardView.html`, `PackingSlipView.html`) into it via client-side JavaScript (`google.script.run`). This approach avoids full page reloads and creates a responsive user experience.
+*   **Dashboard Paradigm:** The initial view loaded is a dashboard composed of several "widgets," with each widget representing a major functional area of the system (e.g., Orders, System Health). This provides a centralized, at-a-glance overview of all system operations.
+
+### 2.1.1. WebApp Controller Architecture
+
+To ensure a clear separation of concerns and maintainability, the interface between the HTML Views and the backend Services is managed by a two-tiered WebApp controller architecture.
+
+*   **1. View Controllers:** For each major UI view/page (e.g., `AdminOrdersView.html`), a corresponding "View Controller" script exists (e.g., `WebAppAdminOrders.js`). 
+    *   **Responsibility:** This script is responsible for orchestrating all data retrieval and updates required by its specific view. 
+    *   **Rule:** The HTML view will **only** make calls to its dedicated View Controller.
+
+*   **2. Data Providers:** `WebApp` scripts are also aligned with data entities (e.g., `WebAppOrders.js`, `WebAppProducts.js`, `WebAppTasks.js`) and act as reusable, internal libraries.
+    *   **Responsibility:** They contain functions that fetch data from the backend *Services* (e.g., `OrderService`) and format it for general UI consumption. They do not know about specific views, only how to provide data about their entity.
+
+*   **Data Flow:** The standard data flow is: `HTML View` -> `View Controller` -> `Data Provider(s)` -> `Backend Service(s)`. The View Controller combines data from multiple providers if necessary and returns a single, consolidated object to the UI. This model keeps the UI logic simple and maximizes code reuse in the data provider layer.
 
 ### 2.2. Backend: API-Driven & Service-Oriented
 
@@ -146,21 +156,9 @@ User authentication is handled entirely by Google's account system. The web app 
 
 ### 3.2. Identification & Authorization
 
-*   **Identification:** Once a user is authenticated, the backend can reliably identify them on every request by calling `Session.getActiveUser().getEmail()`. This provides a secure, verified email address for the active user.
-*   **Authorization:** This user email serves as the primary key for all role-based access control (RBAC). When a user attempts an action, the relevant backend service checks their email against the system's configuration sheets (e.g., `SysTaskStatusWorkflow`) to determine if their role permits them to perform that action.
-
-### 3.2.1. Developer Impersonation (Development Only)
-
-To facilitate testing of different user roles without requiring multiple Google accounts, a development-only impersonation feature has been implemented.
-
-*   **`AuthService.js`**: A new centralized service has been created to handle user identification. All parts of the application that need to identify the current user **must** call `AuthService.getActiveUserEmail()` instead of `Session.getActiveUser().getEmail()`.
-
-*   **Impersonation Mechanism**: The `doGet(e)` function in `WebApp.js` calls `AuthService.handleImpersonation(e)`. This function checks for a URL parameter `test_user`.
-    *   If `?test_user=email@domain.com` is present in the web app's URL, the `AuthService` will store this email in the current user's `PropertiesService`.
-    *   The `AuthService.getActiveUserEmail()` function will then return this stored email for all subsequent backend calls, effectively impersonating that user for the current session.
-    *   To clear the impersonation, navigate to the web app URL with `?clear_impersonation=true`.
-
-*   **Security Warning**: This feature is intended **strictly for development and testing purposes**. It allows a developer to test the UI and permissions of different roles easily. It should be disabled or secured before the application is considered production-ready.
+*   **Identification:** The `AuthService.js` service is responsible for identifying the current user by calling `Session.getActiveUser().getEmail()`.
+*   **Authorization:** The service determines the user's role (`admin`, `manager`, or `viewer`) by looking up their email in the `system.users` configuration, which is defined in `SysConfig`. If a user is not found, they are assigned the 'viewer' role, which grants no access.
+*   **UI-Based Role Switching:** For development and testing, the UI includes a dropdown menu that displays all users defined in the `system.users` configuration. Selecting a user from this dropdown reloads the UI with that user's role and permissions, allowing developers to easily test the application from different perspectives. Full user impersonation is a potential future enhancement but is not part of the current implementation.
 
 ### 3.3. Deployment Configuration
 
@@ -220,7 +218,7 @@ The `SysConfig` Google Sheet is the live configuration for the application, but 
 
 The `ConfigService.js` is the universal service for accessing configuration values. It contains important caching behavior.
 
-*   **Parsing:** On its first run, `ConfigService` reads the entire `SysConfig` sheet into memory. It parses the multi-column format, respects the `scf_status` column (only loading `stable` or `locked` records by default), and builds a structured JavaScript object.
+*   **Parsing:** On its first run, `ConfigService` reads the entire `SysConfig` sheet into memory. It parses the multi-column format, respects the `scf_status` column (only loading `stable` or `locked` records by default), and builds a structured JavaScript object. It includes special handling for `system.users` to ensure it is parsed as an array of objects.
 *   **Caching:** The parsed configuration object is cached in a script-level variable for the duration of the script execution. All subsequent calls to `ConfigService.getConfig()` or `ConfigService.getAllConfig()` read from this cache, avoiding repeated spreadsheet reads.
 *   **Forcing a Reload:** If the `SysConfig` sheet is changed during a script's execution (which should only happen in specific admin/debug workflows), the cache can be invalidated by calling `ConfigService.forceReload()`. This will cause the service to re-read the spreadsheet on the next configuration request.
 

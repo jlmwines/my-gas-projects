@@ -56,41 +56,32 @@
       <a href="<?= ScriptApp.getService().getUrl(); ?>">
         <h3 class="mb-0">JLMops</h3>
       </a>
-      <div class="user-info d-flex align-items-center">
-        <span id="user-display" class="mr-3">Loading...</span>
-        <div class="form-group mb-0">
-          <select id="role-switcher" class="form-control form-control-sm" disabled>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-          </select>
-        </div>
-      </div>
     </div>
 
     <div class="main-body">
       <div class="sidebar">
         <ul class="nav flex-column">
           <!-- Admin Links -->
-          <li id="nav-system-health" class="nav-item" style="display: none;">
+          <li id="nav-system-health" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">
               <span id="system-health-indicator" class="mr-2">●</span>System Health
             </a>
           </li>
-          <li id="nav-admin-orders" class="nav-item" style="display: none;">
+          <li id="nav-admin-orders" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a>
           </li>
-          <li id="nav-admin-inventory" class="nav-item" style="display: none;">
+          <li id="nav-admin-inventory" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a>
           </li>
-          <li id="nav-product-details" class="nav-item" style="display: none;">
+          <li id="nav-product-details" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('ProductDetails')">Product Details</a>
           </li>
-          <li id="nav-development" class="nav-item" style="display: none;">
+          <li id="nav-development" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a>
           </li>
 
           <!-- Manager Links -->
-          <li id="nav-manager-inventory" class="nav-item" style="display: none;">
+          <li id="nav-manager-inventory" class="nav-item">
             <a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a>
           </li>
 
@@ -139,38 +130,6 @@
       }
 
       /**
-       * Sets up the dashboard with user-specific data and role.
-       * @param {Object} bootstrapData - Object containing user email and role.
-       */
-      function setupDashboard(bootstrapData) {
-        const userDisplay = document.getElementById('user-display');
-        const roleSwitcher = document.getElementById('role-switcher');
-
-        if (bootstrapData && bootstrapData.email) {
-          userDisplay.textContent = `${bootstrapData.email} (${bootstrapData.role})`;
-          
-          // Show role-specific navigation
-          if (bootstrapData.role === 'admin') {
-            ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development'].forEach(id => {
-              document.getElementById(id).style.display = 'block';
-            });
-
-            // Load the main admin dashboard view
-            loadView('AdminDashboard');
-
-          } else if (bootstrapData.role === 'manager') {
-            ['nav-manager-inventory'].forEach(id => {
-              document.getElementById(id).style.display = 'block';
-            });
-          }
-
-        } else {
-          showError({ message: 'Could not retrieve user bootstrap data.' });
-          userDisplay.textContent = 'Error loading user data.';
-        }
-      }
-
-      /**
        * Loads a specific sub-view into the main content area.
        * @param {string} viewName - The name of the view to load.
        */
@@ -185,19 +144,22 @@
             executeScriptsInElement(viewContent);
           })
           .withFailureHandler(err => {
-            // Use the main error display for view loading errors
             showError(err);
-            viewContent.innerHTML = ''; // Clear the loading message
+            viewContent.innerHTML = '';
           })
           .getView(viewName);
       }
 
+      /**
+       * Initializes the page on load.
+       */
+      function initPage() {
+        // Load a default view for all users.
+        loadView('AdminDashboard');
+      }
+
       // Initial setup on page load
-      window.onload = function() {
-        // The role switcher is disabled because of the temporary workaround.
-        // document.getElementById('role-switcher').addEventListener('change', handleRoleChange);
-        google.script.run.withSuccessHandler(setupDashboard).withFailureHandler(showError).getAppBootstrapData();
-      };
+      window.onload = initPage;
     </script>
   </body>
 </html>

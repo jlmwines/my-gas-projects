@@ -4,25 +4,48 @@
  */
 
 /**
+ * Includes an HTML file's content.
+ * @param {string} filename - The name of the HTML file to include.
+ * @returns {string} The content of the HTML file.
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
  * Main entry point for the web app. Serves the HTML UI.
  * @param {Object} e - The event parameter from the Apps Script trigger.
  * @returns {HtmlOutput} The HTML output to be served.
  */
 function doGet(e) {
-  // Handle impersonation first, if a test_user is specified in the URL.
-  AuthService.handleImpersonation(e);
+  const initialRole = AuthService.getActiveUserRole();
 
-  // --- TEMPORARY WORKAROUND ---
-  // Force the user to be admin to unblock frontend development.
-  // This will be removed once role-switching is fully debugged.
-  if (!e.parameter.test_user) {
-    PropertiesService.getUserProperties().setProperty('impersonated_user', 'accounts@jlmwines.com');
+  if (initialRole === 'viewer') {
+    return HtmlService.createHtmlOutputFromFile('AccessDenied.html')
+      .setTitle('JLMops - Access Denied')
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME);
   }
 
-  return HtmlService.createHtmlOutputFromFile('Dashboard')
+  const template = HtmlService.createTemplateFromFile('AppView.html');
+  template.initialRole = initialRole;
+  template.availableRoles = AuthService.getAvailableRoles();
+  
+  return template.evaluate()
     .setTitle('JLMops Dashboard')
     .setSandboxMode(HtmlService.SandboxMode.IFRAME);
 }
+
+function getDashboardForRole(role) {
+  switch (role) {
+    case 'admin':
+      return include('AdminDashboardView.html');
+    case 'manager':
+      return include('ManagerDashboardView.html');
+    default:
+      return '<div>Invalid role selected.</div>';
+  }
+}
+
 
 /**
  * Gets the HTML content for a specific view.
@@ -30,18 +53,6 @@ function doGet(e) {
  * @returns {string} The HTML content of the view.
  */
 function getView(viewName) {
-  const adminViews = ['SystemHealth', 'SystemHealthWidget', 'AdminOrders', 'AdminOrdersWidget', 'AdminInventory', 'AdminInventoryWidget', 'AdminProducts', 'AdminProductsWidget', 'Development', 'Comax', 'Web', 'ProductDetails'];
-  const managerViews = ['ManagerInventory'];
-
-  // Basic security check
-  const role = AuthService.getActiveUserRole();
-  if (role !== 'admin' && adminViews.includes(viewName)) {
-    return '<div>You do not have permission to view this page.</div>';
-  }
-  if (role !== 'manager' && role !== 'admin' && managerViews.includes(viewName)) {
-     return '<div>You do not have permission to view this page.</div>';
-  }
-
   const viewMap = {
     'AdminDashboard': 'AdminDashboardView',
     'PackingSlips': 'PackingSlipView',
@@ -73,9 +84,6 @@ function getView(viewName) {
 // =================================================================
 
 function getSystemHealthData() {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('Permission denied.');
-  }
   try {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
@@ -205,9 +213,6 @@ function getSystemHealthData() {
 }
 
 function createMasterValidationJob() {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('Permission denied.');
-  }
   try {
     const allConfig = ConfigService.getAllConfig();
     const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
@@ -246,30 +251,15 @@ function createMasterValidationJob() {
 }
 
 function getAdminOrdersData() {
-  if (AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   try {
     const orderService = new OrderService(ProductService);
     const comaxExportOrderCount = orderService.getComaxExportOrderCount();
 
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const taskSheet = dataSpreadsheet.getSheetByName(ConfigService.getConfig('system.sheet_names').SysTasks);
-    const taskData = taskSheet.getLastRow() > 1 ? taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues() : [];
-    const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-    const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-    
-    const openComaxConfirmationTasks = [];
-    taskData.forEach(row => {
-      const status = row[taskHeaderMap['st_Status']];
-      const typeId = row[taskHeaderMap['st_TaskTypeId']];
-      if (status !== 'Done' && status !== 'Cancelled' && typeId === 'task.confirmation.comax_export') {
-        openComaxConfirmationTasks.push({
-          id: row[taskHeaderMap['st_TaskId']],
-          title: row[taskHeaderMap['st_Title']],
-          notes: row[taskHeaderMap['st_Notes']]
-        });
-      }
-    });
+    const openComaxConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.comax_export').map(task => ({
+      id: task.st_TaskId,
+      title: task.st_Title,
+      notes: task.st_Notes
+    }));
 
     return {
       comaxExportOrderCount: comaxExportOrderCount,
@@ -282,39 +272,18 @@ function getAdminOrdersData() {
 }
 
 function getInventoryWidgetData() {
-  if (AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   try {
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const taskSheetName = ConfigService.getConfig('system.sheet_names').SysTasks;
-    const taskSheet = dataSpreadsheet.getSheetByName(taskSheetName);
-
-    if (!taskSheet) {
-      throw new Error(`Sheet '${taskSheetName}' not found in spreadsheet with ID '${dataSpreadsheetId}'.`);
-    }
+    const inventoryTaskPrefix = 'task.validation.';
+    const openValidationTasks = WebAppTasks.getOpenTasksByPrefix(inventoryTaskPrefix);
 
     const taskCounts = {};
-    const inventoryTaskPrefix = 'task.validation.';
-
-    if (taskSheet.getLastRow() > 1) {
-      const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-      const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-      const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-      
-      const typeIdCol = taskHeaderMap['st_TaskTypeId'];
-      const statusCol = taskHeaderMap['st_Status'];
-
-      taskData.forEach(row => {
-        const status = row[statusCol];
-        const typeId = row[typeIdCol];
-        if (status !== 'Done' && status !== 'Cancelled' && typeId.startsWith(inventoryTaskPrefix)) {
-          if (!taskCounts[typeId]) {
-            taskCounts[typeId] = 0;
-          }
-          taskCounts[typeId]++;
-        }
-      });
-    }
+    openValidationTasks.forEach(task => {
+      const typeId = task.st_TaskTypeId;
+      if (!taskCounts[typeId]) {
+        taskCounts[typeId] = 0;
+      }
+      taskCounts[typeId]++;
+    });
 
     return { data: taskCounts };
   } catch (e) {
@@ -324,39 +293,18 @@ function getInventoryWidgetData() {
 }
 
 function getProductsWidgetData() {
-  if (AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   try {
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const taskSheetName = ConfigService.getConfig('system.sheet_names').SysTasks;
-    const taskSheet = dataSpreadsheet.getSheetByName(taskSheetName);
-
-    if (!taskSheet) {
-      throw new Error(`Sheet '${taskSheetName}' not found in spreadsheet with ID '${dataSpreadsheetId}'.`);
-    }
+    const productTaskPrefix = 'task.validation.'; // Assuming product tasks also use this prefix
+    const openValidationTasks = WebAppTasks.getOpenTasksByPrefix(productTaskPrefix);
 
     const taskCounts = {};
-    const productTaskPrefix = 'task.validation.'; // Assuming product tasks also use this prefix
-
-    if (taskSheet.getLastRow() > 1) {
-      const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-      const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-      const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-      
-      const typeIdCol = taskHeaderMap['st_TaskTypeId'];
-      const statusCol = taskHeaderMap['st_Status'];
-
-      taskData.forEach(row => {
-        const status = row[statusCol];
-        const typeId = row[typeIdCol];
-        if (status !== 'Done' && status !== 'Cancelled' && typeId.startsWith(productTaskPrefix)) {
-          if (!taskCounts[typeId]) {
-            taskCounts[typeId] = 0;
-          }
-          taskCounts[typeId]++;
-        }
-      });
-    }
+    openValidationTasks.forEach(task => {
+      const typeId = task.st_TaskTypeId;
+      if (!taskCounts[typeId]) {
+        taskCounts[typeId] = 0;
+      }
+      taskCounts[typeId]++;
+    });
 
     return { data: taskCounts };
   } catch (e) {
@@ -366,25 +314,13 @@ function getProductsWidgetData() {
 }
 
 function getAdminInventoryData() {
-  if (AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   try {
-    const taskSheet = SpreadsheetApp.openById(ConfigService.getConfig('system.spreadsheet.logs').id).getSheetByName(ConfigService.getConfig('system.sheet_names').SysTasks);
-    const taskData = taskSheet.getLastRow() > 1 ? taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues() : [];
-    const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-    const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-
-    const openProductCountConfirmationTasks = [];
-    taskData.forEach(row => {
-      const status = row[taskHeaderMap['st_Status']];
-      const typeId = row[taskHeaderMap['st_TaskTypeId']];
-      if (status !== 'Done' && status !== 'Cancelled' && typeId === 'task.confirmation.product_count_export') {
-        openProductCountConfirmationTasks.push({
-          id: row[taskHeaderMap['st_TaskId']],
-          title: row[taskHeaderMap['st_Title']],
-          notes: row[taskHeaderMap['st_Notes']]
-        });
-      }
-    });
+    const openProductCountConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.product_count_export').map(task => ({
+      id: task.st_TaskId,
+      title: task.st_Title,
+      notes: task.st_Notes
+    }));
+    
     return { openProductCountConfirmationTasks };
   } catch (e) {
     LoggerService.error('WebApp', 'getAdminInventoryData', e.message, e);
@@ -393,39 +329,14 @@ function getAdminInventoryData() {
 }
 
 function getDashboardOrdersSummaryData() {
-  if (AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   try {
     const ordersWidgetData = WebAppOrders.getOrdersWidgetData();
 
-    // Also retrieve open Comax confirmation tasks
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const taskSheet = dataSpreadsheet.getSheetByName(ConfigService.getConfig('system.sheet_names').SysTasks);
-
-    if (!taskSheet) {
-      LoggerService.warn('WebApp', 'getDashboardOrdersSummaryData', "Required sheet 'SysTasks' not found in logs spreadsheet. Returning empty tasks array.");
-      return {
-        ...ordersWidgetData,
-        openComaxConfirmationTasks: []
-      };
-    }
-
-    const taskData = taskSheet.getLastRow() > 1 ? taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues() : [];
-    const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-    const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-    
-    const openComaxConfirmationTasks = [];
-    taskData.forEach(row => {
-      const status = row[taskHeaderMap['st_Status']];
-      const typeId = row[taskHeaderMap['st_TaskTypeId']];
-      if (status !== 'Done' && status !== 'Cancelled' && typeId === 'task.confirmation.comax_export') {
-        openComaxConfirmationTasks.push({
-          id: row[taskHeaderMap['st_TaskId']],
-          title: row[taskHeaderMap['st_Title']],
-          notes: row[taskHeaderMap['st_Notes']]
-        });
-      }
-    });
+    const openComaxConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.comax_export').map(task => ({
+      id: task.st_TaskId,
+      title: task.st_Title,
+      notes: task.st_Notes
+    }));
 
     return {
       ...ordersWidgetData,
@@ -438,7 +349,6 @@ function getDashboardOrdersSummaryData() {
 }
 
 function getManagerInventoryData() {
-  if (AuthService.getActiveUserRole() !== 'manager' && AuthService.getActiveUserRole() !== 'admin') throw new Error('Permission denied.');
   return { isInventoryCountNeeded: true }; // Placeholder
 }
 
@@ -548,18 +458,6 @@ function createGiftMessageDoc(orderId, noteContent) {
 }
 
 /**
- * Gets the initial data needed to bootstrap the web application.
- * This includes user information like email and role.
- * @returns {Object} An object containing the user's email and role.
- */
-function getAppBootstrapData() {
-  return {
-    email: AuthService.getActiveUserEmail(),
-    role: AuthService.getActiveUserRole()
-  };
-}
-
-/**
  * Retrieves Brurya stock data along with product names for display in the UI.
  * @returns {Array<Object>} An array of stock items, each with SKU, quantity, and product name.
  */
@@ -633,95 +531,13 @@ function getAdminProductData() {
   };
 }
 
-/**
- * Retrieves key health and status metrics for the admin dashboard.
- * @returns {Object} An object containing system health data.
- */
-function getDashboardData() {
-  const role = AuthService.getActiveUserRole();
-  
-  if (role === 'admin') {
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
-      const sheetNames = allConfig['system.sheet_names'];
-      const orderService = new OrderService(ProductService);
 
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-      const jobStatuses = jobQueueSheet.getRange('C2:C').getValues().flat();
-      const failedJobs = jobStatuses.filter(s => s === 'FAILED').length;
-      const quarantinedJobs = jobStatuses.filter(s => s === 'QUARANTINED').length;
-
-      const taskSheet = logSpreadsheet.getSheetByName(sheetNames.SysTasks);
-      const taskData = taskSheet.getLastRow() > 1 ? taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues() : [];
-      const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-      const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-      
-      let highPriorityTasks = 0;
-      const openComaxConfirmationTasks = [];
-      const openProductCountConfirmationTasks = [];
-
-      taskData.forEach(row => {
-        const status = row[taskHeaderMap['st_Status']];
-        const typeId = row[taskHeaderMap['st_TaskTypeId']];
-        const priority = row[taskHeaderMap['st_Priority']];
-
-        if (status !== 'Done' && status !== 'Cancelled') {
-          if (priority === 'High') {
-            highPriorityTasks++;
-          }
-          if (typeId === 'task.confirmation.comax_export') {
-            openComaxConfirmationTasks.push({
-              id: row[taskHeaderMap['st_TaskId']],
-              title: row[taskHeaderMap['st_Title']],
-              notes: row[taskHeaderMap['st_Notes']]
-            });
-          }
-          if (typeId === 'task.confirmation.product_count_export') {
-            openComaxConfirmationTasks.push({
-              id: row[taskHeaderMap['st_TaskId']],
-              title: row[taskHeaderMap['st_Title']],
-              notes: row[taskHaderMap['st_Notes']]
-            });
-          }
-        }
-      });
-
-      const productData = getAdminProductData();
-
-      return {
-        role: role,
-        failedJobs: failedJobs,
-        quarantinedJobs: quarantinedJobs,
-        highPriorityTasks: highPriorityTasks,
-        comaxExportOrderCount: orderService.getComaxExportOrderCount(),
-        openComaxConfirmationTasks: openComaxConfirmationTasks,
-        openProductCountConfirmationTasks: openProductCountConfirmationTasks,
-        productData: productData
-      };
-    } catch (error) {
-      LoggerService.error('WebApp', 'getDashboardData (admin)', error.message, error);
-      return { role: role, error: 'Error loading admin data.' };
-    }
-  } else if (role === 'manager') {
-    return {
-      role: role,
-      isInventoryCountNeeded: true // Placeholder
-    };
-  }
-
-  return { role: role }; // Default for other roles
-}
 
 /**
  * Wraps the global run_exportOrdersToComax function so it can be called from the UI.
  * @returns {string} A success message.
  */
 function runComaxOrderExport() {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('You do not have permission to perform this action.');
-  }
   run_exportOrdersToComax();
   return "Comax order export initiated successfully. A confirmation task has been created.";
 }
@@ -732,10 +548,7 @@ function runComaxOrderExport() {
  * @returns {boolean} True if successful.
  */
 function confirmComaxImport(taskId) {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('You do not have permission to perform this action.');
-  }
-  return TaskService.completeTask(taskId);
+  return WebAppTasks.completeTask(taskId);
 }
 
 /**
@@ -743,13 +556,10 @@ function confirmComaxImport(taskId) {
  * @returns {string} A success message.
  */
 function runProductCountExport() {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('You do not have permission to perform this action.');
-  }
   // This is a placeholder. In the future, it would generate a CSV.
   const taskTitle = 'Confirm Product Count Export';
   const taskNotes = 'Product count export file has been generated. Please confirm that Comax has been updated.';
-  TaskService.createTask('task.confirmation.product_count_export', 'product_count_export_' + new Date().getTime(), taskTitle, taskNotes);
+  WebAppTasks.createTask('task.confirmation.product_count_export', 'product_count_export_' + new Date().getTime(), taskTitle, taskNotes);
   return "Product count export initiated. A confirmation task has been created.";
 }
 
@@ -759,10 +569,7 @@ function runProductCountExport() {
  * @returns {boolean} True if successful.
  */
 function confirmProductCountImport(taskId) {
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('You do not have permission to perform this action.');
-  }
-  return TaskService.completeTask(taskId);
+  return WebAppTasks.completeTask(taskId);
 }
 
 /**
@@ -770,10 +577,6 @@ function confirmProductCountImport(taskId) {
  * @returns {string} A success message.
  */
 function runRebuildSysConfigFromSource() {
-  // Add an explicit check for admin role for security.
-  if (AuthService.getActiveUserRole() !== 'admin') {
-    throw new Error('You do not have permission to perform this action.');
-  }
   rebuildSysConfigFromSource();
   return "SysConfig rebuild initiated successfully. It may take a moment to complete.";
 }
@@ -809,7 +612,7 @@ function runDailyCriticalValidations() {
     const jobQueueSheetName = allConfig['system.sheet_names'].SysJobQueue;
     const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(jobQueueSheetName);
     if (!jobQueueSheet) {
-      throw new Error(`Sheet '${jobQueueSheetName}' not found in spreadsheet with ID '${logSpreadsheetId}'.`);
+      throw new Error(`Sheet '${jobQueueSheetName}' not found in spreadsheet with ID '${logSpreadreadId}'.`);
     }
 
     const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');

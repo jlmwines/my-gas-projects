@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            height: 60px;
+            background: #343a40;
+            color: white;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1030;
+        }
+        .role-switcher {
+            position: relative;
+        }
+        .main-body {
+            display: flex;
+            flex-grow: 1;
+            margin-top: 60px; /* Height of the header */
+        }
+        .sidebar {
+            width: 250px;
+            height: calc(100vh - 60px);
+            position: fixed;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .content {
+            margin-left: 270px;
+            padding: 20px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>JLMops</h1>
+        <div class="role-switcher">
+            <select id="roleSelect">
+                <? for (let r of availableRoles) { ?>
+                    <option value="<?= r ?>" <?= r === initialRole ? 'selected' : '' ?>><?= r.charAt(0).toUpperCase() + r.slice(1) ?></option>
+                <? } ?>
+            </select>
+        </div>
+    </div>
+
+    <div class="main-body">
+      <div class="sidebar">
+        <ul class="nav flex-column">
+          <!-- Admin Links -->
+          <li id="nav-system-health" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">
+              <span id="system-health-indicator" class="mr-2">●</span>System Health
+            </a>
+          </li>
+          <li id="nav-admin-orders" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a>
+          </li>
+          <li id="nav-admin-inventory" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a>
+          </li>
+          <li id="nav-product-details" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ProductDetails')">Product Details</a>
+          </li>
+          <li id="nav-development" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a>
+          </li>
+
+          <!-- Manager Links -->
+          <li id="nav-manager-inventory" class="nav-item" style="display: none;">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a>
+          </li>
+
+          <!-- Shared Links -->
+          <li class="nav-item">
+            <a class="nav-link" href="javascript:void(0);" onclick="loadView('PackingSlips')">Packing Slips</a>
+          </li>
+        </ul>
+      </div>
+
+      <div id="content" class="content">
+        <!-- Content will be loaded here -->
+      </div>
+    </div>
+
+    <script>
+      /**
+       * Displays an error message.
+       */
+      function showError(err) {
+        const contentDiv = document.getElementById('content');
+        contentDiv.innerHTML = `<div class="alert alert-danger">An error occurred: ${err.message}</div>`;
+      }
+
+      /**
+       * Executes scripts found within an HTML string.
+       */
+      function executeScriptsInElement(element) {
+        const scripts = Array.from(element.getElementsByTagName('script'));
+        scripts.forEach(s => {
+          const newScript = document.createElement('script');
+          newScript.textContent = s.textContent;
+          s.parentNode.replaceChild(newScript, s);
+        });
+      }
+
+      /**
+       * Shows/hides navigation links based on role.
+       */
+      function setNavigationForRole(role) {
+        // Hide all role-specific links first
+        ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development', 'nav-manager-inventory'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+
+        // Show links based on role
+        if (role === 'admin') {
+          ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development', 'nav-manager-inventory'].forEach(id => {
+            document.getElementById(id).style.display = 'block';
+          });
+        } else if (role === 'manager') {
+          ['nav-manager-inventory'].forEach(id => {
+            document.getElementById(id).style.display = 'block';
+          });
+        }
+      }
+
+      /**
+       * Loads a view into the content area.
+       */
+      function loadView(viewName) {
+        const viewContent = document.getElementById('content');
+        viewContent.innerHTML = '<h2>Loading...</h2>';
+
+        google.script.run
+          .withSuccessHandler(html => {
+            viewContent.innerHTML = html;
+            executeScriptsInElement(viewContent);
+          })
+          .withFailureHandler(showError)
+          .getView(viewName);
+      }
+      
+      /**
+       * Handles the role change event.
+       */
+      function switchRole() {
+        const selectedRole = document.getElementById('roleSelect').value;
+        setNavigationForRole(selectedRole);
+        
+        if (selectedRole === 'admin') {
+            loadView('AdminDashboard');
+        } else if (selectedRole === 'manager') {
+            loadView('ManagerDashboard');
+        } else {
+            document.getElementById('content').innerHTML = '<h2>Invalid Role</h2>';
+        }
+      }
+
+      // Initial setup on page load
+      window.onload = function() {
+        // Add event listener to the dropdown
+        document.getElementById('roleSelect').addEventListener('change', switchRole);
+        
+        // Load the initial view and set navigation based on the role passed from the server
+        const initialRole = document.getElementById('roleSelect').value;
+        setNavigationForRole(initialRole);
+        if (initialRole === 'admin') {
+            loadView('AdminDashboard');
+        } else if (initialRole === 'manager') {
+            loadView('ManagerDashboard');
+        }
+      };
+    </script>
+</body>
+</html>
