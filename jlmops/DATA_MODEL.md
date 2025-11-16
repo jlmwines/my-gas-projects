@@ -39,7 +39,7 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysConfig`            | `scf_` |
 | `WebOrdM_Archive`      | `woma_`|
 | `WebOrdItemsM_Archive` | `woia_`|
-| `SystemAudit`          | `sa_`  |
+
 
 
 ## System Audit Data Model
@@ -356,23 +356,7 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `sio_SKU`: **Primary Key.**
     *   `sio_OnHoldQuantity`
 
-### 7. `SysProductAudit` (System Product Audit)
-*   **Purpose:** A central audit log for both inventory counts and product detail verifications across all locations.
-*   **Columns:**
-    *   `spa_AuditId`: **Primary Key.** (UUID).
-    *   `spa_SKU`: The SKU being audited.
-    *   `spa_AuditType`: 'Inventory Count', 'Product Detail Verification'.
-    *   `spa_Timestamp`: When the audit event occurred/was submitted.
-    *   `spa_CountValue`: (For Inventory Count) The submitted count.
-    *   `spa_Location`: (For Inventory Count) The location of the count ('Brurya', 'Storage', 'Office', 'Shop').
-    *   `spa_CountedBy`: (For Inventory Count) User who performed the count.
-    *   `spa_VerificationStatus`: (For Product Detail Verification) 'Verified', 'Issues Found', 'Pending Review'.
-    *   `spa_VerifiedBy`: (For Product Detail Verification) User who performed verification.
-    *   `spa_Notes`: Any additional notes from the auditor.
-    *   `spa_ReviewStatus`: 'Pending Admin Review', 'Approved', 'Rejected', 'Brurya - Manager Controlled'.
-    *   `spa_AdminNotes`: Notes from admin review.
-    *   `spa_AdminTimestamp`: Timestamp of admin review.
-    *   `spa_LinkedTaskId`: (Optional) Link to a `SysTasks` entry if the audit was part of a task.
+
 
 ## Managed Inventory Data Model
 
@@ -496,13 +480,3 @@ This section defines the sheets used for monitoring system health and recovering
     *   `sl_FunctionName`: The specific function that was running.
     *   `sl_Message`: A human-readable log message.
     *   `sl_StackTrace`: The full error stack trace, if the log level is `ERROR`.
-
-### 2. `SysFailedJobs` (Dead Letter Queue)
-*   **Purpose:** Records information about automated jobs that have failed, allowing for administrative review and retry.
-*   **Prefix:** `sfj_`
-*   **Columns:**
-    *   `sfj_Timestamp`: When the failure occurred.
-    *   `sfj_OriginalFileId`: The ID of the quarantined file that caused the failure.
-    *   `sfj_ServiceName`: The service that failed during processing.
-    *   `sfj_Error`: The specific error message.
-    *   `sfj_Status`: The current status of the failed job (`NEW`, `RETRYING`, `RESOLVED`, `IGNORED`).

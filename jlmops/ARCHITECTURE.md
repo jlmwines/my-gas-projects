@@ -45,7 +45,7 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`ProductService`**: Handles core product data management, including the validation and integrity checks for the product onboarding and SKU change workflows.
     *   **`OrderService`**: Manages the entire order lifecycle. It handles the import and upsert of order data into the master sheets and is the master controller of the processing state machine in `SysOrdLog`, setting the initial `Eligible` or `Ineligible` status based on defined business rules.
     *   **`PackingSlipService`**: Acts as an enrichment engine. It scans `SysOrdLog` for `Eligible` orders, gathers all necessary data for printing, enriches it with descriptive text, and places the result in `SysPackingCache`. Upon completion, it updates the order's status in `SysOrdLog` to `Ready`.
-    *   **`PrintService`**: Handles the final document generation. It reads pre-processed data from `SysPackingCache` for orders marked as `Ready`. For each order, it copies a designated Google Sheet template, populates the copy with the order's specific data, and saves the resulting Google Sheet in an output folder. It then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
+    *   **`PrintService`**: Handles the final document generation. It reads pre-processed data from `SysPackingCache` for orders marked as `Ready`. For each order, it copies a designated Google Doc template, populates the copy with the order's specific data, and saves the result as a new Google Doc in an output folder. It then completes the workflow by setting the order's status in `SysOrdLog` to `Printed`.
     *   **`CategoryService`**: Contains the rules engine for dynamically determining web categories based on Comax attributes.
     *   **`WpmlService`**: Encapsulates the specific rules for handling multilingual data to ensure compatibility with WPML.
     *   **`BundleService`**: Manages the entire lifecycle of product bundles. This service uses a rules-based engine defined in the Data Model (`SysBundlesM`, `SysBundleRows`, `SysBundleActiveComponents`). Its primary responsibilities include:
@@ -61,7 +61,7 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
     *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
     *   **`ValidationService` (New)**: Provides a suite of tools for validating the `jlmops` system against the legacy system. Its purpose is not to validate raw data, but to compare the final outputs of key business logic (e.g., on-hold inventory calculations, packing slip data, Comax export values) to ensure the new system produces identical results.
-*   **`AuditService`**: Manages stock levels for various locations (Brurya, Storage, Office, Shop) in the `SystemAudit` sheet.
+*   **`AuditService`**: Manages stock levels for various locations (Brurya, Storage, Office, Shop) in the `SysProductAudit` sheet (prefix `pa_`).
 
 ### 2.3. Data Adapters & Formatters
 
@@ -89,6 +89,8 @@ The system's architecture is designed to be entirely driven by its configuration
     *   **`scf_P02` onwards (Values):** These columns hold the values for the given property.
 *   **Robustness and Data Integrity:** Recent efforts have focused on solidifying the `SysConfig` implementation. This included resolving issues with `ConfigService.js` to ensure accurate parsing of all `scf_Pxx` parameters, correcting missing `system.sheet_names` entries, and deduplicating task definitions within `SetupConfig.js`. These improvements have successfully restored the full functionality of critical import processes, including Web Order, Web Product, Web Translation, and Comax Product imports, ensuring `SysConfig` remains the reliable source of truth.
 *   **Example:** A file import is defined by multiple rows sharing the `SettingName` `import.drive.comax_products`. One row might have `P01` set to `source_folder_id` and `P02` as the folder ID, while another row has `P01` set to `file_pattern` and `P02` as the file name. This schema is flexible enough to define any configuration the system needs, from business rules to document templates.
+
+*   **Dependency Management:** To enforce a strict processing sequence for automated imports, the configuration supports defining dependencies as a separate row within an `import.drive.*` configuration block. For example, a row with `scf_P01` set to `depends_on` and `scf_P02` specifying the `scf_SettingName` of the prerequisite job (e.g., `import.drive.web_translations_he`) ensures that the current job (e.g., `import.drive.web_products_en`) will not be processed until its dependency is met.
 
 ##### 2.5.1.1. Configuration State Management
 
@@ -122,29 +124,34 @@ The system relies on a clear folder structure for managing files, with all folde
 *   **`Source Folder`**: The inbox for new files. The system treats this as **read-only**.
 *   **`Archive Folder`**: The system's permanent record for all ingested files.
 
-#### 2.5.4. Event-Driven Workflow Engine
+#### 2.5.4. Dependency-Aware Workflow Engine
 
-The system is driven by a time-based trigger that initiates a two-phase workflow.
+To ensure data integrity, the system's event-driven engine is designed to be dependency-aware, enforcing a strict sequence of operations for automated file imports.
 
-**Phase 1: Intake (Performed by `OrchestratorService`)**
+**Phase 1: Intake & Dependency Check (Performed by `OrchestratorService`)**
 
-*   **Goal:** To securely discover, ingest, and queue new files.
-1.  **Load Config:** The service finds and parses the `SysConfig` sheet.
+*   **Goal:** To securely discover, ingest, and queue new files while respecting their dependencies.
+1.  **Load Config:** The service finds and parses the `SysConfig` sheet, including any `depends_on` parameters for import configurations.
 2.  **Scan Sources:** It iterates through all `import.drive.*` configurations and scans the specified `Source Folder`.
 3.  **Check Registry:** It compares files against the `SysFileRegistry` to see if they are new.
 4.  **Copy to Archive:** New file versions are copied to the `Archive Folder`.
-5.  **Queue Job:** A new job is created in the `SysJobQueue`.
+5.  **Queue Job with Status:** A new job is created in the `SysJobQueue`.
+    *   **If the job has a dependency** (a `depends_on` value in its config), the orchestrator checks if a recent, corresponding prerequisite job is 'COMPLETED'.
+        *   If the dependency is **not met**, the new job is queued with a status of **'BLOCKED'**.
+        *   If the dependency **is met**, the job is queued with a status of **'PENDING'**.
+    *   **If the job has no dependency**, it is queued with a status of **'PENDING'**.
 6.  **Update Registry:** The `SysFileRegistry` is updated to prevent re-ingestion.
 
-**Phase 2: Execution (Performed by specific `ProcessingServices`)**
+**Phase 2: Execution & Unblocking (Performed by `ProcessingServices` & `OrchestratorService`)**
 
-*   **Goal:** To execute the business logic for a queued job.
-1.  **Query Queue:** A service (e.g., `ProductService`) queries the `SysJobQueue` for 'PENDING' jobs of its type.
+*   **Goal:** To execute ready jobs and unblock dependent jobs upon completion.
+1.  **Query Queue:** A service (e.g., `ProductService`) queries the `SysJobQueue` for **'PENDING'** jobs of its type. It will ignore 'BLOCKED' jobs.
 2.  **Claim Job:** It claims a job by updating its status to 'PROCESSING'.
 3.  **Process from Archive:** It performs all business logic using the data from the file in the **Archive Folder**.
 4.  **Handle Outcome:**
-    *   **On Success:** The job status is updated to 'COMPLETED'.
-    *   **On Failure:** The job status is updated to 'FAILED' and the error is logged. The file remains in the `Archive Folder`.
+    *   **On Success:** The job status is updated to 'COMPLETED'. This triggers the "Unblocking" mechanism.
+    *   **On Failure:** The job status is updated to 'FAILED' and the error is logged.
+5.  **Unblocking Mechanism:** After a job is 'COMPLETED', a process is triggered (e.g., `OrchestratorService.unblockDependentJobs()`) that scans the `SysJobQueue` for 'BLOCKED' jobs. If a 'BLOCKED' job's dependency is now met, its status is changed to 'PENDING', making it available for processing.
 
 ## 3. Security & Authentication
 

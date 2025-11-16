@@ -145,6 +145,7 @@ function OrderService(productService) {
         this.processStagedOrders(ordersWithLineItems, productService);
       }
       _updateJobStatus(rowNumber, 'COMPLETED');
+      OrchestratorService.unblockDependentJobs(jobType);
     } catch (e) {
       logger.error(`Failed to process job on row ${rowNumber}: ${e.message}`);
       _updateJobStatus(rowNumber, 'FAILED', e.message);
@@ -490,13 +491,221 @@ function OrderService(productService) {
       const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
       TaskService.createTask('task.confirmation.comax_export', file.getId(), taskTitle, taskNotes);
 
-      logger.info(`${functionName} completed successfully.`);
+            logger.info(`${functionName} completed successfully.`);
 
-    } catch (e) {
-      logger.error(`Error in ${functionName}: ${e.message}`, e);
-      throw e;
-    }
-  };
+          } catch (e) {
+
+            logger.error(`Error in ${functionName}: ${e.message}`, e);
+
+            throw e;
+
+          }
+
+        };
+
+      
+
+        /**
+
+         * Retrieves the count of orders with 'on-hold' status from SysOrdLog.
+
+         * @returns {number} The count of on-hold orders.
+
+         */
+
+        this.getOnHoldOrderCount = function() {
+
+          const functionName = 'getOnHoldOrderCount';
+
+          try {
+
+            const allConfig = ConfigService.getAllConfig();
+
+            const sheetNames = allConfig['system.sheet_names'];
+
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+            const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+      
+
+            if (!logSheet) {
+
+              throw new Error("Required sheet (SysOrdLog) not found.");
+
+            }
+
+      
+
+            const logData = logSheet.getDataRange().getValues();
+
+            const logHeaders = logData.shift();
+
+            const orderStatusCol = logHeaders.indexOf('sol_OrderStatus');
+
+      
+
+            if (orderStatusCol === -1) {
+
+              throw new Error("Could not find 'sol_OrderStatus' in SysOrdLog sheet.");
+
+            }
+
+      
+
+            const onHoldOrders = logData.filter(row => String(row[orderStatusCol]).toLowerCase() === 'on-hold');
+
+            return onHoldOrders.length;
+
+      
+
+          } catch (e) {
+
+            logger.error(`Error in ${functionName}: ${e.message}`, e);
+
+            return -1;
+
+          }
+
+        };
+
+      
+
+        /**
+
+         * Retrieves the count of orders with 'processing' status from SysOrdLog.
+
+         * @returns {number} The count of processing orders.
+
+         */
+
+        this.getProcessingOrderCount = function() {
+
+          const functionName = 'getProcessingOrderCount';
+
+          try {
+
+            const allConfig = ConfigService.getAllConfig();
+
+            const sheetNames = allConfig['system.sheet_names'];
+
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+            const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+      
+
+            if (!logSheet) {
+
+              throw new Error("Required sheet (SysOrdLog) not found.");
+
+            }
+
+      
+
+            const logData = logSheet.getDataRange().getValues();
+
+            const logHeaders = logData.shift();
+
+            const orderStatusCol = logHeaders.indexOf('sol_OrderStatus');
+
+      
+
+            if (orderStatusCol === -1) {
+
+              throw new Error("Could not find 'sol_OrderStatus' in SysOrdLog sheet.");
+
+            }
+
+      
+
+            const processingOrders = logData.filter(row => String(row[orderStatusCol]).toLowerCase() === 'processing');
+
+            return processingOrders.length;
+
+      
+
+          } catch (e) {
+
+            logger.error(`Error in ${functionName}: ${e.message}`, e);
+
+            return -1;
+
+          }
+
+        };
+
+      
+
+        /**
+
+         * Retrieves the count of packing slips with 'Ready' status from SysOrdLog.
+
+         * @returns {number} The count of packing slips ready for printing.
+
+         */
+
+        this.getPackingSlipsReadyCount = function() {
+
+          const functionName = 'getPackingSlipsReadyCount';
+
+          try {
+
+            const allConfig = ConfigService.getAllConfig();
+
+            const sheetNames = allConfig['system.sheet_names'];
+
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+            const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+      
+
+            if (!logSheet) {
+
+              throw new Error("Required sheet (SysOrdLog) not found.");
+
+            }
+
+      
+
+            const logData = logSheet.getDataRange().getValues();
+
+            const logHeaders = logData.shift();
+
+            const packingStatusCol = logHeaders.indexOf('sol_PackingStatus');
+
+      
+
+            if (packingStatusCol === -1) {
+
+              throw new Error("Could not find 'sol_PackingStatus' in SysOrdLog sheet.");
+
+            }
+
+      
+
+            const readyPackingSlips = logData.filter(row => String(row[packingStatusCol]) === 'Ready');
+
+            return readyPackingSlips.length;
+
+      
+
+          } catch (e) {
+
+            logger.error(`Error in ${functionName}: ${e.message}`, e);
+
+            return -1;
+
+          }
+
+        };
 
   this.prepareInitialPackingData = function(orderIds) {
     const functionName = 'prepareInitialPackingData';

@@ -40,6 +40,11 @@ const LoggerService = (function() {
     // Log to Apps Script execution log for immediate debugging
     console.log(logEntry.join(" | "));
 
+    // Only write ERROR level logs to the persistent sheet, per user request.
+    if (level !== 'ERROR') {
+      return;
+    }
+
     try {
       const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
       const sheetNames = ConfigService.getConfig('system.sheet_names');

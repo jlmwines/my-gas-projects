@@ -58,10 +58,10 @@ const ConfigService = (function() {
         return;
       }
 
-      // Only load 'stable', 'locked', or 'testing_phase2_part1' records, 
-      // but ALWAYS load 'sys.schema.version'
-      if (settingName !== 'sys.schema.version' && settingName !== 'system.spreadsheet.logs' && status !== 'stable' && status !== 'locked' && status !== 'testing_phase2_part1') {
-          return;
+      // 2. Check status for all records except the schema version itself
+      const validStatus = (status === 'stable' || status === 'locked' || status === 'testing_phase2_part1');
+      if (settingName !== 'sys.schema.version' && !validStatus) {
+          return; // Skip records that aren't schema version and don't have a valid status
       }
 
       // Special handling for system.users to create an array of objects

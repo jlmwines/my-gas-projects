@@ -254,6 +254,9 @@ function getAdminOrdersData() {
   try {
     const orderService = new OrderService(ProductService);
     const comaxExportOrderCount = orderService.getComaxExportOrderCount();
+    const onHoldCount = orderService.getOnHoldOrderCount();
+    const processingCount = orderService.getProcessingOrderCount();
+    const packingSlipsReadyCount = orderService.getPackingSlipsReadyCount();
 
     const openComaxConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.comax_export').map(task => ({
       id: task.st_TaskId,
@@ -263,6 +266,9 @@ function getAdminOrdersData() {
 
     return {
       comaxExportOrderCount: comaxExportOrderCount,
+      onHoldCount: onHoldCount,
+      processingCount: processingCount,
+      packingSlipsReadyCount: packingSlipsReadyCount,
       openComaxConfirmationTasks: openComaxConfirmationTasks
     };
   } catch (e) {
@@ -273,19 +279,22 @@ function getAdminOrdersData() {
 
 function getInventoryWidgetData() {
   try {
-    const inventoryTaskPrefix = 'task.validation.';
-    const openValidationTasks = WebAppTasks.getOpenTasksByPrefix(inventoryTaskPrefix);
+    const bruryaSummary = InventoryManagementService.getBruryaSummaryStatistic();
+    const openNegativeInventoryTasksCount = InventoryManagementService.getOpenNegativeInventoryTasksCount();
+    const openInventoryCountTasksCount = InventoryManagementService.getOpenInventoryCountTasksCount();
+    const openInventoryCountReviewTasksCount = InventoryManagementService.getOpenInventoryCountReviewTasksCount();
+    const comaxInventoryExportCount = InventoryManagementService.getComaxInventoryExportCount();
+    const openComaxInventoryConfirmationTask = WebAppTasks.getOpenTaskByTypeId('task.confirmation.comax_inventory_export');
 
-    const taskCounts = {};
-    openValidationTasks.forEach(task => {
-      const typeId = task.st_TaskTypeId;
-      if (!taskCounts[typeId]) {
-        taskCounts[typeId] = 0;
-      }
-      taskCounts[typeId]++;
-    });
-
-    return { data: taskCounts };
+    return {
+      bruryaProductCount: bruryaSummary.productCount,
+      bruryaTotalStock: bruryaSummary.totalStock,
+      openNegativeInventoryTasksCount: openNegativeInventoryTasksCount,
+      openInventoryCountTasksCount: openInventoryCountTasksCount,
+      openInventoryCountReviewTasksCount: openInventoryCountReviewTasksCount,
+      comaxInventoryExportCount: comaxInventoryExportCount,
+      openComaxInventoryConfirmationTask: openComaxInventoryConfirmationTask
+    };
   } catch (e) {
     LoggerService.error('WebApp', 'getInventoryWidgetData', e.message, e);
     return { error: `Could not load inventory widget data: ${e.message}` };
@@ -569,6 +578,33 @@ function runProductCountExport() {
  * @returns {boolean} True if successful.
  */
 function confirmProductCountImport(taskId) {
+  return WebAppTasks.completeTask(taskId);
+}
+
+/**
+ * Initiates the Comax inventory export process.
+ * @returns {string} A success or error message.
+ */
+function runComaxInventoryExport() {
+  try {
+    const pendingTask = WebAppTasks.getOpenTaskByTypeId('task.confirmation.comax_inventory_export');
+    if (pendingTask) {
+      return `Error: A Comax inventory export is already awaiting confirmation (Task ID: ${pendingTask.id}). Please confirm or cancel the existing task before generating a new export.`;
+    }
+    InventoryManagementService.exportComaxInventory();
+    return "Comax inventory export initiated successfully. A confirmation task has been created.";
+  } catch (e) {
+    LoggerService.error('WebApp', 'runComaxInventoryExport', e.message, e);
+    return `Error initiating Comax inventory export: ${e.message}`;
+  }
+}
+
+/**
+ * Confirms a Comax inventory import by completing the associated task.
+ * @param {string} taskId The ID of the task to complete.
+ * @returns {boolean} True if successful.
+ */
+function confirmComaxInventoryImport(taskId) {
   return WebAppTasks.completeTask(taskId);
 }
 

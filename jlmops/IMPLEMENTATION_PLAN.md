@@ -55,14 +55,14 @@
 *   **Tasks:**
     1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
     2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
-    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` to contain the Product Count Export workflow.
+    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` to centralize all admin-level inventory management workflows, including inventory count review, export to Comax, and confirmation of external imports.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
 
 ### 5.3. Manager Screen Implementation
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
-    1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house the inventory count input workflow.
+    1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
 
 ### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
 *   **Goal:** To refactor the UI controller layer to align with the formal architecture defined in `ARCHITECTURE.md, Section 2.1.1`.
@@ -80,7 +80,19 @@
     2.  **Implement UI Control (COMPLETED):** Integrated a role-switcher dropdown into `AppView.html` that dynamically loads content and adjusts navigation based on the selected user's role.
     3.  **Resolve Known Issue (COMPLETED):** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
-## Upcoming Implementation Priorities
+## Phase 6: Workflow Integrity & Dependency Management (IN PROGRESS)
+
+**Goal:** To enhance the automated import workflow to be dependency-aware, ensuring that files are processed in the correct sequence to guarantee data integrity.
+
+### 6.1. Implement Dependency-Aware Job Orchestration
+*   **Goal:** Update the core orchestration logic to handle dependencies between import jobs.
+*   **Tasks:**
+    1.  **Enhance SysConfig (PLANNED):** Add a `depends_on` parameter (e.g., using `scf_P07`) to the `import.drive.*` configuration schema to allow for the definition of prerequisite jobs.
+    2.  **Introduce 'BLOCKED' Status (PLANNED):** Update the `OrchestratorService` to create jobs with a 'BLOCKED' status if their `depends_on` prerequisite has not been met.
+    3.  **Implement Unblocking Logic (PLANNED):** Create a mechanism (e.g., `OrchestratorService.unblockDependentJobs()`) that is triggered upon job completion. This mechanism will scan for 'BLOCKED' jobs and update their status to 'PENDING' if their dependencies are now satisfied.
+    4.  **Update Processing Services (PLANNED):** Ensure that services like `ProductService` and `OrderService` only query for jobs with a 'PENDING' status.
+
+## Phase 7: Future Implementation Priorities (PLANNED)
 
 **Goal:** To implement the remaining core workflows from the legacy system.
 
@@ -131,7 +143,19 @@
     2.  **UI Updates (`WebApp.js` & `PackingSlipView.html`): (COMPLETED)**
         *   **Objective:** Adapt the client-side and server-side functions to handle the new return format and provide UI for customer notes and gift message creation.
 
-### 5. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
+### 5. Inventory Management Workflows (PLANNED)
+*   **Goal:** To fully integrate and manage all inventory-related processes within `jlmops`, including physical counts, audits, and synchronization with Comax, using a task-based workflow.
+*   **Tasks:**
+    1.  **Brurya Warehouse Inventory Management:** Implement UI and backend logic for managers to view, update, and manage Brurya-specific stock levels.
+    2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
+    3.  **Negative Inventory Task Follow-up:** Implement logic to detect negative stock levels and create high-priority tasks for investigation and correction.
+    4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type (e.g., `task.inventory.count`) with a defined workflow (e.g., `New`, `Pending Review`, `Accepted`) to manage the entire lifecycle of inventory counts.
+        *   **Entry/Submission:** Provide UI for users to enter and submit physical inventory counts for various locations. This action will create a `task.inventory.count` in `New` status.
+        *   **Review/Acceptance:** Provide UI for admins to review submitted counts and transition the task status to `Accepted` or `Rejected`.
+        *   **Export to Comax/Confirm:** After a count is `Accepted`, trigger the generation of an export file for Comax. This will then require a `task.confirmation.comax_inventory_export` for manual import confirmation.
+        *   **Note:** This requires defining `task.inventory.count` and its workflow in `SetupConfig.js`, and implementing logic in `InventoryManagementService.js` and `TaskService.js`.
+
+### 6. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
 *   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system.
 *   **Status Update:**
     *   **Data Model Foundation (COMPLETED):** `SysProductAudit` sheet defined in `SetupConfig.js` with `pa_CmxId` and wide-format columns.
@@ -198,48 +222,3 @@
 *   **Tasks:**
     1.  **SysConfig:** Add a new task definition to `SetupConfig.js` for `task.system.job_failed`. This task should have a `High` priority.
     2.  **OrchestratorService:** Modify the `processPendingJobs` function in `OrchestratorService.js`. In the `catch` block where a job's status is set to `FAILED`, add a call to `TaskService.createTask` to generate the new "Job Failed" task.
-
-## Identified SysConfig Additions (November 10, 2025)
-
-The following configuration settings were identified as legitimate additions to `SetupConfig.js` after the `6e5caba` commit and will be preserved during the restoration process. They will be formatted in the correct multi-line block structure.
-
-### 1. Printing Configuration
-
-```javascript
-['_section.08_Printing', 'Configurations for printing documents.', '', '', '', '', '', '', '', '', '', '', ''],
-['printing.templates.folder_id', 'The Google Drive Folder ID for printing templates.', 'stable', 'id', '1dUSbbkNCrGbVUpZnmoa0D_e5zib9HaXe', '', '', '', '', '', '', '', ''],
-['printing.packingslip.default_template_id', 'The Google Doc ID for the default packing slip template.', 'stable', 'id', '1z3VocTeR_PbLMtQp94dg2JuIb-Z3EOVoZVgS0zMmAMw', '', '', '', '', '', '', '', ''],
-['printing.note.default_template_id', 'The Google Doc ID for the default note template.', 'stable', 'id', '1_E2uUq0b5jsIfrdvMorUDF2Hweqm4JFvS-GkliEFXKg', '', '', '', '', '', '', '', ''],
-['printing.output.folder_id', 'The Google Drive Folder ID for printed documents output.', 'stable', 'id', '1eUQtr15O_NT0Ow4GUi1icBvpDwGJQf23', '', '', '', '', '', '', '', '']
-```
-
-### 2. Product Audit Schema
-
-```javascript
-['schema.data.SysProductAudit', 'Schema for the Product Audit sheet (wide format).', 'stable', 'headers', 'pa_CmxId,pa_SKU,pa_LastCount,pa_ComaxQty,pa_NewQty,pa_BruryaQty,pa_StorageQty,pa_OfficeQty,pa_ShopQty,pa_LastDetailUpdate,pa_LastDetailAudit', '', '', '', '', '', '', '', ''],
-['schema.data.SysProductAudit', 'Schema for the Product Audit sheet (wide format).', 'stable', 'key_column', 'pa_CmxId', '', '', '', '', '', '', '', '']
-```
-
-### 3. Updated Order Schemas
-
-#### `schema.data.SysOrdLog`
-
-```javascript
-['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'headers', 'sol_OrderId,sol_OrderDate,sol_OrderStatus,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp', '', '', '', '', '', '', '', ''],
-['schema.data.SysOrdLog', 'Schema for System Order Log sheet.', 'stable', 'key_column', 'sol_OrderId', '', '', '', '', '', '', '', '']
-```
-
-#### `schema.data.SysPackingCache`
-
-```javascript
-['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'headers', 'spc_OrderId,spc_WebIdEn,spc_SKU,spc_Quantity,spc_NameEn,spc_NameHe,spc_Intensity,spc_Complexity,spc_Acidity,spc_Decant,spc_HarmonizeEn,spc_ContrastEn,spc_HarmonizeHe,spc_ContrastHe,spc_GrapeG1Text,spc_GrapeG2Text,spc_GrapeG3Text,spc_GrapeG4Text,spc_GrapeG5Text,spc_KashrutK1Text,spc_KashrutK2Text,spc_KashrutK3Text,spc_KashrutK4Text,spc_KashrutK5Text,spc_HeterMechiraText,spc_IsMevushalText,spc_PrintedFlag,spc_PrintedTimestamp,spc_ReprintCount', '', '', '', '', '', '', '', ''],
-['schema.data.SysPackingCache', 'Schema for System Packing Cache sheet.', 'stable', 'key_column', 'spc_OrderId', '', '', '', '', '', '', '', '']
-```
-
-### 4. Comax Export Confirmation Task
-
-```javascript
-['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'topic', 'System', '', '', '', '', '', '', '', ''],
-['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
-['task.confirmation.comax_export', 'Task to confirm Comax order export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', '']
-```

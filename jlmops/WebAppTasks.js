@@ -90,11 +90,23 @@ const WebAppTasks = (() => {
     return TaskService.completeTask(taskId);
   };
 
+  /**
+   * Retrieves a single open task of a specific type.
+   * @param {string} typeId - The exact task type ID to filter by.
+   * @returns {Object|null} The first open task object of the specified type, or null if none exist.
+   */
+  const getOpenTaskByTypeId = (typeId) => {
+    const allOpenTasks = getOpenTasks();
+    const task = allOpenTasks.find(task => task.st_TaskTypeId === typeId);
+    return task || null;
+  };
+
   return {
     getOpenTasks,
     getOpenTasksByTypeId,
     getOpenTasksByPrefix,
     createTask,
     completeTask,
+    getOpenTaskByTypeId,
   };
 })();

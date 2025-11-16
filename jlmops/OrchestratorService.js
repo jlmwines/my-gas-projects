@@ -47,6 +47,32 @@ const OrchestratorService = (function() {
 
   // --- PHASE 1: FILE INTAKE ---
 
+  /**
+   * Checks if a prerequisite job has been completed.
+   * @param {string} dependencyJobType - The job_type of the dependency.
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} jobQueueSheet - The job queue sheet object.
+   * @returns {boolean} True if a completed dependency is found.
+   */
+  function isDependencyMet(dependencyJobType, jobQueueSheet) {
+    if (jobQueueSheet.getLastRow() < 2) {
+      return false; // No jobs in the queue, so dependency can't be met.
+    }
+    const data = jobQueueSheet.getDataRange().getValues();
+    const headers = data.shift();
+    const jobTypeCol = headers.indexOf('job_type');
+    const statusCol = headers.indexOf('status');
+
+    // Search from the bottom up to find the most recent entry for that job type
+    for (let i = data.length - 1; i >= 0; i--) {
+      const row = data[i];
+      if (row[jobTypeCol] === dependencyJobType) {
+        // Found the most recent job of the dependency type. Return true if it's completed.
+        return row[statusCol] === 'COMPLETED';
+      }
+    }
+    return false; // No job of the dependency type was found at all.
+  }
+
   function processAllFileImports() {
     console.log('Checking for new files...');
     const allConfig = ConfigService.getAllConfig();
@@ -105,8 +131,23 @@ const OrchestratorService = (function() {
             }
           }
 
+          // --- Dependency Check Logic ---
+          let initialStatus = 'PENDING';
+          const dependency = config.depends_on;
+
+          if (dependency) {
+            console.log(`Job ${configName} has a dependency: ${dependency}`);
+            if (!isDependencyMet(dependency, jobQueueSheet)) {
+              initialStatus = 'BLOCKED';
+              console.log(`Dependency ${dependency} not met. Job will be BLOCKED.`);
+            } else {
+              console.log(`Dependency ${dependency} is met.`);
+            }
+          }
+          // --- End Dependency Check ---
+
           const archivedFile = archiveFile(file, archiveFolder);
-          createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId());
+          createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus);
           // Update the registry map with the file's ID, name, and last updated time
           registry.set(file.getId(), { name: file.getName(), lastUpdated: file.getLastUpdated() });
         }
@@ -153,11 +194,11 @@ const OrchestratorService = (function() {
     return newFile;
   }
 
-  function createJob(sheet, configName, serviceName, archiveFileId) {
+  function createJob(sheet, configName, serviceName, archiveFileId, status) {
     const jobId = Utilities.getUuid();
     const now = new Date();
-    sheet.appendRow([jobId, configName, 'PENDING', archiveFileId, now, '', '']);
-    console.log(`Created new job ${jobId} for ${configName}`);
+    sheet.appendRow([jobId, configName, status, archiveFileId, now, '', '']);
+    console.log(`Created new job ${jobId} for ${configName} with status: ${status}`);
   }
 
   function getRegistryMap(sheet) {
@@ -301,12 +342,44 @@ const OrchestratorService = (function() {
       }
     }
 
-    createJob(jobQueueSheet, 'periodic.validation.master', 'ValidationOrchestratorService', '');
+    createJob(jobQueueSheet, 'periodic.validation.master', 'ValidationOrchestratorService', '', 'PENDING');
     console.log('Created new periodic validation job.');
   }
 
+  function unblockDependentJobs(completedJobType) {
+    console.log(`A job of type '${completedJobType}' was completed. Checking for dependent jobs to unblock.`);
+    const allConfig = ConfigService.getAllConfig();
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+    if (jobQueueSheet.getLastRow() < 2) {
+      return; // No jobs to unblock
+    }
+
+    const data = jobQueueSheet.getDataRange().getValues();
+    const headers = data.shift();
+    const jobTypeCol = headers.indexOf('job_type');
+    const statusCol = headers.indexOf('status');
+
+    data.forEach((row, index) => {
+      if (row[statusCol] === 'BLOCKED') {
+        const jobType = row[jobTypeCol];
+        const jobConfig = allConfig[jobType];
+        
+        if (jobConfig && jobConfig.depends_on === completedJobType) {
+          const sheetRow = index + 2; // +1 for 0-based index, +1 for header
+          jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('PENDING');
+          console.log(`Unblocked job ${row[0]} (type: ${jobType}) because its dependency '${completedJobType}' was completed.`);
+        }
+      }
+    });
+  }
+
   return {
-    run: run
+    run: run,
+    unblockDependentJobs: unblockDependentJobs
   };
 
 })();

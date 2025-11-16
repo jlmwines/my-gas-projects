@@ -14,7 +14,12 @@
       return;
     }
 
-    let html = '<h5>Order Export</h5>';
+    let html = '<h5>Orders</h5>';
+    html += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
+    html += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
+    html += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
+    html += '<hr>';
+    html += '<h6>Comax Export</h6>';
     if (data.comaxExportOrderCount > 0) {
       html += `<p>${data.comaxExportOrderCount} orders are ready for export.</p><button onclick="runComaxExport()">Generate Comax Order Export</button>`;
     } else {

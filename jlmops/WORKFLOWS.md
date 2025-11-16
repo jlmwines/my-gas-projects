@@ -73,8 +73,8 @@ This workflow manages the process of verifying stock at all locations and prepar
         *   Managers can remove items from Brurya: By setting the `pa_BruryaQty` to zero for a product.
 
 3.  **Admin Review & Approval (for Storage, Office, Shop counts):**
-    *   An admin reviews the `SysProductAudit` sheet for entries with `spa_AuditType = 'Inventory Count'` and `spa_ReviewStatus = 'Pending Admin Review'`.
-    *   If approved, the admin updates the `spa_ReviewStatus` to 'Approved' in `SysProductAudit`.
+    *   An admin reviews recent inventory count submissions in the `SysProductAudit` sheet (e.g., by checking the `pa_LastCount` timestamp).
+    *   Once the counts are approved, the data is ready for the Comax Inventory Export.
     *   **Crucially:** The `InventoryManagementService` does *not* directly update `CmxProdM`. Instead, the approval triggers the preparation of data for the Comax Inventory Export.
 
 4.  **Unified "Stock on Hand" Calculation:**

@@ -15,31 +15,36 @@
     }
 
     const data = result.data;
-    let html = '<h5>Inventory Tasks</h5>';
+    let html = '<h5>Inventory Overview</h5>';
 
-    const taskLabels = {
-      'task.validation.sku_not_in_comax': 'SKU Not in Comax',
-      'task.validation.translation_missing': 'Translation Missing',
-      'task.validation.comax_internal_audit': 'Comax Internal Audit',
-      'task.validation.field_mismatch': 'Field Mismatch',
-      'task.validation.name_mismatch': 'Name Mismatch',
-      'task.validation.web_master_discrepancy': 'Web Master Discrepancy',
-      'task.validation.comax_master_discrepancy': 'Comax Master Discrepancy',
-      'task.validation.row_count_decrease': 'Row Count Decrease',
-      'task.validation.comax_not_web_product': 'Comax Not Web Product'
-    };
+    // Brurya Summary
+    html += '<p>Brurya Products: <strong>' + (result.bruryaProductCount || 0) + '</strong></p>';
+    html += '<p>Brurya Total Stock: <strong>' + (result.bruryaTotalStock || 0) + '</strong></p>';
+    html += '<hr>';
 
-    let hasTasks = false;
-    for (const taskType in data) {
-      if (data.hasOwnProperty(taskType) && data[taskType] > 0) {
-        hasTasks = true;
-        const label = taskLabels[taskType] || taskType;
-        html += `<p>${label}: <span class="badge badge-warning">${data[taskType]}</span></p>`;
-      }
+    // Open Inventory Tasks
+    html += '<h6>Open Inventory Tasks</h6>';
+    html += '<p>Negative Inventory Tasks: <strong>' + (result.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Tasks: <strong>' + (result.openInventoryCountTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Review Tasks: <strong>' + (result.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
+    html += '<hr>';
+
+    // Comax Inventory Export
+    html += '<h6>Comax Inventory Export</h6>';
+    if (result.comaxInventoryExportCount > 0) {
+      html += `<p>${result.comaxInventoryExportCount} items are ready for export.</p><button onclick="runComaxInventoryExport()">Generate Comax Inventory Export</button>`;
+      // TODO: Implement runComaxInventoryExport() in WebApp.js (or similar) to generate the export file and create a 'task.confirmation.comax_inventory_export' task.
+    } else {
+      html += '<p>No inventory items are currently ready for Comax export.</p>';
     }
+    html += '<hr>';
 
-    if (!hasTasks) {
-      html += '<p>No open inventory tasks.</p>';
+    // Comax Inventory Export Confirmation
+    html += '<h6>Comax Inventory Export Confirmation</h6>';
+    if (result.openComaxInventoryConfirmationTask) { // Assuming only one task can be open
+      html += `<p>${result.openComaxInventoryConfirmationTask.notes}</p><button onclick="confirmComaxInventoryImport('${result.openComaxInventoryConfirmationTask.id}')">Confirm Import</button>`;
+    } else {
+      html += '<p>No pending Comax inventory export confirmations.</p>';
     }
 
     widget.innerHTML = html;

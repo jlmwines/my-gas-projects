@@ -949,6 +949,11 @@ const ProductService = (function() {
           throw new Error(`Unknown job type: ${jobType}`);
       }
       _updateJobStatus(jobRowNumber, finalJobStatus);
+      
+      if (finalJobStatus === 'COMPLETED') {
+        OrchestratorService.unblockDependentJobs(jobType);
+      }
+
       LoggerService.info('ProductService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
     } catch (e) {
       LoggerService.error('ProductService', 'processJob', `Job ${jobType} failed: ${e.message}`, e);
@@ -1057,6 +1062,8 @@ const ProductService = (function() {
       const fileName = `ProductInventory_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
       LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
+
+      // TODO: Create a task (e.g., 'task.confirmation.web_inventory_export') to track the user action for confirming this export.
 
     } catch (e) {
       LoggerService.error('ProductService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);

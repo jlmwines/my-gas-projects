@@ -115,6 +115,7 @@ function _getImportsConfig() {
         ['import.drive.web_products_en', 'Configuration for the English Web Products CSV import from Google Drive.', 'stable', 'file_pattern', 'WebProducts.csv', '', '', '', '', '', '', '', ''],
         ['import.drive.web_products_en', 'Configuration for the English Web Products CSV import from Google Drive.', 'stable', 'processing_service', 'ProductService', '', '', '', '', '', '', '', ''],
         ['import.drive.web_products_en', 'Configuration for the English Web Products CSV import from Google Drive.', 'stable', 'file_encoding', 'UTF-8', '', '', '', '', '', '', '', ''],
+        ['import.drive.web_products_en', 'Configuration for the English Web Products CSV import from Google Drive.', 'stable', 'depends_on', 'import.drive.web_translations_he', '', '', '', '', '', '', '', ''],
         ['import.drive.web_translations_he', 'Configuration for the Hebrew Web Translations CSV import from Google Drive.', 'stable', 'source_folder_id', '1bPsgqtH2Wcd_vuLGFQGQiYP85TKHD-3j', '', '', '', '', '', '', '', ''],
         ['import.drive.web_translations_he', 'Configuration for the Hebrew Web Translations CSV import from Google Drive.', 'stable', 'file_pattern', 'wehe.csv', '', '', '', '', '', '', '', ''],
         ['import.drive.web_translations_he', 'Configuration for the Hebrew Web Translations CSV import from Google Drive.', 'stable', 'processing_service', 'ProductService', '', '', '', '', '', '', '', ''],
@@ -630,6 +631,9 @@ function _getTaskDefinitionsConfig() {
         ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'topic', 'Orders', '', '', '', '', '', '', '', ''],
         ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
         ['task.validation.order_staging_failure', 'Task for when order staging validation fails.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.comax_inventory_export', 'Task to confirm Comax inventory export has been processed.', 'stable', 'topic', 'Inventory', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.comax_inventory_export', 'Task to confirm Comax inventory export has been processed.', 'stable', 'default_priority', 'High', '', '', '', '', '', '', '', ''],
+        ['task.confirmation.comax_inventory_export', 'Task to confirm Comax inventory export has been processed.', 'stable', 'initial_status', 'New', '', '', '', '', '', '', '', ''],
     ];
 }
 
