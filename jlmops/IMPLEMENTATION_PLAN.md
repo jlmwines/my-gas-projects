@@ -70,8 +70,10 @@
 *   **Tasks:**
     1.  **Create Data Provider (`WebAppTasks.js`) (COMPLETED):** Created a new data provider for task-related data and actions.
     2.  **Create View Controller (`WebAppDashboard.js`) (COMPLETED):** Created a new view controller for the main dashboard.
-    3.  **Refactor `WebApp.js` (IN PROGRESS):** Moved `getDashboardData` to its view controller and refactored multiple functions to use the new `WebAppTasks.js` data provider.
-    4.  **Future Tasks (PLANNED):** Continue creating new View Controller and Data Provider scripts and migrating logic from `WebApp.js` as new UI views are developed.
+    3.  **Refactor `WebApp.js` (COMPLETED):** Moved data-fetching logic to the view controller and refactored multiple functions to use the new `WebAppTasks.js` data provider.
+    4.  **Consolidate Dashboard Data (COMPLETED):** Centralized all dashboard widget data fetching into a single `getDashboardData` function to improve performance and data consistency.
+    5.  **Implement Global Confirmation Modal (COMPLETED):** Added a reusable, custom confirmation dialog to `AppView.html` for use across the entire application.
+    6.  **Future Tasks (PLANNED):** Continue creating new View Controller and Data Provider scripts and migrating logic from `WebApp.js` as new UI views are developed.
 
 ### 5.5. UI Authentication & User Switching (COMPLETED)
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
@@ -82,15 +84,24 @@
 
 ## Phase 6: Workflow Integrity & Dependency Management (IN PROGRESS)
 
-**Goal:** To enhance the automated import workflow to be dependency-aware, ensuring that files are processed in the correct sequence to guarantee data integrity.
+**Goal:** To enhance the automated import workflow to be dependency-aware, ensuring that files are processed in the correct sequence to guarantee data integrity, and to reflect this status on the UI.
 
-### 6.1. Implement Dependency-Aware Job Orchestration
+### 6.1. Implement Dependency-Aware Job Orchestration (COMPLETED)
 *   **Goal:** Update the core orchestration logic to handle dependencies between import jobs.
 *   **Tasks:**
-    1.  **Enhance SysConfig (PLANNED):** Add a `depends_on` parameter (e.g., using `scf_P07`) to the `import.drive.*` configuration schema to allow for the definition of prerequisite jobs.
-    2.  **Introduce 'BLOCKED' Status (PLANNED):** Update the `OrchestratorService` to create jobs with a 'BLOCKED' status if their `depends_on` prerequisite has not been met.
-    3.  **Implement Unblocking Logic (PLANNED):** Create a mechanism (e.g., `OrchestratorService.unblockDependentJobs()`) that is triggered upon job completion. This mechanism will scan for 'BLOCKED' jobs and update their status to 'PENDING' if their dependencies are now satisfied.
-    4.  **Update Processing Services (PLANNED):** Ensure that services like `ProductService` and `OrderService` only query for jobs with a 'PENDING' status.
+    1.  **Enhance SysConfig (COMPLETED):** Added a `depends_on` parameter to the `import.drive.*` configuration schema.
+    2.  **Introduce 'BLOCKED' Status (COMPLETED):** Updated the `OrchestratorService` to create jobs with a 'BLOCKED' status if their `depends_on` prerequisite has not been met.
+    3.  **Implement Unblocking Logic (COMPLETED):** Created `OrchestratorService.unblockDependentJobs()` that is triggered upon job completion to unblock dependent jobs.
+    4.  **Update Processing Services (COMPLETED):** Ensured that services like `ProductService` and `OrderService` call the unblocking logic.
+    5.  **Refine Dependency Logic (COMPLETED):** Made the dependency check conditional based on the files present in the current import batch.
+
+### 6.2. Dashboard UI Integration (IN PROGRESS)
+*   **Goal:** Update the Admin Dashboard to provide clear visibility and management of the new workflow states.
+*   **Tasks:**
+    1.  **System Health Widget (COMPLETED):** Updated to display counts for blocked, quarantined, and recent failed jobs, and to show the last critical validation timestamp with a "Validate Now" action.
+    2.  **Orders Widget (COMPLETED):** Redesigned with a new layout, disabled button states, and custom confirmation dialogs.
+    3.  **Inventory Widget (COMPLETED):** Redesigned with a new layout, connected to real backend data (excluding placeholders), and added a link to the Comax Invoices folder.
+    4.  **Products Widget (NEXT):** Integrate with the new dashboard data source to show real task counts.
 
 ## Phase 7: Future Implementation Priorities (PLANNED)
 
@@ -222,3 +233,19 @@
 *   **Tasks:**
     1.  **SysConfig:** Add a new task definition to `SetupConfig.js` for `task.system.job_failed`. This task should have a `High` priority.
     2.  **OrchestratorService:** Modify the `processPendingJobs` function in `OrchestratorService.js`. In the `catch` block where a job's status is set to `FAILED`, add a call to `TaskService.createTask` to generate the new "Job Failed" task.
+
+## Phase 8: Architectural Refactoring (PLANNED)
+
+**Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.
+
+### 8.1. Refactor SysConfig Management
+*   **Goal:** To replace the error-prone manual editing of `SetupConfig.js` with a safer, configuration-driven build process.
+*   **Architecture:**
+    1.  The master configuration will be moved from a hardcoded array in `SetupConfig.js` to a dedicated `jlmops/SysConfig.json` file.
+    2.  A new Node.js script (`generate-config.js`) will be created to read `SysConfig.json` and generate the `jlmops/SetupConfig.js` file.
+    3.  `SetupConfig.js` will become a machine-generated artifact and will no longer be edited manually.
+*   **Tasks:**
+    1.  **Create `SysConfig.json` (COMPLETED):** Extract the current configuration from `SetupConfig.js` and convert it into a structured JSON format.
+    2.  **Create `generate-config.js` (COMPLETED):** Develop the Node.js script that performs the JSON-to-JS conversion.
+    3.  **Update Documentation (COMPLETED):** `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` have been updated to reflect this new architecture.
+    4.  **Update Developer Workflow (COMPLETED):** Document the new local development workflow (edit JSON, run generator script, commit both files).

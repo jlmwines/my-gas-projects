@@ -1,0 +1,128 @@
+[
+    [
+        "task.template",
+        "task.validation.webxlt_data_integrity",
+        "Task definition for WebXlt data integrity issues.",
+        "stable",
+        "topic", "WebXlt",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.sku_not_in_comax",
+        "Task definition for when a SKU from a web import does not exist in the Comax master data.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.translation_missing",
+        "Task definition for when a product is missing its counterpart in the other language.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.comax_internal_audit",
+        "Task for internal data consistency issues in Comax staging.",
+        "stable",
+        "topic", "Inventory",
+        "default_priority", "Normal",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.field_mismatch",
+        "Task for when a field in a staging sheet does not match the master sheet.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.name_mismatch",
+        "Task for when a product name in a staging sheet does not match the master sheet.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.web_master_discrepancy",
+        "Task for when a web product exists in staging but not in the master sheet.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.comax_master_discrepancy",
+        "Task for when an active Comax product is missing from staging.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.row_count_decrease",
+        "Task for when a row count decreases in a staging sheet compared to its master.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.confirmation.comax_export",
+        "Task to confirm Comax order export has been processed.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.confirmation.product_count_export",
+        "Task to confirm product count export has been processed.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.comax_not_web_product",
+        "Task for when a web product is not marked as \"sold on line\" in Comax.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.order_staging_failure",
+        "Task for when order staging validation fails.",
+        "stable",
+        "topic", "Orders",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.confirmation.comax_inventory_export",
+        "Task to confirm Comax inventory export has been processed.",
+        "stable",
+        "topic", "Inventory",
+        "default_priority", "High",
+        "initial_status", "New"
+    ]
+]

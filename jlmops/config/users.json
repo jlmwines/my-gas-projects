@@ -1,0 +1,47 @@
+[
+    [
+        "_section.10_Users",
+        "User role assignments.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "system.users",
+        "Defines an authorized user and their role.",
+        "stable",
+        "email",
+        "accounts@jlmwines.com",
+        "role",
+        "admin",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "system.users",
+        "Defines an authorized user and their role.",
+        "stable",
+        "email",
+        "info@jlmwines.com",
+        "role",
+        "manager",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ]
+]

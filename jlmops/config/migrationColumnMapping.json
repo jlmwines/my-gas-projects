@@ -1,0 +1,17 @@
+[
+    [
+        "migration.sync.tasks",
+        "Configuration for migrating SysOrdLog.",
+        "stable",
+        "column_mappings",
+        "order_id:sol_OrderId,order_date:sol_OrderDate,packing_slip_status:sol_PackingStatus,packing_print_date:sol_PackingPrintedTimestamp",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ]
+]
