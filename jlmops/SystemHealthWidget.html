@@ -4,53 +4,49 @@
 
 <script>
   /**
-   * Populates the system health widget based on the final approved design.
-   * @param {Object} data - The health data from the backend.
+   * Populates the system health widget with detailed status.
+   * @param {Object} dashboardData - The full dashboard data from the backend.
    */
-  function updateSystemHealthView(data) {
+  function updateSystemHealthWidget(dashboardData) {
     const widget = document.getElementById('system-health-widget');
-    const indicator = window.parent.document.getElementById('system-health-indicator');
-
-    if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
-      if (indicator) indicator.style.color = 'orange';
+    if (dashboardData.error) {
+      widget.innerHTML = `<p class="text-danger">${dashboardData.error}</p>`;
       return;
     }
 
-    // Update main health indicator color in the parent dashboard
-    if (indicator) {
-      indicator.style.color = data.isHealthy ? 'green' : 'red';
+    const data = dashboardData.systemHealthData;
+    if (!data) {
+      widget.innerHTML = `<p class="text-warning">System health data is unavailable.</p>`;
+      return;
     }
 
-    let finalHtml = '<h5>System Health</h5>';
+    let html = '<h5>System Health</h5>';
 
-    // 1. Alerts Area
+    // 1. Overall Status
     if (data.isHealthy) {
-      finalHtml += '<p class="text-success"><strong>Healthy</strong></p>';
+      html += '<p class="text-success mb-2"><strong>Healthy</strong></p>';
     } else {
       data.alerts.forEach(alert => {
-        finalHtml += `<p class="text-danger mb-1">${alert}</p>`;
+        html += `<p class="text-danger mb-1">${alert}</p>`;
       });
     }
-    finalHtml += '<hr class="my-2">';
+    html += '<hr class="my-2">';
 
-    // 2. Validation Status
+    // 2. Job Counts
+    html += `<p class="mb-1" style="font-size: 0.9rem;">Recent Failed Jobs: <span class="badge ${data.recentFailedJobs > 0 ? 'badge-danger' : 'badge-secondary'}">${data.recentFailedJobs}</span></p>`;
+    html += `<p class="mb-1" style="font-size: 0.9rem;">Quarantined Jobs: <span class="badge ${data.quarantinedJobs > 0 ? 'badge-warning' : 'badge-secondary'}">${data.quarantinedJobs}</span></p>`;
+    html += `<p class="mb-1" style="font-size: 0.9rem;">Blocked Jobs: <span class="badge ${data.blockedJobs > 0 ? 'badge-info' : 'badge-secondary'}">${data.blockedJobs}</span></p>`;
+    html += '<hr class="my-2">';
+
+    // 3. Validation Status
     const lastValidationColor = data.isValidationRecent ? 'text-success' : 'text-danger';
-    finalHtml += `<p class="${lastValidationColor} mb-2" style="font-size: 0.9rem;">Last Validation: ${data.lastValidationTimestamp}</p>`;
+    html += `<p class="${lastValidationColor} mb-2" style="font-size: 0.9rem;">Last Validation: ${data.lastValidationTimestamp}</p>`;
     
-    // 3. Confirmed Critical Validations
-    if (data.passedValidations && data.passedValidations.length > 0) {
-      data.passedValidations.forEach(confirmation => {
-        finalHtml += `<p class="mb-1" style="font-size: 0.8rem;">${confirmation}</p>`;
-      });
-    }
-
     // 4. Action Link
-    finalHtml += '<hr class="my-2">';
-    finalHtml += `<a href="#" onclick="runValidation(); return false;" style="font-size: 0.9rem;">Validate Now</a>`;
-    finalHtml += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
+    html += `<a href="#" onclick="runValidation(); return false;" style="font-size: 0.9rem;">Validate Now</a>`;
+    html += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
     
-    widget.innerHTML = finalHtml;
+    widget.innerHTML = html;
   }
 
   /**
@@ -64,10 +60,10 @@
     google.script.run
       .withSuccessHandler(response => {
         if (response.success) {
-          statusElement.innerText = `Job created. Processing...`;
+          statusElement.innerText = `Job created. Refreshing...`;
           statusElement.className = 'text-success';
           // Refresh the widget data after a short delay to allow the orchestrator to pick up the job
-          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData(), 3000);
+          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthWidget).withFailureHandler(showError).getDashboardData(), 3000);
         } else {
           statusElement.innerText = `Failed to create job: ${response.error}`;
           statusElement.className = 'text-danger';
@@ -82,5 +78,5 @@
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData();
+  google.script.run.withSuccessHandler(updateSystemHealthWidget).withFailureHandler(showError).getDashboardData();
 </script>

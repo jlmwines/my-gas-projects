@@ -41,7 +41,7 @@ const WebAppTasks = (() => {
 
       return openTasks;
     } catch (e) {
-      LoggerService.error('WebAppTasks', 'getOpenTasks', e.message, e);
+      logger.error('WebAppTasks', 'getOpenTasks', e.message, e);
       return []; // Return empty array on error to prevent UI crashes
     }
   };

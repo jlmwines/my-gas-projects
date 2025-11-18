@@ -20,10 +20,12 @@ function runDailyTrigger() {
 const OrchestratorService = (function() {
 
   function run(taskType) {
-    console.log(`Orchestrator running for task type: ${taskType}...`);
+    const serviceName = 'OrchestratorService';
+    const functionName = 'run';
+    logger.info(serviceName, functionName, `Orchestrator running for task type: ${taskType}...`);
     const allConfig = ConfigService.getAllConfig();
     if (!allConfig) {
-      console.error('Could not load configuration in OrchestratorService.run(). Halting.');
+      logger.error(serviceName, functionName, 'Could not load configuration. Halting.');
       return;
     }
     try {
@@ -40,44 +42,20 @@ const OrchestratorService = (function() {
       }
       
     } catch (e) {
-      console.error(`An unexpected error occurred in the orchestrator: ${e.message} (${e.stack})`);
+      logger.error(serviceName, functionName, `An unexpected error occurred: ${e.message}`, e);
     }
-    console.log(`Orchestrator finished for task type: ${taskType}.`);
+    logger.info(serviceName, functionName, `Orchestrator finished for task type: ${taskType}.`);
   }
 
   // --- PHASE 1: FILE INTAKE ---
 
-  /**
-   * Checks if a prerequisite job has been completed.
-   * @param {string} dependencyJobType - The job_type of the dependency.
-   * @param {GoogleAppsScript.Spreadsheet.Sheet} jobQueueSheet - The job queue sheet object.
-   * @returns {boolean} True if a completed dependency is found.
-   */
-  function isDependencyMet(dependencyJobType, jobQueueSheet) {
-    if (jobQueueSheet.getLastRow() < 2) {
-      return false; // No jobs in the queue, so dependency can't be met.
-    }
-    const data = jobQueueSheet.getDataRange().getValues();
-    const headers = data.shift();
-    const jobTypeCol = headers.indexOf('job_type');
-    const statusCol = headers.indexOf('status');
-
-    // Search from the bottom up to find the most recent entry for that job type
-    for (let i = data.length - 1; i >= 0; i--) {
-      const row = data[i];
-      if (row[jobTypeCol] === dependencyJobType) {
-        // Found the most recent job of the dependency type. Return true if it's completed.
-        return row[statusCol] === 'COMPLETED';
-      }
-    }
-    return false; // No job of the dependency type was found at all.
-  }
-
   function processAllFileImports() {
-    console.log('Checking for new files...');
+    const serviceName = 'OrchestratorService';
+    const functionName = 'processAllFileImports';
+    logger.info(serviceName, functionName, 'Checking for new files...');
     const allConfig = ConfigService.getAllConfig();
     if (!allConfig) {
-      console.error('Could not load configuration. Halting file import processing.');
+      logger.error(serviceName, functionName, 'Could not load configuration. Halting file import processing.');
       return;
     }
 
@@ -86,7 +64,7 @@ const OrchestratorService = (function() {
     const sheetNames = allConfig['system.sheet_names'];
 
     if (!logSheetConfig || !logSheetConfig.id || !archiveFolderConfig || !archiveFolderConfig.id || !sheetNames) {
-      console.error('Essential system configuration is missing (log spreadsheet, archive folder, or sheet names).');
+      logger.error(serviceName, functionName, 'Essential system configuration is missing (log spreadsheet, archive folder, or sheet names).');
       return;
     }
 
@@ -99,63 +77,69 @@ const OrchestratorService = (function() {
     
     const processingOrderConfig = allConfig['system.import.processing_order'];
     if (!processingOrderConfig || !processingOrderConfig.order) {
-      console.error('system.import.processing_order is not defined in SysConfig. Halting file import processing.');
+      logger.error(serviceName, functionName, 'system.import.processing_order is not defined in SysConfig. Halting.');
       return;
     }
     const importConfigs = processingOrderConfig.order.split(',');
 
-    console.log(`Found ${importConfigs.length} drive import configuration(s) in the specified processing order.`);
-
+    // --- Pass 1: Discovery ---
+    const batchManifest = [];
+    logger.info(serviceName, functionName, 'Pass 1: Discovering all new files...');
     importConfigs.forEach(configName => {
       const config = allConfig[configName];
-      console.log(`Config for ${configName}:`, config);
-      if (!config.source_folder_id || !config.file_pattern) {
-        console.error(`Configuration for '${configName}' is incomplete. Skipping.`);
+      if (!config || !config.source_folder_id || !config.file_pattern) {
+        logger.warn(serviceName, functionName, `Configuration for '${configName}' is incomplete or missing. Skipping.`);
         return;
       }
 
-      console.log(`Processing import: ${configName}`);
       const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
       const files = sourceFolder.getFilesByName(config.file_pattern);
 
       while (files.hasNext()) {
         const file = files.next();
         if (isNewFile(file, registry)) {
-          console.log(`New file version found: ${file.getName()}`);
-
-          // Workflow Gate for Comax Products
-          if (configName === 'import.drive.comax_products') {
-            if (TaskService.hasOpenTasks('task.confirmation.comax_export')) {
-              console.warn('A new Comax product file was found, but it will not be processed because an administrator has not yet confirmed the previous Comax order export. Please complete the open \'Confirm Comax Export\' task.');
-              continue; // Skip to the next file
-            }
-          }
-
-          // --- Dependency Check Logic ---
-          let initialStatus = 'PENDING';
-          const dependency = config.depends_on;
-
-          if (dependency) {
-            console.log(`Job ${configName} has a dependency: ${dependency}`);
-            if (!isDependencyMet(dependency, jobQueueSheet)) {
-              initialStatus = 'BLOCKED';
-              console.log(`Dependency ${dependency} not met. Job will be BLOCKED.`);
-            } else {
-              console.log(`Dependency ${dependency} is met.`);
-            }
-          }
-          // --- End Dependency Check ---
-
-          const archivedFile = archiveFile(file, archiveFolder);
-          createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus);
-          // Update the registry map with the file's ID, name, and last updated time
-          registry.set(file.getId(), { name: file.getName(), lastUpdated: file.getLastUpdated() });
+          logger.info(serviceName, functionName, `Discovered new file for batch: ${file.getName()} (for job ${configName})`);
+          batchManifest.push({ configName: configName, file: file, config: config });
         }
       }
     });
 
+    if (batchManifest.length === 0) {
+      logger.info(serviceName, functionName, 'No new files found in this run.');
+      return;
+    }
+
+    // --- Pass 2: Queuing with Dependency Checks ---
+    logger.info(serviceName, functionName, `Pass 2: Queuing ${batchManifest.length} jobs with dependency checks...`);
+    const batchConfigNames = new Set(batchManifest.map(item => item.configName));
+
+    batchManifest.forEach(item => {
+      const { configName, file, config } = item;
+
+      // Workflow Gate for Comax Products
+      if (configName === 'import.drive.comax_products') {
+        if (TaskService.hasOpenTasks('task.confirmation.comax_export')) {
+          logger.warn(serviceName, functionName, `A new Comax product file was found, but it will not be processed because an administrator has not yet confirmed the previous Comax order export. Please complete the open 'Confirm Comax Export' task.`);
+          return; // Skip queuing this job
+        }
+      }
+
+      // Conditional Dependency Check
+      let initialStatus = 'PENDING';
+      const dependency = config.depends_on;
+
+      if (dependency && batchConfigNames.has(dependency)) {
+        initialStatus = 'BLOCKED';
+        logger.info(serviceName, functionName, `Job for ${configName} will be BLOCKED because its dependency '${dependency}' is also in this batch.`);
+      }
+
+      const archivedFile = archiveFile(file, archiveFolder);
+      createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus);
+      registry.set(file.getId(), { name: file.getName(), lastUpdated: file.getLastUpdated() });
+    });
+
     updateRegistrySheet(fileRegistrySheet, registry, allConfig['schema.log.SysFileRegistry']);
-    console.log('File import check complete.');
+    logger.info(serviceName, functionName, 'File import check complete.');
   }
 
   function isNewFile(file, registry) {
@@ -170,8 +154,6 @@ const OrchestratorService = (function() {
     // Compare timestamps at the second level to avoid precision issues with Sheets.
     const liveSeconds = Math.floor(lastUpdated.getTime() / 1000);
     const registeredSeconds = Math.floor(new Date(registryEntry.lastUpdated).getTime() / 1000);
-
-    console.log(`isNewFile Check: File: ${file.getName()}, Live Timestamp: ${liveSeconds}, Registered Timestamp: ${registeredSeconds}`);
 
     return liveSeconds > registeredSeconds;
   }
@@ -190,7 +172,7 @@ const OrchestratorService = (function() {
     const newFileName = `${file.getName()}_${timestamp}`;
     
     const newFile = file.makeCopy(newFileName, dayFolder);
-    console.log(`Archived file as: ${newFile.getName()}`);
+    logger.info('OrchestratorService', 'archiveFile', `Archived file as: ${newFile.getName()}`);
     return newFile;
   }
 
@@ -198,7 +180,7 @@ const OrchestratorService = (function() {
     const jobId = Utilities.getUuid();
     const now = new Date();
     sheet.appendRow([jobId, configName, status, archiveFileId, now, '', '']);
-    console.log(`Created new job ${jobId} for ${configName} with status: ${status}`);
+    logger.info('OrchestratorService', 'createJob', `Created new job ${jobId} for ${configName} with status: ${status}`);
   }
 
   function getRegistryMap(sheet) {
@@ -229,7 +211,7 @@ const OrchestratorService = (function() {
       });
       sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
     }
-    console.log('SysFileRegistry updated.');
+    logger.info('OrchestratorService', 'updateRegistrySheet', 'SysFileRegistry updated.');
   }
 
   function getOrCreateFolder(parentFolder, folderName) {
@@ -243,12 +225,14 @@ const OrchestratorService = (function() {
   // --- PHASE 2: JOB EXECUTION ---
 
   function processPendingJobs() {
-    console.log('Checking for pending jobs...');
+    const serviceName = 'OrchestratorService';
+    const functionName = 'processPendingJobs';
+    logger.info(serviceName, functionName, 'Checking for pending jobs...');
     const allConfig = ConfigService.getAllConfig();
     
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
     if (!logSheetConfig || !logSheetConfig.id) {
-      console.error('Log spreadsheet ID not found in configuration.');
+      logger.error(serviceName, functionName, 'Log spreadsheet ID not found in configuration.');
       return;
     }
 
@@ -257,7 +241,7 @@ const OrchestratorService = (function() {
 
     const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
     if (!jobQueueSchema || !jobQueueSchema.headers) {
-        console.error('Job Queue schema not found in configuration.');
+        logger.error(serviceName, functionName, 'Job Queue schema not found in configuration.');
         return;
     }
     const jobQueueHeaders = jobQueueSchema.headers.split(',');
@@ -266,13 +250,13 @@ const OrchestratorService = (function() {
     const jobQueueSheet = logSpreadsheet.getSheetByName(jobQueueSheetName);
     
     if (!jobQueueSheet) {
-        console.error(`Sheet '${jobQueueSheetName}' not found in log spreadsheet.`);
+        logger.error(serviceName, functionName, `Sheet '${jobQueueSheetName}' not found in log spreadsheet.`);
         return;
     }
 
     if (jobQueueSheet.getLastRow() < 2) {
-        console.log('No jobs found in the queue.');
-        console.log('Pending job check complete.');
+        logger.info(serviceName, functionName, 'No jobs found in the queue.');
+        logger.info(serviceName, functionName, 'Pending job check complete.');
         return;
     }
 
@@ -289,12 +273,12 @@ const OrchestratorService = (function() {
         const jobConfig = allConfig[jobType];
         
         if (!jobConfig || !jobConfig.processing_service) {
-          console.error(`No processing service configured for job type: ${jobType}. Skipping job.`);
+          logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}. Skipping job.`);
           continue;
         }
 
         const serviceName = jobConfig.processing_service;
-        console.log(`Delegating job ${row[0]} of type '${jobType}' to service: ${serviceName}`);
+        logger.info(serviceName, functionName, `Delegating job ${row[0]} of type '${jobType}' to service: ${serviceName}`);
 
         jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('PROCESSING');
 
@@ -315,17 +299,19 @@ const OrchestratorService = (function() {
               throw new Error(`Unknown processing service: ${serviceName}`);
           }
         } catch (e) {
-          console.error(`Error processing job ${row[0]}: ${e.message}`);
+          logger.error(serviceName, functionName, `Error processing job ${row[0]}: ${e.message}`, e);
           jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('FAILED');
           jobQueueSheet.getRange(i + 2, errorMsgColIdx + 1).setValue(e.message);
         }
       }
     }
-    console.log('Pending job check complete.');
+    logger.info(serviceName, functionName, 'Pending job check complete.');
   }
 
 
   function createPeriodicValidationJob(jobQueueSheet, allConfig) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'createPeriodicValidationJob';
     const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
     const jobQueueHeaders = jobQueueSchema.headers.split(',');
     const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
@@ -336,18 +322,20 @@ const OrchestratorService = (function() {
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         if (row[jobTypeColIdx] === 'periodic.validation.master' && (row[statusColIdx] === 'PENDING' || row[statusColIdx] === 'PROCESSING')) {
-          console.log('Periodic validation job already pending or processing. Skipping creation.');
+          logger.info(serviceName, functionName, 'Periodic validation job already pending or processing. Skipping creation.');
           return;
         }
       }
     }
 
     createJob(jobQueueSheet, 'periodic.validation.master', 'ValidationOrchestratorService', '', 'PENDING');
-    console.log('Created new periodic validation job.');
+    logger.info(serviceName, functionName, 'Created new periodic validation job.');
   }
 
   function unblockDependentJobs(completedJobType) {
-    console.log(`A job of type '${completedJobType}' was completed. Checking for dependent jobs to unblock.`);
+    const serviceName = 'OrchestratorService';
+    const functionName = 'unblockDependentJobs';
+    logger.info(serviceName, functionName, `A job of type '${completedJobType}' was completed. Checking for dependent jobs to unblock.`);
     const allConfig = ConfigService.getAllConfig();
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
     const sheetNames = allConfig['system.sheet_names'];
@@ -371,7 +359,7 @@ const OrchestratorService = (function() {
         if (jobConfig && jobConfig.depends_on === completedJobType) {
           const sheetRow = index + 2; // +1 for 0-based index, +1 for header
           jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('PENDING');
-          console.log(`Unblocked job ${row[0]} (type: ${jobType}) because its dependency '${completedJobType}' was completed.`);
+          logger.info(serviceName, functionName, `Unblocked job ${row[0]} (type: ${jobType}) because its dependency '${completedJobType}' was completed.`);
         }
       }
     });

@@ -36,7 +36,7 @@ const AuthService = (function() {
     try {
       return Session.getActiveUser().getEmail();
     } catch (e) {
-      console.warn("Could not retrieve active user's email. This may be expected in a trigger-based execution.");
+      logger.warn('AuthService', 'getActiveUserEmail', "Could not retrieve active user's email. This may be expected in a trigger-based execution.");
       return 'system@jlmops.com'; // Fallback for non-interactive executions
     }
   }

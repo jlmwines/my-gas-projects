@@ -4,52 +4,107 @@
 
 <script>
   /**
-   * Populates the inventory widget.
-   * @param {Object} result - The inventory data from the backend.
+   * Handles the response from server-side actions within this widget.
    */
-  function updateInventoryView(result) {
+  function adminInventoryWidget_handleServerResponse(response) {
+    const statusEl = document.getElementById('inventory-widget-status');
+    let statusHtml = '';
+
+    if (response && response.success) {
+      statusHtml = `<div class="text-success">${response.message || 'Success!'}</div>`;
+    } else {
+      const errorMessage = response ? (response.error || 'An unknown error occurred.') : 'An unknown error occurred.';
+      statusHtml = `<div class="text-danger" style="font-size: 0.8rem;">Action failed: ${errorMessage}</div>`;
+    }
+    
+    if(statusEl) statusEl.innerHTML = statusHtml;
+
+    setTimeout(() => {
+      if(statusEl) statusEl.innerHTML = '';
+      google.script.run.withSuccessHandler(adminInventoryWidget_updateView).withFailureHandler(showError).getDashboardData();
+    }, 4000);
+  }
+
+  /**
+   * A wrapper function for the export action.
+   */
+  function adminInventoryWidget_doExport() {
+    const statusEl = document.getElementById('inventory-widget-status');
+    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Inventory Export...</div>';
+    google.script.run.withSuccessHandler(adminInventoryWidget_handleServerResponse).withFailureHandler(adminInventoryWidget_handleServerResponse).runComaxInventoryExport();
+  }
+
+  /**
+   * A wrapper function for the confirm action.
+   * @param {string} taskId - The ID of the task to confirm.
+   */
+  function adminInventoryWidget_doConfirm(taskId) {
+    const statusEl = document.getElementById('inventory-widget-status');
+    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Confirmation...</div>';
+    google.script.run.withSuccessHandler(adminInventoryWidget_handleServerResponse).withFailureHandler(adminInventoryWidget_handleServerResponse).confirmComaxInventoryImport(taskId);
+  }
+
+  /**
+   * Populates the inventory widget.
+   */
+  function adminInventoryWidget_updateView(dashboardData) {
     const widget = document.getElementById('inventory-widget');
-    if (result.error) {
-      widget.innerHTML = `<p class="text-danger">${result.error}</p>`;
+    if (dashboardData.error) {
+      widget.innerHTML = `<p class="text-danger">${dashboardData.error}</p>`;
       return;
     }
 
-    const data = result.data;
-    let html = '<h5>Inventory Overview</h5>';
+    let html = '';
+    const inventoryData = dashboardData.inventoryData || {};
+
+    // Blocked Job Notice
+    if (dashboardData.blockedJobs && dashboardData.blockedJobs.length > 0) {
+      const comaxJob = dashboardData.blockedJobs.find(job => job.jobType === 'import.drive.comax_products');
+      if (comaxJob) {
+        html += `<div class="alert alert-info p-2" style="font-size: 0.9rem;">
+                   <strong>Workflow Paused:</strong><br>Comax product import is waiting for another job to complete.
+                 </div>`;
+      }
+    }
+
+    html += '<h5>Inventory</h5>';
+    
+    // Comax Invoices
+    html += `<a href="${inventoryData.invoiceFolderUrl}" target="_blank" class="text-decoration-none text-dark">
+               <p class="mb-2">Comax Invoices: <strong>${inventoryData.invoiceCount}</strong></p>
+             </a>`;
+    html += '<hr class="my-2">';
 
     // Brurya Summary
-    html += '<p>Brurya Products: <strong>' + (result.bruryaProductCount || 0) + '</strong></p>';
-    html += '<p>Brurya Total Stock: <strong>' + (result.bruryaTotalStock || 0) + '</strong></p>';
-    html += '<hr>';
+    html += '<p>Brurya Products: <strong>' + (inventoryData.bruryaProductCount || 0) + '</strong></p>';
+    html += '<p>Brurya Total Stock: <strong>' + (inventoryData.bruryaTotalStock || 0) + '</strong></p>';
+    html += '<hr class="my-2">';
 
     // Open Inventory Tasks
-    html += '<h6>Open Inventory Tasks</h6>';
-    html += '<p>Negative Inventory Tasks: <strong>' + (result.openNegativeInventoryTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Tasks: <strong>' + (result.openInventoryCountTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Review Tasks: <strong>' + (result.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
-    html += '<hr>';
+    html += '<p>Negative Inventory Tasks: <strong>' + (inventoryData.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Tasks: <strong>' + (inventoryData.openInventoryCountTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Review Tasks: <strong>' + (inventoryData.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
+    html += '<hr class="my-2">';
 
-    // Comax Inventory Export
-    html += '<h6>Comax Inventory Export</h6>';
-    if (result.comaxInventoryExportCount > 0) {
-      html += `<p>${result.comaxInventoryExportCount} items are ready for export.</p><button onclick="runComaxInventoryExport()">Generate Comax Inventory Export</button>`;
-      // TODO: Implement runComaxInventoryExport() in WebApp.js (or similar) to generate the export file and create a 'task.confirmation.comax_inventory_export' task.
-    } else {
-      html += '<p>No inventory items are currently ready for Comax export.</p>';
-    }
-    html += '<hr>';
+    // Comax Inventory Export (New Layout)
+    const exportCount = inventoryData.comaxInventoryExportCount || 0;
+    const confirmTask = inventoryData.openComaxInventoryConfirmationTask;
+    const isExportDisabled = exportCount === 0;
+    const isConfirmDisabled = !confirmTask;
 
-    // Comax Inventory Export Confirmation
-    html += '<h6>Comax Inventory Export Confirmation</h6>';
-    if (result.openComaxInventoryConfirmationTask) { // Assuming only one task can be open
-      html += `<p>${result.openComaxInventoryConfirmationTask.notes}</p><button onclick="confirmComaxInventoryImport('${result.openComaxInventoryConfirmationTask.id}')">Confirm Import</button>`;
-    } else {
-      html += '<p>No pending Comax inventory export confirmations.</p>';
-    }
+    html += `<p>Items to Export: <strong>${exportCount}</strong></p>`;
+
+    const exportButton = `<button class="btn btn-sm btn-light" ${isExportDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Generate Comax Inventory Export?', adminInventoryWidget_doExport)">Generate Export</button>`;
+    
+    const confirmTaskId = confirmTask ? confirmTask.id : '';
+    const confirmButton = `<button class="btn btn-sm btn-light ml-2" ${isConfirmDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Confirm the Inventory Update?', function() { adminInventoryWidget_doConfirm('${confirmTaskId}'); })">Confirm Update</button>`;
+
+    html += `<div>${exportButton} ${confirmButton}</div>`;
+    html += `<div id="inventory-widget-status" class="mt-2" style="font-size: 0.9rem;"></div>`;
 
     widget.innerHTML = html;
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+  google.script.run.withSuccessHandler(adminInventoryWidget_updateView).withFailureHandler(showError).getDashboardData();
 </script>

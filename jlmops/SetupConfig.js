@@ -916,7 +916,7 @@ function getMasterConfiguration() {
         "Schema for the main system log sheet.",
         "stable",
         "headers",
-        "timestamp,sessionId,level,service,function,message,stackTrace",
+        "sl_Timestamp,sl_SessionId,sl_LogLevel,sl_ServiceName,sl_FunctionName,sl_Message,sl_StackTrace",
         "",
         "",
         "",

@@ -47,9 +47,10 @@ const PrintService = (function() {
    * @returns {string} The URL of the folder containing the generated Google Docs.
    */
   function printPackingSlips(orderIds) {
+    const serviceName = 'PrintService';
     const functionName = 'printPackingSlips';
     try {
-      logger.info(`Starting ${functionName} for ${orderIds.length} orders.`);
+      logger.info(serviceName, functionName, `Starting for ${orderIds.length} orders.`);
 
       if (!orderIds || orderIds.length === 0) {
         throw new Error('No order IDs provided to print.');
@@ -225,17 +226,17 @@ const PrintService = (function() {
         });
         if (updatedCount > 0) {
           logSheet.getRange(2, 1, logValuesToUpdate.length, logHeaders.length).setValues(logValuesToUpdate);
-          logger.info(`Updated ${updatedCount} orders to 'Printed' status in SysOrdLog.`);
+          logger.info(serviceName, functionName, `Updated ${updatedCount} orders to 'Printed' status in SysOrdLog.`);
         }
       } else {
-        logger.warn('SysOrdLog sheet not found. Could not update packing statuses to Printed.');
+        logger.warn(serviceName, functionName, 'SysOrdLog sheet not found. Could not update packing statuses to Printed.');
       }
 
-      logger.info(`${functionName} completed successfully. Document URL: ${packingSlipDoc.getUrl()}`);
+      logger.info(serviceName, functionName, `Completed successfully. Document URL: ${packingSlipDoc.getUrl()}`);
       return packingSlipDoc.getUrl();
 
     } catch (error) {
-      LoggerService.error('PrintService', functionName, error.message, error);
+      logger.error(serviceName, functionName, error.message, error);
       throw error;
     }
   }

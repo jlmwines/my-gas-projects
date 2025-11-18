@@ -419,7 +419,14 @@ function createSysFileRegistryHeaders() {
     try {
         console.log(`Running ${functionName}...`);
 
-        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const allConfig = ConfigService.getAllConfig();
+        const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+        if (!logSpreadsheetId) {
+            throw new Error("Log spreadsheet ID not found in configuration ('system.spreadsheet.logs').");
+        }
+        const spreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+        console.log(`Opened log spreadsheet: ${spreadsheet.getName()}`);
+
         const sheetName = 'SysFileRegistry';
         let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
@@ -427,7 +434,6 @@ function createSysFileRegistryHeaders() {
             console.log(`Sheet '${sheetName}' was not found and has been created.`);
         }
 
-        const allConfig = ConfigService.getAllConfig();
         const schema = allConfig[`schema.log.${sheetName}`];
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
@@ -450,7 +456,14 @@ function createSysJobQueueHeaders() {
     try {
         console.log(`Running ${functionName}...`);
 
-        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const allConfig = ConfigService.getAllConfig();
+        const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+        if (!logSpreadsheetId) {
+            throw new Error("Log spreadsheet ID not found in configuration ('system.spreadsheet.logs').");
+        }
+        const spreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+        console.log(`Opened log spreadsheet: ${spreadsheet.getName()}`);
+
         const sheetName = 'SysJobQueue';
         let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
@@ -458,7 +471,6 @@ function createSysJobQueueHeaders() {
             console.log(`Sheet '${sheetName}' was not found and has been created.`);
         }
 
-        const allConfig = ConfigService.getAllConfig();
         const schema = allConfig[`schema.log.${sheetName}`];
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
@@ -481,7 +493,14 @@ function createSysLogHeaders() {
     try {
         console.log(`Running ${functionName}...`);
 
-        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const allConfig = ConfigService.getAllConfig();
+        const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+        if (!logSpreadsheetId) {
+            throw new Error("Log spreadsheet ID not found in configuration ('system.spreadsheet.logs').");
+        }
+        const spreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+        console.log(`Opened log spreadsheet: ${spreadsheet.getName()}`);
+
         const sheetName = 'SysLog';
         let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
@@ -489,7 +508,6 @@ function createSysLogHeaders() {
             console.log(`Sheet '${sheetName}' was not found and has been created.`);
         }
 
-        const allConfig = ConfigService.getAllConfig();
         const schema = allConfig[`schema.log.${sheetName}`];
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);

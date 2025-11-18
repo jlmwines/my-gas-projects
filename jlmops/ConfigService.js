@@ -103,10 +103,8 @@ const ConfigService = (function() {
 
     // 2. Perform Fail-Fast Schema Version Check
     const liveVersionSetting = parsedConfig['sys.schema.version'];
-    console.log('Debug: liveVersionSetting:', liveVersionSetting);
     // The property name for the version setting is 'value'.
     const liveVersion = liveVersionSetting ? Number(liveVersionSetting['value']) : 0;
-    console.log('Debug: liveVersion:', liveVersion);
 
     if (liveVersion !== REQUIRED_SCHEMA_VERSION) {
         throw new Error(`Fatal Error: SysConfig schema mismatch. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please run migration scripts.`);

@@ -55,7 +55,7 @@ function getInventoryWidgetData() {
       data: taskCounts
     };
   } catch (e) {
-    LoggerService.error('WebAppInventory', 'getInventoryWidgetData', `Error getting inventory widget data: ${e.message}`);
+    logger.error('WebAppInventory', 'getInventoryWidgetData', `Error getting inventory widget data: ${e.message}`, e);
     return {
       error: `Error getting inventory widget data: ${e.message}`,
       data: null

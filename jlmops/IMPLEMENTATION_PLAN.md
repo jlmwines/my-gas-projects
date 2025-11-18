@@ -249,3 +249,11 @@
     2.  **Create `generate-config.js` (COMPLETED):** Develop the Node.js script that performs the JSON-to-JS conversion.
     3.  **Update Documentation (COMPLETED):** `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` have been updated to reflect this new architecture.
     4.  **Update Developer Workflow (COMPLETED):** Document the new local development workflow (edit JSON, run generator script, commit both files).
+
+### 8.2. Standardize System Logging (COMPLETED)
+*   **Goal:** To ensure all logging across the application is consistent, meaningful, and conforms to the `LoggerService` standard. This improves traceability and reduces log noise.
+*   **Summary of Work:**
+    *   All `console.*` and `Logger.log` calls in core services (`OrchestratorService.js`, `ComaxAdapter.js`, `WebAdapter.js`, `TaskService.js`, `InventoryManagementService.js`, `OrderService.js`, `ValidationService.js`, `AuthService.js`, `ConfigService.js`, `PackingSlipService.js`, `PrintService.js`, and all `WebApp*.js` scripts) were replaced with calls to the global `logger` object, following the `logger.level(serviceName, functionName, message, [errorObject])` format.
+    *   Logging levels were standardized: `ERROR` for critical, process-halting issues; `WARN` for recoverable system-level events; `INFO` for major operations and expected non-error events.
+    *   Circular dependency between `ConfigService` and `LoggerService` was identified and resolved by reverting `ConfigService`'s internal logging to use `console.log`.
+    *   Diagnostic logging was temporarily added to `LoggerService.js` to confirm successful row appending to the `SysLog` sheet, and subsequently removed.

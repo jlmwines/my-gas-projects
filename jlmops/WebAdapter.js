@@ -12,7 +12,9 @@ const WebAdapter = (function() {
    * @returns {Array<Object>} An array of clean, standardized product objects.
    */
   function processProductCsv(csvContent, mapName) {
-    console.log(`WebAdapter: Starting product CSV processing using map: ${mapName}`);
+    const serviceName = 'WebAdapter';
+    const functionName = 'processProductCsv';
+    logger.info(serviceName, functionName, `Starting product CSV processing using map: ${mapName}`);
 
     const columnMap = ConfigService.getConfig(mapName);
     if (!columnMap) {
@@ -21,12 +23,11 @@ const WebAdapter = (function() {
 
     const parsedData = Utilities.parseCsv(csvContent);
     if (parsedData.length < 2) {
-      console.warn('WebAdapter: File is empty or contains only a header.');
+      logger.error(serviceName, functionName, 'File is empty or contains only a header.');
       return [];
     }
     
     const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
-    console.log(`WebAdapter: Detected headers: ${JSON.stringify(headerRow)}`);
     const productObjects = [];
 
     // Start from row 1 to skip the header
@@ -47,15 +48,14 @@ const WebAdapter = (function() {
       productObjects.push(product);
     }
 
-    console.log(`WebAdapter: Successfully processed ${productObjects.length} products.`);
-    if (productObjects.length > 0) {
-      console.log(`WebAdapter: First processed product object: ${JSON.stringify(productObjects[0])}`);
-    }
+    logger.info(serviceName, functionName, `Successfully processed ${productObjects.length} products.`);
     return productObjects;
   }
 
   function processTranslationCsv(csvContent, mapName) {
-    LoggerService.info('WebAdapter', 'processTranslationCsv', `Starting translation CSV processing using map: ${mapName}`);
+    const serviceName = 'WebAdapter';
+    const functionName = 'processTranslationCsv';
+    logger.info(serviceName, functionName, `Starting translation CSV processing using map: ${mapName}`);
 
     const columnMap = ConfigService.getConfig(mapName);
     if (!columnMap) {
@@ -64,12 +64,11 @@ const WebAdapter = (function() {
 
     const parsedData = Utilities.parseCsv(csvContent);
     if (parsedData.length < 2) {
-      LoggerService.warn('WebAdapter', 'processTranslationCsv', 'File is empty or contains only a header.');
+      logger.error(serviceName, functionName, 'File is empty or contains only a header.');
       return [];
     }
     
     const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
-    LoggerService.info('WebAdapter', 'processTranslationCsv', `Detected CSV headers: ${JSON.stringify(headerRow)}`);
     const translationObjects = [];
 
     // Start from row 1 to skip the header
@@ -90,15 +89,14 @@ const WebAdapter = (function() {
       translationObjects.push(translation);
     }
 
-    LoggerService.info('WebAdapter', 'processTranslationCsv', `Successfully processed ${translationObjects.length} translations.`);
-    if (translationObjects.length > 0) {
-      LoggerService.info('WebAdapter', 'processTranslationCsv', `First processed translation object: ${JSON.stringify(translationObjects[0])}`);
-    }
+    logger.info(serviceName, functionName, `Successfully processed ${translationObjects.length} translations.`);
     return translationObjects;
   }
 
   function processOrderCsv(csvContent, orderMapName, lineItemSchemaName) {
-    LoggerService.info('WebAdapter', 'processOrderCsv', `Starting order CSV processing using order map: ${orderMapName} and line item schema: ${lineItemSchemaName}`);
+    const serviceName = 'WebAdapter';
+    const functionName = 'processOrderCsv';
+    logger.info(serviceName, functionName, `Starting order CSV processing using order map: ${orderMapName} and line item schema: ${lineItemSchemaName}`);
 
     const orderColumnMap = ConfigService.getConfig(orderMapName);
     if (!orderColumnMap) {
@@ -112,7 +110,7 @@ const WebAdapter = (function() {
 
     const parsedData = Utilities.parseCsv(csvContent);
     if (parsedData.length < 2) {
-      LoggerService.warn('WebAdapter', 'processOrderCsv', 'File is empty or contains only a header.');
+      logger.error(serviceName, functionName, 'File is empty or contains only a header.');
       return [];
     }
     
@@ -185,7 +183,7 @@ const WebAdapter = (function() {
       orderObjects.push(order);
     }
 
-    LoggerService.info('WebAdapter', 'processOrderCsv', `Successfully processed ${orderObjects.length} orders.`);
+    logger.info(serviceName, functionName, `Successfully processed ${orderObjects.length} orders.`);
     return orderObjects;
   }
 

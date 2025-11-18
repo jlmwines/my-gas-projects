@@ -11,7 +11,9 @@ const ComaxAdapter = (function() {
    * @returns {Array<Object>} An array of clean, standardized product objects.
    */
   function processProductCsv(fileBlob) {
-    console.log('ComaxAdapter: Starting transformation using Google Sheets conversion engine...');
+    const serviceName = 'ComaxAdapter';
+    const functionName = 'processProductCsv';
+    logger.info(serviceName, functionName, 'Starting transformation using Google Sheets conversion engine...');
 
     const indexMap = ConfigService.getConfig('map.comax.product_columns');
     if (!indexMap) {
@@ -29,7 +31,7 @@ const ComaxAdapter = (function() {
     }
 
     if (!allData || allData.length < 2) {
-      console.warn('ComaxAdapter: File is empty or contains only a header after conversion.');
+      logger.error(serviceName, functionName, 'File is empty or contains only a header after conversion.');
       return [];
     }
     
@@ -61,7 +63,7 @@ const ComaxAdapter = (function() {
       productObjects.push(product);
     }
 
-    console.log(`ComaxAdapter: Successfully processed ${productObjects.length} products.`);
+    logger.info(serviceName, functionName, `Successfully processed ${productObjects.length} products.`);
 
     return productObjects;
   }

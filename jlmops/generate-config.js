@@ -79,7 +79,17 @@ function generateSetupConfig() {
             
             // Process templates before adding to the master array
             const processedData = processTemplates(jsonData);
-            masterConfigArray.push(...processedData);
+            
+            // Ensure all rows have 13 columns
+            const paddedData = processedData.map(row => {
+                const newRow = [...row];
+                while (newRow.length < 13) {
+                    newRow.push('');
+                }
+                console.log(`Row length after padding: ${newRow.length}, content: ${JSON.stringify(newRow)}`); // Debug log
+                return newRow;
+            });
+            masterConfigArray.push(...paddedData);
         }
     } catch (error) {
         console.error(`Error reading or parsing JSON files from ${inputDir}:`, error);

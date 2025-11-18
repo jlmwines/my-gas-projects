@@ -6,20 +6,17 @@ const ValidationService = {
    * Compares the on-hold inventory data between jlmops and the legacy system.
    */
   validateOnHoldInventory() {
-    const legacySheetName = 'OnHoldInventory';
-    const jlmopsSheetName = 'SysInventoryOnHold'; // From DATA_MODEL.md
-
+    const serviceName = 'ValidationService';
+    const functionName = 'validateOnHoldInventory';
     try {
-      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacySheetName);
-      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsSheetName); // Assuming jlmops data spreadsheet ID is configured
+      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OnHoldInventory');
+      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysInventoryOnHold');
 
-      // Convert arrays of objects to maps for easier comparison
       const legacyMap = new Map(legacyData.map(row => [row['product SKU'], row['on hold quantity']]));
       const jlmopsMap = new Map(jlmopsData.map(row => [row.sio_SKU, row.sio_OnHoldQuantity]));
 
       let discrepancies = [];
 
-      // Check for discrepancies in legacyMap
       for (const [sku, legacyQuantity] of legacyMap.entries()) {
         const jlmopsQuantity = jlmopsMap.get(sku);
         if (jlmopsQuantity === undefined) {
@@ -29,7 +26,6 @@ const ValidationService = {
         }
       }
 
-      // Check for SKUs present only in jlmopsMap
       for (const [sku, jlmopsQuantity] of jlmopsMap.entries()) {
         if (!legacyMap.has(sku)) {
           discrepancies.push(`JLMops SKU ${sku} with quantity ${jlmopsQuantity} not found in Legacy.`);
@@ -37,14 +33,13 @@ const ValidationService = {
       }
 
       if (discrepancies.length === 0) {
-        Logger.log('ValidationService: On-Hold Inventory validation successful. Data matches.');
+        logger.info(serviceName, functionName, 'On-Hold Inventory validation successful. Data matches.');
       } else {
-        Logger.log('ValidationService: On-Hold Inventory validation failed. Discrepancies found:');
-        discrepancies.forEach(d => Logger.log(d));
+        logger.info(serviceName, functionName, `On-Hold Inventory validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
       }
 
     } catch (e) {
-      Logger.log(`ValidationService: Error during On-Hold Inventory validation: ${e.message}`);
+      logger.error(serviceName, functionName, `Error during On-Hold Inventory validation: ${e.message}`, e);
     }
   },
 
@@ -117,16 +112,18 @@ const ValidationService = {
    * @param {Array<string>} columnsToCompare The names of the columns to compare.
    */
   _validateCsvExport(legacyFolderId, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, validationName, keyColumn, columnsToCompare) {
+    const serviceName = 'ValidationService';
+    const functionName = '_validateCsvExport';
     try {
       const legacyFile = this._getLatestFile(legacyFolderId, legacyFileNamePattern);
       const jlmopsFile = this._getLatestFile(jlmopsFolderId, jlmopsFileNamePattern);
 
       if (!legacyFile) {
-        Logger.log(`ValidationService: No legacy file found for ${validationName}`);
+        logger.info(serviceName, functionName, `No legacy file found for ${validationName}`);
         return;
       }
       if (!jlmopsFile) {
-        Logger.log(`ValidationService: No jlmops file found for ${validationName}`);
+        logger.info(serviceName, functionName, `No jlmops file found for ${validationName}`);
         return;
       }
 
@@ -136,7 +133,7 @@ const ValidationService = {
       this._compareCsvData(legacyContent, jlmopsContent, validationName, keyColumn, columnsToCompare);
 
     } catch (e) {
-      Logger.log(`ValidationService: Error during ${validationName} validation: ${e.message}`);
+      logger.error(serviceName, functionName, `Error during ${validationName} validation: ${e.message}`, e);
     }
   },
 
@@ -171,6 +168,8 @@ const ValidationService = {
    * @param {Array<string>} columnsToCompare
    */
   _compareCsvData(legacyContent, jlmopsContent, validationName, keyColumn, columnsToCompare) {
+    const serviceName = 'ValidationService';
+    const functionName = '_compareCsvData';
     const legacyData = this._parseCsv(legacyContent);
     const jlmopsData = this._parseCsv(jlmopsContent);
 
@@ -200,10 +199,9 @@ const ValidationService = {
     }
 
     if (discrepancies.length === 0) {
-      Logger.log(`ValidationService: ${validationName} validation successful. Data is equivalent.`);
+      logger.info(serviceName, functionName, `${validationName} validation successful. Data is equivalent.`);
     } else {
-      Logger.log(`ValidationService: ${validationName} validation failed. Discrepancies found:`);
-      discrepancies.forEach(d => Logger.log(d));
+      logger.info(serviceName, functionName, `${validationName} validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
     }
   },
 
@@ -236,12 +234,11 @@ const ValidationService = {
    * Compares the highest order number between jlmops and the legacy system.
    */
   validateHighestOrderNumber() {
-    const legacySheetName = 'OrdersM';
-    const jlmopsSheetName = 'WebOrdM'; // From DATA_MODEL.md
-
+    const serviceName = 'ValidationService';
+    const functionName = 'validateHighestOrderNumber';
     try {
-      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacySheetName);
-      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsSheetName);
+      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
 
       const legacyOrderNumbers = legacyData.map(row => parseInt(row['order_number'])).filter(num => !isNaN(num));
       const jlmopsOrderNumbers = jlmopsData.map(row => parseInt(row.wom_OrderNumber)).filter(num => !isNaN(num));
@@ -250,13 +247,13 @@ const ValidationService = {
       const maxJlmopsOrderNumber = jlmopsOrderNumbers.length > 0 ? Math.max(...jlmopsOrderNumbers) : 0;
 
       if (maxLegacyOrderNumber === maxJlmopsOrderNumber) {
-        Logger.log(`ValidationService: Highest Order Number validation successful. Both systems report ${maxJlmopsOrderNumber}.`);
+        logger.info(serviceName, functionName, `Highest Order Number validation successful. Both systems report ${maxJlmopsOrderNumber}.`);
       } else {
-        Logger.log(`ValidationService: Highest Order Number validation failed. Legacy: ${maxLegacyOrderNumber}, JLMops: ${maxJlmopsOrderNumber}.`);
+        logger.info(serviceName, functionName, `Highest Order Number validation failed. Legacy: ${maxLegacyOrderNumber}, JLMops: ${maxJlmopsOrderNumber}.`);
       }
 
     } catch (e) {
-      Logger.log(`ValidationService: Error during Highest Order Number validation: ${e.message}`);
+      logger.error(serviceName, functionName, `Error during Highest Order Number validation: ${e.message}`, e);
     }
   },
 
@@ -264,15 +261,13 @@ const ValidationService = {
    * Compares the prepared packing slip data between jlmops and the legacy system.
    */
   validatePackingSlipData() {
-    const legacyQueueSheetName = 'PackingQueue';
-    const legacyRowsSheetName = 'PackingRows';
-    const jlmopsCacheSheetName = 'SysPackingCache';
-
+    const serviceName = 'ValidationService';
+    const functionName = 'validatePackingSlipData';
     try {
       // 1. Read data from all sheets
-      const legacyQueueData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacyQueueSheetName);
-      const legacyRowsData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, legacyRowsSheetName);
-      const jlmopsCacheData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, jlmopsCacheSheetName);
+      const legacyQueueData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingQueue');
+      const legacyRowsData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingRows');
+      const jlmopsCacheData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysPackingCache');
 
       // 2. Normalize Legacy Data
       const legacyOrders = new Map();
@@ -346,14 +341,13 @@ const ValidationService = {
       }
 
       if (discrepancies.length === 0) {
-        Logger.log('ValidationService: Packing Slip Data validation successful. Data matches.');
+        logger.info(serviceName, functionName, 'Packing Slip Data validation successful. Data matches.');
       } else {
-        Logger.log('ValidationService: Packing Slip Data validation failed. Discrepancies found:');
-        discrepancies.forEach(d => Logger.log(d));
+        logger.info(serviceName, functionName, `Packing Slip Data validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
       }
 
     } catch (e) {
-      Logger.log(`ValidationService: Error during Packing Slip Data validation: ${e.message}`);
+      logger.error(serviceName, functionName, `Error during Packing Slip Data validation: ${e.message}`, e);
     }
   },
 
@@ -365,6 +359,8 @@ const ValidationService = {
    * @param {string} [message=''] An optional error message.
    */
   _updateJobStatus(rowNumber, status, message = '') {
+    const serviceName = 'ValidationService';
+    const functionName = '_updateJobStatus';
     try {
       const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
       const sheetNames = ConfigService.getConfig('system.sheet_names');
@@ -381,7 +377,7 @@ const ValidationService = {
       if (rowNumber && messageCol > 0) jobQueueSheet.getRange(rowNumber, messageCol).setValue(message);
       if (rowNumber && timestampCol > 0) jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
     } catch (e) {
-      LoggerService.error('ValidationService', '_updateJobStatus', `Failed to update job status: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Failed to update job status: ${e.message}`, e);
     }
   },
 
@@ -391,7 +387,9 @@ const ValidationService = {
    * @param {number} rowNumber The row number in the SysJobQueue sheet for the current job.
    */
   runCriticalValidations(jobType, rowNumber) {
-    LoggerService.info('ValidationService', 'runCriticalValidations', `Starting critical validation job: ${jobType} (Row: ${rowNumber})`);
+    const serviceName = 'ValidationService';
+    const functionName = 'runCriticalValidations';
+    logger.info(serviceName, functionName, `Starting critical validation job: ${jobType} (Row: ${rowNumber})`);
     this._updateJobStatus(rowNumber, 'PROCESSING'); // Set status to PROCESSING immediately
 
     let overallStatus = 'COMPLETED';
@@ -406,7 +404,7 @@ const ValidationService = {
         .map(key => allConfig[key]);
 
       if (criticalValidationRules.length === 0) {
-        LoggerService.warn('ValidationService', 'runCriticalValidations', 'No enabled high-priority validation rules found in SysConfig.');
+        logger.warn(serviceName, functionName, 'No enabled high-priority validation rules found in SysConfig.');
         this._updateJobStatus(rowNumber, 'COMPLETED', 'No high-priority rules to execute.');
         return;
       }
@@ -417,27 +415,27 @@ const ValidationService = {
       for (const rule of criticalValidationRules) {
         const validationFunctionName = rule.validation_function_name; // Assuming this field exists in SysConfig
         if (validationFunctionName && typeof this[validationFunctionName] === 'function') {
-          LoggerService.info('ValidationService', 'runCriticalValidations', `Executing critical validation: ${validationFunctionName}`);
+          logger.info(serviceName, functionName, `Executing critical validation: ${validationFunctionName}`);
           try {
             this[validationFunctionName]();
           } catch (e) {
-            LoggerService.error('ValidationService', 'runCriticalValidations', `Error executing ${validationFunctionName}: ${e.message}`, e);
+            logger.error(serviceName, functionName, `Error executing ${validationFunctionName}: ${e.message}`, e);
             overallStatus = 'FAILED';
             errorMessage += `Validation '${validationFunctionName}' failed: ${e.message}\n`;
             // Continue to next validation even if one fails
           }
         } else {
-          LoggerService.warn('ValidationService', 'runCriticalValidations', `Validation function '${validationFunctionName}' not found or not a function in ValidationService for rule: ${rule.name}`);
+          logger.warn(serviceName, functionName, `Validation function '${validationFunctionName}' not found or not a function in ValidationService for rule: ${rule.name}`);
         }
       }
 
     } catch (e) {
-      LoggerService.error('ValidationService', 'runCriticalValidations', `Error during critical validation orchestration: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error during critical validation orchestration: ${e.message}`, e);
       overallStatus = 'FAILED';
       errorMessage = `Orchestration failed: ${e.message}`;
     } finally {
       this._updateJobStatus(rowNumber, overallStatus, errorMessage.trim());
-      LoggerService.info('ValidationService', 'runCriticalValidations', `Critical validation job ${jobType} finished with status: ${overallStatus}`);
+      logger.info(serviceName, functionName, `Critical validation job ${jobType} finished with status: ${overallStatus}`);
     }
   },
 };

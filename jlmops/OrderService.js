@@ -15,6 +15,8 @@ function OrderService(productService) {
    * @returns {Array<Object>} An array of order objects.
    */
   this.getAllOrders = function() {
+    const serviceName = 'OrderService';
+    const functionName = 'getAllOrders';
     try {
       const allConfig = ConfigService.getAllConfig();
       const sheetNames = allConfig['system.sheet_names'];
@@ -23,7 +25,7 @@ function OrderService(productService) {
       const sheet = ss.getSheetByName(ORDER_SHEET_NAME);
 
       if (!sheet) {
-        logger.error(`Order sheet '${ORDER_SHEET_NAME}' not found.`);
+        logger.error(serviceName, functionName, `Order sheet '${ORDER_SHEET_NAME}' not found.`);
         return [];
       }
 
@@ -31,7 +33,7 @@ function OrderService(productService) {
       const values = dataRange.getValues();
 
       if (values.length === 0) {
-        logger.info(`No data found in order sheet '${ORDER_SHEET_NAME}'.`);
+        logger.info(serviceName, functionName, `No data found in order sheet '${ORDER_SHEET_NAME}'.`);
         return [];
       }
 
@@ -47,11 +49,11 @@ function OrderService(productService) {
         orders.push(order);
       }
 
-      logger.info(`Successfully retrieved ${orders.length} orders from '${ORDER_SHEET_NAME}'.`);
+      logger.info(serviceName, functionName, `Successfully retrieved ${orders.length} orders from '${ORDER_SHEET_NAME}'.`);
       return orders;
 
     } catch (e) {
-      logger.error(`Error getting all orders: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error getting all orders: ${e.message}`, e);
       return [];
     }
   };
@@ -62,19 +64,21 @@ function OrderService(productService) {
    * @returns {Object|null} The order object if found, otherwise null.
    */
   this.getOrderById = function(orderId) {
+    const serviceName = 'OrderService';
+    const functionName = 'getOrderById';
     try {
       const orders = this.getAllOrders(); // For simplicity, fetch all and filter
       const order = orders.find(o => o.ID === orderId || o.OrderNumber === orderId); // Assuming 'ID' or 'OrderNumber' as identifier
 
       if (order) {
-        logger.info(`Found order with ID/OrderNumber: ${orderId}`);
+        logger.info(serviceName, functionName, `Found order with ID/OrderNumber: ${orderId}`);
       } else {
-        logger.warn(`Order with ID/OrderNumber: ${orderId} not found.`);
+        logger.warn(serviceName, functionName, `Order with ID/OrderNumber: ${orderId} not found.`);
       }
       return order || null;
 
     } catch (e) {
-      logger.error(`Error getting order by ID ${orderId}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error getting order by ID ${orderId}: ${e.message}`, e);
       return null;
     }
   };
@@ -86,10 +90,12 @@ function OrderService(productService) {
    * @returns {Array<Object>} An array of order item objects.
    */
   this.getOrderItems = function(orderId) {
+    const serviceName = 'OrderService';
+    const functionName = 'getOrderItems';
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const ORDER_ITEMS_SHEET_NAME = sheetNames.WebOrdItemsM;
-    logger.info(`Attempting to retrieve items for order ID: ${orderId}. (Placeholder: Full implementation needed)`);
+    logger.info(serviceName, functionName, `Attempting to retrieve items for order ID: ${orderId}. (Placeholder: Full implementation needed)`);
     // TODO: Implement logic to fetch order items from ORDER_ITEMS_SHEET_NAME
     // Filter by orderId
     return [];
@@ -121,7 +127,10 @@ function OrderService(productService) {
    * @param {string} jobType The type of job to process.
    * @param {number} rowNumber The row number of the job in the queue.
    */
-  this.processJob = function(jobType, rowNumber, productService) {    logger.info(`OrderService processing job '${jobType}' on row ${rowNumber}`);
+  this.processJob = function(jobType, rowNumber, productService) {
+    const serviceName = 'OrderService';
+    const functionName = 'processJob';
+    logger.info(serviceName, functionName, `Processing job '${jobType}' on row ${rowNumber}`);
     try {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
@@ -137,7 +146,7 @@ function OrderService(productService) {
         const ordersWithLineItems = this.importWebOrdersToStaging(archiveFileId);
         
         if (!_runOrderStagingValidation('order_staging')) {
-            logger.warn('OrderService', 'processJob', 'Order staging validation failed. Job will be QUARANTINED.');
+            logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.');
             _updateJobStatus(rowNumber, 'QUARANTINED');
             return;
         }
@@ -147,11 +156,13 @@ function OrderService(productService) {
       _updateJobStatus(rowNumber, 'COMPLETED');
       OrchestratorService.unblockDependentJobs(jobType);
     } catch (e) {
-      logger.error(`Failed to process job on row ${rowNumber}: ${e.message}`);
+      logger.error(serviceName, functionName, `Failed to process job on row ${rowNumber}: ${e.message}`, e);
       _updateJobStatus(rowNumber, 'FAILED', e.message);
     }
   };
   function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
+    const serviceName = 'OrderService';
+    const functionName = '_getSheetDataAsMap';
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
@@ -159,7 +170,7 @@ function OrderService(productService) {
       throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID: ${dataSpreadsheet.getId()}. This is a critical configuration error.`);
     }
     if (sheet.getLastRow() < 2) {
-      logger.warn('OrderService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty (only headers or less).`);
+      logger.info(serviceName, functionName, `Sheet '${sheetName}' is empty (only headers or less).`);
       return { map: new Map(), headers: headers, values: [] };
     }
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
@@ -178,7 +189,7 @@ function OrderService(productService) {
         dataMap.set(String(key).trim(), rowObject);
       }
     });
-    logger.info('OrderService', '_getSheetDataAsMap', `Loaded ${dataMap.size} rows from ${sheetName}.`);
+    logger.info(serviceName, functionName, `Loaded ${dataMap.size} rows from ${sheetName}.`);
     return { map: dataMap, headers: headers, values: values };
   }
 
@@ -217,19 +228,23 @@ function OrderService(productService) {
   }
 
   function _createTaskFromFailure(rule, dataRow, joinKey) {
+    const serviceName = 'OrderService';
+    const functionName = '_createTaskFromFailure';
     const title = _formatString(rule.on_failure_title, dataRow);
     const notes = _formatString(rule.on_failure_notes, dataRow);
     const orderIdKey = Object.keys(dataRow).find(k => k.endsWith('_OrderId'));
     const entityId = orderIdKey ? dataRow[orderIdKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
 
-    logger.info('OrderService', '_createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
+    logger.info(serviceName, functionName, `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
     TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
     
     return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
   }
 
   function _executeRowCountComparison(rule, dataMaps) {
-    logger.info('OrderService', '_executeRowCountComparison', `Executing rule: ${rule.on_failure_title}`);
+    const serviceName = 'OrderService';
+    const functionName = '_executeRowCountComparison';
+    logger.info(serviceName, functionName, `Executing rule: ${rule.on_failure_title}`);
     let quarantineTriggered = false;
 
     const sourceSheetData = dataMaps[rule.source_sheet];
@@ -247,12 +262,14 @@ function OrderService(productService) {
   }
 
   function _runOrderStagingValidation(suiteName) {
-    logger.info('OrderService', '_runOrderStagingValidation', `Starting validation for suite: ${suiteName}`);
+    const serviceName = 'OrderService';
+    const functionName = '_runOrderStagingValidation';
+    logger.info(serviceName, functionName, `Starting validation for suite: ${suiteName}`);
     const allConfig = ConfigService.getAllConfig();
     const validationRules = Object.keys(allConfig).filter(k => 
       k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
     );
-    logger.info('OrderService', '_runOrderStagingValidation', `Found ${validationRules.length} enabled rules for suite: ${suiteName}.`);
+    logger.info(serviceName, functionName, `Found ${validationRules.length} enabled rules for suite: ${suiteName}.`);
 
     if (validationRules.length === 0) return true;
 
@@ -269,7 +286,7 @@ function OrderService(productService) {
     requiredSheets.forEach(sheetName => {
         const schema = allConfig[`schema.data.${sheetName}`];
         if (!schema) {
-            logger.warn('OrderService', '_runOrderStagingValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            logger.error(serviceName, functionName, `Schema not found for required sheet: ${sheetName}. Skipping load.`);
             return;
         };
         const headers = schema.headers.split(',');
@@ -286,16 +303,16 @@ function OrderService(productService) {
             ruleQuarantineTriggered = _executeRowCountComparison(rule, sheetDataCache);
             break;
           default:
-            logger.warn('OrderService', '_runOrderStagingValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
+            logger.warn(serviceName, functionName, `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
         }
         if (ruleQuarantineTriggered) {
             quarantineTriggered = true;
         }
       } catch (e) {
-        logger.error('OrderService', '_runOrderStagingValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error executing rule ${ruleKey}: ${e.message}`, e);
         if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
             quarantineTriggered = true;
-            logger.warn('OrderService', '_runOrderStagingValidation', `Rule ${ruleKey} encountered an error and triggered quarantine.`);
+            logger.info(serviceName, functionName, `Rule ${ruleKey} encountered an error and triggered quarantine.`);
         }
       }
     });
@@ -307,8 +324,9 @@ function OrderService(productService) {
    * @param {string} archiveFileId The ID of the file in the archive to import.
    */
   this.importWebOrdersToStaging = function(archiveFileId) {
+    const serviceName = 'OrderService';
     const functionName = 'importWebOrdersToStaging';
-    logger.info(`Starting ${functionName} for file ID: ${archiveFileId}`);
+    logger.info(serviceName, functionName, `Starting ${functionName} for file ID: ${archiveFileId}`);
 
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -320,10 +338,10 @@ function OrderService(productService) {
       const ordersWithLineItems = WebAdapter.processOrderCsv(csvContent, 'map.web.order_columns', 'web.order.line_item_schema');
 
       if (ordersWithLineItems.length === 0) {
-        logger.warn('Web orders file is empty or contains no valid orders. Nothing to import.');
+        logger.error(serviceName, functionName, 'Web orders file is empty or contains no valid orders. Nothing to import.');
         return []; // Return empty array if no orders
       }
-      logger.info(`Successfully parsed ${ordersWithLineItems.length} web orders with line items.`);
+      logger.info(serviceName, functionName, `Successfully parsed ${ordersWithLineItems.length} web orders with line items.`);
 
       // 2. Write the structured data to the WebOrdS staging sheet
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -346,14 +364,14 @@ function OrderService(productService) {
       // Write new data
       if (stagingData.length > 0) {
         stagingSheet.getRange(2, 1, stagingData.length, stagingData[0].length).setValues(stagingData);
-        logger.info(`Successfully wrote ${stagingData.length} processed orders to the WebOrdS staging sheet.`);
+        logger.info(serviceName, functionName, `Successfully wrote ${stagingData.length} processed orders to the WebOrdS staging sheet.`);
       }
 
       // 3. Return the in-memory object for immediate processing
       return ordersWithLineItems;
 
     } catch (e) {
-      logger.error(`Error in ${functionName}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
       throw e; // Re-throw to be caught by processJob
     }
   };
@@ -361,8 +379,9 @@ function OrderService(productService) {
 
 
   this.exportOrdersToComax = function() {
+    const serviceName = 'OrderService';
     const functionName = 'exportOrdersToComax';
-    logger.info(`Starting ${functionName}...`);
+    logger.info(serviceName, functionName, `Starting ${functionName}...`);
 
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -398,7 +417,7 @@ function OrderService(productService) {
           orderStatusMap.set(String(orderId), status);
         }
       });
-      logger.info(`Created status map for ${orderStatusMap.size} orders from WebOrdM.`);
+      logger.info(serviceName, functionName, `Created status map for ${orderStatusMap.size} orders from WebOrdM.`);
 
       // 2. Find orders to export from SysOrdLog
       const logData = logSheet.getDataRange().getValues();
@@ -410,7 +429,7 @@ function OrderService(productService) {
         throw new Error("Could not find required columns 'sol_ComaxExportStatus' or 'sol_OrderId' in SysOrdLog sheet. Please check sheet headers.");
       }
       
-      logger.info(`Found ${logData.length} total logs in SysOrdLog.`);
+      logger.info(serviceName, functionName, `Found ${logData.length} total logs in SysOrdLog.`);
 
       const ordersToExport = logData.filter(row => {
         const orderId = String(row[orderIdCol]);
@@ -423,12 +442,12 @@ function OrderService(productService) {
         return isNotExported && isEligibleStatus;
       });
       
-      logger.info(`Found ${ordersToExport.length} orders with eligible status ('processing' or 'completed') that have not been exported.`);
+      logger.info(serviceName, functionName, `Found ${ordersToExport.length} orders with eligible status ('processing' or 'completed') that have not been exported.`);
 
       const orderIdsToExport = new Set(ordersToExport.map(row => row[orderIdCol]));
 
       if (orderIdsToExport.size === 0) {
-        logger.info("No orders to export to Comax.");
+        logger.info(serviceName, functionName, "No orders to export to Comax.");
         return;
       }
 
@@ -458,21 +477,21 @@ function OrderService(productService) {
         csvRows.push([sku, comaxExportData[sku]]);
       }
       const csvContent = csvRows.map(row => row.join(',')).join('\n');
-      logger.info(`Generated CSV content:\n${csvContent}`);
+      logger.info(serviceName, functionName, `Generated CSV content with ${csvRows.length - 1} items.`);
 
       // 4. Save CSV to Drive
       const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      logger.info(`Using export folder ID: ${exportFolderId}`);
+      logger.info(serviceName, functionName, `Using export folder ID: ${exportFolderId}`);
 
       const exportFolder = DriveApp.getFolderById(exportFolderId);
       if (!exportFolder) {
         throw new Error(`Failed to find export folder with ID: ${exportFolderId}. Please check configuration and folder permissions.`);
       }
-      logger.info(`Successfully retrieved export folder: ${exportFolder.getName()}`);
+      logger.info(serviceName, functionName, `Successfully retrieved export folder: ${exportFolder.getName()}`);
 
       const fileName = `ComaxExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
       const file = exportFolder.createFile(fileName, csvContent, MimeType.CSV);
-      logger.info(`Comax export file created: ${file.getName()} (ID: ${file.getId()})`);
+      logger.info(serviceName, functionName, `Comax export file created: ${file.getName()} (ID: ${file.getId()})`);
 
       // 5. Update SysOrdLog
       const now = new Date();
@@ -484,24 +503,20 @@ function OrderService(productService) {
         logSheet.getRange(rowIndex, comaxExportTimestampCol + 1).setValue(now);
       }
       
-      logger.info(`Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`);
+      logger.info(serviceName, functionName, `Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`);
 
       // Create a task for admin confirmation
       const taskTitle = 'Confirm Comax Order Export';
       const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
       TaskService.createTask('task.confirmation.comax_export', file.getId(), taskTitle, taskNotes);
 
-            logger.info(`${functionName} completed successfully.`);
+      logger.info(serviceName, functionName, `${functionName} completed successfully.`);
 
-          } catch (e) {
-
-            logger.error(`Error in ${functionName}: ${e.message}`, e);
-
-            throw e;
-
-          }
-
-        };
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+      throw e;
+    }
+  };
 
       
 
@@ -514,206 +529,106 @@ function OrderService(productService) {
          */
 
         this.getOnHoldOrderCount = function() {
-
+          const serviceName = 'OrderService';
           const functionName = 'getOnHoldOrderCount';
-
           try {
-
             const allConfig = ConfigService.getAllConfig();
-
             const sheetNames = allConfig['system.sheet_names'];
-
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-
             const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-
       
-
             if (!logSheet) {
-
               throw new Error("Required sheet (SysOrdLog) not found.");
-
             }
-
       
-
             const logData = logSheet.getDataRange().getValues();
-
             const logHeaders = logData.shift();
-
             const orderStatusCol = logHeaders.indexOf('sol_OrderStatus');
-
       
-
             if (orderStatusCol === -1) {
-
               throw new Error("Could not find 'sol_OrderStatus' in SysOrdLog sheet.");
-
             }
-
       
-
             const onHoldOrders = logData.filter(row => String(row[orderStatusCol]).toLowerCase() === 'on-hold');
-
             return onHoldOrders.length;
-
       
-
           } catch (e) {
-
-            logger.error(`Error in ${functionName}: ${e.message}`, e);
-
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
             return -1;
-
           }
-
         };
-
-      
-
-        /**
-
-         * Retrieves the count of orders with 'processing' status from SysOrdLog.
-
-         * @returns {number} The count of processing orders.
-
-         */
 
         this.getProcessingOrderCount = function() {
-
+          const serviceName = 'OrderService';
           const functionName = 'getProcessingOrderCount';
-
           try {
-
             const allConfig = ConfigService.getAllConfig();
-
             const sheetNames = allConfig['system.sheet_names'];
-
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-
             const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-
       
-
             if (!logSheet) {
-
               throw new Error("Required sheet (SysOrdLog) not found.");
-
             }
-
       
-
             const logData = logSheet.getDataRange().getValues();
-
             const logHeaders = logData.shift();
-
             const orderStatusCol = logHeaders.indexOf('sol_OrderStatus');
-
       
-
             if (orderStatusCol === -1) {
-
               throw new Error("Could not find 'sol_OrderStatus' in SysOrdLog sheet.");
-
             }
-
       
-
             const processingOrders = logData.filter(row => String(row[orderStatusCol]).toLowerCase() === 'processing');
-
             return processingOrders.length;
-
       
-
           } catch (e) {
-
-            logger.error(`Error in ${functionName}: ${e.message}`, e);
-
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
             return -1;
-
           }
-
         };
 
-      
-
-        /**
-
-         * Retrieves the count of packing slips with 'Ready' status from SysOrdLog.
-
-         * @returns {number} The count of packing slips ready for printing.
-
-         */
-
         this.getPackingSlipsReadyCount = function() {
-
+          const serviceName = 'OrderService';
           const functionName = 'getPackingSlipsReadyCount';
-
           try {
-
             const allConfig = ConfigService.getAllConfig();
-
             const sheetNames = allConfig['system.sheet_names'];
-
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-
             const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
-
       
-
             if (!logSheet) {
-
               throw new Error("Required sheet (SysOrdLog) not found.");
-
             }
-
       
-
             const logData = logSheet.getDataRange().getValues();
-
             const logHeaders = logData.shift();
-
             const packingStatusCol = logHeaders.indexOf('sol_PackingStatus');
-
       
-
             if (packingStatusCol === -1) {
-
               throw new Error("Could not find 'sol_PackingStatus' in SysOrdLog sheet.");
-
             }
-
       
-
             const readyPackingSlips = logData.filter(row => String(row[packingStatusCol]) === 'Ready');
-
             return readyPackingSlips.length;
-
       
-
           } catch (e) {
-
-            logger.error(`Error in ${functionName}: ${e.message}`, e);
-
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
             return -1;
-
           }
-
         };
 
   this.prepareInitialPackingData = function(orderIds) {
+    const serviceName = 'OrderService';
     const functionName = 'prepareInitialPackingData';
-    logger.info(`Starting ${functionName} for ${orderIds.length} orders...`);
+    logger.info(serviceName, functionName, `Starting ${functionName} for ${orderIds.length} orders...`);
 
     try {
         if (!orderIds || orderIds.length === 0) {
-            logger.info('No order IDs provided for initial packing data preparation. Exiting.');
+            logger.info(serviceName, functionName, 'No order IDs provided for initial packing data preparation. Exiting.');
             return;
         }
 
@@ -768,21 +683,22 @@ function OrderService(productService) {
         if (finalCacheData.length > 0) {
             cacheSheet.getRange(2, 1, finalCacheData.length, finalCacheData[0].length).setValues(finalCacheData);
         }
-        logger.info(`Upserted ${newCacheRows.length} item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
+        logger.info(serviceName, functionName, `Upserted ${newCacheRows.length} item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
 
         // 4. Now, call the PackingSlipService to enrich this data
         PackingSlipService.preparePackingData(orderIds);
-        logger.info(`Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`);
+        logger.info(serviceName, functionName, `Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`);
 
     } catch (e) {
-        logger.error(`Error in ${functionName}: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
         throw e;
     }
   };
 
   this.processStagedOrders = function(ordersWithLineItems, productService) {
+    const serviceName = 'OrderService';
     const functionName = 'processStagedOrders';
-    logger.info(`Starting ${functionName}...`);
+    logger.info(serviceName, functionName, `Starting ${functionName}...`);
 
     try {
         const allConfig = ConfigService.getAllConfig();
@@ -794,7 +710,7 @@ function OrderService(productService) {
         const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
         if (!ordersWithLineItems || ordersWithLineItems.length === 0) {
-            logger.warn('No staged orders to process.');
+            logger.info(serviceName, functionName, 'No staged orders to process.');
             return;
         }
 
@@ -933,7 +849,7 @@ function OrderService(productService) {
                 }
                 const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
                 if (!webIdEn) {
-                    logger.warn(`OrderService:processLineItems`, `SKU-to-WebIdEn lookup failed for SKU [${item.SKU}] in Order ID [${order.orderId}].`);
+                    logger.error(serviceName, functionName, `SKU-to-WebIdEn lookup failed for SKU [${item.SKU}] in Order ID [${order.orderId}].`);
                 }
                 const newItemData = { woi_OrderItemId: ++itemMasterIdCounter, woi_OrderId: order.orderId, woi_WebIdEn: webIdEn, woi_SKU: item.SKU, woi_Name: item.Name, woi_Quantity: item.Quantity, woi_ItemTotal: item.Total };
                 allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
@@ -980,24 +896,25 @@ function OrderService(productService) {
         }
         if (logData.length > 0) {
             logSheet.getRange(2, 1, logData.length, logHeaders.length).setValues(logData);
-            logger.info(`Upserted ${logData.length} total logs in SysOrdLog.`);
+            logger.info(serviceName, functionName, `Upserted ${logData.length} total logs in SysOrdLog.`);
         }
 
         // --- 5. Trigger Enrichment for Eligible Orders ---
         if (orderIdsToRefresh.size > 0) {
-            logger.info(`Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`);
+            logger.info(serviceName, functionName, `Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`);
             this.prepareInitialPackingData(Array.from(orderIdsToRefresh));
         }
 
-        logger.info(`${functionName} completed successfully.`);
+        logger.info(serviceName, functionName, `${functionName} completed successfully.`);
 
     } catch (e) {
-        logger.error(`Error in ${functionName}: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
         throw e;
         }
       };
     
       this.getComaxExportOrderCount = function() {
+        const serviceName = 'OrderService';
         const functionName = 'getComaxExportOrderCount';
         try {
           const allConfig = ConfigService.getAllConfig();
@@ -1041,7 +958,7 @@ function OrderService(productService) {
           return ordersToExport.length;
     
         } catch (e) {
-          logger.error(`Error in ${functionName}: ${e.message}`, e);
+          logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
           return -1; // Return -1 to indicate an error to the frontend
         }
       };

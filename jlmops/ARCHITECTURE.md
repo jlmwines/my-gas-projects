@@ -213,13 +213,22 @@ Specifically for the Comax Products import, the workflow identifies new file ver
 
 This section outlines the critical rules and patterns for managing the system's configuration and handling spreadsheet data to ensure stability and prevent common errors.
 
-### 6.1. `SetupConfig.js` as the Single Source of Truth
+### 6.1. Configuration as Code: A Hybrid Approach
 
-The `SysConfig` Google Sheet is the live configuration for the application, but it is not the master source of truth.
+The system employs a hybrid "Configuration as Code" model to balance maintainability, safety, and the specific requirements of the Google Apps Script environment.
 
-*   **Master Source:** The JavaScript file `jlmops/SetupConfig.js` is the **single source of truth** for all system configuration. The master configuration is defined as a hardcoded array within the `getMasterConfiguration()` function.
-*   **Update Workflow:** To make any changes to the system's configuration (including UI templates, validation rules, or sheet names), you **must** edit the array in `SetupConfig.js`. After the script is updated and pushed, an administrator must run the `rebuildSysConfigFromSource()` function from the Apps Script editor. This function will completely overwrite the `SysConfig` sheet with the data from the script.
-*   **Warning:** Manual edits to the `SysConfig` sheet will be lost the next time `rebuildSysConfigFromSource()` is run. Do not edit the sheet directly.
+*   **Primary Source of Truth (`SysConfig.json`):** The ultimate source of truth for all system configuration is a JSON file named `jlmops/SysConfig.json` located in the project root. This file contains all configuration data in a structured, human-readable format. **This is the only file that should be manually edited for configuration changes.**
+
+*   **Build Process (`generate-config.js`):** A local Node.js script, `generate-config.js`, serves as a build step. This script reads `jlmops/SysConfig.json`, validates its structure, and generates the `jlmops/SetupConfig.js` file.
+
+*   **Generated Artifact (`SetupConfig.js`):** The `jlmops/SetupConfig.js` file is a **machine-generated artifact**. It should **not** be edited manually. It contains the `getMasterConfiguration()` function, which returns the configuration data as a hardcoded JavaScript array. This file is committed to version control alongside `SysConfig.json` to ensure that the deployed code is always in sync with the configuration source.
+
+*   **Deployment and Execution:** The standard `clasp push` command deploys the generated `SetupConfig.js` to the Google Apps Script project. The existing `rebuildSysConfigFromSource()` function is then run, which reads from the generated script to populate the live `SysConfig` Google Sheet.
+
+This architecture ensures:
+1.  **Safety:** Manual edits are made to a simple data file (JSON), not a complex script file, dramatically reducing the risk of syntax errors that could break the application.
+2.  **Maintainability:** The JSON format is easier to read, edit, and manage under version control.
+3.  **Consistency:** The build step guarantees that the deployed code is always a direct and valid representation of the master configuration.
 
 ### 6.2. `ConfigService.js` and Caching
 

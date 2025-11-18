@@ -4,40 +4,98 @@
 
 <script>
   /**
-   * Populates the orders widget.
-   * @param {Object} data - The orders data from the backend.
+   * Handles the response from server-side actions within this widget.
+   * @param {object} response - The response object from the server, with {success, message, error}.
    */
-  function updateOrdersWidget(data) {
+  function adminOrdersWidget_handleServerResponse(response) {
+    const statusEl = document.getElementById('orders-widget-status');
+    let statusHtml = '';
+
+    if (response && response.success) {
+      statusHtml = `<div class="text-success">${response.message || 'Success!'}</div>`;
+    } else {
+      const errorMessage = response ? (response.error || 'An unknown error occurred.') : 'An unknown error occurred.';
+      statusHtml = `<div class="text-danger" style="font-size: 0.8rem;">Action failed: ${errorMessage}</div>`;
+    }
+    
+    if(statusEl) statusEl.innerHTML = statusHtml;
+
+    // Refresh the dashboard data after a short delay
+    setTimeout(() => {
+      if(statusEl) statusEl.innerHTML = ''; // Clear status
+      google.script.run.withSuccessHandler(adminOrdersWidget_updateView).withFailureHandler(showError).getDashboardData();
+    }, 4000);
+  }
+
+  /**
+   * A wrapper function to be used as a callback for the export action.
+   */
+  function adminOrdersWidget_doExport() {
+    const statusEl = document.getElementById('orders-widget-status');
+    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Comax Export...</div>';
+    google.script.run.withSuccessHandler(adminOrdersWidget_handleServerResponse).withFailureHandler(adminOrdersWidget_handleServerResponse).runComaxOrderExport();
+  }
+
+  /**
+   * A wrapper function to be used as a callback for the confirm action.
+   * @param {string} taskId - The ID of the task to confirm.
+   */
+  function adminOrdersWidget_doConfirm(taskId) {
+    const statusEl = document.getElementById('orders-widget-status');
+    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Comax Updated...</div>';
+    google.script.run.withSuccessHandler(adminOrdersWidget_handleServerResponse).withFailureHandler(adminOrdersWidget_handleServerResponse).confirmComaxImport(taskId);
+  }
+
+  /**
+   * Populates the orders widget based on the new layout.
+   * @param {Object} data - The full dashboard data from the backend.
+   */
+  function adminOrdersWidget_updateView(data) {
     const widget = document.getElementById('orders-widget');
     if (data.error) {
       widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
+    // --- Data Extraction ---
+    const packingSlipsCount = data.packingSlipsReadyCount || 0;
+    const onHoldCount = data.onHoldCount || 0;
+    const processingCount = data.processingCount || 0;
+    const comaxExportCount = data.comaxExportOrderCount || 0;
+    const openConfirmationTask = (data.openComaxConfirmationTasks && data.openComaxConfirmationTasks.length > 0) 
+      ? data.openComaxConfirmationTasks[0] 
+      : null;
+
+    // --- Button States ---
+    const isExportDisabled = comaxExportCount === 0;
+    const isConfirmDisabled = !openConfirmationTask;
+
+    // --- HTML Generation ---
     let html = '<h5>Orders</h5>';
-    html += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
-    html += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
-    html += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
-    html += '<hr>';
-    html += '<h6>Comax Export</h6>';
-    if (data.comaxExportOrderCount > 0) {
-      html += `<p>${data.comaxExportOrderCount} orders are ready for export.</p><button onclick="runComaxExport()">Generate Comax Order Export</button>`;
-    } else {
-      html += '<p>No orders are currently ready for Comax export.</p>';
-    }
-    html += '<hr><h5>Confirm Imports</h5>';
-    if (data.openComaxConfirmationTasks && data.openComaxConfirmationTasks.length > 0) {
-      html += '<ul>';
-      data.openComaxConfirmationTasks.forEach(task => {
-        html += `<li class="mb-2">${task.notes} <button class="btn btn-sm btn-outline-primary ml-2" onclick="confirmComaxImport('${task.id}')">Confirm Import</button></li>`;
-      });
-      html += '</ul>';
-    } else {
-      html += '<p>No pending Comax import confirmations.</p>';
-    }
+    
+    // Block 1
+    html += `<p>Packing Slips: <strong>${packingSlipsCount}</strong></p>`;
+    html += '<hr class="my-2">';
+    
+    // Block 2
+    html += `<p>On-Hold: <strong>${onHoldCount}</strong></p>`;
+    html += `<p>Processing: <strong>${processingCount}</strong></p>`;
+    html += '<hr class="my-2">';
+
+    // Block 3
+    html += `<p>Comax Export: <strong>${comaxExportCount}</strong></p>`;
+    
+    const exportButton = `<button class="btn btn-sm btn-light" ${isExportDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Comax Export?', adminOrdersWidget_doExport)">Comax Export</button>`;
+    
+    const confirmTaskId = openConfirmationTask ? openConfirmationTask.id : '';
+    const confirmButton = `<button class="btn btn-sm btn-light ml-2" ${isConfirmDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to mark as Comax Updated?', function() { adminOrdersWidget_doConfirm('${confirmTaskId}'); })">Comax Updated</button>`;
+
+    html += `<div>${exportButton} ${confirmButton}</div>`;
+    html += `<div id="orders-widget-status" class="mt-2" style="font-size: 0.9rem;"></div>`;
+
     widget.innerHTML = html;
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+  google.script.run.withSuccessHandler(adminOrdersWidget_updateView).withFailureHandler(showError).getDashboardData();
 </script>

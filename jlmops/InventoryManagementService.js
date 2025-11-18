@@ -18,17 +18,19 @@ function InventoryManagementService() {
    * @returns {number|null} The current stock level, or null if product not found.
    */
   this.getStockLevel = function(productIdentifier) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'getStockLevel';
     try {
       const product = productService.getProductById(productIdentifier); // Reusing ProductService
       if (product && product.Stock !== undefined) {
-        logger.info(`Stock level for ${productIdentifier}: ${product.Stock}`);
+        logger.info(serviceName, functionName, `Stock level for ${productIdentifier}: ${product.Stock}`);
         return product.Stock;
       } else {
-        logger.warn(`Product ${productIdentifier} not found or stock information missing.`);
+        logger.warn(serviceName, functionName, `Product ${productIdentifier} not found or stock information missing.`);
         return null;
       }
     } catch (e) {
-      logger.error(`Error getting stock level for ${productIdentifier}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error getting stock level for ${productIdentifier}: ${e.message}`, e);
       return null;
     }
   };
@@ -41,12 +43,14 @@ function InventoryManagementService() {
    * @returns {boolean} True if stock was updated, false otherwise.
    */
   this.updateStock = function(productIdentifier, quantityChange) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'updateStock';
     try {
       const ss = SpreadsheetApp.getActiveSpreadsheet();
       const sheet = ss.getSheetByName(PRODUCT_SHEET_NAME);
 
       if (!sheet) {
-        logger.error(`Product sheet '${PRODUCT_SHEET_NAME}' not found for stock update.`);
+        logger.error(serviceName, functionName, `Product sheet '${PRODUCT_SHEET_NAME}' not found for stock update.`);
         return false;
       }
 
@@ -56,7 +60,7 @@ function InventoryManagementService() {
       const stockColumnIndex = headers.indexOf('Stock');
 
       if (stockColumnIndex === -1 || (idColumnIndex === -1 && skuColumnIndex === -1)) {
-        logger.error("Required 'ID'/'SKU' or 'Stock' column not found in product sheet.");
+        logger.error(serviceName, functionName, "Required 'ID'/'SKU' or 'Stock' column not found in product sheet.");
         return false;
       }
 
@@ -75,19 +79,19 @@ function InventoryManagementService() {
           const newStock = currentStock + quantityChange;
 
           sheet.getRange(i + 1, stockColumnIndex + 1).setValue(newStock);
-          logger.info(`Stock for ${productIdentifier} updated from ${currentStock} to ${newStock}.`);
+          logger.info(serviceName, functionName, `Stock for ${productIdentifier} updated from ${currentStock} to ${newStock}.`);
           updated = true;
           break;
         }
       }
 
       if (!updated) {
-        logger.warn(`Product with ID/SKU ${productIdentifier} not found for stock update.`);
+        logger.warn(serviceName, functionName, `Product with ID/SKU ${productIdentifier} not found for stock update.`);
       }
       return updated;
 
     } catch (e) {
-      logger.error(`Error updating stock for ${productIdentifier}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error updating stock for ${productIdentifier}: ${e.message}`, e);
       return false;
     }
   };
@@ -97,6 +101,8 @@ function InventoryManagementService() {
    * and populates the SysInventoryOnHold sheet.
    */
   this.calculateOnHoldInventory = function() {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'calculateOnHoldInventory';
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -107,7 +113,7 @@ function InventoryManagementService() {
       const sysInventoryOnHoldSheet = ss.getSheetByName(sheetNames['SysInventoryOnHold']);
 
       if (!webOrdMSheet || !webOrdItemsMSheet || !sysInventoryOnHoldSheet) {
-        logger.error("One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.");
+        logger.error(serviceName, functionName, "One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.");
         return;
       }
 
@@ -117,7 +123,7 @@ function InventoryManagementService() {
       const womStatusCol = webOrdMHeaders.indexOf("wom_Status");
 
       if (womOrderIdCol === -1 || womStatusCol === -1) {
-        logger.error("Required columns (wom_OrderId, wom_Status) not found in WebOrdM.");
+        logger.error(serviceName, functionName, "Required columns (wom_OrderId, wom_Status) not found in WebOrdM.");
         return;
       }
 
@@ -134,7 +140,7 @@ function InventoryManagementService() {
       }
 
       if (onHoldOrderIds.size === 0) {
-        logger.info("No 'On-Hold' orders found. Clearing SysInventoryOnHold sheet.");
+        logger.info(serviceName, functionName, "No 'On-Hold' orders found. Clearing SysInventoryOnHold sheet.");
         // Clear existing content in SysInventoryOnHold (except headers)
         if (sysInventoryOnHoldSheet.getLastRow() > 1) {
           sysInventoryOnHoldSheet.getRange(2, 1, sysInventoryOnHoldSheet.getLastRow() - 1, sysInventoryOnHoldSheet.getLastColumn()).clearContent();
@@ -149,7 +155,7 @@ function InventoryManagementService() {
       const woiQuantityCol = webOrdItemsMHeaders.indexOf("woi_Quantity");
 
       if (woiOrderIdCol === -1 || woiSkuCol === -1 || woiQuantityCol === -1) {
-        logger.error("Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.");
+        logger.error(serviceName, functionName, "Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.");
         return;
       }
 
@@ -186,10 +192,10 @@ function InventoryManagementService() {
         sysInventoryOnHoldSheet.getRange(2, 1, onHoldData.length, onHoldData[0].length).setValues(onHoldData);
       }
 
-      logger.info("SysInventoryOnHold sheet updated successfully with on-hold inventory.");
+      logger.info(serviceName, functionName, "SysInventoryOnHold sheet updated successfully with on-hold inventory.");
 
     } catch (e) {
-      logger.error("Error calculating on-hold inventory: " + e.message, e);
+      logger.error(serviceName, functionName, "Error calculating on-hold inventory: " + e.message, e);
     }
   };
 
@@ -198,8 +204,9 @@ function InventoryManagementService() {
    * @returns {Array<Object>} An array of objects, each with 'sku' and 'bruryaQty'.
    */
   this.getBruryaStock = function() {
+    const serviceName = 'InventoryManagementService';
     const functionName = 'getBruryaStock';
-    logger.info(`Starting ${functionName}...`);
+    logger.info(serviceName, functionName, `Starting ${functionName}...`);
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -208,7 +215,7 @@ function InventoryManagementService() {
       const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
 
       if (!productAuditSheet) {
-        logger.error(`Sheet '${sheetNames.SysProductAudit}' not found.`);
+        logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
         return [];
       }
 
@@ -217,7 +224,7 @@ function InventoryManagementService() {
       const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
 
       if (skuColIdx === -1 || bruryaQtyColIdx === -1) {
-        logger.error("Required columns 'pa_SKU' or 'pa_BruryaQty' not found in SysProductAudit sheet.");
+        logger.error(serviceName, functionName, "Required columns 'pa_SKU' or 'pa_BruryaQty' not found in SysProductAudit sheet.");
         return [];
       }
 
@@ -234,11 +241,11 @@ function InventoryManagementService() {
           bruryaStock.push({ sku: sku, bruryaQty: bruryaQty });
         }
       }
-      logger.info(`Successfully retrieved ${bruryaStock.length} Brurya stock entries.`);
+      logger.info(serviceName, functionName, `Successfully retrieved ${bruryaStock.length} Brurya stock entries.`);
       return bruryaStock;
 
     } catch (e) {
-      logger.error(`Error in ${functionName}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
       return [];
     }
   };
@@ -252,8 +259,9 @@ function InventoryManagementService() {
    * @returns {boolean} True if the operation was successful, false otherwise.
    */
   this.setBruryaStock = function(sku, quantity, userEmail) {
+    const serviceName = 'InventoryManagementService';
     const functionName = 'setBruryaStock';
-    logger.info(`Starting ${functionName} for SKU: ${sku}, Quantity: ${quantity}, User: ${userEmail}`);
+    logger.info(serviceName, functionName, `Starting ${functionName} for SKU: ${sku}, Quantity: ${quantity}, User: ${userEmail}`);
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -262,7 +270,7 @@ function InventoryManagementService() {
       const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
 
       if (!productAuditSheet) {
-        logger.error(`Sheet '${sheetNames.SysProductAudit}' not found.`);
+        logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
         return false;
       }
 
@@ -272,7 +280,7 @@ function InventoryManagementService() {
       const lastCountColIdx = headers.indexOf('pa_LastCount');
 
       if (skuColIdx === -1 || bruryaQtyColIdx === -1 || lastCountColIdx === -1) {
-        logger.error("Required columns 'pa_SKU', 'pa_BruryaQty', or 'pa_LastCount' not found in SysProductAudit sheet.");
+        logger.error(serviceName, functionName, "Required columns 'pa_SKU', 'pa_BruryaQty', or 'pa_LastCount' not found in SysProductAudit sheet.");
         return false;
       }
 
@@ -286,7 +294,7 @@ function InventoryManagementService() {
           // SKU found, update existing row
           productAuditSheet.getRange(i + 1, bruryaQtyColIdx + 1).setValue(quantity);
           productAuditSheet.getRange(i + 1, lastCountColIdx + 1).setValue(now);
-          logger.info(`Updated Brurya stock for SKU ${sku} to ${quantity}.`);
+          logger.info(serviceName, functionName, `Updated Brurya stock for SKU ${sku} to ${quantity}.`);
           skuFound = true;
           break;
         }
@@ -304,12 +312,12 @@ function InventoryManagementService() {
         // newRow[headers.indexOf('pa_ShopQty')] = 0;
 
         productAuditSheet.appendRow(newRow);
-        logger.info(`Added new entry for SKU ${sku} with Brurya stock ${quantity}.`);
+        logger.info(serviceName, functionName, `Added new entry for SKU ${sku} with Brurya stock ${quantity}.`);
       }
       return true;
 
     } catch (e) {
-      logger.error(`Error in ${functionName}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
       return false;
     }
   };

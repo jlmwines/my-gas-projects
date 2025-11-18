@@ -12,11 +12,12 @@ const PackingSlipService = (function() {
    * @param {Array<string>} orderIds - An array of Order IDs to process.
    */
   function preparePackingData(orderIds) {
+    const serviceName = 'PackingSlipService';
     const functionName = 'preparePackingData';
     try {
-        logger.info(`Starting ${functionName} for ${orderIds.length} orders.`);
+        logger.info(serviceName, functionName, `Starting for ${orderIds.length} orders.`);
         if (!orderIds || orderIds.length === 0) {
-            logger.info('No order IDs provided for packing data enrichment. Exiting.');
+            logger.info(serviceName, functionName, 'No order IDs provided for packing data enrichment. Exiting.');
             return;
         }
 
@@ -204,7 +205,7 @@ const PackingSlipService = (function() {
             cacheSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
         }
 
-        logger.info(`Successfully enriched packing data for ${orderIds.length} orders.`);
+        logger.info(serviceName, functionName, `Successfully enriched packing data for ${orderIds.length} orders.`);
 
         // 7. Update SysOrdLog status to 'Ready'
         const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
@@ -231,14 +232,14 @@ const PackingSlipService = (function() {
             // Write the entire updated data array back to the sheet
             if (updatedCount > 0) {
                 orderLogSheet.getRange(2, 1, orderLogData.length, logHeaders.length).setValues(orderLogData);
-                logger.info(`Updated ${updatedCount} orders to 'Ready' status in SysOrdLog.`);
+                logger.info(serviceName, functionName, `Updated ${updatedCount} orders to 'Ready' status in SysOrdLog.`);
             }
         } else {
-            logger.warn('SysOrdLog sheet not found. Could not update packing statuses.');
+            logger.warn(serviceName, functionName, 'SysOrdLog sheet not found. Could not update packing statuses.');
         }
 
     } catch (error) {
-        logger.error(`An error occurred in ${functionName}: ${error.message}`, error.stack);
+        logger.error(serviceName, functionName, `An error occurred: ${error.message}`, error);
     }
   }
 

@@ -44,14 +44,7 @@ const TaskService = (function() {
         );
 
         if (duplicateRow) {
-          const duplicateRowObject = {};
-          headers.forEach((header, index) => {
-              duplicateRowObject[header] = duplicateRow[index];
-          });
-          LoggerService.warn('TaskService', 'createTask', `Duplicate task detected. Aborting creation.`, {
-              newTask: { type: taskTypeId, entity: linkedEntityId },
-              existingDuplicate: duplicateRowObject
-          });
+          logger.info('TaskService', 'createTask', `Duplicate task detected for type '${taskTypeId}' and entity '${linkedEntityId}'. Aborting creation.`);
           return null;
         }
       }
@@ -72,12 +65,12 @@ const TaskService = (function() {
 
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
-      LoggerService.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}.`);
+      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}.`);
       
       return { id: taskId };
 
     } catch (e) {
-      LoggerService.error('TaskService', 'createTask', `CRITICAL: Error creating task: ${e.message}`, e);
+      logger.error('TaskService', 'createTask', `CRITICAL: Error creating task: ${e.message}`, e);
       throw e; // Re-throw the error to halt execution and notify admin
     }
   }
@@ -104,7 +97,7 @@ const TaskService = (function() {
       );
 
     } catch (e) {
-      LoggerService.error('TaskService', 'hasOpenTasks', `Error checking for open tasks of type ${taskTypeId}: ${e.message}`, e);
+      logger.error('TaskService', 'hasOpenTasks', `Error checking for open tasks of type ${taskTypeId}: ${e.message}`, e);
       return false; // Assume no open tasks on error to avoid blocking workflows
     }
   }
@@ -122,7 +115,7 @@ const TaskService = (function() {
 
       const sheet = dataSpreadsheet.getSheetByName(sheetName);
       if (!sheet || sheet.getLastRow() < 2) {
-        LoggerService.warn('TaskService', 'completeTask', `Task sheet '${sheetName}' not found or is empty.`);
+        logger.warn('TaskService', 'completeTask', `Task sheet '${sheetName}' not found or is empty.`);
         return false;
       }
 
@@ -135,7 +128,7 @@ const TaskService = (function() {
       const rowIndex = taskIds.findIndex(id => id === taskId);
 
       if (rowIndex === -1) {
-        LoggerService.warn('TaskService', 'completeTask', `Task with ID '${taskId}' not found.`);
+        logger.warn('TaskService', 'completeTask', `Task with ID '${taskId}' not found.`);
         return false;
       }
 
@@ -143,11 +136,11 @@ const TaskService = (function() {
       sheet.getRange(sheetRow, statusCol + 1).setValue('Done');
       sheet.getRange(sheetRow, completedDateCol + 1).setValue(new Date());
       
-      LoggerService.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
+      logger.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
       return true;
 
     } catch (e) {
-      LoggerService.error('TaskService', 'completeTask', `Error completing task '${taskId}': ${e.message}`, e);
+      logger.error('TaskService', 'completeTask', `Error completing task '${taskId}': ${e.message}`, e);
       return false;
     }
   }
