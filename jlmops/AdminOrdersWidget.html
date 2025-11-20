@@ -4,98 +4,111 @@
 
 <script>
   /**
-   * Handles the response from server-side actions within this widget.
-   * @param {object} response - The response object from the server, with {success, message, error}.
+   * Handles the click event for the 'Export Orders' button.
    */
-  function adminOrdersWidget_handleServerResponse(response) {
-    const statusEl = document.getElementById('orders-widget-status');
-    let statusHtml = '';
-
-    if (response && response.success) {
-      statusHtml = `<div class="text-success">${response.message || 'Success!'}</div>`;
-    } else {
-      const errorMessage = response ? (response.error || 'An unknown error occurred.') : 'An unknown error occurred.';
-      statusHtml = `<div class="text-danger" style="font-size: 0.8rem;">Action failed: ${errorMessage}</div>`;
-    }
+  function handleExportClick() {
+    const exportBtn = document.getElementById('btn-export-orders');
+    const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
     
-    if(statusEl) statusEl.innerHTML = statusHtml;
+    exportBtn.disabled = true;
+    exportBtn.className = 'btn'; // Keep default style when processing
+    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
 
-    // Refresh the dashboard data after a short delay
-    setTimeout(() => {
-      if(statusEl) statusEl.innerHTML = ''; // Clear status
-      google.script.run.withSuccessHandler(adminOrdersWidget_updateView).withFailureHandler(showError).getDashboardData();
-    }, 4000);
+    google.script.run
+      .withSuccessHandler(response => {
+        // The success handler will simply re-run the data load to get the new state
+        google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+      })
+      .withFailureHandler(showError)
+      .runComaxOrderExport();
   }
 
   /**
-   * A wrapper function to be used as a callback for the export action.
+   * Handles the click event for the 'Comax Updated' button.
+   * @param {string} taskId - The ID of the confirmation task to complete.
    */
-  function adminOrdersWidget_doExport() {
-    const statusEl = document.getElementById('orders-widget-status');
-    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Comax Export...</div>';
-    google.script.run.withSuccessHandler(adminOrdersWidget_handleServerResponse).withFailureHandler(adminOrdersWidget_handleServerResponse).runComaxOrderExport();
+  function handleConfirmClick(taskId) {
+    const confirmBtn = document.getElementById('btn-comax-updated');
+    const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
+
+    confirmBtn.disabled = true;
+    confirmBtn.className = 'btn'; // Keep default style when processing
+    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+    
+    google.script.run
+      .withSuccessHandler(wasCompleted => {
+        if (!wasCompleted) {
+          showError('Failed to confirm task. It may have already been completed.');
+        }
+        // Always refresh data to show the latest state
+        google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+      })
+      .withFailureHandler(showError)
+      .confirmComaxImport(taskId); // Re-using existing backend function which calls WebAppTasks.completeTask
   }
 
   /**
-   * A wrapper function to be used as a callback for the confirm action.
-   * @param {string} taskId - The ID of the task to confirm.
+   * Populates the orders widget with new data from the backend.
+   * @param {Object} data - The orders data from the backend.
    */
-  function adminOrdersWidget_doConfirm(taskId) {
-    const statusEl = document.getElementById('orders-widget-status');
-    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Comax Updated...</div>';
-    google.script.run.withSuccessHandler(adminOrdersWidget_handleServerResponse).withFailureHandler(adminOrdersWidget_handleServerResponse).confirmComaxImport(taskId);
-  }
-
-  /**
-   * Populates the orders widget based on the new layout.
-   * @param {Object} data - The full dashboard data from the backend.
-   */
-  function adminOrdersWidget_updateView(data) {
+  function updateOrdersWidget(data) {
     const widget = document.getElementById('orders-widget');
+    if (!data) {
+      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      return;
+    }
     if (data.error) {
       widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    // --- Data Extraction ---
-    const packingSlipsCount = data.packingSlipsReadyCount || 0;
-    const onHoldCount = data.onHoldCount || 0;
-    const processingCount = data.processingCount || 0;
-    const comaxExportCount = data.comaxExportOrderCount || 0;
-    const openConfirmationTask = (data.openComaxConfirmationTasks && data.openComaxConfirmationTasks.length > 0) 
-      ? data.openComaxConfirmationTasks[0] 
+        // --- Update Counts ---
+        let countsHtml = '<h5>Orders</h5>';
+        countsHtml += '<hr>'; // Divider below widget title
+        countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
+        countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
+        countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
+    
+        // --- Rebuild the widget with new structure (preserves a clean slate) ---
+        widget.innerHTML = countsHtml + 
+          '<hr>' + // Divider below widget content
+          '<h6>Comax Order Update</h6>' +
+          '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>' + // Persistent count
+          '<div id="comax-alert-message-area" style="margin-bottom: 0.5rem;"></div>' + // Conditional alert messages
+          '<button id="btn-export-orders" class="btn" disabled>Export Orders</button>' +
+          '<button id="btn-comax-updated" class="btn" style="margin-left: 0.5rem;" disabled>Comax Updated</button>';
+
+    // --- State-Aware Logic for Comax Order Update ---
+    const exportBtn = document.getElementById('btn-export-orders');
+    const confirmBtn = document.getElementById('btn-comax-updated');
+    const alertMessageArea = document.getElementById('comax-alert-message-area'); // Use new alert area
+
+    // Default to base 'btn' class
+    exportBtn.className = 'btn';
+    confirmBtn.className = 'btn';
+
+    const exportConfirmTask = (data.openComaxConfirmationTasks && data.openComaxConfirmationTasks.length > 0)
+      ? data.openComaxConfirmationTasks[0]
       : null;
 
-    // --- Button States ---
-    const isExportDisabled = comaxExportCount === 0;
-    const isConfirmDisabled = !openConfirmationTask;
-
-    // --- HTML Generation ---
-    let html = '<h5>Orders</h5>';
-    
-    // Block 1
-    html += `<p>Packing Slips: <strong>${packingSlipsCount}</strong></p>`;
-    html += '<hr class="my-2">';
-    
-    // Block 2
-    html += `<p>On-Hold: <strong>${onHoldCount}</strong></p>`;
-    html += `<p>Processing: <strong>${processingCount}</strong></p>`;
-    html += '<hr class="my-2">';
-
-    // Block 3
-    html += `<p>Comax Export: <strong>${comaxExportCount}</strong></p>`;
-    
-    const exportButton = `<button class="btn btn-sm btn-light" ${isExportDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Comax Export?', adminOrdersWidget_doExport)">Comax Export</button>`;
-    
-    const confirmTaskId = openConfirmationTask ? openConfirmationTask.id : '';
-    const confirmButton = `<button class="btn btn-sm btn-light ml-2" ${isConfirmDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to mark as Comax Updated?', function() { adminOrdersWidget_doConfirm('${confirmTaskId}'); })">Comax Updated</button>`;
-
-    html += `<div>${exportButton} ${confirmButton}</div>`;
-    html += `<div id="orders-widget-status" class="mt-2" style="font-size: 0.9rem;"></div>`;
-
-    widget.innerHTML = html;
+    if (exportConfirmTask) {
+      // State 2: Confirmation Pending
+      alertMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${exportConfirmTask.notes}</div>`;
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn'; // Active but no color
+      confirmBtn.setAttribute('onclick', `handleConfirmClick('${exportConfirmTask.id}')`);
+    } else if (data.comaxExportOrderCount > 0) {
+      // State 1: Ready to Export
+      alertMessageArea.innerHTML = `<div class="alert alert-info" style="padding: 0.5rem 1rem;">${data.comaxExportOrderCount} orders are ready for export.</div>`;
+      exportBtn.disabled = false;
+      exportBtn.className = 'btn'; // Active but no color
+      exportBtn.setAttribute('onclick', 'handleExportClick()');
+    } else {
+      // State 0: Nothing to do - clear alert message area
+      alertMessageArea.innerHTML = ''; // No alert needed
+    }
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(adminOrdersWidget_updateView).withFailureHandler(showError).getDashboardData();
+  google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
 </script>
