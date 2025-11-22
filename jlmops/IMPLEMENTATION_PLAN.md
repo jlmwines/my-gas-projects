@@ -9,10 +9,10 @@
 ### SysConfig Data Integrity & Import Functionality Restoration (COMPLETED)
 *   **Goal:** Ensure the `SysConfig` sheet accurately reflects the `SetupConfig.js` source of truth and that all critical import processes are fully functional.
 *   **Details:**
-    *   Resolved issues with `ConfigService.js` failing to correctly parse `scf_Pxx` parameters from `SysConfig` rows.
-    *   Corrected missing `system.sheet_names` entries in `SetupConfig.js` for `WebXltM`, `CmxProdM`, and `SysInventoryOnHold`.
-    *   Addressed and deduplicated `task.validation.name_mismatch` and `task.validation.comax_internal_audit` task definitions in `SetupConfig.js`.
-    *   Ensured `_getTaskDefinitionsConfig()` is properly included in `getMasterConfiguration()`.
+    *   Resolved issues with the configuration service failing to correctly parse parameters from the master config sheet.
+    *   Corrected the master configuration to include definitions for all necessary system sheet names.
+    *   Cleaned up and deduplicated several task definitions in the master configuration.
+    *   Ensured all task definitions were being correctly loaded into the system.
     *   **Result:** Web Order Import, Web Product Import, Web Translation Import, and Comax Product Import functionalities are fully restored and operating as expected.
 
 ## Phase 3: Initial Data Population (COMPLETED)
@@ -35,7 +35,7 @@
         4.  **Comax Order Export (COMPLETED - Monitoring Ongoing):** Implement the export generation logic in `OrderService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
         5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
-            *   **Resolution:** `SysConfig`-related data access issues for packing slips resolved. This includes ensuring correct SKU-to-WebIdEn lookups and addressing a timing issue with spreadsheet updates.
+            *   **Resolution:** Data access issues for packing slips were resolved, ensuring correct product ID lookups and addressing a timing issue with spreadsheet updates.
         6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
             *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
@@ -82,26 +82,39 @@
     2.  **Implement UI Control (COMPLETED):** Integrated a role-switcher dropdown into `AppView.html` that dynamically loads content and adjusts navigation based on the selected user's role.
     3.  **Resolve Known Issue (COMPLETED):** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
-## Phase 6: Workflow Integrity & Dependency Management (IN PROGRESS)
+## Phase 6: Workflow Integrity & UI Orchestration (CURRENT)
 
-**Goal:** To enhance the automated import workflow to be dependency-aware, ensuring that files are processed in the correct sequence to guarantee data integrity, and to reflect this status on the UI.
+**Goal:** To evolve the current UI into a state-aware dashboard that provides visibility and guided control over the system's interdependent workflows. This will be achieved by enhancing the existing UI and backend services, not by redesigning them.
 
-### 6.1. Implement Dependency-Aware Job Orchestration (COMPLETED)
-*   **Goal:** Update the core orchestration logic to handle dependencies between import jobs.
-*   **Tasks:**
-    1.  **Enhance SysConfig (COMPLETED):** Added a `depends_on` parameter to the `import.drive.*` configuration schema.
-    2.  **Introduce 'BLOCKED' Status (COMPLETED):** Updated the `OrchestratorService` to create jobs with a 'BLOCKED' status if their `depends_on` prerequisite has not been met.
-    3.  **Implement Unblocking Logic (COMPLETED):** Created `OrchestratorService.unblockDependentJobs()` that is triggered upon job completion to unblock dependent jobs.
-    4.  **Update Processing Services (COMPLETED):** Ensured that services like `ProductService` and `OrderService` call the unblocking logic.
-    5.  **Refine Dependency Logic (COMPLETED):** Made the dependency check conditional based on the files present in the current import batch.
+### 6.1. Core Architectural Principle
 
-### 6.2. Dashboard UI Integration (IN PROGRESS)
-*   **Goal:** Update the Admin Dashboard to provide clear visibility and management of the new workflow states.
-*   **Tasks:**
-    1.  **System Health Widget (COMPLETED):** Updated to display counts for blocked, quarantined, and recent failed jobs, and to show the last critical validation timestamp with a "Validate Now" action.
-    2.  **Orders Widget (COMPLETED):** Redesigned with a new layout, disabled button states, and custom confirmation dialogs.
-    3.  **Inventory Widget (COMPLETED):** Redesigned with a new layout, connected to real backend data (excluding placeholders), and added a link to the Comax Invoices folder.
-    4.  **Products Widget (NEXT):** Integrate with the new dashboard data source to show real task counts.
+The system will formally adopt a **"System-State-Aware Workflow Orchestration"** model. The `OrchestratorService` will serve as the single source of truth for workflow status. The UI will act as a "dumb" but responsive dashboard that reflects the state managed by the backend, disabling or enabling user actions based on that state.
+
+### 6.2. Backend Implementation Plan
+
+*   **Job & Dependency Definition (`SysConfig`)**:
+    *   New, non-file-based jobs for each export process (e.g., `export.comax.orders`, `export.web.inventory`) will be defined in `SysConfig`.
+    *   The `depends_on` property will be used to enforce execution order. Specifically, the `Comax Product Import` job will `depend_on` the `Web Product Import` job.
+
+*   **State-Based Job & Task Creation (`OrchestratorService`)**:
+    *   The service's responsibilities will be extended beyond file-based triggers. It will programmatically create tasks based on system state.
+    *   A **Task** is a simple flag indicating work is ready; it does not store data and does not need to be updated if already open.
+
+*   **New Trigger Logic (`OrchestratorService`)**:
+    *   **Comax Order Export Trigger:** Upon completion of a `Web Order Import` job, the orchestrator will check if a "Comax Order Export" task is open. If not, it will create one.
+    *   **Web Inventory Export Trigger:** Upon completion of *either* a `Web Product Import` or a `Comax Product Import` job, the orchestrator will perform a "paired check." It will verify that its counterpart job has also recently completed. If this condition is met, it will then check if a "Web Inventory Export" task is open and create one if it is not.
+
+### 6.3. Frontend/UI Implementation Plan
+
+The existing dashboard widgets will be enhanced to:
+
+*   **Display Workflow Status:** Each widget associated with a major workflow (Orders, Inventory) will include a status area that displays the real-time state from the `OrchestratorService` (e.g., "Status: Ready to Export 15 Orders to Comax," "Status: Waiting for Web Product Import").
+*   **Implement Action Gating:** UI controls (buttons, links) for initiating actions will be dynamically enabled or disabled based on the workflow state. A user will not be able to click "Export to Comax" if the system is not in a `ReadyForComaxExport` state.
+*   **Implement State-Aware Widget Workflows (COMPLETED):**
+    *   Refactored `AdminOrdersWidget` and `AdminInventoryWidget` data supply to use their dedicated data providers (`WebAppOrders.js`, `WebAppInventory.js`), centralizing logic and removing duplication from `WebApp.js` and `WebAppDashboard.js`.
+    *   Implemented state-aware UI controls for the "Comax Order Export" workflow in the Orders widget.
+    *   Implemented state-aware UI controls for the "Web Inventory Export" workflow in the Inventory widget, including dependency messaging.
+    *   Fixed the data supply for the Inventory widget by implementing `getBruryaSummaryStatistic` and correcting the task type ID for negative inventory counts.
 
 ## Phase 7: Future Implementation Priorities (PLANNED)
 
@@ -109,13 +122,12 @@
 
 ### 1. Packing Slip Workflow (Backend Completed)
 *   **Goal:** Implement a robust, state-aware packing slip generation system that ensures consistency and manages descriptive text enrichment.
-*   **Tasks:**
-    1.  **Define Data Model (COMPLETED):** Added `sol_OrderStatus` to `SysOrdLog` and clarified the role of `SysPackingCache`.
+*   **Define Data Model (COMPLETED):** Enhanced the order data model to support a new status field for the packing slip workflow.
     2.  **Refactor `OrderService` (COMPLETED):** Implemented the full state machine logic, including the "Lock-in" and "On-hold" rules, to set `Eligible`/`Ineligible` status in `SysOrdLog`.
     3.  **Refactor `PackingSlipService` (COMPLETED):** Logic updated to act on `Eligible` orders and set them to `Ready`.
     4.  **Refactor `PrintService` (COMPLETED):** Logic updated to act on `Ready` orders and set them to `Printed`.
     5.  **Update `WebApp.js` Backend (COMPLETED):** The `getPackableOrders` function was updated to fetch `Ready` orders from `SysOrdLog`.
-    *   **Resolution:** `spc_WebIdEn` population issue and underlying timing problem resolved, ensuring accurate packing slip data.
+    *   **Resolution:** A data population issue and an underlying timing problem were resolved, ensuring accurate packing slip data.
 
 ### 2. Frontend UI Development (IN PROGRESS)
 *   **Goal:** To build the dashboard-driven Single Page Application (SPA) that will serve as the main user interface for the JLMops system.
@@ -150,7 +162,7 @@
 *   **Tasks:
     1.  **Gift Message Creation (`WebApp.js`): (COMPLETED)**
         *   **Objective:** Add a new server-side function to create individual, editable Google Docs for gift messages.
-        *   **Action:** Add a new global function `createGiftMessageDoc(orderId, noteContent)` to `WebApp.js`.
+        *   **Action:** A new backend function was added to create individual, editable Google Docs for gift messages.
     2.  **UI Updates (`WebApp.js` & `PackingSlipView.html`): (COMPLETED)**
         *   **Objective:** Adapt the client-side and server-side functions to handle the new return format and provide UI for customer notes and gift message creation.
 
@@ -160,79 +172,112 @@
     1.  **Brurya Warehouse Inventory Management:** Implement UI and backend logic for managers to view, update, and manage Brurya-specific stock levels.
     2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
     3.  **Negative Inventory Task Follow-up:** Implement logic to detect negative stock levels and create high-priority tasks for investigation and correction.
-    4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type (e.g., `task.inventory.count`) with a defined workflow (e.g., `New`, `Pending Review`, `Accepted`) to manage the entire lifecycle of inventory counts.
-        *   **Entry/Submission:** Provide UI for users to enter and submit physical inventory counts for various locations. This action will create a `task.inventory.count` in `New` status.
-        *   **Review/Acceptance:** Provide UI for admins to review submitted counts and transition the task status to `Accepted` or `Rejected`.
-        *   **Export to Comax/Confirm:** After a count is `Accepted`, trigger the generation of an export file for Comax. This will then require a `task.confirmation.comax_inventory_export` for manual import confirmation.
-        *   **Note:** This requires defining `task.inventory.count` and its workflow in `SetupConfig.js`, and implementing logic in `InventoryManagementService.js` and `TaskService.js`.
+    4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type with a defined workflow to manage the entire lifecycle of inventory counts.
+        *   **Entry/Submission:** Provide UI for users to enter and submit physical inventory counts for various locations. This action will create a new inventory count task.
+        *   **Review/Acceptance:** Provide UI for admins to review submitted counts and transition the task status.
+        *   **Export to Comax/Confirm:** After a count is accepted, trigger the generation of an export file for Comax and a corresponding confirmation task.
+        *   **Note:** This requires a new task definition in the master configuration and new logic in the inventory and task services.
 
 ### 6. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
 *   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system.
 *   **Status Update:**
-    *   **Data Model Foundation (COMPLETED):** `SysProductAudit` sheet defined in `SetupConfig.js` with `pa_CmxId` and wide-format columns.
-    *   **Comax Product Import Integration (COMPLETED):** `ProductService.js` modified to maintain `SysProductAudit` with latest `pa_CmxId` and `pa_SKU` during Comax product imports.
-    *   **Brurya Inventory Management Backend (COMPLETED):** `InventoryManagementService.js` updated with `getBruryaStock()` and `setBruryaStock()` functions.
-    *   **Brurya Inventory Management UI (COMPLETED):** `BruryaInventoryView.html` and `WebApp.js` integration for manager-controlled Brurya stock updates.
-    *   **Testing (IN PROGRESS):** Currently testing the `SysProductAudit` maintenance and Brurya UI.
+    *   **Data Model Foundation (COMPLETED):** A new data sheet was defined in the master configuration to audit product data.
+    *   **Comax Product Import Integration (COMPLETED):** The product service was modified to maintain the new audit sheet during Comax product imports.
+    *   **Brurya Inventory Management Backend (COMPLETED):** Functions were added to the inventory service to get and set Brurya-specific stock.
+    *   **Brurya Inventory Management UI (COMPLETED):** The UI for manager-controlled Brurya stock updates was implemented.
+    *   **Testing (IN PROGRESS):** Currently testing the audit sheet maintenance and the Brurya UI.
 *   **Tasks (Remaining):**
-    1.  **Develop Export Logic:** Implement a new function (e.g., in `InventoryManagementService.js` or `PrintService.js`) that reads current inventory data from `SysProductAudit` and generates a CSV string with `SKU` and `Count`.
+    1.  **Develop Export Logic:** Implement a new function that reads current inventory data and generates a CSV string.
     2.  **File Creation:** Create a new CSV file in a designated Google Drive export folder.
-    3.  **UI Integration:** Provide a UI element (e.g., a button on an inventory management page) to trigger this export.
+    3.  **UI Integration:** Provide a UI element to trigger this export.
 
 ### 6. Enhanced Product Detail Verification (PLANNED)
 *   **Goal:** To provide a comprehensive, task-based workflow for managers to review and verify product details, including images, facts, and overall appearance.
 *   **Tasks:
-    1.  **UI Development:** Create a new UI view (e.g., `ProductDetailVerificationView.html`) that displays a list of products requiring verification.
-    2.  **Product Display:** For each product, display relevant details (e.g., `wdm_NameEn`, `wdm_SKU`, current image URL, key attributes).
-    3.  **Checklist Integration:** Implement an interactive checklist for managers to mark verification status for:
-        *   Image accuracy and quality.
-        *   Fact accuracy (e.g., `wdm_Intensity`, `wdm_Acidity`).
-        *   Overall appearance/presentation on the web.
-    4.  **Submission & Status Update:** Implement backend logic (e.g., in `ProductService.js`) to update `wdm_LastVerifiedTimestamp` and potentially a new `wdm_VerificationStatus` field in `WebDetM` upon submission.
-    5.  **Task Integration:** Ensure this UI is linked to "Verify Product Details" tasks generated by the `OrchestratorService`.
+    1.  **UI Development:** Create a new UI view that displays a list of products requiring verification.
+    2.  **Product Display:** For each product, display relevant details (e.g., name, SKU, current image URL, key attributes).
+    3.  **Checklist Integration:** Implement an interactive checklist for managers to mark verification status for various details.
+    4.  **Submission & Status Update:** Implement backend logic to update the product's verification status upon submission.
+    5.  **Task Integration:** Ensure this UI is linked to "Verify Product Details" tasks.
 
 ### 7. Propose New Products to Fill Gaps (PLANNED)
 *   **Goal:** To proactively identify product categories with low inventory and prompt managers to propose new products to fill these gaps, integrating with the "Onboard New Product" workflow.
 *   **Tasks:
-    1.  **Gap Detection Logic:** Implement logic (e.g., in `InventoryManagementService.js` or a new `ProductGapService.js`) to:
-        *   Monitor inventory levels across product categories.
-        *   Identify categories where a significant number of products are consistently low in stock or out of stock.
-        *   Potentially analyze sales data to identify popular categories with unmet demand.
-    2.  **Manager Notification/Prompt:**
-        *   Generate a task (e.g., "Review Product Gaps in [Category Name]") for managers.
-        *   Provide a UI (e.g., a new view or a section on the dashboard) that highlights these categories and lists potential product types or attributes that could fill the gaps.
-    3.  **Integration with New Product Workflow:** From this UI, allow managers to directly initiate the "Onboard New Product" workflow, pre-populating some details based on the identified gap.
+    1.  **Gap Detection Logic:** Implement logic to monitor inventory levels and identify categories with low stock.
+    2.  **Manager Notification/Prompt:** Generate tasks and provide a UI to highlight these categories.
+    3.  **Integration with New Product Workflow:** Allow managers to directly initiate the "Onboard New Product" workflow from the gap analysis UI.
 
 ### 8. Product Detail Update Workflow (Vintage Discrepancy) (PLANNED)
 *   **Goal:** Automate the detection and task creation for vintage mismatches between Comax imports and the master data.
 *   **Tasks:
-    1.  **Verify Validation Rule:** Ensure the `validation.rule.C6_Comax_VintageMismatch` rule in `SysConfig` is correctly configured.
-    2.  **Verify Rule Execution:** Confirm that the `_runStagingValidation` function in `ProductService.js` correctly executes this rule during a Comax import.
-    3.  **Verify Task Creation:** Ensure that the `TaskService` correctly creates a `task.validation.field_mismatch` task when a discrepancy is found.
+    1.  **Verify Validation Rule:** Ensure the vintage mismatch validation rule is correctly configured in the master configuration.
+    2.  **Verify Rule Execution:** Confirm that the staging validation function in the product service correctly executes this rule during a Comax import.
+    3.  **Verify Task Creation:** Ensure that the task service correctly creates a field mismatch task when a discrepancy is found.
 
 ### 9. New Product Workflow (PLANNED)
 *   **Goal:** Create a guided, task-based workflow to manage the process of adding a new product to both Comax and WooCommerce.
 *   **Tasks:
-    1.  **Detection:** Implement logic in `ProductService.js` to detect new products during a Comax import (i.e., products in the import file that do not exist in `CmxProdM`).
-    2.  **Candidate Management:** Create a new sheet (`NewProductCandidates`) or similar mechanism to hold these new products for review.
-    3.  **Task Generation:** Upon detection, create a parent task ("Onboard New Product: [Product Name]") and a sub-task for an admin to "Approve New Product Candidate".
-    4.  **Guided Workflow:** Once approved, the system will generate a series of linked tasks to guide an admin through the manual steps (e.g., "Add Product to WooCommerce", "Set 'IsWeb' Flag in Comax").
+    1.  **Detection:** Implement logic in the product service to detect new products during a Comax import.
+    2.  **Candidate Management:** Create a new sheet or similar mechanism to hold these new products for review.
+    3.  **Task Generation:** Upon detection, create a parent task and a sub-task for an admin to approve the new product.
+    4.  **Guided Workflow:** Once approved, the system will generate a series of linked tasks to guide an admin through the required manual steps.
 
 ### 10. SKU Update Workflow (PLANNED)
 *   **Goal:** Create a guided, task-based workflow to safely manage SKU changes and prevent data mismatches between systems.
 *   **Tasks:
-    1.  **Detection:** Implement logic in `ProductService.js` to detect when a product's SKU has changed during a Comax import (keyed by the stable `cpm_CmxId`).
-    2.  **Task Generation:** When a change is detected for a product that is sold online, create a high-priority task in `SysTasks` (e.g., "SKU Change Detected for [Product Name]").
-    3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the WooCommerce admin panel.
-    4.  **Automated Verification:** The system will monitor subsequent web product imports. When it detects that the SKU for the corresponding product has been updated in `WebProdM`, it will automatically mark the task as 'Completed'.
+    1.  **Detection:** Implement logic in the product service to detect when a product's SKU has changed during a Comax import.
+    2.  **Task Generation:** When a change is detected for a product that is sold online, create a high-priority task.
+    3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the corresponding external system.
+    4.  **Automated Verification:** The system will monitor subsequent imports and automatically mark the task as 'Completed' once the change is verified.
 
 ## Go-Live Readiness
 
 ### 1. Failed Job Handling (PLANNED)
 *   **Goal:** To ensure that any failed job in the `SysJobQueue` automatically generates a high-priority task for an administrator to investigate.
 *   **Tasks:**
-    1.  **SysConfig:** Add a new task definition to `SetupConfig.js` for `task.system.job_failed`. This task should have a `High` priority.
-    2.  **OrchestratorService:** Modify the `processPendingJobs` function in `OrchestratorService.js`. In the `catch` block where a job's status is set to `FAILED`, add a call to `TaskService.createTask` to generate the new "Job Failed" task.
+    1.  **Configuration:** Add a new high-priority task definition for "Job Failed" to the master configuration.
+    2.  **Orchestration:** Modify the job processing function to automatically create a "Job Failed" task when a job's status is set to FAILED.
+
+## Phase 9: Admin & Developer Experience (IN PROGRESS)
+
+**Goal:** To improve the administrator and developer experience by providing dedicated tools for system management, validation, and data migration.
+
+### 9.1. Implement Development Tools UI (IN PROGRESS)
+*   **Goal:** To build a new "Development Tools" screen in the admin UI that provides simple, grouped actions with appropriate safety checks and on-screen results.
+*   **UI Layout:**
+    *   The `DevelopmentView.html` will be updated with three sections: Configuration, Validation, and Migration.
+    *   A new "Results" panel will be added within the Validation section to display on-screen feedback from the triggered functions.
+*   **Configuration Management:**
+    *   **Rebuild SysConfig from Source:**
+        *   **UI:** A button to trigger the rebuild.
+        *   **Backend Function:** Triggers the existing `rebuildSysConfigFromSource` function.
+        *   **Confirmation:** Yes.
+        *   **Confirmation Text:** "Rebuild Sysconfig?"
+*   **Legacy Validation Engine:**
+    *   **UI:** The validation section will be updated to have three domain-specific buttons.
+    *   **Button: "Validate Legacy Orders"**
+        *   **Action:** Executes a comprehensive validation of all order-related data.
+        *   **Checks:** Highest Order Number, Packing Slip Data, and Comax Order Export CSVs.
+        *   **UI Feedback:** A consolidated report from all checks will be displayed.
+    *   **Button: "Validate Legacy Inventory"**
+        *   **Action:** Executes a comprehensive validation of all inventory-related data.
+        *   **Checks:** On-Hold Inventory and the Web Product/Inventory Export CSVs.
+        *   **UI Feedback:** A consolidated report from both checks will be displayed.
+    *   **Button: "Validate Legacy Products"**
+        *   **Action:** Executes a comprehensive validation of all product master data.
+        *   **Checks:** Product Counts, Translation Counts, and ID/SKU matching between legacy and jlmops.
+        *   **UI Feedback:** A full report with counts and a list of any ID/SKU discrepancies will be displayed.
+*   **Data Migration (from Legacy):**
+    *   **Migrate Legacy Product Details:**
+        *   **UI:** A button to migrate product details.
+        *   **Backend Function:** Triggers the existing `migrateProductDetails` function.
+        *   **Confirmation:** Yes.
+        *   **Confirmation Text:** "Migrate Product Data?"
+    *   **Migrate Legacy Order History:**
+        *   **UI:** A button to migrate order history.
+        *   **Backend Function:** Triggers the existing `migrateOrderHistory` function.
+        *   **Confirmation:** Yes.
+        *   **Confirmation Text:** "Migrate Order Data?"
 
 ## Phase 8: Architectural Refactoring (PLANNED)
 
@@ -253,7 +298,7 @@
 ### 8.2. Standardize System Logging (COMPLETED)
 *   **Goal:** To ensure all logging across the application is consistent, meaningful, and conforms to the `LoggerService` standard. This improves traceability and reduces log noise.
 *   **Summary of Work:**
-    *   All `console.*` and `Logger.log` calls in core services (`OrchestratorService.js`, `ComaxAdapter.js`, `WebAdapter.js`, `TaskService.js`, `InventoryManagementService.js`, `OrderService.js`, `ValidationService.js`, `AuthService.js`, `ConfigService.js`, `PackingSlipService.js`, `PrintService.js`, and all `WebApp*.js` scripts) were replaced with calls to the global `logger` object, following the `logger.level(serviceName, functionName, message, [errorObject])` format.
+    *   All native logging calls in core services and UI backends were replaced with calls to the new global logger, following the standardized format.
     *   Logging levels were standardized: `ERROR` for critical, process-halting issues; `WARN` for recoverable system-level events; `INFO` for major operations and expected non-error events.
-    *   Circular dependency between `ConfigService` and `LoggerService` was identified and resolved by reverting `ConfigService`'s internal logging to use `console.log`.
-    *   Diagnostic logging was temporarily added to `LoggerService.js` to confirm successful row appending to the `SysLog` sheet, and subsequently removed.
+    *   A circular dependency between the configuration and logging services was identified and resolved.
+    *   Diagnostic logging was temporarily added to the logging service to confirm successful writes to the log sheet.

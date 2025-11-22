@@ -5,29 +5,18 @@
 <script>
   /**
    * Populates the products widget.
-   * @param {Object} dashboardData - The full dashboard data from the backend.
+   * @param {Object} result - The products data from the backend.
    */
-  function adminProductsWidget_updateView(dashboardData) {
+  function updateProductsWidget(result) {
     const widget = document.getElementById('products-widget');
-    if (dashboardData.error) {
-      widget.innerHTML = `<p class="text-danger">${dashboardData.error}</p>`;
+    if (result.error) {
+      widget.innerHTML = `<p class="text-danger">${result.error}</p>`;
       return;
     }
 
-    let html = '';
+    const data = result.data;
+    let html = '<h5>Product Tasks</h5>';
 
-    // Check for blocked product import job
-    if (dashboardData.blockedJobs && dashboardData.blockedJobs.length > 0) {
-      const productJob = dashboardData.blockedJobs.find(job => job.jobType === 'import.drive.web_products_en');
-      if (productJob) {
-        html += `<div class="alert alert-info p-2" style="font-size: 0.9rem;">
-                   <strong>Workflow Paused:</strong><br>Product import is waiting for the 'Web Translations' file to be processed.
-                 </div>`;
-      }
-    }
-
-    html += '<h5>Product Tasks</h5>';
-    const data = dashboardData.productData;
     const taskLabels = {
       'task.validation.sku_not_in_comax': 'SKU Not in Comax',
       'task.validation.translation_missing': 'Translation Missing',
@@ -41,18 +30,16 @@
     };
 
     let hasTasks = false;
-    if (data) {
-        for (const taskType in data) {
-          if (data.hasOwnProperty(taskType) && data[taskType] > 0) {
-            hasTasks = true;
-            const label = taskLabels[taskType] || taskType;
-            html += `<p>${label}: <span class="badge badge-warning">${data[taskType]}</span></p>`;
-          }
-        }
+    for (const taskType in data) {
+      if (data.hasOwnProperty(taskType) && data[taskType] > 0) {
+        hasTasks = true;
+        const label = taskLabels[taskType] || taskType;
+        html += `<p>${label}: <span class="badge badge-warning">${data[taskType]}</span></p>`;
+      }
     }
 
     if (!hasTasks) {
-      html += '<p>No open product tasks.</p>';
+      html = '<p>No open product tasks.</p>';
     }
 
     // TODO: If a "Web Product Detail Update Export" feature is implemented, add a UI element here
@@ -62,5 +49,5 @@
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(adminProductsWidget_updateView).withFailureHandler(showError).getDashboardData();
+  google.script.run.withSuccessHandler(updateProductsWidget).withFailureHandler(showError).getProductsWidgetData();
 </script>

@@ -4,107 +4,111 @@
 
 <script>
   /**
-   * Handles the response from server-side actions within this widget.
+   * Handles the click event for the 'Web Export' button.
    */
-  function adminInventoryWidget_handleServerResponse(response) {
-    const statusEl = document.getElementById('inventory-widget-status');
-    let statusHtml = '';
-
-    if (response && response.success) {
-      statusHtml = `<div class="text-success">${response.message || 'Success!'}</div>`;
-    } else {
-      const errorMessage = response ? (response.error || 'An unknown error occurred.') : 'An unknown error occurred.';
-      statusHtml = `<div class="text-danger" style="font-size: 0.8rem;">Action failed: ${errorMessage}</div>`;
-    }
+  function handleWebExportClick() {
+    const exportBtn = document.getElementById('btn-web-export');
+    const messageArea = document.getElementById('web-inventory-message-area');
     
-    if(statusEl) statusEl.innerHTML = statusHtml;
+    exportBtn.disabled = true;
+    exportBtn.className = 'btn';
+    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
 
-    setTimeout(() => {
-      if(statusEl) statusEl.innerHTML = '';
-      google.script.run.withSuccessHandler(adminInventoryWidget_updateView).withFailureHandler(showError).getDashboardData();
-    }, 4000);
+    google.script.run
+      .withSuccessHandler(response => {
+        google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+      })
+      .withFailureHandler(showError)
+      .exportWebInventory(); // This global function needs to exist in WebApp.js
   }
 
   /**
-   * A wrapper function for the export action.
+   * Handles the click event for the 'Web Updated' button.
+   * @param {string} taskId - The ID of the confirmation task to complete.
    */
-  function adminInventoryWidget_doExport() {
-    const statusEl = document.getElementById('inventory-widget-status');
-    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Inventory Export...</div>';
-    google.script.run.withSuccessHandler(adminInventoryWidget_handleServerResponse).withFailureHandler(adminInventoryWidget_handleServerResponse).runComaxInventoryExport();
-  }
+  function handleWebConfirmClick(taskId) {
+    const confirmBtn = document.getElementById('btn-web-updated');
+    const messageArea = document.getElementById('web-inventory-message-area');
 
-  /**
-   * A wrapper function for the confirm action.
-   * @param {string} taskId - The ID of the task to confirm.
-   */
-  function adminInventoryWidget_doConfirm(taskId) {
-    const statusEl = document.getElementById('inventory-widget-status');
-    if(statusEl) statusEl.innerHTML = '<div class="text-info">Processing Confirmation...</div>';
-    google.script.run.withSuccessHandler(adminInventoryWidget_handleServerResponse).withFailureHandler(adminInventoryWidget_handleServerResponse).confirmComaxInventoryImport(taskId);
+    confirmBtn.disabled = true;
+    confirmBtn.className = 'btn';
+    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+    
+    google.script.run
+      .withSuccessHandler(wasCompleted => {
+        if (!wasCompleted) {
+          showError('Failed to confirm task. It may have already been completed.');
+        }
+        google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+      })
+      .withFailureHandler(showError)
+      .confirmComaxImport(taskId); // Re-using existing global function which calls completeTask
   }
 
   /**
    * Populates the inventory widget.
+   * @param {Object} data - The inventory data from the backend.
    */
-  function adminInventoryWidget_updateView(dashboardData) {
+  function updateInventoryView(data) {
     const widget = document.getElementById('inventory-widget');
-    if (dashboardData.error) {
-      widget.innerHTML = `<p class="text-danger">${dashboardData.error}</p>`;
+    if (!data) {
+      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      return;
+    }
+    if (data.error) {
+      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    let html = '';
-    const inventoryData = dashboardData.inventoryData || {};
-
-    // Blocked Job Notice
-    if (dashboardData.blockedJobs && dashboardData.blockedJobs.length > 0) {
-      const comaxJob = dashboardData.blockedJobs.find(job => job.jobType === 'import.drive.comax_products');
-      if (comaxJob) {
-        html += `<div class="alert alert-info p-2" style="font-size: 0.9rem;">
-                   <strong>Workflow Paused:</strong><br>Comax product import is waiting for another job to complete.
-                 </div>`;
-      }
-    }
-
-    html += '<h5>Inventory</h5>';
-    
-    // Comax Invoices
-    html += `<a href="${inventoryData.invoiceFolderUrl}" target="_blank" class="text-decoration-none text-dark">
-               <p class="mb-2">Comax Invoices: <strong>${inventoryData.invoiceCount}</strong></p>
-             </a>`;
-    html += '<hr class="my-2">';
+    let html = '<h5>Inventory Overview</h5>';
 
     // Brurya Summary
-    html += '<p>Brurya Products: <strong>' + (inventoryData.bruryaProductCount || 0) + '</strong></p>';
-    html += '<p>Brurya Total Stock: <strong>' + (inventoryData.bruryaTotalStock || 0) + '</strong></p>';
-    html += '<hr class="my-2">';
+    html += '<p>Brurya Products: <strong>' + (data.bruryaProductCount || 0) + '</strong></p>';
+    html += '<p>Brurya Total Stock: <strong>' + (data.bruryaTotalStock || 0) + '</strong></p>';
+    html += '<hr>';
 
     // Open Inventory Tasks
-    html += '<p>Negative Inventory Tasks: <strong>' + (inventoryData.openNegativeInventoryTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Tasks: <strong>' + (inventoryData.openInventoryCountTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Review Tasks: <strong>' + (inventoryData.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
-    html += '<hr class="my-2">';
+    html += '<h6>Open Inventory Tasks</h6>';
+    html += '<p>Negative Inventory Tasks: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Tasks: <strong>' + (data.openInventoryCountTasksCount > 0 ? data.openInventoryCountTasksCount : '') + '</strong></p>';
+    html += '<p>Inventory Count Review Tasks: <strong>' + (data.openInventoryCountReviewTasksCount > 0 ? data.openInventoryCountReviewTasksCount : '') + '</strong></p>';
+    html += '<hr>';
 
-    // Comax Inventory Export (New Layout)
-    const exportCount = inventoryData.comaxInventoryExportCount || 0;
-    const confirmTask = inventoryData.openComaxInventoryConfirmationTask;
-    const isExportDisabled = exportCount === 0;
-    const isConfirmDisabled = !confirmTask;
+    // Web Inventory Update Section
+    html += '<h6>Web Inventory Update</h6>';
+    html += '<div id="web-inventory-message-area" style="margin-bottom: 0.5rem;"></div>';
+    html += '<button id="btn-web-export" class="btn" disabled>Web Export</button>';
+    html += '<button id="btn-web-updated" class="btn" style="margin-left: 0.5rem;" disabled>Web Updated</button>';
+    html += '<hr>';
 
-    html += `<p>Items to Export: <strong>${exportCount}</strong></p>`;
-
-    const exportButton = `<button class="btn btn-sm btn-light" ${isExportDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Generate Comax Inventory Export?', adminInventoryWidget_doExport)">Generate Export</button>`;
-    
-    const confirmTaskId = confirmTask ? confirmTask.id : '';
-    const confirmButton = `<button class="btn btn-sm btn-light ml-2" ${isConfirmDisabled ? 'disabled' : ''} onclick="showCustomConfirm('Are you sure you want to Confirm the Inventory Update?', function() { adminInventoryWidget_doConfirm('${confirmTaskId}'); })">Confirm Update</button>`;
-
-    html += `<div>${exportButton} ${confirmButton}</div>`;
-    html += `<div id="inventory-widget-status" class="mt-2" style="font-size: 0.9rem;"></div>`;
+    // Disabled Comax Inventory Export Section
+    html += '<p>Comax Inventory Export functionality is currently disabled.</p>';
 
     widget.innerHTML = html;
+
+    // --- State-Aware Logic for Web Inventory Update ---
+    const exportBtn = document.getElementById('btn-web-export');
+    const confirmBtn = document.getElementById('btn-web-updated');
+    const messageArea = document.getElementById('web-inventory-message-area');
+
+    exportBtn.className = 'btn';
+    confirmBtn.className = 'btn';
+
+    if (data.webInventoryConfirmationTask) {
+      messageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.webInventoryConfirmationTask.notes}</div>`;
+      confirmBtn.disabled = false;
+      confirmBtn.className = 'btn';
+      confirmBtn.setAttribute('onclick', `handleWebConfirmClick('${data.webInventoryConfirmationTask.id}')`);
+    } else if (data.webInventoryExportReadyTask) {
+      messageArea.innerHTML = `<div class="alert alert-info" style="padding: 0.5rem 1rem;">Web inventory export is ready.</div>`;
+      exportBtn.disabled = false;
+      exportBtn.className = 'btn';
+      exportBtn.setAttribute('onclick', 'handleWebExportClick()');
+    } else {
+      messageArea.innerHTML = '<p>Awaiting product imports.</p>';
+    }
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(adminInventoryWidget_updateView).withFailureHandler(showError).getDashboardData();
+  google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
 </script>

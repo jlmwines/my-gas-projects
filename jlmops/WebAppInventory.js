@@ -1,64 +1,53 @@
 /**
  * @file WebAppInventory.js
- * @description This file contains functions for the inventory widget.
+ * @description This script acts as a Data Provider for all inventory-related data,
+ * following the architecture plan.
  */
 
-/**
- * Gets the counts of various inventory-related tasks.
- *
- * @returns {object} An object containing the counts of inventory tasks.
- */
-function getInventoryWidgetData() {
-  const inventoryTaskTypes = [
-    'task.validation.sku_not_in_comax',
-    'task.validation.translation_missing',
-    'task.validation.comax_internal_audit',
-    'task.validation.field_mismatch',
-    'task.validation.name_mismatch',
-    'task.validation.web_master_discrepancy',
-    'task.validation.comax_master_discrepancy',
-    'task.validation.row_count_decrease',
-    'task.validation.comax_not_web_product'
-  ];
+// eslint-disable-next-line no-unused-vars
+const WebAppInventory = (() => {
 
-  try {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+  /**
+   * Gets all data required for the Admin Inventory Widget.
+   * @returns {Object} An object containing counts and tasks for the inventory widget.
+   */
+  const getInventoryWidgetData = () => {
+    try {
+      // 1. Get Brurya stats from the backend service
+      const bruryaSummary = inventoryManagementService.getBruryaSummaryStatistic();
+      
+      // 2. Get task counts from the tasks data provider
+      const openNegativeInventoryTasksCount = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit').length;
+      const openInventoryCountTasksCount = WebAppTasks.getOpenTasksByTypeId('task.inventory.count').length;
+      const openInventoryCountReviewTasksCount = WebAppTasks.getOpenTasksByTypeId('task.inventory.count_review').length;
 
-    if (!sheet) {
-      throw new Error("Sheet 'SysTasks' not found");
+      // 3. Check for Web Inventory Export tasks
+      const webInventoryExportReadyTask = WebAppTasks.getOpenTaskByTypeId('task.export.web_inventory_ready');
+      const webInventoryConfirmationTask = WebAppTasks.getOpenTaskByTypeId('task.confirmation.web_inventory_export');
+      
+      // 4. Set disabled fields to their null state
+      const comaxInventoryExportCount = 0;
+      const openComaxInventoryConfirmationTask = null;
+
+      return {
+        bruryaProductCount: bruryaSummary.productCount,
+        bruryaTotalStock: bruryaSummary.totalStock,
+        openNegativeInventoryTasksCount: openNegativeInventoryTasksCount,
+        openInventoryCountTasksCount: openInventoryCountTasksCount,
+        openInventoryCountReviewTasksCount: openInventoryCountReviewTasksCount,
+        comaxInventoryExportCount: comaxInventoryExportCount,
+        openComaxInventoryConfirmationTask: openComaxInventoryConfirmationTask,
+        webInventoryExportReadyTask: webInventoryExportReadyTask,
+        webInventoryConfirmationTask: webInventoryConfirmationTask,
+        error: null
+      };
+    } catch (e) {
+      LoggerService.error('WebAppInventory', 'getInventoryWidgetData', e.message, e);
+      return { error: `Could not load inventory widget data: ${e.message}` };
     }
+  };
 
-    const headers = taskSchema.headers.split(',');
-    const typeIdCol = headers.indexOf('st_TaskTypeId');
-    const statusCol = headers.indexOf('st_Status');
-
-    const taskCounts = {};
-    inventoryTaskTypes.forEach(taskType => {
-      taskCounts[taskType] = 0;
-    });
-
-    if (sheet.getLastRow() > 1) {
-      const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-      existingRows.forEach(row => {
-        const taskType = row[typeIdCol];
-        const status = row[statusCol];
-        if (inventoryTaskTypes.includes(taskType) && status !== 'Done' && status !== 'Closed') {
-          taskCounts[taskType]++;
-        }
-      });
-    }
-
-    return {
-      error: null,
-      data: taskCounts
-    };
-  } catch (e) {
-    logger.error('WebAppInventory', 'getInventoryWidgetData', `Error getting inventory widget data: ${e.message}`, e);
-    return {
-      error: `Error getting inventory widget data: ${e.message}`,
-      data: null
-    };
-  }
-}
+  return {
+    getInventoryWidgetData: getInventoryWidgetData
+  };
+})();

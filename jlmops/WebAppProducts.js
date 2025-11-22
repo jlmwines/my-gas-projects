@@ -55,7 +55,7 @@ function getProductsWidgetData() {
       data: taskCounts
     };
   } catch (e) {
-    logger.error('WebAppProducts', 'getProductsWidgetData', `Error getting products widget data: ${e.message}`, e);
+    LoggerService.error('WebAppProducts', 'getProductsWidgetData', `Error getting products widget data: ${e.message}`);
     return {
       error: `Error getting products widget data: ${e.message}`,
       data: null
