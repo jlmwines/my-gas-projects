@@ -1,37 +1,167 @@
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <h3>Inventory (Manager)</h3>
-      </div>
-      <div class="card-body" id="inventory-widget-manager">
-        <p>Loading...</p>
-      </div>
+<div class="container-fluid">
+    <h1 class="mt-4">Manager Inventory</h1>
+    <p>All inventory-related tasks for managers.</p>
+
+    <!-- Section for Inventory Counts -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-tasks mr-1"></i>
+            Inventory Counts
+        </div>
+        <div class="card-body">
+            <p>Start a new physical inventory count for a location.</p>
+            <button class="btn">Start New Count</button>
+            <!-- Placeholder for a list of active counts -->
+        </div>
     </div>
-  </div>
+
+    <!-- Section for Brurya Inventory Management -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-warehouse mr-1"></i>
+            Brurya Stock Management
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <input type="text" class="form-control" id="productSearch" placeholder="Search by SKU or Name">
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered" id="bruryaInventoryTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Product Name</th>
+                            <th>Brurya Quantity</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Inventory items will be loaded here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn mt-3" id="saveBruryaInventory">Save Changes</button>
+        </div>
+    </div>
 </div>
 
 <script>
-  /**
-   * Populates the manager inventory view widgets.
-   * @param {Object} data - The inventory data from the backend.
-   */
-  function updateManagerInventoryView(data) {
-    if (data.error) {
-      showError({ message: data.error });
-      return;
-    }
+    // Note: This script block is a combination of logic for the consolidated view.
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Brurya Inventory Management Logic ---
+        const productSearch = document.getElementById('productSearch');
+        const bruryaInventoryTableBody = document.querySelector('#bruryaInventoryTable tbody');
+        const saveBruryaInventoryButton = document.getElementById('saveBruryaInventory');
 
-    const inventoryWidget = document.getElementById('inventory-widget-manager');
-    let inventoryHtml = '<h6>Inventory Counts</h6>';
-    if (data.isInventoryCountNeeded) {
-      inventoryHtml += '<p>Brurya inventory counts are due.</p><button class="btn btn-primary" onclick="loadView(\'BruryaInventory\')">Go to Count Sheet</button>';
-    } else {
-      inventoryHtml += '<p>No inventory counts are currently needed.</p>';
-    }
-    inventoryWidget.innerHTML = inventoryHtml;
-  }
+        let currentInventory = []; // Stores the current state of inventory displayed
 
-  // Initial data load for this view
-  google.script.run.withSuccessHandler(updateManagerInventoryView).withFailureHandler(showError).getManagerInventoryData();
+        function loadBruryaInventory() {
+            google.script.run
+                .withSuccessHandler(function(inventoryData) {
+                    currentInventory = inventoryData;
+                    renderInventoryTable(currentInventory);
+                })
+                .withFailureHandler(function(error) {
+                    bruryaInventoryTableBody.innerHTML = `<tr><td colspan="4">Error loading inventory: ${error.message}</td></tr>`;
+                    console.error("Error loading Brurya inventory:", error);
+                })
+                .WebAppInventory_getBruryaStockData();
+        }
+
+        function renderInventoryTable(inventory) {
+            bruryaInventoryTableBody.innerHTML = ''; // Clear existing rows
+            if (inventory.length === 0) {
+                bruryaInventoryTableBody.innerHTML = '<tr><td colspan="4">No items in Brurya inventory.</td></tr>';
+                return;
+            }
+
+            inventory.forEach(item => {
+                const row = bruryaInventoryTableBody.insertRow();
+                row.dataset.sku = item.sku;
+
+                row.insertCell(0).textContent = item.sku;
+                row.insertCell(1).textContent = item.productName || 'Loading...'; 
+                
+                const qtyCell = row.insertCell(2);
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'number';
+                qtyInput.value = item.bruryaQty;
+                qtyInput.min = '0';
+                qtyInput.classList.add('form-control');
+                qtyInput.addEventListener('change', () => row.classList.add('table-warning'));
+                qtyCell.appendChild(qtyInput);
+
+                const actionCell = row.insertCell(3);
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove';
+                removeButton.classList.add('btn', 'btn-sm');
+                removeButton.addEventListener('click', () => {
+                    if (confirm(`Are you sure you want to remove ${item.sku} from Brurya inventory?`)) {
+                        qtyInput.value = 0;
+                        row.classList.add('table-warning');
+                    }
+                });
+                actionCell.appendChild(removeButton);
+            });
+            fetchProductNames(inventory.map(item => item.sku));
+        }
+
+        function fetchProductNames(skus) {
+            google.script.run
+                .withSuccessHandler(function(productNamesMap) {
+                    document.querySelectorAll('#bruryaInventoryTable tbody tr').forEach(row => {
+                        const sku = row.dataset.sku;
+                        if (row.cells[1].textContent === 'Loading...') {
+                           row.cells[1].textContent = productNamesMap[sku] || 'N/A';
+                        }
+                    });
+                })
+                .withFailureHandler(console.error)
+                .WebAppInventory_getProductNamesBySkus(skus);
+        }
+
+        productSearch.addEventListener('keyup', function() {
+            const searchTerm = productSearch.value.toLowerCase();
+            const filteredInventory = currentInventory.filter(item => 
+                item.sku.toLowerCase().includes(searchTerm) || 
+                (item.productName && item.productName.toLowerCase().includes(searchTerm))
+            );
+            renderInventoryTable(filteredInventory);
+        });
+
+        saveBruryaInventoryButton.addEventListener('click', function() {
+            const changes = [];
+            document.querySelectorAll('#bruryaInventoryTable tbody tr.table-warning').forEach(row => {
+                const sku = row.dataset.sku;
+                const newQty = parseFloat(row.querySelector('input[type="number"]').value);
+                if (!isNaN(newQty)) {
+                    changes.push({ sku: sku, quantity: newQty });
+                }
+            });
+
+            if (changes.length > 0) {
+                saveBruryaInventoryButton.disabled = true;
+                saveBruryaInventoryButton.textContent = 'Saving...';
+                google.script.run
+                    .withSuccessHandler(function() {
+                        alert("Brurya inventory updated successfully!");
+                        saveBruryaInventoryButton.disabled = false;
+                        saveBruryaInventoryButton.textContent = 'Save Changes';
+                        loadBruryaInventory();
+                    })
+                    .withFailureHandler(function(error) {
+                        console.error("Error saving Brurya inventory:", error);
+                        alert("Failed to save Brurya inventory: " + error.message);
+                        saveBruryaInventoryButton.disabled = false;
+                        saveBruryaInventoryButton.textContent = 'Save Changes';
+                    })
+                    .WebAppInventory_saveBruryaInventoryChanges(changes);
+            } else {
+                alert("No changes to save.");
+            }
+        });
+
+        // Initial load for Brurya inventory
+        loadBruryaInventory();
+    });
 </script>

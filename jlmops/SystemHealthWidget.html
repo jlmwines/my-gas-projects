@@ -67,7 +67,7 @@
           statusElement.innerText = `Job created. Processing...`;
           statusElement.className = 'text-success';
           // Refresh the widget data after a short delay to allow the orchestrator to pick up the job
-          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData(), 3000);
+          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).WebAppSystem_getSystemHealthDashboardData(), 3000);
         } else {
           statusElement.innerText = `Failed to create job: ${response.error}`;
           statusElement.className = 'text-danger';
@@ -78,9 +78,9 @@
         statusElement.className = 'text-danger';
         showError(error);
       })
-      .createMasterValidationJob();
+      .WebAppSystem_createMasterValidationJob();
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).getSystemHealthData();
+  google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).WebAppSystem_getSystemHealthDashboardData();
 </script>

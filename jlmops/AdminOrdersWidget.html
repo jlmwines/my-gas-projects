@@ -18,10 +18,10 @@
       google.script.run
         .withSuccessHandler(response => {
           // The success handler will simply re-run the data load to get the new state
-          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
         })
         .withFailureHandler(showError)
-        .runComaxOrderExport();
+        .WebAppOrders_runComaxOrderExport();
     } else {
       // If user cancels, do nothing, the button is still enabled.
     }
@@ -46,10 +46,10 @@
             showError('Failed to confirm task. It may have already been completed.');
           }
           // Always refresh data to show the latest state
-          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
         })
         .withFailureHandler(showError)
-        .completeTaskById(taskId);
+        .WebAppTasks_completeTaskById(taskId);
     } else {
       // If user cancels, do nothing, the button is still enabled.
     }
@@ -118,5 +118,5 @@
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+  google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
 </script>

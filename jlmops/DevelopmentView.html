@@ -24,7 +24,7 @@
       .withFailureHandler(err => {
         resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
       })
-      .runRebuildSysConfigFromSource();
+      .WebAppSystem_runRebuildSysConfigFromSource();
   }
 
   function downloadSnapshot() {
@@ -41,6 +41,6 @@
       .withFailureHandler(err => {
         resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
       })
-      .getSysConfigCsvAsBase64();
+      .WebAppSystem_getSysConfigCsvAsBase64();
   }
 </script>

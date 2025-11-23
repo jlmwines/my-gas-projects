@@ -1,9 +1,20 @@
-<div>
-  <h2>Packing Slips</h2>
-  <p>Select orders to print packing slips for.</p>
-  <button class="btn btn-primary mb-3" onclick="generateSelectedPackingSlips()">Print Selected</button>
-  <div id="orders-list"></div>
-  <div id="print-result" class="mt-3"></div>
+<div class="container-fluid">
+    <h1 class="mt-4">Manager Orders</h1>
+    <p>All order-related tasks for managers.</p>
+
+    <!-- Section for Packing Slips -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-file-alt mr-1"></i>
+            Packing Slips
+        </div>
+        <div class="card-body">
+            <p>Select orders to print packing slips for.</p>
+            <button class="btn mb-3" onclick="generateSelectedPackingSlips()">Print Selected</button>
+            <div id="orders-list"></div>
+            <div id="print-result" class="mt-3"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -23,7 +34,7 @@
           orders.forEach(order => {
             let giftButton = '';
             if (order.customerNote) {
-              giftButton = `<button class="btn btn-sm btn-secondary" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
+              giftButton = `<button class="btn btn-sm" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
             }
             tableHtml += `<tr><td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td><td>${order.orderId}</td><td>${order.status}</td><td>${order.customerNote || ''}</td><td>${giftButton}</td></tr>`;
           });
@@ -33,7 +44,7 @@
         .withFailureHandler(err => {
           ordersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         })
-        .getPackableOrders();
+        .WebAppOrders_getPackableOrders();
     } catch (e) {
       alert('A client-side error occurred: ' + e.message);
     }
@@ -57,7 +68,7 @@
       .withFailureHandler(err => {
         printResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
       })
-      .createGiftMessageDoc(orderId, noteContent);
+      .WebAppOrders_createGiftMessageDoc(orderId, noteContent);
   }
 
   function generateSelectedPackingSlips() {
@@ -80,7 +91,7 @@
       .withFailureHandler(err => {
         printResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
       })
-      .generatePackingSlips(orderIds);
+      .WebAppOrders_generatePackingSlips(orderIds);
   }
 
   // Self-execute to load the data as soon as the view is loaded.

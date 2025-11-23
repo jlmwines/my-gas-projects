@@ -5,13 +5,11 @@
  * calling the appropriate Data Provider scripts (e.g., WebAppTasks, WebAppOrders).
  */
 
-// eslint-disable-next-line no-unused-vars
-const WebAppDashboard = (() => {
-  /**
-   * Retrieves key health and status metrics for the admin dashboard.
-   * @returns {Object} An object containing system health data.
-   */
-  const getDashboardData = () => {
+/**
+ * Retrieves key health and status metrics for the admin dashboard.
+ * @returns {Object} An object containing system health data.
+ */
+function WebAppDashboard_getDashboardData() {
     const role = AuthService.getActiveUserRole();
     
     if (role === 'admin') {
@@ -53,9 +51,9 @@ const WebAppDashboard = (() => {
           }
         });
 
-        const productData = getAdminProductData();
+        const productData = WebAppProducts_getAdminProductData();
 
-        const ordersWidgetData = WebAppOrders.getOrdersWidgetData();
+        const ordersWidgetData = WebAppOrders_getOrdersWidgetData(); // Direct call to global namespaced function
 
         return {
           role: role,
@@ -78,9 +76,4 @@ const WebAppDashboard = (() => {
     }
 
     return { role: role }; // Default for other roles
-  }
-
-  return {
-    getDashboardData,
-  };
-})();
+}

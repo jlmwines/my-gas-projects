@@ -82,35 +82,20 @@
 
     <div class="main-body">
       <div class="sidebar">
-        <ul class="nav flex-column">
-          <!-- Admin Links -->
-          <li id="nav-system-health" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">
-              System Health
-            </a>
-          </li>
-          <li id="nav-admin-orders" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a>
-          </li>
-          <li id="nav-admin-inventory" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a>
-          </li>
-          <li id="nav-product-details" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ProductDetails')">Product Details</a>
-          </li>
-          <li id="nav-development" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a>
-          </li>
-
-          <!-- Manager Links -->
-          <li id="nav-manager-inventory" class="nav-item" style="display: none;">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a>
-          </li>
-
-          <!-- Shared Links -->
-          <li class="nav-item">
-            <a class="nav-link" href="javascript:void(0);" onclick="loadView('PackingSlips')">Packing Slips</a>
-          </li>
+        <!-- Admin Navigation -->
+        <ul id="admin-nav" class="nav flex-column" style="display: none;">
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="switchRole()">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ProductDetails')">Products</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">System</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
+        </ul>
+        <!-- Manager Navigation -->
+        <ul id="manager-nav" class="nav flex-column" style="display: none;">
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="switchRole()">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerOrders')">Orders</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a></li>
         </ul>
       </div>
 
@@ -144,20 +129,15 @@
        * Shows/hides navigation links based on role.
        */
       function setNavigationForRole(role) {
-        // Hide all role-specific links first
-        ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development', 'nav-manager-inventory'].forEach(id => {
-            document.getElementById(id).style.display = 'none';
-        });
+        const adminNav = document.getElementById('admin-nav');
+        const managerNav = document.getElementById('manager-nav');
 
-        // Show links based on role
         if (role === 'admin') {
-          ['nav-system-health', 'nav-admin-orders', 'nav-admin-inventory', 'nav-product-details', 'nav-development', 'nav-manager-inventory'].forEach(id => {
-            document.getElementById(id).style.display = 'block';
-          });
-        } else if (role === 'manager') {
-          ['nav-manager-inventory'].forEach(id => {
-            document.getElementById(id).style.display = 'block';
-          });
+            adminNav.style.display = 'block';
+            managerNav.style.display = 'none';
+        } else { // Assumes 'manager'
+            adminNav.style.display = 'none';
+            managerNav.style.display = 'block';
         }
       }
 

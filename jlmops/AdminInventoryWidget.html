@@ -17,10 +17,10 @@
 
       google.script.run
         .withSuccessHandler(response => {
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
         })
         .withFailureHandler(showError)
-        .exportWebInventory(); // This global function needs to exist in WebApp.js
+        .WebAppInventory_exportWebInventory();
     }
   }
 
@@ -42,10 +42,10 @@
           if (!wasCompleted) {
             showError('Failed to confirm task. It may have already been completed.');
           }
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
         })
         .withFailureHandler(showError)
-        .completeTaskById(taskId);
+        .WebAppTasks_completeTaskById(taskId);
     }
   }
 
@@ -114,5 +114,5 @@
   }
 
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+  google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
 </script>

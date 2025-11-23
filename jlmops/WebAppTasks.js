@@ -3,9 +3,6 @@
  * @description This script acts as a Data Provider for all task-related data.
  * It contains reusable functions for fetching and preparing task data from the
  * backend services (e.g., TaskService) for consumption by UI View Controllers.
- *
- * As per the architecture, this script should not be called directly from the HTML.
- * It should only be called by View Controller scripts (e.g., WebAppDashboard.js).
  */
 
 // eslint-disable-next-line no-unused-vars
@@ -79,18 +76,6 @@ const WebAppTasks = (() => {
   };
 
   /**
-   * Wraps the TaskService.completeTask function.
-   * @param {string} taskId - The ID of the task to complete.
-   * @returns {boolean} True if the task was completed successfully.
-   */
-  const completeTask = (taskId) => {
-    if (!taskId) {
-      throw new Error('Task ID is required to complete a task.');
-    }
-    return TaskService.completeTask(taskId);
-  };
-
-  /**
    * Retrieves a single open task of a specific type.
    * @param {string} typeId - The exact task type ID to filter by.
    * @returns {Object|null} The first open task object of the specified type, or null if none exist.
@@ -106,7 +91,18 @@ const WebAppTasks = (() => {
     getOpenTasksByTypeId,
     getOpenTasksByPrefix,
     createTask,
-    completeTask,
     getOpenTaskByTypeId,
   };
 })();
+
+/**
+ * Completes a task by its ID. This is a global function callable from the client-side.
+ * @param {string} taskId The ID of the task to complete.
+ * @returns {boolean} True if successful.
+ */
+function WebAppTasks_completeTaskById(taskId) {
+  if (!taskId) {
+    throw new Error('Task ID is required to complete a task.');
+  }
+  return TaskService.completeTask(taskId);
+}

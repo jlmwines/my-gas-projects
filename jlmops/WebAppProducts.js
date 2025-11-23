@@ -8,7 +8,7 @@
  *
  * @returns {object} An object containing the counts of product tasks.
  */
-function getProductsWidgetData() {
+function WebAppProducts_getProductsWidgetData() {
   const productTaskTypes = [
     'task.validation.sku_not_in_comax',
     'task.validation.translation_missing',
@@ -61,4 +61,16 @@ function getProductsWidgetData() {
       data: null
     };
   }
+}
+
+/**
+ * Gets admin product data (placeholder).
+ * @returns {Object} An object with product data for the admin.
+ */
+function WebAppProducts_getAdminProductData() {
+  // Placeholder: In the future, this could query WebDetM for products needing verification.
+  return {
+    productsToVerify: 5, 
+    newProducts: 2
+  };
 }

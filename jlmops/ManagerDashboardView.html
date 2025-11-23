@@ -1,35 +1,69 @@
-<!-- Manager-only widgets -->
-<div id="manager-dashboard-widgets">
-  <div class="row">
-    <div class="col-12">
-      <div class="card mb-4">
-        <div class="card-header">Inventory Workflows</div>
-        <div class="card-body" id="inventory-workflow-widget-manager">
-          <p>Loading...</p>
-        </div>
-      </div>
-    </div>
+<div class="row">
+  <div class="col-md-4" id="manager-orders-widget-placeholder">
+    <p>Loading Manager Orders Widget...</p>
+  </div>
+  <div class="col-md-4" id="manager-inventory-widget-placeholder">
+    <p>Loading Manager Inventory Widget...</p>
+  </div>
+  <div class="col-md-4" id="manager-products-widget-placeholder">
+    <p>Loading Manager Products Widget...</p>
   </div>
 </div>
 
 <script>
   /**
-   * Populates manager dashboard widgets with data from the backend.
-   * This function is called by the main dashboard shell.
-   * @param {Object} data - Object with various manager metrics.
+   * A generic function to execute scripts within a string of HTML.
+   * This function needs to be available in the global scope for the widgets.
+   * @param {HTMLElement} element - The element containing the new HTML.
    */
-  function updateManagerDashboard(data) {
-    const inventoryWidget = document.getElementById('inventory-workflow-widget-manager');
-    let inventoryHtml = '<h6>Inventory Counts</h6>';
-    if (data.isInventoryCountNeeded) {
-      inventoryHtml += '<p>Brurya inventory counts are due.</p><button class="btn btn-primary" onclick="loadView(\'BruryaInventory\')">Go to Count Sheet</button>';
-    } else {
-      inventoryHtml += '<p>No inventory counts are currently needed.</p>';
-    }
-    inventoryWidget.innerHTML = inventoryHtml;
+  function executeScriptsInElement(element) {
+    const scripts = Array.from(element.getElementsByTagName('script'));
+    scripts.forEach(s => {
+      const newScript = document.createElement('script');
+      newScript.textContent = s.textContent;
+      s.parentNode.replaceChild(newScript, s);
+    });
   }
 
-  // Initial data load for the manager dashboard
-  google.script.run.withSuccessHandler(updateManagerDashboard).withFailureHandler(showError).getDashboardData();
-</script>
+  /**
+   * Displays an error message. This needs to be available for the widgets.
+   * @param {Error} err - The error object from a failed google.script.run call.
+   */
+  function showError(err) {
+    if (window.parent && window.parent.showError) {
+      window.parent.showError(err);
+    } else {
+      console.error(err);
+    }
+  }
 
+  /**
+   * Loads a widget into a specified placeholder.
+   * @param {string} widgetName - The name of the widget view to load.
+   * @param {string} placeholderId - The ID of the div to load the widget into.
+   */
+  function loadWidget(widgetName, placeholderId) {
+    const placeholder = document.getElementById(placeholderId);
+    if (!placeholder) {
+      console.error('Placeholder not found:', placeholderId);
+      return;
+    }
+    
+    google.script.run
+      .withSuccessHandler(html => {
+        placeholder.innerHTML = html;
+        executeScriptsInElement(placeholder);
+      })
+      .withFailureHandler(err => {
+        placeholder.innerHTML = `<p class="text-danger">Error loading ${widgetName}: ${err.message}</p>`;
+      })
+      .getView(widgetName);
+  }
+
+  // Load Manager Widgets
+  // TODO: Create and load manager-specific widgets
+  document.getElementById('manager-orders-widget-placeholder').innerHTML = '<div class="card"><div class="card-body"><p>Manager Orders Widget (Placeholder)</p></div></div>';
+  document.getElementById('manager-inventory-widget-placeholder').innerHTML = '<div class="card"><div class="card-body"><p>Manager Inventory Widget (Placeholder)</p></div></div>';
+  document.getElementById('manager-products-widget-placeholder').innerHTML = '<div class="card"><div class="card-body"><p>Manager Products Widget (Placeholder)</p></div></div>';
+
+</script>
