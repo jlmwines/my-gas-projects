@@ -10,16 +10,18 @@
     const exportBtn = document.getElementById('btn-web-export');
     const messageArea = document.getElementById('web-inventory-message-area');
     
-    exportBtn.disabled = true;
-    exportBtn.className = 'btn';
-    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+    if (confirm("Are you sure you want to export web inventory?")) {
+      exportBtn.disabled = true;
+      exportBtn.className = 'btn';
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
 
-    google.script.run
-      .withSuccessHandler(response => {
-        google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
-      })
-      .withFailureHandler(showError)
-      .exportWebInventory(); // This global function needs to exist in WebApp.js
+      google.script.run
+        .withSuccessHandler(response => {
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+        })
+        .withFailureHandler(showError)
+        .exportWebInventory(); // This global function needs to exist in WebApp.js
+    }
   }
 
   /**
@@ -30,19 +32,21 @@
     const confirmBtn = document.getElementById('btn-web-updated');
     const messageArea = document.getElementById('web-inventory-message-area');
 
-    confirmBtn.disabled = true;
-    confirmBtn.className = 'btn';
-    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-    
-    google.script.run
-      .withSuccessHandler(wasCompleted => {
-        if (!wasCompleted) {
-          showError('Failed to confirm task. It may have already been completed.');
-        }
-        google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
-      })
-      .withFailureHandler(showError)
-      .confirmComaxImport(taskId); // Re-using existing global function which calls completeTask
+    if (confirm("Are you sure you want to confirm the web inventory update?")) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn';
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+      
+      google.script.run
+        .withSuccessHandler(wasCompleted => {
+          if (!wasCompleted) {
+            showError('Failed to confirm task. It may have already been completed.');
+          }
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).getInventoryWidgetData();
+        })
+        .withFailureHandler(showError)
+        .completeTaskById(taskId);
+    }
   }
 
   /**

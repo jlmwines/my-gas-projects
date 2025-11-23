@@ -82,7 +82,16 @@
     ],
     [
         "task.template",
-        "task.confirmation.comax_export",
+        "task.export.comax_orders_ready",
+        "System task indicating that new web orders have been imported and are ready for export to Comax.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.confirmation.comax_order_export",
         "Task to confirm Comax order export has been processed.",
         "stable",
         "topic", "System",
@@ -122,6 +131,24 @@
         "Task to confirm Comax inventory export has been processed.",
         "stable",
         "topic", "Inventory",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.export.web_inventory_ready",
+        "System task indicating that paired product imports are complete and web inventory is ready for export.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.confirmation.web_inventory_export",
+        "Task to confirm web inventory export has been processed.",
+        "stable",
+        "topic", "System",
         "default_priority", "High",
         "initial_status", "New"
     ]

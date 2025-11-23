@@ -33,13 +33,19 @@ const ValidationService = {
       }
 
       if (discrepancies.length === 0) {
-        logger.info(serviceName, functionName, 'On-Hold Inventory validation successful. Data matches.');
+        const message = 'On-Hold Inventory validation successful. Data matches.';
+        logger.info(serviceName, functionName, message);
+        return message;
       } else {
-        logger.info(serviceName, functionName, `On-Hold Inventory validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
+        const message = `On-Hold Inventory validation failed. Discrepancies found: \n- ${discrepancies.join('\n- ')}`;
+        logger.info(serviceName, functionName, message.replace(/\n/g, ' ')); // Log as a single line
+        return message;
       }
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error during On-Hold Inventory validation: ${e.message}`, e);
+      const errorMessage = `Error during On-Hold Inventory validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
     }
   },
 
@@ -73,9 +79,83 @@ const ValidationService = {
   },
 
   /**
+   * Compares the orders awaiting Comax export between jlmops and the legacy system.
+   * This is a higher-level check than direct file comparison.
+   */
+  validateComaxExportConsistency() {
+    const serviceName = 'ValidationService';
+    const functionName = 'validateComaxExportConsistency';
+    let report = [];
+
+    try {
+      // --- JLMops System ---
+      const jlmopsDataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+      const sheetNames = ConfigService.getConfig('system.sheet_names');
+      const jlmopsOrderLog = this._readSheetData(jlmopsDataSpreadsheetId, sheetNames.SysOrdLog);
+
+      const jlmopsAwaitingExport = jlmopsOrderLog
+        .filter(row => {
+          const currentStatus = String(row.sol_OrderStatus || '').toLowerCase().trim();
+          const notExported = !row.sol_ComaxExportTimestamp;
+          return notExported && (currentStatus === 'processing' || currentStatus === 'completed');
+        })
+        .map(row => String(row.sol_OrderId));
+
+      report.push('JLMops System:');
+      report.push(`- Count: ${jlmopsAwaitingExport.length}`);
+      if (jlmopsAwaitingExport.length > 0) {
+        report.push(`- Orders: ${jlmopsAwaitingExport.join(', ')}`);
+      }
+      report.push(''); // Add a blank line for spacing
+
+
+      // --- Legacy System ---
+      const legacyOrdersM = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const legacyOrderLog = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrderLog');
+
+      const legacyStatusMap = new Map(legacyOrdersM.map(row => [
+        String(row.order_id),
+        String(row.status || '').toLowerCase().trim()
+      ]));
+      
+      const legacyAwaitingExport = legacyOrderLog
+        .filter(logRow => {
+          const exportStatus = logRow.comax_export_status;
+          if (exportStatus) { return false; } // Filter for null/empty
+
+          const orderId = String(logRow.order_id);
+          const currentStatus = legacyStatusMap.get(orderId);
+          return currentStatus === 'processing' || currentStatus === 'completed';
+        })
+        .map(logRow => String(logRow.order_id));
+
+      report.push('Legacy System:');
+      report.push(`- Count: ${legacyAwaitingExport.length}`);
+      if (legacyAwaitingExport.length > 0) {
+        report.push(`- Orders: ${legacyAwaitingExport.join(', ')}`);
+      }
+
+    } catch (e) {
+      const errorMessage = `Error during Comax Export data collection: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
+    }
+    
+    const finalReport = report.join('\n');
+    logger.info(serviceName, functionName, finalReport.replace(/\n/g, ' | '));
+    return finalReport;
+  },
+
+  /**
    * Compares the Comax order export from jlmops with the latest one from the legacy system.
    */
   validateComaxOrderExport() {
+    // First, run the new high-level consistency check.
+    const consistencyResult = this.validateComaxExportConsistency();
+
+    // The direct file comparison below is disabled in favor of the order-level check above.
+    // It was found to be unreliable if the export processes were not run at the exact same time.
+    /*
     const jlmopsExportConfig = ConfigService.getConfig('system.folder.jlmops_exports');
     if (!jlmopsExportConfig || !jlmopsExportConfig.id) {
       throw new Error('Configuration "system.folder.jlmops_exports" is missing or incomplete in SysConfig. Please ensure SetupConfig.js is correct and rebuildSysConfigFromSource() has been run.');
@@ -83,7 +163,11 @@ const ValidationService = {
     const jlmopsFolderId = jlmopsExportConfig.id;
     const legacyFileNamePattern = /OrderEx-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
     const jlmopsFileNamePattern = /ComaxExport_\d{2}-\d{2}-\d{2}-\d{2}\.csv/; // Updated pattern for jlmops export
-    this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Comax Order Export', 'SKU', ['Quantity']);
+    const fileCompareResult = this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Comax Order Export', 'SKU', ['Quantity']);
+    */
+
+    // Return the result of the new validation.
+    return consistencyResult;
   },
 
   /**
@@ -98,7 +182,7 @@ const ValidationService = {
     const legacyFileNamePattern = /ProductInventory-\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
     const jlmopsFileNamePattern = /ProductInventory_\d{2}-\d{2}-\d{2}-\d{2}\.csv/;
 
-    this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Web Product Update', 'SKU', ['Stock', 'Regular Price']);
+    return this._validateCsvExport(LEGACY_EXPORT_FOLDER_ID, legacyFileNamePattern, jlmopsFolderId, jlmopsFileNamePattern, 'Web Product Update', 'SKU', ['Stock', 'Regular Price']);
   },
 
   /**
@@ -119,21 +203,25 @@ const ValidationService = {
       const jlmopsFile = this._getLatestFile(jlmopsFolderId, jlmopsFileNamePattern);
 
       if (!legacyFile) {
-        logger.info(serviceName, functionName, `No legacy file found for ${validationName}`);
-        return;
+        const message = `Validation skipped: No legacy file found for ${validationName}`;
+        logger.info(serviceName, functionName, message);
+        return message;
       }
       if (!jlmopsFile) {
-        logger.info(serviceName, functionName, `No jlmops file found for ${validationName}`);
-        return;
+        const message = `Validation skipped: No jlmops file found for ${validationName}`;
+        logger.info(serviceName, functionName, message);
+        return message;
       }
 
       const legacyContent = legacyFile.getBlob().getDataAsString();
       const jlmopsContent = jlmopsFile.getBlob().getDataAsString();
 
-      this._compareCsvData(legacyContent, jlmopsContent, validationName, keyColumn, columnsToCompare);
+      return this._compareCsvData(legacyContent, jlmopsContent, validationName, keyColumn, columnsToCompare);
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error during ${validationName} validation: ${e.message}`, e);
+      const errorMessage = `Error during ${validationName} validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
     }
   },
 
@@ -199,9 +287,13 @@ const ValidationService = {
     }
 
     if (discrepancies.length === 0) {
-      logger.info(serviceName, functionName, `${validationName} validation successful. Data is equivalent.`);
+      const message = `${validationName} validation successful. Data is equivalent.`;
+      logger.info(serviceName, functionName, message);
+      return message;
     } else {
-      logger.info(serviceName, functionName, `${validationName} validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
+      const message = `${validationName} validation failed. Discrepancies found: \n- ${discrepancies.join('\n- ')}`;
+      logger.info(serviceName, functionName, message.replace(/\n/g, ' ')); // Log as a single line
+      return message;
     }
   },
 
@@ -246,14 +338,68 @@ const ValidationService = {
       const maxLegacyOrderNumber = legacyOrderNumbers.length > 0 ? Math.max(...legacyOrderNumbers) : 0;
       const maxJlmopsOrderNumber = jlmopsOrderNumbers.length > 0 ? Math.max(...jlmopsOrderNumbers) : 0;
 
+      let message;
       if (maxLegacyOrderNumber === maxJlmopsOrderNumber) {
-        logger.info(serviceName, functionName, `Highest Order Number validation successful. Both systems report ${maxJlmopsOrderNumber}.`);
+        message = `Highest Order Number validation successful. Both systems report ${maxJlmopsOrderNumber}.`;
+        logger.info(serviceName, functionName, message);
       } else {
-        logger.info(serviceName, functionName, `Highest Order Number validation failed. Legacy: ${maxLegacyOrderNumber}, JLMops: ${maxJlmopsOrderNumber}.`);
+        message = `Highest Order Number validation failed. Legacy: ${maxLegacyOrderNumber}, JLMops: ${maxJlmopsOrderNumber}.`;
+        logger.info(serviceName, functionName, message);
+      }
+      return message;
+
+    } catch (e) {
+      const errorMessage = `Error during Highest Order Number validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
+    }
+  },
+
+  /**
+   * Compares order statuses ('on-hold', 'processing') between jlmops and legacy.
+   */
+  validateOrderStatusMatch() {
+    const serviceName = 'ValidationService';
+    const functionName = 'validateOrderStatusMatch';
+    try {
+      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
+      
+      const statusesToCompare = ['on-hold', 'processing'];
+      let discrepancies = [];
+
+      for (const status of statusesToCompare) {
+        const legacyOrders = new Set(legacyData.filter(row => row['status'] === status).map(row => row['order_number']));
+        const jlmopsOrders = new Set(jlmopsData.filter(row => row['wom_Status'] === status).map(row => row.wom_OrderNumber));
+
+        const legacyOnly = [...legacyOrders].filter(order => !jlmopsOrders.has(order));
+        const jlmopsOnly = [...jlmopsOrders].filter(order => !legacyOrders.has(order));
+
+        if (legacyOnly.length > 0) {
+          discrepancies.push(`Status '${status}': Orders found only in legacy system: ${legacyOnly.join(', ')}.`);
+        }
+        if (jlmopsOnly.length > 0) {
+          discrepancies.push(`Status '${status}': Orders found only in JLMops system: ${jlmopsOnly.join(', ')}.`);
+        }
+        if (legacyOnly.length === 0 && jlmopsOnly.length === 0) {
+           discrepancies.push(`Status '${status}': Order lists match successfully.`);
+        }
+      }
+
+      if (discrepancies.some(d => d.includes('only in'))) {
+        const message = `Order Status validation failed. Discrepancies found: \n- ${discrepancies.join('\n- ')}`;
+        logger.info(serviceName, functionName, message.replace(/\n/g, ' '));
+        return message;
+      } else {
+        const message = `Order Status validation successful.\n- ${discrepancies.join('\n- ')}`;
+        logger.info(serviceName, functionName, message.replace(/\n/g, ' '));
+        return message;
       }
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error during Highest Order Number validation: ${e.message}`, e);
+      const errorMessage = `Error during Order Status validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
     }
   },
 
@@ -314,8 +460,8 @@ const ValidationService = {
         }
 
         // Sort items by SKU for consistent comparison
-        legacyItems.sort((a, b) => a.sku.localeCompare(b.sku));
-        jlmopsItems.sort((a, b) => a.sku.localeCompare(b.sku));
+        legacyItems.sort((a, b) => String(a.sku).localeCompare(String(b.sku)));
+        jlmopsItems.sort((a, b) => String(a.sku).localeCompare(String(b.sku)));
 
         if (legacyItems.length !== jlmopsItems.length) {
           discrepancies.push(`Order ${jlmopsOrderId}: Item count mismatch. Legacy: ${legacyItems.length}, JLMops: ${jlmopsItems.length}`);
@@ -341,13 +487,19 @@ const ValidationService = {
       }
 
       if (discrepancies.length === 0) {
-        logger.info(serviceName, functionName, 'Packing Slip Data validation successful. Data matches.');
+        const message = 'Packing Slip Data validation successful. Data matches.';
+        logger.info(serviceName, functionName, message);
+        return message;
       } else {
-        logger.info(serviceName, functionName, `Packing Slip Data validation failed. Discrepancies found: ${discrepancies.join('; ')}`);
+        const message = `Packing Slip Data validation failed. Discrepancies found: \n- ${discrepancies.join('\n- ')}`;
+        logger.info(serviceName, functionName, message.replace(/\n/g, ' ')); // Log as a single line
+        return message;
       }
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error during Packing Slip Data validation: ${e.message}`, e);
+      const errorMessage = `Error during Packing Slip Data validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
     }
   },
 
@@ -438,6 +590,64 @@ const ValidationService = {
       logger.info(serviceName, functionName, `Critical validation job ${jobType} finished with status: ${overallStatus}`);
     }
   },
+
+  validateProductMasterData() {
+    const serviceName = 'ValidationService';
+    const functionName = 'validateProductMasterData';
+    const results = [];
+    
+    try {
+      // 1. Fetch Data
+      const legacyWebMData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WebM');
+      const legacyWeHeData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WeHe');
+      const jlmopsProdMData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebProdM');
+      const jlmopsXltMData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebXltM');
+
+      // 2. Perform Product Count Comparison
+      results.push(`Product Counts: Legacy (WebM) has ${legacyWebMData.length} products, JLMops (WebProdM) has ${jlmopsProdMData.length} products.`);
+
+      // 3. Perform Translation Count Comparison
+      results.push(`Translation Counts: Legacy (WeHe) has ${legacyWeHeData.length} translations, JLMops (WebXltM) has ${jlmopsXltMData.length} translations.`);
+
+      // 4. Perform Product ID, SKU, and Description Matching Validation
+      const jlmopsProdMap = new Map(jlmopsProdMData.map(row => [row.wpm_SKU, row]));
+      const mismatches = [];
+
+      for (const legacyProd of legacyWebMData) {
+        const legacySku = legacyProd['SKU'];
+        const legacyId = legacyProd['ID'];
+        const legacyDesc = legacyProd['post_title']; // Assuming this is the English description column
+
+        if (!jlmopsProdMap.has(legacySku)) {
+          mismatches.push(`Legacy SKU '${legacySku}' (ID: ${legacyId}) not found in JLMops.`);
+        } else {
+          const jlmopsProd = jlmopsProdMap.get(legacySku);
+          if (legacyId != jlmopsProd.wpm_WebIdEn) { // Use '!=' for potential type differences
+            mismatches.push(`SKU '${legacySku}': Legacy ID '${legacyId}' does not match JLMops ID '${jlmopsProd.wpm_WebIdEn}'.`);
+          }
+          if (legacyDesc !== jlmopsProd.wpm_Description) {
+            mismatches.push(`SKU '${legacySku}': Description mismatch. Legacy: "${legacyDesc}" | JLMops: "${jlmopsProd.wpm_Description}".`);
+          }
+        }
+      }
+      
+      if (mismatches.length > 0) {
+        results.push('ID/SKU/Description Mismatches Found:');
+        results.push(...mismatches.map(m => `- ${m}`));
+      } else {
+        results.push('ID/SKU/Description Matching: All legacy SKUs, IDs, and Descriptions match JLMops.');
+      }
+
+      const message = `Product Master Data Validation Results:\n- ${results.join('\n- ')}`;
+      logger.info(serviceName, functionName, message.replace(/\n/g, ' '));
+      return message;
+
+    } catch (e) {
+      const errorMessage = `Error during Product Master Data validation: ${e.message}`;
+      logger.error(serviceName, functionName, errorMessage, e);
+      return errorMessage;
+    }
+  },
 };
 
 // =================================================================
@@ -458,6 +668,10 @@ function run_validateWebProductUpdate() {
 
 function run_validateHighestOrderNumber() {
   ValidationService.validateHighestOrderNumber();
+}
+
+function run_validateOrderStatusMatch() {
+  ValidationService.validateOrderStatusMatch();
 }
 
 function run_validatePackingSlipData() {

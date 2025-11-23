@@ -86,11 +86,6 @@ function finalizeProductData() {
 
         syncNewProductsToAudit(referenceSS);
 
-        const holdSource = referenceSS.getSheetByName('OnHoldInventory');
-        if (holdSource) {
-            holdSource.getRange('A1').setValue(`Last Finalized: ${new Date().toISOString()}`);
-        }
-
         
         return true;
     } catch (err) {

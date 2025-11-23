@@ -8,18 +8,54 @@
 // eslint-disable-next-line no-unused-vars
 const WebAppOrders = (() => {
   /**
-   * Placeholder function to get order widget data.
-   * @returns {Object} A placeholder data object.
+   * Gets all data required for the Admin Orders Widget.
+   * @returns {Object} An object containing counts and tasks for the orders widget.
    */
   const getOrdersWidgetData = () => {
-    // In the future, this would call OrderService and aggregate data.
-    return {
-      newOrders: 0,
-      readyToPack: 0,
-    };
+    try {
+      const orderService = new OrderService(ProductService);
+      const comaxExportOrderCount = orderService.getComaxExportOrderCount();
+      const onHoldCount = orderService.getOnHoldOrderCount();
+      const processingCount = orderService.getProcessingOrderCount();
+      const packingSlipsReadyCount = orderService.getPackingSlipsReadyCount();
+
+      const openComaxConfirmationTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.comax_order_export').map(task => ({
+        id: task.st_TaskId,
+        title: task.st_Title,
+        notes: task.st_Notes
+      }));
+
+      return {
+        comaxExportOrderCount: comaxExportOrderCount,
+        onHoldCount: onHoldCount,
+        processingCount: processingCount,
+        packingSlipsReadyCount: packingSlipsReadyCount,
+        openComaxConfirmationTasks: openComaxConfirmationTasks
+      };
+    } catch (e) {
+      LoggerService.error('WebAppOrders', 'getOrdersWidgetData', e.message, e);
+      return { error: 'Could not load order data.' };
+    }
   };
+
+  /**
+   * Triggers the backend service to generate the Comax Order Export file.
+   * @returns {Object} A result object, { success: true } or { success: false, error: message }.
+   */
+  // const triggerComaxOrdersExport = () => {
+  //   try {
+  //     // ProductService is a global singleton, so we can pass it directly.
+  //     const orderService = new OrderService(ProductService);
+  //     orderService.exportOrdersToComax();
+  //     return { success: true };
+  //   } catch (e) {
+  //     LoggerService.error('WebAppOrders', 'triggerComaxOrdersExport', `Error triggering Comax export: ${e.message}`, e);
+  //     return { success: false, error: e.message };
+  //   }
+  // };
 
   return {
     getOrdersWidgetData,
+    // triggerComaxOrdersExport,
   };
 })();

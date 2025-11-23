@@ -24,16 +24,33 @@ The entire user interface is a modern, dashboard-driven Single Page Application 
 
 ### 2.1.1. WebApp Controller Architecture
 
-To ensure a clear separation of concerns and maintainability, the interface between the HTML Views and the backend Services is managed by a two-tiered WebApp controller architecture.
+To ensure a clear separation of concerns, the interface between the HTML Views and the backend is managed by a flexible, multi-layered controller architecture.
 
-*   **1. View Controllers:** For each major UI view/page (e.g., `AdminOrdersView.html`), a corresponding "View Controller" script exists (e.g., `WebAppAdminOrders.js`). 
-    *   **Responsibility:** This script is responsible for orchestrating all data retrieval and updates required by its specific view. 
-    *   **Rule:** The HTML view will **only** make calls to its dedicated View Controller.
+**Guiding Principles:**
 
-*   **2. Data Providers:** `WebApp` scripts are also aligned with data entities (e.g., `WebAppOrders.js`, `WebAppProducts.js`, `WebAppTasks.js`) and act as reusable, internal libraries.
-    *   **Responsibility:** They contain functions that fetch data from the backend *Services* (e.g., `OrderService`) and format it for general UI consumption. They do not know about specific views, only how to provide data about their entity.
+*   **Separate HTML Views for Roles:** For workflows where different user roles (e.g., admin, manager) have distinct actions, separate HTML files are used for each role's screen (e.g., `AdminInventoryView.html`, `ManagerInventoryView.html`). This keeps the HTML for each role clean and simple.
+*   **Shared Logic:** To avoid code duplication, logic is shared at either the Controller or Data Provider layer, depending on the complexity of the views.
 
-*   **Data Flow:** The standard data flow is: `HTML View` -> `View Controller` -> `Data Provider(s)` -> `Backend Service(s)`. The View Controller combines data from multiple providers if necessary and returns a single, consolidated object to the UI. This model keeps the UI logic simple and maximizes code reuse in the data provider layer.
+**Controller Patterns:**
+
+**1. Shared View Controller (Preferred for Related Workflows):**
+*   When multiple views are closely related and part of the same workflow (e.g., admin and manager views for Inventory), they may share a single View Controller script (e.g., `WebAppInventory.js`).
+*   **Responsibility:** This shared controller contains all the backend functions required by *all* associated views. It is organized with clear, descriptive function names to distinguish which view and action a function supports (e.g., `getManagerInventoryTasks()`, `acceptAdminCounts()`).
+*   **Benefit:** This reduces the number of `.js` files in the project.
+
+**2. Dedicated View Controller:**
+*   For standalone or highly complex views, a dedicated View Controller script may be used (e.g., `WebAppDashboard.js` for `Dashboard.html`).
+*   **Responsibility:** This script is responsible *only* for the data and actions of its specific view.
+
+**Data Providers:**
+Regardless of the controller pattern used, View Controllers call upon **Data Providers** (e.g., `WebAppTasks.js`, `WebAppProducts.js`). These are reusable, internal libraries that contain functions to fetch data from backend *Services* and format it for UI consumption.
+
+**Data Flow:**
+The data flow is typically: `HTML View` -> `View Controller (Shared or Dedicated)` -> `Data Provider(s)` -> `Backend Service(s)`.
+
+### 2.1.2. Client-Side Patterns
+
+*   **HTML Generation via JavaScript:** To prevent duplicating markup in separate but similar HTML files (e.g., an inventory list seen by both an admin and a manager), shared JavaScript functions can be used to generate the HTML for common components. These functions are called from the client-side script within each HTML view, passing parameters to control variations (e.g., making a field read-only for an admin).
 
 ### 2.2. Backend: API-Driven & Service-Oriented
 
@@ -124,34 +141,37 @@ The system relies on a clear folder structure for managing files, with all folde
 *   **`Source Folder`**: The inbox for new files. The system treats this as **read-only**.
 *   **`Archive Folder`**: The system's permanent record for all ingested files.
 
-#### 2.5.4. Dependency-Aware Workflow Engine
+#### 2.5.4. System-State-Aware Workflow Orchestration
 
-To ensure data integrity, the system's event-driven engine is designed to be dependency-aware, enforcing a strict sequence of operations for automated file imports.
+To ensure data integrity and provide robust control over all system processes, the engine has evolved from a simple file-import utility to a **System-State-Aware Orchestrator**. It manages a queue of "Jobs" which can be triggered by various system events.
 
-**Phase 1: Intake & Dependency Check (Performed by `OrchestratorService`)**
+**Job & Task Model:**
+*   **Jobs (`SysJobQueue`):** Represent specific, automated processes run by a service (e.g., importing a file, exporting data). Jobs have statuses like `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, and `BLOCKED`.
+*   **Tasks (`TaskQ`):** Represent signals or units of work. They can be created manually by users or programmatically by the system. They act as triggers or gates for other processes. For orchestration purposes, a task is a simple flag; it does not store detailed data.
 
-*   **Goal:** To securely discover, ingest, and queue new files while respecting their dependencies.
-1.  **Load Config:** The service finds and parses the `SysConfig` sheet, including any `depends_on` parameters for import configurations.
-2.  **Scan Sources:** It iterates through all `import.drive.*` configurations and scans the specified `Source Folder`.
-3.  **Check Registry:** It compares files against the `SysFileRegistry` to see if they are new.
-4.  **Copy to Archive:** New file versions are copied to the `Archive Folder`.
-5.  **Queue Job with Status:** A new job is created in the `SysJobQueue`.
-    *   **If the job has a dependency** (a `depends_on` value in its config), the orchestrator checks if a recent, corresponding prerequisite job is 'COMPLETED'.
-        *   If the dependency is **not met**, the new job is queued with a status of **'BLOCKED'**.
-        *   If the dependency **is met**, the job is queued with a status of **'PENDING'**.
-    *   **If the job has no dependency**, it is queued with a status of **'PENDING'**.
-6.  **Update Registry:** The `SysFileRegistry` is updated to prevent re-ingestion.
+**Trigger Types and Workflow:**
 
-**Phase 2: Execution & Unblocking (Performed by `ProcessingServices` & `OrchestratorService`)**
+The orchestrator initiates and manages jobs based on three distinct trigger types:
 
-*   **Goal:** To execute ready jobs and unblock dependent jobs upon completion.
-1.  **Query Queue:** A service (e.g., `ProductService`) queries the `SysJobQueue` for **'PENDING'** jobs of its type. It will ignore 'BLOCKED' jobs.
-2.  **Claim Job:** It claims a job by updating its status to 'PROCESSING'.
-3.  **Process from Archive:** It performs all business logic using the data from the file in the **Archive Folder**.
-4.  **Handle Outcome:**
-    *   **On Success:** The job status is updated to 'COMPLETED'. This triggers the "Unblocking" mechanism.
-    *   **On Failure:** The job status is updated to 'FAILED' and the error is logged.
-5.  **Unblocking Mechanism:** After a job is 'COMPLETED', a process is triggered (e.g., `OrchestratorService.unblockDependentJobs()`) that scans the `SysJobQueue` for 'BLOCKED' jobs. If a 'BLOCKED' job's dependency is now met, its status is changed to 'PENDING', making it available for processing.
+1.  **File-Based Triggers (for Imports):**
+    *   **Event:** An automated, time-based trigger scans Google Drive for new or updated files (e.g., `comax_products.csv`).
+    *   **Action:** For each new file, a corresponding import job is created in the `SysJobQueue`.
+    *   **Dependency:** If an import job has a `depends_on` property in its configuration, the job is created with a `BLOCKED` status until its prerequisite job is `COMPLETED`.
+
+2.  **State-Based Triggers (for Exports):**
+    *   **Event:** The completion of a prerequisite job (e.g., a `Web Order Import`). This is hooked into the `unblockDependentJobs` function in the `OrchestratorService`.
+    *   **Action:** The service checks the application's state (e.g., queries `OrderService` for pending orders).
+    *   **Logic:** If the state condition is met (e.g., orders are pending), the service checks if a relevant task (e.g., "Comax Order Export") is already open. If not, it creates one, signaling that the export job is ready to be run.
+
+3.  **Paired-Job Triggers (for Complex Exports):**
+    *   **Event:** The completion of *either* of two related jobs (e.g., `Web Product Import` or `Comax Product Import`).
+    *   **Action:** The orchestrator performs a "paired check" to verify that the counterpart job has also recently completed by checking their timestamps in the `SysJobQueue`.
+    *   **Logic:** If the pair is confirmed, a state-based check is performed, and a task is created for the dependent export (e.g., "Web Inventory Export").
+
+**Execution & UI Integration:**
+*   The `OrchestratorService` processes `PENDING` jobs from the queue.
+*   The UI acts as a dashboard, reflecting the state managed by the orchestrator. It queries the backend for the status of jobs and tasks to dynamically enable/disable action buttons, ensuring users can only perform actions that are valid for the system's current state.
+*   Upon job completion, the orchestrator is notified, and it runs its unblocking/trigger logic to advance the next stage of the relevant workflow.
 
 ## 3. Security & Authentication
 

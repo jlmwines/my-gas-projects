@@ -974,9 +974,8 @@ const ProductService = (function() {
     return null;
   }
 
-  /*
-  function generateWooCommerceUpdateExport() {
-    const functionName = 'generateWooCommerceUpdateExport';
+  function exportWebInventory() {
+    const functionName = 'exportWebInventory';
     LoggerService.info('ProductService', functionName, 'Starting WooCommerce inventory update export with change detection.');
 
     try {
@@ -1052,7 +1051,7 @@ const ProductService = (function() {
 
       if (exportProducts.length === 0) {
         LoggerService.info('ProductService', functionName, 'No product changes detected. Export file will not be created.');
-        return; // Exit if there's nothing to export
+        return { success: true, message: 'No product changes detected. Export file not created.' }; // Exit if there's nothing to export
       }
 
       // 5. Format and save the CSV
@@ -1063,20 +1062,44 @@ const ProductService = (function() {
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
       LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
 
-      // TODO: Create a task (e.g., 'task.confirmation.web_inventory_export') to track the user action for confirming this export.
+      // Close the "signal" task that indicated the export was ready
+      try {
+        const signalTasks = WebAppTasks.getOpenTasksByTypeId('task.export.web_inventory_ready');
+        if (signalTasks && signalTasks.length > 0) {
+          LoggerService.info('ProductService', functionName, `Found and closing ${signalTasks.length} 'web_inventory_ready' signal task(s).`);
+          signalTasks.forEach(task => {
+            WebAppTasks.completeTask(task.st_TaskId);
+          });
+        }
+      } catch (e) {
+        LoggerService.error('ProductService', functionName, `Could not close signal task: ${e.message}`, e);
+        // Do not re-throw, proceed to create the confirmation task anyway
+      }
+
+      const taskTitle = 'Confirm Web Inventory Export';
+      const taskNotes = `Web inventory export file ${file.getName()} has been generated. Please confirm that the web inventory has been updated.`;
+      TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), taskTitle, taskNotes);
+
+      return { success: true, message: 'Web Inventory Export file created: ' + file.getName() };
 
     } catch (e) {
       LoggerService.error('ProductService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);
       throw e;
     }
   }
-  */
 
   return {
     processJob: processJob,
     runMasterValidation: _runMasterValidation,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
     getProductWebIdBySku: getProductWebIdBySku,
-    // generateWooCommerceUpdateExport: generateWooCommerceUpdateExport
+    exportWebInventory: exportWebInventory
   };
 })();
+
+/**
+ * Global wrapper function to execute the Web Inventory Export from the Apps Script editor or client-side.
+ */
+function run_exportWebInventory() {
+  ProductService.exportWebInventory();
+}

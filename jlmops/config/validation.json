@@ -96,21 +96,7 @@
         "on_failure_title", "WebXlt Data Incompleteness",
         "on_failure_notes", "Empty cells were found in populated columns of the WebXltS sheet."
     ],
-    [
-        "validation.rule.template",
-        "O_WebOrdS_RowCountDecrease",
-        "[O] Web Orders Staging row count decreased compared to Master.",
-        "stable",
-        "enabled", "FALSE",
-        "validation_suite", "order_staging",
-        "test_type", "ROW_COUNT_COMPARISON",
-        "source_sheet", "WebOrdM",
-        "target_sheet", "WebOrdS",
-        "on_failure_quarantine", "TRUE",
-        "on_failure_task_type", "task.validation.order_staging_failure",
-        "on_failure_title", "Web Orders Import Row Count Decreased",
-        "on_failure_notes", "The number of rows in WebOrdS (${targetRowCount}) is less than the number of rows in WebOrdM (${sourceRowCount}). This may indicate a partial or damaged Web Orders import file."
-    ],
+
     [
         "validation.rule.template",
         "C6_Comax_VintageMismatch",
@@ -334,23 +320,7 @@
         "on_failure_title", "Web Product Published Status Mismatch with Comax Master: ${wpm_NameEn}",
         "on_failure_notes", "Web Product SKU ${wpm_SKU} (Name: ${wpm_NameEn}) has a published status mismatch. Web Master Published: '${wpm_PublishStatusEn}', Comax Master IsWeb: '${cpm_IsWeb}'."
     ],
-    [
-        "validation.rule.template",
-        "C2_ComaxS_NotIn_ComaxM",
-        "[C2] Comax Staging product not in Comax Master.",
-        "stable",
-        "enabled", "TRUE",
-        "validation_suite", "comax_staging",
-        "test_type", "EXISTENCE_CHECK",
-        "source_sheet", "CmxProdS",
-        "source_key", "cps_SKU",
-        "target_sheet", "CmxProdM",
-        "target_key", "cpm_SKU",
-        "invert_result", "TRUE",
-        "on_failure_task_type", "task.validation.comax_master_discrepancy",
-        "on_failure_title", "New Comax Product: ${cps_NameHe}",
-        "on_failure_notes", "Product SKU ${cps_SKU} exists in the Comax import but not in the Comax Master sheet."
-    ],
+
     [
         "validation.rule.template",
         "C3_Comax_NameMismatch",
@@ -385,23 +355,7 @@
         "on_failure_title", "Comax Price Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different price in master (${cpm_Price}) versus staging (${cps_Price})."
     ],
-    [
-        "validation.rule.template",
-        "C5_Comax_StockMismatch",
-        "[C5] Stock mismatch between Comax Master and Staging.",
-        "stable",
-        "enabled", "TRUE",
-        "validation_suite", "comax_staging",
-        "test_type", "FIELD_COMPARISON",
-        "sheet_A", "CmxProdM",
-        "sheet_B", "CmxProdS",
-        "key_A", "cpm_SKU",
-        "key_B", "cps_SKU",
-        "compare_fields", "cpm_Stock,cps_Stock",
-        "on_failure_task_type", "task.validation.field_mismatch",
-        "on_failure_title", "Comax Stock Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different stock in master (${cpm_Stock}) versus staging (${cps_Stock})."
-    ],
+
     [
         "validation.rule.template",
         "C7_Comax_IsWebMismatch",

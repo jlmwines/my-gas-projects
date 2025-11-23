@@ -527,11 +527,11 @@ function exportWebInventory() {
 }
 
 /**
- * Confirms a Comax import by completing the associated task.
+ * Completes a task by its ID.
  * @param {string} taskId The ID of the task to complete.
  * @returns {boolean} True if successful.
  */
-function confirmComaxImport(taskId) {
+function completeTaskById(taskId) {
   return WebAppTasks.completeTask(taskId);
 }
 

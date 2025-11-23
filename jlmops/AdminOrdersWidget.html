@@ -10,17 +10,21 @@
     const exportBtn = document.getElementById('btn-export-orders');
     const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
     
-    exportBtn.disabled = true;
-    exportBtn.className = 'btn'; // Keep default style when processing
-    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+    if (confirm("Are you sure you want to export orders?")) {
+      exportBtn.disabled = true;
+      exportBtn.className = 'btn'; // Keep default style when processing
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
 
-    google.script.run
-      .withSuccessHandler(response => {
-        // The success handler will simply re-run the data load to get the new state
-        google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
-      })
-      .withFailureHandler(showError)
-      .runComaxOrderExport();
+      google.script.run
+        .withSuccessHandler(response => {
+          // The success handler will simply re-run the data load to get the new state
+          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+        })
+        .withFailureHandler(showError)
+        .runComaxOrderExport();
+    } else {
+      // If user cancels, do nothing, the button is still enabled.
+    }
   }
 
   /**
@@ -31,20 +35,24 @@
     const confirmBtn = document.getElementById('btn-comax-updated');
     const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
 
-    confirmBtn.disabled = true;
-    confirmBtn.className = 'btn'; // Keep default style when processing
-    messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-    
-    google.script.run
-      .withSuccessHandler(wasCompleted => {
-        if (!wasCompleted) {
-          showError('Failed to confirm task. It may have already been completed.');
-        }
-        // Always refresh data to show the latest state
-        google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
-      })
-      .withFailureHandler(showError)
-      .confirmComaxImport(taskId); // Re-using existing backend function which calls WebAppTasks.completeTask
+    if (confirm("Are you sure you want to confirm the Comax update?")) {
+      confirmBtn.disabled = true;
+      confirmBtn.className = 'btn'; // Keep default style when processing
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+      
+      google.script.run
+        .withSuccessHandler(wasCompleted => {
+          if (!wasCompleted) {
+            showError('Failed to confirm task. It may have already been completed.');
+          }
+          // Always refresh data to show the latest state
+          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).getAdminOrdersData();
+        })
+        .withFailureHandler(showError)
+        .completeTaskById(taskId);
+    } else {
+      // If user cancels, do nothing, the button is still enabled.
+    }
   }
 
   /**

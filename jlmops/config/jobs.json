@@ -1,7 +1,7 @@
 [
     [
-        "_section.02_Imports",
-        "Configurations for importing data from external sources.",
+        "_section.02_Jobs",
+        "Configurations for all orchestrated jobs, including imports and exports.",
         "",
         "",
         "",
@@ -75,8 +75,23 @@
         ""
     ],
     [
-        "import.drive.web_products_en",
-        "Configuration for the English Web Products CSV import from Google Drive.",
+        "import.drive.comax_products",
+        "Configuration for the Comax Products CSV import from Google Drive.",
+        "stable",
+        "depends_on",
+        "import.drive.web_products",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "import.drive.web_products",
+        "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "source_folder_id",
         "1bPsgqtH2Wcd_vuLGFQGQiYP85TKHD-3j",
@@ -90,8 +105,8 @@
         ""
     ],
     [
-        "import.drive.web_products_en",
-        "Configuration for the English Web Products CSV import from Google Drive.",
+        "import.drive.web_products",
+        "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_pattern",
         "WebProducts.csv",
@@ -105,8 +120,8 @@
         ""
     ],
     [
-        "import.drive.web_products_en",
-        "Configuration for the English Web Products CSV import from Google Drive.",
+        "import.drive.web_products",
+        "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "processing_service",
         "ProductService",
@@ -120,8 +135,8 @@
         ""
     ],
     [
-        "import.drive.web_products_en",
-        "Configuration for the English Web Products CSV import from Google Drive.",
+        "import.drive.web_products",
+        "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_encoding",
         "UTF-8",
@@ -135,8 +150,8 @@
         ""
     ],
     [
-        "import.drive.web_products_en",
-        "Configuration for the English Web Products CSV import from Google Drive.",
+        "import.drive.web_products",
+        "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "depends_on",
         "import.drive.web_translations_he",
@@ -290,6 +305,36 @@
         "stable",
         "processing_service",
         "ValidationOrchestratorService",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "export.comax.orders",
+        "Job to export processed orders to Comax format.",
+        "stable",
+        "processing_service",
+        "OrderService",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "export.web.inventory",
+        "Job to export inventory and price updates for the web.",
+        "stable",
+        "processing_service",
+        "ProductService",
         "",
         "",
         "",

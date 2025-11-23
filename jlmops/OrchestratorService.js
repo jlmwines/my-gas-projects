@@ -332,37 +332,165 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, 'Created new periodic validation job.');
   }
 
+  function _createTaskIfNotOpen(taskTypeId, entityId, title, notes) {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_createTaskIfNotOpen';
+    try {
+      if (!TaskService.hasOpenTasks(taskTypeId)) {
+        logger.info(serviceName, functionName, `No open task of type '${taskTypeId}' found. Creating one.`);
+        TaskService.createTask(taskTypeId, entityId, title, notes);
+      } else {
+        logger.info(serviceName, functionName, `An open task of type '${taskTypeId}' already exists. Skipping creation.`);
+      }
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error during task creation for type '${taskTypeId}': ${e.message}`, e);
+    }
+  }
+
+  function _handleCompletedWebOrderImport() {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_handleCompletedWebOrderImport';
+    try {
+      logger.info(serviceName, functionName, 'Handling completed web order import...');
+      const orderService = new OrderService(ProductService);
+      const ordersToExportCount = orderService.getComaxExportOrderCount();
+
+      if (ordersToExportCount > 0) {
+        logger.info(serviceName, functionName, `${ordersToExportCount} orders are ready for Comax export. Creating task.`);
+        _createTaskIfNotOpen(
+          'task.export.comax_orders_ready',
+          'SYSTEM',
+          `Comax Export Ready: ${ordersToExportCount} Orders`,
+          `The web order import has completed, and ${ordersToExportCount} orders are now ready for export to Comax.`
+        );
+      } else {
+        logger.info(serviceName, functionName, 'No orders are currently ready for Comax export.');
+      }
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error checking for pending Comax exports: ${e.message}`, e);
+    }
+  }
+
+  function _handleCompletedProductImport() {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_handleCompletedProductImport';
+    try {
+      logger.info(serviceName, functionName, 'Handling completed product import, checking for pair...');
+
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        logger.info(serviceName, functionName, 'Job queue is empty, cannot check for pairs.');
+        return;
+      }
+      
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data.shift();
+      const jobTypeCol = headers.indexOf('job_type');
+      const statusCol = headers.indexOf('status');
+      const processedTsCol = headers.indexOf('processed_timestamp');
+
+      let lastWebProd, lastCmxProd;
+
+      for (const row of data) {
+        const jobType = row[jobTypeCol];
+        const status = row[statusCol];
+        const timestamp = new Date(row[processedTsCol]);
+
+        if (status === 'COMPLETED' && timestamp.getTime()) {
+          if (jobType === 'import.drive.web_products') {
+            if (!lastWebProd || timestamp > lastWebProd) {
+              lastWebProd = timestamp;
+            }
+          } else if (jobType === 'import.drive.comax_products') {
+            if (!lastCmxProd || timestamp > lastCmxProd) {
+              lastCmxProd = timestamp;
+            }
+          }
+        }
+      }
+
+      if (lastWebProd && lastCmxProd) {
+        const timeDiffHours = Math.abs(lastWebProd.getTime() - lastCmxProd.getTime()) / 36e5;
+        logger.info(serviceName, functionName, `Found last web prod at ${lastWebProd.toLocaleString()} and last comax prod at ${lastCmxProd.toLocaleString()}. Time difference: ${timeDiffHours.toFixed(2)} hours.`);
+        
+        if (timeDiffHours <= 2) { // 2-hour window to be considered a pair
+          logger.info(serviceName, functionName, 'Product import pair confirmed. Creating web inventory export task.');
+          _createTaskIfNotOpen(
+            'task.export.web_inventory_ready',
+            'SYSTEM',
+            'Web Inventory Export Ready',
+            'The Web and Comax product imports have both completed successfully. The web inventory export is now ready to be generated.'
+          );
+        } else {
+          logger.info(serviceName, functionName, 'Product imports are not a recent pair. No task will be created.');
+        }
+      } else {
+        logger.info(serviceName, functionName, 'One or both product imports have not completed yet. Cannot form a pair.');
+      }
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error during paired product import check: ${e.message}`, e);
+    }
+  }
+
   function unblockDependentJobs(completedJobType) {
     const serviceName = 'OrchestratorService';
     const functionName = 'unblockDependentJobs';
-    logger.info(serviceName, functionName, `A job of type '${completedJobType}' was completed. Checking for dependent jobs to unblock.`);
-    const allConfig = ConfigService.getAllConfig();
-    const logSheetConfig = allConfig['system.spreadsheet.logs'];
-    const sheetNames = allConfig['system.sheet_names'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    logger.info(serviceName, functionName, `A job of type '${completedJobType}' was completed. Running post-completion triggers.`);
+    
+    // --- Phase 1: Unblock dependent jobs in the queue ---
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
-    if (jobQueueSheet.getLastRow() < 2) {
-      return; // No jobs to unblock
+      if (jobQueueSheet.getLastRow() > 1) {
+        const data = jobQueueSheet.getDataRange().getValues();
+        const headers = data.shift();
+        const jobTypeCol = headers.indexOf('job_type');
+        const statusCol = headers.indexOf('status');
+
+        data.forEach((row, index) => {
+          if (row[statusCol] === 'BLOCKED') {
+            const jobType = row[jobTypeCol];
+            const jobConfig = allConfig[jobType];
+            
+            if (jobConfig && jobConfig.depends_on === completedJobType) {
+              const sheetRow = index + 2; // +1 for 0-based index, +1 for header
+              jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('PENDING');
+              logger.info(serviceName, functionName, `Unblocked job ${row[0]} (type: ${jobType}) because its dependency '${completedJobType}' was completed.`);
+            }
+          }
+        });
+      }
+    } catch(e) {
+      logger.error(serviceName, functionName, `Error during job unblocking phase: ${e.message}`, e);
     }
 
-    const data = jobQueueSheet.getDataRange().getValues();
-    const headers = data.shift();
-    const jobTypeCol = headers.indexOf('job_type');
-    const statusCol = headers.indexOf('status');
-
-    data.forEach((row, index) => {
-      if (row[statusCol] === 'BLOCKED') {
-        const jobType = row[jobTypeCol];
-        const jobConfig = allConfig[jobType];
-        
-        if (jobConfig && jobConfig.depends_on === completedJobType) {
-          const sheetRow = index + 2; // +1 for 0-based index, +1 for header
-          jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('PENDING');
-          logger.info(serviceName, functionName, `Unblocked job ${row[0]} (type: ${jobType}) because its dependency '${completedJobType}' was completed.`);
-        }
+    // --- Phase 2: Fire state-based triggers ---
+    try {
+      switch (completedJobType) {
+        case 'import.drive.web_orders':
+          _handleCompletedWebOrderImport();
+          break;
+        case 'import.drive.web_products':
+        case 'import.drive.comax_products':
+          _handleCompletedProductImport();
+          break;
+        default:
+          logger.info(serviceName, functionName, `No specific state-based triggers to run for completed job type: '${completedJobType}'.`);
+          break;
       }
-    });
+    } catch(e) {
+      logger.error(serviceName, functionName, `Error during state-based trigger phase: ${e.message}`, e);
+    }
   }
 
   return {

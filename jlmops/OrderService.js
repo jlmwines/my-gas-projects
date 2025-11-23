@@ -505,10 +505,24 @@ function OrderService(productService) {
       
       logger.info(serviceName, functionName, `Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`);
 
+      // Close the "signal" task that indicated the export was ready
+      try {
+        const signalTasks = WebAppTasks.getOpenTasksByTypeId('task.export.comax_orders_ready');
+        if (signalTasks && signalTasks.length > 0) {
+          logger.info(serviceName, functionName, `Found and closing ${signalTasks.length} 'comax_orders_ready' signal task(s).`);
+          signalTasks.forEach(task => {
+            WebAppTasks.completeTask(task.st_TaskId);
+          });
+        }
+      } catch (e) {
+        logger.error(serviceName, functionName, `Could not close signal task: ${e.message}`, e);
+        // Do not re-throw, proceed to create the confirmation task anyway
+      }
+
       // Create a task for admin confirmation
       const taskTitle = 'Confirm Comax Order Export';
       const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
-      TaskService.createTask('task.confirmation.comax_export', file.getId(), taskTitle, taskNotes);
+      TaskService.createTask('task.confirmation.comax_order_export', file.getId(), taskTitle, taskNotes);
 
       logger.info(serviceName, functionName, `${functionName} completed successfully.`);
 
@@ -627,27 +641,37 @@ function OrderService(productService) {
     logger.info(serviceName, functionName, `Starting ${functionName} for ${orderIds.length} orders...`);
 
     try {
-        if (!orderIds || orderIds.length === 0) {
-            logger.info(serviceName, functionName, 'No order IDs provided for initial packing data preparation. Exiting.');
-            return;
-        }
-
         const allConfig = ConfigService.getAllConfig();
         const sheetNames = allConfig['system.sheet_names'];
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
         const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-        const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
         const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
-        const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+        if (!cacheSheet) {
+            throw new Error('SysPackingCache sheet is missing.');
+        }
 
-        if (!masterItemSheet || !cacheSheet || !logSheet) {
-            throw new Error('One or more required sheets for initial packing data preparation are missing.');
+        // 1. Clear all existing data from the cache sheet (preserving headers)
+        if (cacheSheet.getLastRow() > 1) {
+            cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getMaxColumns()).clearContent();
+        }
+        logger.info(serviceName, functionName, 'Cleared all existing data from SysPackingCache.');
+        
+        if (!orderIds || orderIds.length === 0) {
+            logger.info(serviceName, functionName, 'No eligible order IDs provided. SysPackingCache is now empty.');
+            // We still call the enricher with an empty list so it can handle its side of things if needed.
+            PackingSlipService.preparePackingData(orderIds || []);
+            return;
+        }
+
+        const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+        if (!masterItemSheet) {
+            throw new Error('WebOrdItemsM sheet is missing.');
         }
 
         const eligibleOrderIds = new Set(orderIds.map(String));
 
-        // 1. Get all items for the eligible orders
+        // 2. Get all items for the eligible orders
         const allItems = masterItemSheet.getDataRange().getValues();
         const itemHeaders = allItems.shift();
         const woiOrderIdCol = itemHeaders.indexOf('woi_OrderId');
@@ -657,7 +681,13 @@ function OrderService(productService) {
 
         const itemsForEligibleOrders = allItems.filter(itemRow => eligibleOrderIds.has(String(itemRow[woiOrderIdCol])));
 
-        // 2. Prepare the basic data for the cache
+        // 3. Prepare the new data for the cache
+        if (itemsForEligibleOrders.length === 0) {
+             logger.info(serviceName, functionName, 'No line items found for the eligible orders.');
+             PackingSlipService.preparePackingData(orderIds);
+             return;
+        }
+
         const cacheHeaders = cacheSheet.getRange(1, 1, 1, cacheSheet.getLastColumn()).getValues()[0];
         const headerMap = Object.fromEntries(cacheHeaders.map((h, i) => [h, i]));
         
@@ -670,22 +700,13 @@ function OrderService(productService) {
             return newRow;
         });
 
-        // 3. Perform an "upsert" into the cache sheet
-        const existingCacheData = cacheSheet.getLastRow() > 1 ? cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getLastColumn()).getValues() : [];
-        const spcOrderIdColIdx = headerMap['spc_OrderId'];
-
-        const otherOrdersCacheData = existingCacheData.filter(row => !eligibleOrderIds.has(String(row[spcOrderIdColIdx])));
-        const finalCacheData = otherOrdersCacheData.concat(newCacheRows);
-
-        if (cacheSheet.getLastRow() > 1) {
-            cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getMaxColumns()).clearContent();
+        // 4. Write the new data to the now-empty sheet
+        if (newCacheRows.length > 0) {
+          cacheSheet.getRange(2, 1, newCacheRows.length, newCacheRows[0].length).setValues(newCacheRows);
+          logger.info(serviceName, functionName, `Wrote ${newCacheRows.length} new item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
         }
-        if (finalCacheData.length > 0) {
-            cacheSheet.getRange(2, 1, finalCacheData.length, finalCacheData[0].length).setValues(finalCacheData);
-        }
-        logger.info(serviceName, functionName, `Upserted ${newCacheRows.length} item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
 
-        // 4. Now, call the PackingSlipService to enrich this data
+        // 5. Now, call the PackingSlipService to enrich this data
         PackingSlipService.preparePackingData(orderIds);
         logger.info(serviceName, functionName, `Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`);
 
@@ -722,7 +743,7 @@ function OrderService(productService) {
         const masterOrderIdHeader = allConfig['order.master_order_id_header'].header;
         const masterStatusHeader = allConfig['order.master_status_header'].header;
         const MUTABLE_STATUSES = allConfig['order.mutable_statuses'].statuses.split(',');
-        const INELIGIBLE_ORDER_STATUSES = ['pending', 'cancelled', 'refunded', 'failed', 'trash'];
+        const INELIGIBLE_ORDER_STATUSES = ['pending', 'cancelled', 'refunded', 'failed', 'trash', 'completed'];
         const LOCKED_PACKING_STATUSES = ['processing', 'completed'];
 
         const masterOrderData = masterOrderSheet.getDataRange().getValues();
@@ -772,10 +793,11 @@ function OrderService(productService) {
 
             const existingLogEntry = logOrderMap.get(orderId);
             const priorOrderStatusInLog = existingLogEntry ? existingLogEntry.data[logHeaderMap['sol_OrderStatus']] : '';
+            const currentPackingStatusInLog = existingLogEntry ? existingLogEntry.data[logHeaderMap['sol_PackingStatus']] : '';
 
             let shouldUpdatePackingStatus = true;
-            // Rule A: Lock-in Rule
-            if (LOCKED_PACKING_STATUSES.includes(priorOrderStatusInLog)) {
+            // New Lock-in Rule: Block re-printing an order that was already printed in a 'processing' state.
+            if (currentPackingStatusInLog === 'Printed' && stagedStatus === 'processing' && priorOrderStatusInLog === 'processing') {
                 shouldUpdatePackingStatus = false;
             }
 
@@ -904,6 +926,10 @@ function OrderService(productService) {
             logger.info(serviceName, functionName, `Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`);
             this.prepareInitialPackingData(Array.from(orderIdsToRefresh));
         }
+
+        // --- 6. Recalculate On-Hold Inventory ---
+        logger.info(serviceName, functionName, 'Triggering on-hold inventory recalculation.');
+        inventoryManagementService.calculateOnHoldInventory();
 
         logger.info(serviceName, functionName, `${functionName} completed successfully.`);
 

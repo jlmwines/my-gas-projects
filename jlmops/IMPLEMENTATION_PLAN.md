@@ -55,7 +55,12 @@
 *   **Tasks:**
     1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
     2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
-    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` to centralize all admin-level inventory management workflows, including inventory count review, export to Comax, and confirmation of external imports.
+    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow:
+        *   **1. Inventory Review Table:** The primary section at the top of the screen. This table will display submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept. It will include selection checkboxes and processing controls.
+        *   **2. Task Creation Controls:** A section for generating new count tasks. This will include:
+            *   Controls to create bulk tasks for products that are below a maximum stock quantity OR have not been counted in a maximum number of days.
+            *   A spot-check tool to manually create a count task for a single, specific product.
+        *   **3. Open Tasks List:** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
 
@@ -65,15 +70,8 @@
     1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
 
 ### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
-*   **Goal:** To refactor the UI controller layer to align with the formal architecture defined in `ARCHITECTURE.md, Section 2.1.1`.
-*   **Architectural Model:** All work follows the **View Controller / Data Provider** model.
-*   **Tasks:**
-    1.  **Create Data Provider (`WebAppTasks.js`) (COMPLETED):** Created a new data provider for task-related data and actions.
-    2.  **Create View Controller (`WebAppDashboard.js`) (COMPLETED):** Created a new view controller for the main dashboard.
-    3.  **Refactor `WebApp.js` (COMPLETED):** Moved data-fetching logic to the view controller and refactored multiple functions to use the new `WebAppTasks.js` data provider.
-    4.  **Consolidate Dashboard Data (COMPLETED):** Centralized all dashboard widget data fetching into a single `getDashboardData` function to improve performance and data consistency.
-    5.  **Implement Global Confirmation Modal (COMPLETED):** Added a reusable, custom confirmation dialog to `AppView.html` for use across the entire application.
-    6.  **Future Tasks (PLANNED):** Continue creating new View Controller and Data Provider scripts and migrating logic from `WebApp.js` as new UI views are developed.
+*   **Goal:** To refactor the UI controller layer to align with the flexible patterns defined in `ARCHITECTURE.md`.
+*   **Architectural Model:** For role-based workflows with distinct screens but shared data (like Inventory), work will follow the **Shared View Controller** pattern. This means that related views (e.g., `AdminInventoryView.html`, `ManagerInventoryView.html`) will be supported by a single, shared controller script (e.g., `WebAppInventory.js`). This approach reduces file count while relying on clear function naming to maintain organization. For standalone views, the **Dedicated View Controller** pattern will be used.
 
 ### 5.5. UI Authentication & User Switching (COMPLETED)
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
@@ -169,12 +167,24 @@ The existing dashboard widgets will be enhanced to:
 ### 5. Inventory Management Workflows (PLANNED)
 *   **Goal:** To fully integrate and manage all inventory-related processes within `jlmops`, including physical counts, audits, and synchronization with Comax, using a task-based workflow.
 *   **Tasks:**
-    1.  **Brurya Warehouse Inventory Management:** Implement UI and backend logic for managers to view, update, and manage Brurya-specific stock levels.
-    2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
+            1.  **Brurya Warehouse Inventory Management:** Implement a dedicated manager UI and backend logic for managing Brurya-specific stock levels.
+                *   **UI:** A web-based screen featuring a table of products currently in Brurya inventory.
+                    *   **Table Columns:** `Product Name` (read-only), `SKU` (read-only), `Quantity` (editable number input).
+                    *   **"Add Product" Tool:** A search box labeled "Add Product" to find and add new items by SKU or name.
+                *   **Workflow:** Managers can edit quantities directly in the table, add new products via the search tool, or remove products by setting their quantity to `0`. All changes will be saved via a single "Save Changes" button, which updates the `BruryaQty` in the `SysProductAudit` sheet.    2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
     3.  **Negative Inventory Task Follow-up:** Implement logic to detect negative stock levels and create high-priority tasks for investigation and correction.
     4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type with a defined workflow to manage the entire lifecycle of inventory counts.
-        *   **Entry/Submission:** Provide UI for users to enter and submit physical inventory counts for various locations. This action will create a new inventory count task.
-        *   **Review/Acceptance:** Provide UI for admins to review submitted counts and transition the task status.
+        *   **Entry/Submission:** Provide UI for managers to enter and submit physical inventory counts.
+            *   The UI will feature a single, alphabetized table of all products requiring a count, consolidated from all assigned tasks.
+            *   The table will include editable quantity fields and a checkbox for each row.
+            *   Client-side scripting will provide an intuitive workflow: editing a quantity will automatically check the row's checkbox, and unchecking the box will clear any edits made to that row.
+            *   A "Submit Selected Counts" button will allow for partial submissions, removing completed items from the user's view upon success.
+        *   **Review/Acceptance:** Provide a UI for admins to review and accept submitted counts.
+            *   The screen will be nearly identical to the manager's view, showing a consolidated list of all products in 'Review' status.
+            *   Quantity fields will be read-only, displaying the manager's submitted counts.
+            *   Each row will have a checkbox, and a "Select All" control will be available.
+            *   A "Process Selected Counts" button will trigger the acceptance, updating the underlying tasks to a final state (e.g., 'Completed').
+            *   Upon successful submission, the user will be redirected to the main dashboard to handle the next step of the workflow (exporting the adjustments).
         *   **Export to Comax/Confirm:** After a count is accepted, trigger the generation of an export file for Comax and a corresponding confirmation task.
         *   **Note:** This requires a new task definition in the master configuration and new logic in the inventory and task services.
 

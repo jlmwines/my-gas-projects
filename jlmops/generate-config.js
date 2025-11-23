@@ -64,7 +64,7 @@ function processTemplates(data) {
 
 function generateSetupConfig() {
     const configOrder = [
-        'headers', 'system', 'imports', 'schemas', 'mappings', 'validation',
+        'headers', 'system', 'jobs', 'schemas', 'mappings', 'validation',
         'taskDefinitions', 'migrationColumnMapping', 'orders', 'migrationSyncTasks',
         'printing', 'users', 'otherSettings'
     ];
