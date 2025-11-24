@@ -541,7 +541,7 @@ function getMasterConfiguration() {
         "Configuration for the Comax Products CSV import from Google Drive.",
         "stable",
         "depends_on",
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "",
         "",
         "",
@@ -552,7 +552,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "source_folder_id",
@@ -567,7 +567,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_pattern",
@@ -582,7 +582,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "processing_service",
@@ -597,7 +597,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_encoding",
@@ -612,7 +612,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "depends_on",

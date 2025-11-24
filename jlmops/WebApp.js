@@ -61,9 +61,11 @@ function getView(viewName) {
     'AdminOrders': 'AdminOrdersView',
     'AdminOrdersWidget': 'AdminOrdersWidget',
     'ManagerOrders': 'ManagerOrdersView',
+    'ManagerOrdersWidget': 'ManagerOrdersWidget',
     'AdminInventory': 'AdminInventoryView',
     'AdminInventoryWidget': 'AdminInventoryWidget',
     'ManagerInventory': 'ManagerInventoryView',
+    'ManagerInventoryWidget': 'ManagerInventoryWidget',
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
     'ProductDetails': 'ProductDetailsView',
@@ -182,50 +184,7 @@ function createGiftMessageDoc(orderId, noteContent) {
   }
 }
 
-/**
- * Retrieves Brurya stock data along with product names for display in the UI.
- * @returns {Array<Object>} An array of stock items, each with SKU, quantity, and product name.
- */
-function getBruryaStockData() {
-  try {
-    const bruryaStock = inventoryManagementService.getBruryaStock();
-    const skus = bruryaStock.map(item => item.sku);
-    const products = ProductService.getProductsBySkus(skus); // Assuming ProductService has this method
-    const productMap = new Map(products.map(p => [p.sku, p.name])); // Assuming product objects have 'sku' and 'name'
 
-    return bruryaStock.map(item => ({
-      sku: item.sku,
-      bruryaQty: item.bruryaQty,
-      productName: productMap.get(item.sku) || 'N/A'
-    }));
-  } catch (error) {
-    LoggerService.error('WebApp', 'getBruryaStockData', error.message, error);
-    throw error;
-  }
-}
-
-/**
- * Saves changes to Brurya inventory.
- * @param {Array<Object>} changes - An array of objects, each with 'sku' and 'quantity'.
- * @returns {boolean} True if all changes were saved successfully.
- */
-function saveBruryaInventoryChanges(changes) {
-  try {
-    const userEmail = AuthService.getActiveUserEmail();
-    let allSuccessful = true;
-    changes.forEach(change => {
-      const success = inventoryManagementService.setBruryaStock(change.sku, change.quantity, userEmail);
-      if (!success) {
-        allSuccessful = false;
-        LoggerService.warn('WebApp', 'saveBruryaInventoryChanges', `Failed to save stock for SKU: ${change.sku}`);
-      }
-    });
-    return allSuccessful;
-  } catch (error) {
-    LoggerService.error('WebApp', 'saveBruryaInventoryChanges', error.message, error);
-    throw error;
-  }
-}
 
 /**
  * Retrieves product names for a given list of SKUs.

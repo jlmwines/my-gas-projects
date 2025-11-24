@@ -59,3 +59,16 @@ function WebAppInventory_getManagerInventoryData() {
 function WebAppInventory_exportWebInventory() {
   return ProductService.exportWebInventory();
 }
+
+/**
+ * Retrieves the full list of Brurya stock for display.
+ * @returns {Array<Object>} An array of stock items, each with SKU and quantity.
+ */
+function WebAppInventory_getBruryaStockList() {
+  try {
+    return inventoryManagementService.getBruryaStockList();
+  } catch (error) {
+    LoggerService.error('WebAppInventory', 'getBruryaStockList', error.message, error);
+    throw error; // Re-throw to be caught by the client-side failure handler
+  }
+}

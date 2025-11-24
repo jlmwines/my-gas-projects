@@ -79,7 +79,7 @@
         "Configuration for the Comax Products CSV import from Google Drive.",
         "stable",
         "depends_on",
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "",
         "",
         "",
@@ -90,7 +90,7 @@
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "source_folder_id",
@@ -105,7 +105,7 @@
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_pattern",
@@ -120,7 +120,7 @@
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "processing_service",
@@ -135,7 +135,7 @@
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_encoding",
@@ -150,7 +150,7 @@
         ""
     ],
     [
-        "import.drive.web_products",
+        "import.drive.web_products_en",
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "depends_on",

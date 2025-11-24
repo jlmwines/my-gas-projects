@@ -68,6 +68,46 @@
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
     1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
+    2.  **Product Management Screen (PLANNED):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
+        *   **UI Layout:** The page will feature distinct, ordered areas/widgets to prioritize manager tasks:
+            *   **Area 1: New Product Suggestions (Prominent, Top of Page)**
+                *   **Purpose:** To immediately highlight opportunities for new product additions and address inventory gaps.
+                *   **Content:**
+                    *   **Deficient Categories Summary:** Display metrics or a summary of product categories identified as having deficiencies (e.g., "Wines - 3 products needed"). This data will come from `JLMops/InventoryManagementService.js` or a new `ProductSuggestionService.js`.
+                    *   **Suggested Products Table:** A filterable table listing eligible products (from Comax via `JLMops/ComaxAdapter.js`) that could fill the gaps for selected categories.
+                        *   **Columns:** `Select` (checkbox), `SKU`, `Product Name`, `Category`, `Price`, `Stock`, `Web Status`.
+                    *   **Action:** "Suggest Selected Products" button. This would create `New Product Suggestion` tasks in `JLMops/TaskService.js`.
+            *   **Area 2: My Product Tasks (Below Suggestions)**
+                *   **Purpose:** To provide access to and manage all product-related tasks assigned to the manager, including detail updates, new product entries, and product audit verifications.
+                *   **Content:**
+                    *   **Task List Table:** A scrollable, sortable, filterable table listing all product-related tasks currently `Assigned` to the manager (from `JLMops/TaskService.js`).
+                        *   **Columns:** `Task Type` (e.g., "Update Product Details", "Enter New Product Details", "Verify Product Data"), `SKU`, `Product Name (EN)`, `Product Name (HE)`, `Vintage`, `Status`, `Assigned Date`, `Details/Notes`.
+                        *   **Action:** An "Open Task" button for each row.
+                *   **Action Flow:** When "Open Task" is clicked, it will open a **modal dialog** or a **fly-out panel** whose content is dynamically determined by the `Task Type`.
+                    *   **Modal/Panel for "Update Product Details" or "Enter New Product Details" Tasks:**
+                        *   **Header:** Dynamically display `SKU`, `Product Name (English)`, `Vintage (CMX YEAR)`, and `Product Name (Hebrew)`.
+                        *   **Navigation:** "Previous" and "Next" buttons (if managing multiple tasks sequentially).
+                        *   **Tabbed Interface:** The content will feature a **tabbed layout** (replicating the legacy `DetailsForm.html`):
+                            1.  **Descriptions Tab:** Fields for Short/Long Descriptions (HE/EN).
+                            2.  **Specs Tab:** Editable fields for `Region`, `ABV`. Read-only for `Size`, `Division`, `Group`, `Year`.
+                            3.  **Attributes Tab:** Editable fields for `Intensity`, `Complexity`, `Acidity`, `Decant`.
+                            4.  **Pairing Tab:** Checkboxes for `Harmonize With` and `Contrast With`.
+                            5.  **Grapes Tab:** Dropdowns for `Grape 1` through `Grape 5`.
+                            6.  **Kashrut Tab:** Checkbox for `Heter Mechira`, dropdowns for `Kashrut 1` through `Kashrut 5`.
+                            7.  **Preview Tab:** Dynamically generated English and Hebrew product descriptions.
+                        *   **Action Buttons:** "Submit for Review", "Close".
+                    *   **Modal/Panel for "Verify Product Data" Tasks:**
+                        *   **Content:** A new, dedicated single-page summary view for product audit verification.
+                        *   **Purpose:** Display a comprehensive summary of the wine's data from `JLMops/ProductService.js` (master data), potentially external web data, and physical product details.
+                        *   **Layout:** Sections for:
+                            *   **Basic Info:** `SKU`, `Product Name (EN/HE)`, `Vintage`, `ABV`, `Region`.
+                            *   **Key Descriptors:** `Short Description`, `Long Description`, `Intensity`, `Complexity`, `Acidity`, `Harmonize With`, `Contrast With`.
+                            *   **Categorization:** `Grapes (G1-G5)`, `Kashrut (K1-K5)`, `Heter Mechira`.
+                            *   **Verification Status:** This section would allow the manager to indicate their verification findings (e.g., checkboxes "Matches Web Data", "Matches Physical Product", "Requires Correction", "Verified Date", "Verifier Comments").
+                        *   **Action Buttons:** "Mark as Verified", "Create Correction Task", "Close".
+            *   **Area 3: Product Status/Search (Optional Utility Widget)**
+                *   **Purpose:** A read-only search and display area for any product's details and current JLMops workflow status.
+                *   **Content:** A search bar (by SKU or Name) and a display area for read-only product information from `JLMops/ProductService.js`.
 
 ### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
 *   **Goal:** To refactor the UI controller layer to align with the flexible patterns defined in `ARCHITECTURE.md`.
@@ -194,7 +234,7 @@ The existing dashboard widgets will be enhanced to:
     *   **Data Model Foundation (COMPLETED):** A new data sheet was defined in the master configuration to audit product data.
     *   **Comax Product Import Integration (COMPLETED):** The product service was modified to maintain the new audit sheet during Comax product imports.
     *   **Brurya Inventory Management Backend (COMPLETED):** Functions were added to the inventory service to get and set Brurya-specific stock.
-    *   **Brurya Inventory Management UI (COMPLETED):** The UI for manager-controlled Brurya stock updates was implemented.
+    *   **Brurya Inventory Display (COMPLETED):** The initial UI for displaying a sorted list of products with current Brurya stock (SKU, Name, Quantity) in the Manager Inventory View has been implemented and debugged. Full workflow implementation (editing quantities, adding products) is the next step.
     *   **Testing (IN PROGRESS):** Currently testing the audit sheet maintenance and the Brurya UI.
 *   **Tasks (Remaining):**
     1.  **Develop Export Logic:** Implement a new function that reads current inventory data and generates a CSV string.

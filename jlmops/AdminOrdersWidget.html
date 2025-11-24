@@ -80,10 +80,10 @@
         // --- Rebuild the widget with new structure (preserves a clean slate) ---
         widget.innerHTML = countsHtml + 
           '<hr>' + // Divider below widget content
-          '<h6>Comax Order Update</h6>' +
+          '<h6>Comax Order Update</h6>' + 
           '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>' + // Persistent count
           '<div id="comax-alert-message-area" style="margin-bottom: 0.5rem;"></div>' + // Conditional alert messages
-          '<button id="btn-export-orders" class="btn" disabled>Export Orders</button>' +
+          '<button id="btn-export-orders" class="btn" disabled>Export Orders</button>' + 
           '<button id="btn-comax-updated" class="btn" style="margin-left: 0.5rem;" disabled>Comax Updated</button>';
 
     // --- State-Aware Logic for Comax Order Update ---

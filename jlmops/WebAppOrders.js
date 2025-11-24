@@ -37,6 +37,66 @@ function WebAppOrders_getOrdersWidgetData() {
 }
 
 /**
+ * Gets a list of open orders (on-hold or processing) with detailed information for the manager view.
+ * @returns {Array<Object>} An array of open orders, each with orderId, orderDate, customerName, and shippingCity.
+ */
+function WebAppOrders_getOpenOrdersForManager() {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+    const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+
+    if (!orderLogSheet || !orderMasterSheet) {
+      throw new Error('One or more required sheets are missing (SysOrdLog, WebOrdM).');
+    }
+
+    const orderLogData = orderLogSheet.getDataRange().getValues();
+    const orderLogHeaders = orderLogData.shift();
+    const solHeaderMap = Object.fromEntries(orderLogHeaders.map((h, i) => [h, i]));
+
+    const orderMasterData = orderMasterSheet.getDataRange().getValues();
+    const orderMasterHeaders = orderMasterData.shift();
+    const womHeaderMap = Object.fromEntries(orderMasterHeaders.map((h, i) => [h, i]));
+    // Create a map for quick lookup of WebOrdM data by OrderId
+    const orderMasterMap = new Map(orderMasterData.map(row => [String(row[womHeaderMap['wom_OrderId']]), row]));
+
+    const openOrders = [];
+    const statusesToInclude = ['on-hold', 'processing']; // Case-sensitive as per data model
+
+    orderLogData.forEach(row => {
+      const orderId = String(row[solHeaderMap['sol_OrderId']]);
+      const orderStatus = String(row[solHeaderMap['sol_OrderStatus']]).toLowerCase(); // Ensure case-insensitive comparison
+
+      if (statusesToInclude.includes(orderStatus)) {
+        const orderInfo = orderMasterMap.get(orderId);
+        if (orderInfo) {
+          const orderDate = orderInfo[womHeaderMap['wom_OrderDate']];
+          const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']];
+          const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']];
+          const shippingCity = orderInfo[womHeaderMap['wom_ShippingCity']];
+
+          openOrders.push({
+            orderId: orderId,
+            orderDate: Utilities.formatDate(new Date(orderDate), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+            customerName: `${shippingFirstName} ${shippingLastName}`,
+            shippingCity: shippingCity,
+            status: orderStatus // Add status for display
+          });
+        }
+      }
+    });
+    return openOrders;
+
+  } catch (error) {
+    LoggerService.error('WebAppOrders', 'getOpenOrdersForManager', error.message, error);
+    return [];
+  }
+}
+
+/**
  * Wraps the global run_exportOrdersToComax function so it can be called from the UI.
  * @returns {string} A success message.
  */

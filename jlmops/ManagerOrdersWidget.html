@@ -1,0 +1,45 @@
+<div id="manager-orders-widget" style="padding: 0;">
+  <p>Loading...</p>
+</div>
+
+<script>
+  /**
+   * Placeholder for a global error display function.
+   * In a full application, this would likely be provided by a shared utility.
+   * @param {Error} error - The error object.
+   */
+  function showError(error) {
+    console.error("Error in ManagerOrdersWidget:", error);
+    const widget = document.getElementById('manager-orders-widget');
+    widget.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+  }
+
+  /**
+   * Populates the manager orders widget with new data from the backend.
+   * @param {Object} data - The orders data from the backend.
+   */
+  function updateManagerOrdersWidget(data) {
+    const widget = document.getElementById('manager-orders-widget');
+    if (!data) {
+      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      return;
+    }
+    if (data.error) {
+      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      return;
+    }
+
+    // --- Update Counts ---
+    let countsHtml = '<h5>Manager Orders Overview</h5>';
+    countsHtml += '<hr>'; // Divider below widget title
+    countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
+    countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
+    countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
+    
+    // --- Rebuild the widget with new structure (preserves a clean slate) ---
+    widget.innerHTML = countsHtml;
+  }
+
+  // Initial data load for this view
+  google.script.run.withSuccessHandler(updateManagerOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
+</script>

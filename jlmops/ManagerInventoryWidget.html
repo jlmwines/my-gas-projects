@@ -1,0 +1,51 @@
+<div id="manager-inventory-widget" style="padding: 0;">
+  <p>Loading...</p>
+</div>
+
+<script>
+  /**
+   * Placeholder for a global error display function.
+   * In a full application, this would likely be provided by a shared utility.
+   * @param {Error} error - The error object.
+   */
+  function showError(error) {
+    console.error("Error in ManagerInventoryWidget:", error);
+    const widget = document.getElementById('manager-inventory-widget');
+    widget.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+  }
+
+  /**
+   * Populates the manager inventory widget.
+   * @param {Object} data - The inventory data from the backend.
+   */
+  function updateManagerInventoryView(data) {
+    const widget = document.getElementById('manager-inventory-widget');
+    if (!data) {
+      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      return;
+    }
+    if (data.error) {
+      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      return;
+    }
+
+    let html = '<h5>Manager Inventory Overview</h5>';
+
+    // Brurya Summary
+    html += '<p>Brurya Products: <strong>' + (data.bruryaProductCount || 0) + '</strong></p>';
+    html += '<p>Brurya Total Stock: <strong>' + (data.bruryaTotalStock || 0) + '</strong></p>';
+    html += '<hr>';
+
+    // Open Inventory Tasks
+    html += '<h6>Open Inventory Tasks</h6>';
+    html += '<p>Negative Inventory Tasks: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Tasks: <strong>' + (data.openInventoryCountTasksCount > 0 ? data.openInventoryCountTasksCount : '') + '</strong></p>';
+    html += '<p>Inventory Count Review Tasks: <strong>' + (data.openInventoryCountReviewTasksCount > 0 ? data.openInventoryCountReviewTasksCount : '') + '</strong></p>';
+    html += '<hr>';
+
+    widget.innerHTML = html;
+  }
+
+  // Initial data load for this view
+  google.script.run.withSuccessHandler(updateManagerInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
+</script>

@@ -199,133 +199,87 @@ function InventoryManagementService() {
     }
   };
 
-  /**
-   * Retrieves all products with their current Brurya stock from the SysProductAudit sheet.
-   * @returns {Array<Object>} An array of objects, each with 'sku' and 'bruryaQty'.
-   */
-  this.getBruryaStock = function() {
+  this.getBruryaStockList = function() {
     const serviceName = 'InventoryManagementService';
-    const functionName = 'getBruryaStock';
-    logger.info(serviceName, functionName, `Starting ${functionName}...`);
+    const functionName = 'getBruryaStockList';
+    LoggerService.info(serviceName, functionName, `Starting ${functionName}...`);
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-      const sheetNames = allConfig['system.sheet_names'];
-      const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
+        const allConfig = ConfigService.getAllConfig();
+        if (!allConfig) throw new Error("Could not load system configuration.");
+        
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        if (!dataSpreadsheetId) throw new Error("Data spreadsheet ID not found in configuration.");
+        
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const sheetNames = allConfig['system.sheet_names'];
+        if (!sheetNames) throw new Error("Sheet name configuration not found.");
 
-      if (!productAuditSheet) {
-        logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
-        return [];
-      }
+        // --- 1. Get Brurya Stock ---
+        const auditSheetName = sheetNames.SysProductAudit;
+        if (!auditSheetName) throw new Error("SysProductAudit sheet name not found in configuration.");
+        const productAuditSheet = ss.getSheetByName(auditSheetName);
+        if (!productAuditSheet) throw new Error(`Sheet '${auditSheetName}' not found.`);
 
-      const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-      const skuColIdx = headers.indexOf('pa_SKU');
-      const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
-
-      if (skuColIdx === -1 || bruryaQtyColIdx === -1) {
-        logger.error(serviceName, functionName, "Required columns 'pa_SKU' or 'pa_BruryaQty' not found in SysProductAudit sheet.");
-        return [];
-      }
-
-      const data = productAuditSheet.getDataRange().getValues();
-      const bruryaStock = [];
-
-      // Start from 1 to skip headers
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        const sku = row[skuColIdx];
-        const bruryaQty = parseFloat(row[bruryaQtyColIdx]);
-
-        if (sku && !isNaN(bruryaQty) && bruryaQty > 0) {
-          bruryaStock.push({ sku: sku, bruryaQty: bruryaQty });
+        const paData = productAuditSheet.getDataRange().getValues();
+        const paHeaders = paData.shift();
+        const paSkuColIdx = paHeaders.indexOf('pa_SKU');
+        const paBruryaQtyColIdx = paHeaders.indexOf('pa_BruryaQty');
+        if (paSkuColIdx === -1 || paBruryaQtyColIdx === -1) {
+            throw new Error("Required columns 'pa_SKU' or 'pa_BruryaQty' not found in SysProductAudit sheet.");
         }
-      }
-      logger.info(serviceName, functionName, `Successfully retrieved ${bruryaStock.length} Brurya stock entries.`);
-      return bruryaStock;
+
+        const bruryaStock = paData.map(row => ({
+            sku: row[paSkuColIdx],
+            bruryaQty: parseFloat(row[paBruryaQtyColIdx]) || 0
+        })).filter(item => item.sku && item.bruryaQty > 0);
+        
+        LoggerService.info(serviceName, functionName, `Found ${bruryaStock.length} entries with positive quantity.`);
+
+        // --- 2. Get Comax Product Names (Manual) ---
+        const comaxSheetName = sheetNames.CmxProdM;
+        if (!comaxSheetName) throw new Error("CmxProdM sheet name not found in configuration.");
+        const comaxProdSheet = ss.getSheetByName(comaxSheetName);
+        if (!comaxProdSheet) throw new Error(`Sheet '${comaxSheetName}' not found.`);
+
+        const cpmData = comaxProdSheet.getDataRange().getValues();
+        const cpmHeaders = cpmData.shift();
+        const cpmSkuColIdx = cpmHeaders.indexOf('cpm_SKU');
+        const cpmNameHeColIdx = cpmHeaders.indexOf('cpm_NameHe');
+        
+        if (cpmSkuColIdx === -1 || cpmNameHeColIdx === -1) {
+            throw new Error("Required columns 'cpm_SKU' or 'cpm_NameHe' not found in ComaxProdM sheet.");
+        }
+        
+        const comaxNamesMap = new Map(cpmData.map(row => [row[cpmSkuColIdx], row[cpmNameHeColIdx]]));
+        LoggerService.info(serviceName, functionName, `Created a map of ${comaxNamesMap.size} Comax product names.`);
+
+        // --- 3. Combine ---
+        const combinedData = bruryaStock.map(item => ({
+            sku: item.sku,
+            bruryaQty: item.bruryaQty,
+            Name: comaxNamesMap.get(item.sku) || ''
+        }));
+        
+        // --- 4. Sort (Now enabled with robust string conversion) ---
+        combinedData.sort((a, b) => {
+            const nameA = String(a.Name || '');
+            const nameB = String(b.Name || '');
+            return nameA.localeCompare(nameB);
+        });
+
+        LoggerService.info(serviceName, functionName, `Returning ${combinedData.length} combined and sorted entries.`);
+        return combinedData;
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
-      return [];
+        LoggerService.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+        throw e; // Re-throw the error to be caught by the client
     }
   };
 
   /**
-   * Performs an upsert operation for Brurya stock in the SysProductAudit sheet.
-   * Updates pa_BruryaQty and pa_LastCount for a given SKU, or creates a new entry.
-   * @param {string} sku The SKU of the product.
-   * @param {number} quantity The new quantity for Brurya stock.
-   * @param {string} userEmail The email of the user performing the update.
-   * @returns {boolean} True if the operation was successful, false otherwise.
+   * Calculates the total number of products and the total stock quantity at Brurya.
+   * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
    */
-    this.setBruryaStock = function(sku, quantity, userEmail) {
-      const serviceName = 'InventoryManagementService';
-      const functionName = 'setBruryaStock';
-      logger.info(serviceName, functionName, `Starting ${functionName} for SKU: ${sku}, Quantity: ${quantity}, User: ${userEmail}`);
-      try {
-        const allConfig = ConfigService.getAllConfig();
-        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-        const sheetNames = allConfig['system.sheet_names'];
-        const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
-  
-        if (!productAuditSheet) {
-          logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
-          return false;
-        }
-  
-        const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-        const skuColIdx = headers.indexOf('pa_SKU');
-        const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
-        const lastCountColIdx = headers.indexOf('pa_LastCount');
-  
-        if (skuColIdx === -1 || bruryaQtyColIdx === -1 || lastCountColIdx === -1) {
-          logger.error(serviceName, functionName, "Required columns 'pa_SKU', 'pa_BruryaQty', or 'pa_LastCount' not found in SysProductAudit sheet.");
-          return false;
-        }
-  
-        const data = productAuditSheet.getDataRange().getValues();
-        let skuFound = false;
-        const now = new Date();
-  
-        // Iterate from 1 to skip headers
-        for (let i = 1; i < data.length; i++) {
-          if (data[i][skuColIdx] === sku) {
-            // SKU found, update existing row
-            productAuditSheet.getRange(i + 1, bruryaQtyColIdx + 1).setValue(quantity);
-            productAuditSheet.getRange(i + 1, lastCountColIdx + 1).setValue(now);
-            logger.info(serviceName, functionName, `Updated Brurya stock for SKU ${sku} to ${quantity}.`);
-            skuFound = true;
-            break;
-          }
-        }
-  
-        if (!skuFound) {
-          // SKU not found, create new row
-          const newRow = new Array(headers.length).fill('');
-          newRow[skuColIdx] = sku;
-          newRow[bruryaQtyColIdx] = quantity;
-          newRow[lastCountColIdx] = now;
-          // Optionally set other qty columns to 0 or empty if they are not part of this update
-          // newRow[headers.indexOf('pa_StorageQty')] = 0;
-          // newRow[headers.indexOf('pa_OfficeQty')] = 0;
-          // newRow[headers.indexOf('pa_ShopQty')] = 0;
-  
-          productAuditSheet.appendRow(newRow);
-          logger.info(serviceName, functionName, `Added new entry for SKU ${sku} with Brurya stock ${quantity}.`);
-        }
-        return true;
-  
-      } catch (e) {
-        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
-        return false;
-      }
-    };
-  
-    /**
-     * Calculates the total number of products and the total stock quantity at Brurya.
-     * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
-     */
     this.getBruryaSummaryStatistic = function() {
       const serviceName = 'InventoryManagementService';
       const functionName = 'getBruryaSummaryStatistic';
@@ -489,53 +443,4 @@ function InventoryManagementService() {
   
   // Global instance for easy access throughout the project
   const inventoryManagementService = new InventoryManagementService();
-  /**
-   * Calculates the total number of products and the total stock quantity at Brurya.
-   * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
-   */
-  this.getBruryaSummaryStatistic = function() {
-    const serviceName = 'InventoryManagementService';
-    const functionName = 'getBruryaSummaryStatistic';
-    logger.info(serviceName, functionName, `Starting ${functionName}...`);
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-      const sheetNames = allConfig['system.sheet_names'];
-      const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
 
-      if (!productAuditSheet) {
-        logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
-        return { productCount: 0, totalStock: 0 };
-      }
-
-      const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-      const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
-
-      if (bruryaQtyColIdx === -1) {
-        logger.error(serviceName, functionName, "Required column 'pa_BruryaQty' not found in SysProductAudit sheet.");
-        return { productCount: 0, totalStock: 0 };
-      }
-
-      const data = productAuditSheet.getDataRange().getValues();
-      let productCount = 0;
-      let totalStock = 0;
-
-      // Start from 1 to skip headers
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        const bruryaQty = parseFloat(row[bruryaQtyColIdx]);
-
-        if (!isNaN(bruryaQty) && bruryaQty > 0) {
-          productCount++;
-          totalStock += bruryaQty;
-        }
-      }
-      logger.info(serviceName, functionName, `Brurya Summary: Products: ${productCount}, Total Stock: ${totalStock}.`);
-      return { productCount: productCount, totalStock: totalStock };
-
-    } catch (e) {
-      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
-      return { productCount: 0, totalStock: 0 };
-    }
-  };

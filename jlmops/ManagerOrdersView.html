@@ -1,7 +1,6 @@
 <div class="container-fluid">
-    <h1 class="mt-4">Manager Orders</h1>
-    <p>All order-related tasks for managers.</p>
-
+    <h1 class="mt-4">Orders</h1>
+    
     <!-- Section for Packing Slips -->
     <div class="card mb-4">
         <div class="card-header">
@@ -9,17 +8,28 @@
             Packing Slips
         </div>
         <div class="card-body">
-            <p>Select orders to print packing slips for.</p>
+            <p>Select order documents to print.</p>
             <button class="btn mb-3" onclick="generateSelectedPackingSlips()">Print Selected</button>
-            <div id="orders-list"></div>
+            <div id="packing-slips-list"></div>
             <div id="print-result" class="mt-3"></div>
         </div>
+    </div>
+
+    <!-- Section for Open Orders -->
+    <div class="card mb-4">
+      <div class="card-header">
+          <i class="fas fa-box-open mr-1"></i>
+          Open Orders
+      </div>
+      <div class="card-body">
+          <div id="open-orders-list"></div>
+      </div>
     </div>
 </div>
 
 <script>
   function loadPackingSlipsData() {
-    const ordersListDiv = document.getElementById('orders-list');
+    const ordersListDiv = document.getElementById('packing-slips-list');
     ordersListDiv.innerHTML = 'Loading packable orders...';
 
     try {
@@ -30,13 +40,20 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-hover"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order ID</th><th>Status</th><th>Customer Note</th><th></th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-hover"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order ID</th><th>Status</th><th>Reprint</th><th>Customer Note</th><th></th></tr></thead><tbody>';
           orders.forEach(order => {
             let giftButton = '';
             if (order.customerNote) {
               giftButton = `<button class="btn btn-sm" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
             }
-            tableHtml += `<tr><td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td><td>${order.orderId}</td><td>${order.status}</td><td>${order.customerNote || ''}</td><td>${giftButton}</td></tr>`;
+            tableHtml += `<tr>
+                            <td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td>
+                            <td>${order.orderId}</td>
+                            <td>${order.status}</td>
+                            <td>${order.isReprint ? 'Yes' : 'No'}</td>
+                            <td>${order.customerNote || ''}</td>
+                            <td>${giftButton}</td>
+                          </tr>`;
           });
           tableHtml += '</tbody></table>';
           ordersListDiv.innerHTML = tableHtml;
@@ -45,6 +62,40 @@
           ordersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
         })
         .WebAppOrders_getPackableOrders();
+    } catch (e) {
+      alert('A client-side error occurred: ' + e.message);
+    }
+  }
+
+  function loadOpenOrdersData() {
+    const openOrdersListDiv = document.getElementById('open-orders-list');
+    openOrdersListDiv.innerHTML = 'Loading open orders...';
+
+    try {
+      google.script.run
+        .withSuccessHandler(orders => {
+          if (orders.length === 0) {
+            openOrdersListDiv.innerHTML = '<p>No open orders (on-hold or processing).</p>';
+            return;
+          }
+
+          let tableHtml = '<table class="table table-hover"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Customer Name</th><th>Shipping City</th></tr></thead><tbody>';
+          orders.forEach(order => {
+            tableHtml += `<tr>
+                            <td>${order.orderId}</td>
+                            <td>${order.status}</td>
+                            <td>${order.orderDate}</td>
+                            <td>${order.customerName}</td>
+                            <td>${order.shippingCity}</td>
+                          </tr>`;
+          });
+          tableHtml += '</tbody></table>';
+          openOrdersListDiv.innerHTML = tableHtml;
+        })
+        .withFailureHandler(err => {
+          openOrdersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        })
+        .WebAppOrders_getOpenOrdersForManager();
     } catch (e) {
       alert('A client-side error occurred: ' + e.message);
     }
@@ -96,4 +147,5 @@
 
   // Self-execute to load the data as soon as the view is loaded.
   loadPackingSlipsData();
+  loadOpenOrdersData(); // Load open orders data
 </script>

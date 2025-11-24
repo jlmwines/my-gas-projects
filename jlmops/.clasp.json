@@ -14,13 +14,16 @@
     ".json"
   ],
   "filePushOrder": [
-    "config.js",
+    "SetupConfig.js",
+    "ConfigService.js",
     "LoggerService.js",
+    "AuthService.js",
     "HousekeepingService.js",
     "WpmlService.js",
     "CategoryService.js",
     "WooCommerceFormatter.js",
     "ComaxAdapter.js",
+    "WebAdapter.js",
     "ProductService.js",
     "BundleService.js",
     "PromotionsEngineService.js",
@@ -29,9 +32,20 @@
     "CampaignService.js",
     "TaskService.js",
     "OrderService.js",
+    "PackingSlipService.js",
+    "PrintService.js",
+    "LookupService.js",
+    "ValidationService.js",
     "OrchestratorService.js",
-    "migration.js",
-    "setup.js"
+    "SetupMigrate.js",
+    "SetupSheets.js",
+    "WebApp.js",
+    "WebAppDashboard.js",
+    "WebAppInventory.js",
+    "WebAppOrders.js",
+    "WebAppProducts.js",
+    "WebAppSystem.js",
+    "WebAppTasks.js"
   ],
   "skipSubdirectories": false
 }

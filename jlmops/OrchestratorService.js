@@ -88,8 +88,9 @@ const OrchestratorService = (function() {
     importConfigs.forEach(configName => {
       const config = allConfig[configName];
       if (!config || !config.source_folder_id || !config.file_pattern) {
-        logger.warn(serviceName, functionName, `Configuration for '${configName}' is incomplete or missing. Skipping.`);
-        return;
+        const errorMessage = `Configuration for '${configName}' is incomplete or missing. Halting file import processing.`;
+        logger.error(serviceName, functionName, errorMessage);
+        throw new Error(errorMessage);
       }
 
       const sourceFolder = DriveApp.getFolderById(config.source_folder_id);

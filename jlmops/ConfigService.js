@@ -110,6 +110,9 @@ const ConfigService = (function() {
         throw new Error(`Fatal Error: SysConfig schema mismatch. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please run migration scripts.`);
     }
 
+    // Log the sheet names object before caching for debugging
+    console.log("ConfigService: Parsed 'system.sheet_names':", parsedConfig['system.sheet_names']);
+
     configCache = parsedConfig;
     console.log(`Configuration loaded. Schema version ${liveVersion} validated.`);
   }
