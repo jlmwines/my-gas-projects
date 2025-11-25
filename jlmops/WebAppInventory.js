@@ -10,7 +10,7 @@
  */
 function WebAppInventory_getInventoryWidgetData() {
   try {
-    const inventoryManagementService = new InventoryManagementService();
+    const inventoryManagementService = InventoryManagementService;
     // 1. Get Brurya stats from the backend service
     const bruryaSummary = inventoryManagementService.getBruryaSummaryStatistic();
     
@@ -67,7 +67,7 @@ function WebAppInventory_exportWebInventory() {
  */
 function WebAppInventory_getBruryaStockList() {
   try {
-    const inventoryManagementService = new InventoryManagementService();
+    const inventoryManagementService = InventoryManagementService;
     return inventoryManagementService.getBruryaStockList();
   } catch (error) {
     LoggerService.error('WebAppInventory', 'getBruryaStockList', error.message, error);
@@ -98,11 +98,106 @@ function WebAppInventory_searchComaxProducts(searchTerm) {
  */
 function WebAppInventory_setBruryaQuantity(sku, quantity) {
   try {
-    const inventoryManagementService = new InventoryManagementService();
+    const inventoryManagementService = InventoryManagementService;
     return inventoryManagementService.setBruryaQuantity(sku, quantity);
   } catch (error) {
     LoggerService.error('WebAppInventory', 'setBruryaQuantity', error.message, error);
     throw error;
+  }
+}
+
+/**
+ * Retrieves the number of open inventory count tasks for the current manager.
+ * This is used to display a count badge in the Manager's inventory view.
+ * @returns {number} The number of open 'task.inventory.count' tasks.
+ */
+function WebAppInventory_getManagerTaskCount() {
+  try {
+    // This assumes the task type 'task.inventory.count' corresponds to tasks assigned to managers.
+    return WebAppTasks.getOpenTasksByTypeId('task.inventory.count').length;
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getManagerTaskCount', e.message, e);
+    return 0; // Return 0 on error to prevent UI issues.
+  }
+}
+
+/**
+ * Retrieves the list of products that a manager needs to count, based on open 'task.inventory.count' tasks.
+ * Includes product details (name) and any existing count from SysProductAudit.
+ * @returns {Array<Object>} An array of product objects to count, e.g., [{ taskId, sku, productName, currentCount }]
+ */
+function WebAppInventory_getProductsForCount() {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+
+    const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+    const sysProductAuditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
+    
+    // Get both types of inventory count tasks
+    const inventoryCountTasks = WebAppTasks.getOpenTasksByTypeId('task.inventory.count');
+    const negativeInventoryTasks = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit');
+    
+    // Combine the task lists
+    const allCountTasks = inventoryCountTasks.concat(negativeInventoryTasks);
+    
+    // Load CmxProdM (Comax Product Master) to get product names by SKU
+    const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
+    const cmxProdMMap = cmxProdMData.map;
+
+    // Load SysProductAudit to get any existing counts by SKU
+    const sysProductAuditData = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU');
+    const sysProductAuditMap = sysProductAuditData.map;
+
+    const productsToCount = allCountTasks.map(task => {
+      const sku = task.st_LinkedEntityId;
+      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Name : 'Unknown Product';
+      // Assuming 'pa_OfficeQty' is the general physical count column.
+      const currentCount = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku).pa_OfficeQty || 0 : 0; 
+
+      return {
+        taskId: task.st_TaskId,
+        sku: sku,
+        productName: productName,
+        currentCount: currentCount
+      };
+    });
+
+    // Sort by product name for consistent display
+    productsToCount.sort((a, b) => a.productName.localeCompare(b.productName));
+
+    return productsToCount;
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getProductsForCount', e.message, e);
+    return { error: `Could not load products for count: ${e.message}` };
+  }
+}
+
+/**
+ * Submits inventory counts for multiple products and completes their associated tasks.
+ * @param {Array<Object>} selectedCounts An array of objects, each containing { taskId, sku, quantity }.
+ * @returns {Object} A result object indicating success and number of updated items.
+ */
+function WebAppInventory_submitInventoryCounts(selectedCounts) {
+  try {
+    const inventoryManagementService = InventoryManagementService;
+    let updatedCount = 0;
+    
+    selectedCounts.forEach(item => {
+      // Assuming 'pa_OfficeQty' as the default column for general inventory counts.
+      // This can be made configurable if tasks need to specify the location.
+      const updateResult = inventoryManagementService.setInventoryCount(item.sku, item.quantity, 'pa_OfficeQty');
+      if (updateResult.success) {
+        TaskService.completeTask(item.taskId); // Mark the task as Done.
+        updatedCount++;
+      } else {
+        LoggerService.warn('WebAppInventory', 'submitInventoryCounts', `Failed to update count for SKU ${item.sku}. Task ${item.taskId} not completed.`);
+      }
+    });
+
+    return { success: true, updated: updatedCount };
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'submitInventoryCounts', e.message, e);
+    throw e;
   }
 }
 
@@ -113,7 +208,7 @@ function WebAppInventory_setBruryaQuantity(sku, quantity) {
  */
 function WebAppInventory_updateBruryaInventory(inventoryData) {
   try {
-    const inventoryManagementService = new InventoryManagementService();
+    const inventoryManagementService = InventoryManagementService;
     return inventoryManagementService.updateBruryaInventory(inventoryData);
   } catch (error) {
     LoggerService.error('WebAppInventory', 'updateBruryaInventory', error.message, error);

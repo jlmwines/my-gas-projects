@@ -207,6 +207,49 @@ function getProductNamesBySkus(skus) {
 
 // --- Admin & Developer Tools Functions ---
 
+/**
+ * Functions for the Development View Wishlist.
+ * Reads content from a hard-coded Google Sheet cell.
+ * @returns {string} The content of the wishlist.
+ */
+function getDevWishlistContent() {
+  try {
+    const spreadsheetId = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
+    const sheetName = 'Wishlist';
+    const cell = 'A2'; // Hard-coded cell for the single block of text.
+    const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+    if (!sheet) {
+      return `Sheet "${sheetName}" not found.`;
+    }
+    return sheet.getRange(cell).getValue();
+  } catch (e) {
+    return 'Error loading wishlist: ' + e.message;
+  }
+}
+
+/**
+ * Saves content to a hard-coded Google Sheet cell.
+ * @param {string} content - The content to save.
+ * @returns {string} A success message.
+ */
+function saveDevWishlistContent(content) {
+  try {
+    const spreadsheetId = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
+    const sheetName = 'Wishlist';
+    const cell = 'A2'; // Hard-coded cell
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.getRange('A1').setValue('Wish'); // Add a header
+    }
+    sheet.getRange(cell).setValue(content);
+    return 'Wishlist saved successfully.';
+  } catch (e) {
+    throw new Error('Failed to save wishlist: ' + e.message);
+  }
+}
+
 
 
 

@@ -37,6 +37,7 @@
     // 2. Validation Status
     const lastValidationColor = data.isValidationRecent ? 'text-success' : 'text-danger';
     finalHtml += `<p class="${lastValidationColor} mb-2" style="font-size: 0.9rem;">Last Validation: ${data.lastValidationTimestamp}</p>`;
+    finalHtml += `<div id="system-health-validation-results" class="mt-2" style="font-size: 0.8rem;"></div>`;
     
     // 3. Confirmed Critical Validations
     if (data.passedValidations && data.passedValidations.length > 0) {
@@ -57,28 +58,46 @@
    * Handles the 'validate now' link click.
    */
   function runValidation() {
+    const resultsDiv = document.getElementById('system-health-validation-results');
     const statusElement = document.getElementById('validation-status');
-    statusElement.innerText = 'Creating job...';
+    resultsDiv.innerHTML = ''; // Clear previous results
+    statusElement.innerText = 'Running validation...';
     statusElement.className = 'text-info';
 
     google.script.run
       .withSuccessHandler(response => {
-        if (response.success) {
-          statusElement.innerText = `Job created. Processing...`;
-          statusElement.className = 'text-success';
-          // Refresh the widget data after a short delay to allow the orchestrator to pick up the job
-          setTimeout(() => google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).WebAppSystem_getSystemHealthDashboardData(), 3000);
+        statusElement.innerText = ''; // Clear status message
+        let html = '';
+        if (response.results && response.results.length > 0) {
+          html += `<h5>Detailed Results:</h5><ul>`;
+          response.results.forEach(result => {
+            const statusClass = result.status === 'PASSED' ? 'text-success' : 'text-danger';
+            html += `<li class="${statusClass}">${result.ruleName}: ${result.status} - ${result.message || ''}</li>`;
+          });
+          html += `</ul>`;
+        } else if (response.success) {
+            html = `<p class="alert alert-success">Validation completed successfully. ${response.message}</p>`;
         } else {
-          statusElement.innerText = `Failed to create job: ${response.error}`;
-          statusElement.className = 'text-danger';
+            html = `<p class="alert alert-danger">Validation failed: ${response.error || 'Unknown error'}</p>`;
+        }
+        resultsDiv.innerHTML = html;
+
+        // Update timestamp display - a bit of a hack to find the parent p tag
+        const allP = document.getElementById('system-health-widget').getElementsByTagName('p');
+        for(let i=0; i < allP.length; i++) {
+          if (allP[i].innerText.startsWith('Last Validation:')) {
+            allP[i].innerText = 'Last Validation: Just now';
+            allP[i].className = 'text-success mb-2';
+            break;
+          }
         }
       })
       .withFailureHandler(error => {
-        statusElement.innerText = `Failed: ${error.message}`;
-        statusElement.className = 'text-danger';
+        statusElement.innerText = ''; // Clear status message
+        resultsDiv.innerHTML = `<p class="alert alert-danger">Failed to run validation: ${error.message}</p>`;
         showError(error);
       })
-      .WebAppSystem_createMasterValidationJob();
+      .WebAppSystem_runMasterValidationAndReturnResults();
   }
 
   // Initial data load for this view

@@ -234,24 +234,22 @@ const ProductService = (function() {
     const stagingHeaders = stagingSchema.headers.split(',');
 
     const masterData = ConfigService._getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
-    const stagingData = ConfigService._getSheetDataAsMap('CmxProdS', stagingHeaders, 'cps_CmxId');
-
     const masterMap = masterData.map;
-    const stagingKey = 'cps_CmxId';
-    const masterKey = 'cpm_CmxId';
+
+    const stagingKey = 'cps_CmxId'; 
     const stagingKeyIndex = stagingHeaders.indexOf(stagingKey);
 
-    // Iterate through staging data and update/insert into the master map
-    stagingData.values.forEach(stagingRow => {
-        const key = stagingRow[stagingKeyIndex] ? String(stagingRow[stagingKeyIndex]).trim() : null;
+    // Iterate through the fresh comaxProducts and update/insert into the master map
+    comaxProducts.forEach(comaxProductRow => {
+        const key = comaxProductRow[stagingKeyIndex] ? String(comaxProductRow[stagingKeyIndex]).trim() : null;
         if (key) {
             const newMasterRow = {};
-            masterHeaders.forEach((masterHeader, index) => {
+            masterHeaders.forEach((masterHeader) => {
                 const baseHeader = masterHeader.substring(masterHeader.indexOf('_') + 1);
                 const stagingHeader = 'cps_' + baseHeader;
                 const stagingIndex = stagingHeaders.indexOf(stagingHeader);
                 if (stagingIndex !== -1) {
-                    newMasterRow[masterHeader] = stagingRow[stagingIndex];
+                    newMasterRow[masterHeader] = comaxProductRow[stagingIndex];
                 }
             });
             masterMap.set(key, newMasterRow);

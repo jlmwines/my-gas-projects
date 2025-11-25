@@ -195,7 +195,7 @@ const ValidationService = {
     return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
   },
   
-    _executeFieldComparison(rule, dataMaps) {
+    _executeFieldComparison(rule, dataMaps, prebuiltMaps) {
       const serviceName = 'ValidationService';
       LoggerService.info(serviceName, '_executeFieldComparison', `Executing rule: ${rule.on_failure_title}`);
   
@@ -204,13 +204,16 @@ const ValidationService = {
       let ruleMessage = 'All checks passed.';
       const failedItems = [];
   
-      const dataA = dataMaps[rule.sheet_A];
-      const dataB = dataMaps[rule.sheet_B];
+      // Use pre-built maps for efficiency
+      const mapA = prebuiltMaps[`${rule.sheet_A}_by_${rule.key_A}`];
+      const mapB = prebuiltMaps[`${rule.sheet_B}_by_${rule.key_B}`];
   
-      // Build maps using the keys specified in the rule
-      const mapA = this.buildMapFromData(dataA.values, dataA.headers, rule.key_A);
-      const mapB = this.buildMapFromData(dataB.values, dataB.headers, rule.key_B);
-  
+      if (!mapA || !mapB) {
+          const errorMsg = `Could not find pre-built maps for rule: ${rule.on_failure_title}. Required keys: ${rule.sheet_A}_by_${rule.key_A}, ${rule.sheet_B}_by_${rule.key_B}`;
+          LoggerService.error(serviceName, '_executeFieldComparison', errorMsg);
+          return { status: 'FAILED', message: errorMsg, quarantineTriggered: true }; // Critical configuration error
+      }
+
       const [fieldA, fieldB] = rule.compare_fields.split(',');
   
       if (!fieldA || !fieldB) {
@@ -326,7 +329,20 @@ const ValidationService = {
 
     const sourceMap = dataMaps[rule.source_sheet].map;
     const conditionParts = rule.condition.split(',');
-    const [field, operator, value, logic, field2, op2, val2] = conditionParts;
+    
+    let field, operator, value, logic, field2, op2, val2;
+    const andIndex = conditionParts.indexOf('AND');
+
+    if (andIndex !== -1) {
+      const part1 = conditionParts.slice(0, andIndex);
+      const part2 = conditionParts.slice(andIndex + 1);
+      
+      [field, operator, value] = part1;
+      logic = 'AND';
+      [field2, op2, val2] = part2;
+    } else {
+      [field, operator, value] = conditionParts;
+    }
 
     for (const [key, row] of sourceMap.entries()) {
         const sourceSchema = ConfigService.getAllConfig()[`schema.data.${rule.source_sheet}`];
@@ -541,6 +557,9 @@ const ValidationService = {
         if (rule.test_type === 'EXISTENCE_CHECK') {
           requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
           requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+        } else if (rule.test_type === 'FIELD_COMPARISON') {
+          requiredMaps.set(`${rule.sheet_A}_by_${rule.key_A}`, { sheet: rule.sheet_A, keyColumn: rule.key_A });
+          requiredMaps.set(`${rule.sheet_B}_by_${rule.key_B}`, { sheet: rule.sheet_B, keyColumn: rule.key_B });
         } else if (rule.test_type === 'CROSS_EXISTENCE_CHECK') { // Special handling for CROSS_EXISTENCE_CHECK
           requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
           requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
@@ -580,7 +599,7 @@ const ValidationService = {
               ruleResult = this._executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
               break;
             case 'FIELD_COMPARISON':
-              ruleResult = this._executeFieldComparison(rule, sheetDataCache);
+              ruleResult = this._executeFieldComparison(rule, sheetDataCache, prebuiltMaps);
               break;
             case 'ROW_COUNT_COMPARISON':
               ruleResult = this._executeRowCountComparison(rule, sheetDataCache);
@@ -1178,6 +1197,9 @@ const ValidationService = {
       if (rule.test_type === 'EXISTENCE_CHECK') {
         requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
         requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+      } else if (rule.test_type === 'FIELD_COMPARISON') {
+        requiredMaps.set(`${rule.sheet_A}_by_${rule.key_A}`, { sheet: rule.sheet_A, keyColumn: rule.key_A });
+        requiredMaps.set(`${rule.sheet_B}_by_${rule.key_B}`, { sheet: rule.sheet_B, keyColumn: rule.key_B });
       }
     });
 
@@ -1219,7 +1241,7 @@ const ValidationService = {
             ruleResult = this._executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
             break;
           case 'FIELD_COMPARISON':
-            ruleResult = this._executeFieldComparison(rule, sheetDataCache);
+            ruleResult = this._executeFieldComparison(rule, sheetDataCache, prebuiltMaps);
             break;
           case 'INTERNAL_AUDIT':
             ruleResult = this._executeInternalAudit(rule, sheetDataCache);

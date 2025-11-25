@@ -61,6 +61,7 @@
             *   Controls to create bulk tasks for products that are below a maximum stock quantity OR have not been counted in a maximum number of days.
             *   A spot-check tool to manually create a count task for a single, specific product.
         *   **3. Open Tasks List:** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
+        *   **4. Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
 
@@ -68,6 +69,7 @@
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
     1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
+        *   **Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
     2.  **Product Management Screen (PLANNED):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
         *   **UI Layout:** The page will feature distinct, ordered areas/widgets to prioritize manager tasks:
             *   **Area 1: New Product Suggestions (Prominent, Top of Page)**
@@ -352,6 +354,12 @@ The existing dashboard widgets will be enhanced to:
     *   Logging levels were standardized: `ERROR` for critical, process-halting issues; `WARN` for recoverable system-level events; `INFO` for major operations and expected non-error events.
     *   A circular dependency between the configuration and logging services was identified and resolved.
     *   Diagnostic logging was temporarily added to the logging service to confirm successful writes to the log sheet.
+
+### 8.3. Validation Service Optimization & Bug Fix (COMPLETED)
+*   **Goal:** To improve the performance and correctness of the validation engine.
+*   **Summary of Work:**
+    *   **Optimized Validation Engine:** Refactored the core validation runner functions (`runValidationSuite`, `_runMasterValidation`) and the `_executeFieldComparison` function to eliminate redundant data processing. Data maps required for field comparisons are now pre-computed once per suite run instead of on every rule execution, significantly improving performance.
+    *   **Fixed Compound Condition Parsing:** Corrected a critical bug in the `_executeInternalAudit` function where the logic for parsing compound "AND" conditions was flawed. This ensures that multi-part validation rules are evaluated correctly, preventing incorrect failure reports.
 
 ### 6.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
 

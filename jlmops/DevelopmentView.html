@@ -5,11 +5,24 @@
         <h3>Development Tools</h3>
       </div>
       <div class="card-body">
-        <button class="btn btn-warning mr-2" onclick="runRebuild()">Rebuild SysConfig from Source</button>
-        <button class="btn btn-info mr-2" onclick="downloadSnapshot()">Download SysConfig Snapshot</button>
+        <button class="btn btn-warning mr-2" onclick="runRebuild()">Rebuild SysConfig</button>
         <button class="btn mr-2" onclick="runMasterValidation()">Run Master Validation</button>
-        <div id="master-validation-results" class="mt-3"></div>
         <div id="sysconfig-result" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3>Developer Wishlist</h3>
+      </div>
+      <div class="card-body">
+        <textarea id="dev-wishlist-textarea" class="form-control" rows="10" placeholder="Enter your notes here..."></textarea>
+        <button class="btn mt-2" onclick="saveWishlist()">Save Wishlist</button>
+        <div id="wishlist-status" class="mt-2"></div>
       </div>
     </div>
   </div>
@@ -26,28 +39,11 @@
       .withFailureHandler(err => {
         resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
       })
-      .WebAppSystem_runRebuildSysConfigFromSource();
-  }
-
-  function downloadSnapshot() {
-    const resultDiv = document.getElementById('sysconfig-result');
-    resultDiv.innerHTML = '<p class="text-info">Preparing download...</p>';
-    google.script.run
-      .withSuccessHandler(fileData => {
-        resultDiv.innerHTML = '';
-        const a = document.createElement("a");
-        a.href = "data:text/csv;base64," + fileData.content;
-        a.download = fileData.filename;
-        a.click();
-      })
-      .withFailureHandler(err => {
-        resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
-      })
-      .WebAppSystem_getSysConfigCsvAsBase64();
+      .runRebuildSysConfigFromSource();
   }
 
   function runMasterValidation() {
-    const validationResultsDiv = document.getElementById('master-validation-results');
+    const validationResultsDiv = document.getElementById('system-health-validation-results');
     validationResultsDiv.innerHTML = '<p class="text-info">Running master validation...</p>';
 
     google.script.run
@@ -72,3 +68,38 @@
       })
       .WebAppSystem_runMasterValidationAndReturnResults(); // Renamed backend call
   }
+
+  // --- Wishlist Functions ---
+  function loadWishlist() {
+    google.script.run
+      .withSuccessHandler(content => {
+        if(document.getElementById('dev-wishlist-textarea')) {
+          document.getElementById('dev-wishlist-textarea').value = content;
+        }
+      })
+      .withFailureHandler(err => {
+        if(document.getElementById('wishlist-status')) {
+          document.getElementById('wishlist-status').innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
+        }
+      })
+      .getDevWishlistContent();
+  }
+
+  function saveWishlist() {
+    const content = document.getElementById('dev-wishlist-textarea').value;
+    const statusDiv = document.getElementById('wishlist-status');
+    statusDiv.innerHTML = '<p class="text-info">Saving...</p>';
+    google.script.run
+      .withSuccessHandler(message => {
+        statusDiv.innerHTML = `<p class="alert alert-success">${message}</p>`;
+        setTimeout(() => { statusDiv.innerHTML = ''; }, 3000);
+      })
+      .withFailureHandler(err => {
+        statusDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
+      })
+      .saveDevWishlistContent(content);
+  }
+
+  // Load wishlist content after a short delay to ensure the element exists.
+  setTimeout(loadWishlist, 200);
+</script>

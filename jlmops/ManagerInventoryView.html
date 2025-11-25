@@ -53,26 +53,37 @@
         }
     </style>
 
-    <!-- Section for Brurya Inventory Management -->
+    <!-- New Product Counts Section -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-warehouse mr-1"></i> Brurya Stock Management</h5>
-            
-            <div style="position: relative;">
-                <div class="input-group input-group-sm" style="max-width: 300px;">
-                    <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Add Product (SKU or Name)...">
-                    <div class="input-group-append">
-                        <button id="brurya-add-product-button" class="btn" type="button" style="background-color: #6c757d; color: white; cursor: pointer;">Add</button>
-                    </div>
-                </div>
-            </div>
-
-            <button id="brurya-save-button" class="btn btn-sm" style="background-color: #007bff; color: white; cursor: pointer;">Save</button>
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125);">
+            <h5 class="mb-0">Product Counts <span id="manager-inventory-task-count" class="badge badge-primary ml-2"></span></h5>
         </div>
-        <div class="card-body">
-            <div id="brurya-inventory-list">Loading...</div>
+        <div id="productCountsCollapse">
+            <div class="card-body">
+                <div id="product-counts-list">Loading products for count...</div>
+                <button id="submit-selected-counts-btn" class="btn btn-light btn-sm mt-3" type="button" disabled>Submit Selected Counts</button>
+            </div>
         </div>
     </div>
+
+    <!-- Section for Brurya Inventory Management -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125);">
+        <h5 class="mb-0"><i class="fas fa-warehouse mr-1"></i> Brurya Stock Management</h5>
+        <div style="position: relative;">
+            <div class="input-group input-group-sm" style="max-width: 300px;">
+                <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Product Name">
+                <div class="input-group-append">
+                    <button id="brurya-add-product-button" class="btn btn-light" type="button">Add</button>
+                </div>
+            </div>
+        </div>
+        <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
+    </div>
+    <div class="card-body">
+        <div id="brurya-inventory-list">Loading...</div>
+    </div>
+</div>
 
     <script>
         (function() {
@@ -83,8 +94,155 @@
             let debounceTimer;
             let selectedProduct = null;
 
+            // --- Product Counts Logic ---
+            const productCountsListDiv = document.getElementById('product-counts-list');
+            const submitCountsBtn = document.getElementById('submit-selected-counts-btn');
+
+            function loadProductCountsData() {
+                productCountsListDiv.innerHTML = 'Loading products for count...';
+                google.script.run
+                    .withSuccessHandler(renderProductCountsTable)
+                    .withFailureHandler(err => {
+                        showToast(`Error loading products for count: ${err.message}`, 'error');
+                        productCountsListDiv.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+                    })
+                    .WebAppInventory_getProductsForCount();
+            }
+
+            function renderProductCountsTable(productsToCount) {
+                if (!productsToCount || productsToCount.length === 0) {
+                    productCountsListDiv.innerHTML = '<p>No products currently assigned for counting.</p>';
+                    submitCountsBtn.disabled = true;
+                    return;
+                }
+
+                let tableHtml = `
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                productsToCount.forEach(item => {
+                    tableHtml += `
+                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}">
+                            <td><input type="checkbox" class="product-count-checkbox"></td>
+                            <td>${item.productName}</td>
+                            <td>${item.sku}</td>
+                            <td style="width: 20%;"><input type="number" class="form-control form-control-sm product-count-input" value="${item.currentCount || ''}" min="0"></td>
+                        </tr>
+                    `;
+                });
+                tableHtml += `
+                        </tbody>
+                    </table>
+                `;
+                productCountsListDiv.innerHTML = tableHtml;
+
+                // Add event listeners for quantity input and checkboxes
+                productCountsListDiv.querySelectorAll('.product-count-input').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        const checkbox = e.target.closest('tr').querySelector('.product-count-checkbox');
+                        if (e.target.value.trim() !== '' && parseInt(e.target.value, 10) >= 0) {
+                            checkbox.checked = true;
+                        } else {
+                            // If input is cleared or invalid, uncheck
+                            checkbox.checked = false;
+                        }
+                        updateSubmitButtonState();
+                    });
+                });
+
+                productCountsListDiv.querySelectorAll('.product-count-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateSubmitButtonState);
+                });
+
+                updateSubmitButtonState(); // Initial state check
+            }
+
+            function updateSubmitButtonState() {
+                const checkedBoxes = productCountsListDiv.querySelectorAll('.product-count-checkbox:checked');
+                submitCountsBtn.disabled = checkedBoxes.length === 0;
+            }
+
+            function handleSubmitSelectedCounts() {
+                submitCountsBtn.disabled = true;
+                submitCountsBtn.textContent = 'Submitting...';
+
+                const selectedCounts = [];
+                productCountsListDiv.querySelectorAll('tr[data-task-id]').forEach(row => {
+                    const checkbox = row.querySelector('.product-count-checkbox');
+                    if (checkbox.checked) {
+                        const taskId = row.dataset.taskId;
+                        const sku = row.dataset.sku;
+                        const quantity = parseInt(row.querySelector('.product-count-input').value, 10);
+
+                        if (!isNaN(quantity) && quantity >= 0) {
+                            selectedCounts.push({ taskId, sku, quantity });
+                        } else {
+                            showToast(`Invalid quantity for SKU ${sku}. Please enter a valid number.`, 'warning');
+                            submitCountsBtn.disabled = false;
+                            submitCountsBtn.textContent = 'Submit Selected Counts';
+                            return; // Stop submission if any invalid quantity
+                        }
+                    }
+                });
+
+                if (selectedCounts.length === 0) {
+                    showToast('No counts selected for submission.', 'warning');
+                    submitCountsBtn.disabled = false;
+                    submitCountsBtn.textContent = 'Submit Selected Counts';
+                    return;
+                }
+
+                google.script.run
+                    .withSuccessHandler(response => {
+                        if (response.success) {
+                            showToast(`${response.updated} counts submitted successfully.`);
+                            loadProductCountsData(); // Reload to remove submitted items
+                            loadManagerTaskCount(); // Update task count badge
+                        } else {
+                            showToast(`Error submitting counts: ${response.message}`, 'error');
+                        }
+                        submitCountsBtn.disabled = false;
+                        submitCountsBtn.textContent = 'Submit Selected Counts';
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Error submitting counts: ${err.message}`, 'error');
+                        submitCountsBtn.disabled = false;
+                        submitCountsBtn.textContent = 'Submit Selected Counts';
+                    })
+                    .WebAppInventory_submitInventoryCounts(selectedCounts);
+            }
+
+            function loadManagerTaskCount() {
+                const countSpan = document.getElementById('manager-inventory-task-count');
+                google.script.run
+                    .withSuccessHandler(count => {
+                        if (count > 0) {
+                            countSpan.textContent = count;
+                        } else {
+                            countSpan.style.display = 'none';
+                        }
+                    })
+                    .withFailureHandler(err => {
+                        console.error('Error fetching manager task count:', err);
+                        countSpan.style.display = 'none';
+                    })
+                    .WebAppInventory_getManagerTaskCount();
+            }
+
             function init() {
                 loadBruryaInventoryData();
+                loadProductCountsData(); // Load product counts data
+                loadManagerTaskCount(); // Fetch and display the task count
+
+                // Brurya Event Listeners
                 addProductInput.addEventListener('keyup', handleAutocompleteSearch);
                 addProductBtn.addEventListener('click', handleAddProduct);
                 saveBtn.addEventListener('click', handleSaveInventory);
@@ -94,6 +252,9 @@
                         clearAutocomplete();
                     }
                 });
+
+                // Product Counts Event Listener
+                document.getElementById('submit-selected-counts-btn').addEventListener('click', handleSubmitSelectedCounts);
             }
 
             function showToast(message, type = 'success') {

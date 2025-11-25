@@ -394,177 +394,253 @@ const InventoryManagementService = (function() {
         // Re-throw the error to be caught by the client-side failure handler
         throw new Error(`Failed to update Brurya inventory. Reason: ${e.message}`);
     }
-}
+  }
+
+  /**
+   * Sets the inventory count for a given SKU in a specified quantity column in SysProductAudit.
+   * If the product does not exist in SysProductAudit, it will create a new entry (from CmxProdM).
+   * @param {string} sku The SKU of the product to update.
+   * @param {number} quantity The new quantity to set.
+   * @param {string} countColumnName The name of the quantity column to update (e.g., 'pa_OfficeQty').
+   * @returns {Object} A result object from the service { success: true, sku, quantity, action: 'updated'|'created' }.
+   */
+  function setInventoryCount(sku, quantity, countColumnName) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'setInventoryCount';
+    LoggerService.info(serviceName, functionName, `Setting quantity for SKU ${sku} to ${quantity} in column ${countColumnName}.`);
+
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const sheetNames = allConfig['system.sheet_names'];
+        const auditSheetName = sheetNames.SysProductAudit;
+        const comaxSheetName = sheetNames.CmxProdM;
+
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const auditSheet = ss.getSheetByName(auditSheetName);
+        const comaxSheet = ss.getSheetByName(comaxSheetName);
+
+        if (!auditSheet || !comaxSheet) {
+            throw new Error(`One or more required sheets not found: '${auditSheetName}', '${comaxSheetName}'.`);
+        }
+
+        const auditData = auditSheet.getDataRange().getValues();
+        const auditHeaders = auditData[0];
+        const auditSkuColIdx = auditHeaders.indexOf('pa_SKU');
+        const auditCountColIdx = auditHeaders.indexOf(countColumnName);
+
+        if (auditSkuColIdx === -1 || auditCountColIdx === -1) {
+            throw new Error(`Required columns 'pa_SKU' or '${countColumnName}' not found in '${auditSheetName}'.`);
+        }
+
+        const rowIndex = auditData.findIndex((row, index) => index > 0 && row[auditSkuColIdx] === sku);
+
+        if (rowIndex !== -1) {
+            // Item exists, update it.
+            auditSheet.getRange(rowIndex + 1, auditCountColIdx + 1).setValue(quantity);
+            LoggerService.info(serviceName, functionName, `Successfully updated SKU ${sku} to quantity ${quantity} in ${countColumnName}.`);
+            return { success: true, sku: sku, quantity: quantity, action: 'updated' };
+        } else {
+            // Item does not exist, create it.
+            LoggerService.info(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Attempting to create new entry.`);
+
+            const comaxData = comaxSheet.getDataRange().getValues();
+            const comaxHeaders = comaxData.shift();
+            const comaxSkuIndex = comaxHeaders.indexOf('cpm_SKU');
+
+            const comaxProductRow = comaxData.find(row => row[comaxSkuIndex] === sku);
+
+            if (comaxProductRow) {
+                const newRow = Array(auditHeaders.length).fill('');
+                // Map fields from comax to product audit
+                newRow[auditHeaders.indexOf('pa_SKU')] = sku;
+                newRow[auditHeaders.indexOf('pa_ProdId')] = comaxProductRow[comaxHeaders.indexOf('cpm_ProdId')];
+                newRow[auditHeaders.indexOf('pa_NameHe')] = comaxProductRow[comaxHeaders.indexOf('cpm_NameHe')];
+                newRow[auditCountColIdx] = quantity; // Set the quantity in the specified column
+
+                auditSheet.appendRow(newRow);
+                LoggerService.info(serviceName, functionName, `Successfully created new entry for SKU ${sku} with quantity ${quantity} in ${countColumnName}.`);
+                return { success: true, sku: sku, quantity: quantity, action: 'created' };
+            } else {
+                throw new Error(`Product with SKU '${sku}' was not found in the Comax product list.`);
+            }
+        }
+    } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error setting quantity for SKU ${sku} in ${countColumnName}: ${e.message}`, e);
+        throw e;
+    }
+  }
 
   /**
    * Calculates the total number of products and the total stock quantity at Brurya.
-   * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
-   */
-    function getBruryaSummaryStatistic() {
-      const serviceName = 'InventoryManagementService';
-      const functionName = 'getBruryaSummaryStatistic';
-      logger.info(serviceName, functionName, `Starting ${functionName}...`);
-      try {
-        const allConfig = ConfigService.getAllConfig();
-        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-        const sheetNames = allConfig['system.sheet_names'];
-        const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
-  
-        if (!productAuditSheet) {
-          logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
-          return { productCount: 0, totalStock: 0 };
-        }
-  
-        const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-        const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
-  
-        if (bruryaQtyColIdx === -1) {
-          logger.error(serviceName, functionName, "Required column 'pa_BruryaQty' not found in SysProductAudit sheet.");
-          return { productCount: 0, totalStock: 0 };
-        }
-  
-        const data = productAuditSheet.getDataRange().getValues();
-        let productCount = 0;
-        let totalStock = 0;
-  
-        // Start from 1 to skip headers
-        for (let i = 1; i < data.length; i++) {
-          const row = data[i];
-          const bruryaQty = parseFloat(row[bruryaQtyColIdx]);
-  
-          if (!isNaN(bruryaQty) && bruryaQty > 0) {
-            productCount++;
-            totalStock += bruryaQty;
-          }
-        }
-        logger.info(serviceName, functionName, `Brurya Summary: Products: ${productCount}, Total Stock: ${totalStock}.`);
-        return { productCount: productCount, totalStock: totalStock };
-  
-      } catch (e) {
-        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
-        return { productCount: 0, totalStock: 0 };
-      }
-    }
-  
-    /**
-     * Retrieves the count of open 'Negative Inventory' tasks.
-     * @returns {number} The count of open tasks.
-     */
-    function getOpenNegativeInventoryTasksCount() {
-      return _getOpenTaskCountByTypeId('task.inventory.negative');
-    }
-  
-    /**
-     * Retrieves the count of open 'Inventory Count' tasks.
-     * @returns {number} The count of open tasks.
-     */
-    function getOpenInventoryCountTasksCount() {
-      return _getOpenTaskCountByTypeId('task.inventory.count');
-    }
-  
-    /**
-     * Retrieves the count of open 'Inventory Count Review' tasks.
-     * @returns {number} The count of open tasks.
-     */
-    function getOpenInventoryCountReviewTasksCount() {
-      return _getOpenTaskCountByTypeId('task.inventory.count_review');
-    }
-  
-    /**
-     * Retrieves the count of items with stock ready for Comax Inventory Export.
-     * @returns {number} The count of items with stock > 0.
-     */
-    function getComaxInventoryExportCount() {
-      const serviceName = 'InventoryManagementService';
-      const functionName = 'getComaxInventoryExportCount';
-      try {
-        const allConfig = ConfigService.getAllConfig();
-        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-        const sheetNames = allConfig['system.sheet_names'];
-        const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
-  
-        if (!productAuditSheet || productAuditSheet.getLastRow() <= 1) {
-          return 0;
-        }
-  
-        const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-        const qtyCols = ['pa_BruryaQty', 'pa_StorageQty', 'pa_OfficeQty', 'pa_ShopQty'];
-        const qtyColIndices = qtyCols.map(col => headers.indexOf(col));
-  
-        const data = productAuditSheet.getRange(2, 1, productAuditSheet.getLastRow() - 1, productAuditSheet.getLastColumn()).getValues();
+           * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
+           */
+            function getBruryaSummaryStatistic() {
+              const serviceName = 'InventoryManagementService';
+              const functionName = 'getBruryaSummaryStatistic';
+              logger.info(serviceName, functionName, `Starting ${functionName}...`);
+              try {
+                const allConfig = ConfigService.getAllConfig();
+                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const sheetNames = allConfig['system.sheet_names'];
+                const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
         
-        let exportableItemCount = 0;
-        for (let i = 0; i < data.length; i++) {
-          let totalStock = 0;
-          for (const colIdx of qtyColIndices) {
-            if (colIdx !== -1) {
-              const qty = parseFloat(data[i][colIdx]);
-              if (!isNaN(qty)) {
-                totalStock += qty;
+                if (!productAuditSheet) {
+                  logger.error(serviceName, functionName, `Sheet '${sheetNames.SysProductAudit}' not found.`);
+                  return { productCount: 0, totalStock: 0 };
+                }
+        
+                const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
+                const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
+        
+                if (bruryaQtyColIdx === -1) {
+                  logger.error(serviceName, functionName, "Required column 'pa_BruryaQty' not found in SysProductAudit sheet.");
+                  return { productCount: 0, totalStock: 0 };
+                }
+        
+                const data = productAuditSheet.getDataRange().getValues();
+                let productCount = 0;
+                let totalStock = 0;
+        
+                // Start from 1 to skip headers
+                for (let i = 1; i < data.length; i++) {
+                  const row = data[i];
+                  const bruryaQty = parseFloat(row[bruryaQtyColIdx]);
+        
+                  if (!isNaN(bruryaQty) && bruryaQty > 0) {
+                    productCount++;
+                    totalStock += bruryaQty;
+                  }
+                }
+                logger.info(serviceName, functionName, `Brurya Summary: Products: ${productCount}, Total Stock: ${totalStock}.`);
+                return { productCount: productCount, totalStock: totalStock };
+        
+              } catch (e) {
+                logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+                return { productCount: 0, totalStock: 0 };
               }
             }
-          }
-          if (totalStock > 0) {
-            exportableItemCount++;
-          }
-        }
-        return exportableItemCount;
-      } catch (e) {
-        LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
-        return 0;
-      }
-    }
-  
-    /**
-     * Helper function to get count of open tasks by type ID.
-     * @param {string} taskTypeId The ID of the task type to count.
-     * @returns {number} The count of open tasks.
-     */
-    function _getOpenTaskCountByTypeId(taskTypeId) {
-      const serviceName = 'InventoryManagementService';
-      const functionName = '_getOpenTaskCountByTypeId';
-      try {
-        const allConfig = ConfigService.getAllConfig();
-        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const sheetNames = allConfig['system.sheet_names'];
-        const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
-  
-        if (!taskSheet || taskSheet.getLastRow() <= 1) {
-          return 0;
-        }
-  
-        const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-        const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-        const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
-        const statusCol = taskHeaders.indexOf('st_Status');
-  
-        let count = 0;
-        for (let i = 0; i < taskData.length; i++) {
-          const row = taskData[i];
-          if (row[taskTypeCol] === taskTypeId && row[statusCol] !== 'Done' && row[statusCol] !== 'Cancelled') {
-            count++;
-          }
-        }
-        return count;
-      } catch (e) {
-        LoggerService.error(serviceName, functionName, `Error getting task count for type ${taskTypeId}: ${e.message}`, e);
-        return 0;
-      }
-    }
-
-    return {
-        getStockLevel: getStockLevel,
-        updateStock: updateStock,
-        calculateOnHoldInventory: calculateOnHoldInventory,
-        getBruryaStockList: getBruryaStockList,
-        setBruryaQuantity: setBruryaQuantity,
-        updateBruryaInventory: updateBruryaInventory,
-        getBruryaSummaryStatistic: getBruryaSummaryStatistic,
-        getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
-        getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
-        getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
-        getComaxInventoryExportCount: getComaxInventoryExportCount
-    };
-})();
+        
+            /**
+             * Retrieves the count of open 'Negative Inventory' tasks.
+             * @returns {number} The count of open tasks.
+             */
+            function getOpenNegativeInventoryTasksCount() {
+              return _getOpenTaskCountByTypeId('task.inventory.negative');
+            }
+        
+            /**
+             * Retrieves the count of open 'Inventory Count' tasks.
+             * @returns {number} The count of open tasks.
+             */
+            function getOpenInventoryCountTasksCount() {
+              return _getOpenTaskCountByTypeId('task.inventory.count');
+            }
+        
+            /**
+             * Retrieves the count of open 'Inventory Count Review' tasks.
+             * @returns {number} The count of open tasks.
+             */
+            function getOpenInventoryCountReviewTasksCount() {
+              return _getOpenTaskCountByTypeId('task.inventory.count_review');
+            }
+        
+            /**
+             * Retrieves the count of items with stock ready for Comax Inventory Export.
+             * @returns {number} The count of items with stock > 0.
+             */
+            function getComaxInventoryExportCount() {
+              const serviceName = 'InventoryManagementService';
+              const functionName = 'getComaxInventoryExportCount';
+              try {
+                const allConfig = ConfigService.getAllConfig();
+                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const sheetNames = allConfig['system.sheet_names'];
+                const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
+        
+                if (!productAuditSheet || productAuditSheet.getLastRow() <= 1) {
+                  return 0;
+                }
+        
+                const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
+                const qtyCols = ['pa_BruryaQty', 'pa_StorageQty', 'pa_OfficeQty', 'pa_ShopQty'];
+                const qtyColIndices = qtyCols.map(col => headers.indexOf(col));
+        
+                const data = productAuditSheet.getRange(2, 1, productAuditSheet.getLastRow() - 1, productAuditSheet.getLastColumn()).getValues();
+        
+                let exportableItemCount = 0;
+                for (let i = 0; i < data.length; i++) {
+                  let totalStock = 0;
+                  for (const colIdx of qtyColIndices) {
+                    if (colIdx !== -1) {
+                      const qty = parseFloat(data[i][colIdx]);
+                      if (!isNaN(qty)) {
+                        totalStock += qty;
+                      }
+                    }
+                  }
+                  if (totalStock > 0) {
+                    exportableItemCount++;
+                  }
+                }
+                return exportableItemCount;
+              } catch (e) {
+                LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
+                return 0;
+              }
+            }
+        
+            /**
+             * Helper function to get count of open tasks by type ID.
+             * @param {string} taskTypeId The ID of the task type to count.
+             * @returns {number} The count of open tasks.
+             */
+            function _getOpenTaskCountByTypeId(taskTypeId) {
+              const serviceName = 'InventoryManagementService';
+              const functionName = '_getOpenTaskCountByTypeId';
+              try {
+                const allConfig = ConfigService.getAllConfig();
+                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+                const sheetNames = allConfig['system.sheet_names'];
+                const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+        
+                if (!taskSheet || taskSheet.getLastRow() <= 1) {
+                  return 0;
+                }
+        
+                const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+                const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+                const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
+                const statusCol = taskHeaders.indexOf('st_Status');
+        
+                let count = 0;
+                for (let i = 0; i < taskData.length; i++) {
+                  const row = taskData[i];
+                  if (row[taskTypeCol] === taskTypeId && row[statusCol] !== 'Done' && row[statusCol] !== 'Cancelled') {
+                    count++;
+                  }
+                }
+                return count;
+              } catch (e) {
+                LoggerService.error(serviceName, functionName, `Error getting task count for type ${taskTypeId}: ${e.message}`, e);
+                return 0;
+              }
+            }
+        
+            return {
+                getStockLevel: getStockLevel,
+                updateStock: updateStock,
+                calculateOnHoldInventory: calculateOnHoldInventory,
+                getBruryaStockList: getBruryaStockList,
+                        setBruryaQuantity: setBruryaQuantity,
+                        updateBruryaInventory: updateBruryaInventory,
+                        setInventoryCount: setInventoryCount, // Expose the new function                setInventoryCount: setInventoryCount, // Expose the new function
+                getBruryaSummaryStatistic: getBruryaSummaryStatistic,
+                getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
+                getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
+                getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
+                getComaxInventoryExportCount: getComaxInventoryExportCount
+            };
+        })();
