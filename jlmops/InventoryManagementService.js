@@ -472,6 +472,68 @@ const InventoryManagementService = (function() {
   }
 
   /**
+   * Updates the physical count quantities for a given SKU in SysProductAudit.
+   * @param {Object} counts - An object containing sku, storageQty, officeQty, and shopQty.
+   * @returns {Object} A result object.
+   */
+  function updatePhysicalCounts(counts) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'updatePhysicalCounts';
+    const { sku, storageQty, officeQty, shopQty } = counts;
+    LoggerService.info(serviceName, functionName, `Updating counts for SKU ${sku}.`);
+
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const sheetNames = allConfig['system.sheet_names'];
+        const auditSheetName = sheetNames.SysProductAudit;
+
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const auditSheet = ss.getSheetByName(auditSheetName);
+
+        if (!auditSheet) {
+            throw new Error(`Sheet not found: '${auditSheetName}'.`);
+        }
+
+        const auditData = auditSheet.getDataRange().getValues();
+        const auditHeaders = auditData[0];
+        const skuColIdx = auditHeaders.indexOf('pa_SKU');
+        const storageColIdx = auditHeaders.indexOf('pa_StorageQty');
+        const officeColIdx = auditHeaders.indexOf('pa_OfficeQty');
+        const shopColIdx = auditHeaders.indexOf('pa_ShopQty');
+
+        if ([skuColIdx, storageColIdx, officeColIdx, shopColIdx].includes(-1)) {
+            throw new Error(`One or more required columns not found in '${auditSheetName}'.`);
+        }
+
+        const rowIndex = auditData.findIndex((row, index) => index > 0 && row[skuColIdx] === sku);
+
+        if (rowIndex !== -1) {
+            const sheetRow = rowIndex + 1; // +1 because auditData is 0-indexed without headers.
+            auditSheet.getRange(sheetRow, storageColIdx + 1).setValue(storageQty);
+            auditSheet.getRange(sheetRow, officeColIdx + 1).setValue(officeQty);
+            auditSheet.getRange(sheetRow, shopColIdx + 1).setValue(shopQty);
+            LoggerService.info(serviceName, functionName, `Successfully updated counts for SKU ${sku}.`);
+            return { success: true, sku: sku, action: 'updated' };
+        } else {
+            // This case should ideally not be hit if tasks are generated for existing products.
+            // Creating a new row just in case.
+            const newRow = Array(auditHeaders.length).fill('');
+            newRow[skuColIdx] = sku;
+            newRow[storageColIdx] = storageQty;
+            newRow[officeColIdx] = officeQty;
+            newRow[shopColIdx] = shopQty;
+            auditSheet.appendRow(newRow);
+            LoggerService.warn(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Created a new row.`);
+            return { success: true, sku: sku, action: 'created' };
+        }
+    } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error updating counts for SKU ${sku}: ${e.message}`, e);
+        throw e;
+    }
+  }
+
+  /**
    * Calculates the total number of products and the total stock quantity at Brurya.
            * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
            */
@@ -634,9 +696,10 @@ const InventoryManagementService = (function() {
                 updateStock: updateStock,
                 calculateOnHoldInventory: calculateOnHoldInventory,
                 getBruryaStockList: getBruryaStockList,
-                        setBruryaQuantity: setBruryaQuantity,
-                        updateBruryaInventory: updateBruryaInventory,
-                        setInventoryCount: setInventoryCount, // Expose the new function                setInventoryCount: setInventoryCount, // Expose the new function
+                setBruryaQuantity: setBruryaQuantity,
+                updateBruryaInventory: updateBruryaInventory,
+                setInventoryCount: setInventoryCount,
+                updatePhysicalCounts: updatePhysicalCounts,
                 getBruryaSummaryStatistic: getBruryaSummaryStatistic,
                 getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
                 getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,

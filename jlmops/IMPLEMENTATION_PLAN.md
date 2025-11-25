@@ -8,12 +8,7 @@
 
 ### SysConfig Data Integrity & Import Functionality Restoration (COMPLETED)
 *   **Goal:** Ensure the `SysConfig` sheet accurately reflects the `SetupConfig.js` source of truth and that all critical import processes are fully functional.
-*   **Details:**
-    *   Resolved issues with the configuration service failing to correctly parse parameters from the master config sheet.
-    *   Corrected the master configuration to include definitions for all necessary system sheet names.
-    *   Cleaned up and deduplicated several task definitions in the master configuration.
-    *   Ensured all task definitions were being correctly loaded into the system.
-    *   **Result:** Web Order Import, Web Product Import, Web Translation Import, and Comax Product Import functionalities are fully restored and operating as expected.
+*   **Result:** Web Order Import, Web Product Import, Web Translation Import, and Comax Product Import functionalities are fully restored and operating as expected.
 
 ## Phase 3: Initial Data Population (COMPLETED)
 
@@ -28,16 +23,7 @@
 
 *   **Phase 4.4: Implement Core Order Workflows (COMPLETED)**
     *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
-    *   **Tasks:**
-        1.  **On-Hold Inventory Calculation (COMPLETED):** Implement the logic in `InventoryManagementService.js`.
-        2.  **Optimize Order Upsert (COMPLETED):** Implemented faster order handling in `OrderService.js` by categorizing orders and performing targeted updates.
-        3.  **Refactor WebAdapter for Configuration-Driven Line Item Parsing (COMPLETED):**
-        4.  **Comax Order Export (COMPLETED - Monitoring Ongoing):** Implement the export generation logic in `OrderService.js`.
-            *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
-        5.  **Packing Slip Data Preparation (COMPLETED):** Implement the `preparePackingData` function in `OrderService.js`.
-            *   **Resolution:** Data access issues for packing slips were resolved, ensuring correct product ID lookups and addressing a timing issue with spreadsheet updates.
-        6.  **Web Product Inventory Export (COMPLETED - Monitoring Ongoing):** Implement the stock & price update export generation in `ProductService.js`.
-            *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
+    *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
 
 ## Phase 5: UI Overhaul & Workflow Screens (IN PROGRESS)
 
@@ -68,7 +54,7 @@
 ### 5.3. Manager Screen Implementation
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
-    1.  **Inventory Screen (IN PROGRESS):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
+    1.  **Inventory Screen (COMPLETED):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
         *   **Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
     2.  **Product Management Screen (PLANNED):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
         *   **UI Layout:** The page will feature distinct, ordered areas/widgets to prioritize manager tasks:
@@ -117,10 +103,7 @@
 
 ### 5.5. UI Authentication & User Switching (COMPLETED)
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
-*   **Tasks:**
-    1.  **Refactor `AuthService.js` (COMPLETED):** Replaced the old, complex impersonation logic with a simplified service that reads user roles directly from `SysConfig`.
-    2.  **Implement UI Control (COMPLETED):** Integrated a role-switcher dropdown into `AppView.html` that dynamically loads content and adjusts navigation based on the selected user's role.
-    3.  **Resolve Known Issue (COMPLETED):** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
+*   **Resolution:** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
 ## Phase 6: Workflow Integrity & UI Orchestration (CURRENT)
 
@@ -151,10 +134,7 @@ The existing dashboard widgets will be enhanced to:
 *   **Display Workflow Status:** Each widget associated with a major workflow (Orders, Inventory) will include a status area that displays the real-time state from the `OrchestratorService` (e.g., "Status: Ready to Export 15 Orders to Comax," "Status: Waiting for Web Product Import").
 *   **Implement Action Gating:** UI controls (buttons, links) for initiating actions will be dynamically enabled or disabled based on the workflow state. A user will not be able to click "Export to Comax" if the system is not in a `ReadyForComaxExport` state.
 *   **Implement State-Aware Widget Workflows (COMPLETED):**
-    *   Refactored `AdminOrdersWidget` and `AdminInventoryWidget` data supply to use their dedicated data providers (`WebAppOrders.js`, `WebAppInventory.js`), centralizing logic and removing duplication from `WebApp.js` and `WebAppDashboard.js`.
-    *   Implemented state-aware UI controls for the "Comax Order Export" workflow in the Orders widget.
-    *   Implemented state-aware UI controls for the "Web Inventory Export" workflow in the Inventory widget, including dependency messaging.
-    *   Fixed the data supply for the Inventory widget by implementing `getBruryaSummaryStatistic` and correcting the task type ID for negative inventory counts.
+    *   **Summary:** Refactored widget data supply and implemented state-aware UI controls for Comax Order Export and Web Inventory Export workflows, including dependency messaging and fixing data supply for the Inventory widget.
 
 ## Phase 7: Future Implementation Priorities (PLANNED)
 
@@ -162,12 +142,6 @@ The existing dashboard widgets will be enhanced to:
 
 ### 1. Packing Slip Workflow (Backend Completed)
 *   **Goal:** Implement a robust, state-aware packing slip generation system that ensures consistency and manages descriptive text enrichment.
-*   **Define Data Model (COMPLETED):** Enhanced the order data model to support a new status field for the packing slip workflow.
-    2.  **Refactor `OrderService` (COMPLETED):** Implemented the full state machine logic, including the "Lock-in" and "On-hold" rules, to set `Eligible`/`Ineligible` status in `SysOrdLog`.
-    3.  **Refactor `PackingSlipService` (COMPLETED):** Logic updated to act on `Eligible` orders and set them to `Ready`.
-    4.  **Refactor `PrintService` (COMPLETED):** Logic updated to act on `Ready` orders and set them to `Printed`.
-    5.  **Update `WebApp.js` Backend (COMPLETED):** The `getPackableOrders` function was updated to fetch `Ready` orders from `SysOrdLog`.
-    *   **Resolution:** A data population issue and an underlying timing problem were resolved, ensuring accurate packing slip data.
 
 ### 2. Frontend UI Development (IN PROGRESS)
 *   **Goal:** To build the dashboard-driven Single Page Application (SPA) that will serve as the main user interface for the JLMops system.
@@ -190,21 +164,9 @@ The existing dashboard widgets will be enhanced to:
 
 ### 3. Packing Slip Formatting & Generation (COMPLETED)
 *   **Goal:** To generate professional, readable, and consistent packing slips by leveraging robust Google Doc templates, ensuring continuity with the legacy system's output format.
-*   **Design Rationale (Correction):** The initial `jlmops` implementation incorrectly pivoted to using Google Sheet templates. This has been corrected. The system will now follow the true legacy method of using a pre-formatted **Google Doc** as a WYSIWYG template. This template will be copied and populated with data from `SysPackingCache`, combining the robust data assembly of the new system with the proven output format of the old system.
-*   **Tasks:**
-    1.  **Data Preparation (`PackingSlipService.js`): (COMPLETED)**
-        *   **Objective:** Ensure `SysPackingCache` contains all necessary order and product details for packing slip generation.
-    2.  **Packing Slip Generation (`PrintService.js`): (COMPLETED)**
-        *   **Objective:** Modify the `printPackingSlips` function to copy a **Google Doc** template, populate it with data from `SysPackingCache` by replacing placeholders and building tables, and save the result as a new Google Doc in the designated output folder.
 
 ### 4. Customer Note Implementation (IN PROGRESS - Awaiting Data for Testing)
 *   **Goal:** To provide a UI for handling customer notes and creating individual, editable Google Docs for gift messages.
-*   **Tasks:
-    1.  **Gift Message Creation (`WebApp.js`): (COMPLETED)**
-        *   **Objective:** Add a new server-side function to create individual, editable Google Docs for gift messages.
-        *   **Action:** A new backend function was added to create individual, editable Google Docs for gift messages.
-    2.  **UI Updates (`WebApp.js` & `PackingSlipView.html`): (COMPLETED)**
-        *   **Objective:** Adapt the client-side and server-side functions to handle the new return format and provide UI for customer notes and gift message creation.
 
 ### 5. Inventory Management Workflows (PLANNED)
 *   **Goal:** To fully integrate and manage all inventory-related processes within `jlmops`, including physical counts, audits, and synchronization with Comax, using a task-based workflow.
@@ -216,11 +178,11 @@ The existing dashboard widgets will be enhanced to:
                 *   **Workflow:** Managers can edit quantities directly in the table, add new products via the search tool, or remove products by setting their quantity to `0`. All changes will be saved via a single "Save Changes" button, which updates the `BruryaQty` in the `SysProductAudit` sheet.    2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
     3.  **Negative Inventory Task Follow-up:** Implement logic to detect negative stock levels and create high-priority tasks for investigation and correction.
     4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type with a defined workflow to manage the entire lifecycle of inventory counts.
-        *   **Entry/Submission:** Provide UI for managers to enter and submit physical inventory counts.
-            *   The UI will feature a single, alphabetized table of all products requiring a count, consolidated from all assigned tasks.
-            *   The table will include editable quantity fields and a checkbox for each row.
-            *   Client-side scripting will provide an intuitive workflow: editing a quantity will automatically check the row's checkbox, and unchecking the box will clear any edits made to that row.
-            *   A "Submit Selected Counts" button will allow for partial submissions, removing completed items from the user's view upon success.
+        *   **Entry/Submission (IN PROGRESS):** Provide an enhanced UI for managers to enter and submit physical inventory counts.
+            *   The UI will feature a table displaying all products assigned for counting, with data sourced from `CmxProdM` (for Product Name) and `SysProductAudit` (for quantities).
+            *   The table columns will be: `Comax Qty` (read-only `pa_ComaxQty`), `Total` (read-only calculated sum), `Brurya` (read-only `pa_BruryaQty`), `Storage` (editable `pa_StorageQty`), `Office` (editable `pa_OfficeQty`), `Shop` (editable `pa_ShopQty`), `SKU`, `Product Name` (right-justified), and a `Checkbox`.
+            *   Client-side scripting will provide an intuitive workflow: editing a quantity in any of the editable columns will automatically check that row's checkbox.
+            *   A "Submit Selected Counts" button will allow for partial submissions of all entered counts.
         *   **Review/Acceptance:** Provide a UI for admins to review and accept submitted counts.
             *   The screen will be nearly identical to the manager's view, showing a consolidated list of all products in 'Review' status.
             *   Quantity fields will be read-only, displaying the manager's submitted counts.
@@ -232,16 +194,6 @@ The existing dashboard widgets will be enhanced to:
 
 ### 6. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
 *   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system.
-*   **Status Update:**
-    *   **Data Model Foundation (COMPLETED):** A new data sheet was defined in the master configuration to audit product data.
-    *   **Comax Product Import Integration (COMPLETED):** The product service was modified to maintain the new audit sheet during Comax product imports.
-    *   **Brurya Inventory Management Backend (COMPLETED):** Functions were added to the inventory service to get and set Brurya-specific stock.
-    *   **Brurya Inventory Display (COMPLETED):** The initial UI for displaying a sorted list of products with current Brurya stock (SKU, Name, Quantity) in the Manager Inventory View has been implemented and debugged. Full workflow implementation (editing quantities, adding products) is the next step.
-    *   **Testing (IN PROGRESS):** Currently testing the audit sheet maintenance and the Brurya UI.
-*   **Tasks (Remaining):**
-    1.  **Develop Export Logic:** Implement a new function that reads current inventory data and generates a CSV string.
-    2.  **File Creation:** Create a new CSV file in a designated Google Drive export folder.
-    3.  **UI Integration:** Provide a UI element to trigger this export.
 
 ### 6. Enhanced Product Detail Verification (PLANNED)
 *   **Goal:** To provide a comprehensive, task-based workflow for managers to review and verify product details, including images, facts, and overall appearance.
@@ -349,23 +301,10 @@ The existing dashboard widgets will be enhanced to:
 
 ### 8.2. Standardize System Logging (COMPLETED)
 *   **Goal:** To ensure all logging across the application is consistent, meaningful, and conforms to the `LoggerService` standard. This improves traceability and reduces log noise.
-*   **Summary of Work:**
-    *   All native logging calls in core services and UI backends were replaced with calls to the new global logger, following the standardized format.
-    *   Logging levels were standardized: `ERROR` for critical, process-halting issues; `WARN` for recoverable system-level events; `INFO` for major operations and expected non-error events.
-    *   A circular dependency between the configuration and logging services was identified and resolved.
-    *   Diagnostic logging was temporarily added to the logging service to confirm successful writes to the log sheet.
 
 ### 8.3. Validation Service Optimization & Bug Fix (COMPLETED)
 *   **Goal:** To improve the performance and correctness of the validation engine.
-*   **Summary of Work:**
-    *   **Optimized Validation Engine:** Refactored the core validation runner functions (`runValidationSuite`, `_runMasterValidation`) and the `_executeFieldComparison` function to eliminate redundant data processing. Data maps required for field comparisons are now pre-computed once per suite run instead of on every rule execution, significantly improving performance.
-    *   **Fixed Compound Condition Parsing:** Corrected a critical bug in the `_executeInternalAudit` function where the logic for parsing compound "AND" conditions was flawed. This ensures that multi-part validation rules are evaluated correctly, preventing incorrect failure reports.
 
 ### 6.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
 
 *   **Goal:** To resolve critical runtime errors and improve the robustness of the job orchestration engine.
-*   **Summary of Fixes:**
-    1.  **Inconsistent Service Architecture:** `LookupService` and `InventoryManagementService` were defined as constructor functions while the rest of the application treated them as static singletons. This architectural mismatch caused `ReferenceError` exceptions. Both services were refactored to the singleton pattern, resolving the errors and aligning them with the project's architecture.
-    2.  **Job Dependency Deadlock:** A logic error in the `OrchestratorService` prevented `BLOCKED` jobs from being processed immediately after their dependencies were met. The job completion logic was modified to re-scan and process newly pending jobs, ensuring workflows are not stalled.
-    3.  **Failed Job Retry Logic:** A critical flaw was identified where the system would mark a file as processed *before* the import job was successfully completed. This meant a transient failure would cause the file to be permanently skipped. The workflow has been refactored to only update the file registry *after* the job finishes successfully. This required a schema change to `SysJobQueue` to carry the original file's metadata through the process.
-    4.  **Case-Sensitivity Error:** Corrected a `ReferenceError` in `OrderService` caused by an incorrect casing when calling the `InventoryManagementService`.

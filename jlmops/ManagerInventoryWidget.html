@@ -39,8 +39,8 @@
     // Open Inventory Tasks
     html += '<h6>Open Inventory Tasks</h6>';
     html += '<p>Negative Inventory Tasks: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Tasks: <strong>' + (data.openInventoryCountTasksCount > 0 ? data.openInventoryCountTasksCount : '') + '</strong></p>';
-    html += '<p>Inventory Count Review Tasks: <strong>' + (data.openInventoryCountReviewTasksCount > 0 ? data.openInventoryCountReviewTasksCount : '') + '</strong></p>';
+    html += '<p>Inventory Count Tasks: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Review Tasks: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
     html += '<hr>';
 
     widget.innerHTML = html;

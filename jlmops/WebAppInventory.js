@@ -149,16 +149,34 @@ function WebAppInventory_getProductsForCount() {
     const sysProductAuditMap = sysProductAuditData.map;
 
     const productsToCount = allCountTasks.map(task => {
-      const sku = task.st_LinkedEntityId;
-      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Name : 'Unknown Product';
+      const sku = String(task.st_LinkedEntityId).trim();
+      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product';
+      
+      if (!cmxProdMMap.has(sku)) {
+        LoggerService.warn('WebAppInventory', 'getProductsForCount', `SKU from task not found in CmxProdM: ${sku}`);
+      }
+
       // Assuming 'pa_OfficeQty' is the general physical count column.
-      const currentCount = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku).pa_OfficeQty || 0 : 0; 
+      const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
+      
+      const comaxStockFromMaster = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Stock || 0 : 0;
+      const bruryaQty = auditEntry.pa_BruryaQty || 0;
+      const storageQty = auditEntry.pa_StorageQty || 0;
+      const officeQty = auditEntry.pa_OfficeQty || 0;
+      const shopQty = auditEntry.pa_ShopQty || 0;
+
+      const totalQty = bruryaQty + storageQty + officeQty + shopQty;
 
       return {
         taskId: task.st_TaskId,
         sku: sku,
         productName: productName,
-        currentCount: currentCount
+        comaxQty: comaxStockFromMaster, // Changed to cpm_Stock
+        totalQty: totalQty,
+        bruryaQty: bruryaQty,
+        storageQty: storageQty,
+        officeQty: officeQty,
+        shopQty: shopQty
       };
     });
 
@@ -174,7 +192,7 @@ function WebAppInventory_getProductsForCount() {
 
 /**
  * Submits inventory counts for multiple products and completes their associated tasks.
- * @param {Array<Object>} selectedCounts An array of objects, each containing { taskId, sku, quantity }.
+ * @param {Array<Object>} selectedCounts An array of objects, each containing { taskId, sku, storageQty, officeQty, shopQty }.
  * @returns {Object} A result object indicating success and number of updated items.
  */
 function WebAppInventory_submitInventoryCounts(selectedCounts) {
@@ -183,9 +201,8 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
     let updatedCount = 0;
     
     selectedCounts.forEach(item => {
-      // Assuming 'pa_OfficeQty' as the default column for general inventory counts.
-      // This can be made configurable if tasks need to specify the location.
-      const updateResult = inventoryManagementService.setInventoryCount(item.sku, item.quantity, 'pa_OfficeQty');
+      // Pass the complete item object including taskId, sku, and all quantities
+      const updateResult = inventoryManagementService.updatePhysicalCounts(item); 
       if (updateResult.success) {
         TaskService.completeTask(item.taskId); // Mark the task as Done.
         updatedCount++;
