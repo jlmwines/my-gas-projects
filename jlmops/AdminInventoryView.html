@@ -1,12 +1,320 @@
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <h3>Inventory</h3>
+<div class="container-fluid">
+  <!-- Section 1: Inventory Review Table -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+          <h5>Inventory Counts to Review</h5>
+          <button id="btn-process-counts" class="btn btn-light" disabled>Processing counts disabled</button>
+        </div>
+        <div class="card-body">
+
+          <!-- Container for the review table -->
+          <div id="inventory-review-table-container">
+            <!-- Table will be dynamically generated here -->
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <p>This is the full Inventory page. Content to be added.</p>
+    </div>
+  </div>
+
+  <!-- Section 2: Task Creation Controls -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>Create New Count Tasks</h5>
+        </div>
+        <div class="card-body">
+          <h6>Bulk Task Creation</h6>
+          <p>Generate tasks for products that have not been counted recently or have low stock.</p>
+          <div class="form-row align-items-end">
+            <div class="col-auto">
+              <label for="max-stock-bulk">Max Stock Quantity</label>
+              <input type="number" id="max-stock-bulk" class="form-control" placeholder="e.g., 50">
+            </div>
+            <div class="col-auto">
+              <label for="max-days-bulk">Not Counted in Days</label>
+              <input type="number" id="max-days-bulk" class="form-control" placeholder="e.g., 90">
+            </div>
+            <div class="col-auto">
+              <button id="btn-generate-bulk-tasks" class="btn btn-primary">Generate Bulk Tasks</button>
+            </div>
+          </div>
+          <hr>
+          <h6>Spot-Check Task Creation</h6>
+          <p>Manually create a count task for a specific product.</p>
+           <div class="form-row align-items-end">
+            <div class="col">
+              <label for="spot-check-search">Search by SKU or Product Name</label>
+              <input type="text" id="spot-check-search" class="form-control" placeholder="Search for a product...">
+            </div>
+            <div class="col-auto">
+              <button id="btn-create-spot-task" class="btn btn-secondary">Create Spot-Check Task</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Open Tasks List (Manager Queue) -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>Open Inventory Tasks (Manager Queue)</h5>
+        </div>
+        <div class="card-body">
+          <p>This read-only table shows all products currently assigned to managers for counting.</p>
+          <!-- Container for the open tasks table -->
+          <div id="open-tasks-table-container">
+            <!-- Table will be dynamically generated here -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+</script>
+
+<style>
+    /* Toast Notification Styles */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        background-color: #28a745; /* Green for success */
+        color: white;
+        border-radius: 5px;
+        z-index: 1050;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        opacity: 0;
+        transition: opacity 0.5s, top 0.5s;
+    }
+    .toast-notification.error {
+        background-color: #dc3545; /* Red for error */
+    }
+    .toast-notification.warning {
+        background-color: #ffc107; /* Yellow for warning */
+        color: #212529;
+    }
+    .toast-notification.show {
+        opacity: 1;
+        top: 30px;
+    }
+</style>
+
+<script>
+  const reviewContainer = document.getElementById('inventory-review-table-container');
+  const processBtn = document.getElementById('btn-process-counts');
+
+  /**
+   * Main function to load all data for the view.
+   */
+  function loadAdminViewData() {
+    reviewContainer.innerHTML = '<p class="text-center"><em>Loading review tasks...</em></p>';
+    google.script.run
+      .withSuccessHandler(renderAdminView)
+      .withFailureHandler(handleError)
+      .WebAppInventory_getAdminInventoryViewData();
+  }
+
+  /**
+   * Renders the different components of the admin view.
+   * @param {object} data - The data object from the backend.
+   */
+  function renderAdminView(data) {
+    if (data.error) {
+      handleError({ message: data.error });
+      return;
+    }
+    renderReviewTable(data.reviewTasks || []);
+    // Future: renderOpenTasksTable(data.openTasks || []);
+  }
+
+  /**
+   * Renders the 'Inventory Counts to Review' table.
+   * @param {Array<object>} tasks - The array of task objects for review.
+   */
+  function renderReviewTable(tasks) {
+    console.log('renderReviewTable received tasks:', tasks);
+    if (tasks.length === 0) {
+      reviewContainer.innerHTML = '<p>No inventory counts are currently awaiting review.</p>';
+      return;
+    }
+
+    let tableHtml = `
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+
+            <th class="text-center">Comax</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Brurya</th>
+            <th class="text-center">Storage</th>
+            <th class="text-center">Office</th>
+            <th class="text-center">Shop</th>
+            <th class="text-center">SKU</th>
+            <th class="text-right">Product Name</th>
+            <th class="text-center"><input type="checkbox" id="check-all-reviews"></th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    tasks.forEach(task => {
+      tableHtml += `
+        <tr data-task-id="${task.taskId}" data-sku="${task.sku}">
+          <td class="text-center">${task.comaxQty}</td>
+          <td class="text-center">${task.totalQty}</td>
+          <td class="text-center">${task.bruryaQty}</td>
+          <td class="text-center">${task.storageQty}</td>
+          <td class="text-center">${task.officeQty}</td>
+          <td class="text-center">${task.shopQty}</td>
+          <td class="text-center">${task.sku}</td>
+          <td class="text-right">${task.productName}</td>
+          <td class="text-center"><input type="checkbox" class="review-checkbox"></td>
+        </tr>
+      `;
+    });
+
+    tableHtml += `
+        </tbody>
+      </table>
+    `;
+    reviewContainer.innerHTML = tableHtml;
+    const checkAllCheckbox = document.getElementById('check-all-reviews');
+    if (checkAllCheckbox) {
+      checkAllCheckbox.addEventListener('change', () => {
+        const individualCheckboxes = document.querySelectorAll('.review-checkbox');
+        individualCheckboxes.forEach(checkbox => {
+          checkbox.checked = checkAllCheckbox.checked;
+        });
+        updateProcessButtonState();
+      });
+    }
+    addCheckboxEventListeners();
+    updateProcessButtonState();
+  }
+
+  /**
+   * Attaches event listeners to all review checkboxes.
+   */
+  function addCheckboxEventListeners() {
+    const individualCheckboxes = document.querySelectorAll('.review-checkbox');
+    individualCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        updateProcessButtonState();
+        const checkAllCheckbox = document.getElementById('check-all-reviews');
+        if (checkAllCheckbox) {
+          const allChecked = Array.from(individualCheckboxes).every(cb => cb.checked);
+          checkAllCheckbox.checked = allChecked;
+        }
+      });
+    });
+  }
+
+  /**
+   * Updates the disabled state of the process button based on checked checkboxes.
+   */
+  function updateProcessButtonState() {
+    const checkedCheckboxes = document.querySelectorAll('.review-checkbox:checked');
+    processBtn.disabled = checkedCheckboxes.length === 0;
+    if (checkedCheckboxes.length > 0) {
+      processBtn.textContent = `Process ${checkedCheckboxes.length} Count${checkedCheckboxes.length > 1 ? 's' : ''}`;
+    } else {
+      processBtn.textContent = 'Processing counts disabled';
+    }
+  }
+
+  /**
+   * Handles the click event for the process counts button.
+   */
+  function handleProcessCounts() {
+    if (!confirm("Are you sure you want to process the selected inventory counts?")) {
+      return;
+    }
+    processBtn.disabled = true;
+    processBtn.textContent = 'Processing...';
+
+    const selectedTasks = [];
+    document.querySelectorAll('.review-checkbox:checked').forEach(checkbox => {
+      const row = checkbox.closest('tr');
+      selectedTasks.push({
+        taskId: row.dataset.taskId,
+        sku: row.dataset.sku, // Now using data-sku from tr
+        comaxQty: parseInt(row.querySelector('td:nth-child(1)').textContent, 10), // Comax is 1st column
+        totalQty: parseInt(row.querySelector('td:nth-child(2)').textContent, 10), // Total is 2nd column
+      });
+    });
+
+    if (selectedTasks.length === 0) {
+      showToast('No tasks selected for processing.', 'warning');
+      processBtn.disabled = false;
+      processBtn.textContent = 'Processing counts disabled';
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response.success) {
+          showToast(`${response.updated} counts processed successfully.`);
+          loadAdminViewData(); // Reload data to reflect changes
+        } else {
+          showToast(`Error processing counts: ${response.message}`, 'error');
+        }
+        processBtn.disabled = false;
+        processBtn.textContent = 'Processing counts disabled';
+      })
+      .withFailureHandler(err => {
+        showToast(`Error processing counts: ${err.message}`, 'error');
+        processBtn.disabled = false;
+        processBtn.textContent = 'Processing counts disabled';
+      })
+      .WebAppInventory_processInventoryReviewTasks(selectedTasks);
+  }
+
+  processBtn.addEventListener('click', handleProcessCounts);
+
+  /**
+   * Generic error handler for google.script.run failures.
+   * @param {Error} error - The error object.
+   */
+  function handleError(error) {
+    console.error('An error occurred:', error.message);
+    showToast(`Error: ${error.message}`, 'error');
+  }
+
+  /**
+   * Displays a toast notification.
+   * @param {string} message The message to display.
+   * @param {string} type The type of toast (success, error, warning).
+   */
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Animate in
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Animate out and remove
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                document.body.removeChild(toast);
+            }
+        }, 500);
+    }, 3000);
+  }
+
+  // Initial load
+  loadAdminViewData();
+</script>

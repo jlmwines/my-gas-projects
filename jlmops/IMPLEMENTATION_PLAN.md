@@ -1,3 +1,15 @@
+## 0. CRITICAL WORKFLOW: SysConfig Management
+
+*   **Goal:** To replace the error-prone manual editing of `SetupConfig.js` with a safer, configuration-driven build process.
+*   **Architecture:**
+    1.  The master configuration is stored in `jlmops/SysConfig.json`.
+    2.  A Node.js script (`generate-config.js`) reads `SysConfig.json` and generates the `jlmops/SetupConfig.js` file.
+    3.  `SetupConfig.js` is a machine-generated artifact and must not be edited manually.
+*   **Developer Workflow:**
+    1.  To make configuration changes, edit `jlmops/SysConfig.json`.
+    2.  Run the `node generate-config.js` script.
+    3.  Commit both `jlmops/SysConfig.json` and the generated `jlmops/SetupConfig.js`.
+
 ## Phase 1: System Foundation & Setup (COMPLETED)
 
 **Goal:** To establish the core technical foundation based on the user-managed configuration before any workflow logic is built.
@@ -41,13 +53,13 @@
 *   **Tasks:**
     1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
     2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
-    3.  **Inventory Screen (IN PROGRESS):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow:
-        *   **1. Inventory Review Table:** The primary section at the top of the screen. This table will display submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept. It will include selection checkboxes and processing controls.
-        *   **2. Task Creation Controls:** A section for generating new count tasks. This will include:
+    3.  **Inventory Screen (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow. The 'Inventory Review Table' has been implemented, including data fetching from backend, display with selection controls, and backend logic for processing selected tasks (updating `pa_NewQty`, `pa_LastCount`, and task statuses). Frontend UI bugs have been addressed, including checkbox functionality and "check all" control.
+        *   **1. Inventory Review Table (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** The primary section at the top of the screen. This table will display submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept. It will include selection checkboxes and processing controls.
+        *   **2. Task Creation Controls (IN PROGRESS):** A section for generating new count tasks. This will include:
             *   Controls to create bulk tasks for products that are below a maximum stock quantity OR have not been counted in a maximum number of days.
             *   A spot-check tool to manually create a count task for a single, specific product.
-        *   **3. Open Tasks List:** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
-        *   **4. Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
+        *   **3. Open Tasks List (IN PROGRESS):** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
+        *   **4. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
 
@@ -287,17 +299,8 @@ The existing dashboard widgets will be enhanced to:
 
 **Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.
 
-### 8.1. Refactor SysConfig Management
-*   **Goal:** To replace the error-prone manual editing of `SetupConfig.js` with a safer, configuration-driven build process.
-*   **Architecture:**
-    1.  The master configuration will be moved from a hardcoded array in `SetupConfig.js` to a dedicated `jlmops/SysConfig.json` file.
-    2.  A new Node.js script (`generate-config.js`) will be created to read `SysConfig.json` and generate the `jlmops/SetupConfig.js` file.
-    3.  `SetupConfig.js` will become a machine-generated artifact and will no longer be edited manually.
-*   **Tasks:**
-    1.  **Create `SysConfig.json` (COMPLETED):** Extract the current configuration from `SetupConfig.js` and convert it into a structured JSON format.
-    2.  **Create `generate-config.js` (COMPLETED):** Develop the Node.js script that performs the JSON-to-JS conversion.
-    3.  **Update Documentation (COMPLETED):** `ARCHITECTURE.md` and `IMPLEMENTATION_PLAN.md` have been updated to reflect this new architecture.
-    4.  **Update Developer Workflow (COMPLETED):** Document the new local development workflow (edit JSON, run generator script, commit both files).
+### 8.1. Refactor SysConfig Management (MOVED)
+*   **Note:** This workflow has been moved to Section 0 for high visibility.
 
 ### 8.2. Standardize System Logging (COMPLETED)
 *   **Goal:** To ensure all logging across the application is consistent, meaningful, and conforms to the `LoggerService` standard. This improves traceability and reduces log noise.
