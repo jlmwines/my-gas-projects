@@ -10,6 +10,7 @@
  */
 function WebAppInventory_getInventoryWidgetData() {
   try {
+    const inventoryManagementService = new InventoryManagementService();
     // 1. Get Brurya stats from the backend service
     const bruryaSummary = inventoryManagementService.getBruryaSummaryStatistic();
     
@@ -66,9 +67,56 @@ function WebAppInventory_exportWebInventory() {
  */
 function WebAppInventory_getBruryaStockList() {
   try {
+    const inventoryManagementService = new InventoryManagementService();
     return inventoryManagementService.getBruryaStockList();
   } catch (error) {
     LoggerService.error('WebAppInventory', 'getBruryaStockList', error.message, error);
     throw error; // Re-throw to be caught by the client-side failure handler
+  }
+}
+
+/**
+ * Wraps the LookupService.searchComaxProducts function for client-side access.
+ * @param {string} searchTerm The term to search for.
+ * @returns {Array<Object>} A list of matching products.
+ */
+function WebAppInventory_searchComaxProducts(searchTerm) {
+  try {
+    const lookupService = new LookupService();
+    return lookupService.searchComaxProducts(searchTerm);
+  } catch (error) {
+    LoggerService.error('WebAppInventory', 'searchComaxProducts', error.message, error);
+    throw error;
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.setBruryaQuantity function for client-side access.
+ * @param {string} sku The SKU of the product to update.
+ * @param {number} quantity The new quantity to set.
+ * @returns {Object} A result object from the service.
+ */
+function WebAppInventory_setBruryaQuantity(sku, quantity) {
+  try {
+    const inventoryManagementService = new InventoryManagementService();
+    return inventoryManagementService.setBruryaQuantity(sku, quantity);
+  } catch (error) {
+    LoggerService.error('WebAppInventory', 'setBruryaQuantity', error.message, error);
+    throw error;
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.updateBruryaInventory function for client-side access.
+ * @param {Array<Object>} inventoryData The inventory data to save.
+ * @returns {Object} A result object from the service.
+ */
+function WebAppInventory_updateBruryaInventory(inventoryData) {
+  try {
+    const inventoryManagementService = new InventoryManagementService();
+    return inventoryManagementService.updateBruryaInventory(inventoryData);
+  } catch (error) {
+    LoggerService.error('WebAppInventory', 'updateBruryaInventory', error.message, error);
+    throw error;
   }
 }

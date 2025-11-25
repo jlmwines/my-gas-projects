@@ -180,7 +180,7 @@ The existing dashboard widgets will be enhanced to:
     *   **Tasks:**
         1.  **Create `PackingSlipView.html` (IN PROGRESS):** Partial view for the packing slip UI has been created. Awaiting testing.
         2.  **Integrate View (IN PROGRESS):** View is loaded into the dashboard via the client-side router. Awaiting testing.
-*   **Phase 2.3: Impersonation for Testing (IN PROGRESS)**
+*   **Phase 2.3: Impersonation for Testing (INPROGRESS)**
     *   **Goal:** Implement a mechanism to allow developers to test the UI with different user roles.
     *   **Tasks:**
         1.  **Create `AuthService.js` (IN PROGRESS):** Service created to manage user identity and impersonation. Awaiting testing.
@@ -352,3 +352,12 @@ The existing dashboard widgets will be enhanced to:
     *   Logging levels were standardized: `ERROR` for critical, process-halting issues; `WARN` for recoverable system-level events; `INFO` for major operations and expected non-error events.
     *   A circular dependency between the configuration and logging services was identified and resolved.
     *   Diagnostic logging was temporarily added to the logging service to confirm successful writes to the log sheet.
+
+### 6.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
+
+*   **Goal:** To resolve critical runtime errors and improve the robustness of the job orchestration engine.
+*   **Summary of Fixes:**
+    1.  **Inconsistent Service Architecture:** `LookupService` and `InventoryManagementService` were defined as constructor functions while the rest of the application treated them as static singletons. This architectural mismatch caused `ReferenceError` exceptions. Both services were refactored to the singleton pattern, resolving the errors and aligning them with the project's architecture.
+    2.  **Job Dependency Deadlock:** A logic error in the `OrchestratorService` prevented `BLOCKED` jobs from being processed immediately after their dependencies were met. The job completion logic was modified to re-scan and process newly pending jobs, ensuring workflows are not stalled.
+    3.  **Failed Job Retry Logic:** A critical flaw was identified where the system would mark a file as processed *before* the import job was successfully completed. This meant a transient failure would cause the file to be permanently skipped. The workflow has been refactored to only update the file registry *after* the job finishes successfully. This required a schema change to `SysJobQueue` to carry the original file's metadata through the process.
+    4.  **Case-Sensitivity Error:** Corrected a `ReferenceError` in `OrderService` caused by an incorrect casing when calling the `InventoryManagementService`.

@@ -77,7 +77,10 @@ The backend is designed as a collection of services that are controlled by a sin
     *   **`KpiService`**: Calculates and stores Key Performance Indicators (KPIs) based on configurable definitions.
     *   **`CampaignService`**: Manages promotional campaigns, their assets (posts, bundles, coupons), and the associated tasks.
     *   **`LoggerService`**: Handles centralized logging to the `SysLog` sheet and sends real-time alerts.
-    *   **`ValidationService` (New)**: Provides a suite of tools for validating the `jlmops` system against the legacy system. Its purpose is not to validate raw data, but to compare the final outputs of key business logic (e.g., on-hold inventory calculations, packing slip data, Comax export values) to ensure the new system produces identical results.
+    *   **`ValidationService`**: Provides a central suite of tools for running all types of system validations.
+        *   **Legacy Comparisons:** Validates the `jlmops` system against the legacy system to ensure consistent outputs.
+        *   **System Integrity Checks:** Performs critical master-to-master validations (e.g., row count disparities, SKU existence across master sheets, data completeness) on the internal `jlmops` data.
+        *   **Generic Rule Execution:** Centralizes the execution logic for configurable validation rules (defined by `test_type` in `SysConfig`), making it the single engine for executing validation rules.
 *   **`AuditService`**: Manages stock levels for various locations (Brurya, Storage, Office, Shop) in the `SysProductAudit` sheet (prefix `pa_`).
 
 ### 2.3. Data Adapters & Formatters

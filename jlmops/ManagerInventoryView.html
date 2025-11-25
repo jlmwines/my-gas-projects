@@ -2,62 +2,272 @@
     <h1 class="mt-4">Inventory</h1>
 
     <style>
-        #brurya-inventory-list table th:first-child,
-        #brurya-inventory-list table td:first-child {
-            text-align: right;
+        /* Hide number input spinners */
+        input[type='number']::-webkit-outer-spin-button,
+        input[type='number']::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
+        input[type='number'] {
+            -moz-appearance: textfield;
+        }
+
         #brurya-inventory-list table td {
             padding-top: 0.2rem; /* Reduce top padding */
             padding-bottom: 0.2rem; /* Reduce bottom padding */
             font-size: 0.9rem; /* Slightly smaller font for more rows */
+            vertical-align: middle;
         }
         #brurya-inventory-list table th {
             font-size: 0.9rem;
+        }
+        /* Right align product name */
+        #brurya-inventory-list .product-name-col {
+            text-align: right;
+        }
+        
+        /* Toast Notification Styles */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: #28a745; /* Green for success */
+            color: white;
+            border-radius: 5px;
+            z-index: 1050;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.5s, top 0.5s;
+        }
+        .toast-notification.error {
+            background-color: #dc3545; /* Red for error */
+        }
+        .toast-notification.warning {
+            background-color: #ffc107; /* Yellow for warning */
+            color: #212529;
+        }
+        .toast-notification.show {
+            opacity: 1;
+            top: 30px;
         }
     </style>
 
     <!-- Section for Brurya Inventory Management -->
     <div class="card mb-4">
-        <div class="card-header">
-            <i class="fas fa-warehouse mr-1"></i>
-            Brurya Stock Management
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-warehouse mr-1"></i> Brurya Stock Management</h5>
+            
+            <div style="position: relative;">
+                <div class="input-group input-group-sm" style="max-width: 300px;">
+                    <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Add Product (SKU or Name)...">
+                    <div class="input-group-append">
+                        <button id="brurya-add-product-button" class="btn" type="button" style="background-color: #6c757d; color: white; cursor: pointer;">Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="brurya-save-button" class="btn btn-sm" style="background-color: #007bff; color: white; cursor: pointer;">Save</button>
         </div>
         <div class="card-body">
             <div id="brurya-inventory-list">Loading...</div>
         </div>
     </div>
-</div>
 
-<script>
-    function loadBruryaInventoryData() {
-        const listDiv = document.getElementById('brurya-inventory-list');
-        listDiv.innerHTML = 'Loading inventory...';
+    <script>
+        (function() {
+            const addProductInput = document.getElementById('brurya-add-product-input');
+            const addProductBtn = document.getElementById('brurya-add-product-button');
+            const saveBtn = document.getElementById('brurya-save-button');
+            const listDiv = document.getElementById('brurya-inventory-list');
+            let debounceTimer;
+            let selectedProduct = null;
 
-        google.script.run
-            .withSuccessHandler(inventoryData => {
-                if (!inventoryData || inventoryData.length === 0) {
-                    listDiv.innerHTML = '<p>No items found in Brurya inventory.</p>';
+            function init() {
+                loadBruryaInventoryData();
+                addProductInput.addEventListener('keyup', handleAutocompleteSearch);
+                addProductBtn.addEventListener('click', handleAddProduct);
+                saveBtn.addEventListener('click', handleSaveInventory);
+                document.addEventListener('click', (e) => {
+                    const autocompleteContainer = document.getElementById('autocomplete-results');
+                    if (autocompleteContainer && !autocompleteContainer.contains(e.target) && e.target !== addProductInput) {
+                        clearAutocomplete();
+                    }
+                });
+            }
+
+            function showToast(message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast-notification ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+
+                // Animate in
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+
+                // Animate out and remove
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            document.body.removeChild(toast);
+                        }
+                    }, 500);
+                }, 3000);
+            }
+
+            function handleAutocompleteSearch(e) {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const searchTerm = e.target.value;
+                    if (searchTerm.length < 2) {
+                        clearAutocomplete();
+                        return;
+                    }
+                    google.script.run
+                        .withSuccessHandler(renderAutocomplete)
+                        .withFailureHandler(err => showToast('Autocomplete search failed: ' + err.message, 'error'))
+                        .WebAppInventory_searchComaxProducts(searchTerm);
+                }, 300);
+            }
+
+            function renderAutocomplete(results) {
+                clearAutocomplete();
+                if (!results || results.length === 0) return;
+
+                const container = document.createElement('div');
+                container.id = 'autocomplete-results';
+                container.style.position = 'absolute';
+                container.style.top = '100%';
+                container.style.left = '0';
+                container.style.right = '0';
+                container.style.border = '1px solid #ccc';
+                container.style.backgroundColor = 'white';
+                container.style.zIndex = '1000';
+                container.style.maxHeight = '200px';
+                container.style.overflowY = 'auto';
+
+                results.forEach(item => {
+                    const div = document.createElement('div');
+                    div.textContent = `${item.name} (${item.sku})`;
+                    div.style.padding = '8px';
+                    div.style.cursor = 'pointer';
+                    div.addEventListener('mouseenter', (e) => e.target.style.backgroundColor = '#f0f0f0');
+                    div.addEventListener('mouseleave', (e) => e.target.style.backgroundColor = 'white');
+                    div.addEventListener('click', () => {
+                        addProductInput.value = `${item.name} (${item.sku})`;
+                        selectedProduct = item;
+                        clearAutocomplete();
+                    });
+                    container.appendChild(div);
+                });
+                addProductInput.closest('[style*="position: relative"]').appendChild(container);
+            }
+
+            function clearAutocomplete() {
+                const container = document.getElementById('autocomplete-results');
+                if (container) container.remove();
+            }
+            
+            function handleAddProduct() {
+                if (!selectedProduct) {
+                    showToast('Please select a product from the list.', 'warning');
                     return;
                 }
 
-                let tableHtml = '<table class="table table-hover"><thead><tr><th>Name</th><th>SKU</th><th>Quantity</th></tr></thead><tbody>';
-                inventoryData.forEach(item => {
-                    tableHtml += `<tr>
-                                    <td>${item.Name}</td>
-                                    <td>${item.sku}</td>
-                                    <td>${item.bruryaQty}</td>
-                                  </tr>`;
-                });
-                tableHtml += '</tbody></table>';
-                listDiv.innerHTML = tableHtml;
-            })
-            .withFailureHandler(err => {
-                listDiv.innerHTML = `<div class="alert alert-danger">Error loading inventory: ${err.message}</div>`;
-                console.error("Error loading Brurya inventory:", err);
-            })
-            .WebAppInventory_getBruryaStockList();
-    }
+                const tableBody = listDiv.querySelector('tbody');
+                if (tableBody && tableBody.querySelector(`tr[data-sku="${selectedProduct.sku}"]`)) {
+                    showToast('Product already in the list.', 'warning');
+                    return;
+                }
+                
+                addProductBtn.disabled = true;
+                
+                google.script.run
+                    .withSuccessHandler(response => {
+                        showToast(`Product '${selectedProduct.name}' added to Brurya list.`);
+                        addProductInput.value = '';
+                        selectedProduct = null;
+                        addProductBtn.disabled = false;
+                        loadBruryaInventoryData(); // Reload the whole list
+                    })
+                    .withFailureHandler(err => {
+                        showToast(err.message, 'error');
+                        addProductBtn.disabled = false;
+                    })
+                    .WebAppInventory_setBruryaQuantity(selectedProduct.sku, 1);
+            }
 
-    // Self-execute to load the data as soon as the view is loaded.
-    loadBruryaInventoryData();
-</script>
+            function handleSaveInventory() {
+                const rows = listDiv.querySelectorAll('tbody tr');
+                const inventoryData = [];
+                rows.forEach(row => {
+                    const sku = row.dataset.sku;
+                    const quantityInput = row.querySelector('input[type="number"]');
+                    const quantity = parseInt(quantityInput.value, 10);
+                    if (sku && !isNaN(quantity)) {
+                        inventoryData.push({ sku: sku, quantity: quantity });
+                    }
+                });
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                google.script.run
+                    .withSuccessHandler(result => {
+                        const message = `Successfully updated ${result.updated} items.`;
+                        showToast(message);
+                        loadBruryaInventoryData();
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Error saving inventory: ${err.message}`, 'error');
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                    })
+                    .WebAppInventory_updateBruryaInventory(inventoryData);
+            }
+
+            function renderBruryaInventory(inventoryData) {
+                if (!inventoryData) {
+                    listDiv.innerHTML = '<p>Error loading data.</p>';
+                    return;
+                }
+
+                let tableHtml = '<table class="table table-hover"><thead><tr><th>Quantity</th><th>SKU</th><th>Name</th><th>#</th></tr></thead><tbody>';
+                if (inventoryData.length > 0) {
+                    inventoryData.forEach((item, index) => {
+                        tableHtml += `
+                            <tr data-sku="${item.sku}">
+                                <td style="width: 15%;"><input type="number" class="form-control form-control-sm" value="${item.bruryaQty}" min="0"></td>
+                                <td>${item.sku}</td>
+                                <td class="product-name-col">${item.Name}</td>
+                                <td>${index + 1}</td>
+                            </tr>`;
+                    });
+                }
+                tableHtml += '</tbody></table>';
+                
+                if (inventoryData.length === 0) {
+                    tableHtml += '<p>No items found in Brurya inventory. Use the "Add Product" control to add items.</p>';
+                }
+                listDiv.innerHTML = tableHtml;
+            }
+
+            function loadBruryaInventoryData() {
+                listDiv.innerHTML = 'Loading inventory...';
+                google.script.run
+                    .withSuccessHandler(renderBruryaInventory)
+                    .withFailureHandler(err => {
+                        showToast(`Error loading inventory: ${err.message}`, 'error');
+                    })
+                    .WebAppInventory_getBruryaStockList();
+            }
+
+            init();
+        })();
+    </script>
+</div>

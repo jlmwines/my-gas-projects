@@ -135,11 +135,10 @@ const OrchestratorService = (function() {
       }
 
       const archivedFile = archiveFile(file, archiveFolder);
-      createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus);
-      registry.set(file.getId(), { name: file.getName(), lastUpdated: file.getLastUpdated() });
+      // Pass original file metadata to the job queue instead of updating the registry here.
+      createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus, file.getId(), file.getLastUpdated());
     });
 
-    updateRegistrySheet(fileRegistrySheet, registry, allConfig['schema.log.SysFileRegistry']);
     logger.info(serviceName, functionName, 'File import check complete.');
   }
 
@@ -177,10 +176,11 @@ const OrchestratorService = (function() {
     return newFile;
   }
 
-  function createJob(sheet, configName, serviceName, archiveFileId, status) {
+  function createJob(sheet, configName, serviceName, archiveFileId, status, originalFileId, originalFileLastUpdated) {
     const jobId = Utilities.getUuid();
     const now = new Date();
-    sheet.appendRow([jobId, configName, status, archiveFileId, now, '', '']);
+    // Corresponds to: job_id, job_type, status, archive_file_id, created_timestamp, processed_timestamp, error_message, original_file_id, original_file_last_updated
+    sheet.appendRow([jobId, configName, status, archiveFileId, now, '', '', originalFileId, originalFileLastUpdated]);
     logger.info('OrchestratorService', 'createJob', `Created new job ${jobId} for ${configName} with status: ${status}`);
   }
 
@@ -278,14 +278,14 @@ const OrchestratorService = (function() {
           continue;
         }
 
-        const serviceName = jobConfig.processing_service;
-        logger.info(serviceName, functionName, `Delegating job ${row[0]} of type '${jobType}' to service: ${serviceName}`);
+        const processingServiceName = jobConfig.processing_service;
+        logger.info(processingServiceName, functionName, `Delegating job ${row[0]} of type '${jobType}' to service: ${processingServiceName}`);
 
         jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('PROCESSING');
 
         try {
           const rowNumber = i + 2; // The sheet row number (1-based index + header)
-          switch (serviceName) {
+          switch (processingServiceName) {
             case 'ProductService':
               ProductService.processJob(jobType, rowNumber);
               break;
@@ -439,19 +439,68 @@ const OrchestratorService = (function() {
     }
   }
 
-  function unblockDependentJobs(completedJobType) {
+  function _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated) {
     const serviceName = 'OrchestratorService';
-    const functionName = 'unblockDependentJobs';
-    logger.info(serviceName, functionName, `A job of type '${completedJobType}' was completed. Running post-completion triggers.`);
-    
-    // --- Phase 1: Unblock dependent jobs in the queue ---
+    const functionName = '_recordFileInRegistry';
     try {
+      logger.info(serviceName, functionName, `Recording file in registry: ${originalFileName} (ID: ${originalFileId})`);
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const fileRegistrySheet = logSpreadsheet.getSheetByName(sheetNames.SysFileRegistry);
+
+      const registry = getRegistryMap(fileRegistrySheet);
+      registry.set(originalFileId, { name: originalFileName, lastUpdated: new Date(originalFileLastUpdated) });
+      
+      updateRegistrySheet(fileRegistrySheet, registry, allConfig['schema.log.SysFileRegistry']);
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Failed to record file ${originalFileId} in registry: ${e.message}`, e);
+      // Do not re-throw; we don't want this to crash the parent process.
+    }
+  }
+
+  function finalizeJobCompletion(completedJobType, rowNumber) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'finalizeJobCompletion';
+    logger.info(serviceName, functionName, `Finalizing job completion for type '${completedJobType}' from row ${rowNumber}.`);
+
+    const allConfig = ConfigService.getAllConfig();
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
+    
+    // --- Phase 1: Record file in registry if applicable ---
+    try {
+      if (jobQueueSheet.getLastRow() >= rowNumber) {
+        const jobRowData = jobQueueSheet.getRange(rowNumber, 1, 1, jobQueueHeaders.length).getValues()[0];
+        const archiveFileIdIdx = jobQueueHeaders.indexOf('archive_file_id');
+        const originalFileIdIdx = jobQueueHeaders.indexOf('original_file_id');
+        const originalTimestampIdx = jobQueueHeaders.indexOf('original_file_last_updated');
+        
+        const archiveFileId = jobRowData[archiveFileIdIdx];
+        const originalFileId = jobRowData[originalFileIdIdx];
+        const originalFileLastUpdated = jobRowData[originalTimestampIdx];
+
+        if (originalFileId && originalFileLastUpdated) {
+          const archiveFile = DriveApp.getFileById(archiveFileId);
+          const archiveFileName = archiveFile.getName();
+          // Original name is everything before the last underscore, which precedes the ISO timestamp.
+          const originalFileName = archiveFileName.substring(0, archiveFileName.lastIndexOf('_'));
+
+          _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
+        }
+      }
+    } catch(e) {
+      logger.error(serviceName, functionName, `Error during file registry update phase: ${e.message}`, e);
+    }
+    
+    // --- Phase 2: Unblock dependent jobs in the queue ---
+    try {
       if (jobQueueSheet.getLastRow() > 1) {
         const data = jobQueueSheet.getDataRange().getValues();
         const headers = data.shift();
@@ -475,7 +524,15 @@ const OrchestratorService = (function() {
       logger.error(serviceName, functionName, `Error during job unblocking phase: ${e.message}`, e);
     }
 
-    // --- Phase 2: Fire state-based triggers ---
+    // --- Phase 3: Immediately process any newly unblocked jobs ---
+    try {
+      logger.info(serviceName, functionName, 'Checking for newly unblocked jobs to process.');
+      processPendingJobs();
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error during immediate processing of unblocked jobs: ${e.message}`, e);
+    }
+
+    // --- Phase 4: Fire state-based triggers ---
     try {
       switch (completedJobType) {
         case 'import.drive.web_orders':
@@ -496,7 +553,7 @@ const OrchestratorService = (function() {
 
   return {
     run: run,
-    unblockDependentJobs: unblockDependentJobs
+    finalizeJobCompletion: finalizeJobCompletion
   };
 
 })();

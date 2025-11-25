@@ -82,483 +82,17 @@ const ProductService = (function() {
     }
   }
 
-  function _updateJobStatus(rowNumber, status, message = '') {
-    const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
-    const sheetNames = ConfigService.getConfig('system.sheet_names');
-    const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-    
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-    
-    const statusCol = jobQueueHeaders.indexOf('status') + 1;
-    const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
-    const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
 
-    if (rowNumber && statusCol > 0) jobQueueSheet.getRange(rowNumber, statusCol).setValue(status);
-    if (rowNumber && messageCol > 0) jobQueueSheet.getRange(rowNumber, messageCol).setValue(message);
-    if (rowNumber && timestampCol > 0) jobQueueSheet.getRange(rowNumber, timestampCol).setValue(new Date());
-  }
 
-  function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const sheet = dataSpreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-      // This is a critical error if the sheet is expected to exist
-      throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID: ${dataSpreadsheet.getId()}. This is a critical configuration error.`);
-    }
-    // If the sheet is WebXltM and it's empty, this is also a critical error
-    if (sheetName === 'WebXltM' && sheet.getLastRow() < 2) {
-      throw new Error(`Sheet 'WebXltM' is empty (only headers or less). This is a critical data integrity error as WebXltM is expected to be populated.`);
-    }
-    // For other sheets, or if WebXltM is not empty, proceed as before
-    if (sheet.getLastRow() < 2) {
-      LoggerService.warn('ProductService', '_getSheetDataAsMap', `Sheet '${sheetName}' is empty (only headers or less).`);
-      return { map: new Map(), headers: headers, values: [] };
-    }
-    const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
-    
-    const dataMap = new Map();
-    const keyHeader = keyColumnName || ConfigService.getConfig(`schema.data.${sheetName}`).key_column;
 
-    // DEBUGGING: Log headers and key to diagnose mismatch
-    LoggerService.info('ProductService', '_getSheetDataAsMap', `DEBUG for sheet ${sheetName}: keyHeader = '${keyHeader}', headers = ${JSON.stringify(headers)}`);
-
-    const keyIndex = headers.indexOf(keyHeader);
-    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName} using key '${keyHeader}'`);
-
-    values.forEach(row => {
-      const rowObject = {};
-      headers.forEach((h, i) => rowObject[h] = row[i]);
-      const key = row[keyIndex];
-      if (key && String(key).trim()) {
-        dataMap.set(String(key).trim(), rowObject);
-      }
-    });
-    LoggerService.info('ProductService', '_getSheetDataAsMap', `Loaded ${dataMap.size} rows from ${sheetName}.`);
-    return { map: dataMap, headers: headers, values: values };
-  }
-
-  function _formatString(template, dataRow) {
-    if (!template) return '';
-    return template.replace(/\${(.*?)}/g, (match, key) => {
-      return dataRow[key.trim()] || '';
-    });
-  }
-
-  function _createTaskFromFailure(rule, dataRow, joinKey) {
-    const title = _formatString(rule.on_failure_title, dataRow);
-    const notes = _formatString(rule.on_failure_notes, dataRow);
-    const skuKey = Object.keys(dataRow).find(k => k.endsWith('_SKU'));
-    const entityId = skuKey ? dataRow[skuKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
-
-    LoggerService.info('ProductService', '_createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
-    TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
-    
-    return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
-  }
-
-  function _evaluateCondition(val1, operator, val2) {
-      switch(operator) {
-          case '<': return Number(val1) < Number(val2);
-          case '>': return Number(val1) > Number(val2);
-          case '=': return String(val1) === val2;
-          case '<>': return String(val1) !== val2;
-          default: return false;
-      }
-  }
-
-  // =================================================================================
-  // VALIDATION ENGINE SUB-FUNCTIONS
-  // =================================================================================
-
-  function _buildMapFromData(data, headers, keyHeader) {
-    const map = new Map();
-    const keyIndex = headers.indexOf(keyHeader);
-    if (keyIndex === -1) {
-        throw new Error(`Key header '${keyHeader}' not found in headers: ${headers.join(', ')}`);
-    }
-    data.forEach(row => {
-        const rowObject = {};
-        headers.forEach((h, i) => rowObject[h] = row[i]);
-        const key = row[keyIndex];
-        if (key && String(key).trim()) {
-            map.set(String(key).trim(), rowObject);
-        }
-    });
-    return map;
-  }
-
-  function _executeExistenceCheck(rule, dataMaps, prebuiltMaps) {
-    LoggerService.info('ProductService', '_executeExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
-
-    let quarantineTriggered = false;
-
-    // Use pre-built maps for efficiency
-    const sourceMapKey = `${rule.source_sheet}_by_${rule.source_key}`;
-    const targetMapKey = `${rule.target_sheet}_by_${rule.target_key}`;
-
-    const sourceMap = prebuiltMaps[sourceMapKey];
-    const targetMap = prebuiltMaps[targetMapKey];
-
-    if (!sourceMap || !targetMap) {
-        throw new Error(`Could not find pre-built maps for rule: ${rule.on_failure_title}. Required keys: ${sourceMapKey}, ${targetMapKey}`);
-    }
-
-    for (const [key, sourceRow] of sourceMap.entries()) {
-      const existsInTarget = targetMap.has(key);
-      const shouldInvert = String(rule.invert_result).toUpperCase() === 'TRUE';
-      const shouldFail = shouldInvert ? !existsInTarget : existsInTarget;
-
-      if (shouldFail) {
-        let passesFilter = true;
-        if (rule.source_filter) {
-            const [filterKey, filterValue] = rule.source_filter.split(',');
-            if (sourceRow[filterKey] !== filterValue) {
-                passesFilter = false;
-            }
-        }
-        if (passesFilter) {
-            if (_createTaskFromFailure(rule, sourceRow)) {
-                quarantineTriggered = true;
-            }
-        }
-      }
-    }
-    return quarantineTriggered;
-  }
-  
-  function _executeFieldComparison(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeFieldComparison', `Executing rule: ${rule.on_failure_title}`);
-
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-
-    const dataA = dataMaps[rule.sheet_A];
-    const dataB = dataMaps[rule.sheet_B];
-
-    // Build maps using the keys specified in the rule
-    const mapA = _buildMapFromData(dataA.values, dataA.headers, rule.key_A);
-    const mapB = _buildMapFromData(dataB.values, dataB.headers, rule.key_B);
-
-    const [fieldA, fieldB] = rule.compare_fields.split(',');
-
-    if (!fieldA || !fieldB) {
-        throw new Error(`Invalid 'compare_fields' for rule: ${rule.on_failure_title}`);
-    }
-
-    for (const [key, rowB] of mapB.entries()) {
-        if (mapA.has(key)) {
-            const rowA = mapA.get(key);
-
-            const valueA = String(rowA[fieldA] || '').trim();
-            const valueB = String(rowB[fieldB] || '').trim();
-
-            if (valueA !== valueB) {
-                const mergedRow = { ...rowA, ...rowB };
-                if (_createTaskFromFailure(rule, mergedRow, key)) {
-                    quarantineTriggered = true;
-                }
-            }
-        }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeInternalAudit(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeInternalAudit', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-    const sourceMap = dataMaps[rule.source_sheet].map;
-    const conditionParts = rule.condition.split(',');
-    const [field, operator, value, logic, field2, op2, val2] = conditionParts;
-
-    for (const [key, row] of sourceMap.entries()) {
-        let conditionMet = _evaluateCondition(row[field], operator, value);
-
-        if (conditionMet && logic === 'AND') {
-            conditionMet = _evaluateCondition(row[field2], op2, val2);
-        }
-
-        if (conditionMet) {
-            if (_createTaskFromFailure(rule, row)) {
-                quarantineTriggered = true;
-            }
-        }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeCrossConditionCheck(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeCrossConditionCheck', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-    const mapA = dataMaps[rule.sheet_A].map;
-    const mapB = dataMaps[rule.sheet_B].map;
-    const [condFieldA, condValueA] = rule.condition_A.split(',');
-    const [condFieldB, condOpB, condValueB] = rule.condition_B.split(',');
-
-    for (const [key, rowA] of mapA.entries()) {
-      if (rowA[condFieldA] === condValueA && mapB.has(key)) {
-        const rowB = mapB.get(key);
-        if (_evaluateCondition(rowB[condFieldB], condOpB, condValueB)) {
-          if (_createTaskFromFailure(rule, { ...rowA, ...rowB })) {
-            quarantineTriggered = true;
-          }
-        }
-      }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeCrossExistenceCheck(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeCrossExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-    const sourceMap = dataMaps[rule.source_sheet].map;
-    const targetMap = dataMaps[rule.target_sheet].map;
-    const joinMap = dataMaps[rule.join_against].map;
-    const [condField, condValue] = rule.source_condition.split(',');
-
-    for (const [key, row] of sourceMap.entries()) {
-      if (row[condField] === condValue) {
-        const existsInJoin = joinMap.has(key);
-        const existsInTarget = targetMap.has(key);
-
-        const joinCheck = rule.join_invert === 'TRUE' ? !existsInJoin : existsInJoin;
-        const targetCheck = rule.invert_result === 'TRUE' ? !existsInTarget : existsInTarget;
-
-        if (joinCheck && targetCheck) {
-          if (_createTaskFromFailure(rule, row)) {
-            quarantineTriggered = true;
-          }
-        }
-      }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeSchemaComparison(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeSchemaComparison', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-    const allConfig = ConfigService.getAllConfig();
-
-    const sourceSchemaHeaders = allConfig[rule.source_schema].headers.split(',');
-    const targetSchemaHeaders = allConfig[rule.target_schema].headers.split(',');
-
-    // Extract base names (e.g., 'wpm_SKU' -> 'SKU') to compare schemas correctly
-    const sourceBaseHeaders = sourceSchemaHeaders.map(h => h.substring(h.indexOf('_') + 1));
-    const targetBaseHeaders = targetSchemaHeaders.map(h => h.substring(h.indexOf('_') + 1));
-
-    const missingColumns = sourceBaseHeaders.filter(baseHeader => !targetBaseHeaders.includes(baseHeader));
-
-    if (missingColumns.length > 0) {
-      const errorMessage = `CRITICAL: Schema Mismatch Detected in rule '${rule.on_failure_title}'. Missing columns in target: ${missingColumns.join(', ')}`;
-      LoggerService.error('ProductService', '_executeSchemaComparison', errorMessage);
-      // Schema mismatch is always critical, so it should always trigger quarantine if on_failure_quarantine is TRUE
-      if (_createTaskFromFailure(rule, { missingColumns: missingColumns.join(', ') })) { // Pass relevant data for task
-          quarantineTriggered = true;
-      }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeRowCountComparison(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeRowCountComparison', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-
-    const sourceSheetData = dataMaps[rule.source_sheet];
-    const targetSheetData = dataMaps[rule.target_sheet];
-
-    // Assuming first row is headers, so data rows are length - 1
-    const sourceRowCount = sourceSheetData.values.length;
-    const targetRowCount = targetSheetData.values.length;
-
-    if (targetRowCount < sourceRowCount) {
-      if (_createTaskFromFailure(rule, { sourceRowCount: sourceRowCount, targetRowCount: targetRowCount })) {
-        quarantineTriggered = true;
-      }
-    }
-    return quarantineTriggered;
-  }
-
-  function _executeDataCompleteness(rule, dataMaps) {
-    LoggerService.info('ProductService', '_executeDataCompleteness', `Executing rule: ${rule.on_failure_title}`);
-    let quarantineTriggered = false; // Flag to track if a quarantine task was created
-
-    const sourceSheetData = dataMaps[rule.source_sheet];
-    const sourceSheetHeaders = sourceSheetData.headers;
-    const sourceSheetValues = sourceSheetData.values;
-
-    // Iterate through data (excluding headers)
-    for (let i = 0; i < sourceSheetValues.length; i++) { 
-      const row = sourceSheetValues[i];
-      for (let j = 0; j < row.length; j++) {
-        // Check if the column has a header (i.e., it's a populated column)
-        // and if the cell is empty (null or empty string)
-        if (sourceSheetHeaders[j] && (row[j] === null || String(row[j]).trim() === '')) {
-          if (_createTaskFromFailure(rule, { rowNum: i + 2, colName: sourceSheetHeaders[j], cellValue: row[j] })) {
-            quarantineTriggered = true;
-          }
-        }
-      }
-    }
-    return quarantineTriggered;
-  }
-
-  function _runMasterValidation() {
-    LoggerService.info('ProductService', '_runMasterValidation', 'Starting master-master validation');
-    const allConfig = ConfigService.getAllConfig();
-    const validationRules = Object.keys(allConfig).filter(k => 
-      k.startsWith('validation.rule.') && allConfig[k].validation_suite === 'master_master' && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
-    );
-    LoggerService.info('ProductService', '_runMasterValidation', `Found ${validationRules.length} enabled master_master validation rules.`);
-
-    if (validationRules.length === 0) return;
-
-    // --- 1. Pre-computation Step ---
-    const requiredSheets = new Set();
-    const requiredMaps = new Map();
-
-    validationRules.forEach(ruleKey => {
-      const rule = allConfig[ruleKey];
-      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
-      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
-      if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
-      if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
-
-      if (rule.test_type === 'EXISTENCE_CHECK') {
-        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
-        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
-      }
-    });
-
-    const sheetDataCache = {};
-    requiredSheets.forEach(sheetName => {
-        const schema = allConfig[`schema.data.${sheetName}`];
-        if (!schema) {
-            LoggerService.warn('ProductService', '_runMasterValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
-            return;
-        };
-        const headers = schema.headers.split(',');
-        const keyColumn = schema.key_column; // Extract key_column
-        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers, keyColumn); // Pass keyColumn
-    });
-
-    const prebuiltMaps = {};
-    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
-        if (prebuiltMaps[mapKey]) continue;
-        const data = sheetDataCache[sheet];
-        if (data) {
-            prebuiltMaps[mapKey] = _buildMapFromData(data.values, data.headers, keyColumn);
-        }
-    }
-    LoggerService.info('ProductService', '_runMasterValidation', `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
-
-    // --- 2. Execution Step ---
-    validationRules.forEach(ruleKey => {
-      const rule = allConfig[ruleKey];
-      try {
-        switch (rule.test_type) {
-          case 'EXISTENCE_CHECK':
-            _executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
-            break;
-          case 'FIELD_COMPARISON':
-            _executeFieldComparison(rule, sheetDataCache);
-            break;
-          // Add other test types here as they are refactored
-          default:
-            LoggerService.warn('ProductService', '_runMasterValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
-        }
-      } catch (e) {
-        LoggerService.error('ProductService', '_runMasterValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
-      }
-    });
-    LoggerService.info('ProductService', '_runMasterValidation', 'Master-master validation complete.');
-  }
 
   function _runStagingValidation(suiteName) {
     LoggerService.info('ProductService', '_runStagingValidation', `Starting validation for suite: ${suiteName}`);
-    const allConfig = ConfigService.getAllConfig();
-    const validationRules = Object.keys(allConfig).filter(k => 
-      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
-    );
-    LoggerService.info('ProductService', '_runStagingValidation', `Found ${validationRules.length} enabled rules for suite: ${suiteName}.`);
-
-    if (validationRules.length === 0) return true; // No rules, so validation passes
-
-    let quarantineTriggered = false;
-
-    // --- 1. Pre-computation Step: Gather all required data and build all necessary maps ONCE ---
-    const requiredSheets = new Set();
-    const requiredMaps = new Map(); // Key: sheetName_by_keyColumn, Value: { sheet, keyColumn }
-
-    validationRules.forEach(ruleKey => {
-      const rule = allConfig[ruleKey];
-      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
-      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
-      if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
-      if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
-
-      // For existence checks, identify the specific maps needed
-      if (rule.test_type === 'EXISTENCE_CHECK') {
-        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
-        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
-      }
-    });
-
-    const sheetDataCache = {};
-    requiredSheets.forEach(sheetName => {
-        const schema = allConfig[`schema.data.${sheetName}`];
-        if (!schema) {
-            LoggerService.warn('ProductService', '_runStagingValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
-            return;
-        };
-        const headers = schema.headers.split(',');
-        const keyColumn = schema.key_column; // Extract key_column
-        sheetDataCache[sheetName] = _getSheetDataAsMap(sheetName, headers, keyColumn); // Pass keyColumn
-    });
-
-    const prebuiltMaps = {};
-    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
-        if (prebuiltMaps[mapKey]) continue; // Already built
-        const data = sheetDataCache[sheet];
-        if (data) {
-            prebuiltMaps[mapKey] = _buildMapFromData(data.values, data.headers, keyColumn);
-        }
+    const quarantineTriggered = !ValidationService.runValidationSuite(suiteName);
+    if (quarantineTriggered) {
+        LoggerService.warn('ProductService', '_runStagingValidation', `Validation suite '${suiteName}' triggered a quarantine.`);
     }
-    LoggerService.info('ProductService', '_runStagingValidation', `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
-
-    // --- 2. Execution Step: Run rules with pre-computed data ---
-    validationRules.forEach(ruleKey => {
-      const rule = allConfig[ruleKey];
-      try {
-        let ruleQuarantineTriggered = false;
-        switch (rule.test_type) {
-          case 'EXISTENCE_CHECK':
-            ruleQuarantineTriggered = _executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
-            break;
-          case 'FIELD_COMPARISON':
-            ruleQuarantineTriggered = _executeFieldComparison(rule, sheetDataCache);
-            break;
-          case 'INTERNAL_AUDIT':
-            ruleQuarantineTriggered = _executeInternalAudit(rule, sheetDataCache);
-            break;
-          case 'ROW_COUNT_COMPARISON':
-            ruleQuarantineTriggered = _executeRowCountComparison(rule, sheetDataCache);
-            break;
-          // Add other test types here as they are refactored
-          default:
-            LoggerService.warn('ProductService', '_runStagingValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
-        }
-        if (ruleQuarantineTriggered) {
-            quarantineTriggered = true;
-        }
-      } catch (e) {
-        LoggerService.error('ProductService', '_runStagingValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
-        if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
-            quarantineTriggered = true;
-            LoggerService.warn('ProductService', '_runStagingValidation', `Rule ${ruleKey} encountered an error and triggered quarantine.`);
-        }
-      }
-    });
-    return !quarantineTriggered; // Return true if no quarantine was triggered
+    return !quarantineTriggered;
   }
 
   function _runWebXltValidationAndUpsert(jobRowNumber) {
@@ -588,12 +122,12 @@ const ProductService = (function() {
 
     } catch (e) {
         LoggerService.error('ProductService', '_runWebXltValidationAndUpsert', `Failed to populate staging sheet: ${e.message}`, e);
-        _updateJobStatus(jobRowNumber, 'FAILED', `Staging population failed: ${e.message}`);
+        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Staging population failed: ${e.message}`);
         return 'FAILED';
     }
 
     // --- 2. Run Staging Validation ---
-    if (!_runStagingValidation('web_xlt_staging')) {
+    if (!ValidationService.runValidationSuite('web_xlt_staging')) {
         LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', 'WebXlt staging validation failed. Job will be QUARANTINED.');
         return 'QUARANTINED';
     }
@@ -662,7 +196,7 @@ const ProductService = (function() {
         _populateStagingSheet(comaxData, sheetNames.CmxProdS);
         LoggerService.info('ProductService', '_runComaxImport', 'Successfully populated CmxProdS staging sheet.');
         
-        if (!_runStagingValidation('comax_staging')) {
+        if (!ValidationService.runValidationSuite('comax_staging')) {
             LoggerService.warn('ProductService', '_runComaxImport', 'Comax staging validation failed. Job will be QUARANTINED.');
             return 'QUARANTINED';
         }
@@ -682,7 +216,7 @@ const ProductService = (function() {
 
     } catch (e) {
         LoggerService.error('ProductService', '_runComaxImport', `Failed to import Comax data: ${e.message}`, e);
-        _updateJobStatus(jobRowNumber, 'FAILED', `Comax import failed: ${e.message}`);
+        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Comax import failed: ${e.message}`);
         return 'FAILED';
     }
   }
@@ -699,8 +233,8 @@ const ProductService = (function() {
     const masterHeaders = masterSchema.headers.split(',');
     const stagingHeaders = stagingSchema.headers.split(',');
 
-    const masterData = _getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
-    const stagingData = _getSheetDataAsMap('CmxProdS', stagingHeaders, 'cps_CmxId');
+    const masterData = ConfigService._getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
+    const stagingData = ConfigService._getSheetDataAsMap('CmxProdS', stagingHeaders, 'cps_CmxId');
 
     const masterMap = masterData.map;
     const stagingKey = 'cps_CmxId';
@@ -761,68 +295,62 @@ const ProductService = (function() {
     }
     const sysProductAuditHeaders = sysProductAuditSchema.headers.split(',');
 
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const sysProductAuditSheet = dataSpreadsheet.getSheetByName('SysProductAudit');
-    if (!sysProductAuditSheet) {
-        throw new Error('SysProductAudit sheet not found.');
-    }
-
     // Load existing SysProductAudit data into a map keyed by pa_CmxId
-    const existingAuditData = _getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_CmxId');
-    const auditMap = existingAuditData.map;
+    const auditMap = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_CmxId').map;
 
-    const cmxIdColIdx = sysProductAuditHeaders.indexOf('pa_CmxId');
-    const skuColIdx = sysProductAuditHeaders.indexOf('pa_SKU');
+    let updatedCount = 0;
+    let newCount = 0;
+    let skippedCount = 0;
 
-    if (cmxIdColIdx === -1 || skuColIdx === -1) {
-        throw new Error("Required columns 'pa_CmxId' or 'pa_SKU' not found in SysProductAudit headers.");
-    }
-
-    // Prepare data for batch update/insert
-    const rowsToUpdate = [];
-    const newRows = [];
-
+    // Iterate through the newly imported Comax products and upsert into the map
     comaxProducts.forEach(comaxProduct => {
-        const cmxId = String(comaxProduct.cpm_CmxId).trim();
-        const sku = String(comaxProduct.cpm_SKU).trim();
+        const cmxId = String(comaxProduct.cps_CmxId || '').trim();
+        const sku = String(comaxProduct.cps_SKU || '').trim();
+
+        if (!cmxId) {
+            LoggerService.warn('ProductService', '_maintainSysProductAudit', `Skipping product with empty CmxId. SKU: ${sku}`);
+            skippedCount++;
+            return; // Cannot process without a CmxId
+        }
 
         if (auditMap.has(cmxId)) {
-            // Product exists, check for SKU change
-            const existingRowObject = auditMap.get(cmxId);
-            if (existingRowObject.pa_SKU !== sku) {
-                existingRowObject.pa_SKU = sku; // Update SKU
-                rowsToUpdate.push(existingRowObject);
+            // Product exists, update SKU if it has changed
+            const existingRow = auditMap.get(cmxId);
+            if (existingRow.pa_SKU !== sku) {
+                existingRow.pa_SKU = sku;
+                updatedCount++;
             }
         } else {
-            // New product, create a new row
+            // New product, create a new row object and add it to the map
             const newAuditRow = {};
             sysProductAuditHeaders.forEach(header => {
                 newAuditRow[header] = ''; // Initialize all columns to empty
             });
             newAuditRow.pa_CmxId = cmxId;
             newAuditRow.pa_SKU = sku;
-            newRows.push(newAuditRow);
+            auditMap.set(cmxId, newAuditRow);
+            newCount++;
         }
     });
 
-    // Convert updated/new row objects back to 2D arrays
-    const updatedAuditData = Array.from(auditMap.values()).map(rowObject => {
+    // Convert the fully updated map's values to a 2D array for writing
+    const finalAuditData = Array.from(auditMap.values()).map(rowObject => {
         return sysProductAuditHeaders.map(header => rowObject[header] || '');
     });
 
-    const finalAuditData = updatedAuditData.concat(newRows.map(rowObject => {
-        return sysProductAuditHeaders.map(header => rowObject[header] || '');
-    }));
-
     // Clear and rewrite the entire SysProductAudit sheet
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sysProductAuditSheet = dataSpreadsheet.getSheetByName('SysProductAudit');
+    
     sysProductAuditSheet.clear();
     sysProductAuditSheet.getRange(1, 1, 1, sysProductAuditHeaders.length).setValues([sysProductAuditHeaders]).setFontWeight('bold');
 
     if (finalAuditData.length > 0) {
         sysProductAuditSheet.getRange(2, 1, finalAuditData.length, finalAuditData[0].length).setValues(finalAuditData);
     }
-    LoggerService.info('ProductService', '_maintainSysProductAudit', `SysProductAudit updated. Total rows: ${finalAuditData.length}.`);
+    
+    LoggerService.info('ProductService', '_maintainSysProductAudit', `SysProductAudit synchronized. New: ${newCount}, Updated: ${updatedCount}, Skipped: ${skippedCount}. Total rows: ${finalAuditData.length}.`);
   }
 
   function _runWebProductsImport(jobRowNumber) {
@@ -849,10 +377,11 @@ const ProductService = (function() {
         _populateStagingSheet(productObjects, sheetNames.WebProdS_EN);
         LoggerService.info('ProductService', '_runWebProductsImport', 'Successfully populated WebProdS_EN staging sheet.');
         
-        if (!_runStagingValidation('web_staging')) {
-            LoggerService.warn('ProductService', '_runWebProductsImport', 'Web Products staging validation failed. Job will be QUARANTINED.');
-            return 'QUARANTINED';
-        }
+    // --- 2. Run Staging Validation ---
+    if (!ValidationService.runValidationSuite('web_staging')) {
+        LoggerService.warn('ProductService', '_runWebProductsImport', 'Web Products staging validation failed. Job will be QUARANTINED.');
+        return 'QUARANTINED';
+    }
 
         _upsertWebProductsData();
 
@@ -860,7 +389,7 @@ const ProductService = (function() {
 
     } catch (e) {
         LoggerService.error('ProductService', '_runWebProductsImport', `Failed to import Web Products (EN) data: ${e.message}`, e);
-        _updateJobStatus(jobRowNumber, 'FAILED', `Web Products (EN) import failed: ${e.message}`);
+        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Web Products (EN) import failed: ${e.message}`);
         return 'FAILED';
     }
   }
@@ -878,8 +407,8 @@ const ProductService = (function() {
     const stagingHeaders = stagingSchema.headers.split(',');
     const masterHeaders = masterSchema.headers.split(',');
 
-    const stagingData = _getSheetDataAsMap('WebProdS_EN', stagingHeaders, 'wps_ID');
-    const masterData = _getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_WebIdEn');
+    const stagingData = ConfigService._getSheetDataAsMap('WebProdS_EN', stagingHeaders, 'wps_ID');
+    const masterData = ConfigService._getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_WebIdEn');
     const masterMap = masterData.map;
 
     const stagingKey = stagingSchema.key_column;
@@ -927,7 +456,7 @@ const ProductService = (function() {
 
   function processJob(jobType, jobRowNumber) {
     LoggerService.info('ProductService', 'processJob', `Starting job: ${jobType} (Row: ${jobRowNumber})`);
-    _updateJobStatus(jobRowNumber, 'PROCESSING');
+    ValidationService.updateJobStatus(jobRowNumber, 'PROCESSING');
 
     try {
       let finalJobStatus = 'COMPLETED'; // Default to COMPLETED
@@ -942,22 +471,22 @@ const ProductService = (function() {
           finalJobStatus = _runWebXltValidationAndUpsert(jobRowNumber);
           break;
         case 'manual.validation.master':
-          _runMasterValidation();
+          ValidationService.runValidationSuite('master_master', jobType, rowNumber);
           finalJobStatus = 'COMPLETED';
           break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }
-      _updateJobStatus(jobRowNumber, finalJobStatus);
+      ValidationService.updateJobStatus(jobRowNumber, finalJobStatus);
       
       if (finalJobStatus === 'COMPLETED') {
-        OrchestratorService.unblockDependentJobs(jobType);
+        OrchestratorService.finalizeJobCompletion(jobType, jobRowNumber);
       }
 
       LoggerService.info('ProductService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
     } catch (e) {
       LoggerService.error('ProductService', 'processJob', `Job ${jobType} failed: ${e.message}`, e);
-      _updateJobStatus(jobRowNumber, 'FAILED', e.message);
+      ValidationService.updateJobStatus(jobRowNumber, 'FAILED', e.message);
       throw e; // Re-throw the error after logging and updating status
     }
   }
@@ -986,7 +515,7 @@ const ProductService = (function() {
       // 1. Get CmxProdM data for new stock and price
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
       if (!cmxSheet) throw new Error('CmxProdM sheet not found');
-      const cmxData = _getSheetDataAsMap(allConfig['system.sheet_names'].CmxProdM, allConfig['schema.data.CmxProdM'].headers.split(','), 'cpm_SKU');
+      const cmxData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].CmxProdM, allConfig['schema.data.CmxProdM'].headers.split(','), 'cpm_SKU');
       const cmxMap = cmxData.map;
 
       // 2. Get On-Hold Inventory
@@ -1000,7 +529,7 @@ const ProductService = (function() {
       // 3. Get WebProdM data for existing stock and price
       const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!webProdMSheet) throw new Error('WebProdM sheet not found');
-      const webProdMData = _getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
+      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
       const webProdMMap = webProdMData.map;
 
       // 4. Compare new values with existing and prepare export data for changed products
@@ -1090,7 +619,6 @@ const ProductService = (function() {
 
   return {
     processJob: processJob,
-    runMasterValidation: _runMasterValidation,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
     getProductWebIdBySku: getProductWebIdBySku,
     exportWebInventory: exportWebInventory

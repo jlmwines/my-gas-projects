@@ -6,8 +6,10 @@
       </div>
       <div class="card-body">
         <button class="btn btn-warning mr-2" onclick="runRebuild()">Rebuild SysConfig from Source</button>
-        <button class="btn btn-info" onclick="downloadSnapshot()">Download SysConfig Snapshot</button>
-        <div id="admin-tools-result" class="mt-3"></div>
+        <button class="btn btn-info mr-2" onclick="downloadSnapshot()">Download SysConfig Snapshot</button>
+        <button class="btn mr-2" onclick="runMasterValidation()">Run Master Validation</button>
+        <div id="master-validation-results" class="mt-3"></div>
+        <div id="sysconfig-result" class="mt-3"></div>
       </div>
     </div>
   </div>
@@ -15,7 +17,7 @@
 
 <script>
   function runRebuild() {
-    const resultDiv = document.getElementById('admin-tools-result');
+    const resultDiv = document.getElementById('sysconfig-result');
     resultDiv.innerHTML = '<p class="text-info">Rebuilding SysConfig...</p>';
     google.script.run
       .withSuccessHandler(message => {
@@ -28,7 +30,7 @@
   }
 
   function downloadSnapshot() {
-    const resultDiv = document.getElementById('admin-tools-result');
+    const resultDiv = document.getElementById('sysconfig-result');
     resultDiv.innerHTML = '<p class="text-info">Preparing download...</p>';
     google.script.run
       .withSuccessHandler(fileData => {
@@ -43,4 +45,30 @@
       })
       .WebAppSystem_getSysConfigCsvAsBase64();
   }
-</script>
+
+  function runMasterValidation() {
+    const validationResultsDiv = document.getElementById('master-validation-results');
+    validationResultsDiv.innerHTML = '<p class="text-info">Running master validation...</p>';
+
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response.success) {
+          let html = `<p class="alert alert-success">Validation completed successfully. ${response.message}</p>`;
+          if (response.results && response.results.length > 0) {
+            html += `<h5>Detailed Results:</h5><ul>`;
+            response.results.forEach(result => {
+              const statusClass = result.status === 'PASSED' ? 'text-success' : 'text-danger';
+              html += `<li class="${statusClass}">${result.ruleName}: ${result.status} - ${result.message || ''}</li>`;
+            });
+            html += `</ul>`;
+          }
+          validationResultsDiv.innerHTML = html;
+        } else {
+          validationResultsDiv.innerHTML = `<p class="alert alert-danger">Validation failed: ${response.error || 'Unknown error'}</p>`;
+        }
+      })
+      .withFailureHandler(error => {
+        validationResultsDiv.innerHTML = `<p class="alert alert-danger">Failed to run validation: ${error.message}</p>`;
+      })
+      .WebAppSystem_runMasterValidationAndReturnResults(); // Renamed backend call
+  }

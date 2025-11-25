@@ -193,7 +193,15 @@ function WebAppSystem_getSystemHealthDashboardData() {
  * Creates a master validation job in the SysJobQueue and processes it.
  * @returns {Object} An object indicating success or failure.
  */
-function WebAppSystem_createMasterValidationJob() {
+function WebAppSystem_runMasterValidationAndReturnResults() {
+  const serviceName = 'WebAppSystem';
+  const functionName = 'runMasterValidationAndReturnResults';
+  LoggerService.info(serviceName, functionName, 'Entering WebAppSystem_runMasterValidationAndReturnResults.');
+  let newJobRow = {};
+  let newJobRowNumber = null;
+  let finalOverallStatus = 'FAILED'; // Default to FAILED
+  let finalErrorMessage = '';
+  
   try {
     const allConfig = ConfigService.getAllConfig();
     const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
@@ -204,8 +212,8 @@ function WebAppSystem_createMasterValidationJob() {
     }
 
     const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-    const newJobRow = {};
-    jobQueueHeaders.forEach(header => newJobRow[header] = ''); // Initialize all columns
+    newJobRow = {};
+    jobQueueHeaders.forEach(header => newJobRow[header] = '');
 
     newJobRow.job_id = Utilities.getUuid();
     newJobRow.job_type = 'manual.validation.master';
@@ -214,19 +222,45 @@ function WebAppSystem_createMasterValidationJob() {
 
     const rowValues = jobQueueHeaders.map(header => newJobRow[header]);
     jobQueueSheet.appendRow(rowValues);
-    
-    // Get the row number of the newly appended job
-    const newJobRowNumber = jobQueueSheet.getLastRow();
+    newJobRowNumber = jobQueueSheet.getLastRow();
 
-    LoggerService.info('WebApp', 'createMasterValidationJob', `Created new job: ${newJobRow.job_id} of type ${newJobRow.job_type} at row ${newJobRowNumber}`);
+    LoggerService.info(serviceName, functionName, `Created new job: ${newJobRow.job_id} of type ${newJobRow.job_type} at row ${newJobRowNumber}`);
 
-    // Directly process the validation job
-    ValidationService.runCriticalValidations(newJobRow.job_type, newJobRowNumber);
+    const validationResult = ValidationService.runCriticalValidations(newJobRow.job_type, newJobRowNumber);
+    finalOverallStatus = validationResult.overallStatus;
+    finalErrorMessage = validationResult.errorMessage;
 
-    return { success: true, message: `Validation job ${newJobRow.job_id} created and processed.` };
+    return {
+      success: finalOverallStatus !== 'FAILED',
+      message: finalErrorMessage || 'Validation completed.',
+      results: validationResult.results
+    };
 
   } catch (e) {
-    LoggerService.error('WebApp', 'createMasterValidationJob', e.message, e);
-    return { success: false, error: `Failed to create validation job: ${e.message}` };
+    LoggerService.error(serviceName, functionName, e.message, e);
+    finalErrorMessage = `Failed to run validation: ${e.message}`;
+    return { success: false, error: finalErrorMessage };
+  } finally {
+      if (newJobRowNumber) {
+          try {
+              const allConfig = ConfigService.getAllConfig();
+              const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+              const jobQueueSheetName = allConfig['system.sheet_names'].SysJobQueue;
+              const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(jobQueueSheetName);
+              
+              const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
+              const statusCol = jobQueueHeaders.indexOf('status') + 1;
+              const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
+              const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
+
+              if (statusCol > 0) jobQueueSheet.getRange(newJobRowNumber, statusCol).setValue(finalOverallStatus);
+              if (messageCol > 0) jobQueueSheet.getRange(newJobRowNumber, messageCol).setValue(finalErrorMessage);
+              if (timestampCol > 0) jobQueueSheet.getRange(newJobRowNumber, timestampCol).setValue(new Date());
+
+              LoggerService.info(serviceName, functionName, `Job ${newJobRow.job_id} status updated to ${finalOverallStatus}`);
+          } catch (updateError) {
+              LoggerService.error(serviceName, functionName, `Failed to update final job status for ${newJobRow.job_id}: ${updateError.message}`, updateError);
+          }
+      }
   }
 }

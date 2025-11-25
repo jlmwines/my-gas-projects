@@ -159,9 +159,59 @@ const ConfigService = (function() {
     console.log('Configuration cache invalidated.');
   }
 
+  /**
+   * Helper function to read data from a Google Sheet and return it as a map.
+   * @param {string} sheetName The name of the sheet to read.
+   * @param {Array<string>} headers The expected headers of the sheet.
+   * @param {string} keyColumnName The name of the column to use as the key for the map.
+   * @returns {{map: Map<string, Object>, headers: Array<string>, values: Array<Array<any>>}} An object containing the data map, headers, and raw values.
+   */
+  function _getSheetDataAsMap(sheetName, headers, keyColumnName) {
+    const serviceName = 'ConfigService'; 
+    const functionName = '_getSheetDataAsMap';
+    const dataSpreadsheetId = getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sheet = dataSpreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      // This is a critical error if the sheet is expected to exist
+      throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID: ${dataSpreadsheet.getId()}. This is a critical configuration error.`);
+    }
+    // If the sheet is WebXltM and it's empty, this is also a critical error
+    if (sheetName === 'WebXltM' && sheet.getLastRow() < 2) {
+      throw new Error(`Sheet 'WebXltM' is empty (only headers or less). This is a critical data integrity error as WebXltM is expected to be populated.`);
+    }
+    // For other sheets, or if WebXltM is not empty, proceed as before
+    if (sheet.getLastRow() < 2) {
+      LoggerService.warn(serviceName, functionName, `Sheet '${sheetName}' is empty (only headers or less).`);
+      return { map: new Map(), headers: headers, values: [] };
+    }
+    const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+    
+    const dataMap = new Map();
+    const keyHeader = keyColumnName || getConfig(`schema.data.${sheetName}`).key_column;
+
+    // DEBUGGING: Log headers and key to diagnose mismatch
+    LoggerService.info(serviceName, functionName, `DEBUG for sheet ${sheetName}: keyHeader = '${keyHeader}', headers = ${JSON.stringify(headers)}`);
+
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName} using key '${keyHeader}'`);
+
+    values.forEach(row => {
+      const rowObject = {};
+      headers.forEach((h, i) => rowObject[h] = row[i]);
+      const key = row[keyIndex];
+      if (key && String(key).trim()) {
+        dataMap.set(String(key).trim(), rowObject);
+      }
+    });
+    LoggerService.info(serviceName, functionName, `Loaded ${dataMap.size} rows from ${sheetName}.`);
+    return { map: dataMap, headers: headers, values: values };
+  }
+
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
-    forceReload: forceReload
+    forceReload: forceReload,
+    _getSheetDataAsMap: _getSheetDataAsMap
   };
 })();

@@ -9,8 +9,8 @@ const ValidationService = {
     const serviceName = 'ValidationService';
     const functionName = 'validateOnHoldInventory';
     try {
-      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OnHoldInventory');
-      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysInventoryOnHold');
+      const legacyData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OnHoldInventory');
+      const jlmopsData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysInventoryOnHold');
 
       const legacyMap = new Map(legacyData.map(row => [row['product SKU'], row['on hold quantity']]));
       const jlmopsMap = new Map(jlmopsData.map(row => [row.sio_SKU, row.sio_OnHoldQuantity]));
@@ -55,27 +55,673 @@ const ValidationService = {
    * @param {string} sheetName
    * @returns {Array<Object>}
    */
-  _readSheetData(spreadsheetId, sheetName) {
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID '${spreadsheetId}'.`);
-    }
-    const range = sheet.getDataRange();
-    const values = range.getValues();
-    if (values.length === 0) {
-      return [];
-    }
-    const headers = values[0];
-    const data = [];
-    for (let i = 1; i < values.length; i++) {
-      const row = {};
-      for (let j = 0; j < headers.length; j++) {
-        row[headers[j]] = values[i][j];
+  readSheetData(spreadsheetId, sheetName) {
+    const serviceName = 'ValidationService';
+    const functionName = 'readSheetData';
+    try {
+      const ss = SpreadsheetApp.openById(spreadsheetId);
+      const sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        throw new Error(`Sheet '${sheetName}' not found in spreadsheet ID '${spreadsheetId}'.`);
       }
-      data.push(row);
+      const range = sheet.getDataRange();
+      const values = range.getValues();
+      if (values.length === 0) {
+        return [];
+      }
+      const headers = values[0];
+      const data = [];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const rowObject = {};
+        headers.forEach((header, index) => {
+          rowObject[header] = row[index];
+        });
+        data.push(rowObject);
+      }
+      return data;
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error reading sheet data: ${e.message}`, e);
+      throw e; // Re-throw the error to be handled upstream
     }
-    return data;
+  },
+
+
+
+  formatString(template, dataRow) {
+    if (!template) return '';
+    return template.replace(/\${(.*?)}/g, (match, key) => {
+      return dataRow[key.trim()] || '';
+    });
+  },
+
+  createTaskFromFailure(rule, dataRow, joinKey) {
+    const serviceName = 'ValidationService';
+    const title = this.formatString(rule.on_failure_title, dataRow);
+    const notes = this.formatString(rule.on_failure_notes, dataRow);
+    const skuKey = Object.keys(dataRow).find(k => k.endsWith('_SKU'));
+    const entityId = skuKey ? dataRow[skuKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
+
+    LoggerService.info(serviceName, 'createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
+    // TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
+    
+    return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
+  },
+
+  evaluateCondition(val1, operator, val2) {
+      switch(operator) {
+          case '<': return Number(val1) < Number(val2);
+          case '>': return Number(val1) > Number(val2);
+          case '=': return String(val1) === val2;
+          case '<>': return String(val1) !== val2;
+          case 'IS_NOT_EMPTY': return String(val1 || '').trim() !== ''; 
+          default: return false;
+      }
+  },
+  // =================================================================================
+  // VALIDATION ENGINE SUB-FUNCTIONS
+  // =================================================================================
+
+  buildMapFromData(data, headers, keyHeader) {
+    const map = new Map();
+    const keyIndex = headers.indexOf(keyHeader);
+    if (keyIndex === -1) {
+        throw new Error(`Key header '${keyHeader}' not found in headers: ${headers.join(', ')}`);
+    }
+    data.forEach(row => {
+        const rowObject = {};
+        headers.forEach((h, i) => rowObject[h] = row[i]);
+        const key = row[keyIndex];
+        if (key && String(key).trim()) {
+            map.set(String(key).trim(), rowObject);
+        }
+    });
+    return map;
+  },
+
+  _executeExistenceCheck(rule, dataMaps, prebuiltMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
+
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+
+    // Use pre-built maps for efficiency
+    const sourceMapKey = `${rule.source_sheet}_by_${rule.source_key}`;
+    const targetMapKey = `${rule.target_sheet}_by_${rule.target_key}`;
+
+    const sourceMap = prebuiltMaps[sourceMapKey];
+    const targetMap = prebuiltMaps[targetMapKey];
+
+    if (!sourceMap || !targetMap) {
+        const errorMsg = `Could not find pre-built maps for rule: ${rule.on_failure_title}. Required keys: ${sourceMapKey}, ${targetMapKey}`;
+        LoggerService.error(serviceName, '_executeExistenceCheck', errorMsg);
+        return { status: 'FAILED', message: errorMsg, quarantineTriggered: true }; // Consider this a critical failure
+    }
+
+    const failedItems = [];
+
+    for (const [key, sourceRow] of sourceMap.entries()) {
+      const existsInTarget = targetMap.has(key);
+      const shouldInvert = String(rule.invert_result).toUpperCase() === 'TRUE';
+      const shouldFail = shouldInvert ? !existsInTarget : existsInTarget;
+
+      if (shouldFail) {
+        let passesFilter = true;
+        if (rule.source_filter) {
+            const [filterKey, filterValue] = rule.source_filter.split(',');
+            if (sourceRow[filterKey] != filterValue) { // Use != for loose comparison
+                passesFilter = false;
+            }
+        }
+        if (passesFilter) {
+            // Log for debugging and collect details for the message
+            const isQuarantineFailure = this.createTaskFromFailure(rule, sourceRow);
+            if (isQuarantineFailure) {
+                quarantineTriggered = true;
+            }
+            // Collect enough info to construct a meaningful message later
+            failedItems.push(key); 
+        }
+      }
+    }
+
+    if (failedItems.length > 0) {
+        ruleStatus = 'FAILED';
+        ruleMessage = `Failed for ${failedItems.length} item(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+  
+    _executeFieldComparison(rule, dataMaps) {
+      const serviceName = 'ValidationService';
+      LoggerService.info(serviceName, '_executeFieldComparison', `Executing rule: ${rule.on_failure_title}`);
+  
+      let quarantineTriggered = false;
+      let ruleStatus = 'PASSED';
+      let ruleMessage = 'All checks passed.';
+      const failedItems = [];
+  
+      const dataA = dataMaps[rule.sheet_A];
+      const dataB = dataMaps[rule.sheet_B];
+  
+      // Build maps using the keys specified in the rule
+      const mapA = this.buildMapFromData(dataA.values, dataA.headers, rule.key_A);
+      const mapB = this.buildMapFromData(dataB.values, dataB.headers, rule.key_B);
+  
+      const [fieldA, fieldB] = rule.compare_fields.split(',');
+  
+      if (!fieldA || !fieldB) {
+          const errorMsg = `Invalid 'compare_fields' for rule: ${rule.on_failure_title}`;
+          LoggerService.error(serviceName, '_executeFieldComparison', errorMsg);
+          return { status: 'FAILED', message: errorMsg, quarantineTriggered: true }; // Critical configuration error
+      }
+  
+      for (const [key, rowB] of mapB.entries()) {
+          if (mapA.has(key)) {
+              const rowA = mapA.get(key);
+  
+              let valueA = String(rowA[fieldA] || '').trim();
+              let valueB = String(rowB[fieldB] || '').trim();
+  
+              // Apply translation map for fieldA if available
+              const translationMapConfigA = rule[`field_translations_map_${fieldA}`];
+              if (translationMapConfigA) {
+                  try {
+                      const translationMapA = JSON.parse(translationMapConfigA);
+                      if (valueA in translationMapA) {
+                          valueA = translationMapA[valueA];
+                      }
+                  } catch (e) {
+                      LoggerService.error('ValidationService', '_executeFieldComparison', `Error parsing translation map for ${fieldA}: ${e.message}`);
+                  }
+              }
+  
+              // Apply translation map for fieldB if available
+              const translationMapConfigB = rule[`field_translations_map_${fieldB}`];
+              if (translationMapConfigB) {
+                  try {
+                      const translationMapB = JSON.parse(translationMapConfigB);
+                      if (valueB in translationMapB) {
+                          valueB = translationMapB[valueB];
+                      }
+                  } catch (e) {
+                      LoggerService.error('ValidationService', '_executeFieldComparison', `Error parsing translation map for ${fieldB}: ${e.message}`);
+                  }
+              }
+              
+              // Log values for debugging
+              if (valueA !== valueB) {
+                LoggerService.info(
+                    'ValidationService',
+                    '_executeFieldComparison',
+                    `DEBUG Mismatch for rule '${rule.on_failure_title}'. ` +
+                    `Web SKU: '${rowA.wpm_SKU}', Web Publish Status (original): '${rowA[fieldA]}'. ` +
+                    `Comax SKU: '${rowB.cpm_SKU}', Comax IsWeb (original): '${rowB[fieldB]}', Comax IsWeb (translated): '${valueB}'. ` +
+                    `Comparing Web Publish Status ('${valueA}') with Comax IsWeb (translated) ('${valueB}').`
+                );
+              }
+  
+              if (valueA !== valueB) {
+                  const mergedRow = { ...rowA, ...rowB };
+                  const isQuarantineFailure = this.createTaskFromFailure(rule, mergedRow, key);
+                  if (isQuarantineFailure) {
+                      quarantineTriggered = true;
+                  }
+                  failedItems.push(key);
+              }
+          }
+      }
+  
+      if (failedItems.length > 0) {
+          ruleStatus = 'FAILED';
+          ruleMessage = `Failed for ${failedItems.length} item(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+      }
+      
+      return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+    },
+  _executeCrossConditionCheck(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeCrossConditionCheck', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+    const failedItems = [];
+
+    const mapA = dataMaps[rule.sheet_A].map;
+    const mapB = dataMaps[rule.sheet_B].map;
+    const [condFieldA, condValueA] = rule.condition_A.split(',');
+    const [condFieldB, condOpB, condValueB] = rule.condition_B.split(',');
+
+    for (const [key, rowA] of mapA.entries()) {
+      if (rowA[condFieldA] == condValueA && mapB.has(key)) { // Use == for loose comparison
+        const rowB = mapB.get(key);
+        if (this.evaluateCondition(rowB[condFieldB], condOpB, condValueB)) {
+          const isQuarantineFailure = this.createTaskFromFailure(rule, { ...rowA, ...rowB });
+          if (isQuarantineFailure) {
+            quarantineTriggered = true;
+          }
+          failedItems.push(key);
+        }
+      }
+    }
+
+    if (failedItems.length > 0) {
+        ruleStatus = 'FAILED';
+        ruleMessage = `Failed for ${failedItems.length} item(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+  _executeInternalAudit(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeInternalAudit', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+    const failedItems = [];
+
+    const sourceMap = dataMaps[rule.source_sheet].map;
+    const conditionParts = rule.condition.split(',');
+    const [field, operator, value, logic, field2, op2, val2] = conditionParts;
+
+    for (const [key, row] of sourceMap.entries()) {
+        const sourceSchema = ConfigService.getAllConfig()[`schema.data.${rule.source_sheet}`];
+        const sourceKeyField = sourceSchema ? sourceSchema.key_column : null;
+        const currentSku = sourceKeyField ? row[sourceKeyField] : (row.cpm_SKU || 'N/A'); // More robust SKU for logging
+
+        const val1_part1 = row[field];
+        const result_part1 = this.evaluateCondition(val1_part1, operator, value);
+
+        let conditionMet = result_part1;
+
+        if (conditionMet && logic === 'AND') { // Supports up to one AND condition
+            const val1_part2 = row[field2];
+            const result_part2 = this.evaluateCondition(val1_part2, op2, val2);
+            conditionMet = conditionMet && result_part2;
+        }
+
+        if (conditionMet) {
+            LoggerService.info(
+                serviceName,
+                '_executeInternalAudit',
+                `Condition met for rule '${rule.on_failure_title}'. ` +
+                `SKU: '${currentSku}', ${field}: '${row[field]}', ${field2 ? `${field2}: '${row[field2]}', ` : ''} ` + // Dynamically log condition fields
+                `Full Condition: '${rule.condition}'.`
+            );
+            const isQuarantineFailure = this.createTaskFromFailure(rule, row, key);
+            if (isQuarantineFailure) {
+                quarantineTriggered = true;
+            }
+            failedItems.push(key);
+        }
+    }
+
+    if (failedItems.length > 0) {
+        ruleStatus = 'FAILED';
+        ruleMessage = `Failed for ${failedItems.length} item(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+  _executeCrossExistenceCheck(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeCrossExistenceCheck', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+    const failedItems = [];
+
+    const sourceMap = dataMaps[rule.source_sheet].map;
+    const targetMap = dataMaps[rule.target_sheet].map;
+    const joinMap = dataMaps[rule.join_against].map;
+    const [condField, condValue] = rule.source_condition.split(',');
+
+    for (const [key, row] of sourceMap.entries()) {
+      if (row[condField] == condValue) { // Use == for loose comparison
+        const existsInJoin = joinMap.has(key);
+        const existsInTarget = targetMap.has(key);
+
+        const joinCheck = rule.join_invert === 'TRUE' ? !existsInJoin : existsInJoin;
+        const targetCheck = rule.invert_result === 'TRUE' ? !existsInTarget : existsInTarget;
+
+        if (joinCheck && targetCheck) {
+          const isQuarantineFailure = this.createTaskFromFailure(rule, row);
+          if (isQuarantineFailure) {
+            quarantineTriggered = true;
+          }
+          failedItems.push(key);
+        }
+      }
+    }
+
+    if (failedItems.length > 0) {
+        ruleStatus = 'FAILED';
+        ruleMessage = `Failed for ${failedItems.length} item(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+  _executeSchemaComparison(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeSchemaComparison', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+
+    const allConfig = ConfigService.getAllConfig();
+
+    const sourceSchema = allConfig[rule.source_schema];
+    const targetSchema = allConfig[rule.target_schema];
+
+    if (!sourceSchema || !targetSchema || !sourceSchema.headers || !targetSchema.headers) {
+        const errorMsg = `CRITICAL: Schema configuration incomplete for rule '${rule.on_failure_title}'. Source or target schema headers missing.`;
+        LoggerService.error(serviceName, '_executeSchemaComparison', errorMsg);
+        return { status: 'FAILED', message: errorMsg, quarantineTriggered: true };
+    }
+
+    const sourceSchemaHeaders = sourceSchema.headers.split(',');
+    const targetSchemaHeaders = targetSchema.headers.split(',');
+
+    const missingColumns = sourceSchemaHeaders.filter(header => !targetSchemaHeaders.includes(header));
+
+    if (missingColumns.length > 0) {
+      ruleStatus = 'FAILED';
+      ruleMessage = `Missing columns in target schema: ${missingColumns.join(', ')}`;
+      const isQuarantineFailure = this.createTaskFromFailure(rule, { missingColumns: missingColumns.join(', ') });
+      if (isQuarantineFailure) {
+        quarantineTriggered = true;
+      }
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+  _executeRowCountComparison(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeRowCountComparison', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+
+    const sourceSheetData = dataMaps[rule.source_sheet];
+    const targetSheetData = dataMaps[rule.target_sheet];
+
+    if (!sourceSheetData || !targetSheetData) {
+        const errorMsg = `CRITICAL: Sheet data not found for rule '${rule.on_failure_title}'. Check source_sheet or target_sheet configuration.`;
+        LoggerService.error(serviceName, '_executeRowCountComparison', errorMsg);
+        return { status: 'FAILED', message: errorMsg, quarantineTriggered: true };
+    }
+
+    // Assuming first row is headers, so data rows are length - 1
+    const sourceRowCount = sourceSheetData.values.length;
+    const targetRowCount = targetSheetData.values.length;
+
+    if (targetRowCount < sourceRowCount) {
+      ruleStatus = 'FAILED';
+      ruleMessage = `Row count mismatch: Source (${sourceRowCount}) > Target (${targetRowCount}).`;
+      const isQuarantineFailure = this.createTaskFromFailure(rule, { sourceRowCount: sourceRowCount, targetRowCount: targetRowCount });
+      if (isQuarantineFailure) {
+        quarantineTriggered = true;
+      }
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+  _executeDataCompleteness(rule, dataMaps) {
+    const serviceName = 'ValidationService';
+    LoggerService.info(serviceName, '_executeDataCompleteness', `Executing rule: ${rule.on_failure_title}`);
+    let quarantineTriggered = false;
+    let ruleStatus = 'PASSED';
+    let ruleMessage = 'All checks passed.';
+    const failedItems = [];
+
+    const sourceSheetData = dataMaps[rule.source_sheet];
+    const sourceSheetHeaders = sourceSheetData.headers;
+    const sourceSheetValues = sourceSheetData.values;
+
+    // Iterate through data (excluding headers)
+    for (let i = 0; i < sourceSheetValues.length; i++) { 
+      const row = sourceSheetValues[i];
+      for (let j = 0; j < row.length; j++) {
+        // Check if the column has a header (i.e., it's a populated column)
+        // and if the cell is empty (null or empty string)
+        if (sourceSheetHeaders[j] && (row[j] === null || String(row[j]).trim() === '')) {
+          const isQuarantineFailure = this.createTaskFromFailure(rule, { rowNum: i + 2, colName: sourceSheetHeaders[j], cellValue: row[j] });
+          if (isQuarantineFailure) {
+            quarantineTriggered = true;
+          }
+          failedItems.push(`Row ${i + 2}, Col ${sourceSheetHeaders[j]}`);
+        }
+      }
+    }
+
+    if (failedItems.length > 0) {
+        ruleStatus = 'FAILED';
+        ruleMessage = `Failed for ${failedItems.length} empty cell(s). First few: ${failedItems.slice(0, 5).join(', ')}.`;
+    }
+    
+    return { status: ruleStatus, message: ruleMessage, quarantineTriggered: quarantineTriggered };
+  },
+
+    _runMasterValidation() {
+      const serviceName = 'ValidationService';
+      LoggerService.info(serviceName, '_runMasterValidation', 'Starting master-master validation');
+      const allConfig = ConfigService.getAllConfig();
+      const validationRulesKeys = Object.keys(allConfig).filter(k =>
+        k.startsWith('validation.rule.') && allConfig[k].validation_suite === 'master_master' && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
+      );
+      LoggerService.info(serviceName, '_runMasterValidation', `Found ${validationRulesKeys.length} enabled master_master validation rules.`);
+  
+      const collectedResults = [];
+      let overallQuarantineTriggered = false;
+  
+      if (validationRulesKeys.length === 0) {
+          return { overallQuarantineTriggered: overallQuarantineTriggered, results: collectedResults };
+      }
+  
+      // --- 1. Pre-computation Step ---
+      const requiredSheets = new Set();
+      const requiredMaps = new Map();
+  
+      validationRulesKeys.forEach(ruleKey => {
+        const rule = allConfig[ruleKey];
+        if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+        if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+        if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
+        if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
+        if(rule.join_against) requiredSheets.add(rule.join_against); // For CROSS_EXISTENCE_CHECK
+  
+        if (rule.test_type === 'EXISTENCE_CHECK') {
+          requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+          requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+        } else if (rule.test_type === 'CROSS_EXISTENCE_CHECK') { // Special handling for CROSS_EXISTENCE_CHECK
+          requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+          requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+          requiredMaps.set(`${rule.join_against}_by_${rule.target_key}`, { sheet: rule.join_against, keyColumn: rule.target_key }); // Assuming join_against uses target_key for consistency
+        }
+      });
+  
+      const sheetDataCache = {};
+      requiredSheets.forEach(sheetName => {
+          const schema = allConfig[`schema.data.${sheetName}`];
+          if (!schema) {
+              LoggerService.warn(serviceName, '_runMasterValidation', `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+              return;
+          };
+          const headers = schema.headers.split(',');
+          const keyColumn = schema.key_column; // Extract key_column
+          sheetDataCache[sheetName] = ConfigService._getSheetDataAsMap(sheetName, headers, keyColumn);
+      });
+  
+      const prebuiltMaps = {};
+      for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
+          if (prebuiltMaps[mapKey]) continue;
+          const data = sheetDataCache[sheet];
+          if (data) {
+              prebuiltMaps[mapKey] = this.buildMapFromData(data.values, data.headers, keyColumn);
+          }
+      }
+      LoggerService.info(serviceName, '_runMasterValidation', `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
+  
+      // --- 2. Execution Step ---
+      validationRulesKeys.forEach(ruleKey => {
+        const rule = allConfig[ruleKey];
+        let ruleResult = { ruleKey: ruleKey, ruleTitle: rule.on_failure_title, status: 'UNKNOWN', message: 'Rule did not execute.' };
+        try {
+          switch (rule.test_type) {
+            case 'EXISTENCE_CHECK':
+              ruleResult = this._executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
+              break;
+            case 'FIELD_COMPARISON':
+              ruleResult = this._executeFieldComparison(rule, sheetDataCache);
+              break;
+            case 'ROW_COUNT_COMPARISON':
+              ruleResult = this._executeRowCountComparison(rule, sheetDataCache);
+              break;
+            case 'SCHEMA_COMPARISON':
+              ruleResult = this._executeSchemaComparison(rule, sheetDataCache);
+              break;
+            case 'DATA_COMPLETENESS':
+              ruleResult = this._executeDataCompleteness(rule, sheetDataCache);
+              break;
+            case 'CROSS_CONDITION_CHECK':
+              ruleResult = this._executeCrossConditionCheck(rule, sheetDataCache);
+              break;
+            case 'CROSS_EXISTENCE_CHECK':
+              ruleResult = this._executeCrossExistenceCheck(rule, sheetDataCache);
+              break;
+            case 'INTERNAL_AUDIT':
+              ruleResult = this._executeInternalAudit(rule, sheetDataCache);
+              break;
+            default:
+              LoggerService.warn(serviceName, '_runMasterValidation', `Unhandled or un-refactored test_type: '${rule.test_type}' for rule ${ruleKey}`);
+              ruleResult = { ruleKey: ruleKey, ruleTitle: rule.on_failure_title, status: 'SKIPPED', message: `Unhandled test_type: ${rule.test_type}` };
+          }
+        } catch (e) {
+          LoggerService.error(serviceName, '_runMasterValidation', `Error executing rule ${ruleKey}: ${e.message}`, e);
+          ruleResult = { ruleKey: ruleKey, ruleTitle: rule.on_failure_title, status: 'ERROR', message: `Execution error: ${e.message}` };
+        } finally {
+            collectedResults.push({
+                ruleName: rule.on_failure_title,
+                status: ruleResult.status,
+                message: ruleResult.message
+            });
+            if (ruleResult.quarantineTriggered) {
+                overallQuarantineTriggered = true;
+            }
+        }
+      });
+      LoggerService.info(serviceName, '_runMasterValidation', 'Master-master validation complete.');
+      return { overallQuarantineTriggered: overallQuarantineTriggered, results: collectedResults };
+    },
+  _runOrderStagingValidation(suiteName) {
+    const serviceName = 'ValidationService';
+    const functionName = '_runOrderStagingValidation';
+    logger.info(serviceName, functionName, `Starting validation for suite: ${suiteName}`);
+    const allConfig = ConfigService.getAllConfig();
+    const validationRulesKeys = Object.keys(allConfig).filter(k => 
+      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
+    );
+    logger.info(serviceName, functionName, `Found ${validationRulesKeys.length} enabled rules for suite: ${suiteName}.`);
+
+    if (validationRulesKeys.length === 0) return true;
+
+    let quarantineTriggeredOverall = false;
+
+    // --- 1. Pre-computation Step ---
+    const requiredSheets = new Set();
+    const requiredMaps = new Map();
+
+    validationRulesKeys.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+      if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
+      if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
+
+      if (rule.test_type === 'EXISTENCE_CHECK') {
+        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+      }
+    });
+
+    const sheetDataCache = {};
+    requiredSheets.forEach(sheetName => {
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema) {
+            logger.warn(serviceName, functionName, `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            return;
+        };
+        const headers = schema.headers.split(',');
+        const keyColumn = schema.key_column;
+        const sheetData = ConfigService._getSheetDataAsMap(sheetName, headers, keyColumn);
+        if (sheetData) {
+          sheetDataCache[sheetName] = sheetData;
+        }
+    });
+
+    const prebuiltMaps = {};
+    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
+        if (prebuiltMaps[mapKey]) continue;
+        const data = sheetDataCache[sheet];
+        if (data && data.values && data.headers) {
+            prebuiltMaps[mapKey] = this.buildMapFromData(data.values, data.headers, keyColumn);
+        }
+    }
+    logger.info(serviceName, functionName, `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
+
+    // --- 2. Execution Step ---
+    for (const ruleKey of validationRulesKeys) {
+        const rule = allConfig[ruleKey];
+        logger.info(serviceName, functionName, `Executing rule: ${rule.on_failure_title}`);
+        try {
+            let ruleResult = { quarantineTriggered: false };
+            switch (rule.test_type) {
+                case 'EXISTENCE_CHECK':
+                    ruleResult = this._executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
+                    break;
+                case 'FIELD_COMPARISON':
+                    ruleResult = this._executeFieldComparison(rule, sheetDataCache);
+                    break;
+                case 'INTERNAL_AUDIT':
+                    ruleResult = this._executeInternalAudit(rule, sheetDataCache);
+                    break;
+                case 'ROW_COUNT_COMPARISON':
+                    ruleResult = this._executeRowCountComparison(rule, sheetDataCache);
+                    break;
+                case 'SCHEMA_COMPARISON':
+                    ruleResult = this._executeSchemaComparison(rule, sheetDataCache);
+                    break;
+                case 'DATA_COMPLETENESS':
+                    ruleResult = this._executeDataCompleteness(rule, sheetDataCache);
+                    break;
+                case 'CROSS_CONDITION_CHECK':
+                    ruleResult = this._executeCrossConditionCheck(rule, sheetDataCache);
+                    break;
+                case 'CROSS_EXISTENCE_CHECK':
+                    ruleResult = this._executeCrossExistenceCheck(rule, sheetDataCache);
+                    break;
+                default:
+                    logger.warn(serviceName, functionName, `Unhandled test_type: '${rule.test_type}' for rule: ${rule.on_failure_title}`);
+            }
+            if (ruleResult.quarantineTriggered) {
+                quarantineTriggeredOverall = true;
+            }
+        } catch (e) {
+            logger.error(serviceName, functionName, `Error executing rule '${rule.on_failure_title}': ${e.message}`, e);
+            if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
+                quarantineTriggeredOverall = true;
+            }
+        }
+    }
+    return !quarantineTriggeredOverall;
   },
 
   /**
@@ -91,7 +737,7 @@ const ValidationService = {
       // --- JLMops System ---
       const jlmopsDataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
       const sheetNames = ConfigService.getConfig('system.sheet_names');
-      const jlmopsOrderLog = this._readSheetData(jlmopsDataSpreadsheetId, sheetNames.SysOrdLog);
+      const jlmopsOrderLog = this.readSheetData(jlmopsDataSpreadsheetId, sheetNames.SysOrdLog);
 
       const jlmopsAwaitingExport = jlmopsOrderLog
         .filter(row => {
@@ -110,8 +756,8 @@ const ValidationService = {
 
 
       // --- Legacy System ---
-      const legacyOrdersM = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
-      const legacyOrderLog = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrderLog');
+      const legacyOrdersM = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const legacyOrderLog = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrderLog');
 
       const legacyStatusMap = new Map(legacyOrdersM.map(row => [
         String(row.order_id),
@@ -329,8 +975,8 @@ const ValidationService = {
     const serviceName = 'ValidationService';
     const functionName = 'validateHighestOrderNumber';
     try {
-      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
-      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
+      const legacyData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const jlmopsData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
 
       const legacyOrderNumbers = legacyData.map(row => parseInt(row['order_number'])).filter(num => !isNaN(num));
       const jlmopsOrderNumbers = jlmopsData.map(row => parseInt(row.wom_OrderNumber)).filter(num => !isNaN(num));
@@ -362,8 +1008,8 @@ const ValidationService = {
     const serviceName = 'ValidationService';
     const functionName = 'validateOrderStatusMatch';
     try {
-      const legacyData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
-      const jlmopsData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
+      const legacyData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'OrdersM');
+      const jlmopsData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebOrdM');
       
       const statusesToCompare = ['on-hold', 'processing'];
       let discrepancies = [];
@@ -411,9 +1057,9 @@ const ValidationService = {
     const functionName = 'validatePackingSlipData';
     try {
       // 1. Read data from all sheets
-      const legacyQueueData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingQueue');
-      const legacyRowsData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingRows');
-      const jlmopsCacheData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysPackingCache');
+      const legacyQueueData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingQueue');
+      const legacyRowsData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'PackingRows');
+      const jlmopsCacheData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'SysPackingCache');
 
       // 2. Normalize Legacy Data
       const legacyOrders = new Map();
@@ -503,6 +1149,116 @@ const ValidationService = {
     }
   },
 
+  runValidationSuite(suiteName) {
+    const serviceName = 'ValidationService';
+    const functionName = 'runValidationSuite';
+    LoggerService.info(serviceName, functionName, `Starting validation for suite: ${suiteName}`);
+    const allConfig = ConfigService.getAllConfig();
+    const validationRulesKeys = Object.keys(allConfig).filter(k => 
+      k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE'
+    );
+    LoggerService.info(serviceName, functionName, `Found ${validationRulesKeys.length} enabled rules for suite: ${suiteName}.`);
+
+    if (validationRulesKeys.length === 0) return true; // No rules, so validation passes
+
+    let quarantineTriggeredOverall = false;
+
+    // --- 1. Pre-computation Step: Gather all required data and build all necessary maps ONCE ---
+    const requiredSheets = new Set();
+    const requiredMaps = new Map(); // Key: sheetName_by_keyColumn, Value: { sheet, keyColumn }
+
+    validationRulesKeys.forEach(ruleKey => {
+      const rule = allConfig[ruleKey];
+      if(rule.source_sheet) requiredSheets.add(rule.source_sheet);
+      if(rule.target_sheet) requiredSheets.add(rule.target_sheet);
+      if(rule.sheet_A) requiredSheets.add(rule.sheet_A);
+      if(rule.sheet_B) requiredSheets.add(rule.sheet_B);
+
+      // For existence checks, identify the specific maps needed
+      if (rule.test_type === 'EXISTENCE_CHECK') {
+        requiredMaps.set(`${rule.source_sheet}_by_${rule.source_key}`, { sheet: rule.source_sheet, keyColumn: rule.source_key });
+        requiredMaps.set(`${rule.target_sheet}_by_${rule.target_key}`, { sheet: rule.target_sheet, keyColumn: rule.target_key });
+      }
+    });
+
+    const sheetDataCache = {};
+    requiredSheets.forEach(sheetName => {
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema) {
+            LoggerService.warn(serviceName, functionName, `Schema not found for required sheet: ${sheetName}. Skipping load.`);
+            return;
+        };
+        const headers = schema.headers.split(',');
+        const keyColumn = schema.key_column; // Extract key_column
+        const sheetData = ConfigService._getSheetDataAsMap(sheetName, headers, keyColumn);
+        if (sheetData) {
+          sheetDataCache[sheetName] = sheetData;
+        }
+    });
+
+    const prebuiltMaps = {};
+    for (const [mapKey, { sheet, keyColumn }] of requiredMaps.entries()) {
+        if (prebuiltMaps[mapKey]) continue; // Already built
+        const data = sheetDataCache[sheet];
+        if (data && data.values && data.headers) {
+            prebuiltMaps[mapKey] = this.buildMapFromData(data.values, data.headers, keyColumn);
+        } else {
+             LoggerService.warn(serviceName, functionName, `Could not build map for ${mapKey}. Data not available for sheet ${sheet}.`);
+        }
+    }
+    LoggerService.info(serviceName, functionName, `Pre-built ${Object.keys(prebuiltMaps).length} maps for validation.`);
+
+    // --- 2. Execution Step: Run rules with pre-computed data ---
+    for (const ruleKey of validationRulesKeys) {
+      const rule = allConfig[ruleKey]; // Get the actual rule object
+      LoggerService.info(serviceName, functionName, `Executing rule: ${rule.on_failure_title}`);
+      try {
+        let ruleResult = { status: 'UNKNOWN', message: 'Rule did not execute.', quarantineTriggered: false };
+        switch (rule.test_type) {
+          case 'EXISTENCE_CHECK':
+            ruleResult = this._executeExistenceCheck(rule, sheetDataCache, prebuiltMaps);
+            break;
+          case 'FIELD_COMPARISON':
+            ruleResult = this._executeFieldComparison(rule, sheetDataCache);
+            break;
+          case 'INTERNAL_AUDIT':
+            ruleResult = this._executeInternalAudit(rule, sheetDataCache);
+            break;
+          case 'ROW_COUNT_COMPARISON':
+            ruleResult = this._executeRowCountComparison(rule, sheetDataCache);
+            break;
+          case 'SCHEMA_COMPARISON':
+            ruleResult = this._executeSchemaComparison(rule, sheetDataCache);
+            break;
+          case 'DATA_COMPLETENESS':
+            ruleResult = this._executeDataCompleteness(rule, sheetDataCache);
+            break;
+          case 'CROSS_CONDITION_CHECK':
+            ruleResult = this._executeCrossConditionCheck(rule, sheetDataCache);
+            break;
+          case 'CROSS_EXISTENCE_CHECK':
+            ruleResult = this._executeCrossExistenceCheck(rule, sheetDataCache);
+            break;
+          default:
+            LoggerService.warn(serviceName, functionName, `Unhandled test_type: '${rule.test_type}' for rule: ${rule.on_failure_title}`);
+        }
+        
+        if (ruleResult.quarantineTriggered) {
+          LoggerService.warn(serviceName, functionName, `Rule '${rule.on_failure_title}' triggered a quarantine.`);
+          quarantineTriggeredOverall = true;
+        }
+
+      } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error executing rule '${rule.on_failure_title}': ${e.message}`, e);
+        // If a rule errors and it's marked for quarantine, trigger quarantine.
+        if (String(rule.on_failure_quarantine).toUpperCase() === 'TRUE') {
+            quarantineTriggeredOverall = true; 
+        }
+      }
+    }
+    return !quarantineTriggeredOverall; // Return true if validation passes (no quarantine), false if it fails
+  },
+
   /**
    * Helper function to update job status in SysJobQueue.
    * This is a simplified version for ValidationService.
@@ -510,7 +1266,7 @@ const ValidationService = {
    * @param {string} status The status to set (e.g., 'PROCESSING', 'COMPLETED', 'FAILED').
    * @param {string} [message=''] An optional error message.
    */
-  _updateJobStatus(rowNumber, status, message = '') {
+  updateJobStatus(rowNumber, status, message = '') {
     const serviceName = 'ValidationService';
     const functionName = '_updateJobStatus';
     try {
@@ -533,62 +1289,35 @@ const ValidationService = {
     }
   },
 
-  /**
-   * Executes a suite of critical validations based on SysConfig rules.
-   * @param {string} jobType The type of job being processed (e.g., 'manual.validation.master').
-   * @param {number} rowNumber The row number in the SysJobQueue sheet for the current job.
-   */
-  runCriticalValidations(jobType, rowNumber) {
+  runCriticalValidations(jobType, jobRowNumber) { // jobType and jobRowNumber are for logging/tracking, not direct use here
     const serviceName = 'ValidationService';
     const functionName = 'runCriticalValidations';
-    logger.info(serviceName, functionName, `Starting critical validation job: ${jobType} (Row: ${rowNumber})`);
-    this._updateJobStatus(rowNumber, 'PROCESSING'); // Set status to PROCESSING immediately
+    LoggerService.info(serviceName, functionName, `Starting critical validation (master_master suite)`);
 
     let overallStatus = 'COMPLETED';
     let errorMessage = '';
+    let results = [];
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const criticalValidationRules = Object.keys(allConfig)
-        .filter(key => key.startsWith('validation.rule.') &&
-                       String(allConfig[key].enabled).toUpperCase() === 'TRUE' &&
-                       String(allConfig[key].priority).toUpperCase() === 'HIGH')
-        .map(key => allConfig[key]);
+      const masterValidationResult = this._runMasterValidation(); // Call the modified function
+      results = masterValidationResult.results;
 
-      if (criticalValidationRules.length === 0) {
-        logger.warn(serviceName, functionName, 'No enabled high-priority validation rules found in SysConfig.');
-        this._updateJobStatus(rowNumber, 'COMPLETED', 'No high-priority rules to execute.');
-        return;
-      }
-
-      // Sort rules if a specific order is desired, e.g., by an 'order' property
-      // For now, execute in the order they are filtered.
-      
-      for (const rule of criticalValidationRules) {
-        const validationFunctionName = rule.validation_function_name; // Assuming this field exists in SysConfig
-        if (validationFunctionName && typeof this[validationFunctionName] === 'function') {
-          logger.info(serviceName, functionName, `Executing critical validation: ${validationFunctionName}`);
-          try {
-            this[validationFunctionName]();
-          } catch (e) {
-            logger.error(serviceName, functionName, `Error executing ${validationFunctionName}: ${e.message}`, e);
-            overallStatus = 'FAILED';
-            errorMessage += `Validation '${validationFunctionName}' failed: ${e.message}\n`;
-            // Continue to next validation even if one fails
-          }
-        } else {
-          logger.warn(serviceName, functionName, `Validation function '${validationFunctionName}' not found or not a function in ValidationService for rule: ${rule.name}`);
-        }
+      if (masterValidationResult.overallQuarantineTriggered) {
+        overallStatus = 'FAILED'; // Or 'QUARANTINED' if more granular status is needed
+        errorMessage = 'One or more master_master validation rules failed or triggered quarantine.';
+        LoggerService.warn(serviceName, functionName, errorMessage);
+      } else {
+        LoggerService.info(serviceName, functionName, 'All master_master validation rules passed.');
       }
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error during critical validation orchestration: ${e.message}`, e);
+      LoggerService.error(serviceName, functionName, `Error during critical validation orchestration: ${e.message}`, e);
       overallStatus = 'FAILED';
       errorMessage = `Orchestration failed: ${e.message}`;
-    } finally {
-      this._updateJobStatus(rowNumber, overallStatus, errorMessage.trim());
-      logger.info(serviceName, functionName, `Critical validation job ${jobType} finished with status: ${overallStatus}`);
     }
+    
+    // Return all necessary info
+    return { overallStatus: overallStatus, errorMessage: errorMessage, results: results };
   },
 
   validateProductMasterData() {
@@ -598,10 +1327,10 @@ const ValidationService = {
     
     try {
       // 1. Fetch Data
-      const legacyWebMData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WebM');
-      const legacyWeHeData = this._readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WeHe');
-      const jlmopsProdMData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebProdM');
-      const jlmopsXltMData = this._readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebXltM');
+      const legacyWebMData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WebM');
+      const legacyWeHeData = this.readSheetData(LEGACY_REFERENCE_SPREADSHEET_ID, 'WeHe');
+      const jlmopsProdMData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebProdM');
+      const jlmopsXltMData = this.readSheetData(ConfigService.getConfig('system.spreadsheet.data').id, 'WebXltM');
 
       // 2. Perform Product Count Comparison
       results.push(`Product Counts: Legacy (WebM) has ${legacyWebMData.length} products, JLMops (WebProdM) has ${jlmopsProdMData.length} products.`);

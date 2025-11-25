@@ -1,13 +1,4 @@
-/**
- * @file InventoryManagementService.js
- * @description This service manages inventory.
- * It handles stock levels, updates, and reservations.
- */
-
-/**
- * InventoryManagementService provides methods for managing product inventory.
- */
-function InventoryManagementService() {
+const InventoryManagementService = (function() {
   // Assuming product stock is managed within the ProductService's sheet (WebProdM)
   // or a dedicated inventory sheet. For simplicity, we'll interact with ProductService.
   const PRODUCT_SHEET_NAME = "WebProdM"; // Or a dedicated "Inventory" sheet
@@ -17,11 +8,11 @@ function InventoryManagementService() {
    * @param {string} productIdentifier The ID or SKU of the product.
    * @returns {number|null} The current stock level, or null if product not found.
    */
-  this.getStockLevel = function(productIdentifier) {
+  function getStockLevel(productIdentifier) {
     const serviceName = 'InventoryManagementService';
     const functionName = 'getStockLevel';
     try {
-      const product = productService.getProductById(productIdentifier); // Reusing ProductService
+      const product = ProductService.getProductById(productIdentifier); // Reusing ProductService
       if (product && product.Stock !== undefined) {
         logger.info(serviceName, functionName, `Stock level for ${productIdentifier}: ${product.Stock}`);
         return product.Stock;
@@ -33,7 +24,7 @@ function InventoryManagementService() {
       logger.error(serviceName, functionName, `Error getting stock level for ${productIdentifier}: ${e.message}`, e);
       return null;
     }
-  };
+  }
 
   /**
    * Updates the stock level for a given product ID or SKU.
@@ -42,7 +33,7 @@ function InventoryManagementService() {
    * @param {number} quantityChange The amount to change the stock by (positive for increase, negative for decrease).
    * @returns {boolean} True if stock was updated, false otherwise.
    */
-  this.updateStock = function(productIdentifier, quantityChange) {
+  function updateStock(productIdentifier, quantityChange) {
     const serviceName = 'InventoryManagementService';
     const functionName = 'updateStock';
     try {
@@ -94,13 +85,13 @@ function InventoryManagementService() {
       logger.error(serviceName, functionName, `Error updating stock for ${productIdentifier}: ${e.message}`, e);
       return false;
     }
-  };
+  }
 
   /**
    * Calculates the total quantity of each SKU committed to 'On-Hold' orders
    * and populates the SysInventoryOnHold sheet.
    */
-  this.calculateOnHoldInventory = function() {
+  function calculateOnHoldInventory() {
     const serviceName = 'InventoryManagementService';
     const functionName = 'calculateOnHoldInventory';
     try {
@@ -197,9 +188,9 @@ function InventoryManagementService() {
     } catch (e) {
       logger.error(serviceName, functionName, "Error calculating on-hold inventory: " + e.message, e);
     }
-  };
+  }
 
-  this.getBruryaStockList = function() {
+  function getBruryaStockList() {
     const serviceName = 'InventoryManagementService';
     const functionName = 'getBruryaStockList';
     LoggerService.info(serviceName, functionName, `Starting ${functionName}...`);
@@ -274,13 +265,142 @@ function InventoryManagementService() {
         LoggerService.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
         throw e; // Re-throw the error to be caught by the client
     }
-  };
+  }
+
+  function setBruryaQuantity(sku, quantity) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'setBruryaQuantity';
+    LoggerService.info(serviceName, functionName, `Setting quantity for SKU ${sku} to ${quantity}.`);
+
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const sheetNames = allConfig['system.sheet_names'];
+        const auditSheetName = sheetNames.SysProductAudit;
+        const comaxSheetName = sheetNames.CmxProdM;
+
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const auditSheet = ss.getSheetByName(auditSheetName);
+        const comaxSheet = ss.getSheetByName(comaxSheetName);
+
+        if (!auditSheet || !comaxSheet) {
+            throw new Error(`One or more required sheets not found: '${auditSheetName}', '${comaxSheetName}'.`);
+        }
+
+        const auditData = auditSheet.getDataRange().getValues();
+        const auditHeaders = auditData[0];
+        const auditSkuColIdx = auditHeaders.indexOf('pa_SKU');
+        const auditBruryaQtyColIdx = auditHeaders.indexOf('pa_BruryaQty');
+
+        if (auditSkuColIdx === -1 || auditBruryaQtyColIdx === -1) {
+            throw new Error(`Required columns 'pa_SKU' or 'pa_BruryaQty' not found in '${auditSheetName}'.`);
+        }
+
+        const rowIndex = auditData.findIndex((row, index) => index > 0 && row[auditSkuColIdx] === sku);
+
+        if (rowIndex !== -1) {
+            // Item exists, update it.
+            auditSheet.getRange(rowIndex + 1, auditBruryaQtyColIdx + 1).setValue(quantity);
+            LoggerService.info(serviceName, functionName, `Successfully updated SKU ${sku} to quantity ${quantity}.`);
+            return { success: true, sku: sku, quantity: quantity, action: 'updated' };
+        } else {
+            // Item does not exist, create it.
+            LoggerService.info(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Attempting to create new entry.`);
+            
+            const comaxData = comaxSheet.getDataRange().getValues();
+            const comaxHeaders = comaxData.shift();
+            const comaxSkuIndex = comaxHeaders.indexOf('cpm_SKU');
+            
+            const comaxProductRow = comaxData.find(row => row[comaxSkuIndex] === sku);
+
+            if (comaxProductRow) {
+                const newRow = Array(auditHeaders.length).fill('');
+                // Map fields from comax to product audit
+                // This is a basic mapping, more may be needed depending on the sheet structure
+                newRow[auditHeaders.indexOf('pa_SKU')] = sku;
+                newRow[auditHeaders.indexOf('pa_ProdId')] = comaxProductRow[comaxHeaders.indexOf('cpm_ProdId')];
+                newRow[auditHeaders.indexOf('pa_NameHe')] = comaxProductRow[comaxHeaders.indexOf('cpm_NameHe')];
+                newRow[auditBruryaQtyColIdx] = quantity;
+
+                auditSheet.appendRow(newRow);
+                LoggerService.info(serviceName, functionName, `Successfully created new entry for SKU ${sku}.`);
+                return { success: true, sku: sku, quantity: quantity, action: 'created' };
+            } else {
+                throw new Error(`Product with SKU '${sku}' was not found in the Comax product list.`);
+            }
+        }
+    } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error setting quantity for SKU ${sku}: ${e.message}`, e);
+        throw e;
+    }
+  }
+
+  function updateBruryaInventory(inventoryData) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'updateBruryaInventory';
+    LoggerService.info(serviceName, functionName, `Starting update with ${inventoryData.length} items.`);
+    
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const sheetNames = allConfig['system.sheet_names'];
+        const auditSheetName = sheetNames.SysProductAudit;
+        
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const sheet = ss.getSheetByName(auditSheetName);
+        if (!sheet) {
+            throw new Error(`Sheet '${auditSheetName}' not found.`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const headers = data.shift(); // data now only contains rows
+
+        const skuColIdx = headers.indexOf('pa_SKU');
+        const bruryaQtyColIdx = headers.indexOf('pa_BruryaQty');
+
+        if (skuColIdx === -1 || bruryaQtyColIdx === -1) {
+            throw new Error(`Required columns 'pa_SKU' or 'pa_BruryaQty' not found in '${auditSheetName}'.`);
+        }
+
+        // Create a map of SKU to its row index in the 'data' array (0-based)
+        const skuToRowIndexMap = new Map(data.map((row, index) => [row[skuColIdx], index]));
+        
+        let updatedCount = 0;
+        inventoryData.forEach(item => {
+            const rowIndex = skuToRowIndexMap.get(item.sku);
+            if (rowIndex !== undefined) {
+                // Update the quantity in our in-memory 'data' array
+                data[rowIndex][bruryaQtyColIdx] = item.quantity;
+                updatedCount++;
+            } else {
+                LoggerService.warn(serviceName, functionName, `SKU '${item.sku}' not found in '${auditSheetName}'. Cannot update quantity.`);
+            }
+        });
+
+        // If any updates were made, write the entire BruryaQty column back to the sheet
+        if (updatedCount > 0) {
+            const bruryaQtyColumn = data.map(row => [row[bruryaQtyColIdx]]);
+            // range is +2 because data array is 0-based and sheet is 1-based with a header row
+            sheet.getRange(2, bruryaQtyColIdx + 1, bruryaQtyColumn.length, 1).setValues(bruryaQtyColumn);
+            LoggerService.info(serviceName, functionName, `Successfully updated ${updatedCount} items in '${auditSheetName}'.`);
+        } else {
+            LoggerService.info(serviceName, functionName, 'No items were updated.');
+        }
+
+        return { success: true, updated: updatedCount };
+
+    } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error updating Brurya inventory: ${e.message}`, e);
+        // Re-throw the error to be caught by the client-side failure handler
+        throw new Error(`Failed to update Brurya inventory. Reason: ${e.message}`);
+    }
+}
 
   /**
    * Calculates the total number of products and the total stock quantity at Brurya.
    * @returns {Object} An object `{ productCount: Number, totalStock: Number }`.
    */
-    this.getBruryaSummaryStatistic = function() {
+    function getBruryaSummaryStatistic() {
       const serviceName = 'InventoryManagementService';
       const functionName = 'getBruryaSummaryStatistic';
       logger.info(serviceName, functionName, `Starting ${functionName}...`);
@@ -325,37 +445,37 @@ function InventoryManagementService() {
         logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
         return { productCount: 0, totalStock: 0 };
       }
-    };
+    }
   
     /**
      * Retrieves the count of open 'Negative Inventory' tasks.
      * @returns {number} The count of open tasks.
      */
-    this.getOpenNegativeInventoryTasksCount = function() {
+    function getOpenNegativeInventoryTasksCount() {
       return _getOpenTaskCountByTypeId('task.inventory.negative');
-    };
+    }
   
     /**
      * Retrieves the count of open 'Inventory Count' tasks.
      * @returns {number} The count of open tasks.
      */
-    this.getOpenInventoryCountTasksCount = function() {
+    function getOpenInventoryCountTasksCount() {
       return _getOpenTaskCountByTypeId('task.inventory.count');
-    };
+    }
   
     /**
      * Retrieves the count of open 'Inventory Count Review' tasks.
      * @returns {number} The count of open tasks.
      */
-    this.getOpenInventoryCountReviewTasksCount = function() {
+    function getOpenInventoryCountReviewTasksCount() {
       return _getOpenTaskCountByTypeId('task.inventory.count_review');
-    };
+    }
   
     /**
      * Retrieves the count of items with stock ready for Comax Inventory Export.
      * @returns {number} The count of items with stock > 0.
      */
-    this.getComaxInventoryExportCount = function() {
+    function getComaxInventoryExportCount() {
       const serviceName = 'InventoryManagementService';
       const functionName = 'getComaxInventoryExportCount';
       try {
@@ -395,7 +515,7 @@ function InventoryManagementService() {
         LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
         return 0;
       }
-    };
+    }
   
     /**
      * Helper function to get count of open tasks by type ID.
@@ -433,14 +553,18 @@ function InventoryManagementService() {
         return 0;
       }
     }
-  
-    // TODO: Add methods for:
-    // - Reserving stock (e.g., for pending orders)
-    // - Releasing reserved stock
-    // - Handling low stock alerts
-    // - Syncing inventory with external systems (e.g., Comax)
-  }
-  
-  // Global instance for easy access throughout the project
-  const inventoryManagementService = new InventoryManagementService();
 
+    return {
+        getStockLevel: getStockLevel,
+        updateStock: updateStock,
+        calculateOnHoldInventory: calculateOnHoldInventory,
+        getBruryaStockList: getBruryaStockList,
+        setBruryaQuantity: setBruryaQuantity,
+        updateBruryaInventory: updateBruryaInventory,
+        getBruryaSummaryStatistic: getBruryaSummaryStatistic,
+        getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
+        getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
+        getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
+        getComaxInventoryExportCount: getComaxInventoryExportCount
+    };
+})();
