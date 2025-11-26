@@ -2,6 +2,12 @@
   <p>Loading...</p>
 </div>
 
+<style>
+  .text-warning-dark {
+    color: #d39e00 !important; /* Darker amber for better visibility */
+  }
+</style>
+
 <script>
   /**
    * Populates the system health widget based on the final approved design.
@@ -56,7 +62,7 @@
             break;
           case 'WARNING':
             icon = '⚠️';
-            colorClass = 'text-warning';
+            colorClass = 'text-warning-dark'; // Use new darker class
             break;
           case 'PENDING':
             icon = '⏳';
@@ -76,11 +82,16 @@
             colorClass = 'text-muted';
         }
 
+        let messageHtml = step.message;
+        if (step.data && step.data.folderUrl && step.status === 'WARNING') {
+            messageHtml += ` <a href="${step.data.folderUrl}" target="_blank" class="text-warning-dark" style="text-decoration: underline;">(Open Folder)</a>`;
+        }
+
         finalHtml += `<li class="list-group-item d-flex justify-content-between align-items-start p-2 border-0">`; // Remove border
         finalHtml += `  <div class="me-2">${icon}</div>`;
         finalHtml += `  <div class="flex-grow-1">`;
         finalHtml += `     <div class="fw-bold ${colorClass}">${step.step}. ${step.name}</div>`;
-        finalHtml += `     <div class="text-muted small">${step.message}</div>`;
+        finalHtml += `     <div class="text-muted small">${messageHtml}</div>`;
         finalHtml += `  </div>`;
         finalHtml += `  ${step.timestamp ? `<div class="small text-muted text-end" style="font-size: 0.75rem;">${step.timestamp}</div>` : ''}`;
         finalHtml += `</li>`;

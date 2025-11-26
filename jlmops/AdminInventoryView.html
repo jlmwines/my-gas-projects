@@ -240,18 +240,15 @@
     processBtn.disabled = true;
     processBtn.textContent = 'Processing...';
 
-    const selectedTasks = [];
+    const taskIds = [];
     document.querySelectorAll('.review-checkbox:checked').forEach(checkbox => {
       const row = checkbox.closest('tr');
-      selectedTasks.push({
-        taskId: row.dataset.taskId,
-        sku: row.dataset.sku, // Now using data-sku from tr
-        comaxQty: parseInt(row.querySelector('td:nth-child(1)').textContent, 10), // Comax is 1st column
-        totalQty: parseInt(row.querySelector('td:nth-child(2)').textContent, 10), // Total is 2nd column
-      });
+      if (row && row.dataset.taskId) {
+        taskIds.push(row.dataset.taskId);
+      }
     });
 
-    if (selectedTasks.length === 0) {
+    if (taskIds.length === 0) {
       showToast('No tasks selected for processing.', 'warning');
       processBtn.disabled = false;
       processBtn.textContent = 'Processing counts disabled';
@@ -261,7 +258,7 @@
     google.script.run
       .withSuccessHandler(response => {
         if (response.success) {
-          showToast(`${response.updated} counts processed successfully.`);
+          showToast(`${response.completed} counts processed successfully.`);
           loadAdminViewData(); // Reload data to reflect changes
         } else {
           showToast(`Error processing counts: ${response.message}`, 'error');
@@ -274,7 +271,7 @@
         processBtn.disabled = false;
         processBtn.textContent = 'Processing counts disabled';
       })
-      .WebAppInventory_processInventoryReviewTasks(selectedTasks);
+      .WebAppInventory_acceptInventoryCounts(taskIds);
   }
 
   processBtn.addEventListener('click', handleProcessCounts);

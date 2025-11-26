@@ -706,41 +706,164 @@ const InventoryManagementService = (function() {
               const serviceName = 'InventoryManagementService';
               const functionName = 'getComaxInventoryExportCount';
               try {
+                // Count tasks with 'Accepted' status for inventory count types
+                // We check both standard counts and validation counts (negative inventory)
+                const acceptedCounts = _getOpenTaskCountByTypeIdAndStatus('task.inventory.count', 'Accepted');
+                const acceptedValidations = _getOpenTaskCountByTypeIdAndStatus('task.validation.comax_internal_audit', 'Accepted');
+                
+                return acceptedCounts + acceptedValidations;
+              } catch (e) {
+                LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
+                return 0;
+              }
+            }
+
+            /**
+             * Generates a CSV file for Comax Inventory Export based on 'Accepted' tasks.
+             * @returns {Object} Result with file URL and task info.
+             */
+            function generateComaxInventoryExport() {
+              const serviceName = 'InventoryManagementService';
+              const functionName = 'generateComaxInventoryExport';
+              LoggerService.info(serviceName, functionName, 'Starting Comax Inventory Export generation.');
+
+              try {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
                 const ss = SpreadsheetApp.openById(dataSpreadsheetId);
                 const sheetNames = allConfig['system.sheet_names'];
                 const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
-        
-                if (!productAuditSheet || productAuditSheet.getLastRow() <= 1) {
-                  return 0;
+                const taskSheet = ss.getSheetByName(sheetNames.SysTasks);
+
+                if (!productAuditSheet || !taskSheet) {
+                  throw new Error(`Required sheets not found.`);
                 }
-        
-                const headers = productAuditSheet.getRange(1, 1, 1, productAuditSheet.getLastColumn()).getValues()[0];
-                const qtyCols = ['pa_BruryaQty', 'pa_StorageQty', 'pa_OfficeQty', 'pa_ShopQty'];
-                const qtyColIndices = qtyCols.map(col => headers.indexOf(col));
-        
-                const data = productAuditSheet.getRange(2, 1, productAuditSheet.getLastRow() - 1, productAuditSheet.getLastColumn()).getValues();
-        
-                let exportableItemCount = 0;
-                for (let i = 0; i < data.length; i++) {
-                  let totalStock = 0;
-                  for (const colIdx of qtyColIndices) {
-                    if (colIdx !== -1) {
-                      const qty = parseFloat(data[i][colIdx]);
-                      if (!isNaN(qty)) {
-                        totalStock += qty;
-                      }
+
+                // 1. Find all 'Accepted' tasks to identify SKUs to export
+                const taskData = taskSheet.getDataRange().getValues();
+                const taskHeaders = taskData[0];
+                const tStatusCol = taskHeaders.indexOf('st_Status');
+                const tTypeCol = taskHeaders.indexOf('st_TaskTypeId');
+                const tEntityCol = taskHeaders.indexOf('st_LinkedEntityId');
+                const tIdCol = taskHeaders.indexOf('st_TaskId');
+
+                const acceptedTaskIndices = [];
+                const skusToExport = new Set();
+                const relevantTypes = ['task.inventory.count', 'task.validation.comax_internal_audit'];
+
+                // Start from 1 to skip header
+                for (let i = 1; i < taskData.length; i++) {
+                  const row = taskData[i];
+                  if (row[tStatusCol] === 'Accepted' && relevantTypes.includes(row[tTypeCol])) {
+                    const sku = String(row[tEntityCol]).trim();
+                    if (sku) {
+                        skusToExport.add(sku);
+                        acceptedTaskIndices.push(i); // Store row index (0-based relative to data array)
                     }
                   }
-                  if (totalStock > 0) {
-                    exportableItemCount++;
-                  }
                 }
-                return exportableItemCount;
+
+                if (skusToExport.size === 0) {
+                    return { success: false, message: 'No accepted inventory counts found to export.' };
+                }
+
+                LoggerService.info(serviceName, functionName, `Found ${skusToExport.size} SKUs from ${acceptedTaskIndices.length} accepted tasks.`);
+
+                // 2. Get Stock Levels from SysProductAudit for these SKUs
+                const auditData = productAuditSheet.getDataRange().getValues();
+                const auditHeaders = auditData[0];
+                const skuColIdx = auditHeaders.indexOf('pa_SKU');
+                const qtyCols = ['pa_BruryaQty', 'pa_StorageQty', 'pa_OfficeQty', 'pa_ShopQty'];
+                const qtyColIndices = qtyCols.map(col => auditHeaders.indexOf(col));
+
+                // Map SKU -> TotalQuantity
+                const stockMap = new Map();
+                
+                for (let i = 1; i < auditData.length; i++) {
+                    const row = auditData[i];
+                    const sku = String(row[skuColIdx]).trim();
+                    
+                    if (skusToExport.has(sku)) {
+                        let totalStock = 0;
+                        for (const colIdx of qtyColIndices) {
+                            if (colIdx !== -1) {
+                                const qty = parseFloat(row[colIdx]);
+                                if (!isNaN(qty)) {
+                                    totalStock += qty;
+                                }
+                            }
+                        }
+                        stockMap.set(sku, totalStock);
+                    }
+                }
+
+                // 3. Generate CSV Content
+                let csvContent = 'SKU,Quantity\n';
+                let exportedCount = 0;
+                
+                stockMap.forEach((qty, sku) => {
+                    csvContent += `${sku},${qty}\n`; // Include all, even if qty is 0
+                    exportedCount++;
+                });
+
+                // 4. Save File
+                const fileName = `ComaxAdjust_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM_dd_HH_mm')}.csv`;
+                const exportFolderId = allConfig['system.folder.jlmops_exports']; 
+                
+                let folder;
+                if (exportFolderId && exportFolderId.id) { // Check for .id property as some configs are objects
+                   try {
+                     folder = DriveApp.getFolderById(exportFolderId.id);
+                   } catch (e) {
+                     LoggerService.warn(serviceName, functionName, `Configured export folder not found using .id. Error: ${e.message}`);
+                     folder = DriveApp.getRootFolder();
+                   }
+                } else if (exportFolderId) { // Fallback if it's just a string
+                   try {
+                     folder = DriveApp.getFolderById(exportFolderId);
+                   } catch (e) {
+                     LoggerService.warn(serviceName, functionName, `Configured export folder not found. Using root. Error: ${e.message}`);
+                     folder = DriveApp.getRootFolder();
+                   }
+                } else {
+                   folder = DriveApp.getRootFolder();
+                }
+
+                const file = folder.createFile(fileName, csvContent, 'text/csv');
+                LoggerService.info(serviceName, functionName, `Created export file: ${fileName} with ${exportedCount} items.`);
+
+                // 5. Update Tasks to 'Done'
+                const tStatusColIdx = tStatusCol + 1; 
+                const tDoneDateColIdx = taskHeaders.indexOf('st_DoneDate') + 1;
+                const now = new Date();
+
+                acceptedTaskIndices.forEach(rowIndex => {
+                    const sheetRow = rowIndex + 1;
+                    taskSheet.getRange(sheetRow, tStatusColIdx).setValue('Done');
+                    if (tDoneDateColIdx > 0) {
+                        taskSheet.getRange(sheetRow, tDoneDateColIdx).setValue(now);
+                    }
+                });
+                
+                SpreadsheetApp.flush(); 
+
+                // 6. Create Confirmation Task
+                const taskTitle = `Export Comax adjustments (${fileName})`;
+                const taskNotes = `Comax adjustments exported (${exportedCount} items). Please verify import to Comax and close this task.`;
+                const taskTypeId = 'task.confirmation.comax_inventory_export'; 
+                
+                const newTask = TaskService.createTask(taskTypeId, file.getId(), taskTitle, taskNotes);
+
+                return { 
+                  success: true, 
+                  message: `Export Comax adjustments created.`,
+                  fileUrl: file.getUrl(),
+                  taskId: newTask.st_TaskId
+                };
+
               } catch (e) {
-                LoggerService.error(serviceName, functionName, `Error getting Comax inventory export count: ${e.message}`, e);
-                return 0;
+                LoggerService.error(serviceName, functionName, `Export failed: ${e.message}`, e);
+                throw e;
               }
             }
         
@@ -780,6 +903,41 @@ const InventoryManagementService = (function() {
                 return 0;
               }
             }
+
+            /**
+             * Helper function to get count of tasks by type ID and Status.
+             */
+            function _getOpenTaskCountByTypeIdAndStatus(taskTypeId, status) {
+              const serviceName = 'InventoryManagementService';
+              const functionName = '_getOpenTaskCountByTypeIdAndStatus';
+              try {
+                const allConfig = ConfigService.getAllConfig();
+                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+                const sheetNames = allConfig['system.sheet_names'];
+                const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+        
+                if (!taskSheet || taskSheet.getLastRow() <= 1) {
+                  return 0;
+                }
+        
+                const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+                const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+                const taskTypeCol = taskHeaders.indexOf('st_TaskTypeId');
+                const statusCol = taskHeaders.indexOf('st_Status');
+        
+                let count = 0;
+                for (let i = 0; i < taskData.length; i++) {
+                  const row = taskData[i];
+                  if (row[taskTypeCol] === taskTypeId && row[statusCol] === status) {
+                    count++;
+                  }
+                }
+                return count;
+              } catch (e) {
+                LoggerService.error(serviceName, functionName, `Error getting task count for type ${taskTypeId} status ${status}: ${e.message}`, e);
+                return 0;
+              }
+            }
         
             return {
                 getStockLevel: getStockLevel,
@@ -795,6 +953,7 @@ const InventoryManagementService = (function() {
                 getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
                 getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
                 getComaxInventoryExportCount: getComaxInventoryExportCount,
+                generateComaxInventoryExport: generateComaxInventoryExport,
                 updateLastCount: updateLastCount
             };
         })();

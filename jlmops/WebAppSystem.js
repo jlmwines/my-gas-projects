@@ -213,6 +213,13 @@ function WebAppSystem_getSystemHealthDashboardData() {
     const invoiceCount = OrchestratorService.getInvoiceFileCount();
     let invoiceStatus = 'DONE';
     let invoiceMessage = 'No invoices waiting.';
+    
+    let invoiceFolderUrl = null;
+    const invoiceFolderId = allConfig['system.folder.invoices'];
+    if (invoiceFolderId) {
+        const folderId = invoiceFolderId.id || invoiceFolderId; // Handle object or string
+        invoiceFolderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    }
 
     if (invoiceCount > 0) {
       invoiceStatus = 'WARNING';
@@ -224,7 +231,8 @@ function WebAppSystem_getSystemHealthDashboardData() {
       name: 'Comax Invoice Entry',
       status: invoiceStatus,
       message: invoiceMessage,
-      timestamp: null
+      timestamp: null,
+      data: { folderUrl: invoiceFolderUrl }
     });
 
     // --- Optimize: Read Job Queue Once ---

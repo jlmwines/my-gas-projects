@@ -54,12 +54,17 @@
     1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
     2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
     3.  **Inventory Screen (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow. The 'Inventory Review Table' has been implemented, including data fetching from backend, display with selection controls, and backend logic for processing selected tasks (updating `pa_NewQty`, `pa_LastCount`, and task statuses). Frontend UI bugs have been addressed, including checkbox functionality and "check all" control.
-        *   **1. Inventory Review Table (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** The primary section at the top of the screen. This table will display submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept. It will include selection checkboxes and processing controls.
-        *   **2. Task Creation Controls (IN PROGRESS):** A section for generating new count tasks. This will include:
+        *   **1. Inventory Review Table (COMPLETED):** The primary section at the top of the screen. This table displays submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept.
+        *   **2. Inventory Acceptance Logic (IN PROGRESS):**
+            *   **Implement `WebAppInventory_processInventoryReviewTasks`:** Create the backend handler to process the "Process Selected Counts" action. This function will:
+                *   Update the `pa_LastCount` timestamp in `SysProductAudit`.
+                *   Mark the associated 'Verify Physical Count' task as 'Completed'.
+                *   (Future) Trigger the check for Comax Export readiness.
+        *   **3. Task Creation Controls (IN PROGRESS):** A section for generating new count tasks. This will include:
             *   Controls to create bulk tasks for products that are below a maximum stock quantity OR have not been counted in a maximum number of days.
             *   A spot-check tool to manually create a count task for a single, specific product.
-        *   **3. Open Tasks List (IN PROGRESS):** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
-        *   **4. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
+        *   **4. Open Tasks List (IN PROGRESS):** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
+        *   **5. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
 
@@ -203,8 +208,8 @@ The existing dashboard widgets were enhanced to:
         *   **Export to Comax/Confirm:** After a count is accepted, trigger the generation of an export file for Comax and a corresponding confirmation task.
         *   **Note:** This requires a new task definition in the master configuration and new logic in the inventory and task services.
 
-### 6. Comax Inventory Export (IN PROGRESS - Backend Implemented, Testing)
-*   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system.
+### 6. Comax Inventory Export (COMPLETED)
+*   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system and manage the confirmation workflow.
 
 ### 6. Enhanced Product Detail Verification (PLANNED)
 *   **Goal:** To provide a comprehensive, task-based workflow for managers to review and verify product details, including images, facts, and overall appearance.

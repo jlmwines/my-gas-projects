@@ -37,21 +37,35 @@ function WebAppInventory_getInventoryWidgetData() {
         // Default to false if health check fails
     }
 
-    // 5. Set disabled fields to their null state
-    const comaxInventoryExportCount = 0;
-    const openComaxInventoryConfirmationTask = null;
+    // 5. Get Comax Export Data
+    const comaxInventoryExportCount = inventoryManagementService.getComaxInventoryExportCount();
+    
+    // Robust search for the confirmation task
+    const allOpenTasks = WebAppTasks.getOpenTasks();
+    const openComaxInventoryConfirmationTask = allOpenTasks.find(t => {
+        // Find key that matches 'st_TaskTypeId' ignoring whitespace
+        const typeKey = Object.keys(t).find(k => k.trim() === 'st_TaskTypeId');
+        return typeKey && String(t[typeKey]).trim() === 'task.confirmation.comax_inventory_export';
+    });
+    
+    LoggerService.info('WebAppInventory', 'getInventoryWidgetData', `Comax Confirmation Task found: ${openComaxInventoryConfirmationTask ? 'YES' : 'null'}`);
 
     // Helper to sanitize task objects for client
     const sanitizeTask = (task) => {
       if (!task) return null;
+      // Find keys for ID and Notes robustly
+      const idKey = Object.keys(task).find(k => k.trim() === 'st_TaskId');
+      const notesKey = Object.keys(task).find(k => k.trim() === 'st_Notes');
+      
       return {
-        id: task.st_TaskId ? String(task.st_TaskId) : '',
-        notes: task.st_Notes ? String(task.st_Notes) : ''
+        id: (idKey && task[idKey]) ? String(task[idKey]) : '',
+        notes: (notesKey && task[notesKey]) ? String(task[notesKey]) : ''
       };
     };
 
     const cleanExportReadyTask = sanitizeTask(webInventoryExportReadyTask);
     const cleanConfirmationTask = sanitizeTask(webInventoryConfirmationTask);
+    const cleanComaxConfirmationTask = sanitizeTask(openComaxInventoryConfirmationTask);
 
     LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Returning data object.');
     return {
@@ -61,7 +75,7 @@ function WebAppInventory_getInventoryWidgetData() {
       openInventoryCountTasksCount: openInventoryCountTasksCount,
       openInventoryCountReviewTasksCount: openInventoryCountReviewTasksCount,
       comaxInventoryExportCount: comaxInventoryExportCount,
-      openComaxInventoryConfirmationTask: openComaxInventoryConfirmationTask,
+      openComaxInventoryConfirmationTask: cleanComaxConfirmationTask,
       webInventoryExportReadyTask: cleanExportReadyTask,
       webInventoryConfirmationTask: cleanConfirmationTask,
       canWebInventoryExport: !webInventoryConfirmationTask && isSystemReadyForExport,
@@ -70,6 +84,19 @@ function WebAppInventory_getInventoryWidgetData() {
   } catch (e) {
     LoggerService.error('WebAppInventory', 'getInventoryWidgetData', e.message, e);
     return { error: `Could not load inventory widget data: ${e.message}` };
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.generateComaxInventoryExport function for client-side access.
+ * @returns {Object} A result object from the service.
+ */
+function WebAppInventory_generateComaxInventoryExport() {
+  try {
+    return InventoryManagementService.generateComaxInventoryExport();
+  } catch (error) {
+    LoggerService.error('WebAppInventory', 'generateComaxInventoryExport', error.message, error);
+    throw error;
   }
 }
 
@@ -335,14 +362,15 @@ function WebAppInventory_acceptInventoryCounts(taskIds) {
         // Update pa_LastCount in SysProductAudit
         InventoryManagementService.updateLastCount(sku, new Date());
 
-        // Complete the task in SysTasks
-        TaskService.completeTask(taskId);
+        // Update task status to 'Accepted' so it is picked up by the export workflow
+        TaskService.updateTaskStatus(taskId, 'Accepted');
         completedCount++;
       } catch (innerError) {
         LoggerService.error('WebAppInventory', 'acceptInventoryCounts', `Error processing task ${taskId}: ${innerError.message}`, innerError);
         // Continue to process other tasks even if one fails
       }
     }
+    SpreadsheetApp.flush();
     return { success: true, completed: completedCount };
   } catch (e) {
     LoggerService.error('WebAppInventory', 'acceptInventoryCounts', e.message, e);

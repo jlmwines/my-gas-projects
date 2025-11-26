@@ -87,8 +87,12 @@
     html += '<button id="btn-web-updated" class="btn" style="margin-left: 0.5rem;" disabled>Web Updated</button>';
     html += '<hr>';
 
-    // Disabled Comax Inventory Export Section
-    html += '<p>Comax Inventory Export functionality is currently disabled.</p>';
+    // Comax Inventory Export Section
+    html += '<h6>Comax Inventory Export</h6>';
+    html += '<div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>';
+    html += '<button id="btn-comax-export" class="btn" disabled>Comax Export</button>';
+    html += '<button id="btn-comax-updated" class="btn" style="margin-left: 0.5rem;" disabled>Comax Updated</button>';
+    html += '<hr>';
 
     widget.innerHTML = html;
 
@@ -103,23 +107,100 @@
     if (data.webInventoryConfirmationTask) {
       messageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.webInventoryConfirmationTask.notes}</div>`;
       confirmBtn.disabled = false;
-      confirmBtn.className = 'btn';
-      confirmBtn.setAttribute('onclick', `handleWebConfirmClick('${data.webInventoryConfirmationTask.id}')`);
+      confirmBtn.className = 'btn'; // Reverted to original 'btn'
+      confirmBtn.onclick = function() { handleWebConfirmClick(data.webInventoryConfirmationTask.id); };
     } else if (data.webInventoryExportReadyTask) {
       messageArea.innerHTML = `<div class="alert alert-info" style="padding: 0.5rem 1rem;">Web inventory export is ready.</div>`;
       exportBtn.disabled = false;
-      exportBtn.className = 'btn';
-      exportBtn.setAttribute('onclick', 'handleWebExportClick()');
+      exportBtn.className = 'btn'; // Reverted to original 'btn'
+      exportBtn.onclick = function() { handleWebExportClick(); };
     } else if (data.canWebInventoryExport) {
       // Fallback: Enable button manually if no confirmation is pending and system is ready
       messageArea.innerHTML = ''; 
       exportBtn.disabled = false;
-      exportBtn.className = 'btn';
-      exportBtn.setAttribute('onclick', 'handleWebExportClick()');
+      exportBtn.className = 'btn'; // Reverted to original 'btn'
+      exportBtn.onclick = function() { handleWebExportClick(); };
     } else {
       // Explicitly state why it is disabled
       messageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">Export disabled. Please complete the Daily Inventory Cycle (see System Health).</p>';
       exportBtn.disabled = true;
+    }
+
+    // --- State-Aware Logic for Comax Inventory Export ---
+    const comaxExportBtn = document.getElementById('btn-comax-export');
+    const comaxConfirmBtn = document.getElementById('btn-comax-updated');
+    const comaxMessageArea = document.getElementById('comax-inventory-message-area');
+
+    comaxExportBtn.className = 'btn';
+    comaxConfirmBtn.className = 'btn';
+
+    if (data.openComaxInventoryConfirmationTask) {
+        comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
+        comaxConfirmBtn.disabled = false;
+        comaxConfirmBtn.className = 'btn'; // Reverted to original 'btn'
+        comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
+        comaxExportBtn.disabled = true;
+    } else if (data.comaxInventoryExportCount > 0) {
+        comaxMessageArea.innerHTML = `<p>${data.comaxInventoryExportCount} items ready for export.</p>`;
+        comaxExportBtn.disabled = false;
+        comaxExportBtn.className = 'btn'; // Reverted to original 'btn'
+        comaxExportBtn.onclick = function() { handleComaxExportClick(); };
+    } else {
+        comaxMessageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">No items to export.</p>';
+        comaxExportBtn.disabled = true;
+    }
+  }
+
+  /**
+   * Handles the click event for the 'Comax Export' button.
+   */
+  function handleComaxExportClick() {
+    const exportBtn = document.getElementById('btn-comax-export');
+    const messageArea = document.getElementById('comax-inventory-message-area');
+    
+    if (confirm("Export Comax adjustments?")) {
+      exportBtn.disabled = true;
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response && response.message) {
+            alert(response.message);
+          }
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
+        })
+        .withFailureHandler(showError)
+        .WebAppInventory_generateComaxInventoryExport();
+    }
+  }
+
+  /**
+   * Handles the click event for the 'Comax Updated' button.
+   * @param {string} taskId - The ID of the confirmation task to complete.
+   */
+  function handleComaxConfirmClick(taskId) {
+    console.log('Confirmation clicked for task:', taskId);
+    if (!taskId) {
+        alert('Error: Task ID is missing. Please check the logs.');
+        return;
+    }
+
+    const confirmBtn = document.getElementById('btn-comax-updated');
+    const messageArea = document.getElementById('comax-inventory-message-area');
+
+    if (confirm("Confirm Comax adjustment applied and closed?")) {
+      confirmBtn.disabled = true;
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+      
+      google.script.run
+        .withSuccessHandler(wasCompleted => {
+          if (!wasCompleted) {
+            showError('Failed to confirm task.');
+          }
+          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
+        })
+        .withFailureHandler(showError)
+        .WebAppTasks_completeTaskById(taskId);
     }
   }
 
