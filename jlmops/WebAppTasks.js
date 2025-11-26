@@ -86,12 +86,66 @@ const WebAppTasks = (() => {
     return task || null;
   };
 
+  /**
+   * Retrieves a single task by its ID, regardless of its status.
+   * @param {string} taskId - The ID of the task to retrieve.
+   * @returns {Object|null} The task object if found, or null.
+   */
+  const getTaskById = (taskId) => {
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const sheetNames = allConfig['system.sheet_names'];
+      const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+
+      if (!taskSheet || taskSheet.getLastRow() <= 1) {
+        return null;
+      }
+
+      const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+      const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+      const taskIdCol = taskHeaders.indexOf('st_TaskId');
+
+      if (taskIdCol === -1) {
+        LoggerService.error('WebAppTasks', 'getTaskById', "Required column 'st_TaskId' not found in SysTasks sheet.");
+        return null;
+      }
+      
+      const foundTaskRow = taskData.find(row => row[taskIdCol] === taskId);
+
+      if (foundTaskRow) {
+        const task = {};
+        taskHeaders.forEach((header, index) => {
+          task[header] = foundTaskRow[index];
+        });
+        return task;
+      }
+      return null;
+    } catch (e) {
+      LoggerService.error('WebAppTasks', 'getTaskById', e.message, e);
+      return null;
+    }
+  };
+
+  /**
+   * Retrieves open tasks of a specific type and status.
+   * @param {string} typeId - The exact task type ID to filter by.
+   * @param {string} status - The exact status to filter by (e.g., 'Review').
+   * @returns {Array<Object>} An array of open task objects of the specified type and status.
+   */
+  const getOpenTasksByTypeIdAndStatus = (typeId, status) => {
+    const allOpenTasks = getOpenTasks();
+    return allOpenTasks.filter(task => task.st_TaskTypeId === typeId && task.st_Status === status);
+  };
+
   return {
     getOpenTasks,
     getOpenTasksByTypeId,
     getOpenTasksByPrefix,
     createTask,
     getOpenTaskByTypeId,
+    getTaskById,
+    getOpenTasksByTypeIdAndStatus,
   };
 })();
 

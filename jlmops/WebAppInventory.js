@@ -13,20 +13,47 @@ function WebAppInventory_getInventoryWidgetData() {
     const inventoryManagementService = InventoryManagementService;
     // 1. Get Brurya stats from the backend service
     const bruryaSummary = inventoryManagementService.getBruryaSummaryStatistic();
+    LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Got Brurya stats.');
     
     // 2. Get task counts from the tasks data provider
     const openNegativeInventoryTasksCount = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit').length;
     const openInventoryCountTasksCount = WebAppTasks.getOpenTasksByTypeId('task.inventory.count').length;
-    const openInventoryCountReviewTasksCount = WebAppTasks.getOpenTasksByTypeId('task.inventory.count_review').length;
+    const openInventoryCountReviewTasksCount = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length;
+    LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Got task counts.');
 
     // 3. Check for Web Inventory Export tasks
     const webInventoryExportReadyTask = WebAppTasks.getOpenTaskByTypeId('task.export.web_inventory_ready');
     const webInventoryConfirmationTask = WebAppTasks.getOpenTaskByTypeId('task.confirmation.web_inventory_export');
+    LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Got export tasks.');
     
-    // 4. Set disabled fields to their null state
+    // 4. Check System Health for Export Readiness (The "Green Light")
+    let isSystemReadyForExport = false;
+    try {
+        const systemHealth = WebAppSystem_getSystemHealthDashboardData();
+        isSystemReadyForExport = systemHealth.isInventoryExportReady;
+        LoggerService.info('WebAppInventory', 'getInventoryWidgetData', `Got system health. Ready: ${isSystemReadyForExport}`);
+    } catch (healthError) {
+        LoggerService.warn('WebAppInventory', 'getInventoryWidgetData', `Failed to get system health: ${healthError.message}`);
+        // Default to false if health check fails
+    }
+
+    // 5. Set disabled fields to their null state
     const comaxInventoryExportCount = 0;
     const openComaxInventoryConfirmationTask = null;
 
+    // Helper to sanitize task objects for client
+    const sanitizeTask = (task) => {
+      if (!task) return null;
+      return {
+        id: task.st_TaskId ? String(task.st_TaskId) : '',
+        notes: task.st_Notes ? String(task.st_Notes) : ''
+      };
+    };
+
+    const cleanExportReadyTask = sanitizeTask(webInventoryExportReadyTask);
+    const cleanConfirmationTask = sanitizeTask(webInventoryConfirmationTask);
+
+    LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Returning data object.');
     return {
       bruryaProductCount: bruryaSummary.productCount,
       bruryaTotalStock: bruryaSummary.totalStock,
@@ -35,8 +62,9 @@ function WebAppInventory_getInventoryWidgetData() {
       openInventoryCountReviewTasksCount: openInventoryCountReviewTasksCount,
       comaxInventoryExportCount: comaxInventoryExportCount,
       openComaxInventoryConfirmationTask: openComaxInventoryConfirmationTask,
-      webInventoryExportReadyTask: webInventoryExportReadyTask,
-      webInventoryConfirmationTask: webInventoryConfirmationTask,
+      webInventoryExportReadyTask: cleanExportReadyTask,
+      webInventoryConfirmationTask: cleanConfirmationTask,
+      canWebInventoryExport: !webInventoryConfirmationTask && isSystemReadyForExport,
       error: null
     };
   } catch (e) {
@@ -204,7 +232,7 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
       // Pass the complete item object including taskId, sku, and all quantities
       const updateResult = inventoryManagementService.updatePhysicalCounts(item); 
       if (updateResult.success) {
-        TaskService.completeTask(item.taskId); // Mark the task as Done.
+        TaskService.updateTaskStatus(item.taskId, 'Review'); // Mark the task as 'Review' for admin
         updatedCount++;
       } else {
         LoggerService.warn('WebAppInventory', 'submitInventoryCounts', `Failed to update count for SKU ${item.sku}. Task ${item.taskId} not completed.`);
@@ -214,6 +242,110 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
     return { success: true, updated: updatedCount };
   } catch (e) {
     LoggerService.error('WebAppInventory', 'submitInventoryCounts', e.message, e);
+    throw e;
+  }
+}
+
+/**
+ * Gets all data required for the Admin Inventory View, specifically the tasks for review.
+ * @returns {Object} An object containing tasks for review and any errors.
+ */
+function WebAppInventory_getAdminInventoryViewData() {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+
+    const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+    const sysProductAuditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
+    
+    const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review');
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${reviewTasks.length} tasks in 'Review' status.`);
+
+    
+    const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
+    const cmxProdMMap = cmxProdMData.map;
+
+    const sysProductAuditData = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU');
+    const sysProductAuditMap = sysProductAuditData.map;
+
+    const tasksForReview = reviewTasks.map(task => {
+      LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Processing task: ${task.st_TaskId}`);
+      const sku = String(task.st_LinkedEntityId).trim();
+      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product';
+      
+      if (!cmxProdMMap.has(sku)) {
+        LoggerService.warn('WebAppInventory', 'getAdminInventoryViewData', `SKU from task not found in CmxProdM: ${sku}`);
+      }
+
+      const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
+      
+      const comaxStockFromMaster = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Stock || 0 : 0;
+      const bruryaQty = auditEntry.pa_BruryaQty || 0;
+      const storageQty = auditEntry.pa_StorageQty || 0;
+      const officeQty = auditEntry.pa_OfficeQty || 0;
+      const shopQty = auditEntry.pa_ShopQty || 0;
+
+      const totalQty = bruryaQty + storageQty + officeQty + shopQty;
+
+      LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Task processed for SKU: ${sku}`);
+      return {
+        taskId: task.st_TaskId,
+        sku: sku,
+        productName: productName,
+        comaxQty: comaxStockFromMaster,
+        totalQty: totalQty,
+        bruryaQty: bruryaQty,
+        storageQty: storageQty,
+        officeQty: officeQty,
+        shopQty: shopQty
+      };
+    });
+
+    tasksForReview.sort((a, b) => a.productName.localeCompare(b.productName));
+
+    return {
+      reviewTasks: tasksForReview
+    };
+
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getAdminInventoryViewData', e.message, e);
+    return { error: `Could not load data for Admin Inventory View: ${e.message}` };
+  }
+}
+
+/**
+ * Accepts and completes a list of inventory count review tasks.
+ * @param {Array<string>} taskIds An array of task IDs to be completed.
+ * @returns {Object} A result object indicating success and the number of tasks processed.
+ */
+function WebAppInventory_acceptInventoryCounts(taskIds) {
+  if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
+    return { success: false, message: 'No task IDs provided.' };
+  }
+  try {
+    let completedCount = 0;
+    for (const taskId of taskIds) {
+      try {
+        const task = WebAppTasks.getTaskById(taskId);
+        if (!task || !task.st_LinkedEntityId) {
+          LoggerService.warn('WebAppInventory', 'acceptInventoryCounts', `Task ${taskId} not found or missing LinkedEntityId.`);
+          continue; // Skip to next task
+        }
+        const sku = task.st_LinkedEntityId;
+
+        // Update pa_LastCount in SysProductAudit
+        InventoryManagementService.updateLastCount(sku, new Date());
+
+        // Complete the task in SysTasks
+        TaskService.completeTask(taskId);
+        completedCount++;
+      } catch (innerError) {
+        LoggerService.error('WebAppInventory', 'acceptInventoryCounts', `Error processing task ${taskId}: ${innerError.message}`, innerError);
+        // Continue to process other tasks even if one fails
+      }
+    }
+    return { success: true, completed: completedCount };
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'acceptInventoryCounts', e.message, e);
     throw e;
   }
 }

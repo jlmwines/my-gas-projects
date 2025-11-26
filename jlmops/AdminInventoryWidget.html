@@ -17,6 +17,9 @@
 
       google.script.run
         .withSuccessHandler(response => {
+          if (response && response.message) {
+            alert(response.message);
+          }
           google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
         })
         .withFailureHandler(showError)
@@ -72,9 +75,9 @@
     html += '<hr>';
 
     html += '<h6>Open Inventory Tasks</h6>';
-    html += '<p>Negative Inventory Tasks: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
-    html += '<p>Assigned Count Tasks: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
-    html += '<p>Tasks to Review: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
+    html += '<p>Negative Inventory: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count Reviews: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
     html += '<hr>';
 
     // Web Inventory Update Section
@@ -107,8 +110,16 @@
       exportBtn.disabled = false;
       exportBtn.className = 'btn';
       exportBtn.setAttribute('onclick', 'handleWebExportClick()');
+    } else if (data.canWebInventoryExport) {
+      // Fallback: Enable button manually if no confirmation is pending and system is ready
+      messageArea.innerHTML = ''; 
+      exportBtn.disabled = false;
+      exportBtn.className = 'btn';
+      exportBtn.setAttribute('onclick', 'handleWebExportClick()');
     } else {
-      messageArea.innerHTML = '<p>Awaiting product imports.</p>';
+      // Explicitly state why it is disabled
+      messageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">Export disabled. Please complete the Daily Inventory Cycle (see System Health).</p>';
+      exportBtn.disabled = true;
     }
   }
 

@@ -538,7 +538,7 @@ const OrchestratorService = (function() {
         case 'import.drive.web_orders':
           _handleCompletedWebOrderImport();
           break;
-        case 'import.drive.web_products':
+        case 'import.drive.web_products_en':
         case 'import.drive.comax_products':
           _handleCompletedProductImport();
           break;
@@ -551,9 +551,153 @@ const OrchestratorService = (function() {
     }
   }
 
+  /**
+   * Retrieves the timestamp of the last successful job of a specific type.
+   * @param {string} jobType The type of job to check.
+   * @returns {Date|null} The timestamp of the last success, or null if not found.
+   */
+  function getLastJobSuccess(jobType) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getLastJobSuccess';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        return null;
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data.shift();
+      const jobTypeCol = headers.indexOf('job_type');
+      const statusCol = headers.indexOf('status');
+      const processedTsCol = headers.indexOf('processed_timestamp');
+
+      let lastSuccess = null;
+
+      for (const row of data) {
+        if (row[jobTypeCol] === jobType && row[statusCol] === 'COMPLETED') {
+          const timestamp = new Date(row[processedTsCol]);
+          if (!isNaN(timestamp.getTime())) {
+             if (!lastSuccess || timestamp > lastSuccess) {
+               lastSuccess = timestamp;
+             }
+          }
+        }
+      }
+      return lastSuccess;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error checking last job success for ${jobType}: ${e.message}`, e);
+      return null;
+    }
+  }
+
+  /**
+   * Checks if a job of a specific type is currently pending or processing.
+   * @param {string} jobType The type of job to check.
+   * @returns {boolean} True if such a job exists, false otherwise.
+   */
+  function getPendingOrProcessingJob(jobType) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getPendingOrProcessingJob';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        return false;
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data.shift();
+      const jobTypeCol = headers.indexOf('job_type');
+      const statusCol = headers.indexOf('status');
+
+      for (const row of data) {
+        if (row[jobTypeCol] === jobType) {
+          if (row[statusCol] === 'PENDING' || row[statusCol] === 'PROCESSING') {
+            return true;
+          }
+        }
+      }
+      return false;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error checking pending job for ${jobType}: ${e.message}`, e);
+      return false;
+    }
+  }
+
+  /**
+   * Counts the number of specific file types in the designated invoice folder, ignoring shortcuts.
+   * Replicates logic from legacy AdminWorkflow.js.
+   * @returns {number} The count of relevant files in the folder.
+   */
+  function getInvoiceFileCount() {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getInvoiceFileCount';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const invoiceFolderConfig = allConfig['system.folder.invoices'];
+      
+      if (!invoiceFolderConfig || !invoiceFolderConfig.id) {
+        logger.warn(serviceName, functionName, 'Invoice folder ID not found in configuration.');
+        return 0;
+      }
+
+      const folder = DriveApp.getFolderById(invoiceFolderConfig.id);
+      const files = folder.getFiles();
+      let count = 0;
+
+      const allowedMimeTypes = [
+          // Documents
+          MimeType.GOOGLE_DOCS,
+          MimeType.MICROSOFT_WORD,
+          MimeType.PDF,
+          // Spreadsheets
+          MimeType.GOOGLE_SHEETS,
+          MimeType.MICROSOFT_EXCEL,
+          // Images
+          MimeType.BMP,
+          MimeType.GIF,
+          MimeType.JPEG,
+          MimeType.PNG
+      ];
+
+      while (files.hasNext()) {
+          const file = files.next();
+          const mimeType = file.getMimeType();
+
+          // Skip shortcuts entirely
+          if (mimeType === MimeType.SHORTCUT) {
+              continue;
+          }
+
+          // Check if the file is one of the allowed types
+          if (allowedMimeTypes.includes(mimeType)) {
+              count++;
+          }
+      }
+      return count;
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error counting invoice files: ${e.message}`, e);
+      return 0;
+    }
+  }
+
   return {
     run: run,
-    finalizeJobCompletion: finalizeJobCompletion
+    finalizeJobCompletion: finalizeJobCompletion,
+    getLastJobSuccess: getLastJobSuccess,
+    getPendingOrProcessingJob: getPendingOrProcessingJob,
+    getInvoiceFileCount: getInvoiceFileCount
   };
 
 })();

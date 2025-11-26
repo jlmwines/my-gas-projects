@@ -815,6 +815,52 @@ function OrderService(productService) {
           return -1; // Return -1 to indicate an error to the frontend
         }
       };
+
+      /**
+       * Retrieves the timestamp of the last successful Comax order export.
+       * @returns {Date|null} The timestamp of the last export, or null if none found.
+       */
+      this.getLastComaxOrderExportTimestamp = function() {
+        const serviceName = 'OrderService';
+        const functionName = 'getLastComaxOrderExportTimestamp';
+        try {
+          const allConfig = ConfigService.getAllConfig();
+          const sheetNames = allConfig['system.sheet_names'];
+          const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+          const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+          const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+    
+          if (!logSheet) {
+            throw new Error("Required sheet (SysOrdLog) not found.");
+          }
+    
+          const logData = logSheet.getDataRange().getValues();
+          const logHeaders = logData.shift();
+          const comaxExportTimestampCol = logHeaders.indexOf('sol_ComaxExportTimestamp');
+    
+          if (comaxExportTimestampCol === -1) {
+            throw new Error("Could not find 'sol_ComaxExportTimestamp' in SysOrdLog sheet.");
+          }
+    
+          let maxTimestamp = null;
+    
+          // Iterate through all rows to find the latest timestamp
+          for (const row of logData) {
+            const timestampVal = row[comaxExportTimestampCol];
+            if (timestampVal && timestampVal instanceof Date) {
+              if (!maxTimestamp || timestampVal > maxTimestamp) {
+                maxTimestamp = timestampVal;
+              }
+            }
+          }
+          
+          return maxTimestamp;
+    
+        } catch (e) {
+          logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+          return null;
+        }
+      };
     } // Closing for OrderService
     
     /**

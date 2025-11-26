@@ -506,32 +506,122 @@ const InventoryManagementService = (function() {
             throw new Error(`One or more required columns not found in '${auditSheetName}'.`);
         }
 
-        const rowIndex = auditData.findIndex((row, index) => index > 0 && row[skuColIdx] === sku);
+        const rowIndex = auditData.findIndex((row, index) => {
+            if (index === 0) return false; // Skip header row
+            const sheetSku = String(row[skuColIdx]).trim().toLowerCase();
+            const searchSku = String(sku).trim().toLowerCase();
+            if (sheetSku === searchSku) {
+                LoggerService.info(serviceName, functionName, `SKU '${sku}' found at row index ${index}.`);
+                return true;
+            }
+            return false;
+        });
 
         if (rowIndex !== -1) {
-            const sheetRow = rowIndex + 1; // +1 because auditData is 0-indexed without headers.
+            const sheetRow = rowIndex + 1; // Convert 0-based array index to 1-based sheet row index
+            
+            const bruryaQtyColIdx = auditHeaders.indexOf('pa_BruryaQty');
+            const newQtyColIdx = auditHeaders.indexOf('pa_NewQty');
+
+            if (bruryaQtyColIdx === -1) {
+              throw new Error(`Required column 'pa_BruryaQty' not found in '${auditSheetName}'.`);
+            }
+            if (newQtyColIdx === -1) {
+              throw new Error(`Required column 'pa_NewQty' not found in '${auditSheetName}'.`);
+            }
+            
+            const currentBruryaQty = parseFloat(auditData[sheetRow -1][bruryaQtyColIdx]) || 0; // Get from in-memory data
+
+            const totalNewQty = currentBruryaQty + storageQty + officeQty + shopQty;
+
             auditSheet.getRange(sheetRow, storageColIdx + 1).setValue(storageQty);
             auditSheet.getRange(sheetRow, officeColIdx + 1).setValue(officeQty);
             auditSheet.getRange(sheetRow, shopColIdx + 1).setValue(shopQty);
-            LoggerService.info(serviceName, functionName, `Successfully updated counts for SKU ${sku}.`);
+            auditSheet.getRange(sheetRow, newQtyColIdx + 1).setValue(totalNewQty); // Update pa_NewQty
+            LoggerService.info(serviceName, functionName, `Successfully updated counts for SKU '${sku}'. New Total: ${totalNewQty}.`);
             return { success: true, sku: sku, action: 'updated' };
         } else {
-            // This case should ideally not be hit if tasks are generated for existing products.
-            // Creating a new row just in case.
-            const newRow = Array(auditHeaders.length).fill('');
+            LoggerService.warn(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Creating a new row (this should ideally not happen for existing tasks).`);
+            
+            const currentHeaders = auditSheet.getRange(1, 1, 1, auditSheet.getLastColumn()).getValues()[0];
+            const newRow = Array(currentHeaders.length).fill('');
+            const bruryaQtyColIdx = currentHeaders.indexOf('pa_BruryaQty'); // Moved this line up
+            const newQtyColIdx = currentHeaders.indexOf('pa_NewQty'); 
+            
+            const totalNewQty = (parseFloat(newRow[bruryaQtyColIdx] || 0)) + storageQty + officeQty + shopQty;
+
             newRow[skuColIdx] = sku;
             newRow[storageColIdx] = storageQty;
             newRow[officeColIdx] = officeQty;
             newRow[shopColIdx] = shopQty;
+            if (newQtyColIdx !== -1) {
+              newRow[newQtyColIdx] = totalNewQty;
+            }
             auditSheet.appendRow(newRow);
-            LoggerService.warn(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Created a new row.`);
-            return { success: true, sku: sku, action: 'created' };
+            LoggerService.info(serviceName, functionName, `SKU '${sku}' created a new row in '${auditSheetName}'. New Total: ${totalNewQty}.`);
+            return { success: true, sku: sku, action: 'updated' };
         }
     } catch (e) {
-        LoggerService.error(serviceName, functionName, `Error updating counts for SKU ${sku}: ${e.message}`, e);
+        LoggerService.error(serviceName, functionName, `Error updating counts for SKU '${sku}': ${e.message}`, e);
         throw e;
     }
   }
+
+  /**
+   * Updates the pa_LastCount for a given SKU in SysProductAudit.
+   * @param {string} sku The SKU of the product to update.
+   * @param {Date} timestamp The timestamp to set for pa_LastCount.
+   * @returns {Object} A result object { success: true, sku }.
+   */
+  function updateLastCount(sku, timestamp) {
+    const serviceName = 'InventoryManagementService';
+    const functionName = 'updateLastCount';
+    LoggerService.info(serviceName, functionName, `Updating pa_LastCount for SKU '${sku}' to ${timestamp}.`);
+
+    try {
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const sheetNames = allConfig['system.sheet_names'];
+        const auditSheetName = sheetNames.SysProductAudit;
+
+        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const auditSheet = ss.getSheetByName(auditSheetName);
+
+        if (!auditSheet) {
+            throw new Error(`Sheet not found: '${auditSheetName}'.`);
+        }
+
+        const auditData = auditSheet.getDataRange().getValues();
+        const auditHeaders = auditData[0];
+        const skuColIdx = auditHeaders.indexOf('pa_SKU');
+        const lastCountColIdx = auditHeaders.indexOf('pa_LastCount');
+
+        if (skuColIdx === -1 || lastCountColIdx === -1) {
+            throw new Error(`Required columns 'pa_SKU' or 'pa_LastCount' not found in '${auditSheetName}'.`);
+        }
+
+        const rowIndex = auditData.findIndex((row, index) => {
+            if (index === 0) return false; // Skip header row
+            const sheetSku = String(row[skuColIdx]).trim().toLowerCase();
+            const searchSku = String(sku).trim().toLowerCase();
+            return sheetSku === searchSku;
+        });
+
+        if (rowIndex !== -1) {
+            const sheetRow = rowIndex + 1; // Convert 0-based array index to 1-based sheet row index
+            auditSheet.getRange(sheetRow, lastCountColIdx + 1).setValue(timestamp);
+            LoggerService.info(serviceName, functionName, `Successfully updated pa_LastCount for SKU '${sku}'.`);
+            return { success: true, sku: sku };
+        } else {
+            LoggerService.warn(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Cannot update pa_LastCount.`);
+            return { success: false, sku: sku, message: `SKU '${sku}' not found.` };
+        }
+    } catch (e) {
+        LoggerService.error(serviceName, functionName, `Error updating pa_LastCount for SKU '${sku}': ${e.message}`, e);
+        throw e;
+    }
+  }
+
 
   /**
    * Calculates the total number of products and the total stock quantity at Brurya.
@@ -704,6 +794,7 @@ const InventoryManagementService = (function() {
                 getOpenNegativeInventoryTasksCount: getOpenNegativeInventoryTasksCount,
                 getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
                 getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
-                getComaxInventoryExportCount: getComaxInventoryExportCount
+                getComaxInventoryExportCount: getComaxInventoryExportCount,
+                updateLastCount: updateLastCount
             };
         })();

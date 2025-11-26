@@ -122,7 +122,12 @@ const TaskService = (function() {
       const headers = taskSchema.headers.split(',');
       const taskIdCol = headers.indexOf('st_TaskId');
       const statusCol = headers.indexOf('st_Status');
-      const completedDateCol = headers.indexOf('st_CompletedDate');
+      const doneDateCol = headers.indexOf('st_DoneDate'); // Corrected from st_CompletedDate
+
+      if (taskIdCol === -1) throw new Error("Required column 'st_TaskId' not found in SysTasks sheet.");
+      if (statusCol === -1) throw new Error("Required column 'st_Status' not found in SysTasks sheet.");
+      if (doneDateCol === -1) throw new Error("Required column 'st_DoneDate' not found in SysTasks sheet.");
+
 
       const taskIds = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues().flat();
       const rowIndex = taskIds.findIndex(id => id === taskId);
@@ -134,7 +139,7 @@ const TaskService = (function() {
 
       const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
       sheet.getRange(sheetRow, statusCol + 1).setValue('Done');
-      sheet.getRange(sheetRow, completedDateCol + 1).setValue(new Date());
+      sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
       
       logger.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
       return true;
@@ -145,10 +150,67 @@ const TaskService = (function() {
     }
   }
 
+  /**
+   * Updates the status of a specific task.
+   * @param {string} taskId The UUID of the task to update.
+   * @param {string} newStatus The new status to set for the task (e.g., 'Review', 'In Progress', 'Done').
+   * @returns {boolean} True if the task was found and updated, otherwise false.
+   */
+  function updateTaskStatus(taskId, newStatus) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheetName = 'SysTasks';
+
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) {
+        logger.warn('TaskService', 'updateTaskStatus', `Task sheet '${sheetName}' not found or is empty.`);
+        return false;
+      }
+
+      const headers = taskSchema.headers.split(',');
+      const taskIdCol = headers.indexOf('st_TaskId');
+      const statusCol = headers.indexOf('st_Status');
+      const doneDateCol = headers.indexOf('st_DoneDate'); // Corrected from st_CompletedDate
+
+      if (taskIdCol === -1) throw new Error("Required column 'st_TaskId' not found in SysTasks sheet.");
+      if (statusCol === -1) throw new Error("Required column 'st_Status' not found in SysTasks sheet.");
+      // DoneDate is optional if not setting to 'Done'
+
+      const taskIds = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues().flat();
+      const rowIndex = taskIds.findIndex(id => id === taskId);
+
+      if (rowIndex === -1) {
+        logger.warn('TaskService', 'updateTaskStatus', `Task with ID '${taskId}' not found.`);
+        return false;
+      }
+
+      const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
+      sheet.getRange(sheetRow, statusCol + 1).setValue(newStatus);
+      
+      // If the new status is 'Done' or 'Closed', also set the DoneDate
+      if ((newStatus === 'Done' || newStatus === 'Closed') && doneDateCol !== -1) {
+        sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
+      } else if ((newStatus !== 'Done' && newStatus !== 'Closed') && doneDateCol !== -1) {
+        // If status is changed from a 'Done/Closed' state to active, clear the DoneDate
+        sheet.getRange(sheetRow, doneDateCol + 1).clearContent();
+      }
+      
+      logger.info('TaskService', 'updateTaskStatus', `Task '${taskId}' status updated to '${newStatus}'.`);
+      return true;
+
+    } catch (e) {
+      logger.error('TaskService', 'updateTaskStatus', `Error updating task status for '${taskId}' to '${newStatus}': ${e.message}`, e);
+      return false;
+    }
+  }
+
   return {
     createTask: createTask,
     hasOpenTasks: hasOpenTasks,
-    completeTask: completeTask
+    completeTask: completeTask,
+    updateTaskStatus: updateTaskStatus
   };
 
 })();
+

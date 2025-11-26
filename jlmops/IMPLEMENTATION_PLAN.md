@@ -117,36 +117,35 @@
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
 *   **Resolution:** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
-## Phase 6: Workflow Integrity & UI Orchestration (CURRENT)
+## Phase 6: Workflow Integrity & UI Orchestration (COMPLETED)
 
 **Goal:** To evolve the current UI into a state-aware dashboard that provides visibility and guided control over the system's interdependent workflows. This will be achieved by enhancing the existing UI and backend services, not by redesigning them.
 
-### 6.1. Core Architectural Principle
+### 6.1. Core Architectural Principle (COMPLETED)
 
-The system will formally adopt a **"System-State-Aware Workflow Orchestration"** model. The `OrchestratorService` will serve as the single source of truth for workflow status. The UI will act as a "dumb" but responsive dashboard that reflects the state managed by the backend, disabling or enabling user actions based on that state.
+The system formally adopted a **"System-State-Aware Workflow Orchestration"** model. The `OrchestratorService` serves as the single source of truth for workflow status. The UI acts as a "dumb" but responsive dashboard that reflects the state managed by the backend, disabling or enabling user actions based on that state.
 
-### 6.2. Backend Implementation Plan
+### 6.2. Backend Implementation Plan (COMPLETED)
 
-*   **Job & Dependency Definition (`SysConfig`)**:
-    *   New, non-file-based jobs for each export process (e.g., `export.comax.orders`, `export.web.inventory`) will be defined in `SysConfig`.
-    *   The `depends_on` property will be used to enforce execution order. Specifically, the `Comax Product Import` job will `depend_on` the `Web Product Import` job.
-
-*   **State-Based Job & Task Creation (`OrchestratorService`)**:
-    *   The service's responsibilities will be extended beyond file-based triggers. It will programmatically create tasks based on system state.
-    *   A **Task** is a simple flag indicating work is ready; it does not store data and does not need to be updated if already open.
-
+*   **Job & Dependency Definition (`SysConfig`)**: New, non-file-based jobs for each export process (`export.comax.orders`, `export.web.inventory`) were defined in `SysConfig`. The `depends_on` property is used to enforce execution order. Specifically, the `Comax Product Import` job depends on the `Web Product Import` job.
+*   **State-Based Job & Task Creation (`OrchestratorService`)**: The service's responsibilities were extended beyond file-based triggers. It programmatically creates tasks based on system state. A Task is a simple flag indicating work is ready; it does not store data and does not need to be updated if already open.
 *   **New Trigger Logic (`OrchestratorService`)**:
-    *   **Comax Order Export Trigger:** Upon completion of a `Web Order Import` job, the orchestrator will check if a "Comax Order Export" task is open. If not, it will create one.
-    *   **Web Inventory Export Trigger:** Upon completion of *either* a `Web Product Import` or a `Comax Product Import` job, the orchestrator will perform a "paired check." It will verify that its counterpart job has also recently completed. If this condition is met, it will then check if a "Web Inventory Export" task is open and create one if it is not.
+    *   **Comax Order Export Trigger:** Upon completion of a `Web Order Import` job, the orchestrator checks if a "Comax Order Export" task is open. If not, it creates one.
+    *   **Web Inventory Export Trigger:** Upon completion of *either* a `Web Product Import` or a `Comax Product Import` job, the orchestrator performs a "paired check." It verifies that its counterpart job has also recently completed. If this condition is met, it then checks if a "Web Inventory Export" task is open and creates one if it is not.
 
-### 6.3. Frontend/UI Implementation Plan
+### 6.3. Frontend/UI Implementation Plan (COMPLETED)
 
-The existing dashboard widgets will be enhanced to:
+The existing dashboard widgets were enhanced to:
 
-*   **Display Workflow Status:** Each widget associated with a major workflow (Orders, Inventory) will include a status area that displays the real-time state from the `OrchestratorService` (e.g., "Status: Ready to Export 15 Orders to Comax," "Status: Waiting for Web Product Import").
-*   **Implement Action Gating:** UI controls (buttons, links) for initiating actions will be dynamically enabled or disabled based on the workflow state. A user will not be able to click "Export to Comax" if the system is not in a `ReadyForComaxExport` state.
+*   **Display Workflow Status:** Each widget associated with a major workflow (Orders, Inventory) includes a status area that displays the real-time state from the `OrchestratorService` (e.g., "Status: Ready to Export 15 Orders to Comax," "Status: Waiting for Web Product Import").
+*   **Implement Action Gating:** UI controls (buttons, links) for initiating actions are dynamically enabled or disabled based on the workflow state. A user cannot click "Export to Comax" if the system is not in a `ReadyForComaxExport` state.
 *   **Implement State-Aware Widget Workflows (COMPLETED):**
-    *   **Summary:** Refactored widget data supply and implemented state-aware UI controls for Comax Order Export and Web Inventory Export workflows, including dependency messaging and fixing data supply for the Inventory widget.
+    *   **Inventory Sync Strategy:** Implemented the "Daily Sync" workflow in the System Health Widget as per `INVENTORY_SYNC_STRATEGY.md`.
+    *   **Features:**
+        *   **Daily Sync Checklist:** A sequential, 6-step checklist (Invoices, Translations, Products, Orders, Comax Import, Web Export) guides the daily process.
+        *   **Safety Locks:** Implemented Red/Yellow/Green logic to block export steps if dependencies (e.g., unexported orders, stale product data) are not met.
+        *   **UI Gating:** The "Web Export" button is disabled until the entire sync cycle is verified complete.
+        *   **Performance:** Optimized backend status checks to a single read operation.
 
 ## Phase 7: Future Implementation Priorities (PLANNED)
 

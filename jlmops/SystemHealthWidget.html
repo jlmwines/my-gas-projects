@@ -22,9 +22,10 @@
       indicator.style.color = data.isHealthy ? 'green' : 'red';
     }
 
-    let finalHtml = '<h5>System Health</h5>';
+    let finalHtml = '<h5>System</h5>'; // Change card title
+    finalHtml += '<hr class="my-2">'; // Divider after title
 
-    // 1. Alerts Area
+    // Place healthy notice, last validation, and validate now link here
     if (data.isHealthy) {
       finalHtml += '<p class="text-success"><strong>Healthy</strong></p>';
     } else {
@@ -32,25 +33,71 @@
         finalHtml += `<p class="text-danger mb-1">${alert}</p>`;
       });
     }
-    finalHtml += '<hr class="my-2">';
 
-    // 2. Validation Status
     const lastValidationColor = data.isValidationRecent ? 'text-success' : 'text-danger';
     finalHtml += `<p class="${lastValidationColor} mb-2" style="font-size: 0.9rem;">Last Validation: ${data.lastValidationTimestamp}</p>`;
+    finalHtml += `<a href="#" onclick="runValidation(); return false;" style="font-size: 0.9rem;">Validate Now</a>`;
+    finalHtml += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
+    finalHtml += '<hr class="my-2">'; // Divider after validation section
+
+    // --- New: Daily Sync Checklist ---
+    if (data.inventoryCycle && data.inventoryCycle.length > 0) {
+      finalHtml += '<h6>Daily Sync</h6>'; // Change section title
+      finalHtml += '<ul class="list-group list-group-flush mb-3" style="font-size: 0.85rem;">';
+      
+      data.inventoryCycle.forEach(step => {
+        let icon = '';
+        let colorClass = '';
+
+        switch (step.status) {
+          case 'DONE':
+            icon = '✅';
+            colorClass = 'text-success';
+            break;
+          case 'WARNING':
+            icon = '⚠️';
+            colorClass = 'text-warning';
+            break;
+          case 'PENDING':
+            icon = '⏳';
+            colorClass = 'text-info';
+            break;
+          case 'BLOCKED':
+          case 'ERROR':
+            icon = '❌';
+            colorClass = 'text-danger';
+            break;
+          case 'READY': // New status for step 6
+            icon = '➡️'; // Or any other suitable icon
+            colorClass = 'text-primary';
+            break;
+          default:
+            icon = '❓';
+            colorClass = 'text-muted';
+        }
+
+        finalHtml += `<li class="list-group-item d-flex justify-content-between align-items-start p-2 border-0">`; // Remove border
+        finalHtml += `  <div class="me-2">${icon}</div>`;
+        finalHtml += `  <div class="flex-grow-1">`;
+        finalHtml += `     <div class="fw-bold ${colorClass}">${step.step}. ${step.name}</div>`;
+        finalHtml += `     <div class="text-muted small">${step.message}</div>`;
+        finalHtml += `  </div>`;
+        finalHtml += `  ${step.timestamp ? `<div class="small text-muted text-end" style="font-size: 0.75rem;">${step.timestamp}</div>` : ''}`;
+        finalHtml += `</li>`;
+      });
+      finalHtml += '</ul>';
+      finalHtml += '<hr class="my-2">'; // Divider below the checklist
+    }
+
+    // This section (Confirmed Critical Validations) should remain in its original place relative to validation.
+    // It's part of the general system health status, not specific to the daily sync.
     finalHtml += `<div id="system-health-validation-results" class="mt-2" style="font-size: 0.8rem;"></div>`;
-    
-    // 3. Confirmed Critical Validations
     if (data.passedValidations && data.passedValidations.length > 0) {
       data.passedValidations.forEach(confirmation => {
         finalHtml += `<p class="mb-1" style="font-size: 0.8rem;">${confirmation}</p>`;
       });
     }
 
-    // 4. Action Link
-    finalHtml += '<hr class="my-2">';
-    finalHtml += `<a href="#" onclick="runValidation(); return false;" style="font-size: 0.9rem;">Validate Now</a>`;
-    finalHtml += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
-    
     widget.innerHTML = finalHtml;
   }
 

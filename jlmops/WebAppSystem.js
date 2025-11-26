@@ -65,6 +65,31 @@ function WebAppSystem_getSystemHealthDashboardData() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const twentyFourHoursAgo = new Date(new Date().getTime() - (24 * 60 * 60 * 1000));
+    let recentErrors = 0;
+    let lastMasterValidation = 'N/A';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    // Helper to check if a date is today
+    const isToday = (date) => {
+      if (!date) return false;
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === today.getTime();
+    };
+
+    // --- Job Queue Data - Read Once (Moved for optimization) ---
+    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysJobQueue);
+    if (!jobQueueSheet) throw new Error(`Sheet '${sheetNames.SysJobQueue}' not found.`);
+
+    const jobData = jobQueueSheet.getLastRow() > 1 ? jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueSheet.getLastColumn()).getValues() : [];
+    const jobHeaders = jobQueueSheet.getRange(1, 1, 1, jobQueueSheet.getLastColumn()).getValues()[0];
+    
+    const jobTypeCol = jobHeaders.indexOf('job_type');
+    const jobStatusCol = jobHeaders.indexOf('status');
+    const jobProcessedCol = jobHeaders.indexOf('processed_timestamp');
 
     // --- Dynamically determine Critical Validations and their confirmation texts from task definitions ---
     const criticalTaskDefinitions = Object.keys(allConfig)
@@ -92,6 +117,8 @@ function WebAppSystem_getSystemHealthDashboardData() {
     const alertsBySuite = new Map();
     const openHighPriorityTaskTypes = new Set();
 
+    let lastWebExportConfirmation = null;
+
     if (taskSheet.getLastRow() > 1) {
       const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
       const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
@@ -101,11 +128,22 @@ function WebAppSystem_getSystemHealthDashboardData() {
         const status = row[taskHeaderMap['st_Status']];
         const priority = row[taskHeaderMap['st_Priority']];
         const typeId = row[taskHeaderMap['st_TaskTypeId']];
+        const doneDate = row[taskHeaderMap['st_DoneDate']];
 
         if (status !== 'Done' && status !== 'Cancelled' && priority === 'High' && criticalTaskTypes.has(typeId)) {
           openHighPriorityTaskTypes.add(typeId);
           const suite = taskTypeToSuiteMap.get(typeId) || 'General';
           alertsBySuite.set(suite, (alertsBySuite.get(suite) || 0) + 1);
+        }
+
+        // Check for completed Web Inventory Export tasks
+        if (typeId === 'task.confirmation.web_inventory_export' && (status === 'Done' || status === 'Completed')) {
+            const doneTs = doneDate ? new Date(doneDate) : null;
+            if (doneTs && isToday(doneTs)) {
+                if (!lastWebExportConfirmation || doneTs > lastWebExportConfirmation) {
+                    lastWebExportConfirmation = doneTs;
+                }
+            }
         }
       });
     }
@@ -116,23 +154,14 @@ function WebAppSystem_getSystemHealthDashboardData() {
     });
 
     // --- Analyze SysJobQueue for Last Validation Timestamp ---
-    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysJobQueue);
-    if (!jobQueueSheet) throw new Error(`Sheet '${sheetNames.SysJobQueue}' not found.`);
+    // logSpreadsheetId is already declared at the top.
+    // jobQueueSheet is already declared at the top.
+    // jobData, jobHeaders etc. are already declared at the top.
 
-    let lastMasterValidation = 'N/A';
-    let recentErrors = 0; // Still need to check SysLog for recent errors
-
-    const jobQueueData = jobQueueSheet.getLastRow() > 1 ? jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueSheet.getLastColumn()).getValues() : [];
-    const jobQueueHeaders = jobQueueSheet.getRange(1, 1, 1, jobQueueSheet.getLastColumn()).getValues()[0];
-    const jobTypeCol = jobQueueHeaders.indexOf('job_type');
-    const jobStatusCol = jobQueueHeaders.indexOf('status');
-    const processedTimestampCol = jobQueueHeaders.indexOf('processed_timestamp');
-
-    for (let i = jobQueueData.length - 1; i >= 0; i--) {
-      const row = jobQueueData[i];
+    for (let i = jobData.length - 1; i >= 0; i--) {
+      const row = jobData[i];
       if (row[jobTypeCol] === 'manual.validation.master' && row[jobStatusCol] === 'COMPLETED') {
-        lastMasterValidation = new Date(row[processedTimestampCol]);
+        lastMasterValidation = new Date(row[jobProcessedCol]);
         break;
       }
     }
@@ -175,12 +204,230 @@ function WebAppSystem_getSystemHealthDashboardData() {
     const isValidationRecent = lastMasterValidation !== 'N/A' && lastMasterValidation > twentyFourHoursAgo;
     const isHealthy = alerts.length === 0;
 
+
+    // --- Inventory Cycle Checklist Logic (New) ---
+    const inventoryCycle = [];
+    // today and isToday are defined at the top.
+
+    // Step 1: Invoices (Automated Count)
+    const invoiceCount = OrchestratorService.getInvoiceFileCount();
+    let invoiceStatus = 'DONE';
+    let invoiceMessage = 'No invoices waiting.';
+
+    if (invoiceCount > 0) {
+      invoiceStatus = 'WARNING';
+      invoiceMessage = `${invoiceCount} invoices waiting to be entered.`;
+    }
+
+    inventoryCycle.push({
+      step: 1,
+      name: 'Comax Invoice Entry',
+      status: invoiceStatus,
+      message: invoiceMessage,
+      timestamp: null
+    });
+
+    // --- Optimize: Read Job Queue Once ---
+    // Variables (logSpreadsheetId, jobQueueSheet, jobData, jobHeaders, jobTypeCol, jobStatusCol, jobProcessedCol)
+    // are now declared at the top of the function.
+
+    // Helper to parse job data from the bulk read
+    const getJobStatusSummary = (targetType) => {
+      let lastSuccess = null;
+      let isRunning = false;
+
+      for (const row of jobData) {
+        const type = row[jobTypeCol];
+        const status = row[jobStatusCol];
+        
+        if (type === targetType) {
+          if (status === 'PENDING' || status === 'PROCESSING') {
+            isRunning = true;
+          } else if (status === 'COMPLETED') {
+            const ts = new Date(row[jobProcessedCol]);
+            if (!isNaN(ts.getTime())) {
+              if (!lastSuccess || ts > lastSuccess) {
+                lastSuccess = ts;
+              }
+            }
+          }
+        }
+      }
+      return { lastSuccess, isRunning };
+    };
+
+    // Step 2: Web Translations
+    const transJobType = 'import.drive.web_translations_he';
+    const transData = getJobStatusSummary(transJobType);
+    const lastTransImport = transData.lastSuccess;
+    const isTransRunning = transData.isRunning;
+    
+    let transStatus = 'WARNING';
+    let transMessage = 'Import required.';
+    if (isToday(lastTransImport)) {
+      transStatus = 'DONE';
+      transMessage = 'Completed today.';
+    } else if (isTransRunning) {
+      transStatus = 'PENDING';
+      transMessage = 'Job is running...';
+    }
+
+    inventoryCycle.push({
+      step: 2,
+      name: 'Web Translations Import',
+      status: transStatus,
+      message: transMessage,
+      timestamp: lastTransImport ? Utilities.formatDate(lastTransImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+    });
+
+    // Step 3: Web Products
+    const webProdJobType = 'import.drive.web_products_en';
+    const webProdData = getJobStatusSummary(webProdJobType);
+    const lastWebProdImport = webProdData.lastSuccess;
+    const isWebProdRunning = webProdData.isRunning;
+
+    let webProdStatus = 'WARNING';
+    let webProdMessage = 'Import required.';
+
+    if (transStatus !== 'DONE' && transStatus !== 'PENDING') {
+        // Blocked by Step 2
+        webProdStatus = 'BLOCKED';
+        webProdMessage = 'Waiting for Translations.';
+    } else if (isToday(lastWebProdImport)) {
+        webProdStatus = 'DONE';
+        webProdMessage = 'Completed today.';
+    } else if (isWebProdRunning) {
+        webProdStatus = 'PENDING';
+        webProdMessage = 'Job is running...';
+    }
+
+    inventoryCycle.push({
+      step: 3,
+      name: 'Web Products Import',
+      status: webProdStatus,
+      message: webProdMessage,
+      timestamp: lastWebProdImport ? Utilities.formatDate(lastWebProdImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+    });
+
+    // Step 4: Order Synchronization
+    const webOrderJobType = 'import.drive.web_orders';
+    const webOrderData = getJobStatusSummary(webOrderJobType);
+    const lastWebOrderImport = webOrderData.lastSuccess;
+
+    // Get unexported order count
+    const orderService = new OrderService(ProductService);
+    const unexportedCount = orderService.getComaxExportOrderCount();
+    
+    let orderSyncStatus = 'DONE';
+    let orderSyncMessage = 'All orders exported.';
+    
+    if (unexportedCount > 0) {
+        orderSyncStatus = 'ERROR'; // Red Lock
+        orderSyncMessage = `${unexportedCount} unexported orders. Export required.`;
+    } else if (!isToday(lastWebOrderImport)) {
+        // Maybe warning if import is stale? For now, trust the count.
+        // orderSyncStatus = 'WARNING';
+        // orderSyncMessage = 'Order import might be stale.';
+    }
+
+    inventoryCycle.push({
+      step: 4,
+      name: 'Order Synchronization',
+      status: orderSyncStatus,
+      message: orderSyncMessage,
+      timestamp: lastWebOrderImport ? Utilities.formatDate(lastWebOrderImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null,
+      data: { unexportedCount: unexportedCount }
+    });
+
+    // Step 5: Comax Product Import & Final Safety Lock
+    const comaxProdJobType = 'import.drive.comax_products';
+    const comaxProdData = getJobStatusSummary(comaxProdJobType);
+    const lastComaxImport = comaxProdData.lastSuccess;
+    const isComaxRunning = comaxProdData.isRunning;
+    const lastOrderExport = orderService.getLastComaxOrderExportTimestamp();
+
+    let comaxStatus = 'WARNING';
+    let comaxMessage = 'Import required.';
+
+    if (webProdStatus !== 'DONE' && webProdStatus !== 'PENDING') {
+        comaxStatus = 'BLOCKED';
+        comaxMessage = 'Waiting for Web Products.';
+    } else if (orderSyncStatus === 'ERROR') {
+        comaxStatus = 'BLOCKED';
+        comaxMessage = 'Blocked by Unexported Orders.';
+    } else if (isToday(lastComaxImport)) {
+        // Check Yellow Lock: Comax Import must be NEWER than Last Order Export
+        if (lastOrderExport && lastComaxImport <= lastOrderExport) {
+             comaxStatus = 'WARNING'; // Yellow Lock
+             comaxMessage = 'Stale: Import newer file (post-order export).';
+        } else {
+             comaxStatus = 'DONE';
+             comaxMessage = 'Completed today & Fresh.';
+        }
+    } else if (isComaxRunning) {
+        comaxStatus = 'PENDING';
+        comaxMessage = 'Job is running...';
+    }
+
+    inventoryCycle.push({
+      step: 5,
+      name: 'Comax Product Import',
+      status: comaxStatus,
+      message: comaxMessage,
+      timestamp: lastComaxImport ? Utilities.formatDate(lastComaxImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+    });
+    
+    // Step 6: Web Inventory Export (Final Goal)
+    // Check if a confirmation task was completed TODAY
+    // Since tasks don't have a 'completed_timestamp' easily accessible here without reading SysTasks again or checking `st_DoneDate`
+    // We will infer it from `canWebInventoryExport` logic or check for an open task.
+    
+    let webExportStatus = 'BLOCKED';
+    let webExportMessage = 'Complete previous steps.';
+    let webExportTimestamp = null; // We don't track the export timestamp easily here yet, unless we add a job type for it.
+
+    // Check for open confirmation task
+    const confirmTaskType = 'task.confirmation.web_inventory_export';
+    const confirmTasks = WebAppTasks.getOpenTasksByTypeId(confirmTaskType);
+    
+    // Check if the previous steps are all DONE
+    const previousStepsDone = inventoryCycle.every(s => s.status === 'DONE');
+
+    if (lastWebExportConfirmation) {
+        webExportStatus = 'DONE';
+        webExportMessage = 'Completed today.';
+        webExportTimestamp = Utilities.formatDate(lastWebExportConfirmation, Session.getScriptTimeZone(), 'MM/dd HH:mm');
+    } else if (confirmTasks.length > 0) {
+        webExportStatus = 'PENDING';
+        webExportMessage = 'Waiting for confirmation.';
+    } else if (previousStepsDone) {
+        // If all steps are done and no confirmation is pending, we are ready to export OR already exported.
+        // Ideally we would check the last time the export function was run.
+        // For now, if everything is green, we show READY.
+        webExportStatus = 'READY';
+        webExportMessage = 'Ready to export.';
+    }
+
+    inventoryCycle.push({
+      step: 6,
+      name: 'Web Inventory Export',
+      status: webExportStatus,
+      message: webExportMessage,
+      timestamp: webExportTimestamp
+    });
+
+    // Final Export Ready Status
+    const isInventoryExportReady = previousStepsDone; // Simple check: are 1-5 done?
+
+
     return {
       isHealthy,
       alerts,
-      lastValidationTimestamp: lastMasterValidation === 'N/A' ? 'N/A' : lastMasterValidation.toLocaleString(),
+      lastValidationTimestamp: lastMasterValidation === 'N/A' ? 'N/A' : Utilities.formatDate(lastMasterValidation, Session.getScriptTimeZone(), 'MM/dd HH:mm'),
       isValidationRecent,
-      passedValidations
+      passedValidations,
+      inventoryCycle, // Add the cycle data
+      isInventoryExportReady
     };
 
   } catch (e) {
