@@ -5,7 +5,7 @@
   <style>
     /* Minimal custom styles, relying on Bootstrap from Dashboard.html */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-container { background: white; width: 90%; max-width: 900px; height: 90%; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-container { background: white; width: 90%; max-width: 900px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
     .modal-title { font-size: 18px; font-weight: 600; }
     .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
@@ -53,9 +53,16 @@
   <!-- Product Editor Modal -->
   <div class="modal-overlay" id="editor-modal">
     <div class="modal-container">
-      <div class="modal-header">
-        <div class="modal-title">Edit Product Details <span id="modal-sku" style="font-weight:normal; color:#666; margin-left:10px; font-size:14px;"></span></div>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div class="modal-header flex-column align-items-start">
+        <div class="d-flex justify-content-between w-100">
+            <div class="modal-title">Edit Product Details</div>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modal-subheader" class="text-muted small mt-2 w-100 d-flex justify-content-between">
+            <span id="header-sku"></span>
+            <span id="header-name-en"></span>
+            <span id="header-name-he" class="hebrew-text"></span>
+        </div>
       </div>
       
       <div class="form-body">
@@ -70,21 +77,21 @@
         <div id="tab-desc" class="tab-content active">
           <div class="comparison-grid">
             <div>
-              <div class="col-header">Current (Master)</div>
-              <div class="form-group"><label>Name (En)</label><div class="p-2 bg-light border rounded" id="cur-NameEn"></div></div>
-              <div class="form-group"><label>Name (He)</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-NameHe"></div></div>
-              <div class="form-group"><label>Short Desc (En)</label><div class="p-2 bg-light border rounded" id="cur-ShortDescrEn"></div></div>
-              <div class="form-group"><label>Description (En)</label><div class="p-2 bg-light border rounded" id="cur-DescriptionEn"></div></div>
+              <div class="col-header">Current</div>
+              <div class="form-group"><label>Hebrew Short Description</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-ShortDescrHe"></div></div>
+              <div class="form-group"><label>Hebrew Description</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-DescriptionHe"></div></div>
+              <div class="form-group"><label>English Short Description</label><div class="p-2 bg-light border rounded" id="cur-ShortDescrEn"></div></div>
+              <div class="form-group"><label>English Description</label><div class="p-2 bg-light border rounded" id="cur-DescriptionEn"></div></div>
             </div>
             <div>
-              <div class="col-header">Edit (Staging) 
-                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('desc')">Copy Current</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('desc')">Clear</button>
+              <div class="col-header">Edit 
+                <button class="btn btn-sm border ml-2" onclick="copyToStaging('desc')">Fill</button>
+                <button class="btn btn-sm border ml-1" onclick="clearToStaging('desc')">Clear</button>
               </div>
-              <div class="form-group"><label>Name (En)</label><input type="text" class="form-control" id="edit-NameEn"></div>
-              <div class="form-group"><label>Name (He)</label><input type="text" class="form-control hebrew-text" id="edit-NameHe"></div>
-              <div class="form-group"><label>Short Desc (En)</label><textarea class="form-control" id="edit-ShortDescrEn"></textarea></div>
-              <div class="form-group"><label>Description (En)</label><textarea class="form-control" id="edit-DescriptionEn"></textarea></div>
+              <div class="form-group"><label>Hebrew Short Description</label><textarea class="form-control hebrew-text" id="edit-ShortDescrHe"></textarea></div>
+              <div class="form-group"><label>Hebrew Description</label><textarea class="form-control hebrew-text" id="edit-DescriptionHe"></textarea></div>
+              <div class="form-group"><label>English Short Description</label><textarea class="form-control" id="edit-ShortDescrEn"></textarea></div>
+              <div class="form-group"><label>English Description</label><textarea class="form-control" id="edit-DescriptionEn"></textarea></div>
             </div>
           </div>
         </div>
@@ -148,8 +155,8 @@
       
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="submitChanges()">Submit for Review</button>
+        <button class="btn border" onclick="closeModal()">Cancel</button>
+        <button class="btn border" onclick="submitChanges()">Submit for Review</button>
       </div>
     </div>
   </div>
@@ -157,6 +164,7 @@
   <script>
     let currentTaskId = null;
     let currentSku = null;
+    let currentMasterData = {};
 
     function refreshView() {
       loadWidgetData();
@@ -166,7 +174,12 @@
     function loadWidgetData() {
       google.script.run.withSuccessHandler(data => {
         if (data.error) return console.error(data.error);
-        document.getElementById('stat-mismatch').textContent = data.data['vintage_mismatch_tasks'] || 0;
+        const widget = document.getElementById('stat-mismatch');
+        if (widget) {
+            widget.textContent = data.data['vintage_mismatch_tasks'] || 0;
+        } else {
+            console.warn('Widget element "stat-mismatch" not found.');
+        }
       }).WebAppProducts_getProductsWidgetData();
     }
 
@@ -184,6 +197,7 @@
         
         tasks.forEach(task => {
           try {
+              console.log('Processing task:', task.taskId); // Log entry
               const tr = document.createElement('tr');
               
               tr.innerHTML = `
@@ -211,12 +225,30 @@
         else if(el.classList.contains('p-2')) el.textContent = '';
       });
 
-      google.script.run.withSuccessHandler(data => {
+      google.script.run
+      .withSuccessHandler(data => {
+         console.log('Editor data received:', data);
          currentSku = data.sku;
-         document.getElementById('modal-sku').textContent = `(SKU: ${data.sku})`;
-         populateEditor(data.masterData, data.stagingData, data.comaxData);
-         document.getElementById('modal-status').textContent = '';
-      }).WebAppProducts_loadProductEditorData(taskId);
+         currentMasterData = data.masterData || {}; // Store master data
+         
+         // Populate Subheader
+         document.getElementById('header-sku').textContent = `SKU: ${data.sku}`;
+         document.getElementById('header-name-en').textContent = currentMasterData.wdm_NameEn || '';
+         document.getElementById('header-name-he').textContent = currentMasterData.wdm_NameHe || '';
+
+         try {
+             populateEditor(data.masterData, data.stagingData, data.comaxData);
+             document.getElementById('modal-status').textContent = '';
+         } catch (e) {
+             console.error('Error populating editor:', e);
+             document.getElementById('modal-status').textContent = 'Error displaying data.';
+         }
+      })
+      .withFailureHandler(err => {
+          console.error('Failed to load editor data:', err);
+          document.getElementById('modal-status').textContent = 'Error: ' + err.message;
+      })
+      .WebAppProducts_loadProductEditorData(taskId);
     }
 
     function populateEditor(master, staging, comax) {
@@ -224,10 +256,11 @@
       const s = staging || {};
       const c = comax || {};
 
-      setVal('cur-NameEn', m.wdm_NameEn);
-      setVal('cur-NameHe', m.wdm_NameHe);
+      setVal('cur-ShortDescrHe', m.wdm_ShortDescrHe);
+      setVal('cur-DescriptionHe', m.wdm_DescriptionHe);
       setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
       setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
+      
       setVal('cur-Region', m.wdm_Region);
       setVal('cur-Intensity', m.wdm_Intensity);
       setVal('cur-Complexity', m.wdm_Complexity);
@@ -237,10 +270,11 @@
       setVal('cur-CmxDivision', c.cpm_Division);
       setVal('cur-CmxGroup', c.cpm_Group);
 
-      setInp('edit-NameEn', s.wdm_NameEn || m.wdm_NameEn);
-      setInp('edit-NameHe', s.wdm_NameHe || m.wdm_NameHe);
+      setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || m.wdm_ShortDescrHe);
+      setInp('edit-DescriptionHe', s.wdm_DescriptionHe || m.wdm_DescriptionHe);
       setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || m.wdm_ShortDescrEn);
       setInp('edit-DescriptionEn', s.wdm_DescriptionEn || m.wdm_DescriptionEn);
+      
       setInp('edit-Region', s.wdm_Region || m.wdm_Region);
       setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
       setInp('edit-Complexity', s.wdm_Complexity || m.wdm_Complexity);
@@ -264,8 +298,8 @@
     
     function clearToStaging(section) {
         if(section === 'desc') {
-            document.getElementById('edit-NameEn').value = '';
-            document.getElementById('edit-NameHe').value = '';
+            document.getElementById('edit-ShortDescrHe').value = '';
+            document.getElementById('edit-DescriptionHe').value = '';
             document.getElementById('edit-ShortDescrEn').value = '';
             document.getElementById('edit-DescriptionEn').value = '';
         } else if (section === 'specs') {
@@ -278,7 +312,7 @@
     }
 
     function updatePreview() {
-        const name = document.getElementById('edit-NameEn').value;
+        const name = currentMasterData.wdm_NameEn || '';
         const desc = document.getElementById('edit-DescriptionEn').value;
         document.getElementById('preview-en').textContent = `${name}\n\n${desc}`;
     }
@@ -289,8 +323,10 @@
 
     function submitChanges() {
       const formData = {
-        wdm_NameEn: document.getElementById('edit-NameEn').value,
-        wdm_NameHe: document.getElementById('edit-NameHe').value,
+        wdm_NameEn: currentMasterData.wdm_NameEn,
+        wdm_NameHe: currentMasterData.wdm_NameHe,
+        wdm_ShortDescrHe: document.getElementById('edit-ShortDescrHe').value,
+        wdm_DescriptionHe: document.getElementById('edit-DescriptionHe').value,
         wdm_ShortDescrEn: document.getElementById('edit-ShortDescrEn').value,
         wdm_DescriptionEn: document.getElementById('edit-DescriptionEn').value,
         wdm_Region: document.getElementById('edit-Region').value,

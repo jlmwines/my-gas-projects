@@ -75,6 +75,21 @@
         ""
     ],
     [
+        "schema.data.WebDetS",
+        "Schema for Web Details Staging sheet, mirroring WebDetM with a task ID.",
+        "stable",
+        "headers",
+        "wdm_WebIdEn,wdm_SKU,wdm_NameEn,wdm_NameHe,wdm_ShortDescrEn,wdm_ShortDescrHe,wdm_DescriptionEn,wdm_DescriptionHe,wdm_Region,wdm_Intensity,wdm_Complexity,wdm_Acidity,wdm_Decant,wdm_PairHarMild,wdm_PairHarRich,wdm_PairHarIntense,wdm_PairHarSweet,wdm_PairConMild,wdm_PairConRich,wdm_PairConIntense,wdm_PairConSweet,wdm_GrapeG1,wdm_GrapeG2,wdm_GrapeG3,wdm_GrapeG4,wdm_GrapeG5,wdm_KashrutK1,wdm_KashrutK2,wdm_KashrutK3,wdm_KashrutK4,wdm_KashrutK5,wdm_HeterMechira,wdm_IsMevushal,wdm_IsSoldIndividually,wds_TaskId",
+        "key_column",
+        "wdm_WebIdEn",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "schema.data.WebProdS_EN",
         "Schema for Web Products Staging sheet (EN).",
         "stable",

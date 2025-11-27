@@ -321,6 +321,37 @@ function createWebDetMHeaders() {
     }
 }
 
+function createWebDetSHeaders() {
+    const functionName = 'createWebDetSHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebDetS';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+        console.log(`Headers for ${sheetName} have been synchronized.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
 function createCmxProdMHeaders() {
     const functionName = 'createCmxProdMHeaders';
     try {
@@ -617,6 +648,7 @@ function createJlmopsSystemSheets() {
     createSysPackingCacheHeaders();
     createOrderLogArchiveHeaders();
     createWebDetMHeaders();
+    createWebDetSHeaders();
     createCmxProdMHeaders();
     createWebProdMHeaders();
     createWebProdSEnHeaders();

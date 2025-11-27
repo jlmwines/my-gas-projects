@@ -335,7 +335,7 @@ map.web.order_columns,Maps WooCommerce CSV headers to internal field names for s
 map.web.order_columns,Maps WooCommerce CSV headers to internal field names for staging.,stable,Product Item 24 Quantity,wos_Product_Item_24_Quantity,,,,,,,,
 map.web.order_columns,Maps WooCommerce CSV headers to internal field names for staging.,stable,Product Item 24 Total,wos_Product_Item_24_Total,,,,,,,,
 map.web.order_columns,Maps WooCommerce CSV headers to internal field names for staging.,stable,Product Item 24 Subtotal,wos_Product_Item_24_Subtotal,,,,,,,,
-map.web.translation_columns,Maps wehe.csv headers to internal field names for staging.,stable,id,wxs_WebIdHe,,,,,,,,
+map.web.translation_columns,Maps wehe.csv headers to internal field names for staging.,stable,ID,wxs_WebIdHe,,,,,,,,
 map.web.translation_columns,Maps wehe.csv headers to internal field names for staging.,stable,post_title,wxs_NameHe,,,,,,,,
 map.web.translation_columns,Maps wehe.csv headers to internal field names for staging.,stable,wpml:original_product_id,wxs_WebIdEn,,,,,,,,
 map.web.translation_columns,Maps wehe.csv headers to internal field names for staging.,stable,sku,wxs_SKU,,,,,,,,

@@ -1488,7 +1488,7 @@
         "map.web.translation_columns",
         "Maps wehe.csv headers to internal field names for staging.",
         "stable",
-        "id",
+        "ID",
         "wxs_WebIdHe",
         "",
         "",

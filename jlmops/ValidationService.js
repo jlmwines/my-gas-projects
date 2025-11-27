@@ -225,6 +225,19 @@ const ValidationService = {
       for (const [key, rowB] of mapB.entries()) {
           if (mapA.has(key)) {
               const rowA = mapA.get(key);
+
+              // --- New Filter Logic ---
+              if (rule.source_filter) {
+                  const [filterKey, filterValue] = rule.source_filter.split(',');
+                  // Check filter on Sheet A (Master)
+                  if (rowA.hasOwnProperty(filterKey) && String(rowA[filterKey]) !== String(filterValue)) {
+                      continue; // Skip this row
+                  }
+                  // Check filter on Sheet B (Staging) if not found in A (fallback or specific logic)
+                  // For comparison, we generally filter on the "Source of Truth" or Master record context.
+                  // If needed, we could check rowB as well, but usually Master flag dictates "is this relevant".
+              }
+              // ------------------------
   
               let valueA = String(rowA[fieldA] || '').trim();
               let valueB = String(rowB[fieldB] || '').trim();

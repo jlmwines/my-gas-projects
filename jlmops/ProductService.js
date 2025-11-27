@@ -621,58 +621,97 @@ const ProductService = (function() {
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
       
-      const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
-      const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
-      const comaxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      LoggerService.info('ProductService', 'getProductDetails', `Fetching details for SKU ${sku} using in-memory search...`);
 
-      if (!masterSheet || !stagingSheet || !comaxSheet) {
-        throw new Error('Required product detail sheets (WebDetM, WebDetS, or CmxProdM) not found.');
-      }
+      const sheetNames = {
+        master: allConfig['system.sheet_names'].WebDetM,
+        staging: allConfig['system.sheet_names'].WebDetS,
+        comax: allConfig['system.sheet_names'].CmxProdM,
+        webProd: allConfig['system.sheet_names'].WebProdM
+      };
 
-      // Helper to fetch row object
-      const getRowObject = (sheet, schemaName, keyCol) => {
-        const schema = allConfig[schemaName];
-        if (!schema) return null;
-        const headers = schema.headers.split(',');
-        // Note: _getSheetDataAsMap uses a specific column as key.
-        // For CmxProdM, the key is cpm_CmxId, but we need to find by SKU.
-        // So we can't use _getSheetDataAsMap efficiently if looking up by SKU unless SKU is the key.
-        // CmxProdM key is cpm_CmxId. But let's use a helper that builds map by SKU if needed.
+      const schemas = {
+        master: allConfig['schema.data.WebDetM'],
+        staging: allConfig['schema.data.WebDetS'],
+        comax: allConfig['schema.data.CmxProdM'],
+        webProd: allConfig['schema.data.WebProdM']
+      };
+
+      // Helper to fetch row object using getValues (Legacy Method)
+      const getRowObject = (sheetName, schema, keyCol) => {
+        LoggerService.info('ProductService', 'getProductDetails', `Fetching data for sheet: ${sheetName}`);
+        if (!sheetName || !schema) {
+            LoggerService.warn('ProductService', 'getProductDetails', `Missing sheetName or schema for ${sheetName}`);
+            return null;
+        }
         
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+             LoggerService.warn('ProductService', 'getProductDetails', `Sheet '${sheetName}' not found.`);
+             return null;
+        }
+        
+        // Optimization: Check if sheet is empty
+        if (sheet.getLastRow() < 2) {
+             LoggerService.info('ProductService', 'getProductDetails', `Sheet '${sheetName}' is empty.`);
+             return null;
+        }
+
+        const headers = schema.headers.split(',');
+        
+        // Get all data values (Legacy approach)
         const data = sheet.getDataRange().getValues();
-        const sheetHeaders = data[0]; // Assuming row 1 is headers
+        LoggerService.info('ProductService', 'getProductDetails', `Loaded ${data.length} rows from ${sheetName}`);
+
+        const sheetHeaders = data[0];
         const keyIndex = sheetHeaders.indexOf(keyCol);
         
-        if (keyIndex === -1) return null;
-        
-        // Simple linear search since we are looking for 1 item. 
-        // Optimization: If we were doing bulk, we'd build a map.
-        
-        // For simplicity here, let's use a linear search.
-        const skuIndex = sheetHeaders.indexOf(keyCol); 
-        // actually keyCol passed in is the column name we want to match 'sku' against.
-        
-        const row = data.find(r => String(r[skuIndex]).trim() === String(sku).trim());
-        if (!row) return null;
-        
+        if (keyIndex === -1) {
+             LoggerService.warn('ProductService', 'getProductDetails', `Key column '${keyCol}' not found in sheet '${sheetName}'.`);
+             return null;
+        }
+
+        // Find the row
+        const targetSku = String(sku).trim();
+        const rowData = data.find(r => String(r[keyIndex]).trim() === targetSku);
+
+        if (!rowData) {
+            LoggerService.info('ProductService', 'getProductDetails', `SKU ${targetSku} not found in ${sheetName}`);
+            return null;
+        }
+
         const rowObj = {};
-        headers.forEach((h, i) => {
-             // map header from config to data index
+        headers.forEach((h) => {
              const headerIndex = sheetHeaders.indexOf(h);
-             if(headerIndex > -1) rowObj[h] = row[headerIndex];
+             if(headerIndex > -1) rowObj[h] = rowData[headerIndex];
         });
+        LoggerService.info('ProductService', 'getProductDetails', `Successfully found row for ${sheetName}`);
         return rowObj;
       };
 
-      const masterData = getRowObject(masterSheet, 'schema.data.WebDetM', 'wdm_SKU');
-      const stagingData = getRowObject(stagingSheet, 'schema.data.WebDetS', 'wdm_SKU');
-      const comaxData = getRowObject(comaxSheet, 'schema.data.CmxProdM', 'cpm_SKU');
+      let masterData = getRowObject(sheetNames.master, schemas.master, 'wdm_SKU');
+      const stagingData = getRowObject(sheetNames.staging, schemas.staging, 'wdm_SKU');
+      const comaxData = getRowObject(sheetNames.comax, schemas.comax, 'cpm_SKU');
+      const webProdData = getRowObject(sheetNames.webProd, schemas.webProd, 'wpm_SKU');
 
-      return {
-        master: masterData || null,
+      // Fallback logic for names if WebDetM is incomplete
+      if (!masterData) masterData = {}; // Initialize if null so we can populate it
+      
+      if (!masterData.wdm_NameEn && webProdData && webProdData.wpm_NameEn) {
+          masterData.wdm_NameEn = webProdData.wpm_NameEn;
+      }
+      if (!masterData.wdm_NameHe && comaxData && comaxData.cpm_NameHe) {
+          masterData.wdm_NameHe = comaxData.cpm_NameHe;
+      }
+
+      const result = {
+        master: masterData,
         staging: stagingData || null,
         comax: comaxData || null
       };
+      
+      // Return as JSON string to avoid serialization issues
+      return JSON.stringify(result);
 
     } catch (e) {
       LoggerService.error('ProductService', 'getProductDetails', `Error fetching details for SKU ${sku}: ${e.message}`, e);

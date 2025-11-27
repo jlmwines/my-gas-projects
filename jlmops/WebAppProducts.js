@@ -161,7 +161,9 @@ function WebAppProducts_loadProductEditorData(taskId) {
     if (!task) throw new Error(`Task with ID ${taskId} not found.`);
     const sku = task.st_LinkedEntityId;
 
-    const productDetails = ProductService.getProductDetails(sku); // Returns {master, staging, comax}
+    // Parse the JSON string returned by ProductService
+    const productDetailsJson = ProductService.getProductDetails(sku); 
+    const productDetails = JSON.parse(productDetailsJson);
 
     return {
       sku: sku,
@@ -223,5 +225,34 @@ function WebAppProducts_handleAdminConfirmWebUpdate(taskId) {
   } catch (e) {
     LoggerService.error('WebAppProducts', 'handleAdminConfirmWebUpdate', `Error confirming web update for task ${taskId}: ${e.message}`, e);
     throw e;
+  }
+}
+
+function test_loadProductEditorData() {
+  const taskId = '61c0e9c4-6a04-44eb-8a9a-1dbf255eec64'; // Task ID from previous logs
+  Logger.log(`Testing loadProductEditorData for Task ID: ${taskId}`);
+
+  try {
+    const result = WebAppProducts_loadProductEditorData(taskId);
+    Logger.log('Result received:');
+    Logger.log(JSON.stringify(result, null, 2));
+    
+    if (result.masterData) {
+        Logger.log('Master Data present.');
+        Logger.log(`NameEn: ${result.masterData.wdm_NameEn}`);
+    } else {
+        Logger.log('Master Data MISSING.');
+    }
+
+    if (result.comaxData) {
+        Logger.log('Comax Data present.');
+        Logger.log(`Vintage: ${result.comaxData.cpm_Vintage}`);
+    } else {
+        Logger.log('Comax Data MISSING.');
+    }
+
+  } catch (e) {
+    Logger.log(`Error: ${e.message}`);
+    Logger.log(e.stack);
   }
 }
