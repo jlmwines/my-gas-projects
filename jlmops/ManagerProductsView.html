@@ -6,22 +6,61 @@
     /* Minimal custom styles, relying on Bootstrap from Dashboard.html */
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
     .modal-container { background: white; width: 90%; max-width: 900px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
-    .modal-title { font-size: 18px; font-weight: 600; }
-    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
     
+    /* Header Redesign */
+    .modal-header { padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
+    .modal-title-area { display: flex; flex-direction: column; }
+    .modal-main-title { font-size: 18px; font-weight: 700; color: #333; }
+    .modal-sub-title { font-size: 14px; color: #666; }
+    .modal-close { background: none; border: none; font-size: 24px; line-height: 1; cursor: pointer; color: #999; }
+    .modal-close:hover { color: #333; }
+
     .form-body { flex: 1; overflow-y: auto; padding: 20px; }
-    .tab-bar { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
-    .tab-btn { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-weight: 500; }
+    
+    /* Compact Tab Bar with Actions */
+    .tab-bar { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; justify-content: space-between; align-items: center; }
+    .tab-group { display: flex; }
+    .tab-btn { padding: 8px 15px; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-weight: 500; font-size: 14px; }
+    .tab-btn:hover { color: #007bff; }
     .tab-btn.active { border-bottom-color: #007bff; color: #007bff; }
+    
+    .tab-actions { padding-right: 10px; } /* Always visible */
+    
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
     .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-    .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .hebrew-text { direction: rtl; text-align: right; }
     .preview-box { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 4px; min-height: 200px; white-space: pre-wrap; font-size: 13px; }
+
+    /* Flexible Description Boxes */
+    .desc-short, .desc-long { 
+        width: 100%; 
+        font-size: 14px; 
+        line-height: 1.4;
+        padding: 8px;
+    }
+    
+    /* Read-only Divs */
+    div.desc-short, div.desc-long {
+        background-color: #f8f9fa;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        overflow-y: auto;
+    }
+
+    /* Editable Textareas */
+    textarea.desc-short, textarea.desc-long {
+        resize: vertical;
+    }
+
+    /* 2 lines approx */
+    .desc-short { min-height: 60px; }
+    /* 5 lines approx */
+    .desc-long { min-height: 130px; }
+
   </style>
 </head>
 <body>
@@ -53,45 +92,77 @@
   <!-- Product Editor Modal -->
   <div class="modal-overlay" id="editor-modal">
     <div class="modal-container">
-      <div class="modal-header flex-column align-items-start">
-        <div class="d-flex justify-content-between w-100">
-            <div class="modal-title">Edit Product Details</div>
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+      <!-- Consolidated Header -->
+      <div class="modal-header">
+        <div class="modal-title-area">
+            <div id="modal-product-header" style="font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
+                <span class="mr-1">Editing:</span>
+                <span id="header-sku-display" class="font-weight-bold mr-1"></span>
+                <span id="header-name-en-display" class="mr-1"></span>
+                <span id="header-name-he-display" class="hebrew-text"></span>
+            </div>
         </div>
-        <div id="modal-subheader" class="text-muted small mt-2 w-100 d-flex justify-content-between">
-            <span id="header-sku"></span>
-            <span id="header-name-en"></span>
-            <span id="header-name-he" class="hebrew-text"></span>
-        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
       </div>
       
       <div class="form-body">
+        <!-- Tabs with Right-Aligned Actions -->
         <div class="tab-bar">
-          <div class="tab-btn active" onclick="switchTab('desc')">Descriptions</div>
-          <div class="tab-btn" onclick="switchTab('specs')">Specs</div>
-          <div class="tab-btn" onclick="switchTab('attr')">Attributes</div>
-          <div class="tab-btn" onclick="switchTab('pair')">Pairing</div>
-          <div class="tab-btn" onclick="switchTab('preview')">Preview</div>
+          <div class="tab-group">
+            <div class="tab-btn active" onclick="switchTab('desc')">Descriptions</div>
+            <div class="tab-btn" onclick="switchTab('specs')">Specs</div>
+            <div class="tab-btn" onclick="switchTab('attr')">Attributes</div>
+            <div class="tab-btn" onclick="switchTab('pair')">Pairing</div>
+            <div class="tab-btn" onclick="switchTab('preview')">Preview</div>
+          </div>
+          <div class="tab-actions" id="global-actions">
+             <button class="btn btn-sm border" onclick="globalFill()">Fill</button>
+             <button class="btn btn-sm border" onclick="globalClear()">Clear</button>
+          </div>
         </div>
 
         <div id="tab-desc" class="tab-content active">
           <div class="comparison-grid">
+            <!-- Current Column -->
             <div>
               <div class="col-header">Current</div>
-              <div class="form-group"><label>Hebrew Short Description</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-ShortDescrHe"></div></div>
-              <div class="form-group"><label>Hebrew Description</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-DescriptionHe"></div></div>
-              <div class="form-group"><label>English Short Description</label><div class="p-2 bg-light border rounded" id="cur-ShortDescrEn"></div></div>
-              <div class="form-group"><label>English Description</label><div class="p-2 bg-light border rounded" id="cur-DescriptionEn"></div></div>
-            </div>
-            <div>
-              <div class="col-header">Edit 
-                <button class="btn btn-sm border ml-2" onclick="copyToStaging('desc')">Fill</button>
-                <button class="btn btn-sm border ml-1" onclick="clearToStaging('desc')">Clear</button>
+              <div class="form-group">
+                <label class="small text-muted mb-1">Hebrew Short Description</label>
+                <div class="desc-short hebrew-text" id="cur-ShortDescrHe"></div>
               </div>
-              <div class="form-group"><label>Hebrew Short Description</label><textarea class="form-control hebrew-text" id="edit-ShortDescrHe"></textarea></div>
-              <div class="form-group"><label>Hebrew Description</label><textarea class="form-control hebrew-text" id="edit-DescriptionHe"></textarea></div>
-              <div class="form-group"><label>English Short Description</label><textarea class="form-control" id="edit-ShortDescrEn"></textarea></div>
-              <div class="form-group"><label>English Description</label><textarea class="form-control" id="edit-DescriptionEn"></textarea></div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">Hebrew Description</label>
+                <div class="desc-long hebrew-text" id="cur-DescriptionHe"></div>
+              </div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">English Short Description</label>
+                <div class="desc-short" id="cur-ShortDescrEn"></div>
+              </div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">English Description</label>
+                <div class="desc-long" id="cur-DescriptionEn"></div>
+              </div>
+            </div>
+            
+            <!-- Edit Column -->
+            <div>
+              <div class="col-header">Edit</div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">Hebrew Short Description</label>
+                <textarea class="form-control hebrew-text desc-short" id="edit-ShortDescrHe"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">Hebrew Description</label>
+                <textarea class="form-control hebrew-text desc-long" id="edit-DescriptionHe"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">English Short Description</label>
+                <textarea class="form-control desc-short" id="edit-ShortDescrEn"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="small text-muted mb-1">English Description</label>
+                <textarea class="form-control desc-long" id="edit-DescriptionEn"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -107,10 +178,7 @@
                <div class="form-group"><label>Region</label><div class="p-2 bg-light border rounded" id="cur-Region"></div></div>
             </div>
             <div>
-              <div class="col-header">Edit 
-                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('specs')">Copy Current</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('specs')">Clear</button>
-              </div>
+              <div class="col-header">Edit</div>
               <div class="form-group"><label>Region</label><input type="text" class="form-control" id="edit-Region"></div>
             </div>
           </div>
@@ -124,10 +192,7 @@
               <div class="form-group"><label>Complexity</label><div class="p-2 bg-light border rounded" id="cur-Complexity"></div></div>
             </div>
             <div>
-              <div class="col-header">Edit 
-                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('attr')">Copy Current</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('attr')">Clear</button>
-              </div>
+              <div class="col-header">Edit</div>
               <div class="form-group"><label>Intensity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Intensity"></div>
               <div class="form-group"><label>Complexity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Complexity"></div>
             </div>
@@ -156,7 +221,7 @@
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
         <button class="btn border" onclick="closeModal()">Cancel</button>
-        <button class="btn border" onclick="submitChanges()">Submit for Review</button>
+        <button class="btn" onclick="submitChanges()">Submit</button>
       </div>
     </div>
   </div>
@@ -165,6 +230,7 @@
     let currentTaskId = null;
     let currentSku = null;
     let currentMasterData = {};
+    let currentActiveTab = 'desc';
 
     function refreshView() {
       loadWidgetData();
@@ -188,7 +254,6 @@
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
       
       google.script.run.withSuccessHandler(tasks => {
-        console.log('Received tasks:', tasks); // Debug logging
         tbody.innerHTML = '';
         if (!tasks || tasks.length === 0) {
           tbody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
@@ -197,9 +262,7 @@
         
         tasks.forEach(task => {
           try {
-              console.log('Processing task:', task.taskId); // Log entry
               const tr = document.createElement('tr');
-              
               tr.innerHTML = `
                 <td>${task.title}</td>
                 <td>${task.sku}</td>
@@ -208,7 +271,7 @@
               `;
               tbody.appendChild(tr);
           } catch (e) {
-              console.error('Error rendering row:', e, task);
+              console.error('Error rendering row:', e);
           }
         });
       }).WebAppProducts_getManagerProductTasks();
@@ -223,18 +286,27 @@
       document.querySelectorAll('input, textarea, .p-2').forEach(el => {
         if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
         else if(el.classList.contains('p-2')) el.textContent = '';
+        else if(el.classList.contains('desc-short') || el.classList.contains('desc-long')) {
+             if(el.tagName === 'DIV') el.textContent = '';
+        }
       });
+      
+      // Reset tab to first
+      switchTab('desc');
 
       google.script.run
       .withSuccessHandler(data => {
-         console.log('Editor data received:', data);
          currentSku = data.sku;
-         currentMasterData = data.masterData || {}; // Store master data
+         currentMasterData = data.masterData || {}; 
          
-         // Populate Subheader
-         document.getElementById('header-sku').textContent = `SKU: ${data.sku}`;
-         document.getElementById('header-name-en').textContent = currentMasterData.wdm_NameEn || '';
-         document.getElementById('header-name-he').textContent = currentMasterData.wdm_NameHe || '';
+         // Populate Header
+         const headerSku = data.sku;
+         const headerNameEn = currentMasterData.wdm_NameEn || 'Unknown Product';
+         const headerNameHe = currentMasterData.wdm_NameHe || '';
+         
+         document.getElementById('header-sku-display').textContent = headerSku;
+         document.getElementById('header-name-en-display').textContent = `- ${headerNameEn}`;
+         document.getElementById('header-name-he-display').textContent = headerNameHe ? `- ${headerNameHe}` : '';
 
          try {
              populateEditor(data.masterData, data.stagingData, data.comaxData);
@@ -256,6 +328,7 @@
       const s = staging || {};
       const c = comax || {};
 
+      // Populate Current Column (Read Only)
       setVal('cur-ShortDescrHe', m.wdm_ShortDescrHe);
       setVal('cur-DescriptionHe', m.wdm_DescriptionHe);
       setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
@@ -270,10 +343,11 @@
       setVal('cur-CmxDivision', c.cpm_Division);
       setVal('cur-CmxGroup', c.cpm_Group);
 
-      setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || m.wdm_ShortDescrHe);
-      setInp('edit-DescriptionHe', s.wdm_DescriptionHe || m.wdm_DescriptionHe);
-      setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || m.wdm_ShortDescrEn);
-      setInp('edit-DescriptionEn', s.wdm_DescriptionEn || m.wdm_DescriptionEn);
+      // Populate Edit Column
+      setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || '');
+      setInp('edit-DescriptionHe', s.wdm_DescriptionHe || '');
+      setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || '');
+      setInp('edit-DescriptionEn', s.wdm_DescriptionEn || '');
       
       setInp('edit-Region', s.wdm_Region || m.wdm_Region);
       setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
@@ -290,21 +364,52 @@
     }
 
     function switchTab(tabName) {
+      currentActiveTab = tabName;
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
       document.getElementById('tab-' + tabName).style.display = 'block';
-      event.target.classList.add('active');
+      // Find button by text or index, but event.target is easier if clicked. 
+      // If called programmatically, we need to find the btn. 
+      // Simple loop:
+      const btns = document.querySelectorAll('.tab-btn');
+      if(tabName === 'desc') btns[0].classList.add('active');
+      if(tabName === 'specs') btns[1].classList.add('active');
+      if(tabName === 'attr') btns[2].classList.add('active');
+      if(tabName === 'pair') btns[3].classList.add('active');
+      if(tabName === 'preview') btns[4].classList.add('active');
+
+      // Toggle Actions
+      // const actions = document.getElementById('global-actions');
+      // if(tabName === 'preview') actions.classList.remove('visible');
+      // else actions.classList.add('visible');
     }
     
-    function clearToStaging(section) {
-        if(section === 'desc') {
+    function globalFill() {
+        const m = currentMasterData || {};
+        if (currentActiveTab === 'desc') {
+            document.getElementById('edit-ShortDescrHe').value = m.wdm_ShortDescrHe || '';
+            document.getElementById('edit-DescriptionHe').value = m.wdm_DescriptionHe || '';
+            document.getElementById('edit-ShortDescrEn').value = m.wdm_ShortDescrEn || '';
+            document.getElementById('edit-DescriptionEn').value = m.wdm_DescriptionEn || '';
+        } else if (currentActiveTab === 'specs') {
+            document.getElementById('edit-Region').value = m.wdm_Region || '';
+        } else if (currentActiveTab === 'attr') {
+            document.getElementById('edit-Intensity').value = m.wdm_Intensity || '';
+            document.getElementById('edit-Complexity').value = m.wdm_Complexity || '';
+        }
+        updatePreview();
+    }
+
+    function globalClear() {
+        if (currentActiveTab === 'desc') {
             document.getElementById('edit-ShortDescrHe').value = '';
             document.getElementById('edit-DescriptionHe').value = '';
             document.getElementById('edit-ShortDescrEn').value = '';
             document.getElementById('edit-DescriptionEn').value = '';
-        } else if (section === 'specs') {
+        } else if (currentActiveTab === 'specs') {
             document.getElementById('edit-Region').value = '';
-        } else if (section === 'attr') {
+        } else if (currentActiveTab === 'attr') {
             document.getElementById('edit-Intensity').value = '';
             document.getElementById('edit-Complexity').value = '';
         }
