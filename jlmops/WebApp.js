@@ -66,6 +66,7 @@ function getView(viewName) {
     'AdminInventoryWidget': 'AdminInventoryWidget',
     'ManagerInventory': 'ManagerInventoryView',
     'ManagerInventoryWidget': 'ManagerInventoryWidget',
+    'ManagerProducts': 'ManagerProductsView',
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
     'ProductDetails': 'ProductDetailsView',

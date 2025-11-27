@@ -13,7 +13,7 @@ function WebAppProducts_getProductsWidgetData() {
     'task.validation.sku_not_in_comax',
     'task.validation.translation_missing',
     'task.validation.comax_internal_audit',
-    'task.validation.field_mismatch',
+    'task.validation.field_mismatch', // This includes vintage mismatch
     'task.validation.name_mismatch',
     'task.validation.web_master_discrepancy',
     'task.validation.comax_master_discrepancy',
@@ -22,7 +22,8 @@ function WebAppProducts_getProductsWidgetData() {
   ];
 
   try {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
     const sheet = dataSpreadsheet.getSheetByName('SysTasks');
 
@@ -33,19 +34,26 @@ function WebAppProducts_getProductsWidgetData() {
     const headers = taskSchema.headers.split(',');
     const typeIdCol = headers.indexOf('st_TaskTypeId');
     const statusCol = headers.indexOf('st_Status');
+    const titleCol = headers.indexOf('st_Title');
 
     const taskCounts = {};
     productTaskTypes.forEach(taskType => {
       taskCounts[taskType] = 0;
     });
+    taskCounts['vintage_mismatch_tasks'] = 0; // Specific count for vintage mismatch
 
     if (sheet.getLastRow() > 1) {
       const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
       existingRows.forEach(row => {
         const taskType = row[typeIdCol];
         const status = row[statusCol];
+        const title = String(row[titleCol] || '');
+
         if (productTaskTypes.includes(taskType) && status !== 'Done' && status !== 'Closed') {
           taskCounts[taskType]++;
+          if (taskType === 'task.validation.field_mismatch' && title.toLowerCase().includes('vintage mismatch')) {
+            taskCounts['vintage_mismatch_tasks']++;
+          }
         }
       });
     }
@@ -64,13 +72,156 @@ function WebAppProducts_getProductsWidgetData() {
 }
 
 /**
- * Gets admin product data (placeholder).
- * @returns {Object} An object with product data for the admin.
+ * Gets a list of product detail update tasks for the manager.
+ * Filters for 'task.validation.field_mismatch' tasks with 'Vintage Mismatch' in the title
+ * and 'New' or 'Assigned' status.
+ *
+ * @returns {Array<Object>} A list of product detail update tasks.
  */
-function WebAppProducts_getAdminProductData() {
-  // Placeholder: In the future, this could query WebDetM for products needing verification.
-  return {
-    productsToVerify: 5, 
-    newProducts: 2
-  };
+function WebAppProducts_getManagerProductTasks() {
+  try {
+    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
+    LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Opening spreadsheet ID: ${dataSpreadsheetId}`);
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet) {
+      throw new Error("Sheet 'SysTasks' not found");
+    }
+
+    const headers = taskSchema.headers.split(',');
+    const typeIdCol = headers.indexOf('st_TaskTypeId');
+    const statusCol = headers.indexOf('st_Status');
+    const titleCol = headers.indexOf('st_Title');
+    
+    LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Indices: Type=${typeIdCol}, Status=${statusCol}, Title=${titleCol}`);
+    const linkedEntityIdCol = headers.indexOf('st_LinkedEntityId');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const createdDateCol = headers.indexOf('st_CreatedDate');
+    const assignedToCol = headers.indexOf('st_AssignedTo');
+
+    const tasks = [];
+    if (sheet.getLastRow() > 1) {
+      const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+      if (existingRows.length > 0) {
+         LoggerService.info('WebAppProducts', 'getManagerProductTasks', `First row sample: ${JSON.stringify(existingRows[0])}`);
+      }
+      existingRows.forEach((row, index) => {
+        const taskType = String(row[typeIdCol] || '').trim();
+        const status = String(row[statusCol] || '').trim();
+        const title = String(row[titleCol] || '');
+
+        if (index === 0) {
+             const typeMatch = taskType === 'task.validation.field_mismatch';
+             const titleMatch = title.toLowerCase().includes('vintage mismatch');
+             const statusMatch = (status === 'New' || status === 'Assigned');
+             LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Row 0 Analysis: TypeMatch=${typeMatch}, TitleMatch=${titleMatch}, StatusMatch=${statusMatch}`);
+        }
+
+        if (taskType === 'task.validation.field_mismatch' && title.toLowerCase().includes('vintage mismatch') && (status === 'New' || status === 'Assigned')) {
+          tasks.push({
+            taskId: row[taskIdCol],
+            sku: row[linkedEntityIdCol], // Assuming LinkedEntityId is SKU
+            title: title,
+            status: status,
+            createdDate: String(row[createdDateCol]),
+            assignedTo: row[assignedToCol]
+          });
+        }
+      });
+    }
+    LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Returning ${tasks.length} tasks.`);
+    return tasks;
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getManagerProductTasks', `Error getting manager product tasks: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Fetches product details (master and staging) for the editor.
+ * @param {string} taskId The ID of the task.
+ * @returns {object} An object containing master and staging product data, and the SKU.
+ */
+function WebAppProducts_loadProductEditorData(taskId) {
+  try {
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    if (!sheet) throw new Error("Sheet 'SysTasks' not found");
+
+    const headers = taskSchema.headers.split(',');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const linkedEntityIdCol = headers.indexOf('st_LinkedEntityId');
+
+    const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
+    const task = allTasks.get(taskId);
+
+    if (!task) throw new Error(`Task with ID ${taskId} not found.`);
+    const sku = task.st_LinkedEntityId;
+
+    const productDetails = ProductService.getProductDetails(sku); // Returns {master, staging, comax}
+
+    return {
+      sku: sku,
+      taskId: taskId,
+      masterData: productDetails.master,
+      stagingData: productDetails.staging,
+      comaxData: productDetails.comax
+    };
+
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'loadProductEditorData', `Error loading product editor data for task ${taskId}: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Handles the submission of product details by a manager to the staging area.
+ * @param {string} taskId The ID of the task.
+ * @param {string} sku The SKU of the product being edited.
+ * @param {Object} formData The form data submitted by the manager.
+ * @returns {Object} Success status.
+ */
+function WebAppProducts_handleManagerSubmit(taskId, sku, formData) {
+  try {
+    const result = ProductService.submitProductDetails(taskId, sku, formData);
+    return { success: true, message: "Product details submitted for review." };
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'handleManagerSubmit', `Error submitting manager edits for task ${taskId}: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Handles the acceptance of product details by an admin.
+ * @param {string} taskId The ID of the task.
+ * @param {string} sku The SKU of the product.
+ * @param {Object} finalData The final data approved by the admin.
+ * @returns {Object} Success status.
+ */
+function WebAppProducts_handleAdminAccept(taskId, sku, finalData) {
+  try {
+    const result = ProductService.acceptProductDetails(taskId, sku, finalData);
+    return { success: true, message: "Product details accepted and updated in master." };
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'handleAdminAccept', `Error accepting admin edits for task ${taskId}: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Handles the confirmation by an admin that web updates have been made.
+ * @param {string} taskId The ID of the task.
+ * @returns {Object} Success status.
+ */
+function WebAppProducts_handleAdminConfirmWebUpdate(taskId) {
+  try {
+    TaskService.updateTaskStatus(taskId, 'Done');
+    return { success: true, message: "Task marked as 'Done' (Web update confirmed)." };
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'handleAdminConfirmWebUpdate', `Error confirming web update for task ${taskId}: ${e.message}`, e);
+    throw e;
+  }
 }

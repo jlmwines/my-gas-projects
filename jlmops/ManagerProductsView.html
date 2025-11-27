@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    /* Minimal custom styles, relying on Bootstrap from Dashboard.html */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-container { background: white; width: 90%; max-width: 900px; height: 90%; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
+    .modal-title { font-size: 18px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
+    
+    .form-body { flex: 1; overflow-y: auto; padding: 20px; }
+    .tab-bar { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+    .tab-btn { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; color: #666; font-weight: 500; }
+    .tab-btn.active { border-bottom-color: #007bff; color: #007bff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+    
+    .hebrew-text { direction: rtl; text-align: right; }
+    .preview-box { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 4px; min-height: 200px; white-space: pre-wrap; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid p-4">
+    <!-- Main Card: Detail Updates -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Detail Updates</h5>
+        <span id="stat-mismatch" class="badge badge-secondary badge-pill">0</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th class="border-top-0">Task</th>
+              <th class="border-top-0">SKU</th>
+              <th class="border-top-0">Date</th>
+              <th class="border-top-0">Action</th>
+            </tr>
+          </thead>
+          <tbody id="task-list-body">
+            <!-- Tasks will be populated here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Editor Modal -->
+  <div class="modal-overlay" id="editor-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">Edit Product Details <span id="modal-sku" style="font-weight:normal; color:#666; margin-left:10px; font-size:14px;"></span></div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      
+      <div class="form-body">
+        <div class="tab-bar">
+          <div class="tab-btn active" onclick="switchTab('desc')">Descriptions</div>
+          <div class="tab-btn" onclick="switchTab('specs')">Specs</div>
+          <div class="tab-btn" onclick="switchTab('attr')">Attributes</div>
+          <div class="tab-btn" onclick="switchTab('pair')">Pairing</div>
+          <div class="tab-btn" onclick="switchTab('preview')">Preview</div>
+        </div>
+
+        <div id="tab-desc" class="tab-content active">
+          <div class="comparison-grid">
+            <div>
+              <div class="col-header">Current (Master)</div>
+              <div class="form-group"><label>Name (En)</label><div class="p-2 bg-light border rounded" id="cur-NameEn"></div></div>
+              <div class="form-group"><label>Name (He)</label><div class="p-2 bg-light border rounded hebrew-text" id="cur-NameHe"></div></div>
+              <div class="form-group"><label>Short Desc (En)</label><div class="p-2 bg-light border rounded" id="cur-ShortDescrEn"></div></div>
+              <div class="form-group"><label>Description (En)</label><div class="p-2 bg-light border rounded" id="cur-DescriptionEn"></div></div>
+            </div>
+            <div>
+              <div class="col-header">Edit (Staging) 
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('desc')">Copy Current</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('desc')">Clear</button>
+              </div>
+              <div class="form-group"><label>Name (En)</label><input type="text" class="form-control" id="edit-NameEn"></div>
+              <div class="form-group"><label>Name (He)</label><input type="text" class="form-control hebrew-text" id="edit-NameHe"></div>
+              <div class="form-group"><label>Short Desc (En)</label><textarea class="form-control" id="edit-ShortDescrEn"></textarea></div>
+              <div class="form-group"><label>Description (En)</label><textarea class="form-control" id="edit-DescriptionEn"></textarea></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-specs" class="tab-content">
+          <div class="comparison-grid">
+            <div>
+              <div class="col-header">Current</div>
+               <div class="form-group"><label>Comax Vintage</label><div class="p-2 bg-light border rounded" id="cur-CmxVintage"></div></div>
+               <div class="form-group"><label>Comax Size</label><div class="p-2 bg-light border rounded" id="cur-CmxSize"></div></div>
+               <div class="form-group"><label>Comax Division</label><div class="p-2 bg-light border rounded" id="cur-CmxDivision"></div></div>
+               <div class="form-group"><label>Comax Group</label><div class="p-2 bg-light border rounded" id="cur-CmxGroup"></div></div>
+               <div class="form-group"><label>Region</label><div class="p-2 bg-light border rounded" id="cur-Region"></div></div>
+            </div>
+            <div>
+              <div class="col-header">Edit 
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('specs')">Copy Current</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('specs')">Clear</button>
+              </div>
+              <div class="form-group"><label>Region</label><input type="text" class="form-control" id="edit-Region"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-attr" class="tab-content">
+           <div class="comparison-grid">
+            <div>
+              <div class="col-header">Current</div>
+              <div class="form-group"><label>Intensity</label><div class="p-2 bg-light border rounded" id="cur-Intensity"></div></div>
+              <div class="form-group"><label>Complexity</label><div class="p-2 bg-light border rounded" id="cur-Complexity"></div></div>
+            </div>
+            <div>
+              <div class="col-header">Edit 
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToStaging('attr')">Copy Current</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="clearToStaging('attr')">Clear</button>
+              </div>
+              <div class="form-group"><label>Intensity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Intensity"></div>
+              <div class="form-group"><label>Complexity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Complexity"></div>
+            </div>
+          </div>
+        </div>
+        
+         <div id="tab-pair" class="tab-content">
+           <p class="text-muted p-3">Pairing options will be implemented here.</p>
+        </div>
+
+        <div id="tab-preview" class="tab-content">
+           <div class="comparison-grid">
+             <div>
+               <div class="col-header">English Preview</div>
+               <div class="preview-box" id="preview-en"></div>
+             </div>
+             <div>
+               <div class="col-header">Hebrew Preview</div>
+               <div class="preview-box hebrew-text" id="preview-he"></div>
+             </div>
+           </div>
+        </div>
+
+      </div>
+      
+      <div class="modal-footer bg-light">
+        <div id="modal-status" class="mr-auto text-muted small"></div>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitChanges()">Submit for Review</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTaskId = null;
+    let currentSku = null;
+
+    function refreshView() {
+      loadWidgetData();
+      loadTaskList();
+    }
+
+    function loadWidgetData() {
+      google.script.run.withSuccessHandler(data => {
+        if (data.error) return console.error(data.error);
+        document.getElementById('stat-mismatch').textContent = data.data['vintage_mismatch_tasks'] || 0;
+      }).WebAppProducts_getProductsWidgetData();
+    }
+
+    function loadTaskList() {
+      const tbody = document.getElementById('task-list-body');
+      tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      
+      google.script.run.withSuccessHandler(tasks => {
+        console.log('Received tasks:', tasks); // Debug logging
+        tbody.innerHTML = '';
+        if (!tasks || tasks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
+          return;
+        }
+        
+        tasks.forEach(task => {
+          try {
+              const tr = document.createElement('tr');
+              
+              tr.innerHTML = `
+                <td>${task.title}</td>
+                <td>${task.sku}</td>
+                <td>${new Date(task.createdDate).toLocaleDateString()}</td>
+                <td><button class="btn btn-sm" onclick="openEditor('${task.taskId}')">Open</button></td>
+              `;
+              tbody.appendChild(tr);
+          } catch (e) {
+              console.error('Error rendering row:', e, task);
+          }
+        });
+      }).WebAppProducts_getManagerProductTasks();
+    }
+
+    function openEditor(taskId) {
+      currentTaskId = taskId;
+      document.getElementById('editor-modal').style.display = 'flex';
+      document.getElementById('modal-status').textContent = 'Loading data...';
+      
+      // Clear inputs
+      document.querySelectorAll('input, textarea, .p-2').forEach(el => {
+        if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+        else if(el.classList.contains('p-2')) el.textContent = '';
+      });
+
+      google.script.run.withSuccessHandler(data => {
+         currentSku = data.sku;
+         document.getElementById('modal-sku').textContent = `(SKU: ${data.sku})`;
+         populateEditor(data.masterData, data.stagingData, data.comaxData);
+         document.getElementById('modal-status').textContent = '';
+      }).WebAppProducts_loadProductEditorData(taskId);
+    }
+
+    function populateEditor(master, staging, comax) {
+      const m = master || {};
+      const s = staging || {};
+      const c = comax || {};
+
+      setVal('cur-NameEn', m.wdm_NameEn);
+      setVal('cur-NameHe', m.wdm_NameHe);
+      setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
+      setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
+      setVal('cur-Region', m.wdm_Region);
+      setVal('cur-Intensity', m.wdm_Intensity);
+      setVal('cur-Complexity', m.wdm_Complexity);
+
+      setVal('cur-CmxVintage', c.cpm_Vintage);
+      setVal('cur-CmxSize', c.cpm_Size);
+      setVal('cur-CmxDivision', c.cpm_Division);
+      setVal('cur-CmxGroup', c.cpm_Group);
+
+      setInp('edit-NameEn', s.wdm_NameEn || m.wdm_NameEn);
+      setInp('edit-NameHe', s.wdm_NameHe || m.wdm_NameHe);
+      setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || m.wdm_ShortDescrEn);
+      setInp('edit-DescriptionEn', s.wdm_DescriptionEn || m.wdm_DescriptionEn);
+      setInp('edit-Region', s.wdm_Region || m.wdm_Region);
+      setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
+      setInp('edit-Complexity', s.wdm_Complexity || m.wdm_Complexity);
+      
+      updatePreview();
+    }
+    
+    function setVal(id, val) { document.getElementById(id).textContent = val || '-'; }
+    function setInp(id, val) { document.getElementById(id).value = val || ''; }
+
+    function closeModal() {
+      document.getElementById('editor-modal').style.display = 'none';
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tabName).style.display = 'block';
+      event.target.classList.add('active');
+    }
+    
+    function clearToStaging(section) {
+        if(section === 'desc') {
+            document.getElementById('edit-NameEn').value = '';
+            document.getElementById('edit-NameHe').value = '';
+            document.getElementById('edit-ShortDescrEn').value = '';
+            document.getElementById('edit-DescriptionEn').value = '';
+        } else if (section === 'specs') {
+            document.getElementById('edit-Region').value = '';
+        } else if (section === 'attr') {
+            document.getElementById('edit-Intensity').value = '';
+            document.getElementById('edit-Complexity').value = '';
+        }
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const name = document.getElementById('edit-NameEn').value;
+        const desc = document.getElementById('edit-DescriptionEn').value;
+        document.getElementById('preview-en').textContent = `${name}\n\n${desc}`;
+    }
+    
+    document.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('input', updatePreview);
+    });
+
+    function submitChanges() {
+      const formData = {
+        wdm_NameEn: document.getElementById('edit-NameEn').value,
+        wdm_NameHe: document.getElementById('edit-NameHe').value,
+        wdm_ShortDescrEn: document.getElementById('edit-ShortDescrEn').value,
+        wdm_DescriptionEn: document.getElementById('edit-DescriptionEn').value,
+        wdm_Region: document.getElementById('edit-Region').value,
+        wdm_Intensity: document.getElementById('edit-Intensity').value,
+        wdm_Complexity: document.getElementById('edit-Complexity').value
+      };
+
+      document.getElementById('modal-status').textContent = 'Submitting...';
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) {
+          closeModal();
+          refreshView();
+        } else {
+          alert('Error: ' + res.message);
+        }
+      }).WebAppProducts_handleManagerSubmit(currentTaskId, currentSku, formData);
+    }
+
+    // Init
+    refreshView();
+  </script>
+</body>
+</html>

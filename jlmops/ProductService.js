@@ -615,11 +615,203 @@ const ProductService = (function() {
     }
   }
 
+  function getProductDetails(sku) {
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      
+      const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
+      const comaxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+
+      if (!masterSheet || !stagingSheet || !comaxSheet) {
+        throw new Error('Required product detail sheets (WebDetM, WebDetS, or CmxProdM) not found.');
+      }
+
+      // Helper to fetch row object
+      const getRowObject = (sheet, schemaName, keyCol) => {
+        const schema = allConfig[schemaName];
+        if (!schema) return null;
+        const headers = schema.headers.split(',');
+        // Note: _getSheetDataAsMap uses a specific column as key.
+        // For CmxProdM, the key is cpm_CmxId, but we need to find by SKU.
+        // So we can't use _getSheetDataAsMap efficiently if looking up by SKU unless SKU is the key.
+        // CmxProdM key is cpm_CmxId. But let's use a helper that builds map by SKU if needed.
+        
+        const data = sheet.getDataRange().getValues();
+        const sheetHeaders = data[0]; // Assuming row 1 is headers
+        const keyIndex = sheetHeaders.indexOf(keyCol);
+        
+        if (keyIndex === -1) return null;
+        
+        // Simple linear search since we are looking for 1 item. 
+        // Optimization: If we were doing bulk, we'd build a map.
+        
+        // For simplicity here, let's use a linear search.
+        const skuIndex = sheetHeaders.indexOf(keyCol); 
+        // actually keyCol passed in is the column name we want to match 'sku' against.
+        
+        const row = data.find(r => String(r[skuIndex]).trim() === String(sku).trim());
+        if (!row) return null;
+        
+        const rowObj = {};
+        headers.forEach((h, i) => {
+             // map header from config to data index
+             const headerIndex = sheetHeaders.indexOf(h);
+             if(headerIndex > -1) rowObj[h] = row[headerIndex];
+        });
+        return rowObj;
+      };
+
+      const masterData = getRowObject(masterSheet, 'schema.data.WebDetM', 'wdm_SKU');
+      const stagingData = getRowObject(stagingSheet, 'schema.data.WebDetS', 'wdm_SKU');
+      const comaxData = getRowObject(comaxSheet, 'schema.data.CmxProdM', 'cpm_SKU');
+
+      return {
+        master: masterData || null,
+        staging: stagingData || null,
+        comax: comaxData || null
+      };
+
+    } catch (e) {
+      LoggerService.error('ProductService', 'getProductDetails', `Error fetching details for SKU ${sku}: ${e.message}`, e);
+      throw e;
+    }
+  }
+
+  function submitProductDetails(taskId, sku, formData) {
+    try {
+      LoggerService.info('ProductService', 'submitProductDetails', `Submitting details for SKU ${sku}, Task ${taskId}`);
+      
+      const allConfig = ConfigService.getAllConfig();
+      const stagingSchema = allConfig['schema.data.WebDetS'];
+      const stagingHeaders = stagingSchema.headers.split(',');
+      
+      // Prepare the row data
+      // We need to merge existing staging data (if any) or master data with the form data
+      // For simplicity and safety, we should probably start with a clean slate or existing staging if present.
+      // But formData contains the *full* desired state as edited by the manager?
+      // Assuming formData contains key-value pairs matching the schema headers.
+      
+      // 1. Get existing staging or master to fill in gaps? 
+      // The UI should probably send the COMPLETE object to avoid nulling out fields. 
+      // Let's assume formData is the complete new state for the editable fields.
+      
+      const rowData = {};
+      stagingHeaders.forEach(header => {
+        rowData[header] = formData[header] !== undefined ? formData[header] : '';
+      });
+      
+      // Enforce key fields
+      rowData['wdm_SKU'] = sku;
+      rowData['wds_TaskId'] = taskId;
+
+      // 2. Upsert into WebDetS
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
+      
+      const existingData = stagingSheet.getDataRange().getValues();
+      // Find index by SKU (or WebIdEn if that's the key, but SKU is the user-facing key here)
+      // Schema says key is wdm_WebIdEn. Let's use SKU for now as it's passed in.
+      const skuIndex = stagingHeaders.indexOf('wdm_SKU');
+      let rowIndex = -1;
+      
+      // Simple linear search for upsert
+      if (existingData.length > 1) {
+        for (let i = 1; i < existingData.length; i++) {
+          if (String(existingData[i][skuIndex]) === String(sku)) {
+            rowIndex = i + 1; // 1-based index
+            break;
+          }
+        }
+      }
+
+      const rowValues = stagingHeaders.map(h => rowData[h]);
+
+      if (rowIndex > 0) {
+        stagingSheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+      } else {
+        stagingSheet.appendRow(rowValues);
+      }
+
+      // 3. Update Task Status
+      TaskService.updateTaskStatus(taskId, 'Review');
+      
+      return { success: true };
+
+    } catch (e) {
+      LoggerService.error('ProductService', 'submitProductDetails', `Error submitting details: ${e.message}`, e);
+      throw e;
+    }
+  }
+
+  function acceptProductDetails(taskId, sku, finalData) {
+    try {
+      LoggerService.info('ProductService', 'acceptProductDetails', `Accepting details for SKU ${sku}, Task ${taskId}`);
+
+      const allConfig = ConfigService.getAllConfig();
+      const masterSchema = allConfig['schema.data.WebDetM'];
+      const masterHeaders = masterSchema.headers.split(',');
+
+      // 1. Prepare row data for Master
+      const rowData = {};
+      masterHeaders.forEach(header => {
+        rowData[header] = finalData[header] !== undefined ? finalData[header] : '';
+      });
+      // Ensure SKU matches
+      rowData['wdm_SKU'] = sku;
+
+      // 2. Upsert into WebDetM
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+
+      const existingData = masterSheet.getDataRange().getValues();
+      const skuIndex = masterHeaders.indexOf('wdm_SKU');
+      let rowIndex = -1;
+
+      if (existingData.length > 1) {
+        for (let i = 1; i < existingData.length; i++) {
+          if (String(existingData[i][skuIndex]) === String(sku)) {
+            rowIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      const rowValues = masterHeaders.map(h => rowData[h]);
+
+      if (rowIndex > 0) {
+        masterSheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+      } else {
+        masterSheet.appendRow(rowValues);
+      }
+
+      // 3. Clear from WebDetS (optional but cleaner)
+      // For now, we leave it as history or clear it? 
+      // Let's leave it. The task status is the source of truth.
+
+      // 4. Update Task Status
+      TaskService.updateTaskStatus(taskId, 'Accepted');
+
+      return { success: true };
+
+    } catch (e) {
+      LoggerService.error('ProductService', 'acceptProductDetails', `Error accepting details: ${e.message}`, e);
+      throw e;
+    }
+  }
+
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
     getProductWebIdBySku: getProductWebIdBySku,
-    exportWebInventory: exportWebInventory
+    exportWebInventory: exportWebInventory,
+    getProductDetails: getProductDetails,
+    submitProductDetails: submitProductDetails,
+    acceptProductDetails: acceptProductDetails
   };
 })();
 
