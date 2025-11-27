@@ -27,30 +27,47 @@
         </div>
         <div class="card-body">
           <h6>Bulk Task Creation</h6>
-          <p>Generate tasks for products that have not been counted recently or have low stock.</p>
           <div class="form-row align-items-end">
             <div class="col-auto">
               <label for="max-stock-bulk">Max Stock Quantity</label>
-              <input type="number" id="max-stock-bulk" class="form-control" placeholder="e.g., 50">
+              <input type="number" id="max-stock-bulk" class="form-control" placeholder="e.g., 12" value="12">
             </div>
             <div class="col-auto">
               <label for="max-days-bulk">Not Counted in Days</label>
-              <input type="number" id="max-days-bulk" class="form-control" placeholder="e.g., 90">
+              <input type="number" id="max-days-bulk" class="form-control" placeholder="e.g., 90" value="90">
+            </div>
+             <div class="col-auto" style="padding-bottom: 10px;">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="chk-web-only" checked>
+                    <label class="form-check-label" for="chk-web-only">Web Products Only</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="chk-wine-only" checked>
+                    <label class="form-check-label" for="chk-wine-only">Wine Only (Div 1)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="chk-zero-stock">
+                    <label class="form-check-label" for="chk-zero-stock">Include 0 Stock</label>
+                </div>
             </div>
             <div class="col-auto">
-              <button id="btn-generate-bulk-tasks" class="btn btn-primary">Generate Bulk Tasks</button>
+              <button id="btn-generate-bulk-tasks" class="btn">Generate Tasks</button>
             </div>
           </div>
           <hr>
           <h6>Spot-Check Task Creation</h6>
-          <p>Manually create a count task for a specific product.</p>
-           <div class="form-row align-items-end">
+          <div class="form-row align-items-end" style="position: relative;">
             <div class="col">
-              <label for="spot-check-search">Search by SKU or Product Name</label>
-              <input type="text" id="spot-check-search" class="form-control" placeholder="Search for a product...">
+                <label for="spot-check-search">Product</label>
+                <input type="text" id="spot-check-search" class="form-control" placeholder="Search by Name or SKU">
+                <!-- Autocomplete container will be appended here by JS -->
+            </div>
+            <div class="col">
+               <label for="spot-check-note">Note (Optional)</label>
+               <input type="text" id="spot-check-note" class="form-control" placeholder="Reason for check...">
             </div>
             <div class="col-auto">
-              <button id="btn-create-spot-task" class="btn btn-secondary">Create Spot-Check Task</button>
+              <button id="btn-create-spot-task" class="btn">Create Spot Check</button>
             </div>
           </div>
         </div>
@@ -62,11 +79,12 @@
   <div class="row">
     <div class="col-12">
       <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
           <h5>Open Inventory Tasks (Manager Queue)</h5>
+          <span id="open-tasks-count" class="badge badge-secondary">0</span>
         </div>
         <div class="card-body">
-          <p>This read-only table shows all products currently assigned to managers for counting.</p>
+
           <!-- Container for the open tasks table -->
           <div id="open-tasks-table-container">
             <!-- Table will be dynamically generated here -->
@@ -77,7 +95,40 @@
   </div>
 </div>
 
-</script>
+<!-- Bulk Task Preview Modal -->
+<div class="modal fade" id="bulkPreviewModal" tabindex="-1" aria-labelledby="bulkPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulkPreviewModalLabel">Confirm Bulk Task Generation</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="bulkPreviewSummary"></p>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product Name</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="bulkPreviewTableBody">
+                    <!-- Rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-bulk-generation">Confirm & Generate</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <style>
     /* Toast Notification Styles */
@@ -105,9 +156,31 @@
         opacity: 1;
         top: 30px;
     }
+    
+    #autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 5px; /* Align with input padding */
+        right: 5px;
+        border: 1px solid #ccc;
+        background-color: white;
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        border-radius: 0 0 4px 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    #autocomplete-results div {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+    #autocomplete-results div:hover {
+        background-color: #f0f0f0;
+    }
 </style>
 
 <script>
+(function() {
   const reviewContainer = document.getElementById('inventory-review-table-container');
   const processBtn = document.getElementById('btn-process-counts');
 
@@ -132,7 +205,60 @@
       return;
     }
     renderReviewTable(data.reviewTasks || []);
-    // Future: renderOpenTasksTable(data.openTasks || []);
+    renderOpenTasksTable(data.openTasks || []);
+  }
+
+  /**
+   * Renders the 'Open Tasks (Manager Queue)' table.
+   * @param {Array<object>} tasks - The array of open tasks.
+   */
+  function renderOpenTasksTable(tasks) {
+    const container = document.getElementById('open-tasks-table-container');
+    const countSpan = document.getElementById('open-tasks-count');
+
+    if (countSpan) {
+        countSpan.textContent = tasks.length;
+    }
+
+    if (tasks.length === 0) {
+      container.innerHTML = '<p>No open tasks in the manager queue.</p>';
+      return;
+    }
+
+    let tableHtml = `
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Task Title</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    tasks.forEach(task => {
+      // Format date
+      let dateStr = '';
+      try {
+          const dateObj = new Date(task.createdDate);
+          dateStr = dateObj.toLocaleDateString();
+      } catch (e) {
+          dateStr = task.createdDate;
+      }
+
+      tableHtml += `
+        <tr>
+          <td>${dateStr}</td>
+          <td>${task.title}</td>
+        </tr>
+      `;
+    });
+
+    tableHtml += `
+        </tbody>
+      </table>
+    `;
+    container.innerHTML = tableHtml;
   }
 
   /**
@@ -260,6 +386,9 @@
         if (response.success) {
           showToast(`${response.completed} counts processed successfully.`);
           loadAdminViewData(); // Reload data to reflect changes
+          if (window.refreshSystemHealthWidget) {
+            window.refreshSystemHealthWidget();
+          }
         } else {
           showToast(`Error processing counts: ${response.message}`, 'error');
         }
@@ -312,6 +441,204 @@
     }, 3000);
   }
 
+  // --- Bulk Generation Logic ---
+  const bulkBtn = document.getElementById('btn-generate-bulk-tasks');
+  const daysInput = document.getElementById('max-days-bulk');
+  const stockInput = document.getElementById('max-stock-bulk');
+  const webOnlyChk = document.getElementById('chk-web-only');
+  const wineOnlyChk = document.getElementById('chk-wine-only');
+  const zeroStockChk = document.getElementById('chk-zero-stock');
+
+  function handleBulkGeneration() {
+      const days = daysInput.value;
+      const stock = stockInput.value;
+      
+      if (!days && !stock) {
+          showToast("Please enter at least one condition (Days or Stock).", 'warning');
+          return;
+      }
+      
+      bulkBtn.disabled = true;
+      bulkBtn.textContent = 'Checking...';
+      
+      const payload = {
+          days: days,
+          stock: stock,
+          webOnly: webOnlyChk.checked,
+          wineOnly: wineOnlyChk.checked,
+          zeroStock: zeroStockChk.checked
+      };
+      
+      // Preview first
+      google.script.run
+        .withSuccessHandler(previewRes => {
+            if (previewRes.success) {
+                if (previewRes.candidates.length === 0) {
+                     showToast("No tasks match these criteria.", 'warning');
+                     bulkBtn.disabled = false;
+                     bulkBtn.textContent = 'Generate Tasks';
+                     return;
+                }
+                
+                // Populate Modal
+                const tbody = document.getElementById('bulkPreviewTableBody');
+                tbody.innerHTML = '';
+                previewRes.candidates.forEach(c => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${c.sku}</td><td>${c.name}</td><td>${c.reason}</td>`;
+                    tbody.appendChild(row);
+                });
+                
+                document.getElementById('bulkPreviewSummary').textContent = `Found ${previewRes.candidates.length} products matching your criteria.`;
+                
+                // Setup Confirm Button
+                const confirmBtn = document.getElementById('btn-confirm-bulk-generation');
+                // Remove old listeners to prevent duplicates (cloning node trick)
+                const newConfirmBtn = confirmBtn.cloneNode(true);
+                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                
+                newConfirmBtn.addEventListener('click', () => {
+                    $('#bulkPreviewModal').modal('hide'); // Hide modal (requires jQuery/Bootstrap JS)
+                    bulkBtn.textContent = 'Generating...';
+                    google.script.run
+                        .withSuccessHandler(genRes => {
+                            if (genRes.success) {
+                                showToast(`Generated ${genRes.count} new tasks.`);
+                                loadAdminViewData(); // Refresh lists
+                            } else {
+                                showToast(genRes.message, 'error');
+                            }
+                            bulkBtn.disabled = false;
+                            bulkBtn.textContent = 'Generate Tasks';
+                        })
+                        .withFailureHandler(err => {
+                            handleError(err);
+                            bulkBtn.disabled = false;
+                            bulkBtn.textContent = 'Generate Tasks';
+                        })
+                        .WebAppInventory_generateBulkTasks(payload);
+                });
+
+                // Show Modal
+                $('#bulkPreviewModal').modal('show');
+                bulkBtn.disabled = false;
+                bulkBtn.textContent = 'Generate Tasks'; // Reset button state as modal handles flow now
+
+            } else {
+                showToast(previewRes.message, 'error');
+                bulkBtn.disabled = false;
+                bulkBtn.textContent = 'Generate Tasks';
+            }
+        })
+        .withFailureHandler(err => {
+            handleError(err);
+            bulkBtn.disabled = false;
+            bulkBtn.textContent = 'Generate Tasks';
+        })
+        .WebAppInventory_previewBulkTasks(payload);
+  }
+  
+  bulkBtn.addEventListener('click', handleBulkGeneration);
+
+  // --- Spot Check Logic ---
+  const spotBtn = document.getElementById('btn-create-spot-task');
+  const spotInput = document.getElementById('spot-check-search');
+  const spotNote = document.getElementById('spot-check-note');
+  let debounceTimer;
+  let selectedSpotProduct = null;
+
+  function handleSpotSearch(e) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const term = e.target.value;
+            if (term.length < 2) {
+                clearAutocomplete();
+                return;
+            }
+            google.script.run
+                .withSuccessHandler(renderAutocomplete)
+                .withFailureHandler(err => showToast('Search failed: ' + err.message, 'error'))
+                .WebAppInventory_searchComaxProducts(term);
+        }, 300);
+  }
+
+  function renderAutocomplete(results) {
+        clearAutocomplete();
+        if (!results || results.length === 0) return;
+
+        const container = document.createElement('div');
+        container.id = 'autocomplete-results';
+        
+        results.forEach(item => {
+            const div = document.createElement('div');
+            div.textContent = `${item.name} (${item.sku})`;
+            div.addEventListener('click', () => {
+                spotInput.value = `${item.name} (${item.sku})`;
+                selectedSpotProduct = item; // Store selected item
+                clearAutocomplete();
+            });
+            container.appendChild(div);
+        });
+        
+        // Append to the parent .col of the input
+        spotInput.parentNode.style.position = 'relative';
+        spotInput.parentNode.appendChild(container);
+  }
+
+  function clearAutocomplete() {
+      const el = document.getElementById('autocomplete-results');
+      if (el) el.remove();
+  }
+  
+  function handleCreateSpotTask() {
+      if (!selectedSpotProduct && !spotInput.value) {
+          showToast("Please select a product.", 'warning');
+          return;
+      }
+      // Extract SKU if user typed manually or pasted
+      let sku = selectedSpotProduct ? selectedSpotProduct.sku : null;
+      
+      // Fallback logic if they typed a SKU directly
+      if (!sku) {
+          const val = spotInput.value;
+          const match = val.match(/\(([^)]+)\)$/);
+          sku = match ? match[1] : val; 
+      }
+
+      spotBtn.disabled = true;
+      spotBtn.textContent = 'Creating...';
+      
+      google.script.run
+        .withSuccessHandler(res => {
+            if (res.success) {
+                showToast('Spot check task created.');
+                spotInput.value = '';
+                spotNote.value = '';
+                selectedSpotProduct = null;
+                loadAdminViewData();
+            } else {
+                showToast(res.message, 'error');
+            }
+            spotBtn.disabled = false;
+            spotBtn.textContent = 'Create Spot Check';
+        })
+        .withFailureHandler(err => {
+            handleError(err);
+            spotBtn.disabled = false;
+            spotBtn.textContent = 'Create Spot Check';
+        })
+        .WebAppInventory_createSpotCheckTask(sku, spotNote.value);
+  }
+  
+  spotInput.addEventListener('keyup', handleSpotSearch);
+  spotBtn.addEventListener('click', handleCreateSpotTask);
+  
+  // Close autocomplete on click outside
+  document.addEventListener('click', (e) => {
+      if (e.target !== spotInput) clearAutocomplete();
+  });
+
   // Initial load
   loadAdminViewData();
+})();
 </script>

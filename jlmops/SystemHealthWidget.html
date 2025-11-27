@@ -77,6 +77,10 @@
             icon = '➡️'; // Or any other suitable icon
             colorClass = 'text-primary';
             break;
+          case 'NEUTRAL':
+            icon = '▪️'; // Neutral dot icon
+            colorClass = 'text-muted';
+            break;
           default:
             icon = '❓';
             colorClass = 'text-muted';
@@ -158,6 +162,19 @@
       .WebAppSystem_runMasterValidationAndReturnResults();
   }
 
+  /**
+   * Fetches and displays the latest system health data.
+   */
+  function _fetchAndDisplaySystemHealth() {
+    google.script.run
+      .withSuccessHandler(updateSystemHealthView)
+      .withFailureHandler(showError)
+      .WebAppSystem_getSystemHealthDashboardData();
+  }
+
+  // Expose the refresh function globally
+  window.refreshSystemHealthWidget = _fetchAndDisplaySystemHealth;
+
   // Initial data load for this view
-  google.script.run.withSuccessHandler(updateSystemHealthView).withFailureHandler(showError).WebAppSystem_getSystemHealthDashboardData();
+  _fetchAndDisplaySystemHealth();
 </script>

@@ -287,6 +287,16 @@ function WebAppInventory_getAdminInventoryViewData() {
     const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review');
     LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${reviewTasks.length} tasks in 'Review' status.`);
 
+    // Fetch Open Tasks for Manager Queue (New & Assigned status)
+    const allCountTasks = WebAppTasks.getOpenTasksByTypeId('task.inventory.count');
+    const allAuditTasks = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit');
+    
+    // Filter for tasks that are either 'New' or 'Assigned'
+    const managerQueueTasks = allCountTasks.concat(allAuditTasks).filter(t => 
+      t.st_Status === 'New' || t.st_Status === 'Assigned'
+    );
+    
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${managerQueueTasks.length} tasks for manager queue (New/Assigned).`);
     
     const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
     const cmxProdMMap = cmxProdMData.map;
@@ -294,8 +304,9 @@ function WebAppInventory_getAdminInventoryViewData() {
     const sysProductAuditData = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU');
     const sysProductAuditMap = sysProductAuditData.map;
 
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Starting to process review tasks...');
+
     const tasksForReview = reviewTasks.map(task => {
-      LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Processing task: ${task.st_TaskId}`);
       const sku = String(task.st_LinkedEntityId).trim();
       const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product';
       
@@ -313,7 +324,6 @@ function WebAppInventory_getAdminInventoryViewData() {
 
       const totalQty = bruryaQty + storageQty + officeQty + shopQty;
 
-      LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Task processed for SKU: ${sku}`);
       return {
         taskId: task.st_TaskId,
         sku: sku,
@@ -328,9 +338,29 @@ function WebAppInventory_getAdminInventoryViewData() {
     });
 
     tasksForReview.sort((a, b) => a.productName.localeCompare(b.productName));
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing review tasks. Starting open tasks...');
+
+    // Process Open Tasks for Manager Queue
+    const openTasks = managerQueueTasks.map(task => {
+       let dateStr = '';
+       if (task.st_CreatedDate instanceof Date) {
+         dateStr = task.st_CreatedDate.toISOString();
+       } else {
+         dateStr = String(task.st_CreatedDate);
+       }
+
+       return {
+         taskId: task.st_TaskId,
+         title: task.st_Title,
+         createdDate: dateStr
+       };
+    });
+    
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing open tasks (Simplified).');
 
     return {
-      reviewTasks: tasksForReview
+      reviewTasks: tasksForReview,
+      openTasks: openTasks
     };
 
   } catch (e) {
@@ -390,5 +420,64 @@ function WebAppInventory_updateBruryaInventory(inventoryData) {
   } catch (error) {
     LoggerService.error('WebAppInventory', 'updateBruryaInventory', error.message, error);
     throw error;
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.previewBulkCountTasks function.
+ * @param {Object} formObject The form data from the client.
+ * @returns {Object} Result object { success: true, count: number }.
+ */
+function WebAppInventory_previewBulkTasks(formObject) {
+  try {
+    const criteria = {
+      daysSinceLastCount: formObject.days ? parseInt(formObject.days, 10) : null,
+      maxStockLevel: formObject.stock ? parseInt(formObject.stock, 10) : null,
+      isWebOnly: formObject.webOnly,
+      isWineOnly: formObject.wineOnly,
+      includeZeroStock: formObject.zeroStock
+    };
+    
+    return InventoryManagementService.previewBulkCountTasks(criteria);
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'previewBulkTasks', e.message, e);
+    throw e;
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.generateBulkCountTasks function.
+ * @param {Object} formObject The form data from the client.
+ * @returns {Object} Result object { success: true, count: number }.
+ */
+function WebAppInventory_generateBulkTasks(formObject) {
+  try {
+    const criteria = {
+      daysSinceLastCount: formObject.days ? parseInt(formObject.days, 10) : null,
+      maxStockLevel: formObject.stock ? parseInt(formObject.stock, 10) : null,
+      isWebOnly: formObject.webOnly,
+      isWineOnly: formObject.wineOnly,
+      includeZeroStock: formObject.zeroStock
+    };
+    
+    return InventoryManagementService.generateBulkCountTasks(criteria);
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'generateBulkTasks', e.message, e);
+    throw e;
+  }
+}
+
+/**
+ * Wraps the InventoryManagementService.createSpotCheckTask function.
+ * @param {string} sku The SKU.
+ * @param {string} note Optional note.
+ * @returns {Object} Result object { success: true, taskId: string }.
+ */
+function WebAppInventory_createSpotCheckTask(sku, note) {
+  try {
+    return InventoryManagementService.createSpotCheckTask(sku, note);
+  } catch (e) {
+     LoggerService.error('WebAppInventory', 'createSpotCheckTask', e.message, e);
+     throw e;
   }
 }

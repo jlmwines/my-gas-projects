@@ -1,5 +1,10 @@
-<div id="manager-orders-widget" style="padding: 0;">
-  <p>Loading...</p>
+<div id="manager-orders-widget" class="card h-100">
+  <div class="card-header">
+    <h5 class="mb-0">Orders</h5>
+  </div>
+  <div class="card-body">
+    <p>Loading...</p>
+  </div>
 </div>
 
 <script>
@@ -10,8 +15,10 @@
    */
   function showError(error) {
     console.error("Error in ManagerOrdersWidget:", error);
-    const widget = document.getElementById('manager-orders-widget');
-    widget.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+    const widgetBody = document.querySelector('#manager-orders-widget .card-body');
+    if (widgetBody) {
+      widgetBody.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+    }
   }
 
   /**
@@ -19,25 +26,24 @@
    * @param {Object} data - The orders data from the backend.
    */
   function updateManagerOrdersWidget(data) {
-    const widget = document.getElementById('manager-orders-widget');
+    const widgetBody = document.querySelector('#manager-orders-widget .card-body');
+    if (!widgetBody) return;
+
     if (!data) {
-      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
       return;
     }
     if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    // --- Update Counts ---
-    let countsHtml = '<h5>Manager Orders Overview</h5>';
-    countsHtml += '<hr>'; // Divider below widget title
-    countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
-    countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
-    countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
+    let html = ''; // Removed <hr> here
+    html += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
+    html += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
+    html += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
     
-    // --- Rebuild the widget with new structure (preserves a clean slate) ---
-    widget.innerHTML = countsHtml;
+    widgetBody.innerHTML = html;
   }
 
   // Initial data load for this view

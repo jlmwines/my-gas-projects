@@ -1,5 +1,10 @@
-<div id="manager-inventory-widget" style="padding: 0;">
-  <p>Loading...</p>
+<div id="manager-inventory-widget" class="card h-100">
+  <div class="card-header">
+    <h5 class="mb-0">Inventory</h5>
+  </div>
+  <div class="card-body">
+    <p>Loading...</p>
+  </div>
 </div>
 
 <script>
@@ -10,8 +15,10 @@
    */
   function showError(error) {
     console.error("Error in ManagerInventoryWidget:", error);
-    const widget = document.getElementById('manager-inventory-widget');
-    widget.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+    const widgetBody = document.querySelector('#manager-inventory-widget .card-body');
+    if (widgetBody) {
+      widgetBody.innerHTML = `<p class="text-danger">Error: ${error.message || error}</p>`;
+    }
   }
 
   /**
@@ -19,31 +26,34 @@
    * @param {Object} data - The inventory data from the backend.
    */
   function updateManagerInventoryView(data) {
-    const widget = document.getElementById('manager-inventory-widget');
+    const widgetBody = document.querySelector('#manager-inventory-widget .card-body');
+    if (!widgetBody) return;
+
     if (!data) {
-      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
       return;
     }
     if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    let html = '<h5>Manager Inventory Overview</h5>';
+    let html = ''; // Removed first <hr>
 
-    // Brurya Summary
-    html += '<p>Brurya Products: <strong>' + (data.bruryaProductCount || 0) + '</strong></p>';
-    html += '<p>Brurya Total Stock: <strong>' + (data.bruryaTotalStock || 0) + '</strong></p>';
-    html += '<hr>';
+    // Counts Section
+    html += '<h6>Counts</h6>';
+    html += '<p>Negative Inventory: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Count: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
+    html += '<p>Inventory Review: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
+    html += '<hr>'; // This HR remains
 
-    // Open Inventory Tasks
-    html += '<h6>Open Inventory Tasks</h6>';
-    html += '<p>Negative Inventory Tasks: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Tasks: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
-    html += '<p>Inventory Count Review Tasks: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
-    html += '<hr>';
+    // Brurya Section
+    html += '<h6>Brurya</h6>';
+    html += '<p>Products: <strong>' + (data.bruryaProductCount || 0) + '</strong></p>';
+    html += '<p>Total: <strong>' + (data.bruryaTotalStock || 0) + '</strong></p>';
+    // Removed last <hr>
 
-    widget.innerHTML = html;
+    widgetBody.innerHTML = html;
   }
 
   // Initial data load for this view

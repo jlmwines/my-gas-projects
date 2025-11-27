@@ -61,8 +61,13 @@
                 *   Mark the associated 'Verify Physical Count' task as 'Completed'.
                 *   (Future) Trigger the check for Comax Export readiness.
         *   **3. Task Creation Controls (IN PROGRESS):** A section for generating new count tasks. This will include:
-            *   Controls to create bulk tasks for products that are below a maximum stock quantity OR have not been counted in a maximum number of days.
-            *   A spot-check tool to manually create a count task for a single, specific product.
+            *   **Bulk Task Creation:**
+                *   **Inputs:** 'Max Stock' (Input, default 12), 'Days Since Last Count' (Input, default 90), 'Web Products Only' (Checkbox, default checked), 'Wine Only (Div 1)' (Checkbox, default checked).
+                *   **Logic:** Strict AND condition (Product must meet BOTH stock AND days criteria if specified).
+                *   **Workflow:** Preview count -> Confirmation dialog with number of tasks -> Generate.
+            *   **Spot-Check Task Creation:**
+                *   **Inputs:** Search input with autocomplete (Name/SKU), Optional Note.
+                *   **Logic:** Creates a single high-priority task for the selected product.
         *   **4. Open Tasks List (IN PROGRESS):** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
         *   **5. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).

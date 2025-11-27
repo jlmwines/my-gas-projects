@@ -207,39 +207,8 @@ function WebAppSystem_getSystemHealthDashboardData() {
 
     // --- Inventory Cycle Checklist Logic (New) ---
     const inventoryCycle = [];
-    // today and isToday are defined at the top.
 
-    // Step 1: Invoices (Automated Count)
-    const invoiceCount = OrchestratorService.getInvoiceFileCount();
-    let invoiceStatus = 'DONE';
-    let invoiceMessage = 'No invoices waiting.';
-    
-    let invoiceFolderUrl = null;
-    const invoiceFolderId = allConfig['system.folder.invoices'];
-    if (invoiceFolderId) {
-        const folderId = invoiceFolderId.id || invoiceFolderId; // Handle object or string
-        invoiceFolderUrl = `https://drive.google.com/drive/folders/${folderId}`;
-    }
-
-    if (invoiceCount > 0) {
-      invoiceStatus = 'WARNING';
-      invoiceMessage = `${invoiceCount} invoices waiting to be entered.`;
-    }
-
-    inventoryCycle.push({
-      step: 1,
-      name: 'Comax Invoice Entry',
-      status: invoiceStatus,
-      message: invoiceMessage,
-      timestamp: null,
-      data: { folderUrl: invoiceFolderUrl }
-    });
-
-    // --- Optimize: Read Job Queue Once ---
-    // Variables (logSpreadsheetId, jobQueueSheet, jobData, jobHeaders, jobTypeCol, jobStatusCol, jobProcessedCol)
-    // are now declared at the top of the function.
-
-    // Helper to parse job data from the bulk read
+    // Helper to parse job data from the bulk read (moved to top of this block for clarity)
     const getJobStatusSummary = (targetType) => {
       let lastSuccess = null;
       let isRunning = false;
@@ -264,142 +233,177 @@ function WebAppSystem_getSystemHealthDashboardData() {
       return { lastSuccess, isRunning };
     };
 
-    // Step 2: Web Translations
+    // --- Define Job Types ---
+    const webOrderImportJobType = 'import.drive.web_orders';
     const transJobType = 'import.drive.web_translations_he';
-    const transData = getJobStatusSummary(transJobType);
-    const lastTransImport = transData.lastSuccess;
-    const isTransRunning = transData.isRunning;
-    
-    let transStatus = 'WARNING';
-    let transMessage = 'Import required.';
-    if (isToday(lastTransImport)) {
-      transStatus = 'DONE';
-      transMessage = 'Completed today.';
-    } else if (isTransRunning) {
-      transStatus = 'PENDING';
-      transMessage = 'Job is running...';
-    }
+    const webProdJobType = 'import.drive.web_products_en';
+    const comaxProdJobType = 'import.drive.comax_products';
+    const comaxOrderExportTaskType = 'task.export.comax_orders_ready'; // Defined in OrchestratorService.js
 
+    // --- Get Job Summaries ---
+    const webOrderImportData = getJobStatusSummary(webOrderImportJobType);
+    const transData = getJobStatusSummary(transJobType);
+    const webProdData = getJobStatusSummary(webProdJobType);
+    const comaxProdData = getJobStatusSummary(comaxProdJobType);
+    
+    // --- Get Task Statuses ---
+    const orderService = new OrderService(ProductService);
+    const unexportedOrdersCount = orderService.getComaxExportOrderCount();
+    const lastComaxOrderExportTimestamp = orderService.getLastComaxOrderExportTimestamp(); // For Comax Products Yellow Lock
+
+    // --- Step 1: Comax Invoice Entry (Optional) ---
+    const invoiceCount = OrchestratorService.getInvoiceFileCount();
+    let invoiceStatus = 'DONE';
+    let invoiceMessage = 'No invoices waiting.';
+    let invoiceFolderUrl = null;
+    const invoiceFolderId = allConfig['system.folder.invoices'];
+    if (invoiceFolderId) {
+        const folderId = invoiceFolderId.id || invoiceFolderId;
+        invoiceFolderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    }
+    if (invoiceCount > 0) {
+      invoiceStatus = 'WARNING';
+      invoiceMessage = `${invoiceCount} invoices waiting to be entered.`;
+    }
+    inventoryCycle.push({
+      step: 1,
+      name: 'Comax Invoice Entry',
+      status: invoiceStatus,
+      message: invoiceMessage,
+      timestamp: null,
+      data: { folderUrl: invoiceFolderUrl }
+    });
+
+    // --- Step 2: Web Order Import ---
+    let webOrderImportStatus = 'WARNING';
+    let webOrderImportMessage = 'Import required.';
+    if (isToday(webOrderImportData.lastSuccess)) {
+      webOrderImportStatus = 'DONE';
+      webOrderImportMessage = 'Completed today.';
+    } else if (webOrderImportData.isRunning) {
+      webOrderImportStatus = 'PENDING';
+      webOrderImportMessage = 'Job is running...';
+    }
     inventoryCycle.push({
       step: 2,
-      name: 'Web Translations Import',
-      status: transStatus,
-      message: transMessage,
-      timestamp: lastTransImport ? Utilities.formatDate(lastTransImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+      name: 'Web Order Import',
+      status: webOrderImportStatus,
+      message: webOrderImportMessage,
+      timestamp: webOrderImportData.lastSuccess ? Utilities.formatDate(webOrderImportData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
     });
 
-    // Step 3: Web Products
-    const webProdJobType = 'import.drive.web_products_en';
-    const webProdData = getJobStatusSummary(webProdJobType);
-    const lastWebProdImport = webProdData.lastSuccess;
-    const isWebProdRunning = webProdData.isRunning;
+    // --- Step 3: Comax Order Export (Safety Lock) ---
+    // This step is driven by unexported orders count and the 'task.export.comax_orders_ready' task.
+    let comaxOrderExportStatus = 'DONE';
+    let comaxOrderExportMessage = 'All orders exported.';
+    const openComaxExportTasks = WebAppTasks.getOpenTasksByTypeId(comaxOrderExportTaskType);
 
-    let webProdStatus = 'WARNING';
-    let webProdMessage = 'Import required.';
-
-    if (transStatus !== 'DONE' && transStatus !== 'PENDING') {
-        // Blocked by Step 2
-        webProdStatus = 'BLOCKED';
-        webProdMessage = 'Waiting for Translations.';
-    } else if (isToday(lastWebProdImport)) {
-        webProdStatus = 'DONE';
-        webProdMessage = 'Completed today.';
-    } else if (isWebProdRunning) {
-        webProdStatus = 'PENDING';
-        webProdMessage = 'Job is running...';
+    if (webOrderImportStatus !== 'DONE' && webOrderImportStatus !== 'PENDING') {
+      comaxOrderExportStatus = 'BLOCKED';
+      comaxOrderExportMessage = 'Waiting for Web Order Import.';
+    } else if (unexportedOrdersCount > 0) {
+        comaxOrderExportStatus = 'ERROR'; // Red Lock
+        comaxOrderExportMessage = `${unexportedOrdersCount} unexported orders. Export required.`;
+    } else if (openComaxExportTasks.length > 0) {
+        comaxOrderExportStatus = 'WARNING'; // Task exists, needs attention
+        comaxOrderExportMessage = 'Export task is open.';
     }
-
     inventoryCycle.push({
       step: 3,
-      name: 'Web Products Import',
-      status: webProdStatus,
-      message: webProdMessage,
-      timestamp: lastWebProdImport ? Utilities.formatDate(lastWebProdImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+      name: 'Comax Order Export',
+      status: comaxOrderExportStatus,
+      message: comaxOrderExportMessage,
+      timestamp: lastComaxOrderExportTimestamp ? Utilities.formatDate(lastComaxOrderExportTimestamp, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null,
+      data: { unexportedOrdersCount: unexportedOrdersCount }
     });
 
-    // Step 4: Order Synchronization
-    const webOrderJobType = 'import.drive.web_orders';
-    const webOrderData = getJobStatusSummary(webOrderJobType);
-    const lastWebOrderImport = webOrderData.lastSuccess;
+    // --- Step 4: Web Translations Import (Conditional) ---
+    let transStatus = 'NEUTRAL'; // Default to NEUTRAL
+    let transMessage = 'Not run today.';
 
-    // Get unexported order count
-    const orderService = new OrderService(ProductService);
-    const unexportedCount = orderService.getComaxExportOrderCount();
-    
-    let orderSyncStatus = 'DONE';
-    let orderSyncMessage = 'All orders exported.';
-    
-    if (unexportedCount > 0) {
-        orderSyncStatus = 'ERROR'; // Red Lock
-        orderSyncMessage = `${unexportedCount} unexported orders. Export required.`;
-    } else if (!isToday(lastWebOrderImport)) {
-        // Maybe warning if import is stale? For now, trust the count.
-        // orderSyncStatus = 'WARNING';
-        // orderSyncMessage = 'Order import might be stale.';
+    if (isToday(transData.lastSuccess)) {
+        transStatus = 'DONE';
+        transMessage = 'Completed today.';
+    } else if (transData.isRunning) {
+        transStatus = 'PENDING';
+        transMessage = 'Job is running...';
+    } else if (transData.lastSuccess) { // Job ran, but not today
+        transStatus = 'NEUTRAL';
+        transMessage = `Last run: ${Utilities.formatDate(transData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
     }
 
     inventoryCycle.push({
       step: 4,
-      name: 'Order Synchronization',
-      status: orderSyncStatus,
-      message: orderSyncMessage,
-      timestamp: lastWebOrderImport ? Utilities.formatDate(lastWebOrderImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null,
-      data: { unexportedCount: unexportedCount }
+      name: 'Web Translations Import',
+      status: transStatus,
+      message: transMessage,
+      timestamp: transData.lastSuccess ? Utilities.formatDate(transData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
     });
 
-    // Step 5: Comax Product Import & Final Safety Lock
-    const comaxProdJobType = 'import.drive.comax_products';
-    const comaxProdData = getJobStatusSummary(comaxProdJobType);
-    const lastComaxImport = comaxProdData.lastSuccess;
-    const isComaxRunning = comaxProdData.isRunning;
-    const lastOrderExport = orderService.getLastComaxOrderExportTimestamp();
+    // --- Step 5: Web Products Import ---
+    let webProdStatus = 'PENDING'; // Default to PENDING (Neutral)
+    let webProdMessage = 'Not run today.';
+    if (comaxOrderExportStatus === 'ERROR') {
+      webProdStatus = 'BLOCKED';
+      webProdMessage = 'Blocked by unexported orders.';
+    } else if (isToday(webProdData.lastSuccess)) {
+      webProdStatus = 'DONE';
+      webProdMessage = 'Completed today.';
+    } else if (webProdData.isRunning) {
+      webProdStatus = 'PENDING'; // Active pending
+      webProdMessage = 'Job is running...';
+    } else if (webProdData.lastSuccess) { // Job ran, but not today
+      webProdStatus = 'NEUTRAL';
+      webProdMessage = `Last run: ${Utilities.formatDate(webProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
+    }
 
-    let comaxStatus = 'WARNING';
-    let comaxMessage = 'Import required.';
+    inventoryCycle.push({
+      step: 5,
+      name: 'Web Products Import',
+      status: webProdStatus,
+      message: webProdMessage,
+      timestamp: webProdData.lastSuccess ? Utilities.formatDate(webProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+    });
 
-    if (webProdStatus !== 'DONE' && webProdStatus !== 'PENDING') {
-        comaxStatus = 'BLOCKED';
-        comaxMessage = 'Waiting for Web Products.';
-    } else if (orderSyncStatus === 'ERROR') {
-        comaxStatus = 'BLOCKED';
-        comaxMessage = 'Blocked by Unexported Orders.';
-    } else if (isToday(lastComaxImport)) {
-        // Check Yellow Lock: Comax Import must be NEWER than Last Order Export
-        if (lastOrderExport && lastComaxImport <= lastOrderExport) {
-             comaxStatus = 'WARNING'; // Yellow Lock
+    // --- Step 6: Comax Product Import ---
+    let comaxStatus = 'PENDING'; // Default to PENDING (Neutral)
+    let comaxMessage = 'Not run today.';
+    if (comaxOrderExportStatus === 'ERROR') {
+      comaxStatus = 'BLOCKED';
+      comaxMessage = 'Blocked by unexported orders.';
+    } else if (isToday(comaxProdData.lastSuccess)) {
+        // Yellow Lock: Comax Import must be NEWER than Last Comax Order Export
+        if (lastComaxOrderExportTimestamp && comaxProdData.lastSuccess <= lastComaxOrderExportTimestamp) {
+             comaxStatus = 'WARNING';
              comaxMessage = 'Stale: Import newer file (post-order export).';
         } else {
              comaxStatus = 'DONE';
              comaxMessage = 'Completed today & Fresh.';
         }
-    } else if (isComaxRunning) {
-        comaxStatus = 'PENDING';
-        comaxMessage = 'Job is running...';
+    } else if (comaxProdData.isRunning) {
+      comaxStatus = 'PENDING'; // Active pending
+      comaxMessage = 'Job is running...';
+    } else if (comaxProdData.lastSuccess) { // Job ran, but not today
+      comaxStatus = 'NEUTRAL';
+      comaxMessage = `Last run: ${Utilities.formatDate(comaxProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
     }
-
     inventoryCycle.push({
-      step: 5,
+      step: 6,
       name: 'Comax Product Import',
       status: comaxStatus,
       message: comaxMessage,
-      timestamp: lastComaxImport ? Utilities.formatDate(lastComaxImport, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
+      timestamp: comaxProdData.lastSuccess ? Utilities.formatDate(comaxProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
     });
     
-    // Step 6: Web Inventory Export (Final Goal)
-    // Check if a confirmation task was completed TODAY
-    // Since tasks don't have a 'completed_timestamp' easily accessible here without reading SysTasks again or checking `st_DoneDate`
-    // We will infer it from `canWebInventoryExport` logic or check for an open task.
-    
+    // --- Step 7: Web Inventory Export (Final Goal) ---
     let webExportStatus = 'BLOCKED';
-    let webExportMessage = 'Complete previous steps.';
-    let webExportTimestamp = null; // We don't track the export timestamp easily here yet, unless we add a job type for it.
-
-    // Check for open confirmation task
+    let webExportMessage = 'Resolve Red Locks.';
+    let webExportTimestamp = null;
     const confirmTaskType = 'task.confirmation.web_inventory_export';
     const confirmTasks = WebAppTasks.getOpenTasksByTypeId(confirmTaskType);
     
-    // Check if the previous steps are all DONE
-    const previousStepsDone = inventoryCycle.every(s => s.status === 'DONE');
+    // Check for Red Lock ONLY
+    const isRedLocked = (comaxOrderExportStatus === 'ERROR');
 
     if (lastWebExportConfirmation) {
         webExportStatus = 'DONE';
@@ -408,24 +412,23 @@ function WebAppSystem_getSystemHealthDashboardData() {
     } else if (confirmTasks.length > 0) {
         webExportStatus = 'PENDING';
         webExportMessage = 'Waiting for confirmation.';
-    } else if (previousStepsDone) {
-        // If all steps are done and no confirmation is pending, we are ready to export OR already exported.
-        // Ideally we would check the last time the export function was run.
-        // For now, if everything is green, we show READY.
+    } else if (!isRedLocked) { // Only if NOT red locked
         webExportStatus = 'READY';
         webExportMessage = 'Ready to export.';
     }
 
     inventoryCycle.push({
-      step: 6,
+      step: 7,
       name: 'Web Inventory Export',
       status: webExportStatus,
       message: webExportMessage,
       timestamp: webExportTimestamp
     });
 
-    // Final Export Ready Status
-    const isInventoryExportReady = previousStepsDone; // Simple check: are 1-5 done?
+    // Final Export Ready Status for the main return object
+    const isInventoryExportReady = (
+        webExportStatus === 'READY' || webExportStatus === 'DONE' || webExportStatus === 'PENDING'
+    );
 
 
     return {
