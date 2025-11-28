@@ -170,7 +170,9 @@ function WebAppProducts_loadProductEditorData(taskId) {
       taskId: taskId,
       masterData: productDetails.master,
       stagingData: productDetails.staging,
-      comaxData: productDetails.comax
+      comaxData: productDetails.comax,
+      regions: productDetails.regions,
+      abvOptions: productDetails.abvOptions
     };
 
   } catch (e) {

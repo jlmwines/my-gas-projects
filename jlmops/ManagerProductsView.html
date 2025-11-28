@@ -33,6 +33,7 @@
     .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .hebrew-text { direction: rtl; text-align: right; }
+    select#edit-Region option { text-align: right !important; }
     .preview-box { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 4px; min-height: 200px; white-space: pre-wrap; font-size: 13px; }
 
     /* Flexible Description Boxes */
@@ -171,15 +172,17 @@
           <div class="comparison-grid">
             <div>
               <div class="col-header">Current</div>
+               <div class="form-group"><label>Region</label><div class="p-2 bg-light border rounded" id="cur-Region"></div></div>
+               <div class="form-group"><label>Alcohol by Volume</label><div class="p-2 bg-light border rounded" id="cur-ABV"></div></div>
                <div class="form-group"><label>Comax Vintage</label><div class="p-2 bg-light border rounded" id="cur-CmxVintage"></div></div>
                <div class="form-group"><label>Comax Size</label><div class="p-2 bg-light border rounded" id="cur-CmxSize"></div></div>
                <div class="form-group"><label>Comax Division</label><div class="p-2 bg-light border rounded" id="cur-CmxDivision"></div></div>
                <div class="form-group"><label>Comax Group</label><div class="p-2 bg-light border rounded" id="cur-CmxGroup"></div></div>
-               <div class="form-group"><label>Region</label><div class="p-2 bg-light border rounded" id="cur-Region"></div></div>
             </div>
             <div>
               <div class="col-header">Edit</div>
-              <div class="form-group"><label>Region</label><input type="text" class="form-control" id="edit-Region"></div>
+              <div class="form-group"><label>Region</label><select class="form-control" id="edit-Region"></select></div>
+              <div class="form-group"><label>Alcohol by Volume (%)</label><input type="text" class="form-control" id="edit-ABV" list="abv-options" placeholder=""></div>
             </div>
           </div>
         </div>
@@ -217,7 +220,7 @@
         </div>
 
       </div>
-      
+      <datalist id="abv-options"></datalist>
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
         <button class="btn border" onclick="ManagerProductsView.closeModal()">Cancel</button>
@@ -297,28 +300,32 @@
       ManagerProductsView.switchTab('desc');
 
       google.script.run
-      .withSuccessHandler(data => {
-         ManagerProductsView.currentSku = data.sku;
-         ManagerProductsView.currentMasterData = data.masterData || {}; 
-         
-         // Populate Header
-         const headerSku = data.sku;
-         const headerNameEn = ManagerProductsView.currentMasterData.wdm_NameEn || 'Unknown Product';
-         const headerNameHe = ManagerProductsView.currentMasterData.wdm_NameHe || '';
-         
-         document.getElementById('header-sku-display').textContent = headerSku;
-         document.getElementById('header-name-en-display').textContent = `- ${headerNameEn}`;
-         document.getElementById('header-name-he-display').textContent = headerNameHe ? `- ${headerNameHe}` : '';
-
-         try {
-             ManagerProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
-             document.getElementById('modal-status').textContent = '';
-         } catch (e) {
-             console.error('Error populating editor:', e);
-             document.getElementById('modal-status').textContent = 'Error displaying data.';
-         }
-      })
-      .withFailureHandler(err => {
+            .withSuccessHandler(data => {
+               console.log('Received data from backend in openEditor:', data); // Debug: Check full data object
+               ManagerProductsView.currentSku = data.sku;
+               ManagerProductsView.currentMasterData = data.masterData || {}; 
+               ManagerProductsView.lookupRegions = data.regions || []; // Store regions
+               
+               // Populate dropdowns and datalists
+               ManagerProductsView.populateRegionDropdown(data.regions);
+               ManagerProductsView.populateABVDatalist(data.abvOptions);                      
+                      // Populate Header
+                      const headerSku = data.sku;
+                      const headerNameEn = ManagerProductsView.currentMasterData.wdm_NameEn || 'Unknown Product';
+                      const headerNameHe = ManagerProductsView.currentMasterData.wdm_NameHe || '';
+                      
+                      document.getElementById('header-sku-display').textContent = headerSku;
+                      document.getElementById('header-name-en-display').textContent = `- ${headerNameEn}`;
+                      document.getElementById('header-name-he-display').textContent = headerNameHe ? `- ${headerNameHe}` : '';
+             
+                      try {
+                          ManagerProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
+                          document.getElementById('modal-status').textContent = '';
+                      } catch (e) {
+                          console.error('Error populating editor:', e);
+                          document.getElementById('modal-status').textContent = 'Error displaying data.';
+                      }
+                   })      .withFailureHandler(err => {
           console.error('Failed to load editor data:', err);
           document.getElementById('modal-status').textContent = 'Error: ' + err.message;
       })
@@ -336,28 +343,81 @@
       ManagerProductsView.setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
       ManagerProductsView.setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
       
+      // Specs Tab - Current
       ManagerProductsView.setVal('cur-Region', m.wdm_Region);
-      ManagerProductsView.setVal('cur-Intensity', m.wdm_Intensity);
-      ManagerProductsView.setVal('cur-Complexity', m.wdm_Complexity);
-
+      ManagerProductsView.setVal('cur-ABV', ManagerProductsView.formatABV(m.wdm_ABV));
       ManagerProductsView.setVal('cur-CmxVintage', c.cpm_Vintage);
       ManagerProductsView.setVal('cur-CmxSize', c.cpm_Size);
       ManagerProductsView.setVal('cur-CmxDivision', c.cpm_Division);
       ManagerProductsView.setVal('cur-CmxGroup', c.cpm_Group);
 
+      // Attributes Tab - Current
+      ManagerProductsView.setVal('cur-Intensity', m.wdm_Intensity);
+      ManagerProductsView.setVal('cur-Complexity', m.wdm_Complexity);
+
       // Populate Edit Column
-      ManagerProductsView.setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || '');
-      ManagerProductsView.setInp('edit-DescriptionHe', s.wdm_DescriptionHe || '');
-      ManagerProductsView.setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || '');
-      ManagerProductsView.setInp('edit-DescriptionEn', s.wdm_DescriptionEn || '');
+      ManagerProductsView.setInp('edit-ShortDescrHe', s.wds_ShortDescrHe || '');
+      ManagerProductsView.setInp('edit-DescriptionHe', s.wds_DescriptionHe || '');
+      ManagerProductsView.setInp('edit-ShortDescrEn', s.wds_ShortDescrEn || '');
+      ManagerProductsView.setInp('edit-DescriptionEn', s.wds_DescriptionEn || '');
       
-      ManagerProductsView.setInp('edit-Region', s.wdm_Region || m.wdm_Region);
-      ManagerProductsView.setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
-      ManagerProductsView.setInp('edit-Complexity', s.wdm_Complexity || m.wdm_Complexity);
+      // Specs Tab - Edit
+      ManagerProductsView.setInp('edit-Region', ''); // Should be empty on load
+      ManagerProductsView.setInp('edit-ABV', ''); // Should be empty on load
+
+      // Attributes Tab - Edit
+      ManagerProductsView.setInp('edit-Intensity', ''); // Should be empty on load
+      ManagerProductsView.setInp('edit-Complexity', ''); // Should be empty on load
       
       ManagerProductsView.updatePreview();
     };
     
+    // Helper function to format ABV for display (e.g., "12.5%")
+    ManagerProductsView.formatABV = function(value) {
+        const num = parseFloat(value);
+        return isNaN(num) ? '-' : `${(num * 100).toFixed(1)}%`;
+    };
+
+    // Helper function to format ABV for input (e.g., "12.5")
+    ManagerProductsView.formatABVForInput = function(value) {
+        const num = parseFloat(value);
+        return isNaN(num) ? '' : (num * 100).toFixed(1);
+    };
+
+
+
+
+
+    // Helper to populate the ABV datalist
+    ManagerProductsView.populateABVDatalist = function(abvOptions) {
+        const datalistEl = document.getElementById('abv-options');
+        if (!datalistEl) return;
+        datalistEl.innerHTML = '';
+        abvOptions.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option;
+            datalistEl.appendChild(opt);
+        });
+    };
+
+    // Helper to populate the Region dropdown
+    ManagerProductsView.populateRegionDropdown = function(regions) {
+        const selectEl = document.getElementById('edit-Region');
+        if (!selectEl) return;
+
+        // Clear existing options and add a default "Select Region" option
+        selectEl.innerHTML = '<option value="">Select Region</option>'; 
+
+        if (regions && Array.isArray(regions)) {
+            regions.forEach(region => {
+                const opt = document.createElement('option');
+                opt.value = region.code; // Use 'code' property from the mapped object
+                opt.textContent = region.code; // Use 'code' property for display text for testing
+                selectEl.appendChild(opt);
+            });
+        }
+    };
+
     ManagerProductsView.setVal = function(id, val) { document.getElementById(id).textContent = val || '-'; };
     ManagerProductsView.setInp = function(id, val) { document.getElementById(id).value = val || ''; };
 
@@ -389,7 +449,29 @@
             document.getElementById('edit-ShortDescrEn').value = m.wdm_ShortDescrEn || '';
             document.getElementById('edit-DescriptionEn').value = m.wdm_DescriptionEn || '';
         } else if (tab === 'specs') {
-            document.getElementById('edit-Region').value = m.wdm_Region || '';
+            // Special Logic for Region: Map Name to Code if needed
+            let regionVal = m.wdm_Region || '';
+            const selectEl = document.getElementById('edit-Region');
+            
+            // 1. Try direct assignment (assuming regionVal is a Code)
+            selectEl.value = regionVal;
+            
+            // 2. If failed (selectedIndex is -1 or 0/default but value was not empty), try to find by Name or Code match
+            if (regionVal && selectEl.selectedIndex <= 0) {
+                // Try finding by TextHE
+                let match = ManagerProductsView.lookupRegions.find(r => r.textHE === regionVal);
+                
+                // If not found, try finding by Code (just in case strict equality failed above due to types)
+                if (!match) {
+                    match = ManagerProductsView.lookupRegions.find(r => String(r.code) === String(regionVal));
+                }
+
+                if (match) {
+                    selectEl.value = match.code;
+                }
+            }
+            
+            document.getElementById('edit-ABV').value = ManagerProductsView.formatABVForInput(m.wdm_ABV || '');
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = m.wdm_Intensity || '';
             document.getElementById('edit-Complexity').value = m.wdm_Complexity || '';
@@ -406,6 +488,7 @@
             document.getElementById('edit-DescriptionEn').value = '';
         } else if (tab === 'specs') {
             document.getElementById('edit-Region').value = '';
+            document.getElementById('edit-ABV').value = '';
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = '';
             document.getElementById('edit-Complexity').value = '';
@@ -434,6 +517,7 @@
         wdm_ShortDescrEn: document.getElementById('edit-ShortDescrEn').value,
         wdm_DescriptionEn: document.getElementById('edit-DescriptionEn').value,
         wdm_Region: document.getElementById('edit-Region').value,
+        wdm_ABV: document.getElementById('edit-ABV').value,
         wdm_Intensity: document.getElementById('edit-Intensity').value,
         wdm_Complexity: document.getElementById('edit-Complexity').value
       };

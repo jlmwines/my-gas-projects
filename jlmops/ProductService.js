@@ -690,7 +690,7 @@ const ProductService = (function() {
       };
 
       let masterData = getRowObject(sheetNames.master, schemas.master, 'wdm_SKU');
-      const stagingData = getRowObject(sheetNames.staging, schemas.staging, 'wdm_SKU');
+      const stagingData = getRowObject(sheetNames.staging, schemas.staging, 'wds_SKU');
       const comaxData = getRowObject(sheetNames.comax, schemas.comax, 'cpm_SKU');
       const webProdData = getRowObject(sheetNames.webProd, schemas.webProd, 'wpm_SKU');
 
@@ -704,10 +704,33 @@ const ProductService = (function() {
           masterData.wdm_NameHe = comaxData.cpm_NameHe;
       }
 
+      // Fetch region lookup data
+      const allTexts = LookupService.getLookupMap('map.text_lookups'); // maps to SysLkp_Texts
+      const regionsMap = new Map();
+      allTexts.forEach((value, key) => {
+          if (value.slt_Note === 'Region') {
+              regionsMap.set(key, value);
+          }
+      });
+      // Convert to array and sort by slt_TextHE
+      const regions = Array.from(regionsMap.values()).sort((a, b) => {
+          const textA = a.slt_TextHE || '';
+          const textB = b.slt_TextHE || '';
+          return textA.localeCompare(textB);
+      }).map(r => ({ code: r.slt_Code, textHE: r.slt_TextHE }));
+
+      // Generate ABV options
+      const abvOptions = [];
+      for (let i = 12.0; i <= 14.5; i += 0.5) {
+          abvOptions.push(i.toFixed(1));
+      }
+
       const result = {
         master: masterData,
         staging: stagingData || null,
-        comax: comaxData || null
+        comax: comaxData || null,
+        regions: regions,
+        abvOptions: abvOptions
       };
       
       // Return as JSON string to avoid serialization issues
@@ -727,34 +750,41 @@ const ProductService = (function() {
       const stagingSchema = allConfig['schema.data.WebDetS'];
       const stagingHeaders = stagingSchema.headers.split(',');
       
-      // Prepare the row data
-      // We need to merge existing staging data (if any) or master data with the form data
-      // For simplicity and safety, we should probably start with a clean slate or existing staging if present.
-      // But formData contains the *full* desired state as edited by the manager?
-      // Assuming formData contains key-value pairs matching the schema headers.
-      
-      // 1. Get existing staging or master to fill in gaps? 
-      // The UI should probably send the COMPLETE object to avoid nulling out fields. 
-      // Let's assume formData is the complete new state for the editable fields.
-      
       const rowData = {};
       stagingHeaders.forEach(header => {
-        rowData[header] = formData[header] !== undefined ? formData[header] : '';
+        // Handle TaskId and SKU directly
+        if (header === 'wds_TaskId') {
+            rowData[header] = taskId;
+            return;
+        }
+        if (header === 'wds_SKU') {
+            rowData[header] = sku;
+            return;
+        }
+
+        // Map wds_ header back to wdm_ key to find value in formData
+        // Example: wds_NameEn -> wdm_NameEn
+        const masterKey = header.replace('wds_', 'wdm_');
+        let value = formData[masterKey];
+
+        if (header === 'wds_ABV') {
+            value = parseFloat(value);
+            if (isNaN(value)) {
+                value = ''; 
+            } else {
+                value = value / 100; // Convert percentage (12.5) to decimal (0.125)
+            }
+        }
+        rowData[header] = value !== undefined ? value : '';
       });
       
-      // Enforce key fields
-      rowData['wdm_SKU'] = sku;
-      rowData['wds_TaskId'] = taskId;
-
       // 2. Upsert into WebDetS
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
       const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
       
       const existingData = stagingSheet.getDataRange().getValues();
-      // Find index by SKU (or WebIdEn if that's the key, but SKU is the user-facing key here)
-      // Schema says key is wdm_WebIdEn. Let's use SKU for now as it's passed in.
-      const skuIndex = stagingHeaders.indexOf('wdm_SKU');
+      const skuIndex = stagingHeaders.indexOf('wds_SKU');
       let rowIndex = -1;
       
       // Simple linear search for upsert
@@ -797,7 +827,19 @@ const ProductService = (function() {
       // 1. Prepare row data for Master
       const rowData = {};
       masterHeaders.forEach(header => {
-        rowData[header] = finalData[header] !== undefined ? finalData[header] : '';
+        // Map wdm_ header to wds_ key to find value in finalData (assuming finalData comes from staging/admin UI with wds keys)
+        // Or if finalData uses wdm keys, use directly. 
+        // Given Admin UI likely mirrors Manager UI, let's assume it sends wdm_ keys for now to match submitProductDetails logic.
+        // But if it sends wds_ keys (raw staging data), we need to map.
+        // Let's support both for robustness.
+        
+        let value = finalData[header]; // Try wdm_ key
+        if (value === undefined) {
+             const stagingKey = header.replace('wdm_', 'wds_');
+             value = finalData[stagingKey]; // Try wds_ key
+        }
+        
+        rowData[header] = value !== undefined ? value : '';
       });
       // Ensure SKU matches
       rowData['wdm_SKU'] = sku;
@@ -828,11 +870,7 @@ const ProductService = (function() {
         masterSheet.appendRow(rowValues);
       }
 
-      // 3. Clear from WebDetS (optional but cleaner)
-      // For now, we leave it as history or clear it? 
-      // Let's leave it. The task status is the source of truth.
-
-      // 4. Update Task Status
+      // 3. Update Task Status
       TaskService.updateTaskStatus(taskId, 'Accepted');
 
       return { success: true };
