@@ -20,39 +20,25 @@ function populateInitialOrderData() {
 
         const ordersMSheet = legacySpreadsheet.getSheetByName('OrdersM');
         const orderLogSheet = legacySpreadsheet.getSheetByName('OrderLog');
-        const orderLogArchiveSheet = legacySpreadsheet.getSheetByName('OrderLogArchive');
 
         const sheetNames = ConfigService.getConfig('system.sheet_names');
 
         const webOrdMSheet = targetSpreadsheet.getSheetByName(sheetNames.WebOrdM);
         const webOrdItemsMSheet = targetSpreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
         const sysOrdLogSheet = targetSpreadsheet.getSheetByName(sheetNames.SysOrdLog);
-        const webOrdMArchiveSheet = targetSpreadsheet.getSheetByName(sheetNames.WebOrdM_Archive);
-        const webOrdItemsMArchiveSheet = targetSpreadsheet.getSheetByName(sheetNames.WebOrdItemsM_Archive);
-        const orderLogArchiveJLMopsSheet = targetSpreadsheet.getSheetByName(sheetNames.OrderLogArchive);
 
         // 2. Read data from legacy sheets
         const ordersMData = ordersMSheet.getDataRange().getValues();
         const orderLogData = orderLogSheet.getDataRange().getValues();
-        const orderLogArchiveData = orderLogArchiveSheet.getDataRange().getValues();
 
         const ordersMHeaders = ordersMData.shift();
         const orderLogHeaders = orderLogData.shift();
-        const orderLogArchiveHeaders = orderLogArchiveData.shift();
 
         console.log(`Read ${ordersMData.length} rows from OrdersM.`);
         console.log(`Read ${orderLogData.length} rows from OrderLog.`);
-        console.log(`Read ${orderLogArchiveData.length} rows from OrderLogArchive.`);
-
-        // 3. Create a lookup set of archived order IDs
-        const archivedOrderIdCol = orderLogArchiveHeaders.indexOf('order_id');
-        const archivedOrderIds = new Set(orderLogArchiveData.map(row => row[archivedOrderIdCol]));
-
         // 4. Process data
         const webOrdM_Data = [];
         const webOrdItemsM_Data = [];
-        const webOrdM_Archive_Data = [];
-        const webOrdItemsM_Archive_Data = [];
         let itemMasterIdCounter = 1;
 
         const headerMap = Object.fromEntries(ordersMHeaders.map((h, i) => [h, i]));
@@ -90,7 +76,6 @@ function populateInitialOrderData() {
 
         for (const orderRow of ordersMData) {
             const orderId = orderRow[headerMap['order_id']];
-            const isArchived = archivedOrderIds.has(orderId);
 
             const orderHeader = [
                 orderId, orderRow[headerMap['order_number']], orderRow[headerMap['order_date']],
@@ -102,11 +87,7 @@ function populateInitialOrderData() {
                 orderRow[headerMap['shipping_city']], orderRow[headerMap['shipping_phone']]
             ];
 
-            if (isArchived) {
-                webOrdM_Archive_Data.push(orderHeader);
-            } else {
-                webOrdM_Data.push(orderHeader);
-            }
+            webOrdM_Data.push(orderHeader);
 
             for (let i = 1; i <= 24; i++) {
                 const sku = orderRow[headerMap[`Product Item ${i} SKU`]];
@@ -121,11 +102,7 @@ function populateInitialOrderData() {
                         console.warn(`SKU "${trimmedSku}" not found in WebProdM for order item ${itemMasterIdCounter}. woi_WebIdEn will be blank.`);
                     }
                     const itemRow = [itemMasterIdCounter++, orderId, webIdEn, sku, name, quantity, total];
-                    if (isArchived) {
-                        webOrdItemsM_Archive_Data.push(itemRow);
-                    } else {
-                        webOrdItemsM_Data.push(itemRow);
-                    }
+                    webOrdItemsM_Data.push(itemRow);
                 }
             }
         }
@@ -142,35 +119,72 @@ function populateInitialOrderData() {
 
         writeData(webOrdMSheet, webOrdM_Data, 'WebOrdM');
         writeData(webOrdItemsMSheet, webOrdItemsM_Data, 'WebOrdItemsM');
-        writeData(webOrdMArchiveSheet, webOrdM_Archive_Data, 'WebOrdM_Archive');
-        writeData(webOrdItemsMArchiveSheet, webOrdItemsM_Archive_Data, 'WebOrdItemsM_Archive');
         // Transform and write SysOrdLog data
         const transformedOrderLogData = [];
         const legacyStatusIndex = orderLogHeaders.indexOf('comax_export_status');
+        const legacyPackingStatusIndex = orderLogHeaders.indexOf('packing_slip_status'); // New
+        const legacyPackingPrintDateIndex = orderLogHeaders.indexOf('packing_print_date'); // New
         const legacyTimestampIndex = orderLogHeaders.indexOf('comax_export_timestamp'); // This might not exist, but good to check
 
         // Define target indices based on SysConfig schema for SysOrdLog
         const sysOrdLogSchema = ConfigService.getConfig('schema.data.SysOrdLog').headers.split(',');
-        const targetStatusIndex = sysOrdLogSchema.indexOf('sol_ComaxExportStatus');
-        const targetTimestampIndex = sysOrdLogSchema.indexOf('sol_ComaxExportTimestamp');
+        const targetComaxStatusIndex = sysOrdLogSchema.indexOf('sol_ComaxExportStatus');
+        const targetComaxTimestampIndex = sysOrdLogSchema.indexOf('sol_ComaxExportTimestamp');
+        const targetPackingStatusIndex = sysOrdLogSchema.indexOf('sol_PackingStatus'); // New: Packing Status Index
+        const targetOrderStatusIndex = sysOrdLogSchema.indexOf('sol_OrderStatus'); // New: Order Status Index
+
+        const ordersMOrderIdCol = headerMap['order_id']; // For looking up original order status
+        const ordersMStatusCol = headerMap['status']; // For looking up original order status
+
+        // Create a map for quick lookup of order status from ordersMData
+        const orderStatusMap = ordersMData.reduce((map, row) => {
+            map[row[ordersMOrderIdCol]] = row[ordersMStatusCol];
+            return map;
+        }, {});
 
         orderLogData.forEach(legacyRow => {
-            const newRow = [...legacyRow]; // Create a copy
-            const legacyStatusValue = legacyRow[legacyStatusIndex];
+            // Need to create a newRow that is long enough to hold all SysOrdLog columns
+            const newRow = new Array(sysOrdLogSchema.length).fill('');
+            const orderId = legacyRow[orderLogHeaders.indexOf('order_id')]; // Assuming order_id is in orderLogHeaders
 
-            if (legacyStatusValue instanceof Date || (typeof legacyStatusValue === 'string' && legacyStatusValue.trim() !== '')) {
-                // If there is any value (date or otherwise), treat as exported
-                newRow[targetStatusIndex] = 'Exported';
-                newRow[targetTimestampIndex] = legacyStatusValue; // Place the original value in the timestamp column
+            // Populate base order information
+            newRow[sysOrdLogSchema.indexOf('sol_OrderId')] = orderId;
+            newRow[sysOrdLogSchema.indexOf('sol_OrderDate')] = legacyRow[orderLogHeaders.indexOf('order_date')];
+
+            // Comax Export Status and Timestamp
+            const legacyComaxStatusValue = legacyRow[legacyStatusIndex]; // This is 'comax_export_status' from legacy OrderLog
+            if (legacyComaxStatusValue instanceof Date || (typeof legacyComaxStatusValue === 'string' && legacyComaxStatusValue.trim() !== '')) {
+                newRow[targetComaxStatusIndex] = 'Exported';
+                newRow[targetComaxTimestampIndex] = legacyComaxStatusValue;
             } else {
-                newRow[targetStatusIndex] = 'Pending';
-                newRow[targetTimestampIndex] = '';
+                newRow[targetComaxStatusIndex] = 'Pending';
+                newRow[targetComaxTimestampIndex] = '';
             }
+
+            // Packing Status and Printed Timestamp
+            const legacyPackingStatus = legacyRow[legacyPackingStatusIndex];
+            const legacyPackingPrintDate = legacyRow[legacyPackingPrintDateIndex];
+
+            if (legacyPackingStatus && legacyPackingStatus.toString().trim() !== '') {
+                newRow[targetPackingStatusIndex] = legacyPackingStatus; // Use legacy status if available
+            } else {
+                // If no legacy packing status, determine from original order status
+                const originalOrderStatus = orderStatusMap[orderId];
+                if (originalOrderStatus && (originalOrderStatus.toLowerCase().includes('cancelled') || originalOrderStatus.toLowerCase().includes('refunded'))) {
+                    newRow[targetPackingStatusIndex] = 'Ineligible';
+                } else {
+                    newRow[targetPackingStatusIndex] = 'Eligible'; // Default to eligible
+                }
+            }
+            newRow[sysOrdLogSchema.indexOf('sol_PackingPrintedTimestamp')] = legacyPackingPrintDate || ''; // Set legacy print date
+
+            // Set the original order status from OrdersM
+            newRow[targetOrderStatusIndex] = orderStatusMap[orderId] || '';
+
             transformedOrderLogData.push(newRow);
         });
 
         writeData(sysOrdLogSheet, transformedOrderLogData, 'SysOrdLog');
-        writeData(orderLogArchiveJLMopsSheet, orderLogArchiveData, 'OrderLogArchive (JLMops)');
 
         console.log(`${functionName} completed successfully.`);
 
@@ -199,10 +213,11 @@ function populateInitialProductData() {
         const legacyDetailsMSheet = legacySpreadsheet.getSheetByName('DetailsM');
         const legacyWeHeSheet = legacySpreadsheet.getSheetByName('WeHe');
         const legacyComaxMSheet = legacySpreadsheet.getSheetByName('ComaxM');
-        const legacyWebMSheet = legacySpreadsheet.getSheetByName('WebM'); // Added
+        const legacyWebMSheet = legacySpreadsheet.getSheetByName('WebM');
+        const legacyAuditSheet = legacySpreadsheet.getSheetByName('Audit'); // Added
 
-        if (!legacyDetailsMSheet || !legacyWeHeSheet || !legacyComaxMSheet || !legacyWebMSheet) {
-            throw new Error('One or more legacy product sheets (DetailsM, WeHe, ComaxM, WebM) not found.');
+        if (!legacyDetailsMSheet || !legacyWeHeSheet || !legacyComaxMSheet || !legacyWebMSheet || !legacyAuditSheet) {
+            throw new Error('One or more legacy product sheets (DetailsM, WeHe, ComaxM, WebM, Audit) not found.');
         }
 
         // 3. Get JLMops target sheets from SysConfig
@@ -210,33 +225,40 @@ function populateInitialProductData() {
         const webProdMSheet = targetSpreadsheet.getSheetByName(sheetNames.WebProdM);
         const webDetMSheet = targetSpreadsheet.getSheetByName(sheetNames.WebDetM);
         const webXltMSheet = targetSpreadsheet.getSheetByName(sheetNames.WebXltM);
+        const sysProductAuditSheet = targetSpreadsheet.getSheetByName(sheetNames.SysProductAudit);
+        const cmxProdMSheet = targetSpreadsheet.getSheetByName(sheetNames.CmxProdM); // Added
 
-        if (!webProdMSheet || !webDetMSheet || !webXltMSheet) {
-            throw new Error('One or more JLMops target product sheets (WebProdM, WebDetM, WebXltM) not found.');
+        if (!webProdMSheet || !webDetMSheet || !webXltMSheet || !sysProductAuditSheet || !cmxProdMSheet) {
+            throw new Error('One or more JLMops target product sheets (WebProdM, WebDetM, WebXltM, SysProductAudit, CmxProdM) not found.');
         }
 
         // 4. Read data from legacy sheets
         const legacyDetailsMData = legacyDetailsMSheet.getDataRange().getValues();
         const legacyWeHeData = legacyWeHeSheet.getDataRange().getValues();
         const legacyComaxMData = legacyComaxMSheet.getDataRange().getValues();
-        const legacyWebMData = legacyWebMSheet.getDataRange().getValues(); // Added
+        const legacyWebMData = legacyWebMSheet.getDataRange().getValues();
+        const legacyAuditData = legacyAuditSheet.getDataRange().getValues(); // Added
 
         const legacyDetailsMHeaders = legacyDetailsMData.shift();
         const legacyWeHeHeaders = legacyWeHeData.shift();
         const legacyComaxMHeaders = legacyComaxMData.shift();
-        const legacyWebMHeaders = legacyWebMData.shift(); // Added
+        const legacyWebMHeaders = legacyWebMData.shift();
+        const legacyAuditHeaders = legacyAuditData.shift(); // Added
 
         Logger.log(`legacyDetailsMHeaders: ${JSON.stringify(legacyDetailsMHeaders)}`);
 
         console.log(`Read ${legacyDetailsMData.length} rows from legacy DetailsM.`);
         console.log(`Read ${legacyWeHeData.length} rows from legacy WeHe.`);
         console.log(`Read ${legacyComaxMData.length} rows from legacy ComaxM.`);
-        console.log(`Read ${legacyWebMData.length} rows from legacy WebM.`); // Added
+        console.log(`Read ${legacyWebMData.length} rows from legacy WebM.`);
+        console.log(`Read ${legacyAuditData.length} rows from legacy Audit.`); // Added
 
         // 5. Process and map data
         const webProdM_Data = [];
         const webDetM_Data = [];
         const webXltM_Data = [];
+        const sysProductAudit_Data = [];
+        const cmxProdM_Data = [];
 
         // Build lookup maps for efficient data access
         const legacyComaxMMap = legacyComaxMData.reduce((map, row) => {
@@ -340,6 +362,59 @@ function populateInitialProductData() {
             ]);
         });
 
+        // Populate SysProductAudit
+        const sysProductAuditSchema = ConfigService.getConfig('schema.data.SysProductAudit').headers.split(',');
+        const legacyAuditHeaderMap = legacyAuditHeaders.reduce((map, header, index) => {
+            map[header] = index;
+            return map;
+        }, {});
+
+        legacyAuditData.forEach(row => {
+            const newAuditRow = new Array(sysProductAuditSchema.length).fill('');
+            newAuditRow[sysProductAuditSchema.indexOf('pa_CmxId')] = row[legacyAuditHeaderMap['ID']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_SKU')] = row[legacyAuditHeaderMap['SKU']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastCount')] = row[legacyAuditHeaderMap['LastCount']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_ComaxQty')] = row[legacyAuditHeaderMap['ComaxQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_NewQty')] = row[legacyAuditHeaderMap['NewQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_BruryaQty')] = row[legacyAuditHeaderMap['BruryaQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_StorageQty')] = row[legacyAuditHeaderMap['StorageQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_OfficeQty')] = row[legacyAuditHeaderMap['OfficeQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_ShopQty')] = row[legacyAuditHeaderMap['ShopQty']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailUpdate')] = row[legacyAuditHeaderMap['LastDetailUpdate']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailAudit')] = row[legacyAuditHeaderMap['LastDetailAudit']];
+            sysProductAudit_Data.push(newAuditRow);
+        });
+
+        // Populate CmxProdM
+        const cmxProdMSchema = ConfigService.getConfig('schema.data.CmxProdM').headers.split(',');
+        const legacyComaxMHeaderMap = legacyComaxMHeaders.reduce((map, header, index) => {
+            map[header] = index;
+            return map;
+        }, {});
+
+        legacyComaxMData.forEach(row => {
+            const newCmxProdMRow = new Array(cmxProdMSchema.length).fill('');
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_CmxId')] = row[legacyComaxMHeaderMap['CMX ID']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_SKU')] = row[legacyComaxMHeaderMap['CMX SKU']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_NameHe')] = row[legacyComaxMHeaderMap['CMX NAME']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Division')] = row[legacyComaxMHeaderMap['CMX DIV']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Group')] = row[legacyComaxMHeaderMap['CMX GROUP']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Vendor')] = row[legacyComaxMHeaderMap['CMX VENDOR']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Brand')] = row[legacyComaxMHeaderMap['CMX BRAND']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Color')] = row[legacyComaxMHeaderMap['CMX COLOR']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Size')] = row[legacyComaxMHeaderMap['CMX SIZE']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Dryness')] = row[legacyComaxMHeaderMap['CMX DRY']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Vintage')] = row[legacyComaxMHeaderMap['CMX YEAR']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_IsNew')] = row[legacyComaxMHeaderMap['CMX NEW']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_IsArchived')] = row[legacyComaxMHeaderMap['CMX ARCHIVE']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_IsActive')] = row[legacyComaxMHeaderMap['CMX ACTIVE']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Price')] = row[legacyComaxMHeaderMap['CMX PRICE']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Stock')] = row[legacyComaxMHeaderMap['CMX STOCK']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_IsWeb')] = row[legacyComaxMHeaderMap['CMX WEB']];
+            newCmxProdMRow[cmxProdMSchema.indexOf('cpm_Exclude')] = row[legacyComaxMHeaderMap['EXCLUDE']];
+            cmxProdM_Data.push(newCmxProdMRow);
+        });
+
         // 6. Write data to JLMops sheets
         const writeData = (sheet, data, name) => {
             console.log(`Writing ${data.length} rows to ${name}...`);
@@ -353,6 +428,8 @@ function populateInitialProductData() {
         writeData(webProdMSheet, webProdM_Data, 'WebProdM');
         writeData(webDetMSheet, webDetM_Data, 'WebDetM');
         writeData(webXltMSheet, webXltM_Data, 'WebXltM');
+        writeData(sysProductAuditSheet, sysProductAudit_Data, 'SysProductAudit');
+        writeData(cmxProdMSheet, cmxProdM_Data, 'CmxProdM');
 
         console.log(`${functionName} completed successfully.`);
 

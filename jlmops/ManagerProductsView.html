@@ -102,22 +102,22 @@
                 <span id="header-name-he-display" class="hebrew-text"></span>
             </div>
         </div>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <button class="modal-close" onclick="ManagerProductsView.closeModal()">&times;</button>
       </div>
       
       <div class="form-body">
         <!-- Tabs with Right-Aligned Actions -->
         <div class="tab-bar">
           <div class="tab-group">
-            <div class="tab-btn active" onclick="switchTab('desc')">Descriptions</div>
-            <div class="tab-btn" onclick="switchTab('specs')">Specs</div>
-            <div class="tab-btn" onclick="switchTab('attr')">Attributes</div>
-            <div class="tab-btn" onclick="switchTab('pair')">Pairing</div>
-            <div class="tab-btn" onclick="switchTab('preview')">Preview</div>
+            <div class="tab-btn active" onclick="ManagerProductsView.switchTab('desc')">Descriptions</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('specs')">Specs</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('attr')">Attributes</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('pair')">Pairing</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('preview')">Preview</div>
           </div>
           <div class="tab-actions" id="global-actions">
-             <button class="btn btn-sm border" onclick="globalFill()">Fill</button>
-             <button class="btn btn-sm border" onclick="globalClear()">Clear</button>
+             <button class="btn btn-sm border" onclick="ManagerProductsView.globalFill()">Fill</button>
+             <button class="btn btn-sm border" onclick="ManagerProductsView.globalClear()">Clear</button>
           </div>
         </div>
 
@@ -220,36 +220,38 @@
       
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
-        <button class="btn border" onclick="closeModal()">Cancel</button>
-        <button class="btn" onclick="submitChanges()">Submit</button>
+        <button class="btn border" onclick="ManagerProductsView.closeModal()">Cancel</button>
+        <button class="btn" onclick="ManagerProductsView.submitChanges()">Submit</button>
       </div>
     </div>
   </div>
 
   <script>
-    let currentTaskId = null;
-    let currentSku = null;
-    let currentMasterData = {};
-    let currentActiveTab = 'desc';
+    // Namespace to prevent global scope pollution on reload
+    window.ManagerProductsView = {};
 
-    function refreshView() {
-      loadWidgetData();
-      loadTaskList();
-    }
+    // State Variables attached to namespace
+    ManagerProductsView.currentTaskId = null;
+    ManagerProductsView.currentSku = null;
+    ManagerProductsView.currentMasterData = {};
+    ManagerProductsView.currentActiveTab = 'desc';
 
-    function loadWidgetData() {
+    ManagerProductsView.refreshView = function() {
+      ManagerProductsView.loadWidgetData();
+      ManagerProductsView.loadTaskList();
+    };
+
+    ManagerProductsView.loadWidgetData = function() {
       google.script.run.withSuccessHandler(data => {
         if (data.error) return console.error(data.error);
         const widget = document.getElementById('stat-mismatch');
         if (widget) {
             widget.textContent = data.data['vintage_mismatch_tasks'] || 0;
-        } else {
-            console.warn('Widget element "stat-mismatch" not found.');
         }
       }).WebAppProducts_getProductsWidgetData();
-    }
+    };
 
-    function loadTaskList() {
+    ManagerProductsView.loadTaskList = function() {
       const tbody = document.getElementById('task-list-body');
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
       
@@ -267,7 +269,7 @@
                 <td>${task.title}</td>
                 <td>${task.sku}</td>
                 <td>${new Date(task.createdDate).toLocaleDateString()}</td>
-                <td><button class="btn btn-sm" onclick="openEditor('${task.taskId}')">Open</button></td>
+                <td><button class="btn btn-sm" onclick="ManagerProductsView.openEditor('${task.taskId}')">Open</button></td>
               `;
               tbody.appendChild(tr);
           } catch (e) {
@@ -275,10 +277,10 @@
           }
         });
       }).WebAppProducts_getManagerProductTasks();
-    }
+    };
 
-    function openEditor(taskId) {
-      currentTaskId = taskId;
+    ManagerProductsView.openEditor = function(taskId) {
+      ManagerProductsView.currentTaskId = taskId;
       document.getElementById('editor-modal').style.display = 'flex';
       document.getElementById('modal-status').textContent = 'Loading data...';
       
@@ -292,24 +294,24 @@
       });
       
       // Reset tab to first
-      switchTab('desc');
+      ManagerProductsView.switchTab('desc');
 
       google.script.run
       .withSuccessHandler(data => {
-         currentSku = data.sku;
-         currentMasterData = data.masterData || {}; 
+         ManagerProductsView.currentSku = data.sku;
+         ManagerProductsView.currentMasterData = data.masterData || {}; 
          
          // Populate Header
          const headerSku = data.sku;
-         const headerNameEn = currentMasterData.wdm_NameEn || 'Unknown Product';
-         const headerNameHe = currentMasterData.wdm_NameHe || '';
+         const headerNameEn = ManagerProductsView.currentMasterData.wdm_NameEn || 'Unknown Product';
+         const headerNameHe = ManagerProductsView.currentMasterData.wdm_NameHe || '';
          
          document.getElementById('header-sku-display').textContent = headerSku;
          document.getElementById('header-name-en-display').textContent = `- ${headerNameEn}`;
          document.getElementById('header-name-he-display').textContent = headerNameHe ? `- ${headerNameHe}` : '';
 
          try {
-             populateEditor(data.masterData, data.stagingData, data.comaxData);
+             ManagerProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
              document.getElementById('modal-status').textContent = '';
          } catch (e) {
              console.error('Error populating editor:', e);
@@ -321,115 +323,112 @@
           document.getElementById('modal-status').textContent = 'Error: ' + err.message;
       })
       .WebAppProducts_loadProductEditorData(taskId);
-    }
+    };
 
-    function populateEditor(master, staging, comax) {
+    ManagerProductsView.populateEditor = function(master, staging, comax) {
       const m = master || {};
       const s = staging || {};
       const c = comax || {};
 
       // Populate Current Column (Read Only)
-      setVal('cur-ShortDescrHe', m.wdm_ShortDescrHe);
-      setVal('cur-DescriptionHe', m.wdm_DescriptionHe);
-      setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
-      setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
+      ManagerProductsView.setVal('cur-ShortDescrHe', m.wdm_ShortDescrHe);
+      ManagerProductsView.setVal('cur-DescriptionHe', m.wdm_DescriptionHe);
+      ManagerProductsView.setVal('cur-ShortDescrEn', m.wdm_ShortDescrEn);
+      ManagerProductsView.setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
       
-      setVal('cur-Region', m.wdm_Region);
-      setVal('cur-Intensity', m.wdm_Intensity);
-      setVal('cur-Complexity', m.wdm_Complexity);
+      ManagerProductsView.setVal('cur-Region', m.wdm_Region);
+      ManagerProductsView.setVal('cur-Intensity', m.wdm_Intensity);
+      ManagerProductsView.setVal('cur-Complexity', m.wdm_Complexity);
 
-      setVal('cur-CmxVintage', c.cpm_Vintage);
-      setVal('cur-CmxSize', c.cpm_Size);
-      setVal('cur-CmxDivision', c.cpm_Division);
-      setVal('cur-CmxGroup', c.cpm_Group);
+      ManagerProductsView.setVal('cur-CmxVintage', c.cpm_Vintage);
+      ManagerProductsView.setVal('cur-CmxSize', c.cpm_Size);
+      ManagerProductsView.setVal('cur-CmxDivision', c.cpm_Division);
+      ManagerProductsView.setVal('cur-CmxGroup', c.cpm_Group);
 
       // Populate Edit Column
-      setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || '');
-      setInp('edit-DescriptionHe', s.wdm_DescriptionHe || '');
-      setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || '');
-      setInp('edit-DescriptionEn', s.wdm_DescriptionEn || '');
+      ManagerProductsView.setInp('edit-ShortDescrHe', s.wdm_ShortDescrHe || '');
+      ManagerProductsView.setInp('edit-DescriptionHe', s.wdm_DescriptionHe || '');
+      ManagerProductsView.setInp('edit-ShortDescrEn', s.wdm_ShortDescrEn || '');
+      ManagerProductsView.setInp('edit-DescriptionEn', s.wdm_DescriptionEn || '');
       
-      setInp('edit-Region', s.wdm_Region || m.wdm_Region);
-      setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
-      setInp('edit-Complexity', s.wdm_Complexity || m.wdm_Complexity);
+      ManagerProductsView.setInp('edit-Region', s.wdm_Region || m.wdm_Region);
+      ManagerProductsView.setInp('edit-Intensity', s.wdm_Intensity || m.wdm_Intensity);
+      ManagerProductsView.setInp('edit-Complexity', s.wdm_Complexity || m.wdm_Complexity);
       
-      updatePreview();
-    }
+      ManagerProductsView.updatePreview();
+    };
     
-    function setVal(id, val) { document.getElementById(id).textContent = val || '-'; }
-    function setInp(id, val) { document.getElementById(id).value = val || ''; }
+    ManagerProductsView.setVal = function(id, val) { document.getElementById(id).textContent = val || '-'; };
+    ManagerProductsView.setInp = function(id, val) { document.getElementById(id).value = val || ''; };
 
-    function closeModal() {
+    ManagerProductsView.closeModal = function() {
       document.getElementById('editor-modal').style.display = 'none';
-    }
+    };
 
-    function switchTab(tabName) {
-      currentActiveTab = tabName;
+    ManagerProductsView.switchTab = function(tabName) {
+      ManagerProductsView.currentActiveTab = tabName;
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       
       document.getElementById('tab-' + tabName).style.display = 'block';
-      // Find button by text or index, but event.target is easier if clicked. 
-      // If called programmatically, we need to find the btn. 
-      // Simple loop:
+      
       const btns = document.querySelectorAll('.tab-btn');
       if(tabName === 'desc') btns[0].classList.add('active');
       if(tabName === 'specs') btns[1].classList.add('active');
       if(tabName === 'attr') btns[2].classList.add('active');
       if(tabName === 'pair') btns[3].classList.add('active');
       if(tabName === 'preview') btns[4].classList.add('active');
-
-      // Toggle Actions
-      // const actions = document.getElementById('global-actions');
-      // if(tabName === 'preview') actions.classList.remove('visible');
-      // else actions.classList.add('visible');
-    }
+    };
     
-    function globalFill() {
-        const m = currentMasterData || {};
-        if (currentActiveTab === 'desc') {
+    ManagerProductsView.globalFill = function() {
+        const m = ManagerProductsView.currentMasterData || {};
+        const tab = ManagerProductsView.currentActiveTab;
+        if (tab === 'desc') {
             document.getElementById('edit-ShortDescrHe').value = m.wdm_ShortDescrHe || '';
             document.getElementById('edit-DescriptionHe').value = m.wdm_DescriptionHe || '';
             document.getElementById('edit-ShortDescrEn').value = m.wdm_ShortDescrEn || '';
             document.getElementById('edit-DescriptionEn').value = m.wdm_DescriptionEn || '';
-        } else if (currentActiveTab === 'specs') {
+        } else if (tab === 'specs') {
             document.getElementById('edit-Region').value = m.wdm_Region || '';
-        } else if (currentActiveTab === 'attr') {
+        } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = m.wdm_Intensity || '';
             document.getElementById('edit-Complexity').value = m.wdm_Complexity || '';
         }
-        updatePreview();
-    }
+        ManagerProductsView.updatePreview();
+    };
 
-    function globalClear() {
-        if (currentActiveTab === 'desc') {
+    ManagerProductsView.globalClear = function() {
+        const tab = ManagerProductsView.currentActiveTab;
+        if (tab === 'desc') {
             document.getElementById('edit-ShortDescrHe').value = '';
             document.getElementById('edit-DescriptionHe').value = '';
             document.getElementById('edit-ShortDescrEn').value = '';
             document.getElementById('edit-DescriptionEn').value = '';
-        } else if (currentActiveTab === 'specs') {
+        } else if (tab === 'specs') {
             document.getElementById('edit-Region').value = '';
-        } else if (currentActiveTab === 'attr') {
+        } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = '';
             document.getElementById('edit-Complexity').value = '';
         }
-        updatePreview();
-    }
+        ManagerProductsView.updatePreview();
+    };
 
-    function updatePreview() {
-        const name = currentMasterData.wdm_NameEn || '';
+    ManagerProductsView.updatePreview = function() {
+        const name = ManagerProductsView.currentMasterData.wdm_NameEn || '';
         const desc = document.getElementById('edit-DescriptionEn').value;
         document.getElementById('preview-en').textContent = `${name}\n\n${desc}`;
-    }
+    };
     
     document.querySelectorAll('input, textarea').forEach(el => {
-        el.addEventListener('input', updatePreview);
+        // Remove old listeners to prevent duplicates on reload
+        el.removeEventListener('input', ManagerProductsView.updatePreview);
+        el.addEventListener('input', ManagerProductsView.updatePreview);
     });
 
-    function submitChanges() {
+    ManagerProductsView.submitChanges = function() {
       const formData = {
-        wdm_NameEn: currentMasterData.wdm_NameEn,
-        wdm_NameHe: currentMasterData.wdm_NameHe,
+        wdm_NameEn: ManagerProductsView.currentMasterData.wdm_NameEn,
+        wdm_NameHe: ManagerProductsView.currentMasterData.wdm_NameHe,
         wdm_ShortDescrHe: document.getElementById('edit-ShortDescrHe').value,
         wdm_DescriptionHe: document.getElementById('edit-DescriptionHe').value,
         wdm_ShortDescrEn: document.getElementById('edit-ShortDescrEn').value,
@@ -442,16 +441,16 @@
       document.getElementById('modal-status').textContent = 'Submitting...';
       google.script.run.withSuccessHandler(res => {
         if (res.success) {
-          closeModal();
-          refreshView();
+          ManagerProductsView.closeModal();
+          ManagerProductsView.refreshView();
         } else {
           alert('Error: ' + res.message);
         }
-      }).WebAppProducts_handleManagerSubmit(currentTaskId, currentSku, formData);
-    }
+      }).WebAppProducts_handleManagerSubmit(ManagerProductsView.currentTaskId, ManagerProductsView.currentSku, formData);
+    };
 
     // Init
-    refreshView();
+    ManagerProductsView.refreshView();
   </script>
 </body>
 </html>
