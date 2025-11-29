@@ -4,15 +4,17 @@
   <base target="_top">
   <style>
     /* Minimal custom styles, relying on Bootstrap from Dashboard.html */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-container { background: white; width: 90%; max-width: 900px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 80px; overflow-y: auto; }
+    .modal-container { background: white; width: 90%; max-width: 900px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 50px; }
     
     /* Header Redesign */
-    .modal-header { padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
-    .modal-title-area { display: flex; flex-direction: column; }
-    .modal-main-title { font-size: 18px; font-weight: 700; color: #333; }
-    .modal-sub-title { font-size: 14px; color: #666; }
-    .modal-close { background: none; border: none; font-size: 24px; line-height: 1; cursor: pointer; color: #999; }
+    .modal-header { padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
+    .modal-product-info { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 20px; }
+    .header-item { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-left { text-align: left; font-weight: 600; color: #333; }
+    .header-center { text-align: center; font-weight: 700; color: #007bff; font-size: 1.1em; }
+    .header-right { text-align: right; direction: rtl; font-weight: 600; color: #333; }
+    .modal-close { background: none; border: none; font-size: 24px; line-height: 1; cursor: pointer; color: #999; flex-shrink: 0; }
     .modal-close:hover { color: #333; }
 
     .form-body { flex: 1; overflow-y: auto; padding: 20px; }
@@ -58,9 +60,9 @@
     }
 
     /* 2 lines approx */
-    .desc-short { min-height: 60px; }
-    /* 5 lines approx */
-    .desc-long { min-height: 130px; }
+    .desc-short { min-height: 40px; }
+    /* 3 lines approx */
+    .desc-long { min-height: 80px; }
 
   </style>
 </head>
@@ -95,13 +97,10 @@
     <div class="modal-container">
       <!-- Consolidated Header -->
       <div class="modal-header">
-        <div class="modal-title-area">
-            <div id="modal-product-header" style="font-size: 14px; display: flex; align-items: center; flex-wrap: wrap;">
-                <span class="mr-1">Editing:</span>
-                <span id="header-sku-display" class="font-weight-bold mr-1"></span>
-                <span id="header-name-en-display" class="mr-1"></span>
-                <span id="header-name-he-display" class="hebrew-text"></span>
-            </div>
+        <div class="modal-product-info">
+            <div id="header-name-en-display" class="header-item header-left"></div>
+            <div id="header-sku-display" class="header-item header-center"></div>
+            <div id="header-name-he-display" class="header-item header-right"></div>
         </div>
         <button class="modal-close" onclick="ManagerProductsView.closeModal()">&times;</button>
       </div>
@@ -114,6 +113,8 @@
             <div class="tab-btn" onclick="ManagerProductsView.switchTab('specs')">Specs</div>
             <div class="tab-btn" onclick="ManagerProductsView.switchTab('attr')">Attributes</div>
             <div class="tab-btn" onclick="ManagerProductsView.switchTab('pair')">Pairing</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('grapes')">Grapes</div>
+            <div class="tab-btn" onclick="ManagerProductsView.switchTab('kashrut')">Kashrut</div>
             <div class="tab-btn" onclick="ManagerProductsView.switchTab('preview')">Preview</div>
           </div>
           <div class="tab-actions" id="global-actions">
@@ -193,17 +194,127 @@
               <div class="col-header">Current</div>
               <div class="form-group"><label>Intensity</label><div class="p-2 bg-light border rounded" id="cur-Intensity"></div></div>
               <div class="form-group"><label>Complexity</label><div class="p-2 bg-light border rounded" id="cur-Complexity"></div></div>
+              <div class="form-group"><label>Acidity</label><div class="p-2 bg-light border rounded" id="cur-Acidity"></div></div>
+              <div class="form-group"><label>Decant</label><div class="p-2 bg-light border rounded" id="cur-Decant"></div></div>
             </div>
             <div>
               <div class="col-header">Edit</div>
-              <div class="form-group"><label>Intensity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Intensity"></div>
-              <div class="form-group"><label>Complexity (1-5)</label><input type="number" min="1" max="5" class="form-control" id="edit-Complexity"></div>
+              <div class="form-group"><label>Intensity (1-5)</label><select class="form-control" id="edit-Intensity"></select></div>
+              <div class="form-group"><label>Complexity (1-5)</label><select class="form-control" id="edit-Complexity"></select></div>
+              <div class="form-group"><label>Acidity (1-5)</label><select class="form-control" id="edit-Acidity"></select></div>
+              <div class="form-group"><label>Decant (minutes)</label><select class="form-control" id="edit-Decant"></select></div>
             </div>
           </div>
         </div>
         
          <div id="tab-pair" class="tab-content">
-           <p class="text-muted p-3">Pairing options will be implemented here.</p>
+           <div class="comparison-grid">
+             <div>
+               <div class="col-header">Current</div>
+               <div class="form-group">
+                 <label>Harmonize</label>
+                 <div class="p-2 bg-light border rounded" id="cur-Harmonize"></div>
+               </div>
+               <div class="form-group">
+                 <label>Contrast</label>
+                 <div class="p-2 bg-light border rounded" id="cur-Contrast"></div>
+               </div>
+             </div>
+             <div>
+               <div class="col-header">Edit</div>
+               
+               <label class="mb-2 font-weight-bold text-muted small">Harmonize With</label>
+               <div class="mb-3">
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairHarMild">
+                   <label class="custom-control-label" for="edit-PairHarMild">Mild</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairHarRich">
+                   <label class="custom-control-label" for="edit-PairHarRich">Rich</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairHarIntense">
+                   <label class="custom-control-label" for="edit-PairHarIntense">Intense</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairHarSweet">
+                   <label class="custom-control-label" for="edit-PairHarSweet">Sweet</label>
+                 </div>
+               </div>
+
+               <label class="mb-2 font-weight-bold text-muted small">Contrast With</label>
+               <div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairConMild">
+                   <label class="custom-control-label" for="edit-PairConMild">Mild</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairConRich">
+                   <label class="custom-control-label" for="edit-PairConRich">Rich</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairConIntense">
+                   <label class="custom-control-label" for="edit-PairConIntense">Intense</label>
+                 </div>
+                 <div class="custom-control custom-checkbox">
+                   <input type="checkbox" class="custom-control-input" id="edit-PairConSweet">
+                   <label class="custom-control-label" for="edit-PairConSweet">Sweet</label>
+                 </div>
+               </div>
+
+             </div>
+           </div>
+        </div>
+
+        <div id="tab-grapes" class="tab-content">
+           <div class="comparison-grid">
+             <div>
+               <div class="col-header">Current</div>
+               <div class="form-group"><label>Grape 1</label><div class="p-2 bg-light border rounded" id="cur-Grape1"></div></div>
+               <div class="form-group"><label>Grape 2</label><div class="p-2 bg-light border rounded" id="cur-Grape2"></div></div>
+               <div class="form-group"><label>Grape 3</label><div class="p-2 bg-light border rounded" id="cur-Grape3"></div></div>
+               <div class="form-group"><label>Grape 4</label><div class="p-2 bg-light border rounded" id="cur-Grape4"></div></div>
+               <div class="form-group"><label>Grape 5</label><div class="p-2 bg-light border rounded" id="cur-Grape5"></div></div>
+             </div>
+             <div>
+               <div class="col-header">Edit</div>
+               <div class="form-group"><label>Grape 1</label><select class="form-control" id="edit-Grape1"></select></div>
+               <div class="form-group"><label>Grape 2</label><select class="form-control" id="edit-Grape2"></select></div>
+               <div class="form-group"><label>Grape 3</label><select class="form-control" id="edit-Grape3"></select></div>
+               <div class="form-group"><label>Grape 4</label><select class="form-control" id="edit-Grape4"></select></div>
+               <div class="form-group"><label>Grape 5</label><select class="form-control" id="edit-Grape5"></select></div>
+             </div>
+           </div>
+        </div>
+
+        <div id="tab-kashrut" class="tab-content">
+           <div class="comparison-grid">
+             <div>
+               <div class="col-header">Current</div>
+               <div class="custom-control custom-checkbox mb-3">
+                   <input type="checkbox" class="custom-control-input" id="cur-HeterMechira" disabled>
+                   <label class="custom-control-label" for="cur-HeterMechira">Heter Mechira</label>
+               </div>
+               <div class="form-group"><label>Kashrut 1</label><div class="p-2 bg-light border rounded" id="cur-Kashrut1"></div></div>
+               <div class="form-group"><label>Kashrut 2</label><div class="p-2 bg-light border rounded" id="cur-Kashrut2"></div></div>
+               <div class="form-group"><label>Kashrut 3</label><div class="p-2 bg-light border rounded" id="cur-Kashrut3"></div></div>
+               <div class="form-group"><label>Kashrut 4</label><div class="p-2 bg-light border rounded" id="cur-Kashrut4"></div></div>
+               <div class="form-group"><label>Kashrut 5</label><div class="p-2 bg-light border rounded" id="cur-Kashrut5"></div></div>
+             </div>
+             <div>
+               <div class="col-header">Edit</div>
+               <div class="custom-control custom-checkbox mb-3">
+                   <input type="checkbox" class="custom-control-input" id="edit-HeterMechira">
+                   <label class="custom-control-label" for="edit-HeterMechira">Heter Mechira (היתר מכירה)</label>
+               </div>
+               <div class="form-group"><label>Kashrut 1</label><select class="form-control" id="edit-Kashrut1"></select></div>
+               <div class="form-group"><label>Kashrut 2</label><select class="form-control" id="edit-Kashrut2"></select></div>
+               <div class="form-group"><label>Kashrut 3</label><select class="form-control" id="edit-Kashrut3"></select></div>
+               <div class="form-group"><label>Kashrut 4</label><select class="form-control" id="edit-Kashrut4"></select></div>
+               <div class="form-group"><label>Kashrut 5</label><select class="form-control" id="edit-Kashrut5"></select></div>
+             </div>
+           </div>
         </div>
 
         <div id="tab-preview" class="tab-content">
@@ -282,6 +393,34 @@
       }).WebAppProducts_getManagerProductTasks();
     };
 
+    // Helper to populate select dropdowns with data objects {code, textEN, textHE}
+    ManagerProductsView.populateSelectWithData = function(selectIds, data) {
+        selectIds.forEach(selectId => {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            selectEl.innerHTML = '<option value="">-- Select --</option>'; 
+            if (data && Array.isArray(data)) {
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.code;
+                    opt.textContent = item.textEN;
+                    selectEl.appendChild(opt);
+                });
+            }
+        });
+    };
+
+    // Helper to get lookup text by code
+    ManagerProductsView.getLookupText = function(code, data, lang = 'en') {
+        if (!code || !data) return '-';
+        const normalizedCode = String(code).trim().toUpperCase();
+        const item = data.find(d => String(d.code).trim().toUpperCase() === normalizedCode);
+        if (!item) return code;
+        if (lang === 'he') return item.textHE;
+        return item.textEN;
+    };
+
     ManagerProductsView.openEditor = function(taskId) {
       ManagerProductsView.currentTaskId = taskId;
       document.getElementById('editor-modal').style.display = 'flex';
@@ -289,7 +428,10 @@
       
       // Clear inputs
       document.querySelectorAll('input, textarea, .p-2').forEach(el => {
-        if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.value = '';
+        if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+             if(el.type === 'checkbox') el.checked = false;
+             else el.value = '';
+        }
         else if(el.classList.contains('p-2')) el.textContent = '';
         else if(el.classList.contains('desc-short') || el.classList.contains('desc-long')) {
              if(el.tagName === 'DIV') el.textContent = '';
@@ -301,22 +443,35 @@
 
       google.script.run
             .withSuccessHandler(data => {
-               console.log('Received data from backend in openEditor:', data); // Debug: Check full data object
+               console.log('Received data from backend in openEditor:', data); 
                ManagerProductsView.currentSku = data.sku;
                ManagerProductsView.currentMasterData = data.masterData || {}; 
-               ManagerProductsView.lookupRegions = data.regions || []; // Store regions
+               ManagerProductsView.lookupRegions = data.regions || []; 
+               ManagerProductsView.lookupGrapes = data.grapes || []; // Store grapes
+               ManagerProductsView.lookupKashrut = data.kashrut || []; // Store kashrut
                
                // Populate dropdowns and datalists
                ManagerProductsView.populateRegionDropdown(data.regions);
-               ManagerProductsView.populateABVDatalist(data.abvOptions);                      
+               ManagerProductsView.populateABVDatalist(data.abvOptions);
+               
+               // Populate attribute dropdowns
+               ManagerProductsView.populateSelectRange(['edit-Intensity', 'edit-Complexity', 'edit-Acidity'], [1, 2, 3, 4, 5]);
+               ManagerProductsView.populateSelectRange(['edit-Decant'], [15, 30, 45, 60]);
+
+               // Populate Grape dropdowns
+               ManagerProductsView.populateSelectWithData(['edit-Grape1', 'edit-Grape2', 'edit-Grape3', 'edit-Grape4', 'edit-Grape5'], data.grapes);
+
+               // Populate Kashrut dropdowns
+               ManagerProductsView.populateSelectWithData(['edit-Kashrut1', 'edit-Kashrut2', 'edit-Kashrut3', 'edit-Kashrut4', 'edit-Kashrut5'], data.kashrut);
+
                       // Populate Header
                       const headerSku = data.sku;
                       const headerNameEn = ManagerProductsView.currentMasterData.wdm_NameEn || 'Unknown Product';
                       const headerNameHe = ManagerProductsView.currentMasterData.wdm_NameHe || '';
                       
                       document.getElementById('header-sku-display').textContent = headerSku;
-                      document.getElementById('header-name-en-display').textContent = `- ${headerNameEn}`;
-                      document.getElementById('header-name-he-display').textContent = headerNameHe ? `- ${headerNameHe}` : '';
+                      document.getElementById('header-name-en-display').textContent = headerNameEn;
+                      document.getElementById('header-name-he-display').textContent = headerNameHe;
              
                       try {
                           ManagerProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
@@ -354,20 +509,79 @@
       // Attributes Tab - Current
       ManagerProductsView.setVal('cur-Intensity', m.wdm_Intensity);
       ManagerProductsView.setVal('cur-Complexity', m.wdm_Complexity);
+      ManagerProductsView.setVal('cur-Acidity', m.wdm_Acidity); // New
+      ManagerProductsView.setVal('cur-Decant', m.wdm_Decant); // New
 
-      // Populate Edit Column
+      // Populate Edit Column - Default to Empty, or Staging if available
       ManagerProductsView.setInp('edit-ShortDescrHe', s.wds_ShortDescrHe || '');
       ManagerProductsView.setInp('edit-DescriptionHe', s.wds_DescriptionHe || '');
       ManagerProductsView.setInp('edit-ShortDescrEn', s.wds_ShortDescrEn || '');
       ManagerProductsView.setInp('edit-DescriptionEn', s.wds_DescriptionEn || '');
       
       // Specs Tab - Edit
-      ManagerProductsView.setInp('edit-Region', ''); // Should be empty on load
-      ManagerProductsView.setInp('edit-ABV', ''); // Should be empty on load
+      ManagerProductsView.setInp('edit-Region', ''); 
+      ManagerProductsView.setInp('edit-ABV', ''); 
 
       // Attributes Tab - Edit
-      ManagerProductsView.setInp('edit-Intensity', ''); // Should be empty on load
-      ManagerProductsView.setInp('edit-Complexity', ''); // Should be empty on load
+      ManagerProductsView.setInp('edit-Intensity', ''); 
+      ManagerProductsView.setInp('edit-Complexity', '');
+      ManagerProductsView.setInp('edit-Acidity', ''); 
+      ManagerProductsView.setInp('edit-Decant', ''); 
+      
+      // Pairing Tab - Current
+      const harFields = {'wdm_PairHarMild':'Mild', 'wdm_PairHarRich':'Rich', 'wdm_PairHarIntense':'Intense', 'wdm_PairHarSweet':'Sweet'};
+      const conFields = {'wdm_PairConMild':'Mild', 'wdm_PairConRich':'Rich', 'wdm_PairConIntense':'Intense', 'wdm_PairConSweet':'Sweet'};
+      
+      // Enforce specific order: Mild, Rich, Intense, Sweet
+      const flavorOrder = ['Mild', 'Rich', 'Intense', 'Sweet'];
+      
+      const buildPairingString = (fieldsMap, masterData) => {
+          return flavorOrder.filter(flavor => {
+              // Find the key in fieldsMap that maps to this flavor
+              const key = Object.keys(fieldsMap).find(k => fieldsMap[k] === flavor);
+              return masterData[key] == 1;
+          }).join(', ');
+      };
+
+      const curHar = buildPairingString(harFields, m);
+      const curCon = buildPairingString(conFields, m);
+      
+      ManagerProductsView.setVal('cur-Harmonize', curHar);
+      ManagerProductsView.setVal('cur-Contrast', curCon);
+
+      // Grapes Tab - Current
+      for (let i = 1; i <= 5; i++) {
+          ManagerProductsView.setVal(`cur-Grape${i}`, ManagerProductsView.getLookupText(m[`wdm_GrapeG${i}`], ManagerProductsView.lookupGrapes));
+      }
+
+      // Kashrut Tab - Current
+      const curHmEl = document.getElementById('cur-HeterMechira');
+      if (curHmEl) curHmEl.checked = (m.wdm_HeterMechira == 1);
+      
+      for (let i = 1; i <= 5; i++) {
+          ManagerProductsView.setVal(`cur-Kashrut${i}`, ManagerProductsView.getLookupText(m[`wdm_KashrutK${i}`], ManagerProductsView.lookupKashrut));
+      }
+
+      // Pairing Tab - Edit (Reset checkboxes)
+      ['edit-PairHarSweet', 'edit-PairHarIntense', 'edit-PairHarRich', 'edit-PairHarMild',
+       'edit-PairConSweet', 'edit-PairConIntense', 'edit-PairConRich', 'edit-PairConMild'].forEach(id => {
+           const el = document.getElementById(id);
+           if(el) el.checked = false;
+       });
+       
+      // Grapes Tab - Edit (Reset)
+      ['edit-Grape1', 'edit-Grape2', 'edit-Grape3', 'edit-Grape4', 'edit-Grape5'].forEach(id => {
+          const el = document.getElementById(id);
+          if(el) el.value = '';
+      });
+
+      // Kashrut Tab - Edit (Reset)
+      const hmEl = document.getElementById('edit-HeterMechira');
+      if(hmEl) hmEl.checked = false;
+      ['edit-Kashrut1', 'edit-Kashrut2', 'edit-Kashrut3', 'edit-Kashrut4', 'edit-Kashrut5'].forEach(id => {
+          const el = document.getElementById(id);
+          if(el) el.value = '';
+      });
       
       ManagerProductsView.updatePreview();
     };
@@ -400,6 +614,22 @@
         });
     };
 
+    // Helper to populate select dropdowns with a range or specific options
+    ManagerProductsView.populateSelectRange = function(selectIds, options) {
+        selectIds.forEach(selectId => {
+            const selectEl = document.getElementById(selectId);
+            if (!selectEl) return;
+
+            selectEl.innerHTML = '<option value="">-- Select --</option>'; // Default empty option
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                selectEl.appendChild(opt);
+            });
+        });
+    };
+
     // Helper to populate the Region dropdown
     ManagerProductsView.populateRegionDropdown = function(regions) {
         const selectEl = document.getElementById('edit-Region');
@@ -428,16 +658,15 @@
     ManagerProductsView.switchTab = function(tabName) {
       ManagerProductsView.currentActiveTab = tabName;
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+          el.classList.remove('active');
+          // Check if this button corresponds to the tabName
+          if (el.getAttribute('onclick').includes(`'${tabName}'`)) {
+              el.classList.add('active');
+          }
+      });
       
       document.getElementById('tab-' + tabName).style.display = 'block';
-      
-      const btns = document.querySelectorAll('.tab-btn');
-      if(tabName === 'desc') btns[0].classList.add('active');
-      if(tabName === 'specs') btns[1].classList.add('active');
-      if(tabName === 'attr') btns[2].classList.add('active');
-      if(tabName === 'pair') btns[3].classList.add('active');
-      if(tabName === 'preview') btns[4].classList.add('active');
     };
     
     ManagerProductsView.globalFill = function() {
@@ -475,6 +704,31 @@
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = m.wdm_Intensity || '';
             document.getElementById('edit-Complexity').value = m.wdm_Complexity || '';
+            document.getElementById('edit-Acidity').value = m.wdm_Acidity || ''; // New
+            document.getElementById('edit-Decant').value = m.wdm_Decant || ''; // New
+        } else if (tab === 'pair') {
+            const map = {
+                'edit-PairHarSweet': 'wdm_PairHarSweet', 'edit-PairHarIntense': 'wdm_PairHarIntense', 
+                'edit-PairHarRich': 'wdm_PairHarRich', 'edit-PairHarMild': 'wdm_PairHarMild',
+                'edit-PairConSweet': 'wdm_PairConSweet', 'edit-PairConIntense': 'wdm_PairConIntense', 
+                'edit-PairConRich': 'wdm_PairConRich', 'edit-PairConMild': 'wdm_PairConMild'
+            };
+            for (const [id, key] of Object.entries(map)) {
+                const el = document.getElementById(id);
+                if (el) el.checked = (m[key] == 1);
+            }
+        } else if (tab === 'grapes') {
+             for (let i = 1; i <= 5; i++) {
+                 const val = m[`wdm_GrapeG${i}`];
+                 if (val) document.getElementById(`edit-Grape${i}`).value = val;
+             }
+        } else if (tab === 'kashrut') {
+             const hmEl = document.getElementById('edit-HeterMechira');
+             if (hmEl) hmEl.checked = (m.wdm_HeterMechira == 1);
+             for (let i = 1; i <= 5; i++) {
+                 const val = m[`wdm_KashrutK${i}`];
+                 if (val) document.getElementById(`edit-Kashrut${i}`).value = val;
+             }
         }
         ManagerProductsView.updatePreview();
     };
@@ -492,20 +746,175 @@
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = '';
             document.getElementById('edit-Complexity').value = '';
+            document.getElementById('edit-Acidity').value = ''; // New
+            document.getElementById('edit-Decant').value = ''; // New
+        } else if (tab === 'pair') {
+             ['edit-PairHarSweet', 'edit-PairHarIntense', 'edit-PairHarRich', 'edit-PairHarMild',
+              'edit-PairConSweet', 'edit-PairConIntense', 'edit-PairConRich', 'edit-PairConMild'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.checked = false;
+            });
+        } else if (tab === 'grapes') {
+             ['edit-Grape1', 'edit-Grape2', 'edit-Grape3', 'edit-Grape4', 'edit-Grape5'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
+        } else if (tab === 'kashrut') {
+             const hmEl = document.getElementById('edit-HeterMechira');
+             if (hmEl) hmEl.checked = false;
+             ['edit-Kashrut1', 'edit-Kashrut2', 'edit-Kashrut3', 'edit-Kashrut4', 'edit-Kashrut5'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
         }
         ManagerProductsView.updatePreview();
     };
 
     ManagerProductsView.updatePreview = function() {
-        const name = ManagerProductsView.currentMasterData.wdm_NameEn || '';
-        const desc = document.getElementById('edit-DescriptionEn').value;
-        document.getElementById('preview-en').textContent = `${name}\n\n${desc}`;
+        const m = ManagerProductsView.currentMasterData || {};
+        
+        // Helper to escape HTML characters
+        const escapeHtml = (unsafe) => {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+
+        // Helper to generate preview text for a specific language
+        const generatePreview = (lang) => {
+            const isEn = lang === 'en';
+            let htmlParts = [];
+            
+            // Heter Mechira text for insertion
+            const isHeterMechira = document.getElementById('edit-HeterMechira').checked;
+            const hmText = isEn ? '*** Heter Mechira ***' : '*** היתר מכירה ***';
+
+            // 1. Product Name (Always from Master)
+            const name = isEn ? (m.wdm_NameEn || '') : (m.wdm_NameHe || '');
+            if (name) htmlParts.push(`<b>${escapeHtml(name)}</b>`);
+            
+            // Add first divider if name exists
+            if (name) htmlParts.push('<hr>');
+
+            // 2. Short Description (From Edit)
+            let shortDesc = document.getElementById(isEn ? 'edit-ShortDescrEn' : 'edit-ShortDescrHe').value;
+            if (shortDesc && isHeterMechira) {
+                 shortDesc += ` ${hmText}`;
+            } else if (!shortDesc && isHeterMechira) {
+                 shortDesc = hmText;
+            }
+            if (shortDesc) htmlParts.push(escapeHtml(shortDesc));
+
+            // Add second divider if shortDesc exists
+            if (shortDesc) htmlParts.push('<hr>');
+
+            // 3. Product Name + Long Description (From Edit)
+            const longDesc = document.getElementById(isEn ? 'edit-DescriptionEn' : 'edit-DescriptionHe').value;
+            let nameAndLongDesc = '';
+            if (name) nameAndLongDesc += escapeHtml(name);
+            if (name && longDesc) nameAndLongDesc += ' ';
+            if (longDesc) nameAndLongDesc += escapeHtml(longDesc);
+            if (nameAndLongDesc) htmlParts.push(nameAndLongDesc);
+
+            // Spacer after description block if there's content
+            if (htmlParts.length > 0) htmlParts.push('<br><br>'); // Double blank line
+
+            // 4. Details Section
+            const details = [];
+            const addDetail = (label, val) => { if (val) details.push(`${label}: ${escapeHtml(String(val))}`); };
+
+            // Region
+            const regionCode = document.getElementById('edit-Region').value;
+            if (regionCode) {
+                addDetail(isEn ? 'Region' : 'אזור', ManagerProductsView.getLookupText(regionCode, ManagerProductsView.lookupRegions, lang));
+            }
+
+            // ABV
+            const abv = document.getElementById('edit-ABV').value;
+            if (abv) addDetail(isEn ? 'ABV' : 'אלכוהול', `${abv}%`);
+            
+            // Attributes
+            const attrMap = isEn ? 
+                { intensity: 'Intensity', complexity: 'Complexity', acidity: 'Acidity', decant: 'Decant' } : 
+                { intensity: 'עוצמה', complexity: 'מורכבות', acidity: 'חומציות', decant: 'דקנטר' };
+                
+            addDetail(attrMap.intensity, document.getElementById('edit-Intensity').value);
+            addDetail(attrMap.complexity, document.getElementById('edit-Complexity').value);
+            addDetail(attrMap.acidity, document.getElementById('edit-Acidity').value);
+            
+            const decant = document.getElementById('edit-Decant').value;
+            if (decant) addDetail(attrMap.decant, `${decant} ${isEn ? 'min' : 'דקות'}`);
+
+            // Pairings
+            const flavorKeys = ['Mild', 'Rich', 'Intense', 'Sweet'];
+            const flavorsEn = { 'Mild': 'Mild', 'Rich': 'Rich', 'Intense': 'Intense', 'Sweet': 'Sweet' };
+            const flavorsHe = { 'Mild': 'עדין', 'Rich': 'עשיר', 'Intense': 'עוצמתי', 'Sweet': 'מתוק' };
+            const currentFlavors = isEn ? flavorsEn : flavorsHe;
+            
+            // Harmonize
+            const harSelected = flavorKeys.filter(key => document.getElementById(`edit-PairHar${key}`).checked)
+                                          .map(key => currentFlavors[key]);
+            if (harSelected.length > 0) {
+                const label = isEn ? 'Harmonize with' : 'הרמוניה עם טעמים';
+                const separator = isEn ? ' or ' : ' או ';
+                const suffix = isEn ? ' flavors' : '';
+                details.push(`${label}: ${harSelected.join(separator)}${suffix}`);
+            }
+            
+            // Contrast
+            const conSelected = flavorKeys.filter(key => document.getElementById(`edit-PairCon${key}`).checked)
+                                          .map(key => currentFlavors[key]);
+            if (conSelected.length > 0) {
+                const label = isEn ? 'Contrast with' : 'קונטרסט עם טעמים';
+                const separator = isEn ? ' or ' : ' או ';
+                const suffix = isEn ? ' flavors' : '';
+                details.push(`${label}: ${conSelected.join(separator)}${suffix}`);
+            }
+            
+            // Grapes
+            const grapeList = [];
+            for(let i=1; i<=5; i++) {
+                const val = document.getElementById(`edit-Grape${i}`).value;
+                if(val) {
+                     grapeList.push(ManagerProductsView.getLookupText(val, ManagerProductsView.lookupGrapes, lang));
+                }
+            }
+            if (grapeList.length > 0) {
+                addDetail(isEn ? 'Grapes' : 'זנים', grapeList.join(', '));
+            }
+
+            // Kashrut
+            const kashrutList = [];
+            for(let i=1; i<=5; i++) {
+                const val = document.getElementById(`edit-Kashrut${i}`).value;
+                if(val) {
+                     kashrutList.push(ManagerProductsView.getLookupText(val, ManagerProductsView.lookupKashrut, lang));
+                }
+            }
+            if (kashrutList.length > 0) {
+                addDetail(isEn ? 'Kashrut' : 'כשרות', kashrutList.join(', '));
+            }
+
+            if (details.length > 0) {
+                htmlParts.push(details.join('<br>')); // Join details with <br>
+            }
+            
+            return htmlParts.filter(Boolean).join(''); // Join all HTML parts
+        };
+
+        document.getElementById('preview-en').innerHTML = generatePreview('en');
+        document.getElementById('preview-he').innerHTML = generatePreview('he');
     };
     
-    document.querySelectorAll('input, textarea').forEach(el => {
+    document.querySelectorAll('input, textarea, select').forEach(el => {
         // Remove old listeners to prevent duplicates on reload
         el.removeEventListener('input', ManagerProductsView.updatePreview);
+        el.removeEventListener('change', ManagerProductsView.updatePreview); // Added change listener for selects
         el.addEventListener('input', ManagerProductsView.updatePreview);
+        el.addEventListener('change', ManagerProductsView.updatePreview); // Added change listener for selects
     });
 
     ManagerProductsView.submitChanges = function() {
@@ -519,7 +928,34 @@
         wdm_Region: document.getElementById('edit-Region').value,
         wdm_ABV: document.getElementById('edit-ABV').value,
         wdm_Intensity: document.getElementById('edit-Intensity').value,
-        wdm_Complexity: document.getElementById('edit-Complexity').value
+        wdm_Complexity: document.getElementById('edit-Complexity').value,
+        wdm_Acidity: document.getElementById('edit-Acidity').value, // New
+        wdm_Decant: document.getElementById('edit-Decant').value, // New
+        
+        // Pairings
+        wdm_PairHarSweet: document.getElementById('edit-PairHarSweet').checked ? 1 : 0,
+        wdm_PairHarIntense: document.getElementById('edit-PairHarIntense').checked ? 1 : 0,
+        wdm_PairHarRich: document.getElementById('edit-PairHarRich').checked ? 1 : 0,
+        wdm_PairHarMild: document.getElementById('edit-PairHarMild').checked ? 1 : 0,
+        wdm_PairConSweet: document.getElementById('edit-PairConSweet').checked ? 1 : 0,
+        wdm_PairConIntense: document.getElementById('edit-PairConIntense').checked ? 1 : 0,
+        wdm_PairConRich: document.getElementById('edit-PairConRich').checked ? 1 : 0,
+        wdm_PairConMild: document.getElementById('edit-PairConMild').checked ? 1 : 0,
+        
+        // Grapes
+        wdm_GrapeG1: document.getElementById('edit-Grape1').value,
+        wdm_GrapeG2: document.getElementById('edit-Grape2').value,
+        wdm_GrapeG3: document.getElementById('edit-Grape3').value,
+        wdm_GrapeG4: document.getElementById('edit-Grape4').value,
+        wdm_GrapeG5: document.getElementById('edit-Grape5').value,
+
+        // Kashrut
+        wdm_HeterMechira: document.getElementById('edit-HeterMechira').checked ? 1 : 0,
+        wdm_KashrutK1: document.getElementById('edit-Kashrut1').value,
+        wdm_KashrutK2: document.getElementById('edit-Kashrut2').value,
+        wdm_KashrutK3: document.getElementById('edit-Kashrut3').value,
+        wdm_KashrutK4: document.getElementById('edit-Kashrut4').value,
+        wdm_KashrutK5: document.getElementById('edit-Kashrut5').value
       };
 
       document.getElementById('modal-status').textContent = 'Submitting...';

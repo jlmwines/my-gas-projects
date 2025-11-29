@@ -12,11 +12,14 @@ const LookupService = (function() {
      * @returns {Map<string, Object>} A map where keys are codes and values are objects containing the row data.
      */
     function getLookupMap(mapName) {
+        Logger.log(`LookupService: Attempting to get map '${mapName}'`); // Added log
         if (_cache.has(mapName)) {
+            Logger.log(`LookupService: Map '${mapName}' found in cache.`); // Added log
             return _cache.get(mapName);
         }
 
         const mapConfig = ConfigService.getConfig(mapName);
+        Logger.log(`LookupService: Config for '${mapName}': ${JSON.stringify(mapConfig)}`); // Added log
         if (!mapConfig || !mapConfig.sheet_name || !mapConfig.key_col) {
             Logger.log(`Lookup map configuration for '${mapName}' is invalid or missing in SysConfig.`);
             return new Map();

@@ -316,6 +316,7 @@ function populateInitialProductData() {
                 row[legacyDetailsMHeaders.indexOf('Description')],
                 row[legacyDetailsMHeaders.indexOf('תיאור ארוך')],
                 row[legacyDetailsMHeaders.indexOf('אזור')],
+                row[legacyDetailsMHeaders.indexOf('ABV')],
                 row[legacyDetailsMHeaders.indexOf('Intensity')],
                 row[legacyDetailsMHeaders.indexOf('Complexity')],
                 row[legacyDetailsMHeaders.indexOf('Acidity')],

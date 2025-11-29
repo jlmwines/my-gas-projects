@@ -22,28 +22,7 @@ const PackingSlipService = (function() {
         }
 
         // 1. Get all necessary lookup maps and configurations
-        const grapesMap = LookupService.getLookupMap('map.grape_codes');
-        const kashrutMap = LookupService.getLookupMap('map.kashrut_codes');
-        const textsMap = LookupService.getLookupMap('map.pairing_codes'); // Points to SysLkp_Texts
-
-        const pairingConfig = {
-            harmonize: {
-                mild: ConfigService.getConfig('pairing.harmonize.mild.key')?.key,
-                rich: ConfigService.getConfig('pairing.harmonize.rich.key')?.key,
-                intense: ConfigService.getConfig('pairing.harmonize.intense.key')?.key,
-                sweet: ConfigService.getConfig('pairing.harmonize.sweet.key')?.key,
-            },
-            contrast: {
-                mild: ConfigService.getConfig('pairing.contrast.mild.key')?.key,
-                rich: ConfigService.getConfig('pairing.contrast.rich.key')?.key,
-                intense: ConfigService.getConfig('pairing.contrast.intense.key')?.key,
-                sweet: ConfigService.getConfig('pairing.contrast.sweet.key')?.key,
-            }
-        };
-        const booleanConfig = {
-            isMevushal: ConfigService.getConfig('boolean.is_mevushal.key')?.key,
-            heterMechira: ConfigService.getConfig('boolean.heter_mechira.key')?.key,
-        };
+        // (Lookup maps removed as per new requirement)
 
         // 2. Get all necessary sheets
         const allConfig = ConfigService.getAllConfig();
@@ -80,81 +59,7 @@ const PackingSlipService = (function() {
             const productDetails = webDetMMap.get(webIdEn);
 
             if (productDetails) {
-                // --- Direct Lookups (Grapes, Kashrut) ---
-                for (let i = 1; i <= 5; i++) {
-                    const grapeCode = productDetails[webDetMHeaders.indexOf(`wdm_GrapeG${i}`)];
-                    const grapeData = grapesMap.get(grapeCode);
-                    row[cacheHeaderMap[`spc_GrapeG${i}Text`]] = grapeData ? grapeData.slg_TextEN : '';
-
-                    const kashrutCode = productDetails[webDetMHeaders.indexOf(`wdm_KashrutK${i}`)];
-                    const kashrutData = kashrutMap.get(kashrutCode);
-                    row[cacheHeaderMap[`spc_KashrutK${i}Text`]] = kashrutData ? kashrutData.slk_TextEN : '';
-                }
-
-                // --- Conditional & Compounding Lookups (Pairing) ---
-                const formatFlavorListEN = (flavors) => {
-                    if (flavors.length === 0) return '';
-                    if (flavors.length === 1) return flavors[0];
-                    if (flavors.length === 2) return flavors.join(' or ');
-                    return `${flavors.slice(0, -1).join(', ')} or ${flavors[flavors.length - 1]}`;
-                };
-
-                const formatFlavorListHE = (flavors) => {
-                    if (flavors.length === 0) return '';
-                    if (flavors.length === 1) return flavors[0];
-                    if (flavors.length === 2) return flavors.join(' או ');
-                    return `${flavors.slice(0, -1).join(', ')} או ${flavors[flavors.length - 1]}`;
-                };
-
-                const flavorProfile = [
-                    { flag: 'Mild', en: 'mild', he: 'עדינים' },
-                    { flag: 'Rich', en: 'rich', he: 'עשירים' },
-                    { flag: 'Intense', en: 'intense', he: 'עזים' },
-                    { flag: 'Sweet', en: 'sweet', he: 'מתוקים' }
-                ];
-
-                // --- Harmonize ---
-                const harmonizeFlavorsEN = [];
-                const harmonizeFlavorsHE = [];
-                flavorProfile.forEach(flavor => {
-                    if (productDetails[webDetMHeaders.indexOf(`wdm_PairHar${flavor.flag}`)]) {
-                        harmonizeFlavorsEN.push(flavor.en);
-                        harmonizeFlavorsHE.push(flavor.he);
-                    }
-                });
-
-                if (harmonizeFlavorsEN.length > 0) {
-                    row[cacheHeaderMap['spc_HarmonizeEn']] = `Harmonize with: ${formatFlavorListEN(harmonizeFlavorsEN)} flavors`;
-                    row[cacheHeaderMap['spc_HarmonizeHe']] = `הרמוניה עם: טעמי ${formatFlavorListHE(harmonizeFlavorsHE)}`;
-                }
-
-                // --- Contrast ---
-                const contrastFlavorsEN = [];
-                const contrastFlavorsHE = [];
-                flavorProfile.forEach(flavor => {
-                    if (productDetails[webDetMHeaders.indexOf(`wdm_PairCon${flavor.flag}`)]) {
-                        contrastFlavorsEN.push(flavor.en);
-                        contrastFlavorsHE.push(flavor.he);
-                    }
-                });
-                
-                if (contrastFlavorsEN.length > 0) {
-                    row[cacheHeaderMap['spc_ContrastEn']] = `Contrast with: ${formatFlavorListEN(contrastFlavorsEN)} flavors`;
-                    row[cacheHeaderMap['spc_ContrastHe']] = `קונטרסט עם: טעמי ${formatFlavorListHE(contrastFlavorsHE)}`;
-                }
-
-                // --- Conditional Lookups for Boolean Flags ---
-                const heterMechiraFlag = productDetails[webDetMHeaders.indexOf('wdm_HeterMechira')];
-                if (heterMechiraFlag) {
-                    const textData = textsMap.get(booleanConfig.heterMechira);
-                    row[cacheHeaderMap['spc_HeterMechiraText']] = textData ? textData.slt_TextEN : '';
-                }
-
-                const isMevushalFlag = productDetails[webDetMHeaders.indexOf('wdm_IsMevushal')];
-                if (isMevushalFlag) {
-                    const textData = textsMap.get(booleanConfig.isMevushal);
-                    row[cacheHeaderMap['spc_IsMevushalText']] = textData ? textData.slt_TextEN : '';
-                }
+                // (Enrichment using lookup maps removed as per new requirement)
 
                 // --- Direct Fields ---
                 row[cacheHeaderMap['spc_NameEn']] = productDetails[webDetMHeaders.indexOf('wdm_NameEn')];

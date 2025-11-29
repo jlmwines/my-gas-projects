@@ -717,7 +717,7 @@ const ProductService = (function() {
           const textA = a.slt_TextHE || '';
           const textB = b.slt_TextHE || '';
           return textA.localeCompare(textB);
-      }).map(r => ({ code: r.slt_Code, textHE: r.slt_TextHE }));
+      }).map(r => ({ code: r.slt_Code, textEN: r.slt_TextEN, textHE: r.slt_TextHE }));
 
       // Generate ABV options
       const abvOptions = [];
@@ -725,12 +725,30 @@ const ProductService = (function() {
           abvOptions.push(i.toFixed(1));
       }
 
+      // Fetch Grape lookup data
+      const allGrapes = LookupService.getLookupMap('map.grape_lookups'); // maps to SysLkp_Grapes
+      const grapes = Array.from(allGrapes.values()).sort((a, b) => {
+          const textA = a.slg_TextEN || '';
+          const textB = b.slg_TextEN || '';
+          return textA.localeCompare(textB);
+      }).map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_NameHe }));
+
+      // Fetch Kashrut lookup data
+      const allKashrut = LookupService.getLookupMap('map.kashrut_lookups'); // maps to SysLkp_Kashrut
+      const kashrut = Array.from(allKashrut.values()).sort((a, b) => {
+          const textA = a.slk_TextEN || '';
+          const textB = b.slk_TextEN || '';
+          return textA.localeCompare(textB);
+      }).map(k => ({ code: k.slk_Code, textEN: k.slk_TextEN, textHE: k.slk_TextHE }));
+
       const result = {
         master: masterData,
         staging: stagingData || null,
         comax: comaxData || null,
         regions: regions,
-        abvOptions: abvOptions
+        abvOptions: abvOptions,
+        grapes: grapes,
+        kashrut: kashrut
       };
       
       // Return as JSON string to avoid serialization issues

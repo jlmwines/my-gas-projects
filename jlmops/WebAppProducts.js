@@ -172,7 +172,9 @@ function WebAppProducts_loadProductEditorData(taskId) {
       stagingData: productDetails.staging,
       comaxData: productDetails.comax,
       regions: productDetails.regions,
-      abvOptions: productDetails.abvOptions
+      abvOptions: productDetails.abvOptions,
+      grapes: productDetails.grapes,
+      kashrut: productDetails.kashrut
     };
 
   } catch (e) {
