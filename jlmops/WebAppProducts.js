@@ -72,6 +72,75 @@ function WebAppProducts_getProductsWidgetData() {
 }
 
 /**
+ * Gets a list of product detail update tasks for the admin to review.
+ * Filters for 'task.validation.field_mismatch' tasks with 'Vintage Mismatch' in the title
+ * and 'Review' status.
+ *
+ * @returns {Array<Object>} A list of product detail update tasks.
+ */
+function WebAppProducts_getAdminReviewTasks() {
+  try {
+    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', 'Starting task fetch...');
+    
+    // Emulate inventory method: Use getOpenTasksByTypeIdAndStatus
+    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.field_mismatch', 'Review');
+    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Fetched ${tasks.length} raw tasks with status 'Review'.`);
+    
+    // Filter for Vintage Mismatch safely
+    const reviewTasks = tasks.filter(t => {
+        const title = String(t.st_Title || '');
+        const isMatch = title.toLowerCase().includes('vintage mismatch');
+        if (!isMatch) {
+             LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Filtering out task ${t.st_TaskId}: Title '${title}' does not contain 'vintage mismatch'.`);
+        }
+        return isMatch;
+    });
+    
+    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Returning ${reviewTasks.length} filtered review tasks.`);
+    
+    return reviewTasks.map(t => ({
+        taskId: t.st_TaskId,
+        sku: t.st_LinkedEntityId,
+        title: t.st_Title,
+        status: t.st_Status,
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
+        assignedTo: t.st_AssignedTo
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getAdminReviewTasks', `Error getting admin review tasks: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Gets a list of accepted product detail tasks ready for export.
+ * Filters for 'task.validation.field_mismatch' tasks with 'Vintage Mismatch' in the title
+ * and 'Accepted' status.
+ *
+ * @returns {Array<Object>} A list of accepted tasks.
+ */
+function WebAppProducts_getAcceptedTasks() {
+  LoggerService.warn('WebAppProducts', 'getAcceptedTasks', 'Function disabled per user instruction.');
+  return []; // Disabled per user instruction
+}
+
+/**
+ * Triggers the export of accepted product details to a CSV.
+ * @returns {Object} Result with success status and message.
+ */
+function WebAppProducts_exportAcceptedUpdates() {
+    return ProductService.generateDetailExport();
+}
+
+/**
+ * Confirms that the web updates have been performed, marking accepted tasks as Completed.
+ * @returns {Object} Result with success status and message.
+ */
+function WebAppProducts_confirmWebUpdates() {
+    return ProductService.confirmWebUpdates();
+}
+
+/**
  * Gets a list of product detail update tasks for the manager.
  * Filters for 'task.validation.field_mismatch' tasks with 'Vintage Mismatch' in the title
  * and 'New' or 'Assigned' status.

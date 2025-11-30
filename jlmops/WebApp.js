@@ -69,7 +69,6 @@ function getView(viewName) {
     'ManagerProducts': 'ManagerProductsView',
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
-    'ProductDetails': 'ProductDetailsView',
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',
     'Web': 'WebView'

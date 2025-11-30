@@ -121,6 +121,142 @@ const WooCommerceFormatter = (function() {
       });
 
       return csvRows.join('\n');
+    },
+
+    /**
+     * Formats the product description into a structured HTML string.
+     * Replicates the legacy `compileExportDescription_` logic.
+     * 
+     * @param {string} sku The product SKU.
+     * @param {Object} productData The product detail data (from WebDetM/S).
+     * @param {Object} comaxData The Comax master data (from CmxProdM).
+     * @param {string} lang 'EN' or 'HE'.
+     * @param {Object} lookupMaps A container for text, grape, and kashrut lookup maps.
+     * @param {boolean} isForExport If true, includes the hidden appendices (promo text, etc.).
+     * @returns {string} The formatted HTML string.
+     */
+    formatDescriptionHTML: function(sku, productData, comaxData, lang, lookupMaps, isForExport) {
+        let html = '';
+
+        // Helper to safely get string values
+        const getVal = (key) => productData[key] || '';
+        const getCmxVal = (key) => comaxData ? (comaxData[key] || '') : '';
+
+        const name = lang === 'EN' ? getVal('wdm_NameEn') : getVal('wdm_NameHe');
+        const description = lang === 'EN' ? getVal('wdm_DescriptionEn') : getVal('wdm_DescriptionHe');
+        const region = getVal('wdm_Region'); // Stored as code
+        const abv = getVal('wdm_ABV'); // Stored as decimal 0.125
+        const vintage = getCmxVal('cpm_Vintage'); // From Comax
+        const alcohol = (parseFloat(abv) * 100).toFixed(1) + '%';
+        const volume = getCmxVal('cpm_Size'); // From Comax
+        
+        // --- 1. Opening Section ---
+        html += `<strong>${name}</strong><br>\n`;
+        html += `${description}<br>\n<br>\n`;
+
+        // --- 2. Attributes Section ---
+        html += `<strong>${lang === 'EN' ? 'Attributes:' : 'מאפיינים:'}</strong><br>\n`;
+        
+        const attrLine = (labelEn, labelHe, value) => {
+            if (!value) return '';
+            const label = lang === 'EN' ? labelEn : labelHe;
+            return `${label}: ${value}<br>\n`;
+        };
+        
+        // Group/Type
+        const group = getCmxVal('cpm_Group');
+        html += attrLine('Type', 'סוג', group);
+        
+        // Vintage
+        html += attrLine('Vintage', 'שנת בציר', vintage);
+        
+        // Alcohol
+        html += attrLine('Alcohol', 'אלכוהול', alcohol);
+        
+        // Volume
+        html += attrLine('Volume', 'גודל', volume);
+
+        // Region (Lookup)
+        const regionObj = lookupMaps.texts.get(region);
+        const regionName = regionObj ? (lang === 'EN' ? regionObj.slt_TextEN : regionObj.slt_TextHE) : region;
+        html += attrLine('Region', 'אזור', regionName);
+
+        // Grapes
+        const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
+        const grapeNames = [];
+        grapeCodes.forEach(codeKey => {
+            const code = getVal(codeKey);
+            if (code) {
+                const grapeObj = lookupMaps.grapes.get(code);
+                if (grapeObj) {
+                    grapeNames.push(lang === 'EN' ? grapeObj.slg_TextEN : grapeObj.slg_NameHe);
+                }
+            }
+        });
+        if (grapeNames.length > 0) {
+            html += attrLine('Grapes', 'ענבים', grapeNames.join(', '));
+        }
+
+        // Tasting Attributes (Lookup)
+        ['Intensity', 'Complexity', 'Acidity', 'Decant'].forEach(attr => {
+            const code = getVal(`wdm_${attr}`);
+            if (code) {
+                 const attrObj = lookupMaps.texts.get(code);
+                 const val = attrObj ? (lang === 'EN' ? attrObj.slt_TextEN : attrObj.slt_TextHE) : '';
+                 // Legacy labels hardcoded roughly
+                 const labelEn = attr; 
+                 const labelHe = attr; // Simplified for now, ideally also looked up or hardcoded map
+                 if (val) html += `${labelEn}: ${val}<br>\n`; 
+            }
+        });
+        
+        // Harmonize/Contrast
+        // (This logic can be complex, simplifying for prototype: just listing pairs if checked? 
+        //  Actually, legacy logic appends pre-formatted text blocks in Appendices. 
+        //  The visible section usually just lists simple attributes.)
+
+        html += '<br>\n';
+
+        // --- 3. Kashrut Section ---
+        html += `<strong>${lang === 'EN' ? 'Kashrut:' : 'כשרות:'}</strong><br>\n`;
+        
+        const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
+        kashrutCodes.forEach(codeKey => {
+            const code = getVal(codeKey);
+            if (code) {
+                const kObj = lookupMaps.kashrut.get(code);
+                if (kObj) {
+                     const kText = lang === 'EN' ? kObj.slk_TextEN : kObj.slk_TextHE;
+                     html += `${kText}<br>\n`;
+                }
+            }
+        });
+
+        const heterMechira = getVal('wdm_HeterMechira');
+        if (String(heterMechira) === 'true' || heterMechira === true) {
+            const hmText = lang === 'EN' ? 'Heter Mechira' : 'היתר מכירה';
+            html += `<span style="color: #ff0000;"><strong>${hmText}</strong></span><br>\n`;
+        }
+        
+        const isMevushal = getVal('wdm_IsMevushal');
+        if (String(isMevushal) === 'true' || isMevushal === true) {
+             const mevText = lang === 'EN' ? 'Mevushal' : 'מבושל';
+             html += `${mevText}<br>\n`;
+        }
+
+        // --- 4. Appendices (Export Only) ---
+        if (isForExport) {
+             html += '<br>\n';
+             // P-Code (Promotional Text) - Logic: Look up P-code text and append
+             // Attributes Texts - Look up descriptions for Intensity/Complexity etc.
+             // Pairing Notes - Look up Harmonize/Contrast flavor texts
+             
+             // (Simplified placeholder for now to ensure structure exists)
+             // In a full implementation, we'd query SysLkp_Texts for 'P-Code' linked to this product 
+             // or derived from attributes.
+        }
+
+        return html;
     }
   };
 

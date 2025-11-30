@@ -900,6 +900,107 @@ const ProductService = (function() {
     }
   }
 
+  function generateDetailExport() {
+    LoggerService.info('ProductService', 'generateDetailExport', 'Starting export of accepted product details.');
+    try {
+        // 1. Identify Accepted Tasks
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch'); // And filter by 'Accepted'
+        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
+        
+        if (acceptedTasks.length === 0) {
+             return { success: true, message: 'No accepted tasks found for export.' };
+        }
+        
+        const skus = acceptedTasks.map(t => t.st_LinkedEntityId);
+        
+        // 2. Fetch Data
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+        // Helper to get map
+        const getMap = (sheetName, schemaKey, keyCol) => {
+            const headers = allConfig[schemaKey].headers.split(',');
+            return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
+        };
+
+        const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
+        const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
+        const webXltMap = getMap('WebXltM', 'schema.data.WebXltM', 'wxl_SKU');
+        
+        // Load Lookups
+        const lookupMaps = {
+            texts: LookupService.getLookupMap('map.text_lookups'),
+            grapes: LookupService.getLookupMap('map.grape_lookups'),
+            kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+        };
+
+        const exportRows = [];
+        const csvHeaders = ['ID', 'SKU', 'Description (EN)', 'Description (HE)']; // Simplified CSV structure for manual upload or custom importer
+        exportRows.push(csvHeaders.join(','));
+
+        skus.forEach(sku => {
+            const webDetRow = webDetMap.get(sku);
+            const cmxRow = cmxMap.get(sku);
+            const webXltRow = webXltMap.get(sku); // To get WebIdHe if needed, or WebIdEn
+            
+            if (!webDetRow) {
+                LoggerService.warn('ProductService', 'generateDetailExport', `Skipping SKU ${sku}: Details not found in WebDetM.`);
+                return;
+            }
+
+            const htmlEn = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
+            const htmlHe = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
+            
+            // Construct CSV Row
+            // Assuming ID is the English Web ID. 
+            const webId = webDetRow.wdm_WebIdEn;
+            
+            const row = [
+                webId, 
+                sku, 
+                `"${htmlEn.replace(/"/g, '""')}"`, 
+                `"${htmlHe.replace(/"/g, '""')}"`
+            ];
+            exportRows.push(row.join(','));
+        });
+
+        // 3. Save CSV
+        const csvContent = exportRows.join('\n');
+        const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+        const fileName = `ProductDetailsExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
+        const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
+        
+        LoggerService.info('ProductService', 'generateDetailExport', `Created export file: ${file.getName()}`);
+        return { success: true, message: `Exported ${exportRows.length - 1} products. File: ${file.getName()}`, fileId: file.getId() };
+
+    } catch (e) {
+        LoggerService.error('ProductService', 'generateDetailExport', `Error generating export: ${e.message}`, e);
+        throw e;
+    }
+  }
+
+  function confirmWebUpdates() {
+    LoggerService.info('ProductService', 'confirmWebUpdates', 'Marking exported tasks as Completed.');
+    try {
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch');
+        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
+        
+        let count = 0;
+        acceptedTasks.forEach(t => {
+            TaskService.updateTaskStatus(t.st_TaskId, 'Completed');
+            count++;
+        });
+        
+        LoggerService.info('ProductService', 'confirmWebUpdates', `Completed ${count} tasks.`);
+        return { success: true, message: `Marked ${count} tasks as Completed.` };
+
+    } catch (e) {
+        LoggerService.error('ProductService', 'confirmWebUpdates', `Error confirming updates: ${e.message}`, e);
+        throw e;
+    }
+  }
+
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
@@ -907,7 +1008,9 @@ const ProductService = (function() {
     exportWebInventory: exportWebInventory,
     getProductDetails: getProductDetails,
     submitProductDetails: submitProductDetails,
-    acceptProductDetails: acceptProductDetails
+    acceptProductDetails: acceptProductDetails,
+    generateDetailExport: generateDetailExport,
+    confirmWebUpdates: confirmWebUpdates
   };
 })();
 
