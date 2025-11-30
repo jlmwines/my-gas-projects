@@ -888,6 +888,7 @@ const ProductService = (function() {
       } else {
         masterSheet.appendRow(rowValues);
       }
+      ConfigService.forceReload(); // Force reload of config cache after updating master data
 
       // 3. Update Task Status
       TaskService.updateTaskStatus(taskId, 'Accepted');
@@ -901,14 +902,14 @@ const ProductService = (function() {
   }
 
   function generateDetailExport() {
-    LoggerService.info('ProductService', 'generateDetailExport', 'Starting export of accepted product details.');
+    LoggerService.info('ProductService', 'generateDetailExport', 'Starting export of accepted product details to Google Sheet.');
     try {
         // 1. Identify Accepted Tasks
-        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch'); // And filter by 'Accepted'
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch');
         const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
         
         if (acceptedTasks.length === 0) {
-             return { success: true, message: 'No accepted tasks found for export.' };
+             return { success: false, message: 'No accepted tasks found for export.' }; // Changed to false for no tasks
         }
         
         const skus = acceptedTasks.map(t => t.st_LinkedEntityId);
@@ -926,7 +927,6 @@ const ProductService = (function() {
 
         const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
         const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
-        const webXltMap = getMap('WebXltM', 'schema.data.WebXltM', 'wxl_SKU');
         
         // Load Lookups
         const lookupMaps = {
@@ -935,47 +935,126 @@ const ProductService = (function() {
             kashrut: LookupService.getLookupMap('map.kashrut_lookups')
         };
 
-        const exportRows = [];
-        const csvHeaders = ['ID', 'SKU', 'Description (EN)', 'Description (HE)']; // Simplified CSV structure for manual upload or custom importer
-        exportRows.push(csvHeaders.join(','));
+        // --- DEBUGGING LOGS for webDetMap ---
+        LoggerService.info('ProductService', 'generateDetailExport', `WebDetM map size: ${webDetMap.size}`);
+        LoggerService.info('ProductService', 'generateDetailExport', `WebDetM map first 5 keys: ${Array.from(webDetMap.keys()).slice(0, 5).join(', ')}`);
+        LoggerService.info('ProductService', 'generateDetailExport', `Is SKU '7290017324487' in WebDetM map? ${webDetMap.has('7290017324487')}`);
+        // --- END DEBUGGING LOGS ---
 
-        skus.forEach(sku => {
+
+        // 3. Prepare data for the new Google Sheet
+        const exportDataRows = [];
+        const headers = [
+            'SKU', 
+            'Product Title (EN)', 
+            'Short Description (EN)', 
+            'Long Description (EN)', 
+            'Short Description (HE)', 
+            'Long Description (HE)'
+        ];
+        exportDataRows.push(headers);
+
+        const skippedSkus = [];
+        skus.forEach(rawSku => {
+            const sku = String(rawSku); // Convert SKU to string for consistent lookup
+            // --- DEBUGGING LOGS for each SKU lookup ---
+            LoggerService.info('ProductService', 'generateDetailExport', `Looking up SKU: '${sku}' (Type: ${typeof sku})`);
+            LoggerService.info('ProductService', 'generateDetailExport', `webDetMap.has('${sku}'): ${webDetMap.has(sku)}`);
+            if (webDetMap.size > 0) {
+                LoggerService.info('ProductService', 'generateDetailExport', `First map key type: ${typeof Array.from(webDetMap.keys())[0]}`);
+            }
+            // --- END DEBUGGING LOGS ---
+
             const webDetRow = webDetMap.get(sku);
             const cmxRow = cmxMap.get(sku);
-            const webXltRow = webXltMap.get(sku); // To get WebIdHe if needed, or WebIdEn
             
             if (!webDetRow) {
                 LoggerService.warn('ProductService', 'generateDetailExport', `Skipping SKU ${sku}: Details not found in WebDetM.`);
-                return;
+                skippedSkus.push(sku);
+                return; // Continue to the next SKU
             }
 
-            const htmlEn = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
-            const htmlHe = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
+            const productTitleEn = webDetRow.wdm_NameEn || (cmxRow ? cmxRow.cpm_NameHe : '');
+            const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
+            const shortDescriptionHe = webDetRow.wdm_ShortDescrHe || '';
+
+            const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
+            const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
             
-            // Construct CSV Row
-            // Assuming ID is the English Web ID. 
-            const webId = webDetRow.wdm_WebIdEn;
-            
-            const row = [
-                webId, 
-                sku, 
-                `"${htmlEn.replace(/"/g, '""')}"`, 
-                `"${htmlHe.replace(/"/g, '""')}"`
-            ];
-            exportRows.push(row.join(','));
+            exportDataRows.push([
+                sku,
+                productTitleEn,
+                shortDescriptionEn,
+                longDescriptionEnHtml,
+                shortDescriptionHe,
+                longDescriptionHeHtml
+            ]);
         });
 
-        // 3. Save CSV
-        const csvContent = exportRows.join('\n');
+        if (exportDataRows.length <= 1 && skippedSkus.length === skus.length) { // Only headers present AND all SKUs were skipped or no SKUs were processed
+            LoggerService.info('ProductService', 'generateDetailExport', 'No product data was successfully exported.');
+            return { success: false, message: 'No product data was successfully exported. All selected products were skipped.' };
+        }
+
+        // 4. Create and format the new Google Sheet
+        const newSpreadsheetName = `ProductDetails_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
+        const newSpreadsheet = SpreadsheetApp.create(newSpreadsheetName);
+        const sheet = newSpreadsheet.getSheets()[0];
+        sheet.setName('Product Details'); 
+
+        // Write data
+        sheet.getRange(1, 1, exportDataRows.length, headers.length).setValues(exportDataRows);
+
+        // Apply formatting
+        sheet.setFrozenRows(1); // Freeze header row
+        sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn())
+             .setWrap(true)
+             .setVerticalAlignment('top');
+
+        sheet.autoResizeColumns(1, headers.length); // Auto-resize columns for better readability
+
+        // Move the new spreadsheet to the designated folder
         const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-        const fileName = `ProductDetailsExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
-        const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
         
-        LoggerService.info('ProductService', 'generateDetailExport', `Created export file: ${file.getName()}`);
-        return { success: true, message: `Exported ${exportRows.length - 1} products. File: ${file.getName()}`, fileId: file.getId() };
+        LoggerService.info('ProductService', 'generateDetailExport', `Attempting to move spreadsheet ID: ${newSpreadsheet.getId()} ('${newSpreadsheet.getName()}') to folder ID: ${exportFolderId}`);
+
+        try {
+            const folder = DriveApp.getFolderById(exportFolderId);
+            DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
+            LoggerService.info('ProductService', 'generateDetailExport', `Successfully moved spreadsheet to folder ID: ${exportFolderId}`);
+        } catch (moveError) {
+            LoggerService.error('ProductService', 'generateDetailExport', `Error moving spreadsheet to folder ID ${exportFolderId}: ${moveError.message}`, moveError);
+            return { 
+                success: false, // Indicate failure to move
+                message: `Export created in root, but failed to move to folder: ${moveError.message}. Sheet URL: ${newSpreadsheet.getUrl()}`, 
+                fileId: newSpreadsheet.getId(),
+                fileUrl: newSpreadsheet.getUrl()
+            };
+        }
+        
+        LoggerService.info('ProductService', 'generateDetailExport', `Created export spreadsheet: ${newSpreadsheet.getName()} (ID: ${newSpreadsheet.getId()}), URL: ${newSpreadsheet.getUrl()}`);
+
+        let returnSuccess = true;
+        let returnMessage = `Exported ${exportDataRows.length - 1} products to Google Sheet: ${newSpreadsheet.getName()}`;
+        if (skippedSkus.length > 0) {
+            returnSuccess = false; // Indicate partial success/failure
+            returnMessage += ` (Skipped ${skippedSkus.length} products: ${skippedSkus.join(', ')})`;
+        } else if (exportDataRows.length <=1 && skippedSkus.length === 0) {
+            // This case should be caught by the earlier if-condition for `exportDataRows.length <= 1`,
+            // but included for robustness.
+            returnSuccess = false;
+            returnMessage = 'No product data was successfully exported.';
+        }
+
+        return { 
+            success: returnSuccess, 
+            message: returnMessage, 
+            fileId: newSpreadsheet.getId(),
+            fileUrl: newSpreadsheet.getUrl()
+        };
 
     } catch (e) {
-        LoggerService.error('ProductService', 'generateDetailExport', `Error generating export: ${e.message}`, e);
+        LoggerService.error('ProductService', 'generateDetailExport', `Error generating product details export: ${e.message}`, e);
         throw e;
     }
   }

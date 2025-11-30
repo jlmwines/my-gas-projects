@@ -29,7 +29,8 @@
     div.desc-short, div.desc-long { background-color: #f8f9fa; border: 1px solid #ced4da; border-radius: 4px; overflow-y: auto; }
     textarea.desc-short, textarea.desc-long { resize: vertical; }
     .desc-short { min-height: 40px; }
-    .desc-long { min-height: 80px; }
+    /* 3 lines approx */
+    .desc-long { min-height: 120px; }
   </style>
 </head>
 <body>
@@ -66,15 +67,26 @@
         </div>
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
+
                 <div>
-                    <p class="mb-0">Items accepted and ready for export to WooCommerce.</p>
-                </div>
-                <div>
-                    <button id="btn-export" class="btn mr-2" onclick="AdminProductsView.exportUpdates()">Export CSV</button>
+                    <button id="btn-export" class="btn mr-2" onclick="AdminProductsView.exportUpdates()">Export Sheet</button>
                     <button id="btn-confirm" class="btn" onclick="AdminProductsView.confirmUpdates()">Mark as Completed</button>
                 </div>
             </div>
             <div id="export-status" class="mt-2 small"></div>
+
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                    <th class="border-top-0">Task</th>
+                    <th class="border-top-0">SKU</th>
+                    <th class="border-top-0">Date</th>
+                    </tr>
+                </thead>
+                <tbody id="export-list-body">
+                    <!-- Export tasks will be populated here -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -152,6 +164,9 @@
     };
 
     AdminProductsView.loadExportStats = function() {
+        const tbody = document.getElementById('export-list-body');
+        tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>'; // 3 columns for task, sku, date
+
         google.script.run.withSuccessHandler(tasks => {
             const count = tasks ? tasks.length : 0;
             const el = document.getElementById('stat-export');
@@ -161,14 +176,21 @@
             document.getElementById('btn-export').disabled = !hasItems;
             document.getElementById('btn-confirm').disabled = !hasItems;
 
-            // Also change styles to indicate readiness
-            const header = document.querySelector('.bg-info');
-            if(hasItems) {
-                header.classList.remove('bg-secondary');
-                header.classList.add('bg-info');
-            } else {
-                 // Optional: make it dull if 0
+            tbody.innerHTML = ''; // Clear loading message
+            if (!tasks || tasks.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="3">No tasks for export.</td></tr>';
+              return;
             }
+
+            tasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td>${task.title}</td>
+                  <td>${task.sku}</td>
+                  <td>${new Date(task.createdDate).toLocaleDateString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }).WebAppProducts_getAcceptedTasks();
     };
 
@@ -205,7 +227,7 @@
         
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                statusDiv.innerHTML = `Success! Export created. <a href="https://drive.google.com/open?id=${res.fileId}" target="_blank">Open File</a>`;
+                statusDiv.innerHTML = `Success! Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
                 statusDiv.className = 'mt-2 small text-success';
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
@@ -240,13 +262,21 @@
       AdminProductsView.switchTab('preview');
 
       // Clear inputs and display areas before loading new data
-      document.querySelectorAll('textarea, .desc-short, .desc-long, .p-2').forEach(el => {
-        if(el.tagName === 'TEXTAREA') {
-             el.value = '';
-        } else if (el.tagName === 'DIV' || el.classList.contains('desc-short') || el.classList.contains('desc-long') || el.classList.contains('p-2')) {
-             el.textContent = '';
-        }
-      });
+      // Clear header elements
+      document.getElementById('header-name-en-display').textContent = '';
+      document.getElementById('header-sku-display').textContent = '';
+      document.getElementById('header-name-he-display').textContent = '';
+
+      // Clear description textareas
+      document.getElementById('edit-ShortDescrHe').value = '';
+      document.getElementById('edit-DescriptionHe').value = '';
+      document.getElementById('edit-ShortDescrEn').value = '';
+      document.getElementById('edit-DescriptionEn').value = '';
+
+      // Clear preview boxes
+      document.getElementById('preview-en').innerHTML = '';
+      document.getElementById('preview-he').innerHTML = '';
+
       
       google.script.run.withSuccessHandler(data => {
                AdminProductsView.currentSku = data.sku;
@@ -298,6 +328,7 @@
 
       // Construct full object with all required keys for ProductService
       const fd = {
+        wdm_WebIdEn: m.wdm_WebIdEn, // Explicitly preserve WebIdEn
         wdm_NameEn: m.wdm_NameEn,
         wdm_NameHe: m.wdm_NameHe,
         wdm_Region: val('Region'),
@@ -375,11 +406,17 @@
     });
 
     AdminProductsView.closeModal = function() { document.getElementById('editor-modal').style.display = 'none'; };
-    AdminProductsView.switchTab = function(t) {
+    AdminProductsView.switchTab = function(tabName) {
         document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
-        document.getElementById('tab-'+t).style.display='block';
+        document.getElementById('tab-'+tabName).style.display='block';
         document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
-        event.target.classList.add('active');
+        
+        // Find the button that corresponds to the tabName and add the active class
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            if (button.onclick && button.onclick.toString().includes(`'${tabName}'`)) {
+                button.classList.add('active');
+            }
+        });
     };
 
     AdminProductsView.acceptChanges = function() {

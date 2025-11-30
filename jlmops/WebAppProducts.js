@@ -120,8 +120,31 @@ function WebAppProducts_getAdminReviewTasks() {
  * @returns {Array<Object>} A list of accepted tasks.
  */
 function WebAppProducts_getAcceptedTasks() {
-  LoggerService.warn('WebAppProducts', 'getAcceptedTasks', 'Function disabled per user instruction.');
-  return []; // Disabled per user instruction
+  try {
+    LoggerService.info('WebAppProducts', 'getAcceptedTasks', 'Starting accepted task fetch...');
+    
+    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.field_mismatch', 'Accepted');
+    LoggerService.info('WebAppProducts', 'getAcceptedTasks', `Fetched ${tasks.length} raw tasks with status 'Accepted'.`);
+    
+    const acceptedTasks = tasks.filter(t => {
+        const title = String(t.st_Title || '');
+        return title.toLowerCase().includes('vintage mismatch');
+    });
+    
+    LoggerService.info('WebAppProducts', 'getAcceptedTasks', `Returning ${acceptedTasks.length} filtered accepted tasks.`);
+    
+    return acceptedTasks.map(t => ({
+        taskId: t.st_TaskId,
+        sku: t.st_LinkedEntityId,
+        title: t.st_Title,
+        status: t.st_Status,
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
+        assignedTo: t.st_AssignedTo
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getAcceptedTasks', `Error getting accepted tasks: ${e.message}`, e);
+    throw e;
+  }
 }
 
 /**

@@ -62,7 +62,7 @@
     /* 2 lines approx */
     .desc-short { min-height: 40px; }
     /* 3 lines approx */
-    .desc-long { min-height: 80px; }
+    .desc-long { min-height: 120px; }
 
   </style>
 </head>
@@ -426,17 +426,41 @@
       document.getElementById('editor-modal').style.display = 'flex';
       document.getElementById('modal-status').textContent = 'Loading data...';
       
-      // Clear inputs
-      document.querySelectorAll('input, textarea, .p-2').forEach(el => {
-        if(el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-             if(el.type === 'checkbox') el.checked = false;
-             else el.value = '';
-        }
-        else if(el.classList.contains('p-2')) el.textContent = '';
-        else if(el.classList.contains('desc-short') || el.classList.contains('desc-long')) {
-             if(el.tagName === 'DIV') el.textContent = '';
-        }
+      // Clear all editable and display elements
+      // Clear header elements
+      document.getElementById('header-name-en-display').textContent = '';
+      document.getElementById('header-sku-display').textContent = '';
+      document.getElementById('header-name-he-display').textContent = '';
+
+      // Clear description textareas
+      document.getElementById('edit-ShortDescrHe').value = '';
+      document.getElementById('edit-DescriptionHe').value = '';
+      document.getElementById('edit-ShortDescrEn').value = '';
+      document.getElementById('edit-DescriptionEn').value = '';
+
+      // Clear read-only display divs (cur- prefix)
+      document.querySelectorAll('div[id^="cur-"]').forEach(el => {
+          el.textContent = '';
       });
+
+      // Clear editable select elements (edit- prefix)
+      document.querySelectorAll('select[id^="edit-"]').forEach(el => {
+          el.value = ''; // Set to default empty option
+      });
+      
+      // Clear editable input text/number elements (edit- prefix)
+      document.querySelectorAll('input[type="text"][id^="edit-"], input[type="number"][id^="edit-"]').forEach(el => {
+          el.value = '';
+      });
+
+      // Clear checkboxes (edit- prefix)
+      document.querySelectorAll('input[type="checkbox"][id^="edit-"]').forEach(el => {
+          el.checked = false;
+      });
+
+      // Clear preview boxes
+      document.getElementById('preview-en').innerHTML = '';
+      document.getElementById('preview-he').innerHTML = '';
       
       // Reset tab to first
       ManagerProductsView.switchTab('desc');
