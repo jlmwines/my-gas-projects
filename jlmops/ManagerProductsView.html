@@ -446,6 +446,7 @@
                console.log('Received data from backend in openEditor:', data); 
                ManagerProductsView.currentSku = data.sku;
                ManagerProductsView.currentMasterData = data.masterData || {}; 
+               ManagerProductsView.currentComaxData = data.comaxData || {}; // Store Comax Data
                ManagerProductsView.lookupRegions = data.regions || []; 
                ManagerProductsView.lookupGrapes = data.grapes || []; // Store grapes
                ManagerProductsView.lookupKashrut = data.kashrut || []; // Store kashrut
@@ -772,6 +773,7 @@
 
     ManagerProductsView.updatePreview = function() {
         const m = ManagerProductsView.currentMasterData || {};
+        const c = ManagerProductsView.currentComaxData || {};
         
         // Helper to escape HTML characters
         const escapeHtml = (unsafe) => {
@@ -819,19 +821,28 @@
             if (name && longDesc) nameAndLongDesc += ' ';
             if (longDesc) nameAndLongDesc += escapeHtml(longDesc);
             if (nameAndLongDesc) descriptionBlock.push(nameAndLongDesc);
+            if (nameAndLongDesc) descriptionBlock.push('<br>'); // Add blank row here
+
 
             // 4. Details Section
             const addDetail = (label, val) => { if (val) detailsBlock.push(`${label}: ${escapeHtml(String(val))}`); };
+
+            // Comax Fields
+            addDetail(isEn ? 'Type' : 'סוג', c.cpm_Group);
+            addDetail(isEn ? 'Vintage' : 'שנת בציר', c.cpm_Vintage);
+            
+            // ABV
+            const abv = document.getElementById('edit-ABV').value;
+            if (abv) addDetail(isEn ? 'Alcohol' : 'אלכוהול', `${abv}%`);
+            
+            // Volume
+            addDetail(isEn ? 'Volume' : 'גודל', c.cpm_Size);
 
             // Region
             const regionCode = document.getElementById('edit-Region').value;
             if (regionCode) {
                 addDetail(isEn ? 'Region' : 'אזור', ManagerProductsView.getLookupText(regionCode, ManagerProductsView.lookupRegions, lang));
             }
-
-            // ABV
-            const abv = document.getElementById('edit-ABV').value;
-            if (abv) addDetail(isEn ? 'ABV' : 'אלכוהול', `${abv}%`);
             
             // Attributes
             const attrMap = isEn ? 

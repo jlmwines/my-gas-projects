@@ -141,6 +141,23 @@ function WebAppProducts_confirmWebUpdates() {
 }
 
 /**
+ * Generates HTML previews for the product editor.
+ * @param {string} sku The product SKU.
+ * @param {Object} formData The current form data.
+ * @param {Object} comaxData The Comax master data.
+ * @returns {Object} { htmlEn, htmlHe }
+ */
+function WebAppProducts_getPreview(sku, formData, comaxData) {
+    const allConfig = ConfigService.getAllConfig();
+    const lookupMaps = {
+        texts: LookupService.getLookupMap('map.text_lookups'),
+        grapes: LookupService.getLookupMap('map.grape_lookups'),
+        kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+    };
+    return ProductService.getProductHtmlPreview(sku, formData, comaxData, 'EN', lookupMaps, false); // Assuming EN for preview, pass comaxData
+}
+
+/**
  * Gets a list of product detail update tasks for the manager.
  * Filters for 'task.validation.field_mismatch' tasks with 'Vintage Mismatch' in the title
  * and 'New' or 'Assigned' status.

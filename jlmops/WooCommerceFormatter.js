@@ -125,10 +125,10 @@ const WooCommerceFormatter = (function() {
 
     /**
      * Formats the product description into a structured HTML string.
-     * Replicates the legacy `compileExportDescription_` logic.
+     * Replicates the legacy `compileExportDescription_` logic and manager preview requirements.
      * 
      * @param {string} sku The product SKU.
-     * @param {Object} productData The product detail data (from WebDetM/S).
+     * @param {Object} productData The product detail data (from WebDetM/S or formData).
      * @param {Object} comaxData The Comax master data (from CmxProdM).
      * @param {string} lang 'EN' or 'HE'.
      * @param {Object} lookupMaps A container for text, grape, and kashrut lookup maps.
@@ -138,126 +138,153 @@ const WooCommerceFormatter = (function() {
     formatDescriptionHTML: function(sku, productData, comaxData, lang, lookupMaps, isForExport) {
         let html = '';
 
-        // Helper to safely get string values
+        // Helper to safely get string values from productData
         const getVal = (key) => productData[key] || '';
+        // Helper to safely get string values from comaxData
         const getCmxVal = (key) => comaxData ? (comaxData[key] || '') : '';
 
-        const name = lang === 'EN' ? getVal('wdm_NameEn') : getVal('wdm_NameHe');
-        const description = lang === 'EN' ? getVal('wdm_DescriptionEn') : getVal('wdm_DescriptionHe');
-        const region = getVal('wdm_Region'); // Stored as code
+        const isEn = lang === 'EN';
+
+        // --- Data Extraction ---
+        const name = isEn ? getVal('wdm_NameEn') : getVal('wdm_NameHe');
+        const shortDescription = isEn ? getVal('wdm_ShortDescrEn') : getVal('wdm_ShortDescrHe');
+        const longDescription = isEn ? getVal('wdm_DescriptionEn') : getVal('wdm_DescriptionHe');
+
+        const regionCode = getVal('wdm_Region');
         const abv = getVal('wdm_ABV'); // Stored as decimal 0.125
-        const vintage = getCmxVal('cpm_Vintage'); // From Comax
-        const alcohol = (parseFloat(abv) * 100).toFixed(1) + '%';
-        const volume = getCmxVal('cpm_Size'); // From Comax
-        
-        // --- 1. Opening Section ---
-        html += `<strong>${name}</strong><br>\n`;
-        html += `${description}<br>\n<br>\n`;
-
-        // --- 2. Attributes Section ---
-        html += `<strong>${lang === 'EN' ? 'Attributes:' : 'מאפיינים:'}</strong><br>\n`;
-        
-        const attrLine = (labelEn, labelHe, value) => {
-            if (!value) return '';
-            const label = lang === 'EN' ? labelEn : labelHe;
-            return `${label}: ${value}<br>\n`;
-        };
-        
-        // Group/Type
-        const group = getCmxVal('cpm_Group');
-        html += attrLine('Type', 'סוג', group);
-        
-        // Vintage
-        html += attrLine('Vintage', 'שנת בציר', vintage);
-        
-        // Alcohol
-        html += attrLine('Alcohol', 'אלכוהול', alcohol);
-        
-        // Volume
-        html += attrLine('Volume', 'גודל', volume);
-
-        // Region (Lookup)
-        const regionObj = lookupMaps.texts.get(region);
-        const regionName = regionObj ? (lang === 'EN' ? regionObj.slt_TextEN : regionObj.slt_TextHE) : region;
-        html += attrLine('Region', 'אזור', regionName);
-
-        // Grapes
-        const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
-        const grapeNames = [];
-        grapeCodes.forEach(codeKey => {
-            const code = getVal(codeKey);
-            if (code) {
-                const grapeObj = lookupMaps.grapes.get(code);
-                if (grapeObj) {
-                    grapeNames.push(lang === 'EN' ? grapeObj.slg_TextEN : grapeObj.slg_NameHe);
-                }
-            }
-        });
-        if (grapeNames.length > 0) {
-            html += attrLine('Grapes', 'ענבים', grapeNames.join(', '));
-        }
-
-        // Tasting Attributes (Lookup)
-        ['Intensity', 'Complexity', 'Acidity', 'Decant'].forEach(attr => {
-            const code = getVal(`wdm_${attr}`);
-            if (code) {
-                 const attrObj = lookupMaps.texts.get(code);
-                 const val = attrObj ? (lang === 'EN' ? attrObj.slt_TextEN : attrObj.slt_TextHE) : '';
-                 // Legacy labels hardcoded roughly
-                 const labelEn = attr; 
-                 const labelHe = attr; // Simplified for now, ideally also looked up or hardcoded map
-                 if (val) html += `${labelEn}: ${val}<br>\n`; 
-            }
-        });
-        
-        // Harmonize/Contrast
-        // (This logic can be complex, simplifying for prototype: just listing pairs if checked? 
-        //  Actually, legacy logic appends pre-formatted text blocks in Appendices. 
-        //  The visible section usually just lists simple attributes.)
-
-        html += '<br>\n';
-
-        // --- 3. Kashrut Section ---
-        html += `<strong>${lang === 'EN' ? 'Kashrut:' : 'כשרות:'}</strong><br>\n`;
-        
-        const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
-        kashrutCodes.forEach(codeKey => {
-            const code = getVal(codeKey);
-            if (code) {
-                const kObj = lookupMaps.kashrut.get(code);
-                if (kObj) {
-                     const kText = lang === 'EN' ? kObj.slk_TextEN : kObj.slk_TextHE;
-                     html += `${kText}<br>\n`;
-                }
-            }
-        });
-
+        const intensityCode = getVal('wdm_Intensity');
+        const complexityCode = getVal('wdm_Complexity');
+        const acidityCode = getVal('wdm_Acidity');
+        const decant = getVal('wdm_Decant');
         const heterMechira = getVal('wdm_HeterMechira');
-        if (String(heterMechira) === 'true' || heterMechira === true) {
-            const hmText = lang === 'EN' ? 'Heter Mechira' : 'היתר מכירה';
-            html += `<span style="color: #ff0000;"><strong>${hmText}</strong></span><br>\n`;
-        }
-        
         const isMevushal = getVal('wdm_IsMevushal');
-        if (String(isMevushal) === 'true' || isMevushal === true) {
-             const mevText = lang === 'EN' ? 'Mevushal' : 'מבושל';
-             html += `${mevText}<br>\n`;
-        }
+        
+        // Comax-specific data
+        const group = getCmxVal('cpm_Group');
+        const vintage = getCmxVal('cpm_Vintage');
+        const size = getCmxVal('cpm_Size');
 
-        // --- 4. Appendices (Export Only) ---
-        if (isForExport) {
-             html += '<br>\n';
-             // P-Code (Promotional Text) - Logic: Look up P-code text and append
-             // Attributes Texts - Look up descriptions for Intensity/Complexity etc.
-             // Pairing Notes - Look up Harmonize/Contrast flavor texts
-             
-             // (Simplified placeholder for now to ensure structure exists)
-             // In a full implementation, we'd query SysLkp_Texts for 'P-Code' linked to this product 
-             // or derived from attributes.
-        }
+        // --- Formatting Helpers ---
+        const getLookupText = (code, lookupType, fallback = '') => {
+            if (!code) return fallback;
+            const map = lookupMaps[lookupType];
+            const item = map ? map.get(String(code).trim().toUpperCase()) : null;
+            if (!item) {
+                // LoggerService.warn('WooCommerceFormatter', 'formatDescriptionHTML', `Lookup failed for code: ${code}, type: ${lookupType}`);
+                return fallback;
+            }
+            if (lookupType === 'texts') return isEn ? item.slt_TextEN : item.slt_TextHE;
+            if (lookupType === 'grapes') return isEn ? item.slg_TextEN : item.slg_NameHe;
+            if (lookupType === 'kashrut') return isEn ? item.slk_TextEN : item.slk_TextHE;
+            return fallback;
+        };
 
-        return html;
-    }
-  };
+                const addDetailLine = (labelEn, labelHe, value) => {
+                    if (!value) return '';
+                    const label = isEn ? labelEn : labelHe;
+                    return `${label}: ${value}<br>`;
+                };
+        
+                // --- HTML Construction ---
+        
+                // 1. Product Title
+                if (name) html += `<b>${name}</b><br>`;
+                html += '<hr>'; // Divider
+        
+                // 2. Short Description
+                if (shortDescription) html += `${shortDescription}<br>`;
+                html += '<hr>'; // Divider
+        
+                // 3. Product Title & Long Description
+                if (name || longDescription) {
+                    html += (name ? `${name}` : '') + (name && longDescription ? ' ' : '') + (longDescription ? `${longDescription}` : '');
+                    html += '<br>';
+                }
+                
+                html += '<br>'; // Blank line after description block as requested
+        
+                // 4. Details List
+                // Order: Category, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, Kashrut, Heter Mechira, Mevushal
+                
+                        // Category (Group from Comax)
+                        if (group) html += addDetailLine('Category', 'קטגוריה', getLookupText(group, 'texts', group));
+                        // Vintage
+                        if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);
+                        // ABV
+                        if (abv) html += addDetailLine('Alcohol', 'אלכוהול', `${(parseFloat(abv) * 100).toFixed(1)}%`);
+                        // Volume (Size from Comax)
+                        if (size) html += addDetailLine('Volume', 'גודל', `${size} ${isEn ? 'ML' : 'מ”ל'}`);
+                        // Region
+                        if (regionCode) html += addDetailLine('Region', 'אזור', getLookupText(regionCode, 'texts', regionCode));
+                
+                        // Grapes
+                        const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
+                        const grapeNames = [];
+                        grapeCodes.forEach(codeKey => {
+                            const code = getVal(codeKey);
+                            if (code) grapeNames.push(getLookupText(code, 'grapes', code));
+                        });
+                        if (grapeNames.length > 0) html += addDetailLine('Grapes', 'זנים', grapeNames.join(', '));
+                
+                        // Intensity
+                        if (intensityCode) html += addDetailLine('Intensity', 'עוצמה', intensityCode);
+                        // Complexity
+                        if (complexityCode) html += addDetailLine('Complexity', 'מורכבות', complexityCode);
+                        // Acidity
+                        if (acidityCode) html += addDetailLine('Acidity', 'חומציות', acidityCode);
+                                
+                // Pairing - Harmonize
+                const harFlavors = [];
+                if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'Mild' : 'עדין');
+                if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'Rich' : 'עשיר');
+                if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'Intense' : 'עוצמתי');
+                if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'Sweet' : 'מתוק');
+                if (harFlavors.length > 0) html += addDetailLine('Harmonize with', 'הרמוניה עם טעמים', harFlavors.join(isEn ? ' or ' : ' או ') + (isEn ? ' flavors' : ''));
+        
+                // Pairing - Contrast
+                const conFlavors = [];
+                if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'Mild' : 'עדין');
+                if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'Rich' : 'עשיר');
+                if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'Intense' : 'עוצמתי');
+                if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'Sweet' : 'מתוק');
+                if (conFlavors.length > 0) html += addDetailLine('Contrast with', 'קונטרסט עם טעמים', conFlavors.join(isEn ? ' or ' : ' או ') + (isEn ? ' flavors' : ''));
+
+                // Decant
+                if (decant) {
+                    const decantText = isEn ? `Recommending decanting - ${decant} minutes` : `מומלץ לאוורור – ${decant} דקות`;
+                    html += `${decantText}<br>`;
+                }
+                
+                // Blank row
+                html += '<br>';
+        
+                // Kashrut
+                const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
+                const kashrutNames = [];
+                kashrutCodes.forEach(codeKey => {
+                    const code = getVal(codeKey);
+                    if (code) kashrutNames.push(getLookupText(code, 'kashrut', code));
+                });
+                if (kashrutNames.length > 0) html += addDetailLine('Kashrut', 'כשרות', kashrutNames.join(', '));
+        
+                // Heter Mechira
+                if (String(heterMechira) === 'true' || heterMechira === true) {
+                    const hmText = isEn ? 'Heter Mechira' : 'היתר מכירה';
+                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span><br>`;
+                }
+                // Mevushal
+                if (String(isMevushal) === 'true' || isMevushal === true) {
+                     const mevText = isEn ? 'Mevushal' : 'מבושל';
+                     html += `${mevText}<br>`;
+                }
+        
+                // --- Appendices (Export Only) ---
+                // Placeholder for future promotional text, attribute texts, etc.
+                if (isForExport) {
+                     // Logic to add P-codes, other formatted texts
+                }
+        
+                return html;
+            }  };
 
 })();

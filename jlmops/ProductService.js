@@ -1001,6 +1001,36 @@ const ProductService = (function() {
     }
   }
 
+  /**
+   * Generates HTML previews for a product based on the provided data (from frontend).
+   * @param {string} sku The product SKU.
+   * @param {Object} formData The form data from the UI.
+   * @returns {Object} { htmlEn, htmlHe }
+   */
+  function getProductHtmlPreview(sku, formData, comaxData, lang, lookupMaps, isForExport) {
+      try {
+          // Use the comaxData passed as an argument directly
+          const cmxRow = comaxData;
+
+          // 2. Load Lookups
+          const lookupMaps = {
+              texts: LookupService.getLookupMap('map.text_lookups'),
+              grapes: LookupService.getLookupMap('map.grape_lookups'),
+              kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+          };
+
+          // 3. Generate HTML
+          const htmlEn = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'EN', lookupMaps, false);
+          const htmlHe = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'HE', lookupMaps, false);
+
+          return { htmlEn: htmlEn, htmlHe: htmlHe };
+
+      } catch (e) {
+          LoggerService.error('ProductService', 'getProductHtmlPreview', `Error generating preview: ${e.message}`, e);
+          throw e;
+      }
+  }
+
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
@@ -1010,7 +1040,8 @@ const ProductService = (function() {
     submitProductDetails: submitProductDetails,
     acceptProductDetails: acceptProductDetails,
     generateDetailExport: generateDetailExport,
-    confirmWebUpdates: confirmWebUpdates
+    confirmWebUpdates: confirmWebUpdates,
+    getProductHtmlPreview: getProductHtmlPreview
   };
 })();
 
