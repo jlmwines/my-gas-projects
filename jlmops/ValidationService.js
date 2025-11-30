@@ -103,7 +103,7 @@ const ValidationService = {
     const entityId = skuKey ? dataRow[skuKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
 
     LoggerService.info(serviceName, 'createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
-    // TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
+    TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
     
     return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
   },
@@ -274,9 +274,8 @@ const ValidationService = {
                     'ValidationService',
                     '_executeFieldComparison',
                     `DEBUG Mismatch for rule '${rule.on_failure_title}'. ` +
-                    `Web SKU: '${rowA.wpm_SKU}', Web Publish Status (original): '${rowA[fieldA]}'. ` +
-                    `Comax SKU: '${rowB.cpm_SKU}', Comax IsWeb (original): '${rowB[fieldB]}', Comax IsWeb (translated): '${valueB}'. ` +
-                    `Comparing Web Publish Status ('${valueA}') with Comax IsWeb (translated) ('${valueB}').`
+                    `Key: '${key}'. ` +
+                    `Comparing '${fieldA}' (Value: '${valueA}') with '${fieldB}' (Value: '${valueB}').`
                 );
               }
   
@@ -358,10 +357,6 @@ const ValidationService = {
     }
 
     for (const [key, row] of sourceMap.entries()) {
-        const sourceSchema = ConfigService.getAllConfig()[`schema.data.${rule.source_sheet}`];
-        const sourceKeyField = sourceSchema ? sourceSchema.key_column : null;
-        const currentSku = sourceKeyField ? row[sourceKeyField] : (row.cpm_SKU || 'N/A'); // More robust SKU for logging
-
         const val1_part1 = row[field];
         const result_part1 = this.evaluateCondition(val1_part1, operator, value);
 
@@ -378,7 +373,7 @@ const ValidationService = {
                 serviceName,
                 '_executeInternalAudit',
                 `Condition met for rule '${rule.on_failure_title}'. ` +
-                `SKU: '${currentSku}', ${field}: '${row[field]}', ${field2 ? `${field2}: '${row[field2]}', ` : ''} ` + // Dynamically log condition fields
+                `Key: '${key}', ${field}: '${row[field]}', ${field2 ? `${field2}: '${row[field2]}', ` : ''} ` + // Dynamically log condition fields
                 `Full Condition: '${rule.condition}'.`
             );
             const isQuarantineFailure = this.createTaskFromFailure(rule, row, key);

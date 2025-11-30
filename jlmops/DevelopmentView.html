@@ -5,9 +5,9 @@
         <h3>Development Tools</h3>
       </div>
       <div class="card-body">
-        <button class="btn btn-warning mr-2" onclick="runRebuild()">Rebuild SysConfig</button>
-        <button class="btn mr-2" onclick="runMasterValidation()">Run Master Validation</button>
-        <div id="sysconfig-result" class="mt-3"></div>
+        <button class="btn btn-warning mr-2" onclick="runRebuildSysConfig()">Rebuild SysConfig</button>
+        <button class="btn mr-2" onclick="runLegacyValidation()">Run Legacy Validation</button>
+        <div id="dev-tools-results" class="mt-3"></div>
       </div>
     </div>
   </div>
@@ -29,8 +29,8 @@
 </div>
 
 <script>
-  function runRebuild() {
-    const resultDiv = document.getElementById('sysconfig-result');
+  function runRebuildSysConfig() {
+    const resultDiv = document.getElementById('dev-tools-results');
     resultDiv.innerHTML = '<p class="text-info">Rebuilding SysConfig...</p>';
     google.script.run
       .withSuccessHandler(message => {
@@ -42,31 +42,32 @@
       .runRebuildSysConfigFromSource();
   }
 
-  function runMasterValidation() {
-    const validationResultsDiv = document.getElementById('system-health-validation-results');
-    validationResultsDiv.innerHTML = '<p class="text-info">Running master validation...</p>';
+  function runLegacyValidation() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Running legacy validations...</p>';
 
     google.script.run
       .withSuccessHandler(response => {
+        let html = '';
         if (response.success) {
-          let html = `<p class="alert alert-success">Validation completed successfully. ${response.message}</p>`;
+          html += `<p class="alert alert-success">Legacy validation completed successfully.</p>`;
           if (response.results && response.results.length > 0) {
             html += `<h5>Detailed Results:</h5><ul>`;
             response.results.forEach(result => {
-              const statusClass = result.status === 'PASSED' ? 'text-success' : 'text-danger';
-              html += `<li class="${statusClass}">${result.ruleName}: ${result.status} - ${result.message || ''}</li>`;
+              const statusClass = result.includes('failed') || result.includes('Error') ? 'text-danger' : 'text-success';
+              html += `<li class="${statusClass}">${result}</li>`;
             });
             html += `</ul>`;
           }
-          validationResultsDiv.innerHTML = html;
+          resultDiv.innerHTML = html;
         } else {
-          validationResultsDiv.innerHTML = `<p class="alert alert-danger">Validation failed: ${response.error || 'Unknown error'}</p>`;
+          resultDiv.innerHTML = `<p class="alert alert-danger">Legacy validation failed: ${response.error || 'Unknown error'}</p>`;
         }
       })
       .withFailureHandler(error => {
-        validationResultsDiv.innerHTML = `<p class="alert alert-danger">Failed to run validation: ${error.message}</p>`;
+        resultDiv.innerHTML = `<p class="alert alert-danger">Failed to run legacy validation: ${error.message}</p>`;
       })
-      .WebAppSystem_runMasterValidationAndReturnResults(); // Renamed backend call
+      .WebAppSystem_runLegacyValidationAndReturnResults();
   }
 
   // --- Wishlist Functions ---

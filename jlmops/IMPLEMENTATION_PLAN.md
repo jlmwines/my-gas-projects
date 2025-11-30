@@ -78,7 +78,7 @@
 *   **Tasks:**
     1.  **Inventory Screen (COMPLETED):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
         *   **Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
-    2.  **Product Management Screen (PLANNED):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
+    2.  **Product Management Screen (IN PROGRESS):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
         *   **UI Layout:** The page will feature distinct, ordered areas/widgets to prioritize manager tasks:
             *   **Area 1: New Product Suggestions (Prominent, Top of Page)**
                 *   **Purpose:** To immediately highlight opportunities for new product additions and address inventory gaps.
@@ -126,6 +126,38 @@
 ### 5.5. UI Authentication & User Switching (COMPLETED)
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
 *   **Resolution:** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
+
+### 5.6. Admin Product Review & Export (IN PROGRESS)
+*   **Goal:** Provide a comprehensive interface for admins to review product detail updates, make final edits, accept changes, and export them for web updates.
+*   **Detailed Technical Plan:**
+    1.  **Backend: `WooCommerceFormatter.js`:**
+        *   Implement `formatDescriptionHTML(sku, productData, comaxData, lang, lookupMaps)` to strictly replicate the legacy `compileExportDescription_` logic.
+        *   Logic must construct the HTML description in four specific sections:
+            *   **1. Opening:** Product Name (Bold) + Long Description.
+            *   **2. Attributes:** Detailed list including Group, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, and Decanting.
+            *   **3. Kashrut:** List of certifications + "Heter Mechira" (styled with Red/Bold HTML).
+            *   **4. Appendices (Export Only):** Promotional Text (P-code lookup), Attribute Texts (Intensity/Complexity/Acidity lookups), and Bulleted Pairing Notes (Harmonize/Contrast flavor lookups).
+    2.  **Backend: `ProductService.js`:**
+        *   **`acceptProductDetails` (Existing):** Verifies it upserts to `WebDetM` and sets task to `Accepted`.
+        *   **Implement `generateDetailExport()`:**
+            *   Identify all tasks with status `Accepted`.
+            *   Retrieve combined data from `WebDetM`, `CmxProdM`, and `WebXltM` (for IDs).
+            *   Fetch all necessary lookup maps via `LookupService` (Texts, Grapes, Kashrut, Regions).
+            *   Generate the CSV content using `WooCommerceFormatter.formatDescriptionHTML`.
+            *   Save the file to the configured export folder.
+        *   **Implement `confirmWebUpdates()`:**
+            *   Bulk update all currently `Accepted` tasks to `Completed`.
+    3.  **Backend: `WebAppProducts.js`:**
+        *   Expose `getAdminReviewTasks()`: Fetch tasks in 'Review' status.
+        *   Expose `getAcceptedTasks()`: Fetch tasks in 'Accepted' status (for the export queue).
+        *   Expose `approveProductDetails()`: Wrapper for `ProductService.acceptProductDetails`.
+        *   Expose `exportAcceptedUpdates()`: Wrapper for `ProductService.generateDetailExport`.
+        *   Expose `confirmWebUpdates()`: Wrapper for `ProductService.confirmWebUpdates`.
+    4.  **Frontend: `AdminProductsView.html`:**
+        *   **Review Section:** A table displaying tasks in `Review` status. Clicking a row opens the Product Editor Modal (reused from Manager view) for final edits and approval.
+        *   **Export Section:** A summary area showing the count of `Accepted` items ready for export.
+            *   **Action:** "Export CSV" button.
+            *   **Action:** "Mark as Completed" button (to be clicked after the admin uploads the CSV to WooCommerce).
 
 ## Phase 6: Workflow Integrity & UI Orchestration (COMPLETED)
 

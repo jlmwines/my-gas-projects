@@ -28,6 +28,18 @@ const WebAdapter = (function() {
     }
     
     const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
+
+    // Strict Header Validation
+    const missingHeaders = Object.keys(columnMap).filter(expectedHeader => 
+        headerRow.indexOf(expectedHeader.toLowerCase()) === -1
+    );
+
+    if (missingHeaders.length > 0) {
+        const errorMessage = `Critical: Input CSV is missing required headers: ${missingHeaders.join(', ')}. Check file format.`;
+        logger.error(serviceName, functionName, errorMessage);
+        throw new Error(errorMessage);
+    }
+
     const productObjects = [];
 
     // Start from row 1 to skip the header

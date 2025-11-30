@@ -35,9 +35,25 @@
     if (data.isHealthy) {
       finalHtml += '<p class="text-success"><strong>Healthy</strong></p>';
     } else {
-      data.alerts.forEach(alert => {
-        finalHtml += `<p class="text-danger mb-1">${alert}</p>`;
-      });
+      // Display specific failure tasks if available
+      if (data.activeFailureTasks && data.activeFailureTasks.length > 0) {
+        finalHtml += '<h6 class="text-danger">Attention Needed</h6>';
+        finalHtml += '<ul class="list-group list-group-flush mb-3">';
+        data.activeFailureTasks.forEach(task => {
+           finalHtml += `<li class="list-group-item p-2 border-0 bg-light mb-1">`;
+           finalHtml += `<div class="fw-bold text-danger" style="font-size: 0.85rem;">${task.title}</div>`;
+           if (task.notes) {
+               finalHtml += `<div class="text-muted" style="font-size: 0.75rem;">${task.notes}</div>`;
+           }
+           finalHtml += `</li>`;
+        });
+        finalHtml += '</ul>';
+      } else {
+        // Fallback to summary alerts if no detailed tasks found (legacy behavior)
+        data.alerts.forEach(alert => {
+            finalHtml += `<p class="text-danger mb-1">${alert}</p>`;
+        });
+      }
     }
 
     const lastValidationColor = data.isValidationRecent ? 'text-success' : 'text-danger';

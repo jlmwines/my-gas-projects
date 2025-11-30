@@ -786,7 +786,8 @@
         // Helper to generate preview text for a specific language
         const generatePreview = (lang) => {
             const isEn = lang === 'en';
-            let htmlParts = [];
+            let descriptionBlock = [];
+            let detailsBlock = [];
             
             // Heter Mechira text for insertion
             const isHeterMechira = document.getElementById('edit-HeterMechira').checked;
@@ -794,10 +795,10 @@
 
             // 1. Product Name (Always from Master)
             const name = isEn ? (m.wdm_NameEn || '') : (m.wdm_NameHe || '');
-            if (name) htmlParts.push(`<b>${escapeHtml(name)}</b>`);
+            if (name) descriptionBlock.push(`<b>${escapeHtml(name)}</b>`);
             
             // Add first divider if name exists
-            if (name) htmlParts.push('<hr>');
+            if (name) descriptionBlock.push('<hr>');
 
             // 2. Short Description (From Edit)
             let shortDesc = document.getElementById(isEn ? 'edit-ShortDescrEn' : 'edit-ShortDescrHe').value;
@@ -806,10 +807,10 @@
             } else if (!shortDesc && isHeterMechira) {
                  shortDesc = hmText;
             }
-            if (shortDesc) htmlParts.push(escapeHtml(shortDesc));
+            if (shortDesc) descriptionBlock.push(escapeHtml(shortDesc));
 
             // Add second divider if shortDesc exists
-            if (shortDesc) htmlParts.push('<hr>');
+            if (shortDesc) descriptionBlock.push('<hr>');
 
             // 3. Product Name + Long Description (From Edit)
             const longDesc = document.getElementById(isEn ? 'edit-DescriptionEn' : 'edit-DescriptionHe').value;
@@ -817,14 +818,10 @@
             if (name) nameAndLongDesc += escapeHtml(name);
             if (name && longDesc) nameAndLongDesc += ' ';
             if (longDesc) nameAndLongDesc += escapeHtml(longDesc);
-            if (nameAndLongDesc) htmlParts.push(nameAndLongDesc);
-
-            // Spacer after description block if there's content
-            if (htmlParts.length > 0) htmlParts.push('<br><br>'); // Double blank line
+            if (nameAndLongDesc) descriptionBlock.push(nameAndLongDesc);
 
             // 4. Details Section
-            const details = [];
-            const addDetail = (label, val) => { if (val) details.push(`${label}: ${escapeHtml(String(val))}`); };
+            const addDetail = (label, val) => { if (val) detailsBlock.push(`${label}: ${escapeHtml(String(val))}`); };
 
             // Region
             const regionCode = document.getElementById('edit-Region').value;
@@ -861,7 +858,7 @@
                 const label = isEn ? 'Harmonize with' : 'הרמוניה עם טעמים';
                 const separator = isEn ? ' or ' : ' או ';
                 const suffix = isEn ? ' flavors' : '';
-                details.push(`${label}: ${harSelected.join(separator)}${suffix}`);
+                detailsBlock.push(`${label}: ${harSelected.join(separator)}${suffix}`);
             }
             
             // Contrast
@@ -871,7 +868,7 @@
                 const label = isEn ? 'Contrast with' : 'קונטרסט עם טעמים';
                 const separator = isEn ? ' or ' : ' או ';
                 const suffix = isEn ? ' flavors' : '';
-                details.push(`${label}: ${conSelected.join(separator)}${suffix}`);
+                detailsBlock.push(`${label}: ${conSelected.join(separator)}${suffix}`);
             }
             
             // Grapes
@@ -898,11 +895,15 @@
                 addDetail(isEn ? 'Kashrut' : 'כשרות', kashrutList.join(', '));
             }
 
-            if (details.length > 0) {
-                htmlParts.push(details.join('<br>')); // Join details with <br>
+            let combinedHtml = descriptionBlock.filter(Boolean).join('');
+            if (detailsBlock.length > 0) {
+                if (combinedHtml.length > 0) {
+                    combinedHtml += '<br>'; // Single blank line
+                }
+                combinedHtml += detailsBlock.join('<br>');
             }
             
-            return htmlParts.filter(Boolean).join(''); // Join all HTML parts
+            return combinedHtml;
         };
 
         document.getElementById('preview-en').innerHTML = generatePreview('en');

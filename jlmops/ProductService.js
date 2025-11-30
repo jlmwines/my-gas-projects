@@ -78,6 +78,7 @@ const ProductService = (function() {
         if (finalData.length > 0 && finalData[0].length > 0) {
             sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
         }
+        SpreadsheetApp.flush(); // Ensure data is written before any subsequent reads (e.g., validation)
         LoggerService.info('ProductService', '_populateStagingSheet', `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`);
     }
   }
