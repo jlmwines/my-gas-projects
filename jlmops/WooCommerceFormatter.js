@@ -182,26 +182,26 @@ const WooCommerceFormatter = (function() {
                 const addDetailLine = (labelEn, labelHe, value) => {
                     if (!value) return '';
                     const label = isEn ? labelEn : labelHe;
-                    return `${label}: ${value}<br>`;
+                    return `${label}: ${value}<br>\n`;
                 };
         
                 // --- HTML Construction ---
         
                 // 1. Product Title
-                if (name) html += `<b>${name}</b><br>`;
-                html += '<hr>'; // Divider
+                if (name) html += `<b>${name}</b><br>\n`;
+                html += '<hr>\n'; // Divider
         
                 // 2. Short Description
-                if (shortDescription) html += `${shortDescription}<br>`;
-                html += '<hr>'; // Divider
+                if (shortDescription) html += `${shortDescription}<br>\n`;
+                html += '<hr>\n'; // Divider
         
                 // 3. Product Title & Long Description
                 if (name || longDescription) {
                     html += (name ? `${name}` : '') + (name && longDescription ? ' ' : '') + (longDescription ? `${longDescription}` : '');
-                    html += '<br>';
+                    html += '<br>\n';
                 }
                 
-                html += '<br>'; // Blank line after description block as requested
+                html += '<br>\n'; // Blank line after description block as requested
         
                 // 4. Details List
                 // Order: Category, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, Kashrut, Heter Mechira, Mevushal
@@ -211,7 +211,16 @@ const WooCommerceFormatter = (function() {
                         // Vintage
                         if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);
                         // ABV
-                        if (abv) html += addDetailLine('Alcohol', 'אלכוהול', `${(parseFloat(abv) * 100).toFixed(1)}%`);
+                        if (abv) {
+                             // Ensure abv is a number
+                             const abvNum = parseFloat(abv);
+                             if (!isNaN(abvNum)) {
+                                  html += addDetailLine('Alcohol', 'אלכוהול', `${(abvNum * 100).toFixed(1)}%`);
+                             } else {
+                                  // Fallback if it's already formatted or text
+                                  html += addDetailLine('Alcohol', 'אלכוהול', abv);
+                             }
+                        }
                         // Volume (Size from Comax)
                         if (size) html += addDetailLine('Volume', 'גודל', `${size} ${isEn ? 'ML' : 'מ”ל'}`);
                         // Region
@@ -252,11 +261,11 @@ const WooCommerceFormatter = (function() {
                 // Decant
                 if (decant) {
                     const decantText = isEn ? `Recommending decanting - ${decant} minutes` : `מומלץ לאוורור – ${decant} דקות`;
-                    html += `${decantText}<br>`;
+                    html += `${decantText}<br>\n`;
                 }
                 
                 // Blank row
-                html += '<br>';
+                html += '<br>\n';
         
                 // Kashrut
                 const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
@@ -270,18 +279,90 @@ const WooCommerceFormatter = (function() {
                 // Heter Mechira
                 if (String(heterMechira) === 'true' || heterMechira === true) {
                     const hmText = isEn ? 'Heter Mechira' : 'היתר מכירה';
-                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span><br>`;
+                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span><br>\n`;
                 }
                 // Mevushal
                 if (String(isMevushal) === 'true' || isMevushal === true) {
                      const mevText = isEn ? 'Mevushal' : 'מבושל';
-                     html += `${mevText}<br>`;
+                     html += `${mevText}<br>\n`;
                 }
         
                 // --- Appendices (Export Only) ---
-                // Placeholder for future promotional text, attribute texts, etc.
                 if (isForExport) {
-                     // Logic to add P-codes, other formatted texts
+                     const appendedParagraphs = [];
+                     const lastDigit = String(sku).slice(-1);
+                     const promoKey = 'P' + lastDigit;
+                     const promoText = getLookupText(promoKey, 'texts');
+                     if (promoText) appendedParagraphs.push(`<b>* ${promoText}</b>`);
+        
+                     if (intensityCode) {
+                         const intensityKey = 'IN0' + intensityCode;
+                         const text = getLookupText(intensityKey, 'texts');
+                         if (text) appendedParagraphs.push(text);
+                     }
+                     if (complexityCode) {
+                         const complexityKey = 'CO0' + complexityCode;
+                         const text = getLookupText(complexityKey, 'texts');
+                         if (text) appendedParagraphs.push(text);
+                     }
+                     if (acidityCode) {
+                         const match = String(acidityCode).match(/\d+/);
+                         if (match) {
+                              const acidityKey = 'AC0' + match[0];
+                              const text = getLookupText(acidityKey, 'texts');
+                              if (text) appendedParagraphs.push(text);
+                         }
+                     }
+        
+                     const flavorDefinitions = [
+                         { code: 'MILD', har: 'wdm_PairHarMild', con: 'wdm_PairConMild', labelEn: 'Mild', labelHe: 'עדין' },
+                         { code: 'RICH', har: 'wdm_PairHarRich', con: 'wdm_PairConRich', labelEn: 'Rich', labelHe: 'עשיר' },
+                         { code: 'INTENSE', har: 'wdm_PairHarIntense', con: 'wdm_PairConIntense', labelEn: 'Intense', labelHe: 'עוצמתי' },
+                         { code: 'SWEET', har: 'wdm_PairHarSweet', con: 'wdm_PairConSweet', labelEn: 'Sweet', labelHe: 'מתוק' }
+                     ];
+        
+                     // Harmonize Bullets
+                     const activeHar = flavorDefinitions.filter(def => getVal(def.har) == 1);
+                     if (activeHar.length > 0) {
+                         const block = [];
+                         const header = getLookupText('HARMONIZE', 'texts');
+                         if (header) block.push(header);
+                         
+                         const bullets = [];
+                         activeHar.forEach(def => {
+                             const desc = getLookupText(def.code, 'texts');
+                             if (desc) {
+                                 // For export, we use the full text from the lookup, no prefix
+                                 bullets.push(`• ${desc}`);
+                             }
+                         });
+                         if (bullets.length > 0) block.push(bullets.join('<br>\n'));
+                         if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
+                     }
+        
+                     // Contrast Bullets
+                     const activeCon = flavorDefinitions.filter(def => getVal(def.con) == 1);
+                     if (activeCon.length > 0) {
+                         const block = [];
+                         const header = getLookupText('CONTRAST', 'texts');
+                         if (header) block.push(header);
+                         
+                         const bullets = [];
+                         activeCon.forEach(def => {
+                             const desc = getLookupText(def.code, 'texts');
+                             if (desc) {
+                                 // For export, we use the full text from the lookup, no prefix
+                                 bullets.push(`• ${desc}`);
+                             }
+                         });
+                         if (bullets.length > 0) block.push(bullets.join('<br>\n'));
+                         if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
+                     }
+        
+                     if (appendedParagraphs.length > 0) {
+                         html += '<br>\n';
+                         html += appendedParagraphs.join('<br>\n'); 
+                     }
                 }
         
                 return html;

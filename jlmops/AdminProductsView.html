@@ -237,8 +237,7 @@
     };
 
     AdminProductsView.confirmUpdates = function() {
-        if(!confirm('This will mark all accepted tasks as "Completed". Ensure you have already exported and uploaded the data. Continue?')) return;
-
+                    if(!confirm('Confirm web product detail update?')) return;
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Processing...';
         

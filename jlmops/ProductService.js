@@ -1011,6 +1011,13 @@ const ProductService = (function() {
              .setWrap(true)
              .setVerticalAlignment('top');
 
+        // Apply specific column widths
+        sheet.setColumnWidth(4, 550); // Column D: Long Description (EN)
+        sheet.setColumnWidth(6, 550); // Column F: Long Description (HE)
+
+        // Set vertical alignment for the header row to bottom
+        sheet.getRange(1, 1, 1, headers.length).setVerticalAlignment('bottom');
+
         sheet.autoResizeColumns(1, headers.length); // Auto-resize columns for better readability
 
         // Move the new spreadsheet to the designated folder
