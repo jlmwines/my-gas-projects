@@ -160,5 +160,23 @@
         "topic", "Inventory",
         "default_priority", "High",
         "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.onboarding.suggestion",
+        "Task for suggesting a new product to add to the web store.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.onboarding.add_product",
+        "Task for managing the full onboarding process of a new product.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
     ]
 ]

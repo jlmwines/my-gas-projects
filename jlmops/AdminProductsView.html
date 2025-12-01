@@ -35,60 +35,220 @@
 </head>
 <body>
   <div class="container-fluid p-4">
+    <h2 class="mb-4">Products</h2>
     
-    <!-- Review Section -->
+    <!-- CARD 1: DETAIL UPDATES -->
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Review Pending Updates</h5>
-        <span id="stat-review" class="badge badge-secondary badge-pill">0</span>
+      <div class="card-header bg-white font-weight-bold">
+        Detail Updates
       </div>
-      <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-          <thead>
-            <tr>
-              <th class="border-top-0">Task</th>
-              <th class="border-top-0">SKU</th>
-              <th class="border-top-0">Date</th>
-              <th class="border-top-0">Action</th>
-            </tr>
-          </thead>
-          <tbody id="review-list-body">
-            <!-- Tasks will be populated here -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Export Section -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Web Updates Export</h5>
-            <span id="stat-export" class="badge badge-light badge-pill">0</span>
-        </div>
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-
-                <div>
-                    <button id="btn-export" class="btn mr-2" onclick="AdminProductsView.exportUpdates()">Export Sheet</button>
-                    <button id="btn-confirm" class="btn" onclick="AdminProductsView.confirmUpdates()">Mark as Completed</button>
-                </div>
-            </div>
-            <div id="export-status" class="mt-2 small"></div>
-
+      <div class="card-body">
+        
+        <!-- Section A: Review Pending (Primary) -->
+        <h6 class="text-muted mb-2">Review Pending (<span id="stat-review">0</span>)</h6>
+        <div class="table-responsive mb-4 border rounded">
             <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                    <th class="border-top-0">Task</th>
-                    <th class="border-top-0">SKU</th>
-                    <th class="border-top-0">Date</th>
-                    </tr>
-                </thead>
-                <tbody id="export-list-body">
-                    <!-- Export tasks will be populated here -->
-                </tbody>
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="review-list-body">
+                <!-- Review tasks populated here -->
+              </tbody>
             </table>
         </div>
+
+        <!-- Section B: Export & Confirm -->
+        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-4">
+            <div>
+                <span class="font-weight-bold mr-2">Accepted Updates:</span>
+                <span id="stat-export" class="badge badge-secondary">0</span>
+            </div>
+            <div>
+                <button id="btn-export-details" class="btn btn-dark mr-2" onclick="AdminProductsView.exportUpdates()">Export Detail Updates</button>
+                <button id="btn-confirm-details" class="btn btn-success" onclick="AdminProductsView.confirmUpdates()">Confirm Detail Updates</button>
+            </div>
+        </div>
+        <div id="export-status" class="mt-2 small text-right"></div>
+
+        <!-- Section C: Pending (Secondary) -->
+        <h6 class="text-muted mb-2 mt-4">Pending (<span id="stat-pending-details">0</span>)</h6>
+        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Status</th>
+                  <th class="border-top-0">Assigned To</th>
+                </tr>
+              </thead>
+              <tbody id="pending-details-list-body">
+                <!-- Pending detail tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+      </div>
     </div>
+
+    <!-- CARD 2: NEW PRODUCTS -->
+    <div class="card mb-4">
+      <div class="card-header bg-white font-weight-bold">
+        New Products
+      </div>
+      <div class="card-body">
+        
+        <!-- Section A: Suggestions -->
+        <h6 class="text-muted mb-2">Suggestions (<span id="stat-suggestions">0</span>)</h6>
+        <div class="table-responsive mb-4 border rounded">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Notes</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="suggestions-list-body">
+                <!-- Suggestions tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section B: Review Submissions -->
+        <h6 class="text-muted mb-2">Review Submissions (<span id="stat-submissions">0</span>)</h6>
+        <div class="table-responsive mb-4 border rounded">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="submissions-list-body">
+                <!-- Submissions tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section C: Finalize Linkage -->
+        <h6 class="text-muted mb-2">Finalize Linkage (<span id="stat-linkage">0</span>)</h6>
+        <div class="table-responsive mb-4 border rounded">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Status</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="linkage-list-body">
+                <!-- Linkage tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section D: Export -->
+        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-4">
+            <div>
+                <span class="font-weight-bold mr-2">Ready for Web:</span>
+                <span id="stat-onboarding-export" class="badge badge-secondary">0</span>
+            </div>
+            <div>
+                <button id="btn-export-new" class="btn btn-dark mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
+            </div>
+        </div>
+        <div id="new-export-status" class="mt-2 small text-right"></div>
+
+        <!-- Section E: Pending (Secondary) -->
+        <h6 class="text-muted mb-2 mt-4">Pending (<span id="stat-pending-new">0</span>)</h6>
+        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Status</th>
+                  <th class="border-top-0">Assigned To</th>
+                </tr>
+              </thead>
+              <tbody id="pending-new-list-body">
+                <!-- Pending new product tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Suggestion Approval Modal -->
+  <div class="modal-overlay" id="suggestion-modal">
+    <div class="modal-container" style="max-width: 500px; max-height: auto;">
+      <div class="modal-header">
+        <h5 class="mb-0">Approve Suggestion</h5>
+        <button type="button" class="close" onclick="document.getElementById('suggestion-modal').style.display='none'">&times;</button>
+      </div>
+      <div class="form-body">
+        <p class="text-muted small">Define the official names for the new product.</p>
+        <div class="form-group">
+            <label>SKU</label>
+            <input type="text" class="form-control" id="sugg-sku" readonly>
+        </div>
+        <div class="form-group">
+            <label>Product Name EN</label>
+            <input type="text" class="form-control" id="sugg-name-en">
+        </div>
+        <div class="form-group">
+            <label>Product Name HE</label>
+            <input type="text" class="form-control hebrew-text" id="sugg-name-he">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button class="btn border" onclick="document.getElementById('suggestion-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-primary" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Linkage Modal -->
+  <div class="modal-overlay" id="linkage-modal">
+    <div class="modal-container" style="max-width: 500px; max-height: auto;">
+      <div class="modal-header">
+        <h5 class="mb-0">Link & Finalize Product</h5>
+        <button type="button" class="close" onclick="document.getElementById('linkage-modal').style.display='none'">&times;</button>
+      </div>
+      <div class="form-body">
+        <p class="text-muted small">Enter the WooCommerce IDs to finalize the Hot Insert.</p>
+        <div class="form-group">
+            <label>SKU</label>
+            <input type="text" class="form-control" id="link-sku" readonly>
+        </div>
+        <div class="form-group">
+            <label>WooCommerce ID (English)</label>
+            <input type="text" class="form-control" id="link-woo-en" placeholder="e.g., 12345">
+        </div>
+        <div class="form-group">
+            <label>WooCommerce ID (Hebrew)</label>
+            <input type="text" class="form-control" id="link-woo-he" placeholder="e.g., 12346">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button class="btn border" onclick="document.getElementById('linkage-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-success" onclick="AdminProductsView.submitLinkage()">Finalize Hot Insert</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Product Editor Modal (Reused Structure) -->
   <div class="modal-overlay" id="editor-modal">
@@ -159,53 +319,33 @@
     AdminProductsView.lookupKashrut = [];
 
     AdminProductsView.refreshView = function() {
-      AdminProductsView.loadReviewList();
-      AdminProductsView.loadExportStats();
+      // Card 1 Refresh
+      AdminProductsView.loadReviewList(); 
+      AdminProductsView.updateDetailExportUI();
+      AdminProductsView.loadPendingDetailsList();
+
+      // Card 2 Refresh
+      AdminProductsView.loadSuggestionList();
+      AdminProductsView.loadSubmissionsList();
+      AdminProductsView.loadLinkageList();
+      AdminProductsView.updateNewExportUI();
+      AdminProductsView.loadPendingNewList();
     };
 
-    AdminProductsView.loadExportStats = function() {
-        const tbody = document.getElementById('export-list-body');
-        tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>'; // 3 columns for task, sku, date
-
-        google.script.run.withSuccessHandler(tasks => {
-            const count = tasks ? tasks.length : 0;
-            const el = document.getElementById('stat-export');
-            if(el) el.textContent = count;
-            
-            const hasItems = count > 0;
-            document.getElementById('btn-export').disabled = !hasItems;
-            document.getElementById('btn-confirm').disabled = !hasItems;
-
-            tbody.innerHTML = ''; // Clear loading message
-            if (!tasks || tasks.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="3">No tasks for export.</td></tr>';
-              return;
-            }
-
-            tasks.forEach(task => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                  <td>${task.title}</td>
-                  <td>${task.sku}</td>
-                  <td>${new Date(task.createdDate).toLocaleDateString()}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }).WebAppProducts_getAcceptedTasks();
-    };
-
+    // --- Card 1: Detail Updates ---
+    
     AdminProductsView.loadReviewList = function() {
       const tbody = document.getElementById('review-list-body');
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
       
       google.script.run.withSuccessHandler(tasks => {
         tbody.innerHTML = '';
+        document.getElementById('stat-review').textContent = tasks ? tasks.length : 0;
+        
         if (!tasks || tasks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4">No tasks for review.</td></tr>';
-          document.getElementById('stat-review').textContent = '0';
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
           return;
         }
-        document.getElementById('stat-review').textContent = tasks.length;
         
         tasks.forEach(task => {
           const tr = document.createElement('tr');
@@ -220,14 +360,26 @@
       }).WebAppProducts_getAdminReviewTasks();
     };
 
+    AdminProductsView.updateDetailExportUI = function() {
+        google.script.run.withSuccessHandler(tasks => {
+            const count = tasks ? tasks.length : 0;
+            const el = document.getElementById('stat-export');
+            if(el) el.textContent = count;
+            
+            const hasItems = count > 0;
+            document.getElementById('btn-export-details').disabled = !hasItems;
+            document.getElementById('btn-confirm-details').disabled = !hasItems;
+        }).WebAppProducts_getAcceptedTasks();
+    };
+
     AdminProductsView.exportUpdates = function() {
         const statusDiv = document.getElementById('export-status');
-        statusDiv.textContent = 'Generating export...';
+        statusDiv.textContent = 'Generating detail export...';
         statusDiv.className = 'mt-2 small text-info';
         
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                statusDiv.innerHTML = `Success! Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
+                statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
                 statusDiv.className = 'mt-2 small text-success';
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
@@ -237,7 +389,7 @@
     };
 
     AdminProductsView.confirmUpdates = function() {
-                    if(!confirm('Confirm web product detail update?')) return;
+        if(!confirm('Confirm that you have updated the website with these details? This will close the tasks.')) return;
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Processing...';
         
@@ -253,6 +405,220 @@
         }).WebAppProducts_confirmWebUpdates();
     };
 
+    AdminProductsView.loadPendingDetailsList = function() {
+      const tbody = document.getElementById('pending-details-list-body');
+      google.script.run.withSuccessHandler(tasks => {
+        tbody.innerHTML = '';
+        document.getElementById('stat-pending-details').textContent = tasks ? tasks.length : 0;
+        if (!tasks || tasks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted small">No pending tasks.</td></tr>';
+          return;
+        }
+        tasks.forEach(task => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${task.sku}</td>
+            <td>${task.title}</td>
+            <td><span class="badge badge-light">${task.status}</span></td>
+            <td>${task.assignedTo || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).WebAppProducts_getPendingDetailTasks();
+    };
+
+    // --- Card 2: New Products ---
+
+    AdminProductsView.loadSuggestionList = function() {
+        const tbody = document.getElementById('suggestions-list-body');
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(tasks => {
+            document.getElementById('stat-suggestions').textContent = tasks ? tasks.length : 0;
+            tbody.innerHTML = '';
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No new suggestions.</td></tr>';
+                return;
+            }
+            tasks.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${t.sku}</td>
+                    <td>${t.title}</td>
+                    <td class="small text-muted">${t.notes || ''}</td>
+                    <td><button class="btn btn-sm btn-primary" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Approve</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }).WebAppProducts_getSuggestionTasks();
+    };
+
+    AdminProductsView.loadSubmissionsList = function() {
+        const tbody = document.getElementById('submissions-list-body');
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(tasks => {
+            document.getElementById('stat-submissions').textContent = tasks ? tasks.length : 0;
+            tbody.innerHTML = '';
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No submissions to review.</td></tr>';
+                return;
+            }
+            tasks.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${t.title}</td>
+                    <td>${t.sku}</td>
+                    <td>${new Date(t.createdDate).toLocaleDateString()}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" onclick="AdminProductsView.openEditor('${t.taskId}')">Review</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }).WebAppProducts_getSubmissionsTasks();
+    };
+
+    AdminProductsView.loadLinkageList = function() {
+        const tbody = document.getElementById('linkage-list-body');
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(tasks => {
+            tbody.innerHTML = '';
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No finalized products waiting for link.</td></tr>';
+                return;
+            }
+            tasks.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${t.title}</td>
+                    <td>${t.sku}</td>
+                    <td><span class="badge badge-success">${t.status}</span></td>
+                    <td><button class="btn btn-sm btn-success" onclick="AdminProductsView.openLinkageModal('${t.taskId}', '${t.sku}')">Link</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }).WebAppProducts_getLinkageTasks();
+    };
+
+    AdminProductsView.updateNewExportUI = function() {
+        google.script.run.withSuccessHandler(tasks => {
+            const count = tasks ? tasks.length : 0;
+            const el = document.getElementById('stat-linkage');
+            if(el) el.textContent = count; // Header count
+            
+            const exportEl = document.getElementById('stat-onboarding-export');
+            if(exportEl) exportEl.textContent = count; // Footer count
+            
+            const btnExport = document.getElementById('btn-export-new');
+            if(btnExport) btnExport.disabled = (count === 0);
+        }).WebAppProducts_getLinkageTasks();
+    };
+
+    AdminProductsView.exportNewProducts = function() {
+        const statusDiv = document.getElementById('new-export-status');
+        statusDiv.textContent = 'Generating new product export...';
+        statusDiv.className = 'mt-2 small text-info';
+        
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
+                statusDiv.className = 'mt-2 small text-success';
+            } else {
+                statusDiv.textContent = 'Export failed: ' + res.message;
+                statusDiv.className = 'mt-2 small text-danger';
+            }
+        }).WebAppProducts_exportNewProducts();
+    };
+    
+    AdminProductsView.loadPendingNewList = function() {
+      const tbody = document.getElementById('pending-new-list-body');
+      google.script.run.withSuccessHandler(tasks => {
+        tbody.innerHTML = '';
+        document.getElementById('stat-pending-new').textContent = tasks ? tasks.length : 0;
+        if (!tasks || tasks.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted small">No pending tasks.</td></tr>';
+          return;
+        }
+        tasks.forEach(task => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${task.sku}</td>
+            <td>${task.title}</td>
+            <td><span class="badge badge-light">${task.status}</span></td>
+            <td>${task.assignedTo || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).WebAppProducts_getPendingNewTasks();
+    };
+
+    // --- Modal Logic ---
+
+    // Suggestion Logic
+    AdminProductsView.openSuggestionModal = function(taskId, sku, title) {
+        AdminProductsView.currentTaskId = taskId;
+        AdminProductsView.currentSku = sku;
+        document.getElementById('sugg-sku').value = sku;
+        // Attempt to extract name from title "Suggestion: [Name]"
+        let name = title.replace('New Product Suggestion:', '').trim(); 
+        document.getElementById('sugg-name-en').value = name;
+        document.getElementById('sugg-name-he').value = ''; // User must provide
+        document.getElementById('suggestion-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.submitSuggestionApproval = function() {
+        const nameEn = document.getElementById('sugg-name-en').value.trim();
+        const nameHe = document.getElementById('sugg-name-he').value.trim();
+        if (!nameEn || !nameHe) {
+            alert('Please provide both Product Name EN and Product Name HE.');
+            return;
+        }
+        if (!confirm(`Approve suggestion for ${nameEn}?`)) return;
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                document.getElementById('suggestion-modal').style.display = 'none';
+                AdminProductsView.refreshView();
+            } else {
+                alert('Error: ' + res.message);
+            }
+        }).withFailureHandler(err => alert('Error: ' + err.message))
+        .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe);
+    };
+
+    // Linkage Logic
+    AdminProductsView.openLinkageModal = function(taskId, sku) {
+        AdminProductsView.currentTaskId = taskId;
+        AdminProductsView.currentSku = sku;
+        document.getElementById('link-sku').value = sku;
+        document.getElementById('link-woo-en').value = '';
+        document.getElementById('link-woo-he').value = '';
+        document.getElementById('linkage-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.submitLinkage = function() {
+        const wooEn = document.getElementById('link-woo-en').value.trim();
+        const wooHe = document.getElementById('link-woo-he').value.trim();
+        if (!wooEn || !wooHe) {
+            alert('Please provide both WooCommerce IDs.');
+            return;
+        }
+        if (isNaN(wooEn) || isNaN(wooHe)) {
+             alert('IDs must be numeric.');
+             return;
+        }
+
+        if (!confirm(`Finalize and Hot Insert ${AdminProductsView.currentSku}? This cannot be undone.`)) return;
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                alert('Success! Product is now live in JLMops.');
+                document.getElementById('linkage-modal').style.display = 'none';
+                AdminProductsView.refreshView();
+            } else {
+                alert('Error: ' + res.message);
+            }
+        }).withFailureHandler(err => alert('Error: ' + err.message))
+        .WebAppProducts_finalizeProduct(AdminProductsView.currentTaskId, AdminProductsView.currentSku, wooEn, wooHe);
+    };
+
     // --- Editor Logic (Simplified/Shared) ---
     AdminProductsView.openEditor = function(taskId) {
       AdminProductsView.currentTaskId = taskId;
@@ -260,35 +626,29 @@
       document.getElementById('modal-status').textContent = 'Loading data...';
       AdminProductsView.switchTab('preview');
 
-      // Clear inputs and display areas before loading new data
-      // Clear header elements
+      // Clear inputs
       document.getElementById('header-name-en-display').textContent = '';
       document.getElementById('header-sku-display').textContent = '';
       document.getElementById('header-name-he-display').textContent = '';
-
-      // Clear description textareas
       document.getElementById('edit-ShortDescrHe').value = '';
       document.getElementById('edit-DescriptionHe').value = '';
       document.getElementById('edit-ShortDescrEn').value = '';
       document.getElementById('edit-DescriptionEn').value = '';
-
-      // Clear preview boxes
       document.getElementById('preview-en').innerHTML = '';
       document.getElementById('preview-he').innerHTML = '';
 
-      
       google.script.run.withSuccessHandler(data => {
                AdminProductsView.currentSku = data.sku;
                AdminProductsView.currentMasterData = data.masterData || {}; 
                AdminProductsView.currentStagingData = data.stagingData || {}; 
-               AdminProductsView.currentComaxData = data.comaxData || {}; // Store Comax Data
+               AdminProductsView.currentComaxData = data.comaxData || {};
                
                document.getElementById('header-sku-display').textContent = data.sku;
                document.getElementById('header-name-en-display').textContent = data.masterData.wdm_NameEn || '';
                document.getElementById('header-name-he-display').textContent = data.masterData.wdm_NameHe || '';
 
                AdminProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
-               AdminProductsView.updatePreview(); // Trigger initial preview
+               AdminProductsView.updatePreview();
                document.getElementById('modal-status').textContent = '';
       }).WebAppProducts_loadProductEditorData(taskId);
     };
@@ -296,17 +656,13 @@
     AdminProductsView.populateEditor = function(m, s, c) {
         m = m || {}; s = s || {}; c = c || {};
         
-        const setVal = (id, val) => document.getElementById(id).textContent = val || '-';
         const setInp = (id, val) => document.getElementById(id).value = val || '';
-
-        // Helper to get value from Staging (wds_) or fallback to Master (wdm_)
         const val = (keySuffix) => {
             if (s && s['wds_' + keySuffix] !== undefined) return s['wds_' + keySuffix];
             if (m && m['wdm_' + keySuffix] !== undefined) return m['wdm_' + keySuffix];
             return '';
         };
 
-        // Populate editable textareas with staging data, or master data as fallback
         setInp('edit-ShortDescrHe', val('ShortDescrHe'));
         setInp('edit-DescriptionHe', val('DescriptionHe'));
         setInp('edit-ShortDescrEn', val('ShortDescrEn'));
@@ -314,20 +670,16 @@
     };
 
     AdminProductsView.getFormData = function() {
-      // 1. Start with values from Staging (or Master fallback) for ALL fields
-      // This preserves data for fields not in the Admin UI (Region, Grapes, etc.)
       const s = AdminProductsView.currentStagingData || {};
       const m = AdminProductsView.currentMasterData || {};
-      
       const val = (keySuffix) => {
           if (s && s['wds_' + keySuffix] !== undefined) return s['wds_' + keySuffix];
           if (m && m['wdm_' + keySuffix] !== undefined) return m['wdm_' + keySuffix];
           return '';
       };
 
-      // Construct full object with all required keys for ProductService
       const fd = {
-        wdm_WebIdEn: m.wdm_WebIdEn, // Explicitly preserve WebIdEn
+        wdm_WebIdEn: m.wdm_WebIdEn,
         wdm_NameEn: m.wdm_NameEn,
         wdm_NameHe: m.wdm_NameHe,
         wdm_Region: val('Region'),
@@ -336,7 +688,6 @@
         wdm_Complexity: val('Complexity'),
         wdm_Acidity: val('Acidity'),
         wdm_Decant: val('Decant'),
-        
         wdm_PairHarSweet: val('PairHarSweet'),
         wdm_PairHarIntense: val('PairHarIntense'),
         wdm_PairHarRich: val('PairHarRich'),
@@ -345,13 +696,11 @@
         wdm_PairConIntense: val('PairConIntense'),
         wdm_PairConRich: val('PairConRich'),
         wdm_PairConMild: val('PairConMild'),
-        
         wdm_HeterMechira: val('HeterMechira'),
       };
       for(let i=1; i<=5; i++) fd[`wdm_GrapeG${i}`] = val(`GrapeG${i}`);
       for(let i=1; i<=5; i++) fd[`wdm_KashrutK${i}`] = val(`KashrutK${i}`);
 
-      // 2. Overwrite with Editable Description Fields from DOM
       fd.wdm_ShortDescrHe = document.getElementById('edit-ShortDescrHe').value;
       fd.wdm_DescriptionHe = document.getElementById('edit-DescriptionHe').value;
       fd.wdm_ShortDescrEn = document.getElementById('edit-ShortDescrEn').value;
@@ -367,10 +716,6 @@
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 document.getElementById('modal-status').textContent = 'Staging Updated. Refreshing Preview...';
-                // Reload editor data to ensure local state matches backend state
-                // But for speed, just update preview with local formData is fine, 
-                // though re-fetching ensures we have the exact saved state.
-                // Let's re-fetch to be safe and update currentStagingData
                 google.script.run.withSuccessHandler(data => {
                     AdminProductsView.currentStagingData = data.stagingData;
                     AdminProductsView.updatePreview();
@@ -385,12 +730,9 @@
 
     let previewDebounce;
     AdminProductsView.updatePreview = function() {
-         // Use current form data directly for immediate feedback
          const formData = AdminProductsView.getFormData();
-         
          document.getElementById('preview-en').innerHTML = '<em>Generating preview...</em>';
          document.getElementById('preview-he').innerHTML = '<em>Generating preview...</em>';
-         
          google.script.run.withSuccessHandler(res => {
              document.getElementById('preview-en').innerHTML = res.htmlEn;
              document.getElementById('preview-he').innerHTML = res.htmlHe;
@@ -400,7 +742,7 @@
     document.querySelectorAll('textarea').forEach(el => {
         el.addEventListener('input', () => {
              clearTimeout(previewDebounce);
-             previewDebounce = setTimeout(AdminProductsView.updatePreview, 800); // Longer debounce for typing
+             previewDebounce = setTimeout(AdminProductsView.updatePreview, 800);
         });
     });
 
@@ -409,8 +751,6 @@
         document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
         document.getElementById('tab-'+tabName).style.display='block';
         document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
-        
-        // Find the button that corresponds to the tabName and add the active class
         document.querySelectorAll('.tab-btn').forEach(button => {
             if (button.onclick && button.onclick.toString().includes(`'${tabName}'`)) {
                 button.classList.add('active');

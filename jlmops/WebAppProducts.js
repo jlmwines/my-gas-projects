@@ -4,64 +4,59 @@
  */
 
 /**
- * Gets the counts of various product-related tasks.
+ * Gets the counts of various product-related tasks for the Admin Widget.
+ * Organized into Detail Updates, New Products, and Other Validations.
  *
- * @returns {object} An object containing the counts of product tasks.
+ * @returns {object} An object containing the organized counts.
  */
 function WebAppProducts_getProductsWidgetData() {
-  const productTaskTypes = [
-    'task.validation.sku_not_in_comax',
-    'task.validation.translation_missing',
-    'task.validation.comax_internal_audit',
-    'task.validation.field_mismatch', // This includes vintage mismatch
-    'task.validation.name_mismatch',
-    'task.validation.web_master_discrepancy',
-    'task.validation.comax_master_discrepancy',
-    'task.validation.row_count_decrease',
-    'task.validation.comax_not_web_product'
-  ];
-
   try {
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    const result = {
+      detailUpdates: {
+        edit: 0,
+        review: 0
+      },
+      newProducts: {
+        suggested: 0,
+        review: 0
+      },
+      otherValidations: 0
+    };
 
-    if (!sheet) {
-      throw new Error("Sheet 'SysTasks' not found");
-    }
+    const allTasks = WebAppTasks.getOpenTasks();
 
-    const headers = taskSchema.headers.split(',');
-    const typeIdCol = headers.indexOf('st_TaskTypeId');
-    const statusCol = headers.indexOf('st_Status');
-    const titleCol = headers.indexOf('st_Title');
+    if (allTasks && allTasks.length > 0) {
+      allTasks.forEach(t => {
+        const type = t.st_TaskTypeId;
+        const status = t.st_Status;
 
-    const taskCounts = {};
-    productTaskTypes.forEach(taskType => {
-      taskCounts[taskType] = 0;
-    });
-    taskCounts['vintage_mismatch_tasks'] = 0; // Specific count for vintage mismatch
-
-    if (sheet.getLastRow() > 1) {
-      const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-      existingRows.forEach(row => {
-        const taskType = row[typeIdCol];
-        const status = row[statusCol];
-        const title = String(row[titleCol] || '');
-
-        if (productTaskTypes.includes(taskType) && status !== 'Done' && status !== 'Closed') {
-          taskCounts[taskType]++;
-          if (taskType === 'task.validation.field_mismatch' && title.toLowerCase().includes('vintage mismatch')) {
-            taskCounts['vintage_mismatch_tasks']++;
+        // 1. Detail Updates (Field Mismatch / Vintage Mismatch)
+        if (type === 'task.validation.field_mismatch') {
+          if (status === 'New') {
+            result.detailUpdates.edit++;
+          } else if (status === 'Review') {
+            result.detailUpdates.review++;
           }
+        }
+        // 2. New Products
+        else if (type === 'task.onboarding.suggestion' && status === 'New') {
+          result.newProducts.suggested++;
+        }
+        else if (type === 'task.onboarding.add_product' && status === 'Review') {
+          result.newProducts.review++;
+        }
+        // 3. Other Validations
+        else if (type.startsWith('task.validation.') && type !== 'task.validation.comax_internal_audit') {
+           result.otherValidations++;
         }
       });
     }
 
     return {
       error: null,
-      data: taskCounts
+      data: result
     };
+
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getProductsWidgetData', `Error getting products widget data: ${e.message}`);
     return {
@@ -369,6 +364,9 @@ function test_loadProductEditorData() {
   }
 }
 
+
+// --- Manager Widget Functions (Re-added) ---
+
 /**
  * Gets the consolidated data for the Manager Products Widget.
  * Aggregates task counts and category health status.
@@ -376,7 +374,7 @@ function test_loadProductEditorData() {
  * @returns {Object} { 
  *   newDetailUpdatesCount: number, 
  *   reviewDetailUpdatesCount: number,
- *   newProductSuggestionsCount: number,
+ *   pendingSuggestionsCount: number,
  *   deficientCategoriesCount: number,
  *   deficientCategories: Array<{category: string, current: number, min: number, status: string}>
  * }
@@ -385,16 +383,17 @@ function WebAppProducts_getManagerWidgetData() {
   try {
     LoggerService.info('WebAppProducts', 'getManagerWidgetData', 'Starting data fetch...');
     const result = {
-      newDetailUpdatesCount: 0,
+      newDetailUpdatesCount: 0, 
       reviewDetailUpdatesCount: 0,
-      newProductSuggestionsCount: 0,
+      pendingSuggestionsCount: 0, // NEW: Suggestions pending admin approval
+      newProductEditsCount: 0,    // NEW: Products needing details from manager
       deficientCategoriesCount: 0,
       deficientCategories: [],
       allCategories: []
     };
 
     // 1. Fetch Task Counts
-    const allTasks = WebAppTasks.getOpenTasks(); // Assuming this returns all tasks, might need optimization
+    const allTasks = WebAppTasks.getOpenTasks(); 
     
     if (allTasks && allTasks.length > 0) {
       allTasks.forEach(t => {
@@ -409,10 +408,15 @@ function WebAppProducts_getManagerWidgetData() {
             result.reviewDetailUpdatesCount++;
           }
         }
-        // Assuming generic new product tasks have a specific type or title pattern
-        // For now, using a placeholder check based on typical naming
-        if (title.includes('new product') && (status === 'New' || status === 'Assigned')) {
-             result.newProductSuggestionsCount++;
+        
+        // Suggestions Pending Approval
+        if (type === 'task.onboarding.suggestion' && status === 'New') {
+             result.pendingSuggestionsCount++;
+        }
+
+        // New Products Needing Edits
+        if (type === 'task.onboarding.add_product' && status === 'New') {
+             result.newProductEditsCount++;
         }
       });
     }
@@ -430,14 +434,6 @@ function WebAppProducts_getManagerWidgetData() {
         // Value (scf_P02): "MinCount"
         // However, we added scf_P03 (FilterRule). ConfigService DOES NOT currently return P03 in the simple object map.
         // It only returns P01: P02.
-        
-        // CRITICAL: ConfigService needs to provide P03.
-        // Checking ConfigService.js... 
-        // "if (propKeyP03 !== null ... parsedConfig[settingName][String(propKeyP03).trim()] = propValueP04;"
-        // It maps P03 as a KEY and P04 as a VALUE. This is for schema definitions.
-        
-        // For 'StockHealth', we are using P01, P02, P03.
-        // The current ConfigService will map P01: P02. It will IGNORE P03 unless it's a schema block.
         
         // Workaround: We must read the raw sheet or fix ConfigService.
         // Since I cannot fix ConfigService, I will read the raw sheet here to get P03.
@@ -640,6 +636,155 @@ function WebAppProducts_getPotentialProducts(category) {
   }
 }
 
+
+/**
+ * Gets a list of pending detail tasks (New/Assigned) for the Admin view.
+ * @returns {Array<Object>} List of tasks.
+ */
+function WebAppProducts_getPendingDetailTasks() {
+  try {
+    const tasks = WebAppTasks.getOpenTasks();
+    const pendingTasks = tasks.filter(t => 
+      t.st_TaskTypeId === 'task.validation.field_mismatch' && 
+      String(t.st_Title || '').toLowerCase().includes('vintage mismatch') &&
+      (t.st_Status === 'New' || t.st_Status === 'Assigned')
+    );
+    
+    return pendingTasks.map(t => ({
+      taskId: t.st_TaskId,
+      sku: t.st_LinkedEntityId,
+      title: t.st_Title,
+      status: t.st_Status,
+      assignedTo: t.st_AssignedTo
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getPendingDetailTasks', e.message);
+    return [];
+  }
+}
+
+/**
+ * Gets a list of pending new product tasks (New/Assigned) for the Admin view.
+ * @returns {Array<Object>} List of tasks.
+ */
+function WebAppProducts_getPendingNewTasks() {
+  try {
+    const tasks = WebAppTasks.getOpenTasks();
+    const pendingTasks = tasks.filter(t => 
+      t.st_TaskTypeId === 'task.onboarding.add_product' && 
+      (t.st_Status === 'New' || t.st_Status === 'Assigned')
+    );
+    
+    return pendingTasks.map(t => ({
+      taskId: t.st_TaskId,
+      sku: t.st_LinkedEntityId,
+      title: t.st_Title,
+      status: t.st_Status,
+      assignedTo: t.st_AssignedTo
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getPendingNewTasks', e.message);
+    return [];
+  }
+}
+
+/**
+ * Gets a list of product suggestion tasks for the admin.
+ */
+function WebAppProducts_getSuggestionTasks() {
+  try {
+    const allTasks = WebAppTasks.getOpenTasks();
+    const tasks = allTasks.filter(t => 
+        t.st_TaskTypeId === 'task.onboarding.suggestion' && 
+        t.st_Status === 'New'
+    );
+    
+    return tasks.map(t => ({
+        taskId: t.st_TaskId,
+        sku: t.st_LinkedEntityId,
+        title: t.st_Title,
+        status: t.st_Status,
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
+        notes: t.st_Notes
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getSuggestionTasks', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Gets a list of onboarding tasks ready for review (Status: Review).
+ */
+function WebAppProducts_getSubmissionsTasks() {
+  try {
+    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Review');
+    
+    return tasks.map(t => ({
+        taskId: t.st_TaskId,
+        sku: t.st_LinkedEntityId,
+        title: t.st_Title,
+        status: t.st_Status,
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
+        assignedTo: t.st_AssignedTo
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getSubmissionsTasks', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Gets a list of onboarding tasks ready for linkage (Status: Accepted).
+ */
+function WebAppProducts_getLinkageTasks() {
+  try {
+    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted');
+    
+    return tasks.map(t => ({
+        taskId: t.st_TaskId,
+        sku: t.st_LinkedEntityId,
+        title: t.st_Title,
+        status: t.st_Status,
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getLinkageTasks', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Accepts a suggestion and creates the onboarding task.
+ */
+function WebAppProducts_acceptSuggestion(taskId, sku, nameEn, nameHe) {
+    try {
+        return ProductService.acceptProductSuggestion(taskId, sku, nameEn, nameHe);
+    } catch (e) {
+        LoggerService.error('WebAppProducts', 'acceptSuggestion', `Error: ${e.message}`, e);
+        throw e;
+    }
+}
+
+/**
+ * Finalizes the new product by linking Woo IDs and hot-inserting.
+ */
+function WebAppProducts_finalizeProduct(taskId, sku, wooIdEn, wooIdHe) {
+    try {
+        return ProductService.linkAndFinalizeNewProduct(taskId, sku, wooIdEn, wooIdHe);
+    } catch (e) {
+        LoggerService.error('WebAppProducts', 'finalizeProduct', `Error: ${e.message}`, e);
+        throw e;
+    }
+}
+
+/**
+ * Triggers the export of new products to a Google Sheet.
+ */
+function WebAppProducts_exportNewProducts() {
+    return ProductService.generateNewProductExport();
+}
+
 /**
  * Creates 'New Product' tasks for the selected products.
  *
@@ -652,26 +797,15 @@ function WebAppProducts_suggestProducts(products) {
       throw new Error("No products provided for suggestion.");
     }
 
-    const taskType = 'task.validation.sku_not_in_comax'; // Using a generic type or creating a new one?
-    // Re-reading taskDefinitions.json suggests 'task.validation.comax_not_web_product' fits best,
-    // OR we can use a generic 'New Product' type if defined.
-    // For now, let's use a standard title format that the system recognizes.
-    
-    // Checking SysTaskTypes...
-    // Let's use a generic approach: creating tasks in SysTasks directly via TaskService
-    
     const userEmail = Session.getActiveUser().getEmail();
     
     products.forEach(p => {
-      TaskService.createTask({
-        typeId: 'task.validation.comax_not_web_product', // This seems most appropriate for "Exists in Comax, needs to be on Web"
-        topic: 'Products',
-        title: `New Product Suggestion: ${p.name}`,
-        priority: 'Normal',
-        linkedEntityId: p.sku,
-        assignedTo: '', // Unassigned initially, or assign to Manager?
-        notes: `Suggested by ${userEmail}`
-      });
+      TaskService.createTask(
+        'task.onboarding.suggestion',
+        p.sku,
+        `Suggestion: ${p.name}`,
+        `Suggested by ${userEmail}`
+      );
     });
 
     return { success: true, message: `Successfully suggested ${products.length} products.` };

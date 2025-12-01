@@ -32,7 +32,8 @@
 
     // Section 2: New Products
     html += '<h6>New Products</h6>';
-    html += '<p>Product Suggestions: <strong>' + (data.newProductSuggestionsCount || 0) + '</strong></p>';
+    html += '<p>Product Suggestions: <strong>' + (data.pendingSuggestionsCount || 0) + '</strong></p>';
+    html += '<p>New Product Edits: <strong>' + (data.newProductEditsCount || 0) + '</strong></p>';
     html += '<p>Deficient Categories: <strong class="text-' + (data.deficientCategoriesCount > 0 ? 'danger' : 'success') + '">' + (data.deficientCategoriesCount || 0) + '</strong></p>';
     
     widgetBody.innerHTML = html; // Set innerHTML of card-body

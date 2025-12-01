@@ -79,7 +79,10 @@
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Detail Updates</h5>
-        <span id="stat-mismatch" class="badge badge-secondary badge-pill">0</span>
+        <div id="stat-mismatch-container">
+            <span id="stat-mismatch" class="badge badge-secondary badge-pill mr-1" title="Vintage Mismatch">0</span>
+            <span id="stat-onboarding" class="badge badge-info badge-pill" title="New Product Onboarding">0</span>
+        </div>
       </div>
       <div class="card-body p-0">
         <table class="table table-hover mb-0">
@@ -98,14 +101,25 @@
       </div>
     </div>
 
-    <!-- SECTION 2: New Products (Placeholder) -->
+    <!-- SECTION 2: New Products -->
     <div class="card mb-4">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">New Products</h5>
         </div>
-        <div class="card-body">
-            <p class="text-muted">Manual new product creation workflow (Placeholder).</p>
-            <!-- Future content: Form to start a new product task manually -->
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="onboarding-list-body">
+                <!-- Onboarding tasks will be populated here -->
+              </tbody>
+            </table>
         </div>
     </div>
 
@@ -419,9 +433,15 @@
     ManagerProductsView.loadWidgetData = function() {
       google.script.run.withSuccessHandler(data => {
         if (data.error) return console.error(data.error);
-        const widget = document.getElementById('stat-mismatch');
-        if (widget) {
-            widget.textContent = data.data['vintage_mismatch_tasks'] || 0;
+        
+        const mismatchWidget = document.getElementById('stat-mismatch');
+        if (mismatchWidget) {
+            mismatchWidget.textContent = data.data['vintage_mismatch_tasks'] || 0;
+        }
+        
+        const onboardingWidget = document.getElementById('stat-onboarding');
+        if (onboardingWidget) {
+            onboardingWidget.textContent = data.data['onboarding_tasks'] || 0;
         }
       }).WebAppProducts_getProductsWidgetData();
     };
@@ -548,30 +568,47 @@
 
     // --- Task List Logic (Existing) ---
     ManagerProductsView.loadTaskList = function() {
-      const tbody = document.getElementById('task-list-body');
-      tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      const detailBody = document.getElementById('task-list-body');
+      const onboardingBody = document.getElementById('onboarding-list-body');
+      
+      detailBody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      onboardingBody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
       
       google.script.run.withSuccessHandler(tasks => {
-        tbody.innerHTML = '';
+        detailBody.innerHTML = '';
+        onboardingBody.innerHTML = '';
+        
+        let detailCount = 0;
+        let onboardingCount = 0;
+
         if (!tasks || tasks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
+          detailBody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
+          onboardingBody.innerHTML = '<tr><td colspan="4">No tasks found.</td></tr>';
           return;
         }
         
         tasks.forEach(task => {
-          try {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td>${task.title}</td>
-                <td>${task.sku}</td>
-                <td>${new Date(task.createdDate).toLocaleDateString()}</td>
-                <td><button class="btn btn-sm" onclick="ManagerProductsView.openEditor('${task.taskId}')">Open</button></td>
-              `;
-              tbody.appendChild(tr);
-          } catch (e) {
-              console.error('Error rendering row:', e);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${task.title}</td>
+            <td>${task.sku}</td>
+            <td>${new Date(task.createdDate).toLocaleDateString()}</td>
+            <td><button class="btn btn-sm" onclick="ManagerProductsView.openEditor('${task.taskId}')">Open</button></td>
+          `;
+          
+          // Simple filter based on title convention (or add type to return object if needed)
+          if (task.title.toLowerCase().includes('add new product')) {
+              onboardingBody.appendChild(tr);
+              onboardingCount++;
+          } else {
+              detailBody.appendChild(tr);
+              detailCount++;
           }
         });
+        
+        if (detailCount === 0) detailBody.innerHTML = '<tr><td colspan="4">No detail updates pending.</td></tr>';
+        if (onboardingCount === 0) onboardingBody.innerHTML = '<tr><td colspan="4">No new products pending.</td></tr>';
+
       }).WebAppProducts_getManagerProductTasks();
     };
 

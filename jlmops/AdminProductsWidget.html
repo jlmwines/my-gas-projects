@@ -1,5 +1,12 @@
 <div id="products-widget" style="padding: 0;">
-  <p>Loading...</p>
+  <div class="card">
+    <div class="card-header">
+      <h5>Products</h5>
+    </div>
+    <div class="card-body">
+      <p>Loading Product Widget...</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -8,44 +15,34 @@
    * @param {Object} result - The products data from the backend.
    */
   function updateProductsWidget(result) {
-    const widget = document.getElementById('products-widget');
+    const widgetBody = document.querySelector('#products-widget .card-body');
     if (result.error) {
-      widget.innerHTML = `<p class="text-danger">${result.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${result.error}</p>`;
       return;
     }
 
     const data = result.data;
-    let html = '<h5>Product Tasks</h5>';
+    let html = '';
 
-    const taskLabels = {
-      'task.validation.sku_not_in_comax': 'SKU Not in Comax',
-      'task.validation.translation_missing': 'Translation Missing',
-      'task.validation.comax_internal_audit': 'Comax Internal Audit',
-      'task.validation.field_mismatch': 'Field Mismatch',
-      'task.validation.name_mismatch': 'Name Mismatch',
-      'task.validation.web_master_discrepancy': 'Web Master Discrepancy',
-      'task.validation.comax_master_discrepancy': 'Comax Master Discrepancy',
-      'task.validation.row_count_decrease': 'Row Count Decrease',
-      'task.validation.comax_not_web_product': 'Comax Not Web Product'
-    };
+    // Section 1: Detail Updates
+    html += '<h6>Detail Updates</h6>';
+    html += '<p>Edits Pending: <strong>' + (data.detailUpdates.edit || 0) + '</strong></p>';
+    html += '<p>Review Pending: <strong>' + (data.detailUpdates.review || 0) + '</strong></p>';
+    
+    html += '<hr>';
 
-    let hasTasks = false;
-    for (const taskType in data) {
-      if (data.hasOwnProperty(taskType) && data[taskType] > 0) {
-        hasTasks = true;
-        const label = taskLabels[taskType] || taskType;
-        html += `<p>${label}: <span class="badge badge-warning">${data[taskType]}</span></p>`;
-      }
+    // Section 2: New Products
+    html += '<h6>New Products</h6>';
+    html += '<p>Suggestions: <strong>' + (data.newProducts.suggested || 0) + '</strong></p>';
+    html += '<p>Review: <strong>' + (data.newProducts.review || 0) + '</strong></p>';
+
+    // Section 3: Other Validations (Conditional)
+    if (data.otherValidations > 0) {
+        html += '<hr>';
+        html += '<p class="text-muted small">Other Validation Issues: <strong>' + data.otherValidations + '</strong></p>';
     }
 
-    if (!hasTasks) {
-      html = '<p>No open product tasks.</p>';
-    }
-
-    // TODO: If a "Web Product Detail Update Export" feature is implemented, add a UI element here
-    // to trigger the export and create a corresponding confirmation task.
-
-    widget.innerHTML = html;
+    widgetBody.innerHTML = html;
   }
 
   // Initial data load for this view

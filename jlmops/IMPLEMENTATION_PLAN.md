@@ -10,32 +10,12 @@
     2.  Run the `node generate-config.js` script.
     3.  Commit both `jlmops/SysConfig.json` and the generated `jlmops/SetupConfig.js`.
 
-## Phase 1: System Foundation & Setup (COMPLETED)
+## Recent Completions (Phases 1-4)
 
-**Goal:** To establish the core technical foundation based on the user-managed configuration before any workflow logic is built.
-
-## Phase 2: Product Workflow Engine (COMPLETED)
-
-**Goal:** To build the complete, automated workflow for ingesting, reconciling, and validating all product data sources, replacing the legacy `ImportWebProducts.js` and `ProductUpdates.js` scripts.
-
-### SysConfig Data Integrity & Import Functionality Restoration (COMPLETED)
-*   **Goal:** Ensure the `SysConfig` sheet accurately reflects the `SetupConfig.js` source of truth and that all critical import processes are fully functional.
-*   **Result:** Web Order Import, Web Product Import, Web Translation Import, and Comax Product Import functionalities are fully restored and operating as expected.
-
-## Phase 3: Initial Data Population (COMPLETED)
-
-**Goal:** To migrate all necessary product and order data from the legacy system into the new JLMops master sheets.
-
-## Phase 4: Order Workflow & Parallel Implementation (COMPLETED)
-
-**Goal:** To implement the core order workflow logic while establishing a robust framework for parallel operation, data synchronization, and validation against the legacy system.
-
-*   **Phase 4.1: Foundational Utilities for Parallel Operation (COMPLETED)**
-    *   **Goal:** Built a set of safe, reusable tools to manage data during the parallel implementation phase.
-
-*   **Phase 4.4: Implement Core Order Workflows (COMPLETED)**
-    *   **Goal:** Re-implement the core business logic for order processing within the new, robust framework.
-    *   **Note:** Results must be validated in parallel with the legacy system over many cycles to check for different data patterns.
+*   **Phase 1: System Foundation & Setup (COMPLETED):** Established the core technical foundation and user-managed configuration.
+*   **Phase 2: Product Workflow Engine (COMPLETED):** Built the automated workflow for ingesting, reconciling, and validating product data. Restored SysConfig data integrity and import functionality.
+*   **Phase 3: Initial Data Population (COMPLETED):** Migrated product and order data from the legacy system.
+*   **Phase 4: Order Workflow & Parallel Implementation (COMPLETED):** Implemented core order logic, packing slip generation, and parallel operation utilities.
 
 ## Phase 5: UI Overhaul & Workflow Screens (IN PROGRESS)
 
@@ -68,7 +48,12 @@
 *   **Tasks:**
     1.  **Inventory Screen (COMPLETED):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
         *   **Display Inventory Task Count (COMPLETED):** Logic implemented to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
-    2.  **Product Management Screen (IN PROGRESS):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows. Product-related task creation (e.g., New Product Suggestions, My Product Tasks) remains to be done.
+    2.  **Product Management Screen (COMPLETED):** Created `ManagerProductsView.html` as a unified dashboard for manager-level product workflows.
+        *   **Product Detail Updates (COMPLETED):** Integrated task list for handling "Vintage Mismatch" and other product detail updates.
+        *   **Stock Health & Suggestions (COMPLETED):** Implemented a "New Products" section featuring:
+            *   **Category Status:** Visual dashboard of product categories (Wine, Liqueur, etc.) showing current stock vs. configured minimums (`StockHealth` config).
+            *   **Suggestion Tool:** Interface to view eligible "candidate" products (Active, In Stock, Not on Web) filtered by category, and batch-create "New Product" tasks for them.
+        *   **Manager Products Widget (COMPLETED):** Created `ManagerProductsWidget.html` to provide a high-level summary of open product tasks and deficient categories on the main dashboard.
 
 ### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
 *   **Goal:** To refactor the UI controller layer to align with the flexible patterns defined in `ARCHITECTURE.md`.
@@ -151,13 +136,13 @@ The existing dashboard widgets were enhanced to:
 
 
 
-### 6. Gap Analysis & New Product Suggestions (PLANNED)
+### 6. Gap Analysis & New Product Suggestions (COMPLETED)
 *   **Goal:** To proactively identify product categories with low inventory (gap analysis), suggest eligible candidates from Comax to fill those gaps, and provide a mechanism for general new product suggestions. This replaces legacy category management functions.
 *   **Tasks:**
-    1.  **Gap Detection Logic:** Implement logic to monitor inventory levels and identify categories with low stock or missing members.
-    2.  **Candidate Suggestion Logic:** Implement logic to scan Comax master data for products that fit the criteria of deficient categories.
-    3.  **Manager Notification/Prompt:** Generate tasks and provide a UI to highlight these categories and suggested candidates.
-    4.  **Integration with New Product Workflow:** Allow managers to directly initiate the "Onboard New Product" workflow from the gap analysis UI or suggestions list.
+    1.  **Gap Detection Logic (COMPLETED):** Implemented logic in `WebAppProducts_getManagerWidgetData` to monitor inventory levels against `StockHealth` config.
+    2.  **Candidate Suggestion Logic (COMPLETED):** Implemented `WebAppProducts_getPotentialProducts` to find eligible candidates in `CmxProdM`.
+    3.  **Manager Notification/Prompt (COMPLETED):** Implemented visual indicators in `ManagerProductsWidget` and `ManagerProductsView`.
+    4.  **Integration with New Product Workflow (COMPLETED):** Allowed managers to suggest selected products directly, creating "New Product" tasks.
 
 ### 7. SKU Management Workflow (Update/Replace) (PLANNED)
 *   **Goal:** To provide a safe, guided workflow for updating a product's SKU across all Comax and Web product sheets. This is critical for maintaining data integrity when a SKU changes in the external systems (Comax/WooCommerce) or when switching a web product's connection to a different Comax product.

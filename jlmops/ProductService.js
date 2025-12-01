@@ -1066,6 +1066,121 @@ const ProductService = (function() {
     }
   }
 
+  function generateNewProductExport() {
+    LoggerService.info('ProductService', 'generateNewProductExport', 'Starting export of new products to Google Sheet.');
+    try {
+        // 1. Identify Accepted Tasks
+        const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted');
+        
+        if (tasks.length === 0) {
+             return { success: false, message: 'No new products ready for export.' };
+        }
+        
+        const skus = tasks.map(t => t.st_LinkedEntityId);
+        
+        // 2. Fetch Data
+        const allConfig = ConfigService.getAllConfig();
+        
+        // Helper to get map
+        const getMap = (sheetName, schemaKey, keyCol) => {
+            const headers = allConfig[schemaKey].headers.split(',');
+            return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
+        };
+
+        const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
+        const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
+        
+        // Load Lookups
+        const lookupMaps = {
+            texts: LookupService.getLookupMap('map.text_lookups'),
+            grapes: LookupService.getLookupMap('map.grape_lookups'),
+            kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+        };
+
+        // 3. Prepare data
+        const exportDataRows = [];
+        const headers = [
+            'SKU', 
+            'Name (EN)', 
+            'Price',
+            'Stock',
+            'Short Description (EN)', 
+            'Long Description (EN)', 
+            'Short Description (HE)', 
+            'Long Description (HE)'
+        ];
+        exportDataRows.push(headers);
+
+        skus.forEach(rawSku => {
+            const sku = String(rawSku);
+            const webDetRow = webDetMap.get(sku);
+            const cmxRow = cmxMap.get(sku);
+            
+            if (!webDetRow) {
+                LoggerService.warn('ProductService', 'generateNewProductExport', `Skipping SKU ${sku}: Details not found in WebDetM.`);
+                return;
+            }
+
+            const nameEn = webDetRow.wdm_NameEn || '';
+            const price = cmxRow ? cmxRow.cpm_Price : 0;
+            const stock = cmxRow ? cmxRow.cpm_Stock : 0;
+            
+            const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
+            const shortDescriptionHe = webDetRow.wdm_ShortDescrHe || '';
+
+            const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
+            const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
+            
+            exportDataRows.push([
+                sku,
+                nameEn,
+                price,
+                stock,
+                shortDescriptionEn,
+                longDescriptionEnHtml,
+                shortDescriptionHe,
+                longDescriptionHeHtml
+            ]);
+        });
+
+        if (exportDataRows.length <= 1) {
+            return { success: false, message: 'No data found to export.' };
+        }
+
+        // 4. Create Sheet
+        const fileName = `NewProducts_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
+        const newSpreadsheet = SpreadsheetApp.create(fileName);
+        const sheet = newSpreadsheet.getSheets()[0];
+        
+        sheet.getRange(1, 1, exportDataRows.length, headers.length).setValues(exportDataRows);
+        
+        // Formatting
+        sheet.setFrozenRows(1);
+        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+        sheet.autoResizeColumns(1, headers.length);
+
+        // Move to Export Folder
+        const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+        try {
+            const folder = DriveApp.getFolderById(exportFolderId);
+            DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
+        } catch (moveError) {
+            LoggerService.warn('ProductService', 'generateNewProductExport', `Failed to move to export folder: ${moveError.message}`);
+        }
+
+        return { 
+            success: true, 
+            message: `Exported ${exportDataRows.length - 1} new products to ${fileName}`, 
+            fileId: newSpreadsheet.getId(),
+            fileUrl: newSpreadsheet.getUrl()
+        };
+
+    } catch (e) {
+        LoggerService.error('ProductService', 'generateNewProductExport', `Error: ${e.message}`, e);
+        throw e;
+    }
+  }
+
   function confirmWebUpdates() {
     LoggerService.info('ProductService', 'confirmWebUpdates', 'Marking exported tasks as Completed.');
     try {
@@ -1117,6 +1232,232 @@ const ProductService = (function() {
       }
   }
 
+  /**
+   * Transitions a product suggestion task to a full onboarding task.
+   * @param {string} suggestionTaskId The ID of the suggestion task.
+   * @param {string} sku The product SKU.
+   * @param {string} suggestedNameEn The confirmed English name.
+   * @param {string} suggestedNameHe The confirmed Hebrew name.
+   */
+  function acceptProductSuggestion(suggestionTaskId, sku, suggestedNameEn, suggestedNameHe) {
+    LoggerService.info('ProductService', 'acceptProductSuggestion', `Accepting suggestion for SKU ${sku}`);
+    try {
+      // 1. Complete the suggestion task
+      TaskService.completeTask(suggestionTaskId);
+
+      // 2. Create the onboarding task
+      const title = `Add New Product: ${suggestedNameEn} (${sku})`;
+      const notes = `Approved suggestion. \nEN Name: ${suggestedNameEn}\nHE Name: ${suggestedNameHe}`;
+      TaskService.createTask('task.onboarding.add_product', sku, title, notes);
+      
+      // 3. Pre-populate WebDetS with the approved names to save the manager time
+      // We can reuse submitProductDetails logic or just write directly. 
+      // Let's use a lightweight direct write to WebDetS for efficiency.
+      const allConfig = ConfigService.getAllConfig();
+      const stagingSchema = allConfig['schema.data.WebDetS'];
+      const stagingHeaders = stagingSchema.headers.split(',');
+      const rowData = new Array(stagingHeaders.length).fill('');
+      
+      // Map indices
+      const skuIdx = stagingHeaders.indexOf('wds_SKU');
+      const nameEnIdx = stagingHeaders.indexOf('wds_NameEn');
+      const nameHeIdx = stagingHeaders.indexOf('wds_NameHe');
+
+      if (skuIdx > -1) rowData[skuIdx] = sku;
+      if (nameEnIdx > -1) rowData[nameEnIdx] = suggestedNameEn;
+      if (nameHeIdx > -1) rowData[nameHeIdx] = suggestedNameHe;
+      
+      // Upsert to WebDetS
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
+      const existingData = stagingSheet.getDataRange().getValues();
+      let rowIndex = -1;
+      if (existingData.length > 1) {
+        for (let i = 1; i < existingData.length; i++) {
+          if (String(existingData[i][skuIdx]) === String(sku)) {
+            rowIndex = i + 1;
+            break;
+          }
+        }
+      }
+      if (rowIndex > 0) {
+        stagingSheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        stagingSheet.appendRow(rowData);
+      }
+
+      return { success: true };
+    } catch (e) {
+      LoggerService.error('ProductService', 'acceptProductSuggestion', `Error: ${e.message}`, e);
+      throw e;
+    }
+  }
+
+  /**
+   * The "Hot Insert" Engine.
+   * Validates inputs and synchronously inserts the new product into all master sheets.
+   * @param {string} onboardingTaskId The ID of the onboarding task.
+   * @param {string} sku The product SKU.
+   * @param {string} wooIdEn The WooCommerce Product ID (English).
+   * @param {string} wooIdHe The WooCommerce Product ID (Hebrew).
+   */
+  function linkAndFinalizeNewProduct(onboardingTaskId, sku, wooIdEn, wooIdHe) {
+    LoggerService.info('ProductService', 'linkAndFinalizeNewProduct', `Starting Hot Insert for SKU ${sku}. IDs: ${wooIdEn} / ${wooIdHe}`);
+    
+    if (!sku || !wooIdEn || !wooIdHe) {
+      throw new Error('Missing required parameters: SKU, WooIdEn, or WooIdHe.');
+    }
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+      // --- 1. Load Master Sheets ---
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const webXltSheet = spreadsheet.getSheetByName('WebXltM');
+      const auditSheet = spreadsheet.getSheetByName('SysProductAudit');
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+
+      if (!cmxSheet || !webProdSheet || !webXltSheet || !auditSheet || !webDetSheet) {
+        throw new Error('One or more master sheets are missing.');
+      }
+
+      // --- 2. Validation Checks ---
+      
+      // A. Check if SKU exists in Comax
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+      const cmxData = cmxSheet.getDataRange().getValues();
+      const cmxRowIdx = cmxData.findIndex(row => String(row[cmxSkuIdx]).trim() === String(sku).trim());
+      
+      if (cmxRowIdx === -1) {
+        throw new Error(`SKU ${sku} not found in Comax Master (CmxProdM). Cannot link.`);
+      }
+      const cmxRowData = cmxData[cmxRowIdx]; // Keep for later data copying
+
+      // B. Check if Woo IDs are already in use
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const webIdIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const webProdData = webProdSheet.getDataRange().getValues();
+      const duplicateEn = webProdData.some(row => String(row[webIdIdx]).trim() === String(wooIdEn).trim());
+      if (duplicateEn) throw new Error(`WooCommerce ID (EN) ${wooIdEn} is already in use in WebProdM.`);
+
+      const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+      const xltIdHeIdx = webXltHeaders.indexOf('wxl_WebIdHe');
+      const webXltData = webXltSheet.getDataRange().getValues();
+      const duplicateHe = webXltData.some(row => String(row[xltIdHeIdx]).trim() === String(wooIdHe).trim());
+      if (duplicateHe) throw new Error(`WooCommerce ID (HE) ${wooIdHe} is already in use in WebXltM.`);
+
+      // --- 3. Perform Hot Inserts (Synchronous Writes) ---
+
+      // A. Update CmxProdM: Set cpm_IsWeb to TRUE
+      const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+      if (cmxIsWebIdx > -1) {
+         // +1 for 1-based index
+         cmxSheet.getRange(cmxRowIdx + 1, cmxIsWebIdx + 1).setValue(true); 
+      }
+
+      // B. Insert into WebProdM
+      // Required: wpm_WebIdEn, wpm_SKU, wpm_NameEn, wpm_PublishStatusEn, wpm_Stock, wpm_Price
+      const newWebProdRow = new Array(webProdHeaders.length).fill('');
+      
+      // Map logic
+      const wp_WebIdIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const wp_SkuIdx = webProdHeaders.indexOf('wpm_SKU');
+      const wp_NameIdx = webProdHeaders.indexOf('wpm_NameEn');
+      const wp_StatusIdx = webProdHeaders.indexOf('wpm_PublishStatusEn');
+      const wp_StockIdx = webProdHeaders.indexOf('wpm_Stock');
+      const wp_PriceIdx = webProdHeaders.indexOf('wpm_Price');
+
+      // Get values from Comax row or Args
+      const cpmNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+      const cpmStockIdx = cmxHeaders.indexOf('cpm_Stock');
+      const cpmPriceIdx = cmxHeaders.indexOf('cpm_Price');
+
+      // Get Name from WebDetM (should have been populated in previous 'Accept' step)
+      // We need to fetch it to be safe, or pass it in. Fetching is safer.
+      const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+      const wd_SkuIdx = webDetHeaders.indexOf('wdm_SKU');
+      const wd_NameEnIdx = webDetHeaders.indexOf('wdm_NameEn');
+      const webDetData = webDetSheet.getDataRange().getValues();
+      const webDetRow = webDetData.find(r => String(r[wd_SkuIdx]) === String(sku));
+      const nameEn = webDetRow ? webDetRow[wd_NameEnIdx] : (cmxRowData[cpmNameHeIdx] || 'New Product');
+
+      if (wp_WebIdIdx > -1) newWebProdRow[wp_WebIdIdx] = wooIdEn;
+      if (wp_SkuIdx > -1) newWebProdRow[wp_SkuIdx] = sku;
+      if (wp_NameIdx > -1) newWebProdRow[wp_NameIdx] = nameEn;
+      if (wp_StatusIdx > -1) newWebProdRow[wp_StatusIdx] = 'publish'; // Assume published if we are finalizing
+      if (wp_StockIdx > -1) newWebProdRow[wp_StockIdx] = cmxRowData[cpmStockIdx] || 0;
+      if (wp_PriceIdx > -1) newWebProdRow[wp_PriceIdx] = cmxRowData[cpmPriceIdx] || 0;
+
+      webProdSheet.appendRow(newWebProdRow);
+
+      // C. Insert into WebXltM
+      // Required: wxl_WebIdHe, wxl_NameHe, wxl_WebIdEn, wxl_SKU
+      const newXltRow = new Array(webXltHeaders.length).fill('');
+      const xl_IdHeIdx = webXltHeaders.indexOf('wxl_WebIdHe');
+      const xl_IdEnIdx = webXltHeaders.indexOf('wxl_WebIdEn');
+      const xl_SkuIdx = webXltHeaders.indexOf('wxl_SKU');
+      const xl_NameHeIdx = webXltHeaders.indexOf('wxl_NameHe');
+
+      if (xl_IdHeIdx > -1) newXltRow[xl_IdHeIdx] = wooIdHe;
+      if (xl_IdEnIdx > -1) newXltRow[xl_IdEnIdx] = wooIdEn;
+      if (xl_SkuIdx > -1) newXltRow[xl_SkuIdx] = sku;
+      if (xl_NameHeIdx > -1) newXltRow[xl_NameHeIdx] = cmxRowData[cpmNameHeIdx]; // Default to Comax Name
+
+      webXltSheet.appendRow(newXltRow);
+
+      // D. Maintain SysProductAudit
+      // Ensure row exists. If not, add it.
+      const auditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
+      const pa_SkuIdx = auditHeaders.indexOf('pa_SKU');
+      const pa_CmxIdIdx = auditHeaders.indexOf('pa_CmxId');
+      
+      const auditData = auditSheet.getDataRange().getValues();
+      const auditRowExists = auditData.some(r => String(r[pa_SkuIdx]) === String(sku));
+      
+      if (!auditRowExists) {
+         const cpmCmxIdIdx = cmxHeaders.indexOf('cpm_CmxId');
+         const cmxId = cmxRowData[cpmCmxIdIdx];
+         
+         const newAuditRow = new Array(auditHeaders.length).fill('');
+         if (pa_SkuIdx > -1) newAuditRow[pa_SkuIdx] = sku;
+         if (pa_CmxIdIdx > -1) newAuditRow[pa_CmxIdIdx] = cmxId;
+         
+         auditSheet.appendRow(newAuditRow);
+      }
+      
+      // E. Update WebDetM with WebIdEn
+      // The row exists (from 'Accept'), but needs the WebIdEn linked.
+      const wd_WebIdIdx = webDetHeaders.indexOf('wdm_WebIdEn');
+      if (webDetRow && wd_WebIdIdx > -1) {
+          // Find row index again (data might have shifted if we were concurrent, but we are single threaded here mostly)
+          const refreshWebDetData = webDetSheet.getDataRange().getValues();
+          const refreshRowIdx = refreshWebDetData.findIndex(r => String(r[wd_SkuIdx]) === String(sku));
+          if (refreshRowIdx > -1) {
+              webDetSheet.getRange(refreshRowIdx + 1, wd_WebIdIdx + 1).setValue(wooIdEn);
+          }
+      }
+
+      SpreadsheetApp.flush(); // Commit all changes
+      
+      // 4. Complete Task
+      TaskService.updateTaskStatus(onboardingTaskId, 'Done');
+      
+      // 5. Force Reload Config/Cache if needed (though product maps are usually rebuilt per request)
+      // skuToWebIdMap = null; // Invalidate local cache if used
+      
+      return { success: true };
+
+    } catch (e) {
+      LoggerService.error('ProductService', 'linkAndFinalizeNewProduct', `Error: ${e.message}`, e);
+      throw e;
+    }
+  }
+
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
@@ -1126,8 +1467,11 @@ const ProductService = (function() {
     submitProductDetails: submitProductDetails,
     acceptProductDetails: acceptProductDetails,
     generateDetailExport: generateDetailExport,
+    generateNewProductExport: generateNewProductExport,
     confirmWebUpdates: confirmWebUpdates,
-    getProductHtmlPreview: getProductHtmlPreview
+    getProductHtmlPreview: getProductHtmlPreview,
+    acceptProductSuggestion: acceptProductSuggestion,
+    linkAndFinalizeNewProduct: linkAndFinalizeNewProduct
   };
 })();
 
