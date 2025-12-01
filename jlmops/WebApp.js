@@ -27,7 +27,13 @@ function doGet(e) {
   }
 
   const template = HtmlService.createTemplateFromFile('AppView.html');
-  template.initialRole = initialRole;
+  
+  let effectiveRole = initialRole;
+  // If the initial role is not 'admin' (and not 'viewer' as that's handled), default to 'manager'.
+  if (effectiveRole !== 'admin') {
+    effectiveRole = 'manager';
+  }
+  template.initialRole = effectiveRole;
   template.availableRoles = AuthService.getAvailableRoles();
   
   return template.evaluate()
@@ -67,6 +73,7 @@ function getView(viewName) {
     'ManagerInventory': 'ManagerInventoryView',
     'ManagerInventoryWidget': 'ManagerInventoryWidget',
     'ManagerProducts': 'ManagerProductsView',
+    'ManagerProductsWidget': 'ManagerProductsWidget',
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
     'Development': 'DevelopmentView',

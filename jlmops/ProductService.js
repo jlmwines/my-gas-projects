@@ -596,7 +596,7 @@ const ProductService = (function() {
         if (signalTasks && signalTasks.length > 0) {
           LoggerService.info('ProductService', functionName, `Found and closing ${signalTasks.length} 'web_inventory_ready' signal task(s).`);
           signalTasks.forEach(task => {
-            WebAppTasks.completeTask(task.st_TaskId);
+            TaskService.completeTask(task.st_TaskId);
           });
         }
       } catch (e) {

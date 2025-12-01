@@ -338,7 +338,7 @@ function OrderService(productService) {
         if (signalTasks && signalTasks.length > 0) {
           logger.info(serviceName, functionName, `Found and closing ${signalTasks.length} 'comax_orders_ready' signal task(s).`);
           signalTasks.forEach(task => {
-            WebAppTasks.completeTask(task.st_TaskId);
+            TaskService.completeTask(task.st_TaskId);
           });
         }
       } catch (e) {

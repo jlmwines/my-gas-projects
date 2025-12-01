@@ -1,0 +1,43 @@
+<div id="products-widget" style="padding: 0;">
+  <div class="card">
+    <div class="card-header">
+      <h5>Products</h5>
+    </div>
+    <div class="card-body">
+      <p>Loading Product Widget...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateProductsView(data) {
+    const widgetBody = document.querySelector('#products-widget .card-body'); // Select the card-body
+    if (!data) {
+      widgetBody.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      return;
+    }
+    if (data.error) {
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      return;
+    }
+
+    let html = ''; // Start with empty string to build content for card-body
+    
+    // Section 1: Detail Updates
+    html += '<h6>Detail Updates</h6>';
+    html += '<p>New Updates: <strong>' + (data.newDetailUpdatesCount || 0) + '</strong></p>';
+    html += '<p>Review Updates: <strong>' + (data.reviewDetailUpdatesCount || 0) + '</strong></p>';
+    
+    html += '<hr>';
+
+    // Section 2: New Products
+    html += '<h6>New Products</h6>';
+    html += '<p>Product Suggestions: <strong>' + (data.newProductSuggestionsCount || 0) + '</strong></p>';
+    html += '<p>Deficient Categories: <strong class="text-' + (data.deficientCategoriesCount > 0 ? 'danger' : 'success') + '">' + (data.deficientCategoriesCount || 0) + '</strong></p>';
+    
+    widgetBody.innerHTML = html; // Set innerHTML of card-body
+  }
+
+  // Initial data load for this widget
+  google.script.run.withSuccessHandler(updateProductsView).withFailureHandler(showError).WebAppProducts_getManagerWidgetData();
+</script>

@@ -144,11 +144,42 @@
       }
 
       /**
-       * Loads a view into the content area.
+       * Loads a view into the content area and highlights the active navigation link.
+       * @param {string} viewName - The name of the view to load.
+       * @param {HTMLElement} [linkElement] - The navigation link element that was clicked.
        */
-      function loadView(viewName) {
+      function loadView(viewName, linkElement) {
         const viewContent = document.getElementById('content');
         viewContent.innerHTML = '<h2>Loading...</h2>';
+
+        // Highlight Navigation
+        const activeNavId = document.getElementById('admin-nav').style.display === 'block' ? 'admin-nav' : 'manager-nav';
+        const navLinks = document.querySelectorAll(`#${activeNavId} .nav-link`);
+        
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            link.classList.remove('font-weight-bold');
+            link.style.color = '#007bff'; // Default link color
+        });
+
+        let activeLink = linkElement;
+        
+        // If no element passed, try to find it by viewName
+        if (!activeLink) {
+            // Special case for Dashboards called via switchRole
+            if (viewName === 'AdminDashboard' || viewName === 'ManagerDashboard') {
+                 // Find the link that calls switchRole() which implies Dashboard
+                 activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes('switchRole'));
+            } else {
+                 activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes(`'${viewName}'`));
+            }
+        }
+
+        if (activeLink) {
+            activeLink.classList.add('active');
+            activeLink.classList.add('font-weight-bold');
+            activeLink.style.color = '#0056b3'; // darker active color
+        }
 
         google.script.run
           .withSuccessHandler(html => {

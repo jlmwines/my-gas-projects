@@ -64,12 +64,19 @@
     /* 3 lines approx */
     .desc-long { min-height: 120px; }
 
+    /* Category Badge */
+    .cat-badge { cursor: pointer; margin-right: 5px; margin-bottom: 5px; padding: 8px 12px; font-size: 14px; }
+    .cat-badge:hover { opacity: 0.8; }
+
   </style>
 </head>
 <body>
   <div class="container-fluid p-4">
-    <!-- Main Card: Detail Updates -->
-    <div class="card">
+    
+    <h2 class="mb-4">Products</h2>
+
+    <!-- SECTION 1: Detail Updates -->
+    <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Detail Updates</h5>
         <span id="stat-mismatch" class="badge badge-secondary badge-pill">0</span>
@@ -90,9 +97,59 @@
         </table>
       </div>
     </div>
+
+    <!-- SECTION 2: New Products (Placeholder) -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">New Products</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Manual new product creation workflow (Placeholder).</p>
+            <!-- Future content: Form to start a new product task manually -->
+        </div>
+    </div>
+
+    <!-- SECTION 3: Suggest Products -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Suggest Products</h5>
+        </div>
+        <div class="card-body">
+            
+            <!-- Category Filter Panel -->
+            <div id="category-status-panel" class="mb-3 p-2 border rounded bg-light">
+                <p class="text-muted small mb-0">Loading categories...</p>
+            </div>
+
+            <!-- Suggestion Tool -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-muted" id="suggestion-table-title">Select a category above to view products</h6>
+                <button class="btn btn-light btn-sm" id="btn-suggest-products" disabled onclick="ManagerProductsView.submitSuggestions()">Suggest Selected</button>
+            </div>
+            
+            <div class="table-responsive border rounded">
+                <table class="table table-hover mb-0 table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th width="40" class="text-center"><input type="checkbox" id="check-all-suggestions" onclick="ManagerProductsView.toggleAllSuggestions()"></th>
+                            <th>SKU</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody id="suggestion-list-body">
+                        <tr><td colspan="6" class="text-center text-muted py-4">No products loaded.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
   </div>
 
-  <!-- Product Editor Modal -->
+  <!-- Product Editor Modal (Existing) -->
   <div class="modal-overlay" id="editor-modal">
     <div class="modal-container">
       <!-- Consolidated Header -->
@@ -349,12 +406,16 @@
     ManagerProductsView.currentSku = null;
     ManagerProductsView.currentMasterData = {};
     ManagerProductsView.currentActiveTab = 'desc';
+    ManagerProductsView.suggestionsList = [];
 
+    // --- Initialization ---
     ManagerProductsView.refreshView = function() {
       ManagerProductsView.loadWidgetData();
       ManagerProductsView.loadTaskList();
+      ManagerProductsView.loadCategoryStatus(); // Load section 3 contents immediately
     };
 
+    // --- Widget Data & Category Status (Updated) ---
     ManagerProductsView.loadWidgetData = function() {
       google.script.run.withSuccessHandler(data => {
         if (data.error) return console.error(data.error);
@@ -365,6 +426,127 @@
       }).WebAppProducts_getProductsWidgetData();
     };
 
+    ManagerProductsView.loadCategoryStatus = function() {
+        const panel = document.getElementById('category-status-panel');
+        panel.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading status...';
+
+        google.script.run.withSuccessHandler(data => {
+            panel.innerHTML = '';
+            
+            // 1. "All" Filter
+            const allBadge = document.createElement('span');
+            allBadge.className = 'badge badge-secondary cat-badge';
+            allBadge.textContent = 'All';
+            allBadge.onclick = () => ManagerProductsView.loadSuggestions('');
+            panel.appendChild(allBadge);
+
+            // 2. Individual Category Filters
+            if (data.allCategories && data.allCategories.length > 0) {
+                data.allCategories.forEach(cat => {
+                    const badge = document.createElement('span');
+                    const badgeClass = cat.status === 'Low' ? 'badge-warning' : 'badge-light border';
+                    badge.className = `badge ${badgeClass} cat-badge`;
+                    
+                    let badgeText = cat.category;
+                    if (cat.status === 'Low') {
+                        badgeText += ` (-${cat.min - cat.current})`;
+                    }
+                    badge.textContent = badgeText;
+                    
+                    badge.onclick = () => ManagerProductsView.loadSuggestions(cat.category);
+                    panel.appendChild(badge);
+                });
+            } else {
+                panel.innerHTML += '<p class="text-muted ml-2">No categories configured.</p>';
+            }
+
+        }).withFailureHandler(err => {
+            panel.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        }).WebAppProducts_getManagerWidgetData();
+    };
+
+    // --- Suggestion Tool Logic ---
+    ManagerProductsView.loadSuggestions = function(category) {
+        const tbody = document.getElementById('suggestion-list-body');
+        const title = document.getElementById('suggestion-table-title');
+        
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm" role="status"></div> Finding candidates...</td></tr>';
+        title.textContent = category ? `Candidates for: ${category}` : 'All Candidates';
+        document.getElementById('check-all-suggestions').checked = false;
+        document.getElementById('btn-suggest-products').disabled = true;
+
+        google.script.run.withSuccessHandler(products => {
+            ManagerProductsView.suggestionsList = products;
+            tbody.innerHTML = '';
+            
+            if (!products || products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No eligible products found.</td></tr>';
+                return;
+            }
+
+            products.forEach((p, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
+                    <td>${p.sku}</td>
+                    <td>${p.name}</td>
+                    <td>${p.category}</td>
+                    <td>${p.price}</td>
+                    <td>${p.stock}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }).withFailureHandler(err => {
+             tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+        }).WebAppProducts_getPotentialProducts(category);
+    };
+
+    ManagerProductsView.toggleAllSuggestions = function() {
+        const masterCheck = document.getElementById('check-all-suggestions');
+        const checks = document.querySelectorAll('.suggestion-check');
+        checks.forEach(c => c.checked = masterCheck.checked);
+        ManagerProductsView.updateSuggestButton();
+    };
+
+    ManagerProductsView.updateSuggestButton = function() {
+        const checked = document.querySelectorAll('.suggestion-check:checked').length;
+        const btn = document.getElementById('btn-suggest-products');
+        btn.disabled = checked === 0;
+        btn.textContent = checked > 0 ? `Suggest Selected (${checked})` : 'Suggest Selected';
+    };
+
+    ManagerProductsView.submitSuggestions = function() {
+        const selectedIndices = Array.from(document.querySelectorAll('.suggestion-check:checked')).map(cb => parseInt(cb.value));
+        const selectedProducts = selectedIndices.map(i => ManagerProductsView.suggestionsList[i]);
+        
+        if (selectedProducts.length === 0) return;
+
+        if(!confirm(`Are you sure you want to create suggestions for ${selectedProducts.length} products?`)) return;
+
+        const btn = document.getElementById('btn-suggest-products');
+        const prevText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        google.script.run.withSuccessHandler(res => {
+            if(res.success) {
+                alert(res.message);
+                ManagerProductsView.loadSuggestions(''); // Reload generic
+                ManagerProductsView.loadCategoryStatus(); // Refresh counts
+            } else {
+                alert('Error: ' + res.message);
+            }
+            btn.disabled = false;
+            btn.textContent = prevText;
+        }).withFailureHandler(err => {
+            alert('Error: ' + err.message);
+            btn.disabled = false;
+            btn.textContent = prevText;
+        }).WebAppProducts_suggestProducts(selectedProducts);
+    };
+
+
+    // --- Task List Logic (Existing) ---
     ManagerProductsView.loadTaskList = function() {
       const tbody = document.getElementById('task-list-body');
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';

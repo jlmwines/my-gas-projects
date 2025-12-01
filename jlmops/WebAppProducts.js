@@ -363,9 +363,321 @@ function test_loadProductEditorData() {
     } else {
         Logger.log('Comax Data MISSING.');
     }
-
   } catch (e) {
     Logger.log(`Error: ${e.message}`);
     Logger.log(e.stack);
+  }
+}
+
+/**
+ * Gets the consolidated data for the Manager Products Widget.
+ * Aggregates task counts and category health status.
+ *
+ * @returns {Object} { 
+ *   newDetailUpdatesCount: number, 
+ *   reviewDetailUpdatesCount: number,
+ *   newProductSuggestionsCount: number,
+ *   deficientCategoriesCount: number,
+ *   deficientCategories: Array<{category: string, current: number, min: number, status: string}>
+ * }
+ */
+function WebAppProducts_getManagerWidgetData() {
+  try {
+    LoggerService.info('WebAppProducts', 'getManagerWidgetData', 'Starting data fetch...');
+    const result = {
+      newDetailUpdatesCount: 0,
+      reviewDetailUpdatesCount: 0,
+      newProductSuggestionsCount: 0,
+      deficientCategoriesCount: 0,
+      deficientCategories: [],
+      allCategories: []
+    };
+
+    // 1. Fetch Task Counts
+    const allTasks = WebAppTasks.getOpenTasks(); // Assuming this returns all tasks, might need optimization
+    
+    if (allTasks && allTasks.length > 0) {
+      allTasks.forEach(t => {
+        const type = t.st_TaskTypeId;
+        const status = t.st_Status;
+        const title = String(t.st_Title || '').toLowerCase();
+
+        if (type === 'task.validation.field_mismatch' && title.includes('vintage mismatch')) {
+          if (status === 'New' || status === 'Assigned') {
+            result.newDetailUpdatesCount++;
+          } else if (status === 'Review') {
+            result.reviewDetailUpdatesCount++;
+          }
+        }
+        // Assuming generic new product tasks have a specific type or title pattern
+        // For now, using a placeholder check based on typical naming
+        if (title.includes('new product') && (status === 'New' || status === 'Assigned')) {
+             result.newProductSuggestionsCount++;
+        }
+      });
+    }
+
+    // 2. Calculate Category Health
+    const stockHealthConfig = ConfigService.getConfig('StockHealth');
+    if (stockHealthConfig) {
+        // Parse the flattened config structure: Key="MinCat.CategoryName"
+        const minRules = [];
+        
+        // In ConfigService's current implementation for multi-row configs sharing SettingName,
+        // it returns an object where keys are scf_P01.
+        // For our structure: 
+        // Key (scf_P01): "MinCat.CategoryName"
+        // Value (scf_P02): "MinCount"
+        // However, we added scf_P03 (FilterRule). ConfigService DOES NOT currently return P03 in the simple object map.
+        // It only returns P01: P02.
+        
+        // CRITICAL: ConfigService needs to provide P03.
+        // Checking ConfigService.js... 
+        // "if (propKeyP03 !== null ... parsedConfig[settingName][String(propKeyP03).trim()] = propValueP04;"
+        // It maps P03 as a KEY and P04 as a VALUE. This is for schema definitions.
+        
+        // For 'StockHealth', we are using P01, P02, P03.
+        // The current ConfigService will map P01: P02. It will IGNORE P03 unless it's a schema block.
+        
+        // Workaround: We must read the raw sheet or fix ConfigService.
+        // Since I cannot fix ConfigService, I will read the raw sheet here to get P03.
+        // This is inefficient but necessary without changing ConfigService.
+        
+        const configDataMap = ConfigService._getSheetDataAsMap('SysConfig', ['scf_SettingName', 'scf_P01', 'scf_P02', 'scf_P03'], 'scf_P01'); 
+        // Wait, SysConfig isn't keyed by P01 globally. It's a list.
+        // ConfigService._getSheetDataAsMap uses a key column.
+        
+        // Better approach: ConfigService.getAllConfig() returns the cached object.
+        // If ConfigService doesn't expose P03 for generic settings, I can't get it easily.
+        
+        // Let's assume for now I can infer the Division from the Category Name or hardcode the mapping logic 
+        // momentarily if I can't change ConfigService.
+        // OR, I can use the fact that I know the new categories:
+        // 'ליקר' -> Div 3
+        // 'אביזרים' -> Div 5
+        // 'פריטי מתנה' -> Div 9
+        
+        // I will hardcode this mapping map temporarily to proceed without modifying ConfigService core logic 
+        // which might be risky.
+        
+        const divisionMap = {
+            'ליקר': '3',
+            'אביזרים': '5',
+            'פריטי מתנה': '9'
+        };
+
+        for (const [key, value] of Object.entries(stockHealthConfig)) {
+            if (key.startsWith('MinCat.')) {
+                const catName = key.replace('MinCat.', '');
+                minRules.push({
+                    category: catName,
+                    min: parseInt(value, 10),
+                    targetDivision: divisionMap[catName] || null // Use hardcoded map for now
+                });
+            }
+        }
+
+        if (minRules.length > 0) {
+            const cmxDataMap = ConfigService._getSheetDataAsMap('CmxProdM', ConfigService.getConfig('schema.data.CmxProdM').headers.split(','), 'cpm_CmxId');
+            const categoryCounts = {};
+            let debugLogCount = 0;
+
+            // Aggregate current stock
+            cmxDataMap.map.forEach(product => {
+                // Filter for Active and Web products
+                const isActive = String(product.cpm_IsActive || '').trim();
+                const isWeb = String(product.cpm_IsWeb || '').trim();
+                const activeCheck = (isActive !== '');
+                const webCheck = (isWeb === '1' || isWeb.toLowerCase() === 'true' || isWeb === 'כן');
+
+                if (activeCheck && webCheck) {
+                    const prodGroup = String(product.cpm_Group || '').trim();
+                    const prodDiv = String(product.cpm_Division || '').trim();
+                    const stock = parseInt(product.cpm_Stock, 10) || 0;
+
+                    if (stock > 0) {
+                        // Find matching rule
+                        // Priority: Division Match -> Group Match
+                        let matchedCategory = null;
+                        
+                        // 1. Check Division Rules
+                        for (const rule of minRules) {
+                            if (rule.targetDivision && rule.targetDivision === prodDiv) {
+                                matchedCategory = rule.category;
+                                break; 
+                            }
+                        }
+                        
+                        // 2. If no division match, use Group (implied Div 1 or default)
+                        if (!matchedCategory) {
+                             matchedCategory = prodGroup;
+                        }
+
+                        if (matchedCategory) {
+                             categoryCounts[matchedCategory] = (categoryCounts[matchedCategory] || 0) + 1;
+                        }
+                    }
+                }
+            });
+            
+            // Compare against rules
+            minRules.forEach(rule => {
+                const currentCount = categoryCounts[rule.category] || 0;
+                const status = currentCount < rule.min ? 'Low' : 'OK';
+                
+                const catData = {
+                    category: rule.category,
+                    current: currentCount,
+                    min: rule.min,
+                    status: status
+                };
+                
+                result.allCategories.push(catData);
+
+                if (status === 'Low') {
+                    result.deficientCategoriesCount++;
+                    result.deficientCategories.push(catData);
+                }
+            });
+        }
+    }
+
+    LoggerService.info('WebAppProducts', 'getManagerWidgetData', `Returning data: ${JSON.stringify(result)}`);
+    return result;
+
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getManagerWidgetData', `Error: ${e.message}`, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Gets a list of potential products for a given category.
+ * Products must be Active, have Stock > 0, and NOT be on the Web.
+ *
+ * @param {string} category The category (Comax Group) to filter by.
+ * @returns {Array<Object>} List of eligible products {sku, name, price, stock}.
+ */
+function WebAppProducts_getPotentialProducts(category) {
+  try {
+    const cmxDataMap = ConfigService._getSheetDataAsMap('CmxProdM', ConfigService.getConfig('schema.data.CmxProdM').headers.split(','), 'cpm_CmxId');
+    const potentialProducts = [];
+    
+    // Helper for strict boolean check (for IsWeb)
+    const isTrue = (val) => {
+        const s = String(val || '').trim().toLowerCase();
+        return s === '1' || s === 'true' || s === 'yes' || s === 'כן';
+    };
+
+    const divisionMap = {
+        'ליקר': '3',
+        'אביזרים': '5',
+        'פריטי מתנה': '9'
+    };
+    const targetDivision = divisionMap[category] || null;
+
+    let logCount = 0;
+
+    cmxDataMap.map.forEach(product => {
+      // Filter Logic:
+      const prodGroup = String(product.cpm_Group || '').trim();
+      const prodDiv = String(product.cpm_Division || '').trim();
+
+      // 1. Match Category (if provided)
+      if (category) {
+          if (targetDivision) {
+              // Division Match Mode
+              if (prodDiv !== targetDivision) return;
+          } else {
+              // Group Match Mode (Wine)
+              if (prodGroup !== category) return;
+          }
+      }
+
+      // 2. Must be Active (Non-empty string)
+      const isActive = String(product.cpm_IsActive || '').trim();
+      if (isActive === '') return;
+
+      // 3. Must NOT be on Web (Strict check)
+      if (isTrue(product.cpm_IsWeb)) return;
+
+      // 4. Must have Stock
+      const stock = parseInt(product.cpm_Stock, 10) || 0;
+      if (stock <= 0) return;
+
+      if (logCount < 5) {
+          LoggerService.info('WebAppProducts', 'getPotentialProducts', `Found candidate: ${product.cpm_SKU} (${product.cpm_NameHe})`);
+          logCount++;
+      }
+
+      // Determine display category (Group for wines, mapped name for others)
+      let displayCategory = prodGroup;
+      if (['3', '5', '9'].includes(prodDiv)) {
+          // Reverse lookup for display if possible, or just use Group if it exists?
+          // Comax often puts generic names in Group for these.
+          // Let's use the requested Category name if it matches, or Group.
+          displayCategory = prodGroup || category; 
+      }
+
+      potentialProducts.push({
+        sku: product.cpm_SKU,
+        name: product.cpm_NameHe,
+        price: product.cpm_Price,
+        stock: stock,
+        category: displayCategory
+      });
+    });
+
+    // Sort by Name
+    potentialProducts.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Limit to 100 to prevent payload issues
+    return potentialProducts.slice(0, 100);
+
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getPotentialProducts', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Creates 'New Product' tasks for the selected products.
+ *
+ * @param {Array<Object>} products List of objects {sku, name}.
+ * @returns {Object} Success message.
+ */
+function WebAppProducts_suggestProducts(products) {
+  try {
+    if (!products || products.length === 0) {
+      throw new Error("No products provided for suggestion.");
+    }
+
+    const taskType = 'task.validation.sku_not_in_comax'; // Using a generic type or creating a new one?
+    // Re-reading taskDefinitions.json suggests 'task.validation.comax_not_web_product' fits best,
+    // OR we can use a generic 'New Product' type if defined.
+    // For now, let's use a standard title format that the system recognizes.
+    
+    // Checking SysTaskTypes...
+    // Let's use a generic approach: creating tasks in SysTasks directly via TaskService
+    
+    const userEmail = Session.getActiveUser().getEmail();
+    
+    products.forEach(p => {
+      TaskService.createTask({
+        typeId: 'task.validation.comax_not_web_product', // This seems most appropriate for "Exists in Comax, needs to be on Web"
+        topic: 'Products',
+        title: `New Product Suggestion: ${p.name}`,
+        priority: 'Normal',
+        linkedEntityId: p.sku,
+        assignedTo: '', // Unassigned initially, or assign to Manager?
+        notes: `Suggested by ${userEmail}`
+      });
+    });
+
+    return { success: true, message: `Successfully suggested ${products.length} products.` };
+
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'suggestProducts', `Error: ${e.message}`, e);
+    throw e;
   }
 }

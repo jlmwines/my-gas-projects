@@ -55,69 +55,20 @@
     2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
     3.  **Inventory Screen (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow. The 'Inventory Review Table' has been implemented, including data fetching from backend, display with selection controls, and backend logic for processing selected tasks (updating `pa_NewQty`, `pa_LastCount`, and task statuses). Frontend UI bugs have been addressed, including checkbox functionality and "check all" control.
         *   **1. Inventory Review Table (COMPLETED):** The primary section at the top of the screen. This table displays submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept.
-        *   **2. Inventory Acceptance Logic (IN PROGRESS):**
-            *   **Implement `WebAppInventory_processInventoryReviewTasks`:** Create the backend handler to process the "Process Selected Counts" action. This function will:
-                *   Update the `pa_LastCount` timestamp in `SysProductAudit`.
-                *   Mark the associated 'Verify Physical Count' task as 'Completed'.
-                *   (Future) Trigger the check for Comax Export readiness.
-        *   **3. Task Creation Controls (IN PROGRESS):** A section for generating new count tasks. This will include:
-            *   **Bulk Task Creation:**
-                *   **Inputs:** 'Max Stock' (Input, default 12), 'Days Since Last Count' (Input, default 90), 'Web Products Only' (Checkbox, default checked), 'Wine Only (Div 1)' (Checkbox, default checked).
-                *   **Logic:** Strict AND condition (Product must meet BOTH stock AND days criteria if specified).
-                *   **Workflow:** Preview count -> Confirmation dialog with number of tasks -> Generate.
-            *   **Spot-Check Task Creation:**
-                *   **Inputs:** Search input with autocomplete (Name/SKU), Optional Note.
-                *   **Logic:** Creates a single high-priority task for the selected product.
-        *   **4. Open Tasks List (IN PROGRESS):** A read-only table at the bottom of the screen displaying all products that are currently in the manager's queue to be counted (i.e., tasks in 'Assigned' status). This provides the admin with full visibility into the current workload.
+        *   **2. Inventory Acceptance Logic (COMPLETED):**
+            *   **Goal:** Admins can now process and accept submitted inventory counts, which updates `pa_LastCount` and marks associated tasks as `Completed`.
+        *   **3. Inventory Task Creation Controls (COMPLETED):** Admins can now generate new inventory count tasks (both bulk and spot-check). Product-related task creation remains to be done.
+        *   **4. Admin Inventory Open Tasks List (COMPLETED):** Admins now have full visibility into the current inventory counting workload of managers.
         *   **5. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
     4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
-    5.  **Product Details Screen (PLANNED):** Create a placeholder `ProductDetailsView.html`.
+    5.  **Product Details Screen (COMPLETED):** A placeholder `ProductDetailsView.html` has been created, ready for future development.
 
 ### 5.3. Manager Screen Implementation
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
     1.  **Inventory Screen (COMPLETED):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
-        *   **Display Inventory Task Count (PLANNED):** Implement logic to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
-    2.  **Product Management Screen (IN PROGRESS):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows.
-        *   **UI Layout:** The page will feature distinct, ordered areas/widgets to prioritize manager tasks:
-            *   **Area 1: New Product Suggestions (Prominent, Top of Page)**
-                *   **Purpose:** To immediately highlight opportunities for new product additions and address inventory gaps.
-                *   **Content:**
-                    *   **Deficient Categories Summary:** Display metrics or a summary of product categories identified as having deficiencies (e.g., "Wines - 3 products needed"). This data will come from `JLMops/InventoryManagementService.js` or a new `ProductSuggestionService.js`.
-                    *   **Suggested Products Table:** A filterable table listing eligible products (from Comax via `JLMops/ComaxAdapter.js`) that could fill the gaps for selected categories.
-                        *   **Columns:** `Select` (checkbox), `SKU`, `Product Name`, `Category`, `Price`, `Stock`, `Web Status`.
-                    *   **Action:** "Suggest Selected Products" button. This would create `New Product Suggestion` tasks in `JLMops/TaskService.js`.
-            *   **Area 2: My Product Tasks (Below Suggestions)**
-                *   **Purpose:** To provide access to and manage all product-related tasks assigned to the manager, including detail updates, new product entries, and product audit verifications.
-                *   **Content:**
-                    *   **Task List Table:** A scrollable, sortable, filterable table listing all product-related tasks currently `Assigned` to the manager (from `JLMops/TaskService.js`).
-                        *   **Columns:** `Task Type` (e.g., "Update Product Details", "Enter New Product Details", "Verify Product Data"), `SKU`, `Product Name (EN)`, `Product Name (HE)`, `Vintage`, `Status`, `Assigned Date`, `Details/Notes`.
-                        *   **Action:** An "Open Task" button for each row.
-                *   **Action Flow:** When "Open Task" is clicked, it will open a **modal dialog** or a **fly-out panel** whose content is dynamically determined by the `Task Type`.
-                    *   **Modal/Panel for "Update Product Details" or "Enter New Product Details" Tasks:**
-                        *   **Header:** Dynamically display `SKU`, `Product Name (English)`, `Vintage (CMX YEAR)`, and `Product Name (Hebrew)`.
-                        *   **Navigation:** "Previous" and "Next" buttons (if managing multiple tasks sequentially).
-                        *   **Tabbed Interface:** The content will feature a **tabbed layout** (replicating the legacy `DetailsForm.html`):
-                            1.  **Descriptions Tab:** Fields for Short/Long Descriptions (HE/EN).
-                            2.  **Specs Tab:** Editable fields for `Region`, `ABV`. Read-only for `Size`, `Division`, `Group`, `Year`.
-                            3.  **Attributes Tab:** Editable fields for `Intensity`, `Complexity`, `Acidity`, `Decant`.
-                            4.  **Pairing Tab:** Checkboxes for `Harmonize With` and `Contrast With`.
-                            5.  **Grapes Tab:** Dropdowns for `Grape 1` through `Grape 5`.
-                            6.  **Kashrut Tab:** Checkbox for `Heter Mechira`, dropdowns for `Kashrut 1` through `Kashrut 5`.
-                            7.  **Preview Tab:** Dynamically generated English and Hebrew product descriptions.
-                        *   **Action Buttons:** "Submit for Review", "Close".
-                    *   **Modal/Panel for "Verify Product Data" Tasks:**
-                        *   **Content:** A new, dedicated single-page summary view for product audit verification.
-                        *   **Purpose:** Display a comprehensive summary of the wine's data from `JLMops/ProductService.js` (master data), potentially external web data, and physical product details.
-                        *   **Layout:** Sections for:
-                            *   **Basic Info:** `SKU`, `Product Name (EN/HE)`, `Vintage`, `ABV`, `Region`.
-                            *   **Key Descriptors:** `Short Description`, `Long Description`, `Intensity`, `Complexity`, `Acidity`, `Harmonize With`, `Contrast With`.
-                            *   **Categorization:** `Grapes (G1-G5)`, `Kashrut (K1-K5)`, `Heter Mechira`.
-                            *   **Verification Status:** This section would allow the manager to indicate their verification findings (e.g., checkboxes "Matches Web Data", "Matches Physical Product", "Requires Correction", "Verified Date", "Verifier Comments").
-                        *   **Action Buttons:** "Mark as Verified", "Create Correction Task", "Close".
-            *   **Area 3: Product Status/Search (Optional Utility Widget)**
-                *   **Purpose:** A read-only search and display area for any product's details and current JLMops workflow status.
-                *   **Content:** A search bar (by SKU or Name) and a display area for read-only product information from `JLMops/ProductService.js`.
+        *   **Display Inventory Task Count (COMPLETED):** Logic implemented to display the count of 'Assigned' inventory tasks in `ManagerInventoryView.html`.
+    2.  **Product Management Screen (IN PROGRESS):** Create `ManagerProductsView.html` to serve as a unified dashboard for all manager-level product workflows. Product-related task creation (e.g., New Product Suggestions, My Product Tasks) remains to be done.
 
 ### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
 *   **Goal:** To refactor the UI controller layer to align with the flexible patterns defined in `ARCHITECTURE.md`.
@@ -127,37 +78,8 @@
 *   **Goal:** Implement a robust and flexible UI control for user authentication and role switching, leveraging a proven pattern for dynamic content loading.
 *   **Resolution:** The previous issue of user-specific content not loading correctly has been resolved by implementing a client-side content loading mechanism, ensuring that all initial and subsequent content is fetched and rendered via `google.script.run`.
 
-### 5.6. Admin Product Review & Export (IN PROGRESS)
+### 5.6. Admin Product Review & Export (COMPLETED)
 *   **Goal:** Provide a comprehensive interface for admins to review product detail updates, make final edits, accept changes, and export them for web updates.
-*   **Detailed Technical Plan:**
-    1.  **Backend: `WooCommerceFormatter.js`:**
-        *   Implement `formatDescriptionHTML(sku, productData, comaxData, lang, lookupMaps)` to strictly replicate the legacy `compileExportDescription_` logic.
-        *   Logic must construct the HTML description in four specific sections:
-            *   **1. Opening:** Product Name (Bold) + Long Description.
-            *   **2. Attributes:** Detailed list including Group, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, and Decanting.
-            *   **3. Kashrut:** List of certifications + "Heter Mechira" (styled with Red/Bold HTML).
-            *   **4. Appendices (Export Only):** Promotional Text (P-code lookup), Attribute Texts (Intensity/Complexity/Acidity lookups), and Bulleted Pairing Notes (Harmonize/Contrast flavor lookups).
-    2.  **Backend: `ProductService.js`:**
-        *   **`acceptProductDetails` (Existing):** Verifies it upserts to `WebDetM` and sets task to `Accepted`.
-        *   **Implement `generateDetailExport()`:**
-            *   Identify all tasks with status `Accepted`.
-            *   Retrieve combined data from `WebDetM`, `CmxProdM`, and `WebXltM` (for IDs).
-            *   Fetch all necessary lookup maps via `LookupService` (Texts, Grapes, Kashrut, Regions).
-            *   Generate the CSV content using `WooCommerceFormatter.formatDescriptionHTML`.
-            *   Save the file to the configured export folder.
-        *   **Implement `confirmWebUpdates()`:**
-            *   Bulk update all currently `Accepted` tasks to `Completed`.
-    3.  **Backend: `WebAppProducts.js`:**
-        *   Expose `getAdminReviewTasks()`: Fetch tasks in 'Review' status.
-        *   Expose `getAcceptedTasks()`: Fetch tasks in 'Accepted' status (for the export queue).
-        *   Expose `approveProductDetails()`: Wrapper for `ProductService.acceptProductDetails`.
-        *   Expose `exportAcceptedUpdates()`: Wrapper for `ProductService.generateDetailExport`.
-        *   Expose `confirmWebUpdates()`: Wrapper for `ProductService.confirmWebUpdates`.
-    4.  **Frontend: `AdminProductsView.html`:**
-        *   **Review Section:** A table displaying tasks in `Review` status. Clicking a row opens the Product Editor Modal (reused from Manager view) for final edits and approval.
-        *   **Export Section:** A summary area showing the count of `Accepted` items ready for export.
-            *   **Action:** "Export CSV" button.
-            *   **Action:** "Mark as Completed" button (to be clicked after the admin uploads the CSV to WooCommerce).
 
 ## Phase 6: Workflow Integrity & UI Orchestration (COMPLETED)
 
@@ -221,55 +143,30 @@ The existing dashboard widgets were enhanced to:
 ### 4. Customer Note Implementation (IN PROGRESS - Awaiting Data for Testing)
 *   **Goal:** To provide a UI for handling customer notes and creating individual, editable Google Docs for gift messages.
 
-### 5. Inventory Management Workflows (PLANNED)
-*   **Goal:** To fully integrate and manage all inventory-related processes within `jlmops`, including physical counts, audits, and synchronization with Comax, using a task-based workflow.
-*   **Tasks:**
-            1.  **Brurya Warehouse Inventory Management:** Implement a dedicated manager UI and backend logic for managing Brurya-specific stock levels.
-                *   **UI:** A web-based screen featuring a table of products currently in Brurya inventory.
-                    *   **Table Columns:** `Product Name` (read-only), `SKU` (read-only), `Quantity` (editable number input).
-                    *   **"Add Product" Tool:** A search box labeled "Add Product" to find and add new items by SKU or name.
-                *   **Workflow:** Managers can edit quantities directly in the table, add new products via the search tool, or remove products by setting their quantity to `0`. All changes will be saved via a single "Save Changes" button, which updates the `BruryaQty` in the `SysProductAudit` sheet.    2.  **Low Inventory Task Creation:** Implement logic to automatically identify low-stock items (based on configurable thresholds) and generate tasks for review or reorder.
-    3.  **Negative Inventory Task Follow-up:** Implement logic to detect negative stock levels and create high-priority tasks for investigation and correction.
-    4.  **Inventory Count Workflow (Single Task Type):** Implement a unified task type with a defined workflow to manage the entire lifecycle of inventory counts.
-        *   **Entry/Submission (IN PROGRESS):** Provide an enhanced UI for managers to enter and submit physical inventory counts.
-            *   The UI will feature a table displaying all products assigned for counting, with data sourced from `CmxProdM` (for Product Name) and `SysProductAudit` (for quantities).
-            *   The table columns will be: `Comax Qty` (read-only `pa_ComaxQty`), `Total` (read-only calculated sum), `Brurya` (read-only `pa_BruryaQty`), `Storage` (editable `pa_StorageQty`), `Office` (editable `pa_OfficeQty`), `Shop` (editable `pa_ShopQty`), `SKU`, `Product Name` (right-justified), and a `Checkbox`.
-            *   Client-side scripting will provide an intuitive workflow: editing a quantity in any of the editable columns will automatically check that row's checkbox.
-            *   A "Submit Selected Counts" button will allow for partial submissions of all entered counts.
-        *   **Review/Acceptance:** Provide a UI for admins to review and accept submitted counts.
-            *   The screen will be nearly identical to the manager's view, showing a consolidated list of all products in 'Review' status.
-            *   Quantity fields will be read-only, displaying the manager's submitted counts.
-            *   Each row will have a checkbox, and a "Select All" control will be available.
-            *   A "Process Selected Counts" button will trigger the acceptance, updating the underlying tasks to a final state (e.g., 'Completed').
-            *   Upon successful submission, the user will be redirected to the main dashboard to handle the next step of the workflow (exporting the adjustments).
-        *   **Export to Comax/Confirm:** After a count is accepted, trigger the generation of an export file for Comax and a corresponding confirmation task.
-        *   **Note:** This requires a new task definition in the master configuration and new logic in the inventory and task services.
+### 5. Inventory Management Workflows (COMPLETED)
+*   **Goal:** The full workflow for managing inventory, including Brurya warehouse stock, identifying low/negative stock, and executing physical counts (entry, review, acceptance, export to Comax), is now implemented.
 
 ### 6. Comax Inventory Export (COMPLETED)
 *   **Goal:** To generate a simple CSV file of SKU and count for export to the Comax system and manage the confirmation workflow.
 
-### 6. Enhanced Product Detail Verification (PLANNED)
-*   **Goal:** To provide a comprehensive, task-based workflow for managers to review and verify product details, including images, facts, and overall appearance.
-*   **Tasks:
-    1.  **UI Development:** Create a new UI view that displays a list of products requiring verification.
-    2.  **Product Display:** For each product, display relevant details (e.g., name, SKU, current image URL, key attributes).
-    3.  **Checklist Integration:** Implement an interactive checklist for managers to mark verification status for various details.
-    4.  **Submission & Status Update:** Implement backend logic to update the product's verification status upon submission.
-    5.  **Task Integration:** Ensure this UI is linked to "Verify Product Details" tasks.
 
-### 7. Propose New Products to Fill Gaps (PLANNED)
-*   **Goal:** To proactively identify product categories with low inventory and prompt managers to propose new products to fill these gaps, integrating with the "Onboard New Product" workflow.
-*   **Tasks:
-    1.  **Gap Detection Logic:** Implement logic to monitor inventory levels and identify categories with low stock.
-    2.  **Manager Notification/Prompt:** Generate tasks and provide a UI to highlight these categories.
-    3.  **Integration with New Product Workflow:** Allow managers to directly initiate the "Onboard New Product" workflow from the gap analysis UI.
 
-### 8. Product Detail Update Workflow (Vintage Discrepancy) (PLANNED)
-*   **Goal:** Automate the detection and task creation for vintage mismatches between Comax imports and the master data.
-*   **Tasks:
-    1.  **Verify Validation Rule:** Ensure the vintage mismatch validation rule is correctly configured in the master configuration.
-    2.  **Verify Rule Execution:** Confirm that the staging validation function in the product service correctly executes this rule during a Comax import.
-    3.  **Verify Task Creation:** Ensure that the task service correctly creates a field mismatch task when a discrepancy is found.
+### 6. Gap Analysis & New Product Suggestions (PLANNED)
+*   **Goal:** To proactively identify product categories with low inventory (gap analysis), suggest eligible candidates from Comax to fill those gaps, and provide a mechanism for general new product suggestions. This replaces legacy category management functions.
+*   **Tasks:**
+    1.  **Gap Detection Logic:** Implement logic to monitor inventory levels and identify categories with low stock or missing members.
+    2.  **Candidate Suggestion Logic:** Implement logic to scan Comax master data for products that fit the criteria of deficient categories.
+    3.  **Manager Notification/Prompt:** Generate tasks and provide a UI to highlight these categories and suggested candidates.
+    4.  **Integration with New Product Workflow:** Allow managers to directly initiate the "Onboard New Product" workflow from the gap analysis UI or suggestions list.
+
+### 7. SKU Management Workflow (Update/Replace) (PLANNED)
+*   **Goal:** To provide a safe, guided workflow for updating a product's SKU across all Comax and Web product sheets. This is critical for maintaining data integrity when a SKU changes in the external systems (Comax/WooCommerce) or when switching a web product's connection to a different Comax product.
+*   **Tasks:**
+    1.  **Detection & Trigger:** Create a mechanism (manual or automated) to initiate an SKU update.
+    2.  **Validation:** Ensure the new SKU exists in Comax and is valid for use.
+    3.  **System-Wide Update:** Implement a service to safely update `wpm_SKU`, `cpm_SKU`, `wdm_SKU`, `wxl_SKU`, and `pa_SKU` references across all master and audit sheets.
+    4.  **External Synchronization:** Provide clear instructions or tasks for the user to manually update the SKU in Comax and WooCommerce to match the internal change.
+### 8. Product Detail Update Workflow (Vintage Discrepancy) (COMPLETED)
 
 ### 9. New Product Workflow (PLANNED)
 *   **Goal:** Create a guided, task-based workflow to manage the process of adding a new product to both Comax and WooCommerce.
@@ -287,9 +184,14 @@ The existing dashboard widgets were enhanced to:
     3.  **Guided Action:** The task notes will instruct the admin to manually update the SKU in the corresponding external system.
     4.  **Automated Verification:** The system will monitor subsequent imports and automatically mark the task as 'Completed' once the change is verified.
 
-## Go-Live Readiness
-
-### 1. Failed Job Handling (PLANNED)
+### 11. Enhanced Product Detail Verification (PLANNED)
+*   **Goal:** To provide a comprehensive, task-based workflow for managers to review and verify product details, including images, facts, and overall appearance.
+*   **Tasks:**
+    1.  **UI Development:** Create a new UI view that displays a list of products requiring verification.
+    2.  **Product Display:** For each product, display relevant details (e.g., name, SKU, current image URL, key attributes).
+    3.  **Checklist Integration:** Implement an interactive checklist for managers to mark verification status for various details.
+    4.  **Submission & Status Update:** Implement backend logic to update the product's verification status upon submission.
+    5.  **Task Integration:** Ensure this UI is linked to "Verify Product Details" tasks.
 *   **Goal:** To ensure that any failed job in the `SysJobQueue` automatically generates a high-priority task for an administrator to investigate.
 *   **Tasks:**
     1.  **Configuration:** Add a new high-priority task definition for "Job Failed" to the master configuration.

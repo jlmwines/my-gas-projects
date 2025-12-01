@@ -365,24 +365,25 @@ function populateInitialProductData() {
 
         // Populate SysProductAudit
         const sysProductAuditSchema = ConfigService.getConfig('schema.data.SysProductAudit').headers.split(',');
-        const legacyAuditHeaderMap = legacyAuditHeaders.reduce((map, header, index) => {
-            map[header] = index;
-            return map;
-        }, {});
-
+        // Legacy Audit columns based on frontend-scripts/Globals.js:
+        // ID: 0, SKU: 1, LastCount: 2, ComaxQty: 3, NewQty: 4, BruryaQty: 5, StorageQty: 6, OfficeQty: 7, ShopQty: 8
+        
         legacyAuditData.forEach(row => {
             const newAuditRow = new Array(sysProductAuditSchema.length).fill('');
-            newAuditRow[sysProductAuditSchema.indexOf('pa_CmxId')] = row[legacyAuditHeaderMap['ID']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_SKU')] = row[legacyAuditHeaderMap['SKU']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_LastCount')] = row[legacyAuditHeaderMap['LastCount']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_ComaxQty')] = row[legacyAuditHeaderMap['ComaxQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_NewQty')] = row[legacyAuditHeaderMap['NewQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_BruryaQty')] = row[legacyAuditHeaderMap['BruryaQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_StorageQty')] = row[legacyAuditHeaderMap['StorageQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_OfficeQty')] = row[legacyAuditHeaderMap['OfficeQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_ShopQty')] = row[legacyAuditHeaderMap['ShopQty']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailUpdate')] = row[legacyAuditHeaderMap['LastDetailUpdate']];
-            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailAudit')] = row[legacyAuditHeaderMap['LastDetailAudit']];
+            newAuditRow[sysProductAuditSchema.indexOf('pa_CmxId')] = row[0]; // ID
+            newAuditRow[sysProductAuditSchema.indexOf('pa_SKU')] = row[1]; // SKU
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastCount')] = row[2]; // LastCount
+            newAuditRow[sysProductAuditSchema.indexOf('pa_ComaxQty')] = row[3]; // ComaxQty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_NewQty')] = row[4]; // NewQty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_BruryaQty')] = row[5]; // BruryaQty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_StorageQty')] = row[6]; // StorageQty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_OfficeQty')] = row[7]; // OfficeQty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_ShopQty')] = row[8]; // ShopQty
+            
+            // Attempt to read extra columns if they exist, otherwise empty
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailUpdate')] = row[9] || ''; 
+            newAuditRow[sysProductAuditSchema.indexOf('pa_LastDetailAudit')] = row[10] || '';
+            
             sysProductAudit_Data.push(newAuditRow);
         });
 
