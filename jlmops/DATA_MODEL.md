@@ -350,11 +350,20 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `spc_CustomerNote`
 
 
-### 6. `SysInventoryOnHold` (System On-Hold Inventory)
-*   **Purpose:** Stores a pre-calculated summary of stock committed to 'On-Hold' orders to improve system performance.
+### 7. `SysJobQueue` (System Job Queue)
+*   **Purpose:** Tracks the lifecycle and status of all orchestrated jobs within the system.
+*   **Prefix:** `jq_` (Note: Current code uses direct header names, this prefix is for conceptual consistency if formal schema were used)
 *   **Columns:**
-    *   `sio_SKU`: **Primary Key.**
-    *   `sio_OnHoldQuantity`
+    *   `job_id`: **Primary Key.** Unique ID for the job.
+    *   `session_id`: The ID of the session this job belongs to, for grouping related jobs.
+    *   `job_type`: The type of job (e.g., `import.drive.comax_products`).
+    *   `status`: Current status (e.g., `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `BLOCKED`).
+    *   `archive_file_id`: ID of the archived input file (if applicable).
+    *   `created_timestamp`: When the job was created.
+    *   `processed_timestamp`: When the job was last processed or completed.
+    *   `error_message`: Details if the job failed.
+    *   `original_file_id`: ID of the original source file (if applicable).
+    *   `original_file_last_updated`: Last modified timestamp of the original file.
 
 
 
@@ -377,6 +386,7 @@ This system provides a flexible, configurable way to manage all user and system-
     *   `st_Priority`: 'High', 'Normal', 'Low'.
     *   `st_AssignedTo`: The user responsible for the task.
     *   `st_LinkedEntityId`: The ID of the product, order, etc. that this task is about.
+    *   `st_SessionId`: The ID of the session (from SysJobQueue) that generated this task, for traceability.
     *   `st_CreatedDate`
     *   `st_DueDate`
     *   `st_DoneDate`: Populated when the task is closed, for KPI tracking.

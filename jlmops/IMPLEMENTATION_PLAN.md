@@ -223,19 +223,131 @@ The existing dashboard widgets were enhanced to:
         *   **Confirmation:** Yes.
         *   **Confirmation Text:** "Migrate Order Data?"
 
-## Phase 8: Architectural Refactoring (PLANNED)
+## Phase 8: Session-Based Orchestration & Validation (PLANNED)
 
-**Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.
+**Goal:** To transition the system from time-based inference to explicit state management using a "System Session ID", ensuring strict sequencing and robust traceability, followed by the implementation of specific validation rules.
 
-### 8.1. Refactor SysConfig Management (MOVED)
+### 8.1. Foundation: Session-Based Orchestration
+*   **Goal:** Implement a "Session Manager" to group related jobs (Import -> Validation -> Export) into a single, traceable execution cycle.
+*   **Detailed Implementation Steps:**
+    1.  **Data Model Schema Updates:**
+        *   **Goal:** Ensure the database supports the new tracking fields.
+        *   **Target Sheets & Columns:**
+            *   **`SysJobQueue`**: Add `session_id` (String), `retry_count` (Number, Default: 0).
+            *   **`SysLog`**: Add `sl_SessionId` (String), `sl_Data` (String/JSON for structured context).
+            *   **`SysTasks`**: Add `st_SessionId` (String).
+    2.  **LoggerService Upgrade:**
+        *   **Goal:** Ensure logs are tagged with the Session ID for debugging.
+        *   **Action:** Update `LoggerService.js` to accept an optional `context` object (containing `sessionId` and `data`) and map it to the new `sl_SessionId` and `sl_Data` columns.
+    3.  **Orchestrator Core Logic (The "Brain"):**
+        *   **Goal:** Logic to generate and assign Session IDs.
+        *   **Action:** Implement `generateSessionId()` (e.g., `SYNC-YYYYMMDD-XX`) and `resolveSessionIdForJob()`.
+        *   **Logic:** Root jobs (no dependencies) trigger new IDs; dependent jobs inherit the `session_id` of their completed parent job.
+    4.  **Dependency Logic Update (Strict Sequencing):**
+        *   **Goal:** Prevent "Time Travel" (e.g., using stale data) and enforce strict ordering.
+        *   **Action:** Update `checkDependencies` in `OrchestratorService.js`.
+        *   **Logic:** Replace time-window checks with strict Session ID matching. A dependent job can only run if its prerequisite exists *within the same session*.
+    5.  **Service Layer Context Propagation:**
+        *   **Goal:** Pass the Session ID down to workers (ProductService, OrderService) for logging and task linkage.
+        *   **Action:** Standardize an `ExecutionContext` object (`{ sessionId, jobId }`) and pass it as the final argument to all service entry points. Update `TaskService` to link created tasks to this ID.
+    6.  **Resilience & Concurrency:**
+        *   **Goal:** Prevent job pile-ups and handle crashes.
+        *   **Action:**
+            *   **Single Thread:** Modify `processPendingJobs` to execute only **one** job per trigger execution.
+            *   **Zombie Cleanup:** Implement a check at the start of the Orchestrator to detect jobs stuck in `PROCESSING` state for > 15 minutes and mark them as `FAILED`.
+
+### 8.2. Foundation: Decouple Validation Side-Effects
+*   **Goal:** Make `ValidationService` a pure analysis engine that returns results, removing direct dependencies on `TaskService`.
+*   **Tasks:**
+    1.  **Refactor Validation Execution:** Modify `_execute...` methods in `ValidationService` to return a standardized `ValidationResult` object containing discrepancies, rather than creating tasks internally.
+    2.  **Create Result Handler:** Implement logic (likely in `ValidationOrchestratorService`) to process `ValidationResult` objects and decide when to create tasks based on configuration and the current `SessionID`.
+        *   **Aggregation Policy:** If discrepancies exceed a configured threshold (e.g., 10), create a single summary task linked to the detailed log entry (using `sl_Data`) instead of creating individual tasks.
+
+### 8.3. Define Specific Task Types
+*   **Goal:** Create distinct task types for different categories of field mismatches.
+*   **Tasks:
+    1.  **Vintage Mismatch:** Add `task.validation.vintage_mismatch` (High Priority) to `taskDefinitions.json`.
+    2.  **Status Mismatch:** Add `task.validation.status_mismatch` (High Priority) to `taskDefinitions.json` for critical status changes (IsWeb, IsActive).
+    3.  **Name Mismatch:** Ensure `task.validation.name_mismatch` is properly defined and utilized.
+
+### 8.4. Update Validation Rules
+*   **Goal:** Update the validation rules configuration to use the new, specific task types.
+*   **Tasks:
+    1.  **Vintage Rule:** Update `C6_Comax_VintageMismatch` to use `task.validation.vintage_mismatch`.
+    2.  **Name Rule:** Update `C3_Comax_NameMismatch` to use `task.validation.name_mismatch`.
+    3.  **Status Rules:** Update `C7_Comax_IsWebMismatch` and `C8_Comax_IsActiveMismatch` to use `task.validation.status_mismatch`.
+
+### 8.5. UI Consolidation: Daily Sync Controller
+*   **Goal:** Segregate business process controls from system health monitoring by creating a dedicated "Daily Sync Controller" widget.
+*   **Tasks:
+    1.  **Create `AdminDailySyncWidget.html`:**
+        *   **Visual Timeline:** Display the linear progression of the daily sync session (Invoices -> Import -> Validation -> Export).
+        *   **Unified Controls:** Centralize triggers for exports (Comax, Web) and validation checks here, removing them from distributed widgets.
+        *   **Session Status:** Display the active `SessionID` and current state.
+    2.  **Refactor `SystemHealthWidget.html`:**
+        *   Remove the "Daily Sync Checklist".
+        *   Focus purely on IT health: Failed Jobs, Retry Counts, Error Logs, and Housekeeping status.
+    3.  **Controller Logic:** Update `WebAppSystem.js` (or create `WebAppSync.js`) to feed the new widget with Session-aware data from the Orchestrator.
+
+## Phase 9: Architectural Refactoring (PLANNED)
+*   **Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.
+
+### 9.1. Refactor SysConfig Management (MOVED)
 *   **Note:** This workflow has been moved to Section 0 for high visibility.
 
-### 8.2. Standardize System Logging (COMPLETED)
+### 9.2. Standardize System Logging (COMPLETED)
 *   **Goal:** To ensure all logging across the application is consistent, meaningful, and conforms to the `LoggerService` standard. This improves traceability and reduces log noise.
 
-### 8.3. Validation Service Optimization & Bug Fix (COMPLETED)
+### 9.3. Validation Service Optimization & Bug Fix (COMPLETED)
 *   **Goal:** To improve the performance and correctness of the validation engine.
 
-### 6.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
-
+### 9.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
 *   **Goal:** To resolve critical runtime errors and improve the robustness of the job orchestration engine.
+
+## Phase 10: System Maintenance & Scalability (PLANNED)
+
+**Goal:** To ensure the long-term performance and manageability of the system through automated housekeeping and archiving.
+
+### 10.1. Housekeeping Service
+*   **Goal:** Prevent the `SysJobQueue` and `SysLog` sheets from growing indefinitely.
+*   **Tasks:**
+    1.  **Archive Logic:** Create a service to move records older than X days (e.g., 30) from the live spreadsheet to a dedicated "Archive Spreadsheet".
+    2.  **Scheduled Trigger:** Configure a monthly trigger to run the housekeeping job.
+
+### 10.2. Advanced Logging Policy
+*   **Goal:** Reduce log noise.
+*   **Tasks:**
+    1.  **Aggregation:** Update services to aggregate recurring errors (e.g., "500 validation failures") into a single log entry summary.
+    2.  **Log Levels:** strictly enforce INFO for high-level flow and DEBUG (new level) for granular details.
+
+## Phase 11: Performance Optimization (PLANNED)
+
+**Goal:** To improve system responsiveness and reduce load times by addressing data access bottlenecks and optimizing the backend-frontend interface.
+
+### 11.1. Data Access Optimization
+*   **Goal:** Reduce the latency caused by repeated, expensive Spreadsheet reads.
+*   **Tasks:**
+    1.  **Cache Implementation:** Implement `CacheService` for frequently accessed data (e.g., `SysConfig`, Product Lookups).
+    2.  **Optimized Lookups:** Refactor `getDataRange().getValues()` calls to use more efficient indexing or lookup strategies where possible.
+
+### 11.2. Backend-Frontend Interface
+*   **Goal:** Minimize network round-trips (`google.script.run` calls).
+*   **Tasks:**
+    1.  **Data Aggregation:** Refactor backend functions to return "Composite Objects" (e.g., `getProductFullDetails` returns Metadata + Stock + History in one call) instead of multiple fragmented calls.
+    2.  **Prefetching:** Where feasible, include essential detail data in list views to eliminate loading time for simple actions.
+
+## Phase 12: Quality Assurance & Resilience (PLANNED)
+
+**Goal:** To ensure business logic stability and "user-proof" the database infrastructure.
+
+### 12.1. Automated Testing Framework
+*   **Goal:** Ensure business logic stability without relying solely on manual testing.
+*   **Tasks:**
+    1.  **Unit Test Suite:** Create a script infrastructure to run logical tests on core services (e.g., `OrderService` logic) using mock data, avoiding spreadsheet side-effects.
+    2.  **Regression Tests:** Define a standard set of tests to run before any deployment.
+
+### 12.2. Database Protection
+*   **Goal:** "User-proof" the Google Sheets database to prevent accidental corruption.
+*   **Tasks:**
+    1.  **Header Locking:** Programmatically protect the header rows of all Master Sheets.
+    2.  **Schema Validator:** Implement a startup check that verifies all required columns exist before allowing operations to proceed.

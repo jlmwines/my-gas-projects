@@ -8,13 +8,13 @@
  */
 const LoggerService = (function() {
   const LOG_SHEET_NAME = "SysLog";
-  let sessionId = null;
+  let internalSessionId = null; // Renamed to avoid confusion with context.sessionId
 
-  function getSessionId() {
-    if (!sessionId) {
-      sessionId = Utilities.getUuid();
+  function getInternalSessionId() {
+    if (!internalSessionId) {
+      internalSessionId = Utilities.getUuid();
     }
-    return sessionId;
+    return internalSessionId;
   }
 
   /**
@@ -24,18 +24,22 @@ const LoggerService = (function() {
    * @param {string} serviceName The name of the service calling the logger.
    * @param {string} functionName The name of the function calling the logger.
    * @param {string} message The message to log.
+   * @param {object} [context={}] Optional context object containing sessionId and data.
    * @param {string} [stackTrace] Optional error stack trace.
    */
-  function _log(level, serviceName, functionName, message, stackTrace = '') {
+  function _log(level, serviceName, functionName, message, context = {}, stackTrace = '') {
     const timestamp = new Date();
-    const sessionId = getSessionId();
+    const currentSessionId = context.sessionId || getInternalSessionId(); // Use context sessionId if provided
+    const logData = context.data ? JSON.stringify(context.data) : '';
+
     const logEntry = [
       timestamp,
-      sessionId,
+      currentSessionId,
       level,
       serviceName,
       functionName,
       message,
+      logData, // New sl_Data column
       stackTrace
     ];
 
@@ -67,15 +71,15 @@ const LoggerService = (function() {
   }
 
   return {
-    info: function(serviceName, functionName, message) {
-      _log('INFO', serviceName, functionName, message);
+    info: function(serviceName, functionName, message, context = {}) {
+      _log('INFO', serviceName, functionName, message, context);
     },
-    warn: function(serviceName, functionName, message) {
-      _log('WARN', serviceName, functionName, message);
+    warn: function(serviceName, functionName, message, context = {}) {
+      _log('WARN', serviceName, functionName, message, context);
     },
-    error: function(serviceName, functionName, message, error) {
+    error: function(serviceName, functionName, message, error, context = {}) {
       const stackTrace = error && error.stack ? error.stack : '';
-      _log('ERROR', serviceName, functionName, message, stackTrace);
+      _log('ERROR', serviceName, functionName, message, context, stackTrace);
     },
 
     /**
@@ -86,7 +90,7 @@ const LoggerService = (function() {
       try {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
-        const expectedHeaders = ['sl_Timestamp', 'sl_SessionId', 'sl_LogLevel', 'sl_ServiceName', 'sl_FunctionName', 'sl_Message', 'sl_StackTrace'];
+        const expectedHeaders = ['sl_Timestamp', 'sl_SessionId', 'sl_LogLevel', 'sl_ServiceName', 'sl_FunctionName', 'sl_Message', 'sl_Data', 'sl_StackTrace'];
 
         if (!logSheetConfig || !logSheetConfig.id) {
           console.error("ConfigService: Log Spreadsheet ID not found.");

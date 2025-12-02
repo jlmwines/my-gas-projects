@@ -6,6 +6,42 @@
 const ProductService = (function() {
   let skuToWebIdMap = null;
 
+  /**
+   * Helper to update job status in SysJobQueue.
+   * @param {object} executionContext The execution context.
+   * @param {string} status The new status ('COMPLETED', 'FAILED', 'QUARANTINED').
+   * @param {string} [errorMessage=''] Optional error message.
+   */
+  function _updateJobStatus(executionContext, status, errorMessage = '') {
+    const serviceName = 'ProductService';
+    const functionName = '_updateJobStatus';
+    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+
+      const statusColIdx = jobQueueHeaders.indexOf('status');
+      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+
+      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
+        logger.error(serviceName, functionName, `Missing required columns in SysJobQueue headers for updating job status.`, null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+        return;
+      }
+
+      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
+      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
+      if (errorMessage) {
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
+      }
+      logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+    } catch (e) {
+      logger.error(serviceName, functionName, `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+    }
+  }
+
   function _buildSkuToWebIdMap() {
     const functionName = '_buildSkuToWebIdMap';
     LoggerService.info('ProductService', functionName, 'Building SKU to WebIdEn map...');
@@ -43,14 +79,16 @@ const ProductService = (function() {
   // PRIVATE HELPER METHODS
   // =================================================================================
 
-  function _populateStagingSheet(productsOrData, sheetName) {
+  function _populateStagingSheet(productsOrData, sheetName, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_populateStagingSheet';
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
         throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
     }
-    LoggerService.info('ProductService', '_populateStagingSheet', `Successfully opened sheet: ${sheetName}. Current headers: ${JSON.stringify(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0])}`);
+    logger.info(serviceName, functionName, `Successfully opened sheet: ${sheetName}. Current headers: ${JSON.stringify(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0])}`, { sessionId: sessionId });
 
     let finalData;
 
@@ -69,7 +107,7 @@ const ProductService = (function() {
           return schemaHeaders.map(header => product[header] || '');
         });
 
-        LoggerService.info('ProductService', '_populateStagingSheet', `Mapping complete for ${sheetName}. Schema headers: ${JSON.stringify(schemaHeaders)}. First data row: ${finalData.length > 0 ? JSON.stringify(finalData[0]) : 'N/A'}`);
+        logger.info(serviceName, functionName, `Mapping complete for ${sheetName}. Schema headers: ${JSON.stringify(schemaHeaders)}. First data row: ${finalData.length > 0 ? JSON.stringify(finalData[0]) : 'N/A'}`, { sessionId: sessionId });
         
         // Clear previous content and write new data
         if (sheet.getLastRow() > 1) {
@@ -79,7 +117,7 @@ const ProductService = (function() {
             sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
         }
         SpreadsheetApp.flush(); // Ensure data is written before any subsequent reads (e.g., validation)
-        LoggerService.info('ProductService', '_populateStagingSheet', `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`);
+        logger.info(serviceName, functionName, `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`, { sessionId: sessionId });
     }
   }
 
@@ -87,11 +125,13 @@ const ProductService = (function() {
 
 
 
-  function _runStagingValidation(suiteName) {
-    LoggerService.info('ProductService', '_runStagingValidation', `Starting validation for suite: ${suiteName}`);
-    const quarantineTriggered = !ValidationService.runValidationSuite(suiteName);
+  function _runStagingValidation(suiteName, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_runStagingValidation';
+    logger.info(serviceName, functionName, `Starting validation for suite: ${suiteName}`, { sessionId: sessionId });
+    const quarantineTriggered = !ValidationService.runValidationSuite(suiteName, sessionId); // Pass sessionId to ValidationService
     if (quarantineTriggered) {
-        LoggerService.warn('ProductService', '_runStagingValidation', `Validation suite '${suiteName}' triggered a quarantine.`);
+        logger.warn(serviceName, functionName, `Validation suite '${suiteName}' triggered a quarantine.`, { sessionId: sessionId });
     }
     return !quarantineTriggered;
   }
@@ -138,8 +178,10 @@ const ProductService = (function() {
     return 'COMPLETED';
   }
 
-  function _upsertWebXltData() {
-    LoggerService.info('ProductService', '_upsertWebXltData', 'Starting WebXltS to WebXltM full replacement process.');
+  function _upsertWebXltData(sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_upsertWebXltData';
+    logger.info(serviceName, functionName, 'Starting WebXltS to WebXltM full replacement process.', { sessionId: sessionId });
 
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
@@ -155,23 +197,23 @@ const ProductService = (function() {
 
     // Clear the master sheet entirely
     webXltMSheet.clear();
-    LoggerService.info('ProductService', '_upsertWebXltData', 'Cleared WebXltM sheet.');
+    logger.info(serviceName, functionName, 'Cleared WebXltM sheet.', { sessionId: sessionId });
 
     if (numRows > 0 && numCols > 0) {
         // Write the entire data block from staging (including headers) to master in one operation
         webXltMSheet.getRange(1, 1, numRows, numCols).setValues(webXltSData);
-        LoggerService.info('ProductService', '_upsertWebXltData', `Wrote ${numRows} rows and ${numCols} columns from WebXltS to WebXltM.`);
+        logger.info(serviceName, functionName, `Wrote ${numRows} rows and ${numCols} columns from WebXltS to WebXltM.`, { sessionId: sessionId });
     } else {
         // If staging is empty, we still need to restore the headers to the master sheet
         const webXltMHeaders = ConfigService.getConfig('schema.data.WebXltM').headers.split(',');
         if (webXltMHeaders.length > 0) {
             webXltMSheet.getRange(1, 1, 1, webXltMHeaders.length).setValues([webXltMHeaders]).setFontWeight('bold');
-            LoggerService.info('ProductService', '_upsertWebXltData', 'WebXltS was empty. Restored headers to WebXltM.');
+            logger.info(serviceName, functionName, 'WebXltS was empty. Restored headers to WebXltM.', { sessionId: sessionId });
         }
     }
 
     SpreadsheetApp.flush(); // Ensure all pending changes are applied
-    LoggerService.info('ProductService', '_upsertWebXltData', `Upsert complete. Final row count in WebXltM: ${webXltMSheet.getLastRow()}`);
+    logger.info(serviceName, functionName, `Upsert complete. Final row count in WebXltM: ${webXltMSheet.getLastRow()}`, { sessionId: sessionId });
   }
 
   function _runComaxImport(jobRowNumber) {
@@ -222,8 +264,10 @@ const ProductService = (function() {
     }
   }
 
-  function _upsertComaxData(comaxProducts) { // Modified to accept comaxProducts
-    LoggerService.info('ProductService', '_upsertComaxData', 'Starting CmxProdS to CmxProdM upsert process.');
+  function _upsertComaxData(comaxProducts, sessionId) { // Modified to accept comaxProducts and sessionId
+    const serviceName = 'ProductService';
+    const functionName = '_upsertComaxData';
+    logger.info(serviceName, functionName, 'Starting CmxProdS to CmxProdM upsert process.', { sessionId: sessionId });
 
     const allConfig = ConfigService.getAllConfig();
     const masterSchema = allConfig['schema.data.CmxProdM'];
@@ -273,10 +317,10 @@ const ProductService = (function() {
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
     }
-    LoggerService.info('ProductService', '_upsertComaxData', `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`);
+    logger.info(serviceName, functionName, `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
 
     // Maintain SysProductAudit after CmxProdM is updated
-    _maintainSysProductAudit(comaxProducts);
+    _maintainSysProductAudit(comaxProducts, sessionId);
   }
 
   /**
@@ -284,8 +328,10 @@ const ProductService = (function() {
    * This ensures that SysProductAudit is synchronized with the latest CmxId and SKU from Comax.
    * @param {Array<Object>} comaxProducts - An array of Comax product objects (from ComaxAdapter).
    */
-  function _maintainSysProductAudit(comaxProducts) {
-    LoggerService.info('ProductService', '_maintainSysProductAudit', 'Starting SysProductAudit maintenance.');
+  function _maintainSysProductAudit(comaxProducts, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_maintainSysProductAudit';
+    logger.info(serviceName, functionName, 'Starting SysProductAudit maintenance.', { sessionId: sessionId });
 
     const allConfig = ConfigService.getAllConfig();
     const sysProductAuditSchema = allConfig['schema.data.SysProductAudit'];
@@ -295,7 +341,9 @@ const ProductService = (function() {
     const sysProductAuditHeaders = sysProductAuditSchema.headers.split(',');
 
     // Load existing SysProductAudit data into a map keyed by pa_CmxId
-    const auditMap = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_CmxId').map;
+    const auditMap = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_CmxId');
+    // Ensure auditMap is not null/undefined if _getSheetDataAsMap can return null or if map property doesn't exist.
+    const actualAuditMap = auditMap ? auditMap.map : new Map(); 
 
     let updatedCount = 0;
     let newCount = 0;
@@ -307,14 +355,14 @@ const ProductService = (function() {
         const sku = String(comaxProduct.cps_SKU || '').trim();
 
         if (!cmxId) {
-            LoggerService.warn('ProductService', '_maintainSysProductAudit', `Skipping product with empty CmxId. SKU: ${sku}`);
+            logger.warn(serviceName, functionName, `Skipping product with empty CmxId. SKU: ${sku}`, { sessionId: sessionId, sku: sku });
             skippedCount++;
             return; // Cannot process without a CmxId
         }
 
-        if (auditMap.has(cmxId)) {
+        if (actualAuditMap.has(cmxId)) {
             // Product exists, update SKU if it has changed
-            const existingRow = auditMap.get(cmxId);
+            const existingRow = actualAuditMap.get(cmxId);
             if (existingRow.pa_SKU !== sku) {
                 existingRow.pa_SKU = sku;
                 updatedCount++;
@@ -327,13 +375,13 @@ const ProductService = (function() {
             });
             newAuditRow.pa_CmxId = cmxId;
             newAuditRow.pa_SKU = sku;
-            auditMap.set(cmxId, newAuditRow);
+            actualAuditMap.set(cmxId, newAuditRow);
             newCount++;
         }
     });
 
     // Convert the fully updated map's values to a 2D array for writing
-    const finalAuditData = Array.from(auditMap.values()).map(rowObject => {
+    const finalAuditData = Array.from(actualAuditMap.values()).map(rowObject => {
         return sysProductAuditHeaders.map(header => rowObject[header] || '');
     });
 
@@ -349,7 +397,7 @@ const ProductService = (function() {
         sysProductAuditSheet.getRange(2, 1, finalAuditData.length, finalAuditData[0].length).setValues(finalAuditData);
     }
     
-    LoggerService.info('ProductService', '_maintainSysProductAudit', `SysProductAudit synchronized. New: ${newCount}, Updated: ${updatedCount}, Skipped: ${skippedCount}. Total rows: ${finalAuditData.length}.`);
+    logger.info(serviceName, functionName, `SysProductAudit synchronized. New: ${newCount}, Updated: ${updatedCount}, Skipped: ${skippedCount}. Total rows: ${finalAuditData.length}.`, { sessionId: sessionId });
   }
 
   function _runWebProductsImport(jobRowNumber) {
@@ -393,8 +441,10 @@ const ProductService = (function() {
     }
   }
 
-  function _upsertWebProductsData() {
-    LoggerService.info('ProductService', '_upsertWebProductsData', 'Starting UPDATE-ONLY process for WebProdM.');
+  function _upsertWebProductsData(sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_upsertWebProductsData';
+    logger.info(serviceName, functionName, 'Starting UPDATE-ONLY process for WebProdM.', { sessionId: sessionId });
 
     const allConfig = ConfigService.getAllConfig();
     const stagingSchema = allConfig['schema.data.WebProdS_EN'];
@@ -436,7 +486,7 @@ const ProductService = (function() {
         // If key does not exist in masterMap, we do nothing, as per user requirements.
     });
 
-    LoggerService.info('ProductService', '_upsertWebProductsData', `${updatedCount} existing products were updated in the master map.`);
+    logger.info(serviceName, functionName, `${updatedCount} existing products were updated in the master map.`, { sessionId: sessionId });
 
     // Convert the map back to a 2D array to write to the sheet
     const finalData = Array.from(masterMap.values()).map(rowObject => {
@@ -450,42 +500,46 @@ const ProductService = (function() {
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
     }
-    LoggerService.info('ProductService', '_upsertWebProductsData', `Upsert to WebProdM complete. Total rows: ${finalData.length}.`);
+    logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
   }
 
-  function processJob(jobType, jobRowNumber) {
-    LoggerService.info('ProductService', 'processJob', `Starting job: ${jobType} (Row: ${jobRowNumber})`);
-    ValidationService.updateJobStatus(jobRowNumber, 'PROCESSING');
+  function processJob(executionContext) {
+    const serviceName = 'ProductService';
+    const functionName = 'processJob';
+    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting job: ${jobType} (Row: ${jobQueueSheetRowNumber})`, { sessionId: sessionId, jobType: jobType });
+
 
     try {
       let finalJobStatus = 'COMPLETED'; // Default to COMPLETED
       switch (jobType) {
         case 'import.drive.comax_products':
-          finalJobStatus = _runComaxImport(jobRowNumber);
+          finalJobStatus = _runComaxImport(executionContext);
           break;
         case 'import.drive.web_products_en':
-          finalJobStatus = _runWebProductsImport(jobRowNumber);
+          finalJobStatus = _runWebProductsImport(executionContext);
           break;
         case 'import.drive.web_translations_he':
-          finalJobStatus = _runWebXltValidationAndUpsert(jobRowNumber);
+          finalJobStatus = _runWebXltValidationAndUpsert(executionContext);
           break;
         case 'manual.validation.master':
-          ValidationService.runValidationSuite('master_master', jobType, rowNumber);
-          finalJobStatus = 'COMPLETED';
+          ValidationService.runValidationSuite('master_master', executionContext); // Pass executionContext
+          finalJobStatus = 'COMPLETED'; // Assume validation suite will handle its own logging/errors
           break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }
-      ValidationService.updateJobStatus(jobRowNumber, finalJobStatus);
+      // Update job status in the queue
+      _updateJobStatus(executionContext, finalJobStatus, errorMessage);
       
       if (finalJobStatus === 'COMPLETED') {
-        OrchestratorService.finalizeJobCompletion(jobType, jobRowNumber);
+        OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
       }
 
       LoggerService.info('ProductService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
     } catch (e) {
-      LoggerService.error('ProductService', 'processJob', `Job ${jobType} failed: ${e.message}`, e);
-      ValidationService.updateJobStatus(jobRowNumber, 'FAILED', e.message);
+      logger.error(serviceName, functionName, `Job ${jobType} failed: ${errorMessage}`, e, { sessionId: sessionId, jobType: jobType });
+      _updateJobStatus(executionContext, 'FAILED', errorMessage);
       throw e; // Re-throw the error after logging and updating status
     }
   }
@@ -901,11 +955,13 @@ const ProductService = (function() {
     }
   }
 
-  function generateDetailExport() {
-    LoggerService.info('ProductService', 'generateDetailExport', 'Starting export of accepted product details to Google Sheet.');
+  function generateDetailExport(sessionId) { // Added sessionId
+    const serviceName = 'ProductService';
+    const functionName = 'generateDetailExport';
+    logger.info(serviceName, functionName, 'Starting export of accepted product details to Google Sheet.', { sessionId: sessionId });
     try {
         // 1. Identify Accepted Tasks
-        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch');
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch', sessionId); // Pass sessionId
         const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
         
         if (acceptedTasks.length === 0) {
@@ -936,9 +992,9 @@ const ProductService = (function() {
         };
 
         // --- DEBUGGING LOGS for webDetMap ---
-        LoggerService.info('ProductService', 'generateDetailExport', `WebDetM map size: ${webDetMap.size}`);
-        LoggerService.info('ProductService', 'generateDetailExport', `WebDetM map first 5 keys: ${Array.from(webDetMap.keys()).slice(0, 5).join(', ')}`);
-        LoggerService.info('ProductService', 'generateDetailExport', `Is SKU '7290017324487' in WebDetM map? ${webDetMap.has('7290017324487')}`);
+        logger.info(serviceName, functionName, `WebDetM map size: ${webDetMap.size}`, { sessionId: sessionId });
+        logger.info(serviceName, functionName, `WebDetM map first 5 keys: ${Array.from(webDetMap.keys()).slice(0, 5).join(', ')}`, { sessionId: sessionId });
+        logger.info(serviceName, functionName, `Is SKU '7290017324487' in WebDetM map? ${webDetMap.has('7290017324487')}`, { sessionId: sessionId });
         // --- END DEBUGGING LOGS ---
 
 
@@ -958,10 +1014,10 @@ const ProductService = (function() {
         skus.forEach(rawSku => {
             const sku = String(rawSku); // Convert SKU to string for consistent lookup
             // --- DEBUGGING LOGS for each SKU lookup ---
-            LoggerService.info('ProductService', 'generateDetailExport', `Looking up SKU: '${sku}' (Type: ${typeof sku})`);
-            LoggerService.info('ProductService', 'generateDetailExport', `webDetMap.has('${sku}'): ${webDetMap.has(sku)}`);
+            logger.info(serviceName, functionName, `Looking up SKU: '${sku}' (Type: ${typeof sku})`, { sessionId: sessionId });
+            logger.info(serviceName, functionName, `webDetMap.has('${sku}'): ${webDetMap.has(sku)}`, { sessionId: sessionId });
             if (webDetMap.size > 0) {
-                LoggerService.info('ProductService', 'generateDetailExport', `First map key type: ${typeof Array.from(webDetMap.keys())[0]}`);
+                logger.info(serviceName, functionName, `First map key type: ${typeof Array.from(webDetMap.keys())[0]}`, { sessionId: sessionId });
             }
             // --- END DEBUGGING LOGS ---
 
@@ -969,7 +1025,7 @@ const ProductService = (function() {
             const cmxRow = cmxMap.get(sku);
             
             if (!webDetRow) {
-                LoggerService.warn('ProductService', 'generateDetailExport', `Skipping SKU ${sku}: Details not found in WebDetM.`);
+                logger.warn(serviceName, functionName, `Skipping SKU ${sku}: Details not found in WebDetM.`, { sessionId: sessionId, sku: sku });
                 skippedSkus.push(sku);
                 return; // Continue to the next SKU
             }
@@ -992,7 +1048,7 @@ const ProductService = (function() {
         });
 
         if (exportDataRows.length <= 1 && skippedSkus.length === skus.length) { // Only headers present AND all SKUs were skipped or no SKUs were processed
-            LoggerService.info('ProductService', 'generateDetailExport', 'No product data was successfully exported.');
+            logger.info(serviceName, functionName, 'No product data was successfully exported.', { sessionId: sessionId });
             return { success: false, message: 'No product data was successfully exported. All selected products were skipped.' };
         }
 
@@ -1023,14 +1079,14 @@ const ProductService = (function() {
         // Move the new spreadsheet to the designated folder
         const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
         
-        LoggerService.info('ProductService', 'generateDetailExport', `Attempting to move spreadsheet ID: ${newSpreadsheet.getId()} ('${newSpreadsheet.getName()}') to folder ID: ${exportFolderId}`);
+        logger.info(serviceName, functionName, `Attempting to move spreadsheet ID: ${newSpreadsheet.getId()} ('${newSpreadsheet.getName()}') to folder ID: ${exportFolderId}`, { sessionId: sessionId });
 
         try {
             const folder = DriveApp.getFolderById(exportFolderId);
             DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
-            LoggerService.info('ProductService', 'generateDetailExport', `Successfully moved spreadsheet to folder ID: ${exportFolderId}`);
+            logger.info(serviceName, functionName, `Successfully moved spreadsheet to folder ID: ${exportFolderId}`, { sessionId: sessionId, fileId: newSpreadsheet.getId() });
         } catch (moveError) {
-            LoggerService.error('ProductService', 'generateDetailExport', `Error moving spreadsheet to folder ID ${exportFolderId}: ${moveError.message}`, moveError);
+            logger.error(serviceName, functionName, `Error moving spreadsheet to folder ID ${exportFolderId}: ${moveError.message}`, moveError, { sessionId: sessionId, fileId: newSpreadsheet.getId(), folderId: exportFolderId });
             return { 
                 success: false, // Indicate failure to move
                 message: `Export created in root, but failed to move to folder: ${moveError.message}. Sheet URL: ${newSpreadsheet.getUrl()}`, 
@@ -1039,7 +1095,7 @@ const ProductService = (function() {
             };
         }
         
-        LoggerService.info('ProductService', 'generateDetailExport', `Created export spreadsheet: ${newSpreadsheet.getName()} (ID: ${newSpreadsheet.getId()}), URL: ${newSpreadsheet.getUrl()}`);
+        logger.info(serviceName, functionName, `Created export spreadsheet: ${newSpreadsheet.getName()} (ID: ${newSpreadsheet.getId()}), URL: ${newSpreadsheet.getUrl()}`, { sessionId: sessionId, fileId: newSpreadsheet.getId(), fileName: newSpreadsheet.getName(), fileUrl: newSpreadsheet.getUrl() });
 
         let returnSuccess = true;
         let returnMessage = `Exported ${exportDataRows.length - 1} products to Google Sheet: ${newSpreadsheet.getName()}`;
@@ -1061,143 +1117,254 @@ const ProductService = (function() {
         };
 
     } catch (e) {
-        LoggerService.error('ProductService', 'generateDetailExport', `Error generating product details export: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error generating product details export: ${e.message}`, e, { sessionId: sessionId });
         throw e;
     }
   }
 
-  function generateNewProductExport() {
-    LoggerService.info('ProductService', 'generateNewProductExport', 'Starting export of new products to Google Sheet.');
-    try {
-        // 1. Identify Accepted Tasks
-        const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted');
-        
-        if (tasks.length === 0) {
-             return { success: false, message: 'No new products ready for export.' };
-        }
-        
-        const skus = tasks.map(t => t.st_LinkedEntityId);
-        
-        // 2. Fetch Data
-        const allConfig = ConfigService.getAllConfig();
-        
-        // Helper to get map
-        const getMap = (sheetName, schemaKey, keyCol) => {
-            const headers = allConfig[schemaKey].headers.split(',');
-            return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
-        };
+    function generateNewProductExport(sessionId) { // Added sessionId
 
-        const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
-        const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
-        
-        // Load Lookups
-        const lookupMaps = {
-            texts: LookupService.getLookupMap('map.text_lookups'),
-            grapes: LookupService.getLookupMap('map.grape_lookups'),
-            kashrut: LookupService.getLookupMap('map.kashrut_lookups')
-        };
+      const serviceName = 'ProductService';
 
-        // 3. Prepare data
-        const exportDataRows = [];
-        const headers = [
-            'SKU', 
-            'Name (EN)', 
-            'Price',
-            'Stock',
-            'Short Description (EN)', 
-            'Long Description (EN)', 
-            'Short Description (HE)', 
-            'Long Description (HE)'
-        ];
-        exportDataRows.push(headers);
+      const functionName = 'generateNewProductExport';
 
-        skus.forEach(rawSku => {
-            const sku = String(rawSku);
-            const webDetRow = webDetMap.get(sku);
-            const cmxRow = cmxMap.get(sku);
-            
-            if (!webDetRow) {
-                LoggerService.warn('ProductService', 'generateNewProductExport', `Skipping SKU ${sku}: Details not found in WebDetM.`);
-                return;
-            }
+      logger.info(serviceName, functionName, 'Starting export of new products to Google Sheet.', { sessionId: sessionId });
 
-            const nameEn = webDetRow.wdm_NameEn || '';
-            const price = cmxRow ? cmxRow.cpm_Price : 0;
-            const stock = cmxRow ? cmxRow.cpm_Stock : 0;
-            
-            const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
-            const shortDescriptionHe = webDetRow.wdm_ShortDescrHe || '';
+      try {
 
-            const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
-            const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
-            
-            exportDataRows.push([
-                sku,
-                nameEn,
-                price,
-                stock,
-                shortDescriptionEn,
-                longDescriptionEnHtml,
-                shortDescriptionHe,
-                longDescriptionHeHtml
-            ]);
-        });
+          // 1. Identify Accepted Tasks
 
-        if (exportDataRows.length <= 1) {
-            return { success: false, message: 'No data found to export.' };
-        }
+          const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted', sessionId); // Pass sessionId
 
-        // 4. Create Sheet
-        const fileName = `NewProducts_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
-        const newSpreadsheet = SpreadsheetApp.create(fileName);
-        const sheet = newSpreadsheet.getSheets()[0];
-        
-        sheet.getRange(1, 1, exportDataRows.length, headers.length).setValues(exportDataRows);
-        
-        // Formatting
-        sheet.setFrozenRows(1);
-        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
-        sheet.autoResizeColumns(1, headers.length);
+          
 
-        // Move to Export Folder
-        const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-        try {
-            const folder = DriveApp.getFolderById(exportFolderId);
-            DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
-        } catch (moveError) {
-            LoggerService.warn('ProductService', 'generateNewProductExport', `Failed to move to export folder: ${moveError.message}`);
-        }
+          if (tasks.length === 0) {
 
-        return { 
-            success: true, 
-            message: `Exported ${exportDataRows.length - 1} new products to ${fileName}`, 
-            fileId: newSpreadsheet.getId(),
-            fileUrl: newSpreadsheet.getUrl()
-        };
+               return { success: false, message: 'No new products ready for export.' };
 
-    } catch (e) {
-        LoggerService.error('ProductService', 'generateNewProductExport', `Error: ${e.message}`, e);
-        throw e;
+          }
+
+          
+
+          const skus = tasks.map(t => t.st_LinkedEntityId);
+
+          
+
+          // 2. Fetch Data
+
+          const allConfig = ConfigService.getAllConfig();
+
+          
+
+          // Helper to get map
+
+          const getMap = (sheetName, schemaKey, keyCol) => {
+
+              const headers = allConfig[schemaKey].headers.split(',');
+
+              return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
+
+          };
+
+  
+
+          const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
+
+          const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
+
+          
+
+          // Load Lookups
+
+          const lookupMaps = {
+
+              texts: LookupService.getLookupMap('map.text_lookups'),
+
+              grapes: LookupService.getLookupMap('map.grape_lookups'),
+
+              kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+
+          };
+
+  
+
+          // 3. Prepare data
+
+          const exportDataRows = [];
+
+          const headers = [
+
+              'SKU', 
+
+              'Name (EN)', 
+
+              'Price',
+
+              'Stock',
+
+              'Short Description (EN)', 
+
+              'Long Description (EN)', 
+
+              'Long Description (HE)'
+
+          ];
+
+          exportDataRows.push(headers);
+
+  
+
+          skus.forEach(rawSku => {
+
+              const sku = String(rawSku);
+
+              const webDetRow = webDetMap.get(sku);
+
+              const cmxRow = cmxMap.get(sku);
+
+              
+
+              if (!webDetRow) {
+
+                  logger.warn(serviceName, functionName, `Skipping SKU ${sku}: Details not found in WebDetM.`, { sessionId: sessionId, sku: sku });
+
+                  return;
+
+              }
+
+  
+
+              const nameEn = webDetRow.wdm_NameEn || '';
+
+              const price = cmxRow ? cmxRow.cpm_Price : 0;
+
+              const stock = cmxRow ? cmxRow.cpm_Stock : 0;
+
+              
+
+              const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
+
+              const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
+
+              const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
+
+              
+
+              exportDataRows.push([
+
+                  sku,
+
+                  nameEn,
+
+                  price,
+
+                  stock,
+
+                  shortDescriptionEn,
+
+                  longDescriptionEnHtml,
+
+                  longDescriptionHeHtml
+
+              ]);
+
+          });
+
+  
+
+          if (exportDataRows.length <= 1) {
+
+              return { success: false, message: 'No data found to export.' };
+
+          }
+
+  
+
+          // 4. Create Sheet
+
+          const fileName = `NewProducts_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
+
+          const newSpreadsheet = SpreadsheetApp.create(fileName);
+
+          const sheet = newSpreadsheet.getSheets()[0];
+
+          
+
+          sheet.getRange(1, 1, exportDataRows.length, headers.length).setValues(exportDataRows);
+
+          
+
+          // Formatting
+
+          sheet.setFrozenRows(1);
+
+          sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+
+          sheet.autoResizeColumns(1, headers.length);
+
+  
+
+          // Move to Export Folder
+
+          const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+
+          try {
+
+              const folder = DriveApp.getFolderById(exportFolderId);
+
+              DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
+
+          } catch (moveError) {
+
+              logger.warn(serviceName, functionName, `Failed to move to export folder: ${moveError.message}`, { sessionId: sessionId, fileId: newSpreadsheet.getId(), folderId: exportFolderId });
+
+          }
+
+  
+
+          return { 
+
+              success: true, 
+
+              message: `Exported ${exportDataRows.length - 1} new products to ${fileName}`, 
+
+              fileId: newSpreadsheet.getId(),
+
+              fileUrl: newSpreadsheet.getUrl()
+
+          };
+
+  
+
+      } catch (e) {
+
+          logger.error(serviceName, functionName, `Error: ${e.message}`, e, { sessionId: sessionId });
+
+          throw e;
+
+      }
+
     }
-  }
 
-  function confirmWebUpdates() {
-    LoggerService.info('ProductService', 'confirmWebUpdates', 'Marking exported tasks as Completed.');
+  function confirmWebUpdates(sessionId) { // Added sessionId
+    const serviceName = 'ProductService';
+    const functionName = 'confirmWebUpdates';
+    logger.info(serviceName, functionName, 'Marking exported tasks as Completed.', { sessionId: sessionId });
     try {
-        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch');
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch', sessionId); // Pass sessionId
         const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
         
         let count = 0;
         acceptedTasks.forEach(t => {
-            TaskService.updateTaskStatus(t.st_TaskId, 'Completed');
+            TaskService.updateTaskStatus(t.st_TaskId); // TaskService needs sessionId too
             count++;
         });
         
-        LoggerService.info('ProductService', 'confirmWebUpdates', `Completed ${count} tasks.`);
+        logger.info(serviceName, functionName, `Completed ${count} tasks.`, { sessionId: sessionId, completedTasks: count });
         return { success: true, message: `Marked ${count} tasks as Completed.` };
 
     } catch (e) {
-        LoggerService.error('ProductService', 'confirmWebUpdates', `Error confirming updates: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error confirming updates: ${e.message}`, e, { sessionId: sessionId });
         throw e;
     }
   }
@@ -1208,30 +1375,31 @@ const ProductService = (function() {
    * @param {Object} formData The form data from the UI.
    * @returns {Object} { htmlEn, htmlHe }
    */
-  function getProductHtmlPreview(sku, formData, comaxData, lang, lookupMaps, isForExport) {
-      try {
-          // Use the comaxData passed as an argument directly
-          const cmxRow = comaxData;
-
-          // 2. Load Lookups
-          const lookupMaps = {
-              texts: LookupService.getLookupMap('map.text_lookups'),
-              grapes: LookupService.getLookupMap('map.grape_lookups'),
-              kashrut: LookupService.getLookupMap('map.kashrut_lookups')
-          };
-
-          // 3. Generate HTML
-          const htmlEn = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'EN', lookupMaps, false);
-          const htmlHe = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'HE', lookupMaps, false);
-
-          return { htmlEn: htmlEn, htmlHe: htmlHe };
-
-      } catch (e) {
-          LoggerService.error('ProductService', 'getProductHtmlPreview', `Error generating preview: ${e.message}`, e);
-          throw e;
-      }
-  }
-
+    function getProductHtmlPreview(sku, formData, comaxData, lang, lookupMaps, isForExport, sessionId) { // Added sessionId
+        const serviceName = 'ProductService';
+        const functionName = 'getProductHtmlPreview';
+        try {
+            // Use the comaxData passed as an argument directly
+            const cmxRow = comaxData;
+  
+            // 2. Load Lookups
+            const lookupMaps = {
+                texts: LookupService.getLookupMap('map.text_lookups'),
+                grapes: LookupService.getLookupMap('map.grape_lookups'),
+                kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+            };
+  
+            // 3. Generate HTML
+            const htmlEn = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'EN', lookupMaps, false);
+            const htmlHe = WooCommerceFormatter.formatDescriptionHTML(sku, formData, cmxRow, 'HE', lookupMaps, false);
+  
+            return { htmlEn: htmlEn, htmlHe: htmlHe };
+  
+        } catch (e) {
+            logger.error(serviceName, functionName, `Error generating preview: ${e.message}`, e, { sessionId: sessionId, sku: sku });
+            throw e;
+        }
+    }
   /**
    * Transitions a product suggestion task to a full onboarding task.
    * @param {string} suggestionTaskId The ID of the suggestion task.
@@ -1239,16 +1407,18 @@ const ProductService = (function() {
    * @param {string} suggestedNameEn The confirmed English name.
    * @param {string} suggestedNameHe The confirmed Hebrew name.
    */
-  function acceptProductSuggestion(suggestionTaskId, sku, suggestedNameEn, suggestedNameHe) {
-    LoggerService.info('ProductService', 'acceptProductSuggestion', `Accepting suggestion for SKU ${sku}`);
+  function acceptProductSuggestion(suggestionTaskId, sku, suggestedNameEn, suggestedNameHe, sessionId) { // Added sessionId
+    const serviceName = 'ProductService';
+    const functionName = 'acceptProductSuggestion';
+    logger.info(serviceName, functionName, `Accepting suggestion for SKU ${sku}`, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
     try {
       // 1. Complete the suggestion task
-      TaskService.completeTask(suggestionTaskId);
+      TaskService.completeTask(suggestionTaskId); // TaskService needs sessionId too
 
       // 2. Create the onboarding task
       const title = `Add New Product: ${suggestedNameEn} (${sku})`;
       const notes = `Approved suggestion. \nEN Name: ${suggestedNameEn}\nHE Name: ${suggestedNameHe}`;
-      TaskService.createTask('task.onboarding.add_product', sku, title, notes);
+      TaskService.createTask('task.onboarding.add_product', sku, title, notes); // TaskService needs sessionId too
       
       // 3. Pre-populate WebDetS with the approved names to save the manager time
       // We can reuse submitProductDetails logic or just write directly. 
@@ -1289,7 +1459,7 @@ const ProductService = (function() {
 
       return { success: true };
     } catch (e) {
-      LoggerService.error('ProductService', 'acceptProductSuggestion', `Error: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error: ${e.message}`, e, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
       throw e;
     }
   }
@@ -1302,8 +1472,10 @@ const ProductService = (function() {
    * @param {string} wooIdEn The WooCommerce Product ID (English).
    * @param {string} wooIdHe The WooCommerce Product ID (Hebrew).
    */
-  function linkAndFinalizeNewProduct(onboardingTaskId, sku, wooIdEn, wooIdHe) {
-    LoggerService.info('ProductService', 'linkAndFinalizeNewProduct', `Starting Hot Insert for SKU ${sku}. IDs: ${wooIdEn} / ${wooIdHe}`);
+  function linkAndFinalizeNewProduct(onboardingTaskId, sku, wooIdEn, wooIdHe, sessionId) { // Added sessionId
+    const serviceName = 'ProductService';
+    const functionName = 'linkAndFinalizeNewProduct';
+    logger.info(serviceName, functionName, `Starting Hot Insert for SKU ${sku}. IDs: ${wooIdEn} / ${wooIdHe}`, { sessionId: sessionId, sku: sku, wooIdEn: wooIdEn, wooIdHe: wooIdHe });
     
     if (!sku || !wooIdEn || !wooIdHe) {
       throw new Error('Missing required parameters: SKU, WooIdEn, or WooIdHe.');
@@ -1445,7 +1617,7 @@ const ProductService = (function() {
       SpreadsheetApp.flush(); // Commit all changes
       
       // 4. Complete Task
-      TaskService.updateTaskStatus(onboardingTaskId, 'Done');
+      TaskService.updateTaskStatus(onboardingTaskId, 'Done'); // TaskService needs sessionId too
       
       // 5. Force Reload Config/Cache if needed (though product maps are usually rebuilt per request)
       // skuToWebIdMap = null; // Invalidate local cache if used
@@ -1453,7 +1625,7 @@ const ProductService = (function() {
       return { success: true };
 
     } catch (e) {
-      LoggerService.error('ProductService', 'linkAndFinalizeNewProduct', `Error: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error: ${e.message}`, e, { sessionId: sessionId, sku: sku, wooIdEn: wooIdEn, wooIdHe: wooIdHe });
       throw e;
     }
   }

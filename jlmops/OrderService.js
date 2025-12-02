@@ -11,6 +11,42 @@ function OrderService(productService) {
   const _productService = productService;
 
   /**
+   * Helper to update job status in SysJobQueue.
+   * @param {object} executionContext The execution context.
+   * @param {string} status The new status ('COMPLETED', 'FAILED', 'QUARANTINED').
+   * @param {string} [errorMessage=''] Optional error message.
+   */
+  function _updateJobStatus(executionContext, status, errorMessage = '') {
+    const serviceName = 'OrderService';
+    const functionName = '_updateJobStatus';
+    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+
+      const statusColIdx = jobQueueHeaders.indexOf('status');
+      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+
+      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
+        logger.error(serviceName, functionName, `Missing required columns in SysJobQueue headers for updating job status.`, null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+        return;
+      }
+
+      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
+      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
+      if (errorMessage) {
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
+      }
+      logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
+    } catch (e) {
+      logger.error(serviceName, functionName, `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
+    }
+  }
+
+  /**
    * Retrieves all orders from the order sheet.
    * @returns {Array<Object>} An array of order objects.
    */
@@ -112,37 +148,44 @@ function OrderService(productService) {
    * @param {string} jobType The type of job to process.
    * @param {number} rowNumber The row number of the job in the queue.
    */
-  this.processJob = function(jobType, rowNumber, productService) {
+  this.processJob = function(executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'processJob';
-    logger.info(serviceName, functionName, `Processing job '${jobType}' on row ${rowNumber}`);
+    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Processing job '${jobType}' on row ${jobQueueSheetRowNumber}`, { sessionId: sessionId, jobType: jobType });
+
+    let finalJobStatus = 'FAILED'; // Default to FAILED
+    let errorMessage = '';
+
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-
-      const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-      const archiveFileIdColIdx = jobQueueHeaders.indexOf('archive_file_id');
-      const archiveFileId = jobQueueSheet.getRange(rowNumber, archiveFileIdColIdx + 1).getValue();
-
       if (jobType === 'import.drive.web_orders') {
-        const ordersWithLineItems = this.importWebOrdersToStaging(archiveFileId);
+        const ordersWithLineItems = this.importWebOrdersToStaging(executionContext); // Pass executionContext
         
-        if (!ValidationService.runValidationSuite('order_staging')) {
-            logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.');
-            ValidationService.updateJobStatus(rowNumber, 'QUARANTINED');
-            return;
+        if (!ValidationService.runValidationSuite('order_staging', executionContext)) { // Pass executionContext
+            logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.', { sessionId: sessionId, jobType: jobType });
+            finalJobStatus = 'QUARANTINED';
+            errorMessage = 'Order staging validation failed.';
+        } else {
+            this.processStagedOrders(ordersWithLineItems, executionContext); // Pass executionContext
+            finalJobStatus = 'COMPLETED';
         }
-
-        this.processStagedOrders(ordersWithLineItems, productService);
+      } else {
+        errorMessage = `Unknown job type: ${jobType}`;
+        throw new Error(errorMessage);
       }
-      ValidationService.updateJobStatus(rowNumber, 'COMPLETED');
-      OrchestratorService.finalizeJobCompletion(jobType, rowNumber);
+      
+      _updateJobStatus(executionContext, finalJobStatus, errorMessage);
+
+      if (finalJobStatus === 'COMPLETED') {
+        OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
+      }
+      logger.info(serviceName, functionName, `Job ${jobType} completed with status: ${finalJobStatus}.`, { sessionId: sessionId, jobType: jobType, finalStatus: finalJobStatus });
+
     } catch (e) {
-      logger.error(serviceName, functionName, `Failed to process job on row ${rowNumber}: ${e.message}`, e);
-      ValidationService.updateJobStatus(rowNumber, 'FAILED', e.message);
+      errorMessage = e.message;
+      logger.error(serviceName, functionName, `Failed to process job on row ${jobQueueSheetRowNumber}: ${errorMessage}`, e, { sessionId: sessionId, jobType: jobType });
+      _updateJobStatus(executionContext, 'FAILED', errorMessage);
+      throw e; // Re-throw to be caught by Orchestrator
     }
   };
 
@@ -150,25 +193,38 @@ function OrderService(productService) {
    * Imports the content of a given CSV file into the WebOrdS staging sheet.
    * @param {string} archiveFileId The ID of the file in the archive to import.
    */
-  this.importWebOrdersToStaging = function(archiveFileId) {
+  this.importWebOrdersToStaging = function(executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'importWebOrdersToStaging';
-    logger.info(serviceName, functionName, `Starting ${functionName} for file ID: ${archiveFileId}`);
+    const { jobQueueSheetRowNumber, sessionId, jobQueueHeaders } = executionContext;
+    
+    // Extract archiveFileId from the job queue using executionContext
+    const allConfig = ConfigService.getAllConfig();
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    
+    const archiveFileIdColIdx = jobQueueHeaders.indexOf('archive_file_id');
+    if (archiveFileIdColIdx === -1) {
+        logger.error(serviceName, functionName, `Missing 'archive_file_id' column in SysJobQueue.`, null, { sessionId: sessionId });
+        throw new Error(`Missing 'archive_file_id' column in SysJobQueue.`);
+    }
+    const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdColIdx + 1).getValue();
+
+    logger.info(serviceName, functionName, `Starting ${functionName} for file ID: ${archiveFileId}`, { sessionId: sessionId, archiveFileId: archiveFileId });
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const sheetNames = allConfig['system.sheet_names'];
-
       // 1. Parse raw CSV into structured objects
       const file = DriveApp.getFileById(archiveFileId);
       const csvContent = file.getBlob().getDataAsString(ConfigService.getConfig('import.drive.web_orders').file_encoding);
       const ordersWithLineItems = WebAdapter.processOrderCsv(csvContent, 'map.web.order_columns', 'web.order.line_item_schema');
 
       if (ordersWithLineItems.length === 0) {
-        logger.error(serviceName, functionName, 'Web orders file is empty or contains no valid orders. Nothing to import.');
+        logger.error(serviceName, functionName, 'Web orders file is empty or contains no valid orders. Nothing to import.', null, { sessionId: sessionId, archiveFileId: archiveFileId });
         return []; // Return empty array if no orders
       }
-      logger.info(serviceName, functionName, `Successfully parsed ${ordersWithLineItems.length} web orders with line items.`);
+      logger.info(serviceName, functionName, `Successfully parsed ${ordersWithLineItems.length} web orders with line items.`, { sessionId: sessionId, parsedOrders: ordersWithLineItems.length });
 
       // 2. Write the structured data to the WebOrdS staging sheet
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -191,24 +247,24 @@ function OrderService(productService) {
       // Write new data
       if (stagingData.length > 0) {
         stagingSheet.getRange(2, 1, stagingData.length, stagingData[0].length).setValues(stagingData);
-        logger.info(serviceName, functionName, `Successfully wrote ${stagingData.length} processed orders to the WebOrdS staging sheet.`);
+        logger.info(serviceName, functionName, `Successfully wrote ${stagingData.length} processed orders to the WebOrdS staging sheet.`, { sessionId: sessionId, writtenOrders: stagingData.length });
       }
 
       // 3. Return the in-memory object for immediate processing
       return ordersWithLineItems;
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId, archiveFileId: archiveFileId });
       throw e; // Re-throw to be caught by processJob
     }
   };
 
 
 
-  this.exportOrdersToComax = function() {
+  this.exportOrdersToComax = function(sessionId) { // Added sessionId
     const serviceName = 'OrderService';
     const functionName = 'exportOrdersToComax';
-    logger.info(serviceName, functionName, `Starting ${functionName}...`);
+    logger.info(serviceName, functionName, `Starting ${functionName}...`, { sessionId: sessionId });
 
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -238,13 +294,13 @@ function OrderService(productService) {
 
       const orderStatusMap = new Map();
       webOrdMData.forEach(row => {
-        const orderId = row[womOrderIdCol];
+        const orderId = String(row[womOrderIdCol]);
         const status = String(row[womStatusCol] || '').trim().toLowerCase();
         if (orderId) {
           orderStatusMap.set(String(orderId), status);
         }
       });
-      logger.info(serviceName, functionName, `Created status map for ${orderStatusMap.size} orders from WebOrdM.`);
+      logger.info(serviceName, functionName, `Created status map for ${orderStatusMap.size} orders from WebOrdM.`, { sessionId: sessionId });
 
       // 2. Find orders to export from SysOrdLog
       const logData = logSheet.getDataRange().getValues();
@@ -256,7 +312,7 @@ function OrderService(productService) {
         throw new Error("Could not find required columns 'sol_ComaxExportStatus' or 'sol_OrderId' in SysOrdLog sheet. Please check sheet headers.");
       }
       
-      logger.info(serviceName, functionName, `Found ${logData.length} total logs in SysOrdLog.`);
+      logger.info(serviceName, functionName, `Found ${logData.length} total logs in SysOrdLog.`, { sessionId: sessionId });
 
       const ordersToExport = logData.filter(row => {
         const orderId = String(row[orderIdCol]);
@@ -269,12 +325,12 @@ function OrderService(productService) {
         return isNotExported && isEligibleStatus;
       });
       
-      logger.info(serviceName, functionName, `Found ${ordersToExport.length} orders with eligible status ('processing' or 'completed') that have not been exported.`);
+      logger.info(serviceName, functionName, `Found ${ordersToExport.length} orders with eligible status ('processing' or 'completed') that have not been exported.`, { sessionId: sessionId });
 
       const orderIdsToExport = new Set(ordersToExport.map(row => row[orderIdCol]));
 
       if (orderIdsToExport.size === 0) {
-        logger.info(serviceName, functionName, "No orders to export to Comax.");
+        logger.info(serviceName, functionName, "No orders to export to Comax.", { sessionId: sessionId });
         return;
       }
 
@@ -304,21 +360,21 @@ function OrderService(productService) {
         csvRows.push([sku, comaxExportData[sku]]);
       }
       const csvContent = csvRows.map(row => row.join(',')).join('\n');
-      logger.info(serviceName, functionName, `Generated CSV content with ${csvRows.length - 1} items.`);
+      logger.info(serviceName, functionName, `Generated CSV content with ${csvRows.length - 1} items.`, { sessionId: sessionId });
 
       // 4. Save CSV to Drive
       const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      logger.info(serviceName, functionName, `Using export folder ID: ${exportFolderId}`);
+      logger.info(serviceName, functionName, `Using export folder ID: ${exportFolderId}`, { sessionId: sessionId });
 
       const exportFolder = DriveApp.getFolderById(exportFolderId);
       if (!exportFolder) {
         throw new Error(`Failed to find export folder with ID: ${exportFolderId}. Please check configuration and folder permissions.`);
       }
-      logger.info(serviceName, functionName, `Successfully retrieved export folder: ${exportFolder.getName()}`);
+      logger.info(serviceName, functionName, `Successfully retrieved export folder: ${exportFolder.getName()}`, { sessionId: sessionId });
 
       const fileName = `ComaxExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
       const file = exportFolder.createFile(fileName, csvContent, MimeType.CSV);
-      logger.info(serviceName, functionName, `Comax export file created: ${file.getName()} (ID: ${file.getId()})`);
+      logger.info(serviceName, functionName, `Comax export file created: ${file.getName()} (ID: ${file.getId()})`, { sessionId: sessionId, fileId: file.getId(), fileName: file.getName() });
 
       // 5. Update SysOrdLog
       const now = new Date();
@@ -330,31 +386,31 @@ function OrderService(productService) {
         logSheet.getRange(rowIndex, comaxExportTimestampCol + 1).setValue(now);
       }
       
-      logger.info(serviceName, functionName, `Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`);
+      logger.info(serviceName, functionName, `Updated ${ordersToExport.length} orders in SysOrdLog to 'Exported'.`, { sessionId: sessionId });
 
       // Close the "signal" task that indicated the export was ready
       try {
-        const signalTasks = WebAppTasks.getOpenTasksByTypeId('task.export.comax_orders_ready');
+        const signalTasks = WebAppTasks.getOpenTasksByTypeId('task.export.comax_orders_ready', sessionId); // Pass sessionId
         if (signalTasks && signalTasks.length > 0) {
-          logger.info(serviceName, functionName, `Found and closing ${signalTasks.length} 'comax_orders_ready' signal task(s).`);
+          logger.info(serviceName, functionName, `Found and closing ${signalTasks.length} 'comax_orders_ready' signal task(s).`, { sessionId: sessionId });
           signalTasks.forEach(task => {
-            TaskService.completeTask(task.st_TaskId);
+            TaskService.completeTask(task.st_TaskId); // TaskService needs sessionId too
           });
         }
       } catch (e) {
-        logger.error(serviceName, functionName, `Could not close signal task: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Could not close signal task: ${e.message}`, e, { sessionId: sessionId });
         // Do not re-throw, proceed to create the confirmation task anyway
       }
 
       // Create a task for admin confirmation
       const taskTitle = 'Confirm Comax Order Export';
       const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
-      TaskService.createTask('task.confirmation.comax_order_export', file.getId(), taskTitle, taskNotes);
+      TaskService.createTask('task.confirmation.comax_order_export', file.getId(), taskTitle, taskNotes); // TaskService needs sessionId too
 
-      logger.info(serviceName, functionName, `${functionName} completed successfully.`);
+      logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
 
     } catch (e) {
-      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+      logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
       throw e;
     }
   };
@@ -369,7 +425,7 @@ function OrderService(productService) {
 
          */
 
-        this.getOnHoldOrderCount = function() {
+        this.getOnHoldOrderCount = function(sessionId) { // Added sessionId
           const serviceName = 'OrderService';
           const functionName = 'getOnHoldOrderCount';
           try {
@@ -395,12 +451,12 @@ function OrderService(productService) {
             return onHoldOrders.length;
       
           } catch (e) {
-            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
             return -1;
           }
         };
 
-        this.getProcessingOrderCount = function() {
+        this.getProcessingOrderCount = function(sessionId) { // Added sessionId
           const serviceName = 'OrderService';
           const functionName = 'getProcessingOrderCount';
           try {
@@ -426,12 +482,12 @@ function OrderService(productService) {
             return processingOrders.length;
       
           } catch (e) {
-            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
             return -1;
           }
         };
 
-        this.getPackingSlipsReadyCount = function() {
+        this.getPackingSlipsReadyCount = function(sessionId) { // Added sessionId
           const serviceName = 'OrderService';
           const functionName = 'getPackingSlipsReadyCount';
           try {
@@ -457,15 +513,15 @@ function OrderService(productService) {
             return readyPackingSlips.length;
       
           } catch (e) {
-            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
             return -1;
           }
         };
 
-  this.prepareInitialPackingData = function(orderIds) {
+  this.prepareInitialPackingData = function(orderIds, sessionId) { // Added sessionId
     const serviceName = 'OrderService';
     const functionName = 'prepareInitialPackingData';
-    logger.info(serviceName, functionName, `Starting ${functionName} for ${orderIds.length} orders...`);
+    logger.info(serviceName, functionName, `Starting ${functionName} for ${orderIds.length} orders...`, { sessionId: sessionId, orderCount: orderIds.length });
 
     try {
         const allConfig = ConfigService.getAllConfig();
@@ -482,12 +538,12 @@ function OrderService(productService) {
         if (cacheSheet.getLastRow() > 1) {
             cacheSheet.getRange(2, 1, cacheSheet.getLastRow() - 1, cacheSheet.getMaxColumns()).clearContent();
         }
-        logger.info(serviceName, functionName, 'Cleared all existing data from SysPackingCache.');
+        logger.info(serviceName, functionName, 'Cleared all existing data from SysPackingCache.', { sessionId: sessionId });
         
         if (!orderIds || orderIds.length === 0) {
-            logger.info(serviceName, functionName, 'No eligible order IDs provided. SysPackingCache is now empty.');
+            logger.info(serviceName, functionName, 'No eligible order IDs provided. SysPackingCache is now empty.', { sessionId: sessionId });
             // We still call the enricher with an empty list so it can handle its side of things if needed.
-            PackingSlipService.preparePackingData(orderIds || []);
+            PackingSlipService.preparePackingData(orderIds || [], sessionId); // Pass sessionId
             return;
         }
 
@@ -510,8 +566,8 @@ function OrderService(productService) {
 
         // 3. Prepare the new data for the cache
         if (itemsForEligibleOrders.length === 0) {
-             logger.info(serviceName, functionName, 'No line items found for the eligible orders.');
-             PackingSlipService.preparePackingData(orderIds);
+             logger.info(serviceName, functionName, 'No line items found for the eligible orders.', { sessionId: sessionId });
+             PackingSlipService.preparePackingData(orderIds, sessionId); // Pass sessionId
              return;
         }
 
@@ -530,23 +586,24 @@ function OrderService(productService) {
         // 4. Write the new data to the now-empty sheet
         if (newCacheRows.length > 0) {
           cacheSheet.getRange(2, 1, newCacheRows.length, newCacheRows[0].length).setValues(newCacheRows);
-          logger.info(serviceName, functionName, `Wrote ${newCacheRows.length} new item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`);
+          logger.info(serviceName, functionName, `Wrote ${newCacheRows.length} new item rows for ${eligibleOrderIds.size} orders into SysPackingCache.`, { sessionId: sessionId, newItemRows: newCacheRows.length, eligibleOrders: eligibleOrderIds.size });
         }
 
         // 5. Now, call the PackingSlipService to enrich this data
-        PackingSlipService.preparePackingData(orderIds);
-        logger.info(serviceName, functionName, `Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`);
+        PackingSlipService.preparePackingData(orderIds, sessionId); // Pass sessionId
+        logger.info(serviceName, functionName, `Successfully triggered PackingSlipService to enrich data for ${orderIds.length} orders.`, { sessionId: sessionId, triggeredOrders: orderIds.length });
 
     } catch (e) {
-        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
         throw e;
     }
   };
 
-  this.processStagedOrders = function(ordersWithLineItems, productService) {
+  this.processStagedOrders = function(ordersWithLineItems, executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'processStagedOrders';
-    logger.info(serviceName, functionName, `Starting ${functionName}...`);
+    const { sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting ${functionName}...`, { sessionId: sessionId });
 
     try {
         const allConfig = ConfigService.getAllConfig();
@@ -558,7 +615,7 @@ function OrderService(productService) {
         const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
         if (!ordersWithLineItems || ordersWithLineItems.length === 0) {
-            logger.info(serviceName, functionName, 'No staged orders to process.');
+            logger.info(serviceName, functionName, 'No staged orders to process.', { sessionId: sessionId });
             return;
         }
 
@@ -696,9 +753,9 @@ function OrderService(productService) {
                 if (!item.SKU) {
                     continue; 
                 }
-                const webIdEn = productService.getProductWebIdBySku(item.SKU) || '';
+                const webIdEn = _productService.getProductWebIdBySku(item.SKU, sessionId) || ''; // Pass sessionId
                 if (!webIdEn) {
-                    logger.error(serviceName, functionName, `SKU-to-WebIdEn lookup failed for SKU [${item.SKU}] in Order ID [${order.orderId}].`);
+                    logger.error(serviceName, functionName, `SKU-to-WebIdEn lookup failed for SKU [${item.SKU}] in Order ID [${order.orderId}].`, null, { sessionId: sessionId, sku: item.SKU, orderId: order.orderId });
                 }
                 const newItemData = { woi_OrderItemId: ++itemMasterIdCounter, woi_OrderId: order.orderId, woi_WebIdEn: webIdEn, woi_SKU: item.SKU, woi_Name: item.Name, woi_Quantity: item.Quantity, woi_ItemTotal: item.Total };
                 allNewOrderItems.push(webOrdItemsMHeaders.map(header => newItemData[header] !== undefined ? newItemData[header] : ''));
@@ -745,23 +802,24 @@ function OrderService(productService) {
         }
         if (logData.length > 0) {
             logSheet.getRange(2, 1, logData.length, logHeaders.length).setValues(logData);
-            logger.info(serviceName, functionName, `Upserted ${logData.length} total logs in SysOrdLog.`);
+            logger.info(serviceName, functionName, `Upserted ${logData.length} total logs in SysOrdLog.`, { sessionId: sessionId });
         }
 
         // --- 5. Trigger Enrichment for Eligible Orders ---
         if (orderIdsToRefresh.size > 0) {
-            logger.info(serviceName, functionName, `Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`);
-            this.prepareInitialPackingData(Array.from(orderIdsToRefresh));
+            logger.info(serviceName, functionName, `Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`, { sessionId: sessionId });
+            this.prepareInitialPackingData(Array.from(orderIdsToRefresh), sessionId); // Pass sessionId
         }
 
         // --- 6. Recalculate On-Hold Inventory ---
-        logger.info(serviceName, functionName, 'Triggering on-hold inventory recalculation.');
-        InventoryManagementService.calculateOnHoldInventory();
+        logger.info(serviceName, functionName, 'Triggering on-hold inventory recalculation.', { sessionId: sessionId });
+        // InventoryManagementService.calculateOnHoldInventory needs to be updated to accept sessionId
+        InventoryManagementService.calculateOnHoldInventory(sessionId); // Pass sessionId
 
-        logger.info(serviceName, functionName, `${functionName} completed successfully.`);
+        logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
 
     } catch (e) {
-        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+        logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
         throw e;
         }
       };
@@ -820,7 +878,7 @@ function OrderService(productService) {
        * Retrieves the timestamp of the last successful Comax order export.
        * @returns {Date|null} The timestamp of the last export, or null if none found.
        */
-      this.getLastComaxOrderExportTimestamp = function() {
+      this.getLastComaxOrderExportTimestamp = function(sessionId) { // Added sessionId
         const serviceName = 'OrderService';
         const functionName = 'getLastComaxOrderExportTimestamp';
         try {
@@ -857,7 +915,7 @@ function OrderService(productService) {
           return maxTimestamp;
     
         } catch (e) {
-          logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e);
+          logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
           return null;
         }
       };
