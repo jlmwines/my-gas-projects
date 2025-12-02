@@ -208,9 +208,56 @@ const ConfigService = (function() {
     return { map: dataMap, headers: headers, values: values };
   }
 
+  /**
+   * Updates a configuration value in the SysConfig sheet.
+   * Note: This writes directly to the sheet. It's designed for runtime state persistence (like system.sync.state)
+   * rather than permanent configuration changes, which should be done in source JSON.
+   * 
+   * @param {string} settingName The setting group name (e.g., 'system.sync.state').
+   * @param {string} key The property key (e.g., 'json').
+   * @param {string} value The value to set.
+   */
+  function setConfig(settingName, key, value) {
+    const spreadsheet = findDataSpreadsheet();
+    const sheet = spreadsheet.getSheetByName('SysConfig');
+    if (!sheet) throw new Error("Sheet 'SysConfig' not found.");
+
+    const data = sheet.getDataRange().getValues();
+    let found = false;
+
+    // Search for existing row
+    for (let i = 1; i < data.length; i++) { // Skip header
+      // Column 0 is scf_SettingName, Column 3 is scf_P01 (Key)
+      if (data[i][0] === settingName && data[i][3] === key) {
+        // Update existing value in Column 4 (scf_P02 - Value)
+        // +1 for 1-based index
+        sheet.getRange(i + 1, 5).setValue(value); 
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      // Basic append logic. For complex block configs, this might need refinement to keep groups together,
+      // but for single-row state objects like system.sync.state, appending is acceptable or we can insert.
+      // We'll append for simplicity.
+      // Columns: Name, Desc, Status, P01 (Key), P02 (Value), ...
+      const newRow = new Array(sheet.getLastColumn()).fill('');
+      newRow[0] = settingName;
+      newRow[2] = 'stable'; // Default status
+      newRow[3] = key;
+      newRow[4] = value;
+      sheet.appendRow(newRow);
+    }
+    
+    // Invalidate cache to reflect changes
+    configCache = null;
+  }
+
   return {
     getConfig: getConfig,
     getAllConfig: getAllConfig,
+    setConfig: setConfig,
     forceReload: forceReload,
     _getSheetDataAsMap: _getSheetDataAsMap
   };

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        .sync-container {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .sync-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .sync-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        .sync-header button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .sync-header button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .sync-header button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .sync-status-card {
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .status-indicator {
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        .status-IDLE { background-color: #e0e0e0; color: #333; }
+        .status-PENDING { background-color: #ffe082; color: #333; }
+        .status-PROCESSING { background-color: #90caf9; color: #333; }
+        .status-WAITING_FOR_COMAX { background-color: #ffcc80; color: #333; }
+        .status-COMPLETE { background-color: #a5d6a7; color: #333; }
+        .status-FAILED, .status-QUARANTINED { background-color: #ef9a9a; color: white; }
+
+        .sync-stage-actions button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+            min-width: 150px;
+        }
+        .sync-stage-actions button.primary {
+            background-color: #28a745;
+        }
+        .sync-stage-actions button.primary:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        .sync-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .sync-message.info { background-color: #e0f2f7; color: #007bff; }
+        .sync-message.warn { background-color: #fff3e0; color: #ff9800; }
+        .sync-message.error { background-color: #ffebee; color: #f44336; }
+    </style>
+</head>
+<body>
+
+    <div class="sync-container">
+        <div class="sync-header">
+            <h3>Daily Sync Workflow</h3>
+            <button id="resetSyncBtn" onclick="syncApp.resetSync()" disabled>Reset Sync</button>
+        </div>
+
+        <div id="syncStatusCard" class="sync-status-card">
+            <p><strong>Current Session:</strong> <span id="sessionIdDisplay">N/A</span></p>
+            <p><strong>Current Stage:</strong> <span id="currentStageDisplay" class="status-IDLE">IDLE</span></p>
+            <p><strong>Last Updated:</strong> <span id="lastUpdatedDisplay">N/A</span></p>
+            <p id="staleMessage" class="sync-message warn" style="display:none;">This sync session is stale. Consider resetting.</p>
+            <div id="errorMessageContainer" style="display:none;">
+                <p class="sync-message error"><strong>Error:</strong> <span id="errorMessageDisplay"></span></p>
+            </div>
+        </div>
+
+        <div id="syncStageActions" class="sync-stage-actions">
+            <!-- Buttons will be dynamically rendered here based on currentStage -->
+        </div>
+
+        <div id="syncMessages" class="sync-message info" style="display:none;">
+            <span id="syncMessageText"></span>
+        </div>
+    </div>
+
+    <script>
+        // Placeholder for client-side JavaScript
+        const syncApp = {}; // Global object for sync related functions
+
+        document.addEventListener('DOMContentLoaded', () => {
+            syncApp.loadSyncState();
+        });
+
+        syncApp.updateUI = (state) => {
+            document.getElementById('sessionIdDisplay').textContent = state.sessionId || 'N/A';
+            document.getElementById('currentStageDisplay').textContent = state.currentStage;
+            document.getElementById('currentStageDisplay').className = `status-indicator status-${state.currentStage}`;
+            document.getElementById('lastUpdatedDisplay').textContent = state.lastUpdated ? new Date(state.lastUpdated).toLocaleString() : 'N/A';
+            
+            // Handle error message display
+            const errorContainer = document.getElementById('errorMessageContainer');
+            if (state.errorMessage) {
+                document.getElementById('errorMessageDisplay').textContent = state.errorMessage;
+                errorContainer.style.display = 'block';
+            } else {
+                errorContainer.style.display = 'none';
+            }
+
+            // Handle stale message
+            const staleMessage = document.getElementById('staleMessage');
+            if (state.sessionId && state.currentStage !== 'IDLE' && state.currentStage !== 'COMPLETE' && syncApp.isSessionStale(state.lastUpdated)) {
+                staleMessage.style.display = 'block';
+            } else {
+                staleMessage.style.display = 'none';
+            }
+            
+            // Enable reset button if not IDLE
+            document.getElementById('resetSyncBtn').disabled = (state.currentStage === 'IDLE');
+
+            syncApp.renderStageActions(state.currentStage, state.sessionId);
+        };
+
+        syncApp.isSessionStale = (lastUpdated) => {
+            if (!lastUpdated) return false;
+            const lastUpdateDate = new Date(lastUpdated);
+            const now = new Date();
+            const hoursDiff = (now.getTime() - lastUpdateDate.getTime()) / (1000 * 60 * 60);
+            // Configurable stale threshold (e.g., 12 hours from backend config)
+            return hoursDiff > 12; // Hardcoding 12 for UI logic, backend check is authoritative
+        }
+
+
+        syncApp.renderStageActions = (currentStage, sessionId) => {
+            const actionsDiv = document.getElementById('syncStageActions');
+            actionsDiv.innerHTML = ''; // Clear previous actions
+
+            const createButton = (text, onClick, isPrimary = false, disabled = false) => {
+                const btn = document.createElement('button');
+                btn.textContent = text;
+                btn.onclick = onClick;
+                btn.disabled = disabled;
+                if (isPrimary) btn.classList.add('primary');
+                actionsDiv.appendChild(btn);
+            };
+
+            switch (currentStage) {
+                case 'IDLE':
+                    createButton('Start Daily Sync', syncApp.startSync, true);
+                    break;
+                case 'WEB_IMPORT_PROCESSING':
+                    actionsDiv.innerHTML = '<p class="sync-message info">Processing Web Data...</p>';
+                    break;
+                case 'WAITING_FOR_COMAX':
+                    actionsDiv.innerHTML = `
+                        <p class="sync-message warn">
+                            Stage 1 Complete. Please export new orders to Comax ERP and upload the latest 
+                            <code>ComaxProducts.csv</code> file to the input folder.
+                        </p>
+                    `;
+                    createButton('Resume Sync (Import Comax Data)', syncApp.resumeSync, true);
+                    break;
+                case 'COMAX_IMPORT_PROCESSING':
+                    actionsDiv.innerHTML = '<p class="sync-message info">Processing Comax Data...</p>';
+                    break;
+                case 'VALIDATING':
+                    actionsDiv.innerHTML = '<p class="sync-message info">Running Master Validation...</p>';
+                    break;
+                case 'COMPLETE':
+                    actionsDiv.innerHTML = '<p class="sync-message info">Daily Sync Complete!</p>';
+                    // Optionally, a button to download the export or go to a summary view
+                    createButton('Download Web Inventory Export', () => alert('Not implemented yet!'), false, !sessionId);
+                    break;
+                case 'FAILED':
+                    actionsDiv.innerHTML = `
+                        <p class="sync-message error">
+                            Sync Failed! Please check the error message and logs. Reset sync to retry.
+                        </p>
+                    `;
+                    break;
+                default:
+                    actionsDiv.innerHTML = '<p class="sync-message info">Unknown Sync State. Please reset.</p>';
+            }
+        };
+
+        // Backend Calls (placeholders for google.script.run)
+        syncApp.loadSyncState = () => {
+            document.getElementById('syncMessageText').textContent = 'Loading sync state...';
+            document.getElementById('syncMessages').style.display = 'block';
+            google.script.run.withSuccessHandler((state) => {
+                syncApp.updateUI(state);
+                document.getElementById('syncMessages').style.display = 'none';
+            }).withFailureHandler((error) => {
+                document.getElementById('syncMessageText').textContent = 'Error loading sync state: ' + error.message;
+                document.getElementById('syncMessages').className = 'sync-message error';
+                console.error("Error loading sync state:", error);
+            }).getSyncStateFromBackend(); // This function needs to be exposed in WebAppSync.js
+        };
+
+        syncApp.startSync = () => {
+            if (!confirm('Are you sure you want to start a new Daily Sync? This will overwrite previous session progress.')) return;
+            document.getElementById('syncMessageText').textContent = 'Starting sync...';
+            document.getElementById('syncMessages').style.display = 'block';
+            syncApp.updateUI({ currentStage: 'WEB_IMPORT_PROCESSING' }); // Optimistic UI update
+            google.script.run.withSuccessHandler((state) => {
+                syncApp.updateUI(state);
+                document.getElementById('syncMessages').style.display = 'none';
+            }).withFailureHandler((error) => {
+                document.getElementById('syncMessageText').textContent = 'Error starting sync: ' + error.message;
+                document.getElementById('syncMessages').className = 'sync-message error';
+                syncApp.loadSyncState(); // Revert to actual state on error
+                console.error("Error starting sync:", error);
+            }).startDailySyncBackend(); // This function needs to be exposed in WebAppSync.js
+        };
+
+        syncApp.resumeSync = () => {
+            if (!confirm('Are you sure you have uploaded the latest ComaxProducts.csv?')) return;
+            document.getElementById('syncMessageText').textContent = 'Resuming sync...';
+            document.getElementById('syncMessages').style.display = 'block';
+            syncApp.updateUI({ currentStage: 'COMAX_IMPORT_PROCESSING' }); // Optimistic UI update
+            google.script.run.withSuccessHandler((state) => {
+                syncApp.updateUI(state);
+                document.getElementById('syncMessages').style.display = 'none';
+            }).withFailureHandler((error) => {
+                document.getElementById('syncMessageText').textContent = 'Error resuming sync: ' + error.message;
+                document.getElementById('syncMessages').className = 'sync-message error';
+                syncApp.loadSyncState(); // Revert to actual state on error
+                console.error("Error resuming sync:", error);
+            }).resumeDailySyncBackend(); // This function needs to be exposed in WebAppSync.js
+        };
+
+        syncApp.resetSync = () => {
+            if (!confirm('Are you sure you want to reset the Daily Sync state? This will clear all progress.')) return;
+            document.getElementById('syncMessageText').textContent = 'Resetting sync...';
+            document.getElementById('syncMessages').style.display = 'block';
+            google.script.run.withSuccessHandler((state) => {
+                syncApp.updateUI(state);
+                document.getElementById('syncMessages').style.display = 'none';
+            }).withFailureHandler((error) => {
+                document.getElementById('syncMessageText').textContent = 'Error resetting sync: ' + error.message;
+                document.getElementById('syncMessages').className = 'sync-message error';
+                console.error("Error resetting sync state:", error);
+            }).resetSyncStateBackend(); // This function needs to be exposed in WebAppSync.js
+        };
+
+        // Basic polling to update UI periodically while processing
+        setInterval(() => {
+            const currentStage = document.getElementById('currentStageDisplay').textContent;
+            if (currentStage === 'WEB_IMPORT_PROCESSING' || currentStage === 'COMAX_IMPORT_PROCESSING' || currentStage === 'VALIDATING') {
+                syncApp.loadSyncState();
+            }
+        }, 10000); // Poll every 10 seconds
+    </script>
+</body>
+</html>

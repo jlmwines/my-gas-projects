@@ -435,6 +435,21 @@
         ""
     ],
     [
+        "system.sync.state",
+        "Persisted state for the Daily Sync session.",
+        "stable",
+        "json",
+        "{}",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.import.processing_order",
         "Defines the processing order for file import configurations.",
         "stable",

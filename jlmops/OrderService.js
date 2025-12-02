@@ -161,8 +161,9 @@ function OrderService(productService) {
       if (jobType === 'import.drive.web_orders') {
         const ordersWithLineItems = this.importWebOrdersToStaging(executionContext); // Pass executionContext
         
-        if (!ValidationService.runValidationSuite('order_staging', executionContext)) { // Pass executionContext
-            logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.', { sessionId: sessionId, jobType: jobType });
+        const validationResult = ValidationLogic.runValidationSuite('order_staging', sessionId); // Pass sessionId
+        if (!validationResult.success || validationResult.results.some(r => r.status === 'FAILED')) {
+            logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.', { sessionId: sessionId, jobType: jobType, validationResults: validationResult.results });
             finalJobStatus = 'QUARANTINED';
             errorMessage = 'Order staging validation failed.';
         } else {

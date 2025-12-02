@@ -1,74 +1,78 @@
+/**
+ * @file OrchestratorService.js
+ * @description Main service to orchestrate all automated workflows.
+ */
 
-  function generateSessionId() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = ('0' + (now.getMonth() + 1)).slice(-2);
-      const day = ('0' + now.getDate()).slice(-2);
-      const hours = ('0' + now.getHours()).slice(-2);
-      const minutes = ('0' + now.getMinutes()).slice(-2);
-      const seconds = ('0' + now.getSeconds()).slice(-2);
-      const uuidPart = Utilities.getUuid().substring(0, 8).toUpperCase(); // Take a short part of UUID
-      return `SYNC-${year}${month}${day}-${hours}${minutes}${seconds}-${uuidPart}`;
+function generateSessionId() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = ('0' + (now.getMonth() + 1)).slice(-2);
+  const day = ('0' + now.getDate()).slice(-2);
+  const hours = ('0' + now.getHours()).slice(-2);
+  const minutes = ('0' + now.getMinutes()).slice(-2);
+  const seconds = ('0' + now.getSeconds()).slice(-2);
+  const uuidPart = Utilities.getUuid().substring(0, 8).toUpperCase(); // Take a short part of UUID
+  return `SYNC-${year}${month}${day}-${hours}${minutes}${seconds}-${uuidPart}`;
+}
+
+function resolveSessionIdForJob(jobType, jobConfig, allConfig) {
+  const serviceName = 'OrchestratorService';
+  const functionName = 'resolveSessionIdForJob';
+
+  const dependencyJobType = jobConfig.depends_on;
+
+  // If it's a root job (no dependency) or a job that needs a new session
+  if (!dependencyJobType) {
+      logger.info(serviceName, functionName, `Job type '${jobType}' is a root job or has no direct dependency. Generating new session ID.`, { data: { jobType: jobType } });
+      return generateSessionId();
   }
 
-  function resolveSessionIdForJob(jobType, jobConfig, allConfig) {
-      const serviceName = 'OrchestratorService';
-      const functionName = 'resolveSessionIdForJob';
+  // Check for the most recent completed job of the dependency type to inherit its session ID
+  const logSheetConfig = allConfig['system.spreadsheet.logs'];
+  const sheetNames = allConfig['system.sheet_names'];
+  const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+  const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+  
+  if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+      logger.warn(serviceName, functionName, `Job queue is empty. Cannot resolve session ID for dependent job '${jobType}'. Generating new session ID.`, { data: { jobType: jobType, dependency: dependencyJobType } });
+      return generateSessionId();
+  }
 
-      const dependencyJobType = jobConfig.depends_on;
+  const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
+  const jobQueueHeaders = jobQueueSchema.headers.split(',');
 
-      // If it's a root job (no dependency) or a job that needs a new session
-      if (!dependencyJobType) {
-          logger.info(serviceName, functionName, `Job type '${jobType}' is a root job or has no direct dependency. Generating new session ID.`, { data: { jobType: jobType } });
-          return generateSessionId();
-      }
+  const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
 
-      // Check for the most recent completed job of the dependency type to inherit its session ID
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-      
-      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
-          logger.warn(serviceName, functionName, `Job queue is empty. Cannot resolve session ID for dependent job '${jobType}'. Generating new session ID.`, { data: { jobType: jobType, dependency: dependencyJobType } });
-          return generateSessionId();
-      }
-
-      const jobQueueSchema = allConfig['schema.log.SysJobQueue'];
-      const jobQueueHeaders = jobQueueSchema.headers.split(',');
-
-      const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
-
-      const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const sessionIdColIdx = jobQueueHeaders.indexOf('session_id');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+  const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
+  const statusColIdx = jobQueueHeaders.indexOf('status');
+  const sessionIdColIdx = jobQueueHeaders.indexOf('session_id');
+  const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
 
 
-      let lastDependencySessionId = null;
-      let lastDependencyProcessedTime = 0;
+  let lastDependencySessionId = null;
+  let lastDependencyProcessedTime = 0;
 
-      // Iterate backwards to find the most recent completed dependency
-      for (let i = data.length - 1; i >= 0; i--) {
-          const row = data[i];
-          if (row[jobTypeColIdx] === dependencyJobType && row[statusColIdx] === 'COMPLETED') {
-              const processedTimestamp = new Date(row[processedTsColIdx]).getTime();
-              if (!isNaN(processedTimestamp) && processedTimestamp > lastDependencyProcessedTime) {
-                  lastDependencySessionId = row[sessionIdColIdx];
-                  lastDependencyProcessedTime = processedTimestamp;
-                  break; // Found the most recent, break the loop
-              }
+  // Iterate backwards to find the most recent completed dependency
+  for (let i = data.length - 1; i >= 0; i--) {
+      const row = data[i];
+      if (row[jobTypeColIdx] === dependencyJobType && row[statusColIdx] === 'COMPLETED') {
+          const processedTimestamp = new Date(row[processedTsColIdx]).getTime();
+          if (!isNaN(processedTimestamp) && processedTimestamp > lastDependencyProcessedTime) {
+              lastDependencySessionId = row[sessionIdColIdx];
+              lastDependencyProcessedTime = processedTimestamp;
+              break; // Found the most recent, break the loop
           }
       }
-
-      if (lastDependencySessionId) {
-          logger.info(serviceName, functionName, `Found session ID '${lastDependencySessionId}' from completed dependency job '${dependencyJobType}' for job '${jobType}'.`, { data: { jobType: jobType, dependency: dependencyJobType, resolvedSessionId: lastDependencySessionId } });
-          return lastDependencySessionId;
-      } else {
-          logger.warn(serviceName, functionName, `Could not find a completed session ID for dependency '${dependencyJobType}'. Generating new session ID for job '${jobType}'.`, { data: { jobType: jobType, dependency: dependencyJobType } });
-          return generateSessionId();
-      }
   }
+
+  if (lastDependencySessionId) {
+      logger.info(serviceName, functionName, `Found session ID '${lastDependencySessionId}' from completed dependency job '${dependencyJobType}' for job '${jobType}'.`, { data: { jobType: jobType, dependency: dependencyJobType, resolvedSessionId: lastDependencySessionId } });
+      return lastDependencySessionId;
+  } else {
+      logger.warn(serviceName, functionName, `Could not find a completed session ID for dependency '${dependencyJobType}'. Generating new session ID for job '${jobType}'.`, { data: { jobType: jobType, dependency: dependencyJobType } });
+      return generateSessionId();
+  }
+}
 
 /**
  * The main entry point for the hourly time-driven trigger.
@@ -102,13 +106,12 @@ const OrchestratorService = (function() {
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (taskType === 'hourly') {
-        processAllFileImports();
+        _processWebOrdersFiles(); // Dedicated to orders
         processPendingJobs();
-      } else if (taskType === 'daily') {
-        // For daily jobs, we might want to resolve a common session ID for the entire daily run
-        // For now, let's allow createPeriodicValidationJob to resolve its own session.
-        createPeriodicValidationJob(jobQueueSheet, allConfig);
+        _checkAndAdvanceSyncState();
       }
+      // REMOVED: else if (taskType === 'daily') { ... } 
+      // PERIODIC SYNC IS NOW UI-DRIVEN, NOT A SIMPLE CRON JOB
       
     } catch (e) {
       logger.error(serviceName, functionName, `An unexpected error occurred: ${e.message}`, e);
@@ -116,15 +119,14 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, `Orchestrator finished for task type: ${taskType}.`);
   }
 
-  // --- PHASE 1: FILE INTAKE ---
-
-  function processAllFileImports() {
+  // --- ORDER RIVER: Hourly Process Web Orders ---
+  function _processWebOrdersFiles() {
     const serviceName = 'OrchestratorService';
-    const functionName = 'processAllFileImports';
-    logger.info(serviceName, functionName, 'Checking for new files...');
+    const functionName = '_processWebOrdersFiles';
+    logger.info(serviceName, functionName, 'Checking for new Web Order files...');
     const allConfig = ConfigService.getAllConfig();
     if (!allConfig) {
-      logger.error(serviceName, functionName, 'Could not load configuration. Halting file import processing.');
+      logger.error(serviceName, functionName, 'Could not load configuration. Halting Web Order file processing.');
       return;
     }
 
@@ -144,74 +146,204 @@ const OrchestratorService = (function() {
 
     const registry = getRegistryMap(fileRegistrySheet);
     
-    const processingOrderConfig = allConfig['system.import.processing_order'];
-    if (!processingOrderConfig || !processingOrderConfig.order) {
-      logger.error(serviceName, functionName, 'system.import.processing_order is not defined in SysConfig. Halting.');
+    const configName = 'import.drive.web_orders'; // Only process web orders here
+    const config = allConfig[configName];
+    
+    if (!config || !config.source_folder_id || !config.file_pattern) {
+      const errorMessage = `Configuration for '${configName}' is incomplete or missing. Halting Web Order file processing.`;
+      logger.error(serviceName, functionName, errorMessage);
       return;
     }
-    const importConfigs = processingOrderConfig.order.split(',');
 
-    // --- Pass 1: Discovery ---
-    const batchManifest = [];
-    logger.info(serviceName, functionName, 'Pass 1: Discovering all new files...');
-    importConfigs.forEach(configName => {
-      const config = allConfig[configName];
-      if (!config || !config.source_folder_id || !config.file_pattern) {
-        const errorMessage = `Configuration for '${configName}' is incomplete or missing. Halting file import processing.`;
-        logger.error(serviceName, functionName, errorMessage);
-        throw new Error(errorMessage);
-      }
+    const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+    const files = sourceFolder.getFilesByName(config.file_pattern);
 
-      const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
-      const files = sourceFolder.getFilesByName(config.file_pattern);
-
-      while (files.hasNext()) {
+    let filesFound = 0;
+    while (files.hasNext()) {
         const file = files.next();
         if (isNewFile(file, registry)) {
-          logger.info(serviceName, functionName, `Discovered new file for batch: ${file.getName()} (for job ${configName})`);
-          batchManifest.push({ configName: configName, file: file, config: config });
+            logger.info(serviceName, functionName, `Discovered new Web Order file: ${file.getName()}`);
+            const archivedFile = archiveFile(file, archiveFolder);
+            // Web Orders have no dependencies, so always generate a new session ID for them
+            const sessionIdForNewJob = generateSessionId(); 
+            createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', file.getId(), file.getLastUpdated(), sessionIdForNewJob);
+            filesFound++;
         }
-      }
+    }
+    if (filesFound === 0) {
+      logger.info(serviceName, functionName, 'No new Web Order files found in this run.');
+    }
+    logger.info(serviceName, functionName, 'Web Order file discovery complete.');
+  }
+
+  // --- PERIODIC SYNC: UI-DRIVEN STAGE 1 ---
+  function queueWebFilesForSync(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueWebFilesForSync';
+    logger.info(serviceName, functionName, `Queuing Web files for Periodic Sync Session: ${sessionId}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    const importConfigs = [
+        'import.drive.web_products_en',
+        'import.drive.web_translations_he', // Translations are now independent
+        'import.drive.web_orders' // Web Orders also part of sync for stock accuracy
+    ];
+
+    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
+    const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
+
+    const registry = getRegistryMap(fileRegistrySheet);
+
+    const requiredFiles = {
+        'import.drive.web_products_en': false,
+        'import.drive.web_translations_he': false,
+        'import.drive.web_orders': false
+    };
+
+    importConfigs.forEach(configName => {
+        const config = allConfig[configName];
+        if (!config || !config.source_folder_id || !config.file_pattern) {
+            throw new Error(`Configuration for '${configName}' is incomplete or missing.`);
+        }
+
+        const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+        const files = sourceFolder.getFilesByName(config.file_pattern);
+        
+        // Find latest file for this configName
+        let latestFile = null;
+        let latestDate = new Date(0);
+
+        while (files.hasNext()) {
+            const file = files.next();
+            const lastUpdated = file.getLastUpdated();
+            if (lastUpdated > latestDate) {
+                latestFile = file;
+                latestDate = lastUpdated;
+            }
+        }
+
+        if (latestFile) {
+            // Check if this file has already been processed in the current session
+            const alreadyProcessedInSession = getPendingOrProcessingJob(configName, sessionId) ||
+                                              getLastJobSuccess(configName, sessionId);
+            
+            if (alreadyProcessedInSession) {
+                logger.info(serviceName, functionName, `File for ${configName} already processed or pending in session ${sessionId}. Skipping.`, { sessionId: sessionId, configName: configName });
+            } else {
+                const archivedFile = archiveFile(latestFile, archiveFolder);
+                createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
+                requiredFiles[configName] = true;
+            }
+        } else {
+            logger.warn(serviceName, functionName, `No new file found for ${configName} in input folder.`, { sessionId: sessionId, configName: configName });
+        }
     });
 
-    if (batchManifest.length === 0) {
-      logger.info(serviceName, functionName, 'No new files found in this run.');
-      return;
+    // Pre-flight check: Ensure all required files were found/queued
+    // We loosen this slightly: Translations are optional, but Products and Orders are mandatory for Sync.
+    if (!requiredFiles['import.drive.web_products_en']) throw new Error("Missing required file: WebProducts.csv");
+    if (!requiredFiles['import.drive.web_orders']) throw new Error("Missing required file: WebOrders.csv");
+    
+    logger.info(serviceName, functionName, `Web files queued for Session: ${sessionId}.`);
+  }
+
+  // --- PERIODIC SYNC: UI-DRIVEN STAGE 2 ---
+  function queueComaxFileForSync(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueComaxFileForSync';
+    logger.info(serviceName, functionName, `Queuing Comax file for Periodic Sync Session: ${sessionId}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    const configName = 'import.drive.comax_products';
+    const config = allConfig[configName];
+    
+    if (!config || !config.source_folder_id || !config.file_pattern) {
+        throw new Error(`Configuration for '${configName}' is incomplete or missing.`);
     }
 
-    // --- Pass 2: Queuing with Dependency Checks ---
-    logger.info(serviceName, functionName, `Pass 2: Queuing ${batchManifest.length} jobs with dependency checks...`);
-    const batchConfigNames = new Set(batchManifest.map(item => item.configName));
+    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
+    const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
+    const registry = getRegistryMap(fileRegistrySheet);
 
-    batchManifest.forEach(item => {
-      const { configName, file, config } = item;
+    const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+    const files = sourceFolder.getFilesByName(config.file_pattern);
+    
+    let latestFile = null;
+    let latestDate = new Date(0);
 
-      // Workflow Gate for Comax Products
-      if (configName === 'import.drive.comax_products') {
-        if (TaskService.hasOpenTasks('task.confirmation.comax_export')) {
-          logger.warn(serviceName, functionName, `A new Comax product file was found, but it will not be processed because an administrator has not yet confirmed the previous Comax order export. Please complete the open 'Confirm Comax Export' task.`);
-          return; // Skip queuing this job
+    while (files.hasNext()) {
+        const file = files.next();
+        const lastUpdated = file.getLastUpdated();
+        if (lastUpdated > latestDate) {
+            latestFile = file;
+            latestDate = lastUpdated;
         }
-      }
+    }
 
-      // Conditional Dependency Check
-      let initialStatus = 'PENDING';
-      const dependency = config.depends_on;
+    if (!latestFile) {
+        throw new Error(`Required file for ${configName} was not found. Please ensure it is in the input folder.`);
+    }
 
-      if (dependency && batchConfigNames.has(dependency)) {
-        initialStatus = 'BLOCKED';
-        logger.info(serviceName, functionName, `Job for ${configName} will be BLOCKED because its dependency '${dependency}' is also in this batch.`);
-      }
-
-      const archivedFile = archiveFile(file, archiveFolder);
-      // Resolve session ID for the new job
-      const sessionIdForNewJob = resolveSessionIdForJob(configName, config, allConfig);
-      // Pass original file metadata to the job queue instead of updating the registry here.
-      createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), initialStatus, file.getId(), file.getLastUpdated(), sessionIdForNewJob);
-    });
-
-    logger.info(serviceName, functionName, 'File import check complete.');
+    // Check if this file has already been processed in the current session
+    const alreadyProcessedInSession = getPendingOrProcessingJob(configName, sessionId) ||
+                                      getLastJobSuccess(configName, sessionId);
+    
+    if (alreadyProcessedInSession) {
+        logger.info(serviceName, functionName, `File for ${configName} already processed or pending in session ${sessionId}. Skipping.`, { sessionId: sessionId, configName: configName });
+    } else {
+        const archivedFile = archiveFile(latestFile, archiveFolder);
+        // Comax import depends on web_products_en for sequencing, but in the UI flow, we know Web is done.
+        // However, for safety, we can keep it PENDING and let Orchestrator pick it up.
+        // NOTE: We removed the dependency in jobs.json, so PENDING is correct. It will run immediately.
+        createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
+    }
+    
+    logger.info(serviceName, functionName, `Comax file queued for Session: ${sessionId}.`);
   }
+
+  // --- PERIODIC SYNC: UI-DRIVEN STAGE 3 ---
+  function finalizeSync(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'finalizeSync';
+    logger.info(serviceName, functionName, `Finalizing Periodic Sync Session: ${sessionId}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    const jobQueueSheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id)
+                                    .getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    
+    // 1. Queue Master Validation
+    const validationJobType = 'job.periodic.validation.master';
+    const validationJobConfig = allConfig[validationJobType];
+    const existingValidationJob = getPendingOrProcessingJob(validationJobType, sessionId);
+
+    if (!existingValidationJob) {
+        createJob(jobQueueSheet, validationJobType, validationJobConfig.processing_service, '', 'PENDING', '', '', sessionId);
+        logger.info(serviceName, functionName, `Queued Master Validation job for Session: ${sessionId}`, { sessionId: sessionId });
+    } else {
+        logger.info(serviceName, functionName, `Master Validation job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
+    }
+
+    // 2. Queue Web Inventory Export
+    const exportJobType = 'export.web.inventory';
+    const exportJobConfig = allConfig[exportJobType];
+    const existingExportJob = getPendingOrProcessingJob(exportJobType, sessionId);
+
+    if (!existingExportJob) {
+        // It should be PENDING. Dependencies are handled by the flow.
+        createJob(jobQueueSheet, exportJobType, exportJobConfig.processing_service, '', 'PENDING', '', '', sessionId);
+        logger.info(serviceName, functionName, `Queued Web Inventory Export job for Session: ${sessionId}`, { sessionId: sessionId });
+    } else {
+        logger.info(serviceName, functionName, `Web Inventory Export job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
+    }
+    
+    logger.info(serviceName, functionName, `Periodic Sync finalization steps queued for Session: ${sessionId}.`);
+  }
+
+  // --- HELPER FUNCTIONS ---
 
   function isNewFile(file, registry) {
     const fileId = file.getId();
@@ -807,6 +939,184 @@ const OrchestratorService = (function() {
     }
   }
 
+  function _checkAndAdvanceSyncState() {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_checkAndAdvanceSyncState';
+    
+    try {
+      const state = SyncStateService.getSyncState();
+      if (!state || !state.sessionId || state.currentStage === 'IDLE' || state.currentStage === 'COMPLETE' || state.currentStage === 'FAILED') {
+        return; // Nothing to do
+      }
+
+      if (state.currentStage === 'WEB_IMPORT_PROCESSING') {
+        const requiredJobs = [
+          'import.drive.web_products_en',
+          'import.drive.web_translations_he',
+          'import.drive.web_orders'
+        ];
+        
+        let allCompleted = true;
+        let anyFailedOrQuarantined = false;
+        let errorMessage = '';
+
+        for (const jobType of requiredJobs) {
+          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          logger.info(serviceName, functionName, `Job ${jobType} status in session ${state.sessionId}: ${jobStatus}`);
+
+          if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
+            allCompleted = false; // Not all jobs are done yet
+            break; 
+          }
+          if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+            anyFailedOrQuarantined = true;
+            errorMessage = `Required import job (${jobType}) failed or was quarantined. Current status: ${jobStatus}.`;
+            break;
+          }
+        }
+
+        if (anyFailedOrQuarantined) {
+          logger.error(serviceName, functionName, `Stage 1 (Web) jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+          state.currentStage = 'FAILED';
+          state.errorMessage = errorMessage;
+          state.lastUpdated = new Date().toISOString();
+          SyncStateService.setSyncState(state);
+        } else if (allCompleted) {
+          logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}. Advancing to WAITING_FOR_COMAX.`);
+          state.currentStage = 'WAITING_FOR_COMAX';
+          state.lastUpdated = new Date().toISOString();
+          SyncStateService.setSyncState(state);
+        }
+      }
+
+      if (state.currentStage === 'VALIDATING') {
+        const requiredJobs = [
+          'job.periodic.validation.master',
+          'export.web.inventory'
+        ];
+        
+        let allCompleted = true;
+        let anyFailedOrQuarantined = false;
+        let errorMessage = '';
+
+        for (const jobType of requiredJobs) {
+          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
+            allCompleted = false;
+            break;
+          }
+          if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+            anyFailedOrQuarantined = true;
+            errorMessage = `Finalization job (${jobType}) failed or was quarantined. Status: ${jobStatus}`;
+            // We might still want to mark as COMPLETE but with errors, or FAILED. 
+            // Let's mark as FAILED to alert the user.
+            break;
+          }
+        }
+
+        if (anyFailedOrQuarantined) {
+           logger.error(serviceName, functionName, `Finalization jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+           state.currentStage = 'FAILED';
+           state.errorMessage = errorMessage;
+           state.lastUpdated = new Date().toISOString();
+           SyncStateService.setSyncState(state);
+        } else if (allCompleted) {
+           logger.info(serviceName, functionName, `All Finalization jobs completed for session ${state.sessionId}. Sync is COMPLETE.`);
+           state.currentStage = 'COMPLETE';
+           state.lastUpdated = new Date().toISOString();
+           SyncStateService.setSyncState(state);
+        }
+      }
+      
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error checking sync state: ${e.message}`, e);
+    }
+  }
+
+  function getPendingOrProcessingJob(jobType, sessionId = null) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getPendingOrProcessingJob';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        return false;
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data.shift();
+      const jobTypeCol = headers.indexOf('job_type');
+      const statusCol = headers.indexOf('status');
+      const sessionIdCol = headers.indexOf('session_id'); // New index
+
+      for (const row of data) {
+        // Filter by session ID if provided
+        if ((sessionId === null || row[sessionIdCol] === sessionId) &&
+            row[jobTypeCol] === jobType) {
+          if (row[statusCol] === 'PENDING' || row[statusCol] === 'PROCESSING') {
+            return true;
+          }
+        }
+      }
+      return false;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error checking pending job for ${jobType}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
+      return false;
+    }
+  }
+
+  /**
+   * Retrieves the most recent status of a specific job type within a given session.
+   * @param {string} jobType The type of job to check.
+   * @param {string} sessionId The session ID to filter by.
+   * @returns {string} The status ('PENDING', 'PROCESSING', 'COMPLETED', 'QUARANTINED', 'FAILED', 'NOT_FOUND').
+   */
+  function getJobStatusInSession(jobType, sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getJobStatusInSession';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        return 'NOT_FOUND';
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data.shift();
+      const jobTypeCol = headers.indexOf('job_type');
+      const statusCol = headers.indexOf('status');
+      const sessionIdCol = headers.indexOf('session_id');
+      const processedTsCol = headers.indexOf('processed_timestamp');
+
+      let latestStatus = 'NOT_FOUND';
+      let latestTimestamp = new Date(0);
+
+      for (const row of data) {
+        if (row[jobTypeCol] === jobType && row[sessionIdCol] === sessionId) {
+          const processedTimestamp = new Date(row[processedTsCol]);
+          if (!isNaN(processedTimestamp.getTime()) && processedTimestamp >= latestTimestamp) {
+            latestStatus = row[statusCol];
+            latestTimestamp = processedTimestamp;
+          }
+        }
+      }
+      return latestStatus;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error getting job status for ${jobType} in session ${sessionId}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
+      return 'ERROR'; // Indicate an error occurred
+    }
+  }
+
   /**
    * Counts the number of specific file types in the designated invoice folder, ignoring shortcuts.
    * Replicates logic from legacy AdminWorkflow.js.
@@ -869,7 +1179,11 @@ const OrchestratorService = (function() {
     finalizeJobCompletion: finalizeJobCompletion,
     getLastJobSuccess: getLastJobSuccess,
     getPendingOrProcessingJob: getPendingOrProcessingJob,
-    getInvoiceFileCount: getInvoiceFileCount
+    getInvoiceFileCount: getInvoiceFileCount,
+    queueWebFilesForSync: queueWebFilesForSync,
+    queueComaxFileForSync: queueComaxFileForSync,
+    finalizeSync: finalizeSync,
+    generateSessionId: generateSessionId
   };
 
 })();

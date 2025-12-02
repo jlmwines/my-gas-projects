@@ -289,17 +289,21 @@ The existing dashboard widgets were enhanced to:
     2.  **Name Rule:** Update `C3_Comax_NameMismatch` to use `task.validation.name_mismatch`.
     3.  **Status Rules:** Update `C7_Comax_IsWebMismatch` and `C8_Comax_IsActiveMismatch` to use `task.validation.status_mismatch`.
 
-### 8.5. UI Consolidation: Daily Sync Controller
-*   **Goal:** Segregate business process controls from system health monitoring by creating a dedicated "Daily Sync Controller" widget.
-*   **Tasks:
-    1.  **Create `AdminDailySyncWidget.html`:**
-        *   **Visual Timeline:** Display the linear progression of the daily sync session (Invoices -> Import -> Validation -> Export).
-        *   **Unified Controls:** Centralize triggers for exports (Comax, Web) and validation checks here, removing them from distributed widgets.
-        *   **Session Status:** Display the active `SessionID` and current state.
-    2.  **Refactor `SystemHealthWidget.html`:**
-        *   Remove the "Daily Sync Checklist".
-        *   Focus purely on IT health: Failed Jobs, Retry Counts, Error Logs, and Housekeeping status.
-    3.  **Controller Logic:** Update `WebAppSystem.js` (or create `WebAppSync.js`) to feed the new widget with Session-aware data from the Orchestrator.
+### 8.5. UI Consolidation: Daily Sync Controller (The "Persistent State Machine")
+*   **Goal:** Implement a robust, state-aware "Wizard" for the Admin to manage the multi-step Periodic Sync process.
+*   **Architecture:**
+    *   **State Persistence:** Store the current sync state in `SysConfig` (e.g., `system.sync.state`) to survive browser closes/interruptions. State includes: `sessionId`, `currentStage`, `lastUpdated`, and job statuses.
+    *   **Stages:**
+        1.  **Stage 1: Initialization (Web Data):** Admin uploads Web files. System imports them and generates `SessionID`.
+        2.  **Stage 2: Comax Reconciliation (The Gap):** System waits. Admin performs external Comax update (using order export from Stage 1) and uploads `ComaxProducts.csv`.
+        3.  **Stage 3: Validation & Finalization:** System imports Comax data, runs Master-Master validation, and generates the Inventory Export delta.
+*   **Resilience:**
+    *   **Resume:** UI reloads state from backend on startup.
+    *   **Staleness:** If state is > 12 hours old, UI prompts to "Start Over" (clearing state).
+*   **Tasks:**
+    1.  **Backend:** Create `SyncStateService.js` to manage `get/set/reset` of the sync state blob.
+    2.  **Frontend:** Create `AdminDailySyncWidget.html` that renders different "Cards" based on the `currentStage`.
+    3.  **Integration:** Connect UI buttons to `OrchestratorService` triggers that advance the state.
 
 ## Phase 9: Architectural Refactoring (PLANNED)
 *   **Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.

@@ -136,8 +136,12 @@ const ProductService = (function() {
     return !quarantineTriggered;
   }
 
-  function _runWebXltValidationAndUpsert(jobRowNumber) {
-    LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', `Starting WebXlt specific validation and upsert process for job row: ${jobRowNumber}.`);
+  function _runWebXltValidationAndUpsert(executionContext) {
+    const serviceName = 'ProductService';
+    const functionName = '_runWebXltValidationAndUpsert';
+    const { jobQueueSheetRowNumber, sessionId } = executionContext;
+    
+    LoggerService.info(serviceName, functionName, `Starting WebXlt specific validation and upsert process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
 
     // --- 1. Populate Staging Sheet ---
     try {
@@ -147,10 +151,10 @@ const ProductService = (function() {
         const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobRowNumber, archiveFileIdCol).getValue();
+        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -158,23 +162,26 @@ const ProductService = (function() {
 
         const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.web.translation_columns');
 
-        _populateStagingSheet(translationObjects, sheetNames.WebXltS);
-        LoggerService.info('ProductService', '_runWebXltValidationAndUpsert', 'Successfully populated WebXltS staging sheet.');
+        _populateStagingSheet(translationObjects, sheetNames.WebXltS, sessionId);
+        LoggerService.info(serviceName, functionName, 'Successfully populated WebXltS staging sheet.', { sessionId: sessionId });
 
     } catch (e) {
-        LoggerService.error('ProductService', '_runWebXltValidationAndUpsert', `Failed to populate staging sheet: ${e.message}`, e);
-        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Staging population failed: ${e.message}`);
+        LoggerService.error(serviceName, functionName, `Failed to populate staging sheet: ${e.message}`, e, { sessionId: sessionId });
+        _updateJobStatus(executionContext, 'FAILED', `Staging population failed: ${e.message}`);
         return 'FAILED';
     }
 
     // --- 2. Run Staging Validation ---
-    if (!ValidationService.runValidationSuite('web_xlt_staging')) {
-        LoggerService.warn('ProductService', '_runWebXltValidationAndUpsert', 'WebXlt staging validation failed. Job will be QUARANTINED.');
+    const validationResult = ValidationLogic.runValidationSuite('web_xlt_staging', sessionId);
+    const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
+
+    if (quarantineTriggered) {
+        logger.warn(serviceName, functionName, 'WebXlt staging validation triggered a quarantine.', { sessionId: sessionId });
         return 'QUARANTINED';
     }
 
     // --- 3. Upsert (existing logic) ---
-    _upsertWebXltData();
+    _upsertWebXltData(sessionId);
     return 'COMPLETED';
   }
 
@@ -216,8 +223,11 @@ const ProductService = (function() {
     logger.info(serviceName, functionName, `Upsert complete. Final row count in WebXltM: ${webXltMSheet.getLastRow()}`, { sessionId: sessionId });
   }
 
-  function _runComaxImport(jobRowNumber) {
-    LoggerService.info('ProductService', '_runComaxImport', `Starting Comax import process for job row: ${jobRowNumber}.`);
+  function _runComaxImport(executionContext) {
+    const serviceName = 'ProductService';
+    const functionName = '_runComaxImport';
+    const { jobQueueSheetRowNumber, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting Comax import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
     try {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
@@ -225,10 +235,10 @@ const ProductService = (function() {
         const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobRowNumber, archiveFileIdCol).getValue();
+        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -236,21 +246,24 @@ const ProductService = (function() {
 
         const comaxData = ComaxAdapter.processProductCsv(fileBlob);
 
-        _populateStagingSheet(comaxData, sheetNames.CmxProdS);
-        LoggerService.info('ProductService', '_runComaxImport', 'Successfully populated CmxProdS staging sheet.');
+        _populateStagingSheet(comaxData, sheetNames.CmxProdS, sessionId);
+        logger.info(serviceName, functionName, 'Successfully populated CmxProdS staging sheet.', { sessionId: sessionId });
         
-        if (!ValidationService.runValidationSuite('comax_staging')) {
-            LoggerService.warn('ProductService', '_runComaxImport', 'Comax staging validation failed. Job will be QUARANTINED.');
+        const validationResult = ValidationLogic.runValidationSuite('comax_staging', sessionId);
+        const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
+
+        if (quarantineTriggered) {
+            logger.warn(serviceName, functionName, 'Comax staging validation triggered a quarantine.', { sessionId: sessionId });
             return 'QUARANTINED';
         }
 
-        _upsertComaxData(comaxData); // Pass comaxData here
+        _upsertComaxData(comaxData, sessionId); // Pass comaxData here
 
         try {
-            LoggerService.info('ProductService', '_runComaxImport', 'Comax import successful. Triggering automatic WooCommerce update export.');
-            // generateWooCommerceUpdateExport();
+            logger.info(serviceName, functionName, 'Comax import successful. Triggering automatic WooCommerce update export.', { sessionId: sessionId });
+            // generateWooCommerceUpdateExport(); // This function will need sessionId if it logs
         } catch (e) {
-            LoggerService.error('ProductService', '_runComaxImport', `The subsequent WooCommerce update export failed: ${e.message}`, e);
+            logger.error(serviceName, functionName, `The subsequent WooCommerce update export failed: ${e.message}`, e, { sessionId: sessionId });
             // We do not re-throw the error or change the job status.
             // The primary Comax import was successful. The export failure is a separate issue.
         }
@@ -258,8 +271,8 @@ const ProductService = (function() {
         return 'COMPLETED';
 
     } catch (e) {
-        LoggerService.error('ProductService', '_runComaxImport', `Failed to import Comax data: ${e.message}`, e);
-        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Comax import failed: ${e.message}`);
+        logger.error(serviceName, functionName, `Failed to import Comax data: ${e.message}`, e, { sessionId: sessionId });
+        _updateJobStatus(executionContext, 'FAILED', `Comax import failed: ${e.message}`); // Using new helper
         return 'FAILED';
     }
   }
@@ -400,8 +413,11 @@ const ProductService = (function() {
     logger.info(serviceName, functionName, `SysProductAudit synchronized. New: ${newCount}, Updated: ${updatedCount}, Skipped: ${skippedCount}. Total rows: ${finalAuditData.length}.`, { sessionId: sessionId });
   }
 
-  function _runWebProductsImport(jobRowNumber) {
-    LoggerService.info('ProductService', '_runWebProductsImport', `Starting Web Products (EN) import process for job row: ${jobRowNumber}.`);
+  function _runWebProductsImport(executionContext) {
+    const serviceName = 'ProductService';
+    const functionName = '_runWebProductsImport';
+    const { jobQueueSheetRowNumber, sessionId } = executionContext;
+    logger.info(serviceName, functionName, `Starting Web Products (EN) import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
     try {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
@@ -409,10 +425,10 @@ const ProductService = (function() {
         const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
-        const archiveFileId = jobQueueSheet.getRange(jobRowNumber, archiveFileIdCol).getValue();
+        const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
         if (!archiveFileId) {
-            throw new Error(`Could not find archive_file_id for job row: ${jobRowNumber}`);
+            throw new Error(`Could not find archive_file_id for job row: ${jobQueueSheetRowNumber}`);
         }
 
         const file = DriveApp.getFileById(archiveFileId);
@@ -421,22 +437,25 @@ const ProductService = (function() {
 
         const productObjects = WebAdapter.processProductCsv(csvContent, 'map.web.product_columns');
 
-        _populateStagingSheet(productObjects, sheetNames.WebProdS_EN);
-        LoggerService.info('ProductService', '_runWebProductsImport', 'Successfully populated WebProdS_EN staging sheet.');
+        _populateStagingSheet(productObjects, sheetNames.WebProdS_EN, sessionId);
+        logger.info(serviceName, functionName, 'Successfully populated WebProdS_EN staging sheet.', { sessionId: sessionId });
         
     // --- 2. Run Staging Validation ---
-    if (!ValidationService.runValidationSuite('web_staging')) {
-        LoggerService.warn('ProductService', '_runWebProductsImport', 'Web Products staging validation failed. Job will be QUARANTINED.');
+    const validationResult = ValidationLogic.runValidationSuite('web_staging', sessionId);
+    const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
+
+    if (quarantineTriggered) {
+        logger.warn(serviceName, functionName, 'Web Products staging validation triggered a quarantine.', { sessionId: sessionId });
         return 'QUARANTINED';
     }
 
-        _upsertWebProductsData();
+        _upsertWebProductsData(sessionId);
 
         return 'COMPLETED';
 
     } catch (e) {
-        LoggerService.error('ProductService', '_runWebProductsImport', `Failed to import Web Products (EN) data: ${e.message}`, e);
-        ValidationService.updateJobStatus(jobRowNumber, 'FAILED', `Web Products (EN) import failed: ${e.message}`);
+        logger.error(serviceName, functionName, `Failed to import Web Products (EN) data: ${e.message}`, e, { sessionId: sessionId });
+        _updateJobStatus(executionContext, 'FAILED', `Web Products (EN) import failed: ${e.message}`); // Using new helper
         return 'FAILED';
     }
   }
@@ -526,11 +545,15 @@ const ProductService = (function() {
           ValidationService.runValidationSuite('master_master', executionContext); // Pass executionContext
           finalJobStatus = 'COMPLETED'; // Assume validation suite will handle its own logging/errors
           break;
+        case 'export.web.inventory':
+          exportWebInventory(); // Call the export function
+          finalJobStatus = 'COMPLETED';
+          break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }
       // Update job status in the queue
-      _updateJobStatus(executionContext, finalJobStatus, errorMessage);
+      _updateJobStatus(executionContext, finalJobStatus);
       
       if (finalJobStatus === 'COMPLETED') {
         OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
@@ -538,8 +561,8 @@ const ProductService = (function() {
 
       LoggerService.info('ProductService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
     } catch (e) {
-      logger.error(serviceName, functionName, `Job ${jobType} failed: ${errorMessage}`, e, { sessionId: sessionId, jobType: jobType });
-      _updateJobStatus(executionContext, 'FAILED', errorMessage);
+      logger.error(serviceName, functionName, `Job ${jobType} failed: ${e.message}`, e, { sessionId: sessionId, jobType: jobType });
+      _updateJobStatus(executionContext, 'FAILED', e.message);
       throw e; // Re-throw the error after logging and updating status
     }
   }
@@ -960,9 +983,8 @@ const ProductService = (function() {
     const functionName = 'generateDetailExport';
     logger.info(serviceName, functionName, 'Starting export of accepted product details to Google Sheet.', { sessionId: sessionId });
     try {
-        // 1. Identify Accepted Tasks
-        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch', sessionId); // Pass sessionId
-        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.vintage_mismatch', sessionId); // Use specific task type
+        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted');
         
         if (acceptedTasks.length === 0) {
              return { success: false, message: 'No accepted tasks found for export.' }; // Changed to false for no tasks
@@ -1351,8 +1373,8 @@ const ProductService = (function() {
     const functionName = 'confirmWebUpdates';
     logger.info(serviceName, functionName, 'Marking exported tasks as Completed.', { sessionId: sessionId });
     try {
-        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.field_mismatch', sessionId); // Pass sessionId
-        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted' && t.st_Title.toLowerCase().includes('vintage mismatch'));
+        const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.vintage_mismatch', sessionId); // Use specific task type
+        const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted');
         
         let count = 0;
         acceptedTasks.forEach(t => {

@@ -5,29 +5,7 @@
 
 const ValidationOrchestratorService = (function() {
 
-  function processJob(executionContext) {
-    const serviceName = 'ValidationOrchestratorService';
-    const functionName = 'processJob';
-    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
-
-    logger.info(serviceName, functionName, `Starting validation job: ${jobType}`, { sessionId: sessionId });
-
-    // 1. Determine Suite Name based on Job Type
-    let suiteName = '';
-    if (jobType === 'manual.validation.master' || jobType === 'periodic.validation.master') {
-        suiteName = 'master_master';
-    } else {
-        throw new Error(`Unknown validation job type: ${jobType}`);
-    }
-
-    // 2. Run Validation Logic (Pure Analysis)
-    const analysisResult = ValidationLogic.runValidationSuite(suiteName, sessionId);
-
-    if (!analysisResult.success) {
-        throw new Error('Validation suite execution failed.');
-    }
-
-    // 3. Process Results & Create Tasks
+  function processValidationResults(analysisResult, sessionId) {
     let quarantineTriggered = false;
     let failureCount = 0;
 
@@ -53,6 +31,35 @@ const ValidationOrchestratorService = (function() {
             }
         }
     });
+
+    return { quarantineTriggered, failureCount };
+  }
+
+  function processJob(executionContext) {
+    const serviceName = 'ValidationOrchestratorService';
+    const functionName = 'processJob';
+    const { jobType, jobQueueSheetRowNumber, sessionId } = executionContext;
+
+    logger.info(serviceName, functionName, `Starting validation job: ${jobType}`, { sessionId: sessionId });
+
+    // 1. Determine Suite Name based on Job Type
+    let suiteName = '';
+    if (jobType === 'manual.validation.master' || jobType === 'periodic.validation.master' || jobType === 'job.periodic.validation.master') {
+        suiteName = 'master_master';
+    } else {
+        throw new Error(`Unknown validation job type: ${jobType}`);
+    }
+
+    // 2. Run Validation Logic (Pure Analysis)
+    const analysisResult = ValidationLogic.runValidationSuite(suiteName, sessionId);
+
+    if (!analysisResult.success) {
+        throw new Error('Validation suite execution failed.');
+    }
+
+    // 3. Process Results & Create Tasks (Refactored)
+    const processingOutcome = processValidationResults(analysisResult, sessionId);
+    const { quarantineTriggered, failureCount } = processingOutcome;
 
     // 4. Determine Job Status
     let finalStatus = 'COMPLETED';
@@ -111,7 +118,8 @@ const ValidationOrchestratorService = (function() {
   }
 
   return {
-    processJob: processJob
+    processJob: processJob,
+    processValidationResults: processValidationResults
   };
 
 })();

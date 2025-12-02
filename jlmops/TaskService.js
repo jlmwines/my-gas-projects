@@ -11,9 +11,10 @@ const TaskService = (function() {
    * @param {string} linkedEntityId The primary identifier of the item this task is about (e.g., a SKU or Product ID).
    * @param {string} title A short, descriptive title for the task.
    * @param {string} notes Additional details or context for the task.
+   * @param {string} [sessionId=null] The session ID associated with this task.
    * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
-  function createTask(taskTypeId, linkedEntityId, title, notes) {
+  function createTask(taskTypeId, linkedEntityId, title, notes, sessionId = null) {
     try {
       const taskTypeConfig = ConfigService.getConfig(taskTypeId);
       if (!taskTypeConfig) {
@@ -55,6 +56,10 @@ const TaskService = (function() {
       
       newRow[headers.indexOf('st_TaskId')] = taskId;
       newRow[headers.indexOf('st_TaskTypeId')] = taskTypeId;
+      if (sessionId) {
+          const sessionIdIdx = headers.indexOf('st_SessionId');
+          if (sessionIdIdx > -1) newRow[sessionIdIdx] = sessionId;
+      }
       newRow[headers.indexOf('st_Topic')] = taskTypeConfig.topic;
       newRow[headers.indexOf('st_Title')] = title;
       newRow[headers.indexOf('st_Status')] = taskTypeConfig.initial_status;
@@ -65,7 +70,7 @@ const TaskService = (function() {
 
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
-      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}.`);
+      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Session: ${sessionId}.`);
       
       return { id: taskId };
 
