@@ -46,6 +46,24 @@
     ],
     [
         "task.template",
+        "task.validation.vintage_mismatch",
+        "Task for when a product's vintage in a staging sheet does not match the master sheet or Comax.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.status_mismatch",
+        "Task for critical status (IsWeb, IsActive) mismatches in product data.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
         "task.validation.name_mismatch",
         "Task for when a product name in a staging sheet does not match the master sheet.",
         "stable",
@@ -59,6 +77,15 @@
         "Task for when a web product exists in staging but not in the master sheet.",
         "stable",
         "topic", "Products",
+        "default_priority", "High",
+        "initial_status", "New"
+    ],
+    [
+        "task.template",
+        "task.validation.master_master_discrepancy",
+        "Task for when a critical discrepancy is found between two master sheets.",
+        "stable",
+        "topic", "System",
         "default_priority", "High",
         "initial_status", "New"
     ],

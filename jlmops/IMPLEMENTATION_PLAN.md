@@ -256,23 +256,35 @@ The existing dashboard widgets were enhanced to:
             *   **Single Thread:** Modify `processPendingJobs` to execute only **one** job per trigger execution.
             *   **Zombie Cleanup:** Implement a check at the start of the Orchestrator to detect jobs stuck in `PROCESSING` state for > 15 minutes and mark them as `FAILED`.
 
-### 8.2. Foundation: Decouple Validation Side-Effects
-*   **Goal:** Make `ValidationService` a pure analysis engine that returns results, removing direct dependencies on `TaskService`.
-*   **Tasks:**
-    1.  **Refactor Validation Execution:** Modify `_execute...` methods in `ValidationService` to return a standardized `ValidationResult` object containing discrepancies, rather than creating tasks internally.
-    2.  **Create Result Handler:** Implement logic (likely in `ValidationOrchestratorService`) to process `ValidationResult` objects and decide when to create tasks based on configuration and the current `SessionID`.
-        *   **Aggregation Policy:** If discrepancies exceed a configured threshold (e.g., 10), create a single summary task linked to the detailed log entry (using `sl_Data`) instead of creating individual tasks.
+### 8.2. Foundation: Decouple Validation Side-Effects (Shadow Implementation Strategy)
+*   **Goal:** Safely transition `ValidationService` to a pure analysis engine without breaking the live system. We will build new components in parallel and switch over only when they are ready.
+*   **Detailed Steps:**
+    1.  **Create `ValidationLogic.js` (New File):**
+        *   **Purpose:** A pure analysis engine.
+        *   **Action:** Copy logic from `ValidationService.js`.
+        *   **Refactor:** Remove all `TaskService.createTask` calls. Instead, have functions return a `ValidationResult` object (e.g., `{ isValid: false, discrepancies: [...] }`).
+    2.  **Create `ValidationOrchestratorService.js` (New File):**
+        *   **Purpose:** The decision maker and result handler.
+        *   **Action:** Implement a service that calls `ValidationLogic` methods.
+        *   **Logic:** Receive `ValidationResult`. If `isValid` is false, iterate through `discrepancies` and call `TaskService` based on the new `task.validation.*` types. Implement aggregation logic (e.g., "Too many errors" task) here.
+    3.  **Verify (Parallel Test):**
+        *   **Action:** Create a test script `test_validation_shadow.js`.
+        *   **Logic:** Run `ValidationOrchestratorService.processJob(...)` manually on a staging sheet.
+        *   **Check:** Verify it creates the *correct* new tasks in `SysTasks` (you can delete them after) and logs correctly with `SessionID`.
+    4.  **Switch Over (Final Atomic Step):**
+        *   **Action:** Update `ProductService.js` and `OrchestratorService.js` to call `ValidationOrchestratorService` instead of `ValidationService`.
+        *   **Cleanup:** Mark `ValidationService.js` as deprecated or delete it.
 
-### 8.3. Define Specific Task Types
+### 8.3. Define Specific Task Types (COMPLETED)
 *   **Goal:** Create distinct task types for different categories of field mismatches.
-*   **Tasks:
+*   **Tasks:**
     1.  **Vintage Mismatch:** Add `task.validation.vintage_mismatch` (High Priority) to `taskDefinitions.json`.
     2.  **Status Mismatch:** Add `task.validation.status_mismatch` (High Priority) to `taskDefinitions.json` for critical status changes (IsWeb, IsActive).
     3.  **Name Mismatch:** Ensure `task.validation.name_mismatch` is properly defined and utilized.
 
 ### 8.4. Update Validation Rules
 *   **Goal:** Update the validation rules configuration to use the new, specific task types.
-*   **Tasks:
+*   **Tasks:**
     1.  **Vintage Rule:** Update `C6_Comax_VintageMismatch` to use `task.validation.vintage_mismatch`.
     2.  **Name Rule:** Update `C3_Comax_NameMismatch` to use `task.validation.name_mismatch`.
     3.  **Status Rules:** Update `C7_Comax_IsWebMismatch` and `C8_Comax_IsActiveMismatch` to use `task.validation.status_mismatch`.

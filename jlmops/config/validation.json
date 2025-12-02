@@ -111,7 +111,7 @@
         "key_B", "cps_SKU",
         "compare_fields", "cpm_Vintage,cps_Vintage",
         "source_filter", "cpm_IsWeb,כן",
-        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_task_type", "task.validation.vintage_mismatch",
         "on_failure_title", "Comax Vintage Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different vintage in master (${cpm_Vintage}) versus staging (${cps_Vintage})."
     ],
@@ -323,7 +323,7 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_NameHe,cps_NameHe",
-        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_task_type", "task.validation.name_mismatch",
         "on_failure_title", "Comax Name Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different name in master (${cpm_NameHe}) versus staging (${cps_NameHe})."
     ],
@@ -358,7 +358,7 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsWeb,cps_IsWeb",
-        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_task_type", "task.validation.status_mismatch",
         "on_failure_title", "Comax IsWeb Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different IsWeb status in master (${cpm_IsWeb}) versus staging (${cps_IsWeb})."
     ],
@@ -375,7 +375,7 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsActive,cps_IsActive",
-        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_task_type", "task.validation.status_mismatch",
         "on_failure_title", "Comax IsActive Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different IsActive status in master (${cpm_IsActive}) versus staging (${cps_IsActive})."
     ],
