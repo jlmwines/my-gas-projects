@@ -1,0 +1,40 @@
+<div class="container-fluid">
+    <h1 class="mt-4">Sync</h1>
+    
+    <div id="admin-daily-sync-widget-container">
+        <!-- AdminDailySyncWidget.html will be loaded here -->
+    </div>
+
+    <script>
+        // Define executeScriptsInElement locally for this view
+        function executeScriptsInElement(element) {
+            const scripts = Array.from(element.getElementsByTagName('script'));
+            scripts.forEach(s => {
+                const newScript = document.createElement('script');
+                newScript.textContent = s.textContent;
+                // Append to a temporary element to ensure scripts run sequentially or handle special cases
+                // For simplicity and direct execution, replacing the script tag works.
+                s.parentNode.replaceChild(newScript, s);
+            });
+        }
+
+        function loadAdminDailySyncWidget() {
+            console.log('AdminSyncView: Loading AdminDailySyncWidget.html');
+            google.script.run
+                .withSuccessHandler(html => {
+                    const container = document.getElementById('admin-daily-sync-widget-container');
+                    container.innerHTML = html;
+                    executeScriptsInElement(container); // Execute scripts in the loaded content
+                    console.log('AdminSyncView: AdminDailySyncWidget.html loaded and scripts executed.');
+                })
+                .withFailureHandler(err => {
+                    console.error('AdminSyncView: Failed to load AdminDailySyncWidget.html', err);
+                    document.getElementById('admin-daily-sync-widget-container').innerHTML = '<p class="text-danger">Failed to load sync widget.</p>';
+                })
+                .getHtmlOutput('AdminDailySyncWidget'); // This now correctly points to the new backend function
+        }
+
+        // Call the function to load the widget when the view is rendered
+        loadAdminDailySyncWidget();
+    </script>
+</div>

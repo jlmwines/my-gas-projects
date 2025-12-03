@@ -176,6 +176,17 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, 'Web Order file discovery complete.');
   }
 
+  /**
+   * Public function to trigger the processing of Web Order files.
+   * Discovers new files and queues jobs.
+   */
+  function triggerWebOrderFileProcessing() {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'triggerWebOrderFileProcessing';
+    logger.info(serviceName, functionName, 'Manually triggering Web Order file processing.');
+    _processWebOrdersFiles();
+  }
+
   // --- PERIODIC SYNC: UI-DRIVEN STAGE 1 ---
   function queueWebFilesForSync(sessionId) {
     const serviceName = 'OrchestratorService';
@@ -1289,6 +1300,8 @@ const OrchestratorService = (function() {
       finalizeSync: finalizeSync,
       queueWebInventoryExport: queueWebInventoryExport, // Export new function
       getJobStatusInSession: getJobStatusInSession, // Export function
-      generateSessionId: generateSessionId
+      generateSessionId: generateSessionId,
+      triggerWebOrderFileProcessing: triggerWebOrderFileProcessing, // NEW
+      processPendingJobs: processPendingJobs // NEWLY EXPOSED
     };
 })();

@@ -1,9 +1,13 @@
     <div class="card shadow-sm mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Daily Sync Workflow</h5>
-            <div>
-                 <span id="sessionIdDisplay" class="small text-muted me-5"></span>
-                 <a href="#" id="resetSyncLink" class="fw-bold text-secondary text-decoration-none" style="pointer-events: none;">Reset</a>
+            <div class="text-start">
+                <span id="sessionIdDisplay" class="small text-muted"></span>
+            </div>
+            <div class="text-center flex-grow-1">
+                <h5 class="mb-0" id="inventoryReceiptsDisplay"></h5> <!-- Centered, larger text -->
+            </div>
+            <div class="text-end">
+                 <a href="#" id="resetSyncLink" class="btn btn-sm btn-outline-secondary">Reset</a> <!-- Larger size, more button-like -->
             </div>
         </div>
         <div class="card-body">
@@ -139,11 +143,11 @@
             if (resetSyncLink) {
                 if (state.currentStage && state.currentStage !== 'IDLE') {
                     resetSyncLink.style.pointerEvents = 'auto'; 
-                    resetSyncLink.className = 'fw-bold text-danger text-decoration-none';
+                    resetSyncLink.className = 'btn btn-sm btn-danger'; // More prominent for active reset
                     resetSyncLink.onclick = (e) => { e.preventDefault(); resetSyncWorkflow(); };
                 } else {
                     resetSyncLink.style.pointerEvents = 'none'; 
-                    resetSyncLink.className = 'fw-bold text-secondary text-decoration-none';
+                    resetSyncLink.className = 'btn btn-sm btn-outline-secondary'; // Matched with new HTML structure
                     resetSyncLink.onclick = null;
                 }
             }
@@ -460,6 +464,30 @@
         
         // Initialize immediately
         console.log('Daily Sync Widget: Initializing...');
+        
+        // Fetch inventory receipts info once on load
+        google.script.run
+            .withSuccessHandler(info => {
+                const receiptsDisplay = document.getElementById('inventoryReceiptsDisplay');
+                if (receiptsDisplay) {
+                    if (info.count > 0 && info.folderUrl) {
+                        receiptsDisplay.innerHTML = `Inventory Receipts: <a href="${info.folderUrl}" target="_blank" class="fw-bold text-danger">${info.count} Files</a>`;
+                    } else if (info.count === 0) {
+                        receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-success">0 Files</span>`;
+                    } else {
+                        receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-muted">N/A</span>`; // Error or not available
+                    }
+                }
+            })
+            .withFailureHandler(err => {
+                console.error('Failed to load inventory receipts info:', err);
+                const receiptsDisplay = document.getElementById('inventoryReceiptsDisplay');
+                if (receiptsDisplay) {
+                    receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-danger">Error</span>`;
+                }
+            })
+            .getInventoryReceiptsInfo(); // Call the new backend function
+
         refreshDailySyncWidgetState();
         // Poll every 30s
         setInterval(refreshDailySyncWidgetState, 30000);

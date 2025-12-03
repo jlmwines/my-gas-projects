@@ -393,6 +393,30 @@ function getWebInventoryExportBackend() {
   }
 }
 
+/**
+ * Retrieves the count of inventory receipts files and the URL of the receipts folder.
+ * Accessible from frontend via `google.script.run.getInventoryReceiptsInfo()`.
+ * @returns {object} An object containing { count: number, folderUrl: string|null }.
+ */
+function getInventoryReceiptsInfo() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'getInventoryReceiptsInfo';
+  try {
+    const count = OrchestratorService.getInvoiceFileCount();
+    const allConfig = ConfigService.getAllConfig();
+    const receiptsFolderConfig = allConfig['system.folder.invoices'];
+    let folderUrl = null;
+    if (receiptsFolderConfig && receiptsFolderConfig.id) {
+      folderUrl = `https://drive.google.com/drive/folders/${receiptsFolderConfig.id}`;
+    }
+    logger.info(serviceName, functionName, `Found ${count} inventory receipts files. Folder URL: ${folderUrl}`);
+    return { count: count, folderUrl: folderUrl };
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error getting inventory receipts info: ${e.message}`, e);
+    return { count: 0, folderUrl: null, error: e.message };
+  }
+}
+
 // =================================================================
 //  GLOBAL RUNNER FUNCTIONS (for manual execution from Editor)
 // =================================================================

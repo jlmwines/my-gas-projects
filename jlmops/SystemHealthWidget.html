@@ -1,5 +1,12 @@
-<div id="system-health-widget" style="padding: 0;">
-  <p>Loading...</p>
+<div id="system-health-widget-container" style="padding: 0;">
+  <div class="card">
+    <div class="card-header">
+      <h5>System</h5>
+    </div>
+    <div class="card-body" id="system-health-widget-body">
+      <p>Loading System Health...</p>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -14,11 +21,11 @@
    * @param {Object} data - The health data from the backend.
    */
   function updateSystemHealthView(data) {
-    const widget = document.getElementById('system-health-widget');
+    const widgetBody = document.getElementById('system-health-widget-body'); // Targeting the body
     const indicator = window.parent.document.getElementById('system-health-indicator');
 
     if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
       if (indicator) indicator.style.color = 'orange';
       return;
     }
@@ -28,8 +35,7 @@
       indicator.style.color = data.isHealthy ? 'green' : 'red';
     }
 
-    let finalHtml = '<h5>System</h5>'; // Change card title
-    finalHtml += '<hr class="my-2">'; // Divider after title
+    let finalHtml = ''; // Remove the h5 and hr, as they are now in the card structure
 
     // Place healthy notice, last validation, and validate now link here
     if (data.isHealthy) {
@@ -62,7 +68,13 @@
     finalHtml += `<p id="validation-status" class="mt-1" style="font-size: 0.8rem;"></p>`;
     finalHtml += '<hr class="my-2">'; // Divider after validation section
 
-
+    // NEW Sync Status Display
+    if (data.syncStatusSummary && data.syncStatusSummary.text) {
+        finalHtml += `<div id="widget-sync-status" class="mt-2" style="font-size: 0.9rem;">`;
+        finalHtml += `<p class="mb-0 ${data.syncStatusSummary.color}">${data.syncStatusSummary.text}</p>`;
+        finalHtml += `</div>`;
+        finalHtml += '<hr class="my-2">'; // Divider after sync status
+    }
 
     // This section (Confirmed Critical Validations) should remain in its original place relative to validation.
     // It's part of the general system health status, not specific to the daily sync.
@@ -73,7 +85,7 @@
       });
     }
 
-    widget.innerHTML = finalHtml;
+    widgetBody.innerHTML = finalHtml; // Update widgetBody content
   }
 
   /**
@@ -105,7 +117,7 @@
         resultsDiv.innerHTML = html;
 
         // Update timestamp display - a bit of a hack to find the parent p tag
-        const allP = document.getElementById('system-health-widget').getElementsByTagName('p');
+        const allP = document.getElementById('system-health-widget-body').getElementsByTagName('p'); // Updated ID
         for(let i=0; i < allP.length; i++) {
           if (allP[i].innerText.startsWith('Last Validation:')) {
             allP[i].innerText = 'Last Validation: Just now';

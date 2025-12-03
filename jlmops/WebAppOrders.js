@@ -88,6 +88,19 @@ function WebAppOrders_getOpenOrdersForManager() {
         }
       }
     });
+    
+    // Sort orders by orderId numerically in descending order (high to low), with a fallback to string comparison
+    openOrders.sort((a, b) => {
+        const idA = parseInt(a.orderId, 10);
+        const idB = parseInt(b.orderId, 10);
+
+        if (isNaN(idA) || isNaN(idB)) {
+            // If not purely numeric, fall back to string comparison (descending)
+            return String(b.orderId).localeCompare(String(a.orderId));
+        }
+        return idB - idA; // Numerical descending
+    });
+
     return openOrders;
 
   } catch (error) {
@@ -203,5 +216,26 @@ function WebAppOrders_createGiftMessageDoc(orderId, noteContent) {
   } catch (error) {
     LoggerService.error('WebAppOrders', 'createGiftMessageDoc', error.message, error);
     throw error;
+  }
+}
+
+/**
+ * Triggers the processing of new Web Order files and immediately processes any pending jobs.
+ * This is intended for manual admin control to expedite packing slip production.
+ * @returns {object} A success message.
+ */
+function WebAppOrders_triggerWebOrderImport() {
+  const serviceName = 'WebAppOrders';
+  const functionName = 'triggerWebOrderImport';
+  LoggerService.info(serviceName, functionName, 'Admin manually triggering Web Order import.');
+
+  try {
+    OrchestratorService.triggerWebOrderFileProcessing(); // Discover and queue new files
+    OrchestratorService.processPendingJobs(); // Immediately process the queued jobs
+
+    return { success: true, message: 'Web Order import triggered and processing initiated.' };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Error triggering Web Order import: ${e.message}`, e);
+    throw e;
   }
 }

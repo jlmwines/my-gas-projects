@@ -12,17 +12,19 @@
             height: 100vh;
         }
         .header h1 {
-            /* color: white; Removed to allow default text color */
+            margin-bottom: 0;
+            margin-right: 15px;
+            padding-left: 1rem; /* Align with nav-link text */
+            font-size: 1.25rem;
         }
         .header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
-            padding: 10px;
+            padding: 10px 20px; /* Match sidebar padding */
             border-bottom: 1px solid #ccc;
             height: 60px;
-            background: #f8f9fa; /* Light background */
-            /* color: white; Removed to allow default text color */
+            background: #f8f9fa;
             width: 100%;
             position: fixed;
             top: 0;
@@ -71,9 +73,9 @@
 </head>
 <body>
     <div class="header">
-        <h1>JLMops</h1>
+        <h1>JLM Wines</h1>
         <div class="jlmops-role-switcher">
-            <select id="roleSelect">
+            <select id="roleSelect" class="form-control form-control-sm" style="min-width: 150px;">
                 <? for (let r of availableRoles) { ?>
                     <option value="<?= r ?>" <?= r === initialRole ? 'selected' : '' ?>><?= r.charAt(0).toUpperCase() + r.slice(1) ?></option>
                 <? } ?>
@@ -86,10 +88,10 @@
         <!-- Admin Navigation -->
         <ul id="admin-nav" class="nav flex-column" style="display: none;">
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="switchRole()">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminSyncView')">Sync</a></li> <!-- NEW SYNC LINK -->
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminProducts')">Products</a></li>
-          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('SystemHealth')">System</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
         </ul>
         <!-- Manager Navigation -->

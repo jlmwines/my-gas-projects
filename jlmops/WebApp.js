@@ -77,6 +77,7 @@ function getView(viewName) {
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
     'AdminDailySyncWidget': 'AdminDailySyncWidget',
+    'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',
     'Web': 'WebView'
@@ -89,7 +90,20 @@ function getView(viewName) {
   return `<div>View not found: ${viewName}</div>`;
 }
 
-
+/**
+ * Gets the raw HTML content for a specific file.
+ * This is used for dynamically loading widget HTML into views.
+ * @param {string} filename - The name of the HTML file to get.
+ * @returns {string} The raw HTML content of the file.
+ */
+function getHtmlOutput(filename) {
+  try {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  } catch (e) {
+    LoggerService.error('WebApp', 'getHtmlOutput', `Failed to get HTML content for ${filename}: ${e.message}`, e);
+    throw new Error(`Failed to load HTML content for ${filename}.`);
+  }
+}
 
 /**
  * Gets a list of orders that are ready to be packed.
