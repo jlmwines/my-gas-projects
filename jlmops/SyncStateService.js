@@ -13,17 +13,36 @@ const SyncStateService = (function() {
    */
   function getSyncState() {
     const functionName = 'getSyncState';
+    let state = getDefaultState(); // Initialize with default state
     try {
       const stateConfig = ConfigService.getConfig(SYNC_STATE_CONFIG_KEY);
       if (stateConfig && stateConfig.json) {
-        const state = JSON.parse(stateConfig.json);
-        logger.info(SERVICE_NAME, functionName, 'Successfully retrieved sync state.', { state: state });
-        return state;
+        // Merge stored state with default state to ensure new properties exist
+        state = { ...state, ...JSON.parse(stateConfig.json) };
       }
     } catch (e) {
       logger.error(SERVICE_NAME, functionName, `Error retrieving or parsing sync state: ${e.message}`, e);
     }
-    return getDefaultState();
+
+    // If there's an active session (even if completed/failed), refresh granular job statuses
+    if (state.sessionId && state.currentStage !== 'IDLE') {
+      try {
+        state.webOrdersJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_orders', state.sessionId));
+        state.webProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_products_en', state.sessionId));
+        state.webTranslationsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_translations_he', state.sessionId));
+        state.comaxProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.comax_products', state.sessionId));
+        state.masterValidationJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('job.periodic.validation.master', state.sessionId));
+        state.webInventoryExportJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('export.web.inventory', state.sessionId));
+      } catch (e) {
+        logger.error(SERVICE_NAME, functionName, `Error refreshing granular job statuses: ${e.message}`, e, { sessionId: state.sessionId });
+        state.errorMessage = state.errorMessage ? state.errorMessage + "; Error refreshing job statuses." : "Error refreshing job statuses.";
+      }
+    }
+    return state;
+  }
+
+  function mapNotFoundToNotStarted(status) {
+      return status === 'NOT_FOUND' ? 'NOT_STARTED' : status;
   }
 
   /**
@@ -59,14 +78,22 @@ const SyncStateService = (function() {
   function getDefaultState() {
     return {
       sessionId: null,
-      currentStage: 'IDLE', // IDLE, WEB_IMPORT_PROCESSING, WAITING_FOR_COMAX, COMAX_IMPORT_PROCESSING, VALIDATING, COMPLETE, FAILED
+      currentStage: 'IDLE', // IDLE, WEB_IMPORT_PROCESSING, WAITING_FOR_COMAX, READY_FOR_COMAX_IMPORT, COMAX_IMPORT_PROCESSING, VALIDATING, READY_FOR_WEB_EXPORT, WEB_EXPORT_PROCESSING, WEB_EXPORT_GENERATED, COMPLETE, FAILED
       lastUpdated: null,
-      webImportStatus: 'PENDING',
-      comaxImportStatus: 'PENDING',
-      ordersImportStatus: 'PENDING',
-      validationStatus: 'PENDING',
-      exportStatus: 'PENDING',
-      errorMessage: null
+      errorMessage: null,
+      // Granular job statuses for frontend feedback
+      webOrdersJobStatus: 'NOT_STARTED',
+      webProductsJobStatus: 'NOT_STARTED',
+      webTranslationsJobStatus: 'NOT_STARTED',
+      comaxProductsJobStatus: 'NOT_STARTED',
+      masterValidationJobStatus: 'NOT_STARTED',
+      webInventoryExportJobStatus: 'NOT_STARTED',
+      // Counts
+      ordersPendingExportCount: -1,
+      comaxOrdersExported: false, // Initialize the flag as well
+      
+      // Filenames
+      webExportFilename: null
     };
   }
 

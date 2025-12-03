@@ -546,7 +546,7 @@ const ProductService = (function() {
           finalJobStatus = 'COMPLETED'; // Assume validation suite will handle its own logging/errors
           break;
         case 'export.web.inventory':
-          exportWebInventory(); // Call the export function
+          exportWebInventory(sessionId); // Pass sessionId
           finalJobStatus = 'COMPLETED';
           break;
         default:
@@ -579,9 +579,9 @@ const ProductService = (function() {
     return null;
   }
 
-  function exportWebInventory() {
+  function exportWebInventory(sessionId) { // Accept sessionId
     const functionName = 'exportWebInventory';
-    LoggerService.info('ProductService', functionName, 'Starting WooCommerce inventory update export with change detection.');
+    LoggerService.info('ProductService', functionName, 'Starting WooCommerce inventory update export with change detection.', { sessionId: sessionId });
 
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -656,7 +656,17 @@ const ProductService = (function() {
 
       if (exportProducts.length === 0) {
         LoggerService.info('ProductService', functionName, 'No product changes detected. Export file will not be created.');
-        return { success: true, message: 'No product changes detected. Export file not created.' }; // Exit if there's nothing to export
+        // Update state to indicate "No changes" or empty filename?
+        // User wants to see the filename. If no file, maybe "No Changes"?
+        if (sessionId) {
+            const currentState = SyncStateService.getSyncState();
+            if (currentState.sessionId === sessionId) {
+                currentState.webExportFilename = 'No Changes Detected';
+                currentState.lastUpdated = new Date().toISOString();
+                SyncStateService.setSyncState(currentState);
+            }
+        }
+        return { success: true, message: 'No product changes detected. Export file not created.' }; 
       }
 
       // 5. Format and save the CSV
@@ -666,6 +676,17 @@ const ProductService = (function() {
       const fileName = `ProductInventory_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
       LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
+
+      // Update Sync State with Filename
+      if (sessionId) {
+          const currentState = SyncStateService.getSyncState();
+          // Ensure we are updating the correct session's state (though job runs in context)
+          if (currentState.sessionId === sessionId) {
+              currentState.webExportFilename = fileName;
+              currentState.lastUpdated = new Date().toISOString();
+              SyncStateService.setSyncState(currentState);
+          }
+      }
 
       // Close the "signal" task that indicated the export was ready
       try {
@@ -678,14 +699,13 @@ const ProductService = (function() {
         }
       } catch (e) {
         LoggerService.error('ProductService', functionName, `Could not close signal task: ${e.message}`, e);
-        // Do not re-throw, proceed to create the confirmation task anyway
       }
 
       const taskTitle = 'Confirm Web Inventory Export';
       const taskNotes = `Web inventory export file ${file.getName()} has been generated. Please confirm that the web inventory has been updated.`;
       TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), taskTitle, taskNotes);
 
-      return { success: true, message: 'Web Inventory Export file created: ' + file.getName() };
+      return { success: true, message: 'Web Inventory Export file created: ' + file.getName(), fileUrl: file.getUrl() };
 
     } catch (e) {
       LoggerService.error('ProductService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);

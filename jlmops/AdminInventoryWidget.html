@@ -4,55 +4,6 @@
 
 <script>
   /**
-   * Handles the click event for the 'Web Export' button.
-   */
-  function handleWebExportClick() {
-    const exportBtn = document.getElementById('btn-web-export');
-    const messageArea = document.getElementById('web-inventory-message-area');
-    
-    if (confirm("Are you sure you want to export web inventory?")) {
-      exportBtn.disabled = true;
-      exportBtn.className = 'btn';
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-
-      google.script.run
-        .withSuccessHandler(response => {
-          if (response && response.message) {
-            alert(response.message);
-          }
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppInventory_exportWebInventory();
-    }
-  }
-
-  /**
-   * Handles the click event for the 'Web Updated' button.
-   * @param {string} taskId - The ID of the confirmation task to complete.
-   */
-  function handleWebConfirmClick(taskId) {
-    const confirmBtn = document.getElementById('btn-web-updated');
-    const messageArea = document.getElementById('web-inventory-message-area');
-
-    if (confirm("Are you sure you want to confirm the web inventory update?")) {
-      confirmBtn.disabled = true;
-      confirmBtn.className = 'btn';
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-      
-      google.script.run
-        .withSuccessHandler(wasCompleted => {
-          if (!wasCompleted) {
-            showError('Failed to confirm task. It may have already been completed.');
-          }
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppTasks_completeTaskById(taskId);
-    }
-  }
-
-  /**
    * Populates the inventory widget.
    * @param {Object} data - The inventory data from the backend.
    */
@@ -80,13 +31,6 @@
     html += '<p>Inventory Count Reviews: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
     html += '<hr>';
 
-    // Web Inventory Update Section
-    html += '<h6>Web Inventory Update</h6>';
-    html += '<div id="web-inventory-message-area" style="margin-bottom: 0.5rem;"></div>';
-    html += '<button id="btn-web-export" class="btn" disabled>Web Export</button>';
-    html += '<button id="btn-web-updated" class="btn" style="margin-left: 0.5rem;" disabled>Web Updated</button>';
-    html += '<hr>';
-
     // Comax Inventory Export Section
     html += '<h6>Comax Inventory Export</h6>';
     html += '<div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>';
@@ -95,36 +39,6 @@
     html += '<hr>';
 
     widget.innerHTML = html;
-
-    // --- State-Aware Logic for Web Inventory Update ---
-    const exportBtn = document.getElementById('btn-web-export');
-    const confirmBtn = document.getElementById('btn-web-updated');
-    const messageArea = document.getElementById('web-inventory-message-area');
-
-    exportBtn.className = 'btn';
-    confirmBtn.className = 'btn';
-
-    if (data.webInventoryConfirmationTask) {
-      messageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.webInventoryConfirmationTask.notes}</div>`;
-      confirmBtn.disabled = false;
-      confirmBtn.className = 'btn'; // Reverted to original 'btn'
-      confirmBtn.onclick = function() { handleWebConfirmClick(data.webInventoryConfirmationTask.id); };
-    } else if (data.webInventoryExportReadyTask) {
-      messageArea.innerHTML = `<div class="alert alert-info" style="padding: 0.5rem 1rem;">Web inventory export is ready.</div>`;
-      exportBtn.disabled = false;
-      exportBtn.className = 'btn'; // Reverted to original 'btn'
-      exportBtn.onclick = function() { handleWebExportClick(); };
-    } else if (data.canWebInventoryExport) {
-      // Fallback: Enable button manually if no confirmation is pending and system is ready
-      messageArea.innerHTML = ''; 
-      exportBtn.disabled = false;
-      exportBtn.className = 'btn'; // Reverted to original 'btn'
-      exportBtn.onclick = function() { handleWebExportClick(); };
-    } else {
-      // Explicitly state why it is disabled
-      messageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">Export disabled. Please complete the Daily Inventory Cycle (see System Health).</p>';
-      exportBtn.disabled = true;
-    }
 
     // --- State-Aware Logic for Comax Inventory Export ---
     const comaxExportBtn = document.getElementById('btn-comax-export');

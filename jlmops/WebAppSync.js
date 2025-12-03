@@ -9,6 +9,7 @@
  * @returns {object} The current sync state.
  */
 function getSyncStateFromBackend() {
+  logger.info('WebAppSync', 'getSyncStateFromBackend', 'Retrieving sync state.');
   return SyncStateService.getSyncState();
 }
 
@@ -37,6 +38,7 @@ function startDailySyncBackend() {
     OrchestratorService.queueWebFilesForSync(newSessionId); 
 
     logger.info(serviceName, functionName, `Daily Sync started. Session ID: ${newSessionId}`, { sessionId: newSessionId, newState: newState });
+    OrchestratorService.run('hourly'); // Force immediate processing
     return SyncStateService.getSyncState(); // Return current state after queuing
   } catch (e) {
     logger.error(serviceName, functionName, `Error starting Daily Sync: ${e.message}`, e);
@@ -64,14 +66,15 @@ function finalizeDailySyncBackend() {
     // Validation: Ensure we are in a valid state to finalize (e.g., COMAX_IMPORT_PROCESSING completed)
     // For now, we'll be permissive to allow manual advancement if needed, but ideally check job status.
     
-    currentState.currentStage = 'VALIDATING';
+    currentState.currentStage = 'READY_FOR_WEB_EXPORT'; // Transition to new stage for manual trigger
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
 
-    // Queue Validation and Export jobs
+    // Only queue Validation job. Web Export is now manually triggered.
     OrchestratorService.finalizeSync(currentState.sessionId); 
 
-    logger.info(serviceName, functionName, `Daily Sync finalization started. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
+    logger.info(serviceName, functionName, `Daily Sync finalization started (Validation queued). Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
+    OrchestratorService.run('hourly'); // Force immediate processing
     return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error finalizing Daily Sync: ${e.message}`, e);
@@ -108,9 +111,47 @@ function resumeDailySyncBackend() {
     OrchestratorService.queueComaxFileForSync(currentState.sessionId); // New Orchestrator function
 
     logger.info(serviceName, functionName, `Daily Sync resumed. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
+    OrchestratorService.run('hourly'); // Force immediate processing
     return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error resuming Daily Sync: ${e.message}`, e);
+    const errorState = SyncStateService.getSyncState();
+    errorState.currentStage = 'FAILED';
+    errorState.errorMessage = e.message;
+    errorState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(errorState);
+    return errorState;
+  }
+}
+
+/**
+ * Manually starts the Comax import process after the user confirms readiness.
+ * Accessible from frontend via `google.script.run.startComaxImportBackend()`.
+ * @returns {object} The updated sync state.
+ */
+function startComaxImportBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'startComaxImportBackend';
+  logger.info(serviceName, functionName, 'Starting Comax import process.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+    if (currentState.currentStage !== 'READY_FOR_COMAX_IMPORT') {
+      throw new Error(`Cannot start Comax import. Current stage is ${currentState.currentStage}, expected READY_FOR_COMAX_IMPORT.`);
+    }
+
+    currentState.currentStage = 'COMAX_IMPORT_PROCESSING';
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    // Queue Comax import job with the current session ID
+    OrchestratorService.queueComaxFileForSync(currentState.sessionId); 
+
+    logger.info(serviceName, functionName, `Comax import started. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
+    OrchestratorService.run('hourly'); // Force immediate processing
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error starting Comax import: ${e.message}`, e);
     const errorState = SyncStateService.getSyncState();
     errorState.currentStage = 'FAILED';
     errorState.errorMessage = e.message;
@@ -159,6 +200,196 @@ function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
     }
   } catch (e) {
     logger.error(serviceName, functionName, `Error updating sync state from Orchestrator: ${e.message}`, e, { sessionId: sessionId, statusUpdate: statusUpdate });
+  }
+}
+
+/**
+ * Exports orders to Comax and returns the file URL.
+ * Accessible from frontend via `google.script.run.exportComaxOrdersBackend()`.
+ * @returns {object} { success: true, fileUrl: '...' }
+ */
+function exportComaxOrdersBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'exportComaxOrdersBackend';
+  
+  try {
+    const currentState = SyncStateService.getSyncState();
+    const sessionId = currentState.sessionId;
+    logger.info(serviceName, functionName, `Exporting Comax orders for session: ${sessionId}`);
+    
+    const orderService = new OrderService(ProductService);
+    const result = orderService.exportOrdersToComax(sessionId);
+
+    // After successful export, update the state to indicate readiness for confirmation
+    if (result.success) {
+      const newState = SyncStateService.getSyncState();
+      newState.comaxOrdersExported = true; // New state property
+      newState.lastUpdated = new Date().toISOString();
+      SyncStateService.setSyncState(newState);
+    }
+    
+    return result;
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error exporting Comax orders: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Confirms that Comax orders have been updated/uploaded externally.
+ * Accessible from frontend via `google.script.run.confirmComaxUpdateBackend()`.
+ * @returns {object} The updated sync state.
+ */
+function confirmComaxUpdateBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'confirmComaxUpdateBackend';
+  logger.info(serviceName, functionName, 'Confirming Comax update and moving to Comax import stage.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+    if (currentState.currentStage !== 'WAITING_FOR_COMAX' || !currentState.comaxOrdersExported) {
+      throw new Error(`Cannot confirm Comax update. Current stage is ${currentState.currentStage} or Comax orders not exported.`);
+    }
+
+    currentState.currentStage = 'READY_FOR_COMAX_IMPORT'; // Move to intermediate stage
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    // Orchestrator is NOT run here. User must click "Start Import".
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error confirming Comax update: ${e.message}`, e);
+    const errorState = SyncStateService.getSyncState();
+    errorState.currentStage = 'FAILED'; // Mark as failed if confirmation fails
+    errorState.errorMessage = e.message;
+    errorState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(errorState);
+    return errorState;
+  }
+}
+
+/**
+ * Confirms that Comax orders have been updated/uploaded externally.
+ * Accessible from frontend via `google.script.run.confirmComaxUpdateBackend()`.
+ * @returns {object} The updated sync state.
+ */
+function confirmComaxUpdateBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'confirmComaxUpdateBackend';
+  logger.info(serviceName, functionName, 'Confirming Comax update and moving to Comax import stage.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+    if (currentState.currentStage !== 'WAITING_FOR_COMAX' || !currentState.comaxOrdersExported) {
+      throw new Error(`Cannot confirm Comax update. Current stage is ${currentState.currentStage} or Comax orders not exported.`);
+    }
+
+    currentState.currentStage = 'READY_FOR_COMAX_IMPORT'; // Move to intermediate stage
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    // Orchestrator is NOT run here. User must click "Start Import".
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error confirming Comax update: ${e.message}`, e);
+    const errorState = SyncStateService.getSyncState();
+    errorState.currentStage = 'FAILED'; // Mark as failed if confirmation fails
+    errorState.errorMessage = e.message;
+    errorState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(errorState);
+    return errorState;
+  }
+}
+
+/**
+ * Manually starts the process of generating the Web Inventory Export.
+ * Accessible from frontend via `google.script.run.generateWebExportBackend()`.
+ * @returns {object} The updated sync state.
+ */
+function generateWebExportBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'generateWebExportBackend';
+  logger.info(serviceName, functionName, 'Manually starting Web Inventory Export generation.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+    if (currentState.currentStage !== 'READY_FOR_WEB_EXPORT') {
+      throw new Error(`Cannot generate Web Export. Current stage is ${currentState.currentStage}, expected READY_FOR_WEB_EXPORT.`);
+    }
+
+    currentState.currentStage = 'WEB_EXPORT_PROCESSING';
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    // Queue Web Inventory Export job
+    OrchestratorService.queueWebInventoryExport(currentState.sessionId); // New Orchestrator function
+
+    logger.info(serviceName, functionName, `Web Export generation started. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
+    OrchestratorService.run('hourly'); // Force immediate processing
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error generating Web Export: ${e.message}`, e);
+    const errorState = SyncStateService.getSyncState();
+    errorState.currentStage = 'FAILED';
+    errorState.errorMessage = e.message;
+    errorState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(errorState);
+    return errorState;
+  }
+}
+
+/**
+ * Confirms that the Web Inventory Update has been completed externally.
+ * Accessible from frontend via `google.script.run.confirmWebInventoryUpdateBackend()`.
+ * @returns {object} The updated sync state.
+ */
+function confirmWebInventoryUpdateBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'confirmWebInventoryUpdateBackend';
+  logger.info(serviceName, functionName, 'Confirming Web Inventory Update and completing sync cycle.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+    // Assuming WEB_EXPORT_GENERATED means the file is ready and we just need user confirmation
+    // Or we can check if the job for export.web.inventory is COMPLETED for this session
+    const webExportJobStatus = OrchestratorService.getJobStatusInSession('export.web.inventory', currentState.sessionId);
+
+    if (webExportJobStatus !== 'COMPLETED') {
+        throw new Error(`Cannot confirm Web Inventory Update. Export job status is ${webExportJobStatus}, expected COMPLETED.`);
+    }
+
+    currentState.currentStage = 'COMPLETE';
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error confirming Web Inventory Update: ${e.message}`, e);
+    const errorState = SyncStateService.getSyncState();
+    errorState.currentStage = 'FAILED';
+    errorState.errorMessage = e.message;
+    errorState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(errorState);
+    return errorState;
+  }
+}
+
+/**
+ * Generates/Retrieves the Web Inventory Export file URL.
+ * Accessible from frontend via `google.script.run.getWebInventoryExportBackend()`.
+ * @returns {object} { success: true, fileUrl: '...' }
+ */
+function getWebInventoryExportBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'getWebInventoryExportBackend';
+  
+  try {
+    logger.info(serviceName, functionName, `Retrieving Web Inventory Export...`);
+    const result = ProductService.exportWebInventory();
+    return result;
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error retrieving Web Inventory Export: ${e.message}`, e);
+    throw e;
   }
 }
 

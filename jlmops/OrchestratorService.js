@@ -246,6 +246,7 @@ const OrchestratorService = (function() {
     if (!requiredFiles['import.drive.web_products_en']) throw new Error("Missing required file: WebProducts.csv");
     if (!requiredFiles['import.drive.web_orders']) throw new Error("Missing required file: WebOrders.csv");
     
+    SpreadsheetApp.flush(); // Ensure jobs are written to the sheet
     logger.info(serviceName, functionName, `Web files queued for Session: ${sessionId}.`);
   }
 
@@ -302,6 +303,7 @@ const OrchestratorService = (function() {
         createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
     }
     
+    SpreadsheetApp.flush(); // Ensure job is written
     logger.info(serviceName, functionName, `Comax file queued for Session: ${sessionId}.`);
   }
 
@@ -327,20 +329,43 @@ const OrchestratorService = (function() {
         logger.info(serviceName, functionName, `Master Validation job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
     }
 
-    // 2. Queue Web Inventory Export
+    // Export Web Inventory is now user-initiated after validation succeeds. Not auto-queued here.
+    
+    SpreadsheetApp.flush(); // Ensure jobs are written
+    logger.info(serviceName, functionName, `Periodic Sync finalization steps (validation only) queued for Session: ${sessionId}.`);
+  }
+
+  /**
+   * Queues the Web Inventory Export job for the given session.
+   * @param {string} sessionId The current sync session ID.
+   */
+  function queueWebInventoryExport(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueWebInventoryExport';
+    
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+    logger.info(serviceName, functionName, `Queuing Web Inventory Export job for Session: ${sessionId}`);
+
     const exportJobType = 'export.web.inventory';
     const exportJobConfig = allConfig[exportJobType];
     const existingExportJob = getPendingOrProcessingJob(exportJobType, sessionId);
 
+    if (!exportJobConfig) {
+      throw new Error(`Configuration for '${exportJobType}' is missing.`);
+    }
+
     if (!existingExportJob) {
-        // It should be PENDING. Dependencies are handled by the flow.
         createJob(jobQueueSheet, exportJobType, exportJobConfig.processing_service, '', 'PENDING', '', '', sessionId);
         logger.info(serviceName, functionName, `Queued Web Inventory Export job for Session: ${sessionId}`, { sessionId: sessionId });
     } else {
         logger.info(serviceName, functionName, `Web Inventory Export job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
     }
-    
-    logger.info(serviceName, functionName, `Periodic Sync finalization steps queued for Session: ${sessionId}.`);
+    SpreadsheetApp.flush(); // Ensure job is written
   }
 
   // --- HELPER FUNCTIONS ---
@@ -564,6 +589,7 @@ const OrchestratorService = (function() {
     if (!jobFoundAndProcessed) {
       logger.info(serviceName, functionName, 'No PENDING jobs found in the queue to process in this run.');
     }
+    SpreadsheetApp.flush(); // Ensure status updates are written
     logger.info(serviceName, functionName, 'Pending job check complete.');
   }
 
@@ -982,17 +1008,58 @@ const OrchestratorService = (function() {
           state.lastUpdated = new Date().toISOString();
           SyncStateService.setSyncState(state);
         } else if (allCompleted) {
-          logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}. Advancing to WAITING_FOR_COMAX.`);
-          state.currentStage = 'WAITING_FOR_COMAX';
-          state.lastUpdated = new Date().toISOString();
+          logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}.`);
+          
+          // Calculate orders pending for export
+          const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
+          state.ordersPendingExportCount = ordersToExportCount;
+          state.lastUpdated = new Date().toISOString(); // Update timestamp
+          
+          if (ordersToExportCount === 0) {
+            logger.info(serviceName, functionName, `No orders to export. Transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
+            state.currentStage = 'READY_FOR_COMAX_IMPORT';
+            state.comaxOrdersExported = true; // Mark as exported since nothing was needed
+          } else {
+            logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
+            state.currentStage = 'WAITING_FOR_COMAX';
+            state.comaxOrdersExported = false; // Reset flag for new export cycle
+          }
           SyncStateService.setSyncState(state);
         }
       }
 
+      // --- NEW: Automate Transition from COMAX_IMPORT_PROCESSING to VALIDATING ---
+      if (state.currentStage === 'COMAX_IMPORT_PROCESSING') {
+          const jobType = 'import.drive.comax_products';
+          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          
+          if (jobStatus === 'COMPLETED') {
+              logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING and triggering finalization.`);
+              
+              // 1. Advance State
+              state.currentStage = 'VALIDATING';
+              state.lastUpdated = new Date().toISOString();
+              SyncStateService.setSyncState(state);
+              
+              // 2. Trigger Finalization (Queue Validation Jobs)
+              finalizeSync(state.sessionId);
+              
+              // 3. Process the newly queued validation job immediately
+              logger.info(serviceName, functionName, 'Triggering immediate processing for newly queued validation job.');
+              processPendingJobs();
+              
+          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+              logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+              state.currentStage = 'FAILED';
+              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
+              state.lastUpdated = new Date().toISOString();
+              SyncStateService.setSyncState(state);
+          }
+      }
+
       if (state.currentStage === 'VALIDATING') {
         const requiredJobs = [
-          'job.periodic.validation.master',
-          'export.web.inventory'
+          'job.periodic.validation.master' // Only master validation is required here
         ];
         
         let allCompleted = true;
@@ -1007,25 +1074,42 @@ const OrchestratorService = (function() {
           }
           if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
             anyFailedOrQuarantined = true;
-            errorMessage = `Finalization job (${jobType}) failed or was quarantined. Status: ${jobStatus}`;
-            // We might still want to mark as COMPLETE but with errors, or FAILED. 
-            // Let's mark as FAILED to alert the user.
+            errorMessage = `Master Validation job (${jobType}) failed or was quarantined. Status: ${jobStatus}`;
             break;
           }
         }
 
         if (anyFailedOrQuarantined) {
-           logger.error(serviceName, functionName, `Finalization jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+           logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
            state.currentStage = 'FAILED';
            state.errorMessage = errorMessage;
            state.lastUpdated = new Date().toISOString();
            SyncStateService.setSyncState(state);
         } else if (allCompleted) {
-           logger.info(serviceName, functionName, `All Finalization jobs completed for session ${state.sessionId}. Sync is COMPLETE.`);
-           state.currentStage = 'COMPLETE';
+           logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
+           state.currentStage = 'READY_FOR_WEB_EXPORT';
            state.lastUpdated = new Date().toISOString();
            SyncStateService.setSyncState(state);
         }
+      }
+
+      // --- NEW: Automate Transition from WEB_EXPORT_PROCESSING to WEB_EXPORT_GENERATED ---
+      if (state.currentStage === 'WEB_EXPORT_PROCESSING') {
+          const jobType = 'export.web.inventory';
+          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          
+          if (jobStatus === 'COMPLETED') {
+              logger.info(serviceName, functionName, `Web Inventory Export completed for session ${state.sessionId}. Advancing to WEB_EXPORT_GENERATED.`);
+              state.currentStage = 'WEB_EXPORT_GENERATED';
+              state.lastUpdated = new Date().toISOString();
+              SyncStateService.setSyncState(state);
+          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+              logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+              state.currentStage = 'FAILED';
+              state.errorMessage = `Web Inventory Export job failed. Status: ${jobStatus}`;
+              state.lastUpdated = new Date().toISOString();
+              SyncStateService.setSyncState(state);
+          }
       }
       
     } catch (e) {
@@ -1096,16 +1180,36 @@ const OrchestratorService = (function() {
       const statusCol = headers.indexOf('status');
       const sessionIdCol = headers.indexOf('session_id');
       const processedTsCol = headers.indexOf('processed_timestamp');
+      const createdTsCol = headers.indexOf('created_timestamp'); // Get created timestamp index
 
       let latestStatus = 'NOT_FOUND';
       let latestTimestamp = new Date(0);
+      let foundCompletedOrFailed = false; // Flag to prioritize completed/failed
 
       for (const row of data) {
         if (row[jobTypeCol] === jobType && row[sessionIdCol] === sessionId) {
-          const processedTimestamp = new Date(row[processedTsCol]);
-          if (!isNaN(processedTimestamp.getTime()) && processedTimestamp >= latestTimestamp) {
-            latestStatus = row[statusCol];
-            latestTimestamp = processedTimestamp;
+          let effectiveTimestamp = new Date(row[processedTsCol]);
+          
+          if (isNaN(effectiveTimestamp.getTime())) {
+              effectiveTimestamp = new Date(row[createdTsCol]);
+          }
+
+          if (isNaN(effectiveTimestamp.getTime())) continue; // Skip if no valid timestamp at all
+
+          const currentStatus = row[statusCol];
+
+          // Prioritize COMPLETED/FAILED
+          if (currentStatus === 'COMPLETED' || currentStatus === 'FAILED' || currentStatus === 'QUARANTINED') {
+              if (!foundCompletedOrFailed || effectiveTimestamp >= latestTimestamp) {
+                  latestStatus = currentStatus;
+                  latestTimestamp = effectiveTimestamp;
+                  foundCompletedOrFailed = true;
+              }
+          } else if (!foundCompletedOrFailed) { // Only consider PENDING/PROCESSING if no COMPLETED/FAILED found yet
+              if (effectiveTimestamp >= latestTimestamp) {
+                  latestStatus = currentStatus;
+                  latestTimestamp = effectiveTimestamp;
+              }
           }
         }
       }
@@ -1174,16 +1278,17 @@ const OrchestratorService = (function() {
     }
   }
 
-  return {
-    run: run,
-    finalizeJobCompletion: finalizeJobCompletion,
-    getLastJobSuccess: getLastJobSuccess,
-    getPendingOrProcessingJob: getPendingOrProcessingJob,
-    getInvoiceFileCount: getInvoiceFileCount,
-    queueWebFilesForSync: queueWebFilesForSync,
-    queueComaxFileForSync: queueComaxFileForSync,
-    finalizeSync: finalizeSync,
-    generateSessionId: generateSessionId
-  };
-
+      return {
+      run: run,
+      finalizeJobCompletion: finalizeJobCompletion,
+      getLastJobSuccess: getLastJobSuccess,
+      getPendingOrProcessingJob: getPendingOrProcessingJob,
+      getInvoiceFileCount: getInvoiceFileCount,
+      queueWebFilesForSync: queueWebFilesForSync,
+      queueComaxFileForSync: queueComaxFileForSync,
+      finalizeSync: finalizeSync,
+      queueWebInventoryExport: queueWebInventoryExport, // Export new function
+      getJobStatusInSession: getJobStatusInSession, // Export function
+      generateSessionId: generateSessionId
+    };
 })();

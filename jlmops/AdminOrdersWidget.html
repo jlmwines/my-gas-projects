@@ -4,58 +4,6 @@
 
 <script>
   /**
-   * Handles the click event for the 'Export Orders' button.
-   */
-  function handleExportClick() {
-    const exportBtn = document.getElementById('btn-export-orders');
-    const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
-    
-    if (confirm("Are you sure you want to export orders?")) {
-      exportBtn.disabled = true;
-      exportBtn.className = 'btn'; // Keep default style when processing
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-
-      google.script.run
-        .withSuccessHandler(response => {
-          // The success handler will simply re-run the data load to get the new state
-          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppOrders_runComaxOrderExport();
-    } else {
-      // If user cancels, do nothing, the button is still enabled.
-    }
-  }
-
-  /**
-   * Handles the click event for the 'Comax Updated' button.
-   * @param {string} taskId - The ID of the confirmation task to complete.
-   */
-  function handleConfirmClick(taskId) {
-    const confirmBtn = document.getElementById('btn-comax-updated');
-    const messageArea = document.getElementById('comax-alert-message-area'); // Target the alert message area
-
-    if (confirm("Are you sure you want to confirm the Comax update?")) {
-      confirmBtn.disabled = true;
-      confirmBtn.className = 'btn'; // Keep default style when processing
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-      
-      google.script.run
-        .withSuccessHandler(wasCompleted => {
-          if (!wasCompleted) {
-            showError('Failed to confirm task. It may have already been completed.');
-          }
-          // Always refresh data to show the latest state
-          google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppTasks_completeTaskById(taskId);
-    } else {
-      // If user cancels, do nothing, the button is still enabled.
-    }
-  }
-
-  /**
    * Populates the orders widget with new data from the backend.
    * @param {Object} data - The orders data from the backend.
    */
@@ -70,51 +18,17 @@
       return;
     }
 
-        // --- Update Counts ---
-        let countsHtml = '<h5>Orders</h5>';
-        countsHtml += '<hr>'; // Divider below widget title
-        countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
-        countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
-        countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
+    // --- Update Counts ---
+    let countsHtml = '<h5>Orders</h5>';
+    countsHtml += '<hr>'; // Divider below widget title
+    countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
+    countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
+    countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
     
-        // --- Rebuild the widget with new structure (preserves a clean slate) ---
-        widget.innerHTML = countsHtml + 
-          '<hr>' + // Divider below widget content
-          '<h6>Comax Order Update</h6>' + 
-          '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>' + // Persistent count
-          '<div id="comax-alert-message-area" style="margin-bottom: 0.5rem;"></div>' + // Conditional alert messages
-          '<button id="btn-export-orders" class="btn" disabled>Export Orders</button>' + 
-          '<button id="btn-comax-updated" class="btn" style="margin-left: 0.5rem;" disabled>Comax Updated</button>';
-
-    // --- State-Aware Logic for Comax Order Update ---
-    const exportBtn = document.getElementById('btn-export-orders');
-    const confirmBtn = document.getElementById('btn-comax-updated');
-    const alertMessageArea = document.getElementById('comax-alert-message-area'); // Use new alert area
-
-    // Default to base 'btn' class
-    exportBtn.className = 'btn';
-    confirmBtn.className = 'btn';
-
-    const exportConfirmTask = (data.openComaxConfirmationTasks && data.openComaxConfirmationTasks.length > 0)
-      ? data.openComaxConfirmationTasks[0]
-      : null;
-
-    if (exportConfirmTask) {
-      // State 2: Confirmation Pending
-      alertMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${exportConfirmTask.notes}</div>`;
-      confirmBtn.disabled = false;
-      confirmBtn.className = 'btn'; // Active but no color
-      confirmBtn.setAttribute('onclick', `handleConfirmClick('${exportConfirmTask.id}')`);
-    } else if (data.comaxExportOrderCount > 0) {
-      // State 1: Ready to Export
-      alertMessageArea.innerHTML = `<div class="alert alert-info" style="padding: 0.5rem 1rem;">${data.comaxExportOrderCount} orders are ready for export.</div>`;
-      exportBtn.disabled = false;
-      exportBtn.className = 'btn'; // Active but no color
-      exportBtn.setAttribute('onclick', 'handleExportClick()');
-    } else {
-      // State 0: Nothing to do - clear alert message area
-      alertMessageArea.innerHTML = ''; // No alert needed
-    }
+    // --- Rebuild the widget with new structure (preserves a clean slate) ---
+    widget.innerHTML = countsHtml + 
+      '<hr>' + // Divider below widget content
+      '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Comax Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>';
   }
 
   // Initial data load for this view

@@ -332,7 +332,7 @@ function OrderService(productService) {
 
       if (orderIdsToExport.size === 0) {
         logger.info(serviceName, functionName, "No orders to export to Comax.", { sessionId: sessionId });
-        return;
+        return { success: true, message: 'No eligible orders to export.', fileUrl: null };
       }
 
       // 2. Aggregate line items
@@ -409,6 +409,8 @@ function OrderService(productService) {
       TaskService.createTask('task.confirmation.comax_order_export', file.getId(), taskTitle, taskNotes); // TaskService needs sessionId too
 
       logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
+
+      return { success: true, fileUrl: file.getUrl(), fileName: file.getName() };
 
     } catch (e) {
       logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });

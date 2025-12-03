@@ -1,3 +1,8 @@
+<div class="row mb-3">
+  <div class="col-12" id="daily-sync-widget-placeholder">
+    <p>Loading Daily Sync Widget...</p>
+  </div>
+</div>
 <div class="row">
   <div class="col-md-3" id="system-widget-placeholder">
     <p>Loading System Widget...</p>
@@ -68,6 +73,7 @@
   }
 
   // Load Widgets
+  loadWidget('AdminDailySyncWidget', 'daily-sync-widget-placeholder');
   loadWidget('SystemHealthWidget', 'system-widget-placeholder');
   loadWidget('AdminOrdersWidget', 'orders-widget-placeholder');
   loadWidget('AdminInventoryWidget', 'inventory-widget-placeholder');
