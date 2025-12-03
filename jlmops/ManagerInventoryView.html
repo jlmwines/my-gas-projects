@@ -59,7 +59,14 @@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125);">
             <h5 class="mb-0">Product Counts</h5>
-            <button id="submit-selected-counts-btn" class="btn btn-light btn-sm" type="button" disabled>Submit Counts</button>
+            <div>
+              <button id="export-counts-btn" class="btn btn-light btn-sm mr-2" type="button">Export to Sheet</button>
+              <button id="import-counts-btn" class="btn btn-light btn-sm mr-2" type="button">Import from Sheet</button>
+              <button id="submit-selected-counts-btn" class="btn btn-light btn-sm" type="button" disabled>Submit Counts</button>
+            </div>
+        </div>
+        <div id="export-link-container" class="alert alert-info mt-2" style="display: none;">
+            Exported to: <a id="exported-sheet-link" href="#" target="_blank"></a>
         </div>
         <div id="productCountsCollapse">
             <div class="card-body">
@@ -136,17 +143,28 @@
                         <tbody>
                 `;
                 productsToCount.forEach(item => {
+                    // Helper to format value: null/undefined/'' -> '' (empty), 0 -> '0', number -> string
+                    const formatVal = (v) => (v === null || v === undefined || v === '') ? '' : v;
+
+                    const valStorage = formatVal(item.storageQty);
+                    const valOffice = formatVal(item.officeQty);
+                    const valShop = formatVal(item.shopQty);
+                    
+                    // Checkbox logic: Check if ANY field has a value (is not an empty string).
+                    // This ensures '0' triggers a check (counted as none), but empty (uncounted) does not.
+                    const isChecked = (valStorage !== '' || valOffice !== '' || valShop !== '') ? 'checked' : '';
+
                     tableHtml += `
                         <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}">
                             <td class="text-center">${item.comaxQty}</td>
                             <td class="text-center" id="total-qty-${item.sku}">${item.totalQty}</td>
                             <td class="text-center">${item.bruryaQty}</td>
-                            <td style="width: 10%;"><input type="number" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="" min="0"></td>
-                            <td style="width: 10%;"><input type="number" class="form-control form-control-sm product-count-input" data-qty-type="office" value="" min="0"></td>
-                            <td style="width: 10%;"><input type="number" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="" min="0"></td>
+                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="${valStorage}"></td>
+                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="office" value="${valOffice}"></td>
+                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="${valShop}"></td>
                             <td class="text-center">${item.sku}</td>
                             <td class="text-right">${item.productName}</td>
-                            <td><input type="checkbox" class="product-count-checkbox" disabled></td>
+                            <td><input type="checkbox" class="product-count-checkbox" ${isChecked} disabled></td>
                         </tr>
                     `;
                 });
@@ -226,15 +244,21 @@
 
                 google.script.run
                     .withSuccessHandler(response => {
-                        if (response.success) {
-                            showToast(`${response.updated} counts submitted successfully.`);
-                            loadProductCountsData(); // Reload to remove submitted items
-                            loadManagerTaskCount(); // Update task count badge
-                        } else {
-                            showToast(`Error submitting counts: ${response.message}`, 'error');
+                        try {
+                            if (response.success) {
+                                showToast(`${response.updated} counts submitted successfully.`);
+                                loadProductCountsData(); // Reload to remove submitted items
+                                loadManagerTaskCount(); // Update task count badge
+                            } else {
+                                showToast(`Error submitting counts: ${response.message}`, 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showToast('UI Error: ' + e.message, 'error');
+                        } finally {
+                            submitCountsBtn.disabled = false;
+                            submitCountsBtn.textContent = 'Submit Selected Counts';
                         }
-                        submitCountsBtn.disabled = false;
-                        submitCountsBtn.textContent = 'Submit Selected Counts';
                     })
                     .withFailureHandler(err => {
                         showToast(`Error submitting counts: ${err.message}`, 'error');
@@ -261,6 +285,79 @@
 
                 // Product Counts Event Listener
                 document.getElementById('submit-selected-counts-btn').addEventListener('click', handleSubmitSelectedCounts);
+                
+                // Export Counts Event Listener
+                document.getElementById('export-counts-btn').addEventListener('click', handleExportCounts);
+                
+                // Import Counts Event Listener
+                document.getElementById('import-counts-btn').addEventListener('click', handleImportCounts);
+            }
+
+            function handleImportCounts() {
+                const importBtn = document.getElementById('import-counts-btn');
+                
+                if (!confirm("This will import counts from the most recent 'ProductCount_' sheet in the export folder. Continue?")) {
+                    return;
+                }
+
+                importBtn.disabled = true;
+                importBtn.textContent = 'Importing...';
+
+                google.script.run
+                    .withSuccessHandler(response => {
+                        try {
+                            if (response.success) {
+                                showToast(response.message);
+                                loadProductCountsData(); 
+                                loadManagerTaskCount(); 
+                            } else {
+                                showToast(response.message, 'error');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            showToast('UI Error: ' + e.message, 'error');
+                        } finally {
+                            importBtn.disabled = false;
+                            importBtn.textContent = 'Import from Sheet';
+                        }
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Error importing counts: ${err.message}`, 'error');
+                        importBtn.disabled = false;
+                        importBtn.textContent = 'Import from Sheet';
+                    })
+                    .WebAppInventory_importCountsFromSheet(); // Call without arguments
+            }
+
+            function handleExportCounts() {
+                const exportBtn = document.getElementById('export-counts-btn');
+                exportBtn.disabled = true;
+                exportBtn.textContent = 'Exporting...';
+                
+                const exportLinkContainer = document.getElementById('export-link-container');
+                const exportedSheetLink = document.getElementById('exported-sheet-link');
+                
+                exportLinkContainer.style.display = 'none'; // Hide previous link
+                exportedSheetLink.href = '#';
+                exportedSheetLink.textContent = '';
+
+                google.script.run
+                    .withSuccessHandler(url => {
+                        showToast('Counts exported successfully!');
+                        exportedSheetLink.href = url;
+                        exportedSheetLink.textContent = url.split('/').pop(); // Display just the name or part of URL
+                        exportLinkContainer.style.display = 'block';
+                        exportBtn.disabled = false;
+                        exportBtn.textContent = 'Export to Sheet';
+                        // Auto-open the sheet
+                        window.open(url, '_blank');
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Error exporting counts: ${err.message}`, 'error');
+                        exportBtn.disabled = false;
+                        exportBtn.textContent = 'Export to Sheet';
+                    })
+                    .WebAppInventory_exportCountsToSheet();
             }
 
             function showToast(message, type = 'success') {

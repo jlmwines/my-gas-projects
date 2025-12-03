@@ -88,6 +88,56 @@ function WebAppInventory_getInventoryWidgetData() {
 }
 
 /**
+ * Gets data specifically for the Admin Comax Inventory Synchronization card.
+ * @returns {Object} An object containing Comax inventory export count and confirmation task.
+ */
+function WebAppInventory_getAdminComaxSyncData() {
+  try {
+    const inventoryManagementService = InventoryManagementService;
+
+    // 1. Get Comax Export Data
+    const comaxInventoryExportCount = inventoryManagementService.getComaxInventoryExportCount();
+    
+    // 2. Get Detailed Accepted Tasks for Display
+    const acceptedTasks = inventoryManagementService.getAcceptedSyncTasks();
+
+    // Robust search for the confirmation task
+    const allOpenTasks = WebAppTasks.getOpenTasks();
+    const openComaxInventoryConfirmationTask = allOpenTasks.find(t => {
+        // Find key that matches 'st_TaskTypeId' ignoring whitespace
+        const typeKey = Object.keys(t).find(k => k.trim() === 'st_TaskTypeId');
+        return typeKey && String(t[typeKey]).trim() === 'task.confirmation.comax_inventory_export';
+    });
+    
+    LoggerService.info('WebAppInventory', 'getAdminComaxSyncData', `Comax Confirmation Task found: ${openComaxInventoryConfirmationTask ? 'YES' : 'null'}`);
+
+    // Helper to sanitize task objects for client
+    const sanitizeTask = (task) => {
+      if (!task) return null;
+      const idKey = Object.keys(task).find(k => k.trim() === 'st_TaskId');
+      const notesKey = Object.keys(task).find(k => k.trim() === 'st_Notes');
+      
+      return {
+        id: (idKey && task[idKey]) ? String(task[idKey]) : '',
+        notes: (notesKey && task[notesKey]) ? String(task[notesKey]) : ''
+      };
+    };
+
+    const cleanComaxConfirmationTask = sanitizeTask(openComaxInventoryConfirmationTask);
+
+    return {
+      comaxInventoryExportCount: comaxInventoryExportCount,
+      acceptedTasks: acceptedTasks,
+      openComaxInventoryConfirmationTask: cleanComaxConfirmationTask,
+      error: null
+    };
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getAdminComaxSyncData', e.message, e);
+    return { error: `Could not load Comax sync data: ${e.message}` };
+  }
+}
+
+/**
  * Wraps the InventoryManagementService.generateComaxInventoryExport function for client-side access.
  * @returns {Object} A result object from the service.
  */
@@ -137,8 +187,8 @@ function WebAppInventory_getBruryaStockList() {
  */
 function WebAppInventory_searchComaxProducts(searchTerm) {
   try {
-    const lookupService = new LookupService();
-    return lookupService.searchComaxProducts(searchTerm);
+    // LookupService is a singleton object, not a class.
+    return LookupService.searchComaxProducts(searchTerm);
   } catch (error) {
     LoggerService.error('WebAppInventory', 'searchComaxProducts', error.message, error);
     throw error;
@@ -179,9 +229,11 @@ function WebAppInventory_getManagerTaskCount() {
 /**
  * Retrieves the list of products that a manager needs to count, based on open 'task.inventory.count' tasks.
  * Includes product details (name) and any existing count from SysProductAudit.
+ * @param {boolean} [forExport=false] If true, returns audit quantities for Storage, Office, Shop and includes them in totalQty.
+ *                                   If false (default), sets Storage, Office, Shop to 0 for initial manager input, and totalQty is only Brurya.
  * @returns {Array<Object>} An array of product objects to count, e.g., [{ taskId, sku, productName, currentCount }]
  */
-function WebAppInventory_getProductsForCount() {
+function WebAppInventory_getProductsForCount(forExport = false) {
   try {
     const allConfig = ConfigService.getAllConfig();
 
@@ -193,7 +245,9 @@ function WebAppInventory_getProductsForCount() {
     const negativeInventoryTasks = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit');
     
     // Combine the task lists
-    const allCountTasks = inventoryCountTasks.concat(negativeInventoryTasks);
+    const allCountTasks = inventoryCountTasks.concat(negativeInventoryTasks).filter(t => 
+      t.st_Status === 'New' || t.st_Status === 'Assigned'
+    );
     
     // Load CmxProdM (Comax Product Master) to get product names by SKU
     const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
@@ -211,22 +265,24 @@ function WebAppInventory_getProductsForCount() {
         LoggerService.warn('WebAppInventory', 'getProductsForCount', `SKU from task not found in CmxProdM: ${sku}`);
       }
 
-      // Assuming 'pa_OfficeQty' is the general physical count column.
       const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
       
       const comaxStockFromMaster = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_Stock || 0 : 0;
-      const bruryaQty = auditEntry.pa_BruryaQty || 0;
-      const storageQty = auditEntry.pa_StorageQty || 0;
-      const officeQty = auditEntry.pa_OfficeQty || 0;
-      const shopQty = auditEntry.pa_ShopQty || 0;
+      const bruryaQty = auditEntry.pa_BruryaQty || 0; // BruryaQty should still default to 0 if not present.
 
-      const totalQty = bruryaQty + storageQty + officeQty + shopQty;
+      // These should not default to 0 if empty, to distinguish null/uncounted from counted-as-zero.
+      const storageQty = auditEntry.pa_StorageQty; 
+      const officeQty = auditEntry.pa_OfficeQty;
+      const shopQty = auditEntry.pa_ShopQty;
+      
+      // Calculate total treating nulls as 0
+      const totalQty = bruryaQty + (storageQty || 0) + (officeQty || 0) + (shopQty || 0);
 
       return {
         taskId: task.st_TaskId,
         sku: sku,
         productName: productName,
-        comaxQty: comaxStockFromMaster, // Changed to cpm_Stock
+        comaxQty: comaxStockFromMaster,
         totalQty: totalQty,
         bruryaQty: bruryaQty,
         storageQty: storageQty,
@@ -479,5 +535,272 @@ function WebAppInventory_createSpotCheckTask(sku, note) {
   } catch (e) {
      LoggerService.error('WebAppInventory', 'createSpotCheckTask', e.message, e);
      throw e;
+  }
+}
+
+/**
+ * Exports the current list of products awaiting count to a new Google Sheet.
+ * The new sheet will have a specific naming convention and pre-populated headers.
+ *
+ * @returns {string} The URL of the newly created Google Sheet.
+ */
+function WebAppInventory_exportCountsToSheet() {
+  try {
+    // Use false to get data for UI display (reset user inputs), 
+    // as we want the export sheet to be a blank slate for new counts, just like the UI.
+    const productsToCount = WebAppInventory_getProductsForCount(false);
+
+    if (productsToCount.error) {
+      throw new Error(productsToCount.error);
+    }
+    
+    if (productsToCount.length === 0) {
+      throw new Error('No products available for export.');
+    }
+
+    const config = ConfigService.getConfig('system.folder.jlmops_exports');
+    const inventoryFolderId = config ? config.id : null;
+    if (!inventoryFolderId) {
+      throw new Error('Inventory exports folder ID (inventory.exports.folder_id) not configured in SysConfig.');
+    }
+
+    const folder = DriveApp.getFolderById(inventoryFolderId);
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+    const sheetName = `ProductCount_${timestamp}`;
+
+    const newSpreadsheet = SpreadsheetApp.create(sheetName);
+    const sheet = newSpreadsheet.getSheets()[0]; // Get the first sheet
+
+    // Set headers with Total Count
+    const headers = [
+      "SKU", 
+      "Product Name", 
+      "Comax Quantity", 
+      "Brurya Quantity", 
+      "Storage Quantity", 
+      "Office Quantity", 
+      "Shop Quantity", 
+      "Total Count",  // New Column
+      "Comments", 
+      "Task ID"
+    ];
+    sheet.appendRow(headers);
+
+    // Populate data
+    const data = productsToCount.map((product, index) => {
+      const rowNum = index + 2; // Data starts at row 2
+      return [
+        product.sku,
+        product.productName,
+        product.comaxQty,
+        product.bruryaQty,
+        product.storageQty, // WIP Value
+        product.officeQty,  // WIP Value
+        product.shopQty,    // WIP Value
+        `=D${rowNum}+E${rowNum}+F${rowNum}+G${rowNum}`, // Formula: Brurya + Storage + Office + Shop
+        '', // Comments - Empty for input
+        product.taskId // Task ID
+      ];
+    });
+    
+    // Write data starting at row 2
+    const dataRange = sheet.getRange(2, 1, data.length, data[0].length);
+    dataRange.setValues(data);
+
+    // Formatting
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, headers.length);
+    
+    // Highlight Input Columns (Optional but helpful: Light Yellow)
+    const inputColor = '#FFF2CC';
+    const storageCol = sheet.getRange(2, 5, data.length, 3); // Cols E, F, G
+    storageCol.setBackground(inputColor);
+    const commentsCol = sheet.getRange(2, 9, data.length, 1); // Col I
+    commentsCol.setBackground(inputColor);
+    
+    // Bold the Total Column
+    const totalCol = sheet.getRange(2, 8, data.length, 1); // Col H
+    totalCol.setFontWeight('bold');
+
+    // --- Protection Logic ---
+    // 1. Protect the entire sheet first
+    const protection = sheet.protect().setDescription('System Data - Do Not Edit Locked Fields');
+    
+    // 2. Define the ranges for User Input
+    // Range 1: Storage, Office, Shop (Cols 5, 6, 7)
+    const inputRange1 = sheet.getRange(2, 5, data.length, 3);
+    // Range 2: Comments (Col 9)
+    const inputRange2 = sheet.getRange(2, 9, data.length, 1);
+    
+    // 3. Set unprotected ranges
+    protection.setUnprotectedRanges([inputRange1, inputRange2]);
+
+    // Move the new spreadsheet to the designated folder
+    const file = DriveApp.getFileById(newSpreadsheet.getId());
+    file.moveTo(folder);
+
+    LoggerService.info('WebAppInventory', 'exportCountsToSheet', `Exported ${productsToCount.length} products to sheet: ${newSpreadsheet.getUrl()}`);
+    return newSpreadsheet.getUrl();
+
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'exportCountsToSheet', e.message, e);
+    throw e;
+  }
+}
+
+/**
+ * Imports inventory counts from a specified Google Sheet.
+ * Expected sheet format: Headers "SKU", "Storage Quantity", "Office Quantity", "Shop Quantity", "Task ID".
+ *
+ * @param {string} [sheetIdOrUrl] The ID or URL of the Google Sheet to import from. If omitted, finds the latest export.
+ * @returns {Object} An object indicating success, updated count, and any errors.
+ */
+function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
+  try {
+    let ss;
+    
+    // 1. Auto-discover latest sheet if no ID provided
+    if (!sheetIdOrUrl) {
+        const config = ConfigService.getConfig('system.folder.jlmops_exports');
+        const inventoryFolderId = config ? config.id : null;
+        if (!inventoryFolderId) {
+            throw new Error('Inventory exports folder not configured.');
+        }
+        const folder = DriveApp.getFolderById(inventoryFolderId);
+        const files = folder.getFiles();
+        let latestFile = null;
+        
+        while (files.hasNext()) {
+            const file = files.next();
+            if (file.getName().startsWith('ProductCount_') && file.getMimeType() === MimeType.GOOGLE_SHEETS) {
+                if (!latestFile || file.getDateCreated() > latestFile.getDateCreated()) {
+                    latestFile = file;
+                }
+            }
+        }
+        
+        if (!latestFile) {
+            throw new Error('No "ProductCount_" sheets found in the export folder.');
+        }
+        ss = SpreadsheetApp.open(latestFile);
+        LoggerService.info('WebAppInventory', 'importCountsFromSheet', `Auto-selected latest sheet: ${latestFile.getName()}`);
+    } else {
+        // Existing logic for provided ID/URL
+        try {
+          if (sheetIdOrUrl.startsWith('https://docs.google.com/spreadsheets/d/')) {
+            const match = sheetIdOrUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (!match) throw new Error('Invalid Google Sheet URL.');
+            ss = SpreadsheetApp.openById(match[1]);
+          } else {
+            ss = SpreadsheetApp.openById(sheetIdOrUrl);
+          }
+        } catch (e) {
+          throw new Error(`Could not open spreadsheet. Please check the ID/URL: ${e.message}`);
+        }
+    }
+
+    const sheet = ss.getSheets()[0];
+    const range = sheet.getDataRange();
+    const values = range.getValues();
+
+    if (values.length < 2) {
+      throw new Error('Sheet is empty or only contains headers.');
+    }
+
+    const headers = values[0];
+    const dataRows = values.slice(1);
+
+    const skuCol = headers.indexOf("SKU");
+    const storageCol = headers.indexOf("Storage Quantity");
+    const officeCol = headers.indexOf("Office Quantity");
+    const shopCol = headers.indexOf("Shop Quantity");
+    const taskIdCol = headers.indexOf("Task ID");
+
+    if (skuCol === -1 || taskIdCol === -1 || storageCol === -1 || officeCol === -1 || shopCol === -1) {
+      throw new Error('Missing one or more required headers: SKU, Storage Quantity, Office Quantity, Shop Quantity, Task ID.');
+    }
+
+    const inventoryManagementService = InventoryManagementService;
+    let updatedCount = 0;
+    const errors = [];
+
+    // --- Validation: Pre-fetch allowed tasks ---
+    // Only allow updates for tasks in 'New' or 'Assigned' status.
+    // This prevents overwriting data for tasks that are already in 'Review' or 'Done'.
+    const openTasks = WebAppTasks.getOpenTasks();
+    const allowedTaskIds = new Set();
+    
+    openTasks.forEach(t => {
+        if (t.st_Status === 'New' || t.st_Status === 'Assigned') {
+            allowedTaskIds.add(String(t.st_TaskId).trim());
+        }
+    });
+    // -------------------------------------------
+
+    dataRows.forEach((row, index) => {
+      // 2. Check for "Unchanged" rows (all input fields are empty strings)
+      const rawStorage = row[storageCol];
+      const rawOffice = row[officeCol];
+      const rawShop = row[shopCol];
+
+      if (rawStorage === "" && rawOffice === "" && rawShop === "") {
+          // Skip this row as the user entered no data
+          return;
+      }
+
+      const sku = String(row[skuCol]).trim();
+      const taskId = String(row[taskIdCol]).trim();
+      
+      // Treat empty strings as null, otherwise parse as integer
+      const storageQty = rawStorage === "" ? null : parseInt(rawStorage, 10);
+      const officeQty = rawOffice === "" ? null : parseInt(rawOffice, 10);
+      const shopQty = rawShop === "" ? null : parseInt(rawShop, 10);
+
+      if (!sku || !taskId) {
+        errors.push(`Row ${index + 2}: SKU or Task ID missing.`);
+        return;
+      }
+
+      // --- Validation Check ---
+      if (!allowedTaskIds.has(taskId)) {
+          errors.push(`Row ${index + 2}: Task is not active (Status must be 'New' or 'Assigned'). Skipping.`);
+          return;
+      }
+      // ------------------------
+      
+      // Validate only if not null (null is valid for clearing)
+      if ((storageQty !== null && isNaN(storageQty)) || 
+          (officeQty !== null && isNaN(officeQty)) || 
+          (shopQty !== null && isNaN(shopQty))) {
+        errors.push(`Row ${index + 2}: Invalid quantity for SKU ${sku}.`);
+        return;
+      }
+
+      try {
+        const item = { taskId, sku, storageQty, officeQty, shopQty }; // Comax Stock is not imported here, only physical counts
+        const updateResult = inventoryManagementService.updatePhysicalCounts(item);
+        if (updateResult.success) {
+          // Task status is NOT updated here. Import is just data entry.
+          updatedCount++;
+        } else {
+          errors.push(`Row ${index + 2}: Failed to update for SKU ${sku}. Message: ${updateResult.message}`);
+        }
+      } catch (innerE) {
+        errors.push(`Row ${index + 2}: Error processing SKU ${sku}: ${innerE.message}`);
+        LoggerService.error('WebAppInventory', 'importCountsFromSheet', `Error for SKU ${sku} at row ${index + 2}: ${innerE.message}`, innerE);
+      }
+    });
+
+    if (errors.length > 0) {
+      throw new Error(`Import completed with ${updatedCount} updates and ${errors.length} errors. First error: ${errors[0]}`);
+    }
+
+    SpreadsheetApp.flush();
+    LoggerService.info('WebAppInventory', 'importCountsFromSheet', `Successfully imported counts. Updated ${updatedCount} items.`);
+    return { success: true, updated: updatedCount, message: `Successfully imported ${updatedCount} counts.` };
+
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'importCountsFromSheet', e.message, e);
+    return { success: false, message: `Error importing counts: ${e.message}` };
   }
 }

@@ -532,11 +532,26 @@ const InventoryManagementService = (function() {
             
             const currentBruryaQty = parseFloat(auditData[sheetRow -1][bruryaQtyColIdx]) || 0; // Get from in-memory data
 
-            const totalNewQty = currentBruryaQty + storageQty + officeQty + shopQty;
+            // Treat nulls as 0 for calculation
+            const calcStorage = storageQty === null ? 0 : storageQty;
+            const calcOffice = officeQty === null ? 0 : officeQty;
+            const calcShop = shopQty === null ? 0 : shopQty;
 
-            auditSheet.getRange(sheetRow, storageColIdx + 1).setValue(storageQty);
-            auditSheet.getRange(sheetRow, officeColIdx + 1).setValue(officeQty);
-            auditSheet.getRange(sheetRow, shopColIdx + 1).setValue(shopQty);
+            const totalNewQty = currentBruryaQty + calcStorage + calcOffice + calcShop;
+
+            // Helper to set value or clear content if null
+            const setOrClear = (range, val) => {
+                if (val === null) {
+                    range.clearContent();
+                } else {
+                    range.setValue(val);
+                }
+            };
+
+            setOrClear(auditSheet.getRange(sheetRow, storageColIdx + 1), storageQty);
+            setOrClear(auditSheet.getRange(sheetRow, officeColIdx + 1), officeQty);
+            setOrClear(auditSheet.getRange(sheetRow, shopColIdx + 1), shopQty);
+            
             auditSheet.getRange(sheetRow, newQtyColIdx + 1).setValue(totalNewQty); // Update pa_NewQty
             LoggerService.info(serviceName, functionName, `Successfully updated counts for SKU '${sku}'. New Total: ${totalNewQty}.`);
             return { success: true, sku: sku, action: 'updated' };
@@ -548,12 +563,17 @@ const InventoryManagementService = (function() {
             const bruryaQtyColIdx = currentHeaders.indexOf('pa_BruryaQty'); // Moved this line up
             const newQtyColIdx = currentHeaders.indexOf('pa_NewQty'); 
             
-            const totalNewQty = (parseFloat(newRow[bruryaQtyColIdx] || 0)) + storageQty + officeQty + shopQty;
+            // Treat nulls as 0 for calculation
+            const calcStorage = storageQty === null ? 0 : storageQty;
+            const calcOffice = officeQty === null ? 0 : officeQty;
+            const calcShop = shopQty === null ? 0 : shopQty;
+            
+            const totalNewQty = (parseFloat(newRow[bruryaQtyColIdx] || 0)) + calcStorage + calcOffice + calcShop;
 
             newRow[skuColIdx] = sku;
-            newRow[storageColIdx] = storageQty;
-            newRow[officeColIdx] = officeQty;
-            newRow[shopColIdx] = shopQty;
+            newRow[storageColIdx] = storageQty === null ? '' : storageQty;
+            newRow[officeColIdx] = officeQty === null ? '' : officeQty;
+            newRow[shopColIdx] = shopQty === null ? '' : shopQty;
             if (newQtyColIdx !== -1) {
               newRow[newQtyColIdx] = totalNewQty;
             }
@@ -719,6 +739,116 @@ const InventoryManagementService = (function() {
             }
 
             /**
+             * Retrieves detailed information for tasks with 'Accepted' status that are ready for Comax export.
+             * @returns {Array<Object>} List of objects { sku, name, bruryaQty, storageQty, officeQty, shopQty, totalQty, taskId }
+             */
+            function getAcceptedSyncTasks() {
+              const serviceName = 'InventoryManagementService';
+              const functionName = 'getAcceptedSyncTasks';
+              try {
+                const allConfig = ConfigService.getAllConfig();
+                const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const sheetNames = allConfig['system.sheet_names'];
+                const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
+                const taskSheet = ss.getSheetByName(sheetNames.SysTasks);
+                const cmxProdSheet = ss.getSheetByName(sheetNames.CmxProdM); // Needed for Names
+
+                if (!productAuditSheet || !taskSheet || !cmxProdSheet) {
+                  throw new Error(`Required sheets not found.`);
+                }
+
+                // 1. Find all 'Accepted' tasks to identify SKUs
+                const taskData = taskSheet.getDataRange().getValues();
+                const taskHeaders = taskData[0];
+                const tStatusCol = taskHeaders.indexOf('st_Status');
+                const tTypeCol = taskHeaders.indexOf('st_TaskTypeId');
+                const tEntityCol = taskHeaders.indexOf('st_LinkedEntityId');
+                const tIdCol = taskHeaders.indexOf('st_TaskId');
+
+                const relevantTypes = ['task.inventory.count', 'task.validation.comax_internal_audit'];
+                const acceptedItems = []; // [{sku, taskId}]
+
+                for (let i = 1; i < taskData.length; i++) {
+                  const row = taskData[i];
+                  if (row[tStatusCol] === 'Accepted' && relevantTypes.includes(row[tTypeCol])) {
+                    const sku = String(row[tEntityCol]).trim();
+                    if (sku) {
+                        acceptedItems.push({ sku: sku, taskId: row[tIdCol] });
+                    }
+                  }
+                }
+
+                if (acceptedItems.length === 0) return [];
+
+                // 2. Prepare Maps for Data Lookup
+                
+                // CmxProdM for Names
+                const cmxData = cmxProdSheet.getDataRange().getValues();
+                const cmxHeaders = cmxData[0];
+                const cmxSkuCol = cmxHeaders.indexOf('cpm_SKU');
+                const cmxNameCol = cmxHeaders.indexOf('cpm_NameHe');
+                const cmxNameMap = new Map();
+                if (cmxSkuCol !== -1 && cmxNameCol !== -1) {
+                    for(let i=1; i<cmxData.length; i++) {
+                        cmxNameMap.set(String(cmxData[i][cmxSkuCol]).trim(), cmxData[i][cmxNameCol]);
+                    }
+                }
+
+                // SysProductAudit for Quantities
+                const auditData = productAuditSheet.getDataRange().getValues();
+                const auditHeaders = auditData[0];
+                const paSkuCol = auditHeaders.indexOf('pa_SKU');
+                const paBruryaCol = auditHeaders.indexOf('pa_BruryaQty');
+                const paStorageCol = auditHeaders.indexOf('pa_StorageQty');
+                const paOfficeCol = auditHeaders.indexOf('pa_OfficeQty');
+                const paShopCol = auditHeaders.indexOf('pa_ShopQty');
+                const paComaxCol = auditHeaders.indexOf('pa_ComaxQty');
+
+                const auditMap = new Map();
+                for(let i=1; i<auditData.length; i++) {
+                    const row = auditData[i];
+                    const sku = String(row[paSkuCol]).trim();
+                    auditMap.set(sku, {
+                        brurya: parseFloat(row[paBruryaCol]) || 0,
+                        storage: parseFloat(row[paStorageCol]) || 0,
+                        office: parseFloat(row[paOfficeCol]) || 0,
+                        shop: parseFloat(row[paShopCol]) || 0,
+                        comax: parseFloat(row[paComaxCol]) || 0
+                    });
+                }
+
+                // 3. Build Result Array
+                const results = acceptedItems.map(item => {
+                    const sku = item.sku;
+                    const name = cmxNameMap.get(sku) || 'Unknown Product';
+                    const stock = auditMap.get(sku) || { brurya: 0, storage: 0, office: 0, shop: 0, comax: 0 };
+                    const total = stock.brurya + stock.storage + stock.office + stock.shop;
+
+                    return {
+                        taskId: item.taskId,
+                        sku: sku,
+                        productName: name,
+                        comaxQty: stock.comax,
+                        bruryaQty: stock.brurya,
+                        storageQty: stock.storage,
+                        officeQty: stock.office,
+                        shopQty: stock.shop,
+                        totalQty: total
+                    };
+                });
+
+                // Sort by Name
+                results.sort((a, b) => a.productName.localeCompare(b.productName));
+                return results;
+
+              } catch (e) {
+                LoggerService.error(serviceName, functionName, `Error: ${e.message}`, e);
+                return [];
+              }
+            }
+
+            /**
              * Generates a CSV file for Comax Inventory Export based on 'Accepted' tasks.
              * @returns {Object} Result with file URL and task info.
              */
@@ -832,16 +962,55 @@ const InventoryManagementService = (function() {
                 const file = folder.createFile(fileName, csvContent, 'text/csv');
                 LoggerService.info(serviceName, functionName, `Created export file: ${fileName} with ${exportedCount} items.`);
 
-                // 5. Update Tasks to 'Done'
+                // 5. Update Tasks to 'Done' AND Reset WIP Counts in SysProductAudit
                 const tStatusColIdx = tStatusCol + 1; 
                 const tDoneDateColIdx = taskHeaders.indexOf('st_DoneDate') + 1;
                 const now = new Date();
 
+                // Prepare Audit Sheet updates
+                const auditDataForReset = productAuditSheet.getDataRange().getValues();
+                const auditHeadersForReset = auditDataForReset[0];
+                const paSkuColIdx = auditHeadersForReset.indexOf('pa_SKU');
+                const paStorageColIdx = auditHeadersForReset.indexOf('pa_StorageQty');
+                const paOfficeColIdx = auditHeadersForReset.indexOf('pa_OfficeQty');
+                const paShopColIdx = auditHeadersForReset.indexOf('pa_ShopQty');
+                const paBruryaColIdx = auditHeadersForReset.indexOf('pa_BruryaQty');
+                const paNewQtyColIdx = auditHeadersForReset.indexOf('pa_NewQty');
+
+                const skuToRowIndexMap = new Map();
+                for (let i = 1; i < auditDataForReset.length; i++) {
+                    skuToRowIndexMap.set(String(auditDataForReset[i][paSkuColIdx]).trim(), i + 1); // 1-based row
+                }
+
+                // Updates array to minimize API calls (batching not strictly necessary for small sets but good practice)
+                // However, for simplicity and readability in this mix, we'll iterate.
+                // Actually, we should batch updates if possible, but random access makes it hard.
+                // Let's do direct updates for now as export volume is typically manageable (<100 items).
+                
                 acceptedTaskIndices.forEach(rowIndex => {
-                    const sheetRow = rowIndex + 1;
-                    taskSheet.getRange(sheetRow, tStatusColIdx).setValue('Done');
+                    // A. Update Task
+                    const taskSheetRow = rowIndex + 1;
+                    taskSheet.getRange(taskSheetRow, tStatusColIdx).setValue('Done');
                     if (tDoneDateColIdx > 0) {
-                        taskSheet.getRange(sheetRow, tDoneDateColIdx).setValue(now);
+                        taskSheet.getRange(taskSheetRow, tDoneDateColIdx).setValue(now);
+                    }
+
+                    // B. Reset SysProductAudit WIP Counts
+                    // We need the SKU from the task data we already loaded
+                    const sku = String(taskData[rowIndex][tEntityCol]).trim();
+                    if (skuToRowIndexMap.has(sku)) {
+                        const auditSheetRow = skuToRowIndexMap.get(sku);
+                        
+                        // 1. Reset partial counts to 0
+                        if (paStorageColIdx > -1) productAuditSheet.getRange(auditSheetRow, paStorageColIdx + 1).setValue(0);
+                        if (paOfficeColIdx > -1) productAuditSheet.getRange(auditSheetRow, paOfficeColIdx + 1).setValue(0);
+                        if (paShopColIdx > -1) productAuditSheet.getRange(auditSheetRow, paShopColIdx + 1).setValue(0);
+                        
+                        // 2. Reset NewQty to match BruryaQty (Base)
+                        if (paNewQtyColIdx > -1 && paBruryaColIdx > -1) {
+                            const bruryaQty = productAuditSheet.getRange(auditSheetRow, paBruryaColIdx + 1).getValue();
+                            productAuditSheet.getRange(auditSheetRow, paNewQtyColIdx + 1).setValue(bruryaQty);
+                        }
                     }
                 });
                 
@@ -1144,6 +1313,7 @@ const InventoryManagementService = (function() {
                 getOpenInventoryCountTasksCount: getOpenInventoryCountTasksCount,
                 getOpenInventoryCountReviewTasksCount: getOpenInventoryCountReviewTasksCount,
                 getComaxInventoryExportCount: getComaxInventoryExportCount,
+                getAcceptedSyncTasks: getAcceptedSyncTasks,
                 generateComaxInventoryExport: generateComaxInventoryExport,
                 updateLastCount: updateLastCount,
                 previewBulkCountTasks: previewBulkCountTasks,
