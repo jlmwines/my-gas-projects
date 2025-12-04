@@ -605,6 +605,30 @@ function OrderService(productService) {
     }
   };
 
+  /**
+   * Pure helper function to check if an order is eligible for Comax export.
+   * @param {string} orderStatus - The status of the order (e.g., 'processing').
+   * @param {string} exportStatus - The export status (e.g., 'Pending').
+   * @returns {boolean} True if eligible, false otherwise.
+   */
+  this.isEligibleForExport = function(orderStatus, exportStatus) {
+      const normOrderStatus = String(orderStatus || '').trim().toLowerCase();
+      const normExportStatus = String(exportStatus || '').trim().toLowerCase();
+      return (normOrderStatus === 'processing' || normOrderStatus === 'completed') && 
+             normExportStatus !== 'exported';
+  };
+
+  /**
+   * Pure helper function to check if an order is eligible for packing.
+   * @param {string} orderStatus - The status of the order.
+   * @returns {boolean} True if eligible, false otherwise.
+   */
+  this.isEligibleForPacking = function(orderStatus) {
+      const INELIGIBLE_ORDER_STATUSES = ['pending', 'cancelled', 'refunded', 'failed', 'trash', 'completed'];
+      const normOrderStatus = String(orderStatus || '').trim().toLowerCase();
+      return !INELIGIBLE_ORDER_STATUSES.includes(normOrderStatus);
+  };
+
   this.processStagedOrders = function(ordersWithLineItems, executionContext) {
     const serviceName = 'OrderService';
     const functionName = 'processStagedOrders';
@@ -633,7 +657,9 @@ function OrderService(productService) {
         const masterOrderIdHeader = allConfig['order.master_order_id_header'].header;
         const masterStatusHeader = allConfig['order.master_status_header'].header;
         const MUTABLE_STATUSES = allConfig['order.mutable_statuses'].statuses.split(',');
-        const INELIGIBLE_ORDER_STATUSES = ['pending', 'cancelled', 'refunded', 'failed', 'trash', 'completed'];
+        
+        // INELIGIBLE_ORDER_STATUSES is now encapsulated in isEligibleForPacking
+        
         const LOCKED_PACKING_STATUSES = ['processing', 'completed'];
 
         const masterOrderData = masterOrderSheet.getDataRange().getValues();
@@ -705,7 +731,7 @@ function OrderService(productService) {
 
             // Create or update log entry in memory
             if (shouldUpdatePackingStatus) {
-                const isEligibleForPacking = !INELIGIBLE_ORDER_STATUSES.includes(stagedStatus);
+                const isEligibleForPacking = this.isEligibleForPacking(stagedStatus);
                 const newPackingStatus = isEligibleForPacking ? 'Eligible' : 'Ineligible';
 
                 if (existingLogEntry) {

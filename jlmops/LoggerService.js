@@ -12,7 +12,7 @@ const LoggerService = (function() {
 
   function getInternalSessionId() {
     if (!internalSessionId) {
-      internalSessionId = Utilities.getUuid();
+      internalSessionId = 'INTERNAL-' + Utilities.getUuid();
     }
     return internalSessionId;
   }
@@ -29,7 +29,16 @@ const LoggerService = (function() {
    */
   function _log(level, serviceName, functionName, message, context = {}, stackTrace = '') {
     const timestamp = new Date();
-    const currentSessionId = context.sessionId || getInternalSessionId(); // Use context sessionId if provided
+    let currentSessionId = context.sessionId;
+    
+    if (!currentSessionId) {
+        currentSessionId = getInternalSessionId();
+        // Strict Context Enforcement: Warn on ERROR logs if no session ID was provided
+        if (level === 'ERROR') {
+            console.warn(`[Context Warning] ERROR log generated without explicit Session ID in ${serviceName}.${functionName}`);
+        }
+    }
+    
     const logData = context.data ? JSON.stringify(context.data) : '';
 
     const logEntry = [

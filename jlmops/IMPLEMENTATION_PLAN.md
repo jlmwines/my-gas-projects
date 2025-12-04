@@ -125,7 +125,7 @@ The existing dashboard widgets were enhanced to:
 ### 3. Packing Slip Formatting & Generation (COMPLETED)
 *   **Goal:** To generate professional, readable, and consistent packing slips by leveraging robust Google Doc templates, ensuring continuity with the legacy system's output format.
 
-### 4. Customer Note Implementation (IN PROGRESS - Awaiting Data for Testing)
+### 4. Customer Note Implementation (COMPLETED)
 *   **Goal:** To provide a UI for handling customer notes and creating individual, editable Google Docs for gift messages.
 
 ### 5. Inventory Management Workflows (COMPLETED)
@@ -402,7 +402,7 @@ The existing dashboard widgets were enhanced to:
 ### 10.2. Advanced Logging Policy (IN PROGRESS)
 *   **Goal:** Maintain a useful, searchable log without hitting cell limits or creating noise.
 *   **Tasks:**
-    1.  **(IN PROGRESS) Context Enforcement:** Ensure `LoggerService` enforces the presence of `session_id` for all transactional logs to ensure traceability even after rotation.
+    1.  **(COMPLETED) Context Enforcement:** Ensure `LoggerService` enforces the presence of `session_id` for all transactional logs to ensure traceability even after rotation.
     2.  **(COMPLETED) Standardization:** Refactor all services to use the centralized `LoggerService` instead of ad-hoc `console.log`.
 
 ## Phase 11: Performance Optimization (PLANNED)
@@ -425,7 +425,7 @@ The existing dashboard widgets were enhanced to:
 
 **Goal:** To ensure business logic stability and "user-proof" the database infrastructure.
 
-### 12.1. Automated Testing Framework (IN PROGRESS)
+### 12.1. Automated Testing Framework (COMPLETED)
 *   **Goal:** Ensure business logic stability without relying solely on manual testing.
 *   **Tasks:**
     1.  **Test Infrastructure:** Create `TestRunner.js` to execute test functions and report pass/fail results to the `SysLog` or a UI panel.
@@ -433,6 +433,7 @@ The existing dashboard widgets were enhanced to:
     3.  **Unit Test Suites:** Create dedicated test files (e.g., `OrderService.test.js`, `ProductService.test.js`) that import mock data and verify the logic of core service functions.
     4.  **Regression Tests:** Define a comprehensive suite of tests (combining unit tests and potentially integration tests) to be run before every deployment, ensuring new changes do not introduce regressions.
     5.  **Execution:** Add a "Run Unit Tests" button to the Development Tools UI to allow on-demand verification.
+    6.  **Test Hardening:** Refactor `OrderService` to extract logic into pure functions (`isEligibleForExport`, `isEligibleForPacking`) and expand `TestData.js` with sad-path scenarios to enable rigorous, non-synthetic testing.
 
 ### 12.2. Database Protection (COMPLETED)
 *   **Goal:** "User-proof" the Google Sheets database to prevent accidental corruption.

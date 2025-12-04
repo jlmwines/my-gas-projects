@@ -589,3 +589,22 @@ function WebAppSystem_runLegacyValidationAndReturnResults() {
   }
 }
 
+/**
+ * Executes the automated unit test suite.
+ * @returns {Object} The test results.
+ */
+function WebAppSystem_runUnitTests() {
+  const serviceName = 'WebAppSystem';
+  const functionName = 'runUnitTests';
+  LoggerService.info(serviceName, functionName, 'Starting unit tests...');
+
+  try {
+    const results = TestRunner.runAllTests();
+    LoggerService.info(serviceName, functionName, `Unit tests completed. Passed: ${results.passed}, Failed: ${results.failed}`);
+    return { success: true, results: results };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Error running unit tests: ${e.message}`, e);
+    return { success: false, error: e.message };
+  }
+}
+

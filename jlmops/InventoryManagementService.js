@@ -90,8 +90,9 @@ const InventoryManagementService = (function() {
   /**
    * Calculates the total quantity of each SKU committed to 'On-Hold' orders
    * and populates the SysInventoryOnHold sheet.
+   * @param {string} sessionId The session ID for context.
    */
-  function calculateOnHoldInventory() {
+  function calculateOnHoldInventory(sessionId) {
     const serviceName = 'InventoryManagementService';
     const functionName = 'calculateOnHoldInventory';
     try {
@@ -104,7 +105,7 @@ const InventoryManagementService = (function() {
       const sysInventoryOnHoldSheet = ss.getSheetByName(sheetNames['SysInventoryOnHold']);
 
       if (!webOrdMSheet || !webOrdItemsMSheet || !sysInventoryOnHoldSheet) {
-        logger.error(serviceName, functionName, "One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.");
+        logger.error(serviceName, functionName, "One or more required sheets (WebOrdM, WebOrdItemsM, SysInventoryOnHold) not found.", null, { sessionId: sessionId });
         return;
       }
 
@@ -114,7 +115,7 @@ const InventoryManagementService = (function() {
       const womStatusCol = webOrdMHeaders.indexOf("wom_Status");
 
       if (womOrderIdCol === -1 || womStatusCol === -1) {
-        logger.error(serviceName, functionName, "Required columns (wom_OrderId, wom_Status) not found in WebOrdM.");
+        logger.error(serviceName, functionName, "Required columns (wom_OrderId, wom_Status) not found in WebOrdM.", null, { sessionId: sessionId });
         return;
       }
 
@@ -131,7 +132,7 @@ const InventoryManagementService = (function() {
       }
 
       if (onHoldOrderIds.size === 0) {
-        logger.info(serviceName, functionName, "No 'On-Hold' orders found. Clearing SysInventoryOnHold sheet.");
+        logger.info(serviceName, functionName, "No 'On-Hold' orders found. Clearing SysInventoryOnHold sheet.", { sessionId: sessionId });
         // Clear existing content in SysInventoryOnHold (except headers)
         if (sysInventoryOnHoldSheet.getLastRow() > 1) {
           sysInventoryOnHoldSheet.getRange(2, 1, sysInventoryOnHoldSheet.getLastRow() - 1, sysInventoryOnHoldSheet.getLastColumn()).clearContent();
@@ -146,7 +147,7 @@ const InventoryManagementService = (function() {
       const woiQuantityCol = webOrdItemsMHeaders.indexOf("woi_Quantity");
 
       if (woiOrderIdCol === -1 || woiSkuCol === -1 || woiQuantityCol === -1) {
-        logger.error(serviceName, functionName, "Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.");
+        logger.error(serviceName, functionName, "Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.", null, { sessionId: sessionId });
         return;
       }
 
@@ -183,10 +184,10 @@ const InventoryManagementService = (function() {
         sysInventoryOnHoldSheet.getRange(2, 1, onHoldData.length, onHoldData[0].length).setValues(onHoldData);
       }
 
-      logger.info(serviceName, functionName, "SysInventoryOnHold sheet updated successfully with on-hold inventory.");
+      logger.info(serviceName, functionName, "SysInventoryOnHold sheet updated successfully with on-hold inventory.", { sessionId: sessionId });
 
     } catch (e) {
-      logger.error(serviceName, functionName, "Error calculating on-hold inventory: " + e.message, e);
+      logger.error(serviceName, functionName, "Error calculating on-hold inventory: " + e.message, e, { sessionId: sessionId });
     }
   }
 

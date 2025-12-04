@@ -73,7 +73,7 @@ const TaskService = (function() {
 
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
-      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Name: ${linkedEntityName}, Session: ${sessionId}.`);
+      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Name: ${linkedEntityName}.`, { sessionId: sessionId });
       
       return { id: taskId };
 
