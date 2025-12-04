@@ -706,7 +706,7 @@ const ProductService = (function() {
 
       const taskTitle = 'Confirm Web Inventory Export';
       const taskNotes = `Web inventory export file ${file.getName()} has been generated. Please confirm that the web inventory has been updated.`;
-      TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), taskTitle, taskNotes);
+      TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), file.getName(), taskTitle, taskNotes, sessionId);
 
       return { success: true, message: 'Web Inventory Export file created: ' + file.getName(), fileUrl: file.getUrl() };
 
@@ -1465,7 +1465,7 @@ const ProductService = (function() {
       // 2. Create the onboarding task
       const title = `Add New Product: ${suggestedNameEn} (${sku})`;
       const notes = `Approved suggestion. \nEN Name: ${suggestedNameEn}\nHE Name: ${suggestedNameHe}`;
-      TaskService.createTask('task.onboarding.add_product', sku, title, notes); // TaskService needs sessionId too
+      TaskService.createTask('task.onboarding.add_product', sku, suggestedNameEn, title, notes, sessionId); // TaskService needs sessionId too
       
       // 3. Pre-populate WebDetS with the approved names to save the manager time
       // We can reuse submitProductDetails logic or just write directly. 

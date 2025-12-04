@@ -30,8 +30,8 @@ function WebAppProducts_getProductsWidgetData() {
         const type = t.st_TaskTypeId;
         const status = t.st_Status;
 
-        // 1. Detail Updates (Field Mismatch / Vintage Mismatch)
-        if (type === 'task.validation.field_mismatch') {
+        // 1. Detail Updates (Vintage Mismatch)
+        if (type === 'task.validation.vintage_mismatch') {
           if (status === 'New') {
             result.detailUpdates.edit++;
           } else if (status === 'Review') {
@@ -77,29 +77,16 @@ function WebAppProducts_getAdminReviewTasks() {
   try {
     LoggerService.info('WebAppProducts', 'getAdminReviewTasks', 'Starting task fetch...');
     
-    // Emulate inventory method: Use getOpenTasksByTypeIdAndStatus
-    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.field_mismatch', 'Review');
-    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Fetched ${tasks.length} raw tasks with status 'Review'.`);
+    const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.vintage_mismatch', 'Review');
     
-    // Filter for Vintage Mismatch safely
-    const reviewTasks = tasks.filter(t => {
-        const title = String(t.st_Title || '');
-        const isMatch = title.toLowerCase().includes('vintage mismatch');
-        if (!isMatch) {
-             LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Filtering out task ${t.st_TaskId}: Title '${title}' does not contain 'vintage mismatch'.`);
-        }
-        return isMatch;
-    });
-    
-    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Returning ${reviewTasks.length} filtered review tasks.`);
+    LoggerService.info('WebAppProducts', 'getAdminReviewTasks', `Fetched ${reviewTasks.length} review tasks.`);
     
     return reviewTasks.map(t => ({
         taskId: t.st_TaskId,
         sku: t.st_LinkedEntityId,
+        productName: t.st_LinkedEntityName,
         title: t.st_Title,
-        status: t.st_Status,
-        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
-        assignedTo: t.st_AssignedTo
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
     }));
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getAdminReviewTasks', `Error getting admin review tasks: ${e.message}`, e);
@@ -118,23 +105,16 @@ function WebAppProducts_getAcceptedTasks() {
   try {
     LoggerService.info('WebAppProducts', 'getAcceptedTasks', 'Starting accepted task fetch...');
     
-    const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.field_mismatch', 'Accepted');
-    LoggerService.info('WebAppProducts', 'getAcceptedTasks', `Fetched ${tasks.length} raw tasks with status 'Accepted'.`);
+    const acceptedTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.vintage_mismatch', 'Accepted');
     
-    const acceptedTasks = tasks.filter(t => {
-        const title = String(t.st_Title || '');
-        return title.toLowerCase().includes('vintage mismatch');
-    });
-    
-    LoggerService.info('WebAppProducts', 'getAcceptedTasks', `Returning ${acceptedTasks.length} filtered accepted tasks.`);
+    LoggerService.info('WebAppProducts', 'getAcceptedTasks', `Fetched ${acceptedTasks.length} accepted tasks.`);
     
     return acceptedTasks.map(t => ({
         taskId: t.st_TaskId,
         sku: t.st_LinkedEntityId,
+        productName: t.st_LinkedEntityName,
         title: t.st_Title,
-        status: t.st_Status,
-        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
-        assignedTo: t.st_AssignedTo
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
     }));
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getAcceptedTasks', `Error getting accepted tasks: ${e.message}`, e);
@@ -198,9 +178,8 @@ function WebAppProducts_getManagerProductTasks() {
     const typeIdCol = headers.indexOf('st_TaskTypeId');
     const statusCol = headers.indexOf('st_Status');
     const titleCol = headers.indexOf('st_Title');
-    
-    LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Indices: Type=${typeIdCol}, Status=${statusCol}, Title=${titleCol}`);
     const linkedEntityIdCol = headers.indexOf('st_LinkedEntityId');
+    const linkedEntityNameCol = headers.indexOf('st_LinkedEntityName');
     const taskIdCol = headers.indexOf('st_TaskId');
     const createdDateCol = headers.indexOf('st_CreatedDate');
     const assignedToCol = headers.indexOf('st_AssignedTo');
@@ -208,25 +187,18 @@ function WebAppProducts_getManagerProductTasks() {
     const tasks = [];
     if (sheet.getLastRow() > 1) {
       const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-      if (existingRows.length > 0) {
-         LoggerService.info('WebAppProducts', 'getManagerProductTasks', `First row sample: ${JSON.stringify(existingRows[0])}`);
-      }
+      
       existingRows.forEach((row, index) => {
         const taskType = String(row[typeIdCol] || '').trim();
         const status = String(row[statusCol] || '').trim();
         const title = String(row[titleCol] || '');
 
-        if (index === 0) {
-             const typeMatch = taskType === 'task.validation.field_mismatch';
-             const titleMatch = title.toLowerCase().includes('vintage mismatch');
-             const statusMatch = (status === 'New' || status === 'Assigned');
-             LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Row 0 Analysis: TypeMatch=${typeMatch}, TitleMatch=${titleMatch}, StatusMatch=${statusMatch}`);
-        }
-
-        if (taskType === 'task.validation.field_mismatch' && title.toLowerCase().includes('vintage mismatch') && (status === 'New' || status === 'Assigned')) {
+        if (taskType === 'task.validation.vintage_mismatch' && (status === 'New' || status === 'Assigned')) {
+          const productName = (linkedEntityNameCol > -1) ? String(row[linkedEntityNameCol]) : '';
           tasks.push({
             taskId: row[taskIdCol],
-            sku: row[linkedEntityIdCol], // Assuming LinkedEntityId is SKU
+            sku: row[linkedEntityIdCol],
+            productName: productName,
             title: title,
             status: status,
             createdDate: String(row[createdDateCol]),
@@ -235,6 +207,10 @@ function WebAppProducts_getManagerProductTasks() {
         }
       });
     }
+    
+    // Sort by productName
+    tasks.sort((a, b) => a.productName.localeCompare(b.productName));
+
     LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Returning ${tasks.length} tasks.`);
     return tasks;
   } catch (e) {
@@ -401,7 +377,7 @@ function WebAppProducts_getManagerWidgetData() {
         const status = t.st_Status;
         const title = String(t.st_Title || '').toLowerCase();
 
-        if (type === 'task.validation.field_mismatch' && title.includes('vintage mismatch')) {
+        if (type === 'task.validation.vintage_mismatch') {
           if (status === 'New' || status === 'Assigned') {
             result.newDetailUpdatesCount++;
           } else if (status === 'Review') {
@@ -645,17 +621,16 @@ function WebAppProducts_getPendingDetailTasks() {
   try {
     const tasks = WebAppTasks.getOpenTasks();
     const pendingTasks = tasks.filter(t => 
-      t.st_TaskTypeId === 'task.validation.field_mismatch' && 
-      String(t.st_Title || '').toLowerCase().includes('vintage mismatch') &&
+      t.st_TaskTypeId === 'task.validation.vintage_mismatch' && 
       (t.st_Status === 'New' || t.st_Status === 'Assigned')
     );
     
     return pendingTasks.map(t => ({
       taskId: t.st_TaskId,
       sku: t.st_LinkedEntityId,
+      productName: t.st_LinkedEntityName,
       title: t.st_Title,
-      status: t.st_Status,
-      assignedTo: t.st_AssignedTo
+      createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
     }));
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getPendingDetailTasks', e.message);
@@ -678,9 +653,9 @@ function WebAppProducts_getPendingNewTasks() {
     return pendingTasks.map(t => ({
       taskId: t.st_TaskId,
       sku: t.st_LinkedEntityId,
+      productName: t.st_LinkedEntityName,
       title: t.st_Title,
-      status: t.st_Status,
-      assignedTo: t.st_AssignedTo
+      createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
     }));
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getPendingNewTasks', e.message);
@@ -723,10 +698,9 @@ function WebAppProducts_getSubmissionsTasks() {
     return tasks.map(t => ({
         taskId: t.st_TaskId,
         sku: t.st_LinkedEntityId,
+        productName: t.st_LinkedEntityName,
         title: t.st_Title,
-        status: t.st_Status,
-        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
-        assignedTo: t.st_AssignedTo
+        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
     }));
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getSubmissionsTasks', `Error: ${e.message}`, e);
@@ -803,6 +777,7 @@ function WebAppProducts_suggestProducts(products) {
       TaskService.createTask(
         'task.onboarding.suggestion',
         p.sku,
+        p.name,
         `Suggestion: ${p.name}`,
         `Suggested by ${userEmail}`
       );

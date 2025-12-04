@@ -50,8 +50,9 @@
             <table class="table table-hover mb-0">
               <thead class="thead-light">
                 <tr>
-                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">Product</th>
                   <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Task</th>
                   <th class="border-top-0">Date</th>
                   <th class="border-top-0">Action</th>
                 </tr>
@@ -82,9 +83,9 @@
               <thead class="thead-light">
                 <tr>
                   <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Product</th>
                   <th class="border-top-0">Title</th>
-                  <th class="border-top-0">Status</th>
-                  <th class="border-top-0">Assigned To</th>
+                  <th class="border-top-0">Date</th>
                 </tr>
               </thead>
               <tbody id="pending-details-list-body">
@@ -127,8 +128,9 @@
             <table class="table table-hover mb-0">
               <thead class="thead-light">
                 <tr>
-                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">Product</th>
                   <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Task</th>
                   <th class="border-top-0">Date</th>
                   <th class="border-top-0">Action</th>
                 </tr>
@@ -176,9 +178,9 @@
               <thead class="thead-light">
                 <tr>
                   <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Product</th>
                   <th class="border-top-0">Title</th>
-                  <th class="border-top-0">Status</th>
-                  <th class="border-top-0">Assigned To</th>
+                  <th class="border-top-0">Date</th>
                 </tr>
               </thead>
               <tbody id="pending-new-list-body">
@@ -350,8 +352,9 @@
         tasks.forEach(task => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${task.title}</td>
+            <td>${task.productName || ''}</td>
             <td>${task.sku}</td>
+            <td>${task.title}</td>
             <td>${new Date(task.createdDate).toLocaleDateString()}</td>
             <td><button class="btn btn-sm" onclick="AdminProductsView.openEditor('${task.taskId}')">Review</button></td>
           `;
@@ -418,9 +421,9 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${task.sku}</td>
+            <td>${task.productName || ''}</td>
             <td>${task.title}</td>
-            <td><span class="badge badge-light">${task.status}</span></td>
-            <td>${task.assignedTo || '-'}</td>
+            <td>${new Date(task.createdDate).toLocaleDateString()}</td>
           `;
           tbody.appendChild(tr);
         });
@@ -465,8 +468,9 @@
             tasks.forEach(t => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${t.title}</td>
+                    <td>${t.productName || ''}</td>
                     <td>${t.sku}</td>
+                    <td>${t.title}</td>
                     <td>${new Date(t.createdDate).toLocaleDateString()}</td>
                     <td><button class="btn btn-sm btn-outline-primary" onclick="AdminProductsView.openEditor('${t.taskId}')">Review</button></td>
                 `;
@@ -540,9 +544,9 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${task.sku}</td>
+            <td>${task.productName || ''}</td>
             <td>${task.title}</td>
-            <td><span class="badge badge-light">${task.status}</span></td>
-            <td>${task.assignedTo || '-'}</td>
+            <td>${new Date(task.createdDate).toLocaleDateString()}</td>
           `;
           tbody.appendChild(tr);
         });

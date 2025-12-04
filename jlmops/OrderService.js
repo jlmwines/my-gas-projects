@@ -409,7 +409,7 @@ function OrderService(productService) {
       // Create a task for admin confirmation
       const taskTitle = 'Confirm Comax Order Export';
       const taskNotes = `Comax order export file ${file.getName()} has been generated. Please confirm that Comax has processed this file before the next product update.`;
-      TaskService.createTask('task.confirmation.comax_order_export', file.getId(), taskTitle, taskNotes); // TaskService needs sessionId too
+      TaskService.createTask('task.confirmation.comax_order_export', file.getId(), file.getName(), taskTitle, taskNotes, sessionId);
 
       logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
 

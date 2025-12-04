@@ -1201,7 +1201,7 @@ function getMasterConfiguration() {
         "Schema for the master task list.",
         "stable",
         "headers",
-        "st_TaskId,st_TaskTypeId,st_SessionId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_CreatedDate,st_DueDate,st_DoneDate,st_Notes",
+        "st_TaskId,st_TaskTypeId,st_SessionId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_LinkedEntityName,st_CreatedDate,st_DueDate,st_DoneDate,st_Notes",
         "",
         "",
         "",
@@ -5592,7 +5592,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "enabled",
@@ -5607,7 +5607,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "validation_suite",
@@ -5622,7 +5622,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "test_type",
@@ -5637,7 +5637,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "source_sheet",
@@ -5652,7 +5652,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "condition",
@@ -5667,7 +5667,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "on_failure_task_type",
@@ -5682,7 +5682,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "on_failure_title",
@@ -5697,7 +5697,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D2_ComaxS_NegativeStock",
+        "validation.rule.validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "on_failure_notes",
@@ -5712,7 +5712,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "enabled",
@@ -5727,7 +5727,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "validation_suite",
@@ -5742,7 +5742,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "test_type",
@@ -5757,7 +5757,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "source_sheet",
@@ -5772,7 +5772,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "target_sheet",
@@ -5787,7 +5787,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "on_failure_quarantine",
@@ -5802,7 +5802,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "on_failure_task_type",
@@ -5817,7 +5817,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "on_failure_title",
@@ -5832,7 +5832,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C_ComaxS_RowCountDecrease",
+        "validation.rule.validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "on_failure_notes",
@@ -5847,7 +5847,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "enabled",
@@ -5862,7 +5862,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "validation_suite",
@@ -5877,7 +5877,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "test_type",
@@ -5892,7 +5892,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "source_sheet",
@@ -5907,7 +5907,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "target_sheet",
@@ -5922,7 +5922,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "on_failure_quarantine",
@@ -5937,7 +5937,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "on_failure_task_type",
@@ -5952,7 +5952,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "on_failure_title",
@@ -5967,7 +5967,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.W_WebS_RowCountDecrease",
+        "validation.rule.validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "on_failure_notes",
@@ -5982,7 +5982,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "enabled",
@@ -5997,7 +5997,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "validation_suite",
@@ -6012,7 +6012,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "test_type",
@@ -6027,7 +6027,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "source_sheet",
@@ -6042,7 +6042,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "target_sheet",
@@ -6057,7 +6057,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "on_failure_quarantine",
@@ -6072,7 +6072,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "on_failure_task_type",
@@ -6087,7 +6087,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "on_failure_title",
@@ -6102,7 +6102,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.X_WebXltS_RowCountDecrease",
+        "validation.rule.validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "on_failure_notes",
@@ -6117,7 +6117,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "enabled",
@@ -6132,7 +6132,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "test_type",
@@ -6147,7 +6147,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "source_schema",
@@ -6162,7 +6162,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "target_schema",
@@ -6177,7 +6177,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "on_failure_task_type",
@@ -6192,7 +6192,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "on_failure_title",
@@ -6207,7 +6207,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_ColumnMismatch",
+        "validation.rule.validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "on_failure_notes",
@@ -6222,7 +6222,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "enabled",
@@ -6237,7 +6237,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "test_type",
@@ -6252,7 +6252,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "source_sheet",
@@ -6267,7 +6267,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "target_sheet",
@@ -6282,7 +6282,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "on_failure_task_type",
@@ -6297,7 +6297,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "on_failure_title",
@@ -6312,7 +6312,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_RowCountMismatch",
+        "validation.rule.validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "on_failure_notes",
@@ -6327,11 +6327,11 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "enabled",
-        "TRUE",
+        "FALSE",
         "",
         "",
         "",
@@ -6342,7 +6342,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "test_type",
@@ -6357,7 +6357,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "source_sheet",
@@ -6372,7 +6372,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "on_failure_task_type",
@@ -6387,7 +6387,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "on_failure_title",
@@ -6402,7 +6402,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.WebXlt_EmptyCells",
+        "validation.rule.validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
         "on_failure_notes",
@@ -6417,7 +6417,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -6432,7 +6432,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "validation_suite",
@@ -6447,7 +6447,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -6462,7 +6462,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "sheet_A",
@@ -6477,7 +6477,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "sheet_B",
@@ -6492,7 +6492,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "key_A",
@@ -6507,7 +6507,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "key_B",
@@ -6522,7 +6522,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "compare_fields",
@@ -6537,7 +6537,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "source_filter",
@@ -6552,7 +6552,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -6567,7 +6567,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -6582,7 +6582,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C6_Comax_VintageMismatch",
+        "validation.rule.validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -6597,7 +6597,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "enabled",
@@ -6612,7 +6612,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "validation_suite",
@@ -6627,7 +6627,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "test_type",
@@ -6642,7 +6642,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "source_sheet",
@@ -6657,7 +6657,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "source_key",
@@ -6672,7 +6672,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "target_sheet",
@@ -6687,7 +6687,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "target_key",
@@ -6702,7 +6702,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "invert_result",
@@ -6717,7 +6717,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "on_failure_task_type",
@@ -6732,7 +6732,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "on_failure_title",
@@ -6747,7 +6747,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A1_WebS_NotIn_WebM",
+        "validation.rule.validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "on_failure_notes",
@@ -6762,7 +6762,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "enabled",
@@ -6777,7 +6777,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "validation_suite",
@@ -6792,7 +6792,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "test_type",
@@ -6807,7 +6807,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "sheet_A",
@@ -6822,7 +6822,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "sheet_B",
@@ -6837,7 +6837,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "key_A",
@@ -6852,7 +6852,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "key_B",
@@ -6867,7 +6867,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "compare_fields",
@@ -6882,7 +6882,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -6897,7 +6897,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "on_failure_title",
@@ -6912,7 +6912,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A3_Web_SKUMismatch",
+        "validation.rule.validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -6927,7 +6927,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "enabled",
@@ -6942,7 +6942,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "validation_suite",
@@ -6957,7 +6957,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "test_type",
@@ -6972,7 +6972,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "sheet_A",
@@ -6987,7 +6987,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "sheet_B",
@@ -7002,7 +7002,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "key_A",
@@ -7017,7 +7017,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "key_B",
@@ -7032,7 +7032,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "compare_fields",
@@ -7047,7 +7047,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -7062,7 +7062,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "on_failure_title",
@@ -7077,7 +7077,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A4_Web_NameMismatch",
+        "validation.rule.validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -7092,7 +7092,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "enabled",
@@ -7107,7 +7107,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "validation_suite",
@@ -7122,7 +7122,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "test_type",
@@ -7137,7 +7137,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "source_sheet",
@@ -7152,7 +7152,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "source_key",
@@ -7167,7 +7167,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "target_sheet",
@@ -7182,7 +7182,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "target_key",
@@ -7197,7 +7197,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "invert_result",
@@ -7212,7 +7212,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "on_failure_task_type",
@@ -7227,7 +7227,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "on_failure_title",
@@ -7242,7 +7242,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.A2_WebM_NotIn_WebS",
+        "validation.rule.validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "on_failure_notes",
@@ -7257,7 +7257,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "enabled",
@@ -7272,7 +7272,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "validation_suite",
@@ -7287,7 +7287,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "test_type",
@@ -7302,7 +7302,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "source_sheet",
@@ -7317,7 +7317,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "source_key",
@@ -7332,7 +7332,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "source_filter",
@@ -7347,7 +7347,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "target_sheet",
@@ -7362,7 +7362,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "target_key",
@@ -7377,7 +7377,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "invert_result",
@@ -7392,7 +7392,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "on_failure_task_type",
@@ -7407,7 +7407,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "on_failure_title",
@@ -7422,7 +7422,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C1_CmxM_NotIn_CmxS",
+        "validation.rule.validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "on_failure_notes",
@@ -7437,7 +7437,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "enabled",
@@ -7452,7 +7452,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "priority",
@@ -7467,7 +7467,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "validation_suite",
@@ -7482,7 +7482,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "test_type",
@@ -7497,7 +7497,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "source_sheet",
@@ -7512,7 +7512,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "target_sheet",
@@ -7527,7 +7527,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "on_failure_quarantine",
@@ -7542,7 +7542,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "on_failure_task_type",
@@ -7557,7 +7557,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "on_failure_title",
@@ -7572,7 +7572,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.M_Audit_RowCountMismatch",
+        "validation.rule.validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "on_failure_notes",
@@ -7587,7 +7587,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "enabled",
@@ -7602,7 +7602,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "priority",
@@ -7617,7 +7617,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "validation_suite",
@@ -7632,7 +7632,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "test_type",
@@ -7647,7 +7647,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "source_sheet",
@@ -7662,7 +7662,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "source_key",
@@ -7677,7 +7677,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "target_sheet",
@@ -7692,7 +7692,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "target_key",
@@ -7707,7 +7707,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "invert_result",
@@ -7722,7 +7722,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "on_failure_task_type",
@@ -7737,7 +7737,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "on_failure_title",
@@ -7752,7 +7752,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B1_WebM_SKU_NotIn_ComaxM",
+        "validation.rule.validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "on_failure_notes",
@@ -7767,7 +7767,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "enabled",
@@ -7782,7 +7782,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "priority",
@@ -7797,7 +7797,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "validation_suite",
@@ -7812,7 +7812,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "test_type",
@@ -7827,7 +7827,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "source_sheet",
@@ -7842,7 +7842,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "source_key",
@@ -7857,7 +7857,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "source_filter",
@@ -7872,7 +7872,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "target_sheet",
@@ -7887,7 +7887,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "target_key",
@@ -7902,7 +7902,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "invert_result",
@@ -7917,7 +7917,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "on_failure_task_type",
@@ -7932,7 +7932,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "on_failure_title",
@@ -7947,7 +7947,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B2_ComaxM_SKU_NotIn_WebM",
+        "validation.rule.validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "on_failure_notes",
@@ -7962,7 +7962,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "enabled",
@@ -7977,7 +7977,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "priority",
@@ -7992,7 +7992,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "validation_suite",
@@ -8007,7 +8007,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "test_type",
@@ -8022,7 +8022,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "source_sheet",
@@ -8037,7 +8037,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "source_key",
@@ -8052,7 +8052,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "target_sheet",
@@ -8067,7 +8067,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "target_key",
@@ -8082,7 +8082,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "invert_result",
@@ -8097,7 +8097,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "on_failure_task_type",
@@ -8112,7 +8112,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "on_failure_title",
@@ -8127,7 +8127,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B3_WebM_Name_NotIn_WebDetM",
+        "validation.rule.validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "on_failure_notes",
@@ -8142,7 +8142,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "enabled",
@@ -8157,7 +8157,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "priority",
@@ -8172,7 +8172,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "validation_suite",
@@ -8187,7 +8187,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "test_type",
@@ -8202,7 +8202,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "source_sheet",
@@ -8217,7 +8217,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "source_key",
@@ -8232,7 +8232,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "target_sheet",
@@ -8247,7 +8247,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "target_key",
@@ -8262,7 +8262,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "invert_result",
@@ -8277,7 +8277,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "on_failure_task_type",
@@ -8292,7 +8292,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "on_failure_title",
@@ -8307,7 +8307,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B4_WebDetM_Name_NotIn_WebM",
+        "validation.rule.validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "on_failure_notes",
@@ -8322,7 +8322,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "enabled",
@@ -8337,7 +8337,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "priority",
@@ -8352,7 +8352,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "validation_suite",
@@ -8367,7 +8367,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "test_type",
@@ -8382,7 +8382,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "sheet_A",
@@ -8397,7 +8397,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "sheet_B",
@@ -8412,7 +8412,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "key_A",
@@ -8427,7 +8427,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "key_B",
@@ -8442,7 +8442,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "compare_fields",
@@ -8457,7 +8457,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "field_translations_map_cpm_IsWeb",
@@ -8472,7 +8472,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "on_failure_task_type",
@@ -8487,7 +8487,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "on_failure_title",
@@ -8502,7 +8502,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.B7_WebM_Published_NotIn_ComaxM",
+        "validation.rule.validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "on_failure_notes",
@@ -8517,7 +8517,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -8532,7 +8532,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "validation_suite",
@@ -8547,7 +8547,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -8562,7 +8562,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "sheet_A",
@@ -8577,7 +8577,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "sheet_B",
@@ -8592,7 +8592,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "key_A",
@@ -8607,7 +8607,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "key_B",
@@ -8622,7 +8622,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "compare_fields",
@@ -8637,7 +8637,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -8652,7 +8652,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -8667,7 +8667,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C3_Comax_NameMismatch",
+        "validation.rule.validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -8682,7 +8682,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -8697,7 +8697,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "validation_suite",
@@ -8712,7 +8712,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -8727,7 +8727,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "sheet_A",
@@ -8742,7 +8742,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "sheet_B",
@@ -8757,7 +8757,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "key_A",
@@ -8772,7 +8772,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "key_B",
@@ -8787,7 +8787,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "compare_fields",
@@ -8802,7 +8802,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -8817,7 +8817,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -8832,7 +8832,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C4_Comax_PriceMismatch",
+        "validation.rule.validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -8847,7 +8847,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -8862,7 +8862,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "validation_suite",
@@ -8877,7 +8877,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -8892,7 +8892,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "sheet_A",
@@ -8907,7 +8907,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "sheet_B",
@@ -8922,7 +8922,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "key_A",
@@ -8937,7 +8937,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "key_B",
@@ -8952,7 +8952,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "compare_fields",
@@ -8967,7 +8967,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -8982,7 +8982,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -8997,7 +8997,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C7_Comax_IsWebMismatch",
+        "validation.rule.validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -9012,7 +9012,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -9027,7 +9027,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "validation_suite",
@@ -9042,7 +9042,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -9057,7 +9057,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "sheet_A",
@@ -9072,7 +9072,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "sheet_B",
@@ -9087,7 +9087,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "key_A",
@@ -9102,7 +9102,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "key_B",
@@ -9117,7 +9117,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "compare_fields",
@@ -9132,7 +9132,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -9147,7 +9147,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -9162,7 +9162,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.C8_Comax_IsActiveMismatch",
+        "validation.rule.validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -9177,131 +9177,146 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.enabled",
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
+        "enabled",
         "FALSE",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "validation_suite",
         "comax_staging",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "test_type",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "FIELD_COMPARISON",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "sheet_A",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "CmxProdM",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "sheet_B",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "CmxProdS",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "key_A",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "cpm_SKU",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "key_B",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "cps_SKU",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "compare_fields",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "cpm_IsArchived,cps_IsArchived",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "on_failure_task_type",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "task.validation.field_mismatch",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "on_failure_title",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
-        "validation.rule.enabled",
-        "FALSE",
-        "validation_suite",
         "Comax IsArchived Mismatch: ${cpm_NameHe}",
-        "on_failure_notes",
         "",
         "",
         "",
@@ -9312,7 +9327,22 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
+        "on_failure_notes",
+        "SKU ${cpm_SKU} has a different IsArchived status in master (${cpm_IsArchived}) versus staging (${cps_IsArchived}).",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "enabled",
@@ -9327,7 +9357,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "test_type",
@@ -9342,7 +9372,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "source_schema",
@@ -9357,7 +9387,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "target_schema",
@@ -9372,7 +9402,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -9387,7 +9417,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_title",
@@ -9402,7 +9432,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D1_ComaxS_ColumnMismatch",
+        "validation.rule.validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -9417,11 +9447,11 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "enabled",
-        "TRUE",
+        "FALSE",
         "",
         "",
         "",
@@ -9432,7 +9462,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "test_type",
@@ -9447,7 +9477,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "source_sheet",
@@ -9462,7 +9492,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "on_failure_task_type",
@@ -9477,7 +9507,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "on_failure_title",
@@ -9492,7 +9522,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.D3_ComaxS_EmptyCells",
+        "validation.rule.validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
         "on_failure_notes",
@@ -9507,7 +9537,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "enabled",
@@ -9522,7 +9552,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "test_type",
@@ -9537,7 +9567,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "source_schema",
@@ -9552,7 +9582,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "target_schema",
@@ -9567,7 +9597,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -9582,7 +9612,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "on_failure_title",
@@ -9597,7 +9627,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E1_WebOrdS_ColumnMismatch",
+        "validation.rule.validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -9612,11 +9642,11 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "enabled",
-        "TRUE",
+        "FALSE",
         "",
         "",
         "",
@@ -9627,7 +9657,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "test_type",
@@ -9642,7 +9672,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "source_sheet",
@@ -9657,7 +9687,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "on_failure_task_type",
@@ -9672,7 +9702,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "on_failure_title",
@@ -9687,7 +9717,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.E2_WebOrdS_EmptyCells",
+        "validation.rule.validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
         "on_failure_notes",
@@ -9702,7 +9732,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "enabled",
@@ -9717,7 +9747,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "test_type",
@@ -9732,7 +9762,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "source_schema",
@@ -9747,7 +9777,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "target_schema",
@@ -9762,7 +9792,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "on_failure_task_type",
@@ -9777,7 +9807,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "on_failure_title",
@@ -9792,7 +9822,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F1_WebProdS_ColumnMismatch",
+        "validation.rule.validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "on_failure_notes",
@@ -9807,11 +9837,11 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "enabled",
-        "TRUE",
+        "FALSE",
         "",
         "",
         "",
@@ -9822,7 +9852,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "test_type",
@@ -9837,7 +9867,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "source_sheet",
@@ -9852,7 +9882,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "on_failure_task_type",
@@ -9867,7 +9897,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "on_failure_title",
@@ -9882,7 +9912,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.F2_WebProdS_EmptyCells",
+        "validation.rule.validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
         "on_failure_notes",
@@ -9897,7 +9927,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "enabled",
@@ -9912,7 +9942,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "priority",
@@ -9927,7 +9957,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "validation_suite",
@@ -9942,7 +9972,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "test_type",
@@ -9957,7 +9987,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "source_sheet",
@@ -9972,7 +10002,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "condition",
@@ -9987,7 +10017,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "on_failure_task_type",
@@ -10002,7 +10032,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "on_failure_title",
@@ -10017,7 +10047,7 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "validation.rule.ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.rule.validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "on_failure_notes",

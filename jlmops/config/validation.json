@@ -1,7 +1,7 @@
 [
     [
         "validation.rule.template",
-        "D2_ComaxS_NegativeStock",
+        "validation.comax.negative_stock",
         "[D2] Negative inventory in Comax Staging.",
         "stable",
         "enabled", "TRUE",
@@ -15,7 +15,7 @@
     ],
     [
         "validation.rule.template",
-        "C_ComaxS_RowCountDecrease",
+        "validation.comax.row_count_decrease",
         "[C] Comax Staging row count decreased compared to Master.",
         "stable",
         "enabled", "TRUE",
@@ -30,7 +30,7 @@
     ],
     [
         "validation.rule.template",
-        "W_WebS_RowCountDecrease",
+        "validation.web.row_count_decrease",
         "[W] Web Products Staging row count decreased compared to Master.",
         "stable",
         "enabled", "TRUE",
@@ -45,7 +45,7 @@
     ],
     [
         "validation.rule.template",
-        "X_WebXltS_RowCountDecrease",
+        "validation.web_translations.row_count_decrease",
         "[X] Web Translations Staging row count decreased compared to Master.",
         "stable",
         "enabled", "TRUE",
@@ -60,7 +60,7 @@
     ],
     [
         "validation.rule.template",
-        "WebXlt_ColumnMismatch",
+        "validation.web_translations.schema_mismatch",
         "[WebXlt] Column mismatch between WebXltM and WebXltS.",
         "stable",
         "enabled", "TRUE",
@@ -73,7 +73,7 @@
     ],
     [
         "validation.rule.template",
-        "WebXlt_RowCountMismatch",
+        "validation.web_translations.row_count_mismatch",
         "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
         "stable",
         "enabled", "TRUE",
@@ -86,10 +86,10 @@
     ],
     [
         "validation.rule.template",
-        "WebXlt_EmptyCells",
+        "validation.web_translations.empty_cells",
         "[WebXlt] Empty cells found in populated columns of WebXltS.",
         "stable",
-        "enabled", "TRUE",
+        "enabled", "FALSE",
         "test_type", "DATA_COMPLETENESS",
         "source_sheet", "WebXltS",
         "on_failure_task_type", "task.validation.webxlt_data_integrity",
@@ -99,7 +99,7 @@
 
     [
         "validation.rule.template",
-        "C6_Comax_VintageMismatch",
+        "validation.comax.vintage_mismatch",
         "[C6] Vintage mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -117,7 +117,7 @@
     ],
     [
         "validation.rule.template",
-        "A1_WebS_NotIn_WebM",
+        "validation.web.new_product_in_staging",
         "[A1] Web Staging product not in Web Master.",
         "stable",
         "enabled", "TRUE",
@@ -134,7 +134,7 @@
     ],
     [
         "validation.rule.template",
-        "A3_Web_SKUMismatch",
+        "validation.web.sku_mismatch",
         "[A3] SKU mismatch between Web Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -151,7 +151,7 @@
     ],
     [
         "validation.rule.template",
-        "A4_Web_NameMismatch",
+        "validation.web.name_mismatch",
         "[A4] Name mismatch between Web Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -168,7 +168,7 @@
     ],
     [
         "validation.rule.template",
-        "A2_WebM_NotIn_WebS",
+        "validation.web.master_missing_from_staging",
         "[A2] Web Master product not in Web Staging.",
         "stable",
         "enabled", "TRUE",
@@ -185,7 +185,7 @@
     ],
     [
         "validation.rule.template",
-        "C1_CmxM_NotIn_CmxS",
+        "validation.comax.master_missing_from_staging",
         "[C1] Active Comax Master product not in Comax Staging.",
         "stable",
         "enabled", "TRUE",
@@ -203,7 +203,7 @@
     ],
     [
         "validation.rule.template",
-        "M_Audit_RowCountMismatch",
+        "validation.audit.row_count_mismatch",
         "[M1] Row count mismatch between Comax Master and Product Audit.",
         "stable",
         "enabled", "TRUE",
@@ -219,7 +219,7 @@
     ],
     [
         "validation.rule.template",
-        "B1_WebM_SKU_NotIn_ComaxM",
+        "validation.master.web_sku_missing_comax",
         "[B1] Web Master SKU not in Comax Master.",
         "stable",
         "enabled", "TRUE",
@@ -237,7 +237,7 @@
     ],
     [
         "validation.rule.template",
-        "B2_ComaxM_SKU_NotIn_WebM",
+        "validation.master.comax_sku_missing_web",
         "[B2] Comax Master SKU not in Web Master.",
         "stable",
         "enabled", "TRUE",
@@ -256,7 +256,7 @@
     ],
     [
         "validation.rule.template",
-        "B3_WebM_Name_NotIn_WebDetM",
+        "validation.master.web_name_missing_details",
         "[B3] Web Master Name not in Web Details Master.",
         "stable",
         "enabled", "TRUE",
@@ -274,7 +274,7 @@
     ],
     [
         "validation.rule.template",
-        "B4_WebDetM_Name_NotIn_WebM",
+        "validation.master.web_details_name_missing_master",
         "[B4] Web Details Master Name not in Web Master.",
         "stable",
         "enabled", "TRUE",
@@ -292,7 +292,7 @@
     ],
     [
         "validation.rule.template",
-        "B7_WebM_Published_NotIn_ComaxM",
+        "validation.master.published_status_mismatch",
         "[B7] Web Master Published status not in Comax Master.",
         "stable",
         "enabled", "TRUE",
@@ -312,7 +312,7 @@
 
     [
         "validation.rule.template",
-        "C3_Comax_NameMismatch",
+        "validation.comax.name_mismatch",
         "[C3] Name mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -329,7 +329,7 @@
     ],
     [
         "validation.rule.template",
-        "C4_Comax_PriceMismatch",
+        "validation.comax.price_mismatch",
         "[C4] Price mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "FALSE",
@@ -347,7 +347,7 @@
 
     [
         "validation.rule.template",
-        "C7_Comax_IsWebMismatch",
+        "validation.comax.is_web_mismatch",
         "[C7] IsWeb mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -364,7 +364,7 @@
     ],
     [
         "validation.rule.template",
-        "C8_Comax_IsActiveMismatch",
+        "validation.comax.is_active_mismatch",
         "[C8] IsActive mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -381,6 +381,9 @@
     ],
     [
         "validation.rule.template",
+        "validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
+        "stable",
         "enabled", "FALSE",
         "validation_suite", "comax_staging",
         "test_type", "FIELD_COMPARISON",
@@ -395,7 +398,7 @@
     ],
     [
         "validation.rule.template",
-        "D1_ComaxS_ColumnMismatch",
+        "validation.comax.schema_mismatch",
         "[D1] Column mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -408,10 +411,10 @@
     ],
     [
         "validation.rule.template",
-        "D3_ComaxS_EmptyCells",
+        "validation.comax.empty_cells",
         "[D3] Empty cells found in populated columns of Comax Staging.",
         "stable",
-        "enabled", "TRUE",
+        "enabled", "FALSE",
         "test_type", "DATA_COMPLETENESS",
         "source_sheet", "CmxProdS",
         "on_failure_task_type", "task.validation.comax_data_integrity",
@@ -420,7 +423,7 @@
     ],
     [
         "validation.rule.template",
-        "E1_WebOrdS_ColumnMismatch",
+        "validation.orders.schema_mismatch",
         "[E1] Column mismatch between Web Orders Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -433,10 +436,10 @@
     ],
     [
         "validation.rule.template",
-        "E2_WebOrdS_EmptyCells",
+        "validation.orders.empty_cells",
         "[E2] Empty cells found in populated columns of Web Orders Staging.",
         "stable",
-        "enabled", "TRUE",
+        "enabled", "FALSE",
         "test_type", "DATA_COMPLETENESS",
         "source_sheet", "WebOrdS",
         "on_failure_task_type", "task.validation.order_staging_failure",
@@ -445,7 +448,7 @@
     ],
     [
         "validation.rule.template",
-        "F1_WebProdS_ColumnMismatch",
+        "validation.web.schema_mismatch",
         "[F1] Column mismatch between Web Products Master and Staging.",
         "stable",
         "enabled", "TRUE",
@@ -458,10 +461,10 @@
     ],
     [
         "validation.rule.template",
-        "F2_WebProdS_EmptyCells",
+        "validation.web.empty_cells",
         "[F2] Empty cells found in populated columns of Web Products Staging.",
         "stable",
-        "enabled", "TRUE",
+        "enabled", "FALSE",
         "test_type", "DATA_COMPLETENESS",
         "source_sheet", "WebProdS_EN",
         "on_failure_task_type", "task.validation.web_data_integrity",
@@ -470,7 +473,7 @@
     ],
     [
         "validation.rule.template",
-        "ARCHIVED_COMAX_PRODUCT_HAS_STOCK",
+        "validation.comax.archived_stock",
         "[Z2] Archived Comax Product has Non-Zero Stock.",
         "stable",
         "enabled", "TRUE",

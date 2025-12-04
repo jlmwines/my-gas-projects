@@ -752,9 +752,8 @@ const InventoryManagementService = (function() {
                 const sheetNames = allConfig['system.sheet_names'];
                 const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
                 const taskSheet = ss.getSheetByName(sheetNames.SysTasks);
-                const cmxProdSheet = ss.getSheetByName(sheetNames.CmxProdM); // Needed for Names
 
-                if (!productAuditSheet || !taskSheet || !cmxProdSheet) {
+                if (!productAuditSheet || !taskSheet) {
                   throw new Error(`Required sheets not found.`);
                 }
 
@@ -764,38 +763,26 @@ const InventoryManagementService = (function() {
                 const tStatusCol = taskHeaders.indexOf('st_Status');
                 const tTypeCol = taskHeaders.indexOf('st_TaskTypeId');
                 const tEntityCol = taskHeaders.indexOf('st_LinkedEntityId');
+                const tNameCol = taskHeaders.indexOf('st_LinkedEntityName');
                 const tIdCol = taskHeaders.indexOf('st_TaskId');
 
                 const relevantTypes = ['task.inventory.count', 'task.validation.comax_internal_audit'];
-                const acceptedItems = []; // [{sku, taskId}]
+                const acceptedItems = []; // [{sku, taskId, name}]
 
                 for (let i = 1; i < taskData.length; i++) {
                   const row = taskData[i];
                   if (row[tStatusCol] === 'Accepted' && relevantTypes.includes(row[tTypeCol])) {
                     const sku = String(row[tEntityCol]).trim();
                     if (sku) {
-                        acceptedItems.push({ sku: sku, taskId: row[tIdCol] });
+                        const name = (tNameCol > -1) ? row[tNameCol] : '';
+                        acceptedItems.push({ sku: sku, taskId: row[tIdCol], name: name });
                     }
                   }
                 }
 
                 if (acceptedItems.length === 0) return [];
 
-                // 2. Prepare Maps for Data Lookup
-                
-                // CmxProdM for Names
-                const cmxData = cmxProdSheet.getDataRange().getValues();
-                const cmxHeaders = cmxData[0];
-                const cmxSkuCol = cmxHeaders.indexOf('cpm_SKU');
-                const cmxNameCol = cmxHeaders.indexOf('cpm_NameHe');
-                const cmxNameMap = new Map();
-                if (cmxSkuCol !== -1 && cmxNameCol !== -1) {
-                    for(let i=1; i<cmxData.length; i++) {
-                        cmxNameMap.set(String(cmxData[i][cmxSkuCol]).trim(), cmxData[i][cmxNameCol]);
-                    }
-                }
-
-                // SysProductAudit for Quantities
+                // 2. SysProductAudit for Quantities
                 const auditData = productAuditSheet.getDataRange().getValues();
                 const auditHeaders = auditData[0];
                 const paSkuCol = auditHeaders.indexOf('pa_SKU');
@@ -821,7 +808,7 @@ const InventoryManagementService = (function() {
                 // 3. Build Result Array
                 const results = acceptedItems.map(item => {
                     const sku = item.sku;
-                    const name = cmxNameMap.get(sku) || 'Unknown Product';
+                    const name = item.name || 'Unknown Product';
                     const stock = auditMap.get(sku) || { brurya: 0, storage: 0, office: 0, shop: 0, comax: 0 };
                     const total = stock.brurya + stock.storage + stock.office + stock.shop;
 
@@ -1024,7 +1011,7 @@ const InventoryManagementService = (function() {
                 const taskNotes = `Comax adjustments exported (${exportedCount} items). Please verify import to Comax and close this task.`;
                 const taskTypeId = 'task.confirmation.comax_inventory_export'; 
                 
-                const newTask = TaskService.createTask(taskTypeId, file.getId(), taskTitle, taskNotes);
+                const newTask = TaskService.createTask(taskTypeId, file.getId(), file.getName(), taskTitle, taskNotes);
 
                 return { 
                   success: true, 
@@ -1238,6 +1225,7 @@ const InventoryManagementService = (function() {
                            TaskService.createTask(
                                taskTypeId, 
                                item.sku, 
+                               item.name,
                                `Verify Count: ${item.name}`, 
                                `Auto-generated. Reason: ${item.reason}`
                            );
@@ -1292,7 +1280,7 @@ const InventoryManagementService = (function() {
                     const title = `Spot Check: ${productData.cpm_NameHe}`;
                     const finalNote = note ? `Spot Check. Note: ${note}` : `Spot Check requested manually.`;
                     
-                    const newTask = TaskService.createTask(taskTypeId, cleanSku, title, finalNote);
+                    const newTask = TaskService.createTask(taskTypeId, cleanSku, productData.cpm_NameHe, title, finalNote);
 
                     return { success: true, taskId: newTask.st_TaskId };
 

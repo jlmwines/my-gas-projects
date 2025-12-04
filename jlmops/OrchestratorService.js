@@ -630,13 +630,13 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, 'Created new periodic validation job.');
   }
 
-  function _createTaskIfNotOpen(taskTypeId, entityId, title, notes) {
+  function _createTaskIfNotOpen(taskTypeId, entityId, linkedEntityName, title, notes) {
     const serviceName = 'OrchestratorService';
     const functionName = '_createTaskIfNotOpen';
     try {
       if (!TaskService.hasOpenTasks(taskTypeId)) {
         logger.info(serviceName, functionName, `No open task of type '${taskTypeId}' found. Creating one.`);
-        TaskService.createTask(taskTypeId, entityId, title, notes);
+        TaskService.createTask(taskTypeId, entityId, linkedEntityName, title, notes);
       } else {
         logger.info(serviceName, functionName, `An open task of type '${taskTypeId}' already exists. Skipping creation.`);
       }
@@ -658,6 +658,7 @@ const OrchestratorService = (function() {
         _createTaskIfNotOpen(
           'task.export.comax_orders_ready',
           'SYSTEM',
+          'System',
           `Comax Export Ready: ${ordersToExportCount} Orders`,
           `The web order import has completed, and ${ordersToExportCount} orders are now ready for export to Comax.`
         );
@@ -724,6 +725,7 @@ const OrchestratorService = (function() {
           _createTaskIfNotOpen(
             'task.export.web_inventory_ready',
             'SYSTEM',
+            'System',
             'Web Inventory Export Ready',
             'The Web and Comax product imports have both completed successfully. The web inventory export is now ready to be generated.'
           );

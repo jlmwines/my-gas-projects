@@ -67,12 +67,13 @@ const WebAppTasks = (() => {
    * Wraps the TaskService.createTask function.
    * @param {string} typeId - The type of task to create.
    * @param {string} entityId - The ID of the entity this task relates to.
+   * @param {string} linkedEntityName - The human-readable name of the entity.
    * @param {string} title - The title of the task.
    * @param {string} notes - The notes for the task.
    * @returns {Object} The created task object.
    */
-  const createTask = (typeId, entityId, title, notes) => {
-    return TaskService.createTask(typeId, entityId, title, notes);
+  const createTask = (typeId, entityId, linkedEntityName, title, notes) => {
+    return TaskService.createTask(typeId, entityId, linkedEntityName, title, notes);
   };
 
   /**

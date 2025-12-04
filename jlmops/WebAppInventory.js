@@ -249,7 +249,7 @@ function WebAppInventory_getProductsForCount(forExport = false) {
       t.st_Status === 'New' || t.st_Status === 'Assigned'
     );
     
-    // Load CmxProdM (Comax Product Master) to get product names by SKU
+    // Load CmxProdM (Comax Product Master) to get stock by SKU
     const cmxProdMData = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
     const cmxProdMMap = cmxProdMData.map;
 
@@ -259,10 +259,11 @@ function WebAppInventory_getProductsForCount(forExport = false) {
 
     const productsToCount = allCountTasks.map(task => {
       const sku = String(task.st_LinkedEntityId).trim();
-      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product';
+      // Use LinkedEntityName from task if available, otherwise fallback or 'Unknown'
+      const productName = task.st_LinkedEntityName || (cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product');
       
-      if (!cmxProdMMap.has(sku)) {
-        LoggerService.warn('WebAppInventory', 'getProductsForCount', `SKU from task not found in CmxProdM: ${sku}`);
+      if (!task.st_LinkedEntityName && !cmxProdMMap.has(sku)) {
+        LoggerService.warn('WebAppInventory', 'getProductsForCount', `SKU from task not found in CmxProdM and no name in task: ${sku}`);
       }
 
       const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
@@ -364,10 +365,10 @@ function WebAppInventory_getAdminInventoryViewData() {
 
     const tasksForReview = reviewTasks.map(task => {
       const sku = String(task.st_LinkedEntityId).trim();
-      const productName = cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product';
+      const productName = task.st_LinkedEntityName || (cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product');
       
-      if (!cmxProdMMap.has(sku)) {
-        LoggerService.warn('WebAppInventory', 'getAdminInventoryViewData', `SKU from task not found in CmxProdM: ${sku}`);
+      if (!task.st_LinkedEntityName && !cmxProdMMap.has(sku)) {
+        LoggerService.warn('WebAppInventory', 'getAdminInventoryViewData', `SKU from task not found in CmxProdM and no name in task: ${sku}`);
       }
 
       const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
@@ -405,14 +406,21 @@ function WebAppInventory_getAdminInventoryViewData() {
          dateStr = String(task.st_CreatedDate);
        }
 
+       const productName = task.st_LinkedEntityName || 'Unknown Product'; // Use LinkedEntityName
+
        return {
          taskId: task.st_TaskId,
          title: task.st_Title,
+         productName: productName, // New: Add product name
+         sku: task.st_LinkedEntityId, // New: Add SKU/LinkedEntityId
          createdDate: dateStr
        };
     });
     
-    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing open tasks (Simplified).');
+    // Sort open tasks by product name
+    openTasks.sort((a, b) => a.productName.localeCompare(b.productName));
+    
+    LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', 'Finished processing open tasks (Enhanced).');
 
     return {
       reviewTasks: tasksForReview,

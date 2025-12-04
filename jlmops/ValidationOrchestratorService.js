@@ -84,15 +84,16 @@ const ValidationOrchestratorService = (function() {
       const notes = `${rule.on_failure_notes}\n\nSummary of ${discrepancies.length} failures.\nSee SysLog for details.\nFirst few: ${discrepancies.slice(0,5).map(d => d.key).join(', ')}`;
       
       // Create a system-level task
-      TaskService.createTask(rule.on_failure_task_type, 'SYSTEM', title, notes); // TODO: Add sessionId support to TaskService
+      TaskService.createTask(rule.on_failure_task_type, 'SYSTEM', 'System', title, notes, sessionId);
   }
 
   function _createIndividualTask(rule, discrepancy, sessionId) {
       // Simple template replacement for now
       const title = rule.on_failure_title.replace('${key}', discrepancy.key); 
       const notes = `${rule.on_failure_notes}\n\nDetails: ${discrepancy.details}`;
+      const entityName = discrepancy.name || '';
       
-      TaskService.createTask(rule.on_failure_task_type, discrepancy.key, title, notes);
+      TaskService.createTask(rule.on_failure_task_type, discrepancy.key, entityName, title, notes, sessionId);
   }
 
   // Duplicate from ProductService for now, ideally shared utility

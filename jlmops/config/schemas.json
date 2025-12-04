@@ -184,7 +184,7 @@
         "Schema for the master task list.",
         "stable",
         "headers",
-        "st_TaskId,st_TaskTypeId,st_SessionId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_CreatedDate,st_DueDate,st_DoneDate,st_Notes",
+        "st_TaskId,st_TaskTypeId,st_SessionId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_LinkedEntityName,st_CreatedDate,st_DueDate,st_DoneDate,st_Notes",
         "",
         "",
         "",

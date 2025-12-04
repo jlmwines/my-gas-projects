@@ -44,6 +44,16 @@ const ValidationLogic = (function() {
     });
   }
 
+  function _extractName(row) {
+      if (!row) return '';
+      // Priority list of name columns
+      const nameCols = ['cpm_NameHe', 'wdm_NameEn', 'wpm_NameEn', 'wps_Name', 'wxl_NameHe', 'Name', 'name', 'cps_NameHe'];
+      for (const col of nameCols) {
+          if (row[col]) return row[col];
+      }
+      return '';
+  }
+
   // =================================================================================
   // VALIDATION EXECUTORS
   // =================================================================================
@@ -82,6 +92,7 @@ const ValidationLogic = (function() {
         if (passesFilter) {
             discrepancies.push({
                 key: key,
+                name: _extractName(sourceRow),
                 details: `Item ${key} failed existence check.`
             });
         }
@@ -127,6 +138,7 @@ const ValidationLogic = (function() {
               if (valueA !== valueB) {
                   discrepancies.push({
                       key: key,
+                      name: _extractName(rowA) || _extractName(rowB),
                       details: `Mismatch: ${fieldA}('${valueA}') vs ${fieldB}('${valueB}')`
                   });
               }

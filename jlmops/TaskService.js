@@ -9,12 +9,13 @@ const TaskService = (function() {
    * Creates a new task if an identical open task does not already exist.
    * @param {string} taskTypeId The configuration name of the task type (e.g., 'task.validation.sku_not_in_comax').
    * @param {string} linkedEntityId The primary identifier of the item this task is about (e.g., a SKU or Product ID).
+   * @param {string} linkedEntityName The human-readable name of the entity this task is about (e.g., product name).
    * @param {string} title A short, descriptive title for the task.
    * @param {string} notes Additional details or context for the task.
    * @param {string} [sessionId=null] The session ID associated with this task.
    * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
-  function createTask(taskTypeId, linkedEntityId, title, notes, sessionId = null) {
+  function createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes, sessionId = null) {
     try {
       const taskTypeConfig = ConfigService.getConfig(taskTypeId);
       if (!taskTypeConfig) {
@@ -65,12 +66,14 @@ const TaskService = (function() {
       newRow[headers.indexOf('st_Status')] = taskTypeConfig.initial_status;
       newRow[headers.indexOf('st_Priority')] = taskTypeConfig.default_priority;
       newRow[headers.indexOf('st_LinkedEntityId')] = linkedEntityId;
+      const linkedEntityNameIdx = headers.indexOf('st_LinkedEntityName');
+      if (linkedEntityNameIdx > -1) newRow[linkedEntityNameIdx] = linkedEntityName;
       newRow[headers.indexOf('st_CreatedDate')] = new Date();
       newRow[headers.indexOf('st_Notes')] = notes;
 
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
-      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Session: ${sessionId}.`);
+      logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Name: ${linkedEntityName}, Session: ${sessionId}.`);
       
       return { id: taskId };
 

@@ -103,7 +103,7 @@ const ValidationService = {
     const entityId = skuKey ? dataRow[skuKey] : (joinKey || dataRow[rule.source_key] || dataRow[rule.key_A] || 'N/A');
 
     LoggerService.info(serviceName, 'createTaskFromFailure', `Attempting to create task for rule: ${rule.on_failure_task_type} with entity ID: ${entityId}`);
-    TaskService.createTask(rule.on_failure_task_type, entityId, title, notes);
+    TaskService.createTask(rule.on_failure_task_type, entityId, '', title, notes);
     
     return String(rule.on_failure_quarantine).toUpperCase() === 'TRUE';
   },
