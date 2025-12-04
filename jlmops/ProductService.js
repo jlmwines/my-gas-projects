@@ -129,7 +129,10 @@ const ProductService = (function() {
     const serviceName = 'ProductService';
     const functionName = '_runStagingValidation';
     logger.info(serviceName, functionName, `Starting validation for suite: ${suiteName}`, { sessionId: sessionId });
-    const quarantineTriggered = !ValidationService.runValidationSuite(suiteName, sessionId); // Pass sessionId to ValidationService
+    
+    const result = ValidationOrchestratorService.runValidationSuite(suiteName, sessionId);
+    const quarantineTriggered = result.quarantineTriggered;
+
     if (quarantineTriggered) {
         logger.warn(serviceName, functionName, `Validation suite '${suiteName}' triggered a quarantine.`, { sessionId: sessionId });
     }
@@ -542,8 +545,8 @@ const ProductService = (function() {
           finalJobStatus = _runWebXltValidationAndUpsert(executionContext);
           break;
         case 'manual.validation.master':
-          ValidationService.runValidationSuite('master_master', executionContext); // Pass executionContext
-          finalJobStatus = 'COMPLETED'; // Assume validation suite will handle its own logging/errors
+          ValidationOrchestratorService.processJob(executionContext);
+          return;
           break;
         case 'export.web.inventory':
           exportWebInventory(sessionId); // Pass sessionId
@@ -1329,7 +1332,8 @@ const ProductService = (function() {
 
           // 4. Create Sheet
 
-          const fileName = `NewProducts_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
+          const namePattern = allConfig['system.files.output_names']?.web_product_update || 'Prod-Web-{timestamp}';
+          const fileName = namePattern.replace('{timestamp}', Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')).replace('.csv', '');
 
           const newSpreadsheet = SpreadsheetApp.create(fileName);
 

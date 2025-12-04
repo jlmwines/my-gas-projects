@@ -79,6 +79,18 @@ const ValidationOrchestratorService = (function() {
     _updateJobStatus(executionContext, finalStatus, failureCount > 0 ? `${failureCount} rules failed.` : '');
   }
 
+  function runValidationSuite(suiteName, sessionId) {
+    const analysisResult = ValidationLogic.runValidationSuite(suiteName, sessionId);
+    
+    if (!analysisResult.success) {
+        throw new Error('Validation suite execution failed.');
+    }
+
+    const { quarantineTriggered, failureCount } = processValidationResults(analysisResult, sessionId);
+    
+    return { quarantineTriggered, failureCount };
+  }
+
   function _createSummaryTask(rule, discrepancies, sessionId) {
       const title = `${rule.on_failure_title} (Summary: ${discrepancies.length} Items)`;
       const notes = `${rule.on_failure_notes}\n\nSummary of ${discrepancies.length} failures.\nSee SysLog for details.\nFirst few: ${discrepancies.slice(0,5).map(d => d.key).join(', ')}`;
@@ -120,7 +132,8 @@ const ValidationOrchestratorService = (function() {
 
   return {
     processJob: processJob,
-    processValidationResults: processValidationResults
+    processValidationResults: processValidationResults,
+    runValidationSuite: runValidationSuite
   };
 
 })();

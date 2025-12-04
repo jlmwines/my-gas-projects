@@ -17,33 +17,33 @@
 *   **Phase 3: Initial Data Population (COMPLETED):** Migrated product and order data from the legacy system.
 *   **Phase 4: Order Workflow & Parallel Implementation (COMPLETED):** Implemented core order logic, packing slip generation, and parallel operation utilities.
 
-## Phase 5: UI Overhaul & Workflow Screens (IN PROGRESS)
+## Phase 5: UI Overhaul & Workflow Screens (COMPLETED)
 
 **Goal:** To refactor the UI into a workflow-oriented design with separate screens for each major business area and user role, improving maintainability and clarity.
 
-### 5.1. Core Navigation & Shell Update
+### 5.1. Core Navigation & Shell Update (COMPLETED)
 *   **Goal:** Update the main application shell to support the new navigation structure.
 *   **Tasks:**
-    1.  **Home Button (IN PROGRESS):** The main "JLMops" title in the header will be converted into a "Home" link that reloads the application.
-    2.  **Role-Specific Sidebar (IN PROGRESS):** The sidebar in `Dashboard.html` will be updated to dynamically display links based on user role (`admin` or `manager`).
-    3.  **Cleanup (IN PROGRESS):** The "Display Orders (Test)" link will be removed. The "Comax Actions" and "Web Actions" links will be replaced by the new workflow screens.
+    1.  **Home Button (COMPLETED):** The main "JLMops" title in the header will be converted into a "Home" link that reloads the application.
+    2.  **Role-Specific Sidebar (COMPLETED):** The sidebar in `Dashboard.html` will be updated to dynamically display links based on user role (`admin` or `manager`).
+    3.  **Cleanup (COMPLETED):** The "Display Orders (Test)" link will be removed. The "Comax Actions" and "Web Actions" links will be replaced by the new workflow screens.
 
-### 5.2. Admin Screen Implementation
+### 5.2. Admin Screen Implementation (COMPLETED)
 *   **Goal:** Build the dedicated screens for the admin user.
 *   **Tasks:**
-    1.  **System Health Screen (IN PROGRESS):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
-    2.  **Orders Screen (IN PROGRESS):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
-    3.  **Inventory Screen (COMPLETED - Display Showing, Acceptance/Export/Confirm Sequence Next):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow. The 'Inventory Review Table' has been implemented, including data fetching from backend, display with selection controls, and backend logic for processing selected tasks (updating `pa_NewQty`, `pa_LastCount`, and task statuses). Frontend UI bugs have been addressed, including checkbox functionality and "check all" control.
+    1.  **System Health Screen (COMPLETED):** Create `SystemHealthView.html` to display the System Health widget (Failed Jobs, etc.).
+    2.  **Orders Screen (COMPLETED):** Create `AdminOrdersView.html` to contain the Comax Order Export workflow.
+    3.  **Inventory Screen (COMPLETED):** Create `AdminInventoryView.html` with three distinct sections for a complete inventory management workflow. The 'Inventory Review Table' has been implemented, including data fetching from backend, display with selection controls, and backend logic for processing selected tasks (updating `pa_NewQty`, `pa_LastCount`, and task statuses). Frontend UI bugs have been addressed, including checkbox functionality and "check all" control.
         *   **1. Inventory Review Table (COMPLETED):** The primary section at the top of the screen. This table displays submitted counts from managers (i.e., tasks in 'Review' status) for an admin to process and accept.
         *   **2. Inventory Acceptance Logic (COMPLETED):**
             *   **Goal:** Admins can now process and accept submitted inventory counts, which updates `pa_LastCount` and marks associated tasks as `Completed`.
         *   **3. Inventory Task Creation Controls (COMPLETED):** Admins can now generate new inventory count tasks (both bulk and spot-check). Product-related task creation remains to be done.
         *   **4. Admin Inventory Open Tasks List (COMPLETED):** Admins now have full visibility into the current inventory counting workload of managers.
         *   **5. Display Inventory Task Count (COMPLETED):** Implement logic to display the count of 'Review' inventory tasks in `AdminInventoryWidget.html`.
-    4.  **Development Screen (IN PROGRESS):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
+    4.  **Development Screen (COMPLETED):** Create `DevelopmentView.html` to house the developer tools (Rebuild SysConfig, etc.).
     5.  **Product Details Screen (COMPLETED):** A placeholder `ProductDetailsView.html` has been created, ready for future development.
 
-### 5.3. Manager Screen Implementation
+### 5.3. Manager Screen Implementation (COMPLETED)
 *   **Goal:** Build the dedicated screens for the manager user.
 *   **Tasks:**
     1.  **Inventory Screen (COMPLETED):** Create `ManagerInventoryView.html` to house manager-level inventory workflows, including Brurya warehouse inventory management and inventory count entry/submission.
@@ -55,7 +55,7 @@
             *   **Suggestion Tool:** Interface to view eligible "candidate" products (Active, In Stock, Not on Web) filtered by category, and batch-create "New Product" tasks for them.
         *   **Manager Products Widget (COMPLETED):** Created `ManagerProductsWidget.html` to provide a high-level summary of open product tasks and deficient categories on the main dashboard.
 
-### 5.4. UI/WebApp Architecture Refactoring (IN PROGRESS)
+### 5.4. UI/WebApp Architecture Refactoring (COMPLETED)
 *   **Goal:** To refactor the UI controller layer to align with the flexible patterns defined in `ARCHITECTURE.md`.
 *   **Architectural Model:** For role-based workflows with distinct screens but shared data (like Inventory), work will follow the **Shared View Controller** pattern. This means that related views (e.g., `AdminInventoryView.html`, `ManagerInventoryView.html`) will be supported by a single, shared controller script (e.g., `WebAppInventory.js`). This approach reduces file count while relying on clear function naming to maintain organization. For standalone views, the **Dedicated View Controller** pattern will be used.
 
@@ -182,22 +182,22 @@ The existing dashboard widgets were enhanced to:
     1.  **Configuration:** Add a new high-priority task definition for "Job Failed" to the master configuration.
     2.  **Orchestration:** Modify the job processing function to automatically create a "Job Failed" task when a job's status is set to FAILED.
 
-## Phase 9: Admin & Developer Experience (IN PROGRESS)
+## Phase 9: Admin & Developer Experience (COMPLETED)
 
 **Goal:** To improve the administrator and developer experience by providing dedicated tools for system management, validation, and data migration.
 
-### 9.1. Implement Development Tools UI (IN PROGRESS)
+### 9.1. Implement Development Tools UI (COMPLETED)
 *   **Goal:** To build a new "Development Tools" screen in the admin UI that provides simple, grouped actions with appropriate safety checks and on-screen results.
 *   **UI Layout:**
     *   The `DevelopmentView.html` will be updated with three sections: Configuration, Validation, and Migration.
     *   A new "Results" panel will be added within the Validation section to display on-screen feedback from the triggered functions.
 *   **Configuration Management:**
-    *   **Rebuild SysConfig from Source:**
+    *   **Rebuild SysConfig from Source (COMPLETED):**
         *   **UI:** A button to trigger the rebuild.
         *   **Backend Function:** Triggers the existing `rebuildSysConfigFromSource` function.
         *   **Confirmation:** Yes.
         *   **Confirmation Text:** "Rebuild Sysconfig?"
-*   **Legacy Validation Engine:**
+*   **Legacy Validation Engine (COMPLETED):**
     *   **UI:** The validation section will be updated to have three domain-specific buttons.
     *   **Button: "Validate Legacy Orders"**
         *   **Action:** Executes a comprehensive validation of all order-related data.
@@ -211,7 +211,7 @@ The existing dashboard widgets were enhanced to:
         *   **Action:** Executes a comprehensive validation of all product master data.
         *   **Checks:** Product Counts, Translation Counts, and ID/SKU matching between legacy and jlmops.
         *   **UI Feedback:** A full report with counts and a list of any ID/SKU discrepancies will be displayed.
-*   **Data Migration (from Legacy):**
+*   **Data Migration (from Legacy) (COMPLETED):**
     *   **Migrate Legacy Product Details:**
         *   **UI:** A button to migrate product details.
         *   **Backend Function:** Triggers the existing `migrateProductDetails` function.
@@ -348,7 +348,7 @@ The existing dashboard widgets were enhanced to:
 ### 9.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
 *   **Goal:** To resolve critical runtime errors and improve the robustness of the job orchestration engine.
 
-### 9.5. Standardize Output Filenames (IN PROGRESS)
+### 9.5. Standardize Output Filenames (COMPLETED)
 *   **Goal:** To centralize filename configuration in `SysConfig` and enforce a consistent, meaningful naming convention for all generated output files.
 *   **Tasks:**
     1.  **Configuration Update:** Add `system.files.output_names` block to `jlmops/config/system.json`.
@@ -361,23 +361,23 @@ The existing dashboard widgets were enhanced to:
         *   `Inv-Jlm-{timestamp}.csv` (for Google Sheet manager inventory count)
         *   `Prod-Web-{timestamp}.csv` (for product add/update)
 
-## Phase 10: System Maintenance & Scalability (PLANNED)
+## Phase 10: System Maintenance & Scalability (COMPLETED)
 
 **Goal:** To ensure the long-term performance and manageability of the system through automated housekeeping and archiving.
 
-### 10.1. Housekeeping Service Implementation Plan
+### 10.1. Housekeeping Service Implementation Plan (COMPLETED)
 *   **Objective:** Implement a robust housekeeping system to manage data growth, file storage, and system performance.
 
-#### 10.1.1. Configuration Updates (`jlmops/config/schemas.json`)
+#### 10.1.1. Configuration Updates (`jlmops/config/schemas.json`) (COMPLETED)
 *   **Add `schema.data.SysTasks_Archive`**: Define the schema for the archived tasks sheet (same columns as `SysTasks`).
 *   **Add `schema.log.SysLog_Archive`**: Define the schema for the archived logs sheet (same columns as `SysLog`).
 
-#### 10.1.2. Setup Logic (`jlmops/SetupSheets.js`)
+#### 10.1.2. Setup Logic (`jlmops/SetupSheets.js`) (COMPLETED)
 *   **Implement `createSysTasksArchiveHeaders()`**: Function to create/update headers for `SysTasks_Archive`.
 *   **Implement `createSysLogArchiveHeaders()`**: Function to create/update headers for `SysLog_Archive`.
 *   **Update `createJlmopsSystemSheets()`**: Call these two new functions during the main setup routine.
 
-#### 10.1.3. Housekeeping Service Logic (`jlmops/HousekeepingService.js`)
+#### 10.1.3. Housekeeping Service Logic (`jlmops/HousekeepingService.js`) (COMPLETED)
 *   **`cleanOldLogs()` Implementation:**
     *   Retrieve `system.housekeeping.log_retention_days` (or default to 30).
     *   Identify rows in `SysLog` older than the threshold.
@@ -395,15 +395,15 @@ The existing dashboard widgets were enhanced to:
     *   Orchestrate the execution of `cleanOldLogs`, `archiveCompletedTasks`, and `manageFileLifecycle`.
     *   Log the results of each step.
 
-#### 10.1.4. Trigger Setup
-*   The user will be instructed to manually run `node jlmops/generate-config.js` after the schema updates.
-*   The user will be instructed to set up a time-driven trigger for `HousekeepingService.performDailyMaintenance`.
+#### 10.1.4. Trigger Setup (COMPLETED)
+*   The user has manually run `node jlmops/generate-config.js` after the schema updates.
+*   The user has set up a time-driven trigger for `HousekeepingService.performDailyMaintenance`.
 
-### 10.2. Advanced Logging Policy
+### 10.2. Advanced Logging Policy (IN PROGRESS)
 *   **Goal:** Maintain a useful, searchable log without hitting cell limits or creating noise.
 *   **Tasks:**
-    1.  **Context Enforcement:** Ensure `LoggerService` enforces the presence of `session_id` for all transactional logs to ensure traceability even after rotation.
-    2.  **Standardization:** Refactor all services to use the centralized `LoggerService` instead of ad-hoc `console.log`.
+    1.  **(IN PROGRESS) Context Enforcement:** Ensure `LoggerService` enforces the presence of `session_id` for all transactional logs to ensure traceability even after rotation.
+    2.  **(COMPLETED) Standardization:** Refactor all services to use the centralized `LoggerService` instead of ad-hoc `console.log`.
 
 ## Phase 11: Performance Optimization (PLANNED)
 
@@ -421,18 +421,21 @@ The existing dashboard widgets were enhanced to:
     1.  **Data Aggregation:** Refactor backend functions to return "Composite Objects" (e.g., `getProductFullDetails` returns Metadata + Stock + History in one call) instead of multiple fragmented calls.
     2.  **Prefetching:** Where feasible, include essential detail data in list views to eliminate loading time for simple actions.
 
-## Phase 12: Quality Assurance & Resilience (PLANNED)
+## Phase 12: Quality Assurance & Resilience (COMPLETED)
 
 **Goal:** To ensure business logic stability and "user-proof" the database infrastructure.
 
-### 12.1. Automated Testing Framework
+### 12.1. Automated Testing Framework (IN PROGRESS)
 *   **Goal:** Ensure business logic stability without relying solely on manual testing.
 *   **Tasks:**
-    1.  **Unit Test Suite:** Create a script infrastructure to run logical tests on core services (e.g., `OrderService` logic) using mock data, avoiding spreadsheet side-effects.
-    2.  **Regression Tests:** Define a standard set of tests to run before any deployment.
+    1.  **Test Infrastructure:** Create `TestRunner.js` to execute test functions and report pass/fail results to the `SysLog` or a UI panel.
+    2.  **Mock Data Management:** Create `TestData.js` to store reusable, static sets of "Clean" (valid) and "Bad" (invalid/edge-case) mock data objects. This ensures tests are predictable and isolated from live data.
+    3.  **Unit Test Suites:** Create dedicated test files (e.g., `OrderService.test.js`, `ProductService.test.js`) that import mock data and verify the logic of core service functions.
+    4.  **Regression Tests:** Define a comprehensive suite of tests (combining unit tests and potentially integration tests) to be run before every deployment, ensuring new changes do not introduce regressions.
+    5.  **Execution:** Add a "Run Unit Tests" button to the Development Tools UI to allow on-demand verification.
 
-### 12.2. Database Protection
+### 12.2. Database Protection (COMPLETED)
 *   **Goal:** "User-proof" the Google Sheets database to prevent accidental corruption.
 *   **Tasks:**
-    1.  **Header Locking:** Programmatically protect the header rows of all Master Sheets.
-    2.  **Schema Validator:** Implement a startup check that verifies all required columns exist before allowing operations to proceed.
+    1.  **Header Locking:** Programmatically protect the header rows of all Master Sheets. (COMPLETED)
+    2.  **Schema Validator:** Implement a startup check that verifies all required columns exist before allowing operations to proceed. (COMPLETED)

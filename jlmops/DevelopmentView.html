@@ -6,6 +6,9 @@
       </div>
       <div class="card-body">
         <button class="btn btn-warning mr-2" onclick="runRebuildSysConfig()">Rebuild SysConfig</button>
+        <button class="btn mr-2" onclick="runProtectHeaders()">Protect Headers</button>
+        <button class="btn mr-2" onclick="runValidateSchema()">Validate Schema</button>
+        <button class="btn mr-2" onclick="runDailyHousekeeping()">Daily Housekeeping</button>
         <button class="btn mr-2" onclick="runLegacyValidation()">Run Legacy Validation</button>
         <div id="dev-tools-results" class="mt-3"></div>
       </div>
@@ -42,6 +45,47 @@
       .runRebuildSysConfigFromSource();
   }
 
+  function runProtectHeaders() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Protecting headers...</p>';
+    google.script.run
+      .withSuccessHandler(message => {
+        resultDiv.innerHTML = `<p class="alert alert-success">${message}</p>`;
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
+      })
+      .protectAllSheetHeadersFromUI(); // Backend function name
+  }
+
+  function runValidateSchema() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Validating schema...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        let html = '';
+        if (response.status === 'PASSED') {
+            html += `<p class="alert alert-success">${response.message}</p>`;
+        } else {
+            html += `<p class="alert alert-danger">${response.message}</p>`;
+            if (response.discrepancies && response.discrepancies.length > 0) {
+                html += '<h5>Discrepancies:</h5><ul>';
+                response.discrepancies.forEach(disc => {
+                    html += `<li><strong>Sheet:</strong> ${disc.sheet}, <strong>Issue:</strong> ${disc.issue}, <strong>Severity:</strong> ${disc.severity}`;
+                    if (disc.details) html += `, <strong>Details:</strong> ${disc.details}`;
+                    html += `</li>`;
+                });
+                html += '</ul>';
+            }
+        }
+        resultDiv.innerHTML = html;
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Failed to validate schema: ${err.message}</p>`;
+      })
+      .validateDatabaseSchemaFromUI(); // Backend function name
+  }
+
   function runLegacyValidation() {
     const resultDiv = document.getElementById('dev-tools-results');
     resultDiv.innerHTML = '<p class="text-info">Running legacy validations...</p>';
@@ -68,6 +112,19 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Failed to run legacy validation: ${error.message}</p>`;
       })
       .WebAppSystem_runLegacyValidationAndReturnResults();
+  }
+
+  function runDailyHousekeeping() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Running daily housekeeping...</p>';
+    google.script.run
+      .withSuccessHandler(message => {
+        resultDiv.innerHTML = `<p class="alert alert-success">${message || 'Daily housekeeping completed successfully.'}</p>`;
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error during daily housekeeping: ${err.message}</p>`;
+      })
+      .runDailyMaintenance();
   }
 
   // --- Wishlist Functions ---

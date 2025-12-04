@@ -3,41 +3,69 @@
  * @description Contains functions for creating and updating headers for all system sheets.
  */
 
-function createWebXltHeaders() {
-    const functionName = 'createWebXltHeaders';
+function createWebXltSHeaders() {
+    const functionName = 'createWebXltSHeaders';
     try {
         console.log(`Running ${functionName}...`);
 
         const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-        const sheetNames = ['WebXltS', 'WebXltM'];
+        const sheetName = 'WebXltS';
         
-        // This assumes that rebuildSysConfigFromSource has been run and the config is available.
         const allConfig = ConfigService.getAllConfig();
 
-        sheetNames.forEach(sheetName => {
-            let sheet = spreadsheet.getSheetByName(sheetName);
-            if (!sheet) {
-                sheet = spreadsheet.insertSheet(sheetName);
-                console.log(`Sheet '${sheetName}' was not found and has been created.`);
-            }
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
 
-            const schema = allConfig[`schema.data.${sheetName}`];
-            if (!schema || !schema.headers) {
-                throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
-            }
-            const headers = schema.headers.split(',');
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
 
-            sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-            console.log(`Headers written to '${sheetName}'.`);
-        });
-
-        SpreadsheetApp.getUi().alert('Headers for WebXltS and WebXltM have been synchronized.');
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
 
     } catch (error) {
         console.error(`A critical error occurred in ${functionName}: ${error.message}`);
-        SpreadsheetApp.getUi().alert(`Error: ${error.message}`);
+        throw error;
     }
 }
+
+function createWebXltMHeaders() {
+    const functionName = 'createWebXltMHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'WebXltM';
+        
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}'.`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+
 
 function createComaxStagingHeaders() {
     const functionName = 'createComaxStagingHeaders';
@@ -638,7 +666,8 @@ function createWebOrdItemsMArchiveHeaders() {
 }
 
 function createJlmopsSystemSheets() {
-    createWebXltHeaders();
+    createWebXltSHeaders();
+    createWebXltMHeaders();
     createComaxStagingHeaders();
     createWebOrdSHeaders();
     createWebOrdMHeaders();
@@ -659,7 +688,23 @@ function createJlmopsSystemSheets() {
     createWebOrdMArchiveHeaders();
     createWebOrdItemsMArchiveHeaders();
     createLookupSheets(); // Add new function to the main setup call
+    protectAllSheetHeaders();
 }
+
+/**
+ * Public function to be called from the UI to protect all sheet headers.
+ * @returns {string} A success message or throws an error.
+ */
+function protectAllSheetHeadersFromUI() {
+    try {
+        protectAllSheetHeaders();
+        return 'All sheet headers have been protected.';
+    } catch (error) {
+        console.error('Error protecting all sheet headers from UI: ' + error.message);
+        throw new Error('Failed to protect sheet headers: ' + error.message);
+    }
+}
+
 
 function createSysProductAuditHeaders() {
     const functionName = 'createSysProductAuditHeaders';
@@ -693,33 +738,62 @@ function createSysProductAuditHeaders() {
     }
 }
 
-function createLookupSheets() {
-    const functionName = 'createLookupSheets';
+
+function protectAllSheetHeaders() {
+    const functionName = 'protectAllSheetHeaders';
     try {
         console.log(`Running ${functionName}...`);
-        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const allConfig = ConfigService.getAllConfig();
 
-        const sheetsToCreate = {
-            'SysLkp_Grapes': ['slg_Code', 'slg_TextEN', 'slg_TextHE'],
-            'SysLkp_Kashrut': ['slk_Type', 'slk_Code', 'slk_TextEN', 'slk_TextHE'],
-            'SysLkp_Texts': ['slt_Code', 'slt_TextEN', 'slt_TextHE', 'slt_Note']
-        };
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
 
-        for (const sheetName in sheetsToCreate) {
-            let sheet = spreadsheet.getSheetByName(sheetName);
-            if (!sheet) {
-                sheet = spreadsheet.insertSheet(sheetName);
-                console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+
+        const sheetSchemas = Object.keys(allConfig).filter(key => key.startsWith('schema.data.') || key.startsWith('schema.log.'));
+
+        for (const schemaKey of sheetSchemas) {
+            const schema = allConfig[schemaKey];
+            if (!schema || !schema.headers) {
+                console.warn(`Skipping protection for ${schemaKey}: schema or headers not found.`);
+                continue;
             }
-            const headers = sheetsToCreate[sheetName];
-            sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-            console.log(`Headers written to '${sheetName}'.`);
-        }
 
-        console.log('Lookup sheets have been created/verified.');
+            const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '');
+            let targetSpreadsheet;
+            if (schemaKey.startsWith('schema.data.')) {
+                targetSpreadsheet = dataSpreadsheet;
+            } else if (schemaKey.startsWith('schema.log.')) {
+                targetSpreadsheet = logSpreadsheet;
+            } else {
+                continue; // Should not happen with the filter, but good for safety
+            }
+
+            const sheet = targetSpreadsheet.getSheetByName(sheetName);
+            if (!sheet) {
+                console.warn(`Sheet '${sheetName}' not found in ${targetSpreadsheet.getName()}. Skipping protection.`);
+                continue;
+            }
+
+            const protection = sheet.getRange(1, 1, 1, sheet.getLastColumn()).protect();
+            protection.setDescription(`Header row protection for ${sheetName}`);
+            
+            // Ensure only the owner can edit the protected range
+            const editors = protection.getEditors();
+            if (editors.length > 0) {
+                protection.removeEditors(editors);
+            }
+            // ScriptApp.getProjectOwner() is not available in Web App context, rely on deployment execution user
+            protection.addEditor(Session.getActiveUser()); // Add current user too for testing/dev
+
+            console.log(`Protected header row for sheet: '${sheetName}' in '${targetSpreadsheet.getName()}'.`);
+        }
+        console.log(`${functionName} completed successfully.`);
 
     } catch (error) {
         console.error(`A critical error occurred in ${functionName}: ${error.message}`);
         throw error;
     }
 }
+
