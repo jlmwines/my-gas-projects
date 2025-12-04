@@ -122,7 +122,11 @@ const PrintService = (function() {
       const sortedOrderIds = Object.keys(ordersData).sort((a, b) => a - b);
 
       // --- 3. Generate a Google Doc for each order ---
-      const finalPackingSlipDocFile = templateFile.makeCopy(`Packing Slips ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd-HHmm")}`, outputFolder);
+      const namePattern = allConfig['system.files.output_names']?.packing_slips || 'Packing-{timestamp}';
+      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+      const fileName = namePattern.replace('{timestamp}', timestamp);
+
+      const finalPackingSlipDocFile = templateFile.makeCopy(fileName, outputFolder);
       const packingSlipDoc = DocumentApp.openById(finalPackingSlipDocFile.getId());
       const packingSlipBody = packingSlipDoc.getBody();
       

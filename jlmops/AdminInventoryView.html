@@ -18,7 +18,42 @@
     </div>
   </div>
 
-  <!-- Section 2: Task Creation Controls -->
+  <!-- Section 2: Comax Inventory Synchronization (Moved Up) -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Comax Inventory Synchronization</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive mb-3" style="max-height: 300px; overflow-y: auto;">
+                <table class="table table-sm table-hover" id="comax-export-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Comax</th>
+                            <th class="text-center">Total</th>
+                            <th class="text-center">Brurya</th>
+                            <th class="text-center">Storage</th>
+                            <th class="text-center">Office</th>
+                            <th class="text-center">Shop</th>
+                            <th class="text-center">SKU</th>
+                            <th class="text-right">Product Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>
+            <button id="btn-comax-export" class="btn btn-light" disabled>Comax Export</button>
+            <button id="btn-comax-updated" class="btn btn-light ml-2" disabled>Comax Updated</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Task Creation Controls -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
@@ -75,7 +110,7 @@
     </div>
   </div>
 
-  <!-- Section 3: Open Tasks List (Manager Queue) -->
+  <!-- Section 4: Open Tasks List (Manager Queue) -->
   <div class="row">
     <div class="col-12">
       <div class="card">
@@ -640,5 +675,143 @@
 
   // Initial load
   loadAdminViewData();
+  loadComaxSyncData(); // Load data for the new Comax Sync card
+
+  /**
+   * Loads data specifically for the Comax Sync card.
+   */
+  function loadComaxSyncData() {
+      google.script.run
+          .withSuccessHandler(renderComaxSyncCard)
+          .withFailureHandler(handleError)
+          .WebAppInventory_getAdminComaxSyncData();
+  }
+
+  /**
+   * Renders the Comax Sync card based on the provided data.
+   * @param {object} data - The data object from the backend.
+   */
+  function renderComaxSyncCard(data) {
+    const comaxExportBtn = document.getElementById('btn-comax-export');
+    const comaxConfirmBtn = document.getElementById('btn-comax-updated');
+    const comaxMessageArea = document.getElementById('comax-inventory-message-area');
+    const tableBody = document.querySelector('#comax-export-table tbody');
+
+    // Reset button states
+    comaxExportBtn.disabled = true;
+    comaxConfirmBtn.disabled = true;
+    comaxMessageArea.innerHTML = '';
+    comaxExportBtn.className = 'btn btn-light'; 
+    comaxConfirmBtn.className = 'btn btn-light ml-2';
+    tableBody.innerHTML = ''; // Clear table
+
+    if (data.error) {
+        comaxMessageArea.innerHTML = `<p class="text-danger">${data.error}</p>`;
+        return;
+    }
+
+    // Render Table of Accepted Tasks
+    if (data.acceptedTasks && data.acceptedTasks.length > 0) {
+        data.acceptedTasks.forEach(task => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="text-center">${task.comaxQty}</td>
+                <td class="text-center">${task.totalQty}</td>
+                <td class="text-center">${task.bruryaQty}</td>
+                <td class="text-center">${task.storageQty}</td>
+                <td class="text-center">${task.officeQty}</td>
+                <td class="text-center">${task.shopQty}</td>
+                <td class="text-center">${task.sku}</td>
+                <td class="text-right">${task.productName}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } else {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="8" class="text-center text-muted">No accepted tasks waiting for export.</td>';
+        tableBody.appendChild(row);
+    }
+
+    if (data.openComaxInventoryConfirmationTask) {
+        comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
+        comaxConfirmBtn.disabled = false;
+        comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
+    } else if (data.comaxInventoryExportCount > 0) {
+        // comaxMessageArea.innerHTML = `<p>${data.comaxInventoryExportCount} items ready for export.</p>`; // Redundant with table
+        comaxExportBtn.disabled = false;
+        comaxExportBtn.onclick = function() { handleComaxExportClick(); };
+    } else {
+        // comaxMessageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">No items to export.</p>'; // Redundant with table message
+    }
+  }
+
+  /**
+   * Handles the click event for the 'Comax Export' button.
+   */
+  function handleComaxExportClick() {
+    const exportBtn = document.getElementById('btn-comax-export');
+    const messageArea = document.getElementById('comax-inventory-message-area');
+    
+    if (confirm("Export Comax adjustments?")) {
+      exportBtn.disabled = true;
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response && response.message) {
+            alert(response.message);
+          }
+          loadAdminViewData(); // Reload all data
+          loadComaxSyncData(); // Reload Comax Sync data specifically
+          if (window.refreshSystemHealthWidget) {
+            window.refreshSystemHealthWidget();
+          }
+        })
+        .withFailureHandler(err => {
+            handleError(err);
+            exportBtn.disabled = false;
+            messageArea.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        })
+        .WebAppInventory_generateComaxInventoryExport();
+    }
+  }
+
+  /**
+   * Handles the click event for the 'Comax Updated' button.
+   * @param {string} taskId - The ID of the confirmation task to complete.
+   */
+  function handleComaxConfirmClick(taskId) {
+    console.log('Confirmation clicked for task:', taskId);
+    if (!taskId) {
+        handleError('Error: Task ID is missing. Please check the logs.');
+        return;
+    }
+
+    const confirmBtn = document.getElementById('btn-comax-updated');
+    const messageArea = document.getElementById('comax-inventory-message-area');
+
+    if (confirm("Confirm Comax adjustment applied and closed?")) {
+      confirmBtn.disabled = true;
+      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
+      
+      google.script.run
+        .withSuccessHandler(wasCompleted => {
+          if (!wasCompleted) {
+            handleError('Failed to confirm task.');
+          }
+          loadAdminViewData(); // Reload all data
+          loadComaxSyncData(); // Reload Comax Sync data specifically
+          if (window.refreshSystemHealthWidget) {
+            window.refreshSystemHealthWidget();
+          }
+        })
+        .withFailureHandler(err => {
+            handleError(err);
+            confirmBtn.disabled = false;
+            messageArea.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+        })
+        .WebAppTasks_completeTaskById(taskId);
+    }
+  }
 })();
 </script>

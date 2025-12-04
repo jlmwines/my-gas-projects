@@ -937,7 +937,10 @@ const InventoryManagementService = (function() {
                 });
 
                 // 4. Save File
-                const fileName = `ComaxAdjust_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM_dd_HH_mm')}.csv`;
+                const namePattern = allConfig['system.files.output_names']?.comax_inventory_export || 'Inv-Cmx-{timestamp}.csv';
+                const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+                const fileName = namePattern.replace('{timestamp}', timestamp);
+                
                 const exportFolderId = allConfig['system.folder.jlmops_exports']; 
                 
                 let folder;

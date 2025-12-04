@@ -1,5 +1,12 @@
-<div id="inventory-widget" style="padding: 0;">
-  <p>Loading...</p>
+<div id="inventory-widget-container" style="padding: 0;">
+  <div class="card">
+    <div class="card-header">
+      <h5>Inventory</h5>
+    </div>
+    <div class="card-body" id="inventory-widget-body">
+      <p>Loading Inventory Widget...</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -8,17 +15,17 @@
    * @param {Object} data - The inventory data from the backend.
    */
   function updateInventoryView(data) {
-    const widget = document.getElementById('inventory-widget');
+    const widgetBody = document.getElementById('inventory-widget-body'); // Targeting the body
     if (!data) {
-      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
       return;
     }
     if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    let html = '<h5>Inventory</h5>';
+    let html = ''; // Remove the h5, as it is now in the card structure
 
     // Brurya Summary
     html += '<p>Brurya Products: <strong>' + (data.bruryaProductCount || 0) + '</strong></p>';
@@ -29,94 +36,14 @@
     html += '<p>Negative Inventory: <strong>' + (data.openNegativeInventoryTasksCount || 0) + '</strong></p>';
     html += '<p>Inventory Count: <strong>' + (data.openInventoryCountTasksCount || 0) + '</strong></p>';
     html += '<p>Inventory Count Reviews: <strong>' + (data.openInventoryCountReviewTasksCount || 0) + '</strong></p>';
-    html += '<hr>';
-
-    // Comax Inventory Export Section
-    html += '<h6>Comax Inventory Export</h6>';
-    html += '<div id="comax-inventory-message-area" style="margin-bottom: 0.5rem;"></div>';
-    html += '<button id="btn-comax-export" class="btn" disabled>Comax Export</button>';
-    html += '<button id="btn-comax-updated" class="btn" style="margin-left: 0.5rem;" disabled>Comax Updated</button>';
-    html += '<hr>';
-
-    widget.innerHTML = html;
-
-    // --- State-Aware Logic for Comax Inventory Export ---
-    const comaxExportBtn = document.getElementById('btn-comax-export');
-    const comaxConfirmBtn = document.getElementById('btn-comax-updated');
-    const comaxMessageArea = document.getElementById('comax-inventory-message-area');
-
-    comaxExportBtn.className = 'btn';
-    comaxConfirmBtn.className = 'btn';
-
-    if (data.openComaxInventoryConfirmationTask) {
-        comaxMessageArea.innerHTML = `<div class="alert alert-warning" style="padding: 0.5rem 1rem;">${data.openComaxInventoryConfirmationTask.notes}</div>`;
-        comaxConfirmBtn.disabled = false;
-        comaxConfirmBtn.className = 'btn'; // Reverted to original 'btn'
-        comaxConfirmBtn.onclick = function() { handleComaxConfirmClick(data.openComaxInventoryConfirmationTask.id); };
-        comaxExportBtn.disabled = true;
-    } else if (data.comaxInventoryExportCount > 0) {
-        comaxMessageArea.innerHTML = `<p>${data.comaxInventoryExportCount} items ready for export.</p>`;
-        comaxExportBtn.disabled = false;
-        comaxExportBtn.className = 'btn'; // Reverted to original 'btn'
-        comaxExportBtn.onclick = function() { handleComaxExportClick(); };
-    } else {
-        comaxMessageArea.innerHTML = '<p style="font-size: 0.85rem;" class="text-muted">No items to export.</p>';
-        comaxExportBtn.disabled = true;
-    }
+    // Comax Inventory Export Section removed.
+    // HTML for Comax Inventory Export section removed.
+    // State-aware logic for Comax Inventory Export removed.
+    widgetBody.innerHTML = html; // Update widgetBody content
   }
 
-  /**
-   * Handles the click event for the 'Comax Export' button.
-   */
-  function handleComaxExportClick() {
-    const exportBtn = document.getElementById('btn-comax-export');
-    const messageArea = document.getElementById('comax-inventory-message-area');
-    
-    if (confirm("Export Comax adjustments?")) {
-      exportBtn.disabled = true;
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-
-      google.script.run
-        .withSuccessHandler(response => {
-          if (response && response.message) {
-            alert(response.message);
-          }
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppInventory_generateComaxInventoryExport();
-    }
-  }
-
-  /**
-   * Handles the click event for the 'Comax Updated' button.
-   * @param {string} taskId - The ID of the confirmation task to complete.
-   */
-  function handleComaxConfirmClick(taskId) {
-    console.log('Confirmation clicked for task:', taskId);
-    if (!taskId) {
-        alert('Error: Task ID is missing. Please check the logs.');
-        return;
-    }
-
-    const confirmBtn = document.getElementById('btn-comax-updated');
-    const messageArea = document.getElementById('comax-inventory-message-area');
-
-    if (confirm("Confirm Comax adjustment applied and closed?")) {
-      confirmBtn.disabled = true;
-      messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
-      
-      google.script.run
-        .withSuccessHandler(wasCompleted => {
-          if (!wasCompleted) {
-            showError('Failed to confirm task.');
-          }
-          google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();
-        })
-        .withFailureHandler(showError)
-        .WebAppTasks_completeTaskById(taskId);
-    }
-  }
+  // handleComaxExportClick function removed.
+  // handleComaxConfirmClick function removed.
 
   // Initial data load for this view
   google.script.run.withSuccessHandler(updateInventoryView).withFailureHandler(showError).WebAppInventory_getInventoryWidgetData();

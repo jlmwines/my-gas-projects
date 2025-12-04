@@ -439,6 +439,25 @@ function WebAppSystem_getSystemHealthDashboardData() {
         webExportStatus === 'READY' || webExportStatus === 'DONE' || webExportStatus === 'PENDING'
     );
 
+    // --- Daily Sync Summary ---
+    let syncStatusSummary = 'Daily Sync: Idle';
+    let syncStatusColor = 'text-muted'; // Default color
+    
+    // Prioritize display based on urgency
+    if (inventoryCycle.some(step => step.status === 'ERROR' || step.status === 'BLOCKED')) {
+        syncStatusSummary = 'Daily Sync: Attention Needed';
+        syncStatusColor = 'text-danger';
+    } else if (inventoryCycle.some(step => step.status === 'WARNING')) {
+        syncStatusSummary = 'Daily Sync: Review Required';
+        syncStatusColor = 'text-warning-dark'; // Use a custom darker warning color
+    } else if (inventoryCycle.some(step => step.status === 'PENDING')) {
+        syncStatusSummary = 'Daily Sync: In Progress';
+        syncStatusColor = 'text-primary';
+    } else if (inventoryCycle.every(step => step.status === 'DONE' || step.status === 'NEUTRAL')) {
+        syncStatusSummary = 'Daily Sync: Up to Date';
+        syncStatusColor = 'text-success';
+    }
+    // If none of the above, it stays 'Idle' (text-muted)
 
     return {
       isHealthy,
@@ -448,7 +467,11 @@ function WebAppSystem_getSystemHealthDashboardData() {
       passedValidations,
       inventoryCycle, // Add the cycle data
       isInventoryExportReady,
-      activeFailureTasks // Return the detailed tasks
+      activeFailureTasks, // Return the detailed tasks
+      syncStatusSummary: {
+        text: syncStatusSummary,
+        color: syncStatusColor
+      }
     };
 
   } catch (e) {

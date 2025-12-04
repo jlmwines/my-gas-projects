@@ -1,5 +1,12 @@
-<div id="orders-widget" style="padding: 0;">
-  <p>Loading...</p>
+<div id="orders-widget-container" style="padding: 0;">
+  <div class="card">
+    <div class="card-header">
+      <h5>Orders</h5>
+    </div>
+    <div class="card-body" id="orders-widget-body">
+      <p>Loading Orders Widget...</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -8,25 +15,23 @@
    * @param {Object} data - The orders data from the backend.
    */
   function updateOrdersWidget(data) {
-    const widget = document.getElementById('orders-widget');
+    const widgetBody = document.getElementById('orders-widget-body'); // Targeting the body
     if (!data) {
-      widget.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">Error: No data received from server.</p>`;
       return;
     }
     if (data.error) {
-      widget.innerHTML = `<p class="text-danger">${data.error}</p>`;
+      widgetBody.innerHTML = `<p class="text-danger">${data.error}</p>`;
       return;
     }
 
-    // --- Update Counts ---
-    let countsHtml = '<h5>Orders</h5>';
-    countsHtml += '<hr>'; // Divider below widget title
+    let countsHtml = ''; // Remove the h5 and hr, as they are now in the card structure
     countsHtml += '<p>On-Hold Orders: <strong>' + (data.onHoldCount || 0) + '</strong></p>';
     countsHtml += '<p>Processing Orders: <strong>' + (data.processingCount || 0) + '</strong></p>';
     countsHtml += '<p>Packing Slips Ready: <strong>' + (data.packingSlipsReadyCount || 0) + '</strong></p>';
     
     // --- Rebuild the widget with new structure (preserves a clean slate) ---
-    widget.innerHTML = countsHtml + 
+    widgetBody.innerHTML = countsHtml + 
       '<hr>' + // Divider below widget content
       '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Comax Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>';
   }

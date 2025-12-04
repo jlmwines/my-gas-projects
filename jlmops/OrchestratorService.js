@@ -401,16 +401,15 @@ const OrchestratorService = (function() {
     const now = new Date();
     const year = now.getFullYear();
     const month = ('0' + (now.getMonth() + 1)).slice(-2);
-    const day = ('0' + now.getDate()).slice(-2);
+    // Day folder level removed per user request
 
     let yearFolder = getOrCreateFolder(archiveFolder, year.toString());
     let monthFolder = getOrCreateFolder(yearFolder, month);
-    let dayFolder = getOrCreateFolder(monthFolder, day);
 
     const timestamp = now.toISOString().replace(/:/g, '-');
     const newFileName = `${file.getName()}_${timestamp}`;
     
-    const newFile = file.makeCopy(newFileName, dayFolder);
+    const newFile = file.makeCopy(newFileName, monthFolder);
     logger.info('OrchestratorService', 'archiveFile', `Archived file as: ${newFile.getName()}`);
     return newFile;
   }

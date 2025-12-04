@@ -463,5 +463,85 @@
         "",
         "",
         ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "comax_order_export",
+        "Ord-Cmx-{timestamp}.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "web_inventory_export",
+        "Inv-Web-{timestamp}.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "comax_inventory_export",
+        "Inv-Cmx-{timestamp}.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "packing_slips",
+        "Packing-{timestamp}",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "jlm_inventory_count",
+        "Inv-Jlm-{timestamp}.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.files.output_names",
+        "Naming patterns for generated output files. {timestamp} is replaced by MM-dd-HH-mm.",
+        "stable",
+        "web_product_update",
+        "Prod-Web-{timestamp}.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.housekeeping",
+        "Log retention days for SysLog sheet.",
+        "stable",
+        "log_retention_days",
+        "30",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.housekeeping",
+        "Task retention days for SysTasks sheet (completed/cancelled).",
+        "stable",
+        "task_retention_days",
+        "30",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysTasks_Archive",
+        "SysTasks_Archive",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysLog_Archive",
+        "SysLog_Archive",
+        "", "", "", "", "", "", "", ""
     ]
 ]

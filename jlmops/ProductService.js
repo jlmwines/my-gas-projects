@@ -673,7 +673,10 @@ const ProductService = (function() {
       const csvContent = WooCommerceFormatter.formatInventoryUpdate(exportProducts);
 
       const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      const fileName = `ProductInventory_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
+      const namePattern = allConfig['system.files.output_names']?.web_inventory_export || 'Inv-Web-{timestamp}.csv';
+      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+      const fileName = namePattern.replace('{timestamp}', timestamp);
+      
       const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
       LoggerService.info('ProductService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
 
@@ -1095,7 +1098,9 @@ const ProductService = (function() {
         }
 
         // 4. Create and format the new Google Sheet
-        const newSpreadsheetName = `ProductDetails_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}`;
+        const namePattern = allConfig['system.files.output_names']?.web_product_update || 'Prod-Web-{timestamp}';
+        const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+        const newSpreadsheetName = namePattern.replace('{timestamp}', timestamp).replace('.csv', ''); // Remove .csv if present as this is a Sheet
         const newSpreadsheet = SpreadsheetApp.create(newSpreadsheetName);
         const sheet = newSpreadsheet.getSheets()[0];
         sheet.setName('Product Details'); 

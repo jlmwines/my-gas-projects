@@ -373,7 +373,10 @@ function OrderService(productService) {
       }
       logger.info(serviceName, functionName, `Successfully retrieved export folder: ${exportFolder.getName()}`, { sessionId: sessionId });
 
-      const fileName = `ComaxExport_${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')}.csv`;
+      const namePattern = allConfig['system.files.output_names']?.comax_order_export || 'Ord-Cmx-{timestamp}.csv';
+      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+      const fileName = namePattern.replace('{timestamp}', timestamp);
+      
       const file = exportFolder.createFile(fileName, csvContent, MimeType.CSV);
       logger.info(serviceName, functionName, `Comax export file created: ${file.getName()} (ID: ${file.getId()})`, { sessionId: sessionId, fileId: file.getId(), fileName: file.getName() });
 

@@ -305,6 +305,34 @@ The existing dashboard widgets were enhanced to:
     2.  **Frontend:** Create `AdminDailySyncWidget.html` that renders different "Cards" based on the `currentStage`.
     3.  **Integration:** Connect UI buttons to `OrchestratorService` triggers that advance the state.
 
+### 8.6. Validation & Task System Hardening (PLANNED)
+*   **Goal:** To harden the system against data corruption, streamline task management, and unify the validation architecture under a consistent naming convention.
+
+#### 8.6.1. Unified Naming Convention (`Action.Object.Detail`)
+*   **Concept:** Harmonize Validation Rule IDs and Task Types to be self-documenting and easily groupable.
+    *   **Rule ID:** `validation.[Category].[Issue]` (e.g., `validation.product.vintage_mismatch`)
+    *   **Task Type:** `task.[Category].[Action].[Issue]` (e.g., `task.product.validation.vintage_mismatch`)
+*   **Action:** Refactor `validation.json` and `taskDefinitions.json` to use this schema, ensuring 1:1 traceability between a rule failure and its resulting task.
+
+#### 8.6.2. Task System Enhancements
+*   **Schema Update (`SysTasks`):**
+    *   **Add Column:** `st_LinkedEntityName`.
+    *   **Purpose:** Cache the product/entity name at creation time. This eliminates expensive cross-sheet lookups during dashboard rendering, significantly improving load times.
+*   **Task Type Standardization:**
+    *   Update `taskDefinitions.json` to group tasks logically (e.g., all inventory counts under `task.inventory.count.*`).
+    *   Ensure priorities align with the new severity rules (e.g., Schema Mismatch = High).
+
+#### 8.6.3. Validation Rule Hardening (`validation.json`)
+*   **Severity & Quarantine:** Set `on_failure_quarantine: "TRUE"` for **all** Schema Comparison (`D1`, `F1`, `E1`, `WebXlt_ColumnMismatch`) and Row Count (`WebXlt_RowCountMismatch`) rules.
+*   **Priority Adjustment:** Increase `A2_WebM_NotIn_WebS` (Web Master missing from Staging) to `HIGH` priority to catch accidental source deletions.
+*   **Noise Reduction:** Disable generic `DATA_COMPLETENESS` rules (`D3`, `E2`, `F2`, `WebXlt_EmptyCells`) to stop false alarms.
+*   **Gap Closure:** Add specific `INTERNAL_AUDIT` rules to check for empty Primary Keys (`wps_ID`, `cps_SKU`, `wos_OrderId`) with `quarantine: "TRUE"`.
+
+#### 8.6.4. Architectural Migration
+*   **Port Logic:** Move `_executeRowCountComparison`, `_executeSchemaComparison`, and `_executeInternalAudit` logic from `ValidationService_DEPRECATED.js` to `ValidationLogic.js`.
+*   **Switch Consumers:** Update `ValidationOrchestratorService` to use the newly ported functions in `ValidationLogic`.
+*   **Decommission:** Delete `ValidationService_DEPRECATED.js`.
+
 ## Phase 9: Architectural Refactoring (PLANNED)
 *   **Goal:** To improve the long-term safety and maintainability of the system by refactoring core components and workflows.
 
@@ -320,21 +348,62 @@ The existing dashboard widgets were enhanced to:
 ### 9.4. Orchestration and Service Layer Bug Fixes (COMPLETED)
 *   **Goal:** To resolve critical runtime errors and improve the robustness of the job orchestration engine.
 
+### 9.5. Standardize Output Filenames (IN PROGRESS)
+*   **Goal:** To centralize filename configuration in `SysConfig` and enforce a consistent, meaningful naming convention for all generated output files.
+*   **Tasks:**
+    1.  **Configuration Update:** Add `system.files.output_names` block to `jlmops/config/system.json`.
+    2.  **Service Refactoring:** Update `OrderService`, `ProductService`, `InventoryManagementService`, and `PrintService` to use the new configuration and standardized `[Content]-[Target]-MM-dd-HH-mm` pattern.
+    3.  **Filenames:**
+        *   `Ord-Cmx-{timestamp}.csv`
+        *   `Inv-Web-{timestamp}.csv`
+        *   `Inv-Cmx-{timestamp}.csv`
+        *   `Packing-{timestamp}`
+        *   `Inv-Jlm-{timestamp}.csv` (for Google Sheet manager inventory count)
+        *   `Prod-Web-{timestamp}.csv` (for product add/update)
+
 ## Phase 10: System Maintenance & Scalability (PLANNED)
 
 **Goal:** To ensure the long-term performance and manageability of the system through automated housekeeping and archiving.
 
-### 10.1. Housekeeping Service
-*   **Goal:** Prevent the `SysJobQueue` and `SysLog` sheets from growing indefinitely.
-*   **Tasks:**
-    1.  **Archive Logic:** Create a service to move records older than X days (e.g., 30) from the live spreadsheet to a dedicated "Archive Spreadsheet".
-    2.  **Scheduled Trigger:** Configure a monthly trigger to run the housekeeping job.
+### 10.1. Housekeeping Service Implementation Plan
+*   **Objective:** Implement a robust housekeeping system to manage data growth, file storage, and system performance.
+
+#### 10.1.1. Configuration Updates (`jlmops/config/schemas.json`)
+*   **Add `schema.data.SysTasks_Archive`**: Define the schema for the archived tasks sheet (same columns as `SysTasks`).
+*   **Add `schema.log.SysLog_Archive`**: Define the schema for the archived logs sheet (same columns as `SysLog`).
+
+#### 10.1.2. Setup Logic (`jlmops/SetupSheets.js`)
+*   **Implement `createSysTasksArchiveHeaders()`**: Function to create/update headers for `SysTasks_Archive`.
+*   **Implement `createSysLogArchiveHeaders()`**: Function to create/update headers for `SysLog_Archive`.
+*   **Update `createJlmopsSystemSheets()`**: Call these two new functions during the main setup routine.
+
+#### 10.1.3. Housekeeping Service Logic (`jlmops/HousekeepingService.js`)
+*   **`cleanOldLogs()` Implementation:**
+    *   Retrieve `system.housekeeping.log_retention_days` (or default to 30).
+    *   Identify rows in `SysLog` older than the threshold.
+    *   Move them to `SysLog_Archive`.
+    *   Keep the most recent 10,000 rows in `SysLog` regardless of date to prevent total data loss if housekeeping fails for a while.
+*   **`archiveCompletedTasks()` Implementation:**
+    *   Retrieve `system.housekeeping.task_retention_days` (or default to 30).
+    *   Identify tasks in `SysTasks` with status 'Completed' or 'Cancelled' that are older than the threshold.
+    *   Move them to `SysTasks_Archive`.
+*   **`manageFileLifecycle()` Implementation:**
+    *   **Input Source:** Scan for processed files (using `SysFileRegistry`) and delete them from the source folder.
+    *   **Input Archive:** Scan the Archive folder and delete files older than 365 days.
+    *   **Exports:** Scan the Exports folder. Move files > 7 days old to `_Old_Exports`. Delete files in `_Old_Exports` > 90 days old.
+*   **`performDailyMaintenance()` Update:**
+    *   Orchestrate the execution of `cleanOldLogs`, `archiveCompletedTasks`, and `manageFileLifecycle`.
+    *   Log the results of each step.
+
+#### 10.1.4. Trigger Setup
+*   The user will be instructed to manually run `node jlmops/generate-config.js` after the schema updates.
+*   The user will be instructed to set up a time-driven trigger for `HousekeepingService.performDailyMaintenance`.
 
 ### 10.2. Advanced Logging Policy
-*   **Goal:** Reduce log noise.
+*   **Goal:** Maintain a useful, searchable log without hitting cell limits or creating noise.
 *   **Tasks:**
-    1.  **Aggregation:** Update services to aggregate recurring errors (e.g., "500 validation failures") into a single log entry summary.
-    2.  **Log Levels:** strictly enforce INFO for high-level flow and DEBUG (new level) for granular details.
+    1.  **Context Enforcement:** Ensure `LoggerService` enforces the presence of `session_id` for all transactional logs to ensure traceability even after rotation.
+    2.  **Standardization:** Refactor all services to use the centralized `LoggerService` instead of ad-hoc `console.log`.
 
 ## Phase 11: Performance Optimization (PLANNED)
 
