@@ -31,7 +31,19 @@ const ConfigService = (function() {
    * This function performs a critical schema version check on load.
    */
   function loadConfig() {
-    if (configCache) {
+    // Try to get from CacheService first
+    const scriptCache = CacheService.getScriptCache();
+    const cachedConfig = scriptCache.get('parsedSysConfig');
+    
+    if (cachedConfig) {
+      configCache = JSON.parse(cachedConfig);
+      console.log('Configuration loaded from CacheService.');
+      // Perform schema version check even on cached config
+      const liveVersionSetting = configCache['sys.schema.version'];
+      const liveVersion = liveVersionSetting ? Number(liveVersionSetting['value']) : 0;
+      if (liveVersion !== REQUIRED_SCHEMA_VERSION) {
+        throw new Error(`Fatal Error: SysConfig schema mismatch in cache. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please force reload or run migration scripts.`);
+      }
       return;
     }
 
@@ -114,7 +126,8 @@ const ConfigService = (function() {
     console.log("ConfigService: Parsed 'system.sheet_names':", parsedConfig['system.sheet_names']);
 
     configCache = parsedConfig;
-    console.log(`Configuration loaded. Schema version ${liveVersion} validated.`);
+    scriptCache.put('parsedSysConfig', JSON.stringify(parsedConfig), 300); // Cache for 5 minutes
+    console.log(`Configuration loaded and cached. Schema version ${liveVersion} validated.`);
   }
 
 
@@ -156,6 +169,7 @@ const ConfigService = (function() {
    */
   function forceReload() {
     configCache = null;
+    CacheService.getScriptCache().remove('parsedSysConfig');
     console.log('Configuration cache invalidated.');
   }
 

@@ -91,8 +91,9 @@ const InventoryManagementService = (function() {
    * Calculates the total quantity of each SKU committed to 'On-Hold' orders
    * and populates the SysInventoryOnHold sheet.
    * @param {string} sessionId The session ID for context.
+   * @param {Array<Array<any>>} [webOrdItemsMData] Optional: Pre-loaded data from WebOrdItemsM sheet.
    */
-  function calculateOnHoldInventory(sessionId) {
+  function calculateOnHoldInventory(sessionId, webOrdItemsMData) {
     const serviceName = 'InventoryManagementService';
     const functionName = 'calculateOnHoldInventory';
     try {
@@ -140,24 +141,36 @@ const InventoryManagementService = (function() {
         return;
       }
 
-      // Get headers for WebOrdItemsM
-      const webOrdItemsMHeaders = webOrdItemsMSheet.getRange(1, 1, 1, webOrdItemsMSheet.getLastColumn()).getValues()[0];
-      const woiOrderIdCol = webOrdItemsMHeaders.indexOf("woi_OrderId");
-      const woiSkuCol = webOrdItemsMHeaders.indexOf("woi_SKU");
-      const woiQuantityCol = webOrdItemsMHeaders.indexOf("woi_Quantity");
+      // Determine the source of webOrdItemsMData
+      let currentWebOrdItemsMData;
+      let currentWebOrdItemsMHeaders;
+      if (webOrdItemsMData) {
+        // Use provided data, assume it includes headers in the first row
+        currentWebOrdItemsMData = webOrdItemsMData.slice(1);
+        currentWebOrdItemsMHeaders = webOrdItemsMData[0];
+        logger.info(serviceName, functionName, "Using provided webOrdItemsMData for on-hold inventory calculation.", { sessionId: sessionId, dataLength: currentWebOrdItemsMData.length });
+      } else {
+        // Read from sheet if not provided
+        const allItems = webOrdItemsMSheet.getDataRange().getValues();
+        currentWebOrdItemsMHeaders = allItems.shift();
+        currentWebOrdItemsMData = allItems;
+        logger.info(serviceName, functionName, "Reading WebOrdItemsM from sheet for on-hold inventory calculation.", { sessionId: sessionId, dataLength: currentWebOrdItemsMData.length });
+      }
+
+      const woiOrderIdCol = currentWebOrdItemsMHeaders.indexOf("woi_OrderId");
+      const woiSkuCol = currentWebOrdItemsMHeaders.indexOf("woi_SKU");
+      const woiQuantityCol = currentWebOrdItemsMHeaders.indexOf("woi_Quantity");
 
       if (woiOrderIdCol === -1 || woiSkuCol === -1 || woiQuantityCol === -1) {
-        logger.error(serviceName, functionName, "Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM.", null, { sessionId: sessionId });
+        logger.error(serviceName, functionName, "Required columns (woi_OrderId, woi_SKU, woi_Quantity) not found in WebOrdItemsM (or provided data headers).", null, { sessionId: sessionId });
         return;
       }
 
-      // Get WebOrdItemsM data
-      const webOrdItemsMData = webOrdItemsMSheet.getDataRange().getValues();
       const onHoldInventory = {}; // { SKU: quantity }
 
       // Aggregate quantities for 'On-Hold' items
-      for (let i = 1; i < webOrdItemsMData.length; i++) { // Skip header row
-        const row = webOrdItemsMData[i];
+      for (let i = 0; i < currentWebOrdItemsMData.length; i++) { // Iterate through data rows (headers already shifted)
+        const row = currentWebOrdItemsMData[i];
         const orderId = row[woiOrderIdCol];
         if (onHoldOrderIds.has(orderId)) {
           const sku = row[woiSkuCol];

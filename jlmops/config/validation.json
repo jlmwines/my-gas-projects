@@ -358,6 +358,8 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsWeb,cps_IsWeb",
+        "field_translations_map_cpm_IsWeb", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
+        "field_translations_map_cps_IsWeb", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.status_mismatch",
         "on_failure_title", "Comax IsWeb Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different IsWeb status in master (${cpm_IsWeb}) versus staging (${cps_IsWeb})."
@@ -375,6 +377,8 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsActive,cps_IsActive",
+        "field_translations_map_cpm_IsActive", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
+        "field_translations_map_cps_IsActive", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.status_mismatch",
         "on_failure_title", "Comax IsActive Mismatch: ${cpm_NameHe}",
         "on_failure_notes", "SKU ${cpm_SKU} has a different IsActive status in master (${cpm_IsActive}) versus staging (${cps_IsActive})."

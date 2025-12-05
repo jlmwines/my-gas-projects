@@ -33,11 +33,28 @@ const SyncStateService = (function() {
         state.comaxProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.comax_products', state.sessionId));
         state.masterValidationJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('job.periodic.validation.master', state.sessionId));
         state.webInventoryExportJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('export.web.inventory', state.sessionId));
+        
+        // --- NEW: Fetch latest log for UI feedback ---
+        const latestLog = logger.getLatestLogForSession(state.sessionId);
+        if (latestLog) {
+            state.latestLogMessage = `${new Date(latestLog.timestamp).toLocaleTimeString()} - ${latestLog.message}`;
+            // Use latest log timestamp as lastUpdated if state timestamp is older or missing
+            if (!state.lastUpdated || new Date(latestLog.timestamp) > new Date(state.lastUpdated)) {
+                 state.lastUpdated = latestLog.timestamp;
+            }
+        }
+
       } catch (e) {
         logger.error(SERVICE_NAME, functionName, `Error refreshing granular job statuses: ${e.message}`, e, { sessionId: state.sessionId });
         state.errorMessage = state.errorMessage ? state.errorMessage + "; Error refreshing job statuses." : "Error refreshing job statuses.";
       }
     }
+    
+    // Ensure lastUpdated has a value for UI if it's still missing
+    if (!state.lastUpdated) {
+        state.lastUpdated = new Date().toISOString();
+    }
+
     return state;
   }
 

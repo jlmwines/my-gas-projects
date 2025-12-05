@@ -79,83 +79,101 @@ function WebAppSystem_getSystemHealthDashboardData() {
       return d.getTime() === today.getTime();
     };
 
-    // --- Job Queue Data - Read Once (Moved for optimization) ---
-    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysJobQueue);
-    if (!jobQueueSheet) throw new Error(`Sheet '${sheetNames.SysJobQueue}' not found.`);
-
-    const jobData = jobQueueSheet.getLastRow() > 1 ? jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueSheet.getLastColumn()).getValues() : [];
-    const jobHeaders = jobQueueSheet.getRange(1, 1, 1, jobQueueSheet.getLastColumn()).getValues()[0];
-    
-    const jobTypeCol = jobHeaders.indexOf('job_type');
-    const jobStatusCol = jobHeaders.indexOf('status');
-    const jobProcessedCol = jobHeaders.indexOf('processed_timestamp');
-
-    // --- Dynamically determine Critical Validations and their confirmation texts from task definitions ---
-    const criticalTaskDefinitions = Object.keys(allConfig)
-      .filter(key => key.startsWith('task.validation.') &&
-                     String(allConfig[key].default_priority).toUpperCase() === 'HIGH')
-      .map(key => ({
-        taskTypeId: key,
-        description: allConfig[key].scf_Description // Assuming scf_Description holds the human-friendly text
-      }));
-
-    const criticalTaskTypes = new Set(criticalTaskDefinitions.map(def => def.taskTypeId));
-    const criticalValidationDisplayNames = new Map(criticalTaskDefinitions.map(def => [def.taskTypeId, def.description]));
-
-    // --- Build a map of task types to their validation suites (this part remains, but might be less relevant now) ---
-    const taskTypeToSuiteMap = new Map();
-    // This map was originally built from validation.rule.*. If still needed, it would require a different source.
-    // For now, it will remain empty or be populated differently if validation_suite is needed for task.validation.*
-    // For the purpose of passedValidations, it's not directly used.
-
-    // --- Analyze Tasks for Alerts ---
+    // --- Optimization: Fetch SysTasks ONCE ---
     const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
     const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
     if (!taskSheet) throw new Error(`Sheet '${sheetNames.SysTasks}' not found.`);
 
-    const alertsBySuite = new Map();
-    const openHighPriorityTaskTypes = new Set();
-    const activeFailureTasks = []; // New collection for detailed failure tasks
-
+    let allOpenTasks = [];
     let lastWebExportConfirmation = null;
 
     if (taskSheet.getLastRow() > 1) {
       const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
       const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
       const taskHeaderMap = Object.fromEntries(taskHeaders.map((h, i) => [h, i]));
-      
+
+      // Filter and map in one pass
       taskData.forEach(row => {
-        const status = row[taskHeaderMap['st_Status']];
-        const priority = row[taskHeaderMap['st_Priority']];
-        const typeId = row[taskHeaderMap['st_TaskTypeId']];
-        const doneDate = row[taskHeaderMap['st_DoneDate']];
-
-        if (status !== 'Done' && status !== 'Cancelled' && priority === 'High' && criticalTaskTypes.has(typeId)) {
-          openHighPriorityTaskTypes.add(typeId);
-          const suite = taskTypeToSuiteMap.get(typeId) || 'General';
-          alertsBySuite.set(suite, (alertsBySuite.get(suite) || 0) + 1);
-
-          // Collect detailed task info
-          activeFailureTasks.push({
-            id: row[taskHeaderMap['st_TaskId']],
-            title: row[taskHeaderMap['st_Title']],
-            notes: row[taskHeaderMap['st_Notes']],
-            type: typeId
-          });
-        }
-
-        // Check for completed Web Inventory Export tasks
-        if (typeId === 'task.confirmation.web_inventory_export' && (status === 'Done' || status === 'Completed')) {
+         const status = String(row[taskHeaderMap['st_Status']]).trim();
+         const typeId = String(row[taskHeaderMap['st_TaskTypeId']]).trim();
+         const doneDate = row[taskHeaderMap['st_DoneDate']];
+         
+         // Check for completed Web Inventory Export tasks (needed for Inventory Cycle)
+         if (typeId === 'task.confirmation.web_inventory_export' && (status === 'Done' || status === 'Completed')) {
             const doneTs = doneDate ? new Date(doneDate) : null;
             if (doneTs && isToday(doneTs)) {
                 if (!lastWebExportConfirmation || doneTs > lastWebExportConfirmation) {
                     lastWebExportConfirmation = doneTs;
                 }
             }
-        }
+         }
+
+         if (status !== 'Done' && status !== 'Cancelled') {
+             allOpenTasks.push({
+                 id: row[taskHeaderMap['st_TaskId']],
+                 typeId: typeId,
+                 status: status,
+                 priority: row[taskHeaderMap['st_Priority']],
+                 title: row[taskHeaderMap['st_Title']],
+                 notes: row[taskHeaderMap['st_Notes']],
+                 createdDate: row[taskHeaderMap['st_CreatedDate']]
+             });
+         }
       });
     }
+
+    // --- Job Queue Data - Read Last 500 Rows ---
+    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysJobQueue);
+    if (!jobQueueSheet) throw new Error(`Sheet '${sheetNames.SysJobQueue}' not found.`);
+
+    const lastJobRow = jobQueueSheet.getLastRow();
+    const startJobRow = Math.max(2, lastJobRow - 499);
+    const numJobRows = lastJobRow - startJobRow + 1;
+
+    let jobData = [];
+    if (numJobRows > 0) {
+        jobData = jobQueueSheet.getRange(startJobRow, 1, numJobRows, jobQueueSheet.getLastColumn()).getValues();
+    }
+    // Read headers from the first row
+    const jobHeaders = jobQueueSheet.getRange(1, 1, 1, jobQueueSheet.getLastColumn()).getValues()[0];
+    
+    const jobTypeCol = jobHeaders.indexOf('job_type');
+    const jobStatusCol = jobHeaders.indexOf('status');
+    const jobProcessedCol = jobHeaders.indexOf('processed_timestamp');
+
+    // --- Dynamically determine Critical Validations ---
+    const criticalTaskDefinitions = Object.keys(allConfig)
+      .filter(key => key.startsWith('task.validation.') &&
+                     String(allConfig[key].default_priority).toUpperCase() === 'HIGH')
+      .map(key => ({
+        taskTypeId: key,
+        description: allConfig[key].scf_Description
+      }));
+
+    const criticalTaskTypes = new Set(criticalTaskDefinitions.map(def => def.taskTypeId));
+    const criticalValidationDisplayNames = new Map(criticalTaskDefinitions.map(def => [def.taskTypeId, def.description]));
+
+    // --- Analyze Tasks for Alerts (In-Memory) ---
+    const alertsBySuite = new Map();
+    const openHighPriorityTaskTypes = new Set();
+    const activeFailureTasks = [];
+
+    allOpenTasks.forEach(task => {
+        if (task.priority === 'High' && criticalTaskTypes.has(task.typeId)) {
+            openHighPriorityTaskTypes.add(task.typeId);
+            // Suite logic was placeholder, using 'General' for now
+            const suite = 'General'; 
+            alertsBySuite.set(suite, (alertsBySuite.get(suite) || 0) + 1);
+
+            activeFailureTasks.push({
+                id: task.id,
+                title: task.title,
+                notes: task.notes,
+                type: task.typeId
+            });
+        }
+    });
 
     const alerts = Array.from(alertsBySuite.entries()).map(([suite, count]) => {
         const suiteName = suite.charAt(0).toUpperCase() + suite.slice(1).replace(/_/g, ' ');
@@ -163,10 +181,6 @@ function WebAppSystem_getSystemHealthDashboardData() {
     });
 
     // --- Analyze SysJobQueue for Last Validation Timestamp ---
-    // logSpreadsheetId is already declared at the top.
-    // jobQueueSheet is already declared at the top.
-    // jobData, jobHeaders etc. are already declared at the top.
-
     for (let i = jobData.length - 1; i >= 0; i--) {
       const row = jobData[i];
       if (row[jobTypeCol] === 'manual.validation.master' && row[jobStatusCol] === 'COMPLETED') {
@@ -175,31 +189,8 @@ function WebAppSystem_getSystemHealthDashboardData() {
       }
     }
 
-    // --- Analyze SysLog for Recent Errors ---
-    const logSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysLog);
-    if (!logSheet) throw new Error(`Sheet '${sheetNames.SysLog}' not found.`);
-
-    if (logSheet.getLastRow() > 1) {
-      const logData = logSheet.getRange(2, 1, logSheet.getLastRow() - 1, logSheet.getLastColumn()).getValues();
-      const logHeaders = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0];
-      const logHeaderMap = Object.fromEntries(logHeaders.map((h, i) => [h, i]));
-
-      for (let i = logData.length - 1; i >= 0; i--) {
-        const row = logData[i];
-        const timestamp = new Date(row[logHeaderMap['sl_Timestamp']]);
-        if (timestamp < twentyFourHoursAgo) break; // Optimization
-
-        if (row[logHeaderMap['sl_LogLevel']] === 'ERROR') {
-          recentErrors++;
-        }
-      }
-    }
-    
     // --- Generate Passed Validations List ---
     const passedValidations = [];
-    if (recentErrors === 0) {
-      passedValidations.push('No Recent Errors');
-    }
     for (const taskType of criticalTaskTypes) {
       if (!openHighPriorityTaskTypes.has(taskType)) {
         const displayName = criticalValidationDisplayNames.get(taskType);
@@ -209,15 +200,13 @@ function WebAppSystem_getSystemHealthDashboardData() {
       }
     }
 
-    // --- Final Health Summary ---
     const isValidationRecent = lastMasterValidation !== 'N/A' && lastMasterValidation > twentyFourHoursAgo;
     const isHealthy = alerts.length === 0;
 
 
-    // --- Inventory Cycle Checklist Logic (New) ---
+    // --- Inventory Cycle Checklist Logic (Optimized) ---
     const inventoryCycle = [];
 
-    // Helper to parse job data from the bulk read (moved to top of this block for clarity)
     const getJobStatusSummary = (targetType) => {
       let lastSuccess = null;
       let isRunning = false;
@@ -242,25 +231,27 @@ function WebAppSystem_getSystemHealthDashboardData() {
       return { lastSuccess, isRunning };
     };
 
-    // --- Define Job Types ---
+    // Job Types
     const webOrderImportJobType = 'import.drive.web_orders';
     const transJobType = 'import.drive.web_translations_he';
     const webProdJobType = 'import.drive.web_products_en';
     const comaxProdJobType = 'import.drive.comax_products';
-    const comaxOrderExportTaskType = 'task.export.comax_orders_ready'; // Defined in OrchestratorService.js
+    const comaxOrderExportTaskType = 'task.export.comax_orders_ready';
 
-    // --- Get Job Summaries ---
+    // Get Job Summaries
     const webOrderImportData = getJobStatusSummary(webOrderImportJobType);
     const transData = getJobStatusSummary(transJobType);
     const webProdData = getJobStatusSummary(webProdJobType);
     const comaxProdData = getJobStatusSummary(comaxProdJobType);
     
-    // --- Get Task Statuses ---
+    // --- Optimized Order Metrics Fetch (One call to OrderService) ---
     const orderService = new OrderService(ProductService);
-    const unexportedOrdersCount = orderService.getComaxExportOrderCount();
-    const lastComaxOrderExportTimestamp = orderService.getLastComaxOrderExportTimestamp(); // For Comax Products Yellow Lock
+    const dashboardStats = orderService.getDashboardStats();
+    
+    const unexportedOrdersCount = dashboardStats.unexportedOrdersCount;
+    const lastComaxOrderExportTimestamp = dashboardStats.lastComaxOrderExportTimestamp;
 
-    // --- Step 1: Comax Invoice Entry (Optional) ---
+    // --- Step 1: Comax Invoice Entry ---
     const invoiceCount = OrchestratorService.getInvoiceFileCount();
     let invoiceStatus = 'DONE';
     let invoiceMessage = 'No invoices waiting.';
@@ -302,10 +293,11 @@ function WebAppSystem_getSystemHealthDashboardData() {
     });
 
     // --- Step 3: Comax Order Export (Safety Lock) ---
-    // This step is driven by unexported orders count and the 'task.export.comax_orders_ready' task.
     let comaxOrderExportStatus = 'DONE';
     let comaxOrderExportMessage = 'All orders exported.';
-    const openComaxExportTasks = WebAppTasks.getOpenTasksByTypeId(comaxOrderExportTaskType);
+    
+    // Use in-memory filtered tasks
+    const openComaxExportTasksCount = allOpenTasks.filter(t => t.typeId === comaxOrderExportTaskType).length;
 
     if (webOrderImportStatus !== 'DONE' && webOrderImportStatus !== 'PENDING') {
       comaxOrderExportStatus = 'BLOCKED';
@@ -313,7 +305,7 @@ function WebAppSystem_getSystemHealthDashboardData() {
     } else if (unexportedOrdersCount > 0) {
         comaxOrderExportStatus = 'ERROR'; // Red Lock
         comaxOrderExportMessage = `${unexportedOrdersCount} unexported orders. Export required.`;
-    } else if (openComaxExportTasks.length > 0) {
+    } else if (openComaxExportTasksCount > 0) {
         comaxOrderExportStatus = 'WARNING'; // Task exists, needs attention
         comaxOrderExportMessage = 'Export task is open.';
     }
@@ -326,21 +318,19 @@ function WebAppSystem_getSystemHealthDashboardData() {
       data: { unexportedOrdersCount: unexportedOrdersCount }
     });
 
-    // --- Step 4: Web Translations Import (Conditional) ---
-    let transStatus = 'NEUTRAL'; // Default to NEUTRAL
+    // --- Step 4: Web Translations Import ---
+    let transStatus = 'NEUTRAL';
     let transMessage = 'Not run today.';
-
     if (isToday(transData.lastSuccess)) {
         transStatus = 'DONE';
         transMessage = 'Completed today.';
     } else if (transData.isRunning) {
         transStatus = 'PENDING';
         transMessage = 'Job is running...';
-    } else if (transData.lastSuccess) { // Job ran, but not today
+    } else if (transData.lastSuccess) {
         transStatus = 'NEUTRAL';
         transMessage = `Last run: ${Utilities.formatDate(transData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
     }
-
     inventoryCycle.push({
       step: 4,
       name: 'Web Translations Import',
@@ -350,7 +340,7 @@ function WebAppSystem_getSystemHealthDashboardData() {
     });
 
     // --- Step 5: Web Products Import ---
-    let webProdStatus = 'PENDING'; // Default to PENDING (Neutral)
+    let webProdStatus = 'PENDING';
     let webProdMessage = 'Not run today.';
     if (comaxOrderExportStatus === 'ERROR') {
       webProdStatus = 'BLOCKED';
@@ -359,13 +349,12 @@ function WebAppSystem_getSystemHealthDashboardData() {
       webProdStatus = 'DONE';
       webProdMessage = 'Completed today.';
     } else if (webProdData.isRunning) {
-      webProdStatus = 'PENDING'; // Active pending
+      webProdStatus = 'PENDING';
       webProdMessage = 'Job is running...';
-    } else if (webProdData.lastSuccess) { // Job ran, but not today
+    } else if (webProdData.lastSuccess) {
       webProdStatus = 'NEUTRAL';
       webProdMessage = `Last run: ${Utilities.formatDate(webProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
     }
-
     inventoryCycle.push({
       step: 5,
       name: 'Web Products Import',
@@ -375,13 +364,12 @@ function WebAppSystem_getSystemHealthDashboardData() {
     });
 
     // --- Step 6: Comax Product Import ---
-    let comaxStatus = 'PENDING'; // Default to PENDING (Neutral)
+    let comaxStatus = 'PENDING';
     let comaxMessage = 'Not run today.';
     if (comaxOrderExportStatus === 'ERROR') {
       comaxStatus = 'BLOCKED';
       comaxMessage = 'Blocked by unexported orders.';
     } else if (isToday(comaxProdData.lastSuccess)) {
-        // Yellow Lock: Comax Import must be NEWER than Last Comax Order Export
         if (lastComaxOrderExportTimestamp && comaxProdData.lastSuccess <= lastComaxOrderExportTimestamp) {
              comaxStatus = 'WARNING';
              comaxMessage = 'Stale: Import newer file (post-order export).';
@@ -390,9 +378,9 @@ function WebAppSystem_getSystemHealthDashboardData() {
              comaxMessage = 'Completed today & Fresh.';
         }
     } else if (comaxProdData.isRunning) {
-      comaxStatus = 'PENDING'; // Active pending
+      comaxStatus = 'PENDING';
       comaxMessage = 'Job is running...';
-    } else if (comaxProdData.lastSuccess) { // Job ran, but not today
+    } else if (comaxProdData.lastSuccess) {
       comaxStatus = 'NEUTRAL';
       comaxMessage = `Last run: ${Utilities.formatDate(comaxProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm')}`;
     }
@@ -404,24 +392,24 @@ function WebAppSystem_getSystemHealthDashboardData() {
       timestamp: comaxProdData.lastSuccess ? Utilities.formatDate(comaxProdData.lastSuccess, Session.getScriptTimeZone(), 'MM/dd HH:mm') : null
     });
     
-    // --- Step 7: Web Inventory Export (Final Goal) ---
+    // --- Step 7: Web Inventory Export ---
     let webExportStatus = 'BLOCKED';
     let webExportMessage = 'Resolve Red Locks.';
     let webExportTimestamp = null;
     const confirmTaskType = 'task.confirmation.web_inventory_export';
-    const confirmTasks = WebAppTasks.getOpenTasksByTypeId(confirmTaskType);
     
-    // Check for Red Lock ONLY
+    // Use in-memory filtered tasks
+    const confirmTasksCount = allOpenTasks.filter(t => t.typeId === confirmTaskType).length;
     const isRedLocked = (comaxOrderExportStatus === 'ERROR');
 
     if (lastWebExportConfirmation) {
         webExportStatus = 'DONE';
         webExportMessage = 'Completed today.';
         webExportTimestamp = Utilities.formatDate(lastWebExportConfirmation, Session.getScriptTimeZone(), 'MM/dd HH:mm');
-    } else if (confirmTasks.length > 0) {
+    } else if (confirmTasksCount > 0) {
         webExportStatus = 'PENDING';
         webExportMessage = 'Waiting for confirmation.';
-    } else if (!isRedLocked) { // Only if NOT red locked
+    } else if (!isRedLocked) {
         webExportStatus = 'READY';
         webExportMessage = 'Ready to export.';
     }
@@ -434,22 +422,20 @@ function WebAppSystem_getSystemHealthDashboardData() {
       timestamp: webExportTimestamp
     });
 
-    // Final Export Ready Status for the main return object
     const isInventoryExportReady = (
         webExportStatus === 'READY' || webExportStatus === 'DONE' || webExportStatus === 'PENDING'
     );
 
     // --- Daily Sync Summary ---
     let syncStatusSummary = 'Daily Sync: Idle';
-    let syncStatusColor = 'text-muted'; // Default color
+    let syncStatusColor = 'text-muted';
     
-    // Prioritize display based on urgency
     if (inventoryCycle.some(step => step.status === 'ERROR' || step.status === 'BLOCKED')) {
         syncStatusSummary = 'Daily Sync: Attention Needed';
         syncStatusColor = 'text-danger';
     } else if (inventoryCycle.some(step => step.status === 'WARNING')) {
         syncStatusSummary = 'Daily Sync: Review Required';
-        syncStatusColor = 'text-warning-dark'; // Use a custom darker warning color
+        syncStatusColor = 'text-warning-dark';
     } else if (inventoryCycle.some(step => step.status === 'PENDING')) {
         syncStatusSummary = 'Daily Sync: In Progress';
         syncStatusColor = 'text-primary';
@@ -457,7 +443,6 @@ function WebAppSystem_getSystemHealthDashboardData() {
         syncStatusSummary = 'Daily Sync: Up to Date';
         syncStatusColor = 'text-success';
     }
-    // If none of the above, it stays 'Idle' (text-muted)
 
     return {
       isHealthy,
@@ -465,9 +450,9 @@ function WebAppSystem_getSystemHealthDashboardData() {
       lastValidationTimestamp: lastMasterValidation === 'N/A' ? 'N/A' : Utilities.formatDate(lastMasterValidation, Session.getScriptTimeZone(), 'MM/dd HH:mm'),
       isValidationRecent,
       passedValidations,
-      inventoryCycle, // Add the cycle data
+      inventoryCycle,
       isInventoryExportReady,
-      activeFailureTasks, // Return the detailed tasks
+      activeFailureTasks,
       syncStatusSummary: {
         text: syncStatusSummary,
         color: syncStatusColor
@@ -517,42 +502,48 @@ function WebAppSystem_runMasterValidationAndReturnResults() {
 
     LoggerService.info(serviceName, functionName, `Created new job: ${newJobRow.job_id} of type ${newJobRow.job_type} at row ${newJobRowNumber}`);
 
-    const validationResult = ValidationService.runCriticalValidations(newJobRow.job_type, newJobRowNumber);
-    finalOverallStatus = validationResult.overallStatus;
-    finalErrorMessage = validationResult.errorMessage;
+    const executionContext = {
+        jobId: newJobRow.job_id,
+        jobType: newJobRow.job_type,
+        sessionId: newJobRow.job_id, // Using job_id as session_id for manual runs
+        jobQueueSheetRowNumber: newJobRowNumber,
+        jobQueueHeaders: jobQueueHeaders
+    };
+
+    const result = ValidationOrchestratorService.processJob(executionContext);
+    finalOverallStatus = result.finalStatus;
+    finalErrorMessage = result.failureCount > 0 ? `${result.failureCount} rules failed.` : '';
 
     return {
-      success: finalOverallStatus !== 'FAILED',
+      success: finalOverallStatus !== 'FAILED' && finalOverallStatus !== 'QUARANTINED',
       message: finalErrorMessage || 'Validation completed.',
-      results: validationResult.results
+      results: [] // Detailed results are now tasks, UI should fetch tasks if needed or we can enhance Orchestrator return
     };
 
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
     finalErrorMessage = `Failed to run validation: ${e.message}`;
+    
+    // Update job status to FAILED on catch, as Orchestrator might have thrown before updating
+    if (newJobRowNumber) {
+        try {
+             const allConfig = ConfigService.getAllConfig();
+             const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+             const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+             const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
+             const statusColIdx = jobQueueHeaders.indexOf('status');
+             const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+             const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+
+             jobQueueSheet.getRange(newJobRowNumber, statusColIdx + 1).setValue('FAILED');
+             jobQueueSheet.getRange(newJobRowNumber, processedTsColIdx + 1).setValue(new Date());
+             jobQueueSheet.getRange(newJobRowNumber, errorMsgColIdx + 1).setValue(finalErrorMessage);
+        } catch (updateError) {
+             LoggerService.error(serviceName, functionName, `Failed to update job status on error: ${updateError.message}`);
+        }
+    }
+
     return { success: false, error: finalErrorMessage };
-  } finally {
-      if (newJobRowNumber) {
-          try {
-              const allConfig = ConfigService.getAllConfig();
-              const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-              const jobQueueSheetName = allConfig['system.sheet_names'].SysJobQueue;
-              const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(jobQueueSheetName);
-              
-              const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
-              const statusCol = jobQueueHeaders.indexOf('status') + 1;
-              const messageCol = jobQueueHeaders.indexOf('error_message') + 1;
-              const timestampCol = jobQueueHeaders.indexOf('processed_timestamp') + 1;
-
-              if (statusCol > 0) jobQueueSheet.getRange(newJobRowNumber, statusCol).setValue(finalOverallStatus);
-              if (messageCol > 0) jobQueueSheet.getRange(newJobRowNumber, messageCol).setValue(finalErrorMessage);
-              if (timestampCol > 0) jobQueueSheet.getRange(newJobRowNumber, timestampCol).setValue(new Date());
-
-              LoggerService.info(serviceName, functionName, `Job ${newJobRow.job_id} status updated to ${finalOverallStatus}`);
-          } catch (updateError) {
-              LoggerService.error(serviceName, functionName, `Failed to update final job status for ${newJobRow.job_id}: ${updateError.message}`, updateError);
-          }
-      }
   }
 }
 

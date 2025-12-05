@@ -92,6 +92,57 @@ const LoggerService = (function() {
     },
 
     /**
+     * Retrieves the most recent log message for a given session ID.
+     * @param {string} sessionId The session ID to filter by.
+     * @returns {object|null} The log object { timestamp, message, level } or null if not found.
+     */
+    getLatestLogForSession: function(sessionId) {
+      if (!sessionId) return null;
+      try {
+        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+        const sheetNames = ConfigService.getConfig('system.sheet_names');
+        // Avoid full openById if we can, but LoggerService usually needs it. 
+        // We assume this is called sparingly by the UI polling.
+        const ss = SpreadsheetApp.openById(logSheetConfig.id);
+        const sheet = ss.getSheetByName(sheetNames.SysLog);
+        
+        if (!sheet || sheet.getLastRow() < 2) return null;
+        
+        // Read only the last 100 rows for performance
+        const lastRow = sheet.getLastRow();
+        const startRow = Math.max(2, lastRow - 100); 
+        const numRows = lastRow - startRow + 1;
+        
+        const data = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn()).getValues();
+        
+        // Fetch headers to be safe about column indices
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        const tsIdx = headers.indexOf('sl_Timestamp');
+        const sessionIdx = headers.indexOf('sl_SessionId');
+        const msgIdx = headers.indexOf('sl_Message');
+        const levelIdx = headers.indexOf('sl_LogLevel');
+
+        if (tsIdx === -1 || sessionIdx === -1 || msgIdx === -1) return null;
+
+        // Iterate backwards to find the latest
+        for (let i = data.length - 1; i >= 0; i--) {
+            const row = data[i];
+            if (row[sessionIdx] === sessionId) {
+                return {
+                    timestamp: row[tsIdx],
+                    message: row[msgIdx],
+                    level: row[levelIdx]
+                };
+            }
+        }
+        return null;
+      } catch (e) {
+        console.error(`Error fetching latest log: ${e.message}`);
+        return null;
+      }
+    },
+
+    /**
      * Temporary diagnostic function to test log sheet access.
      * @returns {boolean} True if access is successful, false otherwise.
      */

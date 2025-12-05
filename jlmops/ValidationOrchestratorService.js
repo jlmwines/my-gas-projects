@@ -77,6 +77,8 @@ const ValidationOrchestratorService = (function() {
     // Ideally Orchestrator handles this, but currently ProductService does it.
     // We need to update the SysJobQueue status.
     _updateJobStatus(executionContext, finalStatus, failureCount > 0 ? `${failureCount} rules failed.` : '');
+
+    return { finalStatus, failureCount, quarantineTriggered };
   }
 
   function runValidationSuite(suiteName, sessionId) {
@@ -91,21 +93,39 @@ const ValidationOrchestratorService = (function() {
     return { quarantineTriggered, failureCount };
   }
 
+  function formatString(template, dataRow) {
+    if (!template) return '';
+    return template.replace(/\${(.*?)}/g, (match, key) => {
+      const val = dataRow[key.trim()];
+      return val !== undefined && val !== null ? val : '';
+    });
+  }
+
   function _createSummaryTask(rule, discrepancies, sessionId) {
-      const title = `${rule.on_failure_title} (Summary: ${discrepancies.length} Items)`;
-      const notes = `${rule.on_failure_notes}\n\nSummary of ${discrepancies.length} failures.\nSee SysLog for details.\nFirst few: ${discrepancies.slice(0,5).map(d => d.key).join(', ')}`;
+      const cleanedTitle = rule.on_failure_title.replace(/\${.*?}/g, '').trim(); 
+      const title = `${cleanedTitle} (Summary: ${discrepancies.length} Items)`;
+      
+      // Clean notes as well
+      let cleanedNotes = rule.on_failure_notes.replace(/\${.*?}/g, '[Variable]').trim();
+      const notes = `${cleanedNotes}\nSummary of ${discrepancies.length} failures.\nSee SysLog for details.\nFirst few: ${discrepancies.slice(0,5).map(d => d.key).join(', ')}`;
       
       // Create a system-level task
       TaskService.createTask(rule.on_failure_task_type, 'SYSTEM', 'System', title, notes, sessionId);
   }
 
   function _createIndividualTask(rule, discrepancy, sessionId) {
-      // Simple template replacement for now
-      const title = rule.on_failure_title.replace('${key}', discrepancy.key); 
-      const notes = `${rule.on_failure_notes}\n\nDetails: ${discrepancy.details}`;
+      // Merge data and key for template context
+      const contextData = { ...(discrepancy.data || {}), key: discrepancy.key };
+
+      const title = formatString(rule.on_failure_title, contextData);
+      // Fallback if title ends up empty or just whitespace because of missing data (though unlikely)
+      const finalTitle = title.trim() || rule.on_failure_title;
+
+      const baseNotes = formatString(rule.on_failure_notes, contextData);
+      const notes = `${baseNotes}\nDetails: ${discrepancy.details}`;
       const entityName = discrepancy.name || '';
       
-      TaskService.createTask(rule.on_failure_task_type, discrepancy.key, entityName, title, notes, sessionId);
+      TaskService.createTask(rule.on_failure_task_type, discrepancy.key, entityName, finalTitle, notes, sessionId);
   }
 
   // Duplicate from ProductService for now, ideally shared utility

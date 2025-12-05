@@ -93,7 +93,8 @@ const ValidationLogic = (function() {
             discrepancies.push({
                 key: key,
                 name: _extractName(sourceRow),
-                details: `Item ${key} failed existence check.`
+                details: `Item ${key} failed existence check.`,
+                data: sourceRow
             });
         }
       }
@@ -117,6 +118,7 @@ const ValidationLogic = (function() {
       }
 
       const [fieldA, fieldB] = rule.compare_fields.split(',');
+      let logCount = 0;
   
       for (const [key, rowB] of mapB.entries()) {
           if (mapA.has(key)) {
@@ -132,14 +134,52 @@ const ValidationLogic = (function() {
   
               let valueA = String(rowA[fieldA] || '').trim();
               let valueB = String(rowB[fieldB] || '').trim();
-  
-              // Apply translation maps logic here if needed (omitted for brevity, can add if critical)
+              const rawValueA = valueA;
+              const rawValueB = valueB;
+
+              // Helper to load map from config (JSON or LookupService)
+              const getTranslationMap = (configValue) => {
+                  if (!configValue) return null;
+                  try {
+                      // Try parsing as inline JSON first
+                      const parsed = JSON.parse(configValue);
+                      if (typeof parsed === 'object' && parsed !== null) {
+                          return new Map(Object.entries(parsed));
+                      }
+                  } catch (e) {
+                      // Not JSON, proceed to LookupService
+                  }
+                  // Fallback to named lookup map
+                  const lookupMap = LookupService.getLookupMap(configValue);
+                  if (!lookupMap && logCount < 1) {
+                       logger.info('ValidationLogic', 'getTranslationMap', `Failed to load map for configValue: ${configValue}`, { sessionId: sessionId });
+                  }
+                  return lookupMap;
+              };
+
+              // Apply translation map for fieldA if defined in the rule (Dynamic lookup)
+              const mapKeyA = `field_translations_map_${fieldA}`;
+              if (rule[mapKeyA]) {
+                  const translationMap = getTranslationMap(rule[mapKeyA]);
+                  if (translationMap && translationMap.has(valueA)) {
+                      valueA = translationMap.get(valueA);
+                  }
+              }
+              // Apply translation map for fieldB if defined in the rule (Dynamic lookup)
+              const mapKeyB = `field_translations_map_${fieldB}`;
+              if (rule[mapKeyB]) {
+                  const translationMap = getTranslationMap(rule[mapKeyB]);
+                  if (translationMap && translationMap.has(valueB)) {
+                      valueB = translationMap.get(valueB);
+                  }
+              }
   
               if (valueA !== valueB) {
                   discrepancies.push({
                       key: key,
                       name: _extractName(rowA) || _extractName(rowB),
-                      details: `Mismatch: ${fieldA}('${valueA}') vs ${fieldB}('${valueB}')`
+                      details: `Mismatch: ${fieldA}('${valueA}') vs ${fieldB}('${valueB}')`,
+                      data: { ...rowA, ...rowB }
                   });
               }
           }
@@ -229,12 +269,17 @@ const ValidationLogic = (function() {
     // Iterate through data (starting from row 1)
     for (let i = 1; i < sourceSheetValues.length; i++) { 
       const row = sourceSheetValues[i];
+      // Build rowObj for context
+      const rowObj = {};
+      sourceSheetHeaders.forEach((h, k) => rowObj[h] = row[k]);
+
       for (let j = 0; j < row.length; j++) {
         if (sourceSheetHeaders[j] && (row[j] === null || String(row[j]).trim() === '')) {
           discrepancies.push({
               key: `Row ${i + 1}`,
-              name: _extractName(row), // Try to extract name from the row
-              details: `Empty cell in column '${sourceSheetHeaders[j]}'.`
+              name: _extractName(rowObj), // Updated to use rowObj
+              details: `Empty cell in column '${sourceSheetHeaders[j]}'.`,
+              data: rowObj
           });
         }
       }
@@ -288,9 +333,7 @@ const ValidationLogic = (function() {
     for (let i = 1; i < values.length; i++) {
         const row = values[i];
         const rowObj = {}; 
-        // We need a row object for _extractName, but for evaluation we have indices.
-        // Optimization: build rowObj only on failure? No, _extractName needs it.
-        // Let's build it lazily or just map indices.
+        headers.forEach((h, k) => rowObj[h] = row[k]);
         
         const val1_part1 = row[fieldIdx];
         const result_part1 = evaluateCondition(val1_part1, operator, value);
@@ -303,16 +346,13 @@ const ValidationLogic = (function() {
         }
 
         if (conditionMet) {
-            // Reconstruct row object for name extraction
-            const rowObj = {};
-            headers.forEach((h, k) => rowObj[h] = row[k]);
-            
             const key = (keyIdx > -1) ? row[keyIdx] : `Row ${i+1}`;
             
             discrepancies.push({
                 key: key,
                 name: _extractName(rowObj),
-                details: `Internal Audit failed: ${rule.condition}`
+                details: `Internal Audit failed: ${rule.condition}`,
+                data: rowObj
             });
         }
     }
@@ -337,6 +377,7 @@ const ValidationLogic = (function() {
     const functionName = 'runValidationSuite';
     logger.info(serviceName, functionName, `Starting analysis for suite: ${suiteName}`, { sessionId: sessionId });
     
+    ConfigService.forceReload(); // Force reload to ensure latest rules are used
     const allConfig = ConfigService.getAllConfig();
     const rules = Object.keys(allConfig)
         .filter(k => k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE')

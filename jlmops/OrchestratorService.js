@@ -500,7 +500,7 @@ const OrchestratorService = (function() {
         return;
     }
 
-    const data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+    let data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
 
     const jobIdColIdx = jobQueueHeaders.indexOf('job_id');
     const statusColIdx = jobQueueHeaders.indexOf('status');
@@ -534,70 +534,90 @@ const OrchestratorService = (function() {
     SpreadsheetApp.flush(); // Ensure updates are written immediately
     // --- End Zombie Killer ---
     
-    let jobFoundAndProcessed = false;
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      if (row[statusColIdx] === 'PENDING') {
-        const jobId = row[jobIdColIdx];
-        const jobType = row[jobTypeColIdx];
-        const jobQueueSheetRowNumber = i + 2; // +1 for 0-based index, +1 for header
+    SpreadsheetApp.flush(); // Ensure updates are written immediately
+    // --- End Zombie Killer ---
+    
+    let jobFoundAndProcessed = true; // Initialize to true to enter loop
+    let jobsProcessedCount = 0;
+    const MAX_JOBS_PER_RUN = 5; // Safety limit
 
-        const jobConfig = allConfig[jobType];
-        
-        if (!jobConfig || !jobConfig.processing_service) {
-          logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}. Setting job ${jobId} to FAILED.`, { jobId: jobId, jobType: jobType });
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('No processing service configured.');
-          jobFoundAndProcessed = true; // Still consider it processed for this run
-          break; // Process only one job
-        }
+    while (jobFoundAndProcessed && jobsProcessedCount < MAX_JOBS_PER_RUN) {
+      jobFoundAndProcessed = false; // Reset flag for this iteration
+      
+      // Re-read data to ensure we have the latest status after the previous job's processing
+      // This is critical because processing one job might unblock or create others
+      if (jobsProcessedCount > 0) {
+         data = jobQueueSheet.getRange(2, 1, jobQueueSheet.getLastRow() - 1, jobQueueHeaders.length).getValues();
+      }
 
-        const processingServiceName = jobConfig.processing_service;
-        logger.info(serviceName, functionName, `Delegating job ${jobId} of type '${jobType}' to service: ${processingServiceName}`, { jobId: jobId, jobType: jobType });
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row[statusColIdx] === 'PENDING') {
+          const jobId = row[jobIdColIdx];
+          const jobType = row[jobTypeColIdx];
+          const jobQueueSheetRowNumber = i + 2; // +1 for 0-based index, +1 for header
 
-        // Create execution context to pass to the processing service
-        const executionContext = {
-            sessionId: row[jobQueueHeaders.indexOf('session_id')], // Get sessionId from job queue
-            jobId: jobId,
-            jobType: jobType,
-            jobQueueSheetRowNumber: jobQueueSheetRowNumber,
-            jobQueueHeaders: jobQueueHeaders // Pass headers for service to find column indices
-        };
-
-        try {
-          // Set status to PROCESSING before calling service
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date()); // Update processed timestamp
-
-          switch (processingServiceName) {
-            case 'ProductService':
-              // Services will now be responsible for updating their own job status (COMPLETED/FAILED)
-              // and calling OrchestratorService.finalizeJobCompletion upon success.
-              ProductService.processJob(executionContext);
-              break;
-            case 'OrderService':
-              const orderServiceInstance = new OrderService(ProductService);
-              orderServiceInstance.processJob(executionContext);
-              break;
-            case 'ValidationOrchestratorService':
-              ValidationOrchestratorService.processJob(executionContext);
-              break;
-            default:
-              throw new Error(`Unknown processing service: ${processingServiceName}`);
+          const jobConfig = allConfig[jobType];
+          
+          if (!jobConfig || !jobConfig.processing_service) {
+            logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}. Setting job ${jobId} to FAILED.`, { jobId: jobId, jobType: jobType });
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('No processing service configured.');
+            // We count this as processed so we don't loop infinitely on the same bad job if logic fails
+            jobsProcessedCount++; 
+            jobFoundAndProcessed = true;
+            break; // Break inner for-loop to re-scan
           }
-        } catch (e) {
-          logger.error(serviceName, functionName, `Critical error in Orchestrator while delegating job ${jobId}: ${e.message}`, e, executionContext);
-          // If service failed to update status, Orchestrator catches and sets FAILED
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
-          jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(`Orchestrator delegation failed: ${e.message}`);
+
+          const processingServiceName = jobConfig.processing_service;
+          logger.info(serviceName, functionName, `Delegating job ${jobId} of type '${jobType}' to service: ${processingServiceName}`, { jobId: jobId, jobType: jobType });
+
+          // Create execution context to pass to the processing service
+          const executionContext = {
+              sessionId: row[jobQueueHeaders.indexOf('session_id')], // Get sessionId from job queue
+              jobId: jobId,
+              jobType: jobType,
+              jobQueueSheetRowNumber: jobQueueSheetRowNumber,
+              jobQueueHeaders: jobQueueHeaders // Pass headers for service to find column indices
+          };
+
+          try {
+            // Set status to PROCESSING before calling service
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date()); // Update processed timestamp
+
+            switch (processingServiceName) {
+              case 'ProductService':
+                ProductService.processJob(executionContext);
+                break;
+              case 'OrderService':
+                const orderServiceInstance = new OrderService(ProductService);
+                orderServiceInstance.processJob(executionContext);
+                break;
+              case 'ValidationOrchestratorService':
+                ValidationOrchestratorService.processJob(executionContext);
+                break;
+              default:
+                throw new Error(`Unknown processing service: ${processingServiceName}`);
+            }
+            jobsProcessedCount++;
+          } catch (e) {
+            logger.error(serviceName, functionName, `Critical error in Orchestrator while delegating job ${jobId}: ${e.message}`, e, executionContext);
+            // If service failed to update status, Orchestrator catches and sets FAILED
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
+            jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(`Orchestrator delegation failed: ${e.message}`);
+            jobsProcessedCount++;
+          }
+          jobFoundAndProcessed = true;
+          break; // Break inner for-loop to re-scan
         }
-        jobFoundAndProcessed = true;
-        break; // Process only one job per execution
       }
     }
 
-    if (!jobFoundAndProcessed) {
+    if (jobsProcessedCount === 0) {
       logger.info(serviceName, functionName, 'No PENDING jobs found in the queue to process in this run.');
+    } else {
+      logger.info(serviceName, functionName, `Processed ${jobsProcessedCount} jobs in this run.`);
     }
     SpreadsheetApp.flush(); // Ensure status updates are written
     logger.info(serviceName, functionName, 'Pending job check complete.');
@@ -1027,15 +1047,11 @@ const OrchestratorService = (function() {
           state.ordersPendingExportCount = ordersToExportCount;
           state.lastUpdated = new Date().toISOString(); // Update timestamp
           
-          if (ordersToExportCount === 0) {
-            logger.info(serviceName, functionName, `No orders to export. Transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
-            state.currentStage = 'READY_FOR_COMAX_IMPORT';
-            state.comaxOrdersExported = true; // Mark as exported since nothing was needed
-          } else {
-            logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
-            state.currentStage = 'WAITING_FOR_COMAX';
-            state.comaxOrdersExported = false; // Reset flag for new export cycle
-          }
+          // ALWAYS transition to WAITING_FOR_COMAX. The UI will show appropriate messages.
+          logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
+          state.currentStage = 'WAITING_FOR_COMAX';
+          // If there are no orders to export, it's implicitly "exported" and ready for Comax import.
+          state.comaxOrdersExported = (ordersToExportCount === 0); 
           SyncStateService.setSyncState(state);
         }
       }
@@ -1051,6 +1067,7 @@ const OrchestratorService = (function() {
               // 1. Advance State
               state.currentStage = 'VALIDATING';
               state.lastUpdated = new Date().toISOString();
+              state.errorMessage = null; // Clear error on successful transition
               SyncStateService.setSyncState(state);
               
               // 2. Trigger Finalization (Queue Validation Jobs)
@@ -1063,7 +1080,7 @@ const OrchestratorService = (function() {
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
               state.currentStage = 'FAILED';
-              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
+              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`; // Error message set here
               state.lastUpdated = new Date().toISOString();
               SyncStateService.setSyncState(state);
           }
@@ -1101,6 +1118,7 @@ const OrchestratorService = (function() {
            logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
            state.currentStage = 'READY_FOR_WEB_EXPORT';
            state.lastUpdated = new Date().toISOString();
+           state.errorMessage = null; // Clear error on successful transition
            SyncStateService.setSyncState(state);
         }
       }
@@ -1114,6 +1132,7 @@ const OrchestratorService = (function() {
               logger.info(serviceName, functionName, `Web Inventory Export completed for session ${state.sessionId}. Advancing to WEB_EXPORT_GENERATED.`);
               state.currentStage = 'WEB_EXPORT_GENERATED';
               state.lastUpdated = new Date().toISOString();
+              state.errorMessage = null; // Clear error on successful transition
               SyncStateService.setSyncState(state);
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);

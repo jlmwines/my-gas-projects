@@ -35,7 +35,4 @@
       '<hr>' + // Divider below widget content
       '<div id="comax-persistent-count-area" style="margin-bottom: 0.5rem;">Comax Orders to Export: ' + (data.comaxExportOrderCount || 0) + '</div>';
   }
-
-  // Initial data load for this view
-  google.script.run.withSuccessHandler(updateOrdersWidget).withFailureHandler(showError).WebAppOrders_getOrdersWidgetData();
 </script>

@@ -67,9 +67,69 @@
       .getView(widgetName);
   }
 
-  // Load Widgets
+  // Load Widgets - The HTML is loaded first
   loadWidget('SystemHealthWidget', 'system-widget-placeholder');
   loadWidget('AdminOrdersWidget', 'orders-widget-placeholder');
   loadWidget('AdminInventoryWidget', 'inventory-widget-placeholder');
   loadWidget('AdminProductsWidget', 'products-widget-placeholder');
+
+  /**
+   * Orchestrates the fetching of all dashboard data in a single round-trip.
+   * This replaces the individual data fetches inside each widget.
+   */
+  function loadDashboardData() {
+    console.log('Fetching aggregated dashboard data...');
+    google.script.run
+      .withSuccessHandler(response => {
+        if (!response.success) {
+          showError({ message: response.error });
+          return;
+        }
+
+        // Distribute data to widgets
+        // We use a short timeout to ensure the HTML injection (loadWidget) has finished.
+        // Since loadWidget is async (google.script.run), there's a race condition risk.
+        // A robust solution uses Promises, but for simplicity in this context,
+        // we check if the function exists, or retry.
+        
+        distributeDataWhenReady(response);
+      })
+      .withFailureHandler(showError)
+      .WebAppDashboard_getAdminDashboardData();
+  }
+
+  /**
+   * Retries distributing data until the widget scripts are loaded.
+   */
+  function distributeDataWhenReady(data, attempts = 0) {
+    if (attempts > 50) { // Give up after 5 seconds
+      console.error('Widgets took too long to load. Data distribution failed.');
+      return;
+    }
+
+    // Check if all update functions are defined in the global scope
+    const missing = [];
+    if (typeof updateSystemHealthView !== 'function') missing.push('updateSystemHealthView');
+    if (typeof updateOrdersWidget !== 'function') missing.push('updateOrdersWidget');
+    if (typeof updateInventoryView !== 'function') missing.push('updateInventoryView');
+    if (typeof updateProductsWidget !== 'function') missing.push('updateProductsWidget');
+
+    if (missing.length === 0) {
+      console.log('All widgets ready. Distributing data.');
+      updateSystemHealthView(data.system);
+      updateOrdersWidget(data.orders);
+      updateInventoryView(data.inventory);
+      updateProductsWidget(data.products);
+    } else {
+      // Not ready yet, wait and retry
+      if (attempts % 10 === 0) {
+          console.log(`Waiting for widgets: ${missing.join(', ')} (attempt ${attempts})`);
+      }
+      setTimeout(() => distributeDataWhenReady(data, attempts + 1), 100);
+    }
+  }
+
+  // Initiate data load immediately.
+  // Ideally, this runs parallel to the HTML loading.
+  loadDashboardData();
 </script>

@@ -6,9 +6,10 @@
 
 /**
  * Gets all data required for the Admin Inventory Widget.
+ * @param {Object} [injectedSystemHealth] Optional: Pre-calculated system health data to avoid redundant calls.
  * @returns {Object} An object containing counts and tasks for the inventory widget.
  */
-function WebAppInventory_getInventoryWidgetData() {
+function WebAppInventory_getInventoryWidgetData(injectedSystemHealth) {
   try {
     const inventoryManagementService = InventoryManagementService;
     // 1. Get Brurya stats from the backend service
@@ -29,9 +30,9 @@ function WebAppInventory_getInventoryWidgetData() {
     // 4. Check System Health for Export Readiness (The "Green Light")
     let isSystemReadyForExport = false;
     try {
-        const systemHealth = WebAppSystem_getSystemHealthDashboardData();
+        const systemHealth = injectedSystemHealth || WebAppSystem_getSystemHealthDashboardData();
         isSystemReadyForExport = systemHealth.isInventoryExportReady;
-        LoggerService.info('WebAppInventory', 'getInventoryWidgetData', `Got system health. Ready: ${isSystemReadyForExport}`);
+        LoggerService.info('WebAppInventory', 'getInventoryWidgetData', `Got system health (Injected: ${!!injectedSystemHealth}). Ready: ${isSystemReadyForExport}`);
     } catch (healthError) {
         LoggerService.warn('WebAppInventory', 'getInventoryWidgetData', `Failed to get system health: ${healthError.message}`);
         // Default to false if health check fails

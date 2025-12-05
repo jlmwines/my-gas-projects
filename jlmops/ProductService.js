@@ -46,6 +46,21 @@ const ProductService = (function() {
     const functionName = '_buildSkuToWebIdMap';
     LoggerService.info('ProductService', functionName, 'Building SKU to WebIdEn map...');
     skuToWebIdMap = new Map();
+
+    // Try to get from CacheService first
+    const scriptCache = CacheService.getScriptCache();
+    const cachedMap = scriptCache.get('skuToWebIdMap');
+    if (cachedMap) {
+      try {
+        const entries = JSON.parse(cachedMap);
+        skuToWebIdMap = new Map(entries);
+        LoggerService.info('ProductService', functionName, `Loaded SKU map from cache with ${skuToWebIdMap.size} entries.`);
+        return;
+      } catch (e) {
+        LoggerService.warn('ProductService', functionName, 'Failed to parse cached SKU map. Rebuilding from sheet.');
+      }
+    }
+
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -67,7 +82,16 @@ const ProductService = (function() {
           skuToWebIdMap.set(sku, row[webIdCol]);
         }
       });
-      LoggerService.info('ProductService', functionName, `Built SKU map with ${skuToWebIdMap.size} entries.`);
+      
+      // Cache the built map
+      try {
+        const serializedMap = JSON.stringify(Array.from(skuToWebIdMap.entries()));
+        scriptCache.put('skuToWebIdMap', serializedMap, 600); // Cache for 10 minutes
+        LoggerService.info('ProductService', functionName, `Built and cached SKU map with ${skuToWebIdMap.size} entries.`);
+      } catch (cacheError) {
+        LoggerService.warn('ProductService', functionName, `Failed to cache SKU map (likely too large): ${cacheError.message}`);
+      }
+
     } catch (e) {
       LoggerService.error('ProductService', functionName, `Error building SKU map: ${e.message}`, e);
       // If the map fails to build, we leave it as an empty map to prevent repeated errors.
@@ -287,30 +311,43 @@ const ProductService = (function() {
 
     const allConfig = ConfigService.getAllConfig();
     const masterSchema = allConfig['schema.data.CmxProdM'];
-    const stagingSchema = allConfig['schema.data.CmxProdS'];
-    if (!masterSchema || !stagingSchema) {
-        throw new Error('Comax master or staging schema not found.');
+    if (!masterSchema) {
+        throw new Error('Comax master schema not found.');
     }
     const masterHeaders = masterSchema.headers.split(',');
-    const stagingHeaders = stagingSchema.headers.split(',');
 
     const masterData = ConfigService._getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
     const masterMap = masterData.map;
 
-    const stagingKey = 'cps_CmxId'; 
-    const stagingKeyIndex = stagingHeaders.indexOf(stagingKey);
-
-    // Iterate through the fresh comaxProducts and update/insert into the master map
-    comaxProducts.forEach(comaxProductRow => {
-        const key = comaxProductRow[stagingKeyIndex] ? String(comaxProductRow[stagingKeyIndex]).trim() : null;
+    // Iterate through the fresh comaxProducts (Objects) and update/insert into the master map
+    comaxProducts.forEach(comaxProductObj => {
+        const key = comaxProductObj['cps_CmxId'] ? String(comaxProductObj['cps_CmxId']).trim() : null;
+        
         if (key) {
             const newMasterRow = {};
+            
+            // If the product exists, preserve existing data (especially manual fields not in Comax import)
+            // However, for CmxProdM, essentially all fields come from Comax. 
+            // But if we have extra manual columns in the future, we should preserve them.
+            // For now, we are replacing the row with new data derived from the object.
+            
+            // Check if we need to merge with existing row? 
+            // The previous logic seemed to replace. Let's stick to replacing fields present in the input.
+            
             masterHeaders.forEach((masterHeader) => {
                 const baseHeader = masterHeader.substring(masterHeader.indexOf('_') + 1);
                 const stagingHeader = 'cps_' + baseHeader;
-                const stagingIndex = stagingHeaders.indexOf(stagingHeader);
-                if (stagingIndex !== -1) {
-                    newMasterRow[masterHeader] = comaxProductRow[stagingIndex];
+                
+                // If the object has the property, use it. Otherwise default to empty string.
+                // This implicitly handles the mapping from cps_ -> cpm_
+                if (comaxProductObj.hasOwnProperty(stagingHeader)) {
+                    newMasterRow[masterHeader] = comaxProductObj[stagingHeader];
+                } else if (masterMap.has(key) && masterMap.get(key)[masterHeader]) {
+                     // Optional: Preserve existing value if not in update? 
+                     // ComaxAdapter returns ALL columns defined in mapping, so missing usually means empty in Comax.
+                     newMasterRow[masterHeader] = ''; 
+                } else {
+                    newMasterRow[masterHeader] = '';
                 }
             });
             masterMap.set(key, newMasterRow);
@@ -321,6 +358,37 @@ const ProductService = (function() {
     const finalData = Array.from(masterMap.values()).map(rowObject => {
         return masterHeaders.map(header => rowObject[header] || '');
     });
+
+    // --- SANITY CHECK ---
+    if (finalData.length > 0) {
+        // Check headers indices for critical columns
+        const stockIdx = masterHeaders.indexOf('cpm_Stock');
+        const priceIdx = masterHeaders.indexOf('cpm_Price');
+        const nameIdx = masterHeaders.indexOf('cpm_NameHe');
+        
+        // Sample first 5 rows (or fewer if length < 5)
+        const sampleSize = Math.min(5, finalData.length);
+        let validRowsFound = 0;
+        
+        for (let i = 0; i < sampleSize; i++) {
+            const row = finalData[i];
+            // Check if at least one of the critical fields has a value
+            const hasStock = stockIdx > -1 && row[stockIdx] !== '';
+            const hasPrice = priceIdx > -1 && row[priceIdx] !== '';
+            const hasName = nameIdx > -1 && row[nameIdx] !== '';
+            
+            if (hasStock || hasPrice || hasName) {
+                validRowsFound++;
+            }
+        }
+        
+        if (validRowsFound === 0) {
+            const msg = `CRITICAL SANITY CHECK FAILED in _upsertComaxData. Attempted to write ${finalData.length} rows, but sampled rows appear empty for Stock, Price, and Name. Aborting write to prevent data loss.`;
+            logger.error(serviceName, functionName, msg, null, { sessionId: sessionId });
+            throw new Error(msg);
+        }
+    }
+    // --- END SANITY CHECK ---
 
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
@@ -515,6 +583,32 @@ const ProductService = (function() {
         return masterHeaders.map(header => rowObject[header] || '');
     });
 
+    // --- SANITY CHECK ---
+    if (finalData.length > 0) {
+        const stockIdx = masterHeaders.indexOf('wpm_Stock');
+        const priceIdx = masterHeaders.indexOf('wpm_Price');
+        
+        const sampleSize = Math.min(5, finalData.length);
+        let validRowsFound = 0;
+        
+        for (let i = 0; i < sampleSize; i++) {
+            const row = finalData[i];
+            const hasStock = stockIdx > -1 && row[stockIdx] !== '';
+            const hasPrice = priceIdx > -1 && row[priceIdx] !== '';
+            
+            if (hasStock || hasPrice) {
+                validRowsFound++;
+            }
+        }
+        
+        if (validRowsFound === 0) {
+            const msg = `CRITICAL SANITY CHECK FAILED in _upsertWebProductsData. Attempted to write ${finalData.length} rows, but sampled rows appear empty for Stock or Price. Aborting write.`;
+            logger.error(serviceName, functionName, msg, null, { sessionId: sessionId });
+            throw new Error(msg);
+        }
+    }
+    // --- END SANITY CHECK ---
+
     // Write the updated data back to WebProdM
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const masterSheet = dataSpreadsheet.getSheetByName('WebProdM');
@@ -522,7 +616,8 @@ const ProductService = (function() {
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
     }
-    logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
+    CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate SKU map cache
+    logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}. Cache invalidated.`, { sessionId: sessionId });
   }
 
   function processJob(executionContext) {
@@ -1671,7 +1766,8 @@ const ProductService = (function() {
       TaskService.updateTaskStatus(onboardingTaskId, 'Done'); // TaskService needs sessionId too
       
       // 5. Force Reload Config/Cache if needed (though product maps are usually rebuilt per request)
-      // skuToWebIdMap = null; // Invalidate local cache if used
+      skuToWebIdMap = null; // Invalidate local cache if used
+      CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate shared cache
       
       return { success: true };
 

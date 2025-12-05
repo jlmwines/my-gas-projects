@@ -50,7 +50,7 @@
         "Task for when a product's vintage in a staging sheet does not match the master sheet or Comax.",
         "stable",
         "topic", "Products",
-        "default_priority", "High",
+        "default_priority", "Normal",
         "initial_status", "New"
     ],
     [

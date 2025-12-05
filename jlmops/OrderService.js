@@ -227,6 +227,21 @@ function OrderService(productService) {
       }
       logger.info(serviceName, functionName, `Successfully parsed ${ordersWithLineItems.length} web orders with line items.`, { sessionId: sessionId, parsedOrders: ordersWithLineItems.length });
 
+      // --- SANITY CHECK: Ensure critical data exists after parsing ---
+      const minValidOrders = Math.max(1, Math.floor(ordersWithLineItems.length * 0.8)); // At least 1, or 80% valid
+      let validOrderCount = 0;
+      for (const order of ordersWithLineItems) {
+          if (order.hasOwnProperty('wos_OrderId') && String(order.wos_OrderId).trim() !== '') {
+              validOrderCount++;
+          }
+      }
+      if (validOrderCount < minValidOrders) {
+          const msg = `CRITICAL SANITY CHECK FAILED in importWebOrdersToStaging. Only ${validOrderCount} of ${ordersWithLineItems.length} parsed orders have a valid Order ID. This indicates a parsing issue.`;
+          logger.error(serviceName, functionName, msg, null, { sessionId: sessionId, archiveFileId: archiveFileId });
+          throw new Error(msg);
+      }
+      // --- END SANITY CHECK ---
+
       // 2. Write the structured data to the WebOrdS staging sheet
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
@@ -845,8 +860,9 @@ function OrderService(productService) {
 
         // --- 6. Recalculate On-Hold Inventory ---
         logger.info(serviceName, functionName, 'Triggering on-hold inventory recalculation.', { sessionId: sessionId });
-        // InventoryManagementService.calculateOnHoldInventory needs to be updated to accept sessionId
-        InventoryManagementService.calculateOnHoldInventory(sessionId); // Pass sessionId
+        // Get masterItemData including headers to pass to InventoryManagementService
+        const currentMasterItemData = masterItemSheet.getDataRange().getValues();
+        InventoryManagementService.calculateOnHoldInventory(sessionId, currentMasterItemData);
 
         logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
 
@@ -856,6 +872,112 @@ function OrderService(productService) {
         }
       };
     
+    /**
+     * Retrieves consolidated order statistics for the dashboard in a single efficient read.
+     * Reads SysOrdLog once to calculate all metrics.
+     * @returns {Object} An object containing all dashboard order metrics.
+     */
+    this.getDashboardStats = function(sessionId) {
+        const serviceName = 'OrderService';
+        const functionName = 'getDashboardStats';
+        try {
+            const allConfig = ConfigService.getAllConfig();
+            const sheetNames = allConfig['system.sheet_names'];
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+            if (!logSheet) {
+                throw new Error("Required sheet (SysOrdLog) not found.");
+            }
+
+            // Optimization: Read only the last 1000 rows
+            const lastRow = logSheet.getLastRow();
+            const startRow = Math.max(2, lastRow - 999);
+            const numRows = lastRow - startRow + 1;
+
+            let data = [];
+            if (numRows > 0) {
+                data = logSheet.getRange(startRow, 1, numRows, logSheet.getLastColumn()).getValues();
+            }
+            
+            // We need headers to map columns. Read the first row separately if we are not reading from row 1.
+            // But wait, we need column indices. We can read headers from row 1.
+            const headers = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0];
+
+            // Map headers to indices
+            const statusCol = headers.indexOf('sol_OrderStatus');
+            const comaxStatusCol = headers.indexOf('sol_ComaxExportStatus');
+            const comaxTsCol = headers.indexOf('sol_ComaxExportTimestamp');
+            const packingStatusCol = headers.indexOf('sol_PackingStatus');
+
+            if (statusCol === -1 || comaxStatusCol === -1 || comaxTsCol === -1 || packingStatusCol === -1) {
+                throw new Error("Missing one or more required columns in SysOrdLog.");
+            }
+
+            // Initialize counters
+            let unexportedOrdersCount = 0;
+            let lastComaxOrderExportTimestamp = null;
+            let onHoldOrderCount = 0;
+            let processingOrderCount = 0;
+            let packingSlipsReadyCount = 0;
+
+            // Single pass iteration
+            for (const row of data) {
+                const orderStatus = String(row[statusCol] || '').trim().toLowerCase();
+                const comaxStatus = String(row[comaxStatusCol] || '').trim().toLowerCase();
+                const packingStatus = String(row[packingStatusCol] || '').trim();
+                const comaxTs = row[comaxTsCol];
+
+                // 1. Unexported Orders (Eligible & Not Exported)
+                const isEligible = (orderStatus === 'processing' || orderStatus === 'completed');
+                if (isEligible && comaxStatus !== 'exported') {
+                    unexportedOrdersCount++;
+                }
+
+                // 2. Last Comax Export Timestamp
+                if (comaxTs && comaxTs instanceof Date) {
+                    if (!lastComaxOrderExportTimestamp || comaxTs > lastComaxOrderExportTimestamp) {
+                        lastComaxOrderExportTimestamp = comaxTs;
+                    }
+                }
+
+                // 3. On Hold Count
+                if (orderStatus === 'on-hold') {
+                    onHoldOrderCount++;
+                }
+
+                // 4. Processing Count
+                if (orderStatus === 'processing') {
+                    processingOrderCount++;
+                }
+
+                // 5. Packing Slips Ready
+                if (packingStatus === 'Ready') {
+                    packingSlipsReadyCount++;
+                }
+            }
+
+            return {
+                unexportedOrdersCount,
+                lastComaxOrderExportTimestamp,
+                onHoldOrderCount,
+                processingOrderCount,
+                packingSlipsReadyCount
+            };
+
+        } catch (e) {
+            logger.error(serviceName, functionName, `Error calculating dashboard stats: ${e.message}`, e, { sessionId: sessionId });
+            return {
+                unexportedOrdersCount: -1,
+                lastComaxOrderExportTimestamp: null,
+                onHoldOrderCount: -1,
+                processingOrderCount: -1,
+                packingSlipsReadyCount: -1
+            };
+        }
+    };
+
       this.getComaxExportOrderCount = function() {
         const serviceName = 'OrderService';
         const functionName = 'getComaxExportOrderCount';
