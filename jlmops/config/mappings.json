@@ -720,6 +720,21 @@
         ""
     ],
     [
+        "map.web.product_columns",
+        "Maps WooCommerce CSV headers to internal field names for staging.",
+        "stable",
+        "Regular price",
+        "wps_RegularPrice",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "map.web.order_columns",
         "Maps WooCommerce CSV headers to internal field names for staging.",
         "stable",

@@ -15,6 +15,8 @@ const SyncStateService = (function() {
     const functionName = 'getSyncState';
     let state = getDefaultState(); // Initialize with default state
     try {
+      // Force reload to get fresh state from database, not cache
+      ConfigService.forceReload();
       const stateConfig = ConfigService.getConfig(SYNC_STATE_CONFIG_KEY);
       if (stateConfig && stateConfig.json) {
         // Merge stored state with default state to ensure new properties exist
@@ -24,16 +26,30 @@ const SyncStateService = (function() {
       logger.error(SERVICE_NAME, functionName, `Error retrieving or parsing sync state: ${e.message}`, e);
     }
 
+    // Always fetch invoice count (it's fast and informational for Step 0)
+    try {
+      state.invoiceFileCount = OrchestratorService.getInvoiceFileCount();
+    } catch (e) {
+      logger.warn(SERVICE_NAME, functionName, `Could not fetch invoice count: ${e.message}`);
+      state.invoiceFileCount = -1; // Indicate error
+    }
+
     // If there's an active session (even if completed/failed), refresh granular job statuses
     if (state.sessionId && state.currentStage !== 'IDLE') {
       try {
-        state.webOrdersJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_orders', state.sessionId));
-        state.webProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_products_en', state.sessionId));
-        state.webTranslationsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.web_translations_he', state.sessionId));
+        const ordersStatus = OrchestratorService.getJobStatusInSession('import.drive.web_orders', state.sessionId);
+        const productsStatus = OrchestratorService.getJobStatusInSession('import.drive.web_products_en', state.sessionId);
+        const translationsStatus = OrchestratorService.getJobStatusInSession('import.drive.web_translations_he', state.sessionId);
+
+        state.webOrdersJobStatus = mapNotFoundToNotStarted(ordersStatus);
+        state.webProductsJobStatus = mapNotFoundToNotStarted(productsStatus);
+        state.webTranslationsJobStatus = mapNotFoundToNotStarted(translationsStatus);
         state.comaxProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.comax_products', state.sessionId));
         state.masterValidationJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('job.periodic.validation.master', state.sessionId));
         state.webInventoryExportJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('export.web.inventory', state.sessionId));
-        
+
+        // Don't log routine status refresh - creates noise during UI polling
+
         // --- NEW: Fetch latest log for UI feedback ---
         const latestLog = logger.getLatestLogForSession(state.sessionId);
         if (latestLog) {
@@ -108,7 +124,8 @@ const SyncStateService = (function() {
       // Counts
       ordersPendingExportCount: -1,
       comaxOrdersExported: false, // Initialize the flag as well
-      
+      invoiceFileCount: 0, // Invoice receipts awaiting processing
+
       // Filenames
       webExportFilename: null
     };

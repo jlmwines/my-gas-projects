@@ -509,7 +509,7 @@ const ProductService = (function() {
         const productObjects = WebAdapter.processProductCsv(csvContent, 'map.web.product_columns');
 
         _populateStagingSheet(productObjects, sheetNames.WebProdS_EN, sessionId);
-        logger.info(serviceName, functionName, 'Successfully populated WebProdS_EN staging sheet.', { sessionId: sessionId });
+        logger.info(serviceName, functionName, `Successfully populated WebProdS_EN staging sheet with ${productObjects.length} products.`, { sessionId });
         
     // --- 2. Run Staging Validation ---
     const validationResult = ValidationLogic.runValidationSuite('web_staging', sessionId);
@@ -554,15 +554,19 @@ const ProductService = (function() {
     const stagingKeyIndex = stagingHeaders.indexOf(stagingKey);
 
     let updatedCount = 0;
-    stagingData.values.forEach(stagingRow => {
-        const key = stagingRow[stagingKeyIndex];
+    let skippedCount = 0;
+    const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
+
+    stagingData.values.forEach((stagingRow, idx) => {
+        const rawKey = stagingRow[stagingKeyIndex];
+        const key = String(rawKey).trim(); // Convert to string to match map keys
+
         if (key && masterMap.has(key)) {
             // Product exists in master, update its values
             const masterRow = masterMap.get(key);
             const stagingRowObject = {};
             stagingHeaders.forEach((h, i) => { stagingRowObject[h] = stagingRow[i]; });
 
-            const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
             for (const sKey in stagingToMasterMap) {
               if (stagingRowObject.hasOwnProperty(sKey)) {
                 const mKey = stagingToMasterMap[sKey];
@@ -572,11 +576,12 @@ const ProductService = (function() {
 
             masterMap.set(key, masterRow); // Put the updated row back in the map
             updatedCount++;
+        } else {
+            skippedCount++;
         }
-        // If key does not exist in masterMap, we do nothing, as per user requirements.
     });
 
-    logger.info(serviceName, functionName, `${updatedCount} existing products were updated in the master map.`, { sessionId: sessionId });
+    logger.info(serviceName, functionName, `WebProdM upsert complete: ${updatedCount} products updated, ${skippedCount} not found in master`, { sessionId });
 
     // Convert the map back to a 2D array to write to the sheet
     const finalData = Array.from(masterMap.values()).map(rowObject => {

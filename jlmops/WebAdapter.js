@@ -21,16 +21,27 @@ const WebAdapter = (function() {
         throw new Error(`Web product column map '${mapName}' not found in configuration. Please run setup.`);
     }
 
+    // Validate that critical fields are mapped
+    const criticalFields = ['wps_RegularPrice', 'wps_SKU', 'wps_Name', 'wps_Stock'];
+    const mappedFields = Object.values(columnMap);
+    const missingCriticalMappings = criticalFields.filter(field => !mappedFields.includes(field));
+
+    if (missingCriticalMappings.length > 0) {
+        const errorMessage = `CONFIGURATION ERROR: Column mapping '${mapName}' is missing critical field mappings: ${missingCriticalMappings.join(', ')}. Update configuration.`;
+        logger.error(serviceName, functionName, errorMessage);
+        throw new Error(errorMessage);
+    }
+
     const parsedData = Utilities.parseCsv(csvContent);
     if (parsedData.length < 2) {
       logger.error(serviceName, functionName, 'File is empty or contains only a header.');
       return [];
     }
-    
+
     const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
 
-    // Strict Header Validation
-    const missingHeaders = Object.keys(columnMap).filter(expectedHeader => 
+    // Strict Header Validation - all configured headers must be present
+    const missingHeaders = Object.keys(columnMap).filter(expectedHeader =>
         headerRow.indexOf(expectedHeader.toLowerCase()) === -1
     );
 

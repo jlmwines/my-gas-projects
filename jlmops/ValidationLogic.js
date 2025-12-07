@@ -422,7 +422,29 @@ const ValidationLogic = (function() {
     }
 
     // --- Execution ---
-    const results = rules.map(rule => {
+    const results = [];
+    const totalRules = rules.length;
+
+    for (let i = 0; i < rules.length; i++) {
+        const rule = rules[i];
+
+        // Write progress status for each validation rule
+        if (sessionId) {
+            // Extract a simple, human-friendly name from the rule
+            const simpleName = rule.on_failure_title
+                .replace(/\$\{.*?\}/g, '') // Remove ${variables}
+                .replace(/\[.*?\]/g, '')    // Remove [tags]
+                .replace(/:/g, '')          // Remove colons
+                .trim();
+
+            SyncStatusService.writeStatus(sessionId, {
+                step: 4,
+                stepName: 'Validation',
+                status: 'processing',
+                message: simpleName
+            });
+        }
+
         let result;
         try {
             switch (rule.test_type) {
@@ -451,14 +473,14 @@ const ValidationLogic = (function() {
             result = { status: 'ERROR', message: e.message, discrepancies: [] };
             logger.error(serviceName, functionName, `Error executing rule ${rule.on_failure_title}: ${e.message}`, e, { sessionId: sessionId });
         }
-        
-        return {
+
+        results.push({
             rule: rule,
             status: result.status,
             message: result.message,
             discrepancies: result.discrepancies
-        };
-    });
+        });
+    }
 
     return { success: true, results: results };
   }

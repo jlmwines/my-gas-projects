@@ -618,6 +618,8 @@ const OrchestratorService = (function() {
       logger.info(serviceName, functionName, 'No PENDING jobs found in the queue to process in this run.');
     } else {
       logger.info(serviceName, functionName, `Processed ${jobsProcessedCount} jobs in this run.`);
+      // Check if any job completions should advance sync state
+      _checkAndAdvanceSyncState();
     }
     SpreadsheetApp.flush(); // Ensure status updates are written
     logger.info(serviceName, functionName, 'Pending job check complete.');
@@ -1018,14 +1020,28 @@ const OrchestratorService = (function() {
         let anyFailedOrQuarantined = false;
         let errorMessage = '';
 
+        // Track individual job completions
+        const jobNames = {
+          'import.drive.web_orders': 'Orders',
+          'import.drive.web_products_en': 'Products',
+          'import.drive.web_translations_he': 'Translations'
+        };
+
+        const completedJobs = [];
+        const pendingJobs = [];
+
         for (const jobType of requiredJobs) {
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
-          logger.info(serviceName, functionName, `Job ${jobType} status in session ${state.sessionId}: ${jobStatus}`);
+          const jobName = jobNames[jobType] || jobType;
+          // Don't log routine status checks - creates noise during UI polling
 
-          if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
-            allCompleted = false; // Not all jobs are done yet
-            break; 
+          if (jobStatus === 'COMPLETED') {
+            completedJobs.push(jobName);
+          } else if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
+            allCompleted = false;
+            pendingJobs.push(jobName);
           }
+
           if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
             anyFailedOrQuarantined = true;
             errorMessage = `Required import job (${jobType}) failed or was quarantined. Current status: ${jobStatus}.`;
@@ -1033,25 +1049,86 @@ const OrchestratorService = (function() {
           }
         }
 
+        // Update status message to show progress
+        if (!allCompleted && !anyFailedOrQuarantined && completedJobs.length > 0) {
+          const progressMsg = `✓ ${completedJobs.join(', ')}${pendingJobs.length > 0 ? ' | Processing: ' + pendingJobs.join(', ') : ''}`;
+          SyncStatusService.writeStatus(state.sessionId, {
+            step: 1,
+            stepName: 'Import Web Data',
+            status: 'processing',
+            message: progressMsg
+          });
+        }
+
         if (anyFailedOrQuarantined) {
           logger.error(serviceName, functionName, `Stage 1 (Web) jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+
+          // Write Step 1 failure status
+          SyncStatusService.writeStatus(state.sessionId, {
+            step: 1,
+            stepName: 'Import Web Data',
+            status: 'failed',
+            message: errorMessage
+          });
+
+          // Clear all subsequent step statuses to prevent showing stale notifications
+          SyncStatusService.clearStepsFromSession(state.sessionId, 2);
+
           state.currentStage = 'FAILED';
           state.errorMessage = errorMessage;
           state.lastUpdated = new Date().toISOString();
           SyncStateService.setSyncState(state);
         } else if (allCompleted) {
           logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}.`);
-          
+
+          // Write Step 1 completion status
+          SyncStatusService.writeStatus(state.sessionId, {
+            step: 1,
+            stepName: 'Import Web Data',
+            status: 'completed',
+            message: 'All web data imported successfully'
+          });
+
           // Calculate orders pending for export
           const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
           state.ordersPendingExportCount = ordersToExportCount;
-          state.lastUpdated = new Date().toISOString(); // Update timestamp
-          
-          // ALWAYS transition to WAITING_FOR_COMAX. The UI will show appropriate messages.
-          logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
-          state.currentStage = 'WAITING_FOR_COMAX';
-          // If there are no orders to export, it's implicitly "exported" and ready for Comax import.
-          state.comaxOrdersExported = (ordersToExportCount === 0); 
+          state.lastUpdated = new Date().toISOString();
+
+          if (ordersToExportCount === 0) {
+            // No orders to export - skip Step 2, mark it complete
+            logger.info(serviceName, functionName, `No orders to export. Skipping export step and transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
+
+            SyncStatusService.writeStatus(state.sessionId, {
+              step: 2,
+              stepName: 'Export to Comax',
+              status: 'completed',
+              message: 'No orders to export - skipped'
+            });
+
+            SyncStatusService.writeStatus(state.sessionId, {
+              step: 3,
+              stepName: 'Import Comax Data',
+              status: 'waiting',
+              message: 'Ready to import Comax product data'
+            });
+
+            state.currentStage = 'READY_FOR_COMAX_IMPORT';
+            state.comaxOrdersExported = true;
+          } else {
+            // Orders need to be exported - wait for manual export and confirmation
+            logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
+
+            SyncStatusService.writeStatus(state.sessionId, {
+              step: 2,
+              stepName: 'Export to Comax',
+              status: 'waiting',
+              message: `${ordersToExportCount} orders ready to export`
+            });
+
+            state.currentStage = 'WAITING_FOR_COMAX';
+            state.comaxOrdersExported = false;
+          }
+
           SyncStateService.setSyncState(state);
         }
       }
@@ -1063,24 +1140,51 @@ const OrchestratorService = (function() {
           
           if (jobStatus === 'COMPLETED') {
               logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING and triggering finalization.`);
-              
-              // 1. Advance State
+
+              // Write Step 3 completion status
+              SyncStatusService.writeStatus(state.sessionId, {
+                step: 3,
+                stepName: 'Import Comax Data',
+                status: 'completed',
+                message: 'Comax product data imported successfully'
+              });
+
+              // Write Step 4 waiting status (not processing yet - just queued)
+              SyncStatusService.writeStatus(state.sessionId, {
+                step: 4,
+                stepName: 'Validation',
+                status: 'waiting',
+                message: 'Validation queued, starting...'
+              });
+
+              // Advance State
               state.currentStage = 'VALIDATING';
               state.lastUpdated = new Date().toISOString();
-              state.errorMessage = null; // Clear error on successful transition
+              state.errorMessage = null;
               SyncStateService.setSyncState(state);
-              
-              // 2. Trigger Finalization (Queue Validation Jobs)
+
+              // Trigger Finalization (Queue Validation Jobs)
               finalizeSync(state.sessionId);
-              
-              // 3. Process the newly queued validation job immediately
+
+              // Process the newly queued validation job immediately
               logger.info(serviceName, functionName, 'Triggering immediate processing for newly queued validation job.');
               processPendingJobs();
-              
+
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+
+              SyncStatusService.writeStatus(state.sessionId, {
+                step: 3,
+                stepName: 'Import Comax Data',
+                status: 'failed',
+                message: `Import failed: ${jobStatus}`
+              });
+
+              // Clear all subsequent step statuses to prevent showing stale notifications
+              SyncStatusService.clearStepsFromSession(state.sessionId, 4);
+
               state.currentStage = 'FAILED';
-              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`; // Error message set here
+              state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
               state.lastUpdated = new Date().toISOString();
               SyncStateService.setSyncState(state);
           }
@@ -1110,12 +1214,41 @@ const OrchestratorService = (function() {
 
         if (anyFailedOrQuarantined) {
            logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+
+           // Write Step 4 failure status
+           SyncStatusService.writeStatus(state.sessionId, {
+             step: 4,
+             stepName: 'Validation',
+             status: 'failed',
+             message: errorMessage
+           });
+
+           // Clear all subsequent step statuses to prevent showing stale notifications
+           SyncStatusService.clearStepsFromSession(state.sessionId, 5);
+
            state.currentStage = 'FAILED';
            state.errorMessage = errorMessage;
            state.lastUpdated = new Date().toISOString();
            SyncStateService.setSyncState(state);
         } else if (allCompleted) {
            logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
+
+           // Write Step 4 completion status
+           SyncStatusService.writeStatus(state.sessionId, {
+             step: 4,
+             stepName: 'Validation',
+             status: 'completed',
+             message: 'All validation checks passed'
+           });
+
+           // Write Step 5 waiting status
+           SyncStatusService.writeStatus(state.sessionId, {
+             step: 5,
+             stepName: 'Export Web Inventory',
+             status: 'waiting',
+             message: 'Ready to generate web inventory export'
+           });
+
            state.currentStage = 'READY_FOR_WEB_EXPORT';
            state.lastUpdated = new Date().toISOString();
            state.errorMessage = null; // Clear error on successful transition
@@ -1130,12 +1263,30 @@ const OrchestratorService = (function() {
           
           if (jobStatus === 'COMPLETED') {
               logger.info(serviceName, functionName, `Web Inventory Export completed for session ${state.sessionId}. Advancing to WEB_EXPORT_GENERATED.`);
+
+              // Write Step 5 waiting status - ready for confirmation
+              SyncStatusService.writeStatus(state.sessionId, {
+                step: 5,
+                stepName: 'Export Web Inventory',
+                status: 'waiting',
+                message: 'Export complete. Ready to confirm upload.'
+              });
+
               state.currentStage = 'WEB_EXPORT_GENERATED';
               state.lastUpdated = new Date().toISOString();
               state.errorMessage = null; // Clear error on successful transition
               SyncStateService.setSyncState(state);
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+
+              // Write Step 5 failure status
+              SyncStatusService.writeStatus(state.sessionId, {
+                step: 5,
+                stepName: 'Export Web Inventory',
+                status: 'failed',
+                message: `Export failed: ${jobStatus}`
+              });
+
               state.currentStage = 'FAILED';
               state.errorMessage = `Web Inventory Export job failed. Status: ${jobStatus}`;
               state.lastUpdated = new Date().toISOString();
@@ -1318,10 +1469,11 @@ const OrchestratorService = (function() {
       queueWebFilesForSync: queueWebFilesForSync,
       queueComaxFileForSync: queueComaxFileForSync,
       finalizeSync: finalizeSync,
-      queueWebInventoryExport: queueWebInventoryExport, // Export new function
-      getJobStatusInSession: getJobStatusInSession, // Export function
+      queueWebInventoryExport: queueWebInventoryExport,
+      getJobStatusInSession: getJobStatusInSession,
       generateSessionId: generateSessionId,
-      triggerWebOrderFileProcessing: triggerWebOrderFileProcessing, // NEW
-      processPendingJobs: processPendingJobs // NEWLY EXPOSED
+      triggerWebOrderFileProcessing: triggerWebOrderFileProcessing,
+      processPendingJobs: processPendingJobs,
+      checkAndAdvanceSyncState: _checkAndAdvanceSyncState // Export state checking
     };
 })();

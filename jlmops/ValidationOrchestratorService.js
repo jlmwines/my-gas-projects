@@ -42,6 +42,16 @@ const ValidationOrchestratorService = (function() {
 
     logger.info(serviceName, functionName, `Starting validation job: ${jobType}`, { sessionId: sessionId });
 
+    // Write initial processing status
+    if (sessionId) {
+      SyncStatusService.writeStatus(sessionId, {
+        step: 4,
+        stepName: 'Validation',
+        status: 'processing',
+        message: 'Initializing validation suite...'
+      });
+    }
+
     // 1. Determine Suite Name based on Job Type
     let suiteName = '';
     if (jobType === 'manual.validation.master' || jobType === 'periodic.validation.master' || jobType === 'job.periodic.validation.master') {

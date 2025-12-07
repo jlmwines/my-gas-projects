@@ -204,9 +204,6 @@ const ConfigService = (function() {
     const dataMap = new Map();
     const keyHeader = keyColumnName || getConfig(`schema.data.${sheetName}`).key_column;
 
-    // DEBUGGING: Log headers and key to diagnose mismatch
-    LoggerService.info(serviceName, functionName, `DEBUG for sheet ${sheetName}: keyHeader = '${keyHeader}', headers = ${JSON.stringify(headers)}`);
-
     const keyIndex = headers.indexOf(keyHeader);
     if (keyIndex === -1) throw new Error(`Could not determine a key column for sheet ${sheetName} using key '${keyHeader}'`);
 
@@ -218,7 +215,7 @@ const ConfigService = (function() {
         dataMap.set(String(key).trim(), rowObject);
       }
     });
-    LoggerService.info(serviceName, functionName, `Loaded ${dataMap.size} rows from ${sheetName}.`);
+    // Don't log routine data loading - it creates noise during UI polling
     return { map: dataMap, headers: headers, values: values };
   }
 
