@@ -54,6 +54,16 @@ const TaskService = (function() {
       const entityIdCol = headers.indexOf('st_LinkedEntityId');
       const statusCol = headers.indexOf('st_Status');
 
+      // --- SKU Validation for Product Tasks ---
+      // Product-related tasks should use SKU (numeric) as linkedEntityId
+      if (taskTypeId.includes('product') || taskTypeId.includes('vintage') || taskTypeId.includes('onboarding')) {
+        const trimmedEntityId = String(linkedEntityId).trim();
+        if (!/^\d+$/.test(trimmedEntityId)) {
+          logger.warn('TaskService', 'createTask',
+            `Product-related task '${taskTypeId}' has non-SKU entityId: '${linkedEntityId}'. Expected numeric SKU.`);
+        }
+      }
+
       // --- De-duplication Check ---
       if (sheet.getLastRow() > 1) {
         const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();

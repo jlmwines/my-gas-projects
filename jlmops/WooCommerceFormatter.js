@@ -182,27 +182,39 @@ const WooCommerceFormatter = (function() {
                 const addDetailLine = (labelEn, labelHe, value) => {
                     if (!value) return '';
                     const label = isEn ? labelEn : labelHe;
-                    return `${label}: ${value}<br>\n`;
+                    return `${label}: ${value}\n`;
                 };
         
                 // --- HTML Construction ---
-        
+
                 // 1. Product Title
-                if (name) html += `<b>${name}</b><br>\n`;
-                html += '<hr>\n'; // Divider
-        
-                // 2. Short Description
-                if (shortDescription) html += `${shortDescription}<br>\n`;
-                html += '<hr>\n'; // Divider
-        
-                // 3. Product Title & Long Description
-                if (name || longDescription) {
-                    html += (name ? `${name}` : '') + (name && longDescription ? ' ' : '') + (longDescription ? `${longDescription}` : '');
-                    html += '<br>\n';
+                if (name) {
+                    html += `<b>${name}</b>`;
+                    html += '<hr>';
                 }
-                
-                html += '<br>\n'; // Blank line after description block as requested
-        
+
+                // 2. Short Description
+                if (shortDescription) {
+                    html += `${shortDescription}`;
+                    html += '<hr>';
+                }
+
+                // 3. Long Description (starts with product title + space + user content)
+                if (name || longDescription) {
+                    html += (name ? name : '') + (name && longDescription ? ' ' : '') + (longDescription ? longDescription : '');
+                    html += '<br>'; // End description line
+                }
+
+                // Conditional blank line - only if detail fields will follow
+                const hasDetailFields = group || vintage || abv || size || regionCode || intensityCode || complexityCode || acidityCode || decant ||
+                    getVal('wdm_GrapeG1') || getVal('wdm_GrapeG2') || getVal('wdm_GrapeG3') || getVal('wdm_GrapeG4') || getVal('wdm_GrapeG5') ||
+                    getVal('wdm_PairHarMild') || getVal('wdm_PairHarRich') || getVal('wdm_PairHarIntense') || getVal('wdm_PairHarSweet') ||
+                    getVal('wdm_PairConMild') || getVal('wdm_PairConRich') || getVal('wdm_PairConIntense') || getVal('wdm_PairConSweet');
+
+                if (hasDetailFields) {
+                    html += '<br>'; // Blank row before attributes
+                }
+
                 // 4. Details List
                 // Order: Category, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, Kashrut, Heter Mechira, Mevushal
                 
@@ -261,30 +273,38 @@ const WooCommerceFormatter = (function() {
                 // Decant
                 if (decant) {
                     const decantText = isEn ? `Recommending decanting - ${decant} minutes` : `מומלץ לאוורור – ${decant} דקות`;
-                    html += `${decantText}<br>\n`;
+                    html += `${decantText}\n`;
                 }
-                
-                // Blank row
-                html += '<br>\n';
-        
-                // Kashrut
+
+                // Kashrut section
                 const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
                 const kashrutNames = [];
                 kashrutCodes.forEach(codeKey => {
                     const code = getVal(codeKey);
                     if (code) kashrutNames.push(getLookupText(code, 'kashrut', code));
                 });
+
+                const hasKashrutSection = kashrutNames.length > 0 ||
+                    (String(heterMechira) === 'true' || heterMechira === true) ||
+                    (String(isMevushal) === 'true' || isMevushal === true);
+
+                // Blank row before kashrut section
+                if (hasKashrutSection) {
+                    html += '<br>';
+                }
+
+                // Kashrut
                 if (kashrutNames.length > 0) html += addDetailLine('Kashrut', 'כשרות', kashrutNames.join(', '));
-        
+
                 // Heter Mechira
                 if (String(heterMechira) === 'true' || heterMechira === true) {
                     const hmText = isEn ? 'Heter Mechira' : 'היתר מכירה';
-                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span><br>\n`;
+                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span>\n`;
                 }
                 // Mevushal
                 if (String(isMevushal) === 'true' || isMevushal === true) {
                      const mevText = isEn ? 'Mevushal' : 'מבושל';
-                     html += `${mevText}<br>\n`;
+                     html += `${mevText}\n`;
                 }
         
                 // --- Appendices (Export Only) ---
@@ -364,7 +384,11 @@ const WooCommerceFormatter = (function() {
                          html += appendedParagraphs.join('<br>\n'); 
                      }
                 }
-        
+
+                // Cleanup: Remove excessive consecutive <br> tags and trailing blanks
+                html = html.replace(/(<br>\s*\n){3,}/g, '<br>\n<br>\n'); // Max 2 consecutive blank lines
+                html = html.replace(/(<br>\s*\n)+$/, ''); // Remove trailing <br> tags
+
                 return html;
             }  };
 

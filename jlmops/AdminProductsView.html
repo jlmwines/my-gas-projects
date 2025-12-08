@@ -217,8 +217,8 @@
         </div>
       </div>
       <div class="modal-footer bg-light">
-        <button class="btn border" onclick="document.getElementById('suggestion-modal').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
+        <button class="btn btn-sm" onclick="document.getElementById('suggestion-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-sm" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
       </div>
     </div>
   </div>
@@ -305,8 +305,8 @@
             <datalist id="abv-options"></datalist>
             <div class="modal-footer bg-light">
               <div id="modal-status" class="mr-auto text-muted small"></div>
-              <button class="btn border" onclick="AdminProductsView.closeModal()">Cancel</button>
-              <button class="btn" onclick="AdminProductsView.acceptChanges()">Accept & Update</button>
+              <button class="btn btn-sm" onclick="AdminProductsView.closeModal()">Cancel</button>
+              <button class="btn btn-sm" onclick="AdminProductsView.acceptChanges()">Accept & Update</button>
             </div>
           </div> <!-- Closes modal-container -->
         </div>
@@ -448,7 +448,7 @@
                     <td>${t.sku}</td>
                     <td>${t.title}</td>
                     <td class="small text-muted">${t.notes || ''}</td>
-                    <td><button class="btn btn-sm btn-primary" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Approve</button></td>
+                    <td><button class="btn btn-sm" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Approve</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -472,7 +472,7 @@
                     <td>${t.sku}</td>
                     <td>${t.title}</td>
                     <td>${new Date(t.createdDate).toLocaleDateString()}</td>
-                    <td><button class="btn btn-sm btn-outline-primary" onclick="AdminProductsView.openEditor('${t.taskId}')">Review</button></td>
+                    <td><button class="btn btn-sm" onclick="AdminProductsView.openEditor('${t.taskId}')">Review</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -560,10 +560,10 @@
         AdminProductsView.currentTaskId = taskId;
         AdminProductsView.currentSku = sku;
         document.getElementById('sugg-sku').value = sku;
-        // Attempt to extract name from title "Suggestion: [Name]"
-        let name = title.replace('New Product Suggestion:', '').trim(); 
-        document.getElementById('sugg-name-en').value = name;
-        document.getElementById('sugg-name-he').value = ''; // User must provide
+        // Extract name from title "New Product Suggestion: [Name]" - this is the Hebrew name
+        let name = title.replace('New Product Suggestion:', '').trim();
+        document.getElementById('sugg-name-en').value = ''; // User must provide
+        document.getElementById('sugg-name-he').value = name; // Suggest the Hebrew name from title
         document.getElementById('suggestion-modal').style.display = 'flex';
     };
 

@@ -242,7 +242,7 @@ function WebAppProducts_loadProductEditorData(taskId) {
     const sku = task.st_LinkedEntityId;
 
     // Parse the JSON string returned by ProductService
-    const productDetailsJson = ProductService.getProductDetails(sku); 
+    const productDetailsJson = ProductService.getProductDetails(sku);
     const productDetails = JSON.parse(productDetailsJson);
 
     return {
@@ -608,6 +608,104 @@ function WebAppProducts_getPotentialProducts(category) {
 
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getPotentialProducts', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * Searches for products by SKU or name across all Comax products.
+ * Filters by category if provided, and applies same eligibility criteria as getPotentialProducts.
+ *
+ * @param {string} searchTerm The search term (SKU or name fragment), minimum 2 characters
+ * @param {string} category Optional category filter
+ * @returns {Array<Object>} List of matching products {sku, name, price, stock, category}
+ */
+function WebAppProducts_searchProducts(searchTerm, category) {
+  try {
+    if (!searchTerm || searchTerm.length < 2) {
+      return [];
+    }
+
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    const cmxDataMap = ConfigService._getSheetDataAsMap(
+      'CmxProdM',
+      ConfigService.getConfig('schema.data.CmxProdM').headers.split(','),
+      'cpm_CmxId'
+    );
+
+    const matchingProducts = [];
+
+    // Helper for strict boolean check
+    const isTrue = (val) => {
+      const s = String(val || '').trim().toLowerCase();
+      return s === '1' || s === 'true' || s === 'yes' || s === 'כן';
+    };
+
+    // Map category to division if applicable
+    const divisionMap = {
+      'ליקר': '3',
+      'אביזרים': '5',
+      'פריטי מתנה': '9'
+    };
+    const targetDivision = category ? (divisionMap[category] || null) : null;
+
+    cmxDataMap.map.forEach(product => {
+      // Filter: Not Archived, Not on Web, Has Stock
+      const isArchived = String(product.cpm_IsArchived || '').trim();
+      if (isArchived !== '') {
+        return;
+      }
+
+      if (isTrue(product.cpm_IsWeb)) {
+        return;
+      }
+
+      const stock = parseInt(product.cpm_Stock, 10) || 0;
+      if (stock <= 0) {
+        return;
+      }
+
+      // Category filter (if provided)
+      if (category) {
+        const prodGroup = String(product.cpm_Group || '').trim();
+        const prodDiv = String(product.cpm_Division || '').trim();
+
+        if (targetDivision) {
+          // Category is mapped to division
+          if (prodDiv !== targetDivision) {
+            return;
+          }
+        } else {
+          // Category is a group name
+          if (prodGroup !== category) {
+            return;
+          }
+        }
+      }
+
+      // Search filter: Match SKU or Name
+      const sku = String(product.cpm_SKU || '').toLowerCase();
+      const nameHe = String(product.cpm_NameHe || '').toLowerCase();
+
+      if (sku.includes(lowerSearchTerm) || nameHe.includes(lowerSearchTerm)) {
+        matchingProducts.push({
+          sku: product.cpm_SKU,
+          name: product.cpm_NameHe,
+          price: product.cpm_Price,
+          stock: stock,
+          category: product.cpm_Group || category
+        });
+      }
+    });
+
+    // Sort by Name
+    matchingProducts.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Limit to 100 to prevent UI overload
+    return matchingProducts.slice(0, 100);
+
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'searchProducts', `Error: ${e.message}`, e);
     throw e;
   }
 }

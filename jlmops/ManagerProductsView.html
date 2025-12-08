@@ -135,6 +135,16 @@
                 <p class="text-muted small mb-0">Loading categories...</p>
             </div>
 
+            <!-- Search Input -->
+            <div class="mb-3">
+                <label for="product-search-input" class="form-label">Search Products (SKU or Name)</label>
+                <input type="text" id="product-search-input" class="form-control"
+                       placeholder="Type at least 2 characters to search all products...">
+                <small class="form-text text-muted">
+                    Search works across all products, not just the initial list. Clear to return to category view.
+                </small>
+            </div>
+
             <!-- Suggestion Tool -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="mb-0 text-muted" id="suggestion-table-title">Select a category above to view products</h6>
@@ -427,6 +437,7 @@
       ManagerProductsView.loadWidgetData();
       ManagerProductsView.loadTaskList();
       ManagerProductsView.loadCategoryStatus(); // Load section 3 contents immediately
+      ManagerProductsView.initializeSearch(); // Attach search listener
     };
 
     // --- Widget Data & Category Status (Updated) ---
@@ -487,9 +498,15 @@
 
     // --- Suggestion Tool Logic ---
     ManagerProductsView.loadSuggestions = function(category) {
+        ManagerProductsView.currentCategory = category; // Track for search filtering
+
         const tbody = document.getElementById('suggestion-list-body');
         const title = document.getElementById('suggestion-table-title');
-        
+
+        // Clear search input when loading by category
+        const searchInput = document.getElementById('product-search-input');
+        if (searchInput) searchInput.value = '';
+
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm" role="status"></div> Finding candidates...</td></tr>';
         title.textContent = category ? `Candidates for: ${category}` : 'All Candidates';
         document.getElementById('check-all-suggestions').checked = false;
@@ -519,6 +536,75 @@
         }).withFailureHandler(err => {
              tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
         }).WebAppProducts_getPotentialProducts(category);
+    };
+
+    // --- Search Functionality ---
+    ManagerProductsView.searchDebounce = null;
+    ManagerProductsView.currentCategory = ''; // Track current category for search
+
+    ManagerProductsView.handleSearch = function(searchTerm) {
+        clearTimeout(ManagerProductsView.searchDebounce);
+
+        const tbody = document.getElementById('suggestion-list-body');
+        const title = document.getElementById('suggestion-table-title');
+
+        // If search term is too short, return to category view
+        if (searchTerm.length < 2) {
+            if (searchTerm.length === 0) {
+                // Cleared search - return to current category view
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Select a category or search for products.</td></tr>';
+                title.textContent = 'Select a category above to view products';
+            }
+            return;
+        }
+
+        // Show searching indicator
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border spinner-border-sm" role="status"></div> Searching...</td></tr>';
+        title.textContent = `Search results for: "${searchTerm}"`;
+        document.getElementById('check-all-suggestions').checked = false;
+        document.getElementById('btn-suggest-products').disabled = true;
+
+        // Debounce the actual search call
+        ManagerProductsView.searchDebounce = setTimeout(() => {
+            google.script.run.withSuccessHandler(products => {
+                ManagerProductsView.suggestionsList = products;
+                tbody.innerHTML = '';
+
+                if (!products || products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No matching products found.</td></tr>';
+                    return;
+                }
+
+                products.forEach((p, index) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
+                        <td>${p.sku}</td>
+                        <td>${p.name}</td>
+                        <td>${p.category}</td>
+                        <td>${p.price} ₪</td>
+                        <td>${p.stock}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                title.textContent = `Found ${products.length} product(s) for: "${searchTerm}"`;
+
+            }).withFailureHandler(err => {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
+            }).WebAppProducts_searchProducts(searchTerm, ManagerProductsView.currentCategory);
+        }, 500); // 500ms debounce
+    };
+
+    // Initialize search listener - called from refreshView
+    ManagerProductsView.initializeSearch = function() {
+        const searchInput = document.getElementById('product-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                ManagerProductsView.handleSearch(this.value.trim());
+            });
+            console.log('Search listener attached');
+        }
     };
 
     ManagerProductsView.toggleAllSuggestions = function() {
@@ -1224,7 +1310,21 @@
       }).WebAppProducts_handleManagerSubmit(ManagerProductsView.currentTaskId, ManagerProductsView.currentSku, formData);
     };
 
-    // Init
+    // Init - Clear state before refresh to ensure clean reload when navigating back
+    ManagerProductsView.currentTaskId = null;
+    ManagerProductsView.currentSku = null;
+    ManagerProductsView.currentMasterData = {};
+    ManagerProductsView.suggestionsList = [];
+
+    // Clear DOM elements
+    var taskListEl = document.getElementById('task-list-body');
+    var onboardingListEl = document.getElementById('onboarding-list-body');
+    var suggestionListEl = document.getElementById('suggestion-list-body');
+    if (taskListEl) taskListEl.innerHTML = '';
+    if (onboardingListEl) onboardingListEl.innerHTML = '';
+    if (suggestionListEl) suggestionListEl.innerHTML = '';
+
+    // Initialize view with fresh data
     ManagerProductsView.refreshView();
   </script>
 </body>

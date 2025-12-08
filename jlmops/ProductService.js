@@ -5,6 +5,11 @@
 
 const ProductService = (function() {
   let skuToWebIdMap = null;
+  // Cached lookup data (module-level cache for small reference data)
+  let cachedRegions = null;
+  let cachedGrapes = null;
+  let cachedKashrut = null;
+  // Note: Product data now uses CacheService instead of module-level cache
 
   /**
    * Helper to update job status in SysJobQueue.
@@ -97,6 +102,95 @@ const ProductService = (function() {
       // If the map fails to build, we leave it as an empty map to prevent repeated errors.
       skuToWebIdMap = new Map();
     }
+  }
+
+  /**
+   * Get cached regions lookup data. Filters and caches the result for performance.
+   * @returns {Array} Array of region objects {code, textEN, textHE}
+   */
+  function _getCachedRegions() {
+    if (cachedRegions) {
+      return cachedRegions;
+    }
+
+    const allTexts = LookupService.getLookupMap('map.text_lookups');
+    const regionsMap = new Map();
+    allTexts.forEach((value, key) => {
+      if (value.slt_Note === 'Region') {
+        regionsMap.set(key, value);
+      }
+    });
+
+    cachedRegions = Array.from(regionsMap.values())
+      .sort((a, b) => (a.slt_TextHE || '').localeCompare(b.slt_TextHE || ''))
+      .map(r => ({ code: r.slt_Code, textEN: r.slt_TextEN, textHE: r.slt_TextHE }));
+
+    return cachedRegions;
+  }
+
+  /**
+   * Get cached grapes lookup data.
+   * @returns {Array} Array of grape objects {code, textEN, textHE}
+   */
+  function _getCachedGrapes() {
+    if (cachedGrapes) {
+      return cachedGrapes;
+    }
+
+    const allGrapes = LookupService.getLookupMap('map.grape_lookups');
+    cachedGrapes = Array.from(allGrapes.values())
+      .sort((a, b) => {
+        const textA = a.slg_TextEN || '';
+        const textB = b.slg_TextEN || '';
+        return textA.localeCompare(textB);
+      })
+      .map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_NameHe }));
+
+    return cachedGrapes;
+  }
+
+  /**
+   * Get cached kashrut lookup data.
+   * @returns {Array} Array of kashrut objects {code, textEN, textHE}
+   */
+  function _getCachedKashrut() {
+    if (cachedKashrut) {
+      return cachedKashrut;
+    }
+
+    const allKashrut = LookupService.getLookupMap('map.kashrut_lookups');
+    cachedKashrut = Array.from(allKashrut.values())
+      .sort((a, b) => {
+        const textA = a.slk_TextEN || '';
+        const textB = b.slk_TextEN || '';
+        return textA.localeCompare(textB);
+      })
+      .map(k => ({ code: k.slk_Code, textEN: k.slk_TextEN, textHE: k.slk_TextHE }));
+
+    return cachedKashrut;
+  }
+
+  /**
+   * Invalidate all product data caches.
+   * Called after data modifications (submit/accept).
+   */
+  function _invalidateProductCache() {
+    // Clear CacheService caches
+    try {
+      const cache = CacheService.getScriptCache();
+      cache.remove('productData_WebDetM');
+      cache.remove('productData_WebDetS');
+      cache.remove('productData_CmxProdM');
+      cache.remove('productData_WebProdM');
+      LoggerService.info('ProductService', '_invalidateProductCache', 'Cleared all CacheService product caches');
+    } catch (e) {
+      LoggerService.warn('ProductService', '_invalidateProductCache', `Failed to clear CacheService: ${e.message}`);
+    }
+
+    // Clear module-level caches (for lookup helpers)
+    cachedRegions = null;
+    cachedGrapes = null;
+    cachedKashrut = null;
   }
 
   // =================================================================================
@@ -956,12 +1050,13 @@ const ProductService = (function() {
   }
 
   function getProductDetails(sku) {
+    const startTime = new Date();
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      
-      LoggerService.info('ProductService', 'getProductDetails', `Fetching details for SKU ${sku} using in-memory search...`);
+
+      LoggerService.info('ProductService', 'getProductDetails', `Fetching details for SKU ${sku} using cached maps...`);
 
       const sheetNames = {
         master: allConfig['system.sheet_names'].WebDetM,
@@ -977,56 +1072,104 @@ const ProductService = (function() {
         webProd: allConfig['schema.data.WebProdM']
       };
 
-      // Helper to fetch row object using getValues (Legacy Method)
+      // Helper to fetch row object with CacheService caching
       const getRowObject = (sheetName, schema, keyCol) => {
-        LoggerService.info('ProductService', 'getProductDetails', `Fetching data for sheet: ${sheetName}`);
+        const cacheKey = `productData_${sheetName}`;
+        const cache = CacheService.getScriptCache();
+        const now = Date.now();
+        const targetSku = String(sku).trim();
+
+        // Try to get from CacheService
+        try {
+          const cachedData = cache.get(cacheKey);
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData);
+            const cacheAge = Math.round((now - parsed.timestamp) / 1000);
+
+            LoggerService.info('ProductService', 'getProductDetails',
+              `Using CacheService data for ${sheetName} (age: ${cacheAge}s)`);
+
+            // Reconstruct Map from cached entries array
+            const dataMap = new Map(parsed.entries);
+            const rowObj = dataMap.get(targetSku);
+            if (!rowObj) {
+              LoggerService.info('ProductService', 'getProductDetails',
+                `SKU ${targetSku} not found in cached ${sheetName}`);
+            }
+            return rowObj || null;
+          }
+        } catch (e) {
+          LoggerService.warn('ProductService', 'getProductDetails',
+            `Failed to read cache for ${sheetName}: ${e.message}`);
+        }
+
+        // Cache miss - load from sheet
+        LoggerService.info('ProductService', 'getProductDetails',
+            `Cache miss for ${sheetName}, loading from sheet...`);
+
         if (!sheetName || !schema) {
-            LoggerService.warn('ProductService', 'getProductDetails', `Missing sheetName or schema for ${sheetName}`);
+            LoggerService.warn('ProductService', 'getProductDetails',
+                `Missing sheetName or schema for ${sheetName}`);
             return null;
         }
-        
+
         const sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
-             LoggerService.warn('ProductService', 'getProductDetails', `Sheet '${sheetName}' not found.`);
-             return null;
+            LoggerService.warn('ProductService', 'getProductDetails',
+                `Sheet '${sheetName}' not found.`);
+            return null;
         }
-        
-        // Optimization: Check if sheet is empty
+
         if (sheet.getLastRow() < 2) {
-             LoggerService.info('ProductService', 'getProductDetails', `Sheet '${sheetName}' is empty.`);
-             return null;
+            LoggerService.info('ProductService', 'getProductDetails',
+                `Sheet '${sheetName}' is empty.`);
+            return null;
         }
 
         const headers = schema.headers.split(',');
-        
-        // Get all data values (Legacy approach)
         const data = sheet.getDataRange().getValues();
-        LoggerService.info('ProductService', 'getProductDetails', `Loaded ${data.length} rows from ${sheetName}`);
-
         const sheetHeaders = data[0];
         const keyIndex = sheetHeaders.indexOf(keyCol);
-        
+
         if (keyIndex === -1) {
-             LoggerService.warn('ProductService', 'getProductDetails', `Key column '${keyCol}' not found in sheet '${sheetName}'.`);
-             return null;
-        }
-
-        // Find the row
-        const targetSku = String(sku).trim();
-        const rowData = data.find(r => String(r[keyIndex]).trim() === targetSku);
-
-        if (!rowData) {
-            LoggerService.info('ProductService', 'getProductDetails', `SKU ${targetSku} not found in ${sheetName}`);
+            LoggerService.warn('ProductService', 'getProductDetails',
+                `Key column '${keyCol}' not found in sheet '${sheetName}'.`);
             return null;
         }
 
-        const rowObj = {};
-        headers.forEach((h) => {
-             const headerIndex = sheetHeaders.indexOf(h);
-             if(headerIndex > -1) rowObj[h] = rowData[headerIndex];
-        });
-        LoggerService.info('ProductService', 'getProductDetails', `Successfully found row for ${sheetName}`);
-        return rowObj;
+        // Build map for entire sheet
+        const dataMap = new Map();
+        for (let i = 1; i < data.length; i++) {
+            const rowData = data[i];
+            const key = String(rowData[keyIndex]).trim();
+            if (key) {
+                const rowObj = {};
+                headers.forEach((h, idx) => {
+                    const headerIdx = sheetHeaders.indexOf(h);
+                    if (headerIdx > -1) rowObj[h] = rowData[headerIdx];
+                });
+                dataMap.set(key, rowObj);
+            }
+        }
+
+        // Cache the map using CacheService (convert Map to array for JSON serialization)
+        const cacheData = {
+          timestamp: now,
+          entries: Array.from(dataMap.entries())  // Convert Map to array for JSON
+        };
+
+        try {
+          cache.put(cacheKey, JSON.stringify(cacheData), 300); // 300 seconds = 5 minutes
+          LoggerService.info('ProductService', 'getProductDetails',
+            `Cached ${dataMap.size} rows in CacheService for ${sheetName}`);
+        } catch (e) {
+          LoggerService.warn('ProductService', 'getProductDetails',
+            `Failed to cache ${sheetName}: ${e.message}`);
+        }
+
+        // Return the requested row
+        const rowObj = dataMap.get(targetSku);
+        return rowObj || null;
       };
 
       let masterData = getRowObject(sheetNames.master, schemas.master, 'wdm_SKU');
@@ -1044,42 +1187,16 @@ const ProductService = (function() {
           masterData.wdm_NameHe = comaxData.cpm_NameHe;
       }
 
-      // Fetch region lookup data
-      const allTexts = LookupService.getLookupMap('map.text_lookups'); // maps to SysLkp_Texts
-      const regionsMap = new Map();
-      allTexts.forEach((value, key) => {
-          if (value.slt_Note === 'Region') {
-              regionsMap.set(key, value);
-          }
-      });
-      // Convert to array and sort by slt_TextHE
-      const regions = Array.from(regionsMap.values()).sort((a, b) => {
-          const textA = a.slt_TextHE || '';
-          const textB = b.slt_TextHE || '';
-          return textA.localeCompare(textB);
-      }).map(r => ({ code: r.slt_Code, textEN: r.slt_TextEN, textHE: r.slt_TextHE }));
+      // Use cached lookup helpers for better performance
+      const regions = _getCachedRegions();
+      const grapes = _getCachedGrapes();
+      const kashrut = _getCachedKashrut();
 
       // Generate ABV options
       const abvOptions = [];
       for (let i = 12.0; i <= 14.5; i += 0.5) {
           abvOptions.push(i.toFixed(1));
       }
-
-      // Fetch Grape lookup data
-      const allGrapes = LookupService.getLookupMap('map.grape_lookups'); // maps to SysLkp_Grapes
-      const grapes = Array.from(allGrapes.values()).sort((a, b) => {
-          const textA = a.slg_TextEN || '';
-          const textB = b.slg_TextEN || '';
-          return textA.localeCompare(textB);
-      }).map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_NameHe }));
-
-      // Fetch Kashrut lookup data
-      const allKashrut = LookupService.getLookupMap('map.kashrut_lookups'); // maps to SysLkp_Kashrut
-      const kashrut = Array.from(allKashrut.values()).sort((a, b) => {
-          const textA = a.slk_TextEN || '';
-          const textB = b.slk_TextEN || '';
-          return textA.localeCompare(textB);
-      }).map(k => ({ code: k.slk_Code, textEN: k.slk_TextEN, textHE: k.slk_TextHE }));
 
       const result = {
         master: masterData,
@@ -1090,7 +1207,11 @@ const ProductService = (function() {
         grapes: grapes,
         kashrut: kashrut
       };
-      
+
+      const endTime = new Date();
+      LoggerService.info('ProductService', 'getProductDetails',
+        `Completed in ${endTime - startTime}ms for SKU ${sku}`);
+
       // Return as JSON string to avoid serialization issues
       return JSON.stringify(result);
 
@@ -1165,7 +1286,10 @@ const ProductService = (function() {
 
       // 3. Update Task Status
       TaskService.updateTaskStatus(taskId, 'Review');
-      
+
+      // 4. Invalidate cache after data modification
+      _invalidateProductCache();
+
       return { success: true };
 
     } catch (e) {
@@ -1231,6 +1355,9 @@ const ProductService = (function() {
 
       // 3. Update Task Status
       TaskService.updateTaskStatus(taskId, 'Accepted');
+
+      // Invalidate cache after data modification
+      _invalidateProductCache();
 
       return { success: true };
 
