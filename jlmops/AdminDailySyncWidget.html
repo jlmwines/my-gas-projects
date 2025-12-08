@@ -3,9 +3,6 @@
             <div class="text-start">
                 <span id="sessionIdDisplay" class="small text-muted"></span>
             </div>
-            <div class="text-center flex-grow-1">
-                <h5 class="mb-0" id="inventoryReceiptsDisplay"></h5> <!-- Centered, larger text -->
-            </div>
             <div class="text-end">
                  <a href="#" id="resetSyncLink" class="btn btn-sm btn-outline-secondary">Reset</a> <!-- Larger size, more button-like -->
             </div>
@@ -13,7 +10,18 @@
         <div class="card-body">
             
             <!-- Visual Steps Flow -->
-            <div class="row row-cols-5 g-1 text-center mb-4">
+            <div class="row row-cols-6 g-1 text-center mb-4">
+                <!-- Step 0: Invoices (Informational) -->
+                <div class="col" id="step0Col">
+                    <div class="card h-100">
+                        <div class="card-body p-2 d-flex flex-column justify-content-start align-items-center">
+                            <h6 class="card-title mb-1">Invoices</h6>
+                            <div id="step0Status" class="mt-2">
+                                <span id="invoiceCountDisplay" class="fw-bold">...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <!-- Step 1: Import Web Data -->
                 <div class="col" id="step1Col">
                     <div class="card h-100">
@@ -87,7 +95,7 @@
                 <div class="col" id="step5Col">
                     <div class="card h-100">
                         <div class="card-body p-2 d-flex flex-column justify-content-start align-items-center">
-                            <h6 class="card-title mb-1">5. Export Web Inv.</h6>
+                            <h6 class="card-title mb-1">5. Export Web Inventory</h6>
                             <div id="step5Actions" class="d-none mt-2">
                                 <a href="#" id="linkGenerateWebExport" onclick="handleSyncAction(event, 'generateWebExport')" class="d-block small fw-bold text-primary text-decoration-none mb-1">Generate Export</a>
                                 <a href="#" id="linkConfirmWebUpdate" onclick="handleSyncAction(event, 'confirmWebUpdate')" class="d-block small fw-bold text-success text-decoration-none d-none">Confirm Web Update</a>
@@ -124,16 +132,40 @@
 
     <script>
         // Removed 'const syncApp = {}' to prevent redeclaration errors on reload
-
-        function refreshDailySyncWidgetState() {
-             console.log('Daily Sync Widget: Calling backend getSyncStateFromBackend...');
-             google.script.run.withSuccessHandler(updateSyncUI)
-                              .withFailureHandler(handleSyncError)
-                              .getSyncStateFromBackend();
-        }
+        // refreshDailySyncWidgetState function is defined at the bottom with adaptive polling
 
         function updateSyncUI(state) {
-            console.log('Daily Sync Widget: Received state', state);
+            // Only log when stage changes or during active processing
+            const activeStages = ['WEB_IMPORT_PROCESSING', 'COMAX_IMPORT_PROCESSING', 'VALIDATING', 'WEB_EXPORT_PROCESSING'];
+            if (activeStages.includes(state.currentStage)) {
+                console.log('Sync Widget: Stage=' + state.currentStage + ', Jobs:', {
+                    orders: state.webOrdersJobStatus,
+                    products: state.webProductsJobStatus,
+                    translations: state.webTranslationsJobStatus
+                });
+            }
+
+            // 0. Invoice Status (Step 0)
+            const invoiceCountDisplay = document.getElementById('invoiceCountDisplay');
+            const step0Col = document.getElementById('step0Col');
+            if (invoiceCountDisplay && step0Col) {
+                const count = state.invoiceFileCount || 0;
+                const card = step0Col.querySelector('.card');
+
+                if (count === 0) {
+                    invoiceCountDisplay.innerHTML = '<span class="text-success">✓ 0 files</span>';
+                    if (card) card.classList.remove('border-warning', 'border-danger');
+                } else if (count > 0) {
+                    invoiceCountDisplay.innerHTML = `<span class="text-warning">${count} file${count > 1 ? 's' : ''}</span>`;
+                    if (card) {
+                        card.classList.add('border-warning');
+                        card.classList.remove('border-danger');
+                    }
+                } else {
+                    invoiceCountDisplay.innerHTML = '<span class="text-muted">N/A</span>';
+                }
+            }
+
             // 1. Session Info
             const sessionIdDisplay = document.getElementById('sessionIdDisplay');
             if (sessionIdDisplay) {
@@ -176,8 +208,23 @@
             const logContainer = document.getElementById('liveLogContainer');
             const logDisplay = document.getElementById('liveLogDisplay');
             if (logContainer && logDisplay) {
-                if (state.latestLogMessage && state.currentStage !== 'IDLE') {
-                    logDisplay.innerText = state.latestLogMessage;
+                // Show log container during any active stage
+                const isActiveStage = ['WEB_IMPORT_PROCESSING', 'COMAX_IMPORT_PROCESSING', 'VALIDATING', 'WEB_EXPORT_PROCESSING'].includes(state.currentStage);
+
+                if (isActiveStage) {
+                    // Show log message or generic processing message
+                    if (state.latestLogMessage) {
+                        logDisplay.innerText = state.latestLogMessage;
+                    } else {
+                        // Fallback message if no log available yet
+                        const stageMessages = {
+                            'WEB_IMPORT_PROCESSING': 'Processing web data imports...',
+                            'COMAX_IMPORT_PROCESSING': 'Processing Comax product import...',
+                            'VALIDATING': 'Running validation checks...',
+                            'WEB_EXPORT_PROCESSING': 'Generating web inventory export...'
+                        };
+                        logDisplay.innerText = stageMessages[state.currentStage] || 'Processing...';
+                    }
                     logContainer.classList.remove('d-none');
                 } else {
                     logContainer.classList.add('d-none');
@@ -311,22 +358,35 @@
                         const link = s1Processing.querySelector('a');
                         if(link) link.classList.add('d-none');
                     }
-                    if (loadingEl) loadingEl.classList.remove('d-none');
+                    const step1LoadingEl = document.getElementById('step1Loading');
+                    if (step1LoadingEl) step1LoadingEl.classList.remove('d-none');
                     break;
                 case 'WAITING_FOR_COMAX':
-                    activeStep = 2;
                     const s2Actions = document.getElementById('step2Actions');
                     const noOrdersMsg = document.getElementById('step2NoOrdersMsg');
 
                     if (state.ordersPendingExportCount === 0) {
-                        if (s2Actions) s2Actions.classList.add('d-none'); // Hide links
+                        // No orders - automatically show Step 3 as active and ready
+                        activeStep = 3; // Move to Step 3 instead of Step 2
+
+                        if (s2Actions) s2Actions.classList.add('d-none'); // Hide Step 2 links
                         if (noOrdersMsg) { // Show message
                             noOrdersMsg.classList.remove('d-none');
-                            noOrdersMsg.innerText = 'No orders to export. Click "Start Import" in Step 3.';
+                            noOrdersMsg.innerText = 'No orders to export.';
                         }
-                        // Orchestrator should have transitioned to READY_FOR_COMAX_IMPORT
-                        // If not, something is wrong, but UI should reflect that.
+
+                        // Show Step 3 "Start Import" button
+                        const s3Actions = document.getElementById('step3Actions');
+                        if(s3Actions) {
+                             s3Actions.classList.remove('d-none');
+                             const startComaxLink = s3Actions.querySelector('a');
+                             if(startComaxLink) {
+                                 startComaxLink.style.pointerEvents = 'auto';
+                                 startComaxLink.innerText = 'Start Import';
+                             }
+                        }
                     } else if (s2Actions) { // Orders > 0, show export/confirm links
+                        activeStep = 2; // Normal flow - stay on Step 2
                         if (noOrdersMsg) noOrdersMsg.classList.add('d-none'); // Hide message
 
                         s2Actions.classList.remove('d-none');
@@ -363,10 +423,13 @@
                     break;
                 case 'COMAX_IMPORT_PROCESSING':
                     activeStep = 3;
-                    const s3Status = document.getElementById('step3Status');
-                    if(s3Status) {
-                        s3Status.classList.remove('d-none');
-                        s3Status.innerText = 'Processing...';
+                    const s3ActionsProcessing = document.getElementById('step3Actions');
+                    const s3StatusProcessing = document.getElementById('step3Status');
+                    // Hide the action link, show processing status
+                    if(s3ActionsProcessing) s3ActionsProcessing.classList.add('d-none');
+                    if(s3StatusProcessing) {
+                        s3StatusProcessing.classList.remove('d-none');
+                        s3StatusProcessing.innerText = 'Processing...';
                     }
                     break;
                 case 'VALIDATING':
@@ -401,16 +464,18 @@
                     }
                     if (step5LoadingEl) step5LoadingEl.classList.remove('d-none'); // Show loading
                     break;
-                case 'WEB_EXPORT_GENERATED': // New Stage (or after job completion)
+                case 'WEB_EXPORT_GENERATED': // Only show confirm after export succeeds
                     activeStep = 5;
                     const s5ActionsGenerated = document.getElementById('step5Actions');
-                    if(s5ActionsGenerated) {
+                    const linkGenWeb = document.getElementById('linkGenerateWebExport');
+                    const linkConfWeb = document.getElementById('linkConfirmWebUpdate');
+                    if(s5ActionsGenerated && linkGenWeb && linkConfWeb) {
                         s5ActionsGenerated.classList.remove('d-none');
-                        document.getElementById('linkGenerateWebExport').classList.add('d-none'); // Hide generate
-                        const confirmLink = document.getElementById('linkConfirmWebUpdate');
-                        confirmLink.classList.remove('d-none'); // Show confirm
-                        confirmLink.style.pointerEvents = 'auto';
-                        confirmLink.innerText = 'Confirm Web Update';
+                        linkGenWeb.classList.add('d-none'); // Hide generate button
+                        linkConfWeb.classList.remove('d-none'); // Show confirm button (only after export succeeds)
+                        linkConfWeb.style.pointerEvents = 'auto';
+                        linkConfWeb.innerText = 'Confirm Web Update';
+                        console.log('Step 5: Showing Confirm Web Update button (export completed successfully)');
                     }
                     break;
                 case 'COMPLETE':
@@ -463,11 +528,36 @@
             e.preventDefault();
             const link = e.target;
             const originalText = link.innerText;
-            link.innerText = '...'; 
+
+            // Add confirmation dialogs for certain actions
+            if (actionName === 'exportComaxOrders') {
+                if (!confirm('Export orders to Comax CSV file?')) {
+                    return;
+                }
+            } else if (actionName === 'confirmComaxUpdate') {
+                if (!confirm('Confirm that you have uploaded the file to Comax and are ready to proceed?')) {
+                    return;
+                }
+            } else if (actionName === 'generateWebExport') {
+                if (!confirm('Generate web inventory export file?')) {
+                    return;
+                }
+            } else if (actionName === 'confirmWebUpdate') {
+                if (!confirm('Confirm that you have uploaded the inventory file to the website?')) {
+                    return;
+                }
+            }
+
+            link.innerText = '...';
             link.style.pointerEvents = 'none';
 
+            // Common success handler that updates UI
+            const handleActionSuccess = (state) => {
+                updateSyncUI(state);
+            };
+
             if (actionName === 'startSync') {
-                google.script.run.withSuccessHandler(updateSyncUI).withFailureHandler(handleSyncError).startDailySyncBackend();
+                google.script.run.withSuccessHandler(handleActionSuccess).withFailureHandler(handleSyncError).startDailySyncBackend();
             } else if (actionName === 'exportComaxOrders') {
                 google.script.run.withSuccessHandler((res) => {
                     if (res.success) {
@@ -481,16 +571,16 @@
                     }
                     link.innerText = originalText;
                     link.style.pointerEvents = 'auto';
-                    refreshDailySyncWidgetState(); 
+                    refreshDailySyncWidgetState();
                 }).exportComaxOrdersBackend();
             } else if (actionName === 'confirmComaxUpdate') {
-                 google.script.run.withSuccessHandler(updateSyncUI).withFailureHandler(handleSyncError).confirmComaxUpdateBackend();
+                 google.script.run.withSuccessHandler(handleActionSuccess).withFailureHandler(handleSyncError).confirmComaxUpdateBackend();
             } else if (actionName === 'startComaxImport') {
-                 google.script.run.withSuccessHandler(updateSyncUI).withFailureHandler(handleSyncError).startComaxImportBackend();
+                 google.script.run.withSuccessHandler(handleActionSuccess).withFailureHandler(handleSyncError).startComaxImportBackend();
             } else if (actionName === 'generateWebExport') { // New action
-                 google.script.run.withSuccessHandler(updateSyncUI).withFailureHandler(handleSyncError).generateWebExportBackend();
+                 google.script.run.withSuccessHandler(handleActionSuccess).withFailureHandler(handleSyncError).generateWebExportBackend();
             } else if (actionName === 'confirmWebUpdate') { // New action
-                 google.script.run.withSuccessHandler(updateSyncUI).withFailureHandler(handleSyncError).confirmWebInventoryUpdateBackend();
+                 google.script.run.withSuccessHandler(handleActionSuccess).withFailureHandler(handleSyncError).confirmWebInventoryUpdateBackend();
             }
         }
 
@@ -511,31 +601,39 @@
         
         // Initialize immediately
         console.log('Daily Sync Widget: Initializing...');
-        
-        // Fetch inventory receipts info once on load
-        google.script.run
-            .withSuccessHandler(info => {
-                const receiptsDisplay = document.getElementById('inventoryReceiptsDisplay');
-                if (receiptsDisplay) {
-                    if (info.count > 0 && info.folderUrl) {
-                        receiptsDisplay.innerHTML = `Inventory Receipts: <a href="${info.folderUrl}" target="_blank" class="fw-bold text-danger">${info.count} Files</a>`;
-                    } else if (info.count === 0) {
-                        receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-success">0 Files</span>`;
-                    } else {
-                        receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-muted">N/A</span>`; // Error or not available
-                    }
-                }
-            })
-            .withFailureHandler(err => {
-                console.error('Failed to load inventory receipts info:', err);
-                const receiptsDisplay = document.getElementById('inventoryReceiptsDisplay');
-                if (receiptsDisplay) {
-                    receiptsDisplay.innerHTML = `Inventory Receipts: <span class="text-danger">Error</span>`;
-                }
-            })
-            .getInventoryReceiptsInfo(); // Call the new backend function
 
+        // ===== SMART POLLING: Fast when active, slow when idle =====
+        let currentPollInterval = null;
+        let pollIntervalId = null;
+
+        function refreshDailySyncWidgetState() {
+            google.script.run
+                .withSuccessHandler((state) => {
+                    updateSyncUI(state);
+                    adjustPollingSpeed(state);
+                })
+                .withFailureHandler(handleSyncError)
+                .getSyncStateFromBackend();
+        }
+
+        function adjustPollingSpeed(state) {
+            const activeStages = ['WEB_IMPORT_PROCESSING', 'COMAX_IMPORT_PROCESSING', 'VALIDATING', 'WEB_EXPORT_PROCESSING'];
+            const isActive = activeStages.includes(state.currentStage);
+
+            const newInterval = isActive ? 3000 : 30000; // 3s when active, 30s when idle
+
+            if (newInterval !== currentPollInterval) {
+                currentPollInterval = newInterval;
+                if (pollIntervalId) clearInterval(pollIntervalId);
+                pollIntervalId = setInterval(refreshDailySyncWidgetState, currentPollInterval);
+                console.log(`Polling: ${isActive ? 'ACTIVE' : 'IDLE'} - ${currentPollInterval/1000}s interval`);
+            }
+        }
+
+        // Initialize - fetch state once on load
         refreshDailySyncWidgetState();
-        // Poll every 30s
-        setInterval(refreshDailySyncWidgetState, 30000);
+
+        // Start with idle polling (will switch to fast if needed)
+        currentPollInterval = 30000;
+        pollIntervalId = setInterval(refreshDailySyncWidgetState, 30000);
     </script>

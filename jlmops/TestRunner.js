@@ -19,8 +19,10 @@ const TestRunner = (function() {
 
     // Register suites here
     const suites = [
-      OrderServiceTest
-      // Add other test suites here (e.g., ProductServiceTest)
+      OrderServiceTest,
+      ProductServiceTest,
+      ComaxAdapterTest,
+      WebAdapterTest
     ];
 
     suites.forEach(suite => {

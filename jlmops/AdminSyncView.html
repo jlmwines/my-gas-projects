@@ -2,7 +2,7 @@
     <h1 class="mt-4">Sync</h1>
     
     <div id="admin-daily-sync-widget-container">
-        <!-- AdminDailySyncWidget.html will be loaded here -->
+        <!-- AdminDailySyncWidget_v2.html will be loaded here -->
     </div>
 
     <script>
@@ -19,19 +19,19 @@
         }
 
         function loadAdminDailySyncWidget() {
-            console.log('AdminSyncView: Loading AdminDailySyncWidget.html');
+            console.log('AdminSyncView: Loading AdminDailySyncWidget_v2.html (new event-driven version)');
             google.script.run
                 .withSuccessHandler(html => {
                     const container = document.getElementById('admin-daily-sync-widget-container');
                     container.innerHTML = html;
                     executeScriptsInElement(container); // Execute scripts in the loaded content
-                    console.log('AdminSyncView: AdminDailySyncWidget.html loaded and scripts executed.');
+                    console.log('AdminSyncView: AdminDailySyncWidget_v2.html loaded and scripts executed.');
                 })
                 .withFailureHandler(err => {
-                    console.error('AdminSyncView: Failed to load AdminDailySyncWidget.html', err);
+                    console.error('AdminSyncView: Failed to load AdminDailySyncWidget_v2.html', err);
                     document.getElementById('admin-daily-sync-widget-container').innerHTML = '<p class="text-danger">Failed to load sync widget.</p>';
                 })
-                .getHtmlOutput('AdminDailySyncWidget'); // This now correctly points to the new backend function
+                .getHtmlOutput('AdminDailySyncWidget_v2'); // Updated to use new v2 widget
         }
 
         // Call the function to load the widget when the view is rendered

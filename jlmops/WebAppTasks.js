@@ -3,38 +3,92 @@
  * @description This script acts as a Data Provider for all task-related data.
  * It contains reusable functions for fetching and preparing task data from the
  * backend services (e.g., TaskService) for consumption by UI View Controllers.
+ *
+ * PERFORMANCE: Implements in-memory caching with 60-second TTL to reduce
+ * expensive spreadsheet reads during dashboard loading.
  */
 
 // eslint-disable-next-line no-unused-vars
 const WebAppTasks = (() => {
+  // ===== CACHING LAYER =====
+  let taskCache = null;
+  let taskCacheTime = null;
+  const CACHE_TTL_MS = 60000; // 60 seconds
+
+  /**
+   * Invalidates the task cache. Should be called after any task modification.
+   */
+  const invalidateCache = () => {
+    taskCache = null;
+    taskCacheTime = null;
+    LoggerService.info('WebAppTasks', 'invalidateCache', 'Task cache invalidated.');
+  };
+
+  /**
+   * Checks if the cache is still valid.
+   * @returns {boolean} True if cache exists and is not expired.
+   */
+  const isCacheValid = () => {
+    if (!taskCache || !taskCacheTime) {
+      return false;
+    }
+    const now = Date.now();
+    const age = now - taskCacheTime;
+    return age < CACHE_TTL_MS;
+  };
+
+  /**
+   * Fetches tasks from the spreadsheet (bypasses cache).
+   * @returns {Array<Object>} An array of open task objects.
+   */
+  const fetchTasksFromSheet = () => {
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const sheetNames = allConfig['system.sheet_names'];
+    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+
+    if (!taskSheet || taskSheet.getLastRow() <= 1) {
+      return [];
+    }
+
+    const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+    const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+
+    const openTasks = taskData.map(row => {
+      const task = {};
+      taskHeaders.forEach((header, index) => {
+        task[header] = row[index];
+      });
+      return task;
+    }).filter(task => {
+      const status = task.st_Status;
+      return status !== 'Done' && status !== 'Cancelled';
+    });
+
+    return openTasks;
+  };
+
   /**
    * Retrieves all tasks that are not in a 'Done' or 'Cancelled' state.
+   * Uses an in-memory cache with 60-second TTL to improve performance.
+   * @param {boolean} forceRefresh - If true, bypasses cache and fetches fresh data.
    * @returns {Array<Object>} An array of open task objects, where each object is a map of header names to values.
    */
-  const getOpenTasks = () => {
+  const getOpenTasks = (forceRefresh = false) => {
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const sheetNames = allConfig['system.sheet_names'];
-      const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
-
-      if (!taskSheet || taskSheet.getLastRow() <= 1) {
-        return [];
+      // Check cache first
+      if (!forceRefresh && isCacheValid()) {
+        LoggerService.info('WebAppTasks', 'getOpenTasks', 'Returning cached tasks.', { cacheAge: Date.now() - taskCacheTime });
+        return taskCache;
       }
 
-      const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
-      const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
-      
-      const openTasks = taskData.map(row => {
-        const task = {};
-        taskHeaders.forEach((header, index) => {
-          task[header] = row[index];
-        });
-        return task;
-      }).filter(task => {
-        const status = task.st_Status;
-        return status !== 'Done' && status !== 'Cancelled';
-      });
+      // Cache miss or expired - fetch from sheet
+      LoggerService.info('WebAppTasks', 'getOpenTasks', 'Cache miss - fetching tasks from sheet.');
+      const openTasks = fetchTasksFromSheet();
+
+      // Update cache
+      taskCache = openTasks;
+      taskCacheTime = Date.now();
 
       return openTasks;
     } catch (e) {
@@ -64,7 +118,7 @@ const WebAppTasks = (() => {
   };
 
   /**
-   * Wraps the TaskService.createTask function.
+   * Wraps the TaskService.createTask function and invalidates cache.
    * @param {string} typeId - The type of task to create.
    * @param {string} entityId - The ID of the entity this task relates to.
    * @param {string} linkedEntityName - The human-readable name of the entity.
@@ -73,7 +127,12 @@ const WebAppTasks = (() => {
    * @returns {Object} The created task object.
    */
   const createTask = (typeId, entityId, linkedEntityName, title, notes) => {
-    return TaskService.createTask(typeId, entityId, linkedEntityName, title, notes);
+    const result = TaskService.createTask(typeId, entityId, linkedEntityName, title, notes);
+
+    // Invalidate cache after task creation
+    invalidateCache();
+
+    return result;
   };
 
   /**
@@ -147,6 +206,7 @@ const WebAppTasks = (() => {
     getOpenTaskByTypeId,
     getTaskById,
     getOpenTasksByTypeIdAndStatus,
+    invalidateCache, // Export cache invalidation for external use
   };
 })();
 
@@ -159,5 +219,12 @@ function WebAppTasks_completeTaskById(taskId) {
   if (!taskId) {
     throw new Error('Task ID is required to complete a task.');
   }
-  return TaskService.completeTask(taskId);
+  const result = TaskService.completeTask(taskId);
+
+  // Invalidate cache after task modification
+  if (result) {
+    WebAppTasks.invalidateCache();
+  }
+
+  return result;
 }

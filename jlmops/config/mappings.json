@@ -645,6 +645,36 @@
         ""
     ],
     [
+        "map.staging_to_master.web_products",
+        "Maps WebProdS_EN staging columns to WebProdM master columns.",
+        "stable",
+        "wps_SKU",
+        "wpm_SKU",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "map.staging_to_master.web_products",
+        "Maps WebProdS_EN staging columns to WebProdM master columns.",
+        "stable",
+        "wps_Name",
+        "wpm_NameEn",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "map.web.product_columns",
         "Maps WooCommerce CSV headers to internal field names for staging.",
         "stable",

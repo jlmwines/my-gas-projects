@@ -28,6 +28,26 @@ function HousekeepingService() {
   const ARCHIVE_FOLDER_RETENTION_DAYS = 365;
   const MIN_LOG_ROWS = 10000; // Keep this many recent log rows regardless of age
 
+  /**
+   * Retrieves a configuration value safely.
+   * @param {string} settingName The main setting name (e.g., 'system.spreadsheet.logs').
+   * @param {string} key The specific key within the setting (e.g., 'id').
+   * @param {any} defaultValue An optional default value if the setting or key is not found.
+   * @returns {any} The configuration value or the default value.
+   */
+  function _getConfigValue(settingName, key, defaultValue = undefined) {
+    const config = ConfigService.getConfig(settingName);
+    if (config && config.hasOwnProperty(key)) {
+      return config[key];
+    }
+    if (defaultValue !== undefined) {
+      logger.warn('HousekeepingService', '_getConfigValue', `Configuration setting "${settingName}.${key}" not found, using default value: "${defaultValue}"`);
+      return defaultValue;
+    }
+    logger.error('HousekeepingService', '_getConfigValue', `Configuration setting "${settingName}.${key}" not found and no default value provided.`);
+    throw new Error(`Configuration setting "${settingName}.${key}" not found.`);
+  }
+
   function _getThresholdDate(daysAgo) {
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
@@ -149,20 +169,20 @@ function HousekeepingService() {
    * @returns {boolean} True if cleanup was attempted, false otherwise.
    */
   this.cleanOldLogs = function() {
-    logger.info("Starting cleanup of old log entries.");
+    logger.info('HousekeepingService', 'cleanOldLogs', "Starting cleanup of old log entries.");
     let movedCount = 0;
     try {
-      const logsSpreadsheetId = ConfigService.getSetting('system.spreadsheet.logs', 'id');
+      const logsSpreadsheetId = _getConfigValue('system.spreadsheet.logs', 'id');
       const logsSpreadsheet = SpreadsheetApp.openById(logsSpreadsheetId);
-      const logSheet = logsSpreadsheet.getSheetByName(ConfigService.getSetting('system.sheet_names', 'SysLog'));
-      const logArchiveSheet = logsSpreadsheet.getSheetByName(ConfigService.getSetting('system.sheet_names', 'SysLog_Archive'));
+      const logSheet = logsSpreadsheet.getSheetByName(_getConfigValue('system.sheet_names', 'SysLog'));
+      const logArchiveSheet = logsSpreadsheet.getSheetByName(_getConfigValue('system.sheet_names', 'SysLog_Archive'));
 
       if (!logSheet || !logArchiveSheet) {
-        logger.warn("SysLog or SysLog_Archive sheet not found. Skipping log cleanup.");
+        logger.warn('HousekeepingService', 'cleanOldLogs', "SysLog or SysLog_Archive sheet not found. Skipping log cleanup.");
         return false;
       }
 
-      const logRetentionDays = parseInt(ConfigService.getSetting('system.housekeeping', 'log_retention_days') || OLD_DATA_THRESHOLD_DAYS);
+      const logRetentionDays = parseInt(_getConfigValue('system.housekeeping', 'log_retention_days', OLD_DATA_THRESHOLD_DAYS));
       const thresholdDate = _getThresholdDate(logRetentionDays);
 
       // Filter function for logs: move if older than threshold AND not among the MIN_LOG_ROWS most recent
@@ -172,10 +192,10 @@ function HousekeepingService() {
       };
 
       movedCount = _moveRowsToArchive(logSheet, logArchiveSheet, filterLogs);
-      logger.info(`Cleaned up ${movedCount} old log entries from SysLog.`);
+      logger.info('HousekeepingService', 'cleanOldLogs', `Cleaned up ${movedCount} old log entries from SysLog.`);
       return true;
     } catch (e) {
-      logger.error(`Error during old log cleanup: ${e.message}`, e);
+      logger.error('HousekeepingService', 'cleanOldLogs', `Error during old log cleanup: ${e.message}`, e);
       return false;
     }
   };
@@ -185,30 +205,30 @@ function HousekeepingService() {
    * This can be triggered by a time-driven trigger.
    */
   this.performDailyMaintenance = function() {
-    logger.info("Starting daily maintenance tasks.");
+    logger.info('HousekeepingService', 'performDailyMaintenance', "Starting daily maintenance tasks.");
     this.cleanOldLogs();
     this.archiveCompletedTasks();
     this.manageFileLifecycle();
-    logger.info("Daily maintenance tasks completed.");
+    logger.info('HousekeepingService', 'performDailyMaintenance', "Daily maintenance tasks completed.");
   };
 
   // TODO: Add more specific housekeeping methods as needed.
   // this.archiveCompletedOrders = function() { ... };
   // this.optimizeSheet = function(sheetName) { ... };
   this.archiveCompletedTasks = function() {
-    logger.info("Starting archiving of completed/cancelled tasks.");
+    logger.info('HousekeepingService', 'archiveCompletedTasks', "Starting archiving of completed/cancelled tasks.");
     let movedCount = 0;
     try {
-      const dataSpreadsheet = SpreadsheetApp.openById(ConfigService.getSetting('system.spreadsheet.data', 'id'));
-      const taskSheet = dataSpreadsheet.getSheetByName(ConfigService.getSetting('system.sheet_names', 'SysTasks'));
-      const taskArchiveSheet = dataSpreadsheet.getSheetByName(ConfigService.getSetting('system.sheet_names', 'SysTasks_Archive'));
+      const dataSpreadsheet = SpreadsheetApp.openById(_getConfigValue('system.spreadsheet.data', 'id'));
+      const taskSheet = dataSpreadsheet.getSheetByName(_getConfigValue('system.sheet_names', 'SysTasks'));
+      const taskArchiveSheet = dataSpreadsheet.getSheetByName(_getConfigValue('system.sheet_names', 'SysTasks_Archive'));
 
       if (!taskSheet || !taskArchiveSheet) {
-        logger.warn("SysTasks or SysTasks_Archive sheet not found. Skipping task archiving.");
+        logger.warn('HousekeepingService', 'archiveCompletedTasks', "SysTasks or SysTasks_Archive sheet not found. Skipping task archiving.");
         return false;
       }
 
-      const taskRetentionDays = parseInt(ConfigService.getSetting('system.housekeeping', 'task_retention_days') || OLD_DATA_THRESHOLD_DAYS);
+      const taskRetentionDays = parseInt(_getConfigValue('system.housekeeping', 'task_retention_days', OLD_DATA_THRESHOLD_DAYS));
       const thresholdDate = _getThresholdDate(taskRetentionDays);
 
       // Assuming st_Status is in column 5 (index 4) and st_CreatedDate is in column 10 (index 9)
@@ -222,10 +242,10 @@ function HousekeepingService() {
       };
 
       movedCount = _moveRowsToArchive(taskSheet, taskArchiveSheet, filterTasks);
-      logger.info(`Archived ${movedCount} completed or cancelled tasks from SysTasks.`);
+      logger.info('HousekeepingService', 'archiveCompletedTasks', `Archived ${movedCount} completed or cancelled tasks from SysTasks.`);
       return true;
     } catch (e) {
-      logger.error(`Error during completed task archiving: ${e.message}`, e);
+      logger.error('HousekeepingService', 'archiveCompletedTasks', `Error during completed task archiving: ${e.message}`, e);
       return false;
     }
   };
@@ -237,17 +257,17 @@ function HousekeepingService() {
    * 3. Moves old export files to a separate '_Old_Exports' folder and then trashes very old files from there.
    */
   this.manageFileLifecycle = function() {
-    logger.info("Starting file lifecycle management.");
+    logger.info('HousekeepingService', 'manageFileLifecycle', "Starting file lifecycle management.");
     try {
       // Get necessary sheet and folder IDs from ConfigService
-      const logsSpreadsheetId = ConfigService.getSetting('system.spreadsheet.logs', 'id');
-      const dataSpreadsheetId = ConfigService.getSetting('system.spreadsheet.data', 'id'); // For SysFileRegistry location
+      const logsSpreadsheetId = _getConfigValue('system.spreadsheet.logs', 'id');
+      const dataSpreadsheetId = _getConfigValue('system.spreadsheet.data', 'id'); // For SysFileRegistry location
 
       const logsSpreadsheet = SpreadsheetApp.openById(logsSpreadsheetId);
-      const fileRegistrySheet = logsSpreadsheet.getSheetByName(ConfigService.getSetting('system.sheet_names', 'SysFileRegistry'));
+      const fileRegistrySheet = logsSpreadsheet.getSheetByName(_getConfigValue('system.sheet_names', 'SysFileRegistry'));
 
       if (!fileRegistrySheet) {
-        logger.warn("SysFileRegistry sheet not found. Skipping file lifecycle management.");
+        logger.warn('HousekeepingService', 'manageFileLifecycle', "SysFileRegistry sheet not found. Skipping file lifecycle management.");
         return false;
       }
 
@@ -257,32 +277,17 @@ function HousekeepingService() {
       // No need for lastProcessedTimestampCol for this specific logic
 
       if (sourceFileIdCol === -1) {
-        logger.error("SysFileRegistry header 'source_file_id' not found.");
+        logger.error('HousekeepingService', 'manageFileLifecycle', "SysFileRegistry header 'source_file_id' not found.");
         return false;
       }
 
-      // 1. Trashing processed source files (tracked in SysFileRegistry)
-      let trashedSourceFiles = 0;
-      // Iterate from the second row (skip headers)
-      for (let i = 1; i < fileRegistryData.length; i++) {
-        const row = fileRegistryData[i];
-        const sourceFileId = row[sourceFileIdCol];
-        if (sourceFileId) {
-          try {
-            DriveApp.getFileById(sourceFileId).setTrashed(true);
-            trashedSourceFiles++;
-          } catch (e) {
-            // Log a warning if file not found or cannot be trashed, but continue processing
-            logger.warn(`Could not trash source file ID ${sourceFileId}: ${e.message}`);
-          }
-        }
-      }
-      if (trashedSourceFiles > 0) {
-        logger.info(`Trashed ${trashedSourceFiles} processed source files listed in SysFileRegistry.`);
-      }
+      // 1. SOURCE FILES ARE EXEMPT FROM HOUSEKEEPING
+      // Source files in import folders should be kept for manual re-processing
+      // Only archived copies and exports are subject to lifecycle management
+      logger.info('HousekeepingService', 'manageFileLifecycle', 'Source import files are exempt from housekeeping. Skipping source file cleanup.');
 
       // 2. Trashing old files from the dedicated Archive folder
-      const archiveFolderId = ConfigService.getSetting('system.folder.archive', 'id');
+      const archiveFolderId = _getConfigValue('system.folder.archive', 'id');
       if (archiveFolderId) {
         const archiveFolder = DriveApp.getFolderById(archiveFolderId);
         const archiveFiles = archiveFolder.getFiles();
@@ -296,14 +301,14 @@ function HousekeepingService() {
           }
         }
         if (trashedArchiveFiles > 0) {
-          logger.info(`Trashed ${trashedArchiveFiles} old files from Archive folder.`);
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Trashed ${trashedArchiveFiles} old files from Archive folder.`);
         }
       } else {
-        logger.warn("System setting 'system.folder.archive' not found. Skipping archive folder cleanup.");
+        logger.warn('HousekeepingService', 'manageFileLifecycle', "System setting 'system.folder.archive' not found. Skipping archive folder cleanup.");
       }
 
       // 3. Managing Export files (move to old_exports, then trash from old_exports)
-      const exportsFolderId = ConfigService.getSetting('system.folder.jlmops_exports', 'id');
+      const exportsFolderId = _getConfigValue('system.folder.jlmops_exports', 'id');
 
       if (exportsFolderId) {
         const exportsFolder = DriveApp.getFolderById(exportsFolderId);
@@ -336,7 +341,7 @@ function HousekeepingService() {
           }
         }
         if (movedExportFiles > 0) {
-          logger.info(`Moved ${movedExportFiles} files from Exports to _Old_Exports folder.`);
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Moved ${movedExportFiles} files from Exports to _Old_Exports folder.`);
         }
 
         // Trash files from the old_exports folder if they are older than OLD_EXPORTS_RETENTION_DAYS
@@ -349,15 +354,15 @@ function HousekeepingService() {
           }
         }
         if (trashedOldExportFiles > 0) {
-          logger.info(`Trashed ${trashedOldExportFiles} very old files from _Old_Exports folder.`);
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Trashed ${trashedOldExportFiles} very old files from _Old_Exports folder.`);
         }
 
       } else {
-        logger.warn("System setting 'system.folder.jlmops_exports' not found. Skipping export folder management.");
+        logger.warn('HousekeepingService', 'manageFileLifecycle', "System setting 'system.folder.jlmops_exports' not found. Skipping export folder management.");
       }
       return true;
     } catch (e) {
-      logger.error(`Error during file lifecycle management: ${e.message}`, e);
+      logger.error('HousekeepingService', 'manageFileLifecycle', `Error during file lifecycle management: ${e.message}`, e);
       return false;
     }
   };

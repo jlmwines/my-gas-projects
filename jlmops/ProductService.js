@@ -203,11 +203,12 @@ const ProductService = (function() {
     const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
     if (quarantineTriggered) {
-        logger.warn(serviceName, functionName, 'WebXlt staging validation triggered a quarantine.', { sessionId: sessionId });
+        logger.error(serviceName, functionName, '🛑 CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+        _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
         return 'QUARANTINED';
     }
 
-    // --- 3. Upsert (existing logic) ---
+    // --- 3. Upsert (existing logic) - Only reached if validation passed
     _upsertWebXltData(sessionId);
     return 'COMPLETED';
   }
@@ -280,11 +281,13 @@ const ProductService = (function() {
         const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
         if (quarantineTriggered) {
-            logger.warn(serviceName, functionName, 'Comax staging validation triggered a quarantine.', { sessionId: sessionId });
+            logger.error(serviceName, functionName, '🛑 CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+            _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
             return 'QUARANTINED';
         }
 
-        _upsertComaxData(comaxData, sessionId); // Pass comaxData here
+        // Only reached if validation passed - safe to update master
+        _upsertComaxData(comaxData, sessionId);
 
         try {
             logger.info(serviceName, functionName, 'Comax import successful. Triggering automatic WooCommerce update export.', { sessionId: sessionId });
@@ -319,76 +322,131 @@ const ProductService = (function() {
     const masterData = ConfigService._getSheetDataAsMap('CmxProdM', masterHeaders, 'cpm_CmxId');
     const masterMap = masterData.map;
 
+    // NEW: Track mapping errors and missing fields
+    const mappingErrors = [];
+    const criticalFields = ['cpm_SKU', 'cpm_NameHe', 'cpm_Stock', 'cpm_Price'];
+
     // Iterate through the fresh comaxProducts (Objects) and update/insert into the master map
-    comaxProducts.forEach(comaxProductObj => {
+    comaxProducts.forEach((comaxProductObj, idx) => {
         const key = comaxProductObj['cps_CmxId'] ? String(comaxProductObj['cps_CmxId']).trim() : null;
-        
+
         if (key) {
             const newMasterRow = {};
-            
-            // If the product exists, preserve existing data (especially manual fields not in Comax import)
-            // However, for CmxProdM, essentially all fields come from Comax. 
-            // But if we have extra manual columns in the future, we should preserve them.
-            // For now, we are replacing the row with new data derived from the object.
-            
-            // Check if we need to merge with existing row? 
-            // The previous logic seemed to replace. Let's stick to replacing fields present in the input.
-            
+            const missingFields = [];
+
             masterHeaders.forEach((masterHeader) => {
                 const baseHeader = masterHeader.substring(masterHeader.indexOf('_') + 1);
                 const stagingHeader = 'cps_' + baseHeader;
-                
-                // If the object has the property, use it. Otherwise default to empty string.
-                // This implicitly handles the mapping from cps_ -> cpm_
+
+                // If the object has the property, use it. Otherwise track as missing.
                 if (comaxProductObj.hasOwnProperty(stagingHeader)) {
                     newMasterRow[masterHeader] = comaxProductObj[stagingHeader];
                 } else if (masterMap.has(key) && masterMap.get(key)[masterHeader]) {
-                     // Optional: Preserve existing value if not in update? 
-                     // ComaxAdapter returns ALL columns defined in mapping, so missing usually means empty in Comax.
-                     newMasterRow[masterHeader] = ''; 
+                     // Preserve existing value if not in update (for manual fields)
+                     newMasterRow[masterHeader] = masterMap.get(key)[masterHeader];
+                     // NEW: Still log that it wasn't in the staging data
+                     if (idx < 5) { // Only log for first few products to avoid spam
+                         logger.warn(serviceName, functionName, `Product ${key}: Field ${stagingHeader} not in staging, preserving existing master value.`, { sessionId });
+                     }
                 } else {
+                    // NEW: Track as missing instead of silent default
+                    missingFields.push(stagingHeader);
                     newMasterRow[masterHeader] = '';
                 }
             });
+
+            // COMAX BUSINESS RULE: Normalize null/empty stock to '0'
+            if (!newMasterRow['cpm_Stock'] || String(newMasterRow['cpm_Stock']).trim() === '') {
+                newMasterRow['cpm_Stock'] = '0';
+            }
+
+            // COMAX BUSINESS RULE: Normalize null/empty price to '0'
+            if (!newMasterRow['cpm_Price'] || String(newMasterRow['cpm_Price']).trim() === '') {
+                newMasterRow['cpm_Price'] = '0';
+            }
+
+            // NEW: Validate critical fields are NOT empty after mapping
+            // Note: cpm_Stock is already normalized to '0' if empty, so it will pass validation
+            const emptyCriticalFields = criticalFields.filter(f => !newMasterRow[f] || String(newMasterRow[f]).trim() === '');
+
+            if (emptyCriticalFields.length > 0) {
+                mappingErrors.push(
+                    `Product ${key} (row ${idx + 1}): Missing critical fields: ${emptyCriticalFields.join(', ')}`
+                );
+            }
+
+            if (missingFields.length > 0 && idx < 5) {
+                logger.warn(serviceName, functionName,
+                    `Product ${key}: ${missingFields.length} fields not in staging object: ${missingFields.slice(0, 5).join(', ')}${missingFields.length > 5 ? '...' : ''}`,
+                    { sessionId }
+                );
+            }
+
             masterMap.set(key, newMasterRow);
         }
     });
 
+    // NEW: Fail if critical data missing
+    if (mappingErrors.length > 0) {
+        const errorSummary = mappingErrors.slice(0, 10).join('\n');
+        const totalErrors = mappingErrors.length;
+        const errorMsg = `CRITICAL DATA MISSING IN ${totalErrors} PRODUCTS:\n${errorSummary}\n${totalErrors > 10 ? `... and ${totalErrors - 10} more` : ''}\nCannot update master with incomplete data. HALTING.`;
+        logger.error(serviceName, functionName, errorMsg, null, { sessionId });
+        throw new Error(errorMsg);
+    }
+
     // Prepare the final data array for writing back to the sheet
     const finalData = Array.from(masterMap.values()).map(rowObject => {
-        return masterHeaders.map(header => rowObject[header] || '');
+        return masterHeaders.map(header => {
+            const value = rowObject[header];
+            // CRITICAL: Don't treat 0 as falsy - it's a valid stock/price value
+            return (value !== undefined && value !== null) ? value : '';
+        });
     });
 
-    // --- SANITY CHECK ---
+    // --- ENHANCED SANITY CHECK ---
     if (finalData.length > 0) {
-        // Check headers indices for critical columns
         const stockIdx = masterHeaders.indexOf('cpm_Stock');
         const priceIdx = masterHeaders.indexOf('cpm_Price');
         const nameIdx = masterHeaders.indexOf('cpm_NameHe');
-        
-        // Sample first 5 rows (or fewer if length < 5)
-        const sampleSize = Math.min(5, finalData.length);
+        const skuIdx = masterHeaders.indexOf('cpm_SKU');
+
+        // ENHANCED: Sample more rows and check ALL critical fields
+        const sampleSize = Math.min(20, finalData.length); // Increased from 5 to 20
         let validRowsFound = 0;
-        
+        const sanityIssues = [];
+
         for (let i = 0; i < sampleSize; i++) {
             const row = finalData[i];
-            // Check if at least one of the critical fields has a value
-            const hasStock = stockIdx > -1 && row[stockIdx] !== '';
-            const hasPrice = priceIdx > -1 && row[priceIdx] !== '';
-            const hasName = nameIdx > -1 && row[nameIdx] !== '';
-            
-            if (hasStock || hasPrice || hasName) {
+            // CRITICAL: Treat 0 as valid for stock/price (0 !== '', 0 !== null, 0 !== undefined)
+            const hasStock = stockIdx > -1 && row[stockIdx] !== '' && row[stockIdx] !== null && row[stockIdx] !== undefined;
+            const hasPrice = priceIdx > -1 && row[priceIdx] !== '' && row[priceIdx] !== null && row[priceIdx] !== undefined;
+            const hasName = nameIdx > -1 && row[nameIdx] !== '' && row[nameIdx] !== null && row[nameIdx] !== undefined;
+            const hasSKU = skuIdx > -1 && row[skuIdx] !== '' && row[skuIdx] !== null && row[skuIdx] !== undefined;
+
+            // ENHANCED: Require Name AND SKU (Stock/Price can be 0 legitimately)
+            if (hasName && hasSKU && (hasStock || hasPrice)) {
                 validRowsFound++;
+            } else {
+                const missing = [];
+                if (!hasSKU) missing.push('SKU');
+                if (!hasName) missing.push('Name');
+                if (!hasStock && !hasPrice) missing.push('Stock or Price');
+                sanityIssues.push(`Row ${i + 1}: Missing ${missing.join(', ')}`);
             }
         }
-        
-        if (validRowsFound === 0) {
-            const msg = `CRITICAL SANITY CHECK FAILED in _upsertComaxData. Attempted to write ${finalData.length} rows, but sampled rows appear empty for Stock, Price, and Name. Aborting write to prevent data loss.`;
+
+        // ENHANCED: Require at least 80% of sampled rows to be valid
+        const validPercentage = (validRowsFound / sampleSize) * 100;
+        if (validPercentage < 80) {
+            const msg = `CRITICAL SANITY CHECK FAILED in _upsertComaxData. Only ${validRowsFound}/${sampleSize} sampled rows (${validPercentage.toFixed(1)}%) have all critical fields. Issues:\n${sanityIssues.slice(0, 5).join('\n')}\nAborting write to prevent data corruption.`;
             logger.error(serviceName, functionName, msg, null, { sessionId: sessionId });
             throw new Error(msg);
         }
+
+        logger.info(serviceName, functionName, `Sanity check passed: ${validRowsFound}/${sampleSize} sampled rows (${validPercentage.toFixed(1)}%) valid.`, { sessionId });
     }
-    // --- END SANITY CHECK ---
+    // --- END ENHANCED SANITY CHECK ---
 
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
@@ -511,15 +569,17 @@ const ProductService = (function() {
         _populateStagingSheet(productObjects, sheetNames.WebProdS_EN, sessionId);
         logger.info(serviceName, functionName, `Successfully populated WebProdS_EN staging sheet with ${productObjects.length} products.`, { sessionId });
         
-    // --- 2. Run Staging Validation ---
-    const validationResult = ValidationLogic.runValidationSuite('web_staging', sessionId);
-    const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
+        // --- 2. Run Staging Validation ---
+        const validationResult = ValidationLogic.runValidationSuite('web_staging', sessionId);
+        const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
-    if (quarantineTriggered) {
-        logger.warn(serviceName, functionName, 'Web Products staging validation triggered a quarantine.', { sessionId: sessionId });
-        return 'QUARANTINED';
-    }
+        if (quarantineTriggered) {
+            logger.error(serviceName, functionName, '🛑 CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
+            _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+            return 'QUARANTINED';
+        }
 
+        // Only reached if validation passed - safe to update master
         _upsertWebProductsData(sessionId);
 
         return 'COMPLETED';
@@ -557,6 +617,33 @@ const ProductService = (function() {
     let skippedCount = 0;
     const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
 
+    // NEW: Validate mapping configuration exists and is complete
+    if (!stagingToMasterMap || Object.keys(stagingToMasterMap).length === 0) {
+        throw new Error('Staging to master mapping configuration missing or empty!');
+    }
+
+    const criticalMappings = {
+        'wps_Stock': 'wpm_Stock',
+        'wps_RegularPrice': 'wpm_Price',
+        'wps_SKU': 'wpm_SKU',
+        'wps_Name': 'wpm_NameEn'
+    };
+
+    // NEW: Validate critical mappings are present
+    for (const [stagingField, expectedMasterField] of Object.entries(criticalMappings)) {
+        if (!stagingToMasterMap[stagingField]) {
+            throw new Error(`CRITICAL: Mapping missing for ${stagingField}`);
+        }
+        if (stagingToMasterMap[stagingField] !== expectedMasterField) {
+            throw new Error(
+                `CRITICAL: Mapping mismatch for ${stagingField}. ` +
+                `Expected ${expectedMasterField}, got ${stagingToMasterMap[stagingField]}`
+            );
+        }
+    }
+
+    const mappingErrors = [];
+
     stagingData.values.forEach((stagingRow, idx) => {
         const rawKey = stagingRow[stagingKeyIndex];
         const key = String(rawKey).trim(); // Convert to string to match map keys
@@ -567,11 +654,27 @@ const ProductService = (function() {
             const stagingRowObject = {};
             stagingHeaders.forEach((h, i) => { stagingRowObject[h] = stagingRow[i]; });
 
+            const missingFields = [];
+            const updatedFields = [];
+
             for (const sKey in stagingToMasterMap) {
-              if (stagingRowObject.hasOwnProperty(sKey)) {
                 const mKey = stagingToMasterMap[sKey];
-                masterRow[mKey] = stagingRowObject[sKey];
-              }
+
+                if (stagingRowObject.hasOwnProperty(sKey)) {
+                    masterRow[mKey] = stagingRowObject[sKey];
+                    updatedFields.push(sKey);
+                } else {
+                    // NEW: Track missing fields
+                    missingFields.push(sKey);
+                }
+            }
+
+            // NEW: Validate critical fields were updated
+            const missedCritical = Object.keys(criticalMappings).filter(cf => missingFields.includes(cf));
+            if (missedCritical.length > 0) {
+                mappingErrors.push(
+                    `Row ${idx + 2} (${key}): Missing critical staging fields: ${missedCritical.join(', ')}`
+                );
             }
 
             masterMap.set(key, masterRow); // Put the updated row back in the map
@@ -581,38 +684,71 @@ const ProductService = (function() {
         }
     });
 
+    // NEW: Fail if critical fields missing
+    if (mappingErrors.length > 0) {
+        const errorSummary = mappingErrors.slice(0, 10).join('\n');
+        const totalErrors = mappingErrors.length;
+        const errorMsg = `MAPPING ERRORS (${totalErrors} products):\n${errorSummary}\n${totalErrors > 10 ? `... and ${totalErrors - 10} more` : ''}\nStaging sheet missing critical fields. Check schema. HALTING.`;
+        logger.error(serviceName, functionName, errorMsg, null, { sessionId });
+        throw new Error(errorMsg);
+    }
+
     logger.info(serviceName, functionName, `WebProdM upsert complete: ${updatedCount} products updated, ${skippedCount} not found in master`, { sessionId });
 
     // Convert the map back to a 2D array to write to the sheet
     const finalData = Array.from(masterMap.values()).map(rowObject => {
-        return masterHeaders.map(header => rowObject[header] || '');
+        return masterHeaders.map(header => {
+            const value = rowObject[header];
+            // CRITICAL: Don't treat 0 as falsy - it's a valid stock/price value
+            return (value !== undefined && value !== null) ? value : '';
+        });
     });
 
-    // --- SANITY CHECK ---
+    // --- ENHANCED SANITY CHECK ---
     if (finalData.length > 0) {
         const stockIdx = masterHeaders.indexOf('wpm_Stock');
         const priceIdx = masterHeaders.indexOf('wpm_Price');
-        
-        const sampleSize = Math.min(5, finalData.length);
+        const skuIdx = masterHeaders.indexOf('wpm_SKU');
+        const nameIdx = masterHeaders.indexOf('wpm_NameEn');
+
+        // ENHANCED: Sample more rows and check ALL critical fields
+        const sampleSize = Math.min(20, finalData.length); // Increased from 5 to 20
         let validRowsFound = 0;
-        
+        const sanityIssues = [];
+
         for (let i = 0; i < sampleSize; i++) {
             const row = finalData[i];
-            const hasStock = stockIdx > -1 && row[stockIdx] !== '';
-            const hasPrice = priceIdx > -1 && row[priceIdx] !== '';
-            
-            if (hasStock || hasPrice) {
+            // CRITICAL: Treat 0 as valid for stock/price (0 !== '', 0 !== null, 0 !== undefined)
+            const hasStock = stockIdx > -1 && row[stockIdx] !== '' && row[stockIdx] !== null && row[stockIdx] !== undefined;
+            const hasPrice = priceIdx > -1 && row[priceIdx] !== '' && row[priceIdx] !== null && row[priceIdx] !== undefined;
+            const hasSKU = skuIdx > -1 && row[skuIdx] !== '' && row[skuIdx] !== null && row[skuIdx] !== undefined;
+            const hasName = nameIdx > -1 && row[nameIdx] !== '' && row[nameIdx] !== null && row[nameIdx] !== undefined;
+
+            // ENHANCED: Require Stock AND Price AND SKU AND Name (not just OR)
+            if (hasStock && hasPrice && hasSKU && hasName) {
                 validRowsFound++;
+            } else {
+                // Track what's missing
+                const missing = [];
+                if (!hasSKU) missing.push('SKU');
+                if (!hasName) missing.push('Name');
+                if (!hasStock) missing.push('Stock');
+                if (!hasPrice) missing.push('Price');
+                sanityIssues.push(`Row ${i + 1}: Missing ${missing.join(', ')}`);
             }
         }
-        
-        if (validRowsFound === 0) {
-            const msg = `CRITICAL SANITY CHECK FAILED in _upsertWebProductsData. Attempted to write ${finalData.length} rows, but sampled rows appear empty for Stock or Price. Aborting write.`;
+
+        // ENHANCED: Require at least 80% of sampled rows to be valid
+        const validPercentage = (validRowsFound / sampleSize) * 100;
+        if (validPercentage < 80) {
+            const msg = `CRITICAL SANITY CHECK FAILED in _upsertWebProductsData. Only ${validRowsFound}/${sampleSize} sampled rows (${validPercentage.toFixed(1)}%) have all critical fields. Issues:\n${sanityIssues.slice(0, 5).join('\n')}\nAborting write to prevent data corruption.`;
             logger.error(serviceName, functionName, msg, null, { sessionId: sessionId });
             throw new Error(msg);
         }
+
+        logger.info(serviceName, functionName, `Sanity check passed: ${validRowsFound}/${sampleSize} sampled rows (${validPercentage.toFixed(1)}%) valid.`, { sessionId });
     }
-    // --- END SANITY CHECK ---
+    // --- END ENHANCED SANITY CHECK ---
 
     // Write the updated data back to WebProdM
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());

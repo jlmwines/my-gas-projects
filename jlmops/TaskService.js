@@ -1,9 +1,27 @@
 /**
  * @file TaskService.js
  * @description This service manages tasks, including creation with de-duplication.
+ *
+ * PERFORMANCE: Automatically invalidates WebAppTasks cache after task modifications
+ * to ensure dashboard displays fresh data.
  */
 
 const TaskService = (function() {
+
+  /**
+   * Helper function to invalidate WebAppTasks cache after task modifications.
+   * This ensures dashboard data stays fresh without manual cache management.
+   */
+  function invalidateTaskCache() {
+    try {
+      if (typeof WebAppTasks !== 'undefined' && WebAppTasks.invalidateCache) {
+        WebAppTasks.invalidateCache();
+      }
+    } catch (e) {
+      // Silent failure - cache invalidation is a performance optimization, not critical
+      console.log('TaskService: Could not invalidate WebAppTasks cache:', e.message);
+    }
+  }
 
   /**
    * Creates a new task if an identical open task does not already exist.
@@ -74,7 +92,10 @@ const TaskService = (function() {
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
       logger.info('TaskService', 'createTask', `Task created. Type: ${taskTypeId}, Entity: ${linkedEntityId}, Name: ${linkedEntityName}.`, { sessionId: sessionId });
-      
+
+      // Invalidate cache after task creation
+      invalidateTaskCache();
+
       return { id: taskId };
 
     } catch (e) {
@@ -148,8 +169,12 @@ const TaskService = (function() {
       const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
       sheet.getRange(sheetRow, statusCol + 1).setValue('Done');
       sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
-      
+
       logger.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
+
+      // Invalidate cache after task completion
+      invalidateTaskCache();
+
       return true;
 
     } catch (e) {
@@ -195,7 +220,7 @@ const TaskService = (function() {
 
       const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
       sheet.getRange(sheetRow, statusCol + 1).setValue(newStatus);
-      
+
       // If the new status is 'Done' or 'Closed', also set the DoneDate
       if ((newStatus === 'Done' || newStatus === 'Closed') && doneDateCol !== -1) {
         sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
@@ -203,8 +228,12 @@ const TaskService = (function() {
         // If status is changed from a 'Done/Closed' state to active, clear the DoneDate
         sheet.getRange(sheetRow, doneDateCol + 1).clearContent();
       }
-      
+
       logger.info('TaskService', 'updateTaskStatus', `Task '${taskId}' status updated to '${newStatus}'.`);
+
+      // Invalidate cache after task status update
+      invalidateTaskCache();
+
       return true;
 
     } catch (e) {

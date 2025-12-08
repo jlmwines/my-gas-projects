@@ -20,6 +20,13 @@ const ComaxAdapter = (function() {
         throw new Error('Comax product column map not found in configuration.');
     }
 
+    // NEW: Get expected schema for validation
+    const expectedSchema = ConfigService.getConfig('schema.data.CmxProdS');
+    if (!expectedSchema) {
+        throw new Error('CmxProdS schema not found in configuration.');
+    }
+    const expectedHeaders = expectedSchema.headers.split(',');
+
     let allData;
     const tempFile = Drive.Files.insert({ title: `[TEMP] Comax Import - ${new Date().toISOString()}` }, fileBlob, { convert: true });
 
@@ -32,17 +39,32 @@ const ComaxAdapter = (function() {
 
     if (!allData || allData.length < 2) {
       logger.error(serviceName, functionName, 'File is empty or contains only a header after conversion.');
-      return [];
+      throw new Error('INVALID FILE: Comax file is empty or contains only a header. Cannot import.');
     }
-    
-    const productObjects = [];
+
     const dataRows = allData.slice(1); // Skip header row
+
+    // NEW: Validate file has enough columns for mapping
+    const maxColumnIndex = Math.max(...Object.keys(indexMap).map(k => parseInt(k, 10)));
+    const fileColumnCount = dataRows.length > 0 ? dataRows[0].length : 0;
+
+    if (fileColumnCount <= maxColumnIndex) {
+        const errorMsg = `SCHEMA MISMATCH: Comax file has ${fileColumnCount} columns, but mapping expects at least ${maxColumnIndex + 1}. File schema may have changed. HALTING import.`;
+        logger.error(serviceName, functionName, errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    const productObjects = [];
+    const mappingErrors = [];
+    const criticalFields = ['cps_CmxId', 'cps_SKU', 'cps_NameHe', 'cps_Stock', 'cps_Price'];
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
       if (row.join('').trim() === '') continue; // Skip empty rows
 
       const product = {};
+      const rowMissingFields = [];
+
       Object.keys(indexMap).forEach(index => {
         const internalFieldName = indexMap[index];
         const colIndex = parseInt(index, 10);
@@ -58,12 +80,52 @@ const ComaxAdapter = (function() {
           }
 
           product[targetFieldName] = String(cellValue || '').trim();
+        } else {
+          // NEW: Track missing columns
+          rowMissingFields.push(`Column ${colIndex} (${internalFieldName})`);
         }
       });
+
+      // COMAX BUSINESS RULE: Null/empty stock is treated as zero (out of stock)
+      if (product.cps_Stock === '' || product.cps_Stock === null || product.cps_Stock === undefined) {
+          product.cps_Stock = '0';
+      }
+
+      // COMAX BUSINESS RULE: Null/empty price is treated as zero (no price set)
+      if (product.cps_Price === '' || product.cps_Price === null || product.cps_Price === undefined) {
+          product.cps_Price = '0';
+      }
+
+      // NEW: Validate all expected fields are present in product object
+      const missingExpectedFields = expectedHeaders.filter(header => !product.hasOwnProperty(header));
+      if (missingExpectedFields.length > 0) {
+          mappingErrors.push(`Row ${i + 2}: Missing expected fields: ${missingExpectedFields.join(', ')}`);
+      }
+
+      // NEW: Validate critical fields are not empty
+      // Note: cps_Stock is already normalized to '0' if empty, so it will pass validation
+      const emptyCriticalFields = criticalFields.filter(field => !product[field] || String(product[field]).trim() === '');
+      if (emptyCriticalFields.length > 0) {
+          mappingErrors.push(`Row ${i + 2}: Empty critical fields: ${emptyCriticalFields.join(', ')}`);
+      }
+
+      if (rowMissingFields.length > 0) {
+          mappingErrors.push(`Row ${i + 2}: ${rowMissingFields.join(', ')}`);
+      }
+
       productObjects.push(product);
     }
 
-    logger.info(serviceName, functionName, `Successfully processed ${productObjects.length} products.`);
+    // NEW: Fail if any mapping errors detected
+    if (mappingErrors.length > 0) {
+        const errorSummary = mappingErrors.slice(0, 10).join('\n');
+        const totalErrors = mappingErrors.length;
+        const errorMsg = `MAPPING ERRORS DETECTED (${totalErrors} total):\n${errorSummary}\n${totalErrors > 10 ? `... and ${totalErrors - 10} more` : ''}\nCheck if Comax export format changed. HALTING import.`;
+        logger.error(serviceName, functionName, errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    logger.info(serviceName, functionName, `Successfully processed ${productObjects.length} products with complete schema validation.`);
 
     return productObjects;
   }

@@ -1,0 +1,60 @@
+{
+  "project": {
+    "name": "JLMOps - Google Apps Script Optimization",
+    "description": "Resource optimization project for JLMOps dashboard and sync workflows"
+  },
+  "preferences": {
+    "model": "sonnet",
+    "autoSummarize": true,
+    "contextManagement": "aggressive"
+  },
+  "files": {
+    "exclude": [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/ComaxProducts.csv",
+      "**/*.log",
+      "jlmops/SetupConfig.js"
+    ],
+    "focus": [
+      "jlmops/**/*.js",
+      "jlmops/**/*.html",
+      "jlmops/**/*.md",
+      "jlmops/config/*.json"
+    ],
+    "notes": {
+      "SetupConfig.js": "Auto-generated - DO NOT EDIT. Edit config/*.json and run generate-config.js instead"
+    }
+  },
+  "workflows": {
+    "primary": "Resource optimization and performance improvements",
+    "areas": [
+      "Task caching system",
+      "Sync widget UX improvements",
+      "Google Sheets API optimization",
+      "Dashboard performance"
+    ],
+    "configManagement": {
+      "source": "jlmops/config/*.json",
+      "generator": "node jlmops/generate-config.js",
+      "output": "jlmops/SetupConfig.js",
+      "deploy": "cd jlmops && clasp push",
+      "execute": "Run rebuildSysConfigFromSource() in Apps Script IDE"
+    }
+  },
+  "architecture": {
+    "pattern": "Role-based UI with shared data layer",
+    "roles": ["admin", "manager"],
+    "uiFiles": {
+      "admin": "Admin*.html (Views + Widgets)",
+      "manager": "Manager*.html (Views + Widgets)",
+      "note": "UI is duplicated per role"
+    },
+    "dataLayer": {
+      "files": "WebApp*.js",
+      "shared": true,
+      "note": "One set of data scripts serves both roles - optimize once, benefit twice"
+    },
+    "optimizationStrategy": "Optimize WebApp*.js data layer to benefit both Admin and Manager roles simultaneously"
+  }
+}
