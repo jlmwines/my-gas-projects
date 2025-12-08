@@ -120,6 +120,27 @@
     };
 
     function updateUI(status) {
+        const now = Date.now();
+        const gracePeriod = 5000; // 5 seconds
+
+        // PHASE 4: Don't overwrite recent user actions
+        if (now - lastActionTime < gracePeriod) {
+            console.log('Skipping UI update - within grace period after user action');
+            return;
+        }
+
+        // PHASE 4: Track message timestamps to prevent stale overwrites
+        const messageTimestamp = new Date(status.lastUpdated || 0).getTime();
+        const currentMessageTimestamp = window.lastMessageTimestamp || 0;
+
+        // Only update if message is newer (prevent stale data from overwriting fresh UI)
+        if (messageTimestamp > 0 && messageTimestamp <= currentMessageTimestamp) {
+            console.log('Skipping stale message - already have newer data');
+            return;
+        }
+
+        window.lastMessageTimestamp = messageTimestamp;
+
         // Only log when step status actually changes (not on every poll)
         const currentStepData = status[`step${status.currentStep}`];
         const lastLoggedStatus = window._lastLoggedStatus || {};
@@ -254,43 +275,76 @@
 
     // Action functions
     function startSync() {
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now(); // Prevent polling from overwriting UI
 
-        // Immediately show processing state
+        // IMMEDIATE visual feedback
+        const step1Card = document.getElementById('step1Card');
         const step1Action = document.getElementById('step1Action');
         const step1Icon = document.getElementById('step1Icon');
         const step1Message = document.getElementById('step1Message');
 
-        step1Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        // 1. Highlight card
+        step1Card.style.borderColor = '#0d6efd';
+        step1Card.style.borderWidth = '2px';
+
+        // 2. Clear old content
+        step1Action.innerHTML = '';
+
+        // 3. Show spinner + timestamp
+        step1Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
         step1Icon.textContent = '🔄';
-        step1Message.textContent = 'Starting...';
+        step1Message.innerHTML = `<strong>Starting sync...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        // Track action time for callback
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                // Only update if no newer action occurred
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step1Card.style.borderColor = '#dc3545';
+                step1Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step1Action.innerHTML = `<a href="#" onclick="startSync(); return false;" class="small">Retry</a>`;
+            })
             .startDailySyncBackend();
     }
 
     function exportOrders() {
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
+        const step2Card = document.getElementById('step2Card');
         const step2Action = document.getElementById('step2Action');
         const step2Icon = document.getElementById('step2Icon');
         const step2Message = document.getElementById('step2Message');
 
-        step2Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        step2Card.style.borderColor = '#0d6efd';
+        step2Card.style.borderWidth = '2px';
+        step2Action.innerHTML = '';
+        step2Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
         step2Icon.textContent = '🔄';
-        step2Message.textContent = 'Exporting orders...';
+        step2Message.innerHTML = `<strong>Exporting orders...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step2Card.style.borderColor = '#dc3545';
+                step2Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step2Action.innerHTML = `<a href="#" onclick="exportOrders(); return false;" class="small">Retry</a>`;
+            })
             .exportComaxOrdersBackend();
     }
 
@@ -299,74 +353,134 @@
             return;
         }
 
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
+        const step2Card = document.getElementById('step2Card');
         const step2Action = document.getElementById('step2Action');
         const step2Icon = document.getElementById('step2Icon');
         const step2Message = document.getElementById('step2Message');
 
-        step2Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        step2Card.style.borderColor = '#0d6efd';
+        step2Card.style.borderWidth = '2px';
+        step2Action.innerHTML = '';
+        step2Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
         step2Icon.textContent = '🔄';
-        step2Message.textContent = 'Confirming upload...';
+        step2Message.innerHTML = `<strong>Confirming upload...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step2Card.style.borderColor = '#dc3545';
+                step2Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step2Action.innerHTML = `<a href="#" onclick="confirmComax(); return false;" class="small">Retry</a>`;
+            })
             .confirmComaxUpdateBackend();
     }
 
     function startComaxImport() {
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
+        const step3Card = document.getElementById('step3Card');
         const step3Action = document.getElementById('step3Action');
         const step3Icon = document.getElementById('step3Icon');
         const step3Message = document.getElementById('step3Message');
 
-        step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        step3Card.style.borderColor = '#0d6efd';
+        step3Card.style.borderWidth = '2px';
+        step3Action.innerHTML = '';
+        step3Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
         step3Icon.textContent = '🔄';
-        step3Message.textContent = 'Starting import...';
+        step3Message.innerHTML = `<strong>Starting import...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step3Card.style.borderColor = '#dc3545';
+                step3Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step3Action.innerHTML = `<a href="#" onclick="startComaxImport(); return false;" class="small">Retry</a>`;
+            })
             .startComaxImportBackend();
     }
 
     function generateWebExport() {
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
+        const step5Card = document.getElementById('step5Card');
         const step5Action = document.getElementById('step5Action');
         const step5Icon = document.getElementById('step5Icon');
         const step5Message = document.getElementById('step5Message');
 
-        step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        step5Card.style.borderColor = '#0d6efd';
+        step5Card.style.borderWidth = '2px';
+        step5Action.innerHTML = '';
+        step5Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
         step5Icon.textContent = '🔄';
-        step5Message.textContent = 'Generating export...';
+        step5Message.innerHTML = `<strong>Generating export...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step5Card.style.borderColor = '#dc3545';
+                step5Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step5Action.innerHTML = `<a href="#" onclick="generateWebExport(); return false;" class="small">Retry</a>`;
+            })
             .generateWebExportBackend();
     }
 
     function confirmWeb() {
+        const timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
+
+        const step5Card = document.getElementById('step5Card');
+        const step5Icon = document.getElementById('step5Icon');
+        const step5Message = document.getElementById('step5Message');
+        const step5Action = document.getElementById('step5Action');
+
+        step5Card.style.borderColor = '#0d6efd';
+        step5Card.style.borderWidth = '2px';
+        step5Action.innerHTML = '';
+        step5Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
+        step5Icon.textContent = '🔄';
+        step5Message.innerHTML = `<strong>Confirming...</strong> <small class="text-muted">(${timestamp})</small>`;
+
+        const originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(status => {
-                updateUI(status);
-                adjustPolling(status);
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(err => {
+                step5Card.style.borderColor = '#dc3545';
+                step5Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
+                step5Action.innerHTML = `<a href="#" onclick="confirmWeb(); return false;" class="small">Retry</a>`;
+            })
             .confirmWebInventoryUpdateBackend();
     }
 
@@ -392,11 +506,14 @@
         errorDiv.classList.remove('d-none');
     }
 
-    // Smart polling - only poll when sync is active
+    // Smart polling - fast after clicks, slower when idle
     let pollInterval = null;
     let lastActionTime = 0;
-    const ACTIVE_POLL_MS = 2000;  // Poll every 2 seconds when active
-    const ACTION_GRACE_PERIOD_MS = 3000; // Don't update UI for 3 seconds after user action
+    let currentPollInterval = null;
+    const ULTRA_FAST_POLL_MS = 500;   // 500ms when just clicked (ultra-fast)
+    const ACTIVE_POLL_MS = 1000;       // 1s when processing
+    const IDLE_POLL_MS = 10000;        // 10s when idle (reduced from 30s)
+    const ACTION_GRACE_PERIOD_MS = 5000; // Don't update UI for 5 seconds after user action (extended)
 
     function refreshStatus() {
         // Don't refresh if we just performed an action (prevents overwriting optimistic UI)
@@ -415,22 +532,44 @@
     }
 
     function adjustPolling(status) {
-        // Determine if sync is active and processing
-        const isActive = status.sessionId && status.currentStep >= 1 && status.currentStep <= 5;
-        const anyProcessing = isActive && [status.step1, status.step2, status.step3, status.step4, status.step5]
-            .some(step => step && step.status === 'processing');
+        const now = Date.now();
+        const timeSinceAction = now - lastActionTime;
 
-        if (anyProcessing) {
-            // Start polling if not already
-            if (!pollInterval) {
-                pollInterval = setInterval(refreshStatus, ACTIVE_POLL_MS);
+        let newInterval;
+
+        // Just clicked (within 5 seconds) - ULTRA FAST
+        if (timeSinceAction < 5000) {
+            newInterval = ULTRA_FAST_POLL_MS;
+        }
+        // Active processing - FAST
+        else {
+            const isActive = status.sessionId && status.currentStep >= 1 && status.currentStep <= 5;
+            const anyProcessing = isActive && [status.step1, status.step2, status.step3, status.step4, status.step5]
+                .some(step => step && step.status === 'processing');
+
+            if (anyProcessing) {
+                newInterval = ACTIVE_POLL_MS;
+            } else if (isActive) {
+                newInterval = IDLE_POLL_MS;
+            } else {
+                // No active session - stop polling
+                if (pollInterval) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    currentPollInterval = null;
+                }
+                return;
             }
-        } else {
-            // Stop polling when nothing is processing
+        }
+
+        // Only restart interval if the speed changed
+        if (newInterval !== currentPollInterval) {
             if (pollInterval) {
                 clearInterval(pollInterval);
-                pollInterval = null;
             }
+            currentPollInterval = newInterval;
+            pollInterval = setInterval(refreshStatus, newInterval);
+            console.log(`Polling: ${newInterval}ms interval (${timeSinceAction < 5000 ? 'ULTRA-FAST' : anyProcessing ? 'ACTIVE' : 'IDLE'})`);
         }
     }
 
