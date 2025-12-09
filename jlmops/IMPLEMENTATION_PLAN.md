@@ -144,13 +144,18 @@ The existing dashboard widgets were enhanced to:
     3.  **Manager Notification/Prompt (COMPLETED):** Implemented visual indicators in `ManagerProductsWidget` and `ManagerProductsView`.
     4.  **Integration with New Product Workflow (COMPLETED):** Allowed managers to suggest selected products directly, creating "New Product" tasks.
 
-### 7. SKU Management Workflow (Update/Replace) (PLANNED)
+### 7. SKU Management Workflow (Update/Replace) (COMPLETED)
 *   **Goal:** To provide a safe, guided workflow for updating a product's SKU across all Comax and Web product sheets. This is critical for maintaining data integrity when a SKU changes in the external systems (Comax/WooCommerce) or when switching a web product's connection to a different Comax product.
-*   **Tasks:**
-    1.  **Detection & Trigger:** Create a mechanism (manual or automated) to initiate an SKU update.
-    2.  **Validation:** Ensure the new SKU exists in Comax and is valid for use.
-    3.  **System-Wide Update:** Implement a service to safely update `wpm_SKU`, `cpm_SKU`, `wdm_SKU`, `wxl_SKU`, and `pa_SKU` references across all master and audit sheets.
-    4.  **External Synchronization:** Provide clear instructions or tasks for the user to manually update the SKU in Comax and WooCommerce to match the internal change.
+*   **Implementation:**
+    1.  **Modal-Guided Workflows:** Two distinct modal workflows in `AdminProductsView.html`:
+        *   **Vendor SKU Update:** For same product, SKU changing. User finds existing product, enters new SKU, updates external systems, confirms.
+        *   **Product Replacement:** For replacing one web product with a different Comax product. User finds both products, updates IsWeb flags in Comax, updates WooCommerce, confirms.
+    2.  **Product Lookup:** `ProductService.lookupProductBySku()` returns comprehensive Comax + Web data including names.
+    3.  **Validation Rules:**
+        *   Vendor SKU Update: New SKU must NOT exist in JLMops.
+        *   Product Replacement: Replacement SKU must exist in CmxProdM but NOT in WebProdM.
+    4.  **System-Wide Update:** `ProductService.webProductReassign()` updates `wpm_SKU`, `wdm_SKU`, `wxl_SKU` and manages `cpm_IsWeb` flags (using Hebrew values: כן/לא).
+    5.  **Audit Trail:** All SKU changes logged to `SysSkuUpdateLog` sheet.
 ### 8. Product Detail Update Workflow (Vintage Discrepancy) (COMPLETED)
 
 ### 9. New Product Workflow (PLANNED)

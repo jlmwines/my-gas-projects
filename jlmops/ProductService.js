@@ -144,7 +144,7 @@ const ProductService = (function() {
         const textB = b.slg_TextEN || '';
         return textA.localeCompare(textB);
       })
-      .map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_NameHe }));
+      .map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_TextHE }));
 
     return cachedGrapes;
   }
@@ -1412,12 +1412,13 @@ const ProductService = (function() {
         // 3. Prepare data for the new Google Sheet
         const exportDataRows = [];
         const headers = [
-            'SKU', 
-            'Product Title (EN)', 
-            'Short Description (EN)', 
-            'Long Description (EN)', 
-            'Short Description (HE)', 
-            'Long Description (HE)'
+            'SKU',
+            'Product Title EN',
+            'Short Description EN',
+            'Long Description EN',
+            'Short Description HE',
+            'Long Description HE',
+            'Product Title HE'
         ];
         exportDataRows.push(headers);
 
@@ -1441,20 +1442,22 @@ const ProductService = (function() {
                 return; // Continue to the next SKU
             }
 
-            const productTitleEn = webDetRow.wdm_NameEn || (cmxRow ? cmxRow.cpm_NameHe : '');
+            const productTitleEn = webDetRow.wdm_NameEn || '';
+            const productTitleHe = webDetRow.wdm_NameHe || (cmxRow ? cmxRow.cpm_NameHe : '');
             const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
             const shortDescriptionHe = webDetRow.wdm_ShortDescrHe || '';
 
             const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
             const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
-            
+
             exportDataRows.push([
                 sku,
                 productTitleEn,
                 shortDescriptionEn,
                 longDescriptionEnHtml,
                 shortDescriptionHe,
-                longDescriptionHeHtml
+                longDescriptionHeHtml,
+                productTitleHe
             ]);
         });
 
@@ -1767,15 +1770,43 @@ const ProductService = (function() {
     try {
         const tasks = WebAppTasks.getOpenTasksByTypeId('task.validation.vintage_mismatch', sessionId); // Use specific task type
         const acceptedTasks = tasks.filter(t => t.st_Status === 'Accepted');
-        
+
+        // Prepare for WebDetS cleanup
+        const allConfig = ConfigService.getAllConfig();
+        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const stagingSheetName = allConfig['system.sheet_names'].WebDetS;
+        const stagingSheet = spreadsheet.getSheetByName(stagingSheetName);
+        const stagingSchema = allConfig['schema.data.WebDetS'];
+        const stagingHeaders = stagingSchema.headers.split(',');
+        const skuColIndex = stagingHeaders.indexOf('wds_SKU');
+
         let count = 0;
+        let deletedCount = 0;
         acceptedTasks.forEach(t => {
-            TaskService.updateTaskStatus(t.st_TaskId); // TaskService needs sessionId too
+            TaskService.updateTaskStatus(t.st_TaskId);
             count++;
+
+            // Delete corresponding WebDetS row
+            const sku = t.st_LinkedEntityId;
+            if (sku && stagingSheet && skuColIndex >= 0) {
+                const stagingData = stagingSheet.getDataRange().getValues();
+                for (let i = stagingData.length - 1; i > 0; i--) { // Start from end, skip header
+                    if (String(stagingData[i][skuColIndex]) === String(sku)) {
+                        stagingSheet.deleteRow(i + 1);
+                        deletedCount++;
+                        logger.info(serviceName, functionName, `Deleted WebDetS row for SKU ${sku}`, { sessionId: sessionId, sku: sku });
+                        break;
+                    }
+                }
+            }
         });
-        
-        logger.info(serviceName, functionName, `Completed ${count} tasks.`, { sessionId: sessionId, completedTasks: count });
-        return { success: true, message: `Marked ${count} tasks as Completed.` };
+
+        // Invalidate cache after staging cleanup
+        _invalidateProductCache();
+
+        logger.info(serviceName, functionName, `Completed ${count} tasks, deleted ${deletedCount} staging rows.`, { sessionId: sessionId, completedTasks: count, deletedRows: deletedCount });
+        return { success: true, message: `Marked ${count} tasks as Completed. Cleaned up ${deletedCount} staging rows.` };
 
     } catch (e) {
         logger.error(serviceName, functionName, `Error confirming updates: ${e.message}`, e, { sessionId: sessionId });
@@ -2045,6 +2076,604 @@ const ProductService = (function() {
     }
   }
 
+  /**
+   * Vendor SKU Update - Updates SKU across ALL product master sheets.
+   * Used when vendor changes SKU in both Comax and WooCommerce.
+   * @param {string} oldSku The old SKU to replace.
+   * @param {string} newSku The new SKU value.
+   * @param {string} sessionId Optional session ID for logging.
+   * @returns {Object} { success: boolean, message: string }
+   */
+  function vendorSkuUpdate(oldSku, newSku, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = 'vendorSkuUpdate';
+    logger.info(serviceName, functionName, `Starting vendor SKU update: ${oldSku} -> ${newSku}`, { sessionId, oldSku, newSku });
+
+    if (!oldSku || !newSku) {
+      return { success: false, message: 'Both old SKU and new SKU are required.' };
+    }
+
+    if (oldSku === newSku) {
+      return { success: false, message: 'Old SKU and new SKU cannot be the same.' };
+    }
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const userEmail = Session.getActiveUser().getEmail();
+
+      let updatedSheets = [];
+
+      // 1. Update CmxProdM
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      if (cmxSheet) {
+        const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+        const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+        if (cmxSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(cmxSheet, cmxSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('CmxProdM');
+        }
+      }
+
+      // 2. Update WebProdM
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      if (webProdSheet) {
+        const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+        const webProdSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+        if (webProdSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(webProdSheet, webProdSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebProdM');
+        }
+      }
+
+      // 3. Update WebDetM
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      if (webDetSheet) {
+        const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+        const webDetSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+        if (webDetSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(webDetSheet, webDetSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebDetM');
+        }
+      }
+
+      // 4. Update WebXltM
+      const webXltSheet = spreadsheet.getSheetByName('WebXltM');
+      if (webXltSheet) {
+        const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+        const webXltSkuIdx = webXltHeaders.indexOf('wxl_SKU');
+        if (webXltSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(webXltSheet, webXltSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebXltM');
+        }
+      }
+
+      // 5. Update SysProductAudit
+      const auditSheet = spreadsheet.getSheetByName('SysProductAudit');
+      if (auditSheet) {
+        const auditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
+        const auditSkuIdx = auditHeaders.indexOf('pa_SKU');
+        if (auditSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(auditSheet, auditSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('SysProductAudit');
+        }
+      }
+
+      // 6. Update SysTasks (open tasks referencing old SKU in st_LinkedEntityId)
+      const taskSchema = allConfig['schema.data.SysTasks'];
+      const taskHeaders = taskSchema.headers.split(',');
+      const taskSheet = spreadsheet.getSheetByName('SysTasks');
+      if (taskSheet) {
+        const taskEntityIdIdx = taskHeaders.indexOf('st_LinkedEntityId');
+        const taskStatusIdx = taskHeaders.indexOf('st_Status');
+        if (taskEntityIdIdx >= 0 && taskStatusIdx >= 0) {
+          const taskData = taskSheet.getDataRange().getValues();
+          let taskUpdated = false;
+          for (let i = 1; i < taskData.length; i++) {
+            const status = String(taskData[i][taskStatusIdx]).trim();
+            // Only update open tasks (not Completed/Cancelled)
+            if (status !== 'Completed' && status !== 'Cancelled' && status !== 'Done') {
+              if (String(taskData[i][taskEntityIdIdx]).trim() === oldSku) {
+                taskSheet.getRange(i + 1, taskEntityIdIdx + 1).setValue(newSku);
+                taskUpdated = true;
+              }
+            }
+          }
+          if (taskUpdated) updatedSheets.push('SysTasks');
+        }
+      }
+
+      // 7. Log the SKU update to SysLog
+      _logSkuUpdate('VendorSkuUpdate', oldSku, newSku, userEmail, updatedSheets.join(', '));
+
+      // Invalidate caches
+      _invalidateProductCache();
+
+      const message = updatedSheets.length > 0
+        ? `SKU updated from ${oldSku} to ${newSku} in: ${updatedSheets.join(', ')}`
+        : `No records found with SKU ${oldSku}`;
+
+      logger.info(serviceName, functionName, message, { sessionId, oldSku, newSku, updatedSheets });
+      return { success: true, message };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error updating SKU: ${e.message}`, e, { sessionId, oldSku, newSku });
+      return { success: false, message: `Error: ${e.message}` };
+    }
+  }
+
+  /**
+   * Web Product Reassign - Updates SKU in web product sheets and optionally updates IsWeb flags in CmxProdM.
+   * Used when replacing an old product with a new one on the website.
+   * @param {string} webProductId The WooCommerce Product ID (EN or HE).
+   * @param {string} oldSku The old Comax SKU being replaced.
+   * @param {string} newSku The new Comax SKU to assign.
+   * @param {boolean} updateOldIsWeb If true, set old product's cpm_IsWeb to empty.
+   * @param {boolean} updateNewIsWeb If true, set new product's cpm_IsWeb to '1'.
+   * @param {string} sessionId Optional session ID for logging.
+   * @returns {Object} { success: boolean, message: string }
+   */
+  function webProductReassign(webProductId, oldSku, newSku, updateOldIsWeb, updateNewIsWeb, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = 'webProductReassign';
+    logger.info(serviceName, functionName, `Starting web product reassign: WebId ${webProductId}, ${oldSku} -> ${newSku}`, { sessionId, webProductId, oldSku, newSku, updateOldIsWeb, updateNewIsWeb });
+
+    if (!webProductId || !newSku) {
+      return { success: false, message: 'Both Web Product ID and new SKU are required.' };
+    }
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const userEmail = Session.getActiveUser().getEmail();
+
+      let updatedSheets = [];
+
+      // 1. Find and update WebProdM by wpm_WebIdEn or wpm_WebIdHe
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      if (!webProdSheet) {
+        return { success: false, message: 'WebProdM sheet not found.' };
+      }
+
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const webIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const webIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+      const webProdSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+
+      const webProdData = webProdSheet.getDataRange().getValues();
+      let webProdRowIdx = -1;
+      const webIdStr = String(webProductId).trim();
+
+      for (let i = 1; i < webProdData.length; i++) {
+        const idEn = String(webProdData[i][webIdEnIdx]).trim();
+        const idHe = String(webProdData[i][webIdHeIdx]).trim();
+        if (idEn === webIdStr || idHe === webIdStr) {
+          webProdRowIdx = i;
+          // Use passed oldSku or get from sheet
+          if (!oldSku) {
+            oldSku = String(webProdData[i][webProdSkuIdx]).trim();
+          }
+          break;
+        }
+      }
+
+      if (webProdRowIdx === -1) {
+        return { success: false, message: `Web Product ID ${webProductId} not found in WebProdM.` };
+      }
+
+      // Update WebProdM SKU
+      webProdSheet.getRange(webProdRowIdx + 1, webProdSkuIdx + 1).setValue(newSku);
+      updatedSheets.push('WebProdM');
+
+      // 2. Update WebDetM using the old SKU to find the row
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      if (webDetSheet && oldSku) {
+        const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+        const webDetSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+        if (webDetSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(webDetSheet, webDetSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebDetM');
+        }
+      }
+
+      // 3. Update WebXltM using the old SKU
+      const webXltSheet = spreadsheet.getSheetByName('WebXltM');
+      if (webXltSheet && oldSku) {
+        const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+        const webXltSkuIdx = webXltHeaders.indexOf('wxl_SKU');
+        if (webXltSkuIdx >= 0) {
+          const updated = _updateSkuInSheet(webXltSheet, webXltSkuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebXltM');
+        }
+      }
+
+      // 4. Update CmxProdM IsWeb flags if requested
+      if (updateOldIsWeb || updateNewIsWeb) {
+        const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+        if (cmxSheet) {
+          const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+          const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+          const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+
+          if (cmxSkuIdx >= 0 && cmxIsWebIdx >= 0) {
+            const cmxData = cmxSheet.getDataRange().getValues();
+            const oldSkuStr = String(oldSku).trim();
+            const newSkuStr = String(newSku).trim();
+
+            for (let i = 1; i < cmxData.length; i++) {
+              const sku = String(cmxData[i][cmxSkuIdx]).trim();
+
+              // Set old product's IsWeb to 'לא'
+              if (updateOldIsWeb && sku === oldSkuStr) {
+                cmxSheet.getRange(i + 1, cmxIsWebIdx + 1).setValue('לא');
+                if (!updatedSheets.includes('CmxProdM (old IsWeb off)')) {
+                  updatedSheets.push('CmxProdM (old IsWeb off)');
+                }
+              }
+
+              // Set new product's IsWeb to 'כן'
+              if (updateNewIsWeb && sku === newSkuStr) {
+                cmxSheet.getRange(i + 1, cmxIsWebIdx + 1).setValue('כן');
+                if (!updatedSheets.includes('CmxProdM (new IsWeb on)')) {
+                  updatedSheets.push('CmxProdM (new IsWeb on)');
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 5. Log the SKU update
+      _logSkuUpdate('WebProductReassign', oldSku || webProductId, newSku, userEmail, updatedSheets.join(', '));
+
+      // Invalidate caches
+      _invalidateProductCache();
+
+      const message = `Web Product ${webProductId} reassigned from SKU ${oldSku} to ${newSku}. Updated: ${updatedSheets.join(', ')}`;
+      logger.info(serviceName, functionName, message, { sessionId, webProductId, oldSku, newSku, updatedSheets });
+      return { success: true, message };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error reassigning web product: ${e.message}`, e, { sessionId, webProductId, newSku });
+      return { success: false, message: `Error: ${e.message}` };
+    }
+  }
+
+  /**
+   * Helper to update SKU value in a sheet column.
+   * @param {Sheet} sheet The sheet object.
+   * @param {number} skuColIdx The 0-based index of the SKU column.
+   * @param {string} oldSku The old SKU to find.
+   * @param {string} newSku The new SKU to set.
+   * @returns {boolean} True if a row was updated.
+   */
+  function _updateSkuInSheet(sheet, skuColIdx, oldSku, newSku) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) { // Skip header
+      if (String(data[i][skuColIdx]).trim() === oldSku) {
+        sheet.getRange(i + 1, skuColIdx + 1).setValue(newSku);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Logs a SKU update to SysLog for audit trail.
+   * @param {string} updateType 'VendorSkuUpdate' or 'WebProductReassign'
+   * @param {string} oldSku The old SKU.
+   * @param {string} newSku The new SKU.
+   * @param {string} userEmail The user who performed the update.
+   * @param {string} affectedSheets Comma-separated list of updated sheets.
+   */
+  function _logSkuUpdate(updateType, oldSku, newSku, userEmail, affectedSheets) {
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+      const logSheet = logSpreadsheet.getSheetByName('SysLog');
+
+      if (logSheet) {
+        const timestamp = new Date();
+        const logEntry = [
+          timestamp,
+          'INFO',
+          'ProductService',
+          updateType,
+          `SKU Update: ${oldSku} -> ${newSku}`,
+          JSON.stringify({ oldSku, newSku, affectedSheets, updatedBy: userEmail }),
+          ''  // sessionId
+        ];
+        logSheet.appendRow(logEntry);
+      }
+    } catch (e) {
+      // Don't throw - logging failure shouldn't break the main operation
+      console.error(`Failed to log SKU update: ${e.message}`);
+    }
+  }
+
+  /**
+   * Gets recent SKU updates from SysLog for display in the UI.
+   * @param {number} limit Number of records to return (default 10).
+   * @returns {Array<Object>} Array of { date, type, oldSku, newSku, updatedBy }
+   */
+  function getRecentSkuUpdates(limit) {
+    limit = limit || 10;
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+      const logSheet = logSpreadsheet.getSheetByName('SysLog');
+
+      if (!logSheet || logSheet.getLastRow() <= 1) {
+        return [];
+      }
+
+      const data = logSheet.getDataRange().getValues();
+      const results = [];
+
+      // Search from the end (most recent) backwards
+      for (let i = data.length - 1; i >= 1 && results.length < limit; i--) {
+        const functionName = String(data[i][3] || '');
+        if (functionName === 'VendorSkuUpdate' || functionName === 'WebProductReassign') {
+          try {
+            const details = JSON.parse(data[i][5] || '{}');
+            results.push({
+              date: data[i][0],
+              type: functionName === 'VendorSkuUpdate' ? 'Vendor Update' : 'Reassign',
+              oldSku: details.oldSku || '',
+              newSku: details.newSku || '',
+              updatedBy: details.updatedBy || ''
+            });
+          } catch (parseErr) {
+            // Skip malformed entries
+          }
+        }
+      }
+
+      return results;
+    } catch (e) {
+      console.error(`Failed to get recent SKU updates: ${e.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Looks up a product by SKU and returns comprehensive data from both Comax and Web.
+   * @param {string} sku The product SKU to lookup.
+   * @returns {Object} { comax: {...}, web: {...} | null }
+   */
+  function lookupProductBySku(sku) {
+    const serviceName = 'ProductService';
+    const functionName = 'lookupProductBySku';
+
+    if (!sku) return null;
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+      // Lookup in CmxProdM
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+      const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+      const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+      const cmxIsActiveIdx = cmxHeaders.indexOf('cpm_IsActive');
+      const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
+      const cmxPriceIdx = cmxHeaders.indexOf('cpm_Price');
+
+      let comaxData = null;
+      if (cmxSheet) {
+        const cmxData = cmxSheet.getDataRange().getValues();
+        for (let i = 1; i < cmxData.length; i++) {
+          if (String(cmxData[i][cmxSkuIdx]).trim() === String(sku).trim()) {
+            const isWebVal = String(cmxData[i][cmxIsWebIdx] || '').trim().toLowerCase();
+            comaxData = {
+              sku: cmxData[i][cmxSkuIdx],
+              nameHe: cmxData[i][cmxNameHeIdx] || '',
+              isWeb: isWebVal === '1' || isWebVal === 'true' || isWebVal === 'כן',
+              isActive: !!cmxData[i][cmxIsActiveIdx],
+              stock: cmxData[i][cmxStockIdx] || 0,
+              price: cmxData[i][cmxPriceIdx] || 0
+            };
+            break;
+          }
+        }
+      }
+
+      if (!comaxData) {
+        return null; // SKU not found in Comax
+      }
+
+      // Lookup in WebProdM + WebDetM
+      let webData = null;
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+      const wpmWebIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const wpmWebIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+
+      if (webProdSheet) {
+        const webProdData = webProdSheet.getDataRange().getValues();
+        for (let i = 1; i < webProdData.length; i++) {
+          if (String(webProdData[i][wpmSkuIdx]).trim() === String(sku).trim()) {
+            webData = {
+              webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
+              webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
+              nameEn: '',
+              nameHe: ''
+            };
+            break;
+          }
+        }
+      }
+
+      // Get web names from WebDetM
+      if (webData) {
+        const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+        const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+        const wdmSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+        const wdmNameEnIdx = webDetHeaders.indexOf('wdm_NameEn');
+        const wdmNameHeIdx = webDetHeaders.indexOf('wdm_NameHe');
+
+        if (webDetSheet) {
+          const webDetData = webDetSheet.getDataRange().getValues();
+          for (let i = 1; i < webDetData.length; i++) {
+            if (String(webDetData[i][wdmSkuIdx]).trim() === String(sku).trim()) {
+              webData.nameEn = webDetData[i][wdmNameEnIdx] || '';
+              webData.nameHe = webDetData[i][wdmNameHeIdx] || '';
+              break;
+            }
+          }
+        }
+      }
+
+      return { comax: comaxData, web: webData };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error looking up product: ${e.message}`, e, { sku });
+      return null;
+    }
+  }
+
+  /**
+   * Searches web products (products linked to WooCommerce) by SKU or name.
+   * @param {string} searchTerm The search term (min 2 chars).
+   * @returns {Array<Object>} Array of { sku, webIdEn, webIdHe, nameEn, nameHe }
+   */
+  function searchWebProducts(searchTerm) {
+    if (!searchTerm || searchTerm.length < 2) return [];
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const term = String(searchTerm).toLowerCase();
+
+      // Get WebProdM data
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+      const wpmWebIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const wpmWebIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
+
+      if (!webProdSheet) return [];
+
+      const webProdData = webProdSheet.getDataRange().getValues();
+
+      // Get WebDetM for names
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+      const wdmSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+      const wdmNameEnIdx = webDetHeaders.indexOf('wdm_NameEn');
+      const wdmNameHeIdx = webDetHeaders.indexOf('wdm_NameHe');
+
+      const webDetData = webDetSheet ? webDetSheet.getDataRange().getValues() : [];
+      const detailsMap = new Map();
+      for (let i = 1; i < webDetData.length; i++) {
+        const sku = String(webDetData[i][wdmSkuIdx]).trim();
+        if (sku) {
+          detailsMap.set(sku, {
+            nameEn: webDetData[i][wdmNameEnIdx] || '',
+            nameHe: webDetData[i][wdmNameHeIdx] || ''
+          });
+        }
+      }
+
+      const results = [];
+      for (let i = 1; i < webProdData.length && results.length < 50; i++) {
+        const sku = String(webProdData[i][wpmSkuIdx] || '').trim();
+        const details = detailsMap.get(sku) || { nameEn: '', nameHe: '' };
+
+        // Search by SKU or names
+        if (sku.toLowerCase().includes(term) ||
+            details.nameEn.toLowerCase().includes(term) ||
+            details.nameHe.includes(searchTerm)) {
+          results.push({
+            sku: sku,
+            webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
+            webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
+            nameEn: details.nameEn,
+            nameHe: details.nameHe
+          });
+        }
+      }
+
+      return results;
+
+    } catch (e) {
+      console.error(`Failed to search web products: ${e.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Searches Comax products that are NOT linked to web (for replacement).
+   * @param {string} searchTerm The search term (min 2 chars).
+   * @returns {Array<Object>} Array of { sku, name }
+   */
+  function searchProductsForReplacement(searchTerm) {
+    if (!searchTerm || searchTerm.length < 2) return [];
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const term = String(searchTerm).toLowerCase();
+
+      // Get all SKUs that are already on web (in WebProdM)
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+
+      const webSkus = new Set();
+      if (webProdSheet) {
+        const webProdData = webProdSheet.getDataRange().getValues();
+        for (let i = 1; i < webProdData.length; i++) {
+          const sku = String(webProdData[i][wpmSkuIdx] || '').trim();
+          if (sku) webSkus.add(sku);
+        }
+      }
+
+      // Search CmxProdM for products NOT in WebProdM
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+      const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+
+      if (!cmxSheet) return [];
+
+      const cmxData = cmxSheet.getDataRange().getValues();
+      const results = [];
+
+      for (let i = 1; i < cmxData.length && results.length < 50; i++) {
+        const sku = String(cmxData[i][cmxSkuIdx] || '').trim();
+        const nameHe = String(cmxData[i][cmxNameHeIdx] || '');
+
+        // Skip if already on web
+        if (webSkus.has(sku)) continue;
+
+        // Search by SKU or Hebrew name
+        if (sku.toLowerCase().includes(term) || nameHe.includes(searchTerm)) {
+          results.push({
+            sku: sku,
+            name: nameHe
+          });
+        }
+      }
+
+      return results;
+
+    } catch (e) {
+      console.error(`Failed to search products for replacement: ${e.message}`);
+      return [];
+    }
+  }
+
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
@@ -2058,7 +2687,13 @@ const ProductService = (function() {
     confirmWebUpdates: confirmWebUpdates,
     getProductHtmlPreview: getProductHtmlPreview,
     acceptProductSuggestion: acceptProductSuggestion,
-    linkAndFinalizeNewProduct: linkAndFinalizeNewProduct
+    linkAndFinalizeNewProduct: linkAndFinalizeNewProduct,
+    vendorSkuUpdate: vendorSkuUpdate,
+    webProductReassign: webProductReassign,
+    getRecentSkuUpdates: getRecentSkuUpdates,
+    lookupProductBySku: lookupProductBySku,
+    searchWebProducts: searchWebProducts,
+    searchProductsForReplacement: searchProductsForReplacement
   };
 })();
 

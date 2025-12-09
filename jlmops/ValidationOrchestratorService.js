@@ -127,6 +127,16 @@ const ValidationOrchestratorService = (function() {
       // Merge data and key for template context
       const contextData = { ...(discrepancy.data || {}), key: discrepancy.key };
 
+      // Extract SKU explicitly for product-related tasks
+      let entityId = discrepancy.key;
+      if (rule.on_failure_task_type.includes('product') ||
+          rule.on_failure_task_type.includes('vintage') ||
+          rule.on_failure_task_type.includes('onboarding')) {
+          // Try to get SKU from data - prioritize SKU fields
+          const data = discrepancy.data || {};
+          entityId = data.cpm_SKU || data.cps_SKU || data.wdm_SKU || data.wds_SKU || discrepancy.key;
+      }
+
       const title = formatString(rule.on_failure_title, contextData);
       // Fallback if title ends up empty or just whitespace because of missing data (though unlikely)
       const finalTitle = title.trim() || rule.on_failure_title;
@@ -134,8 +144,8 @@ const ValidationOrchestratorService = (function() {
       const baseNotes = formatString(rule.on_failure_notes, contextData);
       const notes = `${baseNotes}\nDetails: ${discrepancy.details}`;
       const entityName = discrepancy.name || '';
-      
-      TaskService.createTask(rule.on_failure_task_type, discrepancy.key, entityName, finalTitle, notes, sessionId);
+
+      TaskService.createTask(rule.on_failure_task_type, entityId, entityName, finalTitle, notes, sessionId);
   }
 
   // Duplicate from ProductService for now, ideally shared utility

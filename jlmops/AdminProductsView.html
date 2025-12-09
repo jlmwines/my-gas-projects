@@ -63,20 +63,32 @@
             </table>
         </div>
 
-        <!-- Section B: Export & Confirm -->
-        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-4">
-            <div>
-                <span class="font-weight-bold mr-2">Accepted Updates:</span>
-                <span id="stat-export" class="badge badge-secondary">0</span>
-            </div>
-            <div>
-                <button id="btn-export-details" class="btn btn-dark mr-2" onclick="AdminProductsView.exportUpdates()">Export Detail Updates</button>
-                <button id="btn-confirm-details" class="btn btn-success" onclick="AdminProductsView.confirmUpdates()">Confirm Detail Updates</button>
-            </div>
+        <!-- Section B: Accepted Updates -->
+        <h6 class="text-muted mb-2">Accepted (<span id="stat-accepted">0</span>)</h6>
+        <div class="table-responsive mb-2 border rounded">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">Date</th>
+                </tr>
+              </thead>
+              <tbody id="accepted-list-body">
+                <!-- Accepted tasks populated here -->
+              </tbody>
+            </table>
         </div>
-        <div id="export-status" class="mt-2 small text-right"></div>
 
-        <!-- Section C: Pending (Secondary) -->
+        <!-- Export & Confirm Bar -->
+        <div class="d-flex justify-content-end align-items-center p-2">
+            <button id="btn-export-details" class="btn btn-sm mr-2" onclick="AdminProductsView.exportUpdates()">Export</button>
+            <button id="btn-confirm-details" class="btn btn-sm" onclick="AdminProductsView.confirmUpdates()" disabled>Confirm</button>
+        </div>
+        <div id="export-status" class="text-right mt-2"></div>
+
+        <!-- Section C: Pending (Info only - awaiting manager action) -->
         <h6 class="text-muted mb-2 mt-4">Pending (<span id="stat-pending-details">0</span>)</h6>
         <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
             <table class="table table-sm mb-0">
@@ -192,6 +204,222 @@
       </div>
     </div>
 
+  </div>
+
+    <!-- CARD 3: SKU MANAGEMENT -->
+    <div class="card mb-4">
+      <div class="card-header bg-white font-weight-bold">
+        SKU Management
+      </div>
+      <div class="card-body">
+
+        <!-- Action Buttons -->
+        <div class="d-flex mb-4">
+          <button class="btn btn-sm mr-3" onclick="AdminProductsView.openVendorSkuModal()">Vendor SKU Update</button>
+          <button class="btn btn-sm" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
+        </div>
+
+        <!-- Recent Updates -->
+        <h6 class="text-muted mb-2">Recent SKU Updates</h6>
+        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Type</th>
+                  <th class="border-top-0">Old SKU</th>
+                  <th class="border-top-0">New SKU</th>
+                  <th class="border-top-0">Updated By</th>
+                </tr>
+              </thead>
+              <tbody id="sku-updates-body">
+                <!-- Recent SKU updates populated here -->
+              </tbody>
+            </table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Vendor SKU Update Modal -->
+  <div class="modal-overlay" id="vendor-sku-modal">
+    <div class="modal-container" style="max-width: 600px;">
+      <div class="modal-header">
+        <h5 class="mb-0">Vendor SKU Update</h5>
+        <button type="button" class="close" onclick="AdminProductsView.closeVendorSkuModal()">&times;</button>
+      </div>
+      <div class="form-body">
+
+        <!-- Step 1: Find Existing Product -->
+        <div class="mb-4">
+          <h6 class="text-muted">Step 1: Find Existing Product</h6>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="vendor-search-sku" placeholder="Search by current SKU or name..." oninput="AdminProductsView.searchCurrentProduct()">
+            <div id="vendor-search-results" class="position-absolute w-100 bg-white border rounded shadow-sm" style="display:none; max-height:200px; overflow-y:auto; z-index:100;"></div>
+          </div>
+          <div id="vendor-current-product" class="mt-3 p-3 bg-light rounded" style="display:none;">
+            <div class="row">
+              <div class="col-6">
+                <small class="text-muted">SKU:</small>
+                <div id="vendor-current-sku" class="font-weight-bold"></div>
+              </div>
+              <div class="col-6">
+                <small class="text-muted">Web IDs:</small>
+                <div id="vendor-current-webids"></div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-12">
+                <small class="text-muted">Comax Name (HE):</small>
+                <div id="vendor-current-comax-name" class="hebrew-text"></div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-6">
+                <small class="text-muted">Web Name (EN):</small>
+                <div id="vendor-current-web-name-en"></div>
+              </div>
+              <div class="col-6">
+                <small class="text-muted">Web Name (HE):</small>
+                <div id="vendor-current-web-name-he" class="hebrew-text"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Enter New SKU -->
+        <div class="mb-4">
+          <h6 class="text-muted">Step 2: Enter New SKU</h6>
+          <input type="text" class="form-control" id="vendor-new-sku" placeholder="Enter new SKU value..." oninput="AdminProductsView.validateNewSku()">
+          <div id="vendor-new-sku-error" class="text-danger small mt-1" style="display:none;"></div>
+          <div id="vendor-new-sku-valid" class="text-success small mt-1" style="display:none;"></div>
+        </div>
+
+        <!-- Step 3: Confirmation -->
+        <div class="mb-3">
+          <h6 class="text-muted">Step 3: Update External Systems</h6>
+          <p class="small text-muted mb-2">Before confirming, update SKU from <strong><span id="vendor-label-old-sku">___</span></strong> to <strong><span id="vendor-label-new-sku">___</span></strong> in:</p>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="vendor-confirm-comax">
+            <label class="form-check-label" for="vendor-confirm-comax">Comax (inventory system)</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="vendor-confirm-woo">
+            <label class="form-check-label" for="vendor-confirm-woo">WooCommerce <span id="vendor-label-webids"></span></label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer bg-light">
+        <div id="vendor-modal-status" class="mr-auto small"></div>
+        <button class="btn btn-sm" onclick="AdminProductsView.closeVendorSkuModal()">Cancel</button>
+        <button class="btn btn-sm" id="vendor-submit-btn" onclick="AdminProductsView.submitVendorSkuUpdate()" disabled>Confirm - Update JLMops</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Replacement Modal -->
+  <div class="modal-overlay" id="replacement-modal">
+    <div class="modal-container" style="max-width: 700px;">
+      <div class="modal-header">
+        <h5 class="mb-0">Product Replacement</h5>
+        <button type="button" class="close" onclick="AdminProductsView.closeReplacementModal()">&times;</button>
+      </div>
+      <div class="form-body">
+
+        <!-- Step 1: Find Current Web Product -->
+        <div class="mb-4">
+          <h6 class="text-muted">Step 1: Find Current Web Product</h6>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="replace-search-current" placeholder="Search by SKU..." oninput="AdminProductsView.searchCurrentWebProduct()">
+            <div id="replace-search-current-results" class="position-absolute w-100 bg-white border rounded shadow-sm" style="display:none; max-height:200px; overflow-y:auto; z-index:100;"></div>
+          </div>
+          <div id="replace-current-product" class="mt-3 p-3 bg-light rounded" style="display:none;">
+            <div class="row">
+              <div class="col-4">
+                <small class="text-muted">SKU:</small>
+                <div id="replace-current-sku" class="font-weight-bold"></div>
+              </div>
+              <div class="col-4">
+                <small class="text-muted">Web IDs:</small>
+                <div id="replace-current-webids"></div>
+              </div>
+              <div class="col-4">
+                <small class="text-muted">Comax IsWeb:</small>
+                <div id="replace-current-isweb"></div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-4">
+                <small class="text-muted">Comax Name (HE):</small>
+                <div id="replace-current-comax-name" class="hebrew-text"></div>
+              </div>
+              <div class="col-4">
+                <small class="text-muted">Web Name (EN):</small>
+                <div id="replace-current-web-name-en"></div>
+              </div>
+              <div class="col-4">
+                <small class="text-muted">Web Name (HE):</small>
+                <div id="replace-current-web-name-he" class="hebrew-text"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Find Replacement Comax Product -->
+        <div class="mb-4">
+          <h6 class="text-muted">Step 2: Find Replacement Comax Product</h6>
+          <div class="position-relative">
+            <input type="text" class="form-control" id="replace-search-new" placeholder="Search by SKU or name (not on web)..." oninput="AdminProductsView.searchReplacementProduct()">
+            <div id="replace-search-new-results" class="position-absolute w-100 bg-white border rounded shadow-sm" style="display:none; max-height:200px; overflow-y:auto; z-index:100;"></div>
+          </div>
+          <div id="replace-new-product" class="mt-3 p-3 bg-light rounded" style="display:none;">
+            <div class="row">
+              <div class="col-6">
+                <small class="text-muted">SKU:</small>
+                <div id="replace-new-sku" class="font-weight-bold"></div>
+              </div>
+              <div class="col-6">
+                <small class="text-muted">Comax IsWeb:</small>
+                <div id="replace-new-isweb"></div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-12">
+                <small class="text-muted">Comax Name (HE):</small>
+                <div id="replace-new-comax-name" class="hebrew-text"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Confirmation -->
+        <div class="mb-3">
+          <h6 class="text-muted">Step 3: Update External Systems</h6>
+          <p class="small text-muted mb-2">Before confirming:</p>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="replace-confirm-old-off">
+            <label class="form-check-label" for="replace-confirm-old-off">Turn OFF old product (<span id="replace-label-old-sku">___</span>) on web in Comax</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="replace-confirm-new-on">
+            <label class="form-check-label" for="replace-confirm-new-on">Turn ON new product (<span id="replace-label-new-sku">___</span>) on web in Comax</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="replace-confirm-woo">
+            <label class="form-check-label" for="replace-confirm-woo">Update SKU in WooCommerce products <span id="replace-label-webids"></span></label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer bg-light">
+        <div id="replace-modal-status" class="mr-auto small"></div>
+        <button class="btn btn-sm" onclick="AdminProductsView.closeReplacementModal()">Cancel</button>
+        <button class="btn btn-sm" id="replace-submit-btn" onclick="AdminProductsView.submitReplacement()" disabled>Confirm - Update JLMops</button>
+      </div>
+    </div>
   </div>
 
   <!-- Suggestion Approval Modal -->
@@ -322,8 +550,8 @@
 
     AdminProductsView.refreshView = function() {
       // Card 1 Refresh
-      AdminProductsView.loadReviewList(); 
-      AdminProductsView.updateDetailExportUI();
+      AdminProductsView.loadReviewList();
+      AdminProductsView.loadAcceptedList();
       AdminProductsView.loadPendingDetailsList();
 
       // Card 2 Refresh
@@ -332,7 +560,423 @@
       AdminProductsView.loadLinkageList();
       AdminProductsView.updateNewExportUI();
       AdminProductsView.loadPendingNewList();
+
+      // Card 3 Refresh
+      AdminProductsView.loadSkuUpdates();
     };
+
+    // --- Card 3: SKU Management ---
+
+    // Modal state
+    AdminProductsView.vendorCurrentProduct = null;
+    AdminProductsView.replaceCurrentProduct = null;
+    AdminProductsView.replaceNewProduct = null;
+    AdminProductsView.searchDebounceTimer = null;
+
+    // Vendor SKU Update Modal
+    AdminProductsView.openVendorSkuModal = function() {
+        AdminProductsView.vendorCurrentProduct = null;
+        AdminProductsView.vendorNewSkuValid = false;
+        document.getElementById('vendor-search-sku').value = '';
+        document.getElementById('vendor-new-sku').value = '';
+        document.getElementById('vendor-current-product').style.display = 'none';
+        document.getElementById('vendor-search-results').style.display = 'none';
+        document.getElementById('vendor-new-sku-error').style.display = 'none';
+        document.getElementById('vendor-new-sku-valid').style.display = 'none';
+        document.getElementById('vendor-confirm-comax').checked = false;
+        document.getElementById('vendor-confirm-woo').checked = false;
+        document.getElementById('vendor-submit-btn').disabled = true;
+        document.getElementById('vendor-modal-status').textContent = '';
+        // Reset dynamic confirmation labels
+        document.getElementById('vendor-label-old-sku').textContent = '___';
+        document.getElementById('vendor-label-new-sku').textContent = '___';
+        document.getElementById('vendor-label-webids').textContent = '';
+        document.getElementById('vendor-sku-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.closeVendorSkuModal = function() {
+        document.getElementById('vendor-sku-modal').style.display = 'none';
+    };
+
+    AdminProductsView.searchCurrentProduct = function() {
+        clearTimeout(AdminProductsView.searchDebounceTimer);
+        const term = document.getElementById('vendor-search-sku').value.trim();
+        const resultsDiv = document.getElementById('vendor-search-results');
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        AdminProductsView.searchDebounceTimer = setTimeout(() => {
+            google.script.run.withSuccessHandler(results => {
+                resultsDiv.innerHTML = '';
+                if (!results || results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-2 text-muted small">No products found</div>';
+                } else {
+                    results.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 border-bottom cursor-pointer';
+                        div.style.cursor = 'pointer';
+                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.name}`;
+                        div.onclick = () => AdminProductsView.selectVendorCurrentProduct(p.sku);
+                        resultsDiv.appendChild(div);
+                    });
+                }
+                resultsDiv.style.display = 'block';
+            }).withFailureHandler(err => {
+                resultsDiv.innerHTML = '<div class="p-2 text-danger small">Search failed</div>';
+                resultsDiv.style.display = 'block';
+            }).WebAppProducts_searchProducts(term);
+        }, 300);
+    };
+
+    AdminProductsView.selectVendorCurrentProduct = function(sku) {
+        document.getElementById('vendor-search-results').style.display = 'none';
+        document.getElementById('vendor-search-sku').value = sku;
+
+        google.script.run.withSuccessHandler(data => {
+            if (!data || !data.comax) {
+                document.getElementById('vendor-current-product').style.display = 'none';
+                document.getElementById('vendor-modal-status').textContent = 'Product not found';
+                document.getElementById('vendor-modal-status').className = 'mr-auto small text-danger';
+                return;
+            }
+            AdminProductsView.vendorCurrentProduct = data;
+            document.getElementById('vendor-current-sku').textContent = data.comax.sku;
+            document.getElementById('vendor-current-comax-name').textContent = data.comax.nameHe || '-';
+            document.getElementById('vendor-current-web-name-en').textContent = data.web ? data.web.nameEn || '-' : 'Not on web';
+            document.getElementById('vendor-current-web-name-he').textContent = data.web ? data.web.nameHe || '-' : '-';
+            document.getElementById('vendor-current-webids').textContent = data.web ? `${data.web.webIdEn} / ${data.web.webIdHe}` : 'Not on web';
+            document.getElementById('vendor-current-product').style.display = 'block';
+            // Update confirmation labels with actual SKU and Web IDs
+            document.getElementById('vendor-label-old-sku').textContent = data.comax.sku;
+            document.getElementById('vendor-label-webids').textContent = data.web ? `(products ${data.web.webIdEn} / ${data.web.webIdHe})` : '(not on web)';
+            AdminProductsView.validateVendorForm();
+        }).withFailureHandler(err => {
+            document.getElementById('vendor-modal-status').textContent = 'Error: ' + err.message;
+            document.getElementById('vendor-modal-status').className = 'mr-auto small text-danger';
+        }).WebAppProducts_lookupProductBySku(sku);
+    };
+
+    AdminProductsView.vendorNewSkuValid = false;
+    AdminProductsView.vendorNewSkuTimer = null;
+
+    AdminProductsView.validateNewSku = function() {
+        clearTimeout(AdminProductsView.vendorNewSkuTimer);
+        const newSku = document.getElementById('vendor-new-sku').value.trim();
+        const errorDiv = document.getElementById('vendor-new-sku-error');
+        const validDiv = document.getElementById('vendor-new-sku-valid');
+        const newSkuLabel = document.getElementById('vendor-label-new-sku');
+
+        AdminProductsView.vendorNewSkuValid = false;
+        validDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+        newSkuLabel.textContent = newSku || '___';
+
+        if (!newSku) {
+            AdminProductsView.validateVendorForm();
+            return;
+        }
+
+        if (AdminProductsView.vendorCurrentProduct && newSku === AdminProductsView.vendorCurrentProduct.comax.sku) {
+            errorDiv.textContent = 'New SKU must be different from current SKU';
+            errorDiv.style.display = 'block';
+            AdminProductsView.validateVendorForm();
+            return;
+        }
+
+        // Debounce the lookup
+        AdminProductsView.vendorNewSkuTimer = setTimeout(() => {
+            validDiv.textContent = 'Checking SKU...';
+            validDiv.style.display = 'block';
+            validDiv.className = 'text-muted small mt-1';
+
+            google.script.run.withSuccessHandler(data => {
+                if (data && data.comax) {
+                    // SKU already exists - this is an error for vendor update
+                    errorDiv.textContent = `SKU "${newSku}" already exists in JLMops (${data.comax.nameHe})`;
+                    errorDiv.style.display = 'block';
+                    validDiv.style.display = 'none';
+                    AdminProductsView.vendorNewSkuValid = false;
+                } else {
+                    // SKU does not exist - this is valid for vendor update
+                    validDiv.textContent = `SKU "${newSku}" is available (not in JLMops yet)`;
+                    validDiv.className = 'text-success small mt-1';
+                    validDiv.style.display = 'block';
+                    errorDiv.style.display = 'none';
+                    AdminProductsView.vendorNewSkuValid = true;
+                }
+                AdminProductsView.validateVendorForm();
+            }).withFailureHandler(err => {
+                validDiv.style.display = 'none';
+                AdminProductsView.validateVendorForm();
+            }).WebAppProducts_lookupProductBySku(newSku);
+        }, 500);
+    };
+
+    AdminProductsView.validateVendorForm = function() {
+        const hasProduct = AdminProductsView.vendorCurrentProduct !== null;
+        const newSku = document.getElementById('vendor-new-sku').value.trim();
+        const comaxChecked = document.getElementById('vendor-confirm-comax').checked;
+        const wooChecked = document.getElementById('vendor-confirm-woo').checked;
+
+        // Valid if: has current product, has new SKU, new SKU validated as available, both checkboxes checked
+        const valid = hasProduct && newSku && AdminProductsView.vendorNewSkuValid && comaxChecked && wooChecked;
+
+        document.getElementById('vendor-submit-btn').disabled = !valid;
+    };
+
+    // Add event listeners for validation
+    document.getElementById('vendor-confirm-comax').addEventListener('change', AdminProductsView.validateVendorForm);
+    document.getElementById('vendor-confirm-woo').addEventListener('change', AdminProductsView.validateVendorForm);
+
+    AdminProductsView.submitVendorSkuUpdate = function() {
+        if (!AdminProductsView.vendorCurrentProduct) return;
+
+        const oldSku = AdminProductsView.vendorCurrentProduct.comax.sku;
+        const newSku = document.getElementById('vendor-new-sku').value.trim();
+        const statusDiv = document.getElementById('vendor-modal-status');
+
+        statusDiv.textContent = 'Updating JLMops...';
+        statusDiv.className = 'mr-auto small text-info';
+        document.getElementById('vendor-submit-btn').disabled = true;
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                statusDiv.textContent = res.message;
+                statusDiv.className = 'mr-auto small text-success';
+                setTimeout(() => {
+                    AdminProductsView.closeVendorSkuModal();
+                    AdminProductsView.loadSkuUpdates();
+                }, 1500);
+            } else {
+                statusDiv.textContent = 'Error: ' + res.message;
+                statusDiv.className = 'mr-auto small text-danger';
+                document.getElementById('vendor-submit-btn').disabled = false;
+            }
+        }).withFailureHandler(err => {
+            statusDiv.textContent = 'Error: ' + err.message;
+            statusDiv.className = 'mr-auto small text-danger';
+            document.getElementById('vendor-submit-btn').disabled = false;
+        }).WebAppProducts_vendorSkuUpdate(oldSku, newSku);
+    };
+
+    // Product Replacement Modal
+    AdminProductsView.openReplacementModal = function() {
+        AdminProductsView.replaceCurrentProduct = null;
+        AdminProductsView.replaceNewProduct = null;
+        document.getElementById('replace-search-current').value = '';
+        document.getElementById('replace-search-new').value = '';
+        document.getElementById('replace-current-product').style.display = 'none';
+        document.getElementById('replace-new-product').style.display = 'none';
+        document.getElementById('replace-search-current-results').style.display = 'none';
+        document.getElementById('replace-search-new-results').style.display = 'none';
+        document.getElementById('replace-confirm-old-off').checked = false;
+        document.getElementById('replace-confirm-new-on').checked = false;
+        document.getElementById('replace-confirm-woo').checked = false;
+        document.getElementById('replace-submit-btn').disabled = true;
+        document.getElementById('replace-modal-status').textContent = '';
+        // Reset dynamic confirmation labels
+        document.getElementById('replace-label-old-sku').textContent = '___';
+        document.getElementById('replace-label-new-sku').textContent = '___';
+        document.getElementById('replace-label-webids').textContent = '';
+        document.getElementById('replacement-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.closeReplacementModal = function() {
+        document.getElementById('replacement-modal').style.display = 'none';
+    };
+
+    AdminProductsView.searchCurrentWebProduct = function() {
+        clearTimeout(AdminProductsView.searchDebounceTimer);
+        const term = document.getElementById('replace-search-current').value.trim();
+        const resultsDiv = document.getElementById('replace-search-current-results');
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        AdminProductsView.searchDebounceTimer = setTimeout(() => {
+            google.script.run.withSuccessHandler(results => {
+                resultsDiv.innerHTML = '';
+                if (!results || results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-2 text-muted small">No web products found</div>';
+                } else {
+                    results.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 border-bottom';
+                        div.style.cursor = 'pointer';
+                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.nameEn || p.nameHe || ''}`;
+                        div.onclick = () => AdminProductsView.selectReplaceCurrentProduct(p.sku);
+                        resultsDiv.appendChild(div);
+                    });
+                }
+                resultsDiv.style.display = 'block';
+            }).withFailureHandler(err => {
+                resultsDiv.innerHTML = '<div class="p-2 text-danger small">Search failed</div>';
+                resultsDiv.style.display = 'block';
+            }).WebAppProducts_searchWebProducts(term);
+        }, 300);
+    };
+
+    AdminProductsView.selectReplaceCurrentProduct = function(sku) {
+        document.getElementById('replace-search-current-results').style.display = 'none';
+        document.getElementById('replace-search-current').value = sku;
+
+        google.script.run.withSuccessHandler(data => {
+            if (!data || !data.comax) {
+                document.getElementById('replace-current-product').style.display = 'none';
+                return;
+            }
+            AdminProductsView.replaceCurrentProduct = data;
+            document.getElementById('replace-current-sku').textContent = data.comax.sku;
+            document.getElementById('replace-current-webids').textContent = data.web ? `${data.web.webIdEn} / ${data.web.webIdHe}` : '-';
+            document.getElementById('replace-current-isweb').textContent = data.comax.isWeb ? '✓' : '☐';
+            document.getElementById('replace-current-comax-name').textContent = data.comax.nameHe || '-';
+            document.getElementById('replace-current-web-name-en').textContent = data.web ? data.web.nameEn || '-' : '-';
+            document.getElementById('replace-current-web-name-he').textContent = data.web ? data.web.nameHe || '-' : '-';
+            document.getElementById('replace-current-product').style.display = 'block';
+            // Update confirmation label with actual SKU and Web IDs
+            document.getElementById('replace-label-old-sku').textContent = data.comax.sku;
+            document.getElementById('replace-label-webids').textContent = data.web ? `(${data.web.webIdEn} / ${data.web.webIdHe})` : '';
+            AdminProductsView.validateReplaceForm();
+        }).withFailureHandler(err => {
+            document.getElementById('replace-modal-status').textContent = 'Error: ' + err.message;
+            document.getElementById('replace-modal-status').className = 'mr-auto small text-danger';
+        }).WebAppProducts_lookupProductBySku(sku);
+    };
+
+    AdminProductsView.searchReplacementProduct = function() {
+        clearTimeout(AdminProductsView.searchDebounceTimer);
+        const term = document.getElementById('replace-search-new').value.trim();
+        const resultsDiv = document.getElementById('replace-search-new-results');
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        AdminProductsView.searchDebounceTimer = setTimeout(() => {
+            google.script.run.withSuccessHandler(results => {
+                resultsDiv.innerHTML = '';
+                if (!results || results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-2 text-muted small">No products found (not on web)</div>';
+                } else {
+                    results.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 border-bottom';
+                        div.style.cursor = 'pointer';
+                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.name}`;
+                        div.onclick = () => AdminProductsView.selectReplaceNewProduct(p.sku);
+                        resultsDiv.appendChild(div);
+                    });
+                }
+                resultsDiv.style.display = 'block';
+            }).withFailureHandler(err => {
+                resultsDiv.innerHTML = '<div class="p-2 text-danger small">Search failed</div>';
+                resultsDiv.style.display = 'block';
+            }).WebAppProducts_searchProductsForReplacement(term);
+        }, 300);
+    };
+
+    AdminProductsView.selectReplaceNewProduct = function(sku) {
+        document.getElementById('replace-search-new-results').style.display = 'none';
+        document.getElementById('replace-search-new').value = sku;
+
+        google.script.run.withSuccessHandler(data => {
+            if (!data || !data.comax) {
+                document.getElementById('replace-new-product').style.display = 'none';
+                return;
+            }
+            AdminProductsView.replaceNewProduct = data;
+            document.getElementById('replace-new-sku').textContent = data.comax.sku;
+            document.getElementById('replace-new-isweb').textContent = (data.comax.isWeb ? '✓' : '☐') + ' (will be set ✓)';
+            document.getElementById('replace-new-comax-name').textContent = data.comax.nameHe || '-';
+            document.getElementById('replace-new-product').style.display = 'block';
+            // Update confirmation label with actual SKU
+            document.getElementById('replace-label-new-sku').textContent = data.comax.sku;
+            AdminProductsView.validateReplaceForm();
+        }).withFailureHandler(err => {
+            document.getElementById('replace-modal-status').textContent = 'Error: ' + err.message;
+            document.getElementById('replace-modal-status').className = 'mr-auto small text-danger';
+        }).WebAppProducts_lookupProductBySku(sku);
+    };
+
+    AdminProductsView.validateReplaceForm = function() {
+        const hasCurrent = AdminProductsView.replaceCurrentProduct !== null;
+        const hasNew = AdminProductsView.replaceNewProduct !== null;
+        const oldOffChecked = document.getElementById('replace-confirm-old-off').checked;
+        const newOnChecked = document.getElementById('replace-confirm-new-on').checked;
+        const wooChecked = document.getElementById('replace-confirm-woo').checked;
+
+        const valid = hasCurrent && hasNew && oldOffChecked && newOnChecked && wooChecked;
+        document.getElementById('replace-submit-btn').disabled = !valid;
+    };
+
+    // Add event listeners for validation
+    document.getElementById('replace-confirm-old-off').addEventListener('change', AdminProductsView.validateReplaceForm);
+    document.getElementById('replace-confirm-new-on').addEventListener('change', AdminProductsView.validateReplaceForm);
+    document.getElementById('replace-confirm-woo').addEventListener('change', AdminProductsView.validateReplaceForm);
+
+    AdminProductsView.submitReplacement = function() {
+        if (!AdminProductsView.replaceCurrentProduct || !AdminProductsView.replaceNewProduct) return;
+
+        const webIdEn = AdminProductsView.replaceCurrentProduct.web.webIdEn;
+        const oldSku = AdminProductsView.replaceCurrentProduct.comax.sku;
+        const newSku = AdminProductsView.replaceNewProduct.comax.sku;
+        const statusDiv = document.getElementById('replace-modal-status');
+
+        statusDiv.textContent = 'Updating JLMops...';
+        statusDiv.className = 'mr-auto small text-info';
+        document.getElementById('replace-submit-btn').disabled = true;
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                statusDiv.textContent = res.message;
+                statusDiv.className = 'mr-auto small text-success';
+                setTimeout(() => {
+                    AdminProductsView.closeReplacementModal();
+                    AdminProductsView.loadSkuUpdates();
+                }, 4000);
+            } else {
+                statusDiv.textContent = 'Error: ' + res.message;
+                statusDiv.className = 'mr-auto small text-danger';
+                document.getElementById('replace-submit-btn').disabled = false;
+            }
+        }).withFailureHandler(err => {
+            statusDiv.textContent = 'Error: ' + err.message;
+            statusDiv.className = 'mr-auto small text-danger';
+            document.getElementById('replace-submit-btn').disabled = false;
+        }).WebAppProducts_webProductReassign(webIdEn, oldSku, newSku, true, true);
+    };
+
+    AdminProductsView.loadSkuUpdates = function() {
+        const tbody = document.getElementById('sku-updates-body');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Loading...</td></tr>';
+
+        google.script.run.withSuccessHandler(updates => {
+            tbody.innerHTML = '';
+            if (!updates || updates.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">No recent SKU updates.</td></tr>';
+                return;
+            }
+            updates.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${new Date(u.date).toLocaleDateString()}</td>
+                    <td>${u.type}</td>
+                    <td>${u.oldSku}</td>
+                    <td>${u.newSku}</td>
+                    <td>${u.updatedBy}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }).withFailureHandler(err => {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Failed to load updates.</td></tr>';
+        }).WebAppProducts_getRecentSkuUpdates();
+    }
 
     // --- Card 1: Detail Updates ---
     
@@ -363,30 +1007,55 @@
       }).WebAppProducts_getAdminReviewTasks();
     };
 
-    AdminProductsView.updateDetailExportUI = function() {
+    AdminProductsView.loadAcceptedList = function() {
+        const tbody = document.getElementById('accepted-list-body');
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+
         google.script.run.withSuccessHandler(tasks => {
+            tbody.innerHTML = '';
             const count = tasks ? tasks.length : 0;
-            const el = document.getElementById('stat-export');
-            if(el) el.textContent = count;
-            
+            document.getElementById('stat-accepted').textContent = count;
+
+            // Enable/disable export button based on count (Confirm stays disabled until export succeeds)
             const hasItems = count > 0;
             document.getElementById('btn-export-details').disabled = !hasItems;
-            document.getElementById('btn-confirm-details').disabled = !hasItems;
+            document.getElementById('btn-confirm-details').disabled = true; // Always disabled until export
+
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No accepted updates.</td></tr>';
+                return;
+            }
+
+            tasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${task.productName || ''}</td>
+                    <td>${task.sku}</td>
+                    <td>${task.title}</td>
+                    <td>${new Date(task.createdDate).toLocaleDateString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }).WebAppProducts_getAcceptedTasks();
     };
 
     AdminProductsView.exportUpdates = function() {
+        const count = document.getElementById('stat-accepted').textContent;
+        if (!confirm(`Export ${count} accepted update(s) to spreadsheet?`)) return;
+
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Generating detail export...';
-        statusDiv.className = 'mt-2 small text-info';
-        
+        statusDiv.className = 'text-right text-info mt-2';
+
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
-                statusDiv.className = 'mt-2 small text-success';
+                statusDiv.className = 'text-right text-success mt-2';
+                // Enable Confirm button after successful export
+                document.getElementById('btn-confirm-details').disabled = false;
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
-                statusDiv.className = 'mt-2 small text-danger';
+                statusDiv.className = 'text-right text-danger mt-2';
             }
         }).WebAppProducts_exportAcceptedUpdates();
     };
@@ -763,6 +1432,8 @@
     };
 
     AdminProductsView.acceptChanges = function() {
+      if (!confirm(`Accept changes for ${AdminProductsView.currentSku}?`)) return;
+
       const formData = AdminProductsView.getFormData();
       document.getElementById('modal-status').textContent = 'Accepting...';
       google.script.run.withSuccessHandler(res => {

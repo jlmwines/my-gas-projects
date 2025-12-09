@@ -870,7 +870,7 @@ function WebAppProducts_suggestProducts(products) {
     }
 
     const userEmail = Session.getActiveUser().getEmail();
-    
+
     products.forEach(p => {
       TaskService.createTask(
         'task.onboarding.suggestion',
@@ -886,5 +886,95 @@ function WebAppProducts_suggestProducts(products) {
   } catch (e) {
     LoggerService.error('WebAppProducts', 'suggestProducts', `Error: ${e.message}`, e);
     throw e;
+  }
+}
+
+// --- SKU Management Functions ---
+
+/**
+ * Performs a vendor SKU update across all product master sheets.
+ * @param {string} oldSku The old SKU to replace.
+ * @param {string} newSku The new SKU value.
+ * @returns {Object} { success: boolean, message: string }
+ */
+function WebAppProducts_vendorSkuUpdate(oldSku, newSku) {
+  try {
+    return ProductService.vendorSkuUpdate(oldSku, newSku);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'vendorSkuUpdate', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+/**
+ * Reassigns a web product to a new Comax SKU, with optional IsWeb flag updates.
+ * @param {string} webProductId The WooCommerce Product ID (EN or HE).
+ * @param {string} oldSku The old Comax SKU being replaced.
+ * @param {string} newSku The new Comax SKU to assign.
+ * @param {boolean} updateOldIsWeb If true, set old product's cpm_IsWeb to empty.
+ * @param {boolean} updateNewIsWeb If true, set new product's cpm_IsWeb to '1'.
+ * @returns {Object} { success: boolean, message: string }
+ */
+function WebAppProducts_webProductReassign(webProductId, oldSku, newSku, updateOldIsWeb, updateNewIsWeb) {
+  try {
+    return ProductService.webProductReassign(webProductId, oldSku, newSku, updateOldIsWeb, updateNewIsWeb);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'webProductReassign', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+/**
+ * Gets recent SKU updates for the audit trail display.
+ * @returns {Array<Object>} Array of { date, type, oldSku, newSku, updatedBy }
+ */
+function WebAppProducts_getRecentSkuUpdates() {
+  try {
+    return ProductService.getRecentSkuUpdates(10);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getRecentSkuUpdates', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
+ * Looks up a product by SKU and returns comprehensive data from both Comax and Web.
+ * @param {string} sku The product SKU to lookup.
+ * @returns {Object} { comax: {...}, web: {...} | null }
+ */
+function WebAppProducts_lookupProductBySku(sku) {
+  try {
+    return ProductService.lookupProductBySku(sku);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'lookupProductBySku', `Error: ${e.message}`, e);
+    return null;
+  }
+}
+
+/**
+ * Searches web products (products linked to WooCommerce) by SKU or name.
+ * @param {string} searchTerm The search term (min 2 chars).
+ * @returns {Array<Object>} Array of { sku, webIdEn, webIdHe, nameEn, nameHe }
+ */
+function WebAppProducts_searchWebProducts(searchTerm) {
+  try {
+    return ProductService.searchWebProducts(searchTerm);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'searchWebProducts', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
+ * Searches Comax products that are NOT linked to web (for replacement).
+ * @param {string} searchTerm The search term (min 2 chars).
+ * @returns {Array<Object>} Array of { sku, name }
+ */
+function WebAppProducts_searchProductsForReplacement(searchTerm) {
+  try {
+    return ProductService.searchProductsForReplacement(searchTerm);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'searchProductsForReplacement', `Error: ${e.message}`, e);
+    return [];
   }
 }

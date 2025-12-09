@@ -174,7 +174,7 @@ const WooCommerceFormatter = (function() {
                 return fallback;
             }
             if (lookupType === 'texts') return isEn ? item.slt_TextEN : item.slt_TextHE;
-            if (lookupType === 'grapes') return isEn ? item.slg_TextEN : item.slg_NameHe;
+            if (lookupType === 'grapes') return isEn ? item.slg_TextEN : item.slg_TextHE;
             if (lookupType === 'kashrut') return isEn ? item.slk_TextEN : item.slk_TextHE;
             return fallback;
         };
@@ -187,19 +187,22 @@ const WooCommerceFormatter = (function() {
         
                 // --- HTML Construction ---
 
-                // 1. Product Title
-                if (name) {
-                    html += `<b>${name}</b>`;
-                    html += '<hr>';
+                // Preview-only: Title and Short Description with HR dividers
+                if (!isForExport) {
+                    // 1. Product Title (preview only)
+                    if (name) {
+                        html += `<b>${name}</b>`;
+                        html += '<hr>';
+                    }
+
+                    // 2. Short Description (preview only)
+                    if (shortDescription) {
+                        html += `${shortDescription}`;
+                        html += '<hr>';
+                    }
                 }
 
-                // 2. Short Description
-                if (shortDescription) {
-                    html += `${shortDescription}`;
-                    html += '<hr>';
-                }
-
-                // 3. Long Description (starts with product title + space + user content)
+                // 3. Long Description (always starts with product title + space)
                 if (name || longDescription) {
                     html += (name ? name : '') + (name && longDescription ? ' ' : '') + (longDescription ? longDescription : '');
                     html += '<br>'; // End description line
@@ -218,18 +221,19 @@ const WooCommerceFormatter = (function() {
                 // 4. Details List
                 // Order: Category, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, Kashrut, Heter Mechira, Mevushal
                 
-                        // Category (Group from Comax)
-                        if (group) html += addDetailLine('Category', 'קטגוריה', getLookupText(group, 'texts', group));
+                        // Category (Group from Comax) - show name only, no label
+                        if (group) {
+                            const categoryName = getLookupText(group, 'texts', group);
+                            if (categoryName) html += `${categoryName}\n`;
+                        }
                         // Vintage
                         if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);
-                        // ABV
+                        // ABV - stored as decimal (0.125 = 12.5%), multiply by 100 for display
                         if (abv) {
-                             // Ensure abv is a number
                              const abvNum = parseFloat(abv);
                              if (!isNaN(abvNum)) {
                                   html += addDetailLine('Alcohol', 'אלכוהול', `${(abvNum * 100).toFixed(1)}%`);
                              } else {
-                                  // Fallback if it's already formatted or text
                                   html += addDetailLine('Alcohol', 'אלכוהול', abv);
                              }
                         }
@@ -245,7 +249,7 @@ const WooCommerceFormatter = (function() {
                             const code = getVal(codeKey);
                             if (code) grapeNames.push(getLookupText(code, 'grapes', code));
                         });
-                        if (grapeNames.length > 0) html += addDetailLine('Grapes', 'זנים', grapeNames.join(', '));
+                        if (grapeNames.length > 0) html += addDetailLine('Grapes', 'ענב(ים)', grapeNames.join(', '));
                 
                         // Intensity
                         if (intensityCode) html += addDetailLine('Intensity', 'עוצמה', intensityCode);
@@ -254,21 +258,28 @@ const WooCommerceFormatter = (function() {
                         // Acidity
                         if (acidityCode) html += addDetailLine('Acidity', 'חומציות', acidityCode);
                                 
+                // Helper: join array with commas and 'or'/'או' before last item
+                const joinWithOr = (arr) => {
+                    if (arr.length <= 1) return arr.join('');
+                    if (arr.length === 2) return arr.join(isEn ? ' or ' : ' או ');
+                    return arr.slice(0, -1).join(', ') + (isEn ? ' or ' : ' או ') + arr[arr.length - 1];
+                };
+
                 // Pairing - Harmonize
                 const harFlavors = [];
-                if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'Mild' : 'עדין');
-                if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'Rich' : 'עשיר');
-                if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'Intense' : 'עוצמתי');
-                if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'Sweet' : 'מתוק');
-                if (harFlavors.length > 0) html += addDetailLine('Harmonize with', 'הרמוניה עם טעמים', harFlavors.join(isEn ? ' or ' : ' או ') + (isEn ? ' flavors' : ''));
-        
+                if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'mild' : 'עדינים');
+                if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'rich' : 'עשירים');
+                if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'intense' : 'עזים');
+                if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'sweet' : 'מתוקים');
+                if (harFlavors.length > 0) html += addDetailLine('Harmonize with', 'הרמוניה עם טעמים', joinWithOr(harFlavors) + (isEn ? ' flavors' : ''));
+
                 // Pairing - Contrast
                 const conFlavors = [];
-                if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'Mild' : 'עדין');
-                if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'Rich' : 'עשיר');
-                if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'Intense' : 'עוצמתי');
-                if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'Sweet' : 'מתוק');
-                if (conFlavors.length > 0) html += addDetailLine('Contrast with', 'קונטרסט עם טעמים', conFlavors.join(isEn ? ' or ' : ' או ') + (isEn ? ' flavors' : ''));
+                if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'mild' : 'עדינים');
+                if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'rich' : 'עשירים');
+                if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'intense' : 'עזים');
+                if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'sweet' : 'מתוקים');
+                if (conFlavors.length > 0) html += addDetailLine('Contrast with', 'קונטרסט עם טעמים', joinWithOr(conFlavors) + (isEn ? ' flavors' : ''));
 
                 // Decant
                 if (decant) {
@@ -381,7 +392,7 @@ const WooCommerceFormatter = (function() {
         
                      if (appendedParagraphs.length > 0) {
                          html += '<br>\n';
-                         html += appendedParagraphs.join('<br>\n'); 
+                         html += appendedParagraphs.join('<br>\n<br>\n');
                      }
                 }
 
