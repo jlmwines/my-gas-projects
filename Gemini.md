@@ -2,34 +2,72 @@
 
 This is a web app being developed to replace and enhance the functions of the existing system that consists of frontend-scripts and backend-scripts environments.
 
-## Gemini AI Assistant Instructions
+## Gemini Session Guidelines
 
-### General Instructions
+### 1. Interaction Protocol
 
-- The user stated that the markdown files are not accurate, and the code is the only source of truth.
-- When reading files, the tool call (e.g., `read_file`, `read_many_files`) should be displayed in the interaction, but the *content* of the files read by these tools should *not* be displayed in the response, unless requested by the user. The purpose is to acknowledge the action without flooding the output with file contents.
-- All tool calls, including context-gathering at the start of a session, must be visible and not silent.
+This project follows a strict, user-driven session flow. The session moves between distinct modes based on user signals.
 
-### Project-Specific Context (jlmops)
+#### Phase 1: Planning Mode (Default Start)
+*   **Start:** Every session begins here.
+*   **Action:**
+    1.  Read core documentation (`jlmops/ARCHITECTURE.md`, `jlmops/IMPLEMENTATION_PLAN.md`, `jlmops/WORKFLOWS.md`, `jlmops/DATA_MODEL.md`) to establish context.
+    2.  Discuss requirements, explore the codebase, and formulate a strategy.
+    3.  **Constraint:** Do **NOT** write, edit, or offer code in this phase. Focus solely on the "What" and "How".
 
-- The frontend-scripts directory contains all frontend scripts.
-- The backend-scripts directory contains all backend scripts.
-- The JLMops project is being implemented in parallel with the live system, using the same live data inputs. I must not assume a sterile environment and should always analyze existing data first.
+#### Phase 2: Editing Mode
+*   **Trigger:** Enter this mode *only* when the user explicitly signals to begin implementation (e.g., "Go ahead", "Start coding", "Implement the plan").
+*   **Action:** Use tools (`replace`, `write_file`) to modify the codebase according to the agreed plan.
+*   **Completion:** specific changes are made, stop and notify the user that the code is ready for testing.
 
-### jlmops Workflow
+#### Phase 3: Testing & Iteration Loop
+*   **User Action:** The user will manually deploy (`clasp push`) and run tests.
+*   **Feedback:** The user will report results.
+*   **AI Response:**
+    *   *Simple Fixes:* Stay in **Editing Mode** and apply fixes.
+    *   *Complex Issues:* Suggest returning to **Planning Mode** to re-evaluate the strategy before touching more code.
+*   **Flexibility:** The user may direct the session back to **Planning Mode** at any time.
 
-- For the jlmops project, I must follow a strict multi-stage approval workflow for all changes. The user must explicitly approve each stage (1. The initial plan, 2. The testing plan, 3. The final 'Persist Progress' commit) before I can proceed to the next. This is a non-negotiable protocol.
-- My workflow is to propose changes, get user approval to commit them to git. The user will then manually run 'clasp push'. After the push, I will tell the user which function to run to test the changes.
-- At the start of every new session for the jlmops project, my first action MUST be to read the latest versions of `ARCHITECTURE.md`, `IMPLEMENTATION_PLAN.md`, `WORKFLOWS.md`, and `DATA_MODEL.md`. After reading, I must await the user's next instruction.
-- The user wants to guide the start of the session, so I should reduce my proactive behavior and await their instructions at the beginning of a session.
+#### Phase 4: Finalization
+*   **Trigger:** This phase is *only* initiated when the user explicitly indicates satisfaction (e.g., "Everything works", "Update docs").
+*   **Action:**
+    1.  Update documentation (e.g., `IMPLEMENTATION_PLAN.md`).
+    2.  Prepare/Perform Git commits.
+*   **Constraint:** Never update docs or git without this explicit final command.
 
-### Key Technical Details & Memories
+### 2. General Instructions
 
-#### SysConfig Management
+- **Source of Truth:** The code is the final source of truth. Markdown documentation is secondary.
+- **Tool Visibility:** All tool calls must be visible. Do not use silent execution.
+- **File Reading:** Do not output the full content of read files unless specifically asked.
+- **Project Structure:**
+    - `frontend-scripts`: Frontend code.
+    - `backend-scripts`: Backend code.
+    - `jlmops`: The active project directory. Always analyze existing data/code before assuming a fresh environment.
 
-- **Source of Truth:** The `jlmops/SetupConfig.js` file is the single source of truth for the `SysConfig` Google Sheet. The master configuration is defined as a hardcoded array within the `getMasterConfiguration()` function in this file.
-- **Update Workflow:** To modify the system's configuration (including UI templates like packing slips), the array in `SetupConfig.js` must be edited. After the script is updated, the `rebuildSysConfigFromSource()` function must be run from the Apps Script editor to apply the changes to the live `SysConfig` sheet.
-- **Warning:** Do not make manual edits directly to the `SysConfig` sheet, as they will be overwritten the next time `rebuildSysConfigFromSource()` is run.
+### 3. Key Technical Constraints
 
-#### Packing Slip Generation Strategy
-- The jlmops project's packing slip generation strategy has been changed. The previous method of generating HTML and converting it to a Google Doc was abandoned due to unreliability. The new, approved method, implemented in `jlmops/PrintService.js`, is to copy a pre-formatted Google Sheet template, populate it with data, and save the result as a final Google Sheet document. This is considered the new standard for document generation in the project.
+#### A. Configuration Management (The "Config Build" Cycle)
+*   **Source of Truth:** The JSON files in **`jlmops/config/*.json`**.
+*   **Workflow:**
+    1.  Edit the appropriate JSON file in `jlmops/config/` (e.g., `mappings.json`, `orders.json`).
+    2.  Run `node generate-config.js` to build `jlmops/SetupConfig.js`.
+    3.  User runs `clasp push` and executes `rebuildSysConfigFromSource()` in the Apps Script editor.
+*   **Do Not Edit:** Never manually edit `jlmops/SetupConfig.js` or the live `SysConfig` Google Sheet directly.
+
+#### B. Data Access (The "No Hardcoding" Rule)
+*   **Rule:** Never hardcode Sheet names ("WebProdM") or Column Indices in the codebase.
+*   **Mechanism:** Always use `ConfigService` to retrieve these values.
+    *   *Bad:* `sheet.getRange(row, 3)`
+    *   *Good:* `const colIdx = ConfigService.getConfig('schema.data.WebProdM').indexOf('wpm_Price');`
+
+#### C. Frontend Architecture (The "Controller" Pattern)
+*   **Pattern:** `HTML View` -> `WebApp Controller` -> `Backend Service`.
+*   **Constraint:**
+    *   **HTML Views** (e.g., `AdminView.html`) must ONLY call functions exposed in **WebApp Controllers** (e.g., `WebAppAdmin.js`).
+    *   **WebApp Controllers** are the *only* scripts allowed to call **Backend Services** (e.g., `OrderService.js`).
+    *   *Never* call a Service directly from HTML.
+
+#### Packing Slip Generation
+- **Strategy:** `jlmops/PrintService.js` copies a Google Sheet template, populates it, and saves it as a new Sheet.
+- **Status:** HTML generation is deprecated.

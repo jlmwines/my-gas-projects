@@ -1354,7 +1354,7 @@ const ProductService = (function() {
       ConfigService.forceReload(); // Force reload of config cache after updating master data
 
       // 3. Update Task Status
-      TaskService.updateTaskStatus(taskId, 'Accepted');
+      TaskService.updateTaskStatus(taskId, 'Done');
 
       // Invalidate cache after data modification
       _invalidateProductCache();

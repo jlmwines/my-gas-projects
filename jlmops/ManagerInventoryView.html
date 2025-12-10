@@ -248,7 +248,6 @@
                             if (response.success) {
                                 showToast(`${response.updated} counts submitted successfully.`);
                                 loadProductCountsData(); // Reload to remove submitted items
-                                loadManagerTaskCount(); // Update task count badge
                             } else {
                                 showToast(`Error submitting counts: ${response.message}`, 'error');
                             }
@@ -308,8 +307,7 @@
                         try {
                             if (response.success) {
                                 showToast(response.message);
-                                loadProductCountsData(); 
-                                loadManagerTaskCount(); 
+                                loadProductCountsData();
                             } else {
                                 showToast(response.message, 'error');
                             }

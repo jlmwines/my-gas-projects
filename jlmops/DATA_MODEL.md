@@ -27,15 +27,12 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `WebXltM`    | `wxl_` |
 | `WebXltS`    | `wxs_` |
 | `BruryaStock`| `bru_` |
-| `SysBundlesM` | `sbm_` |
-| `SysBundleRows` | `sbr_` |
-| `SysBundleActiveComponents` | `sac_` |
-| `SysBundleComponentHistory` | `sbh_` |
+| `SysBundles` | `sb_` |
+| `SysBundleSlots` | `sbs_` |
 | `SysTasks`             | `st_`  |
 | `SysTaskTypes`         | `stt_` |
 | `SysTaskStatusWorkflow`| `stw_` |
-| `SysCampaigns`         | `scamp_` |
-| `SysCampaignAssets`    | `sca_` |
+| `SysProjects`          | `spro_` |
 | `SysConfig`            | `scf_` |
 | `WebOrdM_Archive`      | `woma_`|
 | `WebOrdItemsM_Archive` | `woia_`|
@@ -78,9 +75,13 @@ The following sheets represent the core data model for managing simple products.
 
 ### `WebProdS_EN` (Web Products Staging - English)
 *   **Purpose:** A temporary holding area for raw product data from the English WooCommerce export. This sheet is cleared and re-populated with each import. Its schema is intentionally broader than the input file, containing all columns from the WooCommerce export plus additional columns for future use. This design decouples our system from the source format, allows for future extensibility without database changes, and provides a consistent structure for the `ProductService`.
+*   **Product Type Handling:**
+    *   `wps_Type = 'simple'`: Standard products with SKU. Full Comax validation applies.
+    *   `wps_Type = 'woosb'`: WPClever Smart Bundle products. **No SKU, no Comax relationship.** Skip Comax validation; use for bundle metadata import only.
+*   **Category Notes:** `wps_Categories` contains full WooCommerce category membership (comma-separated). Comax Division/Group remains the **primary category determinant**; WooCommerce categories like "Special Value", "New Arrivals", "Featured Wines" are supplementary marketing categories.
 *   **Columns:**
     *   `wps_ID`
-    *   `wps_Type`
+    *   `wps_Type`: Product type (`simple`, `woosb`, `variable`, etc.)
     *   `wps_SKU`
     *   `wps_Name`
     *   `wps_Published`
@@ -104,17 +105,17 @@ The following sheets represent the core data model for managing simple products.
     *   `wps_PurchaseNote`
     *   `wps_SalePrice`
     *   `wps_RegularPrice`
-    *   `wps_Categories`
+    *   `wps_Categories`: Full WooCommerce category list (e.g., "Dry Red, North, Special Value")
     *   `wps_Tags`
     *   `wps_ShippingClass`
-    *   `wps_Images`
+    *   `wps_Images`: Product image URL
     *   `wps_DownloadLimit`
     *   `wps_DownloadExpiry`
     *   `wps_Parent`
     *   `wps_GroupedProducts`
-    *   `wps_Upsells`
-    *   `wps_CrossSells`
-    *   `wps_ExternalURL`
+    *   `wps_Upsells`: Comma-separated product IDs for upsells
+    *   `wps_CrossSells`: Comma-separated product IDs for cross-sells
+    *   `wps_ExternalURL`: Product page URL
     *   `wps_ButtonText`
     *   `wps_Position`
     *   `wps_Attribute1Name`
@@ -128,6 +129,7 @@ The following sheets represent the core data model for managing simple products.
     *   `wps_MetaWpmlTranslationHash`
     *   `wps_MetaWpmlLanguage`
     *   `wps_MetaWpmlSourceId`
+    *   `wps_WoosbIds`: **(Bundle type only)** JSON containing bundle composition from `Meta: woosb_ids`. Format: `{"key":{"type":"h6","text":"..."},...}` for text blocks, `{"key":{"id":"123","sku":"456","qty":"1","optional":"1",...},...}` for product slots.
 
 
 
@@ -225,59 +227,62 @@ The following sheets represent the core data model for managing simple products.
 
 ## Bundle Management Data Model
 
-This data model uses a rules-engine approach to provide flexible and intelligent management of product bundles and packages.
+This data model provides flexible management of product bundles with intelligent inventory monitoring and replacement suggestions. JLMops serves as a **shadow system**—bundles are managed in WooCommerce (WPClever plugin), while JLMops monitors, suggests, and tracks.
 
-### 1. `SysBundlesM` (Bundles Master)
-*   **Purpose:** Defines the "header" information for each bundle or package. Each row represents one unique bundle product.
-*   **Prefix:** `sbm_`
+### 1. `SysBundles` (Bundle Header)
+*   **Purpose:** Defines the header information for each bundle or package.
+*   **Prefix:** `sb_`
+*   **Terminology (WooCommerce categories for user convenience):**
+    *   **Bundle:** Customer can adjust quantities per item (flexible qty).
+    *   **Package:** Fixed quantity per item.
+    *   Discounts may be applied to Packages. Functionally identical to the system.
 *   **Columns:**
-    *   `sbm_BundleWebIdEn`: **Primary Key.** The WooCommerce Product ID for the bundle.
-    *   `sbm_NameEn`: The bundle's display name in English.
-    *   `sbm_DescriptionEn`: The bundle's description in English.
-    *   `sbm_BundleWebIdHe`: The WooCommerce Product ID for the translated bundle.
-    *   `sbm_NameHe`: The bundle's display name in Hebrew.
-    *   `sbm_DescriptionHe`: The bundle's description in Hebrew.
-    *   `sbm_BundleType`: The type of bundle, e.g., `'Package'` (fixed components) or `'Bundle'` (customer-controlled components).
-    *   `sbm_Theme`: A theme name used for grouping or suggesting products (e.g., "Summer Reds").
-    *   `sbm_PackagePrice`: The special, discounted price if the `sbm_BundleType` is `'Package'`.
+    *   `sb_BundleId`: **Primary Key.** The WooCommerce Product ID (WebIdEn).
+    *   `sb_NameEn`: Display name in English.
+    *   `sb_NameHe`: Display name in Hebrew.
+    *   `sb_Type`: WooCommerce category: `'Bundle'` (flexible qty) or `'Package'` (fixed qty).
+    *   `sb_Status`: Current state: `'Active'`, `'Draft'`, `'Archived'`.
+    *   `sb_DiscountPrice`: Discounted price if applicable (typically for Packages).
 
-### 2. `SysBundleRows` (Bundle Blueprint & Rules)
-*   **Purpose:** Defines the structure, layout, and eligibility rules for each row within a bundle.
-*   **Prefix:** `sbr_`
+### 2. `SysBundleSlots` (Content Blocks + Product Slots)
+*   **Purpose:** Defines the structure of a bundle as a sequence of content blocks and product slots. Each row is either a text block (bilingual content) or a product slot (criteria-based).
+*   **Prefix:** `sbs_`
 *   **Columns:**
-    *   `sbr_RowId`: **Primary Key.** A unique ID for this specific row (e.g., `BUN-001-ROW-01`).
-    *   `sbr_BundleWebIdEn`: Links the row to a bundle in `SysBundlesM`.
-    *   `sbr_RowOrder`: A number (1, 2, 3...) to define the display order of the row within the bundle.
-    *   `sbr_RowType`: The type of row, either `'Product'` or `'Text'`.
-    *   **For 'Text' Rows:**
-        *   `sbr_TextContentEn`: The text to display in English.
-        *   `sbr_TextContentHe`: The text to display in Hebrew.
-    *   **For 'Product' Rows (Eligibility Rules):**
-        *   `sbr_EligibleCategory`: The product category a component must belong to.
-        *   `sbr_EligiblePriceMin`: The minimum price for an eligible component.
-        *   `sbr_EligiblePriceMax`: The maximum price for an eligible component.
-        *   `sbr_EligibleAttributes`: A delimited string of required attributes (e.g., 'Color=Red;Vintage=2020').
-        *   `sbr_MinStockThreshold`: A specific stock threshold for this product slot that triggers a warning.
-        *   `sbr_DefaultQuantity`: The default quantity for this product slot.
-        *   `sbr_IsCustomerControl`: A TRUE/FALSE flag indicating if the customer can change the quantity.
+    *   `sbs_SlotId`: **Primary Key.** Unique ID for this slot.
+    *   `sbs_BundleId`: **Foreign Key.** Links to `SysBundles`.
+    *   `sbs_Order`: Display sequence within the bundle (1, 2, 3...).
+    *   `sbs_SlotType`: Either `'Text'` or `'Product'`.
+    *   **For 'Text' Slots:**
+        *   `sbs_TextStyle`: Display style from WooCommerce (e.g., `'h6'`, `'none'`, `'p'`). Used for rendering.
+        *   `sbs_TextEn`: English content text.
+        *   `sbs_TextHe`: Hebrew content text.
+    *   **For 'Product' Slots - Current State:**
+        *   `sbs_ActiveSKU`: The SKU currently assigned to this slot.
+        *   `sbs_LastRotated`: Timestamp of last product change.
+        *   `sbs_HistoryJson`: JSON array of rotation history. Format: `[{"sku":"12345","start":"2024-01-01","end":"2024-03-15","reason":"Low Stock"},...]`
+    *   **For 'Product' Slots - Common Criteria:**
+        *   `sbs_Category`: Required product category (e.g., 'Red', 'White', 'Rosé').
+        *   `sbs_PriceMin`: Minimum eligible price.
+        *   `sbs_PriceMax`: Maximum eligible price.
+        *   `sbs_Intensity`: Required intensity level (1-5, or blank for any).
+        *   `sbs_Complexity`: Required complexity level (1-5, or blank for any).
+        *   `sbs_Acidity`: Required acidity level (1-5, or blank for any).
+    *   **For 'Product' Slots - Flexible Criteria:**
+        *   `sbs_NameContains`: Text that must appear in product name (covers vendor, grape, etc.).
+    *   **For 'Product' Slots - Behavior:**
+        *   `sbs_Exclusive`: `TRUE` = product should not appear in other bundles.
+        *   `sbs_QtyVariable`: `TRUE` = customer can adjust quantity.
+        *   `sbs_DefaultQty`: Default quantity for this slot.
 
-### 3. `SysBundleActiveComponents` (Live Bundle Version)
-*   **Purpose:** Tracks the currently active, specific SKU filling each product slot in a bundle. This is the sheet the system actively monitors for stock levels.
-*   **Prefix:** `sac_`
-*   **Columns:**
-        *   `sac_RowId`: **Primary Key.** Links directly to a product row and its rules in `SysBundleRows`.
-        *   `sac_ActiveSKU`: The actual product SKU currently filling this slot.
+**Example - Text Slot Row:**
+| sbs_SlotId | sbs_BundleId | sbs_Order | sbs_SlotType | sbs_TextStyle | sbs_TextEn | sbs_TextHe | sbs_ActiveSKU | ... |
+|------------|--------------|-----------|--------------|---------------|------------|------------|---------------|-----|
+| SLOT-001 | 12345 | 1 | Text | h6 | Two bold reds | שני אדומים נועזים | | |
 
-### 4. `SysBundleComponentHistory` (Audit Log)
-*   **Purpose:** An append-only log that provides a full audit trail of every component replacement.
-*   **Prefix:** `sbh_`
-*   **Columns:**
-    *   `sbh_Timestamp`: The exact date and time the change was made.
-    *   `sbh_RowId`: Which product slot (`sac_RowId`) was changed.
-    *   `sbh_OldSKU`: The SKU that was removed.
-    *   `sbh_NewSKU`: The new SKU that was added.
-    *   `sbh_ChangedBy`: The user or process that made the change.
-    *   `sbh_Reason`: The reason for the change (e.g., "Low Stock", "Seasonal Update").
+**Example - Product Slot Row:**
+| sbs_SlotId | sbs_BundleId | sbs_Order | sbs_SlotType | sbs_TextStyle | sbs_TextEn | sbs_TextHe | sbs_ActiveSKU | sbs_Category | sbs_PriceMin | sbs_PriceMax | sbs_Intensity |
+|------------|--------------|-----------|--------------|---------------|------------|------------|---------------|--------------|--------------|--------------|---------------|
+| SLOT-002 | 12345 | 2 | Product | | | | 44521 | Red | 80 | 150 | 3 |
 
 ## Order & Packing Workflow Data Model
 
@@ -371,6 +376,21 @@ This set of sheets manages the entire workflow from when an order is imported un
 
 This section defines the sheets used to manage physical inventory at non-Comax locations and their audit trails.
 
+## Project Management Data Model
+
+This section defines the sheets used to manage all types of projects, from marketing campaigns to operational improvements.
+
+### 1. `SysProjects` (The Master Project List)
+*   **Purpose:** This sheet defines each project acting as a container for tasks and goals. It unifies marketing campaigns and operational projects.
+*   **Prefix:** `spro_`
+*   **Columns:**
+    *   `spro_ProjectId`: **Primary Key.** A unique ID for the project (e.g., `PROJ-SUMMER-SALE`, `PROJ-INV-SYNC`).
+    *   `spro_Name`: The human-readable name of the project.
+    *   `spro_Type`: The type of project (e.g., 'CAMPAIGN', 'OPERATIONAL', 'ONE_OFF').
+    *   `spro_Status`: The current state (e.g., 'PLANNING', 'ACTIVE', 'COMPLETED', 'ARCHIVED').
+    *   `spro_StartDate`: The planned start date.
+    *   `spro_EndDate`: The planned end date (optional for ongoing operational projects).
+
 ## Task Management Data Model
 
 This system provides a flexible, configurable way to manage all user and system-generated tasks. It is composed of one main task sheet and two configuration sheets.
@@ -379,63 +399,20 @@ This system provides a flexible, configurable way to manage all user and system-
 *   **Purpose:** This is the main sheet that holds every individual task created in the system.
 *   **Columns:**
     *   `st_TaskId`: **Primary Key.**
+    *   `st_ProjectId`: **(New)** Links the task to a specific project in `SysProjects`.
     *   `st_TaskTypeId`: Links to the `SysTaskTypes` sheet.
     *   `st_Topic`: e.g., 'Inventory', 'Orders'. This links the task to a dashboard widget.
-    *   `st_Title`: A human-readable title, e.g., "Verify stock for SKU 12345".
+    *   `st_Title`: A human-readable title.
     *   `st_Status`: The current status of the task.
     *   `st_Priority`: 'High', 'Normal', 'Low'.
     *   `st_AssignedTo`: The user responsible for the task.
-    *   `st_LinkedEntityId`: The ID of the product, order, etc. that this task is about.
-    *   `st_SessionId`: The ID of the session (from SysJobQueue) that generated this task, for traceability.
+    *   `st_LinkedEntityId`: The specific subject of the task (e.g., SKU, Order ID) OR the URL/Link to the asset/content (e.g., Google Doc ID).
+    *   `st_SessionId`: The ID of the session that generated this task.
     *   `st_CreatedDate`
+    *   `st_StartDate`: **(New)** The date work should begin on this task.
     *   `st_DueDate`
-    *   `st_DoneDate`: Populated when the task is closed, for KPI tracking.
+    *   `st_DoneDate`: Populated when the task is closed.
     *   `st_Notes`
-
-### 2. `SysTaskTypes` (Configuration Sheet)
-*   **Purpose:** This sheet defines every *type* of task that can exist.
-*   **Columns:**
-    *   `stt_TaskTypeId`: **Primary Key,** e.g., 'VERIFY_COUNT'.
-    *   `stt_TypeName`: Human-readable name, e.g., "Verify Physical Count".
-    *   `stt_Topic`: The dashboard widget this task type belongs to.
-    *   `stt_DefaultPriority`
-    *   `stt_InitialStatus`: The status a new task of this type starts with.
-    *   `stt_Description`
-
-### 3. `SysTaskStatusWorkflow` (Configuration Sheet)
-*   **Purpose:** This sheet defines the "state machine"—the valid paths a task can take from one status to another, and who is allowed to make the change.
-*   **Columns:**
-    *   `stw_WorkflowId`: **Primary Key** for the row.
-    *   `stw_TaskTypeId`: Which task type this rule applies to.
-    *   `stw_FromStatus`: The status the task is currently in.
-    *   `stw_ToStatus`: The status the user wants to move it to.
-    *   `stw_AllowedRole`: The user role allowed to make this change, e.g., 'Admin', 'Manager'.
-
-## Campaign Management Data Model
-
-This section defines the sheets used to coordinate multi-faceted promotional campaigns.
-
-### 1. `SysCampaigns` (The Master Campaign List)
-*   **Purpose:** This sheet defines each promotion as a whole, acting as the central hub for a campaign.
-*   **Prefix:** `scamp_`
-*   **Columns:**
-    *   `scamp_CampaignId`: **Primary Key.** A unique ID for the campaign (e.g., `CAMP-001`).
-    *   `scamp_Name`: The name of the promotion (e.g., "Summer Reds 2025").
-    *   `scamp_Topic`: A short description of the theme.
-    *   `scamp_StartDate`: The planned start date for the promotion.
-    *   `scamp_EndDate`: The planned end date for the promotion.
-    *   `scamp_Status`: The current state of the campaign (e.g., 'Planning', 'In Progress', 'Live', 'Completed').
-
-### 2. `SysCampaignAssets` (The Campaign Components)
-*   **Purpose:** This sheet links all the individual pieces of content (assets) to a specific campaign.
-*   **Prefix:** `sca_`
-*   **Columns:**
-    *   `sca_AssetId`: **Primary Key.** A unique ID for the asset row.
-    *   `sca_CampaignId`: Links to `SysCampaigns`.
-    *   `sca_AssetType`: The type of content (e.g., 'BUNDLE', 'BLOG_POST', 'EMAIL', 'COUPON').
-    *   `sca_LinkedEntityId`: The ID of the actual content (e.g., a Product ID, a Google Doc ID, a Coupon Code).
-    *   `sca_DueDate`: The internal due date for this specific asset.
-    *   `sca_Status`: The status of this asset (e.g., 'Draft', 'Review', 'Scheduled', 'Published').
 
 ## System Configuration
 
