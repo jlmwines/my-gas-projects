@@ -1,6 +1,9 @@
 /**
  * @file ProductService.js
- * @description Service for handling product-related business logic, including staging and validation.
+ * @description Service for product CRUD operations, lookups, detail management, and SKU operations.
+ *
+ * Note: Import/export job processing has been extracted to ProductImportService.js
+ * as part of Phase 13 codebase health initiative.
  */
 
 const ProductService = (function() {
@@ -11,41 +14,9 @@ const ProductService = (function() {
   let cachedKashrut = null;
   // Note: Product data now uses CacheService instead of module-level cache
 
-  /**
-   * Helper to update job status in SysJobQueue.
-   * @param {object} executionContext The execution context.
-   * @param {string} status The new status ('COMPLETED', 'FAILED', 'QUARANTINED').
-   * @param {string} [errorMessage=''] Optional error message.
-   */
-  function _updateJobStatus(executionContext, status, errorMessage = '') {
-    const serviceName = 'ProductService';
-    const functionName = '_updateJobStatus';
-    const { jobQueueSheetRowNumber, jobQueueHeaders, jobId, jobType, sessionId } = executionContext;
-
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
-
-      const statusColIdx = jobQueueHeaders.indexOf('status');
-      const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
-      const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
-
-      if (statusColIdx === -1 || errorMsgColIdx === -1 || processedTsColIdx === -1) {
-        logger.error(serviceName, functionName, `Missing required columns in SysJobQueue headers for updating job status.`, null, { sessionId: sessionId, jobId: jobId, jobType: jobType });
-        return;
-      }
-
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue(status);
-      jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
-      if (errorMessage) {
-        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(errorMessage);
-      }
-      logger.info(serviceName, functionName, `Job ${jobId} status updated to ${status}.`, { sessionId: sessionId, jobId: jobId, jobType: jobType, newStatus: status });
-    } catch (e) {
-      logger.error(serviceName, functionName, `Failed to update job status for ${jobId}: ${e.message}`, e, { sessionId: sessionId, jobId: jobId, jobType: jobType });
-    }
-  }
+  // =================================================================================
+  // SKU LOOKUP AND CACHING
+  // =================================================================================
 
   function _buildSkuToWebIdMap() {
     const functionName = '_buildSkuToWebIdMap';
@@ -194,53 +165,8 @@ const ProductService = (function() {
   }
 
   // =================================================================================
-  // PRIVATE HELPER METHODS
+  // PRODUCT LOOKUP
   // =================================================================================
-
-  function _populateStagingSheet(productsOrData, sheetName, sessionId) {
-    const serviceName = 'ProductService';
-    const functionName = '_populateStagingSheet';
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const sheet = dataSpreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-        throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
-    }
-    logger.info(serviceName, functionName, `Successfully opened sheet: ${sheetName}. Current headers: ${JSON.stringify(sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0])}`, { sessionId: sessionId });
-
-    let finalData;
-
-    // Check if the input is a 2D array (from ComaxAdapter) or an array of objects (from WebAdapter)
-    if (productsOrData.length > 0 && Array.isArray(productsOrData[0])) {
-        finalData = productsOrData; // It's already a 2D array, use directly
-    } else {
-        // It's an array of objects, so we need to map it using the schema
-        const schema = ConfigService.getConfig(`schema.data.${sheetName}`);
-        if (!schema || !schema.headers) {
-            throw new Error(`Schema for sheet '${sheetName}' not found in configuration.`);
-        }
-        const schemaHeaders = schema.headers.split(',');
-
-        finalData = productsOrData.map(product => {
-          return schemaHeaders.map(header => product[header] || '');
-        });
-
-        logger.info(serviceName, functionName, `Mapping complete for ${sheetName}. Schema headers: ${JSON.stringify(schemaHeaders)}. First data row: ${finalData.length > 0 ? JSON.stringify(finalData[0]) : 'N/A'}`, { sessionId: sessionId });
-        
-        // Clear previous content and write new data
-        if (sheet.getLastRow() > 1) {
-            sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
-        }
-        if (finalData.length > 0 && finalData[0].length > 0) {
-            sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
-        }
-        SpreadsheetApp.flush(); // Ensure data is written before any subsequent reads (e.g., validation)
-        logger.info(serviceName, functionName, `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`, { sessionId: sessionId });
-    }
-  }
-
-
-
 
 
   function _runStagingValidation(suiteName, sessionId) {
@@ -320,25 +246,33 @@ const ProductService = (function() {
     if (!webXltMSheet) throw new Error('WebXltM sheet not found in JLMops_Data spreadsheet.');
     if (!webXltSSheet) throw new Error('WebXltS sheet not found in JLMops_Data spreadsheet.');
 
+    // Get the correct headers for master sheet from config (wxl_ prefix)
+    const webXltMHeaders = ConfigService.getConfig('schema.data.WebXltM').headers.split(',');
+
+    // Get staging data (including header row)
     const webXltSData = webXltSSheet.getDataRange().getValues();
-    const numRows = webXltSData.length;
-    const numCols = numRows > 0 ? webXltSData[0].length : 0;
+    const numStagingRows = webXltSData.length;
 
     // Clear the master sheet entirely
     webXltMSheet.clear();
     logger.info(serviceName, functionName, 'Cleared WebXltM sheet.', { sessionId: sessionId });
 
-    if (numRows > 0 && numCols > 0) {
-        // Write the entire data block from staging (including headers) to master in one operation
-        webXltMSheet.getRange(1, 1, numRows, numCols).setValues(webXltSData);
-        logger.info(serviceName, functionName, `Wrote ${numRows} rows and ${numCols} columns from WebXltS to WebXltM.`, { sessionId: sessionId });
+    // Always write the correct headers first
+    if (webXltMHeaders.length > 0) {
+        webXltMSheet.getRange(1, 1, 1, webXltMHeaders.length).setValues([webXltMHeaders]).setFontWeight('bold');
+    }
+
+    // Copy data rows (skip staging header row at index 0) with correct headers
+    if (numStagingRows > 1) {
+        const dataRows = webXltSData.slice(1); // Skip header row
+        const numDataRows = dataRows.length;
+        const numCols = webXltMHeaders.length;
+
+        // Write data rows starting at row 2 (after header)
+        webXltMSheet.getRange(2, 1, numDataRows, numCols).setValues(dataRows);
+        logger.info(serviceName, functionName, `Wrote ${numDataRows} data rows with wxl_ headers to WebXltM.`, { sessionId: sessionId });
     } else {
-        // If staging is empty, we still need to restore the headers to the master sheet
-        const webXltMHeaders = ConfigService.getConfig('schema.data.WebXltM').headers.split(',');
-        if (webXltMHeaders.length > 0) {
-            webXltMSheet.getRange(1, 1, 1, webXltMHeaders.length).setValues([webXltMHeaders]).setFontWeight('bold');
-            logger.info(serviceName, functionName, 'WebXltS was empty. Restored headers to WebXltM.', { sessionId: sessionId });
-        }
+        logger.info(serviceName, functionName, 'WebXltS had no data rows. Only headers written to WebXltM.', { sessionId: sessionId });
     }
 
     SpreadsheetApp.flush(); // Ensure all pending changes are applied
@@ -874,10 +808,8 @@ const ProductService = (function() {
         case 'import.drive.web_translations_he':
           finalJobStatus = _runWebXltValidationAndUpsert(executionContext);
           break;
-        case 'manual.validation.master':
-          ValidationOrchestratorService.processJob(executionContext);
-          return;
-          break;
+        // Note: validation jobs (job.manual.validation.master, job.periodic.validation.master)
+        // are routed directly to ValidationOrchestratorService by OrchestratorService
         case 'export.web.inventory':
           exportWebInventory(sessionId); // Pass sessionId
           finalJobStatus = 'COMPLETED';
@@ -2675,10 +2607,8 @@ const ProductService = (function() {
   }
 
   return {
-    processJob: processJob,
-    runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
+    // Note: processJob, runWebXltValidationAndUpsert, exportWebInventory moved to ProductImportService
     getProductWebIdBySku: getProductWebIdBySku,
-    exportWebInventory: exportWebInventory,
     getProductDetails: getProductDetails,
     submitProductDetails: submitProductDetails,
     acceptProductDetails: acceptProductDetails,
@@ -2696,10 +2626,3 @@ const ProductService = (function() {
     searchProductsForReplacement: searchProductsForReplacement
   };
 })();
-
-/**
- * Global wrapper function to execute the Web Inventory Export from the Apps Script editor or client-side.
- */
-function run_exportWebInventory() {
-  ProductService.exportWebInventory();
-}

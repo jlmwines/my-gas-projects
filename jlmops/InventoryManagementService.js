@@ -986,38 +986,44 @@ const InventoryManagementService = (function() {
                     skuToRowIndexMap.set(String(auditDataForReset[i][paSkuColIdx]).trim(), i + 1); // 1-based row
                 }
 
-                // Updates array to minimize API calls (batching not strictly necessary for small sets but good practice)
-                // However, for simplicity and readability in this mix, we'll iterate.
-                // Actually, we should batch updates if possible, but random access makes it hard.
-                // Let's do direct updates for now as export volume is typically manageable (<100 items).
-                
-                acceptedTaskIndices.forEach(rowIndex => {
-                    // A. Update Task
-                    const taskSheetRow = rowIndex + 1;
-                    taskSheet.getRange(taskSheetRow, tStatusColIdx).setValue('Done');
-                    if (tDoneDateColIdx > 0) {
-                        taskSheet.getRange(taskSheetRow, tDoneDateColIdx).setValue(now);
-                    }
+                // PERFORMANCE FIX: Batch all updates instead of individual setValue() calls
+                // Phase 13 refactoring - eliminated 40-50+ API calls per export
 
-                    // B. Reset SysProductAudit WIP Counts
-                    // We need the SKU from the task data we already loaded
+                // A. Batch update task statuses - read all task data, modify in memory, write back
+                const fullTaskData = taskSheet.getDataRange().getValues();
+                acceptedTaskIndices.forEach(rowIndex => {
+                    fullTaskData[rowIndex][tStatusCol] = 'Done';
+                    if (tDoneDateColIdx > 0) {
+                        fullTaskData[rowIndex][tDoneDateColIdx - 1] = now; // -1 because tDoneDateColIdx was +1 adjusted
+                    }
+                });
+
+                // Write all task updates in one batch operation
+                taskSheet.getRange(1, 1, fullTaskData.length, fullTaskData[0].length).setValues(fullTaskData);
+
+                // B. Batch update SysProductAudit - modify in memory, write back once
+                const auditDataModified = auditDataForReset.slice(); // Clone to modify
+                acceptedTaskIndices.forEach(rowIndex => {
                     const sku = String(taskData[rowIndex][tEntityCol]).trim();
                     if (skuToRowIndexMap.has(sku)) {
-                        const auditSheetRow = skuToRowIndexMap.get(sku);
-                        
+                        const auditRowIndex = skuToRowIndexMap.get(sku) - 1; // Convert to 0-based for array
+
                         // 1. Reset partial counts to 0
-                        if (paStorageColIdx > -1) productAuditSheet.getRange(auditSheetRow, paStorageColIdx + 1).setValue(0);
-                        if (paOfficeColIdx > -1) productAuditSheet.getRange(auditSheetRow, paOfficeColIdx + 1).setValue(0);
-                        if (paShopColIdx > -1) productAuditSheet.getRange(auditSheetRow, paShopColIdx + 1).setValue(0);
-                        
+                        if (paStorageColIdx > -1) auditDataModified[auditRowIndex][paStorageColIdx] = 0;
+                        if (paOfficeColIdx > -1) auditDataModified[auditRowIndex][paOfficeColIdx] = 0;
+                        if (paShopColIdx > -1) auditDataModified[auditRowIndex][paShopColIdx] = 0;
+
                         // 2. Reset NewQty to match BruryaQty (Base)
                         if (paNewQtyColIdx > -1 && paBruryaColIdx > -1) {
-                            const bruryaQty = productAuditSheet.getRange(auditSheetRow, paBruryaColIdx + 1).getValue();
-                            productAuditSheet.getRange(auditSheetRow, paNewQtyColIdx + 1).setValue(bruryaQty);
+                            const bruryaQty = auditDataModified[auditRowIndex][paBruryaColIdx];
+                            auditDataModified[auditRowIndex][paNewQtyColIdx] = bruryaQty;
                         }
                     }
                 });
-                
+
+                // Write all audit updates in one batch operation
+                productAuditSheet.getRange(1, 1, auditDataModified.length, auditDataModified[0].length).setValues(auditDataModified);
+
                 SpreadsheetApp.flush(); 
 
                 // 6. Create Confirmation Task

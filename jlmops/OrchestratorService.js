@@ -588,7 +588,11 @@ const OrchestratorService = (function() {
 
             switch (processingServiceName) {
               case 'ProductService':
-                ProductService.processJob(executionContext);
+                // Legacy routing - ProductService import jobs now handled by ProductImportService
+                ProductImportService.processJob(executionContext);
+                break;
+              case 'ProductImportService':
+                ProductImportService.processJob(executionContext);
                 break;
               case 'OrderService':
                 const orderServiceInstance = new OrderService(ProductService);
@@ -1299,42 +1303,7 @@ const OrchestratorService = (function() {
     }
   }
 
-  function getPendingOrProcessingJob(jobType, sessionId = null) {
-    const serviceName = 'OrchestratorService';
-    const functionName = 'getPendingOrProcessingJob';
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-
-      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
-        return false;
-      }
-
-      const data = jobQueueSheet.getDataRange().getValues();
-      const headers = data.shift();
-      const jobTypeCol = headers.indexOf('job_type');
-      const statusCol = headers.indexOf('status');
-      const sessionIdCol = headers.indexOf('session_id'); // New index
-
-      for (const row of data) {
-        // Filter by session ID if provided
-        if ((sessionId === null || row[sessionIdCol] === sessionId) &&
-            row[jobTypeCol] === jobType) {
-          if (row[statusCol] === 'PENDING' || row[statusCol] === 'PROCESSING') {
-            return true;
-          }
-        }
-      }
-      return false;
-
-    } catch (e) {
-      logger.error(serviceName, functionName, `Error checking pending job for ${jobType}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
-      return false;
-    }
-  }
+  // Note: getPendingOrProcessingJob is defined above (lines ~969-1004). Duplicate removed.
 
   /**
    * Retrieves the most recent status of a specific job type within a given session.

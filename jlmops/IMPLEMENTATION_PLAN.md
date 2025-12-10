@@ -155,35 +155,36 @@
 *   **Goal:** Address technical debt to create a stable foundation before adding new features.
 *   **Rationale:** Bundle implementation touches ProductService, validation logic, and import workflows. These must be clean and maintainable first.
 
-#### 0. Critical Bug Fix (Do First)
-*   **WebXltM Schema Validation Failure**
-    *   **Problem:** `_upsertWebXltData()` in ProductService.js (lines 310-346) copies staging headers (`wxs_`) directly to master sheet instead of transforming to `wxl_` prefix.
-    *   **Location:** `ProductService.js:323-334`
-    *   **Fix:** Read data rows from WebXltS, get correct `wxl_` headers from config schema, write headers + data to WebXltM.
+#### 0. Critical Bug Fix ✅ COMPLETED
+*   **WebXltM Schema Validation Failure** - FIXED
+    *   **Problem:** `_upsertWebXltData()` was copying staging headers (`wxs_`) directly to master sheet instead of transforming to `wxl_` prefix.
+    *   **Solution:** Modified `ProductService.js:310-354` to read correct `wxl_` headers from config schema, skip staging header row, and write master headers + data rows separately.
 
-#### 1. File Renaming (Clarity)
-*   **`ValidationService_DEPRECATED.js`** → **`ValidationService_LEGACY.js`**
+#### 1. File Renaming ✅ COMPLETED
+*   **`ValidationService_DEPRECATED.js`** → **`ValidationService_LEGACY.js`** - RENAMED
     *   Still in use for legacy comparison during parallel processing
     *   "LEGACY" indicates intentional retention, not forgotten code
     *   Remove after parallel processing phase complete
 
-#### 2. ProductService Split (2705 LOC → 2 files)
+#### 2. ProductService Split ✅ COMPLETED
 *   **Split into:**
-    *   `ProductImportService.js` (~865 LOC) - Job processing, Comax/Web/Translation imports, staging, audit maintenance, inventory export
-    *   `ProductService.js` (~1725 LOC) - Core CRUD, lookups, caching, detail management, SKU operations, search
+    *   `ProductImportService.js` (~900 LOC) - Job processing, Comax/Web/Translation imports, staging, audit maintenance, inventory export
+    *   `ProductService.js` - Core CRUD, lookups, caching, detail management, SKU operations, search
 *   **Architecture:** Direct calls from controllers (not facade pattern)
-*   **Why first:** Bundle import will integrate with ProductImportService
+*   **OrchestratorService updated** to route `ProductService` jobs to `ProductImportService.processJob()`
+*   **Note:** Dead import code remains in ProductService.js (not exported) - can clean up later
 
-#### 3. OrchestratorService Split (1479 LOC → 3 files + utilities)
-*   **Split into:**
-    *   `SessionService.js` (~400 LOC) - Session lifecycle, ID tracking, sync workflow state machine
-    *   `JobService.js` (~450 LOC) - Job queue, scheduling, state transitions, completion handlers
-    *   `OrchestratorService.js` (~100 LOC) - High-level workflow coordination only
+#### 3. OrchestratorService Cleanup ✅ PARTIAL
+*   **Duplicate removed:** `getPendingOrProcessingJob()` was defined twice (lines 969 and 1306) - duplicate removed
+*   **Full split deferred:** Functions are tightly coupled; splitting requires careful refactoring
+*   **Planned future split:**
+    *   `SessionService.js` - Session lifecycle, ID tracking, sync workflow state machine
+    *   `JobService.js` - Job queue, scheduling, state transitions, completion handlers
     *   `OrchestratorUtils.js` - Shared helpers (file registry, archiving)
-*   **Note:** Remove duplicate `getPendingOrProcessingJob()` (defined at lines 965 and 1302)
 
-#### 4. InventoryManagementService Split (1328 LOC → 5 files)
-*   **Critical Performance Bug:** `generateComaxInventoryExport()` lines 994-1019 has 40-50+ individual `setValue()`/`getValue()` API calls in forEach loop. Fix with batch processing.
+#### 4. InventoryManagementService Cleanup ✅ PARTIAL
+*   **Performance Bug FIXED:** `generateComaxInventoryExport()` - Replaced 40-50+ individual `setValue()`/`getValue()` API calls with batch array operations (2 `setValues()` calls total)
+*   **5-way split deferred:** Service is functional; splitting can be done in future phase
 *   **Split into:**
     *   `InventoryLevelService.js` (~80 LOC) - `getStockLevel`, `updateStock`
     *   `ReservedInventoryService.js` (~110 LOC) - `calculateOnHoldInventory`
