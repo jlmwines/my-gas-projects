@@ -75,6 +75,43 @@ function resolveSessionIdForJob(jobType, jobConfig, allConfig) {
 }
 
 /**
+ * Gets files from a folder that match a glob-style pattern.
+ * Supports * as wildcard (matches any characters).
+ * @param {GoogleAppsScript.Drive.Folder} folder - The folder to search in
+ * @param {string} pattern - The pattern to match (e.g., "product_export_*.csv")
+ * @returns {GoogleAppsScript.Drive.FileIterator} - Iterator of matching files (wrapped in array for compatibility)
+ */
+function getFilesByPattern(folder, pattern) {
+  // If pattern has no wildcards, use the native getFilesByName
+  if (!pattern.includes('*')) {
+    return folder.getFilesByName(pattern);
+  }
+
+  // Convert glob pattern to regex: escape special chars, replace * with .*
+  const regexPattern = pattern
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')  // Escape regex special chars (except *)
+    .replace(/\*/g, '.*');                    // Replace * with .*
+  const regex = new RegExp('^' + regexPattern + '$', 'i');
+
+  // Get all files and filter by pattern
+  const matchingFiles = [];
+  const allFiles = folder.getFiles();
+  while (allFiles.hasNext()) {
+    const file = allFiles.next();
+    if (regex.test(file.getName())) {
+      matchingFiles.push(file);
+    }
+  }
+
+  // Return an iterator-like object for compatibility with existing code
+  let index = 0;
+  return {
+    hasNext: function() { return index < matchingFiles.length; },
+    next: function() { return matchingFiles[index++]; }
+  };
+}
+
+/**
  * The main entry point for the hourly time-driven trigger.
  */
 function runHourlyTrigger() {
@@ -156,7 +193,7 @@ const OrchestratorService = (function() {
     }
 
     const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
-    const files = sourceFolder.getFilesByName(config.file_pattern);
+    const files = getFilesByPattern(sourceFolder, config.file_pattern);
 
     let filesFound = 0;
     while (files.hasNext()) {
@@ -220,7 +257,7 @@ const OrchestratorService = (function() {
         }
 
         const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
-        const files = sourceFolder.getFilesByName(config.file_pattern);
+        const files = getFilesByPattern(sourceFolder, config.file_pattern);
         
         // Find latest file for this configName
         let latestFile = null;
@@ -254,7 +291,7 @@ const OrchestratorService = (function() {
 
     // Pre-flight check: Ensure all required files were found/queued
     // We loosen this slightly: Translations are optional, but Products and Orders are mandatory for Sync.
-    if (!requiredFiles['import.drive.web_products_en']) throw new Error("Missing required file: WebProducts.csv");
+    if (!requiredFiles['import.drive.web_products_en']) throw new Error("Missing required file: product_export_*.csv");
     if (!requiredFiles['import.drive.web_orders']) throw new Error("Missing required file: WebOrders.csv");
     
     SpreadsheetApp.flush(); // Ensure jobs are written to the sheet
@@ -282,7 +319,7 @@ const OrchestratorService = (function() {
     const registry = getRegistryMap(fileRegistrySheet);
 
     const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
-    const files = sourceFolder.getFilesByName(config.file_pattern);
+    const files = getFilesByPattern(sourceFolder, config.file_pattern);
     
     let latestFile = null;
     let latestDate = new Date(0);

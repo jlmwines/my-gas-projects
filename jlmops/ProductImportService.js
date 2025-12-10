@@ -48,6 +48,39 @@ const ProductImportService = (function() {
   // STAGING HELPERS
   // =================================================================================
 
+  /**
+   * Applies standard formatting to a data sheet: top-align cells and set row height for single line.
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to format.
+   * @param {number} dataRowCount - Number of data rows (excluding header).
+   */
+  function _applySheetFormatting(sheet, dataRowCount) {
+    if (dataRowCount <= 0) return;
+
+    // Set vertical alignment to top for all data rows
+    const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
+    dataRange.setVerticalAlignment('top');
+
+    // Set row height for single line of text (30 pixels)
+    sheet.setRowHeights(2, dataRowCount, 30);
+  }
+
+  /**
+   * Gets the name column for sorting based on sheet name.
+   * @param {string} sheetName - The sheet name.
+   * @param {string[]} headers - The schema headers.
+   * @returns {number} The column index for sorting, or -1 if not applicable.
+   */
+  function _getNameColumnIndex(sheetName, headers) {
+    const nameColumnMap = {
+      'CmxProdS': 'cps_NameHe',
+      'CmxProdM': 'cpm_NameHe',
+      'WebProdS_EN': 'wps_PostTitle',
+      'WebProdM': 'wpm_PostTitle'
+    };
+    const nameCol = nameColumnMap[sheetName];
+    return nameCol ? headers.indexOf(nameCol) : -1;
+  }
+
   function _populateStagingSheet(productsOrData, sheetName, sessionId) {
     const serviceName = 'ProductImportService';
     const functionName = '_populateStagingSheet';
@@ -78,12 +111,26 @@ const ProductImportService = (function() {
 
         logger.info(serviceName, functionName, `Mapping complete for ${sheetName}. Schema headers: ${JSON.stringify(schemaHeaders)}. First data row: ${finalData.length > 0 ? JSON.stringify(finalData[0]) : 'N/A'}`, { sessionId: sessionId });
 
+        // Sort by product name if applicable
+        const nameIdx = _getNameColumnIndex(sheetName, schemaHeaders);
+        if (nameIdx > -1 && finalData.length > 0) {
+            const locale = sheetName.includes('Cmx') ? 'he' : 'en';
+            finalData.sort((a, b) => {
+                const nameA = String(a[nameIdx] || '').toLowerCase();
+                const nameB = String(b[nameIdx] || '').toLowerCase();
+                return nameA.localeCompare(nameB, locale);
+            });
+            logger.info(serviceName, functionName, `Sorted ${sheetName} data by product name.`, { sessionId: sessionId });
+        }
+
         // Clear previous content and write new data
         if (sheet.getLastRow() > 1) {
             sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getMaxColumns()).clearContent();
         }
         if (finalData.length > 0 && finalData[0].length > 0) {
             sheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+            // Apply standard formatting: top-align and single row height
+            _applySheetFormatting(sheet, finalData.length);
         }
         SpreadsheetApp.flush(); // Ensure data is written before any subsequent reads (e.g., validation)
         logger.info(serviceName, functionName, `Staging sheet '${sheetName}' has been updated with ${finalData.length} rows.`, { sessionId: sessionId });
@@ -403,6 +450,17 @@ const ProductImportService = (function() {
     }
     // --- END ENHANCED SANITY CHECK ---
 
+    // Sort by product name (cpm_NameHe) before writing
+    const sortNameIdx = masterHeaders.indexOf('cpm_NameHe');
+    if (sortNameIdx > -1 && finalData.length > 0) {
+        finalData.sort((a, b) => {
+            const nameA = String(a[sortNameIdx] || '').toLowerCase();
+            const nameB = String(b[sortNameIdx] || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'he'); // Hebrew locale for proper sorting
+        });
+        logger.info(serviceName, functionName, 'Sorted CmxProdM data by product name (cpm_NameHe).', { sessionId });
+    }
+
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
@@ -413,6 +471,8 @@ const ProductImportService = (function() {
 
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+        // Apply standard formatting: top-align and single row height
+        _applySheetFormatting(masterSheet, finalData.length);
     }
     logger.info(serviceName, functionName, `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
 
@@ -500,6 +560,178 @@ const ProductImportService = (function() {
   // WEB PRODUCTS IMPORT
   // =================================================================================
 
+  /**
+   * Custom CSV parser that handles multi-line quoted fields properly.
+   * Returns array of arrays (rows of fields).
+   * @param {string} csvContent - Raw CSV content
+   * @returns {Array<Array<string>>} - Parsed rows
+   */
+  function _parseWebToffeeCsv(csvContent) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < csvContent.length) {
+      const char = csvContent[i];
+      const nextChar = csvContent[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            // Escaped quote - add single quote and skip next
+            field += '"';
+            i += 2;
+            continue;
+          } else {
+            // End of quoted field
+            inQuotes = false;
+            i++;
+            continue;
+          }
+        } else {
+          field += char;
+          i++;
+          continue;
+        }
+      } else {
+        // Not in quotes
+        if (char === '"') {
+          // Start of quoted field
+          inQuotes = true;
+          i++;
+          continue;
+        } else if (char === ',') {
+          // End of field
+          row.push(field);
+          field = '';
+          i++;
+          continue;
+        } else if (char === '\r') {
+          // Handle \r\n or standalone \r
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = '';
+          if (nextChar === '\n') {
+            i += 2;
+          } else {
+            i++;
+          }
+          continue;
+        } else if (char === '\n') {
+          // End of row
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = '';
+          i++;
+          continue;
+        } else {
+          field += char;
+          i++;
+          continue;
+        }
+      }
+    }
+
+    // Handle last field/row
+    if (field || row.length > 0) {
+      row.push(field);
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
+  /**
+   * Processes WebToffee CSV content into product objects.
+   * Transforms WebToffee headers to internal wps_* format and converts values.
+   * Uses custom CSV parser to handle multi-line HTML content fields.
+   * @param {string} csvContent - Raw CSV content from WebToffee export
+   * @returns {Array<Object>} - Array of product objects with wps_* field names
+   */
+  function _processWebToffeeProductCsv(csvContent) {
+    const serviceName = 'ProductImportService';
+    const functionName = '_processWebToffeeProductCsv';
+    logger.info(serviceName, functionName, 'Processing WebToffee product CSV...');
+
+    // Get WebToffee mappings from config
+    const headerMap = ConfigService.getConfig('map.webtoffee.product_headers');
+    const valueTransforms = ConfigService.getConfig('map.webtoffee.product_values');
+
+    if (!headerMap) {
+      throw new Error("WebToffee header mapping 'map.webtoffee.product_headers' not found in configuration.");
+    }
+
+    // Parse value transforms: "publish=1,draft=0" → { "publish": "1", "draft": "0" }
+    const valueMapByColumn = {};
+    if (valueTransforms) {
+      Object.keys(valueTransforms).forEach(columnName => {
+        const transformSpec = valueTransforms[columnName]; // e.g., "publish=1,draft=0"
+        const mapping = {};
+        transformSpec.split(',').forEach(pair => {
+          const [oldVal, newVal] = pair.split('=');
+          if (oldVal !== undefined && newVal !== undefined) {
+            mapping[oldVal.trim()] = newVal.trim();
+          }
+        });
+        valueMapByColumn[columnName] = mapping;
+      });
+    }
+
+    // Use custom CSV parser that handles multi-line quoted fields
+    logger.info(serviceName, functionName, `Parsing CSV content (${csvContent.length} chars)...`);
+    const parsedData = _parseWebToffeeCsv(csvContent);
+
+    if (parsedData.length < 2) {
+      logger.warn(serviceName, functionName, 'File is empty or contains only a header.');
+      return [];
+    }
+
+    logger.info(serviceName, functionName, `Parsed ${parsedData.length} rows from CSV.`);
+
+    // Get CSV headers (first row)
+    const csvHeaders = parsedData[0].map(h => String(h).trim());
+    logger.info(serviceName, functionName, `Found ${csvHeaders.length} columns. First 5: ${csvHeaders.slice(0, 5).join(', ')}`);
+
+    // Build column index map: csvHeaderIndex → internalFieldName
+    const columnMapping = [];
+    csvHeaders.forEach((csvHeader, idx) => {
+      const internalField = headerMap[csvHeader];
+      if (internalField) {
+        columnMapping.push({ index: idx, field: internalField });
+      }
+    });
+
+    logger.info(serviceName, functionName, `Mapped ${columnMapping.length} columns from WebToffee to internal format.`);
+
+    // Process data rows
+    const productObjects = [];
+    for (let i = 1; i < parsedData.length; i++) {
+      const row = parsedData[i];
+      if (!row || row.length === 0 || row.join('').trim() === '') continue; // Skip empty rows
+
+      const product = {};
+      columnMapping.forEach(({ index, field }) => {
+        let value = row[index] || '';
+
+        // Apply value transformation if configured for this field
+        if (valueMapByColumn[field] && valueMapByColumn[field][value] !== undefined) {
+          value = valueMapByColumn[field][value];
+        }
+
+        product[field] = value;
+      });
+
+      productObjects.push(product);
+    }
+
+    logger.info(serviceName, functionName, `Successfully processed ${productObjects.length} products from WebToffee format.`);
+    return productObjects;
+  }
+
   function _runWebProductsImport(executionContext) {
     const serviceName = 'ProductImportService';
     const functionName = '_runWebProductsImport';
@@ -522,7 +754,10 @@ const ProductImportService = (function() {
         const fileEncoding = ConfigService.getConfig('import.drive.web_products_en').file_encoding || 'UTF-8';
         const csvContent = file.getBlob().getDataAsString(fileEncoding);
 
-        const productObjects = WebAdapter.processProductCsv(csvContent, 'map.web.product_columns');
+        logger.info(serviceName, functionName, `CSV content length: ${csvContent.length}, first 200 chars: ${csvContent.substring(0, 200)}`, { sessionId });
+
+        // Process WebToffee format directly (JLMops exclusive format)
+        const productObjects = _processWebToffeeProductCsv(csvContent);
 
         _populateStagingSheet(productObjects, sheetNames.WebProdS_EN, sessionId);
         logger.info(serviceName, functionName, `Successfully populated WebProdS_EN staging sheet with ${productObjects.length} products.`, { sessionId });
@@ -565,7 +800,7 @@ const ProductImportService = (function() {
     const masterHeaders = masterSchema.headers.split(',');
 
     const stagingData = ConfigService._getSheetDataAsMap('WebProdS_EN', stagingHeaders, 'wps_ID');
-    const masterData = ConfigService._getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_WebIdEn');
+    const masterData = ConfigService._getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_ID');
     const masterMap = masterData.map;
 
     const stagingKey = stagingSchema.key_column;
@@ -582,9 +817,9 @@ const ProductImportService = (function() {
 
     const criticalMappings = {
         'wps_Stock': 'wpm_Stock',
-        'wps_RegularPrice': 'wpm_Price',
+        'wps_RegularPrice': 'wpm_RegularPrice',
         'wps_SKU': 'wpm_SKU',
-        'wps_Name': 'wpm_NameEn'
+        'wps_PostTitle': 'wpm_PostTitle'
     };
 
     // Validate critical mappings are present
@@ -665,9 +900,9 @@ const ProductImportService = (function() {
     // --- ENHANCED SANITY CHECK ---
     if (finalData.length > 0) {
         const stockIdx = masterHeaders.indexOf('wpm_Stock');
-        const priceIdx = masterHeaders.indexOf('wpm_Price');
+        const priceIdx = masterHeaders.indexOf('wpm_RegularPrice');
         const skuIdx = masterHeaders.indexOf('wpm_SKU');
-        const nameIdx = masterHeaders.indexOf('wpm_NameEn');
+        const nameIdx = masterHeaders.indexOf('wpm_PostTitle');
 
         const sampleSize = Math.min(20, finalData.length);
         let validRowsFound = 0;
@@ -706,12 +941,25 @@ const ProductImportService = (function() {
     }
     // --- END ENHANCED SANITY CHECK ---
 
+    // Sort by product name (wpm_PostTitle) before writing
+    const postTitleIdx = masterHeaders.indexOf('wpm_PostTitle');
+    if (postTitleIdx > -1 && finalData.length > 0) {
+        finalData.sort((a, b) => {
+            const nameA = String(a[postTitleIdx] || '').toLowerCase();
+            const nameB = String(b[postTitleIdx] || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'en');
+        });
+        logger.info(serviceName, functionName, 'Sorted WebProdM data by product name (wpm_PostTitle).', { sessionId });
+    }
+
     // Write the updated data back to WebProdM
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const masterSheet = dataSpreadsheet.getSheetByName('WebProdM');
     masterSheet.getRange(2, 1, masterSheet.getMaxRows() - 1, masterSheet.getMaxColumns()).clearContent();
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+        // Apply standard formatting: top-align and single row height
+        _applySheetFormatting(masterSheet, finalData.length);
     }
     CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate SKU map cache
     logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}. Cache invalidated.`, { sessionId: sessionId });
@@ -794,7 +1042,7 @@ const ProductImportService = (function() {
       // 3. Get WebProdM data for existing stock and price
       const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!webProdMSheet) throw new Error('WebProdM sheet not found');
-      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
+      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_ID');
       const webProdMMap = webProdMData.map;
 
       // 4. Compare new values with existing and prepare export data for changed products
@@ -808,14 +1056,14 @@ const ProductImportService = (function() {
 
         if (!cmxMap.has(sku)) {
           productsSkipped++;
-          LoggerService.warn('ProductImportService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_NameEn}): Not found in Comax master data.`);
+          LoggerService.warn('ProductImportService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_PostTitle}): Not found in Comax master data.`);
           continue; // Cannot determine new price/stock, so skip.
         }
         const cmxProduct = cmxMap.get(sku);
 
         // Get existing values from WebProdM
         const oldStock = Number(webProdMRow.wpm_Stock) || 0;
-        const oldPrice = webProdMRow.wpm_Price;
+        const oldPrice = webProdMRow.wpm_RegularPrice;
 
         // Calculate new values
         const newPrice = cmxProduct.cpm_Price;
@@ -832,9 +1080,9 @@ const ProductImportService = (function() {
         // Compare and add to export list if changed
         if (newStock !== oldStock || newPrice !== oldPrice) {
           exportProducts.push({
-            ID: webProdMRow.wpm_WebIdEn,
+            ID: webProdMRow.wpm_ID,
             SKU: sku,
-            WName: webProdMRow.wpm_NameEn,
+            WName: webProdMRow.wpm_PostTitle,
             Stock: newStock,
             RegularPrice: newPrice
           });

@@ -431,8 +431,15 @@ function createWebProdMHeaders() {
         }
         const headers = schema.headers.split(',');
 
+        // Clear the entire header row first (handles schema changes with different column counts)
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-        console.log(`Headers written to '${sheetName}'.`);
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
 
         console.log(`Headers for ${sheetName} have been synchronized.`);
 
@@ -462,8 +469,15 @@ function createWebProdSEnHeaders() {
         }
         const headers = schema.headers.split(',');
 
+        // Clear the entire header row first (handles schema changes with different column counts)
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-        console.log(`Headers written to '${sheetName}'.`);
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
 
         console.log(`Headers for ${sheetName} have been synchronized.`);
 

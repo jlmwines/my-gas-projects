@@ -109,7 +109,7 @@
         "Configuration for the Web Products & Inventory CSV import from Google Drive.",
         "stable",
         "file_pattern",
-        "WebProducts.csv",
+        "product_export_*.csv",
         "",
         "",
         "",

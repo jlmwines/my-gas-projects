@@ -14,6 +14,22 @@ const ProductService = (function() {
   let cachedKashrut = null;
   // Note: Product data now uses CacheService instead of module-level cache
 
+  /**
+   * Applies standard formatting to a data sheet: top-align cells and set row height for single line.
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to format.
+   * @param {number} dataRowCount - Number of data rows (excluding header).
+   */
+  function _applyProductSheetFormatting(sheet, dataRowCount) {
+    if (dataRowCount <= 0) return;
+
+    // Set vertical alignment to top for all data rows
+    const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
+    dataRange.setVerticalAlignment('top');
+
+    // Set row height for single line of text (30 pixels)
+    sheet.setRowHeights(2, dataRowCount, 30);
+  }
+
   // =================================================================================
   // SKU LOOKUP AND CACHING
   // =================================================================================
@@ -48,7 +64,7 @@ const ProductService = (function() {
       const data = sheet.getDataRange().getValues();
       const headers = data.shift();
       const skuCol = headers.indexOf('wpm_SKU');
-      const webIdCol = headers.indexOf('wpm_WebIdEn');
+      const webIdCol = headers.indexOf('wpm_ID');
       if (skuCol === -1 || webIdCol === -1) {
         throw new Error('Could not find SKU or WebIdEn columns in WebProdM');
       }
@@ -476,16 +492,29 @@ const ProductService = (function() {
     }
     // --- END ENHANCED SANITY CHECK ---
 
+    // Sort by product name (cpm_NameHe) before writing
+    const nameIdx = masterHeaders.indexOf('cpm_NameHe');
+    if (nameIdx > -1 && finalData.length > 0) {
+        finalData.sort((a, b) => {
+            const nameA = String(a[nameIdx] || '').toLowerCase();
+            const nameB = String(b[nameIdx] || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'he'); // Hebrew locale for proper sorting
+        });
+        logger.info(serviceName, functionName, 'Sorted CmxProdM data by product name (cpm_NameHe).', { sessionId });
+    }
+
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
     const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
     const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
-    
+
     // More robustly clear the sheet and rewrite headers + data
     masterSheet.clear();
     masterSheet.getRange(1, 1, 1, masterHeaders.length).setValues([masterHeaders]).setFontWeight('bold');
 
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+        // Apply standard formatting: top-align and single row height
+        _applyProductSheetFormatting(masterSheet, finalData.length);
     }
     logger.info(serviceName, functionName, `Upsert to CmxProdM complete. Total rows: ${finalData.length}.`, { sessionId: sessionId });
 
@@ -635,7 +664,7 @@ const ProductService = (function() {
     const masterHeaders = masterSchema.headers.split(',');
 
     const stagingData = ConfigService._getSheetDataAsMap('WebProdS_EN', stagingHeaders, 'wps_ID');
-    const masterData = ConfigService._getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_WebIdEn');
+    const masterData = ConfigService._getSheetDataAsMap('WebProdM', masterHeaders, 'wpm_ID');
     const masterMap = masterData.map;
 
     const stagingKey = stagingSchema.key_column;
@@ -652,9 +681,9 @@ const ProductService = (function() {
 
     const criticalMappings = {
         'wps_Stock': 'wpm_Stock',
-        'wps_RegularPrice': 'wpm_Price',
+        'wps_RegularPrice': 'wpm_RegularPrice',
         'wps_SKU': 'wpm_SKU',
-        'wps_Name': 'wpm_NameEn'
+        'wps_PostTitle': 'wpm_PostTitle'
     };
 
     // NEW: Validate critical mappings are present
@@ -735,9 +764,9 @@ const ProductService = (function() {
     // --- ENHANCED SANITY CHECK ---
     if (finalData.length > 0) {
         const stockIdx = masterHeaders.indexOf('wpm_Stock');
-        const priceIdx = masterHeaders.indexOf('wpm_Price');
+        const priceIdx = masterHeaders.indexOf('wpm_RegularPrice');
         const skuIdx = masterHeaders.indexOf('wpm_SKU');
-        const nameIdx = masterHeaders.indexOf('wpm_NameEn');
+        const nameIdx = masterHeaders.indexOf('wpm_PostTitle');
 
         // ENHANCED: Sample more rows and check ALL critical fields
         const sampleSize = Math.min(20, finalData.length); // Increased from 5 to 20
@@ -778,12 +807,25 @@ const ProductService = (function() {
     }
     // --- END ENHANCED SANITY CHECK ---
 
+    // Sort by product name (wpm_PostTitle) before writing
+    const postTitleIdx = masterHeaders.indexOf('wpm_PostTitle');
+    if (postTitleIdx > -1 && finalData.length > 0) {
+        finalData.sort((a, b) => {
+            const nameA = String(a[postTitleIdx] || '').toLowerCase();
+            const nameB = String(b[postTitleIdx] || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'en');
+        });
+        logger.info(serviceName, functionName, 'Sorted WebProdM data by product name (wpm_PostTitle).', { sessionId });
+    }
+
     // Write the updated data back to WebProdM
     const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
     const masterSheet = dataSpreadsheet.getSheetByName('WebProdM');
     masterSheet.getRange(2, 1, masterSheet.getMaxRows() - 1, masterSheet.getMaxColumns()).clearContent();
     if (finalData.length > 0) {
         masterSheet.getRange(2, 1, finalData.length, finalData[0].length).setValues(finalData);
+        // Apply standard formatting: top-align and single row height
+        _applyProductSheetFormatting(masterSheet, finalData.length);
     }
     CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate SKU map cache
     logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}. Cache invalidated.`, { sessionId: sessionId });
@@ -870,7 +912,7 @@ const ProductService = (function() {
       // 3. Get WebProdM data for existing stock and price
       const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       if (!webProdMSheet) throw new Error('WebProdM sheet not found');
-      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_WebIdEn');
+      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_ID');
       const webProdMMap = webProdMData.map;
 
       // 4. Compare new values with existing and prepare export data for changed products
@@ -884,14 +926,14 @@ const ProductService = (function() {
 
         if (!cmxMap.has(sku)) {
           productsSkipped++;
-          LoggerService.warn('ProductService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_NameEn}): Not found in Comax master data.`);
+          LoggerService.warn('ProductService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_PostTitle}): Not found in Comax master data.`);
           continue; // Cannot determine new price/stock, so skip.
         }
         const cmxProduct = cmxMap.get(sku);
 
         // Get existing values from WebProdM
         const oldStock = Number(webProdMRow.wpm_Stock) || 0;
-        const oldPrice = webProdMRow.wpm_Price;
+        const oldPrice = webProdMRow.wpm_RegularPrice;
 
         // Calculate new values
         const newPrice = cmxProduct.cpm_Price;
@@ -908,9 +950,9 @@ const ProductService = (function() {
         // Compare and add to export list if changed
         if (newStock !== oldStock || newPrice !== oldPrice) {
           exportProducts.push({
-            ID: webProdMRow.wpm_WebIdEn,
+            ID: webProdMRow.wpm_ID,
             SKU: sku,
-            WName: webProdMRow.wpm_NameEn,
+            WName: webProdMRow.wpm_PostTitle,
             Stock: newStock,
             RegularPrice: newPrice
           });
@@ -1112,8 +1154,8 @@ const ProductService = (function() {
       // Fallback logic for names if WebDetM is incomplete
       if (!masterData) masterData = {}; // Initialize if null so we can populate it
       
-      if (!masterData.wdm_NameEn && webProdData && webProdData.wpm_NameEn) {
-          masterData.wdm_NameEn = webProdData.wpm_NameEn;
+      if (!masterData.wdm_NameEn && webProdData && webProdData.wpm_PostTitle) {
+          masterData.wdm_NameEn = webProdData.wpm_PostTitle;
       }
       if (!masterData.wdm_NameHe && comaxData && comaxData.cpm_NameHe) {
           masterData.wdm_NameHe = comaxData.cpm_NameHe;
@@ -1889,7 +1931,7 @@ const ProductService = (function() {
 
       // B. Check if Woo IDs are already in use
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
-      const webIdIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const webIdIdx = webProdHeaders.indexOf('wpm_ID');
       const webProdData = webProdSheet.getDataRange().getValues();
       const duplicateEn = webProdData.some(row => String(row[webIdIdx]).trim() === String(wooIdEn).trim());
       if (duplicateEn) throw new Error(`WooCommerce ID (EN) ${wooIdEn} is already in use in WebProdM.`);
@@ -1910,16 +1952,16 @@ const ProductService = (function() {
       }
 
       // B. Insert into WebProdM
-      // Required: wpm_WebIdEn, wpm_SKU, wpm_NameEn, wpm_PublishStatusEn, wpm_Stock, wpm_Price
+      // Required: wpm_ID, wpm_SKU, wpm_PostTitle, wpm_PostStatus, wpm_Stock, wpm_RegularPrice
       const newWebProdRow = new Array(webProdHeaders.length).fill('');
       
       // Map logic
-      const wp_WebIdIdx = webProdHeaders.indexOf('wpm_WebIdEn');
+      const wp_WebIdIdx = webProdHeaders.indexOf('wpm_ID');
       const wp_SkuIdx = webProdHeaders.indexOf('wpm_SKU');
-      const wp_NameIdx = webProdHeaders.indexOf('wpm_NameEn');
-      const wp_StatusIdx = webProdHeaders.indexOf('wpm_PublishStatusEn');
+      const wp_NameIdx = webProdHeaders.indexOf('wpm_PostTitle');
+      const wp_StatusIdx = webProdHeaders.indexOf('wpm_PostStatus');
       const wp_StockIdx = webProdHeaders.indexOf('wpm_Stock');
-      const wp_PriceIdx = webProdHeaders.indexOf('wpm_Price');
+      const wp_PriceIdx = webProdHeaders.indexOf('wpm_RegularPrice');
 
       // Get values from Comax row or Args
       const cpmNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');

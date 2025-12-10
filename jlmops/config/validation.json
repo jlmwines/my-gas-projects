@@ -126,10 +126,10 @@
         "source_sheet", "WebProdS_EN",
         "source_key", "wps_ID",
         "target_sheet", "WebProdM",
-        "target_key", "wpm_WebIdEn",
+        "target_key", "wpm_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "New Web Product: ${wps_Name}",
+        "on_failure_title", "New Web Product: ${wps_PostTitle}",
         "on_failure_notes", "Product SKU ${wps_SKU} exists in the web import but not in the Web Master sheet."
     ],
     [
@@ -142,12 +142,12 @@
         "test_type", "FIELD_COMPARISON",
         "sheet_A", "WebProdM",
         "sheet_B", "WebProdS_EN",
-        "key_A", "wpm_WebIdEn",
+        "key_A", "wpm_ID",
         "key_B", "wps_ID",
         "compare_fields", "wpm_SKU,wps_SKU",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "Web SKU Mismatch: ${wps_Name}",
-        "on_failure_notes", "Product '${wps_Name}' (ID: ${wps_ID}) has a SKU mismatch. Master SKU: '${wpm_SKU}', Staging SKU: '${wps_SKU}'."
+        "on_failure_title", "Web SKU Mismatch: ${wps_PostTitle}",
+        "on_failure_notes", "Product '${wps_PostTitle}' (ID: ${wps_ID}) has a SKU mismatch. Master SKU: '${wpm_SKU}', Staging SKU: '${wps_SKU}'."
     ],
     [
         "validation.rule.template",
@@ -161,10 +161,10 @@
         "sheet_B", "WebProdS_EN",
         "key_A", "wdm_WebIdEn",
         "key_B", "wps_ID",
-        "compare_fields", "wdm_NameEn,wps_Name",
+        "compare_fields", "wdm_NameEn,wps_PostTitle",
         "on_failure_task_type", "task.validation.name_mismatch",
-        "on_failure_title", "Web Name Mismatch: ${wps_Name}",
-        "on_failure_notes", "Product '${wps_Name}' (ID: ${wps_ID}) has a name mismatch. Master: '${wdm_NameEn}', Staging: '${wps_Name}'."
+        "on_failure_title", "Web Name Mismatch: ${wps_PostTitle}",
+        "on_failure_notes", "Product '${wps_PostTitle}' (ID: ${wps_ID}) has a name mismatch. Master: '${wdm_NameEn}', Staging: '${wps_PostTitle}'."
     ],
     [
         "validation.rule.template",
@@ -175,13 +175,13 @@
         "validation_suite", "web_staging",
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "WebProdM",
-        "source_key", "wpm_WebIdEn",
+        "source_key", "wpm_ID",
         "target_sheet", "WebProdS_EN",
         "target_key", "wps_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "Web Product Missing from Import: ${wpm_NameEn}",
-        "on_failure_notes", "Product SKU ${wpm_SKU} (ID: ${wpm_WebIdEn}) exists in the Web Master sheet but was not found in the latest web import."
+        "on_failure_title", "Web Product Missing from Import: ${wpm_PostTitle}",
+        "on_failure_notes", "Product SKU ${wpm_SKU} (ID: ${wpm_ID}) exists in the Web Master sheet but was not found in the latest web import."
     ],
     [
         "validation.rule.template",
@@ -220,7 +220,7 @@
     [
         "validation.rule.template",
         "validation.master.web_sku_missing_comax",
-        "[B1] Web Master SKU not in Comax Master.",
+        "[B1] Web Master SKU not in Comax Master (excludes bundles).",
         "stable",
         "enabled", "TRUE",
         "priority", "HIGH",
@@ -228,12 +228,13 @@
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "WebProdM",
         "source_key", "wpm_SKU",
+        "source_filter", "wpm_Type,simple",
         "target_sheet", "CmxProdM",
         "target_key", "cpm_SKU",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product SKU Missing from Comax Master: ${wpm_NameEn}",
-        "on_failure_notes", "Web Product SKU ${wpm_SKU} (ID: ${wpm_WebIdEn}) exists in Web Master but not in Comax Master."
+        "on_failure_title", "Web Product SKU Missing from Comax Master: ${wpm_PostTitle}",
+        "on_failure_notes", "Web Product SKU ${wpm_SKU} (ID: ${wpm_ID}) exists in Web Master but not in Comax Master."
     ],
     [
         "validation.rule.template",
@@ -264,13 +265,13 @@
         "validation_suite", "master_master",
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "WebProdM",
-        "source_key", "wpm_WebIdEn",
+        "source_key", "wpm_ID",
         "target_sheet", "WebDetM",
         "target_key", "wdm_WebIdEn",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product Name Missing from Web Details Master: ${wpm_NameEn}",
-        "on_failure_notes", "Web Product ID ${wpm_WebIdEn} (Name: ${wpm_NameEn}) exists in Web Master but not in Web Details Master."
+        "on_failure_title", "Web Product Name Missing from Web Details Master: ${wpm_PostTitle}",
+        "on_failure_notes", "Web Product ID ${wpm_ID} (Name: ${wpm_PostTitle}) exists in Web Master but not in Web Details Master."
     ],
     [
         "validation.rule.template",
@@ -284,7 +285,7 @@
         "source_sheet", "WebDetM",
         "source_key", "wdm_WebIdEn",
         "target_sheet", "WebProdM",
-        "target_key", "wpm_WebIdEn",
+        "target_key", "wpm_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
         "on_failure_title", "Web Details Master Name Missing from Web Master: ${wdm_NameEn}",
@@ -303,11 +304,11 @@
         "sheet_B", "CmxProdM",
         "key_A", "wpm_SKU",
         "key_B", "cpm_SKU",
-        "compare_fields", "wpm_PublishStatusEn,cpm_IsWeb",
+        "compare_fields", "wpm_PostStatus,cpm_IsWeb",
         "field_translations_map_cpm_IsWeb", "{\"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product Published Status Mismatch with Comax Master: ${wpm_NameEn}",
-        "on_failure_notes", "Web Product SKU ${wpm_SKU} (Name: ${wpm_NameEn}) has a published status mismatch. Web Master Published: '${wpm_PublishStatusEn}', Comax Master IsWeb: '${cpm_IsWeb}'."
+        "on_failure_title", "Web Product Published Status Mismatch with Comax Master: ${wpm_PostTitle}",
+        "on_failure_notes", "Web Product SKU ${wpm_SKU} (Name: ${wpm_PostTitle}) has a published status mismatch. Web Master Published: '${wpm_PostStatus}', Comax Master IsWeb: '${cpm_IsWeb}'."
     ],
 
     [
