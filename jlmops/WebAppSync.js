@@ -183,10 +183,10 @@ function startComaxImportBackend() {
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
 
-    // Write Step 3 processing status
+    // Write Step 4 processing status
     SyncStatusService.writeStatus(currentState.sessionId, {
-      step: 3,
-      stepName: 'Import Comax Data',
+      step: 4,
+      stepName: 'Comax Products',
       status: 'processing',
       message: 'Importing Comax product data...'
     });
@@ -196,8 +196,11 @@ function startComaxImportBackend() {
 
     logger.info(serviceName, functionName, `Comax import started. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId });
 
-    // Trigger immediate job processing
-    OrchestratorService.run('hourly');
+    // Process queued jobs for this session
+    const result = OrchestratorService.processSessionJobs(currentState.sessionId);
+    if (!result.success) {
+      logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId: currentState.sessionId });
+    }
 
     // Return current status for UI
     return SyncStatusService.getSessionStatus(currentState.sessionId);
@@ -283,8 +286,8 @@ function exportComaxOrdersBackend() {
 
     // Write processing status
     SyncStatusService.writeStatus(sessionId, {
-      step: 2,
-      stepName: 'Export Orders to Comax',
+      step: 3,
+      stepName: 'Order Export',
       status: 'processing',
       message: 'Generating order export file...'
     });
@@ -292,25 +295,52 @@ function exportComaxOrdersBackend() {
     const orderService = new OrderService(ProductService);
     const result = orderService.exportOrdersToComax(sessionId);
 
-    // After successful export, update the state to indicate readiness for confirmation
+    // After successful export, update the state
     if (result.success) {
       const newState = SyncStateService.getSyncState();
-      newState.comaxOrdersExported = true; // New state property
-      newState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(newState);
+      const exportedCount = result.exportedCount || 0;
 
-      // Write waiting status - ready for confirmation
-      SyncStatusService.writeStatus(sessionId, {
-        step: 2,
-        stepName: 'Export Orders to Comax',
-        status: 'waiting',
-        message: `Export complete. ${result.exportedCount || 0} orders exported. Ready to confirm upload.`
-      });
+      if (exportedCount === 0) {
+        // No orders to export - mark step 3 complete and move to step 4
+        SyncStatusService.writeStatus(sessionId, {
+          step: 3,
+          stepName: 'Order Export',
+          status: 'completed',
+          message: 'No orders to export'
+        });
+
+        // Set up step 4 as ready
+        SyncStatusService.writeStatus(sessionId, {
+          step: 4,
+          stepName: 'Comax Products',
+          status: 'waiting',
+          message: 'Ready to import Comax product data'
+        });
+
+        // Update state - skip confirmation since nothing was exported
+        newState.comaxOrdersExported = true; // Mark as done (nothing to do)
+        newState.currentStage = 'READY_FOR_COMAX_IMPORT';
+        newState.lastUpdated = new Date().toISOString();
+        SyncStateService.setSyncState(newState);
+      } else {
+        // Orders were exported - need confirmation
+        newState.comaxOrdersExported = true;
+        newState.lastUpdated = new Date().toISOString();
+        SyncStateService.setSyncState(newState);
+
+        // Write waiting status - ready for confirmation
+        SyncStatusService.writeStatus(sessionId, {
+          step: 3,
+          stepName: 'Order Export',
+          status: 'waiting',
+          message: `Export complete. ${exportedCount} orders exported. Ready to confirm upload.`
+        });
+      }
     } else {
       // Write failure status
       SyncStatusService.writeStatus(sessionId, {
-        step: 2,
-        stepName: 'Export Orders to Comax',
+        step: 3,
+        stepName: 'Order Export',
         status: 'failed',
         message: `Export failed: ${result.message || 'Unknown error'}`
       });
@@ -322,8 +352,8 @@ function exportComaxOrdersBackend() {
     const currentState = SyncStateService.getSyncState();
 
     SyncStatusService.writeStatus(currentState.sessionId, {
-      step: 2,
-      stepName: 'Export Orders to Comax',
+      step: 3,
+      stepName: 'Order Export',
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -350,18 +380,18 @@ function confirmComaxUpdateBackend() {
       throw new Error(`Cannot confirm Comax update. Current stage is ${currentState.currentStage} or Comax orders not exported.`);
     }
 
-    // Write Step 2 completed status
+    // Write Step 3 completed status
     SyncStatusService.writeStatus(sessionId, {
-      step: 2,
-      stepName: 'Export Orders to Comax',
+      step: 3,
+      stepName: 'Order Export',
       status: 'completed',
       message: 'Orders exported and uploaded to Comax'
     });
 
-    // Write Step 3 waiting status
+    // Write Step 4 waiting status
     SyncStatusService.writeStatus(sessionId, {
-      step: 3,
-      stepName: 'Import Comax Data',
+      step: 4,
+      stepName: 'Comax Products',
       status: 'waiting',
       message: 'Ready to import Comax product data'
     });
@@ -377,8 +407,8 @@ function confirmComaxUpdateBackend() {
     const errorState = SyncStateService.getSyncState();
 
     SyncStatusService.writeStatus(errorState.sessionId, {
-      step: 2,
-      stepName: 'Export Orders to Comax',
+      step: 3,
+      stepName: 'Order Export',
       status: 'failed',
       message: `Confirmation failed: ${e.message}`
     });
@@ -546,6 +576,223 @@ function getInventoryReceiptsInfo() {
     logger.error(serviceName, functionName, `Error getting inventory receipts info: ${e.message}`, e);
     return { count: 0, folderUrl: null, error: e.message };
   }
+}
+
+// =================================================================
+//  NEW SYNC WIDGET FUNCTIONS (v2)
+// =================================================================
+
+/**
+ * Checks the freshness of web product files before importing.
+ * Returns file info for UI to display/warn user if files are stale.
+ * @returns {object} Freshness info for English products and translations files
+ */
+function checkWebProductFilesFreshness() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'checkWebProductFilesFreshness';
+
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const registry = OrchestratorService.getFileRegistry();
+
+    // Check English products file
+    const enConfig = allConfig['import.drive.web_products_en'];
+    const enFolder = DriveApp.getFolderById(enConfig.source_folder_id);
+    const enFiles = OrchestratorService.getFilesByPattern(enFolder, enConfig.file_pattern || 'product_export*');
+    let enFile = null;
+    let latestEnDate = new Date(0);
+
+    // Find latest file matching pattern
+    while (enFiles.hasNext()) {
+      const file = enFiles.next();
+      if (file.getLastUpdated() > latestEnDate) {
+        latestEnDate = file.getLastUpdated();
+        enFile = file;
+      }
+    }
+
+    if (enFile) {
+      logger.info(serviceName, functionName, `Found English products file: ${enFile.getName()}`);
+    } else {
+      logger.warn(serviceName, functionName, `No English products file found matching pattern: ${enConfig.file_pattern}`);
+    }
+
+    // Check translations file
+    const heConfig = allConfig['import.drive.web_translations_he'];
+    const heFolder = DriveApp.getFolderById(heConfig.source_folder_id);
+    const heFiles = OrchestratorService.getFilesByPattern(heFolder, heConfig.file_pattern || 'he_product_export*');
+    let heFile = null;
+    let latestHeDate = new Date(0);
+
+    while (heFiles.hasNext()) {
+      const file = heFiles.next();
+      if (file.getLastUpdated() > latestHeDate) {
+        latestHeDate = file.getLastUpdated();
+        heFile = file;
+      }
+    }
+
+    if (heFile) {
+      logger.info(serviceName, functionName, `Found translations file: ${heFile.getName()}`);
+    } else {
+      logger.warn(serviceName, functionName, `No translations file found matching pattern: ${heConfig.file_pattern}`);
+    }
+
+    const enRegistryEntry = enFile ? registry.get(enFile.getId()) : null;
+    const heRegistryEntry = heFile ? registry.get(heFile.getId()) : null;
+
+    return {
+      englishProducts: {
+        fileName: enFile ? enFile.getName() : null,
+        missing: !enFile,
+        lastModified: enFile ? enFile.getLastUpdated().toISOString() : null,
+        isNew: enFile ? OrchestratorService.isNewFile(enFile, registry) : false,
+        lastImported: enRegistryEntry ? enRegistryEntry.lastUpdated : null
+      },
+      translations: {
+        fileName: heFile ? heFile.getName() : null,
+        missing: !heFile,
+        lastModified: heFile ? heFile.getLastUpdated().toISOString() : null,
+        isNew: heFile ? OrchestratorService.isNewFile(heFile, registry) : false,
+        lastImported: heRegistryEntry ? heRegistryEntry.lastUpdated : null
+      }
+    };
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error checking file freshness: ${e.message}`, e);
+    return {
+      error: e.message,
+      englishProducts: { fileName: null, missing: true, lastModified: null, isNew: true, lastImported: null },
+      translations: { fileName: null, missing: true, lastModified: null, isNew: true, lastImported: null }
+    };
+  }
+}
+
+/**
+ * Imports web products (translations first, then English products).
+ * Accessible from frontend via `google.script.run.importWebProductsBackend()`.
+ * @returns {object} The updated sync status
+ */
+function importWebProductsBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'importWebProductsBackend';
+  logger.info(serviceName, functionName, 'Starting web products import.');
+
+  try {
+    const sessionId = OrchestratorService.generateSessionId();
+
+    // IMMEDIATE status update
+    SyncStatusService.writeStatus(sessionId, {
+      step: 1,
+      stepName: 'Import Web Products',
+      status: 'processing',
+      message: 'Importing translations and products...'
+    });
+
+    // Update sync state
+    const newState = SyncStateService.getDefaultState();
+    newState.sessionId = sessionId;
+    newState.currentStage = 'WEB_PRODUCTS_IMPORTING';
+    newState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(newState);
+
+    // Queue jobs: translations first, then products
+    OrchestratorService.queueWebProductsImport(sessionId);
+
+    // Process jobs for this session (stops on first failure)
+    const result = OrchestratorService.processSessionJobs(sessionId);
+
+    if (!result.success) {
+      logger.error(serviceName, functionName, `Web products import failed: ${result.error}`, null, { sessionId });
+      // Status already written by processJob catch block
+    } else {
+      logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+    }
+
+    return SyncStatusService.getSessionStatus(sessionId);
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error starting web products import: ${e.message}`, e);
+    const sessionId = OrchestratorService.generateSessionId();
+
+    SyncStatusService.writeStatus(sessionId, {
+      step: 1,
+      stepName: 'Import Web Products',
+      status: 'failed',
+      message: `Error: ${e.message}`
+    });
+
+    return SyncStatusService.getSessionStatus(sessionId);
+  }
+}
+
+/**
+ * Imports web orders. Can be called manually or by auto-polling.
+ * Accessible from frontend via `google.script.run.importWebOrdersBackend()`.
+ * @returns {object} The updated sync status
+ */
+function importWebOrdersBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'importWebOrdersBackend';
+  logger.info(serviceName, functionName, 'Starting web orders import.');
+
+  try {
+    // Use existing session OR create new one
+    let state = SyncStateService.getSyncState();
+    const sessionId = state.sessionId || OrchestratorService.generateSessionId();
+
+    // If no session existed, create state
+    if (!state.sessionId) {
+      const newState = SyncStateService.getDefaultState();
+      newState.sessionId = sessionId;
+      newState.currentStage = 'WEB_ORDERS_IMPORTING';
+      newState.lastUpdated = new Date().toISOString();
+      SyncStateService.setSyncState(newState);
+    }
+
+    // IMMEDIATE status update
+    SyncStatusService.writeStatus(sessionId, {
+      step: 2,
+      stepName: 'Import Web Orders',
+      status: 'processing',
+      message: 'Processing orders...'
+    });
+
+    // Queue orders import job
+    OrchestratorService.queueWebOrdersImport(sessionId);
+
+    // Process jobs for this session (stops on first failure)
+    const result = OrchestratorService.processSessionJobs(sessionId);
+
+    if (!result.success) {
+      logger.error(serviceName, functionName, `Web orders import failed: ${result.error}`, null, { sessionId });
+    } else {
+      logger.info(serviceName, functionName, `Web orders import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+    }
+
+    return SyncStatusService.getSessionStatus(sessionId);
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error starting web orders import: ${e.message}`, e);
+    const state = SyncStateService.getSyncState();
+    const sessionId = state.sessionId || 'ERROR';
+
+    SyncStatusService.writeStatus(sessionId, {
+      step: 2,
+      stepName: 'Import Web Orders',
+      status: 'failed',
+      message: `Error: ${e.message}`
+    });
+
+    return SyncStatusService.getSessionStatus(sessionId);
+  }
+}
+
+/**
+ * Gets recent failures for the current session.
+ * Accessible from frontend via `google.script.run.getRecentFailures(sessionId)`.
+ * @param {string} sessionId - The sync session ID
+ * @returns {Array} Array of failure objects { jobType, error }
+ */
+function getRecentFailures(sessionId) {
+  return SyncStatusService.getRecentFailures(sessionId);
 }
 
 // =================================================================

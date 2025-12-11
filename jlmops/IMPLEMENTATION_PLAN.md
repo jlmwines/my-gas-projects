@@ -155,7 +155,7 @@
 *   **Automated Testing:** `TestRunner`, `TestData`, and unit test suites.
 *   **Database Protection:** Header locking and schema validation.
 
-### Phase 13: Codebase Health & Stabilization (NEXT)
+### Phase 13: Codebase Health & Stabilization (COMPLETED)
 
 *   **Goal:** Address technical debt to create a stable foundation before adding new features.
 *   **Rationale:** Bundle implementation touches ProductService, validation logic, and import workflows. These must be clean and maintainable first.
@@ -203,6 +203,31 @@
 #### Files to Update (Controller Imports)
 *   `WebApp.js`, `WebAppProducts.js`, `WebAppSystem.js`, `WebAppSync.js`
 *   `WebAppInventory.js`, `WebAppDashboard.js`, `WebAppTasks.js`
+
+#### 6. Daily Sync Widget Refactor ✅ COMPLETED
+*   **Problem:** Original widget was slow, had invisible failures, stale file blindness, and confusing validation steps.
+*   **Solution:** Complete refactor with session-based workflow and immediate visual feedback.
+*   **Changes:**
+    *   **AdminDailySyncWidget_v2.html:** New 6-step visual workflow (Comax Invoices + 5 sync steps)
+        *   IIFE-wrapped JavaScript to prevent redeclaration errors on navigation
+        *   Smart polling (ultra-fast after clicks, slower when idle)
+        *   Failure banner with dismiss capability
+        *   Step-specific action buttons with visual feedback
+    *   **WebAppSync.js:** Session-based import functions
+        *   `importWebProductsBackend()` / `importWebOrdersBackend()` - Direct job processing via `processSessionJobs()`
+        *   `exportComaxOrdersBackend()` - Auto-skip step 3 when 0 orders to export
+        *   `startComaxImportBackend()` - Fixed step number (was 3, now 4)
+        *   Correct step numbers throughout (1: Web Products, 2: Web Orders, 3: Order Export, 4: Comax Products, 5: Web Inventory)
+    *   **OrchestratorService.js:** New `processSessionJobs(sessionId)` function
+        *   Processes only jobs for specific session
+        *   Stops immediately on first failure
+        *   Re-reads job queue data after each job to prevent double-processing
+    *   **ProductImportService.js:** Status writes to correct steps with consistent stepNames
+    *   **WebAdapter.js:** Custom CSV parser (`_parseComplexCsv`) for multiline HTML content in Hebrew translation files
+    *   **SyncStatusService.js:** Session-based status tracking with step-by-step progress
+*   **Config Updates:**
+    *   `config/jobs.json`: Hebrew file pattern `wehe.csv` → `he_product_export*`
+    *   `config/mappings.json`: WebToffee column mappings for new export format
 
 ### Phase 14: Bundle Management (PLANNED)
 

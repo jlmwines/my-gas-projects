@@ -169,7 +169,7 @@
         "Configuration for the Hebrew Web Translations CSV import from Google Drive.",
         "stable",
         "file_pattern",
-        "wehe.csv",
+        "he_product_export*",
         "",
         "",
         "",

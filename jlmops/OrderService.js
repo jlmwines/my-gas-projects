@@ -160,21 +160,35 @@ function OrderService(productService) {
     try {
       if (jobType === 'import.drive.web_orders') {
         const ordersWithLineItems = this.importWebOrdersToStaging(executionContext); // Pass executionContext
-        
+
         const validationResult = ValidationLogic.runValidationSuite('order_staging', sessionId); // Pass sessionId
         if (!validationResult.success || validationResult.results.some(r => r.status === 'FAILED')) {
             logger.error(serviceName, functionName, 'Order staging validation failed. Job will be QUARANTINED.', { sessionId: sessionId, jobType: jobType, validationResults: validationResult.results });
             finalJobStatus = 'QUARANTINED';
             errorMessage = 'Order staging validation failed.';
+            // Write status for UI
+            SyncStatusService.writeStatus(sessionId, {
+              step: 2,
+              stepName: 'Import Web Orders',
+              status: 'failed',
+              message: 'Validation failed - orders quarantined'
+            });
         } else {
             this.processStagedOrders(ordersWithLineItems, executionContext); // Pass executionContext
             finalJobStatus = 'COMPLETED';
+            // Write success status for UI
+            SyncStatusService.writeStatus(sessionId, {
+              step: 2,
+              stepName: 'Import Web Orders',
+              status: 'completed',
+              message: `Imported ${ordersWithLineItems.length} orders`
+            });
         }
       } else {
         errorMessage = `Unknown job type: ${jobType}`;
         throw new Error(errorMessage);
       }
-      
+
       _updateJobStatus(executionContext, finalJobStatus, errorMessage);
 
       if (finalJobStatus === 'COMPLETED') {
@@ -186,6 +200,13 @@ function OrderService(productService) {
       errorMessage = e.message;
       logger.error(serviceName, functionName, `Failed to process job on row ${jobQueueSheetRowNumber}: ${errorMessage}`, e, { sessionId: sessionId, jobType: jobType });
       _updateJobStatus(executionContext, 'FAILED', errorMessage);
+      // Write failure status for UI
+      SyncStatusService.writeStatus(sessionId, {
+        step: 2,
+        stepName: 'Import Web Orders',
+        status: 'failed',
+        message: `Import failed: ${e.message}`
+      });
       throw e; // Re-throw to be caught by Orchestrator
     }
   };

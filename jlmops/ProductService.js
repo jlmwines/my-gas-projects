@@ -223,7 +223,7 @@ const ProductService = (function() {
         const file = DriveApp.getFileById(archiveFileId);
         const csvContent = file.getBlob().getDataAsString('UTF-8');
 
-        const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.web.translation_columns');
+        const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.webtoffee.hebrew_headers');
 
         _populateStagingSheet(translationObjects, sheetNames.WebXltS, sessionId);
         LoggerService.info(serviceName, functionName, 'Successfully populated WebXltS staging sheet.', { sessionId: sessionId });

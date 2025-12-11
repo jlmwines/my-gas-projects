@@ -1419,8 +1419,12 @@ const OrchestratorService = (function() {
     const functionName = 'getInvoiceFileCount';
     try {
       const allConfig = ConfigService.getAllConfig();
+      if (!allConfig) {
+        logger.warn(serviceName, functionName, 'Configuration not available. Run rebuildSysConfigFromSource.');
+        return 0;
+      }
       const invoiceFolderConfig = allConfig['system.folder.invoices'];
-      
+
       if (!invoiceFolderConfig || !invoiceFolderConfig.id) {
         logger.warn(serviceName, functionName, 'Invoice folder ID not found in configuration.');
         return 0;
@@ -1466,6 +1470,119 @@ const OrchestratorService = (function() {
     }
   }
 
+  // --- NEW SYNC V2 HELPERS ---
+
+  /**
+   * Queues only web products import (translations + products, no orders).
+   * Translations are queued first as they may be needed for product display.
+   * @param {string} sessionId - The sync session ID
+   */
+  function queueWebProductsImport(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueWebProductsImport';
+    logger.info(serviceName, functionName, `Queuing web products for Session: ${sessionId}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    // Queue translations first, then products
+    const importConfigs = [
+      'import.drive.web_translations_he',
+      'import.drive.web_products_en'
+    ];
+
+    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
+
+    importConfigs.forEach(configName => {
+      const config = allConfig[configName];
+      if (!config || !config.source_folder_id || !config.file_pattern) {
+        logger.warn(serviceName, functionName, `Configuration for '${configName}' is incomplete. Skipping.`);
+        return;
+      }
+
+      const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+      const files = getFilesByPattern(sourceFolder, config.file_pattern);
+
+      // Find latest file
+      let latestFile = null;
+      let latestDate = new Date(0);
+      while (files.hasNext()) {
+        const file = files.next();
+        if (file.getLastUpdated() > latestDate) {
+          latestFile = file;
+          latestDate = file.getLastUpdated();
+        }
+      }
+
+      if (latestFile) {
+        const archivedFile = archiveFile(latestFile, archiveFolder);
+        createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
+        logger.info(serviceName, functionName, `Queued ${configName} for session ${sessionId}`);
+      } else {
+        logger.warn(serviceName, functionName, `No file found for ${configName}`);
+      }
+    });
+
+    SpreadsheetApp.flush();
+  }
+
+  /**
+   * Queues only web orders import.
+   * @param {string} sessionId - The sync session ID
+   */
+  function queueWebOrdersImport(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueWebOrdersImport';
+    logger.info(serviceName, functionName, `Queuing web orders for Session: ${sessionId}`);
+    const allConfig = ConfigService.getAllConfig();
+
+    const configName = 'import.drive.web_orders';
+    const config = allConfig[configName];
+
+    if (!config || !config.source_folder_id || !config.file_pattern) {
+      throw new Error(`Configuration for '${configName}' is incomplete or missing.`);
+    }
+
+    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
+
+    const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
+    const files = getFilesByPattern(sourceFolder, config.file_pattern);
+
+    // Find latest file
+    let latestFile = null;
+    let latestDate = new Date(0);
+    while (files.hasNext()) {
+      const file = files.next();
+      if (file.getLastUpdated() > latestDate) {
+        latestFile = file;
+        latestDate = file.getLastUpdated();
+      }
+    }
+
+    if (latestFile) {
+      const archivedFile = archiveFile(latestFile, archiveFolder);
+      createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
+      logger.info(serviceName, functionName, `Queued orders for session ${sessionId}`);
+    } else {
+      throw new Error('No web orders file found in import folder');
+    }
+
+    SpreadsheetApp.flush();
+  }
+
+  /**
+   * Gets the file registry as a Map for freshness checking.
+   * @returns {Map} Map of fileId -> { name, lastUpdated }
+   */
+  function getFileRegistry() {
+    const allConfig = ConfigService.getAllConfig();
+    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
+    return getRegistryMap(fileRegistrySheet);
+  }
+
       return {
       run: run,
       finalizeJobCompletion: finalizeJobCompletion,
@@ -1480,6 +1597,113 @@ const OrchestratorService = (function() {
       generateSessionId: generateSessionId,
       triggerWebOrderFileProcessing: triggerWebOrderFileProcessing,
       processPendingJobs: processPendingJobs,
-      checkAndAdvanceSyncState: _checkAndAdvanceSyncState // Export state checking
+      checkAndAdvanceSyncState: _checkAndAdvanceSyncState,
+      // New v2 helpers
+      queueWebProductsImport: queueWebProductsImport,
+      queueWebOrdersImport: queueWebOrdersImport,
+      getFileRegistry: getFileRegistry,
+      isNewFile: isNewFile,
+      getFilesByPattern: getFilesByPattern,
+      processSessionJobs: processSessionJobs
     };
+
+  /**
+   * Processes jobs for a specific session, stopping on first failure.
+   * Used for user-driven imports (not the hourly automated flow).
+   * @param {string} sessionId - The session ID to process jobs for
+   * @returns {object} { success: boolean, jobsProcessed: number, error?: string }
+   */
+  function processSessionJobs(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'processSessionJobs';
+    logger.info(serviceName, functionName, `Processing jobs for session: ${sessionId}`);
+
+    const allConfig = ConfigService.getAllConfig();
+    const logSheetConfig = allConfig['system.spreadsheet.logs'];
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+    let jobQueueData = jobQueueSheet.getDataRange().getValues();
+    const jobQueueHeaders = jobQueueData[0];
+
+    const sessionColIdx = jobQueueHeaders.indexOf('session_id');
+    const statusColIdx = jobQueueHeaders.indexOf('status');
+    const jobTypeColIdx = jobQueueHeaders.indexOf('job_type');
+    const jobIdColIdx = jobQueueHeaders.indexOf('job_id');
+    const processedTsColIdx = jobQueueHeaders.indexOf('processed_timestamp');
+    const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
+
+    let jobsProcessed = 0;
+
+    // Find and process PENDING jobs for this session in order
+    for (let i = 1; i < jobQueueData.length; i++) {
+      const row = jobQueueData[i];
+      if (row[sessionColIdx] !== sessionId) continue;
+      if (row[statusColIdx] !== 'PENDING') continue;
+
+      const jobId = row[jobIdColIdx];
+      const jobType = row[jobTypeColIdx];
+      const jobQueueSheetRowNumber = i + 1;
+
+      logger.info(serviceName, functionName, `Processing job ${jobId} (${jobType}) for session ${sessionId}`);
+
+      // Get job config
+      const jobConfig = allConfig[jobType];
+      if (!jobConfig || !jobConfig.processing_service) {
+        logger.error(serviceName, functionName, `No processing service configured for job type: ${jobType}`);
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue('No processing service configured.');
+        return { success: false, jobsProcessed, error: `No processing service for ${jobType}` };
+      }
+
+      const processingServiceName = jobConfig.processing_service;
+      const executionContext = {
+        sessionId: sessionId,
+        jobId: jobId,
+        jobType: jobType,
+        jobQueueSheetRowNumber: jobQueueSheetRowNumber,
+        jobQueueHeaders: jobQueueHeaders
+      };
+
+      try {
+        // Set status to PROCESSING
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('PROCESSING');
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, processedTsColIdx + 1).setValue(new Date());
+
+        switch (processingServiceName) {
+          case 'ProductService':
+          case 'ProductImportService':
+            ProductImportService.processJob(executionContext);
+            break;
+          case 'OrderService':
+            const orderServiceInstance = new OrderService(ProductService);
+            orderServiceInstance.processJob(executionContext);
+            break;
+          default:
+            throw new Error(`Unknown processing service: ${processingServiceName}`);
+        }
+
+        jobsProcessed++;
+        finalizeJobCompletion(jobQueueSheetRowNumber);
+        logger.info(serviceName, functionName, `Job ${jobId} completed successfully`);
+
+        // Re-read job queue data to get latest status after finalize
+        // This prevents re-processing jobs that were already processed by processPendingJobs() inside finalizeJobCompletion
+        jobQueueData = jobQueueSheet.getDataRange().getValues();
+
+      } catch (e) {
+        logger.error(serviceName, functionName, `Job ${jobId} failed: ${e.message}`, e);
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, statusColIdx + 1).setValue('FAILED');
+        jobQueueSheet.getRange(jobQueueSheetRowNumber, errorMsgColIdx + 1).setValue(e.message);
+        SpreadsheetApp.flush();
+        return { success: false, jobsProcessed, error: e.message };
+      }
+    }
+
+    SpreadsheetApp.flush();
+    logger.info(serviceName, functionName, `Session ${sessionId}: ${jobsProcessed} jobs processed successfully`);
+    return { success: true, jobsProcessed };
+  }
+
 })();

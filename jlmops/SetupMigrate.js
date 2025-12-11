@@ -346,7 +346,7 @@ function populateInitialProductData() {
         });
 
         // Populate WebXltM
-        const translationMapConfig = ConfigService.getConfig('map.web.translation_columns');
+        const translationMapConfig = ConfigService.getConfig('map.webtoffee.hebrew_headers');
         const weheHeaderMap = {};
         for (const legacyHeader in translationMapConfig) {
             const internalHeader = translationMapConfig[legacyHeader];

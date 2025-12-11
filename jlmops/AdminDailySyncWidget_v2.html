@@ -8,7 +8,7 @@
         overflow: hidden;
     }
     .sync-icon {
-        font-size: 2rem;
+        font-size: 1.6rem;
         margin: 0.5rem 0;
     }
 </style>
@@ -19,10 +19,17 @@
             <span id="sessionIdDisplay" class="small text-muted"></span>
         </div>
         <div class="text-end">
-            <a href="#" id="resetSyncLink" onclick="resetSync(); return false;" class="text-decoration-none text-secondary small">Reset</a>
+            <a href="#" id="resetSyncLink" onclick="window.SyncWidget.resetSync(); return false;" class="text-decoration-none text-secondary fw-bold">Reset</a>
         </div>
     </div>
     <div class="card-body">
+
+        <!-- Failure Banner -->
+        <div id="failureBanner" class="alert alert-danger d-none mb-3">
+            <button type="button" class="close float-end" onclick="window.SyncWidget.dismissFailures()" style="background:none;border:none;font-size:1.2rem;line-height:1;opacity:0.7;">&times;</button>
+            <strong>Import Failures:</strong>
+            <span id="failureList"></span>
+        </div>
 
         <!-- 6-Step Display (Invoices + 5 Steps) -->
         <div class="row row-cols-6 g-2 mb-3">
@@ -30,7 +37,7 @@
             <div class="col">
                 <div class="card h-100" id="invoiceCard">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">Invoices</h6>
+                        <h6 class="card-title sync-card-title">Comax Invoices</h6>
                         <div id="invoiceIcon" class="sync-icon">📁</div>
                         <div id="invoiceMessage" class="small">
                             <span id="invoiceCount" class="fw-bold">...</span>
@@ -39,61 +46,61 @@
                     </div>
                 </div>
             </div>
-            <!-- Step 1 -->
+            <!-- Step 1: Import Web Products -->
             <div class="col">
                 <div class="card h-100" id="step1Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">1. Import Web Data</h6>
+                        <h6 class="card-title sync-card-title">1. Web Products</h6>
                         <div id="step1Icon" class="sync-icon">⏸️</div>
-                        <div id="step1Message" class="text-muted">Waiting...</div>
+                        <div id="step1Message" class="text-muted small">Pending...</div>
                         <div id="step1Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 2 -->
+            <!-- Step 2: Import Web Orders -->
             <div class="col">
                 <div class="card h-100" id="step2Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">2. Export Orders to Comax</h6>
+                        <h6 class="card-title sync-card-title">2. Web Orders</h6>
                         <div id="step2Icon" class="sync-icon">⏸️</div>
-                        <div id="step2Message" class="text-muted">Waiting...</div>
+                        <div id="step2Message" class="text-muted small">Auto-import</div>
                         <div id="step2Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 3 -->
+            <!-- Step 3: Export to Comax -->
             <div class="col">
                 <div class="card h-100" id="step3Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">3. Import Comax Data</h6>
+                        <h6 class="card-title sync-card-title">3. Order Export</h6>
                         <div id="step3Icon" class="sync-icon">⏸️</div>
-                        <div id="step3Message" class="text-muted">Waiting...</div>
+                        <div id="step3Message" class="text-muted small">Pending...</div>
                         <div id="step3Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 4 -->
+            <!-- Step 4: Import Comax Data -->
             <div class="col">
                 <div class="card h-100" id="step4Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">4. Validation</h6>
+                        <h6 class="card-title sync-card-title">4. Comax Products</h6>
                         <div id="step4Icon" class="sync-icon">⏸️</div>
-                        <div id="step4Message" class="text-muted">Waiting...</div>
+                        <div id="step4Message" class="text-muted small">Pending...</div>
                         <div id="step4Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 5 -->
+            <!-- Step 5: Export Web Inventory -->
             <div class="col">
                 <div class="card h-100" id="step5Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">5. Export Web Inventory</h6>
+                        <h6 class="card-title sync-card-title">5. Web Inventory</h6>
                         <div id="step5Icon" class="sync-icon">⏸️</div>
-                        <div id="step5Message" class="text-muted">Waiting...</div>
+                        <div id="step5Message" class="text-muted small">Pending...</div>
                         <div id="step5Action"></div>
                     </div>
                 </div>
@@ -103,16 +110,39 @@
         <!-- Error Display -->
         <div id="errorDisplay" class="alert alert-danger d-none"></div>
     </div>
-    <div class="card-footer text-muted small" id="footerStatus">
+    <div class="card-footer text-muted" id="footerStatus">
         Ready
     </div>
 </div>
 
 <script>
-    let currentSessionId = null;
+(function() {
+    'use strict';
 
-    // Simple status icons
-    const ICONS = {
+    // Clear any existing interval from previous widget instance
+    if (window._syncWidgetPollInterval) {
+        clearInterval(window._syncWidgetPollInterval);
+        window._syncWidgetPollInterval = null;
+    }
+
+    // Reset all widget state on load
+    window._lastLoggedStatus = null;
+    window.lastMessageTimestamp = 0;
+
+    // Module state
+    var currentSessionId = null;
+    var pollInterval = null;
+    var lastActionTime = 0;
+    var currentPollIntervalMs = null;
+    var dismissedFailures = {};
+
+    // Constants
+    var ULTRA_FAST_POLL_MS = 500;
+    var ACTIVE_POLL_MS = 1000;
+    var IDLE_POLL_MS = 10000;
+    var ACTION_GRACE_PERIOD_MS = 5000;
+
+    var ICONS = {
         waiting: '⏸️',
         processing: '🔄',
         completed: '✅',
@@ -120,41 +150,27 @@
     };
 
     function updateUI(status) {
-        const now = Date.now();
-        const gracePeriod = 5000; // 5 seconds
+        var now = Date.now();
 
-        // PHASE 4: Don't overwrite recent user actions
-        if (now - lastActionTime < gracePeriod) {
-            console.log('Skipping UI update - within grace period after user action');
+        // Don't overwrite recent user actions
+        if (now - lastActionTime < ACTION_GRACE_PERIOD_MS) {
             return;
         }
 
-        // PHASE 4: Track message timestamps to prevent stale overwrites
-        const messageTimestamp = new Date(status.lastUpdated || 0).getTime();
-        const currentMessageTimestamp = window.lastMessageTimestamp || 0;
+        // Track message timestamps to prevent stale overwrites
+        var messageTimestamp = new Date(status.lastUpdated || 0).getTime();
+        var currentMessageTimestamp = window.lastMessageTimestamp || 0;
 
-        // Only update if message is newer (prevent stale data from overwriting fresh UI)
         if (messageTimestamp > 0 && messageTimestamp <= currentMessageTimestamp) {
-            console.log('Skipping stale message - already have newer data');
             return;
         }
 
         window.lastMessageTimestamp = messageTimestamp;
 
-        // Only log when step status actually changes (not on every poll)
-        const currentStepData = status[`step${status.currentStep}`];
-        const lastLoggedStatus = window._lastLoggedStatus || {};
-        const statusKey = `${status.currentStep}_${currentStepData?.status}_${currentStepData?.message}`;
-
-        if (statusKey !== lastLoggedStatus.key) {
-            console.log('Sync Widget: Step', status.currentStep, currentStepData);
-            window._lastLoggedStatus = { key: statusKey };
-        }
-
         currentSessionId = status.sessionId;
 
         // Update session display
-        document.getElementById('sessionIdDisplay').textContent = status.sessionId ? `Session: ${status.sessionId}` : '';
+        document.getElementById('sessionIdDisplay').textContent = status.sessionId ? 'Session: ' + status.sessionId : '';
 
         // Update each step
         updateStep(1, status.step1, status.currentStep === 1);
@@ -165,32 +181,37 @@
 
         // Update footer
         document.getElementById('footerStatus').textContent = status.lastUpdated ?
-            `Last updated: ${new Date(status.lastUpdated).toLocaleTimeString()}` : 'Ready';
+            'Last updated: ' + new Date(status.lastUpdated).toLocaleTimeString() : 'Ready';
+
+        // Check for any failures (only if session active)
+        if (status.sessionId) {
+            checkForFailures();
+        }
     }
 
     function updateInvoiceFolder() {
         google.script.run
-            .withSuccessHandler(info => {
-                const countEl = document.getElementById('invoiceCount');
-                const actionEl = document.getElementById('invoiceAction');
-                const iconEl = document.getElementById('invoiceIcon');
+            .withSuccessHandler(function(info) {
+                var countEl = document.getElementById('invoiceCount');
+                var actionEl = document.getElementById('invoiceAction');
+                var iconEl = document.getElementById('invoiceIcon');
 
                 if (info.count === 0) {
                     countEl.innerHTML = '<span class="text-success">0 files</span>';
                     iconEl.textContent = '✅';
                     actionEl.innerHTML = '';
                 } else if (info.count > 0) {
-                    countEl.innerHTML = `<span class="text-warning">${info.count} file${info.count > 1 ? 's' : ''}</span>`;
+                    countEl.innerHTML = '<span class="text-warning">' + info.count + ' file' + (info.count > 1 ? 's' : '') + '</span>';
                     iconEl.textContent = '⚠️';
                     if (info.folderUrl) {
-                        actionEl.innerHTML = `<a href="${info.folderUrl}" target="_blank" class="small fw-bold text-primary text-decoration-none">Open Folder</a>`;
+                        actionEl.innerHTML = '<a href="' + info.folderUrl + '" target="_blank" class="small fw-bold text-primary text-decoration-none">Open Folder</a>';
                     }
                 } else {
                     countEl.innerHTML = '<span class="text-muted">N/A</span>';
                     iconEl.textContent = '📁';
                 }
             })
-            .withFailureHandler(err => {
+            .withFailureHandler(function(err) {
                 console.error('Failed to load invoice count:', err);
                 document.getElementById('invoiceCount').innerHTML = '<span class="text-danger">Error</span>';
             })
@@ -198,10 +219,10 @@
     }
 
     function updateStep(stepNum, stepData, isActive) {
-        const card = document.getElementById(`step${stepNum}Card`);
-        const icon = document.getElementById(`step${stepNum}Icon`);
-        const message = document.getElementById(`step${stepNum}Message`);
-        const action = document.getElementById(`step${stepNum}Action`);
+        var card = document.getElementById('step' + stepNum + 'Card');
+        var icon = document.getElementById('step' + stepNum + 'Icon');
+        var message = document.getElementById('step' + stepNum + 'Message');
+        var action = document.getElementById('step' + stepNum + 'Action');
 
         // Reset card styling
         card.className = 'card h-100';
@@ -211,8 +232,18 @@
             icon.textContent = ICONS.waiting;
             message.textContent = 'Pending...';
             action.innerHTML = '';
-            if (isActive && stepNum === 1) {
-                action.innerHTML = '<a href="#" onclick="startSync(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Start</a>';
+            // Show appropriate action for each step
+            if (stepNum === 1) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Products</a>';
+            } else if (stepNum === 2) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Now</a>';
+                message.textContent = 'Auto-import';
+            } else if (stepNum === 3) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Export Orders</a>';
+            } else if (stepNum === 4) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Start Import</a>';
+            } else if (stepNum === 5) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Generate Export</a>';
             }
             return;
         }
@@ -228,33 +259,27 @@
 
         // Handle action links based on step and status
         if (stepData.status === 'waiting') {
-            if (stepNum === 2) {
-                // Check if export is complete and ready for confirmation
-                const isExportComplete = stepData.message && stepData.message.includes('Ready to confirm');
-                if (isExportComplete) {
-                    action.innerHTML = `
-                        <a href="#" onclick="exportOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>
-                        <a href="#" onclick="confirmComax(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>
-                    `;
-                } else {
-                    action.innerHTML = `
-                        <a href="#" onclick="exportOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>
-                    `;
-                }
+            if (stepNum === 1) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Products</a>';
+            } else if (stepNum === 2) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Now</a>';
             } else if (stepNum === 3) {
-                action.innerHTML = '<a href="#" onclick="startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Start Import</a>';
-            } else if (stepNum === 5) {
-                // Check if export is complete and ready for confirmation
-                const isExportComplete = stepData.message && stepData.message.includes('Ready to confirm');
+                var isExportComplete = stepData.message && stepData.message.indexOf('Ready to confirm') !== -1;
                 if (isExportComplete) {
-                    action.innerHTML = `
-                        <a href="#" onclick="generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>
-                        <a href="#" onclick="confirmWeb(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>
-                    `;
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>' +
+                        '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
                 } else {
-                    action.innerHTML = `
-                        <a href="#" onclick="generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>
-                    `;
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>';
+                }
+            } else if (stepNum === 4) {
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Start Import</a>';
+            } else if (stepNum === 5) {
+                var isExportComplete5 = stepData.message && stepData.message.indexOf('Ready to confirm') !== -1;
+                if (isExportComplete5) {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>' +
+                        '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
+                } else {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>';
                 }
             } else {
                 action.innerHTML = '';
@@ -274,76 +299,99 @@
     }
 
     // Action functions
-    function startSync() {
-        const timestamp = new Date().toLocaleTimeString();
-        lastActionTime = Date.now(); // Prevent polling from overwriting UI
+    function importProducts() {
+        var timestamp = new Date().toLocaleTimeString();
+        lastActionTime = Date.now();
+        doImportProducts(timestamp);
+    }
 
-        // IMMEDIATE visual feedback
-        const step1Card = document.getElementById('step1Card');
-        const step1Action = document.getElementById('step1Action');
-        const step1Icon = document.getElementById('step1Icon');
-        const step1Message = document.getElementById('step1Message');
+    function doImportProducts(timestamp) {
+        var step1Card = document.getElementById('step1Card');
+        var step1Action = document.getElementById('step1Action');
+        var step1Icon = document.getElementById('step1Icon');
+        var step1Message = document.getElementById('step1Message');
 
-        // 1. Highlight card
-        step1Card.style.borderColor = '#0d6efd';
-        step1Card.style.borderWidth = '2px';
-
-        // 2. Clear old content
-        step1Action.innerHTML = '';
-
-        // 3. Show spinner + timestamp
-        step1Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
+        step1Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step1Icon.textContent = '🔄';
-        step1Message.innerHTML = `<strong>Starting sync...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step1Message.innerHTML = '<strong>Importing products...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        // Track action time for callback
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
-                // Only update if no newer action occurred
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
+            .withFailureHandler(function(err) {
                 step1Card.style.borderColor = '#dc3545';
-                step1Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step1Action.innerHTML = `<a href="#" onclick="startSync(); return false;" class="small">Retry</a>`;
+                step1Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step1Action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="small">Retry</a>';
             })
-            .startDailySyncBackend();
+            .importWebProductsBackend();
     }
 
-    function exportOrders() {
-        const timestamp = new Date().toLocaleTimeString();
+    function importOrders() {
+        var timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
-        const step2Card = document.getElementById('step2Card');
-        const step2Action = document.getElementById('step2Action');
-        const step2Icon = document.getElementById('step2Icon');
-        const step2Message = document.getElementById('step2Message');
+        var step2Card = document.getElementById('step2Card');
+        var step2Action = document.getElementById('step2Action');
+        var step2Icon = document.getElementById('step2Icon');
+        var step2Message = document.getElementById('step2Message');
 
         step2Card.style.borderColor = '#0d6efd';
         step2Card.style.borderWidth = '2px';
-        step2Action.innerHTML = '';
-        step2Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
+        step2Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step2Icon.textContent = '🔄';
-        step2Message.innerHTML = `<strong>Exporting orders...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step2Message.innerHTML = '<strong>Importing orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
+            .withFailureHandler(function(err) {
                 step2Card.style.borderColor = '#dc3545';
-                step2Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step2Action.innerHTML = `<a href="#" onclick="exportOrders(); return false;" class="small">Retry</a>`;
+                step2Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step2Action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="small">Retry</a>';
+            })
+            .importWebOrdersBackend();
+    }
+
+    function exportToComax() {
+        var timestamp = new Date().toLocaleTimeString();
+        lastActionTime = Date.now();
+
+        var step3Card = document.getElementById('step3Card');
+        var step3Action = document.getElementById('step3Action');
+        var step3Icon = document.getElementById('step3Icon');
+        var step3Message = document.getElementById('step3Message');
+
+        step3Card.style.borderColor = '#0d6efd';
+        step3Card.style.borderWidth = '2px';
+        step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
+        step3Icon.textContent = '🔄';
+        step3Message.innerHTML = '<strong>Exporting orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
+
+        var originalActionTime = lastActionTime;
+
+        google.script.run
+            .withSuccessHandler(function(status) {
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
+            })
+            .withFailureHandler(function(err) {
+                step3Card.style.borderColor = '#dc3545';
+                step3Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step3Action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="small">Retry</a>';
             })
             .exportComaxOrdersBackend();
     }
@@ -353,135 +401,170 @@
             return;
         }
 
-        const timestamp = new Date().toLocaleTimeString();
+        var timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
-        const step2Card = document.getElementById('step2Card');
-        const step2Action = document.getElementById('step2Action');
-        const step2Icon = document.getElementById('step2Icon');
-        const step2Message = document.getElementById('step2Message');
+        var step3Card = document.getElementById('step3Card');
+        var step3Action = document.getElementById('step3Action');
+        var step3Icon = document.getElementById('step3Icon');
+        var step3Message = document.getElementById('step3Message');
 
-        step2Card.style.borderColor = '#0d6efd';
-        step2Card.style.borderWidth = '2px';
-        step2Action.innerHTML = '';
-        step2Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
-        step2Icon.textContent = '🔄';
-        step2Message.innerHTML = `<strong>Confirming upload...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step3Card.style.borderColor = '#0d6efd';
+        step3Card.style.borderWidth = '2px';
+        step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
+        step3Icon.textContent = '🔄';
+        step3Message.innerHTML = '<strong>Confirming upload...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
-                step2Card.style.borderColor = '#dc3545';
-                step2Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step2Action.innerHTML = `<a href="#" onclick="confirmComax(); return false;" class="small">Retry</a>`;
+            .withFailureHandler(function(err) {
+                step3Card.style.borderColor = '#dc3545';
+                step3Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step3Action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="small">Retry</a>';
             })
             .confirmComaxUpdateBackend();
     }
 
     function startComaxImport() {
-        const timestamp = new Date().toLocaleTimeString();
+        var timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
-        const step3Card = document.getElementById('step3Card');
-        const step3Action = document.getElementById('step3Action');
-        const step3Icon = document.getElementById('step3Icon');
-        const step3Message = document.getElementById('step3Message');
+        var step4Card = document.getElementById('step4Card');
+        var step4Action = document.getElementById('step4Action');
+        var step4Icon = document.getElementById('step4Icon');
+        var step4Message = document.getElementById('step4Message');
 
-        step3Card.style.borderColor = '#0d6efd';
-        step3Card.style.borderWidth = '2px';
-        step3Action.innerHTML = '';
-        step3Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
-        step3Icon.textContent = '🔄';
-        step3Message.innerHTML = `<strong>Starting import...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step4Card.style.borderColor = '#0d6efd';
+        step4Card.style.borderWidth = '2px';
+        step4Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
+        step4Icon.textContent = '🔄';
+        step4Message.innerHTML = '<strong>Starting import...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
-                step3Card.style.borderColor = '#dc3545';
-                step3Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step3Action.innerHTML = `<a href="#" onclick="startComaxImport(); return false;" class="small">Retry</a>`;
+            .withFailureHandler(function(err) {
+                step4Card.style.borderColor = '#dc3545';
+                step4Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step4Action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="small">Retry</a>';
             })
             .startComaxImportBackend();
     }
 
     function generateWebExport() {
-        const timestamp = new Date().toLocaleTimeString();
+        var timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
-        const step5Card = document.getElementById('step5Card');
-        const step5Action = document.getElementById('step5Action');
-        const step5Icon = document.getElementById('step5Icon');
-        const step5Message = document.getElementById('step5Message');
+        var step5Card = document.getElementById('step5Card');
+        var step5Action = document.getElementById('step5Action');
+        var step5Icon = document.getElementById('step5Icon');
+        var step5Message = document.getElementById('step5Message');
 
         step5Card.style.borderColor = '#0d6efd';
         step5Card.style.borderWidth = '2px';
-        step5Action.innerHTML = '';
-        step5Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
+        step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
-        step5Message.innerHTML = `<strong>Generating export...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step5Message.innerHTML = '<strong>Generating export...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
+            .withFailureHandler(function(err) {
                 step5Card.style.borderColor = '#dc3545';
-                step5Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step5Action.innerHTML = `<a href="#" onclick="generateWebExport(); return false;" class="small">Retry</a>`;
+                step5Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="small">Retry</a>';
             })
             .generateWebExportBackend();
     }
 
     function confirmWeb() {
-        const timestamp = new Date().toLocaleTimeString();
+        var timestamp = new Date().toLocaleTimeString();
         lastActionTime = Date.now();
 
-        const step5Card = document.getElementById('step5Card');
-        const step5Icon = document.getElementById('step5Icon');
-        const step5Message = document.getElementById('step5Message');
-        const step5Action = document.getElementById('step5Action');
+        var step5Card = document.getElementById('step5Card');
+        var step5Icon = document.getElementById('step5Icon');
+        var step5Message = document.getElementById('step5Message');
+        var step5Action = document.getElementById('step5Action');
 
         step5Card.style.borderColor = '#0d6efd';
         step5Card.style.borderWidth = '2px';
-        step5Action.innerHTML = '';
-        step5Action.innerHTML = `<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">${timestamp}</div>`;
+        step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
-        step5Message.innerHTML = `<strong>Confirming...</strong> <small class="text-muted">(${timestamp})</small>`;
+        step5Message.innerHTML = '<strong>Confirming...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
-        const originalActionTime = lastActionTime;
+        var originalActionTime = lastActionTime;
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
-            .withFailureHandler(err => {
+            .withFailureHandler(function(err) {
                 step5Card.style.borderColor = '#dc3545';
-                step5Message.innerHTML = `<span class="text-danger">Failed: ${err.message || err}</span>`;
-                step5Action.innerHTML = `<a href="#" onclick="confirmWeb(); return false;" class="small">Retry</a>`;
+                step5Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="small">Retry</a>';
             })
             .confirmWebInventoryUpdateBackend();
+    }
+
+    function checkForFailures() {
+        if (!currentSessionId) return;
+
+        google.script.run
+            .withSuccessHandler(function(failures) {
+                var banner = document.getElementById('failureBanner');
+                var failureList = document.getElementById('failureList');
+
+                // Filter out dismissed failures
+                var activeFailures = failures.filter(function(f) {
+                    return !dismissedFailures[f.jobType + f.error];
+                });
+
+                if (activeFailures.length > 0) {
+                    failureList.innerHTML = activeFailures.map(function(f) {
+                        return '<div class="mb-1"><strong>' + f.jobType + ':</strong> ' + f.error + '</div>';
+                    }).join('');
+                    banner.classList.remove('d-none');
+                } else {
+                    banner.classList.add('d-none');
+                }
+            })
+            .withFailureHandler(function(err) {
+                console.error('Failure check error:', err);
+            })
+            .getRecentFailures(currentSessionId);
+    }
+
+    function dismissFailures() {
+        var failureList = document.getElementById('failureList');
+        if (failureList.innerHTML) {
+            var failures = failureList.querySelectorAll('div');
+            failures.forEach(function(div) {
+                dismissedFailures[div.textContent] = true;
+            });
+        }
+        document.getElementById('failureBanner').classList.add('d-none');
     }
 
     function resetSync() {
@@ -490,92 +573,93 @@
         }
 
         lastActionTime = Date.now();
+        document.getElementById('footerStatus').textContent = 'Resetting...';
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 updateUI(status);
                 adjustPolling(status);
+                // Also refresh invoice count after reset
+                updateInvoiceFolder();
+                document.getElementById('footerStatus').textContent = 'Reset complete';
             })
-            .withFailureHandler(showError)
+            .withFailureHandler(function(err) {
+                document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
+            })
             .resetSyncStateBackend();
     }
 
-    function showError(error) {
-        const errorDiv = document.getElementById('errorDisplay');
-        errorDiv.textContent = error.message || 'An error occurred';
-        errorDiv.classList.remove('d-none');
-    }
-
-    // Smart polling - fast after clicks, slower when idle
-    let pollInterval = null;
-    let lastActionTime = 0;
-    let currentPollInterval = null;
-    const ULTRA_FAST_POLL_MS = 500;   // 500ms when just clicked (ultra-fast)
-    const ACTIVE_POLL_MS = 1000;       // 1s when processing
-    const IDLE_POLL_MS = 10000;        // 10s when idle (reduced from 30s)
-    const ACTION_GRACE_PERIOD_MS = 5000; // Don't update UI for 5 seconds after user action (extended)
-
     function refreshStatus() {
-        // Don't refresh if we just performed an action (prevents overwriting optimistic UI)
-        const timeSinceAction = Date.now() - lastActionTime;
+        var timeSinceAction = Date.now() - lastActionTime;
         if (timeSinceAction < ACTION_GRACE_PERIOD_MS) {
             return;
         }
 
         google.script.run
-            .withSuccessHandler(status => {
+            .withSuccessHandler(function(status) {
                 updateUI(status);
                 adjustPolling(status);
             })
-            .withFailureHandler(err => console.error('Poll error:', err))
+            .withFailureHandler(function(err) {
+                console.error('Poll error:', err);
+            })
             .getSyncStateFromBackend();
     }
 
     function adjustPolling(status) {
-        const now = Date.now();
-        const timeSinceAction = now - lastActionTime;
+        var now = Date.now();
+        var timeSinceAction = now - lastActionTime;
+        var newInterval;
 
-        let newInterval;
-
-        // Just clicked (within 5 seconds) - ULTRA FAST
         if (timeSinceAction < 5000) {
             newInterval = ULTRA_FAST_POLL_MS;
-        }
-        // Active processing - FAST
-        else {
-            const isActive = status.sessionId && status.currentStep >= 1 && status.currentStep <= 5;
-            const anyProcessing = isActive && [status.step1, status.step2, status.step3, status.step4, status.step5]
-                .some(step => step && step.status === 'processing');
+        } else {
+            var isActive = status.sessionId && status.currentStep >= 1 && status.currentStep <= 5;
+            var anyProcessing = isActive && [status.step1, status.step2, status.step3, status.step4, status.step5]
+                .some(function(step) { return step && step.status === 'processing'; });
 
             if (anyProcessing) {
                 newInterval = ACTIVE_POLL_MS;
             } else if (isActive) {
                 newInterval = IDLE_POLL_MS;
             } else {
-                // No active session - stop polling
                 if (pollInterval) {
                     clearInterval(pollInterval);
                     pollInterval = null;
-                    currentPollInterval = null;
+                    currentPollIntervalMs = null;
+                    window._syncWidgetPollInterval = null;
                 }
                 return;
             }
         }
 
-        // Only restart interval if the speed changed
-        if (newInterval !== currentPollInterval) {
+        if (newInterval !== currentPollIntervalMs) {
             if (pollInterval) {
                 clearInterval(pollInterval);
             }
-            currentPollInterval = newInterval;
+            currentPollIntervalMs = newInterval;
             pollInterval = setInterval(refreshStatus, newInterval);
-            console.log(`Polling: ${newInterval}ms interval (${timeSinceAction < 5000 ? 'ULTRA-FAST' : anyProcessing ? 'ACTIVE' : 'IDLE'})`);
+            window._syncWidgetPollInterval = pollInterval;
         }
     }
 
-    // Initialize - fetch status once on load
-    refreshStatus();
+    // Expose public API on window
+    window.SyncWidget = {
+        importProducts: importProducts,
+        importOrders: importOrders,
+        exportToComax: exportToComax,
+        confirmComax: confirmComax,
+        startComaxImport: startComaxImport,
+        generateWebExport: generateWebExport,
+        confirmWeb: confirmWeb,
+        resetSync: resetSync,
+        dismissFailures: dismissFailures
+    };
 
-    // Load invoice folder info once on widget load
+    // Initialize widget
+    console.log('SyncWidget: Initializing (fresh load or navigation)');
+    refreshStatus();
     updateInvoiceFolder();
+
+})();
 </script>

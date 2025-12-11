@@ -8,6 +8,11 @@ const SyncStatusService = (function() {
   const SERVICE_NAME = 'SyncStatusService';
   const STATUS_SHEET_NAME = 'SysSyncStatus';
 
+  // Simple in-memory cache for status queries
+  let _statusCache = null;
+  let _statusCacheTime = 0;
+  const STATUS_CACHE_TTL = 2000; // 2 seconds
+
   /**
    * Writes a status update for a specific step in the sync workflow.
    * @param {string} sessionId - The sync session ID
@@ -58,11 +63,18 @@ const SyncStatusService = (function() {
 
   /**
    * Gets the latest status for each step in a session.
+   * Uses caching to reduce sheet reads on frequent polls.
    * @param {string} sessionId - The sync session ID
    * @returns {object} Status object with step1-5 and metadata
    */
   function getSessionStatus(sessionId) {
     const functionName = 'getSessionStatus';
+
+    // Check cache first
+    const now = Date.now();
+    if (_statusCache && _statusCache.sessionId === sessionId && (now - _statusCacheTime) < STATUS_CACHE_TTL) {
+      return _statusCache;
+    }
 
     try {
       const allConfig = ConfigService.getAllConfig();
@@ -121,7 +133,7 @@ const SyncStatusService = (function() {
         }
       }
 
-      return {
+      const result = {
         sessionId,
         currentStep,
         step1: stepStatuses.step1,
@@ -131,6 +143,12 @@ const SyncStatusService = (function() {
         step5: stepStatuses.step5,
         lastUpdated: sessionRows[sessionRows.length - 1][0]
       };
+
+      // Update cache
+      _statusCache = result;
+      _statusCacheTime = Date.now();
+
+      return result;
 
     } catch (e) {
       logger.error(SERVICE_NAME, functionName, `Error getting session status: ${e.message}`, e, { sessionId });
@@ -235,11 +253,60 @@ const SyncStatusService = (function() {
     }
   }
 
+  /**
+   * Gets recent failures from SysJobQueue for a session.
+   * Used to show failure alerts to users.
+   * @param {string} sessionId - The sync session ID
+   * @returns {Array} Array of failure objects { jobType, error }
+   */
+  function getRecentFailures(sessionId) {
+    const functionName = 'getRecentFailures';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSheetConfig = allConfig['system.spreadsheet.logs'];
+      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+
+      const jobQueueSheet = logSpreadsheet.getSheetByName('SysJobQueue');
+      if (!jobQueueSheet) {
+        return [];
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data[0];
+
+      // Find column indices
+      const statusCol = headers.indexOf('status');
+      const sessionCol = headers.indexOf('session_id');
+      const jobTypeCol = headers.indexOf('job_type');
+      const errorCol = headers.indexOf('error_message');
+
+      if (statusCol === -1 || sessionCol === -1) {
+        logger.warn(SERVICE_NAME, functionName, 'SysJobQueue missing required columns');
+        return [];
+      }
+
+      const failures = data.slice(1)
+        .filter(row => row[sessionCol] === sessionId && row[statusCol] === 'FAILED')
+        .map(row => ({
+          jobType: row[jobTypeCol] || 'Unknown',
+          error: row[errorCol] || 'No error message'
+        }));
+
+      return failures;
+
+    } catch (e) {
+      logger.error(SERVICE_NAME, functionName, `Error getting recent failures: ${e.message}`, e, { sessionId });
+      return [];
+    }
+  }
+
   return {
     writeStatus,
     getSessionStatus,
     clearSession,
     clearStepsFromSession,
-    getDefaultStatus
+    getDefaultStatus,
+    getRecentFailures
   };
 })();

@@ -177,9 +177,12 @@ const ProductImportService = (function() {
         }
 
         const file = DriveApp.getFileById(archiveFileId);
-        const csvContent = file.getBlob().getDataAsString('UTF-8');
+        const fileEncoding = ConfigService.getConfig('import.drive.web_translations_he').file_encoding || 'UTF-8';
+        const csvContent = file.getBlob().getDataAsString(fileEncoding);
 
-        const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.web.translation_columns');
+        logger.info(serviceName, functionName, `CSV content length: ${csvContent.length}, encoding: ${fileEncoding}, first 200 chars: ${csvContent.substring(0, 200)}`, { sessionId });
+
+        const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.webtoffee.hebrew_headers');
 
         _populateStagingSheet(translationObjects, sheetNames.WebXltS, sessionId);
         LoggerService.info(serviceName, functionName, 'Successfully populated WebXltS staging sheet.', { sessionId: sessionId });
@@ -287,6 +290,13 @@ const ProductImportService = (function() {
         if (quarantineTriggered) {
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
             _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+            // Write status for UI
+            SyncStatusService.writeStatus(sessionId, {
+              step: 4,
+              stepName: 'Comax Products',
+              status: 'failed',
+              message: 'Validation failed - data quarantined'
+            });
             return 'QUARANTINED';
         }
 
@@ -302,11 +312,26 @@ const ProductImportService = (function() {
             // The primary Comax import was successful. The export failure is a separate issue.
         }
 
+        // Write success status for UI
+        SyncStatusService.writeStatus(sessionId, {
+          step: 4,
+          stepName: 'Comax Products',
+          status: 'completed',
+          message: 'Comax data imported successfully'
+        });
+
         return 'COMPLETED';
 
     } catch (e) {
         logger.error(serviceName, functionName, `Failed to import Comax data: ${e.message}`, e, { sessionId: sessionId });
         _updateJobStatus(executionContext, 'FAILED', `Comax import failed: ${e.message}`);
+        // Write failure status for UI
+        SyncStatusService.writeStatus(sessionId, {
+          step: 4,
+          stepName: 'Comax Products',
+          status: 'failed',
+          message: `Import failed: ${e.message}`
+        });
         return 'FAILED';
     }
   }
@@ -769,17 +794,39 @@ const ProductImportService = (function() {
         if (quarantineTriggered) {
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
             _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+            // Write status for UI
+            SyncStatusService.writeStatus(sessionId, {
+              step: 1,
+              stepName: 'Import Web Products',
+              status: 'failed',
+              message: 'Validation failed - data quarantined'
+            });
             return 'QUARANTINED';
         }
 
         // Only reached if validation passed - safe to update master
         _upsertWebProductsData(sessionId);
 
+        // Write success status for UI
+        SyncStatusService.writeStatus(sessionId, {
+          step: 1,
+          stepName: 'Import Web Products',
+          status: 'completed',
+          message: 'Web products imported successfully'
+        });
+
         return 'COMPLETED';
 
     } catch (e) {
         logger.error(serviceName, functionName, `Failed to import Web Products (EN) data: ${e.message}`, e, { sessionId: sessionId });
         _updateJobStatus(executionContext, 'FAILED', `Web Products (EN) import failed: ${e.message}`);
+        // Write failure status for UI
+        SyncStatusService.writeStatus(sessionId, {
+          step: 1,
+          stepName: 'Import Web Products',
+          status: 'failed',
+          message: `Import failed: ${e.message}`
+        });
         return 'FAILED';
     }
   }
@@ -1002,12 +1049,31 @@ const ProductImportService = (function() {
 
       if (finalJobStatus === 'COMPLETED') {
         OrchestratorService.finalizeJobCompletion(jobQueueSheetRowNumber);
+        LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed successfully.`);
+      } else {
+        // Job returned FAILED or QUARANTINED - throw to stop processing
+        LoggerService.error('ProductImportService', 'processJob', `Job ${jobType} returned status: ${finalJobStatus}`);
+        throw new Error(`Job ${jobType} failed with status: ${finalJobStatus}`);
       }
-
-      LoggerService.info('ProductImportService', 'processJob', `Job ${jobType} completed with status: ${finalJobStatus}.`);
     } catch (e) {
       logger.error(serviceName, functionName, `Job ${jobType} failed: ${e.message}`, e, { sessionId: sessionId, jobType: jobType });
       _updateJobStatus(executionContext, 'FAILED', e.message);
+
+      // Write failure to SyncStatusService so UI can show it
+      const stepMap = {
+        'import.drive.web_translations_he': { step: 1, stepName: 'Web Products' },
+        'import.drive.web_products_en': { step: 1, stepName: 'Web Products' },
+        'import.drive.comax_products': { step: 4, stepName: 'Comax Products' },
+        'export.web.inventory': { step: 5, stepName: 'Web Inventory' }
+      };
+      const stepInfo = stepMap[jobType] || { step: 1, stepName: 'Import' };
+      SyncStatusService.writeStatus(sessionId, {
+        step: stepInfo.step,
+        stepName: stepInfo.stepName,
+        status: 'failed',
+        message: `Failed: ${e.message}`
+      });
+
       throw e; // Re-throw the error after logging and updating status
     }
   }

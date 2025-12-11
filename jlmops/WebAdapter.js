@@ -85,12 +85,21 @@ const WebAdapter = (function() {
         throw new Error(`Web translation column map '${mapName}' not found in configuration. Please run setup.`);
     }
 
-    const parsedData = Utilities.parseCsv(csvContent);
+    let parsedData;
+    try {
+      parsedData = Utilities.parseCsv(csvContent);
+    } catch (parseError) {
+      logger.warn(serviceName, functionName, `Utilities.parseCsv failed: ${parseError.message}. Trying custom parser...`);
+      // Fallback to custom parser for complex CSV with multiline quoted fields
+      parsedData = _parseComplexCsv(csvContent);
+      logger.info(serviceName, functionName, `Custom parser succeeded: ${parsedData.length} rows`);
+    }
+
     if (parsedData.length < 2) {
       logger.error(serviceName, functionName, 'File is empty or contains only a header.');
       return [];
     }
-    
+
     const headerRow = parsedData[0].map(h => String(h).trim().toLowerCase()); // Convert CSV headers to lowercase for case-insensitive matching
     const translationObjects = [];
 
@@ -208,6 +217,91 @@ const WebAdapter = (function() {
 
     logger.info(serviceName, functionName, `Successfully processed ${orderObjects.length} orders.`);
     return orderObjects;
+  }
+
+  /**
+   * Custom CSV parser that handles multi-line quoted fields properly.
+   * Used as fallback when Utilities.parseCsv fails on complex content.
+   * @param {string} csvContent - Raw CSV content
+   * @returns {Array<Array<string>>} - Parsed rows (array of arrays)
+   */
+  function _parseComplexCsv(csvContent) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < csvContent.length) {
+      const char = csvContent[i];
+      const nextChar = csvContent[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            // Escaped quote - add single quote and skip next
+            field += '"';
+            i += 2;
+            continue;
+          } else {
+            // End of quoted field
+            inQuotes = false;
+            i++;
+            continue;
+          }
+        } else {
+          field += char;
+          i++;
+          continue;
+        }
+      } else {
+        // Not in quotes
+        if (char === '"') {
+          // Start of quoted field
+          inQuotes = true;
+          i++;
+          continue;
+        } else if (char === ',') {
+          // End of field
+          row.push(field);
+          field = '';
+          i++;
+          continue;
+        } else if (char === '\r') {
+          // Handle \r\n or standalone \r
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = '';
+          if (nextChar === '\n') {
+            i += 2;
+          } else {
+            i++;
+          }
+          continue;
+        } else if (char === '\n') {
+          // End of row
+          row.push(field);
+          rows.push(row);
+          row = [];
+          field = '';
+          i++;
+          continue;
+        } else {
+          field += char;
+          i++;
+          continue;
+        }
+      }
+    }
+
+    // Handle last field/row
+    if (field || row.length > 0) {
+      row.push(field);
+      rows.push(row);
+    }
+
+    return rows;
   }
 
   // Public interface for the adapter
