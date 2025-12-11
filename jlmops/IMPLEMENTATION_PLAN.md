@@ -140,6 +140,11 @@
 
 ### Phase 10: Maintenance & Scalability (COMPLETED)
 *   **Housekeeping:** Automated archiving of old logs and tasks (`SysLog_Archive`, `SysTasks_Archive`) and file lifecycle management.
+    *   Log cleanup keeps most recent 1,000 rows regardless of age (archives oldest rows first)
+    *   Task archiving uses schema-based column lookup (not hardcoded indices)
+    *   Import file cleanup: Timestamped files (`product_export_*.csv`, `he_product_export*.csv`) older than 2 days are moved to archive; legacy files (`ComaxProducts.csv`, `WebOrders.csv`, `wehe.csv`) are retained
+    *   Export file lifecycle: Files moved to `_Old_Exports` after 7 days, trashed after 90 days
+    *   Archive folder cleanup: Files trashed after 365 days
 *   **Advanced Logging:** `LoggerService` standardization and traceability improvements.
 
 ### Phase 11: Performance Optimization (COMPLETED)
