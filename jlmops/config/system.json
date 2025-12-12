@@ -543,5 +543,21 @@
         "SysLog_Archive",
         "SysLog_Archive",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysBundles",
+        "SysBundles",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysBundleSlots",
+        "SysBundleSlots",
+        "", "", "", "", "", "", "", ""
     ]
 ]

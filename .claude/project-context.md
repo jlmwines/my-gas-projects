@@ -20,9 +20,9 @@ Resource optimization project for Google Apps Script application managing orders
 ### Role-Based UI (Two Sets of HTML Files)
 
 **Admin Role** (Full Access):
-- Views: `AdminDashboardView.html`, `AdminOrdersView.html`, `AdminInventoryView.html`, `AdminProductsView.html`, `AdminSyncView.html`
+- Views: `AdminDashboardView.html`, `AdminOrdersView.html`, `AdminInventoryView.html`, `AdminProductsView.html`, `AdminSyncView.html`, `AdminBundlesView.html`
 - Widgets: `AdminOrdersWidget.html`, `AdminInventoryWidget.html`, `AdminProductsWidget.html`, `AdminDailySyncWidget.html`
-- **Unique Features:** Sync management, System administration
+- **Unique Features:** Sync management, System administration, Bundle management
 
 **Manager Role** (Limited Access):
 - Views: `ManagerDashboardView.html`, `ManagerOrdersView.html`, `ManagerInventoryView.html`, `ManagerProductsView.html`
@@ -52,6 +52,8 @@ Resource optimization project for Google Apps Script application managing orders
 - `SyncStateService.js` - Sync workflow state management
 - `SetupConfig.js` - Configuration and logging
 - `AuthService.js` - User authentication and role management
+- `BundleService.js` - Bundle management (2-sheet model: SysBundles + SysBundleSlots)
+- `WebAppBundles.js` - Bundle UI controller functions
 
 ## Configuration Management Workflow
 

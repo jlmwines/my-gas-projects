@@ -26,8 +26,8 @@ const ProductService = (function() {
     const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
     dataRange.setVerticalAlignment('top');
 
-    // Set row height for single line of text (30 pixels)
-    sheet.setRowHeights(2, dataRowCount, 30);
+    // Set row height for single line of text (24 pixels)
+    sheet.setRowHeights(2, dataRowCount, 24);
   }
 
   // =================================================================================
@@ -1223,9 +1223,14 @@ const ProductService = (function() {
         if (header === 'wds_ABV') {
             value = parseFloat(value);
             if (isNaN(value)) {
-                value = ''; 
+                value = '';
             } else {
-                value = value / 100; // Convert percentage (12.5) to decimal (0.125)
+                // Only divide by 100 if value looks like a whole percentage (> 1)
+                // Values like 0.14 are already decimal, values like 14 need conversion
+                if (value > 1) {
+                    value = value / 100; // Convert percentage (14.0) to decimal (0.14)
+                }
+                // else: value is already decimal (e.g., 0.14), keep as is
             }
         }
         rowData[header] = value !== undefined ? value : '';
@@ -1327,8 +1332,8 @@ const ProductService = (function() {
       }
       ConfigService.forceReload(); // Force reload of config cache after updating master data
 
-      // 3. Update Task Status
-      TaskService.updateTaskStatus(taskId, 'Done');
+      // 3. Update Task Status to "Accepted" (not "Done" - Done happens after finalize/export)
+      TaskService.updateTaskStatus(taskId, 'Accepted');
 
       // Invalidate cache after data modification
       _invalidateProductCache();

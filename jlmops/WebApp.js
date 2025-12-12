@@ -78,6 +78,7 @@ function getView(viewName) {
     'AdminProductsWidget': 'AdminProductsWidget',
     'AdminDailySyncWidget': 'AdminDailySyncWidget',
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
+    'AdminBundles': 'AdminBundlesView',
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',
     'Web': 'WebView'

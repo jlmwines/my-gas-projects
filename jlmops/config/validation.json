@@ -228,7 +228,7 @@
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "WebProdM",
         "source_key", "wpm_SKU",
-        "source_filter", "wpm_Type,simple",
+        "source_filter", "wpm_TaxProductType,simple",
         "target_sheet", "CmxProdM",
         "target_key", "cpm_SKU",
         "invert_result", "TRUE",

@@ -372,5 +372,35 @@
         "",
         "",
         ""
+    ],
+    [
+        "schema.data.SysBundles",
+        "Schema for Bundle Header sheet - defines bundle/package metadata.",
+        "stable",
+        "headers",
+        "sb_BundleId,sb_NameEn,sb_NameHe,sb_Type,sb_Status,sb_DiscountPrice",
+        "key_column",
+        "sb_BundleId",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "schema.data.SysBundleSlots",
+        "Schema for Bundle Slots sheet - defines text blocks and product slots within bundles.",
+        "stable",
+        "headers",
+        "sbs_SlotId,sbs_BundleId,sbs_Order,sbs_SlotType,sbs_TextStyle,sbs_TextEn,sbs_TextHe,sbs_ActiveSKU,sbs_LastRotated,sbs_HistoryJson,sbs_Category,sbs_Category2,sbs_PriceMin,sbs_PriceMax,sbs_Intensity,sbs_Complexity,sbs_Acidity,sbs_NameContains,sbs_Exclusive,sbs_QtyVariable,sbs_DefaultQty",
+        "key_column",
+        "sbs_SlotId",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
     ]
 ]

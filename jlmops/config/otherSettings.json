@@ -15,6 +15,21 @@
         ""
     ],
     [
+        "system.inventory.minimum_stock",
+        "System-wide minimum inventory level for bundle eligibility and alerts.",
+        "stable",
+        "value",
+        "6",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.webxlt.validation_status",
         "Status of the latest WebXlt validation (OK, QUARANTINED).",
         "stable",

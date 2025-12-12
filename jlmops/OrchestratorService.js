@@ -1056,7 +1056,7 @@ const OrchestratorService = (function() {
           'import.drive.web_translations_he',
           'import.drive.web_orders'
         ];
-        
+
         let allCompleted = true;
         let anyFailedOrQuarantined = false;
         let errorMessage = '';
@@ -1071,10 +1071,12 @@ const OrchestratorService = (function() {
         const completedJobs = [];
         const pendingJobs = [];
 
+        // Batch fetch all job statuses in a single sheet read
+        const jobStatuses = getJobStatusesBatch(requiredJobs, state.sessionId);
+
         for (const jobType of requiredJobs) {
-          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+          const jobStatus = jobStatuses[jobType];
           const jobName = jobNames[jobType] || jobType;
-          // Don't log routine status checks - creates noise during UI polling
 
           if (jobStatus === 'COMPLETED') {
             completedJobs.push(jobName);
@@ -1348,9 +1350,18 @@ const OrchestratorService = (function() {
    * @param {string} sessionId The session ID to filter by.
    * @returns {string} The status ('PENDING', 'PROCESSING', 'COMPLETED', 'QUARANTINED', 'FAILED', 'NOT_FOUND').
    */
-  function getJobStatusInSession(jobType, sessionId) {
+  /**
+   * Gets statuses for multiple job types in a session with a single sheet read.
+   * @param {Array<string>} jobTypes - Array of job type strings to check
+   * @param {string} sessionId - The session ID to filter by
+   * @returns {Object} Map of jobType -> status
+   */
+  function getJobStatusesBatch(jobTypes, sessionId) {
     const serviceName = 'OrchestratorService';
-    const functionName = 'getJobStatusInSession';
+    const functionName = 'getJobStatusesBatch';
+    const results = {};
+    jobTypes.forEach(jt => results[jt] = 'NOT_FOUND');
+
     try {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
@@ -1359,7 +1370,7 @@ const OrchestratorService = (function() {
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
-        return 'NOT_FOUND';
+        return results;
       }
 
       const data = jobQueueSheet.getDataRange().getValues();
@@ -1368,40 +1379,56 @@ const OrchestratorService = (function() {
       const statusCol = headers.indexOf('status');
       const sessionIdCol = headers.indexOf('session_id');
       const processedTsCol = headers.indexOf('processed_timestamp');
-      const createdTsCol = headers.indexOf('created_timestamp'); // Get created timestamp index
+      const createdTsCol = headers.indexOf('created_timestamp');
 
-      let latestStatus = 'NOT_FOUND';
-      let latestTimestamp = new Date(0);
-      let foundCompletedOrFailed = false; // Flag to prioritize completed/failed
+      // Track latest status and timestamp per job type
+      const latestInfo = {};
+      jobTypes.forEach(jt => latestInfo[jt] = { status: 'NOT_FOUND', timestamp: new Date(0), foundFinal: false });
 
       for (const row of data) {
-        if (row[jobTypeCol] === jobType && row[sessionIdCol] === sessionId) {
-          let effectiveTimestamp = new Date(row[processedTsCol]);
-          
-          if (isNaN(effectiveTimestamp.getTime())) {
-              effectiveTimestamp = new Date(row[createdTsCol]);
-          }
+        const rowJobType = row[jobTypeCol];
+        const rowSessionId = row[sessionIdCol];
 
-          if (isNaN(effectiveTimestamp.getTime())) continue; // Skip if no valid timestamp at all
+        if (jobTypes.includes(rowJobType) && rowSessionId === sessionId) {
+          let effectiveTimestamp = new Date(row[processedTsCol]);
+          if (isNaN(effectiveTimestamp.getTime())) {
+            effectiveTimestamp = new Date(row[createdTsCol]);
+          }
+          if (isNaN(effectiveTimestamp.getTime())) continue;
 
           const currentStatus = row[statusCol];
+          const info = latestInfo[rowJobType];
 
-          // Prioritize COMPLETED/FAILED
-          if (currentStatus === 'COMPLETED' || currentStatus === 'FAILED' || currentStatus === 'QUARANTINED') {
-              if (!foundCompletedOrFailed || effectiveTimestamp >= latestTimestamp) {
-                  latestStatus = currentStatus;
-                  latestTimestamp = effectiveTimestamp;
-                  foundCompletedOrFailed = true;
-              }
-          } else if (!foundCompletedOrFailed) { // Only consider PENDING/PROCESSING if no COMPLETED/FAILED found yet
-              if (effectiveTimestamp >= latestTimestamp) {
-                  latestStatus = currentStatus;
-                  latestTimestamp = effectiveTimestamp;
-              }
+          const isFinal = currentStatus === 'COMPLETED' || currentStatus === 'FAILED' || currentStatus === 'QUARANTINED';
+          if (isFinal) {
+            if (!info.foundFinal || effectiveTimestamp >= info.timestamp) {
+              info.status = currentStatus;
+              info.timestamp = effectiveTimestamp;
+              info.foundFinal = true;
+            }
+          } else if (!info.foundFinal && effectiveTimestamp >= info.timestamp) {
+            info.status = currentStatus;
+            info.timestamp = effectiveTimestamp;
           }
         }
       }
-      return latestStatus;
+
+      jobTypes.forEach(jt => results[jt] = latestInfo[jt].status);
+      return results;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error getting batch job statuses: ${e.message}`, e, { sessionId });
+      return results;
+    }
+  }
+
+  function getJobStatusInSession(jobType, sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'getJobStatusInSession';
+    try {
+      // Use batch function for single job (maintains compatibility)
+      const results = getJobStatusesBatch([jobType], sessionId);
+      return results[jobType];
 
     } catch (e) {
       logger.error(serviceName, functionName, `Error getting job status for ${jobType} in session ${sessionId}: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });

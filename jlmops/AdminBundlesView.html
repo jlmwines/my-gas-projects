@@ -1,0 +1,1117 @@
+<div class="container-fluid">
+  <!-- Section 1: Bundle Dashboard -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+          <h5>Bundle Management</h5>
+          <div>
+            <button id="btn-refresh-bundles" class="btn btn-sm mr-2">Refresh</button>
+            <button id="btn-reimport-bundles" class="btn btn-sm">Re-import from WooCommerce</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Stats Row -->
+          <div class="row mb-3" id="bundle-stats-row">
+            <div class="col-md-2">
+              <div class="text-muted small">Total Bundles</div>
+              <div class="h4" id="stat-total">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Active</div>
+              <div class="h4 text-success" id="stat-active">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Draft</div>
+              <div class="h4 text-warning" id="stat-draft">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Archived</div>
+              <div class="h4 text-secondary" id="stat-archived">-</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Needs Attention</div>
+              <div class="h4 text-danger" id="stat-attention">-</div>
+            </div>
+          </div>
+
+          <!-- Bundle List Table -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-sm table-hover" id="bundle-list-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name (EN)</th>
+                  <th>Name (HE)</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Price</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bundle-list-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Bundle Health Monitor -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Low Inventory Alerts</h5>
+          <button id="btn-apply-replacements" class="btn btn-sm" disabled>Apply Selected Replacements</button>
+        </div>
+        <div class="card-body">
+          <div id="health-alerts-container">
+            <div class="text-muted">Loading health data...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Bundle Editor -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Bundle Editor <span id="editor-bundle-name" class="text-muted ml-2"></span> <span id="editor-bundle-price" class="badge badge-info ml-2"></span></h5>
+          <div id="editor-actions" style="display: none;">
+            <button id="btn-add-text-slot" class="btn btn-sm mr-1">Add Text</button>
+            <button id="btn-add-product-slot" class="btn btn-sm mr-1">Add Product</button>
+            <button id="btn-save-bundle" class="btn btn-sm">Save Changes</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Left: Slot List + Preview Controls -->
+            <div class="col-md-4">
+              <div id="slot-list-container">
+                <div class="text-muted">Select a bundle to edit</div>
+              </div>
+              <!-- Preview Controls -->
+              <div id="preview-controls" class="mt-3 d-none">
+                <div class="d-flex align-items-center">
+                  <small class="text-muted font-weight-bold mr-2">Preview:</small>
+                  <a href="#" id="preview-tab-en" class="small mr-2 font-weight-bold">English</a>
+                  <a href="#" id="preview-tab-he" class="small text-muted">עברית</a>
+                </div>
+              </div>
+            </div>
+            <!-- Right: Slot Detail Editor + Preview -->
+            <div class="col-md-8">
+              <div id="slot-detail-container">
+                <div class="text-muted">Select a slot to view details</div>
+              </div>
+              <!-- Bundle Preview Content -->
+              <div id="preview-section" class="mt-3 d-none">
+                <div id="preview-content" class="border rounded p-3 bg-light">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span id="preview-title" class="h5 font-weight-bold mb-0"></span>
+                    <span id="preview-price" class="text-info font-weight-bold"></span>
+                  </div>
+                  <div id="preview-short-desc" class="mb-2"></div>
+                  <div id="preview-long-desc" class="text-muted mb-3" style="white-space: pre-wrap;"></div>
+                  <table class="table table-sm table-bordered mb-0">
+                    <tbody id="preview-slots-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slot Edit Modal -->
+<div class="modal fade" id="slotEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="slotEditModalTitle">Edit Slot</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="slotEditModalBody">
+        <!-- Dynamic content -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn" id="btn-save-slot">Save Slot</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // State
+  var currentBundleId = null;
+  var currentBundle = null;
+  var selectedSlotId = null;
+  var healthData = [];
+  var selectedReplacements = [];
+  var categoryOptions = [];
+
+  // =================================================================================
+  // INITIALIZATION
+  // =================================================================================
+
+  function init() {
+    loadCategories();
+    loadStats();
+    loadBundleList();
+    loadHealthAlerts();
+    bindEvents();
+  }
+
+  function loadCategories() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.error && result.data) {
+          categoryOptions = result.data;
+        }
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load categories:', err);
+      })
+      .WebAppBundles_getCategories();
+  }
+
+  function bindEvents() {
+    document.getElementById('btn-refresh-bundles').addEventListener('click', function() {
+      loadStats();
+      loadBundleList();
+      loadHealthAlerts();
+    });
+
+    document.getElementById('btn-reimport-bundles').addEventListener('click', reimportBundles);
+    document.getElementById('btn-apply-replacements').addEventListener('click', applyReplacements);
+    document.getElementById('btn-add-text-slot').addEventListener('click', function() { addSlot('Text'); });
+    document.getElementById('btn-add-product-slot').addEventListener('click', function() { addSlot('Product'); });
+    document.getElementById('btn-save-slot').addEventListener('click', saveSlot);
+  }
+
+  // =================================================================================
+  // DASHBOARD
+  // =================================================================================
+
+  function loadStats() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          console.error('Error loading stats:', result.error);
+          return;
+        }
+        var stats = result.data;
+        document.getElementById('stat-total').textContent = stats.total;
+        document.getElementById('stat-active').textContent = stats.active;
+        document.getElementById('stat-draft').textContent = stats.draft;
+        document.getElementById('stat-archived').textContent = stats.archived;
+        document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load stats:', err);
+      })
+      .WebAppBundles_getStats();
+  }
+
+  function toggleDescSection(section) {
+    var contentEl = document.getElementById(section + '-desc-content');
+    var toggleEl = document.getElementById(section + '-toggle');
+    if (contentEl.style.display === 'none') {
+      contentEl.style.display = 'block';
+      toggleEl.textContent = '▲';
+    } else {
+      contentEl.style.display = 'none';
+      toggleEl.textContent = '▼';
+    }
+  }
+
+  function loadBundleList() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          console.error('Error loading bundles:', result.error);
+          return;
+        }
+        renderBundleList(result.data);
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load bundles:', err);
+      })
+      .WebAppBundles_getAllBundles();
+  }
+
+  function renderBundleList(bundles) {
+    var tbody = document.getElementById('bundle-list-body');
+    if (!bundles || bundles.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-center">No bundles found</td></tr>';
+      return;
+    }
+
+    var html = bundles.map(function(b) {
+      var statusClass = b.status === 'Active' ? 'badge-success' : (b.status === 'Draft' ? 'badge-warning' : 'badge-secondary');
+      var priceHtml = '';
+      if (b.totalPrice > 0) {
+        if (b.discount > 0) {
+          priceHtml = '<span class="text-muted" style="text-decoration: line-through; font-size: 0.85em;">' + b.totalPrice + '</span> ' +
+            '<strong>' + b.displayPrice + '</strong>';
+        } else {
+          priceHtml = b.displayPrice;
+        }
+      } else {
+        priceHtml = '-';
+      }
+      return '<tr data-bundle-id="' + b.bundleId + '" style="cursor: pointer;">' +
+        '<td>' + b.bundleId + '</td>' +
+        '<td>' + (b.nameEn || '-') + '</td>' +
+        '<td>' + (b.nameHe || '-') + '</td>' +
+        '<td>' + (b.type || 'Bundle') + '</td>' +
+        '<td><span class="badge ' + statusClass + '">' + b.status + '</span></td>' +
+        '<td>' + priceHtml + '</td>' +
+        '<td><button class="btn btn-sm btn-edit-bundle">Edit</button></td>' +
+        '</tr>';
+    }).join('');
+
+    tbody.innerHTML = html;
+
+    // Bind click handlers
+    tbody.querySelectorAll('tr').forEach(function(row) {
+      row.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-edit-bundle')) {
+          loadBundleForEditing(row.dataset.bundleId);
+        }
+      });
+    });
+  }
+
+  // =================================================================================
+  // HEALTH MONITOR
+  // =================================================================================
+
+  function loadHealthAlerts() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          console.error('Error loading health data:', result.error);
+          document.getElementById('health-alerts-container').innerHTML = '<div class="text-danger">' + result.error + '</div>';
+          return;
+        }
+        healthData = result.data;
+        renderHealthAlerts(result.data);
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load health data:', err);
+        document.getElementById('health-alerts-container').innerHTML = '<div class="text-danger">Failed to load health data</div>';
+      })
+      .WebAppBundles_getBundlesWithLowInventory();
+  }
+
+  function renderHealthAlerts(data) {
+    var container = document.getElementById('health-alerts-container');
+    selectedReplacements = [];
+
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="text-success">All bundle slots have adequate inventory</div>';
+      document.getElementById('btn-apply-replacements').disabled = true;
+      return;
+    }
+
+    var html = data.map(function(bundleData) {
+      var bundle = bundleData.bundle;
+      var slots = bundleData.lowStockSlots;
+
+      var slotsHtml = slots.map(function(slotInfo) {
+        var slot = slotInfo.slot;
+        var suggestions = slotInfo.suggestions || [];
+        var suggestionsHtml = suggestions.length > 0 ?
+          '<select class="form-control form-control-sm replacement-select" data-slot-id="' + slot.slotId + '">' +
+            '<option value="">Select replacement...</option>' +
+            suggestions.map(function(s) {
+              return '<option value="' + s.sku + '">' + (s.nameEn || s.nameHe || s.sku) + ' (Stock: ' + s.stock + ', ' + s.price + ')</option>';
+            }).join('') +
+          '</select>' :
+          '<span class="text-muted">No eligible replacements</span>';
+
+        return '<tr>' +
+          '<td>' + slot.order + '</td>' +
+          '<td>' + slotInfo.currentSKU + '</td>' +
+          '<td>' + (slotInfo.product ? (slotInfo.product.nameEn || slotInfo.product.nameHe || '-') : '-') + '</td>' +
+          '<td class="text-danger font-weight-bold">' + slotInfo.stock + '</td>' +
+          '<td>' + suggestionsHtml + '</td>' +
+          '<td><a href="#" class="btn-edit-slot" data-bundle-id="' + bundle.bundleId + '" data-slot-id="' + slot.slotId + '">Edit</a></td>' +
+          '</tr>';
+      }).join('');
+
+      return '<div class="mb-3">' +
+        '<h6>' + (bundle.nameEn || bundle.bundleId) + ' <span class="badge badge-danger">' + slots.length + ' low stock</span></h6>' +
+        '<table class="table table-sm table-bordered" style="table-layout: fixed;">' +
+          '<colgroup>' +
+            '<col style="width: 40px;">' +
+            '<col style="width: 120px;">' +
+            '<col style="width: 250px;">' +
+            '<col style="width: 50px;">' +
+            '<col style="width: 180px;">' +
+            '<col style="width: 40px;">' +
+          '</colgroup>' +
+          '<thead><tr><th>#</th><th>SKU</th><th>Product</th><th>Stock</th><th>Replacement</th><th></th></tr></thead>' +
+          '<tbody>' + slotsHtml + '</tbody>' +
+        '</table>' +
+      '</div>';
+    }).join('');
+
+    container.innerHTML = html;
+    document.getElementById('btn-apply-replacements').disabled = false;
+
+    // Bind replacement select handlers
+    container.querySelectorAll('.replacement-select').forEach(function(select) {
+      select.addEventListener('change', function() {
+        updateSelectedReplacements();
+      });
+    });
+
+    // Bind edit slot links
+    container.querySelectorAll('.btn-edit-slot').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        loadBundleForEditing(this.dataset.bundleId, this.dataset.slotId);
+      });
+    });
+  }
+
+  function updateSelectedReplacements() {
+    selectedReplacements = [];
+    document.querySelectorAll('.replacement-select').forEach(function(select) {
+      if (select.value) {
+        selectedReplacements.push({
+          slotId: select.dataset.slotId,
+          sku: select.value,
+          reason: 'Low Stock Replacement'
+        });
+      }
+    });
+    document.getElementById('btn-apply-replacements').disabled = selectedReplacements.length === 0;
+  }
+
+  function applyReplacements() {
+    if (selectedReplacements.length === 0) return;
+
+    if (!confirm('Apply ' + selectedReplacements.length + ' replacement(s)?')) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        alert('Applied ' + result.data.successCount + ' replacements. ' + result.data.failCount + ' failed.');
+        loadHealthAlerts();
+        loadStats(); // Refresh needs attention count
+        if (currentBundleId) {
+          loadBundleForEditing(currentBundleId);
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed to apply replacements: ' + err.message);
+      })
+      .WebAppBundles_applyReplacements(selectedReplacements);
+  }
+
+  // =================================================================================
+  // BUNDLE EDITOR
+  // =================================================================================
+
+  function loadBundleForEditing(bundleId, focusSlotId) {
+    currentBundleId = bundleId;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error loading bundle: ' + result.error);
+          return;
+        }
+        currentBundle = result.data;
+        renderBundleEditor(result.data, focusSlotId);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed to load bundle: ' + err.message);
+      })
+      .WebAppBundles_getBundleWithSlots(bundleId);
+  }
+
+  function renderBundleEditor(bundle, focusSlotId) {
+    document.getElementById('editor-bundle-name').textContent = bundle.nameEn || bundle.bundleId;
+    document.getElementById('editor-actions').style.display = 'block';
+
+    // Calculate total price from saved slots
+    var calculatedTotal = 0;
+    if (bundle.slots && bundle.slots.length > 0) {
+      bundle.slots.forEach(function(slot) {
+        if (slot.slotType === 'Product' && slot.productPrice) {
+          calculatedTotal += slot.productPrice * (slot.defaultQty || 1);
+        }
+      });
+    }
+    bundle.calculatedTotal = calculatedTotal;
+
+    // Display price in header (use ₪ symbol)
+    var priceEl = document.getElementById('editor-bundle-price');
+    if (calculatedTotal > 0 || bundle.displayPrice > 0) {
+      var priceText = '';
+      if (calculatedTotal > 0) {
+        priceText = '₪' + calculatedTotal.toFixed(0);
+        if (bundle.displayPrice > 0 && bundle.displayPrice !== calculatedTotal) {
+          var savings = calculatedTotal - bundle.displayPrice;
+          if (savings > 0) {
+            priceText += ' → ₪' + bundle.displayPrice.toFixed(0) + ' (saves ₪' + savings.toFixed(0) + ')';
+          }
+        }
+      } else if (bundle.displayPrice > 0) {
+        priceText = '₪' + bundle.displayPrice.toFixed(0);
+      }
+      priceEl.textContent = priceText;
+      priceEl.style.display = 'inline';
+    } else {
+      priceEl.style.display = 'none';
+    }
+
+    // Store bundle descriptions for collapsible sections
+    window._bundleDescriptions = {
+      shortEn: bundle.shortDescEn || '',
+      shortHe: bundle.shortDescHe || '',
+      longEn: bundle.longDescEn || '',
+      longHe: bundle.longDescHe || ''
+    };
+
+    // Render slot list
+    var slotListHtml = '<div class="list-group">';
+    if (bundle.slots && bundle.slots.length > 0) {
+      slotListHtml += bundle.slots.map(function(slot) {
+        var preview = slot.slotType === 'Text' ?
+          '<small class="text-muted">' + (slot.textEn || '(empty)').substring(0, 30) + '</small>' :
+          '<small>' + (slot.activeSKU || 'No product') + '</small>';
+
+        var activeClass = slot.slotId === focusSlotId ? ' active' : '';
+        return '<a href="#" class="list-group-item list-group-item-action slot-item' + activeClass + '" data-slot-id="' + slot.slotId + '">' +
+          '<div class="d-flex justify-content-between">' +
+            '<span><strong>' + slot.order + '.</strong> ' + slot.slotType + '</span>' +
+            '<span class="badge badge-light">' + (slot.slotType === 'Product' ? slot.defaultQty + 'x' : slot.textStyle) + '</span>' +
+          '</div>' +
+          preview +
+        '</a>';
+      }).join('');
+    } else {
+      slotListHtml += '<div class="text-muted p-3">No slots in this bundle</div>';
+    }
+    slotListHtml += '</div>';
+
+    document.getElementById('slot-list-container').innerHTML = slotListHtml;
+
+    // Bind slot click handlers
+    document.querySelectorAll('.slot-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.slot-item').forEach(function(i) { i.classList.remove('active'); });
+        this.classList.add('active');
+        selectedSlotId = this.dataset.slotId;
+        renderSlotDetail(selectedSlotId);
+      });
+    });
+
+    // Auto-select focused slot or first slot
+    if (focusSlotId) {
+      selectedSlotId = focusSlotId;
+      renderSlotDetail(focusSlotId);
+    } else if (bundle.slots && bundle.slots.length > 0) {
+      selectedSlotId = bundle.slots[0].slotId;
+      renderSlotDetail(selectedSlotId);
+    } else {
+      document.getElementById('slot-detail-container').innerHTML = '<div class="text-muted">No slots to display</div>';
+    }
+
+    // Show preview controls and content, bind click handlers
+    document.getElementById('preview-controls').classList.remove('d-none');
+    document.getElementById('preview-section').classList.remove('d-none');
+
+    // Bind preview tab click handlers
+    document.getElementById('preview-tab-en').onclick = function(e) {
+      e.preventDefault();
+      renderBundlePreview('en');
+    };
+    document.getElementById('preview-tab-he').onclick = function(e) {
+      e.preventDefault();
+      renderBundlePreview('he');
+    };
+
+    renderBundlePreview('en');
+  }
+
+  function renderBundlePreview(lang) {
+    if (!currentBundle) return;
+    var isHe = lang === 'he';
+
+    // Update tab active state (bold for selected, muted for other)
+    var tabEn = document.getElementById('preview-tab-en');
+    var tabHe = document.getElementById('preview-tab-he');
+    if (tabEn && tabHe) {
+      tabEn.className = isHe ? 'small mr-2 text-muted' : 'small mr-2 font-weight-bold';
+      tabHe.className = isHe ? 'small font-weight-bold' : 'small text-muted';
+    }
+
+    // Set RTL for Hebrew
+    var content = document.getElementById('preview-content');
+    if (content) content.dir = isHe ? 'rtl' : 'ltr';
+
+    // Populate content based on language
+    var title = isHe ? (currentBundle.nameHe || currentBundle.nameEn) : currentBundle.nameEn;
+    document.getElementById('preview-title').textContent = title || '';
+
+    // Show calculated total with savings if applicable (use ₪ symbol)
+    var priceText = '';
+    if (currentBundle.calculatedTotal > 0) {
+      priceText = '₪' + currentBundle.calculatedTotal.toFixed(0);
+      if (currentBundle.displayPrice > 0 && currentBundle.displayPrice < currentBundle.calculatedTotal) {
+        var savings = currentBundle.calculatedTotal - currentBundle.displayPrice;
+        priceText += ' → ₪' + currentBundle.displayPrice.toFixed(0) + ' (saves ₪' + savings.toFixed(0) + ')';
+      }
+    } else if (currentBundle.displayPrice) {
+      priceText = '₪' + currentBundle.displayPrice;
+    }
+    document.getElementById('preview-price').textContent = priceText;
+
+    var desc = window._bundleDescriptions || {};
+    document.getElementById('preview-short-desc').textContent = isHe ? (desc.shortHe || '') : (desc.shortEn || '');
+    document.getElementById('preview-long-desc').textContent = isHe ? (desc.longHe || '') : (desc.longEn || '');
+
+    // Build slots table (columns: name, qty, price)
+    var tbody = document.getElementById('preview-slots-body');
+    tbody.innerHTML = '';
+    if (currentBundle.slots) {
+      currentBundle.slots.forEach(function(slot) {
+        var tr = document.createElement('tr');
+        if (slot.slotType === 'Text') {
+          var text = isHe ? (slot.textHe || slot.textEn || '') : (slot.textEn || '');
+          tr.innerHTML = '<td colspan="3"><em>' + text + '</em></td>';
+        } else {
+          var qtyDisplay = (slot.defaultQty || 1) + (slot.qtyVariable ? ' ±' : '');
+          var productName = slot.productName || slot.activeSKU || '-';
+          var price = slot.productPrice ? '₪' + slot.productPrice : '-';
+          tr.innerHTML = '<td>' + productName + '</td><td>' + qtyDisplay + '</td><td>' + price + '</td>';
+        }
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  function renderSlotDetail(slotId) {
+    var slot = currentBundle.slots.find(function(s) { return s.slotId === slotId; });
+    if (!slot) {
+      document.getElementById('slot-detail-container').innerHTML = '<div class="text-danger">Slot not found</div>';
+      return;
+    }
+
+    // Build collapsible description sections
+    var html = '';
+    var desc = window._bundleDescriptions || {};
+    var hasShort = desc.shortEn || desc.shortHe;
+    var hasLong = desc.longEn || desc.longHe;
+
+    if (hasShort || hasLong) {
+      html += '<div class="mb-3">';
+
+      // Short Description Section
+      if (hasShort) {
+        html += '<div class="border rounded mb-2">' +
+          '<div class="d-flex justify-content-between align-items-center p-2 bg-light" id="short-desc-header" style="cursor:pointer">' +
+            '<strong class="small">Short Description</strong>' +
+            '<span id="short-toggle" class="small text-muted">▼</span>' +
+          '</div>' +
+          '<div id="short-desc-content" class="p-2 small" style="display:none">' +
+            '<div class="row">' +
+              '<div class="col-6"><div class="text-muted mb-1">English</div><div>' + (desc.shortEn || '<em class="text-muted">empty</em>') + '</div></div>' +
+              '<div class="col-6"><div class="text-muted mb-1">Hebrew</div><div dir="rtl" class="text-info">' + (desc.shortHe || '<em class="text-muted">empty</em>') + '</div></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      // Long Description Section
+      if (hasLong) {
+        html += '<div class="border rounded">' +
+          '<div class="d-flex justify-content-between align-items-center p-2 bg-light" id="long-desc-header" style="cursor:pointer">' +
+            '<strong class="small">Long Description</strong>' +
+            '<span id="long-toggle" class="small text-muted">▼</span>' +
+          '</div>' +
+          '<div id="long-desc-content" class="p-2 small" style="display:none; max-height:200px; overflow-y:auto">' +
+            '<div class="row">' +
+              '<div class="col-6"><div class="text-muted mb-1">English</div><div style="white-space:pre-wrap">' + (desc.longEn || '<em class="text-muted">empty</em>') + '</div></div>' +
+              '<div class="col-6"><div class="text-muted mb-1">Hebrew</div><div dir="rtl" class="text-info" style="white-space:pre-wrap">' + (desc.longHe || '<em class="text-muted">empty</em>') + '</div></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    html += '<div class="card"><div class="card-body">';
+
+    if (slot.slotType === 'Text') {
+      // Style options in order: H1-H6, p, span, none
+      var styleOptions = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'p', 'span', 'none'];
+      var styleOptionsHtml = styleOptions.map(function(s) {
+        var val = s.toLowerCase();
+        return '<option value="' + val + '"' + (slot.textStyle === val ? ' selected' : '') + '>' + s + '</option>';
+      }).join('');
+
+      html += '<div class="d-flex align-items-center mb-2">' +
+          '<h6 class="mb-0 mr-2">Text Slot</h6>' +
+          '<select class="form-control form-control-sm" id="slot-textStyle" style="width: 80px;">' +
+            styleOptionsHtml +
+          '</select>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Text (English)</label>' +
+          '<textarea class="form-control" id="slot-textEn" rows="2">' + (slot.textEn || '') + '</textarea>' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label>Text (Hebrew)</label>' +
+          '<textarea class="form-control" id="slot-textHe" rows="2" dir="rtl">' + (slot.textHe || '') + '</textarea>' +
+        '</div>';
+    } else {
+      // Get product name and price for display
+      var productInfo = slot.activeSKU ? '<span id="slot-product-name" class="text-muted ml-2">Loading...</span>' : '';
+
+      html += '<div class="row">' +
+          '<div class="col-md-6">' +
+            '<div class="form-group">' +
+              '<label>Current SKU' + productInfo + '</label>' +
+              '<input type="text" class="form-control form-control-sm" id="slot-activeSKU" value="' + (slot.activeSKU || '') + '">' +
+              '<div class="small text-muted mt-1"><span id="slot-product-price"></span></div>' +
+            '</div>' +
+            '<div class="form-row">' +
+              '<div class="col-4">' +
+                '<label>Qty</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-defaultQty" value="' + (slot.defaultQty || 1) + '" style="width: 70px;">' +
+              '</div>' +
+              '<div class="col-8 d-flex align-items-end">' +
+                '<div class="form-check mr-3">' +
+                  '<input type="checkbox" class="form-check-input" id="slot-qtyVariable"' + (slot.qtyVariable ? ' checked' : '') + '>' +
+                  '<label class="form-check-label" for="slot-qtyVariable">Variable</label>' +
+                '</div>' +
+                '<div class="form-check">' +
+                  '<input type="checkbox" class="form-check-input" id="slot-exclusive"' + (slot.exclusive ? ' checked' : '') + '>' +
+                  '<label class="form-check-label" for="slot-exclusive">Exclusive</label>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="col-md-6">' +
+            '<div class="form-row">' +
+              '<div class="col-6">' +
+                '<label>Category</label>' +
+                '<select class="form-control form-control-sm" id="slot-category">' +
+                  '<option value="">-- None --</option>' +
+                  categoryOptions.map(function(cat) {
+                    return '<option value="' + cat + '"' + (slot.category === cat ? ' selected' : '') + '>' + cat + '</option>';
+                  }).join('') +
+                '</select>' +
+              '</div>' +
+              '<div class="col-6">' +
+                '<label>Category 2</label>' +
+                '<select class="form-control form-control-sm" id="slot-category2">' +
+                  '<option value="">-- None --</option>' +
+                  categoryOptions.map(function(cat) {
+                    return '<option value="' + cat + '"' + (slot.category2 === cat ? ' selected' : '') + '>' + cat + '</option>';
+                  }).join('') +
+                '</select>' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-row mt-1">' +
+              '<div class="col-6">' +
+                '<label>Price Min</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-priceMin" value="' + (slot.priceMin || '') + '" style="width: 80px;">' +
+              '</div>' +
+              '<div class="col-6">' +
+                '<label>Price Max</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-priceMax" value="' + (slot.priceMax || '') + '" style="width: 80px;">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-row mt-1">' +
+              '<div class="col-4">' +
+                '<label>Intensity</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-intensity" value="' + (slot.intensity !== null ? slot.intensity : '') + '" min="1" max="5" style="width: 60px;">' +
+              '</div>' +
+              '<div class="col-4">' +
+                '<label>Complexity</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-complexity" value="' + (slot.complexity !== null ? slot.complexity : '') + '" min="1" max="5" style="width: 60px;">' +
+              '</div>' +
+              '<div class="col-4">' +
+                '<label>Acidity</label>' +
+                '<input type="number" class="form-control form-control-sm" id="slot-acidity" value="' + (slot.acidity !== null ? slot.acidity : '') + '" min="1" max="5" style="width: 60px;">' +
+              '</div>' +
+            '</div>' +
+            '<div class="form-group mt-1">' +
+              '<label>Name Contains</label>' +
+              '<input type="text" class="form-control form-control-sm" id="slot-nameContains" value="' + (slot.nameContains || '') + '">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<hr>' +
+        '<button class="btn btn-sm" id="btn-find-eligible">Find Eligible Products</button>' +
+        '<div id="eligible-products-container" class="mt-2"></div>';
+
+      // Load product name after render
+      if (slot.activeSKU) {
+        loadProductName(slot.activeSKU);
+      }
+    }
+
+    // Common fields
+    html += '<hr><div class="form-row">' +
+      '<div class="col">' +
+        '<label>Order</label>' +
+        '<input type="number" class="form-control form-control-sm" id="slot-order" value="' + (slot.order || 1) + '">' +
+      '</div>' +
+      '<div class="col-auto d-flex align-items-end">' +
+        '<button class="btn btn-sm mr-2" id="btn-update-slot">Update Slot</button>' +
+        '<button class="btn btn-sm mr-2" id="btn-duplicate-slot">Duplicate</button>' +
+        '<button class="btn btn-sm" id="btn-delete-slot">Delete</button>' +
+      '</div>' +
+    '</div>';
+
+    html += '</div></div>';
+
+    document.getElementById('slot-detail-container').innerHTML = html;
+
+    // Bind buttons
+    var updateBtn = document.getElementById('btn-update-slot');
+    if (updateBtn) updateBtn.addEventListener('click', function() { updateCurrentSlot(); });
+
+    var duplicateBtn = document.getElementById('btn-duplicate-slot');
+    if (duplicateBtn) duplicateBtn.addEventListener('click', function() { duplicateCurrentSlot(); });
+
+    var deleteBtn = document.getElementById('btn-delete-slot');
+    if (deleteBtn) deleteBtn.addEventListener('click', function() { deleteCurrentSlot(); });
+
+    var findBtn = document.getElementById('btn-find-eligible');
+    if (findBtn) findBtn.addEventListener('click', function() { findEligibleProducts(); });
+
+    // Bind description toggle handlers
+    var shortHeader = document.getElementById('short-desc-header');
+    if (shortHeader) shortHeader.addEventListener('click', function() { toggleDescSection('short'); });
+
+    var longHeader = document.getElementById('long-desc-header');
+    if (longHeader) longHeader.addEventListener('click', function() { toggleDescSection('long'); });
+  }
+
+  function updateCurrentSlot() {
+    if (!selectedSlotId) return;
+
+    var slot = currentBundle.slots.find(function(s) { return s.slotId === selectedSlotId; });
+    if (!slot) return;
+
+    var updates = {
+      order: parseInt(document.getElementById('slot-order').value) || 1
+    };
+
+    if (slot.slotType === 'Text') {
+      updates.textStyle = document.getElementById('slot-textStyle').value;
+      updates.textEn = document.getElementById('slot-textEn').value;
+      updates.textHe = document.getElementById('slot-textHe').value;
+    } else {
+      updates.activeSKU = document.getElementById('slot-activeSKU').value;
+      updates.defaultQty = parseInt(document.getElementById('slot-defaultQty').value) || 1;
+      updates.qtyVariable = document.getElementById('slot-qtyVariable').checked;
+      updates.exclusive = document.getElementById('slot-exclusive').checked;
+      updates.category = document.getElementById('slot-category').value;
+      updates.category2 = document.getElementById('slot-category2').value;
+      updates.priceMin = document.getElementById('slot-priceMin').value ? parseFloat(document.getElementById('slot-priceMin').value) : null;
+      updates.priceMax = document.getElementById('slot-priceMax').value ? parseFloat(document.getElementById('slot-priceMax').value) : null;
+      updates.intensity = document.getElementById('slot-intensity').value ? parseInt(document.getElementById('slot-intensity').value) : null;
+      updates.complexity = document.getElementById('slot-complexity').value ? parseInt(document.getElementById('slot-complexity').value) : null;
+      updates.acidity = document.getElementById('slot-acidity').value ? parseInt(document.getElementById('slot-acidity').value) : null;
+      updates.nameContains = document.getElementById('slot-nameContains').value;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        alert('Slot updated');
+        loadBundleForEditing(currentBundleId, selectedSlotId);
+        loadStats(); // Refresh stats in case inventory status changed
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_updateSlot(selectedSlotId, updates);
+  }
+
+  function deleteCurrentSlot() {
+    if (!selectedSlotId) return;
+    if (!confirm('Delete this slot?')) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        alert('Slot deleted');
+        selectedSlotId = null;
+        loadBundleForEditing(currentBundleId);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_deleteSlot(selectedSlotId);
+  }
+
+  function duplicateCurrentSlot() {
+    if (!selectedSlotId || !currentBundle) return;
+
+    var slot = currentBundle.slots.find(function(s) { return s.slotId === selectedSlotId; });
+    if (!slot) return;
+
+    var maxOrder = currentBundle.slots.reduce(function(max, s) {
+      return Math.max(max, s.order || 0);
+    }, 0);
+
+    var slotData = {
+      bundleId: currentBundleId,
+      slotType: slot.slotType,
+      order: maxOrder + 1,
+      textStyle: slot.textStyle,
+      textEn: slot.textEn,
+      textHe: slot.textHe,
+      activeSKU: '', // Don't copy SKU
+      category: slot.category,
+      category2: slot.category2,
+      priceMin: slot.priceMin,
+      priceMax: slot.priceMax,
+      intensity: slot.intensity,
+      complexity: slot.complexity,
+      acidity: slot.acidity,
+      nameContains: slot.nameContains,
+      exclusive: slot.exclusive,
+      qtyVariable: slot.qtyVariable,
+      defaultQty: slot.defaultQty
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        loadBundleForEditing(currentBundleId, result.data.slotId);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_createSlot(slotData);
+  }
+
+  function addSlot(slotType) {
+    if (!currentBundleId) {
+      alert('Select a bundle first');
+      return;
+    }
+
+    var maxOrder = currentBundle.slots.reduce(function(max, s) {
+      return Math.max(max, s.order || 0);
+    }, 0);
+
+    var slotData = {
+      bundleId: currentBundleId,
+      slotType: slotType,
+      order: maxOrder + 1
+    };
+
+    if (slotType === 'Text') {
+      slotData.textStyle = 'none';
+    } else {
+      slotData.defaultQty = 1;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        loadBundleForEditing(currentBundleId, result.data.slotId);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_createSlot(slotData);
+  }
+
+  function findEligibleProducts() {
+    if (!selectedSlotId) return;
+
+    var container = document.getElementById('eligible-products-container');
+    container.innerHTML = '<div class="text-muted">Searching...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          container.innerHTML = '<div class="text-danger">' + result.error + '</div>';
+          return;
+        }
+        var products = result.data;
+        if (!products || products.length === 0) {
+          container.innerHTML = '<div class="text-muted">No eligible products found</div>';
+          return;
+        }
+
+        var html = '<table class="table table-sm table-bordered">' +
+          '<thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th></th></tr></thead>' +
+          '<tbody>' +
+          products.map(function(p) {
+            return '<tr>' +
+              '<td>' + p.sku + '</td>' +
+              '<td>' + (p.nameEn || p.nameHe || '-') + '</td>' +
+              '<td>' + p.stock + '</td>' +
+              '<td>' + p.price + '</td>' +
+              '<td><button class="btn btn-sm btn-assign-product" data-sku="' + p.sku + '">Assign</button></td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table>';
+
+        container.innerHTML = html;
+
+        container.querySelectorAll('.btn-assign-product').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            assignProduct(this.dataset.sku);
+          });
+        });
+      })
+      .withFailureHandler(function(err) {
+        container.innerHTML = '<div class="text-danger">Failed: ' + err.message + '</div>';
+      })
+      .WebAppBundles_getEligibleProducts(selectedSlotId, { limit: 10, excludeExclusiveSKUs: true });
+  }
+
+  function assignProduct(sku) {
+    if (!selectedSlotId) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        alert('Product assigned');
+        loadBundleForEditing(currentBundleId, selectedSlotId);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_assignProductToSlot(selectedSlotId, sku, 'Manual Assignment');
+  }
+
+  function saveSlot() {
+    // Handled in modal - placeholder
+  }
+
+  function loadProductName(sku) {
+    if (!sku) return;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var nameSpan = document.getElementById('slot-product-name');
+        var priceSpan = document.getElementById('slot-product-price');
+        if (!nameSpan) return;
+        if (result.error || !result.data) {
+          nameSpan.textContent = '(not found)';
+          nameSpan.className = 'text-danger ml-2';
+          if (priceSpan) priceSpan.textContent = '';
+        } else {
+          nameSpan.textContent = '- ' + result.data.name;
+          nameSpan.className = 'text-muted ml-2';
+          if (priceSpan && result.data.price) {
+            priceSpan.textContent = 'Price: ₪' + result.data.price;
+          }
+        }
+      })
+      .withFailureHandler(function() {
+        var nameSpan = document.getElementById('slot-product-name');
+        var priceSpan = document.getElementById('slot-product-price');
+        if (nameSpan) {
+          nameSpan.textContent = '(error)';
+          nameSpan.className = 'text-danger ml-2';
+        }
+        if (priceSpan) priceSpan.textContent = '';
+      })
+      .WebAppBundles_getProductName(sku);
+  }
+
+  // =================================================================================
+  // REIMPORT
+  // =================================================================================
+
+  function reimportBundles() {
+    if (!confirm('This will re-import all bundles from WooCommerce data. Continue?')) {
+      return;
+    }
+
+    // Show progress indicator
+    var btn = document.getElementById('btn-reimport-bundles');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Importing...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        if (result.error) {
+          alert('Error: ' + result.error);
+          return;
+        }
+        alert('Imported ' + result.data.imported + ' bundles. Failed: ' + result.data.failed + '. Skipped: ' + result.data.skipped);
+        loadStats();
+        loadBundleList();
+        loadHealthAlerts();
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_reimportAllBundles();
+  }
+
+  // Initialize on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Expose for debugging
+  window.BundlesView = {
+    loadStats: loadStats,
+    loadBundleList: loadBundleList,
+    loadHealthAlerts: loadHealthAlerts,
+    loadBundleForEditing: loadBundleForEditing
+  };
+
+})();
+</script>

@@ -1,0 +1,23 @@
+term_id,name,slug,description,display_type,parent,thumbnail
+15,Uncategorized,uncategorized,,default,0,
+87,Dessert,dessert,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/dessert-wines.jpg
+88,"Dry Red",dry-red,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/red-wines.jpg
+89,"Dry White",dry-white,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/white-wines.jpg
+90,Fortified,fortified,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/fortified-wines.jpg
+135,Rosé,dry-rose,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/rose-wines.jpg
+666,Bundles,bundle,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/bundles.jpg
+897,Accessories,accessories,"These accessories enhance serving and storing wine. They also make thoughtful and practical gifts.",default,0,https://jlmwines.com/wp-content/uploads/2024/10/Vacu-Vin-Twister-Corkscrew.jpg
+903,"Gift Items",gift-items,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/gift-items.jpg
+911,Liqueurs,liqueur,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/liqueurs.jpg
+961,"Featured Wines",featured-wines,"Savor a handpicked selection of suggestions for this month.",default,0,https://jlmwines.com/wp-content/uploads/2025/02/featured-wines.jpg
+963,"Special Value",special-value,"Uncover remarkable wines at exceptional prices.",default,0,https://jlmwines.com/wp-content/uploads/2024/08/special-value.jpeg
+965,"Seasonal Wines",seasonal,"Get wines to suit the season's weather and events.",default,0,https://jlmwines.com/wp-content/uploads/2024/08/seasonal-wines.jpeg
+967,"Latest Arrivals",new,"<span data-sheets-root=""1"">Discover the newest and most interesting wines.</span>",default,0,https://jlmwines.com/wp-content/uploads/2024/08/lastest-arrivals.jpeg
+969,"Gift Boxed Wines",gift-boxed,"Shop wines that make a beautiful gift in their own box.",default,0,https://jlmwines.com/wp-content/uploads/2024/08/gift-boxed-wines.jpg
+970,"Sparkling Wines",sparkling,"Sparkling wines for a happy event with friends and family.",default,0,https://jlmwines.com/wp-content/uploads/2024/08/sparkling-wines.jpeg
+1023,Magnums,magnums,"Magnums are perfect for groups and special occasions, and have the potential to age well.",default,0,https://jlmwines.com/wp-content/uploads/2025/02/magnum-wines.jpg
+1029,Semi-Dry,semi-dry,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/semi-dry-wines.jpg
+1031,North,north,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/North.jpg
+1035,Packages,packages,"Packages are themed groups of wine, sometimes with tasty companions, that offer a pleasing experience.",default,0,https://jlmwines.com/wp-content/uploads/2024/09/shabbat-shalom.jpg
+1039,"Under ₪40",under-40,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/under-40.jpg
+1041,"Under ₪60",under-60,,default,0,https://jlmwines.com/wp-content/uploads/2025/02/under-60.jpg

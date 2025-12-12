@@ -82,11 +82,26 @@ const ValidationOrchestratorService = (function() {
     }
 
     logger.info(serviceName, functionName, `Validation complete. Failures: ${failureCount}. Quarantine: ${quarantineTriggered}.`, { sessionId: sessionId, finalStatus: finalStatus });
-    
+
     // 5. Update Job Status (Helper internal to this or ProductService?)
     // Ideally Orchestrator handles this, but currently ProductService does it.
     // We need to update the SysJobQueue status.
     _updateJobStatus(executionContext, finalStatus, failureCount > 0 ? `${failureCount} rules failed.` : '');
+
+    // 6. Write final status to SyncStatusService so UI shows completion
+    if (sessionId) {
+      const statusMessage = quarantineTriggered
+        ? 'Validation failed - quarantine triggered'
+        : failureCount > 0
+          ? `Validation complete with ${failureCount} warnings`
+          : 'Validation passed';
+      SyncStatusService.writeStatus(sessionId, {
+        step: 4,
+        stepName: 'Validation',
+        status: quarantineTriggered ? 'failed' : 'completed',
+        message: statusMessage
+      });
+    }
 
     return { finalStatus, failureCount, quarantineTriggered };
   }

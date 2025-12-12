@@ -12,15 +12,24 @@ function getSyncStateFromBackend() {
   // Check if any jobs completed and advance stage if needed
   OrchestratorService.checkAndAdvanceSyncState();
 
-  // Get current session ID from old state
-  const oldState = SyncStateService.getSyncState();
+  // Get sync state (includes job statuses, currentStage, etc.)
+  const syncState = SyncStateService.getSyncState();
 
-  // Return new status-based data
-  if (oldState.sessionId) {
-    return SyncStatusService.getSessionStatus(oldState.sessionId);
+  // Get step-based status data (includes timestamps per step)
+  let statusData;
+  if (syncState.sessionId) {
+    statusData = SyncStatusService.getSessionStatus(syncState.sessionId);
   } else {
-    return SyncStatusService.getDefaultStatus(null);
+    statusData = SyncStatusService.getDefaultStatus(null);
   }
+
+  // Merge both data sources - syncState has job statuses, statusData has step timestamps
+  return {
+    ...syncState,
+    ...statusData,
+    // Ensure currentStage from syncState takes precedence
+    currentStage: syncState.currentStage
+  };
 }
 
 /**

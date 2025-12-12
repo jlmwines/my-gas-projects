@@ -428,22 +428,8 @@ const ValidationLogic = (function() {
     for (let i = 0; i < rules.length; i++) {
         const rule = rules[i];
 
-        // Write progress status for each validation rule
-        if (sessionId) {
-            // Extract a simple, human-friendly name from the rule
-            const simpleName = rule.on_failure_title
-                .replace(/\$\{.*?\}/g, '') // Remove ${variables}
-                .replace(/\[.*?\]/g, '')    // Remove [tags]
-                .replace(/:/g, '')          // Remove colons
-                .trim();
-
-            SyncStatusService.writeStatus(sessionId, {
-                step: 4,
-                stepName: 'Validation',
-                status: 'processing',
-                message: simpleName
-            });
-        }
+        // Validation progress is logged to SysLog, not SyncStatus
+        // Step 4 status is managed by ValidationOrchestratorService (start/complete only)
 
         let result;
         try {

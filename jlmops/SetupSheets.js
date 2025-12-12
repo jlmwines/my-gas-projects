@@ -693,6 +693,78 @@ function createWebOrdItemsMArchiveHeaders() {
     }
 }
 
+function createSysBundlesHeaders() {
+    const functionName = 'createSysBundlesHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysBundles';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first (handles schema changes with different column counts)
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysBundleSlotsHeaders() {
+    const functionName = 'createSysBundleSlotsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysBundleSlots';
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const allConfig = ConfigService.getAllConfig();
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first (handles schema changes with different column counts)
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
 function createJlmopsSystemSheets() {
     createWebXltSHeaders();
     createWebXltMHeaders();
@@ -715,6 +787,8 @@ function createJlmopsSystemSheets() {
     createSysTasksHeaders();
     createWebOrdMArchiveHeaders();
     createWebOrdItemsMArchiveHeaders();
+    createSysBundlesHeaders();
+    createSysBundleSlotsHeaders();
     createLookupSheets(); // Add new function to the main setup call
     protectAllSheetHeaders();
 }

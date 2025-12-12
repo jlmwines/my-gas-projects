@@ -60,8 +60,8 @@ const ProductImportService = (function() {
     const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
     dataRange.setVerticalAlignment('top');
 
-    // Set row height for single line of text (30 pixels)
-    sheet.setRowHeights(2, dataRowCount, 30);
+    // Set row height for single line of text (24 pixels)
+    sheet.setRowHeights(2, dataRowCount, 24);
   }
 
   /**
@@ -1010,6 +1010,77 @@ const ProductImportService = (function() {
     }
     CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate SKU map cache
     logger.info(serviceName, functionName, `Upsert to WebProdM complete. Total rows: ${finalData.length}. Cache invalidated.`, { sessionId: sessionId });
+
+    // Bundle processing moved to manual trigger via Admin UI (Re-import from WooCommerce button)
+    // to avoid slowing down product sync. Use WebAppBundles_reimportAllBundles() when needed.
+  }
+
+  /**
+   * Processes bundle products from web staging data.
+   * Detects woosb type products and imports their bundle structure.
+   * @param {Object} stagingData - Staging data from ConfigService._getSheetDataAsMap
+   * @param {Array<string>} stagingHeaders - Staging schema headers
+   * @param {string} sessionId - Current session ID
+   */
+  function _processBundleProducts(stagingData, stagingHeaders, sessionId) {
+    const serviceName = 'ProductImportService';
+    const functionName = '_processBundleProducts';
+
+    // Get column indices for relevant fields
+    const typeIdx = stagingHeaders.indexOf('wps_TaxProductType');
+    const woosbIdsIdx = stagingHeaders.indexOf('wps_WoosbIds');
+    const idIdx = stagingHeaders.indexOf('wps_ID');
+    const titleIdx = stagingHeaders.indexOf('wps_PostTitle');
+
+    if (typeIdx === -1 || woosbIdsIdx === -1) {
+      logger.info(serviceName, functionName, 'Bundle-related columns not found in staging schema. Skipping bundle processing.', { sessionId });
+      return;
+    }
+
+    let bundlesProcessed = 0;
+    let bundlesFailed = 0;
+
+    stagingData.values.forEach(row => {
+      const productType = String(row[typeIdx] || '').toLowerCase().trim();
+
+      // Only process woosb (WPClever Smart Bundle) products
+      if (productType === 'woosb' || productType === 'bundle') {
+        const bundleId = String(row[idIdx] || '').trim();
+        const woosbIds = String(row[woosbIdsIdx] || '').trim();
+        const nameEn = String(row[titleIdx] || '').trim();
+
+        if (!bundleId) {
+          logger.warn(serviceName, functionName, `Bundle product missing ID. Skipping.`, { sessionId });
+          bundlesFailed++;
+          return;
+        }
+
+        if (!woosbIds) {
+          logger.info(serviceName, functionName, `Bundle ${bundleId} (${nameEn}) has no woosb_ids data. Creating empty bundle.`, { sessionId });
+        }
+
+        try {
+          // Determine bundle type from category or default
+          const bundleType = productType === 'bundle' ? 'Bundle' : 'Bundle';
+
+          BundleService.importBundleFromWooCommerce(bundleId, woosbIds, {
+            nameEn: nameEn,
+            nameHe: '', // Hebrew name populated separately from translation import
+            type: bundleType
+          });
+
+          bundlesProcessed++;
+          logger.info(serviceName, functionName, `Successfully imported bundle: ${bundleId} (${nameEn})`, { sessionId });
+        } catch (e) {
+          bundlesFailed++;
+          logger.error(serviceName, functionName, `Failed to import bundle ${bundleId}: ${e.message}`, e, { sessionId });
+        }
+      }
+    });
+
+    if (bundlesProcessed > 0 || bundlesFailed > 0) {
+      logger.info(serviceName, functionName, `Bundle processing complete. Imported: ${bundlesProcessed}, Failed: ${bundlesFailed}`, { sessionId });
+    }
   }
 
   // =================================================================================
