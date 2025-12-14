@@ -395,12 +395,13 @@ function WebAppBundles_assignProductToSlot(slotId, sku, reason) {
 
 /**
  * Gets bundles with low inventory slots, including replacement suggestions.
- * @param {number} threshold - Stock threshold (default 3)
+ * @param {number} threshold - Stock threshold (uses config default if not provided)
  * @returns {Object} List of bundles with low stock slots and suggestions
  */
 function WebAppBundles_getBundlesWithLowInventory(threshold) {
   try {
-    const results = BundleService.getBundlesWithLowInventory(threshold || 3);
+    // Pass threshold as-is; BundleService will use config default if undefined
+    const results = BundleService.getBundlesWithLowInventory(threshold);
     return {
       error: null,
       data: results

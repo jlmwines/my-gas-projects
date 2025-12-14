@@ -368,7 +368,7 @@ function OrderService(productService) {
 
       if (orderIdsToExport.size === 0) {
         logger.info(serviceName, functionName, "No orders to export to Comax.", { sessionId: sessionId });
-        return { success: true, message: 'No eligible orders to export.', fileUrl: null };
+        return { success: true, message: 'No eligible orders to export.', fileUrl: null, exportedCount: 0 };
       }
 
       // 2. Aggregate line items
@@ -449,7 +449,7 @@ function OrderService(productService) {
 
       logger.info(serviceName, functionName, `${functionName} completed successfully.`, { sessionId: sessionId });
 
-      return { success: true, fileUrl: file.getUrl(), fileName: file.getName() };
+      return { success: true, fileUrl: file.getUrl(), fileName: file.getName(), exportedCount: orderIdsToExport.size };
 
     } catch (e) {
       logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
@@ -748,8 +748,9 @@ function OrderService(productService) {
             const currentPackingStatusInLog = existingLogEntry ? existingLogEntry.data[logHeaderMap['sol_PackingStatus']] : '';
 
             let shouldUpdatePackingStatus = true;
-            // New Lock-in Rule: Block re-printing an order that was already printed in a 'processing' state.
-            if (currentPackingStatusInLog === 'Printed' && stagedStatus === 'processing' && priorOrderStatusInLog === 'processing') {
+            // Lock-in Rule: Preserve 'Printed' status - never overwrite it
+            // Once an order is printed, it stays printed regardless of order status changes
+            if (currentPackingStatusInLog === 'Printed') {
                 shouldUpdatePackingStatus = false;
             }
 

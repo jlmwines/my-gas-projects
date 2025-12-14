@@ -427,9 +427,10 @@ function WebAppSystem_getSystemHealthDashboardData() {
     );
 
     // --- Daily Sync Summary ---
+    // Valid step statuses: DONE, PENDING, ERROR, BLOCKED, WARNING, NEUTRAL, READY
     let syncStatusSummary = 'Daily Sync: Idle';
     let syncStatusColor = 'text-muted';
-    
+
     if (inventoryCycle.some(step => step.status === 'ERROR' || step.status === 'BLOCKED')) {
         syncStatusSummary = 'Daily Sync: Attention Needed';
         syncStatusColor = 'text-danger';
@@ -439,6 +440,10 @@ function WebAppSystem_getSystemHealthDashboardData() {
     } else if (inventoryCycle.some(step => step.status === 'PENDING')) {
         syncStatusSummary = 'Daily Sync: In Progress';
         syncStatusColor = 'text-primary';
+    } else if (inventoryCycle.some(step => step.status === 'READY')) {
+        // READY means step is actionable (e.g., Web Inventory Export ready to run)
+        syncStatusSummary = 'Daily Sync: Ready to Complete';
+        syncStatusColor = 'text-info';
     } else if (inventoryCycle.every(step => step.status === 'DONE' || step.status === 'NEUTRAL')) {
         syncStatusSummary = 'Daily Sync: Up to Date';
         syncStatusColor = 'text-success';

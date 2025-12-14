@@ -899,3 +899,41 @@ function protectAllSheetHeaders() {
     }
 }
 
+function createSysProjectsHeaders() {
+    const functionName = 'createSysProjectsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysProjects';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first (handles schema changes with different column counts)
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+

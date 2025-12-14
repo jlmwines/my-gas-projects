@@ -305,6 +305,7 @@
         "key_A", "wpm_SKU",
         "key_B", "cpm_SKU",
         "compare_fields", "wpm_PostStatus,cpm_IsWeb",
+        "field_translations_map_wpm_PostStatus", "{\"publish\":\"1\", \"draft\":\"0\", \"private\":\"0\", \"pending\":\"0\", \"trash\":\"0\"}",
         "field_translations_map_cpm_IsWeb", "{\"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
         "on_failure_title", "Web Product Published Status Mismatch with Comax Master: ${wpm_PostTitle}",

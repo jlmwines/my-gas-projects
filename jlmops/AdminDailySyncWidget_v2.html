@@ -64,7 +64,7 @@
                     <div class="card-body p-2 text-center">
                         <h6 class="card-title sync-card-title">2. Web Orders</h6>
                         <div id="step2Icon" class="sync-icon">⏸️</div>
-                        <div id="step2Message" class="text-muted small">Auto-import</div>
+                        <div id="step2Message" class="text-muted small">Pending...</div>
                         <div id="step2Action"></div>
                     </div>
                 </div>
@@ -172,16 +172,18 @@
         // Update session display
         document.getElementById('sessionIdDisplay').textContent = status.sessionId ? 'Session: ' + status.sessionId : '';
 
-        // Update each step
-        updateStep(1, status.step1, status.currentStep === 1);
-        updateStep(2, status.step2, status.currentStep === 2);
-        updateStep(3, status.step3, status.currentStep === 3);
-        updateStep(4, status.step4, status.currentStep === 4);
-        updateStep(5, status.step5, status.currentStep === 5);
+        // Update each step (pass currentStep so we only show actions for the active step)
+        var currentStep = status.currentStep || 0;
+        var ordersPending = status.ordersPendingExportCount || 0;
+        updateStep(1, status.step1, currentStep === 1, currentStep);
+        updateStep(2, status.step2, currentStep === 2, currentStep);
+        updateStep(3, status.step3, currentStep === 3, currentStep, ordersPending);
+        updateStep(4, status.step4, currentStep === 4, currentStep);
+        updateStep(5, status.step5, currentStep === 5, currentStep, status.webExportFilename);
 
-        // Update footer
+        // Update footer with date and time
         document.getElementById('footerStatus').textContent = status.lastUpdated ?
-            'Last updated: ' + new Date(status.lastUpdated).toLocaleTimeString() : 'Ready';
+            'Last updated: ' + new Date(status.lastUpdated).toLocaleString() : 'Ready';
 
         // Check for any failures (only if session active)
         if (status.sessionId) {
@@ -195,14 +197,20 @@
                 var countEl = document.getElementById('invoiceCount');
                 var actionEl = document.getElementById('invoiceAction');
                 var iconEl = document.getElementById('invoiceIcon');
+                var card = document.getElementById('invoiceCard');
+
+                // Reset card styling
+                card.className = 'card h-100';
 
                 if (info.count === 0) {
                     countEl.innerHTML = '<span class="text-success">0 files</span>';
                     iconEl.textContent = '✅';
                     actionEl.innerHTML = '';
+                    card.classList.add('border-primary'); // Blue border for 0 files
                 } else if (info.count > 0) {
                     countEl.innerHTML = '<span class="text-warning">' + info.count + ' file' + (info.count > 1 ? 's' : '') + '</span>';
                     iconEl.textContent = '⚠️';
+                    card.classList.add('border-warning'); // Warning border for pending files
                     if (info.folderUrl) {
                         actionEl.innerHTML = '<a href="' + info.folderUrl + '" target="_blank" class="small fw-bold text-primary text-decoration-none">Open Folder</a>';
                     }
@@ -218,81 +226,104 @@
             .getInventoryReceiptsInfo();
     }
 
-    function updateStep(stepNum, stepData, isActive) {
+    function updateStep(stepNum, stepData, isActive, currentStep, extraData) {
         var card = document.getElementById('step' + stepNum + 'Card');
         var icon = document.getElementById('step' + stepNum + 'Icon');
         var message = document.getElementById('step' + stepNum + 'Message');
         var action = document.getElementById('step' + stepNum + 'Action');
 
-        // Reset card styling
+        // Reset card styling (class and inline styles)
         card.className = 'card h-100';
+        card.style.borderColor = '';
+        card.style.borderWidth = '';
 
         if (!stepData) {
-            // No data yet - waiting
+            // No data yet - show pending, only show action if this is the current/active step
             icon.textContent = ICONS.waiting;
             message.textContent = 'Pending...';
             action.innerHTML = '';
-            // Show appropriate action for each step
-            if (stepNum === 1) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Products</a>';
-            } else if (stepNum === 2) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Now</a>';
-                message.textContent = 'Auto-import';
-            } else if (stepNum === 3) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Export Orders</a>';
-            } else if (stepNum === 4) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Start Import</a>';
-            } else if (stepNum === 5) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Generate Export</a>';
+
+            // Only show action link if this step is the current step (or step 1 when no session)
+            if (stepNum === currentStep || (stepNum === 1 && currentStep === 0)) {
+                if (stepNum === 1) {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Products</a>';
+                } else if (stepNum === 2) {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Orders</a>';
+                } else if (stepNum === 3) {
+                    // extraData contains ordersPendingExportCount for step 3
+                    var ordersToExport = extraData || 0;
+                    if (ordersToExport > 0) {
+                        action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Export Orders</a>';
+                    }
+                    // If no orders, don't show export link
+                } else if (stepNum === 4) {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Start Import</a>';
+                } else if (stepNum === 5) {
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Generate Export</a>';
+                }
             }
             return;
         }
 
         // Update icon and message
         icon.textContent = ICONS[stepData.status] || ICONS.waiting;
-        message.textContent = stepData.message || stepData.status;
+
+        // For step 5, show filename if available
+        if (stepNum === 5 && extraData && extraData !== 'No Changes Detected') {
+            message.innerHTML = '<div class="small">' + (stepData.message || stepData.status) + '</div>' +
+                '<div class="text-info fw-bold small mt-1">' + extraData + '</div>';
+        } else {
+            message.textContent = stepData.message || stepData.status;
+        }
 
         // Highlight active step
         if (isActive) {
             card.classList.add('border-primary', 'shadow');
         }
 
-        // Handle action links based on step and status
-        if (stepData.status === 'waiting') {
+        // Handle action links - ONLY show for the current active step
+        // This prevents showing links for future steps or completed steps
+        action.innerHTML = '';
+
+        if (stepData.status === 'processing') {
+            action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
+        } else if (stepData.status === 'waiting' && stepNum === currentStep) {
+            // Only show action links if this is the current step AND status is waiting
             if (stepNum === 1) {
                 action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Products</a>';
             } else if (stepNum === 2) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Now</a>';
+                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Orders</a>';
             } else if (stepNum === 3) {
-                var isExportComplete = stepData.message && stepData.message.indexOf('Ready to confirm') !== -1;
-                if (isExportComplete) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>' +
-                        '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
+                // Check message for state: "No orders" = skip, "exported/confirm" = need confirmation, else = export
+                var msg = stepData.message || '';
+                if (msg.indexOf('No orders') !== -1 || msg.indexOf('no orders') !== -1) {
+                    // No orders - no action needed, will auto-advance
+                    action.innerHTML = '';
+                } else if (msg.indexOf('confirm') !== -1 || msg.indexOf('exported') !== -1) {
+                    // Export done, need confirmation
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
                 } else {
+                    // Ready to export
                     action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>';
                 }
             } else if (stepNum === 4) {
                 action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Start Import</a>';
             } else if (stepNum === 5) {
-                var isExportComplete5 = stepData.message && stepData.message.indexOf('Ready to confirm') !== -1;
-                if (isExportComplete5) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>' +
-                        '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
+                // Check if export was generated and needs confirmation
+                var msg5 = stepData.message || '';
+                if (msg5.indexOf('confirm') !== -1 || msg5.indexOf('Export complete') !== -1) {
+                    // Export done, need confirmation
+                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
                 } else {
                     action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>';
                 }
-            } else {
-                action.innerHTML = '';
             }
-        } else if (stepData.status === 'processing') {
-            action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
-        } else {
-            action.innerHTML = '';
         }
+        // For 'completed' or 'failed' status, action.innerHTML stays empty (no links)
 
         // Color code by status
         if (stepData.status === 'completed') {
-            card.classList.add('bg-light');
+            card.classList.add('border-primary', 'bg-light'); // Blue border for completed
         } else if (stepData.status === 'failed') {
             card.classList.add('border-danger');
         }
@@ -341,8 +372,7 @@
         var step2Icon = document.getElementById('step2Icon');
         var step2Message = document.getElementById('step2Message');
 
-        step2Card.style.borderColor = '#0d6efd';
-        step2Card.style.borderWidth = '2px';
+        step2Card.className = 'card h-100 border-primary shadow';
         step2Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step2Icon.textContent = '🔄';
         step2Message.innerHTML = '<strong>Importing orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
@@ -373,8 +403,7 @@
         var step3Icon = document.getElementById('step3Icon');
         var step3Message = document.getElementById('step3Message');
 
-        step3Card.style.borderColor = '#0d6efd';
-        step3Card.style.borderWidth = '2px';
+        step3Card.className = 'card h-100 border-primary shadow';
         step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step3Icon.textContent = '🔄';
         step3Message.innerHTML = '<strong>Exporting orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
@@ -409,8 +438,7 @@
         var step3Icon = document.getElementById('step3Icon');
         var step3Message = document.getElementById('step3Message');
 
-        step3Card.style.borderColor = '#0d6efd';
-        step3Card.style.borderWidth = '2px';
+        step3Card.className = 'card h-100 border-primary shadow';
         step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step3Icon.textContent = '🔄';
         step3Message.innerHTML = '<strong>Confirming upload...</strong> <small class="text-muted">(' + timestamp + ')</small>';
@@ -441,8 +469,7 @@
         var step4Icon = document.getElementById('step4Icon');
         var step4Message = document.getElementById('step4Message');
 
-        step4Card.style.borderColor = '#0d6efd';
-        step4Card.style.borderWidth = '2px';
+        step4Card.className = 'card h-100 border-primary shadow';
         step4Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step4Icon.textContent = '🔄';
         step4Message.innerHTML = '<strong>Starting import...</strong> <small class="text-muted">(' + timestamp + ')</small>';
@@ -473,8 +500,7 @@
         var step5Icon = document.getElementById('step5Icon');
         var step5Message = document.getElementById('step5Message');
 
-        step5Card.style.borderColor = '#0d6efd';
-        step5Card.style.borderWidth = '2px';
+        step5Card.className = 'card h-100 border-primary shadow';
         step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
         step5Message.innerHTML = '<strong>Generating export...</strong> <small class="text-muted">(' + timestamp + ')</small>';
@@ -505,8 +531,7 @@
         var step5Message = document.getElementById('step5Message');
         var step5Action = document.getElementById('step5Action');
 
-        step5Card.style.borderColor = '#0d6efd';
-        step5Card.style.borderWidth = '2px';
+        step5Card.className = 'card h-100 border-primary shadow';
         step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
         step5Message.innerHTML = '<strong>Confirming...</strong> <small class="text-muted">(' + timestamp + ')</small>';

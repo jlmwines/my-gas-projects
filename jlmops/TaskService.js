@@ -31,9 +31,10 @@ const TaskService = (function() {
    * @param {string} title A short, descriptive title for the task.
    * @param {string} notes Additional details or context for the task.
    * @param {string} [sessionId=null] The session ID associated with this task.
+   * @param {Object} [options={}] Additional options: { projectId, startDate }
    * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
-  function createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes, sessionId = null) {
+  function createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes, sessionId = null, options = {}) {
     try {
       const taskTypeConfig = ConfigService.getConfig(taskTypeId);
       if (!taskTypeConfig) {
@@ -98,6 +99,16 @@ const TaskService = (function() {
       if (linkedEntityNameIdx > -1) newRow[linkedEntityNameIdx] = linkedEntityName;
       newRow[headers.indexOf('st_CreatedDate')] = new Date();
       newRow[headers.indexOf('st_Notes')] = notes;
+
+      // Handle optional project and start date
+      if (options.projectId) {
+        const projectIdIdx = headers.indexOf('st_ProjectId');
+        if (projectIdIdx > -1) newRow[projectIdIdx] = options.projectId;
+      }
+      if (options.startDate) {
+        const startDateIdx = headers.indexOf('st_StartDate');
+        if (startDateIdx > -1) newRow[startDateIdx] = options.startDate;
+      }
 
       sheet.appendRow(newRow);
       SpreadsheetApp.flush(); // Force the changes to be saved immediately.
@@ -252,11 +263,57 @@ const TaskService = (function() {
     }
   }
 
+  /**
+   * Gets all tasks linked to a specific project.
+   * @param {string} projectId The project ID to filter by
+   * @returns {Object[]} Array of task objects
+   */
+  function getTasksByProject(projectId) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheetName = 'SysTasks';
+
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
+      if (!sheet || sheet.getLastRow() < 2) {
+        return [];
+      }
+
+      const headers = taskSchema.headers.split(',');
+      const projectIdCol = headers.indexOf('st_ProjectId');
+
+      if (projectIdCol === -1) {
+        logger.warn('TaskService', 'getTasksByProject', 'st_ProjectId column not found in schema');
+        return [];
+      }
+
+      const dataRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+      const tasks = [];
+
+      dataRows.forEach(row => {
+        if (row[projectIdCol] === projectId) {
+          const task = {};
+          headers.forEach((header, idx) => {
+            task[header] = row[idx];
+          });
+          tasks.push(task);
+        }
+      });
+
+      return tasks;
+
+    } catch (e) {
+      logger.error('TaskService', 'getTasksByProject', `Error getting tasks for project '${projectId}': ${e.message}`, e);
+      return [];
+    }
+  }
+
   return {
     createTask: createTask,
     hasOpenTasks: hasOpenTasks,
     completeTask: completeTask,
-    updateTaskStatus: updateTaskStatus
+    updateTaskStatus: updateTaskStatus,
+    getTasksByProject: getTasksByProject
   };
 
 })();

@@ -1305,20 +1305,25 @@ const OrchestratorService = (function() {
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
           
           if (jobStatus === 'COMPLETED') {
-              logger.info(serviceName, functionName, `Web Inventory Export completed for session ${state.sessionId}. Advancing to WEB_EXPORT_GENERATED.`);
+              // Re-read state to get updated webExportFilename set by ProductService
+              const updatedState = SyncStateService.getSyncState();
+              const exportFilename = updatedState.webExportFilename || '';
+              const noChanges = exportFilename === 'No Changes Detected' || !exportFilename;
 
-              // Write Step 5 waiting status - ready for confirmation
-              SyncStatusService.writeStatus(state.sessionId, {
+              logger.info(serviceName, functionName, `Web Inventory Export completed for session ${updatedState.sessionId}. File: ${exportFilename}. Advancing to WEB_EXPORT_GENERATED.`);
+
+              // Write Step 5 status based on whether a file was created
+              SyncStatusService.writeStatus(updatedState.sessionId, {
                 step: 5,
                 stepName: 'Export Web Inventory',
-                status: 'waiting',
-                message: 'Export complete. Ready to confirm upload.'
+                status: noChanges ? 'completed' : 'waiting',
+                message: noChanges ? 'No changes detected. No file created.' : `Export complete: ${exportFilename}. Ready to confirm upload.`
               });
 
-              state.currentStage = 'WEB_EXPORT_GENERATED';
-              state.lastUpdated = new Date().toISOString();
-              state.errorMessage = null; // Clear error on successful transition
-              SyncStateService.setSyncState(state);
+              updatedState.currentStage = noChanges ? 'COMPLETE' : 'WEB_EXPORT_GENERATED';
+              updatedState.lastUpdated = new Date().toISOString();
+              updatedState.errorMessage = null; // Clear error on successful transition
+              SyncStateService.setSyncState(updatedState);
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 

@@ -95,6 +95,25 @@ const PrintService = (function() {
       const womHeaderMap = Object.fromEntries(orderMasterHeaders.map((h, i) => [h, i]));
       const orderMasterMap = new Map(orderMasterData.map(row => [String(row[womHeaderMap['wom_OrderId']]), row]));
 
+      // Load WebProdM to identify bundle products (type 'woosb') - bundles don't count toward packing total
+      const webProdMSheet = spreadsheet.getSheetByName(sheetNames.WebProdM);
+      const bundleProductIds = new Set();
+      if (webProdMSheet) {
+        const webProdMData = webProdMSheet.getDataRange().getValues();
+        const webProdMHeaders = webProdMData.shift();
+        const wpmIdCol = webProdMHeaders.indexOf('wpm_ID');
+        const wpmTypeCol = webProdMHeaders.indexOf('wpm_TaxProductType');
+        if (wpmIdCol !== -1 && wpmTypeCol !== -1) {
+          webProdMData.forEach(row => {
+            const productType = String(row[wpmTypeCol] || '').toLowerCase().trim();
+            if (productType === 'woosb') {
+              bundleProductIds.add(String(row[wpmIdCol]));
+            }
+          });
+        }
+        logger.info(serviceName, functionName, `Identified ${bundleProductIds.size} bundle products to exclude from packing totals.`);
+      }
+
       const ordersData = dataForPrinting.reduce((acc, row) => {
         const orderId = String(row[cacheHeaderMap['spc_OrderId']]);
         if (!acc[orderId]) {
@@ -175,8 +194,11 @@ const PrintService = (function() {
 
             productsForThisPage.forEach(item => {
               const { englishDetails, hebrewDetails } = _getJLMopsProductDetails(item, cacheHeaderMap);
-              const quantity = String(item[cacheHeaderMap['spc_Quantity']] || '0');
-              
+              const webIdEn = String(item[cacheHeaderMap['spc_WebIdEn']] || '');
+              const isBundle = bundleProductIds.has(webIdEn);
+              // Show quantity for packable items only; bundles show empty cell
+              const quantity = isBundle ? '' : String(item[cacheHeaderMap['spc_Quantity']] || '0');
+
               const newRow = table.appendTableRow();
               const cellEN = newRow.appendTableCell();
               const cellQTY = newRow.appendTableCell();
@@ -200,7 +222,15 @@ const PrintService = (function() {
             });
 
             if (pageNumIndex + 1 === splitsForThisOrder.length) {
-              const totalQuantity = orderData.items.reduce((sum, item) => sum + (Number(item[cacheHeaderMap['spc_Quantity']]) || 0), 0);
+              // Calculate total excluding bundle products (woosb) - only count packable items
+              const totalQuantity = orderData.items.reduce((sum, item) => {
+                const webIdEn = String(item[cacheHeaderMap['spc_WebIdEn']] || '');
+                // Skip bundle products - they don't get packed, only their components do
+                if (bundleProductIds.has(webIdEn)) {
+                  return sum;
+                }
+                return sum + (Number(item[cacheHeaderMap['spc_Quantity']]) || 0);
+              }, 0);
               const totalsRow = table.appendTableRow();
               totalsRow.appendTableCell().appendParagraph(`Total`).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(true);
               totalsRow.appendTableCell().appendParagraph(String(totalQuantity)).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true);

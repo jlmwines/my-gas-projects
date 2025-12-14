@@ -559,5 +559,13 @@
         "SysBundleSlots",
         "SysBundleSlots",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysProjects",
+        "SysProjects",
+        "", "", "", "", "", "", "", ""
     ]
 ]

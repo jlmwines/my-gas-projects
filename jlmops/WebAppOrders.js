@@ -38,7 +38,7 @@ function WebAppOrders_getOrdersWidgetData() {
 
 /**
  * Gets a list of open orders (on-hold or processing) with detailed information for the manager view.
- * @returns {Array<Object>} An array of open orders, each with orderId, orderDate, customerName, and shippingCity.
+ * @returns {Array<Object>} An array of open orders, each with orderId, orderDate, billing/shipping names, and shippingCity.
  */
 function WebAppOrders_getOpenOrdersForManager() {
   try {
@@ -74,21 +74,24 @@ function WebAppOrders_getOpenOrdersForManager() {
         const orderInfo = orderMasterMap.get(orderId);
         if (orderInfo) {
           const orderDate = orderInfo[womHeaderMap['wom_OrderDate']];
-          const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']];
-          const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']];
+          const billingFirstName = orderInfo[womHeaderMap['wom_BillingFirstName']] || '';
+          const billingLastName = orderInfo[womHeaderMap['wom_BillingLastName']] || '';
+          const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']] || '';
+          const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']] || '';
           const shippingCity = orderInfo[womHeaderMap['wom_ShippingCity']];
 
           openOrders.push({
             orderId: orderId,
             orderDate: Utilities.formatDate(new Date(orderDate), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
-            customerName: `${shippingFirstName} ${shippingLastName}`,
+            billingName: `${billingFirstName} ${billingLastName}`.trim(),
+            shippingName: `${shippingFirstName} ${shippingLastName}`.trim(),
             shippingCity: shippingCity,
             status: orderStatus // Add status for display
           });
         }
       }
     });
-    
+
     // Sort orders by orderId numerically in descending order (high to low), with a fallback to string comparison
     openOrders.sort((a, b) => {
         const idA = parseInt(a.orderId, 10);
@@ -121,7 +124,8 @@ function WebAppOrders_runComaxOrderExport() {
 /**
  * Gets a list of orders that are ready to be packed.
  * An order is ready if it has data in SysPackingCache and has not been printed.
- * @returns {Array<Object>} A list of orders with their IDs and statuses.
+ * Sorted: unprinted orders first (newest order number first), then printed orders (newest first).
+ * @returns {Array<Object>} A list of orders with their IDs, statuses, and customer names.
  */
 function WebAppOrders_getPackableOrders() {
   try {
@@ -156,14 +160,36 @@ function WebAppOrders_getPackableOrders() {
       if (packingStatus === readyStatus) {
         const orderInfo = orderMasterMap.get(String(orderId));
         const customerNote = orderInfo ? orderInfo[womHeaderMap['wom_CustomerNote']] : '';
+        const billingFirstName = orderInfo ? orderInfo[womHeaderMap['wom_BillingFirstName']] || '' : '';
+        const billingLastName = orderInfo ? orderInfo[womHeaderMap['wom_BillingLastName']] || '' : '';
+        const shippingFirstName = orderInfo ? orderInfo[womHeaderMap['wom_ShippingFirstName']] || '' : '';
+        const shippingLastName = orderInfo ? orderInfo[womHeaderMap['wom_ShippingLastName']] || '' : '';
+        const orderNumber = orderInfo ? orderInfo[womHeaderMap['wom_OrderNumber']] || orderId : orderId;
+
         packableOrders.push({
           orderId: orderId,
+          orderNumber: orderNumber,
           status: printedTimestamp ? 'Ready (Reprint)' : 'Ready to Print',
           isReprint: !!printedTimestamp,
-          customerNote: customerNote
+          customerNote: customerNote,
+          billingName: `${billingFirstName} ${billingLastName}`.trim(),
+          shippingName: `${shippingFirstName} ${shippingLastName}`.trim()
         });
       }
     });
+
+    // Sort: unprinted first, then by order number descending (newest first)
+    packableOrders.sort((a, b) => {
+      // First: unprinted (isReprint=false) before printed (isReprint=true)
+      if (a.isReprint !== b.isReprint) {
+        return a.isReprint ? 1 : -1;
+      }
+      // Then: by order number descending (newest first)
+      const numA = parseInt(a.orderNumber, 10) || 0;
+      const numB = parseInt(b.orderNumber, 10) || 0;
+      return numB - numA;
+    });
+
     return packableOrders;
 
   } catch (error) {

@@ -245,6 +245,8 @@ const ProductImportService = (function() {
 
         // Write data rows starting at row 2 (after header)
         webXltMSheet.getRange(2, 1, numDataRows, numCols).setValues(dataRows);
+        // Apply standard formatting: top-align and single row height
+        _applySheetFormatting(webXltMSheet, numDataRows);
         logger.info(serviceName, functionName, `Wrote ${numDataRows} data rows with wxl_ headers to WebXltM.`, { sessionId: sessionId });
     } else {
         logger.info(serviceName, functionName, 'WebXltS had no data rows. Only headers written to WebXltM.', { sessionId: sessionId });

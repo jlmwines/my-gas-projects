@@ -76,9 +76,10 @@ function getView(viewName) {
     'ManagerProductsWidget': 'ManagerProductsWidget',
     'AdminProducts': 'AdminProductsView',
     'AdminProductsWidget': 'AdminProductsWidget',
-    'AdminDailySyncWidget': 'AdminDailySyncWidget',
+    'AdminDailySyncWidget': 'AdminDailySyncWidget_v2',
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'AdminBundles': 'AdminBundlesView',
+    'AdminProjects': 'AdminProjectsView',
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',
     'Web': 'WebView'
@@ -109,7 +110,8 @@ function getHtmlOutput(filename) {
 /**
  * Gets a list of orders that are ready to be packed.
  * An order is ready if it has data in SysPackingCache and has not been printed.
- * @returns {Array<Object>} A list of orders with their IDs and statuses.
+ * Sorted: unprinted orders first (newest order number first), then printed orders (newest first).
+ * @returns {Array<Object>} A list of orders with their IDs, statuses, and customer names.
  */
 function getPackableOrders() {
   try {
@@ -144,14 +146,36 @@ function getPackableOrders() {
       if (packingStatus === readyStatus) {
         const orderInfo = orderMasterMap.get(String(orderId));
         const customerNote = orderInfo ? orderInfo[womHeaderMap['wom_CustomerNote']] : '';
+        const billingFirstName = orderInfo ? orderInfo[womHeaderMap['wom_BillingFirstName']] || '' : '';
+        const billingLastName = orderInfo ? orderInfo[womHeaderMap['wom_BillingLastName']] || '' : '';
+        const shippingFirstName = orderInfo ? orderInfo[womHeaderMap['wom_ShippingFirstName']] || '' : '';
+        const shippingLastName = orderInfo ? orderInfo[womHeaderMap['wom_ShippingLastName']] || '' : '';
+        const orderNumber = orderInfo ? orderInfo[womHeaderMap['wom_OrderNumber']] || orderId : orderId;
+
         packableOrders.push({
           orderId: orderId,
+          orderNumber: orderNumber,
           status: printedTimestamp ? 'Ready (Reprint)' : 'Ready to Print',
           isReprint: !!printedTimestamp,
-          customerNote: customerNote
+          customerNote: customerNote,
+          billingName: `${billingFirstName} ${billingLastName}`.trim(),
+          shippingName: `${shippingFirstName} ${shippingLastName}`.trim()
         });
       }
     });
+
+    // Sort: unprinted first, then by order number descending (newest first)
+    packableOrders.sort((a, b) => {
+      // First: unprinted (isReprint=false) before printed (isReprint=true)
+      if (a.isReprint !== b.isReprint) {
+        return a.isReprint ? 1 : -1;
+      }
+      // Then: by order number descending (newest first)
+      const numA = parseInt(a.orderNumber, 10) || 0;
+      const numB = parseInt(b.orderNumber, 10) || 0;
+      return numB - numA;
+    });
+
     return packableOrders;
 
   } catch (error) {

@@ -1,0 +1,519 @@
+<div class="container-fluid">
+  <!-- Section 1: Project Dashboard -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+          <h5>Project Management</h5>
+          <div>
+            <button id="btn-refresh-projects" class="btn btn-sm mr-2">Refresh</button>
+            <button id="btn-new-project" class="btn btn-sm">New Project</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Stats Row -->
+          <div class="row mb-3" id="project-stats-row">
+            <div class="col-md-2">
+              <div class="text-muted small">Total</div>
+              <div class="h4" id="stat-total">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Planning</div>
+              <div class="h4 text-warning" id="stat-planning">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Active</div>
+              <div class="h4 text-success" id="stat-active">-</div>
+            </div>
+            <div class="col-md-2">
+              <div class="text-muted small">Completed</div>
+              <div class="h4 text-info" id="stat-completed">-</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Archived</div>
+              <div class="h4 text-secondary" id="stat-archived">-</div>
+            </div>
+          </div>
+
+          <!-- Project List Table -->
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="table table-sm table-hover" id="project-list-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Tasks</th>
+                </tr>
+              </thead>
+              <tbody id="project-list-body">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Project Detail / Editor -->
+  <div class="row" id="project-editor-section" style="display: none;">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Project Detail <span id="editor-project-name" class="text-muted ml-2"></span></h5>
+          <div id="editor-actions">
+            <button id="btn-save-project" class="btn btn-sm mr-1">Save Changes</button>
+            <button id="btn-close-editor" class="btn btn-sm">Close</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <!-- Left: Project Fields -->
+            <div class="col-md-4">
+              <form id="project-form">
+                <div class="form-group">
+                  <label>Project Name</label>
+                  <input type="text" class="form-control form-control-sm" id="field-name" required>
+                </div>
+                <div class="form-row">
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label>Type</label>
+                      <select class="form-control form-control-sm" id="field-type">
+                        <option value="CAMPAIGN">Campaign</option>
+                        <option value="OPERATIONAL">Operational</option>
+                        <option value="ONE_OFF">One-Off</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label>Status</label>
+                      <select class="form-control form-control-sm" id="field-status">
+                        <option value="PLANNING">Planning</option>
+                        <option value="ACTIVE">Active</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="ARCHIVED">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label>Start Date</label>
+                      <input type="date" class="form-control form-control-sm" id="field-start-date">
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="form-group">
+                      <label>End Date</label>
+                      <input type="date" class="form-control form-control-sm" id="field-end-date">
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <!-- Right: Project Tasks -->
+            <div class="col-md-8">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Project Tasks</h6>
+                <span class="text-muted small" id="task-count-label">0 tasks</span>
+              </div>
+              <div id="project-tasks-container" style="max-height: 250px; overflow-y: auto;">
+                <div class="text-muted">Select a project to view tasks</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal fade" id="newProjectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">New Project</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="new-project-form">
+          <div class="form-group">
+            <label>Project Name *</label>
+            <input type="text" class="form-control" id="new-project-name" required>
+          </div>
+          <div class="form-row">
+            <div class="col-6">
+              <div class="form-group">
+                <label>Type</label>
+                <select class="form-control" id="new-project-type">
+                  <option value="CAMPAIGN">Campaign</option>
+                  <option value="OPERATIONAL">Operational</option>
+                  <option value="ONE_OFF">One-Off</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label>Status</label>
+                <select class="form-control" id="new-project-status">
+                  <option value="PLANNING">Planning</option>
+                  <option value="ACTIVE">Active</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="col-6">
+              <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" class="form-control" id="new-project-start">
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="form-group">
+                <label>End Date</label>
+                <input type="date" class="form-control" id="new-project-end">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn" id="btn-create-project">Create Project</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var currentProjectId = null;
+  var allProjects = [];
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    init();
+  });
+
+  // Also initialize immediately in case DOM is already ready
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(init, 0);
+  }
+
+  function init() {
+    loadStats();
+    loadProjects();
+    bindEventHandlers();
+  }
+
+  function bindEventHandlers() {
+    // Refresh button
+    var refreshBtn = document.getElementById('btn-refresh-projects');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        loadStats();
+        loadProjects();
+      });
+    }
+
+    // New Project button
+    var newBtn = document.getElementById('btn-new-project');
+    if (newBtn) {
+      newBtn.addEventListener('click', function() {
+        $('#newProjectModal').modal('show');
+      });
+    }
+
+    // Create Project button in modal
+    var createBtn = document.getElementById('btn-create-project');
+    if (createBtn) {
+      createBtn.addEventListener('click', createProject);
+    }
+
+    // Save Project button
+    var saveBtn = document.getElementById('btn-save-project');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', saveProject);
+    }
+
+    // Close Editor button
+    var closeBtn = document.getElementById('btn-close-editor');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeEditor);
+    }
+  }
+
+  function loadStats() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          console.error('Error loading stats:', result.error);
+          return;
+        }
+        var stats = result.data;
+        document.getElementById('stat-total').textContent = stats.total || 0;
+        document.getElementById('stat-planning').textContent = stats.byStatus.PLANNING || 0;
+        document.getElementById('stat-active').textContent = stats.byStatus.ACTIVE || 0;
+        document.getElementById('stat-completed').textContent = stats.byStatus.COMPLETED || 0;
+        document.getElementById('stat-archived').textContent = stats.byStatus.ARCHIVED || 0;
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load stats:', err);
+      })
+      .WebAppProjects_getStats();
+  }
+
+  function loadProjects() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          console.error('Error loading projects:', result.error);
+          return;
+        }
+        allProjects = result.data || [];
+        renderProjectList(allProjects);
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load projects:', err);
+      })
+      .WebAppProjects_getAllProjects();
+  }
+
+  function renderProjectList(projects) {
+    var tbody = document.getElementById('project-list-body');
+    if (!tbody) return;
+
+    if (!projects || projects.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center">No projects found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = projects.map(function(p) {
+      var projectId = p.projectid || p.spro_ProjectId;
+      var name = p.name || p.spro_Name || '-';
+      var type = p.type || p.spro_Type || '-';
+      var status = p.status || p.spro_Status || '-';
+      var startDate = formatDate(p.startdate || p.spro_StartDate);
+      var endDate = formatDate(p.enddate || p.spro_EndDate);
+      var taskProgress = (p.completedTaskCount || 0) + '/' + (p.taskCount || 0);
+
+      var typeBadge = getTypeBadge(type);
+      var statusBadge = getStatusBadge(status);
+
+      return '<tr class="project-row" data-project-id="' + projectId + '" style="cursor:pointer">' +
+        '<td>' + escapeHtml(name) + '</td>' +
+        '<td>' + typeBadge + '</td>' +
+        '<td>' + statusBadge + '</td>' +
+        '<td>' + startDate + '</td>' +
+        '<td>' + endDate + '</td>' +
+        '<td>' + taskProgress + '</td>' +
+      '</tr>';
+    }).join('');
+
+    // Bind row click handlers
+    document.querySelectorAll('.project-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var projectId = this.dataset.projectId;
+        loadProjectForEditing(projectId);
+      });
+    });
+  }
+
+  function getTypeBadge(type) {
+    var colors = {
+      'CAMPAIGN': 'badge-purple',
+      'OPERATIONAL': 'badge-info',
+      'ONE_OFF': 'badge-warning'
+    };
+    var color = colors[type] || 'badge-secondary';
+    // Use inline style for purple since Bootstrap 4 doesn't have it
+    if (type === 'CAMPAIGN') {
+      return '<span class="badge" style="background-color: #6f42c1; color: white;">' + type + '</span>';
+    }
+    return '<span class="badge ' + color + '">' + type + '</span>';
+  }
+
+  function getStatusBadge(status) {
+    var colors = {
+      'PLANNING': 'badge-warning',
+      'ACTIVE': 'badge-success',
+      'COMPLETED': 'badge-info',
+      'ARCHIVED': 'badge-secondary'
+    };
+    var color = colors[status] || 'badge-secondary';
+    return '<span class="badge ' + color + '">' + status + '</span>';
+  }
+
+  function formatDate(dateVal) {
+    if (!dateVal) return '-';
+    try {
+      var d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    } catch (e) {
+      return '-';
+    }
+  }
+
+  function loadProjectForEditing(projectId) {
+    currentProjectId = projectId;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error || !result.data) {
+          alert('Error loading project: ' + (result.error || 'Not found'));
+          return;
+        }
+        renderProjectEditor(result.data);
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed to load project: ' + err.message);
+      })
+      .WebAppProjects_getProjectWithTasks(projectId);
+  }
+
+  function renderProjectEditor(project) {
+    document.getElementById('project-editor-section').style.display = 'block';
+    document.getElementById('editor-project-name').textContent = project.name || project.spro_Name || '';
+
+    // Populate form fields
+    document.getElementById('field-name').value = project.name || project.spro_Name || '';
+    document.getElementById('field-type').value = project.type || project.spro_Type || 'ONE_OFF';
+    document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
+
+    var startDate = project.startdate || project.spro_StartDate;
+    var endDate = project.enddate || project.spro_EndDate;
+    document.getElementById('field-start-date').value = formatDateForInput(startDate);
+    document.getElementById('field-end-date').value = formatDateForInput(endDate);
+
+    // Render tasks
+    var tasks = project.tasks || [];
+    document.getElementById('task-count-label').textContent = tasks.length + ' task' + (tasks.length !== 1 ? 's' : '');
+    renderProjectTasks(tasks);
+  }
+
+  function formatDateForInput(dateVal) {
+    if (!dateVal) return '';
+    try {
+      var d = new Date(dateVal);
+      if (isNaN(d.getTime())) return '';
+      return d.toISOString().split('T')[0];
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function renderProjectTasks(tasks) {
+    var container = document.getElementById('project-tasks-container');
+    if (!container) return;
+
+    if (!tasks || tasks.length === 0) {
+      container.innerHTML = '<div class="text-muted">No tasks linked to this project</div>';
+      return;
+    }
+
+    container.innerHTML = '<div class="list-group">' + tasks.map(function(task) {
+      var status = task.st_Status || '-';
+      var title = task.st_Title || '-';
+      var statusClass = status === 'Done' || status === 'Closed' ? 'text-success' : 'text-muted';
+
+      return '<div class="list-group-item list-group-item-action py-2">' +
+        '<div class="d-flex justify-content-between">' +
+          '<span>' + escapeHtml(title) + '</span>' +
+          '<small class="' + statusClass + '">' + status + '</small>' +
+        '</div>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  function closeEditor() {
+    currentProjectId = null;
+    document.getElementById('project-editor-section').style.display = 'none';
+  }
+
+  function createProject() {
+    var name = document.getElementById('new-project-name').value.trim();
+    if (!name) {
+      alert('Please enter a project name');
+      return;
+    }
+
+    var projectData = {
+      name: name,
+      type: document.getElementById('new-project-type').value,
+      status: document.getElementById('new-project-status').value,
+      startDate: document.getElementById('new-project-start').value || null,
+      endDate: document.getElementById('new-project-end').value || null
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error creating project: ' + result.error);
+          return;
+        }
+        $('#newProjectModal').modal('hide');
+        document.getElementById('new-project-form').reset();
+        loadStats();
+        loadProjects();
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed to create project: ' + err.message);
+      })
+      .WebAppProjects_createProject(projectData);
+  }
+
+  function saveProject() {
+    if (!currentProjectId) return;
+
+    var updates = {
+      name: document.getElementById('field-name').value.trim(),
+      type: document.getElementById('field-type').value,
+      status: document.getElementById('field-status').value,
+      startDate: document.getElementById('field-start-date').value || null,
+      endDate: document.getElementById('field-end-date').value || null
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error saving project: ' + result.error);
+          return;
+        }
+        if (result.success) {
+          document.getElementById('editor-project-name').textContent = updates.name;
+          loadStats();
+          loadProjects();
+        } else {
+          alert('Project not found or could not be updated');
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('Failed to save project: ' + err.message);
+      })
+      .WebAppProjects_updateProject(currentProjectId, updates);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+})();
+</script>

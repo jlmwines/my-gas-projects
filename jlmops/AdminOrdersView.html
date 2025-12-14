@@ -4,8 +4,8 @@
     <!-- Section for Open Orders -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Open Orders</h5> <!-- Actual Title -->
-          <a href="#" id="trigger-web-order-import-link" class="text-primary text-decoration-none">Import Web Orders</a> <!-- Text link to trigger action -->
+          <h5 class="mb-0">Open Orders</h5>
+          <button id="trigger-web-order-import-link" class="btn btn-sm">Import Web Orders</button>
       </div>
       <div class="card-body">
           <div id="open-orders-list"></div>
@@ -33,13 +33,14 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-hover"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Customer Name</th><th>Shipping City</th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-hover"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Billing Name</th><th>Shipping Name</th><th>Shipping City</th></tr></thead><tbody>';
           orders.forEach(order => {
             tableHtml += `<tr>
                             <td>${order.orderId}</td>
                             <td>${order.status}</td>
                             <td>${order.orderDate}</td>
-                            <td>${order.customerName}</td>
+                            <td>${order.billingName || ''}</td>
+                            <td>${order.shippingName || ''}</td>
                             <td>${order.shippingCity}</td>
                           </tr>`;
           });
@@ -67,12 +68,12 @@
   }
 
   function handleTriggerWebOrderImport(event) {
-      event.preventDefault(); // Prevent default link behavior
-      const link = document.getElementById('trigger-web-order-import-link');
+      event.preventDefault();
+      const btn = document.getElementById('trigger-web-order-import-link');
       const statusDiv = document.getElementById('web-order-import-status');
-      const originalText = link.textContent;
-      link.textContent = 'Importing...';
-      link.style.pointerEvents = 'none'; // Disable link
+      const originalText = btn.textContent;
+      btn.textContent = 'Importing...';
+      btn.disabled = true;
       statusDiv.innerHTML = '';
 
       google.script.run
@@ -89,8 +90,8 @@
                       window.parent.showToast(`Error: ${response.message}`, 'error');
                    }
               }
-              link.textContent = originalText;
-              link.style.pointerEvents = 'auto'; // Re-enable link
+              btn.textContent = originalText;
+              btn.disabled = false;
           })
           .withFailureHandler(err => {
               statusDiv.innerHTML = `<span class="text-danger">Error: ${err.message}</span>`;
@@ -98,8 +99,8 @@
                  window.parent.showToast(`Error: ${err.message}`, 'error');
               }
               console.error('Web Order Import failed:', err);
-              link.textContent = originalText;
-              link.style.pointerEvents = 'auto'; // Re-enable link
+              btn.textContent = originalText;
+              btn.disabled = false;
           })
           .WebAppOrders_triggerWebOrderImport();
   }

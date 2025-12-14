@@ -1,125 +1,111 @@
-# Session Summary - 2025-12-12
+# Session Summary - 2025-12-14
 
 ## What We Accomplished
 
-### Bundle UI Enhancements (This Session)
+### Daily Sync Widget v2 Overhaul
+
+**Major Change:** Connected `AdminDailySyncWidget_v2.html` (the original was obsolete but still active)
+- Deleted obsolete `AdminDailySyncWidget.html` (785 lines removed)
+- Fixed 15+ UI bugs across 3 iterations
 
 **Files Modified:**
-- `jlmops/AdminBundlesView.html` - Major UI improvements
-- `jlmops/WebAppBundles.js` - Backend enrichment for preview data
+- `jlmops/AdminDailySyncWidget_v2.html` - Multiple UI fixes
+- `jlmops/WebApp.js` - v2 widget connection
+- `jlmops/OrchestratorService.js` - const reassignment fix (line 1309)
 
-**Features Implemented:**
-
-#### 1. Bundle Preview System
-- **Location:** Preview controls in left column (under slot list), preview content in right column
-- **Language Toggle:** Simple text links (English / עברית) - bold for active, muted for inactive
-- **RTL Support:** Hebrew preview displays with RTL direction for proper text alignment
-- **Content:** Title + Price header, short description, long description, slots table
-
-#### 2. Preview Price Display
-- Calculates total from saved slots (`slot.productPrice * slot.defaultQty`)
-- Shows: `₪[total] → ₪[bundle price] (saves ₪[difference])` when there's a discount
-- Price positioned to the right of bundle title
-
-#### 3. Currency Formatting
-- Changed from "NIS" suffix to "₪" prefix throughout UI
-- Applied to: editor header, preview, slot product price display
-
-#### 4. Slot Table Improvements
-- Removed table header (cleaner look)
-- Column order: Product Name, Qty, Price
-- Text slots span all columns with italic formatting
-
-#### 5. Bug Fixes
-- **Stale "Needs Attention" count:** Added `loadStats()` calls after `updateSlot()` and `applyReplacements()` success handlers
-- **Description toggle not working:** Replaced inline `onclick` handlers with proper `addEventListener` bindings
-- **Hebrew preview not switching:** Added explicit click handlers bound via `.onclick` property
-
-#### 6. Backend Enrichment
-- `WebAppBundles_getBundleWithSlots` now enriches slots with `productName` and `productPrice` from WebProdM
-- `WebAppBundles_getProductName` returns both name and price for slot editor display
+**Bugs Fixed:**
+1. Action links showing for steps 3-5 before steps 1-2 complete
+2. Step 2 showing "Auto-import" instead of "Pending"
+3. No confirmation link after exporting orders
+4. Wrong message after export
+5. Invoice box border blue when 0 files
+6. Step 1 border blue after completion
+7. Step 3 export link when no orders
+8. Hide export links after export
+9. Step 4 showed import link during validation
+10. Show generated filename on screen
+11. TypeError: Assignment to constant variable (OrchestratorService)
+12. Blue border inconsistency
+13. Last updated date/time not showing
+14. Step 5 message clearing
 
 ---
 
-### Previous Session: Phase 14 - Bundle Management Implementation
-
-**Files Created:**
-- `jlmops/BundleService.js` - Complete service for 2-sheet bundle model
-- `jlmops/WebAppBundles.js` - Controller functions for UI
-- `jlmops/AdminBundlesView.html` - Admin UI with Dashboard, Health Monitor, and Editor
+### Order Management Improvements
 
 **Files Modified:**
-- `jlmops/config/schemas.json` - Added `SysBundles` and `SysBundleSlots` schemas
-- `jlmops/config/system.json` - Added sheet name entries for bundle sheets
-- `jlmops/SetupConfig.js` - Regenerated with bundle schemas
-- `jlmops/SetupSheets.js` - Added `createSysBundlesHeaders()` and `createSysBundleSlotsHeaders()`
-- `jlmops/ProductImportService.js` - Added `_processBundleProducts()` for auto-import on web product sync
-- `jlmops/AppView.html` - Added Bundles navigation link
-- `jlmops/WebApp.js` - Added AdminBundles view mapping
+- `jlmops/WebAppOrders.js` - Sorting and name fields
+- `jlmops/ManagerOrdersView.html` - Table columns
+- `jlmops/AdminOrdersView.html` - Import button, table columns
+- `jlmops/OrderService.js` - Printed status preservation
+
+**Features:**
+1. **Packing slip sorting:** Unprinted orders first, then by newest order number
+2. **Billing/Shipping names:** Now shown in packing slip list and open orders list
+3. **"Printed" status preservation:** Orders no longer marked "Ineligible" when completed
+4. **Import button visibility:** Changed from subtle link to visible `btn btn-sm` button
 
 ---
 
-## Setup Steps Required
+### Validation Fix
 
-1. **Create Sheets:** Run `createSysBundlesHeaders()` and `createSysBundleSlotsHeaders()` in GAS to create the sheets with headers
-2. **Push Code:** `clasp push` to deploy all new files
-3. **Rebuild Config:** Run `rebuildSysConfigFromSource()` to load new schemas
-4. **Initial Import:** Use "Re-import from WooCommerce" button in Admin > Bundles, or wait for next web products import
+**File Modified:** `jlmops/config/validation.json`
+
+**Issue:** `published_status_mismatch` validation rule had false positives
+**Cause:** `wpm_PostStatus` values ("publish", "draft") weren't being translated to match `cpm_IsWeb` values ("1", "0")
+**Fix:** Added `field_translations_map_wpm_PostStatus` with mapping: `{"publish":"1", "draft":"0", "private":"0", "pending":"0", "trash":"0"}`
+
+---
+
+### Code Cleanup
+
+| Deleted File | Lines Removed |
+|--------------|---------------|
+| AdminDailySyncWidget.html | 785 |
+| CampaignService.js | 110 |
+| **Total Removed** | **895** |
+
+---
+
+## New Features (Untracked - from prior work)
+
+**Project Management System:**
+- `AdminProjectsView.html` - Admin UI for projects
+- `ProjectService.js` - Backend service
+- `WebAppProjects.js` - Controller functions
+
+**Development Tracking:**
+- `.claude/bugs.md` - Bug tracking
+- `.claude/wishlist.md` - Feature wishlist
+- `.claude/commands/bug.md`, `.claude/commands/wish.md` - Slash commands
 
 ---
 
 ## Git Status
 
 **Branch:** main
-**Modified Files (18):**
-- AdminBundlesView.html (new)
-- WebAppBundles.js (new)
-- AdminDailySyncWidget.html
-- BundleService.js
-- ProductImportService.js
-- SetupConfig.js
-- SetupSheets.js
-- config/schemas.json, system.json, otherSettings.json, validation.json
-- And others...
-
-**Lines Changed:** ~1,884 insertions, ~245 deletions
+**Files Changed:** 22 modified, 2 deleted, 7 untracked
+**Net Change:** ~600 lines removed
 
 ---
 
-## Architecture Notes
-
-### Bundle Type Flow
-```
-WooCommerce Export → WebToffee CSV → WebProdS_EN (staging)
-                                    ↓
-                              WebProdM (master)
-                                    ↓
-                         _processBundleProducts()
-                                    ↓
-                    BundleService.importBundleFromWooCommerce()
-                                    ↓
-                         SysBundles + SysBundleSlots
-```
-
-### Preview Data Flow
-```
-loadBundleForEditing(bundleId)
-         ↓
-WebAppBundles_getBundleWithSlots()
-         ↓
-Enrich slots with productName/productPrice from WebProdM
-         ↓
-renderBundleEditor() → calculates total from slots
-         ↓
-renderBundlePreview(lang) → displays EN or HE content with RTL support
-```
+## Wishlist Items Added
+- [ ] Improve and standardize confirmation messages
+- [ ] Show task creation date in product detail update review and export
 
 ---
 
 ## Next Steps
 
-1. **Test Bundle Preview** - Verify EN/HE switching, RTL display, price calculations
-2. **Bundle Dashboard Widget** - Summary widget for main admin dashboard
-3. **Hebrew Translation Sync** - Populate `sb_NameHe` from WebXltM during translation import
-4. **Analytics** - Track bundle sales from order data
-5. **Export** - Generate bundle composition for WooCommerce upload
+1. **Deploy & Test:** `clasp push` and test sync widget in production
+2. **Monitor:** Watch for validation false positives after fix
+3. **Project Feature:** Decide whether to commit the new project management files
+
+---
+
+## Previous Sessions
+
+### 2025-12-12: Bundle Management System
+- Created `BundleService.js`, `WebAppBundles.js`, `AdminBundlesView.html`
+- Bundle preview with EN/HE toggle, RTL support, price calculations
+- Auto-import bundles from WooCommerce during product sync
