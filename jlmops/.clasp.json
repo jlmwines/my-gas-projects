@@ -2,50 +2,5 @@
   "scriptId": "1qSU5lI0ZAkEnLl5EzvY1qMGYO5If0I0wiieKVwMtoIjuJUPy0LXt-x48",
   "rootDir": "",
   "parentId": "1UOTobfQgnMf1LCiDM5EQGQRkh2HEAQnO",
-  "projectId": "406676593117",
-  "scriptExtensions": [
-    ".js",
-    ".gs"
-  ],
-  "htmlExtensions": [
-    ".html"
-  ],
-  "jsonExtensions": [
-    ".json"
-  ],
-  "filePushOrder": [
-    "SetupConfig.js",
-    "ConfigService.js",
-    "LoggerService.js",
-    "AuthService.js",
-    "HousekeepingService.js",
-    "WpmlService.js",
-    "CategoryService.js",
-    "WooCommerceFormatter.js",
-    "ComaxAdapter.js",
-    "WebAdapter.js",
-    "ProductService.js",
-    "BundleService.js",
-    "PromotionsEngineService.js",
-    "InventoryManagementService.js",
-    "KpiService.js",
-    "CampaignService.js",
-    "TaskService.js",
-    "OrderService.js",
-    "PackingSlipService.js",
-    "PrintService.js",
-    "LookupService.js",
-    "ValidationService.js",
-    "OrchestratorService.js",
-    "SetupMigrate.js",
-    "SetupSheets.js",
-    "WebApp.js",
-    "WebAppDashboard.js",
-    "WebAppInventory.js",
-    "WebAppOrders.js",
-    "WebAppProducts.js",
-    "WebAppSystem.js",
-    "WebAppTasks.js"
-  ],
-  "skipSubdirectories": false
+  "projectId": "406676593117"
 }

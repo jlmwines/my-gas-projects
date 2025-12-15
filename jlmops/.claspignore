@@ -1,1 +1,9 @@
+# Dev/build files
 generate-config.js
+
+# Plan and config subfolders (not needed in Apps Script)
+plans/**
+config/**
+
+# Documentation
+*.md
