@@ -100,6 +100,14 @@ const TaskService = (function() {
       newRow[headers.indexOf('st_CreatedDate')] = new Date();
       newRow[headers.indexOf('st_Notes')] = notes;
 
+      // Auto-route to project based on topic (if not explicitly provided)
+      if (!options.projectId) {
+        const routing = ConfigService.getConfig('task.routing.topic_to_project');
+        if (routing && taskTypeConfig.topic && routing[taskTypeConfig.topic]) {
+          options.projectId = routing[taskTypeConfig.topic];
+        }
+      }
+
       // Handle optional project and start date
       if (options.projectId) {
         const projectIdIdx = headers.indexOf('st_ProjectId');

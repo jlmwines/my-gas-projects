@@ -31,7 +31,8 @@ const ProjectService = (function() {
   function _getProjectsSheet() {
     const allConfig = ConfigService.getAllConfig();
     const spreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const sheetName = allConfig['system.sheet_names.SysProjects'] || 'SysProjects';
+    const sheetNames = allConfig['system.sheet_names'];
+    const sheetName = (sheetNames && sheetNames.SysProjects) || 'SysProjects';
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     return spreadsheet.getSheetByName(sheetName);
   }
@@ -75,16 +76,21 @@ const ProjectService = (function() {
    * @returns {Object[]}
    */
   function getAllProjects() {
+    console.log('ProjectService.getAllProjects: Starting');
     const sheet = _getProjectsSheet();
     if (!sheet) {
+      console.log('ProjectService.getAllProjects: Sheet not found!');
       logger.warn(SERVICE_NAME, 'getAllProjects', 'SysProjects sheet not found');
       return [];
     }
+    console.log('ProjectService.getAllProjects: Sheet found - ' + sheet.getName());
 
     const data = sheet.getDataRange().getValues();
+    console.log('ProjectService.getAllProjects: Data rows = ' + data.length);
     if (data.length <= 1) return []; // Only headers or empty
 
     const headers = data[0];
+    console.log('ProjectService.getAllProjects: Headers = ' + headers.join(','));
     const projects = [];
 
     for (let i = 1; i < data.length; i++) {
@@ -94,6 +100,7 @@ const ProjectService = (function() {
       }
     }
 
+    console.log('ProjectService.getAllProjects: Returning ' + projects.length + ' projects');
     return projects;
   }
 
@@ -265,7 +272,8 @@ const ProjectService = (function() {
     // Fallback: manual query
     const allConfig = ConfigService.getAllConfig();
     const spreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const sheetName = allConfig['system.sheet_names.SysTasks'] || 'SysTasks';
+    const sheetNames = allConfig['system.sheet_names'];
+    const sheetName = (sheetNames && sheetNames.SysTasks) || 'SysTasks';
     const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     const sheet = spreadsheet.getSheetByName(sheetName);
 

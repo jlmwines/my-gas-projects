@@ -703,7 +703,7 @@ function importWebProductsBackend() {
     // Update sync state
     const newState = SyncStateService.getDefaultState();
     newState.sessionId = sessionId;
-    newState.currentStage = 'WEB_PRODUCTS_IMPORTING';
+    newState.currentStage = 'WEB_IMPORT_PROCESSING';
     newState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(newState);
 

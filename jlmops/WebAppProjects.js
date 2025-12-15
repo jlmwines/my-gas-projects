@@ -5,16 +5,38 @@
  */
 
 /**
+ * Converts Date objects to ISO strings for JSON serialization.
+ * @param {Object} obj - Object to sanitize
+ * @returns {Object} Sanitized object
+ */
+function _sanitizeForClient(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (obj instanceof Date) return obj.toISOString();
+  if (Array.isArray(obj)) return obj.map(_sanitizeForClient);
+  if (typeof obj === 'object') {
+    const sanitized = {};
+    for (const key in obj) {
+      sanitized[key] = _sanitizeForClient(obj[key]);
+    }
+    return sanitized;
+  }
+  return obj;
+}
+
+/**
  * Gets all projects for the project list.
  * @returns {Object} { error: string|null, data: Object[] }
  */
 function WebAppProjects_getAllProjects() {
   try {
+    console.log('WebAppProjects_getAllProjects: Starting');
     const projects = ProjectService.getAllProjects();
+    console.log('WebAppProjects_getAllProjects: Got ' + projects.length + ' projects');
 
     // Enrich with task counts
     const enrichedProjects = projects.map(project => {
       const projectId = project.projectid || project.spro_ProjectId;
+      console.log('WebAppProjects_getAllProjects: Getting tasks for project ' + projectId);
       const tasks = ProjectService.getTasksForProject(projectId);
       const completedTasks = tasks.filter(t => t.st_Status === 'Done' || t.st_Status === 'Closed').length;
 
@@ -25,8 +47,10 @@ function WebAppProjects_getAllProjects() {
       };
     });
 
-    return { error: null, data: enrichedProjects };
+    console.log('WebAppProjects_getAllProjects: Returning ' + enrichedProjects.length + ' enriched projects');
+    return { error: null, data: _sanitizeForClient(enrichedProjects) };
   } catch (e) {
+    console.log('WebAppProjects_getAllProjects: ERROR - ' + e.message);
     logger.error('WebAppProjects', 'getAllProjects', e.message, e);
     return { error: e.message, data: [] };
   }
@@ -99,9 +123,12 @@ function WebAppProjects_deleteProject(projectId) {
  */
 function WebAppProjects_getStats() {
   try {
+    console.log('WebAppProjects_getStats: Starting');
     const stats = ProjectService.getProjectStats();
+    console.log('WebAppProjects_getStats: Got stats - total: ' + stats.total);
     return { error: null, data: stats };
   } catch (e) {
+    console.log('WebAppProjects_getStats: ERROR - ' + e.message);
     logger.error('WebAppProjects', 'getStats', e.message, e);
     return { error: e.message, data: null };
   }

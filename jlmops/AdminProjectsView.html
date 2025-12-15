@@ -202,14 +202,11 @@
   var currentProjectId = null;
   var allProjects = [];
 
-  // Initialize on page load
-  document.addEventListener('DOMContentLoaded', function() {
+  // Initialize on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
     init();
-  });
-
-  // Also initialize immediately in case DOM is already ready
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(init, 0);
   }
 
   function init() {
@@ -276,13 +273,16 @@
   }
 
   function loadProjects() {
+    console.log('loadProjects: Starting');
     google.script.run
       .withSuccessHandler(function(result) {
+        console.log('loadProjects: Got result', result);
         if (result.error) {
           console.error('Error loading projects:', result.error);
           return;
         }
         allProjects = result.data || [];
+        console.log('loadProjects: allProjects count = ' + allProjects.length);
         renderProjectList(allProjects);
       })
       .withFailureHandler(function(err) {
@@ -292,8 +292,12 @@
   }
 
   function renderProjectList(projects) {
+    console.log('renderProjectList: Starting with ' + (projects ? projects.length : 0) + ' projects');
     var tbody = document.getElementById('project-list-body');
-    if (!tbody) return;
+    if (!tbody) {
+      console.log('renderProjectList: tbody element not found!');
+      return;
+    }
 
     if (!projects || projects.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="text-muted text-center">No projects found</td></tr>';

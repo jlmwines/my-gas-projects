@@ -919,6 +919,16 @@ const OrchestratorService = (function() {
         case 'import.drive.comax_products':
           _handleCompletedProductImport(completedJobSessionId); // Pass session ID
           break;
+        case 'job.periodic.validation.master':
+          // Validation completed - advance state to READY_FOR_WEB_EXPORT
+          logger.info(serviceName, functionName, 'Validation job completed. Triggering state advancement.', { sessionId: completedJobSessionId });
+          _checkAndAdvanceSyncState();
+          break;
+        case 'export.web.inventory':
+          // Web export completed - advance state to WEB_EXPORT_GENERATED
+          logger.info(serviceName, functionName, 'Web inventory export job completed. Triggering state advancement.', { sessionId: completedJobSessionId });
+          _checkAndAdvanceSyncState();
+          break;
         default:
           logger.info(serviceName, functionName, `No specific state-based triggers to run for completed job type: '${completedJobType}'.`, { sessionId: completedJobSessionId, jobType: completedJobType });
           break;
@@ -1124,12 +1134,20 @@ const OrchestratorService = (function() {
         } else if (allCompleted) {
           logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}.`);
 
-          // Write Step 1 completion status
+          // Write Step 1 completion status (Web Products)
           SyncStatusService.writeStatus(state.sessionId, {
             step: 1,
-            stepName: 'Import Web Data',
+            stepName: 'Web Products',
             status: 'completed',
-            message: 'All web data imported successfully'
+            message: 'Products and translations imported'
+          });
+
+          // Write Step 2 completion status (Web Orders)
+          SyncStatusService.writeStatus(state.sessionId, {
+            step: 2,
+            stepName: 'Web Orders',
+            status: 'completed',
+            message: 'Orders imported'
           });
 
           // Calculate orders pending for export
@@ -1142,15 +1160,15 @@ const OrchestratorService = (function() {
             logger.info(serviceName, functionName, `No orders to export. Skipping export step and transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 2,
-              stepName: 'Export to Comax',
+              step: 3,
+              stepName: 'Order Export',
               status: 'completed',
               message: 'No orders to export - skipped'
             });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 3,
-              stepName: 'Import Comax Data',
+              step: 4,
+              stepName: 'Comax Products',
               status: 'waiting',
               message: 'Ready to import Comax product data'
             });
@@ -1162,8 +1180,8 @@ const OrchestratorService = (function() {
             logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 2,
-              stepName: 'Export to Comax',
+              step: 3,
+              stepName: 'Order Export',
               status: 'waiting',
               message: `${ordersToExportCount} orders ready to export`
             });
@@ -1184,18 +1202,18 @@ const OrchestratorService = (function() {
           if (jobStatus === 'COMPLETED') {
               logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING and triggering finalization.`);
 
-              // Write Step 3 completion status
+              // Write Step 4 completion status
               SyncStatusService.writeStatus(state.sessionId, {
-                step: 3,
-                stepName: 'Import Comax Data',
+                step: 4,
+                stepName: 'Comax Products',
                 status: 'completed',
                 message: 'Comax product data imported successfully'
               });
 
-              // Write Step 4 waiting status (not processing yet - just queued)
+              // Write Step 5 waiting status (validation + export)
               SyncStatusService.writeStatus(state.sessionId, {
-                step: 4,
-                stepName: 'Validation',
+                step: 5,
+                stepName: 'Web Inventory',
                 status: 'waiting',
                 message: 'Validation queued, starting...'
               });
@@ -1217,14 +1235,14 @@ const OrchestratorService = (function() {
               logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
               SyncStatusService.writeStatus(state.sessionId, {
-                step: 3,
-                stepName: 'Import Comax Data',
+                step: 4,
+                stepName: 'Comax Products',
                 status: 'failed',
                 message: `Import failed: ${jobStatus}`
               });
 
               // Clear all subsequent step statuses to prevent showing stale notifications
-              SyncStatusService.clearStepsFromSession(state.sessionId, 4);
+              SyncStatusService.clearStepsFromSession(state.sessionId, 5);
 
               state.currentStage = 'FAILED';
               state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
@@ -1258,16 +1276,16 @@ const OrchestratorService = (function() {
         if (anyFailedOrQuarantined) {
            logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
-           // Write Step 4 failure status
+           // Write Step 5 failure status
            SyncStatusService.writeStatus(state.sessionId, {
-             step: 4,
-             stepName: 'Validation',
+             step: 5,
+             stepName: 'Web Inventory',
              status: 'failed',
              message: errorMessage
            });
 
            // Clear all subsequent step statuses to prevent showing stale notifications
-           SyncStatusService.clearStepsFromSession(state.sessionId, 5);
+           SyncStatusService.clearStepsFromSession(state.sessionId, 6);
 
            state.currentStage = 'FAILED';
            state.errorMessage = errorMessage;
@@ -1276,12 +1294,12 @@ const OrchestratorService = (function() {
         } else if (allCompleted) {
            logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
 
-           // Write Step 4 completion status
+           // Write Step 5 processing status (validation complete, now exporting)
            SyncStatusService.writeStatus(state.sessionId, {
-             step: 4,
-             stepName: 'Validation',
-             status: 'completed',
-             message: 'All validation checks passed'
+             step: 5,
+             stepName: 'Web Inventory',
+             status: 'processing',
+             message: 'Validation complete, preparing export...'
            });
 
            // Write Step 5 waiting status

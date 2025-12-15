@@ -567,5 +567,45 @@
         "SysProjects",
         "SysProjects",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Products",
+        "PROJ-SYS_PRODUCT",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Inventory",
+        "PROJ-SYS_INVENTORY",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "System",
+        "PROJ-SYS_SYSTEM",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Orders",
+        "PROJ-SYS_ORDERS",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "WebXlt",
+        "PROJ-SYS_PRODUCT",
+        "", "", "", "", "", "", "", ""
     ]
 ]
