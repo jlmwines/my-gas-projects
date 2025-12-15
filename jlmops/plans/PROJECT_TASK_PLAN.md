@@ -84,13 +84,13 @@ Part 2: The Four System Projects
 |
 |----------------|----------------------|-------------|--------|------------------------------------------------------------------------------------
 --|
-| PROJ-PRODUCT   | Product Data Quality | OPERATIONAL | Active | Product data issues, validation failures, onboarding, bundles, category
+| PROJ-SYS_PRODUCT   | Product Data Quality | OPERATIONAL | Active | Product data issues, validation failures, onboarding, bundles, category
 deficiencies |
-| PROJ-INVENTORY | Inventory Management | OPERATIONAL | Active | Inventory counts, audits, stock-related validations, Brurya warehouse
+| PROJ-SYS_INVENTORY | Inventory Management | OPERATIONAL | Active | Inventory counts, audits, stock-related validations, Brurya warehouse
 |
-| PROJ-SYSTEM    | System Health        | OPERATIONAL | Active | Sync sessions, exports, confirmations, system-level validations
+| PROJ-SYS_SYSTEM    | System Health        | OPERATIONAL | Active | Sync sessions, exports, confirmations, system-level validations
 |
-| PROJ-ORDERS    | Order Fulfillment    | OPERATIONAL | Active | Packing slips, order completion, fulfillment workflow
+| PROJ-SYS_ORDERS    | Order Fulfillment    | OPERATIONAL | Active | Packing slips, order completion, fulfillment workflow
 |
 
 2.2 Manual Creation Steps
@@ -108,18 +108,18 @@ File: config/system.json
 
 Add these rows (following existing flat array pattern):
 ["task.routing.topic_to_project", "Topic-to-project routing for auto-assignment", "stable",
-"Products", "PROJ-PRODUCT", "Inventory", "PROJ-INVENTORY", "System", "PROJ-SYSTEM",
-"Orders", "PROJ-ORDERS", "WebXlt", "PROJ-PRODUCT", "", "", ""]
+"Products", "PROJ-SYS_PRODUCT", "Inventory", "PROJ-SYS_INVENTORY", "System", "PROJ-SYS_SYSTEM",
+"Orders", "PROJ-SYS_ORDERS", "WebXlt", "PROJ-SYS_PRODUCT", "", "", ""]
 
 3.2 Routing Table
 
 | Topic     | Project        | Rationale                                        |
 |-----------|----------------|--------------------------------------------------|
-| Products  | PROJ-PRODUCT   | Product identity, details, existence             |
-| WebXlt    | PROJ-PRODUCT   | Translation/localization is product identity     |
-| Inventory | PROJ-INVENTORY | Stock levels, counts, audits, Brurya warehouse   |
-| Orders    | PROJ-ORDERS    | Order fulfillment, packing slips                 |
-| System    | PROJ-SYSTEM    | System-level tasks, sync sessions, confirmations |
+| Products  | PROJ-SYS_PRODUCT   | Product identity, details, existence             |
+| WebXlt    | PROJ-SYS_PRODUCT   | Translation/localization is product identity     |
+| Inventory | PROJ-SYS_INVENTORY | Stock levels, counts, audits, Brurya warehouse   |
+| Orders    | PROJ-SYS_ORDERS    | Order fulfillment, packing slips                 |
+| System    | PROJ-SYS_SYSTEM    | System-level tasks, sync sessions, confirmations |
 
 ---
 Part 4: Complete Task Type Mapping
@@ -132,44 +132,44 @@ Validation Tasks (13 types)
 
 | Task Type                                     | Topic     | Project        | Flow Pattern            | Priority |
 |-----------------------------------------------|-----------|----------------|-------------------------|----------|
-| task.validation.vintage_mismatch              | Products  | PROJ-PRODUCT   | manager_to_admin_review | Normal   |
-| task.validation.comax_internal_audit          | Inventory | PROJ-INVENTORY | manager_to_admin_review | Normal   |
-| task.validation.webxlt_data_integrity         | WebXlt    | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.sku_not_in_comax              | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.translation_missing           | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.field_mismatch                | Products  | PROJ-PRODUCT   | admin_direct            | Normal   |
-| task.validation.status_mismatch               | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.name_mismatch                 | Products  | PROJ-PRODUCT   | admin_direct            | Normal   |
-| task.validation.web_master_discrepancy        | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.master_master_discrepancy     | System    | PROJ-SYSTEM    | admin_direct            | High     |
-| task.validation.comax_master_discrepancy      | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.row_count_decrease            | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.comax_not_web_product         | Products  | PROJ-PRODUCT   | admin_direct            | High     |
-| task.validation.order_staging_failure         | Orders    | PROJ-ORDERS    | admin_direct            | High     |
-| task.validation.archived_comax_stock_mismatch | Inventory | PROJ-INVENTORY | admin_direct            | High     |
+| task.validation.vintage_mismatch              | Products  | PROJ-SYS_PRODUCT   | manager_to_admin_review | Normal   |
+| task.validation.comax_internal_audit          | Inventory | PROJ-SYS_INVENTORY | manager_to_admin_review | Normal   |
+| task.validation.webxlt_data_integrity         | WebXlt    | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.sku_not_in_comax              | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.translation_missing           | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.field_mismatch                | Products  | PROJ-SYS_PRODUCT   | admin_direct            | Normal   |
+| task.validation.status_mismatch               | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.name_mismatch                 | Products  | PROJ-SYS_PRODUCT   | admin_direct            | Normal   |
+| task.validation.web_master_discrepancy        | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.master_master_discrepancy     | System    | PROJ-SYS_SYSTEM    | admin_direct            | High     |
+| task.validation.comax_master_discrepancy      | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.row_count_decrease            | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.comax_not_web_product         | Products  | PROJ-SYS_PRODUCT   | admin_direct            | High     |
+| task.validation.order_staging_failure         | Orders    | PROJ-SYS_ORDERS    | admin_direct            | High     |
+| task.validation.archived_comax_stock_mismatch | Inventory | PROJ-SYS_INVENTORY | admin_direct            | High     |
 
 Export Tasks (2 types)
 
 | Task Type                       | Topic  | Project     | Flow Pattern | Priority |
 |---------------------------------|--------|-------------|--------------|----------|
-| task.export.comax_orders_ready  | System | PROJ-SYSTEM | admin_direct | High     |
-| task.export.web_inventory_ready | System | PROJ-SYSTEM | admin_direct | High     |
+| task.export.comax_orders_ready  | System | PROJ-SYS_SYSTEM | admin_direct | High     |
+| task.export.web_inventory_ready | System | PROJ-SYS_SYSTEM | admin_direct | High     |
 
 Confirmation Tasks (4 types)
 
 | Task Type                                | Topic     | Project        | Flow Pattern | Priority |
 |------------------------------------------|-----------|----------------|--------------|----------|
-| task.confirmation.comax_order_export     | System    | PROJ-SYSTEM    | admin_direct | High     |
-| task.confirmation.web_inventory_export   | System    | PROJ-SYSTEM    | admin_direct | High     |
-| task.confirmation.product_count_export   | System    | PROJ-SYSTEM    | admin_direct | High     |
-| task.confirmation.comax_inventory_export | Inventory | PROJ-INVENTORY | admin_direct | High     |
+| task.confirmation.comax_order_export     | System    | PROJ-SYS_SYSTEM    | admin_direct | High     |
+| task.confirmation.web_inventory_export   | System    | PROJ-SYS_SYSTEM    | admin_direct | High     |
+| task.confirmation.product_count_export   | System    | PROJ-SYS_SYSTEM    | admin_direct | High     |
+| task.confirmation.comax_inventory_export | Inventory | PROJ-SYS_INVENTORY | admin_direct | High     |
 
 Onboarding Tasks (2 types)
 
 | Task Type                   | Topic    | Project      | Flow Pattern            | Priority |
 |-----------------------------|----------|--------------|-------------------------|----------|
-| task.onboarding.suggestion  | Products | PROJ-PRODUCT | manager_suggestion      | Normal   |
-| task.onboarding.add_product | Products | PROJ-PRODUCT | manager_to_admin_review | High     |
+| task.onboarding.suggestion  | Products | PROJ-SYS_PRODUCT | manager_suggestion      | Normal   |
+| task.onboarding.add_product | Products | PROJ-SYS_PRODUCT | manager_to_admin_review | High     |
 
 4.2 New Task Types (6 types)
 
@@ -283,7 +283,7 @@ Phase 1: Foundation (Config + Data)
 
 Step 1.1: Create Projects (Manual)
 - Open Admin > Projects
-- Create PROJ-PRODUCT, PROJ-INVENTORY, PROJ-SYSTEM, PROJ-ORDERS
+- Create PROJ-SYS_PRODUCT, PROJ-SYS_INVENTORY, PROJ-SYS_SYSTEM, PROJ-SYS_ORDERS
 - Set Type=OPERATIONAL, Status=Active for each
 
 Step 1.2: Add Routing Config
@@ -625,7 +625,7 @@ Inventory Widget - After:
 |--------------------|--------------------------------------------------------|
 | Negative Inventory | Count tasks: type=task.validation.comax_internal_audit |
 | Inventory Count    | Count tasks: type=task.inventory.count                 |
-| Inventory Reviews  | Count tasks: status=Review, project=PROJ-INVENTORY     |
+| Inventory Reviews  | Count tasks: status=Review, project=PROJ-SYS_INVENTORY     |
 | Brurya Status      | Single task (see below)                                |
 
 ---
@@ -744,10 +744,10 @@ notes: headers.indexOf('st_Notes')
 
 // Initialize project summaries
 const projects = {
-'PROJ-PRODUCT': { id: 'PROJ-PRODUCT', name: 'Product Data Quality', counts: {}, tasks: [] },
-'PROJ-INVENTORY': { id: 'PROJ-INVENTORY', name: 'Inventory Management', counts: {}, tasks: [] },
-'PROJ-SYSTEM': { id: 'PROJ-SYSTEM', name: 'System Health', counts: {}, tasks: [] },
-'PROJ-ORDERS': { id: 'PROJ-ORDERS', name: 'Order Fulfillment', counts: {}, tasks: [] }
+'PROJ-SYS_PRODUCT': { id: 'PROJ-SYS_PRODUCT', name: 'Product Data Quality', counts: {}, tasks: [] },
+'PROJ-SYS_INVENTORY': { id: 'PROJ-SYS_INVENTORY', name: 'Inventory Management', counts: {}, tasks: [] },
+'PROJ-SYS_SYSTEM': { id: 'PROJ-SYS_SYSTEM', name: 'System Health', counts: {}, tasks: [] },
+'PROJ-SYS_ORDERS': { id: 'PROJ-SYS_ORDERS', name: 'Order Fulfillment', counts: {}, tasks: [] }
 };
 
 let totalOpen = 0;
@@ -801,7 +801,7 @@ return { error: e.message };
 AdminProductsWidget.html - After:
 <script>
 function updateProductsWidget(dashboardData) {
-const project = dashboardData.projects.find(p => p.id === 'PROJ-PRODUCT');
+const project = dashboardData.projects.find(p => p.id === 'PROJ-SYS_PRODUCT');
 if (!project) return;
 
 const counts = project.counts;
@@ -823,7 +823,7 @@ const deficiencies = counts['task.deficiency.category_stock'] || 0;
 AdminInventoryWidget.html - After:
 <script>
 function updateInventoryWidget(dashboardData) {
-const project = dashboardData.projects.find(p => p.id === 'PROJ-INVENTORY');
+const project = dashboardData.projects.find(p => p.id === 'PROJ-SYS_INVENTORY');
 if (!project) return;
 
 const counts = project.counts;
@@ -896,7 +896,7 @@ Step 5.7: Deprecate old functions
 ---
 Phase 6: Packing Slip Tasks (Order Fulfillment)
 
-Goal: Create a task-based notification system for packing slips, feeding the PROJ-ORDERS dashboard widget.
+Goal: Create a task-based notification system for packing slips, feeding the PROJ-SYS_ORDERS dashboard widget.
 
 ---
 6.1 Current Packing Slip Workflow
@@ -1072,7 +1072,7 @@ Simplest integration: Keep existing count query in widget, task is for project-l
 - After importing orders, task.order.packing_available created/updated
 - Task notes show current count of packable orders
 - After printing all orders, task is completed (closed)
-- Task appears in PROJ-ORDERS project
+- Task appears in PROJ-SYS_ORDERS project
 - Orders widget still shows correct counts
 
 ---
@@ -1082,18 +1082,18 @@ Part 8: Task Creation Points
 
 | File                             | Line | Task Type                           | After Phase 1                 |
 |----------------------------------|------|-------------------------------------|-------------------------------|
-| InventoryManagementService.js    | 1034 | confirmation.comax_inventory_export | Auto-routes to PROJ-INVENTORY |
-| InventoryManagementService.js    | 1245 | inventory.count                     | Auto-routes to PROJ-INVENTORY |
-| InventoryManagementService.js    | 1303 | inventory.count                     | Auto-routes to PROJ-INVENTORY |
-| OrchestratorService.js           | 721  | export.comax_orders_ready           | Auto-routes to PROJ-SYSTEM    |
-| OrchestratorService.js           | 788  | export.web_inventory_ready          | Auto-routes to PROJ-SYSTEM    |
-| OrderService.js                  | 448  | confirmation.comax_order_export     | Auto-routes to PROJ-SYSTEM    |
-| ProductImportService.js          | 1282 | confirmation.web_inventory_export   | Auto-routes to PROJ-SYSTEM    |
-| ProductService.js                | 1018 | confirmation.web_inventory_export   | Auto-routes to PROJ-SYSTEM    |
-| ProductService.js                | 1847 | onboarding.add_product              | Auto-routes to PROJ-PRODUCT   |
+| InventoryManagementService.js    | 1034 | confirmation.comax_inventory_export | Auto-routes to PROJ-SYS_INVENTORY |
+| InventoryManagementService.js    | 1245 | inventory.count                     | Auto-routes to PROJ-SYS_INVENTORY |
+| InventoryManagementService.js    | 1303 | inventory.count                     | Auto-routes to PROJ-SYS_INVENTORY |
+| OrchestratorService.js           | 721  | export.comax_orders_ready           | Auto-routes to PROJ-SYS_SYSTEM    |
+| OrchestratorService.js           | 788  | export.web_inventory_ready          | Auto-routes to PROJ-SYS_SYSTEM    |
+| OrderService.js                  | 448  | confirmation.comax_order_export     | Auto-routes to PROJ-SYS_SYSTEM    |
+| ProductImportService.js          | 1282 | confirmation.web_inventory_export   | Auto-routes to PROJ-SYS_SYSTEM    |
+| ProductService.js                | 1018 | confirmation.web_inventory_export   | Auto-routes to PROJ-SYS_SYSTEM    |
+| ProductService.js                | 1847 | onboarding.add_product              | Auto-routes to PROJ-SYS_PRODUCT   |
 | ValidationOrchestratorService.js | 138  | validation.* (system-level)         | Auto-routes based on topic    |
 | ValidationOrchestratorService.js | 163  | validation.* (entity-level)         | Auto-routes based on topic    |
-| WebAppProducts.js                | 875  | onboarding.suggestion               | Auto-routes to PROJ-PRODUCT   |
+| WebAppProducts.js                | 875  | onboarding.suggestion               | Auto-routes to PROJ-SYS_PRODUCT   |
 
 8.2 New Creation Points (Phase 2-6)
 
@@ -1135,7 +1135,7 @@ Part 10: Verification Checklist
 
 After Phase 1
 
-- 4 projects exist in SysProjects sheet (PROJ-PRODUCT, PROJ-INVENTORY, PROJ-SYSTEM, PROJ-ORDERS)
+- 4 projects exist in SysProjects sheet (PROJ-SYS_PRODUCT, PROJ-SYS_INVENTORY, PROJ-SYS_SYSTEM, PROJ-SYS_ORDERS)
 - taskDefinitions.json updated with all 28 task types (22 existing + 6 new)
 - system.json contains task.routing.topic_to_project entry
 - TaskService.js has auto-routing code after line 93
@@ -1150,7 +1150,7 @@ After Phase 2
 - Check SysTasks  task.sync.daily_session exists with current sessionId
 - Complete the sync (through Step 5 confirmation)
 - Check task status changed to "Done"
-- Verify session task appears in PROJ-SYSTEM project
+- Verify session task appears in PROJ-SYS_SYSTEM project
 
 After Phase 3
 
@@ -1158,7 +1158,7 @@ After Phase 3
 - If a category is Low, check SysTasks for task.deficiency.category_stock
 - Verify task notes contain: category name, current count, minimum
 - Trigger the check again  verify no duplicate task created
-- Task appears in PROJ-PRODUCT project
+- Task appears in PROJ-SYS_PRODUCT project
 
 After Phase 4
 
@@ -1166,7 +1166,7 @@ After Phase 4
 - If any active bundle has 0-stock member  check for task.bundle.critical_inventory
 - Verify task notes list the out-of-stock SKU(s) and names
 - Call BundleService.createMonthlyReviewTask()  verify task created
-- Bundle tasks appear in PROJ-PRODUCT project
+- Bundle tasks appear in PROJ-SYS_PRODUCT project
 
 After Phase 5 (Dashboard Consolidation)
 
@@ -1180,7 +1180,7 @@ After Phase 6 (Packing Slips)
 - Import web orders  task.order.packing_available created/updated
 - Task notes show current count of packable orders
 - Print all packing slips  task is completed (closed)
-- Task appears in PROJ-ORDERS project
+- Task appears in PROJ-SYS_ORDERS project
 - Orders widget still shows correct counts
 
 ---
@@ -1511,11 +1511,11 @@ Add this entry before the closing ]:
 "task.routing.topic_to_project",
 "Topic-to-project routing for auto-assignment",
 "stable",
-"Products", "PROJ-PRODUCT",
-"Inventory", "PROJ-INVENTORY",
-"System", "PROJ-SYSTEM",
-"Orders", "PROJ-ORDERS",
-"WebXlt", "PROJ-PRODUCT",
+"Products", "PROJ-SYS_PRODUCT",
+"Inventory", "PROJ-SYS_INVENTORY",
+"System", "PROJ-SYS_SYSTEM",
+"Orders", "PROJ-SYS_ORDERS",
+"WebXlt", "PROJ-SYS_PRODUCT",
 "", "", ""
 ]
 
@@ -1565,22 +1565,41 @@ Task Lifecycle
 - Priority determines urgency: Critical > High > Normal > Low
 
 ---
-Plan Version: 2.2
+Plan Version: 2.4
 Last Updated: 2025-12-15
-Status: Security Reviewed - Ready for Implementation
+Status: Phase 1 and 1B COMPLETE - Implementation In Progress
 
 IMPLEMENTATION SUMMARY:
-- Phase 0: Prerequisites (manual project creation, config prep)
-- Phase 1: Config files (taskDefinitions.json, system.json)
-- Phase 1B: Core auto-routing (TaskService.js)
-- Phase 2: Sync session tasks (WebAppSync.js)
-- Phase 3: Category deficiency tasks (WebAppProducts.js)
-- Phase 4: Bundle tasks (BundleService.js, HousekeepingService.js)
-- Phase 5: Dashboard consolidation (WebAppProjects.js) - MOST COMPLEX
-- Phase 6: Packing slip tasks (WebAppOrders.js)
+- Phase 0: Prerequisites (manual project creation, config prep) - PENDING
+- Phase 1: Config files (taskDefinitions.json, system.json) - ✅ COMPLETE
+- Phase 1B: Core auto-routing (TaskService.js) - ✅ COMPLETE
+- Phase 2: Sync session tasks (WebAppSync.js) - PENDING
+- Phase 3: Category deficiency tasks (WebAppProducts.js) - PENDING
+- Phase 4: Bundle tasks (BundleService.js, HousekeepingService.js) - PENDING
+- Phase 5: Dashboard consolidation (WebAppProjects.js) - MOST COMPLEX - PENDING
+- Phase 6: Packing slip tasks (WebAppOrders.js) - PENDING
 
 Each phase has: Safety Checks, Verification Tests, Rollback Plan
 See Appendix F for detailed implementation guide with checklists
+
+---
+IMPLEMENTATION LOG:
+
+2025-12-15: Phase 1 & 1B Complete
+- Added flow_pattern to all 22 task definitions in taskDefinitions.json
+- Added 5 routing entries to system.json (Products, Inventory, System, Orders, WebXlt)
+- Added auto-routing code to TaskService.createTask() (lines 103-109)
+- Ran generate-config.js and deployed via clasp push
+- Verified: Tasks now auto-route to projects based on topic
+
+2025-12-15: Critical Sync Fixes (Prerequisite for Phase 2)
+- Fixed stage name mismatch: WEB_PRODUCTS_IMPORTING → WEB_IMPORT_PROCESSING
+- Fixed step number mapping in OrchestratorService.js to match 5-step UI:
+  * Step 1 = Web Products, Step 2 = Web Orders, Step 3 = Order Export
+  * Step 4 = Comax Products, Step 5 = Web Inventory
+- Added missing step 2 completion status when imports finish
+- Added job completion triggers for validation and web export jobs in finalizeJobCompletion()
+- These fixes documented in CODING_STANDARDS.md sections 9-11
 
 ---
 Appendix E: Security Review (2025-12-15, Updated)
@@ -1614,16 +1633,29 @@ PHASE 0: PREREQUISITES (No Code Changes)
 
 Purpose: Prepare environment before any code modifications
 
-Step 0.1: Manual Project Creation in SysProjects Sheet
+Step 0.1: Add System Project Protection to ProjectService.js
+Location: In deleteProject() function, add at the start:
+
+```javascript
+// Reject deletion of system projects (pattern: SYS_ prefix after PROJ-)
+if (projectId && projectId.startsWith('PROJ-SYS_')) {
+  throw new Error('Cannot delete system project');
+}
+```
+
+System project IDs use pattern: PROJ-SYS_XXXXX (e.g., PROJ-SYS_PRODUCT)
+User-created projects use: PROJ-XXXXXXXX (auto-generated UUID)
+
+Step 0.2: Manual Project Creation in SysProjects Sheet
 - Open Google Sheet: JLMops_Data > SysProjects
 - Add 4 rows with EXACT values:
 
-| spro_ProjectId | spro_Name            | spro_Type   | spro_Status | spro_StartDate | spro_EndDate |
-|----------------|----------------------|-------------|-------------|----------------|--------------|
-| PROJ-PRODUCT   | Product Data Quality | OPERATIONAL | Active      | 2025-12-15     |              |
-| PROJ-INVENTORY | Inventory Management | OPERATIONAL | Active      | 2025-12-15     |              |
-| PROJ-SYSTEM    | System Health        | OPERATIONAL | Active      | 2025-12-15     |              |
-| PROJ-ORDERS    | Order Fulfillment    | OPERATIONAL | Active      | 2025-12-15     |              |
+| spro_ProjectId     | spro_Name            | spro_Type   | spro_Status | spro_StartDate | spro_EndDate |
+|--------------------|----------------------|-------------|-------------|----------------|--------------|
+| PROJ-SYS_PRODUCT   | Product Data Quality | OPERATIONAL | Active      | 2025-12-15     |              |
+| PROJ-SYS_INVENTORY | Inventory Management | OPERATIONAL | Active      | 2025-12-15     |              |
+| PROJ-SYS_SYSTEM    | System Health        | OPERATIONAL | Active      | 2025-12-15     |              |
+| PROJ-SYS_ORDERS    | Order Fulfillment    | OPERATIONAL | Active      | 2025-12-15     |              |
 
 SAFETY CHECK 0.1:
 [ ] Open Admin > Projects in web app
@@ -1751,7 +1783,7 @@ SAFETY CHECK 1B:
 VERIFICATION TEST 1B:
 Manual test in Apps Script editor:
 1. Run: TaskService.createTask('task.validation.field_mismatch', 'TEST-SKU-123', 'Test Product', 'Test Task', 'Testing auto-routing')
-2. Check SysTasks sheet - new task should have st_ProjectId = 'PROJ-PRODUCT'
+2. Check SysTasks sheet - new task should have st_ProjectId = 'PROJ-SYS_PRODUCT'
 3. Delete test task row manually
 
 ROLLBACK PLAN 1B:
