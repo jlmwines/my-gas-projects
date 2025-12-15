@@ -75,9 +75,20 @@ function HousekeepingService() {
     // Process rows if a postProcessFunction is provided
     const processedRowsToArchive = postProcessFunction(rowsToArchive);
 
+    // Truncate any cell values exceeding Google Sheets' 50,000 character limit
+    const MAX_CELL_LENGTH = 49000; // Leave margin below 50,000 limit
+    const truncatedRows = processedRowsToArchive.map(row =>
+      row.map(cell => {
+        if (typeof cell === 'string' && cell.length > MAX_CELL_LENGTH) {
+          return cell.substring(0, MAX_CELL_LENGTH) + '... [TRUNCATED]';
+        }
+        return cell;
+      })
+    );
+
     // Append to archive sheet
-    archiveSheet.getRange(archiveSheet.getLastRow() + 1, 1, processedRowsToArchive.length, processedRowsToArchive[0].length)
-                 .setValues(processedRowsToArchive);
+    archiveSheet.getRange(archiveSheet.getLastRow() + 1, 1, truncatedRows.length, truncatedRows[0].length)
+                 .setValues(truncatedRows);
 
     // Overwrite source sheet with kept rows
     sourceSheet.clearContents();

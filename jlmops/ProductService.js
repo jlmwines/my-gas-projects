@@ -924,6 +924,13 @@ const ProductService = (function() {
 
       for (const [webIdEn, webProdMRow] of webProdMMap.entries()) {
         productsChecked++;
+
+        // Skip bundle products - they don't exist in Comax
+        const productType = String(webProdMRow.wpm_Type || '').toLowerCase();
+        if (productType === 'woosb' || productType === 'bundle') {
+          continue;
+        }
+
         const sku = String(webProdMRow.wpm_SKU || '').trim();
 
         if (!cmxMap.has(sku)) {

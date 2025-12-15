@@ -209,6 +209,9 @@ function startComaxImportBackend() {
     const result = OrchestratorService.processSessionJobs(currentState.sessionId);
     if (!result.success) {
       logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId: currentState.sessionId });
+    } else {
+      // Let the state machine advance to next step
+      OrchestratorService.checkAndAdvanceSyncState();
     }
 
     // Return current status for UI
@@ -715,6 +718,9 @@ function importWebProductsBackend() {
       // Status already written by processJob catch block
     } else {
       logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+
+      // Let the state machine advance to next step
+      OrchestratorService.checkAndAdvanceSyncState();
     }
 
     return SyncStatusService.getSessionStatus(sessionId);
@@ -775,6 +781,9 @@ function importWebOrdersBackend() {
       logger.error(serviceName, functionName, `Web orders import failed: ${result.error}`, null, { sessionId });
     } else {
       logger.info(serviceName, functionName, `Web orders import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+
+      // If we're in a sync session, let the state machine advance to next step
+      OrchestratorService.checkAndAdvanceSyncState();
     }
 
     return SyncStatusService.getSessionStatus(sessionId);
