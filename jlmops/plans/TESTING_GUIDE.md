@@ -546,6 +546,29 @@ All 37 tests must pass before deployment to production.
 
 ---
 
+---
+
+## Critical Lesson: JavaScript Zero Values
+
+**Issue:** JavaScript `||` operator treats `0` as falsy, converting valid zero values to empty strings.
+
+**Pattern to avoid:**
+```javascript
+// BAD: 0 || '' returns '' (zero becomes empty!)
+return rowObject[header] || '';
+```
+
+**Correct pattern:**
+```javascript
+// GOOD: Explicit null/undefined check preserves zero
+return (value !== undefined && value !== null) ? value : '';
+```
+
+**Why it matters:** Stock=0 and Price=0 are valid business values (out-of-stock items, free samples). Sanity checks must accept zero as valid data.
+
+---
+
 **Created:** 2025-12-08
+**Updated:** 2025-12-15
 **Maintained By:** Development Team
 **Review Frequency:** After each code change affecting validation/import logic
