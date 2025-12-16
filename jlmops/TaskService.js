@@ -8,9 +8,17 @@
 
 const TaskService = (function() {
 
-  // User emails by role - used for task assignment
-  const ADMIN_EMAIL = 'accounts@jlmwines.com';
-  const MANAGER_EMAIL = 'info@jlmwines.com';
+  /**
+   * Gets user email by role from system.users config.
+   * @param {string} role The role to find (e.g., 'admin', 'manager').
+   * @returns {string|null} Email of user with that role, or null.
+   */
+  function getUserByRole(role) {
+    const users = ConfigService.getConfig('system.users');
+    if (!users || !Array.isArray(users)) return null;
+    const user = users.find(u => u.role === role);
+    return user ? user.email : null;
+  }
 
   /**
    * Gets the initial assignee based on flow pattern.
@@ -20,10 +28,10 @@ const TaskService = (function() {
   function getInitialAssignee(flowPattern) {
     switch (flowPattern) {
       case 'admin_direct':
-        return ADMIN_EMAIL;
+        return getUserByRole('admin');
       case 'manager_to_admin_review':
       case 'manager_suggestion':
-        return MANAGER_EMAIL;
+        return getUserByRole('manager');
       default:
         return null;
     }
@@ -36,8 +44,9 @@ const TaskService = (function() {
    * @returns {string|null} New assignee email or null if no change.
    */
   function getReviewAssignee(flowPattern, currentAssignee) {
-    if (flowPattern === 'manager_to_admin_review' && currentAssignee === MANAGER_EMAIL) {
-      return ADMIN_EMAIL;
+    const managerEmail = getUserByRole('manager');
+    if (flowPattern === 'manager_to_admin_review' && currentAssignee === managerEmail) {
+      return getUserByRole('admin');
     }
     return null;
   }
