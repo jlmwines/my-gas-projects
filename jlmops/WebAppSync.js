@@ -256,7 +256,19 @@ function resetSyncStateBackend() {
     const oldState = SyncStateService.getSyncState();
     const sessionId = oldState.sessionId;
 
-    // Clear old state service
+    // FIRST: Clear all step statuses to give immediate visual feedback
+    if (sessionId) {
+      for (let step = 1; step <= 5; step++) {
+        SyncStatusService.writeStatus(sessionId, {
+          step: step,
+          stepName: '',
+          status: 'pending',
+          message: ''
+        });
+      }
+    }
+
+    // THEN: Do the actual reset work
     SyncStateService.resetSyncState();
 
     // Clear sync status entries for this session
