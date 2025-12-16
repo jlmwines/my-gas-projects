@@ -509,6 +509,20 @@ function WebAppProducts_getManagerWidgetData() {
                 if (status === 'Low') {
                     result.deficientCategoriesCount++;
                     result.deficientCategories.push(catData);
+
+                    // Create deficiency task (de-duplication handled by TaskService)
+                    try {
+                      TaskService.createTask(
+                        'task.deficiency.category_stock',
+                        rule.category,
+                        rule.category,
+                        `Low stock: ${rule.category}`,
+                        `Category "${rule.category}" has ${currentCount} products (minimum: ${rule.min}).`,
+                        null
+                      );
+                    } catch (taskError) {
+                      LoggerService.warn('WebAppProducts', 'getManagerWidgetData', `Could not create deficiency task: ${taskError.message}`);
+                    }
                 }
             });
         }
