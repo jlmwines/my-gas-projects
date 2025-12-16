@@ -226,7 +226,76 @@ function HousekeepingService() {
     this.archiveCompletedTasks();
     this.manageFileLifecycle();
     this.cleanupImportFiles();
+    this.checkBundleHealth();
     logger.info('HousekeepingService', 'performDailyMaintenance', "Daily maintenance tasks completed.");
+  };
+
+  /**
+   * Checks bundle health and creates tasks for critical inventory issues.
+   * Creates task.bundle.critical_inventory for bundles with zero-stock members.
+   */
+  this.checkBundleHealth = function() {
+    const functionName = 'checkBundleHealth';
+    logger.info('HousekeepingService', functionName, "Starting bundle health check.");
+
+    try {
+      // Get bundles with low inventory (threshold 0 = zero stock only for critical)
+      const bundlesWithIssues = BundleService.getBundlesWithLowInventory(1); // Stock < 1 = zero stock
+
+      let criticalTasksCreated = 0;
+
+      for (const bundleData of bundlesWithIssues) {
+        const bundle = bundleData.bundle;
+
+        // Check for zero-stock slots (critical)
+        const zeroStockSlots = bundleData.lowStockSlots.filter(s => s.stock === 0);
+
+        if (zeroStockSlots.length > 0) {
+          // Create critical inventory task for the bundle
+          const skuList = zeroStockSlots.map(s => s.currentSKU).join(', ');
+          try {
+            TaskService.createTask(
+              'task.bundle.critical_inventory',
+              bundle.bundleId,
+              bundle.nameEn || bundle.nameHe || bundle.bundleId,
+              `Critical: Bundle has zero-stock products`,
+              `Bundle "${bundle.nameEn || bundle.nameHe}" has ${zeroStockSlots.length} product(s) with zero inventory: ${skuList}`,
+              null
+            );
+            criticalTasksCreated++;
+          } catch (taskError) {
+            logger.warn('HousekeepingService', functionName, `Could not create critical bundle task: ${taskError.message}`);
+          }
+        }
+      }
+
+      // Monthly review task - create on the 1st of each month
+      const today = new Date();
+      if (today.getDate() === 1) {
+        const stats = BundleService.getBundleStats();
+        if (stats.active > 0) {
+          try {
+            TaskService.createTask(
+              'task.bundle.monthly_review',
+              `review-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+              'Monthly Bundle Review',
+              `Monthly Bundle Review - ${today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+              `Active bundles: ${stats.active}, Needs attention: ${stats.needsAttention}, Low inventory slots: ${stats.lowInventoryCount}`,
+              null
+            );
+            logger.info('HousekeepingService', functionName, 'Created monthly bundle review task.');
+          } catch (taskError) {
+            logger.warn('HousekeepingService', functionName, `Could not create monthly review task: ${taskError.message}`);
+          }
+        }
+      }
+
+      logger.info('HousekeepingService', functionName, `Bundle health check complete. Created ${criticalTasksCreated} critical inventory tasks.`);
+      return true;
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Error during bundle health check: ${e.message}`, e);
+      return false;
+    }
   };
 
   // TODO: Add more specific housekeeping methods as needed.
