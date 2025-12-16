@@ -2,166 +2,196 @@
 
 ## Overview
 
-Add CRM capabilities to jlmops for customer follow-up and behavior-based contact management.
-
-## Goals
-
-1. Follow up with customers after orders are completed
-2. Contact customers based on behavior patterns (repeat, lapsed, new)
-3. Create actionable tasks for manager to track outreach and results
+Build a contact list and customer relationship management system for JLMwines. Focus on core customers (Israeli residents buying for themselves), mine order and email data to identify patterns, and generate actionable tasks for retention and growth.
 
 ---
 
-## Data Sources
+## Data Analysis Summary (Dec 2025)
 
-### WooCommerce Customers
-- Imported to jlmops via existing order sync
-- Unique identifier: email address
-- Contains: order history, language, shipping info, order dates
+### Customer Base (excluding war-related, gift orders)
+- **223 core customers** from 864 orders
+- 71% single-order, 29% repeat (64 customers)
+- ~30% conversion rate from first to repeat order
 
-### Mailchimp Contacts
-- Currently standalone
-- Can export contact list and import to sheet
-- Overlaps with customers but not 1:1
+### Key Patterns
+
+**Language trends:**
+- Hebrew customers growing: 24% (2022) → 34% (2025)
+- Hebrew = 40% of core customers but only 31% of repeat
+- English customers convert to repeat at higher rate
+
+**Location patterns:**
+- Jerusalem dominant: 81 customers (36%), 32% repeat rate
+- Tel Aviv: 12 customers, only 8% repeat rate (poor retention)
+- Smaller cities (Nahariya, Netanya, Haifa) have 67-100% repeat rates
+
+**Order values:**
+- Repeat customers: avg 590 ILS, median 461 ILS
+- Single customers: avg 534 ILS, median 429 ILS
+- Repeat customers spend ~10% more
+
+**Order frequency (repeat customers):**
+- Median: 48 days between orders
+- 75% reorder within 102 days
+- Average: 94 days
+
+**Current customer status:**
+| Status | Single | Repeat | Action |
+|--------|--------|--------|--------|
+| Active (0-30 days) | 5 | 15 | Maintain |
+| Recent (31-90 days) | 2 | 5 | Monitor |
+| Cooling (91-180 days) | 6 | 9 | Re-engage NOW |
+| Lapsed (181-365 days) | 19 | 10 | Win-back |
+| Dormant (365+ days) | 127 | 25 | Long-shot |
+
+### Mailchimp Analysis
+- 632 subscribers total (54% English, 38% Hebrew)
+- 143 core customers in Mailchimp (23%)
+- 80 core customers NOT in Mailchimp (36%) ← capture opportunity
+- 489 subscribers never ordered
+
+**Subscription timing:**
+- 40 subscribed before ordering (newsletter conversion)
+- 97 subscribed at checkout
+- Newsletter-to-customer conversion ~8%
+
+**Engagement scores (MEMBER_RATING):**
+- Almost everyone is rating 2 - not predictive of purchases
+- Rating doesn't correlate with customer status
 
 ---
 
-## Proposed Architecture
+## Thresholds (Data-Driven)
 
-### 1. Unified Contact List (New Sheet: `Contacts` or `Audience`)
+Based on median 48-day reorder interval:
 
-**Core Fields:**
-| Field | Description |
-|-------|-------------|
-| Email | Primary key, dedupe on this |
-| Name | From order or Mailchimp |
-| Is Customer | Y/N - has WooCommerce orders |
-| Is Mailchimp | Y/N - exists in Mailchimp list |
-| Language | From order data (EN/JA/etc) |
-| First Order Date | Earliest order |
-| Last Order Date | Most recent order |
-| Total Orders | Count |
-| Total Spend | Sum of order values |
-| Customer Status | Derived: New / Repeat / Lapsed / Prospect |
-| Notes | Manager notes |
+| Status | Days Since Last Order | Rationale |
+|--------|----------------------|-----------|
+| Active | 0-30 | Within typical reorder window |
+| Recent | 31-90 | Still engaged, approaching reorder |
+| Cooling | 91-180 | Past typical interval, needs nudge |
+| Lapsed | 181-365 | Significantly overdue |
+| Dormant | 365+ | Unlikely to return without intervention |
 
-**Customer Status Logic:**
-- **Prospect**: In Mailchimp but no orders
+---
+
+## Customer Types
+
+### Core Customers (Israeli residents, self-purchase)
 - **New**: 1 order only
 - **Repeat**: 2+ orders
-- **Lapsed**: No order in X months (TBD)
+- **Active Repeat**: Repeat + ordered within 90 days
+- **Cooling Repeat**: Repeat + 91-180 days since order
+- **Lapsed Repeat**: Repeat + 181-365 days since order
 
-### 2. CRM Tasks Sheet
+### Non-Core
+- **Gift Purchaser**: Different billing/shipping name or foreign billing
+- **War-Support**: Used community support coupons (efrat, roshtzurim, gushwarriors)
 
-**Fields:**
-| Field | Description |
-|-------|-------------|
-| Task ID | Auto-generated |
-| Created Date | When task was generated |
-| Due Date | Suggested contact date |
-| Email | Link to contact |
-| Customer Name | For quick reference |
-| Task Type | Follow-up / Win-back / Welcome / Custom |
-| Trigger | What generated this task |
-| Status | Pending / Completed / Skipped |
-| Completed Date | When marked done |
-| Outcome | Manager notes on result |
-| Assigned To | Manager / Mailchimp / Other |
-
-### 3. Task Generation Rules
-
-Automated rules that create tasks:
-
-| Trigger | Task Type | Timing | Notes |
-|---------|-----------|--------|-------|
-| Order completed | Follow-up | X days after | "How was your order?" |
-| First order completed | Welcome | X days after | New customer welcome |
-| No order in X months | Win-back | Immediate | Lapsed customer outreach |
-| Custom query | Custom | Manual | Manager-defined segments |
+### Prospects
+- **Subscriber**: In Mailchimp, never ordered
+- **Recent Subscriber**: Subscribed <90 days ago
+- **Stale Subscriber**: Subscribed 365+ days, never ordered
 
 ---
 
-## Implementation Steps
+## Contact List Schema (SysContacts)
 
-### Phase 1: Foundation
-1. Create Contacts sheet with schema
-2. Build sync function to populate from Orders data
-3. Build import mechanism for Mailchimp export
-4. Implement deduplication by email
-5. Calculate derived fields (status, totals, dates)
-
-### Phase 2: Task System
-1. Create CRM Tasks sheet
-2. Build task generation engine
-3. Implement rule-based triggers
-4. Create manager UI (sidebar or menu) for task management
-5. Add task completion workflow
-
-### Phase 3: Automation
-1. Schedule daily/weekly task generation
-2. Add notifications for new tasks
-3. Build reporting on task completion rates
-
----
-
-## Open Questions
-
-### Timing & Thresholds
-
-1. **Lapsed definition**: How many months without an order = lapsed?
-   - Suggestion: 90 days (3 months)?
-
-2. **Follow-up timing**: Days after order completion for follow-up task?
-   - Suggestion: 7-14 days?
-
-3. **Follow-up scope**: Every completed order, or conditions?
-   - Every order
-   - First order only
-   - First order + every Nth order
-   - Only orders over certain value
-
-### Task Handling
-
-4. **Additional triggers**: Beyond follow-up, welcome, win-back - others?
-   - High-value customer recognition?
-   - Birthday/anniversary?
-   - Product-specific follow-up?
-
-5. **Task location**: New sheet in jlmops workbook, or separate?
-
-6. **Mailchimp-only contacts**: Any specific handling?
-   - Just flag as "prospect"?
-   - Ignore until they order?
-   - Specific outreach tasks?
-
-### Technical
-
-7. **Mailchimp import frequency**: One-time manual, or periodic sync?
-
-8. **Language detection**: Is language reliably in order data, or needs inference?
-
-9. **Historical data**: Process all past orders, or start fresh from implementation date?
+| Field | Type | Source | Description |
+|-------|------|--------|-------------|
+| sc_Email | string | Orders/MC | Primary key |
+| sc_Name | string | Orders/MC | Customer name |
+| sc_Phone | string | Orders | Contact phone |
+| sc_Language | string | Orders/MC | EN or HE |
+| sc_City | string | Orders | Shipping city (normalized) |
+| sc_IsCustomer | boolean | Calc | Has placed orders |
+| sc_IsCore | boolean | Calc | Core customer (not gift/war) |
+| sc_IsSubscribed | boolean | MC | In Mailchimp list |
+| sc_CustomerType | string | Calc | See types above |
+| sc_FirstOrderDate | date | Orders | Earliest order |
+| sc_LastOrderDate | date | Orders | Most recent order |
+| sc_DaysSinceOrder | number | Calc | Updated daily |
+| sc_OrderCount | number | Orders | Total orders |
+| sc_TotalSpend | number | Orders | Sum of order values |
+| sc_AvgOrderValue | number | Calc | Average order |
+| sc_SubscribedDate | date | MC | When joined Mailchimp |
+| sc_DaysSubscribed | number | Calc | Updated daily |
+| sc_Notes | string | Manual | Manager notes |
+| sc_LastUpdated | date | System | Last refresh |
 
 ---
 
-## Dependencies
+## Task Types
 
-- Existing order data in jlmops
-- Mailchimp export capability
-- Manager workflow for task handling
+| Task Type | Trigger | Priority | Assignee |
+|-----------|---------|----------|----------|
+| task.crm.cooling_repeat | Repeat customer 91-180 days | High | Manager |
+| task.crm.lapsed_repeat | Repeat customer 181-365 days | Normal | Manager |
+| task.crm.lapsed_new | Single customer 181-365 days | Normal | Manager |
+| task.crm.welcome | New customer 14 days after order | Normal | Manager |
+| task.crm.convert_subscriber | Subscriber 90+ days, no order | Low | Mailchimp |
+| task.crm.mailchimp_update | Weekly reminder | Normal | Manager |
 
 ---
 
-## Notes
+## Implementation Phases
 
-*Section for additional details as they emerge*
+### Phase 1: Contact List Foundation
+1. Create SysContacts sheet schema
+2. Build ContactService.js
+3. Populate from order history (all historical data)
+4. Import Mailchimp audience
+5. Deduplicate by email
+6. Calculate derived fields
+7. Normalize city names
+
+### Phase 2: Daily Statistics Update
+1. Add contact refresh to housekeeping
+2. Calculate DaysSinceOrder, CustomerType
+3. Flag status changes
+
+### Phase 3: Task Generation
+1. Add CRM task types to taskDefinitions.json
+2. Create CRM project (long-term operational)
+3. Add task generation rules to housekeeping
+4. Deduplication - don't create duplicate tasks
+
+### Phase 4: Manager Interface
+1. Contact list view with filters
+2. Contact detail with order history
+3. Action buttons (phone, email)
+4. Task workflow integration
+
+### Phase 5: Mailchimp Integration
+1. Segment export (lapsed, prospects, etc.)
+2. CSV formatted for Mailchimp import
+3. Track exported contacts
+
+---
+
+## Key Insights for Strategy
+
+1. **Focus on Hebrew customers** - growing segment, lower repeat rate, opportunity to improve
+2. **Jerusalem is the core market** - 36% of customers, good repeat rate
+3. **Tel Aviv needs attention** - low repeat rate despite presence
+4. **Small city loyalty** - customers in smaller cities are more loyal
+5. **Email signups at checkout** - most subscriptions happen at purchase, not from marketing
+6. **Mailchimp engagement scores not useful** - don't rely on MEMBER_RATING for targeting
+7. **36% of customers not subscribed** - opportunity to capture more emails
 
 ---
 
 ## Status
 
-- [ ] Questions answered
-- [ ] Plan approved
+- [x] Data analysis complete
+- [x] Thresholds defined
+- [ ] Schema finalized
 - [ ] Phase 1 implementation
 - [ ] Phase 2 implementation
 - [ ] Phase 3 implementation
+- [ ] Phase 4 implementation
+- [ ] Phase 5 implementation
+
+---
+
+Updated: 2025-12-16

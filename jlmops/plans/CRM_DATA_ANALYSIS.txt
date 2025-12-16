@@ -1,0 +1,42 @@
+Core Customer Analysis Summary
+December 2025
+
+OVERVIEW
+
+From 864 total orders, we identified 223 core customers. Core customers are Israeli residents buying wine for themselves, excluding gift purchasers and war-support orders. Of these 223 customers, 159 placed only one order while 64 are repeat customers with two or more orders. This gives us a 29% repeat rate, meaning roughly 30% of first-time buyers come back.
+
+LANGUAGE TRENDS
+
+Hebrew-speaking customers are a growing segment. In 2022, Hebrew customers made up 24% of the base. By 2025, this grew to 34%. However, Hebrew customers currently represent 40% of all core customers but only 31% of repeat customers. This means English-speaking customers convert to repeat buyers at a higher rate. The Hebrew segment represents an opportunity to improve retention.
+
+LOCATION PATTERNS
+
+Jerusalem dominates with 81 customers, representing 36% of the core customer base. Jerusalem has a solid 32% repeat rate. Tel Aviv has 12 customers but only an 8% repeat rate, indicating poor retention in that market. Interestingly, smaller cities show much higher loyalty. Nahariya, Netanya, and Haifa all show repeat rates between 67% and 100%. Customers in smaller communities appear more loyal.
+
+ORDER VALUES
+
+Repeat customers spend more than single-order customers. Repeat customers average 590 ILS per order with a median of 461 ILS. Single-order customers average 534 ILS with a median of 429 ILS. Repeat customers spend roughly 10% more per order.
+
+ORDER FREQUENCY
+
+For repeat customers, the median time between orders is 48 days. Three quarters of repeat customers reorder within 102 days. The average is 94 days, but this is skewed by a few customers with very long gaps. The 48-day median provides the baseline for defining customer status thresholds.
+
+CURRENT CUSTOMER STATUS
+
+Looking at days since last order, we have 20 active customers who ordered within the last 30 days, split between 5 single-order and 15 repeat. Seven customers are recent, ordering 31 to 90 days ago. Fifteen customers are cooling, at 91 to 180 days, representing the immediate re-engagement opportunity. Twenty-nine customers are lapsed at 181 to 365 days and need win-back efforts. The remaining 152 customers are dormant at over a year since ordering.
+
+MAILCHIMP ANALYSIS
+
+The Mailchimp list has 632 subscribers total. Of the 223 core customers, 143 are in Mailchimp while 80 are not subscribed, representing 36% of customers not receiving email marketing. This is a capture opportunity. Meanwhile, 489 Mailchimp subscribers have never placed an order.
+
+Regarding subscription timing, 40 subscribers joined before their first order, showing newsletter-to-customer conversion. The remaining 97 subscribed at checkout. The newsletter conversion rate is approximately 8%.
+
+Mailchimp engagement scores were examined but are not useful for targeting. Almost all subscribers have a rating of 2, and this rating does not correlate with customer status or purchase behavior.
+
+KEY STRATEGIC INSIGHTS
+
+First, focus retention efforts on Hebrew customers. They are growing as a segment but convert to repeat buyers at a lower rate than English speakers. Second, Jerusalem is the core market with good performance. Third, Tel Aviv needs attention due to poor retention despite presence. Fourth, smaller city customers show higher loyalty and may respond well to personal outreach. Fifth, most email signups happen at purchase rather than from marketing efforts. Sixth, do not rely on Mailchimp engagement scores for targeting. Seventh, 36% of customers are not subscribed to email, representing an opportunity to capture more addresses.
+
+RECOMMENDED THRESHOLDS
+
+Based on the 48-day median reorder interval, customer status should be defined as follows. Active means ordered within 30 days and represents customers within the typical reorder window. Recent means 31 to 90 days and represents still engaged customers approaching reorder time. Cooling means 91 to 180 days and represents customers past the typical interval who need a nudge. Lapsed means 181 to 365 days and represents significantly overdue customers. Dormant means over 365 days and represents customers unlikely to return without intervention.

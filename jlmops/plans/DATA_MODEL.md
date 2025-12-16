@@ -409,8 +409,14 @@ This system provides a flexible, configurable way to manage all user and system-
     *   `st_LinkedEntityId`: The specific subject of the task (e.g., SKU, Order ID) OR the URL/Link to the asset/content (e.g., Google Doc ID).
     *   `st_SessionId`: The ID of the session that generated this task.
     *   `st_CreatedDate`
-    *   `st_StartDate`: **(New)** The date work should begin on this task.
-    *   `st_DueDate`
+    *   `st_StartDate`: The date work begins on this task.
+        - Set automatically on creation for `immediate` due_pattern tasks
+        - Set when task is assigned (manual or auto-assignment)
+        - **Invariant:** If st_StartDate has value, st_DueDate and st_Status='Assigned' must also be set
+    *   `st_DueDate`: The deadline for task completion.
+        - Calculated from `due_pattern` in taskDefinitions
+        - Set when task is assigned
+        - **Invariant:** If st_DueDate has value, st_StartDate and st_Status='Assigned' must also be set
     *   `st_DoneDate`: Populated when the task is closed.
     *   `st_Notes`
 
