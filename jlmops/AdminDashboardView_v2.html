@@ -1,0 +1,210 @@
+<div class="container-fluid">
+  <div class="row mb-3">
+    <div class="col-12">
+      <h4>Dashboard</h4>
+      <small id="dashboard-timestamp" class="text-muted"></small>
+    </div>
+  </div>
+
+  <!-- Row 1: System, Orders, Inventory, Products -->
+  <div class="row">
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">System</div>
+        <div class="card-body" id="card-system">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">Orders</div>
+        <div class="card-body" id="card-orders">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">Inventory</div>
+        <div class="card-body" id="card-inventory">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">Products</div>
+        <div class="card-body" id="card-products">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Projects, Admin Tasks -->
+  <div class="row mt-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">Projects</div>
+        <div class="card-body" id="card-projects">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">Admin Tasks</div>
+        <div class="card-body" id="card-tasks">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(handleData)
+      .withFailureHandler(handleError)
+      .WebAppDashboardV2_getData();
+  }
+
+  function handleData(response) {
+    if (!response.success) {
+      handleError({ message: response.error });
+      return;
+    }
+
+    var data = response.data;
+
+    // Timestamp
+    document.getElementById('dashboard-timestamp').textContent =
+      'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
+
+    // Cards
+    renderSystemCard(data.taskCounts, data.projects);
+    renderOrdersCard(data.taskCounts);
+    renderInventoryCard(data.taskCounts);
+    renderProductsCard(data.taskCounts);
+    renderProjectsCard(data.projects);
+    renderTasksCard(data.taskCounts);
+  }
+
+  function handleError(err) {
+    console.error('Dashboard error:', err);
+    document.querySelectorAll('.card-body').forEach(function(el) {
+      el.innerHTML = '<p class="text-danger">Error loading data</p>';
+    });
+  }
+
+  function countByPrefix(counts, prefix) {
+    var total = 0;
+    Object.keys(counts).forEach(function(type) {
+      if (type.indexOf(prefix) > -1) {
+        total += counts[type];
+      }
+    });
+    return total;
+  }
+
+  function renderSystemCard(counts, projects) {
+    var el = document.getElementById('card-system');
+    var syncTasks = counts['task.sync.daily_session'] || 0;
+    var exportTasks = countByPrefix(counts, 'export');
+    var confirmTasks = countByPrefix(counts, 'confirmation');
+
+    var html = '';
+    html += '<p class="mb-1">Sync Sessions: <strong>' + syncTasks + '</strong></p>';
+    html += '<p class="mb-1">Exports Pending: <strong>' + exportTasks + '</strong></p>';
+    html += '<p class="mb-1">Confirmations: <strong>' + confirmTasks + '</strong></p>';
+    el.innerHTML = html;
+  }
+
+  function renderOrdersCard(counts) {
+    var el = document.getElementById('card-orders');
+    var packingTasks = counts['task.order.packing_available'] || 0;
+    var orderValidation = counts['task.validation.order_staging_failure'] || 0;
+
+    var html = '';
+    html += '<p class="mb-1">Packing Slips Ready: <strong>' + packingTasks + '</strong></p>';
+    html += '<p class="mb-1">Order Issues: <strong>' + orderValidation + '</strong></p>';
+    el.innerHTML = html;
+  }
+
+  function renderInventoryCard(counts) {
+    var el = document.getElementById('card-inventory');
+    var bruryaTasks = counts['task.inventory.brurya_update'] || 0;
+    var negativeInv = counts['task.validation.comax_internal_audit'] || 0;
+    var archivedStock = counts['task.validation.archived_comax_stock_mismatch'] || 0;
+
+    var html = '';
+    html += '<p class="mb-1">Brurya Update: <strong>' + bruryaTasks + '</strong></p>';
+    html += '<p class="mb-1">Negative Inventory: <strong>' + negativeInv + '</strong></p>';
+    html += '<p class="mb-1">Archived Stock Issues: <strong>' + archivedStock + '</strong></p>';
+    el.innerHTML = html;
+  }
+
+  function renderProductsCard(counts) {
+    var el = document.getElementById('card-products');
+    var bundleCritical = counts['task.bundle.critical_inventory'] || 0;
+    var bundleLow = counts['task.bundle.low_inventory'] || 0;
+    var onboardingSuggestions = counts['task.onboarding.suggestion'] || 0;
+    var onboardingAdd = counts['task.onboarding.add_product'] || 0;
+    var validationCount = countByPrefix(counts, 'validation') - (counts['task.validation.comax_internal_audit'] || 0) - (counts['task.validation.order_staging_failure'] || 0) - (counts['task.validation.archived_comax_stock_mismatch'] || 0);
+
+    var html = '';
+    html += '<p class="mb-1">Bundle Critical: <strong>' + bundleCritical + '</strong></p>';
+    html += '<p class="mb-1">Bundle Low Stock: <strong>' + bundleLow + '</strong></p>';
+    html += '<p class="mb-1">New Product Suggestions: <strong>' + onboardingSuggestions + '</strong></p>';
+    html += '<p class="mb-1">Products to Add: <strong>' + onboardingAdd + '</strong></p>';
+    html += '<p class="mb-1">Validation Issues: <strong>' + validationCount + '</strong></p>';
+    el.innerHTML = html;
+  }
+
+  function renderProjectsCard(projects) {
+    var el = document.getElementById('card-projects');
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    projects.forEach(function(proj) {
+      var badge = proj.taskCount > 0 ? '<strong>' + proj.taskCount + '</strong>' : '<span class="text-success">0</span>';
+      html += '<tr><td>' + proj.name + '</td><td class="text-right">' + badge + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function renderTasksCard(counts) {
+    var el = document.getElementById('card-tasks');
+    var total = Object.keys(counts).reduce(function(sum, k) { return sum + counts[k]; }, 0);
+
+    if (total === 0) {
+      el.innerHTML = '<p class="text-success mb-0">No open tasks</p>';
+      return;
+    }
+
+    // Sort by count descending
+    var sorted = Object.keys(counts).map(function(type) {
+      return { type: type, count: counts[type] };
+    }).sort(function(a, b) { return b.count - a.count; });
+
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    sorted.slice(0, 10).forEach(function(item) {
+      var shortName = item.type.replace('task.', '').replace('validation.', 'val.').replace('confirmation.', 'conf.');
+      html += '<tr><td>' + shortName + '</td><td class="text-right"><strong>' + item.count + '</strong></td></tr>';
+    });
+    if (sorted.length > 10) {
+      var remaining = sorted.slice(10).reduce(function(sum, i) { return sum + i.count; }, 0);
+      html += '<tr><td class="text-muted">... and ' + (sorted.length - 10) + ' more types</td><td class="text-right text-muted">' + remaining + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  // Load on init
+  loadDashboard();
+})();
+</script>

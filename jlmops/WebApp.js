@@ -61,6 +61,7 @@ function getDashboardForRole(role) {
 function getView(viewName) {
   const viewMap = {
     'AdminDashboard': 'AdminDashboardView',
+    'AdminDashboardV2': 'AdminDashboardView_v2',
     'ManagerDashboard': 'ManagerDashboardView',
     'SystemHealth': 'SystemHealthView',
     'SystemHealthWidget': 'SystemHealthWidget',
