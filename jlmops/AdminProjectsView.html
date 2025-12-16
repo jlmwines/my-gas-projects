@@ -1,151 +1,227 @@
 <div class="container-fluid">
-  <!-- Section 1: Stats Overview -->
-  <div class="row mb-3">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center py-2">
-          <span><strong>Projects</strong></span>
-          <div>
-            <button id="btn-refresh-projects" class="btn btn-sm btn-light mr-1">Refresh</button>
-            <button id="btn-new-project" class="btn btn-sm btn-light">+ New</button>
-          </div>
-        </div>
-        <div class="card-body py-2">
-          <div class="row text-center">
-            <div class="col"><div class="small text-muted">Total</div><div class="h5 mb-0" id="stat-total">-</div></div>
-            <div class="col"><div class="small text-muted">Planning</div><div class="h5 mb-0 text-warning" id="stat-planning">-</div></div>
-            <div class="col"><div class="small text-muted">Active</div><div class="h5 mb-0 text-success" id="stat-active">-</div></div>
-            <div class="col"><div class="small text-muted">Done</div><div class="h5 mb-0 text-info" id="stat-completed">-</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header py-2"><strong>Open Tasks</strong></div>
-        <div class="card-body py-2">
-          <div class="row text-center">
-            <div class="col"><div class="small text-muted">Total</div><div class="h5 mb-0" id="task-stat-total">-</div></div>
-            <div class="col"><div class="small text-muted">Critical</div><div class="h5 mb-0 text-danger" id="task-stat-critical">-</div></div>
-            <div class="col"><div class="small text-muted">High</div><div class="h5 mb-0 text-warning" id="task-stat-high">-</div></div>
-            <div class="col"><div class="small text-muted">New</div><div class="h5 mb-0 text-primary" id="task-stat-new">-</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 2: Project List -->
-  <div class="row mb-3">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body p-0">
-          <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-            <table class="table table-sm table-hover mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th>Project</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Tasks</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="project-list-body"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 3: All Tasks -->
-  <div class="row mb-3" id="all-tasks-section">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-          <div>
-            <strong>All Tasks</strong>
-            <div class="btn-group btn-group-sm ml-3" id="task-filter-tabs">
-              <button class="btn btn-outline-secondary active" data-filter="mine">My Tasks</button>
-              <button class="btn btn-outline-secondary" data-filter="unassigned">Unassigned</button>
-              <button class="btn btn-outline-secondary" data-filter="all">All</button>
-            </div>
-          </div>
-          <span class="text-muted small" id="all-tasks-count">-</span>
-        </div>
-        <div class="card-body p-0">
-          <div id="all-tasks-container" style="max-height: 300px; overflow-y: auto;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Section 4: Project Detail + Tasks -->
-  <div class="row" id="project-detail-section" style="display: none;">
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-          <strong id="editor-project-name">Project</strong>
-          <button id="btn-close-editor" class="btn btn-sm btn-light">&times;</button>
-        </div>
-        <div class="card-body">
-          <form id="project-form">
-            <div class="form-group">
-              <label class="small">Name</label>
-              <input type="text" class="form-control form-control-sm" id="field-name">
-            </div>
-            <div class="form-row">
-              <div class="col-6">
-                <div class="form-group">
-                  <label class="small">Type</label>
-                  <select class="form-control form-control-sm" id="field-type">
-                    <option value="CAMPAIGN">Campaign</option>
-                    <option value="OPERATIONAL">Operational</option>
-                    <option value="ONE_OFF">One-Off</option>
-                  </select>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="form-group">
-                  <label class="small">Status</label>
-                  <select class="form-control form-control-sm" id="field-status">
-                    <option value="PLANNING">Planning</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="ARCHIVED">Archived</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="col-6">
-                <div class="form-group">
-                  <label class="small">Start</label>
-                  <input type="date" class="form-control form-control-sm" id="field-start-date">
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="form-group">
-                  <label class="small">End</label>
-                  <input type="date" class="form-control form-control-sm" id="field-end-date">
-                </div>
-              </div>
-            </div>
-            <button type="button" id="btn-save-project" class="btn btn-sm btn-primary btn-block">Save</button>
-          </form>
-        </div>
-      </div>
-    </div>
+  <div class="row">
+    <!-- LEFT COLUMN: Navigation -->
     <div class="col-md-8">
-      <div class="card">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <!-- Header: Nav + Breadcrumb + New button -->
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
-          <strong>Tasks</strong>
-          <span class="text-muted small" id="task-count-label">0 tasks</span>
+          <div class="d-flex align-items-center">
+            <button id="btn-home" class="btn btn-sm btn-light mr-1" title="Home">⌂</button>
+            <button id="btn-back" class="btn btn-sm btn-light mr-2" title="Back" style="display:none;">←</button>
+            <span id="breadcrumb">Projects</span>
+          </div>
+          <button id="btn-new" class="btn btn-sm btn-light">+ Project</button>
         </div>
-        <div class="card-body p-0">
-          <div id="project-tasks-container" style="max-height: 350px; overflow-y: auto;"></div>
+
+        <!-- Subheader: Column headers + filters (Projects mode) -->
+        <div id="subheader-projects" class="border-bottom bg-light px-2 py-1">
+          <div class="row small font-weight-bold text-muted">
+            <div class="col-5">
+              <a href="#" class="text-muted sort-col" data-field="name">Name <span id="sort-icon-name">▾</span></a>
+            </div>
+            <div class="col-3">
+              <select id="filter-project-status" class="form-control form-control-sm py-0" style="height:22px;font-size:11px;">
+                <option value="all">Status</option>
+                <option value="PLANNING">Planning</option>
+                <option value="ACTIVE">Active</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
+            <div class="col-2 text-center">Tasks</div>
+            <div class="col-2"></div>
+          </div>
         </div>
+
+        <!-- Subheader: Column headers + filters (Tasks mode) -->
+        <div id="subheader-tasks" class="border-bottom bg-light px-2 py-1" style="display:none;">
+          <div class="row small font-weight-bold text-muted align-items-center">
+            <div class="col-3">Title</div>
+            <div class="col-2">
+              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="all">Assignee</option>
+              </select>
+            </div>
+            <div class="col-1">
+              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="all">Status</option>
+              </select>
+            </div>
+            <div class="col-2">
+              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="all">Priority</option>
+              </select>
+            </div>
+            <div class="col-1">
+              <a href="#" class="text-muted sort-col" data-field="due">Due <span id="sort-icon-due"></span></a>
+            </div>
+            <div class="col-1">Done</div>
+            <div class="col-2 text-right">
+              <label class="mb-0 small" style="font-weight:normal;">
+                <input type="checkbox" id="toggle-show-all"> Show all
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Area -->
+        <div class="card-body p-0" style="overflow-y: auto;">
+          <div id="list-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Detail Panel -->
+    <div class="col-md-4">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <div class="card-header py-2">
+          <strong id="detail-title">Overview</strong>
+        </div>
+        <div class="card-body" style="overflow-y: auto;">
+          <!-- Default: Stats summary -->
+          <div id="detail-summary">
+            <div class="row text-center mb-4">
+              <div class="col">
+                <div class="h3 mb-0" id="stat-total">-</div>
+                <div class="small text-muted">Projects</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0 text-success" id="stat-active">-</div>
+                <div class="small text-muted">Active</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0" id="stat-tasks">-</div>
+                <div class="small text-muted">Open Tasks</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0 text-danger" id="stat-critical">-</div>
+                <div class="small text-muted">Critical</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project detail form -->
+          <div id="detail-project" style="display:none;">
+            <form id="project-form">
+              <div class="form-group">
+                <label class="small font-weight-bold">Project Name</label>
+                <input type="text" class="form-control" id="field-name">
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Type</label>
+                    <select class="form-control" id="field-type">
+                      <option value="ONE_OFF">One-Off</option>
+                      <option value="CAMPAIGN">Campaign</option>
+                      <option value="OPERATIONAL">Operational</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Status</label>
+                    <select class="form-control" id="field-status">
+                      <option value="PLANNING">Planning</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Start Date</label>
+                    <input type="date" class="form-control" id="field-start-date">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">End Date</label>
+                    <input type="date" class="form-control" id="field-end-date">
+                  </div>
+                </div>
+              </div>
+              <hr>
+              <button type="button" id="btn-save-project" class="btn btn-light">Save Changes</button>
+            </form>
+          </div>
+
+          <!-- Task detail form -->
+          <div id="detail-task" style="display:none;">
+            <form id="task-form">
+              <div class="form-group">
+                <label class="small font-weight-bold">Title</label>
+                <input type="text" class="form-control" id="task-field-title" readonly>
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Status</label>
+                    <select class="form-control" id="task-field-status"></select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Priority</label>
+                    <select class="form-control" id="task-field-priority">
+                      <option value="Critical">Critical</option>
+                      <option value="High">High</option>
+                      <option value="Normal">Normal</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Assigned To</label>
+                    <input type="text" class="form-control" id="task-field-assignee" readonly>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Due Date</label>
+                    <input type="text" class="form-control" id="task-field-due" readonly>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="small font-weight-bold">Linked Entity</label>
+                <input type="text" class="form-control" id="task-field-entity" readonly>
+              </div>
+              <div class="form-group">
+                <label class="small font-weight-bold">Notes</label>
+                <textarea class="form-control" id="task-field-notes" rows="3" readonly></textarea>
+              </div>
+              <hr>
+              <div class="d-flex justify-content-between">
+                <button type="button" id="btn-save-task" class="btn btn-light">Save Status</button>
+                <div>
+                  <button type="button" id="btn-complete-task" class="btn btn-light mr-2">Mark Done</button>
+                  <button type="button" id="btn-cancel-task" class="btn btn-light">Cancel Task</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body py-4">
+        <p id="confirm-message" class="mb-0 text-center">Are you sure?</p>
+      </div>
+      <div class="modal-footer py-2 justify-content-center">
+        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">No</button>
+        <button type="button" class="btn btn-sm btn-danger" id="confirm-yes">Yes</button>
       </div>
     </div>
   </div>
@@ -182,8 +258,42 @@
         </form>
       </div>
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-sm btn-primary" id="btn-create-project">Create</button>
+        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Task Modal -->
+<div class="modal fade" id="newTaskModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">New Task</h6>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="new-task-form">
+          <div class="form-group">
+            <input type="text" class="form-control form-control-sm" id="new-task-title" placeholder="Task title" required>
+          </div>
+          <div class="form-group">
+            <select class="form-control form-control-sm" id="new-task-priority">
+              <option value="Normal">Normal Priority</option>
+              <option value="High">High Priority</option>
+              <option value="Critical">Critical</option>
+              <option value="Low">Low Priority</option>
+            </select>
+          </div>
+          <div class="form-group mb-0">
+            <textarea class="form-control form-control-sm" id="new-task-notes" placeholder="Notes (optional)" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-light" id="btn-create-task">Create</button>
       </div>
     </div>
   </div>
@@ -193,13 +303,29 @@
 (function() {
   'use strict';
 
-  var currentProjectId = null;
-  var allProjects = [];
-  var allTasks = [];
-  var currentUserEmail = '';
-  var currentFilter = 'mine';
-  var statusOptions = ['New', 'In Progress', 'Review', 'Blocked', 'Done', 'Cancelled'];
+  // State
+  var state = {
+    projects: [],
+    tasks: [],
+    allTasks: [],  // includes done/closed
+    statusOptions: ['New', 'Assigned', 'Review', 'Done', 'Closed'],
+    priorityOptions: ['Critical', 'High', 'Normal', 'Low'],
+    assignees: [],
+    mode: 'projects',
+    selectedProjectId: null,
+    selectedTaskId: null,
+    projectStatusFilter: 'all',
+    taskStatusFilter: 'all',
+    taskPriorityFilter: 'all',
+    taskAssigneeFilter: 'all',
+    showAllTasks: false,
+    sortField: 'name',
+    sortDir: 'asc'
+  };
 
+  var confirmCallback = null;
+
+  // Init
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -207,329 +333,505 @@
   }
 
   function init() {
-    loadCurrentUser();
-    loadStats();
-    loadTaskStats();
-    loadProjects();
-    loadAllTasks();
+    populateFilterDropdowns();
+    loadData();
     bindEventHandlers();
   }
 
-  function loadCurrentUser() {
+  function populateFilterDropdowns() {
+    // Status filter
+    var filterStatus = document.getElementById('filter-task-status');
+    filterStatus.innerHTML = '<option value="all">Status</option>' +
+      state.statusOptions.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+      }).join('');
+
+    // Priority filter
+    var filterPriority = document.getElementById('filter-task-priority');
+    filterPriority.innerHTML = '<option value="all">Pri</option>' +
+      state.priorityOptions.map(function(p) {
+        return '<option value="' + p + '">' + p + '</option>';
+      }).join('');
+
+    // Task detail status dropdown
+    var taskFieldSelect = document.getElementById('task-field-status');
+    taskFieldSelect.innerHTML = state.statusOptions.map(function(s) {
+      return '<option value="' + s + '">' + s + '</option>';
+    }).join('');
+  }
+
+  function populateAssigneeFilter() {
+    // Extract unique assignees from tasks
+    var assigneeSet = {};
+    state.tasks.forEach(function(t) {
+      if (t.st_AssignedTo) assigneeSet[t.st_AssignedTo] = true;
+    });
+    state.assignees = Object.keys(assigneeSet).sort();
+
+    var filterAssignee = document.getElementById('filter-task-assignee');
+    filterAssignee.innerHTML = '<option value="all">Assignee</option>' +
+      state.assignees.map(function(a) {
+        var short = a.split('@')[0];
+        return '<option value="' + a + '">' + short + '</option>';
+      }).join('');
+  }
+
+  function loadData() {
     google.script.run
-      .withSuccessHandler(function(email) {
-        currentUserEmail = email || '';
-        renderAllTasks(); // Re-render with user context
+      .withSuccessHandler(function(result) {
+        if (!result.error) {
+          state.projects = result.data || [];
+          render();
+          updateStats();
+        }
       })
-      .WebAppTasks_getCurrentUserEmail();
+      .WebAppProjects_getAllProjects();
+
+    loadTasks();
+  }
+
+  function loadTasks() {
+    var fetchFn = state.showAllTasks ? 'WebAppTasks_getAllTasks' : 'WebAppTasks_getAllOpenTasks';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.error) {
+          state.tasks = result.data || [];
+          populateAssigneeFilter();
+          render();
+          updateStats();
+        }
+      })
+      [fetchFn]();
   }
 
   function bindEventHandlers() {
-    document.getElementById('btn-refresh-projects').addEventListener('click', function() {
-      loadStats(); loadTaskStats(); loadProjects(); loadAllTasks();
-      if (currentProjectId) loadProjectForEditing(currentProjectId);
-    });
-    document.getElementById('btn-new-project').addEventListener('click', function() {
-      $('#newProjectModal').modal('show');
-    });
-    document.getElementById('btn-create-project').addEventListener('click', createProject);
-    document.getElementById('btn-save-project').addEventListener('click', saveProject);
-    document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
+    document.getElementById('btn-home').addEventListener('click', goHome);
+    document.getElementById('btn-back').addEventListener('click', goBack);
+    document.getElementById('btn-new').addEventListener('click', handleNew);
 
-    // Task filter tabs
-    document.querySelectorAll('#task-filter-tabs button').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('#task-filter-tabs button').forEach(function(b) { b.classList.remove('active'); });
-        this.classList.add('active');
-        currentFilter = this.dataset.filter;
-        renderAllTasks();
+    document.getElementById('filter-project-status').addEventListener('change', function() {
+      state.projectStatusFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-status').addEventListener('change', function() {
+      state.taskStatusFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-priority').addEventListener('change', function() {
+      state.taskPriorityFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-assignee').addEventListener('change', function() {
+      state.taskAssigneeFilter = this.value;
+      render();
+    });
+
+    document.getElementById('toggle-show-all').addEventListener('change', function() {
+      state.showAllTasks = this.checked;
+      loadTasks();
+    });
+
+    document.querySelectorAll('.sort-col').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        var field = this.dataset.field;
+        if (state.sortField === field) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortField = field;
+          state.sortDir = 'asc';
+        }
+        render();
+      });
+    });
+
+    document.getElementById('btn-save-project').addEventListener('click', saveProject);
+    document.getElementById('btn-save-task').addEventListener('click', saveTaskStatus);
+
+    document.getElementById('btn-complete-task').addEventListener('click', function() {
+      showConfirm('Mark this task as complete?', function() {
+        completeTask(state.selectedTaskId);
+      });
+    });
+
+    document.getElementById('btn-cancel-task').addEventListener('click', function() {
+      showConfirm('Cancel this task? This cannot be undone.', function() {
+        cancelTask(state.selectedTaskId);
+      });
+    });
+
+    document.getElementById('confirm-yes').addEventListener('click', function() {
+      $('#confirmModal').modal('hide');
+      if (confirmCallback) confirmCallback();
+    });
+
+    document.getElementById('btn-create-project').addEventListener('click', createProject);
+    document.getElementById('btn-create-task').addEventListener('click', createTask);
+  }
+
+  // === NAVIGATION ===
+
+  function goHome() {
+    state.mode = 'projects';
+    state.selectedProjectId = null;
+    state.selectedTaskId = null;
+    state.taskStatusFilter = 'all';
+    state.taskPriorityFilter = 'all';
+    state.taskAssigneeFilter = 'all';
+    document.getElementById('filter-task-status').value = 'all';
+    document.getElementById('filter-task-priority').value = 'all';
+    document.getElementById('filter-task-assignee').value = 'all';
+    render();
+  }
+
+  function goBack() {
+    if (state.mode === 'tasks') {
+      goHome();
+    }
+  }
+
+  function selectProject(projectId) {
+    state.selectedProjectId = projectId;
+    state.selectedTaskId = null;
+    state.mode = 'tasks';
+    state.taskStatusFilter = 'all';
+    document.getElementById('filter-task-status').value = 'all';
+    render();
+  }
+
+  function selectTask(taskId) {
+    state.selectedTaskId = taskId;
+    renderDetailPanel();
+  }
+
+  function handleNew() {
+    if (state.mode === 'projects') {
+      $('#newProjectModal').modal('show');
+    } else {
+      $('#newTaskModal').modal('show');
+    }
+  }
+
+  // === RENDERING ===
+
+  function render() {
+    renderHeader();
+    renderSubheader();
+    renderList();
+    renderDetailPanel();
+  }
+
+  function renderHeader() {
+    var backBtn = document.getElementById('btn-back');
+    var breadcrumb = document.getElementById('breadcrumb');
+    var newBtn = document.getElementById('btn-new');
+
+    if (state.mode === 'projects') {
+      backBtn.style.display = 'none';
+      breadcrumb.textContent = 'Projects';
+      newBtn.textContent = '+ Project';
+    } else {
+      backBtn.style.display = '';
+      var project = getSelectedProject();
+      var projectName = project ? (project.name || project.spro_Name) : 'Project';
+      breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + esc(projectName);
+      newBtn.textContent = '+ Task';
+    }
+  }
+
+  function renderSubheader() {
+    var projectsHeader = document.getElementById('subheader-projects');
+    var tasksHeader = document.getElementById('subheader-tasks');
+
+    if (state.mode === 'projects') {
+      projectsHeader.style.display = '';
+      tasksHeader.style.display = 'none';
+      updateSortIcons('name');
+    } else {
+      projectsHeader.style.display = 'none';
+      tasksHeader.style.display = '';
+      updateSortIcons('title');
+    }
+  }
+
+  function updateSortIcons(defaultField) {
+    document.querySelectorAll('.sort-col span').forEach(function(el) {
+      el.textContent = '';
+    });
+    var iconId = 'sort-icon-' + state.sortField;
+    var icon = document.getElementById(iconId);
+    if (icon) {
+      icon.textContent = state.sortDir === 'asc' ? '▾' : '▴';
+    }
+  }
+
+  function renderList() {
+    var container = document.getElementById('list-container');
+
+    if (state.mode === 'projects') {
+      renderProjectsList(container);
+    } else {
+      renderTasksList(container);
+    }
+  }
+
+  function renderProjectsList(container) {
+    var projects = getFilteredProjects();
+
+    // Sort
+    projects = sortItems(projects, function(p) {
+      if (state.sortField === 'name') return (p.name || p.spro_Name || '').toLowerCase();
+      return '';
+    });
+
+    if (projects.length === 0) {
+      container.innerHTML = '<div class="text-muted p-3">No projects</div>';
+      return;
+    }
+
+    container.innerHTML = projects.map(function(p) {
+      var id = p.projectid || p.spro_ProjectId;
+      var name = p.name || p.spro_Name || '-';
+      var status = p.status || p.spro_Status || '';
+      var type = p.type || p.spro_Type || '';
+      var taskCount = getProjectTaskCount(id);
+      var isSelected = id === state.selectedProjectId;
+
+      var statusClass = status === 'ACTIVE' ? 'text-success' : status === 'PLANNING' ? 'text-warning' : 'text-muted';
+
+      return '<div class="row border-bottom py-2 px-2 project-row' + (isSelected ? ' bg-light' : '') + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
+        '<div class="col-5 text-truncate">' + esc(name) + '</div>' +
+        '<div class="col-3"><small class="' + statusClass + '">' + status.toLowerCase() + '</small></div>' +
+        '<div class="col-2 text-center"><span class="badge badge-secondary">' + taskCount + '</span></div>' +
+        '<div class="col-2 text-right text-muted">›</div>' +
+      '</div>';
+    }).join('');
+
+    container.querySelectorAll('.project-row').forEach(function(el) {
+      el.addEventListener('click', function() {
+        selectProject(this.dataset.id);
       });
     });
   }
 
-  function loadStats() {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) return;
-        var stats = result.data;
-        document.getElementById('stat-total').textContent = stats.total || 0;
-        document.getElementById('stat-planning').textContent = stats.byStatus.PLANNING || 0;
-        document.getElementById('stat-active').textContent = stats.byStatus.ACTIVE || 0;
-        document.getElementById('stat-completed').textContent = stats.byStatus.COMPLETED || 0;
-      })
-      .WebAppProjects_getStats();
-  }
+  function renderTasksList(container) {
+    var tasks = getFilteredTasks();
 
-  function loadTaskStats() {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) return;
-        var stats = result.data;
-        document.getElementById('task-stat-total').textContent = stats.total || 0;
-        document.getElementById('task-stat-critical').textContent = stats.byPriority.Critical || 0;
-        document.getElementById('task-stat-high').textContent = stats.byPriority.High || 0;
-        document.getElementById('task-stat-new').textContent = stats.byStatus.New || 0;
-      })
-      .WebAppTasks_getStats();
-  }
-
-  function loadProjects() {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) return;
-        allProjects = result.data || [];
-        renderProjectList(allProjects);
-      })
-      .WebAppProjects_getAllProjects();
-  }
-
-  function loadAllTasks() {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) return;
-        allTasks = result.data || [];
-        renderAllTasks();
-      })
-      .WebAppTasks_getAllOpenTasks();
-  }
-
-  function renderAllTasks() {
-    var container = document.getElementById('all-tasks-container');
-    var countLabel = document.getElementById('all-tasks-count');
-
-    // Filter tasks
-    var filtered = allTasks.filter(function(t) {
-      var assignee = t.st_AssignedTo || '';
-      if (currentFilter === 'mine') return assignee === currentUserEmail;
-      if (currentFilter === 'unassigned') return !assignee;
-      return true; // 'all'
+    // Sort
+    tasks = sortItems(tasks, function(t) {
+      if (state.sortField === 'title') return (t.st_Title || '').toLowerCase();
+      if (state.sortField === 'created') return t.st_CreatedDate || '9999';
+      if (state.sortField === 'start') return t.st_StartDate || '9999';
+      if (state.sortField === 'due') return t.st_DueDate || '9999';
+      if (state.sortField === 'done') return t.st_DoneDate || '9999';
+      return '';
     });
 
-    // Sort by priority (Critical > High > Normal > Low)
-    var priOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
-    filtered.sort(function(a, b) {
-      return (priOrder[a.st_Priority] || 2) - (priOrder[b.st_Priority] || 2);
-    });
-
-    countLabel.textContent = filtered.length + ' task' + (filtered.length !== 1 ? 's' : '');
-
-    if (filtered.length === 0) {
+    if (tasks.length === 0) {
       container.innerHTML = '<div class="text-muted p-3">No tasks</div>';
       return;
     }
 
-    container.innerHTML = '<table class="table table-sm mb-0"><tbody>' + filtered.map(function(t) {
-      var taskId = t.st_TaskId;
+    container.innerHTML = tasks.map(function(t) {
+      var id = t.st_TaskId;
       var title = t.st_Title || '-';
+      var assignee = t.st_AssignedTo ? t.st_AssignedTo.split('@')[0] : '-';
       var status = t.st_Status || 'New';
       var priority = t.st_Priority || 'Normal';
-      var assignee = t.st_AssignedTo || '';
-      var entity = t.st_LinkedEntityName || t.st_LinkedEntityId || '';
-      var isDone = status === 'Done' || status === 'Cancelled';
+      var createdDate = t.st_CreatedDate ? formatDateShort(t.st_CreatedDate) : '-';
+      var startDate = t.st_StartDate ? formatDateShort(t.st_StartDate) : '-';
+      var dueDate = t.st_DueDate ? formatDateShort(t.st_DueDate) : '-';
+      var doneDate = t.st_DoneDate ? formatDateShort(t.st_DoneDate) : '-';
+      var isOverdue = t.st_DueDate && new Date(t.st_DueDate) < new Date() && status !== 'Done' && status !== 'Closed';
+      var isSelected = id === state.selectedTaskId;
 
-      var priBadge = priority === 'Critical' ? '<span class="badge badge-danger">!</span> ' :
-                     priority === 'High' ? '<span class="badge badge-warning">H</span> ' : '';
+      var priBadge = '';
+      if (priority === 'Critical') priBadge = '<span class="badge badge-danger">C</span>';
+      else if (priority === 'High') priBadge = '<span class="badge badge-warning">H</span>';
+      else if (priority === 'Normal') priBadge = '<span class="badge badge-secondary">N</span>';
+      else priBadge = '<span class="badge badge-light">L</span>';
 
-      var assigneeBadge = '';
-      if (currentFilter === 'all' && assignee) {
-        var shortName = assignee.split('@')[0];
-        assigneeBadge = '<span class="badge badge-light ml-1">' + shortName + '</span>';
-      }
+      var dueClass = isOverdue ? 'text-danger font-weight-bold' : '';
 
-      var statusSelect = '<select class="form-control form-control-sm all-task-status" data-task-id="' + taskId + '" ' + (isDone ? 'disabled' : '') + '>' +
-        statusOptions.map(function(s) {
-          return '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
-        }).join('') + '</select>';
+      var isDone = status === 'Done' || status === 'Closed';
+      var rowClass = isDone ? ' text-muted' : '';
 
-      var completeBtn = isDone ? '' : '<button class="btn btn-sm btn-outline-success ml-1 all-task-complete" data-task-id="' + taskId + '" title="Complete"><i class="fas fa-check"></i></button>';
-
-      return '<tr class="' + (isDone ? 'text-muted' : '') + '">' +
-        '<td style="width:45%">' + priBadge + esc(title) + assigneeBadge + (entity ? '<br><small class="text-muted">' + esc(entity) + '</small>' : '') + '</td>' +
-        '<td style="width:35%">' + statusSelect + '</td>' +
-        '<td style="width:20%" class="text-right">' + completeBtn + '</td>' +
-      '</tr>';
-    }).join('') + '</tbody></table>';
-
-    // Bind handlers
-    container.querySelectorAll('.all-task-status').forEach(function(sel) {
-      sel.addEventListener('change', function() {
-        updateAllTaskStatus(this.dataset.taskId, this.value);
-      });
-    });
-    container.querySelectorAll('.all-task-complete').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        completeAllTask(this.dataset.taskId);
-      });
-    });
-  }
-
-  function updateAllTaskStatus(taskId, newStatus) {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) { alert('Error: ' + result.error); return; }
-        loadTaskStats();
-        loadAllTasks();
-        loadProjects();
-      })
-      .WebAppTasks_updateTaskStatus(taskId, newStatus);
-  }
-
-  function completeAllTask(taskId) {
-    google.script.run
-      .withSuccessHandler(function(success) {
-        if (!success) { alert('Could not complete task'); return; }
-        loadStats(); loadTaskStats(); loadProjects(); loadAllTasks();
-      })
-      .WebAppTasks_completeTaskById(taskId);
-  }
-
-  function renderProjectList(projects) {
-    var tbody = document.getElementById('project-list-body');
-    if (!projects || projects.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No projects</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = projects.map(function(p) {
-      var id = p.projectid || p.spro_ProjectId;
-      var name = p.name || p.spro_Name || '-';
-      var type = p.type || p.spro_Type || '-';
-      var status = p.status || p.spro_Status || '-';
-      var openTasks = (p.taskCount || 0) - (p.completedTaskCount || 0);
-
-      return '<tr class="project-row" data-id="' + id + '" style="cursor:pointer">' +
-        '<td>' + esc(name) + '</td>' +
-        '<td>' + typeBadge(type) + '</td>' +
-        '<td>' + statusBadge(status) + '</td>' +
-        '<td>' + (openTasks > 0 ? '<span class="badge badge-warning">' + openTasks + '</span>' : '<span class="text-muted">0</span>') + '</td>' +
-        '<td class="text-right"><i class="fas fa-chevron-right text-muted"></i></td>' +
-      '</tr>';
+      return '<div class="row border-bottom py-2 px-2 task-row' + (isSelected ? ' bg-light' : '') + rowClass + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
+        '<div class="col-3 text-truncate">' + esc(title) + '</div>' +
+        '<div class="col-2 text-truncate">' + assignee + '</div>' +
+        '<div class="col-1">' + status + '</div>' +
+        '<div class="col-2 text-center">' + priBadge + '</div>' +
+        '<div class="col-1 ' + dueClass + '">' + dueDate + '</div>' +
+        '<div class="col-1">' + doneDate + '</div>' +
+      '</div>';
     }).join('');
 
-    document.querySelectorAll('.project-row').forEach(function(row) {
-      row.addEventListener('click', function() {
-        loadProjectForEditing(this.dataset.id);
+    container.querySelectorAll('.task-row').forEach(function(el) {
+      el.addEventListener('click', function() {
+        selectTask(this.dataset.id);
       });
     });
   }
 
-  function typeBadge(t) {
-    if (t === 'CAMPAIGN') return '<span class="badge" style="background:#6f42c1;color:#fff">Campaign</span>';
-    if (t === 'OPERATIONAL') return '<span class="badge badge-info">Ops</span>';
-    return '<span class="badge badge-secondary">One-Off</span>';
+  function renderDetailPanel() {
+    var summary = document.getElementById('detail-summary');
+    var projectDetail = document.getElementById('detail-project');
+    var taskDetail = document.getElementById('detail-task');
+    var title = document.getElementById('detail-title');
+
+    summary.style.display = 'none';
+    projectDetail.style.display = 'none';
+    taskDetail.style.display = 'none';
+
+    if (state.selectedTaskId) {
+      var task = getSelectedTask();
+      if (task) {
+        title.textContent = 'Task Details';
+        taskDetail.style.display = '';
+        populateTaskForm(task);
+      }
+    } else if (state.selectedProjectId && state.mode === 'tasks') {
+      var project = getSelectedProject();
+      if (project) {
+        title.textContent = 'Project Details';
+        projectDetail.style.display = '';
+        populateProjectForm(project);
+      }
+    } else {
+      title.textContent = 'Overview';
+      summary.style.display = '';
+    }
   }
 
-  function statusBadge(s) {
-    var c = { PLANNING: 'warning', ACTIVE: 'success', COMPLETED: 'info', ARCHIVED: 'secondary' };
-    return '<span class="badge badge-' + (c[s] || 'secondary') + '">' + s + '</span>';
-  }
-
-  function loadProjectForEditing(projectId) {
-    currentProjectId = projectId;
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error || !result.data) {
-          alert('Error: ' + (result.error || 'Not found'));
-          return;
-        }
-        renderProjectEditor(result.data);
-      })
-      .WebAppProjects_getProjectWithTasks(projectId);
-  }
-
-  function renderProjectEditor(project) {
-    document.getElementById('project-detail-section').style.display = 'flex';
-    document.getElementById('editor-project-name').textContent = project.name || project.spro_Name || 'Project';
+  function populateProjectForm(project) {
     document.getElementById('field-name').value = project.name || project.spro_Name || '';
     document.getElementById('field-type').value = project.type || project.spro_Type || 'ONE_OFF';
     document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
-    document.getElementById('field-start-date').value = fmtDateInput(project.startdate || project.spro_StartDate);
-    document.getElementById('field-end-date').value = fmtDateInput(project.enddate || project.spro_EndDate);
-
-    var tasks = project.tasks || [];
-    document.getElementById('task-count-label').textContent = tasks.length + ' task' + (tasks.length !== 1 ? 's' : '');
-    renderProjectTasks(tasks);
+    document.getElementById('field-start-date').value = formatDateInput(project.startdate || project.spro_StartDate);
+    document.getElementById('field-end-date').value = formatDateInput(project.enddate || project.spro_EndDate);
   }
 
-  function renderProjectTasks(tasks) {
-    var container = document.getElementById('project-tasks-container');
-    if (!tasks || tasks.length === 0) {
-      container.innerHTML = '<div class="text-muted p-3">No tasks</div>';
-      return;
-    }
+  function populateTaskForm(task) {
+    document.getElementById('task-field-title').value = task.st_Title || '';
+    document.getElementById('task-field-status').value = task.st_Status || 'New';
+    document.getElementById('task-field-priority').value = task.st_Priority || 'Normal';
+    document.getElementById('task-field-assignee').value = task.st_AssignedTo || '';
+    document.getElementById('task-field-due').value = task.st_DueDate ? formatDate(task.st_DueDate) : '';
+    document.getElementById('task-field-entity').value = task.st_LinkedEntityName || task.st_LinkedEntityId || '';
+    document.getElementById('task-field-notes').value = task.st_Notes || '';
 
-    container.innerHTML = '<table class="table table-sm mb-0"><tbody>' + tasks.map(function(t) {
-      var taskId = t.st_TaskId;
-      var title = t.st_Title || '-';
-      var status = t.st_Status || 'New';
-      var priority = t.st_Priority || 'Normal';
-      var entity = t.st_LinkedEntityName || t.st_LinkedEntityId || '';
-      var isDone = status === 'Done' || status === 'Cancelled';
+    var isDone = task.st_Status === 'Done' || task.st_Status === 'Cancelled';
+    document.getElementById('btn-complete-task').disabled = isDone;
+    document.getElementById('btn-cancel-task').disabled = isDone;
+    document.getElementById('task-field-status').disabled = isDone;
+  }
 
-      var priBadge = priority === 'Critical' ? '<span class="badge badge-danger">!</span> ' :
-                     priority === 'High' ? '<span class="badge badge-warning">H</span> ' : '';
+  function updateStats() {
+    document.getElementById('stat-total').textContent = state.projects.length;
+    document.getElementById('stat-active').textContent = state.projects.filter(function(p) {
+      return (p.status || p.spro_Status) === 'ACTIVE';
+    }).length;
+    document.getElementById('stat-tasks').textContent = state.tasks.length;
+    document.getElementById('stat-critical').textContent = state.tasks.filter(function(t) {
+      return t.st_Priority === 'Critical';
+    }).length;
+  }
 
-      var statusSelect = '<select class="form-control form-control-sm task-status-select" data-task-id="' + taskId + '" ' + (isDone ? 'disabled' : '') + '>' +
-        statusOptions.map(function(s) {
-          return '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
-        }).join('') + '</select>';
+  // === HELPERS ===
 
-      var completeBtn = isDone ? '' : '<button class="btn btn-sm btn-outline-success ml-1 task-complete-btn" data-task-id="' + taskId + '" title="Complete"><i class="fas fa-check"></i></button>';
-
-      return '<tr class="' + (isDone ? 'text-muted' : '') + '">' +
-        '<td style="width:50%">' + priBadge + esc(title) + (entity ? '<br><small class="text-muted">' + esc(entity) + '</small>' : '') + '</td>' +
-        '<td style="width:35%">' + statusSelect + '</td>' +
-        '<td style="width:15%" class="text-right">' + completeBtn + '</td>' +
-      '</tr>';
-    }).join('') + '</tbody></table>';
-
-    // Bind status change handlers
-    container.querySelectorAll('.task-status-select').forEach(function(sel) {
-      sel.addEventListener('change', function() {
-        updateTaskStatus(this.dataset.taskId, this.value);
-      });
-    });
-
-    // Bind complete button handlers
-    container.querySelectorAll('.task-complete-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        completeTask(this.dataset.taskId);
-      });
+  function getSelectedProject() {
+    if (!state.selectedProjectId) return null;
+    return state.projects.find(function(p) {
+      return (p.projectid || p.spro_ProjectId) === state.selectedProjectId;
     });
   }
 
-  function updateTaskStatus(taskId, newStatus) {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          alert('Error: ' + result.error);
-          return;
-        }
-        loadTaskStats();
-        loadProjectForEditing(currentProjectId);
-      })
-      .WebAppTasks_updateTaskStatus(taskId, newStatus);
+  function getSelectedTask() {
+    if (!state.selectedTaskId) return null;
+    return state.tasks.find(function(t) {
+      return t.st_TaskId === state.selectedTaskId;
+    });
   }
 
-  function completeTask(taskId) {
-    google.script.run
-      .withSuccessHandler(function(success) {
-        if (!success) {
-          alert('Could not complete task');
-          return;
-        }
-        loadStats();
-        loadTaskStats();
-        loadProjects();
-        loadProjectForEditing(currentProjectId);
-      })
-      .WebAppTasks_completeTaskById(taskId);
+  function getProjectTaskCount(projectId) {
+    return state.tasks.filter(function(t) {
+      return t.st_ProjectId === projectId;
+    }).length;
   }
 
-  function closeEditor() {
-    currentProjectId = null;
-    document.getElementById('project-detail-section').style.display = 'none';
+  function getFilteredProjects() {
+    return state.projects.filter(function(p) {
+      if (state.projectStatusFilter !== 'all') {
+        var status = p.status || p.spro_Status;
+        if (status !== state.projectStatusFilter) return false;
+      }
+      return true;
+    });
   }
+
+  function getFilteredTasks() {
+    return state.tasks.filter(function(t) {
+      if (state.selectedProjectId && t.st_ProjectId !== state.selectedProjectId) return false;
+      if (state.taskStatusFilter !== 'all' && t.st_Status !== state.taskStatusFilter) return false;
+      if (state.taskPriorityFilter !== 'all' && t.st_Priority !== state.taskPriorityFilter) return false;
+      if (state.taskAssigneeFilter !== 'all' && t.st_AssignedTo !== state.taskAssigneeFilter) return false;
+      return true;
+    });
+  }
+
+  function sortItems(items, keyFn) {
+    return items.slice().sort(function(a, b) {
+      var aVal = keyFn(a);
+      var bVal = keyFn(b);
+      if (aVal < bVal) return state.sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return state.sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function formatDate(v) {
+    if (!v) return '';
+    try {
+      var d = new Date(v);
+      return isNaN(d) ? '' : d.toLocaleDateString();
+    } catch(e) { return ''; }
+  }
+
+  function formatDateShort(v) {
+    if (!v) return '';
+    try {
+      var d = new Date(v);
+      if (isNaN(d)) return '';
+      var m = d.getMonth() + 1;
+      var day = d.getDate();
+      return m + '/' + day;
+    } catch(e) { return ''; }
+  }
+
+  function formatDateInput(v) {
+    if (!v) return '';
+    try {
+      var d = new Date(v);
+      return isNaN(d) ? '' : d.toISOString().split('T')[0];
+    } catch(e) { return ''; }
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showConfirm(message, callback) {
+    document.getElementById('confirm-message').textContent = message;
+    confirmCallback = callback;
+    $('#confirmModal').modal('show');
+  }
+
+  // === API ACTIONS ===
 
   function createProject() {
     var name = document.getElementById('new-project-name').value.trim();
@@ -540,8 +842,7 @@
         if (result.error) { alert('Error: ' + result.error); return; }
         $('#newProjectModal').modal('hide');
         document.getElementById('new-project-form').reset();
-        loadStats();
-        loadProjects();
+        loadData();
       })
       .WebAppProjects_createProject({
         name: name,
@@ -550,16 +851,35 @@
       });
   }
 
-  function saveProject() {
-    if (!currentProjectId) return;
+  function createTask() {
+    var title = document.getElementById('new-task-title').value.trim();
+    if (!title) { alert('Enter task title'); return; }
+    if (!state.selectedProjectId) { alert('No project selected'); return; }
+
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) { alert('Error: ' + result.error); return; }
-        loadStats();
-        loadProjects();
-        document.getElementById('editor-project-name').textContent = document.getElementById('field-name').value;
+        $('#newTaskModal').modal('hide');
+        document.getElementById('new-task-form').reset();
+        loadData();
       })
-      .WebAppProjects_updateProject(currentProjectId, {
+      .WebAppTasks_createTask({
+        projectId: state.selectedProjectId,
+        title: title,
+        priority: document.getElementById('new-task-priority').value,
+        notes: document.getElementById('new-task-notes').value
+      });
+  }
+
+  function saveProject() {
+    if (!state.selectedProjectId) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        loadData();
+      })
+      .WebAppProjects_updateProject(state.selectedProjectId, {
         name: document.getElementById('field-name').value.trim(),
         type: document.getElementById('field-type').value,
         status: document.getElementById('field-status').value,
@@ -568,14 +888,36 @@
       });
   }
 
-  function fmtDateInput(v) {
-    if (!v) return '';
-    try { var d = new Date(v); return isNaN(d) ? '' : d.toISOString().split('T')[0]; } catch(e) { return ''; }
+  function saveTaskStatus() {
+    if (!state.selectedTaskId) return;
+
+    var newStatus = document.getElementById('task-field-status').value;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        loadData();
+      })
+      .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
   }
 
-  function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function completeTask(taskId) {
+    google.script.run
+      .withSuccessHandler(function(success) {
+        if (!success) { alert('Could not complete task'); return; }
+        state.selectedTaskId = null;
+        loadData();
+      })
+      .WebAppTasks_completeTaskById(taskId);
+  }
+
+  function cancelTask(taskId) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        state.selectedTaskId = null;
+        loadData();
+      })
+      .WebAppTasks_updateTaskStatus(taskId, 'Cancelled');
   }
 
 })();

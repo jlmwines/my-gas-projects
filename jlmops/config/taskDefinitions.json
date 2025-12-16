@@ -7,7 +7,8 @@
         "topic", "WebXlt",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -17,7 +18,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -27,7 +29,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -37,7 +40,8 @@
         "topic", "Inventory",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_to_admin_review"
+        "flow_pattern", "manager_to_admin_review",
+        "due_pattern", "next_business_day"
     ],
     [
         "task.template",
@@ -47,7 +51,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -57,7 +62,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_to_admin_review"
+        "flow_pattern", "manager_to_admin_review",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -67,7 +73,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
     ],
     [
         "task.template",
@@ -77,7 +84,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -87,7 +95,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -97,7 +106,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
     ],
     [
         "task.template",
@@ -107,7 +117,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -117,7 +128,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
     ],
     [
         "task.template",
@@ -127,7 +139,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -137,7 +150,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -147,7 +161,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -157,7 +172,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -167,7 +183,8 @@
         "topic", "Orders",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
     ],
     [
         "task.template",
@@ -177,7 +194,8 @@
         "topic", "Inventory",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -187,7 +205,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -197,7 +216,8 @@
         "topic", "System",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -207,7 +227,8 @@
         "topic", "Inventory",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -217,7 +238,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_suggestion"
+        "flow_pattern", "manager_suggestion",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -227,7 +249,8 @@
         "topic", "Products",
         "default_priority", "High",
         "initial_status", "New",
-        "flow_pattern", "manager_to_admin_review"
+        "flow_pattern", "manager_to_admin_review",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -237,7 +260,8 @@
         "topic", "System",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -247,7 +271,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -257,7 +282,8 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
     ],
     [
         "task.template",
@@ -267,7 +293,19 @@
         "topic", "Products",
         "default_priority", "Critical",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
+    ],
+    [
+        "task.template",
+        "task.bundle.low_inventory",
+        "Bundle has member product with low inventory.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ],
     [
         "task.template",
@@ -277,7 +315,8 @@
         "topic", "Orders",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "manager_direct",
+        "due_pattern", "immediate"
     ],
     [
         "task.template",
@@ -287,6 +326,7 @@
         "topic", "Inventory",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "admin_direct"
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
     ]
 ]

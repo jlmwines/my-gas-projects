@@ -10,43 +10,82 @@ const TaskService = (function() {
 
   /**
    * Gets user email by role from system.users config.
+   * Case-insensitive matching (e.g., 'admin' matches 'Admin').
    * @param {string} role The role to find (e.g., 'admin', 'manager').
    * @returns {string|null} Email of user with that role, or null.
    */
   function getUserByRole(role) {
     const users = ConfigService.getConfig('system.users');
     if (!users || !Array.isArray(users)) return null;
-    const user = users.find(u => u.role === role);
+    const user = users.find(u => u.role && u.role.toLowerCase() === role.toLowerCase());
     return user ? user.email : null;
   }
 
   /**
-   * Gets the initial assignee based on flow pattern.
-   * @param {string} flowPattern The flow pattern from task config.
-   * @returns {string|null} Email of assignee or null.
+   * Calculates due date based on pattern.
+   * Business days = Sun-Thu (Israel schedule).
+   * @param {Date} startDate - The start date
+   * @param {string} pattern - 'immediate', 'next_business_day', 'one_week', 'two_weeks'
+   * @returns {Date|null} Due date or null
    */
-  function getInitialAssignee(flowPattern) {
-    switch (flowPattern) {
-      case 'admin_direct':
-        return getUserByRole('admin');
-      case 'manager_to_admin_review':
-      case 'manager_suggestion':
-        return getUserByRole('manager');
+  function calculateDueDate(startDate, pattern) {
+    if (!pattern) return null;
+
+    const dueDate = new Date(startDate);
+
+    switch (pattern) {
+      case 'immediate':
+        // Same day
+        return dueDate;
+
+      case 'next_business_day':
+        // Add 1 day, then skip to Sunday if lands on Fri/Sat
+        dueDate.setDate(dueDate.getDate() + 1);
+        const day = dueDate.getDay();
+        if (day === 5) dueDate.setDate(dueDate.getDate() + 2); // Fri -> Sun
+        if (day === 6) dueDate.setDate(dueDate.getDate() + 1); // Sat -> Sun
+        return dueDate;
+
+      case 'one_week':
+        dueDate.setDate(dueDate.getDate() + 7);
+        return dueDate;
+
+      case 'two_weeks':
+        dueDate.setDate(dueDate.getDate() + 14);
+        return dueDate;
+
       default:
         return null;
     }
   }
 
   /**
-   * Gets the next assignee when status changes to Review.
+   * Gets the initial assignee role based on flow pattern.
    * @param {string} flowPattern The flow pattern from task config.
-   * @param {string} currentAssignee Current assignee email.
-   * @returns {string|null} New assignee email or null if no change.
+   * @returns {string|null} Role name (e.g., 'Manager', 'Administrator') or null.
+   */
+  function getInitialAssignee(flowPattern) {
+    switch (flowPattern) {
+      case 'admin_direct':
+        return 'Administrator';
+      case 'manager_direct':
+      case 'manager_to_admin_review':
+      case 'manager_suggestion':
+        return 'Manager';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Gets the next assignee role when status changes to Review.
+   * @param {string} flowPattern The flow pattern from task config.
+   * @param {string} currentAssignee Current assignee role.
+   * @returns {string|null} New assignee role or null if no change.
    */
   function getReviewAssignee(flowPattern, currentAssignee) {
-    const managerEmail = getUserByRole('manager');
-    if (flowPattern === 'manager_to_admin_review' && currentAssignee === managerEmail) {
-      return getUserByRole('admin');
+    if (flowPattern === 'manager_to_admin_review' && currentAssignee === 'Manager') {
+      return 'Administrator';
     }
     return null;
   }
@@ -167,6 +206,40 @@ const TaskService = (function() {
         const assignee = getInitialAssignee(taskTypeConfig.flow_pattern);
         if (assignee) {
           newRow[assignedToIdx] = assignee;
+        }
+      }
+
+      // --- Date and Status Handling ---
+      const today = new Date();
+      const duePattern = taskTypeConfig.due_pattern;
+      const startDateIdx = headers.indexOf('st_StartDate');
+      const dueDateIdx = headers.indexOf('st_DueDate');
+      const statusIdx = headers.indexOf('st_Status');
+
+      // Rule 1: Only immediate tasks get start date on creation
+      if (duePattern === 'immediate' && startDateIdx > -1 && !newRow[startDateIdx]) {
+        newRow[startDateIdx] = today;
+      }
+
+      // Rule 2: If task has assignee, set all 3 fields atomically
+      if (assignedToIdx > -1 && newRow[assignedToIdx]) {
+        // Set start date (if not already set by immediate rule or options)
+        if (startDateIdx > -1 && !newRow[startDateIdx]) {
+          newRow[startDateIdx] = today;
+        }
+
+        // Set status to Assigned
+        if (statusIdx > -1) {
+          newRow[statusIdx] = 'Assigned';
+        }
+
+        // Calculate and set due date
+        if (dueDateIdx > -1 && duePattern) {
+          const startDate = newRow[startDateIdx] || today;
+          const dueDate = calculateDueDate(startDate, duePattern);
+          if (dueDate) {
+            newRow[dueDateIdx] = dueDate;
+          }
         }
       }
 

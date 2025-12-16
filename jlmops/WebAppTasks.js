@@ -41,6 +41,18 @@ const WebAppTasks = (() => {
    * Fetches tasks from the spreadsheet (bypasses cache).
    * @returns {Array<Object>} An array of open task objects.
    */
+  /**
+   * Converts Date objects to ISO strings for JSON serialization.
+   * @param {*} value - The value to serialize.
+   * @returns {*} The serialized value.
+   */
+  const serializeValue = (value) => {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+    return value;
+  };
+
   const fetchTasksFromSheet = () => {
     const allConfig = ConfigService.getAllConfig();
     const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -57,7 +69,7 @@ const WebAppTasks = (() => {
     const openTasks = taskData.map(row => {
       const task = {};
       taskHeaders.forEach((header, index) => {
-        task[header] = row[index];
+        task[header] = serializeValue(row[index]);
       });
       return task;
     }).filter(task => {
@@ -176,7 +188,7 @@ const WebAppTasks = (() => {
       if (foundTaskRow) {
         const task = {};
         taskHeaders.forEach((header, index) => {
-          task[header] = foundTaskRow[index];
+          task[header] = serializeValue(foundTaskRow[index]);
         });
         return task;
       }
@@ -239,6 +251,46 @@ function WebAppTasks_getAllOpenTasks() {
     return { error: null, data: tasks };
   } catch (e) {
     LoggerService.error('WebAppTasks', 'getAllOpenTasks', e.message, e);
+    return { error: e.message, data: [] };
+  }
+}
+
+/**
+ * Gets all tasks (including Done/Closed) for the Tasks view.
+ * @returns {Object} { error: string|null, data: Array }
+ */
+function WebAppTasks_getAllTasks() {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const sheetNames = allConfig['system.sheet_names'];
+    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+
+    if (!taskSheet || taskSheet.getLastRow() <= 1) {
+      return { error: null, data: [] };
+    }
+
+    const taskData = taskSheet.getRange(2, 1, taskSheet.getLastRow() - 1, taskSheet.getLastColumn()).getValues();
+    const taskHeaders = taskSheet.getRange(1, 1, 1, taskSheet.getLastColumn()).getValues()[0];
+
+    const serializeValue = (value) => {
+      if (value instanceof Date) {
+        return value.toISOString();
+      }
+      return value;
+    };
+
+    const tasks = taskData.map(row => {
+      const task = {};
+      taskHeaders.forEach((header, index) => {
+        task[header] = serializeValue(row[index]);
+      });
+      return task;
+    });
+
+    return { error: null, data: tasks };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'getAllTasks', e.message, e);
     return { error: e.message, data: [] };
   }
 }

@@ -271,27 +271,30 @@ function HousekeepingService() {
   };
 
   /**
-   * Checks bundle health and creates tasks for critical inventory issues.
+   * Checks bundle health and creates tasks for inventory issues.
    * Creates task.bundle.critical_inventory for bundles with zero-stock members.
+   * Creates task.bundle.low_inventory for bundles with low (but not zero) stock.
    */
   this.checkBundleHealth = function() {
     const functionName = 'checkBundleHealth';
     logger.info('HousekeepingService', functionName, "Starting bundle health check.");
 
     try {
-      // Get bundles with low inventory (threshold 0 = zero stock only for critical)
-      const bundlesWithIssues = BundleService.getBundlesWithLowInventory(1); // Stock < 1 = zero stock
+      // Get bundles with low inventory (BundleService uses system.inventory.minimum_stock)
+      const bundlesWithIssues = BundleService.getBundlesWithLowInventory();
 
       let criticalTasksCreated = 0;
+      let lowInventoryTasksCreated = 0;
 
       for (const bundleData of bundlesWithIssues) {
         const bundle = bundleData.bundle;
 
-        // Check for zero-stock slots (critical)
+        // Separate zero-stock (critical) from low-stock (normal)
         const zeroStockSlots = bundleData.lowStockSlots.filter(s => s.stock === 0);
+        const lowStockSlots = bundleData.lowStockSlots.filter(s => s.stock > 0);
 
+        // Create critical inventory task for zero-stock
         if (zeroStockSlots.length > 0) {
-          // Create critical inventory task for the bundle
           const skuList = zeroStockSlots.map(s => s.currentSKU).join(', ');
           try {
             TaskService.createTask(
@@ -305,6 +308,24 @@ function HousekeepingService() {
             criticalTasksCreated++;
           } catch (taskError) {
             logger.warn('HousekeepingService', functionName, `Could not create critical bundle task: ${taskError.message}`);
+          }
+        }
+
+        // Create low inventory task for non-zero low stock (only if no critical task for same bundle)
+        if (lowStockSlots.length > 0 && zeroStockSlots.length === 0) {
+          const skuList = lowStockSlots.map(s => `${s.currentSKU}(${s.stock})`).join(', ');
+          try {
+            TaskService.createTask(
+              'task.bundle.low_inventory',
+              bundle.bundleId,
+              bundle.nameEn || bundle.nameHe || bundle.bundleId,
+              `Bundle has low-stock products`,
+              `Bundle "${bundle.nameEn || bundle.nameHe}" has ${lowStockSlots.length} product(s) with low inventory: ${skuList}`,
+              null
+            );
+            lowInventoryTasksCreated++;
+          } catch (taskError) {
+            logger.warn('HousekeepingService', functionName, `Could not create low inventory bundle task: ${taskError.message}`);
           }
         }
       }
@@ -330,7 +351,7 @@ function HousekeepingService() {
         }
       }
 
-      logger.info('HousekeepingService', functionName, `Bundle health check complete. Created ${criticalTasksCreated} critical inventory tasks.`);
+      logger.info('HousekeepingService', functionName, `Bundle health check complete. Critical: ${criticalTasksCreated}, Low inventory: ${lowInventoryTasksCreated}`);
       return true;
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Error during bundle health check: ${e.message}`, e);

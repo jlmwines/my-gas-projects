@@ -8,8 +8,8 @@ already exists - schemas have st_ProjectId, TaskService already reads topic from
 Scope:
 - 4 system projects (Product Data Quality, Inventory Management, System Health, Order Fulfillment)
 - Auto-routing for all 22 existing task types
-- 6 new task types (sync session, category deficiency, 2 bundle types, packing availability, brurya update)
-- Flow pattern metadata for UI guidance
+- 7 new task types (sync session, category deficiency, 3 bundle types, packing availability, brurya update)
+- Flow pattern metadata for UI guidance (admin_direct, manager_direct, manager_to_admin_review, manager_suggestion)
 
 ---
 Part 1: Existing Infrastructure
@@ -199,21 +199,28 @@ Bundle Critical Inventory Task
 ["task.template", "task.bundle.critical_inventory",
 "Bundle has member product with zero inventory.", "stable",
 "topic", "Products", "default_priority", "Critical", "initial_status", "New",
-"flow_pattern", "admin_direct"]
+"flow_pattern", "admin_direct", "due_pattern", "immediate"]
+
+Bundle Low Inventory Task
+
+["task.template", "task.bundle.low_inventory",
+"Bundle has member product with low inventory.", "stable",
+"topic", "Products", "default_priority", "Normal", "initial_status", "New",
+"flow_pattern", "admin_direct", "due_pattern", "one_week"]
 
 Packing Slips Available Task
 
 ["task.template", "task.order.packing_available",
 "Orders are ready for packing slip generation.", "stable",
 "topic", "Orders", "default_priority", "Normal", "initial_status", "New",
-"flow_pattern", "admin_direct"]
+"flow_pattern", "manager_direct", "due_pattern", "immediate"]
 
 Brurya Update Reminder Task
 
 ["task.template", "task.inventory.brurya_update",
 "Reminder to update Brurya remote warehouse inventory.", "stable",
 "topic", "Inventory", "default_priority", "Normal", "initial_status", "New",
-"flow_pattern", "admin_direct"]
+"flow_pattern", "manager_direct", "due_pattern", "one_week"]
 
 ---
 Part 5: Flow Patterns
@@ -238,6 +245,12 @@ New (manager creates)  Done (admin approves, may create follow-up task)
 - Admin reviews and approves
 - May spawn a new task (e.g., suggestion  add_product)
 
+Pattern D: manager_direct
+New  Assigned (manager)  Done (manager completes)
+- System creates task assigned to Manager
+- Manager resolves directly
+- No admin involvement required
+
 5.2 Tasks by Pattern
 
 manager_to_admin_review (4 tasks):
@@ -246,13 +259,19 @@ manager_to_admin_review (4 tasks):
 - task.inventory.count (not in taskDefinitions - created by InventoryManagementService)
 - task.onboarding.add_product
 
-admin_direct (17 tasks):
+admin_direct (16 tasks):
 - All export.* tasks
 - All confirmation.* tasks
 - All validation.* tasks except vintage_mismatch and comax_internal_audit
-- task.sync.daily_session (new)
-- task.deficiency.category_stock (new)
-- task.bundle.* (new)
+- task.sync.daily_session
+- task.deficiency.category_stock
+- task.bundle.monthly_review
+- task.bundle.critical_inventory
+- task.bundle.low_inventory
+
+manager_direct (2 tasks):
+- task.order.packing_available
+- task.inventory.brurya_update
 
 manager_suggestion (1 task):
 - task.onboarding.suggestion
@@ -277,7 +296,47 @@ Part 6: Priority Levels
 4. Admin override - Manual edit in UI
 
 ---
-Part 7: Implementation Phases
+Part 7: Task Dates & Assignment
+
+7.1 Due Date Patterns
+
+Tasks use named patterns for due date calculation:
+
+| Pattern | Meaning | Business Day Logic |
+|---------|---------|-------------------|
+| `immediate` | Same day | N/A |
+| `next_business_day` | Next Sun-Thu | Skip Fri/Sat |
+| `one_week` | 7 calendar days | N/A |
+| `two_weeks` | 14 calendar days | N/A |
+
+Business days (Israel): Sun (0), Mon (1), Tue (2), Wed (3), Thu (4)
+Weekend: Fri (5), Sat (6)
+
+7.2 Date Field Rules
+
+**Rule 1: Start Date on Creation**
+- Only `immediate` due_pattern tasks get st_StartDate on creation
+- User-created tasks may be created without start date
+
+**Rule 2: Assignment Atomicity**
+When a task is assigned, ALL THREE fields must be set together:
+- st_StartDate = assignment time
+- st_Status = 'Assigned'
+- st_DueDate = calculated from due_pattern
+
+**Invariant:** If any of these 3 fields has a value, all 3 must have values.
+
+7.3 Task Type Due Patterns
+
+| Category | due_pattern | Task Types |
+|----------|-------------|------------|
+| Immediate | immediate | task.export.*, task.confirmation.*, task.sync.daily_session, task.bundle.critical_inventory, task.order.packing_available |
+| Next Business Day | next_business_day | task.validation.comax_internal_audit, task.validation.status_mismatch, task.validation.master_master_discrepancy, task.validation.row_count_decrease, task.validation.order_staging_failure |
+| One Week | one_week | Most validation tasks, task.onboarding.*, task.deficiency.category_stock, task.inventory.brurya_update |
+| Two Weeks | two_weeks | task.bundle.monthly_review |
+
+---
+Part 8: Implementation Phases
 
 Phase 1: Foundation (Config + Data)
 
@@ -1076,9 +1135,9 @@ Simplest integration: Keep existing count query in widget, task is for project-l
 - Orders widget still shows correct counts
 
 ---
-Part 8: Task Creation Points
+Part 9: Task Creation Points
 
-8.1 Existing Creation Points (11 locations)
+9.1 Existing Creation Points (11 locations)
 
 | File                             | Line | Task Type                           | After Phase 1                 |
 |----------------------------------|------|-------------------------------------|-------------------------------|
@@ -1095,7 +1154,7 @@ Part 8: Task Creation Points
 | ValidationOrchestratorService.js | 163  | validation.* (entity-level)         | Auto-routes based on topic    |
 | WebAppProducts.js                | 875  | onboarding.suggestion               | Auto-routes to PROJ-SYS_PRODUCT   |
 
-8.2 New Creation Points (Phase 2-6)
+9.2 New Creation Points (Phase 2-6)
 
 | Phase | File                               | Task Type                      |
 |-------|------------------------------------|--------------------------------|
@@ -1107,9 +1166,9 @@ Part 8: Task Creation Points
 | 6     | WebAppOrders.js or OrderService.js | task.order.packing_available   |
 
 ---
-Part 9: Status Update Points
+Part 10: Status Update Points
 
-9.1 Files That Update Task Status
+10.1 Files That Update Task Status
 
 | File               | Functions                                                                                           | Task Types
 |
@@ -1131,7 +1190,7 @@ validation.vintage_mismatch                  |
 |
 
 ---
-Part 10: Verification Checklist
+Part 11: Verification Checklist
 
 After Phase 1
 
