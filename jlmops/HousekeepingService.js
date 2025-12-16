@@ -227,7 +227,47 @@ function HousekeepingService() {
     this.manageFileLifecycle();
     this.cleanupImportFiles();
     this.checkBundleHealth();
+    this.checkBruryaReminder();
     logger.info('HousekeepingService', 'performDailyMaintenance', "Daily maintenance tasks completed.");
+  };
+
+  /**
+   * Checks if Brurya warehouse inventory needs updating.
+   * Creates task.inventory.brurya_update if > 7 days since last update.
+   */
+  this.checkBruryaReminder = function() {
+    const functionName = 'checkBruryaReminder';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const bruryaConfig = allConfig['system.brurya.last_update'];
+      const lastUpdate = bruryaConfig?.value ? new Date(bruryaConfig.value) : null;
+
+      let daysSinceUpdate = lastUpdate
+        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
+        : 999; // No update ever = needs attention
+
+      if (daysSinceUpdate >= 7) {
+        try {
+          TaskService.createTask(
+            'task.inventory.brurya_update',
+            'BRURYA',
+            'Brurya Warehouse',
+            'Update Brurya Inventory',
+            `Brurya inventory has not been updated in ${daysSinceUpdate} days. Please verify stock levels.`,
+            null
+          );
+          logger.info('HousekeepingService', functionName, `Created Brurya reminder task (${daysSinceUpdate} days since last update).`);
+        } catch (taskError) {
+          // De-duplication will throw if task already exists - that's expected
+          if (!taskError.message.includes('already exists')) {
+            logger.warn('HousekeepingService', functionName, `Could not create Brurya reminder: ${taskError.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Brurya reminder check failed: ${e.message}`);
+    }
   };
 
   /**
