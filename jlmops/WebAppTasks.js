@@ -228,3 +228,75 @@ function WebAppTasks_completeTaskById(taskId) {
 
   return result;
 }
+
+/**
+ * Gets all open tasks for the Tasks view.
+ * @returns {Object} { error: string|null, data: Array }
+ */
+function WebAppTasks_getAllOpenTasks() {
+  try {
+    const tasks = WebAppTasks.getOpenTasks(true); // Force refresh
+    return { error: null, data: tasks };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'getAllOpenTasks', e.message, e);
+    return { error: e.message, data: [] };
+  }
+}
+
+/**
+ * Updates a task's status.
+ * @param {string} taskId The task ID.
+ * @param {string} newStatus The new status.
+ * @returns {Object} { error: string|null, success: boolean }
+ */
+function WebAppTasks_updateTaskStatus(taskId, newStatus) {
+  try {
+    const result = TaskService.updateTaskStatus(taskId, newStatus);
+    if (result) {
+      WebAppTasks.invalidateCache();
+    }
+    return { error: null, success: result };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'updateTaskStatus', e.message, e);
+    return { error: e.message, success: false };
+  }
+}
+
+/**
+ * Gets task statistics for dashboard.
+ * @returns {Object} { error: string|null, data: Object }
+ */
+function WebAppTasks_getStats() {
+  try {
+    const tasks = WebAppTasks.getOpenTasks();
+    const stats = {
+      total: tasks.length,
+      byStatus: {},
+      byPriority: {},
+      byType: {}
+    };
+
+    tasks.forEach(task => {
+      const status = task.st_Status || 'Unknown';
+      const priority = task.st_Priority || 'Normal';
+      const type = task.st_TaskTypeId || 'unknown';
+
+      stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
+      stats.byPriority[priority] = (stats.byPriority[priority] || 0) + 1;
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
+    });
+
+    return { error: null, data: stats };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'getStats', e.message, e);
+    return { error: e.message, data: null };
+  }
+}
+
+/**
+ * Gets valid task statuses for dropdown.
+ * @returns {Array<string>} List of valid statuses.
+ */
+function WebAppTasks_getStatusOptions() {
+  return ['New', 'In Progress', 'Review', 'Blocked', 'Done', 'Cancelled'];
+}
