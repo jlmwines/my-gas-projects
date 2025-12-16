@@ -23,6 +23,7 @@
       </div>
       <div class="card-body">
           <div id="open-orders-list"></div>
+          <div id="gift-result" class="mt-3"></div>
       </div>
     </div>
 </div>
@@ -111,15 +112,15 @@
   }
 
   function createGiftMessage(orderId, noteContent) {
-    const printResultDiv = document.getElementById('print-result');
-    printResultDiv.innerHTML = `Creating gift message for order ${orderId}...`;
+    const giftResultDiv = document.getElementById('gift-result');
+    giftResultDiv.innerHTML = `Creating gift message for order ${orderId}...`;
 
     google.script.run
       .withSuccessHandler(docUrl => {
-        printResultDiv.innerHTML = `<div class="alert alert-success">Successfully created gift message. <a href="${docUrl}" target="_blank">Open Document</a></div>`;
+        giftResultDiv.innerHTML = `<div class="alert alert-success">Gift message created for order ${orderId}. <a href="${docUrl}" target="_blank" class="btn btn-sm btn-primary ml-2">Open Document</a></div>`;
       })
       .withFailureHandler(err => {
-        printResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+        giftResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
       })
       .WebAppOrders_createGiftMessageDoc(orderId, noteContent);
   }
