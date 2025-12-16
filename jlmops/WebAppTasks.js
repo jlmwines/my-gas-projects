@@ -300,3 +300,11 @@ function WebAppTasks_getStats() {
 function WebAppTasks_getStatusOptions() {
   return ['New', 'In Progress', 'Review', 'Blocked', 'Done', 'Cancelled'];
 }
+
+/**
+ * Gets the current user's email.
+ * @returns {string} Current user email.
+ */
+function WebAppTasks_getCurrentUserEmail() {
+  return Session.getActiveUser().getEmail();
+}

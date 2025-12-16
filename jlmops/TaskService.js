@@ -8,6 +8,40 @@
 
 const TaskService = (function() {
 
+  // User emails by role - used for task assignment
+  const ADMIN_EMAIL = 'accounts@jlmwines.com';
+  const MANAGER_EMAIL = 'info@jlmwines.com';
+
+  /**
+   * Gets the initial assignee based on flow pattern.
+   * @param {string} flowPattern The flow pattern from task config.
+   * @returns {string|null} Email of assignee or null.
+   */
+  function getInitialAssignee(flowPattern) {
+    switch (flowPattern) {
+      case 'admin_direct':
+        return ADMIN_EMAIL;
+      case 'manager_to_admin_review':
+      case 'manager_suggestion':
+        return MANAGER_EMAIL;
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Gets the next assignee when status changes to Review.
+   * @param {string} flowPattern The flow pattern from task config.
+   * @param {string} currentAssignee Current assignee email.
+   * @returns {string|null} New assignee email or null if no change.
+   */
+  function getReviewAssignee(flowPattern, currentAssignee) {
+    if (flowPattern === 'manager_to_admin_review' && currentAssignee === MANAGER_EMAIL) {
+      return ADMIN_EMAIL;
+    }
+    return null;
+  }
+
   /**
    * Helper function to invalidate WebAppTasks cache after task modifications.
    * This ensures dashboard data stays fresh without manual cache management.
@@ -116,6 +150,15 @@ const TaskService = (function() {
       if (options.startDate) {
         const startDateIdx = headers.indexOf('st_StartDate');
         if (startDateIdx > -1) newRow[startDateIdx] = options.startDate;
+      }
+
+      // Auto-assign based on flow_pattern
+      const assignedToIdx = headers.indexOf('st_AssignedTo');
+      if (assignedToIdx > -1 && taskTypeConfig.flow_pattern) {
+        const assignee = getInitialAssignee(taskTypeConfig.flow_pattern);
+        if (assignee) {
+          newRow[assignedToIdx] = assignee;
+        }
       }
 
       sheet.appendRow(newRow);
@@ -293,6 +336,25 @@ const TaskService = (function() {
       } else if ((newStatus !== 'Done' && newStatus !== 'Closed') && doneDateCol !== -1) {
         // If status is changed from a 'Done/Closed' state to active, clear the DoneDate
         sheet.getRange(sheetRow, doneDateCol + 1).clearContent();
+      }
+
+      // Handle reassignment on Review status
+      if (newStatus === 'Review') {
+        const assignedToCol = headers.indexOf('st_AssignedTo');
+        const taskTypeCol = headers.indexOf('st_TaskTypeId');
+        if (assignedToCol !== -1 && taskTypeCol !== -1) {
+          const rowData = sheet.getRange(sheetRow, 1, 1, headers.length).getValues()[0];
+          const taskTypeId = rowData[taskTypeCol];
+          const currentAssignee = rowData[assignedToCol];
+          const taskTypeConfig = ConfigService.getConfig(taskTypeId);
+          if (taskTypeConfig && taskTypeConfig.flow_pattern) {
+            const newAssignee = getReviewAssignee(taskTypeConfig.flow_pattern, currentAssignee);
+            if (newAssignee) {
+              sheet.getRange(sheetRow, assignedToCol + 1).setValue(newAssignee);
+              logger.info('TaskService', 'updateTaskStatus', `Task '${taskId}' reassigned to '${newAssignee}' on Review.`);
+            }
+          }
+        }
       }
 
       logger.info('TaskService', 'updateTaskStatus', `Task '${taskId}' status updated to '${newStatus}'.`);

@@ -59,7 +59,29 @@
     </div>
   </div>
 
-  <!-- Section 3: Project Detail + Tasks -->
+  <!-- Section 3: All Tasks -->
+  <div class="row mb-3" id="all-tasks-section">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <div>
+            <strong>All Tasks</strong>
+            <div class="btn-group btn-group-sm ml-3" id="task-filter-tabs">
+              <button class="btn btn-outline-secondary active" data-filter="mine">My Tasks</button>
+              <button class="btn btn-outline-secondary" data-filter="unassigned">Unassigned</button>
+              <button class="btn btn-outline-secondary" data-filter="all">All</button>
+            </div>
+          </div>
+          <span class="text-muted small" id="all-tasks-count">-</span>
+        </div>
+        <div class="card-body p-0">
+          <div id="all-tasks-container" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Project Detail + Tasks -->
   <div class="row" id="project-detail-section" style="display: none;">
     <div class="col-md-4">
       <div class="card">
@@ -173,6 +195,9 @@
 
   var currentProjectId = null;
   var allProjects = [];
+  var allTasks = [];
+  var currentUserEmail = '';
+  var currentFilter = 'mine';
   var statusOptions = ['New', 'In Progress', 'Review', 'Blocked', 'Done', 'Cancelled'];
 
   if (document.readyState === 'loading') {
@@ -182,15 +207,26 @@
   }
 
   function init() {
+    loadCurrentUser();
     loadStats();
     loadTaskStats();
     loadProjects();
+    loadAllTasks();
     bindEventHandlers();
+  }
+
+  function loadCurrentUser() {
+    google.script.run
+      .withSuccessHandler(function(email) {
+        currentUserEmail = email || '';
+        renderAllTasks(); // Re-render with user context
+      })
+      .WebAppTasks_getCurrentUserEmail();
   }
 
   function bindEventHandlers() {
     document.getElementById('btn-refresh-projects').addEventListener('click', function() {
-      loadStats(); loadTaskStats(); loadProjects();
+      loadStats(); loadTaskStats(); loadProjects(); loadAllTasks();
       if (currentProjectId) loadProjectForEditing(currentProjectId);
     });
     document.getElementById('btn-new-project').addEventListener('click', function() {
@@ -199,6 +235,16 @@
     document.getElementById('btn-create-project').addEventListener('click', createProject);
     document.getElementById('btn-save-project').addEventListener('click', saveProject);
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
+
+    // Task filter tabs
+    document.querySelectorAll('#task-filter-tabs button').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('#task-filter-tabs button').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderAllTasks();
+      });
+    });
   }
 
   function loadStats() {
@@ -235,6 +281,106 @@
         renderProjectList(allProjects);
       })
       .WebAppProjects_getAllProjects();
+  }
+
+  function loadAllTasks() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) return;
+        allTasks = result.data || [];
+        renderAllTasks();
+      })
+      .WebAppTasks_getAllOpenTasks();
+  }
+
+  function renderAllTasks() {
+    var container = document.getElementById('all-tasks-container');
+    var countLabel = document.getElementById('all-tasks-count');
+
+    // Filter tasks
+    var filtered = allTasks.filter(function(t) {
+      var assignee = t.st_AssignedTo || '';
+      if (currentFilter === 'mine') return assignee === currentUserEmail;
+      if (currentFilter === 'unassigned') return !assignee;
+      return true; // 'all'
+    });
+
+    // Sort by priority (Critical > High > Normal > Low)
+    var priOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
+    filtered.sort(function(a, b) {
+      return (priOrder[a.st_Priority] || 2) - (priOrder[b.st_Priority] || 2);
+    });
+
+    countLabel.textContent = filtered.length + ' task' + (filtered.length !== 1 ? 's' : '');
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="text-muted p-3">No tasks</div>';
+      return;
+    }
+
+    container.innerHTML = '<table class="table table-sm mb-0"><tbody>' + filtered.map(function(t) {
+      var taskId = t.st_TaskId;
+      var title = t.st_Title || '-';
+      var status = t.st_Status || 'New';
+      var priority = t.st_Priority || 'Normal';
+      var assignee = t.st_AssignedTo || '';
+      var entity = t.st_LinkedEntityName || t.st_LinkedEntityId || '';
+      var isDone = status === 'Done' || status === 'Cancelled';
+
+      var priBadge = priority === 'Critical' ? '<span class="badge badge-danger">!</span> ' :
+                     priority === 'High' ? '<span class="badge badge-warning">H</span> ' : '';
+
+      var assigneeBadge = '';
+      if (currentFilter === 'all' && assignee) {
+        var shortName = assignee.split('@')[0];
+        assigneeBadge = '<span class="badge badge-light ml-1">' + shortName + '</span>';
+      }
+
+      var statusSelect = '<select class="form-control form-control-sm all-task-status" data-task-id="' + taskId + '" ' + (isDone ? 'disabled' : '') + '>' +
+        statusOptions.map(function(s) {
+          return '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
+        }).join('') + '</select>';
+
+      var completeBtn = isDone ? '' : '<button class="btn btn-sm btn-outline-success ml-1 all-task-complete" data-task-id="' + taskId + '" title="Complete"><i class="fas fa-check"></i></button>';
+
+      return '<tr class="' + (isDone ? 'text-muted' : '') + '">' +
+        '<td style="width:45%">' + priBadge + esc(title) + assigneeBadge + (entity ? '<br><small class="text-muted">' + esc(entity) + '</small>' : '') + '</td>' +
+        '<td style="width:35%">' + statusSelect + '</td>' +
+        '<td style="width:20%" class="text-right">' + completeBtn + '</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table>';
+
+    // Bind handlers
+    container.querySelectorAll('.all-task-status').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        updateAllTaskStatus(this.dataset.taskId, this.value);
+      });
+    });
+    container.querySelectorAll('.all-task-complete').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        completeAllTask(this.dataset.taskId);
+      });
+    });
+  }
+
+  function updateAllTaskStatus(taskId, newStatus) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        loadTaskStats();
+        loadAllTasks();
+        loadProjects();
+      })
+      .WebAppTasks_updateTaskStatus(taskId, newStatus);
+  }
+
+  function completeAllTask(taskId) {
+    google.script.run
+      .withSuccessHandler(function(success) {
+        if (!success) { alert('Could not complete task'); return; }
+        loadStats(); loadTaskStats(); loadProjects(); loadAllTasks();
+      })
+      .WebAppTasks_completeTaskById(taskId);
   }
 
   function renderProjectList(projects) {
