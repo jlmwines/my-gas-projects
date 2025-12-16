@@ -213,6 +213,43 @@ const TaskService = (function() {
   }
 
   /**
+   * Finds and completes an open task by type and linked entity.
+   * @param {string} taskTypeId The task type to find.
+   * @param {string} linkedEntityId The entity ID to match.
+   * @returns {boolean} True if task found and completed.
+   */
+  function completeTaskByTypeAndEntity(taskTypeId, linkedEntityId) {
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const sheet = spreadsheet.getSheetByName('SysTasks');
+
+      if (!sheet || sheet.getLastRow() < 2) return false;
+
+      const taskSchema = allConfig['schema.data.SysTasks'];
+      const headers = taskSchema.headers.split(',');
+      const typeCol = headers.indexOf('st_TaskTypeId');
+      const entityCol = headers.indexOf('st_LinkedEntityId');
+      const statusCol = headers.indexOf('st_Status');
+      const taskIdCol = headers.indexOf('st_TaskId');
+
+      const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (data[i][typeCol] === taskTypeId &&
+            String(data[i][entityCol]).trim() === String(linkedEntityId).trim() &&
+            data[i][statusCol] !== 'Done' && data[i][statusCol] !== 'Closed') {
+          return completeTask(data[i][taskIdCol]);
+        }
+      }
+      return false;
+    } catch (e) {
+      logger.error('TaskService', 'completeTaskByTypeAndEntity', e.message, e);
+      return false;
+    }
+  }
+
+  /**
    * Updates the status of a specific task.
    * @param {string} taskId The UUID of the task to update.
    * @param {string} newStatus The new status to set for the task (e.g., 'Review', 'In Progress', 'Done').
@@ -320,6 +357,7 @@ const TaskService = (function() {
     createTask: createTask,
     hasOpenTasks: hasOpenTasks,
     completeTask: completeTask,
+    completeTaskByTypeAndEntity: completeTaskByTypeAndEntity,
     updateTaskStatus: updateTaskStatus,
     getTasksByProject: getTasksByProject
   };

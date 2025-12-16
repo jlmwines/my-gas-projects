@@ -228,5 +228,65 @@
         "default_priority", "High",
         "initial_status", "New",
         "flow_pattern", "manager_to_admin_review"
+    ],
+    [
+        "task.template",
+        "task.sync.daily_session",
+        "Wraps an entire daily sync session for tracking and visibility.",
+        "stable",
+        "topic", "System",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
+    ],
+    [
+        "task.template",
+        "task.deficiency.category_stock",
+        "Category is below minimum stock threshold.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
+    ],
+    [
+        "task.template",
+        "task.bundle.monthly_review",
+        "Periodic bundle health check.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
+    ],
+    [
+        "task.template",
+        "task.bundle.critical_inventory",
+        "Bundle has member product with zero inventory.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Critical",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
+    ],
+    [
+        "task.template",
+        "task.order.packing_available",
+        "Orders are ready for packing slip generation.",
+        "stable",
+        "topic", "Orders",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
+    ],
+    [
+        "task.template",
+        "task.inventory.brurya_update",
+        "Reminder to update Brurya remote warehouse inventory.",
+        "stable",
+        "topic", "Inventory",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct"
     ]
 ]

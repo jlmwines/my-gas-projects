@@ -237,6 +237,10 @@ const ProjectService = (function() {
    * @returns {boolean} Success
    */
   function deleteProject(projectId) {
+    // Protect system projects from deletion
+    if (projectId && projectId.startsWith('PROJ-SYS_')) {
+      throw new Error('Cannot delete system project');
+    }
     return updateProject(projectId, { status: PROJECT_STATUSES.ARCHIVED });
   }
 

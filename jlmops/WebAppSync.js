@@ -10,7 +10,11 @@
  */
 function getSyncStateFromBackend() {
   // Check if any jobs completed and advance stage if needed
-  OrchestratorService.checkAndAdvanceSyncState();
+  try {
+    OrchestratorService.checkAndAdvanceSyncState();
+  } catch (e) {
+    logger.warn('WebAppSync', 'getSyncStateFromBackend', `State advancement check failed: ${e.message}`);
+  }
 
   // Get sync state (includes job statuses, currentStage, etc.)
   const syncState = SyncStateService.getSyncState();
@@ -45,6 +49,20 @@ function startDailySyncBackend() {
 
   try {
     const newSessionId = OrchestratorService.generateSessionId();
+
+    // Create sync session tracking task
+    try {
+      TaskService.createTask(
+        'task.sync.daily_session',
+        newSessionId,
+        `Sync ${new Date().toISOString().split('T')[0]}`,
+        `Daily Sync - ${new Date().toLocaleDateString()}`,
+        'Sync session initiated',
+        newSessionId
+      );
+    } catch (taskError) {
+      logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
+    }
 
     // Write initial status for Step 1
     SyncStatusService.writeStatus(newSessionId, {
@@ -209,9 +227,6 @@ function startComaxImportBackend() {
     const result = OrchestratorService.processSessionJobs(currentState.sessionId);
     if (!result.success) {
       logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId: currentState.sessionId });
-    } else {
-      // Let the state machine advance to next step
-      OrchestratorService.checkAndAdvanceSyncState();
     }
 
     // Return current status for UI
@@ -248,6 +263,13 @@ function resetSyncStateBackend() {
     if (sessionId) {
       SyncStatusService.clearSession(sessionId);
       logger.info(serviceName, functionName, `Cleared sync status for session ${sessionId}`);
+
+      // Close any open sync session task
+      try {
+        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
+      } catch (taskError) {
+        logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+      }
     }
 
     // Return default status (no session)
@@ -526,6 +548,26 @@ function confirmWebInventoryUpdateBackend() {
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
 
+    // Complete the sync session task
+    try {
+      TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
+    } catch (taskError) {
+      logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+    }
+
+    // Complete the web inventory export confirmation task
+    try {
+      const confirmTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.web_inventory_export');
+      if (confirmTasks && confirmTasks.length > 0) {
+        confirmTasks.forEach(task => {
+          TaskService.completeTask(task.st_TaskId);
+        });
+        logger.info(serviceName, functionName, `Completed ${confirmTasks.length} web inventory confirmation task(s).`);
+      }
+    } catch (taskError) {
+      logger.warn(serviceName, functionName, `Could not complete web inventory confirmation task: ${taskError.message}`);
+    }
+
     return SyncStatusService.getSessionStatus(sessionId);
   } catch (e) {
     logger.error(serviceName, functionName, `Error confirming Web Inventory Update: ${e.message}`, e);
@@ -692,6 +734,20 @@ function importWebProductsBackend() {
   try {
     const sessionId = OrchestratorService.generateSessionId();
 
+    // Create sync session tracking task
+    try {
+      TaskService.createTask(
+        'task.sync.daily_session',
+        sessionId,
+        `Sync ${new Date().toISOString().split('T')[0]}`,
+        `Daily Sync - ${new Date().toLocaleDateString()}`,
+        'Sync session initiated',
+        sessionId
+      );
+    } catch (taskError) {
+      logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
+    }
+
     // IMMEDIATE status update
     SyncStatusService.writeStatus(sessionId, {
       step: 1,
@@ -703,7 +759,7 @@ function importWebProductsBackend() {
     // Update sync state
     const newState = SyncStateService.getDefaultState();
     newState.sessionId = sessionId;
-    newState.currentStage = 'WEB_IMPORT_PROCESSING';
+    newState.currentStage = 'WEB_PRODUCTS_IMPORTING';
     newState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(newState);
 
@@ -719,8 +775,21 @@ function importWebProductsBackend() {
     } else {
       logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
 
-      // Let the state machine advance to next step
-      OrchestratorService.checkAndAdvanceSyncState();
+      // Mark step 1 complete
+      SyncStatusService.writeStatus(sessionId, {
+        step: 1,
+        stepName: 'Import Web Products',
+        status: 'completed',
+        message: 'Products and translations imported'
+      });
+
+      // Set up step 2 as waiting
+      SyncStatusService.writeStatus(sessionId, {
+        step: 2,
+        stepName: 'Import Web Orders',
+        status: 'waiting',
+        message: 'Ready to import orders'
+      });
     }
 
     return SyncStatusService.getSessionStatus(sessionId);
@@ -782,8 +851,52 @@ function importWebOrdersBackend() {
     } else {
       logger.info(serviceName, functionName, `Web orders import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
 
-      // If we're in a sync session, let the state machine advance to next step
-      OrchestratorService.checkAndAdvanceSyncState();
+      // Mark step 2 complete
+      SyncStatusService.writeStatus(sessionId, {
+        step: 2,
+        stepName: 'Import Web Orders',
+        status: 'completed',
+        message: `Orders imported`
+      });
+
+      // Calculate pending orders and set up step 3
+      const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
+
+      // Update state with order count
+      const currentState = SyncStateService.getSyncState();
+      currentState.ordersPendingExportCount = ordersToExportCount;
+      currentState.currentStage = 'WAITING_FOR_COMAX';
+      currentState.lastUpdated = new Date().toISOString();
+      SyncStateService.setSyncState(currentState);
+
+      // Write step 3 status
+      if (ordersToExportCount > 0) {
+        SyncStatusService.writeStatus(sessionId, {
+          step: 3,
+          stepName: 'Order Export',
+          status: 'waiting',
+          message: `${ordersToExportCount} orders ready for export`
+        });
+      } else {
+        SyncStatusService.writeStatus(sessionId, {
+          step: 3,
+          stepName: 'Order Export',
+          status: 'completed',
+          message: 'No orders to export'
+        });
+
+        // Also set up step 4 as waiting since step 3 is done
+        SyncStatusService.writeStatus(sessionId, {
+          step: 4,
+          stepName: 'Comax Products',
+          status: 'waiting',
+          message: 'Ready to import Comax product data'
+        });
+
+        // Advance stage since no orders
+        currentState.currentStage = 'READY_FOR_COMAX_IMPORT';
+        SyncStateService.setSyncState(currentState);
+      }
     }
 
     return SyncStatusService.getSessionStatus(sessionId);

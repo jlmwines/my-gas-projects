@@ -260,7 +260,10 @@ const ConfigService = (function() {
       newRow[4] = value;
       sheet.appendRow(newRow);
     }
-    
+
+    // Ensure write is committed before any subsequent reads (prevents race condition)
+    SpreadsheetApp.flush();
+
     // Invalidate cache to reflect changes
     configCache = null;
   }

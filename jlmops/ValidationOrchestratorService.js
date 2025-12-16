@@ -146,7 +146,8 @@ const ValidationOrchestratorService = (function() {
       let entityId = discrepancy.key;
       if (rule.on_failure_task_type.includes('product') ||
           rule.on_failure_task_type.includes('vintage') ||
-          rule.on_failure_task_type.includes('onboarding')) {
+          rule.on_failure_task_type.includes('onboarding') ||
+          rule.on_failure_task_type.includes('internal_audit')) {
           // Try to get SKU from data - prioritize SKU fields
           const data = discrepancy.data || {};
           entityId = data.cpm_SKU || data.cps_SKU || data.wdm_SKU || data.wds_SKU || discrepancy.key;

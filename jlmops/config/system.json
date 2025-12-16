@@ -607,5 +607,13 @@
         "WebXlt",
         "PROJ-SYS_PRODUCT",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.brurya.last_update",
+        "Tracks last Brurya inventory update",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
     ]
 ]
