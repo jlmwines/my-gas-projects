@@ -138,6 +138,23 @@ const PackingSlipService = (function() {
             if (updatedCount > 0) {
                 orderLogSheet.getRange(2, 1, orderLogData.length, logHeaders.length).setValues(orderLogData);
                 logger.info(serviceName, functionName, `Updated ${updatedCount} orders to 'Ready' status in SysOrdLog.`);
+
+                // Create packing available task (de-duplication handled by TaskService)
+                try {
+                  TaskService.createTask(
+                    'task.order.packing_available',
+                    'PACKING',
+                    'Packing Slips',
+                    `${updatedCount} order(s) ready for packing`,
+                    `${updatedCount} order(s) are ready for packing slip generation.`,
+                    null
+                  );
+                } catch (taskError) {
+                  // De-duplication will throw if task already exists - that's expected
+                  if (!taskError.message.includes('already exists')) {
+                    logger.warn(serviceName, functionName, `Could not create packing task: ${taskError.message}`);
+                  }
+                }
             }
         } else {
             logger.warn(serviceName, functionName, 'SysOrdLog sheet not found. Could not update packing statuses.');

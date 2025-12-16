@@ -261,6 +261,17 @@ const PrintService = (function() {
         if (updatedCount > 0) {
           logSheet.getRange(2, 1, logValuesToUpdate.length, logHeaders.length).setValues(logValuesToUpdate);
           logger.info(serviceName, functionName, `Updated ${updatedCount} orders to 'Printed' status in SysOrdLog.`);
+
+          // Check if any orders still ready - if not, close the packing task
+          const remainingReady = logValuesToUpdate.filter(row => row[logHeaderMap['sol_PackingStatus']] === 'Ready').length;
+          if (remainingReady === 0) {
+            try {
+              TaskService.completeTaskByTypeAndEntity('task.order.packing_available', 'PACKING');
+              logger.info(serviceName, functionName, 'Closed packing available task - no orders remaining.');
+            } catch (taskError) {
+              // No task to close - that's fine
+            }
+          }
         }
       } else {
         logger.warn(serviceName, functionName, 'SysOrdLog sheet not found. Could not update packing statuses to Printed.');
