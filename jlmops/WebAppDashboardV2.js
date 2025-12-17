@@ -42,13 +42,18 @@ function _getSystemHealthData() {
   try {
     const healthTask = TaskService.findOpenTaskByType('task.system.health_status', '_SYSTEM');
 
+    // Get sync state
+    const syncSession = SyncStateService.getActiveSession();
+    const syncStatus = _getSyncStatus(syncSession);
+
     if (!healthTask || !healthTask.notes) {
       return {
-        available: false,
+        available: true,
         housekeeping: { status: 'unknown', timestamp: null },
         schemaValidation: { status: 'unknown', timestamp: null },
         dataValidation: { status: 'unknown', timestamp: null, issues: null },
-        unitTests: { status: 'unknown', timestamp: null, result: null }
+        unitTests: { status: 'unknown', timestamp: null, result: null },
+        dailySync: syncStatus
       };
     }
 
@@ -78,7 +83,8 @@ function _getSystemHealthData() {
         status: testsOk ? 'ok' : 'error',
         timestamp: hk.timestamp || null,
         result: hk.unit_tests || null
-      }
+      },
+      dailySync: syncStatus
     };
   } catch (e) {
     return {
@@ -86,6 +92,35 @@ function _getSystemHealthData() {
       error: e.message
     };
   }
+}
+
+/**
+ * Gets sync status for dashboard display.
+ * @private
+ */
+function _getSyncStatus(syncSession) {
+  if (!syncSession || !syncSession.sessionId) {
+    return { status: 'unknown', timestamp: null, stage: null };
+  }
+
+  const stage = syncSession.currentStage;
+  let status = 'unknown';
+
+  if (stage === 'COMPLETE') {
+    status = 'ok';
+  } else if (stage === 'FAILED') {
+    status = 'error';
+  } else if (stage === 'IDLE') {
+    status = 'unknown';
+  } else {
+    status = 'partial'; // In progress
+  }
+
+  return {
+    status: status,
+    timestamp: syncSession.lastUpdated || null,
+    stage: stage
+  };
 }
 
 /**

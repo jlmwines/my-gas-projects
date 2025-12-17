@@ -130,6 +130,18 @@
 
     var html = '<table class="table table-sm mb-0"><tbody>';
 
+    // Daily Sync
+    if (health.dailySync) {
+      var syncStatus = health.dailySync.status;
+      var syncStage = health.dailySync.stage;
+      var syncLabel = 'Daily Sync';
+      if (syncStage && syncStage !== 'COMPLETE' && syncStage !== 'IDLE') {
+        syncLabel += ' (' + syncStage.replace(/_/g, ' ').toLowerCase() + ')';
+      }
+      html += '<tr><td>' + statusIcon(syncStatus) + ' ' + syncLabel + '</td>';
+      html += '<td class="text-right small text-muted">' + formatTime(health.dailySync.timestamp) + '</td></tr>';
+    }
+
     // Housekeeping
     html += '<tr><td>' + statusIcon(health.housekeeping.status) + ' Housekeeping</td>';
     html += '<td class="text-right small text-muted">' + formatTime(health.housekeeping.timestamp) + '</td></tr>';
@@ -162,7 +174,7 @@
     }
 
     var html = '<table class="table table-sm mb-0"><tbody>';
-    html += '<tr><td>Packing Slips Ready</td><td class="text-right"><strong>' + orders.packingSlipsReady + '</strong></td></tr>';
+    html += '<tr><td>New Orders</td><td class="text-right"><strong>' + orders.packingSlipsReady + '</strong></td></tr>';
     html += '<tr><td>Orders to Export</td><td class="text-right"><strong>' + orders.ordersToExport + '</strong></td></tr>';
     html += '<tr><td>On Hold</td><td class="text-right"><strong>' + orders.onHold + '</strong></td></tr>';
     html += '<tr><td>Processing</td><td class="text-right"><strong>' + orders.processing + '</strong></td></tr>';
@@ -180,13 +192,12 @@
     }
 
     var html = '<table class="table table-sm mb-0"><tbody>';
-    html += '<tr><td>Brurya Last Update</td><td class="text-right small">' + formatDate(inv.bruryaLastUpdate) + '</td></tr>';
-    if (inv.bruryaReminder > 0) {
-      html += '<tr class="table-warning"><td>Brurya Reminder</td><td class="text-right"><strong>' + inv.bruryaReminder + '</strong></td></tr>';
-    }
+    var bruryaClass = inv.bruryaReminder > 0 ? 'table-warning' : '';
+    var bruryaIcon = inv.bruryaReminder > 0 ? '<span class="text-warning">&#9888;</span> ' : '';
+    html += '<tr class="' + bruryaClass + '"><td>' + bruryaIcon + 'Brurya Update</td><td class="text-right small">' + formatDate(inv.bruryaLastUpdate) + '</td></tr>';
     html += '<tr><td>Negative Inventory</td><td class="text-right"><strong>' + inv.negativeInventory + '</strong></td></tr>';
     html += '<tr><td>Count Tasks</td><td class="text-right"><strong>' + inv.inventoryCountTasks + '</strong></td></tr>';
-    html += '<tr><td>Awaiting Review</td><td class="text-right"><strong>' + inv.inventoryAwaitingReview + '</strong></td></tr>';
+    html += '<tr><td>Counts in Review</td><td class="text-right"><strong>' + inv.inventoryAwaitingReview + '</strong></td></tr>';
     html += '</tbody></table>';
 
     el.innerHTML = html;
