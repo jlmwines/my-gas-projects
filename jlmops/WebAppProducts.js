@@ -193,7 +193,12 @@ function WebAppProducts_getManagerProductTasks() {
         const status = String(row[statusCol] || '').trim();
         const title = String(row[titleCol] || '');
 
-        if (taskType === 'task.validation.vintage_mismatch' && (status === 'New' || status === 'Assigned')) {
+        // Include vintage_mismatch and onboarding tasks for manager
+        const isManagerTask = (taskType === 'task.validation.vintage_mismatch' ||
+                               taskType === 'task.onboarding.add_product') &&
+                              (status === 'New' || status === 'Assigned' || status === 'In Progress');
+
+        if (isManagerTask) {
           const productName = (linkedEntityNameCol > -1) ? String(row[linkedEntityNameCol]) : '';
           tasks.push({
             taskId: row[taskIdCol],
@@ -207,9 +212,9 @@ function WebAppProducts_getManagerProductTasks() {
         }
       });
     }
-    
+
     // Sort by productName
-    tasks.sort((a, b) => a.productName.localeCompare(b.productName));
+    tasks.sort((a, b) => (a.productName || '').localeCompare(b.productName || ''));
 
     LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Returning ${tasks.length} tasks.`);
     return tasks;

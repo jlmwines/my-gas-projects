@@ -294,7 +294,7 @@ const ProductImportService = (function() {
             _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
             // Write status for UI
             SyncStatusService.writeStatus(sessionId, {
-              step: 4,
+              step: 3,
               stepName: 'Comax Products',
               status: 'failed',
               message: 'Validation failed - data quarantined'
@@ -316,7 +316,7 @@ const ProductImportService = (function() {
 
         // Write success status for UI
         SyncStatusService.writeStatus(sessionId, {
-          step: 4,
+          step: 3,
           stepName: 'Comax Products',
           status: 'completed',
           message: 'Comax data imported successfully'
@@ -329,7 +329,7 @@ const ProductImportService = (function() {
         _updateJobStatus(executionContext, 'FAILED', `Comax import failed: ${e.message}`);
         // Write failure status for UI
         SyncStatusService.writeStatus(sessionId, {
-          step: 4,
+          step: 3,
           stepName: 'Comax Products',
           status: 'failed',
           message: `Import failed: ${e.message}`
@@ -1136,8 +1136,8 @@ const ProductImportService = (function() {
       const stepMap = {
         'import.drive.web_translations_he': { step: 1, stepName: 'Web Products' },
         'import.drive.web_products_en': { step: 1, stepName: 'Web Products' },
-        'import.drive.comax_products': { step: 4, stepName: 'Comax Products' },
-        'export.web.inventory': { step: 5, stepName: 'Web Inventory' }
+        'import.drive.comax_products': { step: 3, stepName: 'Comax Products' },
+        'export.web.inventory': { step: 4, stepName: 'Web Inventory' }
       };
       const stepInfo = stepMap[jobType] || { step: 1, stepName: 'Import' };
       SyncStatusService.writeStatus(sessionId, {

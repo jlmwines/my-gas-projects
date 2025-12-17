@@ -26,56 +26,17 @@ const SyncStateService = (function() {
       logger.error(SERVICE_NAME, functionName, `Error retrieving or parsing sync state: ${e.message}`, e);
     }
 
-    // Always fetch invoice count (it's fast and informational for Step 0)
-    try {
-      state.invoiceFileCount = OrchestratorService.getInvoiceFileCount();
-    } catch (e) {
-      logger.warn(SERVICE_NAME, functionName, `Could not fetch invoice count: ${e.message}`);
-      state.invoiceFileCount = -1; // Indicate error
-    }
+    // Invoice count and job statuses are now stored in state JSON
+    // - Invoice count: fetched once after web orders import
+    // - Job statuses: checked by OrchestratorService.getJobStatusesBatch() when needed
+    // No per-call lookups needed here anymore.
 
-    // If there's an active session (even if completed/failed), refresh granular job statuses
-    if (state.sessionId && state.currentStage !== 'IDLE') {
-      try {
-        const ordersStatus = OrchestratorService.getJobStatusInSession('import.drive.web_orders', state.sessionId);
-        const productsStatus = OrchestratorService.getJobStatusInSession('import.drive.web_products_en', state.sessionId);
-        const translationsStatus = OrchestratorService.getJobStatusInSession('import.drive.web_translations_he', state.sessionId);
-
-        state.webOrdersJobStatus = mapNotFoundToNotStarted(ordersStatus);
-        state.webProductsJobStatus = mapNotFoundToNotStarted(productsStatus);
-        state.webTranslationsJobStatus = mapNotFoundToNotStarted(translationsStatus);
-        state.comaxProductsJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('import.drive.comax_products', state.sessionId));
-        state.masterValidationJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('job.periodic.validation.master', state.sessionId));
-        state.webInventoryExportJobStatus = mapNotFoundToNotStarted(OrchestratorService.getJobStatusInSession('export.web.inventory', state.sessionId));
-
-        // Don't log routine status refresh - creates noise during UI polling
-
-        // --- NEW: Fetch latest log for UI feedback ---
-        const latestLog = logger.getLatestLogForSession(state.sessionId);
-        if (latestLog) {
-            state.latestLogMessage = `${new Date(latestLog.timestamp).toLocaleTimeString()} - ${latestLog.message}`;
-            // Use latest log timestamp as lastUpdated if state timestamp is older or missing
-            if (!state.lastUpdated || new Date(latestLog.timestamp) > new Date(state.lastUpdated)) {
-                 state.lastUpdated = latestLog.timestamp;
-            }
-        }
-
-      } catch (e) {
-        logger.error(SERVICE_NAME, functionName, `Error refreshing granular job statuses: ${e.message}`, e, { sessionId: state.sessionId });
-        state.errorMessage = state.errorMessage ? state.errorMessage + "; Error refreshing job statuses." : "Error refreshing job statuses.";
-      }
-    }
-    
     // Ensure lastUpdated has a value for UI if it's still missing
     if (!state.lastUpdated) {
         state.lastUpdated = new Date().toISOString();
     }
 
     return state;
-  }
-
-  function mapNotFoundToNotStarted(status) {
-      return status === 'NOT_FOUND' ? 'NOT_STARTED' : status;
   }
 
   /**
@@ -147,12 +108,41 @@ const SyncStateService = (function() {
     return hoursDiff > staleThresholdHours;
   }
 
+  /**
+   * Lightweight read - just sessionId and currentStage from config.
+   * No job queue lookups, no invoice count, no log fetch.
+   * Use this for polling instead of getSyncState().
+   */
+  function getActiveSession() {
+    const functionName = 'getActiveSession';
+    try {
+      ConfigService.forceReload();
+      const stateConfig = ConfigService.getConfig(SYNC_STATE_CONFIG_KEY);
+      if (stateConfig && stateConfig.json) {
+        const parsed = JSON.parse(stateConfig.json);
+        return {
+          sessionId: parsed.sessionId || null,
+          currentStage: parsed.currentStage || 'IDLE',
+          lastUpdated: parsed.lastUpdated || null,
+          errorMessage: parsed.errorMessage || null,
+          ordersPendingExportCount: parsed.ordersPendingExportCount || 0,
+          webExportFilename: parsed.webExportFilename || null,
+          invoiceFileCount: parsed.invoiceFileCount || 0
+        };
+      }
+    } catch (e) {
+      logger.error(SERVICE_NAME, functionName, `Error reading active session: ${e.message}`, e);
+    }
+    return { sessionId: null, currentStage: 'IDLE', lastUpdated: null, errorMessage: null };
+  }
+
   return {
     getSyncState: getSyncState,
     setSyncState: setSyncState,
     resetSyncState: resetSyncState,
     isSessionStale: isSessionStale,
-    getDefaultState: getDefaultState // Expose for testing/initialization
+    getDefaultState: getDefaultState,
+    getActiveSession: getActiveSession
   };
 
 })();

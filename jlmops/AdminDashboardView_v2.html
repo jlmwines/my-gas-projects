@@ -6,11 +6,11 @@
     </div>
   </div>
 
-  <!-- Row 1: System, Orders, Inventory, Products -->
+  <!-- Row 1: System Health, Orders, Inventory, Products -->
   <div class="row">
     <div class="col-md-3">
       <div class="card">
-        <div class="card-header">System</div>
+        <div class="card-header">System Health</div>
         <div class="card-body" id="card-system">
           <p class="text-muted">Loading...</p>
         </div>
@@ -55,7 +55,7 @@
     <div class="col-md-8">
       <div class="card">
         <div class="card-header">Admin Tasks</div>
-        <div class="card-body" id="card-tasks">
+        <div class="card-body" id="card-tasks" style="max-height: 300px; overflow-y: auto;">
           <p class="text-muted">Loading...</p>
         </div>
       </div>
@@ -87,12 +87,12 @@
       'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
 
     // Cards
-    renderSystemCard(data.taskCounts, data.projects);
-    renderOrdersCard(data.taskCounts);
-    renderInventoryCard(data.taskCounts);
-    renderProductsCard(data.taskCounts);
+    renderSystemHealthCard(data.systemHealth);
+    renderOrdersCard(data.orders);
+    renderInventoryCard(data.inventory);
+    renderProductsCard(data.products);
     renderProjectsCard(data.projects);
-    renderTasksCard(data.taskCounts);
+    renderTasksCard(data.adminTasks);
   }
 
   function handleError(err) {
@@ -102,67 +102,119 @@
     });
   }
 
-  function countByPrefix(counts, prefix) {
-    var total = 0;
-    Object.keys(counts).forEach(function(type) {
-      if (type.indexOf(prefix) > -1) {
-        total += counts[type];
-      }
-    });
-    return total;
+  function formatTime(isoString) {
+    if (!isoString) return 'Never';
+    var d = new Date(isoString);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   }
 
-  function renderSystemCard(counts, projects) {
+  function formatDate(isoString) {
+    if (!isoString) return '-';
+    return new Date(isoString).toLocaleDateString();
+  }
+
+  function statusIcon(status) {
+    if (status === 'ok') return '<span class="text-success">&#10003;</span>';
+    if (status === 'issues' || status === 'partial') return '<span class="text-warning">&#9888;</span>';
+    if (status === 'error') return '<span class="text-danger">&#10007;</span>';
+    return '<span class="text-muted">?</span>';
+  }
+
+  function renderSystemHealthCard(health) {
     var el = document.getElementById('card-system');
-    var syncTasks = counts['task.sync.daily_session'] || 0;
-    var exportTasks = countByPrefix(counts, 'export');
-    var confirmTasks = countByPrefix(counts, 'confirmation');
 
-    var html = '';
-    html += '<p class="mb-1">Sync Sessions: <strong>' + syncTasks + '</strong></p>';
-    html += '<p class="mb-1">Exports Pending: <strong>' + exportTasks + '</strong></p>';
-    html += '<p class="mb-1">Confirmations: <strong>' + confirmTasks + '</strong></p>';
+    if (!health || !health.available) {
+      el.innerHTML = '<p class="text-muted">No health data available</p>';
+      return;
+    }
+
+    var html = '<table class="table table-sm mb-0"><tbody>';
+
+    // Housekeeping
+    html += '<tr><td>' + statusIcon(health.housekeeping.status) + ' Housekeeping</td>';
+    html += '<td class="text-right small text-muted">' + formatTime(health.housekeeping.timestamp) + '</td></tr>';
+
+    // Schema Validation
+    html += '<tr><td>' + statusIcon(health.schemaValidation.status) + ' Schema Validation</td>';
+    html += '<td class="text-right small text-muted">' + formatTime(health.schemaValidation.timestamp) + '</td></tr>';
+
+    // Data Validation
+    var dvStatus = health.dataValidation.status;
+    var dvExtra = health.dataValidation.issues > 0 ? ' (' + health.dataValidation.issues + ')' : '';
+    html += '<tr><td>' + statusIcon(dvStatus) + ' Data Validation' + dvExtra + '</td>';
+    html += '<td class="text-right small text-muted">' + formatTime(health.dataValidation.timestamp) + '</td></tr>';
+
+    // Unit Tests
+    var utExtra = health.unitTests.result ? ' (' + health.unitTests.result + ')' : '';
+    html += '<tr><td>' + statusIcon(health.unitTests.status) + ' Unit Tests' + utExtra + '</td>';
+    html += '<td class="text-right small text-muted">' + formatTime(health.unitTests.timestamp) + '</td></tr>';
+
+    html += '</tbody></table>';
     el.innerHTML = html;
   }
 
-  function renderOrdersCard(counts) {
+  function renderOrdersCard(orders) {
     var el = document.getElementById('card-orders');
-    var packingTasks = counts['task.order.packing_available'] || 0;
-    var orderValidation = counts['task.validation.order_staging_failure'] || 0;
 
-    var html = '';
-    html += '<p class="mb-1">Packing Slips Ready: <strong>' + packingTasks + '</strong></p>';
-    html += '<p class="mb-1">Order Issues: <strong>' + orderValidation + '</strong></p>';
+    if (orders.error) {
+      el.innerHTML = '<p class="text-danger">' + orders.error + '</p>';
+      return;
+    }
+
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    html += '<tr><td>Packing Slips Ready</td><td class="text-right"><strong>' + orders.packingSlipsReady + '</strong></td></tr>';
+    html += '<tr><td>Orders to Export</td><td class="text-right"><strong>' + orders.ordersToExport + '</strong></td></tr>';
+    html += '<tr><td>On Hold</td><td class="text-right"><strong>' + orders.onHold + '</strong></td></tr>';
+    html += '<tr><td>Processing</td><td class="text-right"><strong>' + orders.processing + '</strong></td></tr>';
+    html += '</tbody></table>';
+
     el.innerHTML = html;
   }
 
-  function renderInventoryCard(counts) {
+  function renderInventoryCard(inv) {
     var el = document.getElementById('card-inventory');
-    var bruryaTasks = counts['task.inventory.brurya_update'] || 0;
-    var negativeInv = counts['task.validation.comax_internal_audit'] || 0;
-    var archivedStock = counts['task.validation.archived_comax_stock_mismatch'] || 0;
 
-    var html = '';
-    html += '<p class="mb-1">Brurya Update: <strong>' + bruryaTasks + '</strong></p>';
-    html += '<p class="mb-1">Negative Inventory: <strong>' + negativeInv + '</strong></p>';
-    html += '<p class="mb-1">Archived Stock Issues: <strong>' + archivedStock + '</strong></p>';
+    if (inv.error) {
+      el.innerHTML = '<p class="text-danger">' + inv.error + '</p>';
+      return;
+    }
+
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    html += '<tr><td>Brurya Last Update</td><td class="text-right small">' + formatDate(inv.bruryaLastUpdate) + '</td></tr>';
+    if (inv.bruryaReminder > 0) {
+      html += '<tr class="table-warning"><td>Brurya Reminder</td><td class="text-right"><strong>' + inv.bruryaReminder + '</strong></td></tr>';
+    }
+    html += '<tr><td>Negative Inventory</td><td class="text-right"><strong>' + inv.negativeInventory + '</strong></td></tr>';
+    html += '<tr><td>Count Tasks</td><td class="text-right"><strong>' + inv.inventoryCountTasks + '</strong></td></tr>';
+    html += '<tr><td>Awaiting Review</td><td class="text-right"><strong>' + inv.inventoryAwaitingReview + '</strong></td></tr>';
+    html += '</tbody></table>';
+
     el.innerHTML = html;
   }
 
-  function renderProductsCard(counts) {
+  function renderProductsCard(prod) {
     var el = document.getElementById('card-products');
-    var bundleCritical = counts['task.bundle.critical_inventory'] || 0;
-    var bundleLow = counts['task.bundle.low_inventory'] || 0;
-    var onboardingSuggestions = counts['task.onboarding.suggestion'] || 0;
-    var onboardingAdd = counts['task.onboarding.add_product'] || 0;
-    var validationCount = countByPrefix(counts, 'validation') - (counts['task.validation.comax_internal_audit'] || 0) - (counts['task.validation.order_staging_failure'] || 0) - (counts['task.validation.archived_comax_stock_mismatch'] || 0);
 
-    var html = '';
-    html += '<p class="mb-1">Bundle Critical: <strong>' + bundleCritical + '</strong></p>';
-    html += '<p class="mb-1">Bundle Low Stock: <strong>' + bundleLow + '</strong></p>';
-    html += '<p class="mb-1">New Product Suggestions: <strong>' + onboardingSuggestions + '</strong></p>';
-    html += '<p class="mb-1">Products to Add: <strong>' + onboardingAdd + '</strong></p>';
-    html += '<p class="mb-1">Validation Issues: <strong>' + validationCount + '</strong></p>';
+    if (prod.error) {
+      el.innerHTML = '<p class="text-danger">' + prod.error + '</p>';
+      return;
+    }
+
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    html += '<tr><td>Vintage Update</td><td class="text-right"><strong>' + prod.vintageUpdate + '</strong></td></tr>';
+    html += '<tr><td>Detail Review</td><td class="text-right"><strong>' + prod.detailReview + '</strong></td></tr>';
+    html += '<tr><td>New Suggestions</td><td class="text-right"><strong>' + prod.newProductSuggestion + '</strong></td></tr>';
+    html += '<tr><td>New - Edit</td><td class="text-right"><strong>' + prod.newProductEdit + '</strong></td></tr>';
+    html += '<tr><td>New - Review</td><td class="text-right"><strong>' + prod.newProductReview + '</strong></td></tr>';
+    if (prod.bundleCritical > 0) {
+      html += '<tr class="table-danger"><td>Bundle Critical</td><td class="text-right"><strong>' + prod.bundleCritical + '</strong></td></tr>';
+    } else {
+      html += '<tr><td>Bundle Critical</td><td class="text-right text-success"><strong>0</strong></td></tr>';
+    }
+    html += '<tr><td>Bundle Low</td><td class="text-right"><strong>' + prod.bundleLow + '</strong></td></tr>';
+    html += '<tr><td>Category Low</td><td class="text-right"><strong>' + prod.categoryLow + '</strong></td></tr>';
+    html += '</tbody></table>';
+
     el.innerHTML = html;
   }
 
@@ -177,29 +229,35 @@
     el.innerHTML = html;
   }
 
-  function renderTasksCard(counts) {
+  function renderTasksCard(tasks) {
     var el = document.getElementById('card-tasks');
-    var total = Object.keys(counts).reduce(function(sum, k) { return sum + counts[k]; }, 0);
 
-    if (total === 0) {
+    if (!tasks || tasks.length === 0) {
       el.innerHTML = '<p class="text-success mb-0">No open tasks</p>';
       return;
     }
 
-    // Sort by count descending
-    var sorted = Object.keys(counts).map(function(type) {
-      return { type: type, count: counts[type] };
-    }).sort(function(a, b) { return b.count - a.count; });
+    var html = '<table class="table table-sm mb-0"><thead><tr>';
+    html += '<th>Task</th><th>Entity</th><th>Due</th>';
+    html += '</tr></thead><tbody>';
 
-    var html = '<table class="table table-sm mb-0"><tbody>';
-    sorted.slice(0, 10).forEach(function(item) {
-      var shortName = item.type.replace('task.', '').replace('validation.', 'val.').replace('confirmation.', 'conf.');
-      html += '<tr><td>' + shortName + '</td><td class="text-right"><strong>' + item.count + '</strong></td></tr>';
+    tasks.forEach(function(task) {
+      var priorityClass = '';
+      if (task.priority === 'Critical') priorityClass = 'table-danger';
+      else if (task.priority === 'High') priorityClass = 'table-warning';
+
+      var entityDisplay = task.entityName || task.entityId || '-';
+      if (entityDisplay.length > 20) entityDisplay = entityDisplay.substring(0, 17) + '...';
+
+      var dueDisplay = formatDate(task.dueDate);
+
+      html += '<tr class="' + priorityClass + '">';
+      html += '<td title="' + task.typeId + '">' + task.name + '</td>';
+      html += '<td title="' + task.entityId + '">' + entityDisplay + '</td>';
+      html += '<td>' + dueDisplay + '</td>';
+      html += '</tr>';
     });
-    if (sorted.length > 10) {
-      var remaining = sorted.slice(10).reduce(function(sum, i) { return sum + i.count; }, 0);
-      html += '<tr><td class="text-muted">... and ' + (sorted.length - 10) + ' more types</td><td class="text-right text-muted">' + remaining + '</td></tr>';
-    }
+
     html += '</tbody></table>';
     el.innerHTML = html;
   }

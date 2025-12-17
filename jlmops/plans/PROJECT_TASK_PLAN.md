@@ -1135,6 +1135,273 @@ Simplest integration: Keep existing count query in widget, task is for project-l
 - Orders widget still shows correct counts
 
 ---
+Part 7: Singleton Detail Tasks (Dashboard Data Storage)
+
+7.1 Concept
+
+Some tasks serve as "detail containers" for dashboard widgets rather than simple countable work items. These are singleton tasks - only one open task of that type exists at a time, and the system updates its notes with structured JSON data.
+
+**Pattern:**
+- Fixed linkedEntityId per task type (e.g., "_SYSTEM", "ORDERS", "BRURYA")
+- Task created if none exists
+- Task notes updated if task exists
+- Dashboard reads JSON from task notes instead of counting tasks
+
+7.2 TaskService Changes Required
+
+**New function: updateTaskNotes()**
+```javascript
+/**
+ * Updates the notes field of an existing task.
+ * @param {string} taskId The UUID of the task to update.
+ * @param {string} newNotes The new notes content.
+ * @returns {boolean} True if updated successfully.
+ */
+function updateTaskNotes(taskId, newNotes) {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sheet = spreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet || sheet.getLastRow() < 2) return false;
+
+    const taskSchema = allConfig['schema.data.SysTasks'];
+    const headers = taskSchema.headers.split(',');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const notesCol = headers.indexOf('st_Notes');
+
+    const taskIds = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues().flat();
+    const rowIndex = taskIds.findIndex(id => id === taskId);
+
+    if (rowIndex === -1) return false;
+
+    const sheetRow = rowIndex + 2;
+    sheet.getRange(sheetRow, notesCol + 1).setValue(newNotes);
+    invalidateTaskCache();
+
+    logger.info('TaskService', 'updateTaskNotes', `Task '${taskId}' notes updated.`);
+    return true;
+  } catch (e) {
+    logger.error('TaskService', 'updateTaskNotes', e.message, e);
+    return false;
+  }
+}
+```
+
+**New function: findOpenTaskByType()**
+```javascript
+/**
+ * Finds an open task by type (regardless of linkedEntityId).
+ * @param {string} taskTypeId The task type to find.
+ * @returns {Object|null} Task object with id, notes, etc. or null if not found.
+ */
+function findOpenTaskByType(taskTypeId) {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const sheet = spreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet || sheet.getLastRow() < 2) return null;
+
+    const taskSchema = allConfig['schema.data.SysTasks'];
+    const headers = taskSchema.headers.split(',');
+    const typeCol = headers.indexOf('st_TaskTypeId');
+    const statusCol = headers.indexOf('st_Status');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const notesCol = headers.indexOf('st_Notes');
+    const titleCol = headers.indexOf('st_Title');
+
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][typeCol] === taskTypeId &&
+          data[i][statusCol] !== 'Done' && data[i][statusCol] !== 'Closed') {
+        return {
+          id: data[i][taskIdCol],
+          title: data[i][titleCol],
+          notes: data[i][notesCol],
+          rowIndex: i + 2
+        };
+      }
+    }
+    return null;
+  } catch (e) {
+    logger.error('TaskService', 'findOpenTaskByType', e.message, e);
+    return null;
+  }
+}
+```
+
+**New function: upsertSingletonTask()**
+```javascript
+/**
+ * Creates or updates a singleton task.
+ * If open task of type exists, updates its notes.
+ * If no open task exists, creates one.
+ * @param {string} taskTypeId The task type.
+ * @param {string} linkedEntityId Fixed entity ID for this singleton.
+ * @param {string} linkedEntityName Display name.
+ * @param {string} title Task title.
+ * @param {string|Object} notes Task notes (object will be JSON stringified).
+ * @returns {Object} { created: boolean, updated: boolean, taskId: string }
+ */
+function upsertSingletonTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes) {
+  const notesStr = typeof notes === 'object' ? JSON.stringify(notes) : notes;
+
+  const existing = findOpenTaskByType(taskTypeId);
+  if (existing) {
+    updateTaskNotes(existing.id, notesStr);
+    return { created: false, updated: true, taskId: existing.id };
+  }
+
+  const result = createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notesStr, null);
+  return { created: true, updated: false, taskId: result ? result.id : null };
+}
+```
+
+**Export in TaskService return block:**
+```javascript
+updateTaskNotes: updateTaskNotes,
+findOpenTaskByType: findOpenTaskByType,
+upsertSingletonTask: upsertSingletonTask,
+```
+
+7.3 Singleton Task Types
+
+| Task Type | Entity ID | Purpose | JSON Schema |
+|-----------|-----------|---------|-------------|
+| task.order.packing_available | ORDERS | Orders widget data | See 7.4.1 |
+| task.inventory.brurya_update | BRURYA | Brurya widget data | See 7.4.2 |
+| task.system.health_status | _SYSTEM | System health data | See 7.4.3 |
+
+**New task type to add:**
+```json
+[
+  "task.template",
+  "task.system.health_status",
+  "Singleton task storing system health status for dashboard display.",
+  "stable",
+  "topic", "System",
+  "default_priority", "Normal",
+  "initial_status", "New",
+  "flow_pattern", "admin_direct"
+]
+```
+
+7.4 JSON Schemas for Task Notes
+
+7.4.1 Orders Widget (`task.order.packing_available`)
+```json
+{
+  "updated": "2025-12-17T10:30:00Z",
+  "packing_available": 3,
+  "comax_export_pending": 2,
+  "on_hold": 1,
+  "processing": 5
+}
+```
+
+7.4.2 Brurya Widget (`task.inventory.brurya_update`)
+```json
+{
+  "updated": "2025-12-17T10:30:00Z",
+  "days_since_update": 8,
+  "last_update": "2025-12-09",
+  "status": "overdue",
+  "product_count": 45,
+  "total_stock": 1250
+}
+```
+
+7.4.3 System Health (`task.system.health_status`)
+```json
+{
+  "updated": "2025-12-17T02:00:00Z",
+  "last_sync": {
+    "timestamp": "2025-12-17T08:00:00Z",
+    "status": "success",
+    "session_id": "abc-123",
+    "validation_failures": 0
+  },
+  "last_housekeeping": {
+    "timestamp": "2025-12-17T02:00:00Z",
+    "status": "success",
+    "unit_tests": "pass",
+    "validations_run": 32,
+    "issues_found": 0
+  },
+  "critical_issues": []
+}
+```
+
+7.5 Implementation Steps
+
+**Step 7.1: Add TaskService functions**
+- Add updateTaskNotes(), findOpenTaskByType(), upsertSingletonTask()
+- Export all three functions
+
+**Step 7.2: Add task.system.health_status task type**
+- Add to taskDefinitions.json
+
+**Step 7.3: Update order processing to use upsert**
+- Modify _updatePackingAvailabilityTask() to use upsertSingletonTask()
+- Update notes with full JSON including all order counts
+
+**Step 7.4: Update Brurya reminder to use upsert**
+- Modify checkBruryaReminder() to use upsertSingletonTask()
+- Include product count and stock in JSON notes
+
+**Step 7.5: Add system health updates**
+- At end of sync, update task.system.health_status with sync results
+- At end of housekeeping, update with housekeeping results
+- Include validation counts, unit test status, issues found
+
+**Step 7.6: Update dashboard to read JSON notes**
+- Parse task notes as JSON
+- Display data from parsed JSON instead of counting tasks
+- Fall back to count-based display if JSON parse fails
+
+7.6 Dashboard Integration
+
+**Reading JSON notes in widgets:**
+```javascript
+function parseTaskNotes(notesString) {
+  try {
+    return JSON.parse(notesString);
+  } catch (e) {
+    return null; // Fall back to text display
+  }
+}
+
+// In widget rendering:
+const task = project.tasks.find(t => t.type === 'task.order.packing_available');
+if (task) {
+  const data = parseTaskNotes(task.notes);
+  if (data) {
+    // Use structured data
+    packingCount = data.packing_available;
+    onHoldCount = data.on_hold;
+    processingCount = data.processing;
+  } else {
+    // Fall back to counting tasks
+    packingCount = project.counts['task.order.packing_available'] || 0;
+  }
+}
+```
+
+7.7 Verification
+
+- [ ] TaskService has all three new functions
+- [ ] task.system.health_status task type exists
+- [ ] Orders task notes contain JSON with all counts
+- [ ] Brurya task notes contain JSON with counts and status
+- [ ] System health task updated after sync completion
+- [ ] System health task updated after housekeeping completion
+- [ ] Dashboard correctly parses and displays JSON data
+- [ ] Dashboard falls back gracefully if JSON parse fails
+
+---
 Part 9: Task Creation Points
 
 9.1 Existing Creation Points (11 locations)
@@ -1624,8 +1891,8 @@ Task Lifecycle
 - Priority determines urgency: Critical > High > Normal > Low
 
 ---
-Plan Version: 2.4
-Last Updated: 2025-12-15
+Plan Version: 2.5
+Last Updated: 2025-12-17
 Status: Phase 1 and 1B COMPLETE - Implementation In Progress
 
 IMPLEMENTATION SUMMARY:
@@ -1637,6 +1904,7 @@ IMPLEMENTATION SUMMARY:
 - Phase 4: Bundle tasks (BundleService.js, HousekeepingService.js) - PENDING
 - Phase 5: Dashboard consolidation (WebAppProjects.js) - MOST COMPLEX - PENDING
 - Phase 6: Packing slip tasks (WebAppOrders.js) - PENDING
+- Phase 7: Singleton detail tasks (TaskService.js, Dashboard) - NEW - PENDING
 
 Each phase has: Safety Checks, Verification Tests, Rollback Plan
 See Appendix F for detailed implementation guide with checklists

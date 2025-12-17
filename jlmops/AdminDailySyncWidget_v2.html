@@ -46,66 +46,82 @@
                     </div>
                 </div>
             </div>
-            <!-- Step 1: Import Web Products -->
+            <!-- Step 1: Web Product Import -->
             <div class="col">
                 <div class="card h-100" id="step1Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">1. Web Products</h6>
+                        <h6 class="card-title sync-card-title">1. Web Product Import</h6>
                         <div id="step1Icon" class="sync-icon">⏸️</div>
-                        <div id="step1Message" class="text-muted small">Pending...</div>
+                        <div id="step1Message" class="text-muted small"></div>
                         <div id="step1Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 2: Import Web Orders -->
+            <!-- Step 2: Web Order Import -->
             <div class="col">
                 <div class="card h-100" id="step2Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">2. Web Orders</h6>
+                        <h6 class="card-title sync-card-title">2. Web Order Import</h6>
                         <div id="step2Icon" class="sync-icon">⏸️</div>
-                        <div id="step2Message" class="text-muted small">Pending...</div>
+                        <div id="step2Message" class="text-muted small"></div>
                         <div id="step2Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 3: Export to Comax -->
+            <!-- Step 3: Update Comax Orders -->
             <div class="col">
                 <div class="card h-100" id="step3Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">3. Order Export</h6>
+                        <h6 class="card-title sync-card-title">3. Update Comax Orders</h6>
                         <div id="step3Icon" class="sync-icon">⏸️</div>
-                        <div id="step3Message" class="text-muted small">Pending...</div>
+                        <div id="step3Message" class="text-muted small"></div>
                         <div id="step3Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 4: Import Comax Data -->
+            <!-- Step 4: Import Comax Products -->
             <div class="col">
                 <div class="card h-100" id="step4Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">4. Comax Products</h6>
+                        <h6 class="card-title sync-card-title">4. Import Comax Products</h6>
                         <div id="step4Icon" class="sync-icon">⏸️</div>
-                        <div id="step4Message" class="text-muted small">Pending...</div>
+                        <div id="step4Message" class="text-muted small"></div>
                         <div id="step4Action"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 5: Export Web Inventory -->
+            <!-- Step 5: Update Web Inventory -->
             <div class="col">
                 <div class="card h-100" id="step5Card">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">5. Web Inventory</h6>
+                        <h6 class="card-title sync-card-title">5. Update Web Inventory</h6>
                         <div id="step5Icon" class="sync-icon">⏸️</div>
-                        <div id="step5Message" class="text-muted small">Pending...</div>
+                        <div id="step5Message" class="text-muted small"></div>
                         <div id="step5Action"></div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Shared Message & Action Area -->
+        <div class="card mt-3 border-primary">
+            <div class="card-body py-3 row align-items-center">
+                <div id="sharedMessage" class="col-4" style="font-size: 1.1rem;">
+                    <span class="text-muted">Ready to start sync</span>
+                </div>
+                <div id="sharedAction" class="col-4 text-center">
+                    <!-- Action button rendered here -->
+                </div>
+                <div class="col-4"></div>
+            </div>
+        </div>
+
+        <!-- Progress Log -->
+        <div id="progressLog" class="mt-2 small text-muted"></div>
 
         <!-- Error Display -->
         <div id="errorDisplay" class="alert alert-danger d-none"></div>
@@ -135,6 +151,8 @@
     var lastActionTime = 0;
     var currentPollIntervalMs = null;
     var dismissedFailures = {};
+    var progressEntries = [];
+    var previousStepStatuses = {};
 
     // Constants
     var ULTRA_FAST_POLL_MS = 500;
@@ -148,6 +166,31 @@
         completed: '✅',
         failed: '❌'
     };
+
+    var actionInProgress = false; // Prevent double-clicks
+    var loggedActions = {}; // Track what we've logged to prevent duplicates
+
+    function updateSharedAreaImmediate(stepNum, stepName, actionText) {
+        var msgEl = document.getElementById('sharedMessage');
+        var actionEl = document.getElementById('sharedAction');
+        msgEl.innerHTML = '<strong>Step ' + stepNum + ': ' + stepName + '</strong> - <span class="text-primary">' + actionText + '</span>';
+        actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+        // Don't log "Importing..." - wait for result
+    }
+
+    function addProgressEntry(text, isSuccess) {
+        // Prevent duplicate entries
+        var key = text.replace(/\d+:\d+:\d+ [AP]M/g, '').trim();
+        if (loggedActions[key]) return;
+        loggedActions[key] = true;
+
+        var icon = isSuccess ? '✓' : '•';
+        var cls = isSuccess ? 'text-success' : 'text-muted';
+        var time = new Date().toLocaleTimeString();
+        progressEntries.push('<span class="' + cls + '">' + icon + ' ' + time + ' - ' + text + '</span>');
+        if (progressEntries.length > 10) progressEntries.shift();
+        document.getElementById('progressLog').innerHTML = progressEntries.join('<br>');
+    }
 
     function updateUI(status) {
         var now = Date.now();
@@ -181,14 +224,172 @@
         updateStep(4, status.step4, currentStep === 4, currentStep);
         updateStep(5, status.step5, currentStep === 5, currentStep, status.webExportFilename);
 
+        // Log progress on step completion transitions with context
+        var steps = [null, status.step1, status.step2, status.step3, status.step4, status.step5];
+        for (var i = 1; i <= 5; i++) {
+            var stepData = steps[i];
+            var stepStatus = stepData ? stepData.status : null;
+            var prevStatus = previousStepStatuses['step' + i];
+
+            if (stepStatus === 'completed' && prevStatus !== 'completed') {
+                var logMsg = '';
+                var msg = stepData.message || '';
+
+                switch (i) {
+                    case 1: // Web Product Import
+                        var match = msg.match(/(\d+)/);
+                        logMsg = 'Web products imported' + (match ? ' (' + match[1] + ')' : '');
+                        break;
+                    case 2: // Web Order Import
+                        var match2 = msg.match(/(\d+)/);
+                        logMsg = 'Web orders imported' + (match2 ? ' (' + match2[1] + ')' : '');
+                        break;
+                    case 3: // Update Comax Orders
+                        if (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0) {
+                            logMsg = 'No orders to export (skipped)';
+                        } else {
+                            logMsg = 'Orders exported to Comax';
+                        }
+                        break;
+                    case 4: // Import Comax Products
+                        logMsg = 'Comax products imported';
+                        break;
+                    case 5: // Update Web Inventory
+                        logMsg = 'Web inventory updated';
+                        break;
+                }
+
+                if (logMsg) {
+                    addProgressEntry(logMsg, true);
+                }
+            }
+            previousStepStatuses['step' + i] = stepStatus;
+        }
+
         // Update footer with date and time
         document.getElementById('footerStatus').textContent = status.lastUpdated ?
             'Last updated: ' + new Date(status.lastUpdated).toLocaleString() : 'Ready';
+
+        // Update shared message/action area
+        updateSharedArea(status);
 
         // Check for any failures (only if session active)
         if (status.sessionId) {
             checkForFailures();
         }
+    }
+
+    function btn(action, label) {
+        return '<button class="btn btn-sm" onclick="window.SyncWidget.' + action + '(); return false;">' + label + '</button>';
+    }
+
+    function spinner() {
+        return '<div class="spinner-border spinner-border-sm" role="status"></div>';
+    }
+
+    function updateSharedArea(status) {
+        var msgEl = document.getElementById('sharedMessage');
+        var actionEl = document.getElementById('sharedAction');
+        var stage = status.currentStage || 'IDLE';
+        var orderCount = status.ordersPendingExportCount || 0;
+
+        // Get step statuses
+        var s1 = status.step1 ? status.step1.status : null;
+        var s2 = status.step2 ? status.step2.status : null;
+        var s3 = status.step3 ? status.step3.status : null;
+        var s4 = status.step4 ? status.step4.status : null;
+        var s5 = status.step5 ? status.step5.status : null;
+
+        var message = '';
+        var actionHtml = '';
+
+        // Determine what to show based on stage + step status
+        // Check processing states first, IDLE last
+
+        // Step 1 processing
+        if ((stage === 'WEB_PRODUCTS_IMPORTING' || stage === 'WEB_IMPORT_PROCESSING') && s1 !== 'completed') {
+            message = 'Importing web products...';
+            actionHtml = spinner();
+        }
+        // Step 1 done, step 2 ready
+        else if (s1 === 'completed' && s2 !== 'completed' && s2 !== 'processing') {
+            message = 'Products imported. Import orders';
+            actionHtml = btn('importOrders', 'Import Orders');
+        }
+        // Step 2 processing
+        else if (stage === 'WEB_ORDERS_IMPORTING' || s2 === 'processing') {
+            message = 'Importing web orders...';
+            actionHtml = spinner();
+        }
+        // Step 2 done, orders to export
+        else if (stage === 'WAITING_FOR_COMAX' && orderCount > 0 && s3 !== 'completed') {
+            message = orderCount + ' orders to export';
+            actionHtml = btn('exportToComax', 'Export Orders');
+        }
+        // Step 2 done, no orders - skip to step 4
+        else if ((stage === 'WAITING_FOR_COMAX' || stage === 'READY_FOR_COMAX_IMPORT') && orderCount === 0 && s4 !== 'completed' && s4 !== 'processing') {
+            message = 'No orders. Import Comax products';
+            actionHtml = btn('startComaxImport', 'Import Comax');
+        }
+        // Orders exported, need confirmation
+        else if (s3 === 'waiting' && status.comaxOrdersExported) {
+            message = 'Orders exported. Confirm upload';
+            actionHtml = btn('confirmComax', 'Confirm');
+        }
+        // Ready for Comax import
+        else if (stage === 'READY_FOR_COMAX_IMPORT') {
+            message = 'Import Comax products';
+            actionHtml = btn('startComaxImport', 'Import Comax');
+        }
+        // Comax importing
+        else if (stage === 'COMAX_IMPORT_PROCESSING') {
+            message = 'Importing Comax products...';
+            actionHtml = spinner();
+        }
+        // Validating
+        else if (stage === 'VALIDATING') {
+            message = 'Running validation...';
+            actionHtml = spinner();
+        }
+        // Ready for web export
+        else if (stage === 'READY_FOR_WEB_EXPORT') {
+            message = 'Generate web inventory export';
+            actionHtml = btn('generateWebExport', 'Generate');
+        }
+        // Web export processing
+        else if (stage === 'WEB_EXPORT_PROCESSING') {
+            message = 'Generating export...';
+            actionHtml = spinner();
+        }
+        // Web export ready for confirmation
+        else if (stage === 'WEB_EXPORT_GENERATED') {
+            message = 'Export ready. Confirm upload';
+            actionHtml = btn('confirmWeb', 'Confirm');
+        }
+        // Complete
+        else if (stage === 'COMPLETE') {
+            message = '<span class="text-success">Sync complete</span>';
+            if (!previousStepStatuses.syncComplete) {
+                addProgressEntry('Daily sync completed', true);
+                previousStepStatuses.syncComplete = true;
+            }
+        }
+        // Failed
+        else if (stage === 'FAILED') {
+            message = '<span class="text-danger">Failed: ' + (status.errorMessage || 'Unknown') + '</span>';
+        }
+        // IDLE - no session (check last so processing states take priority)
+        else if (stage === 'IDLE' || !status.sessionId) {
+            message = 'Start daily sync';
+            actionHtml = btn('importProducts', 'Start Import');
+        }
+        // Fallback - show actual stage for debugging
+        else {
+            message = 'Stage: ' + stage;
+        }
+
+        msgEl.innerHTML = message;
+        actionEl.innerHTML = actionHtml;
     }
 
     function updateInvoiceFolder() {
@@ -232,195 +433,122 @@
         var message = document.getElementById('step' + stepNum + 'Message');
         var action = document.getElementById('step' + stepNum + 'Action');
 
-        // Reset card styling (class and inline styles)
+        // Reset card styling
         card.className = 'card h-100';
-        card.style.borderColor = '';
-        card.style.borderWidth = '';
+
+        // Minimal step box display - icon only
+        // All details go to shared area and progress log
+        message.innerHTML = '';
+        action.innerHTML = '';
 
         if (!stepData) {
-            // No data yet - show pending, only show action if this is the current/active step
             icon.textContent = ICONS.waiting;
-            message.textContent = 'Pending...';
-            action.innerHTML = '';
-
-            // Only show action link if this step is the current step (or step 1 when no session)
-            if (stepNum === currentStep || (stepNum === 1 && currentStep === 0)) {
-                if (stepNum === 1) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Products</a>';
-                } else if (stepNum === 2) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Import Orders</a>';
-                } else if (stepNum === 3) {
-                    // extraData contains ordersPendingExportCount for step 3
-                    var ordersToExport = extraData || 0;
-                    if (ordersToExport > 0) {
-                        action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Export Orders</a>';
-                    }
-                    // If no orders, don't show export link
-                } else if (stepNum === 4) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Start Import</a>';
-                } else if (stepNum === 5) {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-2">Generate Export</a>';
-                }
+            if (isActive || (stepNum === 1 && currentStep === 0)) {
+                card.classList.add('border-primary');
             }
             return;
         }
 
-        // Update icon and message
+        // Update icon based on status
         icon.textContent = ICONS[stepData.status] || ICONS.waiting;
 
-        // For step 5, show filename if available
-        if (stepNum === 5 && extraData && extraData !== 'No Changes Detected') {
-            message.innerHTML = '<div class="small">' + (stepData.message || stepData.status) + '</div>' +
-                '<div class="text-info fw-bold small mt-1">' + extraData + '</div>';
-        } else {
-            message.textContent = stepData.message || stepData.status;
-        }
-
-        // Highlight active step
+        // Color code card by status
         if (isActive) {
             card.classList.add('border-primary', 'shadow');
-        }
-
-        // Handle action links - ONLY show for the current active step
-        // This prevents showing links for future steps or completed steps
-        action.innerHTML = '';
-
-        if (stepData.status === 'processing') {
-            action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div>';
-        } else if (stepData.status === 'waiting' && stepNum === currentStep) {
-            // Only show action links if this is the current step AND status is waiting
-            if (stepNum === 1) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Products</a>';
-            } else if (stepNum === 2) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Import Orders</a>';
-            } else if (stepNum === 3) {
-                // Check message for state: "No orders" = skip, "exported/confirm" = need confirmation, else = export
-                var msg = stepData.message || '';
-                if (msg.indexOf('No orders') !== -1 || msg.indexOf('no orders') !== -1) {
-                    // No orders - no action needed, will auto-advance
-                    action.innerHTML = '';
-                } else if (msg.indexOf('confirm') !== -1 || msg.indexOf('exported') !== -1) {
-                    // Export done, need confirmation
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
-                } else {
-                    // Ready to export
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Export Orders</a>';
-                }
-            } else if (stepNum === 4) {
-                action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Start Import</a>';
-            } else if (stepNum === 5) {
-                // Check if export was generated and needs confirmation
-                var msg5 = stepData.message || '';
-                if (msg5.indexOf('confirm') !== -1 || msg5.indexOf('Export complete') !== -1) {
-                    // Export done, need confirmation
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="d-block fw-bold text-success text-decoration-none mt-1">Confirm Upload</a>';
-                } else {
-                    action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="d-block fw-bold text-primary text-decoration-none mt-1">Generate Export</a>';
-                }
-            }
-        }
-        // For 'completed' or 'failed' status, action.innerHTML stays empty (no links)
-
-        // Color code by status
-        if (stepData.status === 'completed') {
-            card.classList.add('border-primary', 'bg-light'); // Blue border for completed
+        } else if (stepData.status === 'completed') {
+            card.classList.add('border-success', 'bg-light');
         } else if (stepData.status === 'failed') {
             card.classList.add('border-danger');
         }
     }
 
-    // Action functions
+    // Action functions - all check actionInProgress to prevent double-clicks
     function importProducts() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
-        doImportProducts(timestamp);
-    }
+        updateSharedAreaImmediate(1, 'Web Product Import', 'Importing...');
 
-    function doImportProducts(timestamp) {
         var step1Card = document.getElementById('step1Card');
-        var step1Action = document.getElementById('step1Action');
         var step1Icon = document.getElementById('step1Icon');
-        var step1Message = document.getElementById('step1Message');
-
-        step1Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
+        step1Card.className = 'card h-100 border-primary shadow';
         step1Icon.textContent = '🔄';
-        step1Message.innerHTML = '<strong>Importing products...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step1Card.style.borderColor = '#dc3545';
-                step1Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step1Action.innerHTML = '<a href="#" onclick="window.SyncWidget.importProducts(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step1Card.classList.add('border-danger');
+                step1Icon.textContent = '❌';
+                updateSharedAreaImmediate(1, 'Web Product Import', 'Failed: ' + (err.message || err));
             })
             .importWebProductsBackend();
     }
 
     function importOrders() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(2, 'Web Order Import', 'Importing...');
 
         var step2Card = document.getElementById('step2Card');
-        var step2Action = document.getElementById('step2Action');
         var step2Icon = document.getElementById('step2Icon');
-        var step2Message = document.getElementById('step2Message');
-
         step2Card.className = 'card h-100 border-primary shadow';
-        step2Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step2Icon.textContent = '🔄';
-        step2Message.innerHTML = '<strong>Importing orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step2Card.style.borderColor = '#dc3545';
-                step2Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step2Action.innerHTML = '<a href="#" onclick="window.SyncWidget.importOrders(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step2Card.classList.add('border-danger');
+                step2Icon.textContent = '❌';
+                updateSharedAreaImmediate(2, 'Web Order Import', 'Failed: ' + (err.message || err));
             })
             .importWebOrdersBackend();
     }
 
     function exportToComax() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Exporting...');
 
         var step3Card = document.getElementById('step3Card');
-        var step3Action = document.getElementById('step3Action');
         var step3Icon = document.getElementById('step3Icon');
-        var step3Message = document.getElementById('step3Message');
-
         step3Card.className = 'card h-100 border-primary shadow';
-        step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step3Icon.textContent = '🔄';
-        step3Message.innerHTML = '<strong>Exporting orders...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step3Card.style.borderColor = '#dc3545';
-                step3Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step3Action.innerHTML = '<a href="#" onclick="window.SyncWidget.exportToComax(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step3Card.classList.add('border-danger');
+                step3Icon.textContent = '❌';
+                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
             })
             .exportComaxOrdersBackend();
     }
@@ -429,128 +557,155 @@
         if (!confirm('Confirm that orders have been uploaded to Comax?')) {
             return;
         }
-
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Confirming...');
 
         var step3Card = document.getElementById('step3Card');
-        var step3Action = document.getElementById('step3Action');
         var step3Icon = document.getElementById('step3Icon');
-        var step3Message = document.getElementById('step3Message');
-
         step3Card.className = 'card h-100 border-primary shadow';
-        step3Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step3Icon.textContent = '🔄';
-        step3Message.innerHTML = '<strong>Confirming upload...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step3Card.style.borderColor = '#dc3545';
-                step3Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step3Action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmComax(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step3Card.classList.add('border-danger');
+                step3Icon.textContent = '❌';
+                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
             })
             .confirmComaxUpdateBackend();
     }
 
     function startComaxImport() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(4, 'Import Comax Products', 'Starting...');
 
         var step4Card = document.getElementById('step4Card');
-        var step4Action = document.getElementById('step4Action');
         var step4Icon = document.getElementById('step4Icon');
-        var step4Message = document.getElementById('step4Message');
-
         step4Card.className = 'card h-100 border-primary shadow';
-        step4Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step4Icon.textContent = '🔄';
-        step4Message.innerHTML = '<strong>Starting import...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step4Card.style.borderColor = '#dc3545';
-                step4Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step4Action.innerHTML = '<a href="#" onclick="window.SyncWidget.startComaxImport(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step4Card.classList.add('border-danger');
+                step4Icon.textContent = '❌';
+                updateSharedAreaImmediate(4, 'Import Comax Products', 'Failed: ' + (err.message || err));
             })
             .startComaxImportBackend();
     }
 
     function generateWebExport() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(5, 'Update Web Inventory', 'Generating...');
 
         var step5Card = document.getElementById('step5Card');
-        var step5Action = document.getElementById('step5Action');
         var step5Icon = document.getElementById('step5Icon');
-        var step5Message = document.getElementById('step5Message');
-
         step5Card.className = 'card h-100 border-primary shadow';
-        step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
-        step5Message.innerHTML = '<strong>Generating export...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step5Card.style.borderColor = '#dc3545';
-                step5Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.generateWebExport(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step5Card.classList.add('border-danger');
+                step5Icon.textContent = '❌';
+                updateSharedAreaImmediate(5, 'Update Web Inventory', 'Failed: ' + (err.message || err));
             })
             .generateWebExportBackend();
     }
 
     function confirmWeb() {
-        var timestamp = new Date().toLocaleTimeString();
+        if (actionInProgress) return;
+        actionInProgress = true;
         lastActionTime = Date.now();
+        updateSharedAreaImmediate(5, 'Update Web Inventory', 'Confirming...');
 
         var step5Card = document.getElementById('step5Card');
         var step5Icon = document.getElementById('step5Icon');
-        var step5Message = document.getElementById('step5Message');
-        var step5Action = document.getElementById('step5Action');
-
         step5Card.className = 'card h-100 border-primary shadow';
-        step5Action.innerHTML = '<div class="spinner-border spinner-border-sm mt-2" role="status"></div><div class="small text-muted mt-1">' + timestamp + '</div>';
         step5Icon.textContent = '🔄';
-        step5Message.innerHTML = '<strong>Confirming...</strong> <small class="text-muted">(' + timestamp + ')</small>';
 
         var originalActionTime = lastActionTime;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                actionInProgress = false;
                 if (lastActionTime === originalActionTime) {
                     updateUI(status);
                     adjustPolling(status);
                 }
             })
             .withFailureHandler(function(err) {
-                step5Card.style.borderColor = '#dc3545';
-                step5Message.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.confirmWeb(); return false;" class="small">Retry</a>';
+                actionInProgress = false;
+                step5Card.classList.add('border-danger');
+                step5Icon.textContent = '❌';
+                updateSharedAreaImmediate(5, 'Update Web Inventory', 'Failed: ' + (err.message || err));
             })
             .confirmWebInventoryUpdateBackend();
+    }
+
+    function skipOrders() {
+        // Skip order export when there are no orders - calls same backend which handles it
+        if (actionInProgress) return;
+        actionInProgress = true;
+        lastActionTime = Date.now();
+        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Skipping (no orders)...');
+        addProgressEntry('No orders to export - skipped', true);
+
+        var step3Card = document.getElementById('step3Card');
+        var step3Icon = document.getElementById('step3Icon');
+        step3Card.className = 'card h-100 border-primary shadow';
+        step3Icon.textContent = '🔄';
+
+        var originalActionTime = lastActionTime;
+
+        google.script.run
+            .withSuccessHandler(function(status) {
+                actionInProgress = false;
+                if (lastActionTime === originalActionTime) {
+                    updateUI(status);
+                    adjustPolling(status);
+                }
+            })
+            .withFailureHandler(function(err) {
+                actionInProgress = false;
+                step3Card.classList.add('border-danger');
+                step3Icon.textContent = '❌';
+                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
+            })
+            .exportComaxOrdersBackend();
     }
 
     function checkForFailures() {
@@ -599,6 +754,12 @@
 
         lastActionTime = Date.now();
         document.getElementById('footerStatus').textContent = 'Resetting...';
+
+        // Clear progress log and step tracking
+        progressEntries = [];
+        previousStepStatuses = {};
+        loggedActions = {};
+        document.getElementById('progressLog').innerHTML = '';
 
         google.script.run
             .withSuccessHandler(function(status) {
@@ -673,6 +834,7 @@
         importProducts: importProducts,
         importOrders: importOrders,
         exportToComax: exportToComax,
+        skipOrders: skipOrders,
         confirmComax: confirmComax,
         startComaxImport: startComaxImport,
         generateWebExport: generateWebExport,

@@ -1,12 +1,11 @@
 /**
  * @file WebAppDashboardV2.js
- * @description New consolidated dashboard - efficient, fast, clear.
- * Single API call returns all project data with task summaries.
+ * @description Consolidated dashboard - efficient, fast, clear.
+ * Single API call returns all widget data with task details.
  */
 
 /**
  * Gets consolidated dashboard data in a single call.
- * Optimized for minimal round trips and fast loading.
  * @returns {Object} Complete dashboard state
  */
 function WebAppDashboardV2_getData() {
@@ -14,12 +13,17 @@ function WebAppDashboardV2_getData() {
   const functionName = 'getData';
 
   try {
+    // Get all open tasks once for efficiency
+    const allTasks = WebAppTasks.getOpenTasks();
+
     const result = {
       timestamp: new Date().toISOString(),
-      projects: _getProjectSummaries(),
-      taskCounts: _getTaskCountsByType(),
-      alerts: _getSystemAlerts(),
-      brurya: _getBruryaStatus()
+      systemHealth: _getSystemHealthData(),
+      orders: _getOrdersData(),
+      inventory: _getInventoryData(allTasks),
+      products: _getProductsData(allTasks),
+      projects: _getProjectSummaries(allTasks),
+      adminTasks: _getAdminTasksList(allTasks)
     };
 
     return { success: true, data: result };
@@ -30,12 +34,140 @@ function WebAppDashboardV2_getData() {
 }
 
 /**
+ * Gets system health data from the singleton task.
+ * Shows time and result of housekeeping, schema validation, data validation, unit testing.
+ * @private
+ */
+function _getSystemHealthData() {
+  try {
+    const healthTask = TaskService.findOpenTaskByType('task.system.health_status', '_SYSTEM');
+
+    if (!healthTask || !healthTask.notes) {
+      return {
+        available: false,
+        housekeeping: { status: 'unknown', timestamp: null },
+        schemaValidation: { status: 'unknown', timestamp: null },
+        dataValidation: { status: 'unknown', timestamp: null, issues: null },
+        unitTests: { status: 'unknown', timestamp: null, result: null }
+      };
+    }
+
+    const notes = typeof healthTask.notes === 'string' ? JSON.parse(healthTask.notes) : healthTask.notes;
+    const hk = notes.last_housekeeping || {};
+
+    // Determine individual statuses
+    const hasIssues = hk.validation_issues > 0;
+    const testsOk = hk.unit_tests && !hk.unit_tests.includes('error');
+
+    return {
+      available: true,
+      housekeeping: {
+        status: hk.status === 'success' ? 'ok' : 'partial',
+        timestamp: hk.timestamp || null
+      },
+      schemaValidation: {
+        status: 'ok', // Schema validation runs as part of housekeeping
+        timestamp: hk.timestamp || null
+      },
+      dataValidation: {
+        status: hasIssues ? 'issues' : 'ok',
+        timestamp: hk.timestamp || null,
+        issues: hk.validation_issues ?? 0
+      },
+      unitTests: {
+        status: testsOk ? 'ok' : 'error',
+        timestamp: hk.timestamp || null,
+        result: hk.unit_tests || null
+      }
+    };
+  } catch (e) {
+    return {
+      available: false,
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Gets orders widget data.
+ * @private
+ */
+function _getOrdersData() {
+  try {
+    const orderService = new OrderService(ProductService);
+    return {
+      packingSlipsReady: orderService.getPackingSlipsReadyCount(),
+      ordersToExport: orderService.getComaxExportOrderCount(),
+      onHold: orderService.getOnHoldOrderCount(),
+      processing: orderService.getProcessingOrderCount()
+    };
+  } catch (e) {
+    return {
+      packingSlipsReady: 0,
+      ordersToExport: 0,
+      onHold: 0,
+      processing: 0,
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Gets inventory widget data.
+ * @private
+ */
+function _getInventoryData(allTasks) {
+  try {
+    // Brurya last update
+    const allConfig = ConfigService.getAllConfig();
+    const bruryaConfig = allConfig['system.brurya.last_update'];
+    const bruryaLastUpdate = bruryaConfig?.value ? new Date(bruryaConfig.value).toISOString() : null;
+
+    // Count tasks by type
+    const negativeInventory = _countTasksByType(allTasks, 'task.validation.comax_internal_audit');
+    const inventoryCountTasks = _countTasksByType(allTasks, 'task.confirmation.comax_inventory_export');
+    const inventoryAwaitingReview = _countTasksByType(allTasks, 'task.validation.archived_comax_stock_mismatch');
+    const bruryaReminder = _countTasksByType(allTasks, 'task.inventory.brurya_update');
+
+    return {
+      bruryaLastUpdate: bruryaLastUpdate,
+      bruryaReminder: bruryaReminder,
+      negativeInventory: negativeInventory,
+      inventoryCountTasks: inventoryCountTasks,
+      inventoryAwaitingReview: inventoryAwaitingReview
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
+ * Gets products widget data.
+ * @private
+ */
+function _getProductsData(allTasks) {
+  try {
+    return {
+      vintageUpdate: _countTasksByType(allTasks, 'task.validation.vintage_mismatch'),
+      detailReview: _countTasksByType(allTasks, 'task.validation.field_mismatch'),
+      newProductSuggestion: _countTasksByType(allTasks, 'task.onboarding.suggestion'),
+      newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
+      newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
+      bundleCritical: _countTasksByType(allTasks, 'task.bundle.critical_inventory'),
+      bundleLow: _countTasksByType(allTasks, 'task.bundle.low_inventory'),
+      categoryLow: _countTasksByType(allTasks, 'task.deficiency.category_stock')
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+/**
  * Gets project summaries with task counts.
  * @private
  */
-function _getProjectSummaries() {
+function _getProjectSummaries(allTasks) {
   const projects = ProjectService.getAllProjects();
-  const allTasks = WebAppTasks.getOpenTasks();
 
   // Group tasks by project
   const tasksByProject = {};
@@ -69,99 +201,73 @@ function _getProjectSummaries() {
 }
 
 /**
- * Gets task counts grouped by type.
+ * Gets admin tasks list with details.
  * @private
  */
-function _getTaskCountsByType() {
-  const allTasks = WebAppTasks.getOpenTasks();
-  const counts = {};
+function _getAdminTasksList(allTasks) {
+  // Filter to admin-relevant tasks and sort by due date
+  const adminTasks = allTasks
+    .filter(task => task.st_Status !== 'Done' && task.st_Status !== 'Cancelled')
+    .map(task => ({
+      id: task.st_TaskId,
+      typeId: task.st_TaskTypeId,
+      name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
+      entityId: task.st_LinkedEntityId || '',
+      entityName: task.st_LinkedEntityName || '',
+      dueDate: task.st_DueDate || null,
+      status: task.st_Status,
+      priority: task.st_Priority
+    }))
+    .sort((a, b) => {
+      // Critical/High first, then by due date
+      const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
+      const pA = priorityOrder[a.priority] ?? 2;
+      const pB = priorityOrder[b.priority] ?? 2;
+      if (pA !== pB) return pA - pB;
 
-  allTasks.forEach(task => {
-    const type = task.st_TaskTypeId || 'unknown';
-    counts[type] = (counts[type] || 0) + 1;
-  });
+      // Then by due date (nulls last)
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    });
 
-  return counts;
+  return adminTasks.slice(0, 20); // Limit to 20 tasks
 }
 
 /**
- * Gets system alerts - bundles with issues, deficiencies, etc.
+ * Counts tasks by type.
  * @private
  */
-function _getSystemAlerts() {
-  const alerts = [];
-
-  try {
-    // Bundle alerts
-    const bundleStats = BundleService.getBundleStats();
-    if (bundleStats.needsAttention > 0) {
-      alerts.push({
-        type: 'bundle',
-        severity: 'warning',
-        message: `${bundleStats.needsAttention} bundle(s) need attention`,
-        count: bundleStats.needsAttention
-      });
-    }
-    if (bundleStats.lowInventoryCount > 0) {
-      alerts.push({
-        type: 'bundle_inventory',
-        severity: 'critical',
-        message: `${bundleStats.lowInventoryCount} bundle slot(s) with low inventory`,
-        count: bundleStats.lowInventoryCount
-      });
-    }
-  } catch (e) {
-    // Bundle service may not be available
-  }
-
-  return alerts;
+function _countTasksByType(allTasks, typeId) {
+  return allTasks.filter(t => t.st_TaskTypeId === typeId).length;
 }
 
 /**
- * Gets Brurya warehouse status and reminder info.
+ * Counts tasks by type and status.
  * @private
  */
-function _getBruryaStatus() {
-  try {
-    const allConfig = ConfigService.getAllConfig();
-    const bruryaConfig = allConfig['system.brurya.last_update'];
-    const lastUpdate = bruryaConfig?.value ? new Date(bruryaConfig.value) : null;
+function _countTasksByTypeAndStatus(allTasks, typeId, statuses) {
+  return allTasks.filter(t =>
+    t.st_TaskTypeId === typeId && statuses.includes(t.st_Status)
+  ).length;
+}
 
-    let daysSinceUpdate = null;
-    let needsUpdate = false;
-
-    if (lastUpdate) {
-      daysSinceUpdate = Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
-      needsUpdate = daysSinceUpdate >= 7;
-    } else {
-      needsUpdate = true;
-    }
-
-    // Get Brurya stats
-    const bruryaSummary = inventoryManagementService.getBruryaSummaryStatistic();
-
-    return {
-      productCount: bruryaSummary.productCount || 0,
-      totalStock: bruryaSummary.totalStock || 0,
-      lastUpdate: lastUpdate?.toISOString() || null,
-      daysSinceUpdate: daysSinceUpdate,
-      needsUpdate: needsUpdate
-    };
-  } catch (e) {
-    return {
-      productCount: 0,
-      totalStock: 0,
-      lastUpdate: null,
-      daysSinceUpdate: null,
-      needsUpdate: true,
-      error: e.message
-    };
-  }
+/**
+ * Formats task type ID into readable name.
+ * @private
+ */
+function _formatTaskTypeName(typeId) {
+  if (!typeId) return 'Unknown';
+  return typeId
+    .replace('task.', '')
+    .replace(/\./g, ' ')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /**
  * Updates the Brurya last update timestamp and closes reminder task.
- * Call this when Brurya inventory is updated.
  * @returns {Object} { success: boolean, message: string }
  */
 function WebAppDashboardV2_confirmBruryaUpdate() {

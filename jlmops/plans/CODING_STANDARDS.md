@@ -159,29 +159,20 @@ return { error: null, data: _sanitizeForClient(results) };
 
 ## 9. Sync Widget Step Mapping
 
-**Problem:** The Daily Sync Widget (AdminDailySyncWidget_v2.html) uses a 5-step UI, but backend code must write status to the correct step numbers.
+**Problem:** The Daily Sync Widget (AdminDailySyncWidget_v2.html) uses a 5-step UI. The shared message area uses `currentStage` as the source of truth, not step data.
 
 **UI Step Mapping:**
-| Step | Card Title | Backend stepName |
-|------|------------|------------------|
-| 1 | Web Products | Web Products |
-| 2 | Web Orders | Web Orders |
-| 3 | Order Export | Order Export |
-| 4 | Comax Products | Comax Products |
-| 5 | Web Inventory | Web Inventory |
+| Step | Card Title | Stage(s) |
+|------|------------|----------|
+| 1 | Web Product Import | IDLE, WEB_IMPORT_PROCESSING |
+| 2 | Web Order Import | (part of WEB_IMPORT_PROCESSING) |
+| 3 | Update Comax Orders | WAITING_FOR_COMAX, COMAX_EXPORT_PENDING |
+| 4 | Import Comax Products | READY_FOR_COMAX_IMPORT, COMAX_IMPORT_PROCESSING, VALIDATING |
+| 5 | Update Web Inventory | READY_FOR_WEB_EXPORT, WEB_EXPORT_PROCESSING, WEB_EXPORT_GENERATED |
 
-**Example:**
-```javascript
-// Writing to Order Export step (step 3, not step 2!)
-SyncStatusService.writeStatus(sessionId, {
-  step: 3,
-  stepName: 'Order Export',
-  status: 'waiting',
-  message: '2 orders ready to export'
-});
-```
+**Important:** The shared message area in the widget uses `status.currentStage` to determine what to show, bypassing potentially mismatched step data.
 
-**Reference:** `OrchestratorService.js` lines 1144-1177
+**Reference:** `AdminDailySyncWidget_v2.html` updateSharedArea() function
 
 ---
 
@@ -191,7 +182,10 @@ SyncStatusService.writeStatus(sessionId, {
 
 **Valid Stage Names:**
 - `IDLE` - No active sync
-- `WEB_IMPORT_PROCESSING` - Importing web data
+- `WEB_PRODUCTS_IMPORTING` - Importing web products (v2 widget)
+- `WEB_ORDERS_READY` - Products done, ready for orders import (v2 widget)
+- `WEB_ORDERS_IMPORTING` - Importing web orders (v2 widget)
+- `WEB_IMPORT_PROCESSING` - Importing web data (v1 combined flow)
 - `WAITING_FOR_COMAX` - Orders ready for export
 - `READY_FOR_COMAX_IMPORT` - Ready to import Comax data
 - `COMAX_IMPORT_PROCESSING` - Importing Comax data
@@ -202,7 +196,7 @@ SyncStatusService.writeStatus(sessionId, {
 - `COMPLETE` - Sync finished
 - `FAILED` - Error occurred
 
-**Never invent new stage names** - the state machine in `_checkAndAdvanceSyncState()` only handles these exact values.
+**Note:** v2 widget stages (WEB_PRODUCTS_IMPORTING, WEB_ORDERS_READY, WEB_ORDERS_IMPORTING) use step-based UI logic and may not require `_checkAndAdvanceSyncState()` handling.
 
 **Reference:** `SyncStateService.js` line 114, `OrchestratorService.js` lines 1043-1350
 

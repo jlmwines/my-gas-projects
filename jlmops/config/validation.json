@@ -10,8 +10,8 @@
         "source_sheet", "CmxProdS",
         "condition", "cps_Stock,<,0",
         "on_failure_task_type", "task.validation.comax_internal_audit",
-        "on_failure_title", "Negative Stock: ${cps_NameHe}",
-        "on_failure_notes", "SKU ${cps_SKU} (${cps_NameHe}) has a negative stock value of ${cps_Stock} in the latest Comax import."
+        "on_failure_title", "Negative Stock",
+        "on_failure_notes", "${cps_Stock}"
     ],
     [
         "validation.rule.template",
@@ -25,8 +25,8 @@
         "target_sheet", "CmxProdS",
         "on_failure_quarantine", "TRUE",
         "on_failure_task_type", "task.validation.row_count_decrease",
-        "on_failure_title", "Comax Import Row Count Decreased",
-        "on_failure_notes", "The number of rows in CmxProdS (${targetRowCount}) is less than the number of rows in CmxProdM (${sourceRowCount}). This may indicate a partial or damaged Comax import file."
+        "on_failure_title", "Comax Row Count Drop",
+        "on_failure_notes", "master ${sourceRowCount} import ${targetRowCount}"
     ],
     [
         "validation.rule.template",
@@ -40,8 +40,8 @@
         "target_sheet", "WebProdS_EN",
         "on_failure_quarantine", "TRUE",
         "on_failure_task_type", "task.validation.row_count_decrease",
-        "on_failure_title", "Web Products Import Row Count Decreased",
-        "on_failure_notes", "The number of rows in WebProdS_EN (${targetRowCount}) is less than the number of rows in WebProdM (${sourceRowCount}). This may indicate a partial or damaged Web Products import file."
+        "on_failure_title", "Web Row Count Drop",
+        "on_failure_notes", "master ${sourceRowCount} import ${targetRowCount}"
     ],
     [
         "validation.rule.template",
@@ -55,8 +55,8 @@
         "target_sheet", "WebXltS",
         "on_failure_quarantine", "TRUE",
         "on_failure_task_type", "task.validation.row_count_decrease",
-        "on_failure_title", "Web Translations Import Row Count Decreased",
-        "on_failure_notes", "The number of rows in WebXltS (${targetRowCount}) is less than the number of rows in WebXltM (${sourceRowCount}). This may indicate a partial or damaged Web Translations import file."
+        "on_failure_title", "Translations Row Count Drop",
+        "on_failure_notes", "master ${sourceRowCount} import ${targetRowCount}"
     ],
     [
         "validation.rule.template",
@@ -68,21 +68,8 @@
         "source_schema", "schema.data.WebXltM",
         "target_schema", "schema.data.WebXltS",
         "on_failure_task_type", "task.validation.webxlt_data_integrity",
-        "on_failure_title", "WebXlt Schema Mismatch: Columns",
-        "on_failure_notes", "The columns in WebXltS do not match the expected schema from WebXltM."
-    ],
-    [
-        "validation.rule.template",
-        "validation.web_translations.row_count_mismatch",
-        "[WebXlt] Row count mismatch between WebXltS and WebXltM.",
-        "stable",
-        "enabled", "TRUE",
-        "test_type", "ROW_COUNT_COMPARISON",
-        "source_sheet", "WebXltM",
-        "target_sheet", "WebXltS",
-        "on_failure_task_type", "task.validation.webxlt_data_integrity",
-        "on_failure_title", "WebXlt Row Count Mismatch",
-        "on_failure_notes", "The number of rows in WebXltS is less than the number of rows in WebXltM."
+        "on_failure_title", "Translations Schema Mismatch",
+        "on_failure_notes", "columns changed"
     ],
     [
         "validation.rule.template",
@@ -112,8 +99,8 @@
         "compare_fields", "cpm_Vintage,cps_Vintage",
         "source_filter", "cpm_IsWeb,כן",
         "on_failure_task_type", "task.validation.vintage_mismatch",
-        "on_failure_title", "Comax Vintage Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different vintage in master (${cpm_Vintage}) versus staging (${cps_Vintage})."
+        "on_failure_title", "Vintage Update",
+        "on_failure_notes", "master ${cpm_Vintage} staging ${cps_Vintage}"
     ],
     [
         "validation.rule.template",
@@ -129,8 +116,8 @@
         "target_key", "wpm_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "New Web Product: ${wps_PostTitle}",
-        "on_failure_notes", "Product SKU ${wps_SKU} exists in the web import but not in the Web Master sheet."
+        "on_failure_title", "Unexpected Web Product",
+        "on_failure_notes", "ID ${wps_ID} not in master"
     ],
     [
         "validation.rule.template",
@@ -146,8 +133,8 @@
         "key_B", "wps_ID",
         "compare_fields", "wpm_SKU,wps_SKU",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "Web SKU Mismatch: ${wps_PostTitle}",
-        "on_failure_notes", "Product '${wps_PostTitle}' (ID: ${wps_ID}) has a SKU mismatch. Master SKU: '${wpm_SKU}', Staging SKU: '${wps_SKU}'."
+        "on_failure_title", "Web SKU Changed",
+        "on_failure_notes", "master ${wpm_SKU} staging ${wps_SKU}"
     ],
     [
         "validation.rule.template",
@@ -163,8 +150,8 @@
         "key_B", "wps_ID",
         "compare_fields", "wdm_NameEn,wps_PostTitle",
         "on_failure_task_type", "task.validation.name_mismatch",
-        "on_failure_title", "Web Name Mismatch: ${wps_PostTitle}",
-        "on_failure_notes", "Product '${wps_PostTitle}' (ID: ${wps_ID}) has a name mismatch. Master: '${wdm_NameEn}', Staging: '${wps_PostTitle}'."
+        "on_failure_title", "Web Name Changed",
+        "on_failure_notes", "master ${wdm_NameEn} staging ${wps_PostTitle}"
     ],
     [
         "validation.rule.template",
@@ -180,8 +167,8 @@
         "target_key", "wps_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.web_master_discrepancy",
-        "on_failure_title", "Web Product Missing from Import: ${wpm_PostTitle}",
-        "on_failure_notes", "Product SKU ${wpm_SKU} (ID: ${wpm_ID}) exists in the Web Master sheet but was not found in the latest web import."
+        "on_failure_title", "Missing From Web Import",
+        "on_failure_notes", "ID ${wpm_ID}"
     ],
     [
         "validation.rule.template",
@@ -192,14 +179,13 @@
         "validation_suite", "comax_staging",
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "CmxProdM",
-        "source_key", "cpm_SKU",
-        "source_filter", "cpm_IsActive,1",
+        "source_key", "cpm_CmxId",
         "target_sheet", "CmxProdS",
-        "target_key", "cps_SKU",
+        "target_key", "cps_CmxId",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.comax_master_discrepancy",
-        "on_failure_title", "Active Comax Product Missing from Import: ${cpm_NameHe}",
-        "on_failure_notes", "Active product SKU ${cpm_SKU} from Comax Master is missing from the latest Comax import."
+        "on_failure_title", "Missing From Comax Import",
+        "on_failure_notes", "CmxId ${cpm_CmxId}"
     ],
     [
         "validation.rule.template",
@@ -214,8 +200,8 @@
         "target_sheet", "SysProductAudit",
         "on_failure_quarantine", "FALSE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Audit Sheet Row Count Mismatch",
-        "on_failure_notes", "The number of rows in CmxProdM (${sourceRowCount}) does not match SysProductAudit (${targetRowCount}). The comax import job may need to be re-run."
+        "on_failure_title", "Audit Row Count Mismatch",
+        "on_failure_notes", "CmxProdM ${sourceRowCount} Audit ${targetRowCount}"
     ],
     [
         "validation.rule.template",
@@ -233,8 +219,8 @@
         "target_key", "cpm_SKU",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product SKU Missing from Comax Master: ${wpm_PostTitle}",
-        "on_failure_notes", "Web Product SKU ${wpm_SKU} (ID: ${wpm_ID}) exists in Web Master but not in Comax Master."
+        "on_failure_title", "No Comax Match",
+        "on_failure_notes", "SKU ${wpm_SKU}"
     ],
     [
         "validation.rule.template",
@@ -252,8 +238,8 @@
         "target_key", "wpm_SKU",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Comax Product SKU Missing from Web Master: ${cpm_NameHe}",
-        "on_failure_notes", "Comax Product SKU ${cpm_SKU} (Name: ${cpm_NameHe}) exists in Comax Master and is marked as web product, but is missing from Web Master."
+        "on_failure_title", "Not In Web Store",
+        "on_failure_notes", "SKU ${cpm_SKU} IsWeb ${cpm_IsWeb}"
     ],
     [
         "validation.rule.template",
@@ -270,8 +256,8 @@
         "target_key", "wdm_WebIdEn",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product Name Missing from Web Details Master: ${wpm_PostTitle}",
-        "on_failure_notes", "Web Product ID ${wpm_ID} (Name: ${wpm_PostTitle}) exists in Web Master but not in Web Details Master."
+        "on_failure_title", "Missing Details Record",
+        "on_failure_notes", "ID ${wpm_ID}"
     ],
     [
         "validation.rule.template",
@@ -288,8 +274,8 @@
         "target_key", "wpm_ID",
         "invert_result", "TRUE",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Details Master Name Missing from Web Master: ${wdm_NameEn}",
-        "on_failure_notes", "Web Product ID ${wdm_WebIdEn} (Name: ${wdm_NameEn}) exists in Web Details Master but not in Web Master."
+        "on_failure_title", "Orphaned Details",
+        "on_failure_notes", "ID ${wdm_WebIdEn}"
     ],
     [
         "validation.rule.template",
@@ -308,8 +294,8 @@
         "field_translations_map_wpm_PostStatus", "{\"publish\":\"1\", \"draft\":\"0\", \"private\":\"0\", \"pending\":\"0\", \"trash\":\"0\"}",
         "field_translations_map_cpm_IsWeb", "{\"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.master_master_discrepancy",
-        "on_failure_title", "Web Product Published Status Mismatch with Comax Master: ${wpm_PostTitle}",
-        "on_failure_notes", "Web Product SKU ${wpm_SKU} (Name: ${wpm_PostTitle}) has a published status mismatch. Web Master Published: '${wpm_PostStatus}', Comax Master IsWeb: '${cpm_IsWeb}'."
+        "on_failure_title", "Web/Comax Status Mismatch",
+        "on_failure_notes", "web ${wpm_PostStatus} comax ${cpm_IsWeb}"
     ],
 
     [
@@ -326,8 +312,8 @@
         "key_B", "cps_SKU",
         "compare_fields", "cpm_NameHe,cps_NameHe",
         "on_failure_task_type", "task.validation.name_mismatch",
-        "on_failure_title", "Comax Name Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different name in master (${cpm_NameHe}) versus staging (${cps_NameHe})."
+        "on_failure_title", "Comax Name Changed",
+        "on_failure_notes", "master ${cpm_NameHe} staging ${cps_NameHe}"
     ],
     [
         "validation.rule.template",
@@ -363,13 +349,13 @@
         "field_translations_map_cpm_IsWeb", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
         "field_translations_map_cps_IsWeb", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
         "on_failure_task_type", "task.validation.status_mismatch",
-        "on_failure_title", "Comax IsWeb Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different IsWeb status in master (${cpm_IsWeb}) versus staging (${cps_IsWeb})."
+        "on_failure_title", "IsWeb Changed",
+        "on_failure_notes", "master ${cpm_IsWeb} staging ${cps_IsWeb}"
     ],
     [
         "validation.rule.template",
-        "validation.comax.is_active_mismatch",
-        "[C8] IsActive mismatch between Comax Master and Staging.",
+        "validation.comax.is_archived_mismatch",
+        "[C9] IsArchived mismatch between Comax Master and Staging.",
         "stable",
         "enabled", "TRUE",
         "validation_suite", "comax_staging",
@@ -378,29 +364,10 @@
         "sheet_B", "CmxProdS",
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
-        "compare_fields", "cpm_IsActive,cps_IsActive",
-        "field_translations_map_cpm_IsActive", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
-        "field_translations_map_cps_IsActive", "{\"TRUE\":\"1\", \"true\":\"1\", \"FALSE\":\"0\", \"false\":\"0\", \"Yes\":\"1\", \"No\":\"0\", \"Active\":\"1\", \"Inactive\":\"0\", \"כן\":\"1\", \"לא\":\"0\"}",
-        "on_failure_task_type", "task.validation.status_mismatch",
-        "on_failure_title", "Comax IsActive Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different IsActive status in master (${cpm_IsActive}) versus staging (${cps_IsActive})."
-    ],
-    [
-        "validation.rule.template",
-        "validation.comax.is_archived_mismatch",
-        "[C9] IsArchived mismatch between Comax Master and Staging.",
-        "stable",
-        "enabled", "FALSE",
-        "validation_suite", "comax_staging",
-        "test_type", "FIELD_COMPARISON",
-        "sheet_A", "CmxProdM",
-        "sheet_B", "CmxProdS",
-        "key_A", "cpm_SKU",
-        "key_B", "cps_SKU",
         "compare_fields", "cpm_IsArchived,cps_IsArchived",
         "on_failure_task_type", "task.validation.field_mismatch",
-        "on_failure_title", "Comax IsArchived Mismatch: ${cpm_NameHe}",
-        "on_failure_notes", "SKU ${cpm_SKU} has a different IsArchived status in master (${cpm_IsArchived}) versus staging (${cps_IsArchived})."
+        "on_failure_title", "Archive Status Changed",
+        "on_failure_notes", "master ${cpm_IsArchived} staging ${cps_IsArchived}"
     ],
     [
         "validation.rule.template",
@@ -412,8 +379,8 @@
         "source_schema", "schema.data.CmxProdM",
         "target_schema", "schema.data.CmxProdS",
         "on_failure_task_type", "task.validation.comax_data_integrity",
-        "on_failure_title", "Comax Schema Mismatch: Columns",
-        "on_failure_notes", "The columns in CmxProdS do not match the expected schema from CmxProdM."
+        "on_failure_title", "Comax Schema Mismatch",
+        "on_failure_notes", "columns changed"
     ],
     [
         "validation.rule.template",
@@ -437,8 +404,8 @@
         "source_schema", "schema.data.WebOrdM",
         "target_schema", "schema.data.WebOrdS",
         "on_failure_task_type", "task.validation.order_staging_failure",
-        "on_failure_title", "Web Orders Schema Mismatch: Columns",
-        "on_failure_notes", "The columns in WebOrdS do not match the expected schema from WebOrdM."
+        "on_failure_title", "Orders Schema Mismatch",
+        "on_failure_notes", "columns changed"
     ],
     [
         "validation.rule.template",
@@ -462,8 +429,8 @@
         "source_schema", "schema.data.WebProdM",
         "target_schema", "schema.data.WebProdS_EN",
         "on_failure_task_type", "task.validation.web_data_integrity",
-        "on_failure_title", "Web Products Schema Mismatch: Columns",
-        "on_failure_notes", "The columns in WebProdS_EN do not match the expected schema from WebProdM."
+        "on_failure_title", "Web Schema Mismatch",
+        "on_failure_notes", "columns changed"
     ],
     [
         "validation.rule.template",
@@ -489,7 +456,179 @@
         "source_sheet", "CmxProdM",
         "condition", "cpm_IsArchived,IS_NOT_EMPTY,AND,cpm_Stock,>,0",
         "on_failure_task_type", "task.validation.archived_comax_stock_mismatch",
-        "on_failure_title", "Archived Comax Product with Stock: ${cpm_NameHe}",
-        "on_failure_notes", "Comax Product SKU ${cpm_SKU} (Name: ${cpm_NameHe}) is archived, but has non-zero stock (${cpm_Stock})."
+        "on_failure_title", "Archived With Stock",
+        "on_failure_notes", "stock ${cpm_Stock}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.comax.division_mismatch",
+        "[Comax Import] Field: Division changed",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "comax_staging",
+        "test_type", "FIELD_COMPARISON",
+        "sheet_A", "CmxProdM",
+        "sheet_B", "CmxProdS",
+        "key_A", "cpm_CmxId",
+        "key_B", "cps_CmxId",
+        "compare_fields", "cpm_Division,cps_Division",
+        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_title", "Division Changed",
+        "on_failure_notes", "master ${cpm_Division} staging ${cps_Division}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.comax.group_mismatch",
+        "[Comax Import] Field: Group changed",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "comax_staging",
+        "test_type", "FIELD_COMPARISON",
+        "sheet_A", "CmxProdM",
+        "sheet_B", "CmxProdS",
+        "key_A", "cpm_CmxId",
+        "key_B", "cps_CmxId",
+        "compare_fields", "cpm_Group,cps_Group",
+        "on_failure_task_type", "task.validation.field_mismatch",
+        "on_failure_title", "Group Changed",
+        "on_failure_notes", "master ${cpm_Group} staging ${cps_Group}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.web.publish_status_mismatch",
+        "[Web Import] Field: Publish status changed",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "web_staging",
+        "test_type", "FIELD_COMPARISON",
+        "sheet_A", "WebProdM",
+        "sheet_B", "WebProdS_EN",
+        "key_A", "wpm_ID",
+        "key_B", "wps_ID",
+        "compare_fields", "wpm_PostStatus,wps_PostStatus",
+        "on_failure_task_type", "task.validation.status_mismatch",
+        "on_failure_title", "Web Publish Status Changed",
+        "on_failure_notes", "master ${wpm_PostStatus} staging ${wps_PostStatus}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.web_translations.master_missing_from_staging",
+        "[Translations Import] Existence: Master translation missing from import",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "web_xlt_staging",
+        "test_type", "EXISTENCE_CHECK",
+        "source_sheet", "WebXltM",
+        "source_key", "wxm_ID",
+        "target_sheet", "WebXltS",
+        "target_key", "wxs_ID",
+        "invert_result", "TRUE",
+        "on_failure_task_type", "task.validation.webxlt_data_integrity",
+        "on_failure_title", "Missing From Translations Import",
+        "on_failure_notes", "HeID ${wxm_ID} EnID ${wxm_WpmlOriginalId}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.orders.missing_order_id",
+        "[Orders Import] Data: Order ID is empty",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "order_staging",
+        "test_type", "INTERNAL_AUDIT",
+        "source_sheet", "WebOrdS",
+        "source_key", "wos_OrderNumber",
+        "condition", "wos_OrderId,IS_EMPTY",
+        "on_failure_task_type", "task.validation.order_staging_failure",
+        "on_failure_title", "Order Missing ID",
+        "on_failure_notes", "OrderNumber ${wos_OrderNumber}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.orders.missing_order_number",
+        "[Orders Import] Data: Order number is empty",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "order_staging",
+        "test_type", "INTERNAL_AUDIT",
+        "source_sheet", "WebOrdS",
+        "source_key", "wos_OrderId",
+        "condition", "wos_OrderNumber,IS_EMPTY",
+        "on_failure_task_type", "task.validation.order_staging_failure",
+        "on_failure_title", "Order Missing Number",
+        "on_failure_notes", "OrderId ${wos_OrderId}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.web.staging_sku_not_in_comax",
+        "[Web Import] Existence: Staging product SKU not found in Comax master",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "web_staging",
+        "test_type", "EXISTENCE_CHECK",
+        "source_sheet", "WebProdS_EN",
+        "source_key", "wps_SKU",
+        "source_filter", "wps_TaxProductType,simple",
+        "target_sheet", "CmxProdM",
+        "target_key", "cpm_SKU",
+        "invert_result", "TRUE",
+        "on_failure_task_type", "task.validation.sku_not_in_comax",
+        "on_failure_title", "No Comax Match (Staging)",
+        "on_failure_notes", "SKU ${wps_SKU}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.comax.staging_isweb_not_in_webmaster",
+        "[Comax Import] Existence: Staging online product not found in Web master",
+        "stable",
+        "enabled", "TRUE",
+        "validation_suite", "comax_staging",
+        "test_type", "EXISTENCE_CHECK",
+        "source_sheet", "CmxProdS",
+        "source_key", "cps_SKU",
+        "source_filter", "cps_IsWeb,כן",
+        "target_sheet", "WebProdM",
+        "target_key", "wpm_SKU",
+        "invert_result", "TRUE",
+        "on_failure_task_type", "task.validation.comax_not_web_product",
+        "on_failure_title", "Not In Web Store (Staging)",
+        "on_failure_notes", "SKU ${cps_SKU}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.master.web_missing_translation",
+        "[Master Sync] Existence: Web product has no Hebrew translation",
+        "stable",
+        "enabled", "TRUE",
+        "priority", "HIGH",
+        "validation_suite", "master_master",
+        "test_type", "EXISTENCE_CHECK",
+        "source_sheet", "WebProdM",
+        "source_key", "wpm_ID",
+        "target_sheet", "WebXltM",
+        "target_key", "wxm_WpmlOriginalId",
+        "invert_result", "TRUE",
+        "on_failure_task_type", "task.validation.translation_missing",
+        "on_failure_title", "Missing Translation",
+        "on_failure_notes", "ID ${wpm_ID}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.master.published_vs_archived",
+        "[Master Sync] Field: Published web product has archived Comax match",
+        "stable",
+        "enabled", "TRUE",
+        "priority", "HIGH",
+        "validation_suite", "master_master",
+        "test_type", "FIELD_COMPARISON",
+        "sheet_A", "WebProdM",
+        "sheet_B", "CmxProdM",
+        "key_A", "wpm_SKU",
+        "key_B", "cpm_SKU",
+        "source_filter", "wpm_PostStatus,publish",
+        "compare_fields", "wpm_PostStatus,cpm_IsArchived",
+        "field_translations_map_wpm_PostStatus", "{\"publish\":\"\"}",
+        "on_failure_task_type", "task.validation.status_mismatch",
+        "on_failure_title", "Published But Archived",
+        "on_failure_notes", "comax archived ${cpm_IsArchived}"
     ]
 ]

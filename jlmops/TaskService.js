@@ -497,13 +497,137 @@ const TaskService = (function() {
     }
   }
 
+  /**
+   * Updates the notes field of an existing task.
+   * @param {string} taskId The UUID of the task to update.
+   * @param {string|Object} notes The new notes (string or object to be JSON-stringified).
+   * @returns {boolean} True if task found and updated.
+   */
+  function updateTaskNotes(taskId, notes) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+      if (!sheet || sheet.getLastRow() < 2) {
+        logger.warn('TaskService', 'updateTaskNotes', 'Task sheet not found or empty.');
+        return false;
+      }
+
+      const headers = taskSchema.headers.split(',');
+      const taskIdCol = headers.indexOf('st_TaskId');
+      const notesCol = headers.indexOf('st_Notes');
+
+      if (taskIdCol === -1 || notesCol === -1) {
+        throw new Error('Required columns not found in SysTasks schema.');
+      }
+
+      const taskIds = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues().flat();
+      const rowIndex = taskIds.findIndex(id => id === taskId);
+
+      if (rowIndex === -1) {
+        logger.warn('TaskService', 'updateTaskNotes', `Task '${taskId}' not found.`);
+        return false;
+      }
+
+      const notesValue = typeof notes === 'object' ? JSON.stringify(notes) : notes;
+      const sheetRow = rowIndex + 2;
+      sheet.getRange(sheetRow, notesCol + 1).setValue(notesValue);
+
+      logger.info('TaskService', 'updateTaskNotes', `Task '${taskId}' notes updated.`);
+      invalidateTaskCache();
+      return true;
+
+    } catch (e) {
+      logger.error('TaskService', 'updateTaskNotes', `Error updating notes for '${taskId}': ${e.message}`, e);
+      return false;
+    }
+  }
+
+  /**
+   * Finds an open task by type (and optionally entity).
+   * @param {string} taskTypeId The task type to find.
+   * @param {string} [linkedEntityId] Optional entity ID to match.
+   * @returns {Object|null} Task object with id and notes, or null if not found.
+   */
+  function findOpenTaskByType(taskTypeId, linkedEntityId) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+      if (!sheet || sheet.getLastRow() < 2) return null;
+
+      const headers = taskSchema.headers.split(',');
+      const typeCol = headers.indexOf('st_TaskTypeId');
+      const entityCol = headers.indexOf('st_LinkedEntityId');
+      const statusCol = headers.indexOf('st_Status');
+      const taskIdCol = headers.indexOf('st_TaskId');
+      const notesCol = headers.indexOf('st_Notes');
+
+      const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        if (row[typeCol] !== taskTypeId) continue;
+        if (row[statusCol] === 'Done' || row[statusCol] === 'Closed') continue;
+        if (linkedEntityId && String(row[entityCol]).trim() !== String(linkedEntityId).trim()) continue;
+
+        return {
+          id: row[taskIdCol],
+          notes: row[notesCol],
+          rowIndex: i + 2
+        };
+      }
+      return null;
+
+    } catch (e) {
+      logger.error('TaskService', 'findOpenTaskByType', `Error finding task type '${taskTypeId}': ${e.message}`, e);
+      return null;
+    }
+  }
+
+  /**
+   * Creates or updates a singleton task (one open task per type+entity).
+   * Used for dashboard data storage (system health, orders widget, etc.).
+   * @param {string} taskTypeId The task type.
+   * @param {string} linkedEntityId Entity ID (use '_SYSTEM' for system-wide singletons).
+   * @param {string} linkedEntityName Human-readable entity name.
+   * @param {string} title Task title.
+   * @param {Object} notesData Data to store in notes (will be JSON-stringified).
+   * @returns {Object|null} Task object with id, or null on failure.
+   */
+  function upsertSingletonTask(taskTypeId, linkedEntityId, linkedEntityName, title, notesData) {
+    try {
+      const existing = findOpenTaskByType(taskTypeId, linkedEntityId);
+
+      if (existing) {
+        // Update existing task notes
+        updateTaskNotes(existing.id, notesData);
+        logger.info('TaskService', 'upsertSingletonTask', `Updated singleton '${taskTypeId}' for '${linkedEntityId}'.`);
+        return { id: existing.id };
+      } else {
+        // Create new task
+        const notesString = typeof notesData === 'object' ? JSON.stringify(notesData) : notesData;
+        return createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notesString);
+      }
+
+    } catch (e) {
+      logger.error('TaskService', 'upsertSingletonTask', `Error upserting singleton '${taskTypeId}': ${e.message}`, e);
+      return null;
+    }
+  }
+
   return {
     createTask: createTask,
     hasOpenTasks: hasOpenTasks,
     completeTask: completeTask,
     completeTaskByTypeAndEntity: completeTaskByTypeAndEntity,
     updateTaskStatus: updateTaskStatus,
-    getTasksByProject: getTasksByProject
+    getTasksByProject: getTasksByProject,
+    updateTaskNotes: updateTaskNotes,
+    findOpenTaskByType: findOpenTaskByType,
+    upsertSingletonTask: upsertSingletonTask
   };
 
 })();

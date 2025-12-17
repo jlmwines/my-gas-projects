@@ -42,15 +42,8 @@ const ValidationOrchestratorService = (function() {
 
     logger.info(serviceName, functionName, `Starting validation job: ${jobType}`, { sessionId: sessionId });
 
-    // Write initial processing status
-    if (sessionId) {
-      SyncStatusService.writeStatus(sessionId, {
-        step: 4,
-        stepName: 'Validation',
-        status: 'processing',
-        message: 'Initializing validation suite...'
-      });
-    }
+    // Validation runs silently - no UI status update
+    // This prevents validation from conflicting with visible import/export steps
 
     // 1. Determine Suite Name based on Job Type
     let suiteName = '';
@@ -88,20 +81,8 @@ const ValidationOrchestratorService = (function() {
     // We need to update the SysJobQueue status.
     _updateJobStatus(executionContext, finalStatus, failureCount > 0 ? `${failureCount} rules failed.` : '');
 
-    // 6. Write final status to SyncStatusService so UI shows completion
-    if (sessionId) {
-      const statusMessage = quarantineTriggered
-        ? 'Validation failed - quarantine triggered'
-        : failureCount > 0
-          ? `Validation complete with ${failureCount} warnings`
-          : 'Validation passed';
-      SyncStatusService.writeStatus(sessionId, {
-        step: 4,
-        stepName: 'Validation',
-        status: quarantineTriggered ? 'failed' : 'completed',
-        message: statusMessage
-      });
-    }
+    // Validation runs silently - no UI status update
+    // Quarantine status is still logged, but doesn't update visible step display
 
     return { finalStatus, failureCount, quarantineTriggered };
   }

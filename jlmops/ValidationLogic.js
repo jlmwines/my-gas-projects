@@ -15,6 +15,7 @@ const ValidationLogic = (function() {
           case '>': return Number(val1) > Number(val2);
           case '=': return String(val1) === val2;
           case '<>': return String(val1) !== val2;
+          case 'IS_EMPTY': return String(val1 || '').trim() === '';
           case 'IS_NOT_EMPTY': return String(val1 || '').trim() !== ''; 
           default: return false;
       }

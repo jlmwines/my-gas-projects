@@ -217,18 +217,69 @@ function HousekeepingService() {
   };
 
   /**
-   * Performs a set of daily maintenance tasks.
+   * Performs a set of daily maintenance tasks in 3 phases.
    * This can be triggered by a time-driven trigger.
+   *
+   * Phase 1: Cleanup - logs, tasks, files
+   * Phase 2: Validation & Testing - master_master suite, unit tests
+   * Phase 3: Service Updates - bundle health, Brurya reminder
    */
   this.performDailyMaintenance = function() {
-    logger.info('HousekeepingService', 'performDailyMaintenance', "Starting daily maintenance tasks.");
+    const functionName = 'performDailyMaintenance';
+    logger.info('HousekeepingService', functionName, "Starting daily maintenance.");
+
+    // Phase 1: Cleanup
     this.cleanOldLogs();
     this.archiveCompletedTasks();
     this.manageFileLifecycle();
     this.cleanupImportFiles();
+
+    // Phase 2: Validation & Testing
+    let validationResult = null;
+    let testResult = null;
+
+    try {
+      validationResult = ValidationOrchestratorService.runValidationSuite('master_master', null);
+      logger.info('HousekeepingService', functionName,
+        `Master validation: ${validationResult.failureCount} issues found.`);
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Validation failed: ${e.message}`);
+    }
+
+    try {
+      testResult = TestRunner.runAllTests();
+      logger.info('HousekeepingService', functionName,
+        `Unit tests: ${testResult.passed}/${testResult.total} passed`);
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Tests failed: ${e.message}`);
+    }
+
+    // Update system health singleton task
+    try {
+      TaskService.upsertSingletonTask(
+        'task.system.health_status',
+        '_SYSTEM',
+        'System Health',
+        'System Health Status',
+        {
+          updated: new Date().toISOString(),
+          last_housekeeping: {
+            timestamp: new Date().toISOString(),
+            status: (validationResult && testResult) ? 'success' : 'partial',
+            unit_tests: testResult ? `${testResult.passed}/${testResult.total}` : 'error',
+            validation_issues: validationResult ? validationResult.failureCount : -1
+          }
+        }
+      );
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Could not update health task: ${e.message}`);
+    }
+
+    // Phase 3: Service Data Updates
     this.checkBundleHealth();
     this.checkBruryaReminder();
-    logger.info('HousekeepingService', 'performDailyMaintenance', "Daily maintenance tasks completed.");
+
+    logger.info('HousekeepingService', functionName, "Daily maintenance completed.");
   };
 
   /**

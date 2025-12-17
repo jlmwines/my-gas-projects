@@ -276,10 +276,20 @@ const OrchestratorService = (function() {
             // Check if this file has already been processed in the current session
             const alreadyProcessedInSession = getPendingOrProcessingJob(configName, sessionId) ||
                                               getLastJobSuccess(configName, sessionId);
-            
+
             if (alreadyProcessedInSession) {
                 logger.info(serviceName, functionName, `File for ${configName} already processed or pending in session ${sessionId}. Skipping.`, { sessionId: sessionId, configName: configName });
             } else {
+                // Translation freshness check: only import if file has changed since last import
+                if (configName === 'import.drive.web_translations_he') {
+                    if (!isNewFile(latestFile, registry)) {
+                        logger.info(serviceName, functionName,
+                            'Translations file unchanged since last import. Skipping.',
+                            { sessionId: sessionId, configName: configName });
+                        return; // Skip to next config in forEach
+                    }
+                }
+
                 const archivedFile = archiveFile(latestFile, archiveFolder);
                 createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
                 requiredFiles[configName] = true;
@@ -1138,19 +1148,19 @@ const OrchestratorService = (function() {
           state.lastUpdated = new Date().toISOString();
 
           if (ordersToExportCount === 0) {
-            // No orders to export - skip Step 2, mark it complete
+            // No orders to export - skip Step 3, mark it complete
             logger.info(serviceName, functionName, `No orders to export. Skipping export step and transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 2,
-              stepName: 'Export to Comax',
+              step: 3,
+              stepName: 'Update Comax Orders',
               status: 'completed',
-              message: 'No orders to export - skipped'
+              message: 'No new web orders to export'
             });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 3,
-              stepName: 'Import Comax Data',
+              step: 4,
+              stepName: 'Import Comax Products',
               status: 'waiting',
               message: 'Ready to import Comax product data'
             });
@@ -1162,8 +1172,8 @@ const OrchestratorService = (function() {
             logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
 
             SyncStatusService.writeStatus(state.sessionId, {
-              step: 2,
-              stepName: 'Export to Comax',
+              step: 3,
+              stepName: 'Update Comax Orders',
               status: 'waiting',
               message: `${ordersToExportCount} orders ready to export`
             });
@@ -1184,22 +1194,15 @@ const OrchestratorService = (function() {
           if (jobStatus === 'COMPLETED') {
               logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING and triggering finalization.`);
 
-              // Write Step 3 completion status
+              // Write Step 4 completion status
               SyncStatusService.writeStatus(state.sessionId, {
-                step: 3,
-                stepName: 'Import Comax Data',
+                step: 4,
+                stepName: 'Import Comax Products',
                 status: 'completed',
                 message: 'Comax product data imported successfully'
               });
 
-              // Write Step 4 waiting status (not processing yet - just queued)
-              SyncStatusService.writeStatus(state.sessionId, {
-                step: 4,
-                stepName: 'Validation',
-                status: 'waiting',
-                message: 'Validation queued, starting...'
-              });
-
+              // Validation runs silently - no UI status update
               // Advance State
               state.currentStage = 'VALIDATING';
               state.lastUpdated = new Date().toISOString();
@@ -1217,14 +1220,14 @@ const OrchestratorService = (function() {
               logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
               SyncStatusService.writeStatus(state.sessionId, {
-                step: 3,
-                stepName: 'Import Comax Data',
+                step: 4,
+                stepName: 'Import Comax Products',
                 status: 'failed',
                 message: `Import failed: ${jobStatus}`
               });
 
               // Clear all subsequent step statuses to prevent showing stale notifications
-              SyncStatusService.clearStepsFromSession(state.sessionId, 4);
+              SyncStatusService.clearStepsFromSession(state.sessionId, 5);
 
               state.currentStage = 'FAILED';
               state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
@@ -1258,15 +1261,8 @@ const OrchestratorService = (function() {
         if (anyFailedOrQuarantined) {
            logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
-           // Write Step 4 failure status
-           SyncStatusService.writeStatus(state.sessionId, {
-             step: 4,
-             stepName: 'Validation',
-             status: 'failed',
-             message: errorMessage
-           });
-
-           // Clear all subsequent step statuses to prevent showing stale notifications
+           // Validation runs silently - no UI status update
+           // Clear step 5 status to prevent showing stale notifications (step 4 stays completed)
            SyncStatusService.clearStepsFromSession(state.sessionId, 5);
 
            state.currentStage = 'FAILED';
@@ -1276,18 +1272,10 @@ const OrchestratorService = (function() {
         } else if (allCompleted) {
            logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
 
-           // Write Step 4 completion status
-           SyncStatusService.writeStatus(state.sessionId, {
-             step: 4,
-             stepName: 'Validation',
-             status: 'completed',
-             message: 'All validation checks passed'
-           });
-
-           // Write Step 5 waiting status
+           // Validation runs silently - Write Step 5 waiting status directly for Web Inventory
            SyncStatusService.writeStatus(state.sessionId, {
              step: 5,
-             stepName: 'Export Web Inventory',
+             stepName: 'Update Web Inventory',
              status: 'waiting',
              message: 'Ready to generate web inventory export'
            });
@@ -1315,9 +1303,9 @@ const OrchestratorService = (function() {
               // Write Step 5 status based on whether a file was created
               SyncStatusService.writeStatus(updatedState.sessionId, {
                 step: 5,
-                stepName: 'Export Web Inventory',
+                stepName: 'Update Web Inventory',
                 status: noChanges ? 'completed' : 'waiting',
-                message: noChanges ? 'No changes detected. No file created.' : `Export complete: ${exportFilename}. Ready to confirm upload.`
+                message: noChanges ? 'No inventory changes detected' : `Export ready: ${exportFilename}`
               });
 
               updatedState.currentStage = noChanges ? 'COMPLETE' : 'WEB_EXPORT_GENERATED';
@@ -1340,7 +1328,7 @@ const OrchestratorService = (function() {
               // Write Step 5 failure status
               SyncStatusService.writeStatus(state.sessionId, {
                 step: 5,
-                stepName: 'Export Web Inventory',
+                stepName: 'Update Web Inventory',
                 status: 'failed',
                 message: `Export failed: ${jobStatus}`
               });
@@ -1525,7 +1513,7 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, `Queuing web products for Session: ${sessionId}`);
     const allConfig = ConfigService.getAllConfig();
 
-    // Queue translations first, then products
+    // Queue translations first (if changed), then products
     const importConfigs = [
       'import.drive.web_translations_he',
       'import.drive.web_products_en'
@@ -1533,7 +1521,9 @@ const OrchestratorService = (function() {
 
     const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
     const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
     const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
+    const registry = getRegistryMap(fileRegistrySheet);
 
     importConfigs.forEach(configName => {
       const config = allConfig[configName];
@@ -1557,6 +1547,20 @@ const OrchestratorService = (function() {
       }
 
       if (latestFile) {
+        // Translation freshness check: only import if file has changed
+        if (configName === 'import.drive.web_translations_he') {
+          if (!isNewFile(latestFile, registry)) {
+            logger.info(serviceName, functionName, 'Translations file unchanged since last import. Skipping.', { sessionId });
+            SyncStatusService.writeStatus(sessionId, {
+              step: 1,
+              stepName: 'Import Web Products',
+              status: 'processing',
+              message: 'Translations file unchanged - skipped'
+            });
+            return; // Skip to next config
+          }
+        }
+
         const archivedFile = archiveFile(latestFile, archiveFolder);
         createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', latestFile.getId(), latestFile.getLastUpdated(), sessionId);
         logger.info(serviceName, functionName, `Queued ${configName} for session ${sessionId}`);

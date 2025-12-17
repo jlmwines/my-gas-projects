@@ -328,5 +328,16 @@
         "initial_status", "New",
         "flow_pattern", "manager_direct",
         "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.system.health_status",
+        "Singleton task for system health dashboard data.",
+        "stable",
+        "topic", "System",
+        "default_priority", "Normal",
+        "initial_status", "Assigned",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ]
 ]
