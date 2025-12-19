@@ -1052,3 +1052,32 @@ function run_finalizeDailySync() {
 function run_resetSyncState() {
   resetSyncStateBackend();
 }
+
+/**
+ * Debug: View current sync state and optionally force confirm.
+ * Run from Apps Script editor to inspect or fix stuck sync.
+ */
+function DEBUG_inspectAndFixSyncState() {
+  const state = SyncStateService.getSyncState();
+  console.log('Current sync state:', JSON.stringify(state, null, 2));
+
+  // Check if we're stuck waiting for confirm
+  if (state.currentStage === 'WAITING_FOR_COMAX' && state.comaxOrdersExported) {
+    console.log('State looks correct for confirm. Calling confirmComaxUpdateBackend()...');
+    const result = confirmComaxUpdateBackend();
+    console.log('Confirm result:', JSON.stringify(result, null, 2));
+    return result;
+  } else if (state.currentStage === 'WAITING_FOR_COMAX' && !state.comaxOrdersExported) {
+    console.log('Orders not marked as exported. Setting comaxOrdersExported=true...');
+    state.comaxOrdersExported = true;
+    state.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(state);
+    console.log('Fixed. Now calling confirmComaxUpdateBackend()...');
+    const result = confirmComaxUpdateBackend();
+    console.log('Confirm result:', JSON.stringify(result, null, 2));
+    return result;
+  } else {
+    console.log('Stage is ' + state.currentStage + ', not WAITING_FOR_COMAX. No auto-fix available.');
+    return state;
+  }
+}

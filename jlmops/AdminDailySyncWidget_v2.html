@@ -164,6 +164,7 @@
         waiting: '⏸️',
         processing: '🔄',
         completed: '✅',
+        skipped: '⏭️',
         failed: '❌'
     };
 
@@ -231,7 +232,12 @@
             var stepStatus = stepData ? stepData.status : null;
             var prevStatus = previousStepStatuses['step' + i];
 
-            if (stepStatus === 'completed' && prevStatus !== 'completed') {
+            var isCompleted = stepStatus === 'completed' && prevStatus !== 'completed';
+            var isSkipped = stepStatus === 'skipped' && prevStatus !== 'skipped';
+            // Detect step 5 export ready (waiting after processing)
+            var isExportReady = i === 5 && stepStatus === 'waiting' && prevStatus === 'processing';
+
+            if (isCompleted || isSkipped || isExportReady) {
                 var logMsg = '';
                 var msg = stepData.message || '';
 
@@ -245,7 +251,7 @@
                         logMsg = 'Web orders imported' + (match2 ? ' (' + match2[1] + ')' : '');
                         break;
                     case 3: // Update Comax Orders
-                        if (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0) {
+                        if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0)) {
                             logMsg = 'No orders to export (skipped)';
                         } else {
                             logMsg = 'Orders exported to Comax';
@@ -255,7 +261,15 @@
                         logMsg = 'Comax products imported';
                         break;
                     case 5: // Update Web Inventory
-                        logMsg = 'Web inventory updated';
+                        if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('changes') >= 0)) {
+                            logMsg = 'Web inventory skipped (no changes)';
+                        } else if (isExportReady) {
+                            // Extract filename from message like "Export ready: filename.csv"
+                            var fileMatch = msg.match(/Export ready:\s*(.+)/);
+                            logMsg = 'Web export created' + (fileMatch ? ': ' + fileMatch[1] : '');
+                        } else {
+                            logMsg = 'Web inventory updated';
+                        }
                         break;
                 }
 
@@ -321,8 +335,8 @@
             message = 'Importing web orders...';
             actionHtml = spinner();
         }
-        // Step 2 done, orders to export
-        else if (stage === 'WAITING_FOR_COMAX' && orderCount > 0 && s3 !== 'completed') {
+        // Step 2 done, orders to export (but not yet exported)
+        else if (stage === 'WAITING_FOR_COMAX' && orderCount > 0 && s3 !== 'completed' && !status.comaxOrdersExported) {
             message = orderCount + ' orders to export';
             actionHtml = btn('exportToComax', 'Export Orders');
         }
@@ -457,6 +471,8 @@
             card.classList.add('border-primary', 'shadow');
         } else if (stepData.status === 'completed') {
             card.classList.add('border-success', 'bg-light');
+        } else if (stepData.status === 'skipped') {
+            card.classList.add('border-secondary', 'bg-light');
         } else if (stepData.status === 'failed') {
             card.classList.add('border-danger');
         }

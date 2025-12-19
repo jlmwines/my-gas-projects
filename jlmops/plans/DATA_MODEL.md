@@ -36,6 +36,11 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysConfig`            | `scf_` |
 | `WebOrdM_Archive`      | `woma_`|
 | `WebOrdItemsM_Archive` | `woia_`|
+| `SysContacts`          | `sc_`  |
+| `SysContactActivity`   | `sca_` |
+| `SysCoupons`           | `sco_` |
+| `SysCampaigns`         | `scm_` |
+| `SysCouponUsage`       | `scu_` |
 
 
 
@@ -419,6 +424,174 @@ This system provides a flexible, configurable way to manage all user and system-
         - **Invariant:** If st_DueDate has value, st_StartDate and st_Status='Assigned' must also be set
     *   `st_DoneDate`: Populated when the task is closed.
     *   `st_Notes`
+
+## CRM Data Model
+
+This section defines the sheets used for customer relationship management, contact tracking, and marketing campaign support.
+
+### 1. `SysContacts` (Contact Master)
+*   **Purpose:** The central contact list combining customer data from orders and subscriber data from Mailchimp. Each row represents one unique email address.
+*   **Prefix:** `sc_`
+*   **Primary Key:** `sc_Email`
+*   **Columns:**
+    *   **Identity:**
+        *   `sc_Email`: **Primary Key.** Lowercase, trimmed email address.
+        *   `sc_Name`: Display name (from orders or Mailchimp).
+        *   `sc_Phone`: Primary phone number (most recent from orders).
+        *   `sc_WhatsAppPhone`: Phone formatted for WhatsApp links (+972...).
+    *   **Demographics:**
+        *   `sc_Language`: `EN` or `HE` (from order language or Mailchimp).
+        *   `sc_City`: Shipping city (raw, from most recent order).
+        *   `sc_Country`: Shipping country code.
+    *   **Classification:**
+        *   `sc_CustomerType`: One of: `core.new`, `core.repeat`, `core.vip`, `noncore.gift`, `noncore.war_support`, `prospect.subscriber`, `prospect.fresh`, `prospect.stale`.
+        *   `sc_LifecycleStatus`: One of: `Active` (0-30 days), `Recent` (31-90), `Cooling` (91-180), `Lapsed` (181-365), `Dormant` (365+).
+        *   `sc_IsCore`: Boolean. TRUE if core customer (not gift purchaser, not war-support).
+        *   `sc_IsCustomer`: Boolean. TRUE if has placed at least one order.
+        *   `sc_IsSubscribed`: Boolean. TRUE if in Mailchimp list.
+    *   **Purchase Metrics:**
+        *   `sc_FirstOrderDate`: Date of earliest order.
+        *   `sc_LastOrderDate`: Date of most recent order.
+        *   `sc_DaysSinceOrder`: Calculated daily. Days since last order.
+        *   `sc_OrderCount`: Total completed orders.
+        *   `sc_TotalSpend`: Sum of order totals.
+        *   `sc_AvgOrderValue`: Calculated. Average order value.
+    *   **Subscription:**
+        *   `sc_SubscribedDate`: Date joined Mailchimp.
+        *   `sc_DaysSubscribed`: Calculated daily. Days since subscription.
+        *   `sc_SubscriptionSource`: How they subscribed (from Mailchimp NOTES).
+    *   **Engagement:**
+        *   `sc_LastContactDate`: Date of last outreach sent.
+        *   `sc_LastContactType`: Type of last contact (whatsapp/email/mailchimp).
+    *   **Predictions:**
+        *   `sc_NextOrderExpected`: Predicted next order date.
+        *   `sc_ChurnRisk`: `low`, `medium`, or `high`.
+    *   **Wine Preferences:** (Calculated from order history)
+        *   `sc_PreferredCategory`: Primary wine type (Dry Red, Dry White, etc.).
+        *   `sc_SecondaryCategory`: Secondary preference if mixed buyer.
+        *   `sc_PriceMin`: Lowest bottle price purchased.
+        *   `sc_PriceMax`: Highest bottle price purchased.
+        *   `sc_PriceMedian`: Typical price point.
+        *   `sc_RedIntensityAvg`: Average intensity (1-5) of purchased reds.
+        *   `sc_RedComplexityAvg`: Average complexity (1-5) of purchased reds.
+        *   `sc_WhiteComplexityAvg`: Average complexity (1-5) of purchased whites.
+        *   `sc_WhiteAcidityAvg`: Average acidity (1-5) of purchased whites.
+        *   `sc_TopWineries`: Top 3 wineries by purchase count (comma-separated).
+        *   `sc_KashrutPrefs`: Observed kashrut patterns (mevushal, heter mechira).
+        *   `sc_GrapeVarieties`: Top grape varieties purchased.
+        *   `sc_BundleBuyer`: Boolean. Has purchased bundles.
+        *   `sc_AvgBottlesPerOrder`: Typical order size in bottles.
+        *   `sc_NewWineryExplorer`: Boolean. Buys from 5+ different wineries.
+    *   **System:**
+        *   `sc_Tags`: Comma-separated manual tags.
+        *   `sc_Notes`: Free-form notes.
+        *   `sc_CreatedDate`: Record creation date.
+        *   `sc_LastUpdated`: Last refresh date.
+
+### 2. `SysContactActivity` (Contact Timeline)
+*   **Purpose:** Stores timeline events for each contact - orders, status changes, communications, etc.
+*   **Prefix:** `sca_`
+*   **Primary Key:** `sca_ActivityId`
+*   **Columns:**
+    *   `sca_ActivityId`: **Primary Key.** Unique ID (UUID).
+    *   `sca_Email`: **Foreign Key** to `SysContacts.sc_Email`.
+    *   `sca_Timestamp`: When the event occurred.
+    *   `sca_Type`: Event type (see below).
+    *   `sca_Summary`: Human-readable summary.
+    *   `sca_Details`: JSON with type-specific data.
+    *   `sca_CreatedBy`: `system` or user email.
+*   **Activity Types:**
+    *   `order.placed` - New order. Details: `{ orderId, total, itemCount, couponUsed }`
+    *   `bundle.purchased` - Bundle in order. Details: `{ orderId, bundleName, bundleId }`
+    *   `status.changed` - Lifecycle status change. Details: `{ from, to }`
+    *   `type.changed` - Customer type change. Details: `{ from, to }`
+    *   `comm.whatsapp` - WhatsApp sent. Details: `{ template, outcome, notes }`
+    *   `comm.email` - Email sent. Details: `{ subject }`
+    *   `comm.mailchimp` - Included in Mailchimp campaign. Details: `{ campaignName, campaignId }`
+    *   `coupon.offered` - Coupon shared. Details: `{ code, channel, campaignName }`
+    *   `coupon.used` - Coupon redeemed. Details: `{ code, orderId, discount }`
+    *   `note.added` - Manual note. Details: `{ note }`
+    *   `mailchimp.subscribed` - New subscription detected.
+    *   `mailchimp.unsubscribed` - Subscription removed.
+
+### 3. `SysCoupons` (Coupon Reference)
+*   **Purpose:** Reference data for WooCommerce coupons. Imported from coupon export CSV.
+*   **Prefix:** `sco_`
+*   **Primary Key:** `sco_Code`
+*   **Columns:**
+    *   `sco_Code`: **Primary Key.** Coupon code (case-sensitive).
+    *   `sco_WooId`: WooCommerce ID.
+    *   `sco_Description`: Coupon description.
+    *   `sco_Status`: `publish`, `draft`, or `trash`.
+    *   `sco_CreatedDate`: When created.
+    *   **Discount:**
+        *   `sco_DiscountType`: `percent`, `fixed_cart`, or `fixed_product`.
+        *   `sco_Amount`: Discount value.
+        *   `sco_FreeShipping`: Boolean. Includes free shipping.
+    *   **Restrictions:**
+        *   `sco_MinSpend`: Minimum cart amount.
+        *   `sco_MaxSpend`: Maximum cart amount.
+        *   `sco_Categories`: Restricted categories.
+        *   `sco_FirstPurchaseOnly`: Boolean. New customers only.
+        *   `sco_FreeProductId`: Free gift product ID.
+        *   `sco_IndividualUse`: Boolean. Can't combine with other coupons.
+    *   **Limits:**
+        *   `sco_UsageLimit`: Max total uses (0 = unlimited).
+        *   `sco_UsageLimitPerUser`: Max uses per customer.
+        *   `sco_UsageCount`: Times used.
+        *   `sco_ExpiryDate`: Expiration date.
+    *   **Classification:**
+        *   `sco_Tags`: Auto-derived tags (war-support, welcome, threshold, gift, shipping-only).
+        *   `sco_IsActive`: Calculated. Usable now.
+        *   `sco_CustomerEmail`: For email-restricted coupons.
+    *   **System:**
+        *   `sco_LastImported`: Last sync date.
+
+### 4. `SysCampaigns` (Mailchimp Campaign History)
+*   **Purpose:** Historical record of Mailchimp campaigns for performance analysis.
+*   **Prefix:** `scm_`
+*   **Primary Key:** `scm_CampaignId`
+*   **Columns:**
+    *   `scm_CampaignId`: **Primary Key.** Mailchimp unique ID.
+    *   `scm_Title`: Internal campaign title.
+    *   `scm_Subject`: Email subject line.
+    *   `scm_SendDate`: When sent.
+    *   `scm_SendWeekday`: Day of week.
+    *   **Delivery:**
+        *   `scm_Recipients`: Total audience size.
+        *   `scm_Delivered`: Successfully delivered.
+        *   `scm_Bounces`: Total bounces.
+    *   **Engagement:**
+        *   `scm_UniqueOpens`: Unique openers.
+        *   `scm_OpenRate`: Open percentage (decimal).
+        *   `scm_TotalOpens`: All opens.
+        *   `scm_UniqueClicks`: Unique clickers.
+        *   `scm_ClickRate`: Click percentage (decimal).
+        *   `scm_TotalClicks`: All clicks.
+        *   `scm_Unsubscribes`: Unsubscribe count.
+    *   **Revenue:**
+        *   `scm_TotalOrders`: Orders attributed.
+        *   `scm_GrossSales`: Gross revenue.
+        *   `scm_Revenue`: Net revenue.
+    *   **Classification:**
+        *   `scm_CampaignType`: Derived from title (seasonal, value, explore, bundle, news, general).
+    *   **System:**
+        *   `scm_LastImported`: Last sync date.
+
+### 5. `SysCouponUsage` (Coupon Redemption Tracking)
+*   **Purpose:** Tracks each coupon use for conversion analysis.
+*   **Prefix:** `scu_`
+*   **Primary Key:** `scu_Id`
+*   **Columns:**
+    *   `scu_Id`: **Primary Key.** Unique ID (UUID).
+    *   `scu_Code`: **Foreign Key** to `SysCoupons.sco_Code`.
+    *   `scu_Email`: **Foreign Key** to `SysContacts.sc_Email`.
+    *   `scu_OrderId`: Order ID where coupon was used.
+    *   `scu_OrderDate`: Order date.
+    *   `scu_DiscountAmount`: Discount given.
+    *   `scu_OrderTotal`: Order total after discount.
+    *   `scu_WasFirstOrder`: Boolean. Was this the customer's first order?
+    *   `scu_ConvertedToRepeat`: Boolean. Did they order again within 90 days?
 
 ## System Configuration
 
