@@ -435,6 +435,21 @@
         ""
     ],
     [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysLkp_Cities",
+        "SysLkp_Cities",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.sync.state",
         "Persisted state for the Daily Sync session.",
         "stable",
@@ -569,6 +584,38 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysContacts",
+        "SysContacts",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysContactActivity",
+        "SysContactActivity",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysCoupons",
+        "SysCoupons",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysCampaigns",
+        "SysCampaigns",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "task.routing.topic_to_project",
         "Topic-to-project routing for auto-assignment",
         "stable",
@@ -609,8 +656,56 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "CRM",
+        "PROJ-SYS_CRM",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Campaign",
+        "PROJ-SYS_CRM",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Content",
+        "PROJ-SYS_CRM",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.brurya.last_update",
         "Tracks last Brurya inventory update",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.mailchimp.subscribers_last_update",
+        "Tracks last Mailchimp subscribers import",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.mailchimp.campaigns_last_update",
+        "Tracks last Mailchimp campaigns import",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.woocommerce.coupons_last_update",
+        "Tracks last WooCommerce coupons import",
         "stable",
         "value",
         "",

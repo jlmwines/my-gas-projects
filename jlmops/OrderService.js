@@ -553,7 +553,49 @@ function OrderService(productService) {
       
             const readyPackingSlips = logData.filter(row => String(row[packingStatusCol]) === 'Ready');
             return readyPackingSlips.length;
-      
+
+          } catch (e) {
+            logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
+            return -1;
+          }
+        };
+
+        /**
+         * Gets count of new orders (Ready status, never printed).
+         * @param {string} [sessionId] - Optional session ID for logging.
+         * @returns {number} Count of new orders, or -1 on error.
+         */
+        this.getNewOrdersCount = function(sessionId) {
+          const serviceName = 'OrderService';
+          const functionName = 'getNewOrdersCount';
+          try {
+            const allConfig = ConfigService.getAllConfig();
+            const sheetNames = allConfig['system.sheet_names'];
+            const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+
+            if (!logSheet) {
+              throw new Error("Required sheet (SysOrdLog) not found.");
+            }
+
+            const logData = logSheet.getDataRange().getValues();
+            const logHeaders = logData.shift();
+            const packingStatusCol = logHeaders.indexOf('sol_PackingStatus');
+            const printedTimestampCol = logHeaders.indexOf('sol_PackingPrintedTimestamp');
+
+            if (packingStatusCol === -1) {
+              throw new Error("Could not find 'sol_PackingStatus' in SysOrdLog sheet.");
+            }
+
+            // New orders: Ready status AND never printed (no timestamp)
+            const newOrders = logData.filter(row => {
+              const isReady = String(row[packingStatusCol]) === 'Ready';
+              const neverPrinted = printedTimestampCol === -1 || !row[printedTimestampCol];
+              return isReady && neverPrinted;
+            });
+            return newOrders.length;
+
           } catch (e) {
             logger.error(serviceName, functionName, `Error in ${functionName}: ${e.message}`, e, { sessionId: sessionId });
             return -1;

@@ -185,13 +185,19 @@ Based on median 48-day reorder interval:
 
 - [x] Data analysis complete
 - [x] Thresholds defined
-- [ ] Schema finalized
-- [ ] Phase 1 implementation
-- [ ] Phase 2 implementation
-- [ ] Phase 3 implementation
-- [ ] Phase 4 implementation
-- [ ] Phase 5 implementation
+- [x] Schema finalized (SysContacts)
+- [x] Phase 1: Contact list populated (~630 contacts from orders + Mailchimp)
+- [x] Phase 2: Daily refresh in housekeeping (refreshCrmContacts)
+- [ ] Phase 3: Task generation rules
+- [ ] Phase 4: Manager interface (contact detail views)
+- [ ] Phase 5: Mailchimp integration (segment export)
+
+**Data Status (Dec 2025):**
+- Orders: ~1,300 (WebOrdM + WebOrdM_Archive)
+- Contacts: ~630 in SysContacts
+- Activity: 18,788 records in SysContactActivity
+- City lookup: SysLkp_Cities seeded and maintained
 
 ---
 
-Updated: 2025-12-16
+Updated: 2025-12-21

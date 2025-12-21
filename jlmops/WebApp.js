@@ -81,6 +81,7 @@ function getView(viewName) {
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'AdminBundles': 'AdminBundlesView',
     'AdminProjects': 'AdminProjectsView',
+    'AdminContacts': 'AdminContactsView',
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',
     'Web': 'WebView'

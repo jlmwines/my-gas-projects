@@ -331,6 +331,39 @@
     ],
     [
         "task.template",
+        "task.data.subscribers_update",
+        "Reminder to update Mailchimp subscriber list.",
+        "stable",
+        "topic", "Data",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.data.campaigns_update",
+        "Reminder to update Mailchimp campaign history.",
+        "stable",
+        "topic", "Data",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.data.coupons_update",
+        "Reminder to update WooCommerce coupons list.",
+        "stable",
+        "topic", "Data",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
         "task.system.health_status",
         "Singleton task for system health dashboard data.",
         "stable",
@@ -339,5 +372,115 @@
         "initial_status", "Assigned",
         "flow_pattern", "admin_direct",
         "due_pattern", "immediate"
+    ],
+    [
+        "task.template",
+        "task.crm.contact_followup",
+        "Follow up with a contact who may need attention.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.crm.churn_risk",
+        "Contact identified as high churn risk needs re-engagement.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.crm.vip_attention",
+        "VIP customer needs attention or special handling.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.campaign.plan",
+        "Plan a new marketing campaign.",
+        "stable",
+        "topic", "Campaign",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.campaign.content",
+        "Create content for a campaign.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.campaign.audience",
+        "Build audience list for a campaign.",
+        "stable",
+        "topic", "Campaign",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.campaign.launch",
+        "Launch scheduled campaign.",
+        "stable",
+        "topic", "Campaign",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
+    ],
+    [
+        "task.template",
+        "task.campaign.review",
+        "Review campaign results and log insights.",
+        "stable",
+        "topic", "Campaign",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.crm.coupon_expiring",
+        "Personal coupon expiring soon - consider follow-up.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.crm.suggestion",
+        "CRM intelligence suggestion for marketing campaign or outreach.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
     ]
 ]

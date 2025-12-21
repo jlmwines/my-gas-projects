@@ -278,13 +278,21 @@ function HousekeepingService() {
     // Phase 3: Service Data Updates
     this.checkBundleHealth();
     this.checkBruryaReminder();
+    this.checkSubscribersReminder();
+    this.checkCampaignsReminder();
+    this.checkCouponsReminder();
+    this.refreshCrmContacts();
+    this.maintainCityLookup();
+    this.backfillActivities();
+    this.runCrmIntelligence();
 
     logger.info('HousekeepingService', functionName, "Daily maintenance completed.");
   };
 
   /**
    * Checks if Brurya warehouse inventory needs updating.
-   * Creates task.inventory.brurya_update if > 7 days since last update.
+   * Creates/updates task.inventory.brurya_update with daysSinceUpdate in notes.
+   * Task created if > 7 days since last update, but notes always updated.
    */
   this.checkBruryaReminder = function() {
     const functionName = 'checkBruryaReminder';
@@ -298,19 +306,28 @@ function HousekeepingService() {
         ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
         : 999; // No update ever = needs attention
 
-      if (daysSinceUpdate >= 7) {
+      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
+
+      // Check if task already exists
+      const existingTask = TaskService.findOpenTaskByType('task.inventory.brurya_update', 'BRURYA');
+
+      if (existingTask) {
+        // Update existing task notes with current days count
+        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        logger.info('HousekeepingService', functionName, `Updated Brurya task notes (${daysSinceUpdate} days).`);
+      } else if (daysSinceUpdate >= 7) {
+        // Create new task if overdue
         try {
           TaskService.createTask(
             'task.inventory.brurya_update',
             'BRURYA',
             'Brurya Warehouse',
             'Update Brurya Inventory',
-            `Brurya inventory has not been updated in ${daysSinceUpdate} days. Please verify stock levels.`,
+            notesJson,
             null
           );
           logger.info('HousekeepingService', functionName, `Created Brurya reminder task (${daysSinceUpdate} days since last update).`);
         } catch (taskError) {
-          // De-duplication will throw if task already exists - that's expected
           if (!taskError.message.includes('already exists')) {
             logger.warn('HousekeepingService', functionName, `Could not create Brurya reminder: ${taskError.message}`);
           }
@@ -318,6 +335,195 @@ function HousekeepingService() {
       }
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Brurya reminder check failed: ${e.message}`);
+    }
+  };
+
+  /**
+   * Checks if Mailchimp subscribers data needs updating.
+   * Creates task if > 14 days since last update.
+   */
+  this.checkSubscribersReminder = function() {
+    const functionName = 'checkSubscribersReminder';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const config = allConfig['system.mailchimp.subscribers_last_update'];
+      const lastUpdate = config?.value ? new Date(config.value) : null;
+
+      let daysSinceUpdate = lastUpdate
+        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+
+      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
+      const existingTask = TaskService.findOpenTaskByType('task.data.subscribers_update', 'DATA');
+
+      if (existingTask) {
+        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        logger.info('HousekeepingService', functionName, `Updated subscribers task notes (${daysSinceUpdate} days).`);
+      } else if (daysSinceUpdate >= 14) {
+        try {
+          TaskService.createTask(
+            'task.data.subscribers_update',
+            'DATA',
+            'Data Import',
+            'Update Mailchimp Subscribers',
+            notesJson,
+            null
+          );
+          logger.info('HousekeepingService', functionName, `Created subscribers reminder task (${daysSinceUpdate} days since last update).`);
+        } catch (taskError) {
+          if (!taskError.message.includes('already exists')) {
+            logger.warn('HousekeepingService', functionName, `Could not create subscribers reminder: ${taskError.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Subscribers reminder check failed: ${e.message}`);
+    }
+  };
+
+  /**
+   * Checks if Mailchimp campaigns data needs updating.
+   * Creates task if > 14 days since last update.
+   */
+  this.checkCampaignsReminder = function() {
+    const functionName = 'checkCampaignsReminder';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const config = allConfig['system.mailchimp.campaigns_last_update'];
+      const lastUpdate = config?.value ? new Date(config.value) : null;
+
+      let daysSinceUpdate = lastUpdate
+        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+
+      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
+      const existingTask = TaskService.findOpenTaskByType('task.data.campaigns_update', 'DATA');
+
+      if (existingTask) {
+        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        logger.info('HousekeepingService', functionName, `Updated campaigns task notes (${daysSinceUpdate} days).`);
+      } else if (daysSinceUpdate >= 14) {
+        try {
+          TaskService.createTask(
+            'task.data.campaigns_update',
+            'DATA',
+            'Data Import',
+            'Update Mailchimp Campaigns',
+            notesJson,
+            null
+          );
+          logger.info('HousekeepingService', functionName, `Created campaigns reminder task (${daysSinceUpdate} days since last update).`);
+        } catch (taskError) {
+          if (!taskError.message.includes('already exists')) {
+            logger.warn('HousekeepingService', functionName, `Could not create campaigns reminder: ${taskError.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Campaigns reminder check failed: ${e.message}`);
+    }
+  };
+
+  /**
+   * Checks if WooCommerce coupons data needs updating.
+   * Creates task if > 14 days since last update.
+   */
+  this.checkCouponsReminder = function() {
+    const functionName = 'checkCouponsReminder';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const config = allConfig['system.woocommerce.coupons_last_update'];
+      const lastUpdate = config?.value ? new Date(config.value) : null;
+
+      let daysSinceUpdate = lastUpdate
+        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+
+      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
+      const existingTask = TaskService.findOpenTaskByType('task.data.coupons_update', 'DATA');
+
+      if (existingTask) {
+        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        logger.info('HousekeepingService', functionName, `Updated coupons task notes (${daysSinceUpdate} days).`);
+      } else if (daysSinceUpdate >= 14) {
+        try {
+          TaskService.createTask(
+            'task.data.coupons_update',
+            'DATA',
+            'Data Import',
+            'Update WooCommerce Coupons',
+            notesJson,
+            null
+          );
+          logger.info('HousekeepingService', functionName, `Created coupons reminder task (${daysSinceUpdate} days since last update).`);
+        } catch (taskError) {
+          if (!taskError.message.includes('already exists')) {
+            logger.warn('HousekeepingService', functionName, `Could not create coupons reminder: ${taskError.message}`);
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Coupons reminder check failed: ${e.message}`);
+    }
+  };
+
+  /**
+   * Refreshes CRM contact calculated fields (lifecycle status, churn risk, etc.)
+   * Should run daily to keep DaysSinceOrder and status calculations current.
+   */
+  this.refreshCrmContacts = function() {
+    const functionName = 'refreshCrmContacts';
+    logger.info('HousekeepingService', functionName, "Starting CRM contact refresh.");
+
+    try {
+      // Check if ContactService exists (CRM may not be fully deployed yet)
+      if (typeof ContactService === 'undefined' || !ContactService.refreshAllContacts) {
+        logger.info('HousekeepingService', functionName, 'ContactService not available yet. Skipping CRM refresh.');
+        return true;
+      }
+
+      ContactService.refreshAllContacts();
+      logger.info('HousekeepingService', functionName, "CRM contact refresh completed.");
+
+      // Enrich contact preferences from order history
+      if (typeof ContactEnrichmentService !== 'undefined' && ContactEnrichmentService.enrichAllContacts) {
+        const enrichResult = ContactEnrichmentService.enrichAllContacts();
+        logger.info('HousekeepingService', functionName, `CRM enrichment: ${enrichResult.enriched} enriched, ${enrichResult.skipped} skipped`);
+      }
+
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `CRM refresh failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Checks for new cities that passed the order threshold.
+   * Auto-adds them to SysLkp_Cities and creates a task to categorize.
+   */
+  this.maintainCityLookup = function() {
+    const functionName = 'maintainCityLookup';
+
+    try {
+      if (typeof ContactAnalysisService === 'undefined' || !ContactAnalysisService.maintainCityLookup) {
+        logger.info('HousekeepingService', functionName, 'ContactAnalysisService not available. Skipping city maintenance.');
+        return true;
+      }
+
+      const result = ContactAnalysisService.maintainCityLookup();
+      if (result.added > 0) {
+        logger.info('HousekeepingService', functionName, `Added ${result.added} new cities: ${result.cities.join(', ')}`);
+      } else {
+        logger.info('HousekeepingService', functionName, 'No new cities to add.');
+      }
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `City lookup maintenance failed: ${e.message}`);
+      return false;
     }
   };
 
@@ -642,6 +848,69 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Error during import file cleanup: ${e.message}`, e);
+      return false;
+    }
+  };
+
+  /**
+   * Backfills activity records from order history and subscriptions.
+   * Runs ActivityBackfillService.runFullBackfill() to ensure activities are current.
+   * This is idempotent - existing activities are skipped.
+   */
+  this.backfillActivities = function() {
+    const functionName = 'backfillActivities';
+    logger.info('HousekeepingService', functionName, 'Starting activity backfill');
+
+    try {
+      const result = ActivityBackfillService.runFullBackfill();
+
+      if (result.totalCreated > 0) {
+        logger.info('HousekeepingService', functionName,
+          `Activity backfill complete: ${result.totalCreated} created, ${result.totalSkipped} skipped`);
+      } else {
+        logger.info('HousekeepingService', functionName, 'Activity backfill complete: no new activities');
+      }
+
+      if (result.totalErrors > 0) {
+        logger.warn('HousekeepingService', functionName, `Activity backfill had ${result.totalErrors} errors`);
+      }
+
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Activity backfill failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Runs CRM intelligence analysis to detect campaign opportunities.
+   * Creates suggestion tasks when thresholds are met (cooling customers, unconverted subscribers, etc.).
+   */
+  this.runCrmIntelligence = function() {
+    const functionName = 'runCrmIntelligence';
+    logger.info('HousekeepingService', functionName, 'Starting CRM intelligence analysis');
+
+    try {
+      if (typeof CrmIntelligenceService === 'undefined' || !CrmIntelligenceService.runAnalysis) {
+        logger.info('HousekeepingService', functionName, 'CrmIntelligenceService not available. Skipping intelligence analysis.');
+        return true;
+      }
+
+      const result = CrmIntelligenceService.runAnalysis();
+
+      if (result.tasksCreated > 0) {
+        logger.info('HousekeepingService', functionName,
+          `CRM intelligence: ${result.suggestions.length} insights, ${result.tasksCreated} tasks created`);
+      } else if (result.suggestions.length > 0) {
+        logger.info('HousekeepingService', functionName,
+          `CRM intelligence: ${result.suggestions.length} insights (tasks already exist)`);
+      } else {
+        logger.info('HousekeepingService', functionName, 'CRM intelligence: no campaign opportunities detected');
+      }
+
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `CRM intelligence failed: ${e.message}`);
       return false;
     }
   };

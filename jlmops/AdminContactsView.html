@@ -1,0 +1,830 @@
+<div class="container-fluid">
+  <div class="row">
+    <!-- LEFT COLUMN: Contact List -->
+    <div class="col-md-8">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <!-- Header -->
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <span class="font-weight-bold">Contacts</span>
+            <span id="contact-count" class="badge badge-secondary ml-2">0</span>
+          </div>
+          <div class="d-flex align-items-center">
+            <input type="text" id="search-input" class="form-control form-control-sm mr-2" placeholder="Search..." style="width:180px;">
+            <button id="btn-refresh" class="btn btn-sm" title="Refresh">↻</button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="border-bottom bg-light px-2 py-1">
+          <div class="row small align-items-center">
+            <div class="col-3">
+              <select id="filter-type" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="">All Types</option>
+              </select>
+            </div>
+            <div class="col-2">
+              <select id="filter-status" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="">All Status</option>
+              </select>
+            </div>
+            <div class="col-2">
+              <select id="filter-subscribed" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="">Subscribed</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="col-2">
+              <select id="filter-core" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+                <option value="">Core</option>
+                <option value="yes">Core Only</option>
+                <option value="no">Non-Core</option>
+              </select>
+            </div>
+            <div class="col-3 text-right">
+              <button id="btn-clear-filters" class="btn btn-sm py-0" style="font-size:11px;">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column Headers -->
+        <div class="border-bottom bg-white px-2 py-1">
+          <div class="row small font-weight-bold text-muted">
+            <div class="col-3">Name</div>
+            <div class="col-2">Type</div>
+            <div class="col-1 text-center">Orders</div>
+            <div class="col-2 text-right">Spend</div>
+            <div class="col-2">Last Order</div>
+            <div class="col-2">Status</div>
+          </div>
+        </div>
+
+        <!-- List Area -->
+        <div class="card-body p-0" style="overflow-y: auto;">
+          <div id="contact-list"></div>
+          <div id="loading-indicator" class="text-center py-4 text-muted">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Detail Panel -->
+    <div class="col-md-4">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <div class="card-header py-2">
+          <strong id="detail-title">Overview</strong>
+        </div>
+        <div class="card-body p-0" style="overflow-y: auto;">
+          <!-- Summary Stats (default) -->
+          <div id="detail-summary" class="p-3">
+            <div class="row text-center mb-3">
+              <div class="col">
+                <div class="h4 mb-0" id="stat-total">-</div>
+                <div class="small text-muted">Total</div>
+              </div>
+              <div class="col">
+                <div class="h4 mb-0 text-primary" id="stat-customers">-</div>
+                <div class="small text-muted">Customers</div>
+              </div>
+              <div class="col">
+                <div class="h4 mb-0 text-success" id="stat-subscribers">-</div>
+                <div class="small text-muted">Subscribed</div>
+              </div>
+            </div>
+            <hr>
+            <div class="small">
+              <div class="font-weight-bold mb-2">By Status</div>
+              <div id="stats-by-status"></div>
+            </div>
+            <hr>
+            <div class="small">
+              <div class="font-weight-bold mb-2">By Type</div>
+              <div id="stats-by-type"></div>
+            </div>
+          </div>
+
+          <!-- Contact Detail -->
+          <div id="detail-contact" style="display:none;">
+            <!-- Header -->
+            <div class="px-3 py-2 bg-light border-bottom">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="font-weight-bold" id="contact-name">-</div>
+                  <div class="small text-muted" id="contact-email">-</div>
+                </div>
+                <span id="contact-type-badge" class="badge">-</span>
+              </div>
+            </div>
+
+
+            <!-- Metrics -->
+            <div class="px-3 py-2 border-bottom">
+              <div class="row text-center small">
+                <div class="col">
+                  <div class="font-weight-bold" id="metric-orders">-</div>
+                  <div class="text-muted">Orders</div>
+                </div>
+                <div class="col">
+                  <div class="font-weight-bold" id="metric-spend">-</div>
+                  <div class="text-muted">Spend</div>
+                </div>
+                <div class="col">
+                  <div class="font-weight-bold" id="metric-avg">-</div>
+                  <div class="text-muted">Avg</div>
+                </div>
+                <div class="col">
+                  <div class="font-weight-bold" id="metric-days">-</div>
+                  <div class="text-muted">Days</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Details Tabs -->
+            <ul class="nav nav-tabs nav-fill small" id="detail-tabs">
+              <li class="nav-item">
+                <a class="nav-link active" href="#" data-tab="info">Info</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="activity">Activity</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="notes">Notes</a>
+              </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="p-3">
+              <!-- Info Tab -->
+              <div id="tab-info">
+                <div class="small">
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Phone</div>
+                    <div class="col-7" id="info-phone">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">City</div>
+                    <div class="col-7" id="info-city">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Language</div>
+                    <div class="col-7" id="info-language">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Status</div>
+                    <div class="col-7" id="info-status">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Churn Risk</div>
+                    <div class="col-7" id="info-churn">-</div>
+                  </div>
+                  <hr>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">First Order</div>
+                    <div class="col-7" id="info-first-order">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Last Order</div>
+                    <div class="col-7" id="info-last-order">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Subscribed</div>
+                    <div class="col-7" id="info-subscribed">-</div>
+                  </div>
+                  <hr>
+                  <div class="font-weight-bold mb-2">Wine Preferences</div>
+                  <div id="info-preferences" class="mb-2">
+                    <!-- Preference rows populated by JS -->
+                    <div class="text-muted small">No preference data</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Price Range</div>
+                    <div class="col-7" id="info-price-range">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Top Wineries</div>
+                    <div class="col-7" id="info-wineries">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-5 text-muted">Bundle Buyer</div>
+                    <div class="col-7" id="info-bundle">-</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Activity Tab -->
+              <div id="tab-activity" style="display:none;">
+                <!-- Action Ribbon -->
+                <div class="d-flex justify-content-center mb-2 py-1 border-bottom">
+                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.call" title="Log Call" style="color:#6f42c1;">
+                    <span style="font-size:16px;">📞</span>
+                  </button>
+                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.whatsapp" title="Log WhatsApp" style="color:#25D366;">
+                    <span style="font-size:16px;">💬</span>
+                  </button>
+                  <button class="btn btn-sm mx-1" id="btn-compose-email" title="Compose Email" style="color:#0d6efd;">
+                    <span style="font-size:16px;">📧</span>
+                  </button>
+                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.sms" title="Log SMS" style="color:#fd7e14;">
+                    <span style="font-size:16px;">📱</span>
+                  </button>
+                  <button class="btn btn-sm mx-1 activity-action" data-type="note.general" title="Add Note" style="color:#6c757d;">
+                    <span style="font-size:16px;">📝</span>
+                  </button>
+                  <button class="btn btn-sm mx-1" id="btn-create-task" title="Create Task" style="color:#dc3545;">
+                    <span style="font-size:16px;">✓</span>
+                  </button>
+                </div>
+                <div id="activity-list" class="small" style="max-height:280px;overflow-y:auto;"></div>
+              </div>
+
+              <!-- Notes Tab -->
+              <div id="tab-notes" style="display:none;">
+                <div class="form-group">
+                  <label class="small font-weight-bold">Tags</label>
+                  <input type="text" id="field-tags" class="form-control form-control-sm" placeholder="vip, newsletter, holiday">
+                </div>
+                <div class="form-group">
+                  <label class="small font-weight-bold">Notes</label>
+                  <textarea id="field-notes" class="form-control form-control-sm" rows="4"></textarea>
+                </div>
+                <button id="btn-save-notes" class="btn btn-sm">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Log Activity Modal -->
+<div class="modal fade" id="modal-activity" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Log Activity</h6>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="small">Type</label>
+          <select id="activity-type" class="form-control form-control-sm">
+            <option value="contact.call">Phone Call</option>
+            <option value="contact.whatsapp">WhatsApp</option>
+            <option value="contact.email">Email</option>
+            <option value="contact.sms">SMS</option>
+            <option value="contact.meeting">Meeting</option>
+            <option value="note.general">Note</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="small">Summary</label>
+          <input type="text" id="activity-summary" class="form-control form-control-sm" placeholder="Brief description">
+        </div>
+        <div class="form-group">
+          <label class="small">Details (optional)</label>
+          <textarea id="activity-details" class="form-control form-control-sm" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" id="btn-submit-activity" class="btn btn-sm">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="modal-task" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Create Task</h6>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="small">Task Type</label>
+          <select id="task-type" class="form-control form-control-sm">
+            <option value="task.crm.contact_followup">Follow Up</option>
+            <option value="task.crm.churn_risk">Churn Risk</option>
+            <option value="task.crm.vip_attention">VIP Attention</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="small">Title</label>
+          <input type="text" id="task-title" class="form-control form-control-sm" placeholder="Task title">
+        </div>
+        <div class="form-group">
+          <label class="small">Notes</label>
+          <textarea id="task-notes" class="form-control form-control-sm" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" id="btn-submit-task" class="btn btn-sm">Create</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compose Email Modal -->
+<div class="modal fade" id="modal-email" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title">Compose Email</h6>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="small">To</label>
+          <input type="text" id="email-to" class="form-control form-control-sm" readonly>
+        </div>
+        <div class="form-group">
+          <label class="small">Subject</label>
+          <input type="text" id="email-subject" class="form-control form-control-sm" placeholder="Subject">
+        </div>
+        <div class="form-group">
+          <label class="small">Message</label>
+          <textarea id="email-body" class="form-control form-control-sm" rows="6" placeholder="Write your message..."></textarea>
+        </div>
+        <div id="email-status" class="small"></div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
+        <button type="button" id="btn-send-email" class="btn btn-sm btn-primary">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var contacts = [];
+  var currentContact = null;
+  var filterOptions = null;
+
+  // Initialize immediately (view is dynamically loaded, DOM already ready)
+  loadContacts();
+  bindEvents();
+
+  function bindEvents() {
+    // Search
+    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 300));
+
+    // Filters
+    document.getElementById('filter-type').addEventListener('change', applyFilters);
+    document.getElementById('filter-status').addEventListener('change', applyFilters);
+    document.getElementById('filter-subscribed').addEventListener('change', applyFilters);
+    document.getElementById('filter-core').addEventListener('change', applyFilters);
+    document.getElementById('btn-clear-filters').addEventListener('click', clearFilters);
+    document.getElementById('btn-refresh').addEventListener('click', loadContacts);
+
+    // Tabs
+    document.querySelectorAll('#detail-tabs a').forEach(function(tab) {
+      tab.addEventListener('click', function(e) {
+        e.preventDefault();
+        switchTab(this.dataset.tab);
+      });
+    });
+
+    // Actions
+    document.getElementById('btn-save-notes').addEventListener('click', saveNotes);
+    document.getElementById('btn-submit-activity').addEventListener('click', submitActivity);
+    document.getElementById('btn-submit-task').addEventListener('click', submitTask);
+    document.getElementById('btn-create-task').addEventListener('click', function() { $('#modal-task').modal('show'); });
+
+    // Activity ribbon buttons
+    document.querySelectorAll('.activity-action').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.getElementById('activity-type').value = this.dataset.type;
+        $('#modal-activity').modal('show');
+      });
+    });
+
+    // Email compose button
+    document.getElementById('btn-compose-email').addEventListener('click', function() {
+      if (!currentContact) return;
+      document.getElementById('email-to').value = currentContact;
+      document.getElementById('email-subject').value = '';
+      document.getElementById('email-body').value = '';
+      document.getElementById('email-status').innerHTML = '';
+      $('#modal-email').modal('show');
+    });
+
+    // Send email button
+    document.getElementById('btn-send-email').addEventListener('click', sendEmail);
+  }
+
+  function sendEmail() {
+    var email = document.getElementById('email-to').value;
+    var subject = document.getElementById('email-subject').value;
+    var body = document.getElementById('email-body').value;
+    var statusDiv = document.getElementById('email-status');
+
+    if (!subject) { statusDiv.innerHTML = '<span class="text-danger">Subject required</span>'; return; }
+    if (!body) { statusDiv.innerHTML = '<span class="text-danger">Message required</span>'; return; }
+
+    statusDiv.innerHTML = '<span class="text-info">Sending...</span>';
+    document.getElementById('btn-send-email').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-send-email').disabled = false;
+        if (result.error) {
+          statusDiv.innerHTML = '<span class="text-danger">Failed: ' + result.error + '</span>';
+        } else {
+          statusDiv.innerHTML = '<span class="text-success">Email sent!</span>';
+          setTimeout(function() {
+            $('#modal-email').modal('hide');
+            loadContactDetail(currentContact);
+          }, 1500);
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-send-email').disabled = false;
+        statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+      })
+      .WebAppContacts_sendEmail(email, subject, body);
+  }
+
+  function loadContacts() {
+    document.getElementById('loading-indicator').style.display = 'block';
+    document.getElementById('contact-list').innerHTML = '';
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        document.getElementById('loading-indicator').style.display = 'none';
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+        contacts = data.contacts || [];
+        filterOptions = data.filters;
+        populateFilterDropdowns();
+        renderStats(data.stats);
+        applyFilters();
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('loading-indicator').style.display = 'none';
+        showError(err.message);
+      })
+      .WebAppContacts_getContactList({});
+  }
+
+  function populateFilterDropdowns() {
+    if (!filterOptions) return;
+
+    var typeSelect = document.getElementById('filter-type');
+    typeSelect.innerHTML = '<option value="">All Types</option>';
+    filterOptions.types.forEach(function(t) {
+      typeSelect.innerHTML += '<option value="' + t.value + '">' + t.label + '</option>';
+    });
+
+    var statusSelect = document.getElementById('filter-status');
+    statusSelect.innerHTML = '<option value="">All Status</option>';
+    filterOptions.statuses.forEach(function(s) {
+      statusSelect.innerHTML += '<option value="' + s.value + '">' + s.label + '</option>';
+    });
+  }
+
+  function applyFilters() {
+    var search = document.getElementById('search-input').value.toLowerCase();
+    var typeFilter = document.getElementById('filter-type').value;
+    var statusFilter = document.getElementById('filter-status').value;
+    var subscribedFilter = document.getElementById('filter-subscribed').value;
+    var coreFilter = document.getElementById('filter-core').value;
+
+    var filtered = contacts.filter(function(c) {
+      if (search && c.name.toLowerCase().indexOf(search) < 0 && c.email.toLowerCase().indexOf(search) < 0) return false;
+      if (typeFilter && c.type !== typeFilter) return false;
+      if (statusFilter && c.status !== statusFilter) return false;
+      if (subscribedFilter === 'yes' && !c.isSubscribed) return false;
+      if (subscribedFilter === 'no' && c.isSubscribed) return false;
+      if (coreFilter === 'yes' && !c.isCore) return false;
+      if (coreFilter === 'no' && c.isCore) return false;
+      return true;
+    });
+
+    renderContactList(filtered);
+    document.getElementById('contact-count').textContent = filtered.length;
+  }
+
+  function clearFilters() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-subscribed').value = '';
+    document.getElementById('filter-core').value = '';
+    applyFilters();
+  }
+
+  function renderContactList(list) {
+    var html = '';
+    list.forEach(function(c) {
+      var typeBadge = getTypeBadge(c.type);
+      var statusClass = getStatusClass(c.status);
+      var icons = '';
+      if (c.isCustomer) icons += '<span title="Customer" style="font-size:10px;">🛒</span>';
+      if (c.isSubscribed) icons += '<span title="Subscribed" style="font-size:10px;">✉️</span>';
+      html += '<div class="contact-row px-2 py-2 border-bottom" data-email="' + c.email + '" style="cursor:pointer;">' +
+        '<div class="row small align-items-center">' +
+        '<div class="col-3">' +
+        '<div class="font-weight-bold text-truncate">' + escapeHtml(c.name) + ' ' + icons + '</div>' +
+        '<div class="text-muted text-truncate" style="font-size:10px;">' + escapeHtml(c.email) + '</div>' +
+        '</div>' +
+        '<div class="col-2">' + typeBadge + '</div>' +
+        '<div class="col-1 text-center">' + c.orderCount + '</div>' +
+        '<div class="col-2 text-right">₪' + c.totalSpend.toLocaleString() + '</div>' +
+        '<div class="col-2">' + (c.lastOrderDate || '-') + '</div>' +
+        '<div class="col-2"><span class="badge ' + statusClass + '">' + c.status + '</span></div>' +
+        '</div></div>';
+    });
+    document.getElementById('contact-list').innerHTML = html || '<div class="text-center py-4 text-muted">No contacts found</div>';
+
+    // Bind row clicks
+    document.querySelectorAll('.contact-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        loadContactDetail(this.dataset.email);
+        document.querySelectorAll('.contact-row').forEach(function(r) { r.classList.remove('bg-light'); });
+        this.classList.add('bg-light');
+      });
+    });
+  }
+
+  function renderStats(stats) {
+    if (!stats) return;
+    document.getElementById('stat-total').textContent = stats.total || 0;
+    document.getElementById('stat-customers').textContent = stats.customers || 0;
+    document.getElementById('stat-subscribers').textContent = stats.subscribers || 0;
+
+    var statusHtml = '';
+    if (stats.byStatus) {
+      Object.keys(stats.byStatus).forEach(function(k) {
+        if (stats.byStatus[k] > 0) {
+          statusHtml += '<div class="d-flex justify-content-between mb-1"><span>' + k + '</span><span>' + stats.byStatus[k] + '</span></div>';
+        }
+      });
+    }
+    document.getElementById('stats-by-status').innerHTML = statusHtml || '-';
+
+    var typeHtml = '';
+    if (stats.byType) {
+      Object.keys(stats.byType).forEach(function(k) {
+        if (stats.byType[k] > 0) {
+          typeHtml += '<div class="d-flex justify-content-between mb-1"><span>' + k + '</span><span>' + stats.byType[k] + '</span></div>';
+        }
+      });
+    }
+    document.getElementById('stats-by-type').innerHTML = typeHtml || '-';
+  }
+
+  function loadContactDetail(email) {
+    currentContact = email;
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+        renderContactDetail(data);
+      })
+      .withFailureHandler(function(err) { showError(err.message); })
+      .WebAppContacts_getContactDetail(email);
+  }
+
+  function renderContactDetail(c) {
+    document.getElementById('detail-summary').style.display = 'none';
+    document.getElementById('detail-contact').style.display = 'block';
+    document.getElementById('detail-title').textContent = 'Contact Detail';
+
+    // Header
+    document.getElementById('contact-name').textContent = c.name || c.email;
+    document.getElementById('contact-email').textContent = c.email;
+    document.getElementById('contact-type-badge').textContent = c.typeLabel;
+    document.getElementById('contact-type-badge').className = 'badge ' + getTypeBadgeClass(c.type);
+
+    // Metrics
+    document.getElementById('metric-orders').textContent = c.orderCount;
+    document.getElementById('metric-spend').textContent = '₪' + (c.totalSpend || 0).toLocaleString();
+    document.getElementById('metric-avg').textContent = '₪' + (c.avgOrderValue || 0);
+    document.getElementById('metric-days').textContent = c.daysSinceOrder !== undefined ? c.daysSinceOrder : '-';
+
+    // Info tab
+    document.getElementById('info-phone').textContent = c.phone || '-';
+    document.getElementById('info-city').textContent = c.city || '-';
+    document.getElementById('info-language').textContent = c.language === 'he' ? 'Hebrew' : 'English';
+    document.getElementById('info-status').innerHTML = '<span class="badge ' + getStatusClass(c.status) + '">' + c.status + '</span>';
+    document.getElementById('info-churn').innerHTML = '<span class="badge ' + getChurnClass(c.churnRisk) + '">' + c.churnRisk + '</span>';
+    document.getElementById('info-first-order').textContent = c.firstOrderDate || '-';
+    document.getElementById('info-last-order').textContent = c.lastOrderDate || '-';
+    document.getElementById('info-subscribed').textContent = c.isSubscribed ? ('Yes' + (c.subscribedDate ? ' (' + c.subscribedDate + ')' : '')) : 'No';
+
+    // Render wine preferences as rows
+    var prefHtml = '';
+    if (c.preferredCategory) {
+      prefHtml += '<div class="row mb-1 small"><div class="col-4 font-weight-bold">' + escapeHtml(c.preferredCategory) + '</div><div class="col-8">';
+      var attrs = [];
+      if (c.preferredCategory.toLowerCase().indexOf('red') >= 0) {
+        if (c.redIntensityRange) attrs.push('Intensity ' + c.redIntensityRange);
+        if (c.redComplexityRange) attrs.push('Complexity ' + c.redComplexityRange);
+      } else if (c.preferredCategory.toLowerCase().indexOf('white') >= 0) {
+        if (c.whiteComplexityRange) attrs.push('Complexity ' + c.whiteComplexityRange);
+        if (c.whiteAcidityRange) attrs.push('Acidity ' + c.whiteAcidityRange);
+      }
+      prefHtml += attrs.length ? attrs.join(', ') : '<span class="text-muted">-</span>';
+      prefHtml += '</div></div>';
+    }
+    if (c.secondaryCategory) {
+      prefHtml += '<div class="row mb-1 small"><div class="col-4 font-weight-bold">' + escapeHtml(c.secondaryCategory) + '</div><div class="col-8">';
+      var attrs2 = [];
+      if (c.secondaryCategory.toLowerCase().indexOf('red') >= 0) {
+        if (c.redIntensityRange) attrs2.push('Intensity ' + c.redIntensityRange);
+        if (c.redComplexityRange) attrs2.push('Complexity ' + c.redComplexityRange);
+      } else if (c.secondaryCategory.toLowerCase().indexOf('white') >= 0) {
+        if (c.whiteComplexityRange) attrs2.push('Complexity ' + c.whiteComplexityRange);
+        if (c.whiteAcidityRange) attrs2.push('Acidity ' + c.whiteAcidityRange);
+      }
+      prefHtml += attrs2.length ? attrs2.join(', ') : '<span class="text-muted">-</span>';
+      prefHtml += '</div></div>';
+    }
+    document.getElementById('info-preferences').innerHTML = prefHtml || '<div class="text-muted small">No preference data</div>';
+    document.getElementById('info-price-range').textContent = c.priceRange || '-';
+    document.getElementById('info-wineries').textContent = c.topWineries || '-';
+    document.getElementById('info-bundle').textContent = c.bundleBuyer ? 'Yes' : 'No';
+
+    // Activity tab - compact single-line with icons
+    var actHtml = '';
+    (c.activities || []).forEach(function(a) {
+      var icon = getActivityIcon(a.type);
+      var displayText = formatActivityDisplay(a.type, a.summary);
+      var dateOnly = a.timestamp ? a.timestamp.split(' ')[0] : '';
+      actHtml += '<div class="d-flex align-items-center py-1 border-bottom" style="line-height:1.3;">' +
+        '<span class="mr-2" style="font-size:14px;">' + icon + '</span>' +
+        '<span class="flex-grow-1 text-truncate">' + escapeHtml(displayText) + '</span>' +
+        '<span class="text-muted ml-2" style="font-size:10px;white-space:nowrap;">' + dateOnly + '</span>' +
+        '</div>';
+    });
+    document.getElementById('activity-list').innerHTML = actHtml || '<div class="text-muted">No activity recorded</div>';
+
+    // Notes tab
+    document.getElementById('field-tags').value = c.tags || '';
+    document.getElementById('field-notes').value = c.notes || '';
+
+    // Reset to info tab
+    switchTab('info');
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('#detail-tabs a').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    document.getElementById('tab-info').style.display = tab === 'info' ? 'block' : 'none';
+    document.getElementById('tab-activity').style.display = tab === 'activity' ? 'block' : 'none';
+    document.getElementById('tab-notes').style.display = tab === 'notes' ? 'block' : 'none';
+  }
+
+  function saveNotes() {
+    if (!currentContact) return;
+    var updates = {
+      tags: document.getElementById('field-tags').value,
+      notes: document.getElementById('field-notes').value
+    };
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) { showError(data.error); return; }
+        showSuccess('Notes saved');
+      })
+      .withFailureHandler(function(err) { showError(err.message); })
+      .WebAppContacts_updateContact(currentContact, updates);
+  }
+
+  function submitActivity() {
+    if (!currentContact) return;
+    var type = document.getElementById('activity-type').value;
+    var summary = document.getElementById('activity-summary').value;
+    var details = document.getElementById('activity-details').value;
+    if (!summary) { showError('Summary is required'); return; }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) { showError(data.error); return; }
+        $('#modal-activity').modal('hide');
+        document.getElementById('activity-summary').value = '';
+        document.getElementById('activity-details').value = '';
+        loadContactDetail(currentContact);
+        showSuccess('Activity logged');
+      })
+      .withFailureHandler(function(err) { showError(err.message); })
+      .WebAppContacts_logActivity(currentContact, type, summary, details);
+  }
+
+  function submitTask() {
+    if (!currentContact) return;
+    var taskType = document.getElementById('task-type').value;
+    var title = document.getElementById('task-title').value;
+    var notes = document.getElementById('task-notes').value;
+    if (!title) { showError('Title is required'); return; }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) { showError(data.error); return; }
+        $('#modal-task').modal('hide');
+        document.getElementById('task-title').value = '';
+        document.getElementById('task-notes').value = '';
+        showSuccess('Task created');
+      })
+      .withFailureHandler(function(err) { showError(err.message); })
+      .WebAppContacts_createTask(currentContact, taskType, title, notes);
+  }
+
+  // Helpers
+  function getActivityIcon(type) {
+    if (!type) return '📌';
+    if (type.indexOf('order') >= 0) return '🛒';
+    if (type.indexOf('coupon') >= 0) return '🎟️';
+    if (type.indexOf('campaign') >= 0 || type.indexOf('mailchimp') >= 0) return '📨';
+    if (type.indexOf('whatsapp') >= 0) return '💬';
+    if (type.indexOf('email') >= 0) return '📧';
+    if (type.indexOf('sms') >= 0) return '📱';
+    if (type.indexOf('call') >= 0) return '📞';
+    if (type.indexOf('subscription') >= 0) return '✉️';
+    if (type.indexOf('note') >= 0) return '📝';
+    return '📌';
+  }
+
+  function formatActivityDisplay(type, summary) {
+    // For campaigns, strip the type prefix and "Received:" prefix
+    if (type && type.indexOf('campaign') >= 0) {
+      // summary like "Received: 2025-11 EN" -> "2025-11 EN"
+      if (summary && summary.indexOf('Received:') === 0) {
+        return summary.substring(9).trim();
+      }
+    }
+    // For orders, fix NIS symbol
+    if (summary) {
+      summary = summary.replace(/â‚ª/g, '₪');
+    }
+    return summary || type || '';
+  }
+
+  function getTypeBadge(type) {
+    var cls = getTypeBadgeClass(type);
+    var label = type ? type.split('.').pop() : 'unknown';
+    return '<span class="badge ' + cls + '">' + label + '</span>';
+  }
+
+  function getTypeBadgeClass(type) {
+    if (!type) return 'badge-secondary';
+    if (type.indexOf('vip') >= 0) return 'badge-warning';
+    if (type.indexOf('repeat') >= 0) return 'badge-primary';
+    if (type.indexOf('new') >= 0) return 'badge-success';
+    if (type.indexOf('prospect') >= 0) return 'badge-info';
+    if (type.indexOf('noncore') >= 0) return 'badge-secondary';
+    return 'badge-light';
+  }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'Active': return 'badge-success';
+      case 'Recent': return 'badge-primary';
+      case 'Cooling': return 'badge-warning';
+      case 'Lapsed': return 'badge-danger';
+      case 'Dormant': return 'badge-dark';
+      default: return 'badge-secondary';
+    }
+  }
+
+  function getChurnClass(risk) {
+    switch (risk) {
+      case 'low': return 'badge-success';
+      case 'medium': return 'badge-warning';
+      case 'high': return 'badge-danger';
+      default: return 'badge-secondary';
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function debounce(fn, delay) {
+    var timer;
+    return function() {
+      clearTimeout(timer);
+      timer = setTimeout(fn, delay);
+    };
+  }
+
+  function showError(msg) {
+    alert('Error: ' + msg);
+  }
+
+  function showSuccess(msg) {
+    // Could use toast, for now just console
+    console.log('Success: ' + msg);
+  }
+})();
+</script>

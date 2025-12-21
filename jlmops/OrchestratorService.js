@@ -1148,13 +1148,13 @@ const OrchestratorService = (function() {
           state.lastUpdated = new Date().toISOString();
 
           if (ordersToExportCount === 0) {
-            // No orders to export - skip Step 3, mark it complete
+            // No orders to export - skip Step 3
             logger.info(serviceName, functionName, `No orders to export. Skipping export step and transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
 
             SyncStatusService.writeStatus(state.sessionId, {
               step: 3,
               stepName: 'Update Comax Orders',
-              status: 'completed',
+              status: 'skipped',
               message: 'No new web orders to export'
             });
 
@@ -1304,7 +1304,7 @@ const OrchestratorService = (function() {
               SyncStatusService.writeStatus(updatedState.sessionId, {
                 step: 5,
                 stepName: 'Update Web Inventory',
-                status: noChanges ? 'completed' : 'waiting',
+                status: noChanges ? 'skipped' : 'waiting',
                 message: noChanges ? 'No inventory changes detected' : `Export ready: ${exportFilename}`
               });
 

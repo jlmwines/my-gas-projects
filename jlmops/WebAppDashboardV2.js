@@ -131,14 +131,14 @@ function _getOrdersData() {
   try {
     const orderService = new OrderService(ProductService);
     return {
-      packingSlipsReady: orderService.getPackingSlipsReadyCount(),
+      newOrders: orderService.getNewOrdersCount(),
       ordersToExport: orderService.getComaxExportOrderCount(),
       onHold: orderService.getOnHoldOrderCount(),
       processing: orderService.getProcessingOrderCount()
     };
   } catch (e) {
     return {
-      packingSlipsReady: 0,
+      newOrders: 0,
       ordersToExport: 0,
       onHold: 0,
       processing: 0,
@@ -153,20 +153,27 @@ function _getOrdersData() {
  */
 function _getInventoryData(allTasks) {
   try {
-    // Brurya last update
-    const allConfig = ConfigService.getAllConfig();
-    const bruryaConfig = allConfig['system.brurya.last_update'];
-    const bruryaLastUpdate = bruryaConfig?.value ? new Date(bruryaConfig.value).toISOString() : null;
+    // Brurya days since update - read from task notes
+    let bruryaDaysSince = null;
+    const bruryaTask = allTasks.find(t => t.st_TaskTypeId === 'task.inventory.brurya_update');
+    if (bruryaTask && bruryaTask.st_Notes) {
+      try {
+        const notes = typeof bruryaTask.st_Notes === 'string'
+          ? JSON.parse(bruryaTask.st_Notes)
+          : bruryaTask.st_Notes;
+        bruryaDaysSince = notes.daysSinceUpdate;
+      } catch (parseErr) {
+        // Notes not valid JSON, ignore
+      }
+    }
 
     // Count tasks by type
     const negativeInventory = _countTasksByType(allTasks, 'task.validation.comax_internal_audit');
     const inventoryCountTasks = _countTasksByType(allTasks, 'task.confirmation.comax_inventory_export');
     const inventoryAwaitingReview = _countTasksByType(allTasks, 'task.validation.archived_comax_stock_mismatch');
-    const bruryaReminder = _countTasksByType(allTasks, 'task.inventory.brurya_update');
 
     return {
-      bruryaLastUpdate: bruryaLastUpdate,
-      bruryaReminder: bruryaReminder,
+      bruryaDaysSince: bruryaDaysSince,
       negativeInventory: negativeInventory,
       inventoryCountTasks: inventoryCountTasks,
       inventoryAwaitingReview: inventoryAwaitingReview
