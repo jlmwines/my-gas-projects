@@ -19,6 +19,22 @@ function runDailyMaintenance() {
 }
 
 /**
+ * A global function to manually trigger order archiving.
+ * Archives completed orders older than 1 year to WebOrdM_Archive.
+ */
+function runOrderArchiving() {
+    housekeepingService.archiveCompletedOrders();
+}
+
+/**
+ * A global function to manually trigger data sheet formatting.
+ * Applies standard formatting (top align, wrapped text, 21px rows) to all data sheets.
+ */
+function runFormatDataSheets() {
+    housekeepingService.formatDataSheets();
+}
+
+/**
  * HousekeepingService provides methods for performing various maintenance tasks.
  */
 function HousekeepingService() {
@@ -86,18 +102,48 @@ function HousekeepingService() {
       })
     );
 
-    // Append to archive sheet
-    archiveSheet.getRange(archiveSheet.getLastRow() + 1, 1, truncatedRows.length, truncatedRows[0].length)
+    // === DATA SAFETY: Atomic-like archive operation ===
+    // Step 1: Record archive state before write
+    const archiveRowsBefore = archiveSheet.getLastRow();
+
+    // Step 2: Append to archive sheet
+    const archiveStartRow = archiveRowsBefore + 1;
+    archiveSheet.getRange(archiveStartRow, 1, truncatedRows.length, truncatedRows[0].length)
                  .setValues(truncatedRows);
 
-    // Overwrite source sheet with kept rows
+    // Step 3: Flush and verify archive write succeeded
+    SpreadsheetApp.flush();
+    const archiveRowsAfter = archiveSheet.getLastRow();
+    const expectedArchiveRows = archiveRowsBefore + truncatedRows.length;
+
+    if (archiveRowsAfter < expectedArchiveRows) {
+      // Archive write failed or incomplete - DO NOT modify source
+      throw new Error(`Archive write verification failed: expected ${expectedArchiveRows} rows, found ${archiveRowsAfter}. Source data preserved.`);
+    }
+
+    // Step 4: Only now safe to modify source - archive has the data
     sourceSheet.clearContents();
     if (rowsToKeep.length > 0) {
       sourceSheet.getRange(1, 1, rowsToKeep.length, rowsToKeep[0].length).setValues(rowsToKeep);
     }
-    SpreadsheetApp.flush(); // Ensure changes are written
+    SpreadsheetApp.flush();
 
     return rowsToArchive.length;
+  }
+
+  /**
+   * Applies standard formatting to a data sheet: top-align cells, single row height, and wrapped text.
+   * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to format.
+   * @param {number} dataRowCount - Number of data rows (excluding header). If 0, uses sheet's last row.
+   */
+  function _applySheetFormatting(sheet, dataRowCount) {
+    const rowCount = dataRowCount || Math.max(0, sheet.getLastRow() - 1);
+    if (rowCount <= 0) return;
+
+    const dataRange = sheet.getRange(2, 1, rowCount, sheet.getLastColumn());
+    dataRange.setVerticalAlignment('top');
+    dataRange.setWrap(true);
+    sheet.setRowHeights(2, rowCount, 21);
   }
 
 
@@ -231,12 +277,16 @@ function HousekeepingService() {
     // Phase 1: Cleanup
     this.cleanOldLogs();
     this.archiveCompletedTasks();
+    this.archiveCompletedOrders();
+    this.purgeOldJobs();
     this.manageFileLifecycle();
     this.cleanupImportFiles();
+    this.formatDataSheets();
 
     // Phase 2: Validation & Testing
     let validationResult = null;
     let testResult = null;
+    let schemaResult = null;
 
     try {
       validationResult = ValidationOrchestratorService.runValidationSuite('master_master', null);
@@ -254,8 +304,22 @@ function HousekeepingService() {
       logger.error('HousekeepingService', functionName, `Tests failed: ${e.message}`);
     }
 
+    try {
+      schemaResult = ValidationLogic.validateDatabaseSchema('housekeeping_' + Date.now());
+      const criticalCount = schemaResult.discrepancies.filter(d => d.severity === 'CRITICAL').length;
+      logger.info('HousekeepingService', functionName,
+        `Schema validation: ${schemaResult.status}, ${criticalCount} critical issues`);
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Schema validation failed: ${e.message}`);
+    }
+
     // Update system health singleton task
     try {
+      const allPassed = validationResult && testResult && schemaResult;
+      const criticalSchemaIssues = schemaResult
+        ? schemaResult.discrepancies.filter(d => d.severity === 'CRITICAL').length
+        : -1;
+
       TaskService.upsertSingletonTask(
         'task.system.health_status',
         '_SYSTEM',
@@ -265,9 +329,11 @@ function HousekeepingService() {
           updated: new Date().toISOString(),
           last_housekeeping: {
             timestamp: new Date().toISOString(),
-            status: (validationResult && testResult) ? 'success' : 'partial',
+            status: allPassed ? 'success' : 'partial',
             unit_tests: testResult ? `${testResult.passed}/${testResult.total}` : 'error',
-            validation_issues: validationResult ? validationResult.failureCount : -1
+            validation_issues: validationResult ? validationResult.failureCount : -1,
+            schema_status: schemaResult ? schemaResult.status : 'error',
+            schema_critical: criticalSchemaIssues
           }
         }
       );
@@ -616,9 +682,240 @@ function HousekeepingService() {
     }
   };
 
-  // TODO: Add more specific housekeeping methods as needed.
-  // this.archiveCompletedOrders = function() { ... };
-  // this.optimizeSheet = function(sheetName) { ... };
+  const ORDER_ARCHIVE_THRESHOLD_DAYS = 365; // 1 year
+
+  /**
+   * Archives completed orders older than ORDER_ARCHIVE_THRESHOLD_DAYS.
+   * Moves data from:
+   *   - WebOrdM → WebOrdM_Archive
+   *   - WebOrdItemsM → WebOrdItemsM_Archive
+   *   - SysOrdLog → OrderLogArchive
+   * Also cleans SysPackingCache (removes entries for archived orders).
+   * Uses data-safe pattern: verify archive write before modifying source.
+   */
+  this.archiveCompletedOrders = function() {
+    const functionName = 'archiveCompletedOrders';
+    logger.info('HousekeepingService', functionName, 'Starting archiving of old completed orders.');
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      if (!allConfig) {
+        logger.warn('HousekeepingService', functionName, 'Configuration not available.');
+        return false;
+      }
+
+      const dataSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.data'].id);
+      const sheetNames = allConfig['system.sheet_names'];
+
+      // Get all required sheets
+      const orderSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdM);
+      const orderArchiveSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdM_Archive);
+      const itemsSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+      const itemsArchiveSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdItemsM_Archive);
+      const ordLogSheet = dataSpreadsheet.getSheetByName(sheetNames.SysOrdLog);
+      const ordLogArchiveSheet = dataSpreadsheet.getSheetByName(sheetNames.OrderLogArchive);
+      const packingCacheSheet = dataSpreadsheet.getSheetByName(sheetNames.SysPackingCache);
+
+      if (!orderSheet || !orderArchiveSheet || !itemsSheet || !itemsArchiveSheet) {
+        logger.warn('HousekeepingService', functionName, 'One or more order sheets not found. Skipping order archiving.');
+        return false;
+      }
+
+      // Get schemas
+      const orderSchema = allConfig['schema.data.WebOrdM'];
+      const itemsSchema = allConfig['schema.data.WebOrdItemsM'];
+      const ordLogSchema = allConfig['schema.data.SysOrdLog'];
+      const ordLogArchiveSchema = allConfig['schema.data.OrderLogArchive'];
+      if (!orderSchema?.headers || !itemsSchema?.headers) {
+        logger.error('HousekeepingService', functionName, 'Order schemas not found in configuration.');
+        return false;
+      }
+
+      const orderHeaders = orderSchema.headers.split(',');
+      const itemsHeaders = itemsSchema.headers.split(',');
+      const orderIdCol = orderHeaders.indexOf('wom_OrderId');
+      const orderDateCol = orderHeaders.indexOf('wom_OrderDate');
+      const orderStatusCol = orderHeaders.indexOf('wom_Status');
+      const itemOrderIdCol = itemsHeaders.indexOf('woi_OrderId');
+
+      if (orderIdCol === -1 || orderDateCol === -1 || orderStatusCol === -1 || itemOrderIdCol === -1) {
+        logger.error('HousekeepingService', functionName, 'Required columns not found in schemas.');
+        return false;
+      }
+
+      // Read all order data
+      const orderData = orderSheet.getDataRange().getValues();
+      if (orderData.length <= 1) {
+        logger.info('HousekeepingService', functionName, 'No orders to process.');
+        return true;
+      }
+
+      const thresholdDate = _getThresholdDate(ORDER_ARCHIVE_THRESHOLD_DAYS);
+
+      // Identify orders to archive
+      const ordersToArchive = [];
+      const ordersToKeep = [orderData[0]]; // Keep headers
+      const orderIdsToArchive = new Set();
+
+      for (let i = 1; i < orderData.length; i++) {
+        const row = orderData[i];
+        const orderId = String(row[orderIdCol]);
+        const orderDate = new Date(row[orderDateCol]);
+        const status = String(row[orderStatusCol]).toLowerCase();
+
+        // Archive if: completed AND older than threshold
+        if (status === 'completed' && orderDate < thresholdDate) {
+          ordersToArchive.push(row);
+          orderIdsToArchive.add(orderId);
+        } else {
+          ordersToKeep.push(row);
+        }
+      }
+
+      if (ordersToArchive.length === 0) {
+        logger.info('HousekeepingService', functionName, 'No orders eligible for archiving.');
+        return true;
+      }
+
+      // Read all items data and separate by order ID
+      const itemsData = itemsSheet.getDataRange().getValues();
+      const itemsToArchive = [];
+      const itemsToKeep = [itemsData[0]]; // Keep headers
+
+      for (let i = 1; i < itemsData.length; i++) {
+        const row = itemsData[i];
+        const itemOrderId = String(row[itemOrderIdCol]);
+        if (orderIdsToArchive.has(itemOrderId)) {
+          itemsToArchive.push(row);
+        } else {
+          itemsToKeep.push(row);
+        }
+      }
+
+      // Read SysOrdLog data and separate by order ID
+      let ordLogToArchive = [];
+      let ordLogToKeep = [];
+      let ordLogArchiveRows = [];
+      if (ordLogSheet && ordLogArchiveSheet && ordLogSchema?.headers && ordLogArchiveSchema?.headers) {
+        const ordLogHeaders = ordLogSchema.headers.split(',');
+        const ordLogArchiveHeaders = ordLogArchiveSchema.headers.split(',');
+        const ordLogOrderIdCol = ordLogHeaders.indexOf('sol_OrderId');
+
+        if (ordLogOrderIdCol !== -1) {
+          const ordLogData = ordLogSheet.getDataRange().getValues();
+          ordLogToKeep = [ordLogData[0]]; // Keep headers
+
+          // Build column mapping from source to archive
+          // Archive: sol_OrderId,sol_PackingStatus,sol_PackingPrintedTimestamp,sol_ComaxExportStatus,sol_ComaxExportTimestamp
+          const archiveColMap = ordLogArchiveHeaders.map(h => ordLogHeaders.indexOf(h));
+
+          for (let i = 1; i < ordLogData.length; i++) {
+            const row = ordLogData[i];
+            const orderId = String(row[ordLogOrderIdCol]);
+            if (orderIdsToArchive.has(orderId)) {
+              ordLogToArchive.push(row);
+              // Map to archive format
+              const archiveRow = archiveColMap.map(srcIdx => srcIdx >= 0 ? row[srcIdx] : '');
+              ordLogArchiveRows.push(archiveRow);
+            } else {
+              ordLogToKeep.push(row);
+            }
+          }
+        }
+      }
+
+      // Read SysPackingCache and filter out archived order entries
+      let packingCacheToKeep = [];
+      let packingCacheRemoved = 0;
+      if (packingCacheSheet) {
+        const packingSchema = allConfig['schema.data.SysPackingCache'];
+        if (packingSchema?.headers) {
+          const packingHeaders = packingSchema.headers.split(',');
+          const packingOrderIdCol = packingHeaders.indexOf('spc_OrderId');
+
+          if (packingOrderIdCol !== -1) {
+            const packingData = packingCacheSheet.getDataRange().getValues();
+            packingCacheToKeep = [packingData[0]]; // Keep headers
+
+            for (let i = 1; i < packingData.length; i++) {
+              const row = packingData[i];
+              const orderId = String(row[packingOrderIdCol]);
+              if (orderIdsToArchive.has(orderId)) {
+                packingCacheRemoved++;
+              } else {
+                packingCacheToKeep.push(row);
+              }
+            }
+          }
+        }
+      }
+
+      // === DATA SAFETY: Archive orders first ===
+      const orderArchiveRowsBefore = orderArchiveSheet.getLastRow();
+      orderArchiveSheet.getRange(orderArchiveRowsBefore + 1, 1, ordersToArchive.length, ordersToArchive[0].length)
+                       .setValues(ordersToArchive);
+      SpreadsheetApp.flush();
+
+      const orderArchiveRowsAfter = orderArchiveSheet.getLastRow();
+      if (orderArchiveRowsAfter < orderArchiveRowsBefore + ordersToArchive.length) {
+        throw new Error('Order archive write verification failed. Source data preserved.');
+      }
+
+      // === DATA SAFETY: Archive items ===
+      if (itemsToArchive.length > 0) {
+        const itemsArchiveRowsBefore = itemsArchiveSheet.getLastRow();
+        itemsArchiveSheet.getRange(itemsArchiveRowsBefore + 1, 1, itemsToArchive.length, itemsToArchive[0].length)
+                         .setValues(itemsToArchive);
+        SpreadsheetApp.flush();
+
+        const itemsArchiveRowsAfter = itemsArchiveSheet.getLastRow();
+        if (itemsArchiveRowsAfter < itemsArchiveRowsBefore + itemsToArchive.length) {
+          throw new Error('Items archive write verification failed. Source data preserved.');
+        }
+      }
+
+      // === DATA SAFETY: Archive order log ===
+      if (ordLogArchiveRows.length > 0 && ordLogArchiveSheet) {
+        const ordLogArchiveRowsBefore = ordLogArchiveSheet.getLastRow();
+        ordLogArchiveSheet.getRange(ordLogArchiveRowsBefore + 1, 1, ordLogArchiveRows.length, ordLogArchiveRows[0].length)
+                          .setValues(ordLogArchiveRows);
+        SpreadsheetApp.flush();
+
+        const ordLogArchiveRowsAfter = ordLogArchiveSheet.getLastRow();
+        if (ordLogArchiveRowsAfter < ordLogArchiveRowsBefore + ordLogArchiveRows.length) {
+          throw new Error('Order log archive write verification failed. Source data preserved.');
+        }
+      }
+
+      // === Only now safe to modify source sheets ===
+      orderSheet.clearContents();
+      orderSheet.getRange(1, 1, ordersToKeep.length, ordersToKeep[0].length).setValues(ordersToKeep);
+
+      itemsSheet.clearContents();
+      itemsSheet.getRange(1, 1, itemsToKeep.length, itemsToKeep[0].length).setValues(itemsToKeep);
+
+      if (ordLogToKeep.length > 0 && ordLogSheet) {
+        ordLogSheet.clearContents();
+        ordLogSheet.getRange(1, 1, ordLogToKeep.length, ordLogToKeep[0].length).setValues(ordLogToKeep);
+      }
+
+      if (packingCacheToKeep.length > 0 && packingCacheSheet) {
+        packingCacheSheet.clearContents();
+        packingCacheSheet.getRange(1, 1, packingCacheToKeep.length, packingCacheToKeep[0].length).setValues(packingCacheToKeep);
+      }
+
+      SpreadsheetApp.flush();
+
+      logger.info('HousekeepingService', functionName,
+        `Archived ${ordersToArchive.length} orders, ${itemsToArchive.length} items, ${ordLogToArchive.length} order logs. Removed ${packingCacheRemoved} packing cache entries.`);
+      return true;
+
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Error during order archiving: ${e.message}`, e);
+      return false;
+    }
+  };
+
   this.archiveCompletedTasks = function() {
     logger.info('HousekeepingService', 'archiveCompletedTasks', "Starting archiving of completed/cancelled tasks.");
     let movedCount = 0;
@@ -669,6 +966,94 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.error('HousekeepingService', 'archiveCompletedTasks', `Error during completed task archiving: ${e.message}`, e);
+      return false;
+    }
+  };
+
+  const JOB_QUEUE_RETENTION_DAYS = 30;
+
+  /**
+   * Purges old completed/failed jobs from SysJobQueue.
+   * Removes jobs older than JOB_QUEUE_RETENTION_DAYS.
+   */
+  this.purgeOldJobs = function() {
+    const functionName = 'purgeOldJobs';
+    logger.info('HousekeepingService', functionName, 'Starting purge of old job queue entries.');
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      if (!allConfig) {
+        logger.warn('HousekeepingService', functionName, 'Configuration not available.');
+        return false;
+      }
+
+      const logsSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+      const sheetNames = allConfig['system.sheet_names'];
+      const jobQueueSheet = logsSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet) {
+        logger.warn('HousekeepingService', functionName, 'SysJobQueue sheet not found. Skipping job purge.');
+        return false;
+      }
+
+      const jobSchema = allConfig['schema.log.SysJobQueue'];
+      if (!jobSchema?.headers) {
+        logger.error('HousekeepingService', functionName, 'SysJobQueue schema not found.');
+        return false;
+      }
+
+      const headers = jobSchema.headers.split(',');
+      const statusCol = headers.indexOf('status');
+      const processedCol = headers.indexOf('processed_timestamp');
+
+      if (statusCol === -1 || processedCol === -1) {
+        logger.error('HousekeepingService', functionName, 'Required columns not found in SysJobQueue schema.');
+        return false;
+      }
+
+      const jobData = jobQueueSheet.getDataRange().getValues();
+      if (jobData.length <= 1) {
+        logger.info('HousekeepingService', functionName, 'No jobs to process.');
+        return true;
+      }
+
+      const thresholdDate = _getThresholdDate(JOB_QUEUE_RETENTION_DAYS);
+      const jobsToKeep = [jobData[0]]; // Keep headers
+      let purgedCount = 0;
+
+      for (let i = 1; i < jobData.length; i++) {
+        const row = jobData[i];
+        const status = String(row[statusCol]).toLowerCase();
+        const processedDate = row[processedCol] ? new Date(row[processedCol]) : null;
+
+        // Purge if: (completed or failed) AND processed > threshold days ago
+        const isTerminal = ['completed', 'failed'].includes(status);
+        const isOld = processedDate && processedDate < thresholdDate;
+
+        if (isTerminal && isOld) {
+          purgedCount++;
+        } else {
+          jobsToKeep.push(row);
+        }
+      }
+
+      if (purgedCount === 0) {
+        logger.info('HousekeepingService', functionName, 'No old jobs to purge.');
+        return true;
+      }
+
+      // Rewrite sheet with kept jobs only
+      jobQueueSheet.clearContents();
+      if (jobsToKeep.length > 0) {
+        jobQueueSheet.getRange(1, 1, jobsToKeep.length, jobsToKeep[0].length).setValues(jobsToKeep);
+      }
+      SpreadsheetApp.flush();
+
+      logger.info('HousekeepingService', functionName, `Purged ${purgedCount} old job queue entries.`);
+      return true;
+
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Error during job queue purge: ${e.message}`, e);
       return false;
     }
   };
@@ -911,6 +1296,57 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `CRM intelligence failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Applies standard formatting to all staging and master data sheets.
+   * Sets: top alignment, wrapped text, 21px row height.
+   * Targets: WebOrdM, WebOrdS, WebOrdItemsM, SysOrdLog, CmxProdM, CmxProdS, WebProdM, WebProdS_EN, WebXltM, WebXltS
+   */
+  this.formatDataSheets = function() {
+    const functionName = 'formatDataSheets';
+    logger.info('HousekeepingService', functionName, 'Starting data sheet formatting');
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      if (!allConfig) {
+        logger.warn('HousekeepingService', functionName, 'Configuration not available.');
+        return false;
+      }
+
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const sheetNames = allConfig['system.sheet_names'];
+
+      // Sheets that need formatting
+      const sheetsToFormat = [
+        'WebOrdM', 'WebOrdS', 'WebOrdItemsM', 'SysOrdLog',
+        'CmxProdM', 'CmxProdS', 'WebProdM', 'WebProdS_EN',
+        'WebXltM', 'WebXltS', 'WebDetM', 'WebDetS'
+      ];
+
+      let formattedCount = 0;
+
+      for (const sheetKey of sheetsToFormat) {
+        const sheetName = sheetNames[sheetKey];
+        if (!sheetName) continue;
+
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) continue;
+
+        const rowCount = sheet.getLastRow() - 1;
+        if (rowCount <= 0) continue;
+
+        _applySheetFormatting(sheet, rowCount);
+        formattedCount++;
+      }
+
+      logger.info('HousekeepingService', functionName, `Formatted ${formattedCount} data sheets.`);
+      return true;
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Error formatting sheets: ${e.message}`, e);
       return false;
     }
   };

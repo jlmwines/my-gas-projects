@@ -8,7 +8,15 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(comm:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== Order $id ===\")",
+      "Bash(done)",
+      "Bash(node --check:*)",
+      "Bash(rm:*)",
+      "Bash(node:*)",
+      "Skill(session)"
     ],
     "deny": [],
     "ask": []

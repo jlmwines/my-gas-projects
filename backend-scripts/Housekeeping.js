@@ -67,22 +67,38 @@ function archiveOldOrderLogRecords() {
         return;
     }
 
-    // --- Archive Records ---
-    // Ensure archive sheet has headers if it's empty
+    // === DATA SAFETY: Atomic-like archive operation ===
+
+    // Step 1: Ensure archive sheet has headers if it's empty
     if (orderLogArchive_sheet.getLastRow() === 0) {
         orderLogArchive_sheet.appendRow(orderLog_headers);
     }
-    // Append archived rows to the archive sheet
-    orderLogArchive_sheet.getRange(orderLogArchive_sheet.getLastRow() + 1, 1, rowsToArchive.length, rowsToArchive[0].length).setValues(rowsToArchive);
+
+    // Step 2: Record archive state before write
+    const archiveRowsBefore = orderLogArchive_sheet.getLastRow();
+
+    // Step 3: Append archived rows to the archive sheet
+    const archiveStartRow = archiveRowsBefore + 1;
+    orderLogArchive_sheet.getRange(archiveStartRow, 1, rowsToArchive.length, rowsToArchive[0].length).setValues(rowsToArchive);
+
+    // Step 4: Flush and verify archive write succeeded
+    SpreadsheetApp.flush();
+    const archiveRowsAfter = orderLogArchive_sheet.getLastRow();
+    const expectedArchiveRows = archiveRowsBefore + rowsToArchive.length;
+
+    if (archiveRowsAfter < expectedArchiveRows) {
+        // Archive write failed or incomplete - DO NOT modify source
+        Logger.log(`ERROR: Archive write verification failed: expected ${expectedArchiveRows} rows, found ${archiveRowsAfter}. Source data preserved.`);
+        return;
+    }
     Logger.log(`Archived ${rowsToArchive.length} records to OrderLogArchive.`);
 
-    // --- Update Original OrderLog ---
-    // Clear existing data (excluding headers)
+    // Step 5: Only now safe to modify source - archive has the data
     orderLog_sheet.getRange(2, 1, orderLog_sheet.getLastRow() - 1, orderLog_headers.length).clearContent();
-    // Write back only the rows to keep
     if (rowsToKeep.length > 0) {
         orderLog_sheet.getRange(2, 1, rowsToKeep.length, rowsToKeep[0].length).setValues(rowsToKeep);
     }
+    SpreadsheetApp.flush();
     Logger.log(`Updated OrderLog with ${rowsToKeep.length} active records.`);
 
     // Record the completion timestamp in the Reference Config sheet

@@ -10,13 +10,20 @@ const ValidationLogic = (function() {
   // =================================================================================
 
   function evaluateCondition(val1, operator, val2) {
+      const str1 = String(val1 || '').toLowerCase().trim();
+      const str2 = String(val2 || '').toLowerCase().trim();
+
       switch(operator) {
           case '<': return Number(val1) < Number(val2);
           case '>': return Number(val1) > Number(val2);
           case '=': return String(val1) === val2;
           case '<>': return String(val1) !== val2;
-          case 'IS_EMPTY': return String(val1 || '').trim() === '';
-          case 'IS_NOT_EMPTY': return String(val1 || '').trim() !== ''; 
+          case 'IS_EMPTY': return str1 === '';
+          case 'IS_NOT_EMPTY': return str1 !== '';
+          case 'CONTAINS': return str1.includes(str2);
+          case 'NOT_CONTAINS': return !str1.includes(str2);
+          case 'STARTS_WITH': return str1.startsWith(str2);
+          case 'NOT_STARTS_WITH': return !str1.startsWith(str2);
           default: return false;
       }
   }
@@ -361,7 +368,8 @@ const ValidationLogic = (function() {
     return {
         status: discrepancies.length > 0 ? 'FAILED' : 'PASSED',
         message: discrepancies.length > 0 ? `${discrepancies.length} items failed audit.` : 'Passed.',
-        discrepancies: discrepancies
+        discrepancies: discrepancies,
+        failedItems: discrepancies.map(d => d.key)
     };
   }
 
@@ -377,12 +385,19 @@ const ValidationLogic = (function() {
     const serviceName = 'ValidationLogic';
     const functionName = 'runValidationSuite';
     logger.info(serviceName, functionName, `Starting analysis for suite: ${suiteName}`, { sessionId: sessionId });
-    
+
     ConfigService.forceReload(); // Force reload to ensure latest rules are used
     const allConfig = ConfigService.getAllConfig();
+
+    // Debug: count validation rules
+    const allValidationRules = Object.keys(allConfig).filter(k => k.startsWith('validation.rule.'));
+    logger.info(serviceName, functionName, `Found ${allValidationRules.length} total validation.rule.* keys`);
+
     const rules = Object.keys(allConfig)
         .filter(k => k.startsWith('validation.rule.') && allConfig[k].validation_suite === suiteName && String(allConfig[k].enabled).toUpperCase() === 'TRUE')
-        .map(k => allConfig[k]);
+        .map(k => ({ ...allConfig[k], _ruleKey: k }));
+
+    logger.info(serviceName, functionName, `Found ${rules.length} rules for suite '${suiteName}'`);
 
     if (rules.length === 0) return { success: true, results: [] };
 
@@ -462,10 +477,12 @@ const ValidationLogic = (function() {
         }
 
         results.push({
+            ruleId: rule._ruleKey,
             rule: rule,
             status: result.status,
             message: result.message,
-            discrepancies: result.discrepancies
+            discrepancies: result.discrepancies,
+            failedItems: result.failedItems || []
         });
     }
 

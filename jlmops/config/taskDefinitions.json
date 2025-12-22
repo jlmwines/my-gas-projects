@@ -232,6 +232,17 @@
     ],
     [
         "task.template",
+        "task.validation.crm_data_integrity",
+        "CRM contact data consistency issue detected.",
+        "stable",
+        "topic", "CRM",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
         "task.onboarding.suggestion",
         "Task for suggesting a new product to add to the web store.",
         "stable",

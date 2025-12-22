@@ -229,7 +229,7 @@
         "Configuration for the Web Orders CSV import from Google Drive.",
         "stable",
         "file_pattern",
-        "WebOrders.csv",
+        "order_export_*",
         "",
         "",
         "",

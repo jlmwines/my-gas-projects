@@ -7,13 +7,27 @@
 const CrmIntelligenceService = (function () {
   const SERVICE_NAME = 'CrmIntelligenceService';
 
-  // Thresholds for triggering suggestions
-  const THRESHOLDS = {
-    COOLING_CUSTOMERS: 5,       // 5+ cooling customers → win-back campaign
-    UNCONVERTED_SUBSCRIBERS: 10, // 10+ subscribers never ordered after 30 days → conversion campaign
-    WINERY_CLUSTER: 5,          // 5+ customers share top winery → winery-themed campaign
-    HOLIDAY_LEAD_DAYS: 21       // 3 weeks before holiday → seasonal campaign
-  };
+  // Config cache (loaded once per execution)
+  let _intelligenceConfig = null;
+
+  /**
+   * Gets intelligence config values from CRM config.
+   * @returns {Object} Intelligence thresholds
+   */
+  function _getIntelligenceConfig() {
+    if (_intelligenceConfig) return _intelligenceConfig;
+
+    const allConfig = ConfigService.getAllConfig();
+    const cfg = allConfig['crm.intelligence.thresholds'] || {};
+    _intelligenceConfig = {
+      coolingCustomers: parseInt(cfg.cooling_customers, 10) || 5,
+      unconvertedSubscribers: parseInt(cfg.unconverted_subscribers, 10) || 10,
+      wineryCluster: parseInt(cfg.winery_cluster, 10) || 5,
+      holidayLeadDays: parseInt(cfg.holiday_lead_days, 10) || 21,
+      subscriberConversionDays: parseInt(cfg.subscriber_conversion_days, 10) || 30
+    };
+    return _intelligenceConfig;
+  }
 
   // Hebrew holidays to track (dates approximate, updated annually)
   const HOLIDAYS = [
@@ -68,7 +82,8 @@ const CrmIntelligenceService = (function () {
       return isCustomer && status === 'cooling';
     });
 
-    if (cooling.length >= THRESHOLDS.COOLING_CUSTOMERS) {
+    const config = _getIntelligenceConfig();
+    if (cooling.length >= config.coolingCustomers) {
       return {
         type: 'winback_campaign',
         title: 'Win-Back Campaign Needed',
@@ -86,21 +101,21 @@ const CrmIntelligenceService = (function () {
    * @returns {Object|null} Suggestion if threshold met
    */
   function _checkUnconvertedSubscribers(contacts) {
-    const now = new Date();
+    const config = _getIntelligenceConfig();
 
     const unconverted = contacts.filter(c => {
       const isSubscribed = c.sc_IsSubscribed === true || c.sc_IsSubscribed === 'TRUE';
       const isCustomer = c.sc_IsCustomer === true || c.sc_IsCustomer === 'TRUE';
       const daysSubscribed = parseInt(c.sc_DaysSubscribed, 10) || 0;
 
-      return isSubscribed && !isCustomer && daysSubscribed > 30;
+      return isSubscribed && !isCustomer && daysSubscribed > config.subscriberConversionDays;
     });
 
-    if (unconverted.length >= THRESHOLDS.UNCONVERTED_SUBSCRIBERS) {
+    if (unconverted.length >= config.unconvertedSubscribers) {
       return {
         type: 'conversion_campaign',
         title: 'Subscriber Conversion Campaign',
-        description: `${unconverted.length} email subscribers have been subscribed for 30+ days without placing an order. Consider a first-order incentive campaign.`,
+        description: `${unconverted.length} email subscribers have been subscribed for ${config.subscriberConversionDays}+ days without placing an order. Consider a first-order incentive campaign.`,
         count: unconverted.length,
         contacts: unconverted.slice(0, 10).map(c => c.sc_Email)
       };
@@ -114,6 +129,7 @@ const CrmIntelligenceService = (function () {
    * @returns {Object|null} Suggestion if threshold met
    */
   function _checkWineryClusters(contacts) {
+    const config = _getIntelligenceConfig();
     const wineryCounts = {};
 
     contacts.forEach(c => {
@@ -129,7 +145,7 @@ const CrmIntelligenceService = (function () {
     // Find wineries with enough customers
     const clusters = [];
     for (const winery in wineryCounts) {
-      if (wineryCounts[winery].length >= THRESHOLDS.WINERY_CLUSTER) {
+      if (wineryCounts[winery].length >= config.wineryCluster) {
         clusters.push({
           winery: winery,
           count: wineryCounts[winery].length,
@@ -157,6 +173,7 @@ const CrmIntelligenceService = (function () {
    * @returns {Object|null} Suggestion if holiday is within lead time
    */
   function _checkUpcomingHolidays() {
+    const config = _getIntelligenceConfig();
     const now = new Date();
     const currentYear = now.getFullYear();
 
@@ -166,7 +183,7 @@ const CrmIntelligenceService = (function () {
         const holidayDate = new Date(year, holiday.month - 1, holiday.day);
         const daysUntil = Math.ceil((holidayDate - now) / (1000 * 60 * 60 * 24));
 
-        if (daysUntil > 0 && daysUntil <= THRESHOLDS.HOLIDAY_LEAD_DAYS) {
+        if (daysUntil > 0 && daysUntil <= config.holidayLeadDays) {
           return {
             type: 'seasonal_campaign',
             title: `${holiday.name} Campaign`,
@@ -281,6 +298,7 @@ const CrmIntelligenceService = (function () {
    */
   function getInsights() {
     const fnName = 'getInsights';
+    const config = _getIntelligenceConfig();
     const contacts = _getContacts();
 
     const insights = {
@@ -304,7 +322,7 @@ const CrmIntelligenceService = (function () {
       const isSubscribed = c.sc_IsSubscribed === true || c.sc_IsSubscribed === 'TRUE';
       const isCustomer = c.sc_IsCustomer === true || c.sc_IsCustomer === 'TRUE';
       const daysSubscribed = parseInt(c.sc_DaysSubscribed, 10) || 0;
-      return isSubscribed && !isCustomer && daysSubscribed > 30;
+      return isSubscribed && !isCustomer && daysSubscribed > config.subscriberConversionDays;
     }).length;
 
     // Find top winery cluster
@@ -345,7 +363,7 @@ const CrmIntelligenceService = (function () {
   return {
     runAnalysis: runAnalysis,
     getInsights: getInsights,
-    THRESHOLDS: THRESHOLDS
+    getConfig: _getIntelligenceConfig
   };
 })();
 

@@ -42,9 +42,6 @@ function getImportFileData(fileName) {
 const ContactImportService = (function () {
   const SERVICE_NAME = 'ContactImportService';
 
-  // War-support coupon codes (lowercase)
-  const WAR_SUPPORT_COUPONS = ['efrat', 'roshtzurim', 'gushwarriors', 'gush', 'tekoa'];
-
   /**
    * Imports contacts from order history (WebOrdM + WebOrdItemsM).
    * Creates or updates contacts based on billing email.
@@ -100,6 +97,7 @@ const ContactImportService = (function () {
         mappedRow[womIdx['wom_ShippingCity']] = row[womaIdx['woma_ShippingCity']];
         mappedRow[womIdx['wom_ShippingPhone']] = row[womaIdx['woma_ShippingPhone']];
         mappedRow[womIdx['wom_CustomerNote']] = row[womaIdx['woma_CustomerNote']];
+        mappedRow[womIdx['wom_CouponItems']] = row[womaIdx['woma_CouponItems']];
         orderData.push(mappedRow);
       });
       LoggerService.info(SERVICE_NAME, fnName, `Added ${archiveData.length} orders from archive`);
@@ -132,6 +130,7 @@ const ContactImportService = (function () {
     }
 
     // Load order log for status info
+    LoggerService.info(SERVICE_NAME, fnName, 'Loading order status log...');
     let orderStatusMap = new Map();
     if (orderLogSheet) {
       const logData = orderLogSheet.getDataRange().getValues();
@@ -141,9 +140,11 @@ const ContactImportService = (function () {
       logData.forEach(row => {
         orderStatusMap.set(String(row[solIdx['sol_OrderId']]), row[solIdx['sol_OrderStatus']]);
       });
+      LoggerService.info(SERVICE_NAME, fnName, `Loaded ${orderStatusMap.size} order statuses`);
     }
 
     // Build items by order map
+    LoggerService.info(SERVICE_NAME, fnName, `Building item index from ${itemsData.length} items...`);
     const itemsByOrder = new Map();
     itemsData.forEach(row => {
       const orderId = String(row[woiIdx['woi_OrderId']]);
@@ -157,8 +158,10 @@ const ContactImportService = (function () {
         total: parseFloat(row[woiIdx['woi_ItemTotal']]) || 0
       });
     });
+    LoggerService.info(SERVICE_NAME, fnName, `Built index for ${itemsByOrder.size} orders`);
 
     // Aggregate by email
+    LoggerService.info(SERVICE_NAME, fnName, `Aggregating ${orderData.length} orders by email...`);
     const contactMap = new Map();
     const today = new Date();
 
@@ -182,15 +185,19 @@ const ContactImportService = (function () {
       const shippingPhone = row[womIdx['wom_ShippingPhone']] || '';
       const shippingCity = row[womIdx['wom_ShippingCity']] || '';
       const customerNote = row[womIdx['wom_CustomerNote']] || '';
+      const couponItems = row[womIdx['wom_CouponItems']] || '';
 
       // Get order items
       const items = itemsByOrder.get(orderId) || [];
       const orderTotal = items.reduce((sum, item) => sum + item.total, 0);
       const bottleCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-      // Check if gift order (different billing/shipping names)
-      const isGift = billingLastName && shippingLastName &&
-                     billingLastName.toLowerCase() !== shippingLastName.toLowerCase();
+      // Check if gift order using ContactService logic (considers delivery keywords in note)
+      const isGift = ContactService._isGiftOrder({
+        customerNote: customerNote,
+        billingLastName: billingLastName,
+        shippingLastName: shippingLastName
+      });
 
       // Initialize or update contact
       if (!contactMap.has(email)) {
@@ -244,16 +251,17 @@ const ContactImportService = (function () {
 
       if (isGift) contact._giftOrders++;
 
-      // Check for war-support coupon in customer note
-      const noteLower = customerNote.toLowerCase();
-      if (WAR_SUPPORT_COUPONS.some(code => noteLower.includes(code))) {
+      // Check for war-support coupon in coupon items (not customer note)
+      const coupons = ContactService._extractCoupons(couponItems);
+      if (ContactService._hasWarSupportCoupon(coupons)) {
         contact._warSupportOrders++;
       }
     });
 
-    // Calculate final metrics and save
-    let imported = 0;
-    let errors = [];
+    // Calculate final metrics
+    LoggerService.info(SERVICE_NAME, fnName, `Aggregated ${contactMap.size} unique contacts. Calculating metrics...`);
+    const contactsToSave = [];
+    let calcErrors = [];
 
     contactMap.forEach((contact, email) => {
       try {
@@ -285,11 +293,11 @@ const ContactImportService = (function () {
         );
 
         // Lifecycle status
-        contact.sc_LifecycleStatus = _calculateLifecycleStatus(contact.sc_DaysSinceOrder);
+        contact.sc_LifecycleStatus = ContactService._calculateLifecycleStatus(contact.sc_DaysSinceOrder);
 
         // Customer type (if not already set as noncore)
         if (!contact.sc_CustomerType) {
-          contact.sc_CustomerType = _classifyCustomerType(contact);
+          contact.sc_CustomerType = ContactService._classifyCustomerType(contact);
         }
 
         // Bundle buyer detection
@@ -304,21 +312,21 @@ const ContactImportService = (function () {
         delete contact._giftOrders;
         delete contact._warSupportOrders;
 
-        // Set timestamps
-        contact.sc_CreatedDate = new Date();
-        contact.sc_LastUpdated = new Date();
-
-        // Save
-        ContactService.upsertContact(contact);
-        imported++;
-
+        contactsToSave.push(contact);
       } catch (e) {
-        errors.push(`${email}: ${e.message}`);
+        calcErrors.push(`${email}: ${e.message}`);
       }
     });
 
-    LoggerService.info(SERVICE_NAME, fnName, `Imported ${imported} contacts, ${errors.length} errors`);
-    return { imported, errors, total: contactMap.size };
+    // Batch save all contacts
+    LoggerService.info(SERVICE_NAME, fnName, `Saving ${contactsToSave.length} contacts in batch...`);
+    const batchResult = ContactService.batchUpsertContacts(contactsToSave, (processed, total) => {
+      LoggerService.info(SERVICE_NAME, fnName, `Processing: ${processed}/${total}`);
+    });
+
+    const allErrors = calcErrors.concat(batchResult.errors.map(e => `${e.email}: ${e.error}`));
+    LoggerService.info(SERVICE_NAME, fnName, `Import complete: ${batchResult.inserted} new, ${batchResult.updated} updated, ${allErrors.length} errors`);
+    return { imported: batchResult.inserted + batchResult.updated, errors: allErrors, total: contactMap.size };
   }
 
   /**
@@ -352,11 +360,22 @@ const ContactImportService = (function () {
       return { imported: 0, updated: 0, errors: ['Email column not found'] };
     }
 
-    let imported = 0;
-    let updated = 0;
+    // Load existing contacts once for lookup
+    LoggerService.info(SERVICE_NAME, fnName, 'Loading existing contacts for lookup...');
+    const existingContacts = ContactService.getContacts();
+    const existingByEmail = new Map();
+    existingContacts.forEach(c => {
+      if (c.sc_Email) existingByEmail.set(c.sc_Email.toLowerCase(), c);
+    });
+    LoggerService.info(SERVICE_NAME, fnName, `Indexed ${existingByEmail.size} existing contacts`);
+
+    const contactsToSave = [];
     const errors = [];
     const today = new Date();
+    let newCount = 0;
+    let updateCount = 0;
 
+    LoggerService.info(SERVICE_NAME, fnName, `Processing ${lines.length - 1} Mailchimp rows...`);
     for (let i = 1; i < lines.length; i++) {
       try {
         const row = lines[i];
@@ -368,8 +387,7 @@ const ContactImportService = (function () {
         const optinTime = optsCol !== undefined ? row[optsCol] : '';
         const language = langCol !== undefined ? row[langCol] : '';
 
-        // Check if contact exists
-        const existing = ContactService.getContactByEmail(email);
+        const existing = existingByEmail.get(email);
 
         if (existing) {
           // Update subscription info
@@ -379,9 +397,8 @@ const ContactImportService = (function () {
             existing.sc_SubscriptionSource = 'mailchimp';
           }
           if (language) existing.sc_Language = language.toLowerCase();
-
-          ContactService.upsertContact(existing);
-          updated++;
+          contactsToSave.push(existing);
+          updateCount++;
         } else {
           // Create prospect record
           const subscribedDate = optinTime ? new Date(optinTime) : today;
@@ -397,57 +414,23 @@ const ContactImportService = (function () {
             sc_SubscribedDate: subscribedDate,
             sc_DaysSubscribed: daysSubscribed,
             sc_SubscriptionSource: 'mailchimp',
-            sc_CustomerType: daysSubscribed < 30 ? 'prospect.fresh' : 'prospect.subscriber',
-            sc_LifecycleStatus: 'Prospect',
-            sc_CreatedDate: new Date(),
-            sc_LastUpdated: new Date()
+            sc_LifecycleStatus: 'Prospect'
           };
-
-          ContactService.upsertContact(contact);
-          imported++;
+          contact.sc_CustomerType = ContactService._classifyCustomerType(contact);
+          contactsToSave.push(contact);
+          newCount++;
         }
       } catch (e) {
         errors.push(`Row ${i + 1}: ${e.message}`);
       }
     }
 
-    LoggerService.info(SERVICE_NAME, fnName, `Created ${imported}, updated ${updated}, ${errors.length} errors`);
-    return { imported, updated, errors };
-  }
+    // Batch save
+    LoggerService.info(SERVICE_NAME, fnName, `Saving ${contactsToSave.length} contacts (${newCount} new, ${updateCount} updates)...`);
+    const batchResult = ContactService.batchUpsertContacts(contactsToSave);
 
-  /**
-   * Calculates lifecycle status based on days since last order.
-   */
-  function _calculateLifecycleStatus(daysSinceOrder) {
-    if (daysSinceOrder === null || daysSinceOrder === undefined) return 'Unknown';
-    if (daysSinceOrder <= 30) return 'Active';
-    if (daysSinceOrder <= 90) return 'Recent';
-    if (daysSinceOrder <= 180) return 'Cooling';
-    if (daysSinceOrder <= 365) return 'Lapsed';
-    return 'Dormant';
-  }
-
-  /**
-   * Classifies customer type based on order count and spend.
-   */
-  function _classifyCustomerType(contact) {
-    if (!contact.sc_IsCustomer) {
-      const daysSubscribed = contact.sc_DaysSubscribed || 0;
-      if (daysSubscribed < 30) return 'prospect.fresh';
-      if (daysSubscribed >= 180) return 'prospect.stale';
-      return 'prospect.subscriber';
-    }
-
-    if (!contact.sc_IsCore) {
-      return 'noncore.gift';
-    }
-
-    const orderCount = contact.sc_OrderCount || 0;
-    const totalSpend = contact.sc_TotalSpend || 0;
-
-    if (orderCount >= 5 || totalSpend >= 3000) return 'core.vip';
-    if (orderCount >= 2) return 'core.repeat';
-    return 'core.new';
+    LoggerService.info(SERVICE_NAME, fnName, `Mailchimp import complete: ${batchResult.inserted} new, ${batchResult.updated} updated`);
+    return { imported: batchResult.inserted, updated: batchResult.updated, errors };
   }
 
   /**
@@ -466,11 +449,27 @@ const ContactImportService = (function () {
     };
 
     // Import from order history
+    LoggerService.info(SERVICE_NAME, fnName, 'Step 1/2: Importing from order history...');
     try {
       results.orders = importFromOrderHistory();
+      LoggerService.info(SERVICE_NAME, fnName, `Order import done: ${results.orders.imported} contacts`);
     } catch (e) {
       LoggerService.error(SERVICE_NAME, fnName, `Order import failed: ${e.message}`);
       results.orders = { error: e.message };
+    }
+
+    // Import Mailchimp subscribers
+    LoggerService.info(SERVICE_NAME, fnName, 'Step 2/2: Looking for Mailchimp file...');
+    try {
+      results.mailchimp = importMailchimpFromFolder();
+      if (results.mailchimp.error) {
+        LoggerService.info(SERVICE_NAME, fnName, `Mailchimp: ${results.mailchimp.error}`);
+      } else {
+        LoggerService.info(SERVICE_NAME, fnName, `Mailchimp done: ${results.mailchimp.imported} new, ${results.mailchimp.updated} updated`);
+      }
+    } catch (e) {
+      LoggerService.error(SERVICE_NAME, fnName, `Mailchimp import failed: ${e.message}`);
+      results.mailchimp = { error: e.message };
     }
 
     LoggerService.info(SERVICE_NAME, fnName, 'Full CRM import completed');

@@ -630,5 +630,54 @@
         "on_failure_task_type", "task.validation.status_mismatch",
         "on_failure_title", "Published But Archived",
         "on_failure_notes", "comax archived ${cpm_IsArchived}"
+    ],
+
+    [
+        "validation.rule.template",
+        "validation.crm.iscore_noncore_mismatch",
+        "[CRM] IsCore=TRUE but CustomerType is noncore.*",
+        "stable",
+        "enabled", "TRUE",
+        "priority", "HIGH",
+        "validation_suite", "master_master",
+        "test_type", "INTERNAL_AUDIT",
+        "source_sheet", "SysContacts",
+        "source_key", "sc_Email",
+        "condition", "sc_IsCore,=,TRUE,AND,sc_CustomerType,STARTS_WITH,noncore.",
+        "on_failure_task_type", "task.validation.crm_data_integrity",
+        "on_failure_title", "IsCore/Type Mismatch",
+        "on_failure_notes", "IsCore=TRUE but type=${sc_CustomerType}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.crm.iscore_prospect_mismatch",
+        "[CRM] IsCore=TRUE but CustomerType is prospect.*",
+        "stable",
+        "enabled", "TRUE",
+        "priority", "HIGH",
+        "validation_suite", "master_master",
+        "test_type", "INTERNAL_AUDIT",
+        "source_sheet", "SysContacts",
+        "source_key", "sc_Email",
+        "condition", "sc_IsCore,=,TRUE,AND,sc_CustomerType,STARTS_WITH,prospect.",
+        "on_failure_task_type", "task.validation.crm_data_integrity",
+        "on_failure_title", "IsCore/Type Mismatch",
+        "on_failure_notes", "IsCore=TRUE but type=${sc_CustomerType}"
+    ],
+    [
+        "validation.rule.template",
+        "validation.crm.notcore_core_mismatch",
+        "[CRM] IsCore=FALSE but CustomerType is core.*",
+        "stable",
+        "enabled", "TRUE",
+        "priority", "HIGH",
+        "validation_suite", "master_master",
+        "test_type", "INTERNAL_AUDIT",
+        "source_sheet", "SysContacts",
+        "source_key", "sc_Email",
+        "condition", "sc_IsCore,=,FALSE,AND,sc_CustomerType,STARTS_WITH,core.",
+        "on_failure_task_type", "task.validation.crm_data_integrity",
+        "on_failure_title", "IsCore/Type Mismatch",
+        "on_failure_notes", "IsCore=FALSE but type=${sc_CustomerType}"
     ]
 ]

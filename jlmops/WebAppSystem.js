@@ -553,39 +553,6 @@ function WebAppSystem_runMasterValidationAndReturnResults() {
 }
 
 /**
- * Executes a suite of legacy validation checks from ValidationService and aggregates their results.
- * @returns {Object} An object containing the success status and aggregated results.
- */
-function WebAppSystem_runLegacyValidationAndReturnResults() {
-  const serviceName = 'WebAppSystem';
-  const functionName = 'runLegacyValidationAndReturnResults';
-  LoggerService.info(serviceName, functionName, 'Starting legacy validation suite.');
-  
-  const results = [];
-  let overallSuccess = true;
-
-  try {
-    results.push(ValidationService.validateProductMasterData());
-    results.push(ValidationService.validateOnHoldInventory());
-    results.push(ValidationService.validateHighestOrderNumber());
-    results.push(ValidationService.validateComaxExportConsistency());
-    results.push(ValidationService.validatePackingSlipData());
-
-    // Check if any individual validation reported a failure or error message
-    if (results.some(r => r.includes('failed') || r.includes('Error'))) {
-        overallSuccess = false;
-    }
-
-    LoggerService.info(serviceName, functionName, 'Legacy validation suite completed.');
-    return { success: overallSuccess, results: results };
-
-  } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error running legacy validation suite: ${e.message}`, e);
-    return { success: false, error: e.message };
-  }
-}
-
-/**
  * Executes the automated unit test suite.
  * @returns {Object} The test results.
  */
