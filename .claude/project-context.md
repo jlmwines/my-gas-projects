@@ -54,6 +54,17 @@ Resource optimization project for Google Apps Script application managing orders
 - `AuthService.js` - User authentication and role management
 - `BundleService.js` - Bundle management (2-sheet model: SysBundles + SysBundleSlots)
 - `WebAppBundles.js` - Bundle UI controller functions
+- `ContactService.js` - CRM contact management with caching
+- `ContactEnrichmentService.js` - Preference calculation from order history
+- `CrmIntelligenceService.js` - AI-driven contact analysis and task generation
+- `CampaignService.js` - Mailchimp campaign history tracking
+
+### CRM System (Phase 2 Complete)
+- **SysContacts:** Customer profiles with dual-language preferences (_En/_He)
+- **SysContactActivity:** Activity history per contact
+- **Enrichment:** Calculates preferences from order history (categories, wineries, grapes, attributes)
+- **Intelligence:** Generates suggestions and tasks for at-risk/high-value contacts
+- **Admin UI:** AdminContactsView.html for contact management
 
 ## Configuration Management Workflow
 

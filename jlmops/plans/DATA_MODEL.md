@@ -41,6 +41,8 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysCoupons`           | `sco_` |
 | `SysCampaigns`         | `scm_` |
 | `SysCouponUsage`       | `scu_` |
+| `SysBrands`            | `sbr_` |
+| `SysCategories`        | `sct_` |
 
 
 
