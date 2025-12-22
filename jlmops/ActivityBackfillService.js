@@ -458,15 +458,20 @@ const ActivityBackfillService = (function () {
         }
 
         const email = contact.sc_Email;
-        const language = (contact.sc_Language || 'en').toLowerCase();
+        // Normalize language: handle full words, two-letter codes, and unexpected values
+        const rawLang = String(contact.sc_Language || 'en').toLowerCase().trim();
+        let language = 'en';  // default
+        if (rawLang === 'he' || rawLang === 'hebrew' || rawLang.includes('hebrew')) {
+          language = 'he';
+        } else if (rawLang === 'en' || rawLang === 'english' || rawLang.includes('english')) {
+          language = 'en';
+        } else {
+          // Unknown language, skip for campaign matching
+          continue;
+        }
         const subscribeDate = contact.sc_SubscribedDate instanceof Date
           ? contact.sc_SubscribedDate
           : new Date(contact.sc_SubscribedDate);
-
-        // Skip if not in English or Hebrew group
-        if (language !== 'en' && language !== 'he') {
-          continue;
-        }
 
         // Get campaigns for this language
         const relevantCampaigns = language === 'he' ? hebrewCampaigns : englishCampaigns;

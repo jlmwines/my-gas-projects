@@ -37,7 +37,7 @@
             </div>
             <div class="col-2">
               <select id="filter-core" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
-                <option value="">Core</option>
+                <option value="">Core/All</option>
                 <option value="yes">Core Only</option>
                 <option value="no">Non-Core</option>
               </select>
@@ -50,13 +50,15 @@
 
         <!-- Column Headers -->
         <div class="border-bottom bg-white px-2 py-1">
-          <div class="row small font-weight-bold text-muted">
-            <div class="col-3">Name</div>
-            <div class="col-2">Type</div>
-            <div class="col-1 text-center">Orders</div>
-            <div class="col-2 text-right">Spend</div>
-            <div class="col-2">Last Order</div>
-            <div class="col-2">Status</div>
+          <div class="row font-weight-bold text-muted align-items-center" style="font-size:12px;">
+            <div class="col-2 sortable-header" data-sort="name" style="cursor:pointer;">Name <span class="sort-indicator"></span></div>
+            <div class="col-3">Email</div>
+            <div class="col-1">Type</div>
+            <div class="col-1 text-center sortable-header" data-sort="orders" style="cursor:pointer;"># <span class="sort-indicator"></span></div>
+            <div class="col-1 text-right sortable-header" data-sort="spend" style="cursor:pointer;">₪ <span class="sort-indicator"></span></div>
+            <div class="col-2 sortable-header" data-sort="lastOrder" style="cursor:pointer;">Last Order <span class="sort-indicator"></span></div>
+            <div class="col-1">Status</div>
+            <div class="col-1 text-center"></div>
           </div>
         </div>
 
@@ -74,30 +76,36 @@
         <div class="card-header py-2">
           <strong id="detail-title">Overview</strong>
         </div>
-        <div class="card-body p-0" style="overflow-y: auto;">
+        <div class="card-body p-0" style="overflow-y: auto; position: relative;">
+          <!-- Detail Loading Spinner -->
+          <div id="detail-loading" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.8); z-index:10;">
+            <div class="d-flex justify-content-center align-items-center h-100">
+              <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>
+            </div>
+          </div>
           <!-- Summary Stats (default) -->
           <div id="detail-summary" class="p-3">
             <div class="row text-center mb-3">
               <div class="col">
                 <div class="h4 mb-0" id="stat-total">-</div>
-                <div class="small text-muted">Total</div>
+                <div class="text-muted" style="font-size:12px;">Total</div>
               </div>
               <div class="col">
                 <div class="h4 mb-0 text-primary" id="stat-customers">-</div>
-                <div class="small text-muted">Customers</div>
+                <div class="text-muted" style="font-size:12px;">Customers</div>
               </div>
               <div class="col">
                 <div class="h4 mb-0 text-success" id="stat-subscribers">-</div>
-                <div class="small text-muted">Subscribed</div>
+                <div class="text-muted" style="font-size:12px;">Subscribed</div>
               </div>
             </div>
             <hr>
-            <div class="small">
+            <div style="font-size:13px;">
               <div class="font-weight-bold mb-2">By Status</div>
               <div id="stats-by-status"></div>
             </div>
             <hr>
-            <div class="small">
+            <div style="font-size:13px;">
               <div class="font-weight-bold mb-2">By Type</div>
               <div id="stats-by-type"></div>
             </div>
@@ -119,22 +127,22 @@
 
             <!-- Metrics -->
             <div class="px-3 py-2 border-bottom">
-              <div class="row text-center small">
+              <div class="row text-center" style="font-size:13px;">
                 <div class="col">
                   <div class="font-weight-bold" id="metric-orders">-</div>
-                  <div class="text-muted">Orders</div>
+                  <div class="text-muted" style="font-size:11px;">Orders</div>
                 </div>
                 <div class="col">
                   <div class="font-weight-bold" id="metric-spend">-</div>
-                  <div class="text-muted">Spend</div>
+                  <div class="text-muted" style="font-size:11px;">Spend</div>
                 </div>
                 <div class="col">
                   <div class="font-weight-bold" id="metric-avg">-</div>
-                  <div class="text-muted">Avg</div>
+                  <div class="text-muted" style="font-size:11px;">Avg</div>
                 </div>
                 <div class="col">
                   <div class="font-weight-bold" id="metric-days">-</div>
-                  <div class="text-muted">Days</div>
+                  <div class="text-muted" style="font-size:11px;">Days</div>
                 </div>
               </div>
             </div>
@@ -156,7 +164,7 @@
             <div class="p-3">
               <!-- Info Tab -->
               <div id="tab-info">
-                <div class="small">
+                <div style="font-size:13px;">
                   <div class="row mb-2">
                     <div class="col-5 text-muted">Phone</div>
                     <div class="col-7" id="info-phone">-</div>
@@ -192,21 +200,29 @@
                   </div>
                   <hr>
                   <div class="font-weight-bold mb-2">Wine Preferences</div>
-                  <div id="info-preferences" class="mb-2">
-                    <!-- Preference rows populated by JS -->
-                    <div class="text-muted small">No preference data</div>
+                  <div class="row mb-2">
+                    <div class="col-4 text-muted">Categories</div>
+                    <div class="col-8" id="info-categories-list">-</div>
                   </div>
                   <div class="row mb-2">
-                    <div class="col-5 text-muted">Price Range</div>
-                    <div class="col-7" id="info-price-range">-</div>
+                    <div class="col-4 text-muted">Wineries</div>
+                    <div class="col-8" id="info-wineries">-</div>
                   </div>
                   <div class="row mb-2">
-                    <div class="col-5 text-muted">Top Wineries</div>
-                    <div class="col-7" id="info-wineries">-</div>
+                    <div class="col-4 text-muted">Grapes</div>
+                    <div class="col-8" id="info-grapes">-</div>
                   </div>
                   <div class="row mb-2">
-                    <div class="col-5 text-muted">Bundle Buyer</div>
-                    <div class="col-7" id="info-bundle">-</div>
+                    <div class="col-4 text-muted">Price</div>
+                    <div class="col-8" id="info-price-range">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4 text-muted">Kashrut</div>
+                    <div class="col-8" id="info-kashrut">-</div>
+                  </div>
+                  <div class="row mb-2">
+                    <div class="col-4 text-muted">Bundles</div>
+                    <div class="col-8" id="info-bundle">-</div>
                   </div>
                 </div>
               </div>
@@ -214,40 +230,28 @@
               <!-- Activity Tab -->
               <div id="tab-activity" style="display:none;">
                 <!-- Action Ribbon -->
-                <div class="d-flex justify-content-center mb-2 py-1 border-bottom">
-                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.call" title="Log Call" style="color:#6f42c1;">
-                    <span style="font-size:16px;">📞</span>
-                  </button>
-                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.whatsapp" title="Log WhatsApp" style="color:#25D366;">
-                    <span style="font-size:16px;">💬</span>
-                  </button>
-                  <button class="btn btn-sm mx-1" id="btn-compose-email" title="Compose Email" style="color:#0d6efd;">
-                    <span style="font-size:16px;">📧</span>
-                  </button>
-                  <button class="btn btn-sm mx-1 activity-action" data-type="contact.sms" title="Log SMS" style="color:#fd7e14;">
-                    <span style="font-size:16px;">📱</span>
-                  </button>
-                  <button class="btn btn-sm mx-1 activity-action" data-type="note.general" title="Add Note" style="color:#6c757d;">
-                    <span style="font-size:16px;">📝</span>
-                  </button>
-                  <button class="btn btn-sm mx-1" id="btn-create-task" title="Create Task" style="color:#dc3545;">
-                    <span style="font-size:16px;">✓</span>
-                  </button>
+                <div class="d-flex justify-content-center mb-2 py-1 border-bottom" style="gap:12px;">
+                  <span class="activity-action" data-type="contact.call" title="Log Call" style="font-size:24px;cursor:pointer;">📞</span>
+                  <span class="activity-action" data-type="contact.whatsapp" title="Log WhatsApp" style="font-size:24px;cursor:pointer;">💬</span>
+                  <span id="btn-compose-email" title="Compose Email" style="font-size:24px;cursor:pointer;">📧</span>
+                  <span class="activity-action" data-type="contact.sms" title="Log SMS" style="font-size:24px;cursor:pointer;">📱</span>
+                  <span class="activity-action" data-type="note.general" title="Add Note" style="font-size:24px;cursor:pointer;">📝</span>
+                  <span id="btn-create-task" title="Create Task" style="font-size:24px;cursor:pointer;">☑️</span>
                 </div>
-                <div id="activity-list" class="small" style="max-height:280px;overflow-y:auto;"></div>
+                <div id="activity-list" style="max-height:280px;overflow-y:auto;"></div>
               </div>
 
               <!-- Notes Tab -->
-              <div id="tab-notes" style="display:none;">
+              <div id="tab-notes" style="display:none;font-size:13px;">
                 <div class="form-group">
-                  <label class="small font-weight-bold">Tags</label>
-                  <input type="text" id="field-tags" class="form-control form-control-sm" placeholder="vip, newsletter, holiday">
+                  <label class="font-weight-bold">Tags</label>
+                  <input type="text" id="field-tags" class="form-control" placeholder="vip, newsletter, holiday">
                 </div>
                 <div class="form-group">
-                  <label class="small font-weight-bold">Notes</label>
-                  <textarea id="field-notes" class="form-control form-control-sm" rows="4"></textarea>
+                  <label class="font-weight-bold">Notes</label>
+                  <textarea id="field-notes" class="form-control" rows="4"></textarea>
                 </div>
-                <button id="btn-save-notes" class="btn btn-sm">Save</button>
+                <button id="btn-save-notes" class="btn btn-sm btn-primary">Save</button>
               </div>
             </div>
           </div>
@@ -364,6 +368,8 @@
   var contacts = [];
   var currentContact = null;
   var filterOptions = null;
+  var sortField = 'lastOrder';
+  var sortAsc = false;
 
   // Initialize immediately (view is dynamically loaded, DOM already ready)
   loadContacts();
@@ -415,6 +421,33 @@
 
     // Send email button
     document.getElementById('btn-send-email').addEventListener('click', sendEmail);
+
+    // Sortable column headers
+    document.querySelectorAll('.sortable-header').forEach(function(header) {
+      header.addEventListener('click', function() {
+        var field = this.dataset.sort;
+        if (sortField === field) {
+          sortAsc = !sortAsc;
+        } else {
+          sortField = field;
+          sortAsc = field === 'name'; // Name defaults to ascending, others descending
+        }
+        updateSortIndicators();
+        applyFilters();
+      });
+    });
+    updateSortIndicators();
+  }
+
+  function updateSortIndicators() {
+    document.querySelectorAll('.sortable-header').forEach(function(header) {
+      var indicator = header.querySelector('.sort-indicator');
+      if (header.dataset.sort === sortField) {
+        indicator.textContent = sortAsc ? ' ▲' : ' ▼';
+      } else {
+        indicator.textContent = '';
+      }
+    });
   }
 
   function sendEmail() {
@@ -507,6 +540,34 @@
       return true;
     });
 
+    // Apply sorting
+    filtered.sort(function(a, b) {
+      var result = 0;
+      switch (sortField) {
+        case 'name':
+          var nameA = (a.name || '').toLowerCase();
+          var nameB = (b.name || '').toLowerCase();
+          // Extract last name (last word)
+          var lastA = nameA.split(' ').pop();
+          var lastB = nameB.split(' ').pop();
+          result = lastA.localeCompare(lastB);
+          break;
+        case 'orders':
+          result = (a.orderCount || 0) - (b.orderCount || 0);
+          break;
+        case 'spend':
+          result = (a.totalSpend || 0) - (b.totalSpend || 0);
+          break;
+        case 'lastOrder':
+          if (!a.lastOrderDate && !b.lastOrderDate) result = 0;
+          else if (!a.lastOrderDate) result = 1;
+          else if (!b.lastOrderDate) result = -1;
+          else result = a.lastOrderDate.localeCompare(b.lastOrderDate);
+          break;
+      }
+      return sortAsc ? result : -result;
+    });
+
     renderContactList(filtered);
     document.getElementById('contact-count').textContent = filtered.length;
   }
@@ -525,20 +586,22 @@
     list.forEach(function(c) {
       var typeBadge = getTypeBadge(c.type);
       var statusClass = getStatusClass(c.status);
-      var icons = '';
-      if (c.isCustomer) icons += '<span title="Customer" style="font-size:10px;">🛒</span>';
-      if (c.isSubscribed) icons += '<span title="Subscribed" style="font-size:10px;">✉️</span>';
-      html += '<div class="contact-row px-2 py-2 border-bottom" data-email="' + c.email + '" style="cursor:pointer;">' +
-        '<div class="row small align-items-center">' +
-        '<div class="col-3">' +
-        '<div class="font-weight-bold text-truncate">' + escapeHtml(c.name) + ' ' + icons + '</div>' +
-        '<div class="text-muted text-truncate" style="font-size:10px;">' + escapeHtml(c.email) + '</div>' +
-        '</div>' +
-        '<div class="col-2">' + typeBadge + '</div>' +
+      var displayName = formatNameLastFirst(c.name);
+      var spendRounded = Math.round(c.totalSpend || 0).toLocaleString();
+      // Icons: customer (bag) and subscriber (envelope)
+      var customerIcon = c.orderCount > 0 ? '<span title="Customer" style="font-size:14px;">🛍️</span>' : '<span style="opacity:0.2;font-size:14px;">🛍️</span>';
+      var subscriberIcon = c.isSubscribed ? '<span title="Email Subscriber" style="font-size:14px;">📬</span>' : '<span style="opacity:0.2;font-size:14px;">📬</span>';
+
+      html += '<div class="contact-row px-2 py-1 border-bottom" data-email="' + c.email + '" style="cursor:pointer;">' +
+        '<div class="row align-items-center" style="font-size:12px;">' +
+        '<div class="col-2 text-truncate font-weight-bold">' + escapeHtml(displayName) + '</div>' +
+        '<div class="col-3 text-truncate text-muted">' + escapeHtml(c.email) + '</div>' +
+        '<div class="col-1">' + typeBadge + '</div>' +
         '<div class="col-1 text-center">' + c.orderCount + '</div>' +
-        '<div class="col-2 text-right">₪' + c.totalSpend.toLocaleString() + '</div>' +
+        '<div class="col-1 text-right">' + spendRounded + '</div>' +
         '<div class="col-2">' + (c.lastOrderDate || '-') + '</div>' +
-        '<div class="col-2"><span class="badge ' + statusClass + '">' + c.status + '</span></div>' +
+        '<div class="col-1"><span class="badge ' + statusClass + '" style="font-size:10px;">' + c.status + '</span></div>' +
+        '<div class="col-1 text-center">' + customerIcon + ' ' + subscriberIcon + '</div>' +
         '</div></div>';
     });
     document.getElementById('contact-list').innerHTML = html || '<div class="text-center py-4 text-muted">No contacts found</div>';
@@ -551,6 +614,14 @@
         this.classList.add('bg-light');
       });
     });
+  }
+
+  function formatNameLastFirst(name) {
+    if (!name) return '';
+    var parts = name.trim().split(/\s+/);
+    if (parts.length < 2) return name;
+    var last = parts.pop();
+    return last + ', ' + parts.join(' ');
   }
 
   function renderStats(stats) {
@@ -582,15 +653,20 @@
 
   function loadContactDetail(email) {
     currentContact = email;
+    document.getElementById('detail-loading').style.display = 'block';
     google.script.run
       .withSuccessHandler(function(data) {
+        document.getElementById('detail-loading').style.display = 'none';
         if (data.error) {
           showError(data.error);
           return;
         }
         renderContactDetail(data);
       })
-      .withFailureHandler(function(err) { showError(err.message); })
+      .withFailureHandler(function(err) {
+        document.getElementById('detail-loading').style.display = 'none';
+        showError(err.message);
+      })
       .WebAppContacts_getContactDetail(email);
   }
 
@@ -621,37 +697,35 @@
     document.getElementById('info-last-order').textContent = c.lastOrderDate || '-';
     document.getElementById('info-subscribed').textContent = c.isSubscribed ? ('Yes' + (c.subscribedDate ? ' (' + c.subscribedDate + ')' : '')) : 'No';
 
-    // Render wine preferences as rows
-    var prefHtml = '';
-    if (c.preferredCategory) {
-      prefHtml += '<div class="row mb-1 small"><div class="col-4 font-weight-bold">' + escapeHtml(c.preferredCategory) + '</div><div class="col-8">';
-      var attrs = [];
-      if (c.preferredCategory.toLowerCase().indexOf('red') >= 0) {
-        if (c.redIntensityRange) attrs.push('Intensity ' + c.redIntensityRange);
-        if (c.redComplexityRange) attrs.push('Complexity ' + c.redComplexityRange);
-      } else if (c.preferredCategory.toLowerCase().indexOf('white') >= 0) {
-        if (c.whiteComplexityRange) attrs.push('Complexity ' + c.whiteComplexityRange);
-        if (c.whiteAcidityRange) attrs.push('Acidity ' + c.whiteAcidityRange);
+    // Wine preferences - build categories list with inline attributes
+    var categoriesStr = c.frequentCategories || '';
+    var categories = categoriesStr ? categoriesStr.split(',').map(function(s) { return s.trim(); }) : [];
+    var catHtml = '';
+    categories.slice(0, 3).forEach(function(cat) {
+      var catLower = cat.toLowerCase();
+      var attrs = '';
+      if (catLower.indexOf('red') >= 0 || catLower.indexOf('אדום') >= 0) {
+        // Red wine - show I: and C: (skip if looks like date)
+        if (c.redIntensityRange && !isDateString(c.redIntensityRange)) attrs += ' I:' + c.redIntensityRange;
+        if (c.redComplexityRange && !isDateString(c.redComplexityRange)) attrs += ' C:' + c.redComplexityRange;
+      } else if (catLower.indexOf('white') >= 0 || catLower.indexOf('לבן') >= 0) {
+        // White wine - show C: and A: (skip if looks like date)
+        if (c.whiteComplexityRange && !isDateString(c.whiteComplexityRange)) attrs += ' C:' + c.whiteComplexityRange;
+        if (c.whiteAcidityRange && !isDateString(c.whiteAcidityRange)) attrs += ' A:' + c.whiteAcidityRange;
       }
-      prefHtml += attrs.length ? attrs.join(', ') : '<span class="text-muted">-</span>';
-      prefHtml += '</div></div>';
-    }
-    if (c.secondaryCategory) {
-      prefHtml += '<div class="row mb-1 small"><div class="col-4 font-weight-bold">' + escapeHtml(c.secondaryCategory) + '</div><div class="col-8">';
-      var attrs2 = [];
-      if (c.secondaryCategory.toLowerCase().indexOf('red') >= 0) {
-        if (c.redIntensityRange) attrs2.push('Intensity ' + c.redIntensityRange);
-        if (c.redComplexityRange) attrs2.push('Complexity ' + c.redComplexityRange);
-      } else if (c.secondaryCategory.toLowerCase().indexOf('white') >= 0) {
-        if (c.whiteComplexityRange) attrs2.push('Complexity ' + c.whiteComplexityRange);
-        if (c.whiteAcidityRange) attrs2.push('Acidity ' + c.whiteAcidityRange);
-      }
-      prefHtml += attrs2.length ? attrs2.join(', ') : '<span class="text-muted">-</span>';
-      prefHtml += '</div></div>';
-    }
-    document.getElementById('info-preferences').innerHTML = prefHtml || '<div class="text-muted small">No preference data</div>';
-    document.getElementById('info-price-range').textContent = c.priceRange || '-';
+      catHtml += '<div>' + escapeHtml(cat) + attrs + '</div>';
+    });
+    document.getElementById('info-categories-list').innerHTML = catHtml || '<div class="text-muted">-</div>';
+
     document.getElementById('info-wineries').textContent = c.topWineries || '-';
+    // Combine red and white grapes
+    var grapes = [];
+    if (c.topRedGrapes) grapes.push(c.topRedGrapes);
+    if (c.topWhiteGrapes) grapes.push(c.topWhiteGrapes);
+    document.getElementById('info-grapes').textContent = grapes.length ? grapes.join(', ') : '-';
+    document.getElementById('info-price-range').textContent = c.priceRange || '-';
+    document.getElementById('info-kashrut').textContent = c.kashrutPrefs || '-';
+
     document.getElementById('info-bundle').textContent = c.bundleBuyer ? 'Yes' : 'No';
 
     // Activity tab - compact single-line with icons
@@ -660,13 +734,13 @@
       var icon = getActivityIcon(a.type);
       var displayText = formatActivityDisplay(a.type, a.summary);
       var dateOnly = a.timestamp ? a.timestamp.split(' ')[0] : '';
-      actHtml += '<div class="d-flex align-items-center py-1 border-bottom" style="line-height:1.3;">' +
-        '<span class="mr-2" style="font-size:14px;">' + icon + '</span>' +
+      actHtml += '<div class="d-flex align-items-center py-1 border-bottom" style="line-height:1.4;font-size:13px;">' +
+        '<span class="mr-2" style="font-size:16px;">' + icon + '</span>' +
         '<span class="flex-grow-1 text-truncate">' + escapeHtml(displayText) + '</span>' +
-        '<span class="text-muted ml-2" style="font-size:10px;white-space:nowrap;">' + dateOnly + '</span>' +
+        '<span class="text-muted ml-2" style="font-size:11px;white-space:nowrap;">' + dateOnly + '</span>' +
         '</div>';
     });
-    document.getElementById('activity-list').innerHTML = actHtml || '<div class="text-muted">No activity recorded</div>';
+    document.getElementById('activity-list').innerHTML = actHtml || '<div class="text-muted" style="font-size:13px;">No activity recorded</div>';
 
     // Notes tab
     document.getElementById('field-tags').value = c.tags || '';
@@ -808,6 +882,12 @@
   function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function isDateString(str) {
+    // Detect corrupted date values from Sheets (e.g., "Tue Feb 04 2025...")
+    if (!str) return false;
+    return String(str).indexOf('GMT') >= 0 || String(str).indexOf('202') >= 0;
   }
 
   function debounce(fn, delay) {
