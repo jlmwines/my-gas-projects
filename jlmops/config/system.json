@@ -616,6 +616,30 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "OrderLogArchive",
+        "OrderLogArchive",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysBrands",
+        "SysBrands",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysCategories",
+        "SysCategories",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "task.routing.topic_to_project",
         "Topic-to-project routing for auto-assignment",
         "stable",

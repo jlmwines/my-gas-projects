@@ -1,0 +1,134 @@
+[
+    [
+        "_section.01_Lifecycle",
+        "Lifecycle status thresholds (days since last order)"
+    ],
+    [
+        "crm.lifecycle.thresholds",
+        "Days thresholds for lifecycle status calculation",
+        "stable",
+        "active", "30",
+        "recent", "90",
+        "cooling", "180",
+        "lapsed", "365"
+    ],
+
+    [
+        "_section.02_Prospects",
+        "Subscriber/prospect classification thresholds"
+    ],
+    [
+        "crm.prospect.thresholds",
+        "Days thresholds for prospect status",
+        "stable",
+        "fresh_max", "30",
+        "stale_min", "180"
+    ],
+
+    [
+        "_section.03_VIP",
+        "VIP customer qualification criteria"
+    ],
+    [
+        "crm.vip.thresholds",
+        "Thresholds for VIP classification",
+        "stable",
+        "min_orders", "5",
+        "min_spend", "3000"
+    ],
+
+    [
+        "_section.04_ChurnRisk",
+        "Churn risk prediction thresholds"
+    ],
+    [
+        "crm.churn.thresholds",
+        "Days and order thresholds for churn risk",
+        "stable",
+        "low_risk_days", "60",
+        "low_risk_min_orders", "2",
+        "low_risk_min_spend", "1000",
+        "high_risk_days", "120",
+        "single_order_risk_days", "90"
+    ],
+
+    [
+        "_section.05_OrderInterval",
+        "Expected order interval settings"
+    ],
+    [
+        "crm.order_interval",
+        "Default order interval for predictions",
+        "stable",
+        "default_days", "48"
+    ],
+
+    [
+        "_section.06_Enrichment",
+        "Preference enrichment calculation settings"
+    ],
+    [
+        "crm.enrichment.category",
+        "Category threshold for frequent categories",
+        "stable",
+        "min_percent", "15"
+    ],
+    [
+        "crm.enrichment.price",
+        "Percentiles for price range calculation",
+        "stable",
+        "min_percentile", "10",
+        "max_percentile", "90"
+    ],
+    [
+        "crm.enrichment.attributes",
+        "Percentiles for attribute range calculation (intensity, complexity, acidity)",
+        "stable",
+        "min_percentile", "15",
+        "max_percentile", "85"
+    ],
+
+    [
+        "_section.07_CustomerTypes",
+        "Customer type definitions"
+    ],
+    [
+        "crm.customer_types",
+        "Valid customer type values",
+        "stable",
+        "core_new", "core.new",
+        "core_repeat", "core.repeat",
+        "core_vip", "core.vip",
+        "noncore_gift", "noncore.gift",
+        "noncore_support", "noncore.support",
+        "prospect_fresh", "prospect.fresh",
+        "prospect_subscriber", "prospect.subscriber",
+        "prospect_stale", "prospect.stale"
+    ],
+
+    [
+        "_section.08_WarSupport",
+        "War support coupon detection"
+    ],
+    [
+        "crm.war_support_coupons",
+        "Coupon codes that indicate war-support orders",
+        "stable",
+        "codes", "efrat,roshtzurim,gushwarriors,gush,tekoa"
+    ],
+
+    [
+        "_section.09_Intelligence",
+        "CRM intelligence suggestion thresholds"
+    ],
+    [
+        "crm.intelligence.thresholds",
+        "Thresholds for triggering marketing suggestions",
+        "stable",
+        "cooling_customers", "5",
+        "unconverted_subscribers", "10",
+        "winery_cluster", "5",
+        "holiday_lead_days", "21",
+        "subscriber_conversion_days", "30"
+    ]
+]

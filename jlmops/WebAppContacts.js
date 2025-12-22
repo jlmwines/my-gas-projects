@@ -128,19 +128,27 @@ function WebAppContacts_getContactDetail(email) {
       lastContactDate: contact.sc_LastContactDate ? Utilities.formatDate(new Date(contact.sc_LastContactDate), Session.getScriptTimeZone(), 'yyyy-MM-dd') : '',
       lastContactType: contact.sc_LastContactType || '',
       churnRisk: contact.sc_ChurnRisk || 'unknown',
-      // Preferences (translate Hebrew to English for display)
-      preferredCategory: _translateCategory(contact.sc_PreferredCategory) || '',
-      secondaryCategory: _translateCategory(contact.sc_SecondaryCategory) || '',
+      // Preferences - dual language (_En for admin UI, _He available)
+      preferredCategory: contact.sc_FrequentCategories_En ? contact.sc_FrequentCategories_En.split(',')[0]?.trim() : '',
+      secondaryCategory: contact.sc_FrequentCategories_En ? contact.sc_FrequentCategories_En.split(',')[1]?.trim() : '',
+      frequentCategories: contact.sc_FrequentCategories_En || '',
+      frequentCategoriesHe: contact.sc_FrequentCategories_He || '',
       priceRange: contact.sc_PriceMin && contact.sc_PriceMax ? `₪${contact.sc_PriceMin}-${contact.sc_PriceMax}` : '',
       bundleBuyer: contact.sc_BundleBuyer || false,
-      topWineries: contact.sc_TopWineries || '',
-      kashrutPrefs: contact.sc_KashrutPrefs || '',
-      // Red wine preferences (using Avg values, ranges coming in Phase 2)
-      redComplexityRange: contact.sc_RedComplexityAvg ? String(Math.round(contact.sc_RedComplexityAvg)) : '',
-      redIntensityRange: contact.sc_RedIntensityAvg ? String(Math.round(contact.sc_RedIntensityAvg)) : '',
+      topWineries: contact.sc_TopWineries_En || '',
+      topWineriesHe: contact.sc_TopWineries_He || '',
+      topRedGrapes: contact.sc_TopRedGrapes_En || '',
+      topRedGrapesHe: contact.sc_TopRedGrapes_He || '',
+      topWhiteGrapes: contact.sc_TopWhiteGrapes_En || '',
+      topWhiteGrapesHe: contact.sc_TopWhiteGrapes_He || '',
+      kashrutPrefs: contact.sc_KashrutPrefs_En || '',
+      kashrutPrefsHe: contact.sc_KashrutPrefs_He || '',
+      // Red wine preferences - ensure string type (sheet may store as other types)
+      redComplexityRange: String(contact.sc_RedComplexityRange || ''),
+      redIntensityRange: String(contact.sc_RedIntensityRange || ''),
       // White wine preferences
-      whiteComplexityRange: contact.sc_WhiteComplexityAvg ? String(Math.round(contact.sc_WhiteComplexityAvg)) : '',
-      whiteAcidityRange: contact.sc_WhiteAcidityAvg ? String(Math.round(contact.sc_WhiteAcidityAvg)) : '',
+      whiteComplexityRange: String(contact.sc_WhiteComplexityRange || ''),
+      whiteAcidityRange: String(contact.sc_WhiteAcidityRange || ''),
       // Notes
       tags: contact.sc_Tags || '',
       notes: contact.sc_Notes || '',

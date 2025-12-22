@@ -7,16 +7,47 @@
 const ContactService = (function () {
   const SERVICE_NAME = 'ContactService';
 
-  // War-support coupon codes (lowercase)
-  const WAR_SUPPORT_COUPONS = ['efrat', 'roshtzurim', 'gushwarriors', 'gush', 'tekoa'];
+  // Config cache (loaded once per execution)
+  let _crmConfig = null;
 
-  // Lifecycle status thresholds (days since last order)
-  const LIFECYCLE_THRESHOLDS = {
-    ACTIVE: 30,
-    RECENT: 90,
-    COOLING: 180,
-    LAPSED: 365
-  };
+  /**
+   * Gets CRM config values, loading from ConfigService if not cached.
+   * @returns {Object} CRM configuration object
+   */
+  function _getCrmConfig() {
+    if (_crmConfig) return _crmConfig;
+
+    const allConfig = ConfigService.getAllConfig();
+    _crmConfig = {
+      lifecycle: {
+        active: parseInt(allConfig['crm.lifecycle.thresholds']?.active, 10) || 30,
+        recent: parseInt(allConfig['crm.lifecycle.thresholds']?.recent, 10) || 90,
+        cooling: parseInt(allConfig['crm.lifecycle.thresholds']?.cooling, 10) || 180,
+        lapsed: parseInt(allConfig['crm.lifecycle.thresholds']?.lapsed, 10) || 365
+      },
+      prospect: {
+        freshMax: parseInt(allConfig['crm.prospect.thresholds']?.fresh_max, 10) || 30,
+        staleMin: parseInt(allConfig['crm.prospect.thresholds']?.stale_min, 10) || 180
+      },
+      vip: {
+        minOrders: parseInt(allConfig['crm.vip.thresholds']?.min_orders, 10) || 5,
+        minSpend: parseInt(allConfig['crm.vip.thresholds']?.min_spend, 10) || 3000
+      },
+      churn: {
+        lowRiskDays: parseInt(allConfig['crm.churn.thresholds']?.low_risk_days, 10) || 60,
+        lowRiskMinOrders: parseInt(allConfig['crm.churn.thresholds']?.low_risk_min_orders, 10) || 2,
+        lowRiskMinSpend: parseInt(allConfig['crm.churn.thresholds']?.low_risk_min_spend, 10) || 1000,
+        highRiskDays: parseInt(allConfig['crm.churn.thresholds']?.high_risk_days, 10) || 120,
+        singleOrderRiskDays: parseInt(allConfig['crm.churn.thresholds']?.single_order_risk_days, 10) || 90
+      },
+      orderInterval: {
+        defaultDays: parseInt(allConfig['crm.order_interval']?.default_days, 10) || 48
+      },
+      warSupportCoupons: (allConfig['crm.war_support_coupons']?.codes || 'efrat,roshtzurim,gushwarriors,gush,tekoa').split(',').map(c => c.trim().toLowerCase()),
+      customerTypes: allConfig['crm.customer_types'] || {}
+    };
+    return _crmConfig;
+  }
 
   // Cache for contacts within a session
   let _contactCache = null;
@@ -114,19 +145,27 @@ const ContactService = (function () {
     return digits.length >= 10 ? '+' + digits : null;
   }
 
+  // Keywords in customer note that suggest customer is directing their OWN delivery (not a gift)
+  const DELIVERY_KEYWORDS = [
+    'please', 'deliver', 'call', 'phone', 'outside', 'floor', 'door', 'gate',
+    'code', 'buzzer', 'leave', 'ring', 'knock', 'entrance', 'building'
+  ];
+
   /**
    * Determines if an order appears to be a gift (different billing/shipping).
-   * @param {Object} order - Order object with billing/shipping fields
+   * If customer note contains delivery instructions, assume it's NOT a gift
+   * (customer is directing their own delivery).
+   * @param {Object} order - Order object with billing/shipping fields and customerNote
    * @returns {boolean}
    */
   function _isGiftOrder(order) {
-    // Different countries
-    if (order.billingCountry && order.shippingCountry &&
-        order.billingCountry !== order.shippingCountry) {
-      return true;
+    // Check customer note for delivery keywords - suggests NOT a gift
+    const note = (order.customerNote || '').toLowerCase();
+    if (note && DELIVERY_KEYWORDS.some(kw => note.includes(kw))) {
+      return false;
     }
 
-    // Different last names (fuzzy)
+    // Different last names = gift
     const billName = (order.billingLastName || '').toLowerCase().trim();
     const shipName = (order.shippingLastName || '').toLowerCase().trim();
     if (billName && shipName && billName !== shipName) {
@@ -163,8 +202,9 @@ const ContactService = (function () {
    * @returns {boolean}
    */
   function _hasWarSupportCoupon(coupons) {
+    const { warSupportCoupons } = _getCrmConfig();
     return coupons.some(c =>
-      WAR_SUPPORT_COUPONS.some(w => c.code.toLowerCase().includes(w))
+      warSupportCoupons.some(w => c.code.toLowerCase().includes(w))
     );
   }
 
@@ -175,10 +215,11 @@ const ContactService = (function () {
    */
   function _calculateLifecycleStatus(daysSinceOrder) {
     if (daysSinceOrder === null || daysSinceOrder === undefined) return 'Unknown';
-    if (daysSinceOrder <= LIFECYCLE_THRESHOLDS.ACTIVE) return 'Active';
-    if (daysSinceOrder <= LIFECYCLE_THRESHOLDS.RECENT) return 'Recent';
-    if (daysSinceOrder <= LIFECYCLE_THRESHOLDS.COOLING) return 'Cooling';
-    if (daysSinceOrder <= LIFECYCLE_THRESHOLDS.LAPSED) return 'Lapsed';
+    const { lifecycle } = _getCrmConfig();
+    if (daysSinceOrder <= lifecycle.active) return 'Active';
+    if (daysSinceOrder <= lifecycle.recent) return 'Recent';
+    if (daysSinceOrder <= lifecycle.cooling) return 'Cooling';
+    if (daysSinceOrder <= lifecycle.lapsed) return 'Lapsed';
     return 'Dormant';
   }
 
@@ -188,12 +229,14 @@ const ContactService = (function () {
    * @returns {string} Customer type
    */
   function _classifyCustomerType(contact) {
+    const config = _getCrmConfig();
+
     // Non-customers
     if (!contact.sc_IsCustomer) {
       if (!contact.sc_IsSubscribed) return 'prospect.fresh';
       const daysSubscribed = contact.sc_DaysSubscribed || 0;
-      if (daysSubscribed < 30) return 'prospect.fresh';
-      if (daysSubscribed >= 180) return 'prospect.stale';
+      if (daysSubscribed < config.prospect.freshMax) return 'prospect.fresh';
+      if (daysSubscribed >= config.prospect.staleMin) return 'prospect.stale';
       return 'prospect.subscriber';
     }
 
@@ -207,8 +250,8 @@ const ContactService = (function () {
     const orderCount = contact.sc_OrderCount || 0;
     const totalSpend = contact.sc_TotalSpend || 0;
 
-    // VIP: Top spend OR 5+ orders
-    if (orderCount >= 5 || totalSpend >= 3000) {
+    // VIP: Top spend OR N+ orders
+    if (orderCount >= config.vip.minOrders || totalSpend >= config.vip.minSpend) {
       return 'core.vip';
     }
 
@@ -233,13 +276,15 @@ const ContactService = (function () {
 
     if (daysSince === null || daysSince === undefined) return 'unknown';
 
+    const { churn } = _getCrmConfig();
+
     // Low risk: Recent activity with good engagement
-    if (daysSince < 60 && (orderCount > 2 || totalSpend > 1000)) {
+    if (daysSince < churn.lowRiskDays && (orderCount > churn.lowRiskMinOrders || totalSpend > churn.lowRiskMinSpend)) {
       return 'low';
     }
 
     // High risk: Long gap OR single order + moderate gap
-    if (daysSince > 120 || (orderCount === 1 && daysSince > 90)) {
+    if (daysSince > churn.highRiskDays || (orderCount === 1 && daysSince > churn.singleOrderRiskDays)) {
       return 'high';
     }
 
@@ -256,9 +301,10 @@ const ContactService = (function () {
     if (!lastOrderDate) return null;
 
     const orderCount = contact.sc_OrderCount || 0;
+    const { orderInterval } = _getCrmConfig();
 
     // For repeat customers, use their average interval
-    // For single-order, use global median (48 days from analysis)
+    // For single-order, use global median from config
     let interval;
     if (orderCount >= 2) {
       const firstOrder = contact.sc_FirstOrderDate;
@@ -266,10 +312,10 @@ const ContactService = (function () {
         const totalDays = Math.floor((lastOrderDate - firstOrder) / (1000 * 60 * 60 * 24));
         interval = Math.round(totalDays / (orderCount - 1));
       } else {
-        interval = 48; // Fallback
+        interval = orderInterval.defaultDays; // Fallback
       }
     } else {
-      interval = 48; // Global median
+      interval = orderInterval.defaultDays; // Global median
     }
 
     const expected = new Date(lastOrderDate);
@@ -285,8 +331,7 @@ const ContactService = (function () {
     const fnName = '_loadContacts';
     const now = Date.now();
     if (_contactCache && _cacheTimestamp && (now - _cacheTimestamp) < CACHE_TTL_MS) {
-      LoggerService.info(SERVICE_NAME, fnName, `Returning ${_contactCache.length} cached contacts`);
-      return _contactCache;
+      return _contactCache;  // Silent cache hit
     }
 
     LoggerService.info(SERVICE_NAME, fnName, 'Loading contacts from sheet...');
@@ -397,9 +442,10 @@ const ContactService = (function () {
   /**
    * Creates or updates a contact.
    * @param {Object} contactData - Contact data with sc_Email required
+   * @param {boolean} skipCacheClear - Skip cache clear for batch operations (caller must clear when done)
    * @returns {Object} Updated contact
    */
-  function upsertContact(contactData) {
+  function upsertContact(contactData, skipCacheClear) {
     if (!contactData.sc_Email) {
       throw new Error('sc_Email is required for upsert');
     }
@@ -443,8 +489,105 @@ const ContactService = (function () {
       sheet.appendRow(rowArray);
     }
 
-    clearCache();
+    if (!skipCacheClear) {
+      clearCache();
+    }
     return contactData;
+  }
+
+  /**
+   * Batch upserts multiple contacts efficiently.
+   * Loads sheet once, processes all in memory, writes in batch.
+   * @param {Array<Object>} contacts - Array of contact objects with sc_Email
+   * @param {Function} progressCallback - Optional callback(processed, total) for progress
+   * @returns {Object} Results { inserted, updated, errors }
+   */
+  function batchUpsertContacts(contacts, progressCallback) {
+    const fnName = 'batchUpsertContacts';
+    LoggerService.info(SERVICE_NAME, fnName, `Starting batch upsert of ${contacts.length} contacts`);
+
+    const sheet = _getContactsSheet();
+    const indices = _getContactColumnIndices();
+    const headers = Object.keys(indices);
+    const data = sheet.getDataRange().getValues();
+
+    // Build email-to-row index (1-based for sheet rows)
+    const emailToRow = new Map();
+    for (let i = 1; i < data.length; i++) {
+      const email = (data[i][indices.sc_Email] || '').toLowerCase().trim();
+      if (email) {
+        emailToRow.set(email, i + 1); // 1-based row number
+      }
+    }
+    LoggerService.info(SERVICE_NAME, fnName, `Indexed ${emailToRow.size} existing contacts`);
+
+    const updates = []; // { row, values }
+    const inserts = []; // [values]
+    const errors = [];
+    const now = new Date();
+
+    for (let i = 0; i < contacts.length; i++) {
+      try {
+        const contactData = contacts[i];
+        if (!contactData.sc_Email) continue;
+
+        const email = contactData.sc_Email.toLowerCase().trim();
+        contactData.sc_Email = email;
+        contactData.sc_LastUpdated = now;
+
+        const existingRow = emailToRow.get(email);
+
+        // Build row array
+        const rowArray = new Array(headers.length).fill('');
+        headers.forEach((h, idx) => {
+          if (contactData[h] !== undefined) {
+            rowArray[idx] = contactData[h];
+          } else if (existingRow) {
+            // Keep existing value
+            rowArray[idx] = data[existingRow - 1][idx];
+          }
+        });
+
+        if (existingRow) {
+          updates.push({ row: existingRow, values: rowArray });
+        } else {
+          contactData.sc_CreatedDate = now;
+          rowArray[indices.sc_CreatedDate] = now;
+          inserts.push(rowArray);
+          // Add to index so duplicates in batch are handled
+          emailToRow.set(email, data.length + inserts.length);
+        }
+
+        if (progressCallback && (i + 1) % 100 === 0) {
+          progressCallback(i + 1, contacts.length);
+        }
+      } catch (e) {
+        errors.push({ email: contacts[i]?.sc_Email, error: e.message });
+      }
+    }
+
+    // Write updates in batch
+    LoggerService.info(SERVICE_NAME, fnName, `Writing ${updates.length} updates, ${inserts.length} inserts`);
+
+    // Updates - write each row (could optimize further with range writes for consecutive rows)
+    for (const upd of updates) {
+      sheet.getRange(upd.row, 1, 1, headers.length).setValues([upd.values]);
+    }
+
+    // Inserts - append all at once
+    if (inserts.length > 0) {
+      const lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, inserts.length, headers.length).setValues(inserts);
+    }
+
+    clearCache();
+    LoggerService.info(SERVICE_NAME, fnName, `Batch complete: ${updates.length} updated, ${inserts.length} inserted, ${errors.length} errors`);
+
+    return {
+      updated: updates.length,
+      inserted: inserts.length,
+      errors: errors
+    };
   }
 
   /**
@@ -638,7 +781,19 @@ const ContactService = (function () {
         }
       }
 
-      // Recalculate customer type
+      // Warn if sc_IsCore is not set for customers (should be set by ContactImportService)
+      // DO NOT default sc_IsCore here - it must be calculated from order analysis during import
+      const currentIsCore = row[indices.sc_IsCore];
+      if (currentIsCore === '' || currentIsCore === null || currentIsCore === undefined) {
+        const isCustomer = row[indices.sc_IsCustomer] === true || row[indices.sc_IsCustomer] === 'TRUE';
+        if (isCustomer) {
+          const email = row[indices.sc_Email] || 'unknown';
+          LoggerService.warn(SERVICE_NAME, fnName,
+            `Contact ${email} is customer but sc_IsCore not set - run import to fix`);
+        }
+      }
+
+      // Recalculate customer type (uses sc_IsCore, so must be after IsCore defaulting)
       const contact = {};
       Object.keys(indices).forEach(col => contact[col] = row[indices[col]]);
       const newType = _classifyCustomerType(contact);
@@ -747,6 +902,123 @@ const ContactService = (function () {
     return { duplicatesRemoved: duplicateCount, uniqueEmails: emailGroups.size };
   }
 
+  /**
+   * Corrects contact data for IsCore/CustomerType consistency.
+   * Re-analyzes order history to fix gift/war-support classification.
+   * @returns {Object} Result with correction counts
+   */
+  function correctContactData() {
+    const fnName = 'correctContactData';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting contact data correction');
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    // Load contacts
+    const contacts = getContacts();
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded ${contacts.length} contacts`);
+
+    // Load all orders from WebOrdM and WebOrdM_Archive with required fields
+    const womSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdM);
+    const womaSheet = dataSpreadsheet.getSheetByName(sheetNames.WebOrdM_Archive);
+
+    const ordersByEmail = new Map();
+
+    // Helper to process order rows
+    function processOrderSheet(sheet, prefix) {
+      if (!sheet || sheet.getLastRow() <= 1) return;
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const idx = {};
+      headers.forEach((h, i) => { idx[h] = i; });
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        const emailField = prefix === 'wom_' ? 'wom_BillingEmail' : 'woma_BillingEmail';
+        const email = String(row[idx[emailField]] || '').toLowerCase().trim();
+        if (!email) continue;
+
+        const order = {
+          billingLastName: row[idx[prefix + 'BillingLastName']] || '',
+          shippingLastName: row[idx[prefix + 'ShippingLastName']] || '',
+          customerNote: row[idx[prefix + 'CustomerNote']] || '',
+          couponItems: row[idx[prefix + 'CouponItems']] || ''
+        };
+
+        if (!ordersByEmail.has(email)) {
+          ordersByEmail.set(email, []);
+        }
+        ordersByEmail.get(email).push(order);
+      }
+    }
+
+    processOrderSheet(womSheet, 'wom_');
+    processOrderSheet(womaSheet, 'woma_');
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded orders for ${ordersByEmail.size} unique emails`);
+
+    let corrected = 0;
+    let checked = 0;
+    const corrections = [];
+
+    for (const contact of contacts) {
+      if (!contact.sc_IsCustomer) continue;
+      checked++;
+
+      const email = String(contact.sc_Email || '').toLowerCase().trim();
+      const customerOrders = ordersByEmail.get(email) || [];
+      if (customerOrders.length === 0) continue;
+
+      // Re-analyze with corrected logic
+      let giftCount = 0;
+      let warSupportCount = 0;
+
+      for (const order of customerOrders) {
+        if (_isGiftOrder(order)) giftCount++;
+        const coupons = _extractCoupons(order.couponItems);
+        if (_hasWarSupportCoupon(coupons)) warSupportCount++;
+      }
+
+      // Determine correct IsCore value
+      const allGifts = giftCount === customerOrders.length && giftCount > 0;
+      const allWarSupport = warSupportCount === customerOrders.length && warSupportCount > 0;
+      const shouldBeCore = !allGifts && !allWarSupport;
+
+      const currentIsCore = contact.sc_IsCore === true || contact.sc_IsCore === 'TRUE';
+
+      // Check for mismatch
+      if (currentIsCore !== shouldBeCore) {
+        contact.sc_IsCore = shouldBeCore;
+        contact.sc_CustomerType = _classifyCustomerType(contact);
+
+        upsertContact(contact);
+        corrected++;
+        corrections.push({
+          email: contact.sc_Email,
+          oldIsCore: currentIsCore,
+          newIsCore: shouldBeCore,
+          newType: contact.sc_CustomerType,
+          orders: customerOrders.length,
+          gifts: giftCount,
+          warSupport: warSupportCount
+        });
+
+        LoggerService.info(SERVICE_NAME, fnName,
+          `Fixed ${contact.sc_Email}: IsCore=${shouldBeCore}, Type=${contact.sc_CustomerType}`);
+      }
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName,
+      `Correction complete: ${corrected} fixed out of ${checked} customers checked`);
+
+    return {
+      checked: checked,
+      corrected: corrected,
+      corrections: corrections.slice(0, 20) // Return first 20 for display
+    };
+  }
+
   // Public API
   return {
     clearCache: clearCache,
@@ -754,12 +1026,14 @@ const ContactService = (function () {
     getContacts: getContacts,
     getStats: getStats,
     upsertContact: upsertContact,
+    batchUpsertContacts: batchUpsertContacts,
     createActivity: createActivity,
     getActivities: getActivities,
     getAllActivities: getAllActivities,
     refreshAllContacts: refreshAllContacts,
     deduplicateContacts: deduplicateContacts,
     formatPhoneForWhatsApp: formatPhoneForWhatsApp,
+    correctContactData: correctContactData,
     // Expose for import services
     _extractCoupons: _extractCoupons,
     _hasWarSupportCoupon: _hasWarSupportCoupon,
@@ -774,4 +1048,55 @@ const ContactService = (function () {
  */
 function runContactDeduplication() {
   return ContactService.deduplicateContacts();
+}
+
+/**
+ * Global function to refresh all contact calculated fields.
+ * Updates DaysSinceOrder, LifecycleStatus, CustomerType, ChurnRisk, etc.
+ */
+function runContactRefresh() {
+  ContactService.refreshAllContacts();
+  return 'Contact refresh completed';
+}
+
+/**
+ * Global function to run CRM validation rules.
+ * Runs the master_master validation suite and returns CRM-related results.
+ */
+function runCrmValidation() {
+  const fnName = 'runCrmValidation';
+  const sessionId = 'crm_validation_' + Date.now();
+
+  LoggerService.info('ContactService', fnName, 'Starting CRM validation...');
+  const result = ValidationLogic.runValidationSuite('master_master', sessionId);
+  LoggerService.info('ContactService', fnName, `Validation complete: ${result.results.length} total rules`);
+
+  // Filter to CRM-related rules
+  const crmResults = result.results.filter(r =>
+    r.ruleId && r.ruleId.includes('.crm.')
+  );
+
+  const failures = crmResults.filter(r => r.status === 'FAILED');
+  LoggerService.info('ContactService', fnName, `CRM: ${crmResults.length} rules, ${failures.length} failures`);
+
+  return {
+    suite: 'master_master',
+    totalRules: result.results.length,
+    crmRules: crmResults.length,
+    crmPassed: crmResults.filter(r => r.status === 'PASSED').length,
+    crmFailed: failures.length,
+    failures: failures.map(f => ({
+      rule: f.ruleId,
+      message: f.message,
+      failedItems: f.failedItems ? f.failedItems.slice(0, 10) : []
+    }))
+  };
+}
+
+/**
+ * Global function to correct contact data for Bug 7.
+ * Re-analyzes order history to fix IsCore/CustomerType mismatches.
+ */
+function runContactDataCorrection() {
+  return ContactService.correctContactData();
 }

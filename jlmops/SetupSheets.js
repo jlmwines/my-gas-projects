@@ -789,7 +789,14 @@ function createJlmopsSystemSheets() {
     createWebOrdItemsMArchiveHeaders();
     createSysBundlesHeaders();
     createSysBundleSlotsHeaders();
-    createLookupSheets(); // Add new function to the main setup call
+    createLookupSheets();
+    // CRM sheets
+    createSysContactsHeaders();
+    createSysContactActivityHeaders();
+    createSysCouponsHeaders();
+    createSysCampaignsHeaders();
+    createSysCouponUsageHeaders();
+    // Protection and freeze
     protectAllSheetHeaders();
 }
 
@@ -853,48 +860,61 @@ function protectAllSheetHeaders() {
         const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
         const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
 
-        const sheetSchemas = Object.keys(allConfig).filter(key => key.startsWith('schema.data.') || key.startsWith('schema.log.'));
+        const sheetSchemas = Object.keys(allConfig).filter(key =>
+            key.startsWith('schema.data.') || key.startsWith('schema.log.')
+        );
+
+        let protectedCount = 0;
+        let skippedCount = 0;
 
         for (const schemaKey of sheetSchemas) {
             const schema = allConfig[schemaKey];
             if (!schema || !schema.headers) {
-                console.warn(`Skipping protection for ${schemaKey}: schema or headers not found.`);
+                console.warn(`Skipping ${schemaKey}: schema or headers not found.`);
+                skippedCount++;
                 continue;
             }
 
             const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '');
-            let targetSpreadsheet;
-            if (schemaKey.startsWith('schema.data.')) {
-                targetSpreadsheet = dataSpreadsheet;
-            } else if (schemaKey.startsWith('schema.log.')) {
-                targetSpreadsheet = logSpreadsheet;
-            } else {
-                continue; // Should not happen with the filter, but good for safety
-            }
+            const targetSpreadsheet = schemaKey.startsWith('schema.data.')
+                ? dataSpreadsheet
+                : logSpreadsheet;
 
             const sheet = targetSpreadsheet.getSheetByName(sheetName);
             if (!sheet) {
-                console.warn(`Sheet '${sheetName}' not found in ${targetSpreadsheet.getName()}. Skipping protection.`);
+                console.warn(`Sheet '${sheetName}' not found. Skipping.`);
+                skippedCount++;
                 continue;
             }
 
-            const protection = sheet.getRange(1, 1, 1, sheet.getLastColumn()).protect();
-            protection.setDescription(`Header row protection for ${sheetName}`);
-            
-            // Ensure only the owner can edit the protected range
-            const editors = protection.getEditors();
-            if (editors.length > 0) {
-                protection.removeEditors(editors);
-            }
-            // ScriptApp.getProjectOwner() is not available in Web App context, rely on deployment execution user
-            protection.addEditor(Session.getActiveUser()); // Add current user too for testing/dev
+            // Freeze row 1
+            sheet.setFrozenRows(1);
 
-            console.log(`Protected header row for sheet: '${sheetName}' in '${targetSpreadsheet.getName()}'.`);
+            // Remove ALL existing header row protections first to prevent stacking
+            const existingProtections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
+            for (const p of existingProtections) {
+                const range = p.getRange();
+                if (range.getRow() === 1 && range.getNumRows() === 1) {
+                    p.remove();
+                }
+            }
+
+            // Apply new protection with WARNING ONLY mode
+            // This shows a confirmation dialog for ALL users including the spreadsheet owner
+            const lastCol = Math.max(1, sheet.getLastColumn());
+            const protection = sheet.getRange(1, 1, 1, lastCol).protect();
+            protection.setDescription(`Header protection: ${sheetName}`);
+            protection.setWarningOnly(true);
+
+            protectedCount++;
+            console.log(`Protected header row for: ${sheetName}`);
         }
-        console.log(`${functionName} completed successfully.`);
+
+        console.log(`${functionName} complete: ${protectedCount} protected, ${skippedCount} skipped.`);
+        return { protected: protectedCount, skipped: skippedCount };
 
     } catch (error) {
-        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        console.error(`Error in ${functionName}: ${error.message}`);
         throw error;
     }
 }
@@ -935,5 +955,265 @@ function createSysProjectsHeaders() {
         console.error(`A critical error occurred in ${functionName}: ${error.message}`);
         throw error;
     }
+}
+
+// ============================================================================
+// CRM Sheet Creation Functions
+// ============================================================================
+
+function createSysContactsHeaders() {
+    const functionName = 'createSysContactsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysContacts';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysContactActivityHeaders() {
+    const functionName = 'createSysContactActivityHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysContactActivity';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysCouponsHeaders() {
+    const functionName = 'createSysCouponsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysCoupons';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysCampaignsHeaders() {
+    const functionName = 'createSysCampaignsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysCampaigns';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysCouponUsageHeaders() {
+    const functionName = 'createSysCouponUsageHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysCouponUsage';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * Creates all CRM sheets with headers.
+ * Run this to set up CRM data storage.
+ */
+function createCrmSheets() {
+    console.log('Creating CRM sheets...');
+    createSysContactsHeaders();
+    createSysContactActivityHeaders();
+    createSysCouponsHeaders();
+    createSysCampaignsHeaders();
+    createSysCouponUsageHeaders();
+    console.log('CRM sheets created successfully.');
+}
+
+// ============================================================================
+// Lookup Sheet Creation Functions
+// ============================================================================
+
+function createSysLkpCitiesHeaders() {
+    const functionName = 'createSysLkpCitiesHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysLkp_Cities';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        // Clear the entire header row first
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        // Write new headers
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * Creates all lookup sheets with headers.
+ * Run this to set up lookup tables.
+ */
+function createLookupSheets() {
+    console.log('Creating lookup sheets...');
+    createSysLkpCitiesHeaders();
+    console.log('Lookup sheets created successfully.');
 }
 

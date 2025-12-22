@@ -7,6 +7,27 @@
 const ContactEnrichmentService = (function () {
   const SERVICE_NAME = 'ContactEnrichmentService';
 
+  // Config cache (loaded once per execution)
+  let _enrichmentConfig = null;
+
+  /**
+   * Gets enrichment config values from CRM config.
+   * @returns {Object} Enrichment configuration
+   */
+  function _getEnrichmentConfig() {
+    if (_enrichmentConfig) return _enrichmentConfig;
+
+    const allConfig = ConfigService.getAllConfig();
+    _enrichmentConfig = {
+      categoryMinPercent: parseInt(allConfig['crm.enrichment.category']?.min_percent, 10) || 15,
+      priceMinPercentile: parseInt(allConfig['crm.enrichment.price']?.min_percentile, 10) || 10,
+      priceMaxPercentile: parseInt(allConfig['crm.enrichment.price']?.max_percentile, 10) || 90,
+      attrMinPercentile: parseInt(allConfig['crm.enrichment.attributes']?.min_percentile, 10) || 15,
+      attrMaxPercentile: parseInt(allConfig['crm.enrichment.attributes']?.max_percentile, 10) || 85
+    };
+    return _enrichmentConfig;
+  }
+
   // Known wineries for extraction from product names
   const KNOWN_WINERIES = [
     'Golan Heights', 'Carmel', 'Barkan', 'Recanati', 'Dalton', 'Teperberg',
@@ -30,6 +51,95 @@ const ContactEnrichmentService = (function () {
     'יין חצי יבש': 'Semi-Dry'
   };
 
+  // English to Hebrew category translation (reverse of above)
+  const CATEGORY_TRANSLATION_HE = {
+    'Dry Red': 'יין אדום יבש',
+    'Dry White': 'יין לבן יבש',
+    'Rosé': 'רוזה',
+    'Sparkling': 'יין מוגז',
+    'Dessert': 'יין קינוח',
+    'Fortified': 'יין מחוזק',
+    'Semi-Dry': 'יין חצי יבש'
+  };
+
+  // Cache for lookup tables
+  let _brandsLookup = null;
+  let _categoriesLookup = null;
+
+  /**
+   * Loads SysBrands lookup table for brand translations.
+   * @returns {Map<string, Object>} Map of BrandEn to {en, he}
+   */
+  function _loadBrandsLookup() {
+    if (_brandsLookup) return _brandsLookup;
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    const sheet = spreadsheet.getSheetByName(sheetNames.SysBrands || 'SysBrands');
+    _brandsLookup = new Map();
+
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const headers = data[0];
+        const idx = {};
+        headers.forEach((h, i) => idx[h] = i);
+
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const brandEn = String(row[idx['sbr_BrandEn']] || '').trim();
+          const brandHe = String(row[idx['sbr_BrandHe']] || '').trim();
+          if (brandEn) {
+            _brandsLookup.set(brandEn.toLowerCase(), { en: brandEn, he: brandHe || brandEn });
+          }
+        }
+      }
+    }
+
+    LoggerService.info(SERVICE_NAME, '_loadBrandsLookup', `Loaded ${_brandsLookup.size} brands`);
+    return _brandsLookup;
+  }
+
+  /**
+   * Loads SysCategories lookup table for category translations.
+   * @returns {Map<string, Object>} Map of NameEn to {en, he}
+   */
+  function _loadCategoriesLookup() {
+    if (_categoriesLookup) return _categoriesLookup;
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    const sheet = spreadsheet.getSheetByName(sheetNames.SysCategories || 'SysCategories');
+    _categoriesLookup = new Map();
+
+    if (sheet) {
+      const data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const headers = data[0];
+        const idx = {};
+        headers.forEach((h, i) => idx[h] = i);
+
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const nameEn = String(row[idx['sct_NameEn']] || '').trim();
+          const nameHe = String(row[idx['sct_NameHe']] || '').trim();
+          if (nameEn) {
+            _categoriesLookup.set(nameEn.toLowerCase(), { en: nameEn, he: nameHe || nameEn });
+          }
+        }
+      }
+    }
+
+    LoggerService.info(SERVICE_NAME, '_loadCategoriesLookup', `Loaded ${_categoriesLookup.size} categories`);
+    return _categoriesLookup;
+  }
+
   /**
    * Extracts winery name from product name (wdm_NameEn).
    * Matches known wineries at the start of the name.
@@ -49,6 +159,38 @@ const ContactEnrichmentService = (function () {
     }
 
     return '';
+  }
+
+  /**
+   * Builds a Set of bundle SKUs from WebProdM.
+   * @returns {Set<string>} Set of SKUs where wpm_TaxProductType = 'woosb'
+   */
+  function _buildBundleSkuSet() {
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    const webProdSheet = spreadsheet.getSheetByName(sheetNames.WebProdM || 'WebProdM');
+    const bundleSkus = new Set();
+    if (webProdSheet) {
+      const data = webProdSheet.getDataRange().getValues();
+      if (data.length > 1) {
+        const headers = data[0];
+        const idx = {};
+        headers.forEach((h, i) => idx[h] = i);
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const sku = String(row[idx['wpm_SKU']] || '').trim();
+          const productType = String(row[idx['wpm_TaxProductType']] || '').trim().toLowerCase();
+          if (sku && productType === 'woosb') {
+            bundleSkus.add(sku);
+          }
+        }
+      }
+    }
+    LoggerService.info(SERVICE_NAME, '_buildBundleSkuSet', `Found ${bundleSkus.size} bundle SKUs`);
+    return bundleSkus;
   }
 
   /**
@@ -170,10 +312,11 @@ const ContactEnrichmentService = (function () {
       return { min: Math.min(...prices), max: Math.max(...prices) };
     }
 
+    const config = _getEnrichmentConfig();
     const sorted = [...prices].sort((a, b) => a - b);
     return {
-      min: Math.round(_percentile(sorted, 10)),
-      max: Math.round(_percentile(sorted, 90))
+      min: Math.round(_percentile(sorted, config.priceMinPercentile)),
+      max: Math.round(_percentile(sorted, config.priceMaxPercentile))
     };
   }
 
@@ -271,13 +414,18 @@ const ContactEnrichmentService = (function () {
         itemsByEmail.set(email, []);
       }
 
+      const quantity = qtyCol !== undefined ? (parseInt(row[qtyCol], 10) || 1) : 1;
+      const total = totalCol !== undefined ? (parseFloat(row[totalCol]) || 0) : 0;
+      // Calculate unit price from total/quantity since WebOrdItemsM has ItemTotal not UnitPrice
+      const unitPrice = quantity > 0 ? total / quantity : 0;
+
       itemsByEmail.get(email).push({
         orderId: orderId,
         sku: sku,
         name: nameCol !== undefined ? row[nameCol] || '' : '',
-        quantity: qtyCol !== undefined ? (parseInt(row[qtyCol], 10) || 1) : 1,
-        unitPrice: priceCol !== undefined ? (parseFloat(row[priceCol]) || 0) : 0,
-        total: totalCol !== undefined ? (parseFloat(row[totalCol]) || 0) : 0
+        quantity: quantity,
+        unitPrice: unitPrice,
+        total: total
       });
     }
   }
@@ -332,16 +480,18 @@ const ContactEnrichmentService = (function () {
   /**
    * Calculates frequent categories from purchased items.
    * Returns categories that represent >15% of purchases, comma-separated.
+   * Uses SysCategories lookup for Hebrew translations.
    * @param {Array} enrichedItems - Items with category field
-   * @returns {string} Comma-separated frequent categories
+   * @returns {Object} { en: string, he: string } - Comma-separated frequent categories
    */
   function _calculateFrequentCategories(enrichedItems) {
     const wineItems = enrichedItems.filter(i =>
       i.category && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
     );
 
-    if (wineItems.length === 0) return '';
+    if (wineItems.length === 0) return { en: '', he: '' };
 
+    const categoriesLookup = _loadCategoriesLookup();
     const counts = {};
     let total = 0;
     wineItems.forEach(item => {
@@ -350,13 +500,33 @@ const ContactEnrichmentService = (function () {
       total += item.quantity;
     });
 
-    // Include categories with >15% of purchases
-    const threshold = total * 0.15;
+    // Include categories with significant percentage of purchases
+    const config = _getEnrichmentConfig();
+    const threshold = total * (config.categoryMinPercent / 100);
     const significant = Object.keys(counts)
       .filter(cat => counts[cat] >= threshold)
       .sort((a, b) => counts[b] - counts[a]);
 
-    return significant.join(', ');
+    // Translate categories
+    const enNames = [];
+    const heNames = [];
+    significant.forEach(cat => {
+      const lookup = categoriesLookup.get(cat.toLowerCase());
+      if (lookup) {
+        enNames.push(lookup.en);
+        heNames.push(lookup.he);
+      } else {
+        // Try reverse lookup from CATEGORY_TRANSLATION_HE
+        const heTranslation = CATEGORY_TRANSLATION_HE[cat];
+        enNames.push(cat);
+        heNames.push(heTranslation || cat);
+      }
+    });
+
+    return {
+      en: enNames.join(', '),
+      he: heNames.join(', ')
+    };
   }
 
   /**
@@ -368,124 +538,163 @@ const ContactEnrichmentService = (function () {
   function _calculateAttributeRange(values) {
     if (!values || values.length < 2) return '';
 
-    // Count occurrences of each value
-    const counts = {};
-    values.forEach(v => {
-      const val = Math.round(v);
-      if (val >= 1 && val <= 5) {
-        counts[val] = (counts[val] || 0) + 1;
-      }
-    });
+    // Filter to valid 1-5 values and sort
+    const valid = values
+      .map(v => Math.round(v))
+      .filter(v => v >= 1 && v <= 5)
+      .sort((a, b) => a - b);
 
-    const valuesPresent = Object.keys(counts).map(Number).sort((a, b) => a - b);
-    if (valuesPresent.length === 0) return '';
+    if (valid.length === 0) return '';
 
-    // Find the most common range (contiguous values covering most purchases)
-    // Start with min-max of values present
-    const min = valuesPresent[0];
-    const max = valuesPresent[valuesPresent.length - 1];
+    // For small samples, use raw min-max
+    if (valid.length < 4) {
+      const min = valid[0];
+      const max = valid[valid.length - 1];
+      return min === max ? String(min) : `${min}~${max}`;
+    }
 
-    return `${min}-${max}`;
+    // Use percentiles from config to trim outliers
+    const config = _getEnrichmentConfig();
+    const min = Math.round(_percentile(valid, config.attrMinPercentile));
+    const max = Math.round(_percentile(valid, config.attrMaxPercentile));
+
+    // Use ~ instead of hyphen to prevent Sheets interpreting as date
+    return min === max ? String(min) : `${min}~${max}`;
   }
 
   /**
-   * Resolves a grape code to English name using LookupService.
+   * Resolves a grape code to names in both languages using LookupService.
    * @param {string} grapeCode - Grape code from WebDetM (e.g., "CS" for Cabernet Sauvignon)
    * @param {Map} grapeLookup - Pre-loaded grape lookup map
-   * @returns {string} English grape name or empty
+   * @returns {Object} { en: string, he: string } or null
    */
   function _resolveGrapeCode(grapeCode, grapeLookup) {
-    if (!grapeCode || !grapeLookup) return '';
+    if (!grapeCode || !grapeLookup) return null;
     const grapeRow = grapeLookup.get(grapeCode);
     if (grapeRow) {
-      // Try English name first, then Hebrew
-      return grapeRow['slg_NameEn'] || grapeRow['slg_NameHe'] || grapeCode;
+      const en = grapeRow['slg_TextEN'] || '';
+      const he = grapeRow['slg_TextHE'] || '';
+      if (en || he) {
+        return { en: en || he, he: he || en };
+      }
     }
-    return '';
+    return null;
   }
 
   /**
    * Gets the primary grape variety for a product using lookup codes.
    * @param {Object} product - Product with grapeG1 code field
    * @param {Map} grapeLookup - Pre-loaded grape lookup map
-   * @returns {string} English grape name or empty
+   * @returns {Object} { en: string, he: string } or null
    */
   function _getFirstGrape(product, grapeLookup) {
     return _resolveGrapeCode(product.grapeG1, grapeLookup);
   }
 
   /**
-   * Resolves a kashrut code to name using LookupService.
+   * Resolves a kashrut code to names in both languages using LookupService.
    * @param {string} kashrutCode - Kashrut code from WebDetM
    * @param {Map} kashrutLookup - Pre-loaded kashrut lookup map
-   * @returns {string} Kashrut name or empty
+   * @returns {Object} { en: string, he: string } or null
    */
   function _resolveKashrutCode(kashrutCode, kashrutLookup) {
-    if (!kashrutCode || !kashrutLookup) return '';
+    if (!kashrutCode || !kashrutLookup) return null;
     const row = kashrutLookup.get(kashrutCode);
     if (row) {
-      return row['slk_NameEn'] || row['slk_NameHe'] || kashrutCode;
+      const en = row['slk_TextEN'] || '';
+      const he = row['slk_TextHE'] || '';
+      if (en || he) {
+        return { en: en || he, he: he || en };
+      }
     }
-    return '';
+    return null;
   }
 
   /**
    * Calculates top kashrut certifications from K1 codes.
    * @param {Array} enrichedItems - Items with kashrutK1 field
    * @param {Map} kashrutLookup - Pre-loaded kashrut lookup map
-   * @returns {string} Comma-separated top 3 kashrut certifications
+   * @returns {Object} { en: string, he: string } - Comma-separated top 3 kashrut certifications
    */
   function _calculateTopKashrut(enrichedItems, kashrutLookup) {
     const wineItems = enrichedItems.filter(i =>
       i.category && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
     );
 
-    if (wineItems.length === 0) return '';
+    if (wineItems.length === 0) return { en: '', he: '' };
 
+    // Count by kashrut code to preserve order, store translations
     const counts = {};
+    const translations = {};
     wineItems.forEach(item => {
       if (item.kashrutK1) {
-        const kashrutName = _resolveKashrutCode(item.kashrutK1, kashrutLookup);
-        if (kashrutName) {
-          counts[kashrutName] = (counts[kashrutName] || 0) + item.quantity;
+        const resolved = _resolveKashrutCode(item.kashrutK1, kashrutLookup);
+        if (resolved) {
+          const key = item.kashrutK1;
+          counts[key] = (counts[key] || 0) + item.quantity;
+          translations[key] = resolved;
         }
       }
     });
 
-    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    return sorted.slice(0, 3).join(', ');
+    const sortedKeys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 3);
+    return {
+      en: sortedKeys.map(k => translations[k].en).join(', '),
+      he: sortedKeys.map(k => translations[k].he).join(', ')
+    };
   }
 
   /**
    * Calculates top wineries by purchase count.
+   * Uses SysBrands lookup for Hebrew translations.
    * @param {Array} enrichedItems - Items with winery field
    * @param {number} limit - Number of wineries to return
-   * @returns {string} Comma-separated list of top wineries
+   * @returns {Object} { en: string, he: string } - Comma-separated list of top wineries
    */
   function _calculateTopWineries(enrichedItems, limit = 3) {
     const wineItems = enrichedItems.filter(i =>
       i.winery && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
     );
 
-    if (wineItems.length === 0) return '';
+    if (wineItems.length === 0) return { en: '', he: '' };
 
+    const brandsLookup = _loadBrandsLookup();
     const counts = {};
     wineItems.forEach(item => {
       counts[item.winery] = (counts[item.winery] || 0) + item.quantity;
     });
 
     // Sort by count descending
-    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    return sorted.slice(0, limit).join(', ');
+    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, limit);
+
+    // Translate wineries using SysBrands lookup
+    const enNames = [];
+    const heNames = [];
+    sorted.forEach(winery => {
+      const brand = brandsLookup.get(winery.toLowerCase());
+      if (brand) {
+        enNames.push(brand.en);
+        heNames.push(brand.he);
+      } else {
+        // No translation found, use original
+        enNames.push(winery);
+        heNames.push(winery);
+      }
+    });
+
+    return {
+      en: enNames.join(', '),
+      he: heNames.join(', ')
+    };
   }
 
   /**
    * Calculates top grapes by wine category.
    * Uses primary grape (G1) only - blend components are listed by volume,
    * so G2/G3 are minor components not indicative of preference.
-   * @param {Array} enrichedItems - Items with grape and category fields
+   * @param {Array} enrichedItems - Items with grape (object with en/he) and category fields
    * @param {string} wineType - 'red' or 'white'
-   * @returns {string} Comma-separated top grapes
+   * @returns {Object} { en: string, he: string } - Comma-separated top grapes
    */
   function _calculateTopGrapes(enrichedItems, wineType) {
     const redCategories = ['Dry Red'];
@@ -497,18 +706,25 @@ const ContactEnrichmentService = (function () {
       return targetCategories.some(tc => cat.includes(tc.toLowerCase()));
     });
 
-    if (wineItems.length === 0) return '';
+    if (wineItems.length === 0) return { en: '', he: '' };
 
+    // Count by grape code to preserve order, store translations
     const counts = {};
+    const translations = {};
     wineItems.forEach(item => {
       // Only use primary grape (G1) - blend components are not preferences
-      if (item.grape) {
-        counts[item.grape] = (counts[item.grape] || 0) + item.quantity;
+      if (item.grape && item.grapeCode) {
+        const key = item.grapeCode;
+        counts[key] = (counts[key] || 0) + item.quantity;
+        translations[key] = item.grape;  // grape is now { en, he }
       }
     });
 
-    const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    return sorted.slice(0, 3).join(', ');
+    const sortedKeys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 3);
+    return {
+      en: sortedKeys.map(k => translations[k].en).join(', '),
+      he: sortedKeys.map(k => translations[k].he).join(', ')
+    };
   }
 
   /**
@@ -522,6 +738,7 @@ const ContactEnrichmentService = (function () {
 
     const productLookup = _buildProductLookup();
     const itemsByEmail = _buildItemsByEmail();
+    const bundleSkus = _buildBundleSkuSet();
 
     // Load grape lookup for code resolution
     const grapeLookup = LookupService.getLookupMap('map.grape_lookups');
@@ -531,11 +748,24 @@ const ContactEnrichmentService = (function () {
     const kashrutLookup = LookupService.getLookupMap('map.kashrut_lookups');
     LoggerService.info(SERVICE_NAME, fnName, `Loaded kashrut lookup with ${kashrutLookup.size} entries`);
 
+    // Preload brands and categories lookups
+    _loadBrandsLookup();
+    _loadCategoriesLookup();
+
     let enriched = 0;
     let skipped = 0;
     let errors = [];
+    let processed = 0;
+    const totalContacts = itemsByEmail.size;
+
+    LoggerService.info(SERVICE_NAME, fnName, `Processing ${totalContacts} contacts with order history`);
 
     itemsByEmail.forEach((items, email) => {
+      processed++;
+      if (processed % 50 === 0 || processed === totalContacts) {
+        LoggerService.info(SERVICE_NAME, fnName, `Progress: ${processed}/${totalContacts} (${enriched} enriched, ${skipped} skipped)`);
+      }
+
       try {
         const contact = ContactService.getContactByEmail(email);
         if (!contact) {
@@ -555,11 +785,13 @@ const ContactEnrichmentService = (function () {
         const enrichedItems = items.map(item => {
           const product = productLookup.get(item.sku);
           if (product) {
+            const grapeResolved = _getFirstGrape(product, grapeLookup);
             return {
               ...item,
               category: _getPrimaryCategory(product),
               winery: product.winery,
-              grape: _getFirstGrape(product, grapeLookup),
+              grape: grapeResolved,  // { en, he } or null
+              grapeCode: product.grapeG1,  // Keep code for grape calculation
               price: item.unitPrice || product.price,
               intensity: product.intensity,
               complexity: product.complexity,
@@ -571,7 +803,8 @@ const ContactEnrichmentService = (function () {
             ...item,
             category: '',
             winery: '',
-            grape: '',
+            grape: null,
+            grapeCode: '',
             price: item.unitPrice,
             intensity: null,
             complexity: null,
@@ -619,23 +852,42 @@ const ContactEnrichmentService = (function () {
         // Update contact if any preferences calculated
         let updated = false;
 
-        if (frequentCategories && contact.sc_FrequentCategories !== frequentCategories) {
-          contact.sc_FrequentCategories = frequentCategories;
+        // Frequent Categories - _En and _He for consistency
+        if (frequentCategories.en && contact.sc_FrequentCategories_En !== frequentCategories.en) {
+          contact.sc_FrequentCategories_En = frequentCategories.en;
+          updated = true;
+        }
+        if (frequentCategories.he && contact.sc_FrequentCategories_He !== frequentCategories.he) {
+          contact.sc_FrequentCategories_He = frequentCategories.he;
           updated = true;
         }
 
-        if (topWineries && contact.sc_TopWineries !== topWineries) {
-          contact.sc_TopWineries = topWineries;
+        // Top Wineries - _En and _He
+        if (topWineries.en && contact.sc_TopWineries_En !== topWineries.en) {
+          contact.sc_TopWineries_En = topWineries.en;
+          updated = true;
+        }
+        if (topWineries.he && contact.sc_TopWineries_He !== topWineries.he) {
+          contact.sc_TopWineries_He = topWineries.he;
           updated = true;
         }
 
-        if (topRedGrapes && contact.sc_TopRedGrapes !== topRedGrapes) {
-          contact.sc_TopRedGrapes = topRedGrapes;
+        // Top Grapes - _En and _He
+        if (topRedGrapes.en && contact.sc_TopRedGrapes_En !== topRedGrapes.en) {
+          contact.sc_TopRedGrapes_En = topRedGrapes.en;
+          updated = true;
+        }
+        if (topRedGrapes.he && contact.sc_TopRedGrapes_He !== topRedGrapes.he) {
+          contact.sc_TopRedGrapes_He = topRedGrapes.he;
           updated = true;
         }
 
-        if (topWhiteGrapes && contact.sc_TopWhiteGrapes !== topWhiteGrapes) {
-          contact.sc_TopWhiteGrapes = topWhiteGrapes;
+        if (topWhiteGrapes.en && contact.sc_TopWhiteGrapes_En !== topWhiteGrapes.en) {
+          contact.sc_TopWhiteGrapes_En = topWhiteGrapes.en;
+          updated = true;
+        }
+        if (topWhiteGrapes.he && contact.sc_TopWhiteGrapes_He !== topWhiteGrapes.he) {
+          contact.sc_TopWhiteGrapes_He = topWhiteGrapes.he;
           updated = true;
         }
 
@@ -675,36 +927,41 @@ const ContactEnrichmentService = (function () {
           updated = true;
         }
 
-        // Calculate BundleBuyer - check if any item name/SKU contains "bundle"
-        const hasBundles = enrichedItems.some(i => {
-          const name = (i.name || '').toLowerCase();
-          const sku = (i.sku || '').toLowerCase();
-          return name.includes('bundle') || name.includes('חבילה') || sku.includes('bundle');
-        });
+        // Calculate BundleBuyer - check if any purchased SKU is a bundle (wpm_TaxProductType = 'woosb')
+        const hasBundles = items.some(i => bundleSkus.has(i.sku));
         if (hasBundles !== contact.sc_BundleBuyer) {
           contact.sc_BundleBuyer = hasBundles;
           updated = true;
         }
 
-        // Calculate AvgBottlesPerOrder
-        const totalBottles = enrichedItems.reduce((sum, i) => sum + (i.quantity || 0), 0);
-        const orderCount = contact.sc_OrderCount || 1;
-        const avgBottles = orderCount > 0 ? Math.round(totalBottles / orderCount * 10) / 10 : 0;
+        // Calculate AvgBottlesPerOrder (wine items only, not accessories/gifts)
+        // Count unique orders from items (not sc_OrderCount which may be from different data source)
+        const wineItemsForBottles = enrichedItems.filter(i =>
+          i.category && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
+        );
+        const totalBottles = wineItemsForBottles.reduce((sum, i) => sum + (i.quantity || 0), 0);
+        const uniqueOrderIds = new Set(items.map(i => i.orderId));
+        const orderCountFromItems = uniqueOrderIds.size || 1;
+        const avgBottles = orderCountFromItems > 0 ? Math.round(totalBottles / orderCountFromItems * 10) / 10 : 0;
         if (avgBottles > 0 && contact.sc_AvgBottlesPerOrder !== avgBottles) {
           contact.sc_AvgBottlesPerOrder = avgBottles;
           updated = true;
         }
 
         // Calculate KashrutPrefs - top 3 kashrut certifications from K1 codes
-        const kashrutPrefsStr = _calculateTopKashrut(enrichedItems, kashrutLookup);
-        if (kashrutPrefsStr && kashrutPrefsStr !== (contact.sc_KashrutPrefs || '')) {
-          contact.sc_KashrutPrefs = kashrutPrefsStr;
+        const kashrutPrefs = _calculateTopKashrut(enrichedItems, kashrutLookup);
+        if (kashrutPrefs.en && kashrutPrefs.en !== (contact.sc_KashrutPrefs_En || '')) {
+          contact.sc_KashrutPrefs_En = kashrutPrefs.en;
+          updated = true;
+        }
+        if (kashrutPrefs.he && kashrutPrefs.he !== (contact.sc_KashrutPrefs_He || '')) {
+          contact.sc_KashrutPrefs_He = kashrutPrefs.he;
           updated = true;
         }
 
         // Always set LastEnriched when we process a contact (even if no changes)
         contact.sc_LastEnriched = new Date().toISOString();
-        ContactService.upsertContact(contact);
+        ContactService.upsertContact(contact, true);  // Skip cache clear for batch performance
 
         if (updated) {
           enriched++;
@@ -716,6 +973,9 @@ const ContactEnrichmentService = (function () {
         errors.push(`${email}: ${e.message}`);
       }
     });
+
+    // Clear cache once at end of batch
+    ContactService.clearCache();
 
     LoggerService.info(SERVICE_NAME, fnName, `Enriched ${enriched}, skipped ${skipped}, errors ${errors.length}`);
     return { enriched, skipped, errors };
@@ -737,35 +997,58 @@ const ContactEnrichmentService = (function () {
 
     const productLookup = _buildProductLookup();
     const itemsByEmail = _buildItemsByEmail();
+    const bundleSkus = _buildBundleSkuSet();
     const items = itemsByEmail.get(email.toLowerCase().trim());
 
     if (!items || items.length === 0) {
       return { success: true, message: 'No order items found' };
     }
 
-    // Load grape lookup for code resolution
+    // Load grape and kashrut lookups for code resolution
     const grapeLookup = LookupService.getLookupMap('map.grape_lookups');
+    const kashrutLookup = LookupService.getLookupMap('map.kashrut_lookups');
 
     // Enrich items with product data
     const enrichedItems = items.map(item => {
       const product = productLookup.get(item.sku);
       if (product) {
+        const grapeResolved = _getFirstGrape(product, grapeLookup);
         return {
           ...item,
           category: _getPrimaryCategory(product),
           winery: product.winery,
-          grape: _getFirstGrape(product, grapeLookup),
-          price: item.unitPrice || product.price
+          grape: grapeResolved,  // { en, he } or null
+          grapeCode: product.grapeG1,
+          price: item.unitPrice || product.price,
+          kashrutK1: product.kashrutK1
         };
       }
-      return { ...item, category: '', winery: '', grape: '', price: item.unitPrice };
+      return { ...item, category: '', winery: '', grape: null, grapeCode: '', price: item.unitPrice, kashrutK1: '' };
     });
 
-    // Calculate preferences
-    contact.sc_FrequentCategories = _calculateFrequentCategories(enrichedItems);
-    contact.sc_TopWineries = _calculateTopWineries(enrichedItems);
-    contact.sc_TopRedGrapes = _calculateTopGrapes(enrichedItems, 'red');
-    contact.sc_TopWhiteGrapes = _calculateTopGrapes(enrichedItems, 'white');
+    // Calculate BundleBuyer - check if any purchased SKU is a bundle
+    contact.sc_BundleBuyer = items.some(i => bundleSkus.has(i.sku));
+
+    // Calculate preferences with dual language support
+    const frequentCategories = _calculateFrequentCategories(enrichedItems);
+    contact.sc_FrequentCategories_En = frequentCategories.en;
+    contact.sc_FrequentCategories_He = frequentCategories.he;
+
+    const topWineries = _calculateTopWineries(enrichedItems);
+    contact.sc_TopWineries_En = topWineries.en;
+    contact.sc_TopWineries_He = topWineries.he;
+
+    const topRedGrapes = _calculateTopGrapes(enrichedItems, 'red');
+    contact.sc_TopRedGrapes_En = topRedGrapes.en;
+    contact.sc_TopRedGrapes_He = topRedGrapes.he;
+
+    const topWhiteGrapes = _calculateTopGrapes(enrichedItems, 'white');
+    contact.sc_TopWhiteGrapes_En = topWhiteGrapes.en;
+    contact.sc_TopWhiteGrapes_He = topWhiteGrapes.he;
+
+    const kashrutPrefs = _calculateTopKashrut(enrichedItems, kashrutLookup);
+    contact.sc_KashrutPrefs_En = kashrutPrefs.en;
+    contact.sc_KashrutPrefs_He = kashrutPrefs.he;
 
     const wineWithPrices = enrichedItems.filter(i =>
       i.price > 0 && !['Liqueur', 'Accessories', 'Gifts', 'Other'].includes(i.category)
@@ -786,10 +1069,16 @@ const ContactEnrichmentService = (function () {
     return {
       success: true,
       preferences: {
-        categories: contact.sc_FrequentCategories,
-        wineries: contact.sc_TopWineries,
-        redGrapes: contact.sc_TopRedGrapes,
-        whiteGrapes: contact.sc_TopWhiteGrapes,
+        categories_en: contact.sc_FrequentCategories_En,
+        categories_he: contact.sc_FrequentCategories_He,
+        wineries_en: contact.sc_TopWineries_En,
+        wineries_he: contact.sc_TopWineries_He,
+        redGrapes_en: contact.sc_TopRedGrapes_En,
+        redGrapes_he: contact.sc_TopRedGrapes_He,
+        whiteGrapes_en: contact.sc_TopWhiteGrapes_En,
+        whiteGrapes_he: contact.sc_TopWhiteGrapes_He,
+        kashrut_en: contact.sc_KashrutPrefs_En,
+        kashrut_he: contact.sc_KashrutPrefs_He,
         priceAvg: contact.sc_PriceAvg,
         priceRange: `${contact.sc_PriceMin}-${contact.sc_PriceMax}`
       }

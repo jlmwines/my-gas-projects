@@ -64,7 +64,7 @@ function processTemplates(data) {
 
 function generateSetupConfig() {
     const configOrder = [
-        'headers', 'system', 'jobs', 'schemas', 'mappings', 'validation',
+        'headers', 'system', 'crm', 'jobs', 'schemas', 'mappings', 'validation',
         'taskDefinitions', 'migrationColumnMapping', 'orders', 'migrationSyncTasks',
         'printing', 'users', 'otherSettings'
     ];
@@ -72,25 +72,28 @@ function generateSetupConfig() {
     let masterConfigArray = [];
 
     try {
+        // First pass: collect all rows and find max column count
+        let allRows = [];
         for (const fileName of configOrder) {
             const filePath = path.join(inputDir, `${fileName}.json`);
             const rawData = fs.readFileSync(filePath, 'utf8');
             let jsonData = JSON.parse(rawData);
-            
-            // Process templates before adding to the master array
             const processedData = processTemplates(jsonData);
-            
-            // Ensure all rows have 13 columns
-            const paddedData = processedData.map(row => {
-                const newRow = [...row];
-                while (newRow.length < 13) {
-                    newRow.push('');
-                }
-                console.log(`Row length after padding: ${newRow.length}, content: ${JSON.stringify(newRow)}`); // Debug log
-                return newRow;
-            });
-            masterConfigArray.push(...paddedData);
+            allRows.push(...processedData);
         }
+
+        // Find max column count
+        const maxCols = Math.max(...allRows.map(row => row.length));
+        console.log(`Max column count: ${maxCols}`);
+
+        // Second pass: pad all rows to max column count
+        masterConfigArray = allRows.map(row => {
+            const newRow = [...row];
+            while (newRow.length < maxCols) {
+                newRow.push('');
+            }
+            return newRow;
+        });
     } catch (error) {
         console.error(`Error reading or parsing JSON files from ${inputDir}:`, error);
         process.exit(1);
@@ -148,7 +151,11 @@ function rebuildSysConfigFromSource() {
 
     } catch (error) {
         console.error('A critical error occurred in ' + functionName + ': ' + error.message);
-        SpreadsheetApp.getUi().alert('Error: ' + error.message);
+        try {
+            SpreadsheetApp.getUi().alert('Error: ' + error.message);
+        } catch (e) {
+            // getUi() fails in web app context - error already logged above
+        }
     }
 }
 
