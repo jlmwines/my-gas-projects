@@ -365,6 +365,314 @@ const CampaignService = (function () {
     return { imported, errors };
   }
 
+  // =============================================
+  // SEGMENT TARGETING FOR CAMPAIGN PLANNING
+  // =============================================
+
+  /**
+   * Gets contacts matching segment criteria for campaign targeting.
+   * @param {Object} options - Targeting options
+   * @param {Array<string>} [options.customerType] - Filter by customer types (e.g., ['core.vip', 'core.repeat'])
+   * @param {Array<string>} [options.lifecycleStatus] - Filter by lifecycle status (e.g., ['Cooling', 'Lapsed'])
+   * @param {string} [options.language] - Filter by language ('en', 'he', or null for all)
+   * @param {boolean} [options.hasOrderIn2025] - Filter by whether they ordered in 2025
+   * @param {boolean} [options.isSubscribed] - Filter by subscription status
+   * @param {Object} [options.preferences] - Filter by preferences
+   * @param {Array<string>} [options.preferences.categories] - Must have purchased these categories
+   * @param {number} [options.preferences.priceMin] - Minimum price range
+   * @param {number} [options.preferences.priceMax] - Maximum price range
+   * @param {number} [options.limit] - Maximum contacts to return
+   * @param {string} [options.sortBy] - Sort field: 'totalSpend', 'orderCount', 'daysSince', 'lastOrder'
+   * @param {string} [options.sortOrder] - 'asc' or 'desc' (default 'desc')
+   * @returns {Object} { contacts: Array, stats: Object }
+   */
+  function getTargetSegment(options = {}) {
+    const fnName = 'getTargetSegment';
+    LoggerService.info(SERVICE_NAME, fnName, `Getting segment with options: ${JSON.stringify(options)}`);
+
+    // Load all contacts
+    const allContacts = ContactService.getContacts();
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded ${allContacts.length} total contacts`);
+
+    // Apply filters
+    let filtered = allContacts.filter(c => {
+      // Customer type filter
+      if (options.customerType && options.customerType.length > 0) {
+        if (!options.customerType.includes(c.sc_CustomerType)) return false;
+      }
+
+      // Lifecycle status filter
+      if (options.lifecycleStatus && options.lifecycleStatus.length > 0) {
+        if (!options.lifecycleStatus.includes(c.sc_LifecycleStatus)) return false;
+      }
+
+      // Language filter
+      if (options.language) {
+        const contactLang = (c.sc_Language || 'en').toLowerCase();
+        if (contactLang !== options.language.toLowerCase()) return false;
+      }
+
+      // Subscription filter
+      if (options.isSubscribed !== undefined) {
+        if (options.isSubscribed && !c.sc_IsSubscribed) return false;
+        if (!options.isSubscribed && c.sc_IsSubscribed) return false;
+      }
+
+      // 2025 order filter
+      if (options.hasOrderIn2025 !== undefined) {
+        const lastOrder = c.sc_LastOrderDate;
+        let orderedIn2025 = false;
+        if (lastOrder) {
+          const lastOrderDate = lastOrder instanceof Date ? lastOrder : new Date(lastOrder);
+          orderedIn2025 = lastOrderDate.getFullYear() === 2025;
+        }
+        if (options.hasOrderIn2025 && !orderedIn2025) return false;
+        if (!options.hasOrderIn2025 && orderedIn2025) return false;
+      }
+
+      // Preference filters
+      if (options.preferences) {
+        // Category filter
+        if (options.preferences.categories && options.preferences.categories.length > 0) {
+          const contactCategories = (c.sc_FrequentCategories_En || '').toLowerCase();
+          const hasCategory = options.preferences.categories.some(cat =>
+            contactCategories.includes(cat.toLowerCase())
+          );
+          if (!hasCategory) return false;
+        }
+
+        // Price range filter
+        if (options.preferences.priceMin !== undefined) {
+          if ((c.sc_PriceMax || 0) < options.preferences.priceMin) return false;
+        }
+        if (options.preferences.priceMax !== undefined) {
+          if ((c.sc_PriceMin || 999999) > options.preferences.priceMax) return false;
+        }
+      }
+
+      return true;
+    });
+
+    LoggerService.info(SERVICE_NAME, fnName, `After filtering: ${filtered.length} contacts`);
+
+    // Sort
+    const sortBy = options.sortBy || 'totalSpend';
+    const sortOrder = options.sortOrder || 'desc';
+    const multiplier = sortOrder === 'asc' ? 1 : -1;
+
+    filtered.sort((a, b) => {
+      let valA, valB;
+      switch (sortBy) {
+        case 'totalSpend':
+          valA = a.sc_TotalSpend || 0;
+          valB = b.sc_TotalSpend || 0;
+          break;
+        case 'orderCount':
+          valA = a.sc_OrderCount || 0;
+          valB = b.sc_OrderCount || 0;
+          break;
+        case 'daysSince':
+          valA = a.sc_DaysSinceOrder || 9999;
+          valB = b.sc_DaysSinceOrder || 9999;
+          break;
+        case 'lastOrder':
+          valA = a.sc_LastOrderDate ? new Date(a.sc_LastOrderDate).getTime() : 0;
+          valB = b.sc_LastOrderDate ? new Date(b.sc_LastOrderDate).getTime() : 0;
+          break;
+        default:
+          valA = a.sc_TotalSpend || 0;
+          valB = b.sc_TotalSpend || 0;
+      }
+      return (valA - valB) * multiplier;
+    });
+
+    // Apply limit
+    if (options.limit && options.limit > 0) {
+      filtered = filtered.slice(0, options.limit);
+    }
+
+    // Calculate stats
+    const stats = {
+      total: filtered.length,
+      byLanguage: { en: 0, he: 0 },
+      byType: {},
+      byStatus: {},
+      totalSpend: 0,
+      avgSpend: 0
+    };
+
+    filtered.forEach(c => {
+      const lang = (c.sc_Language || 'en').toLowerCase();
+      stats.byLanguage[lang] = (stats.byLanguage[lang] || 0) + 1;
+
+      const type = c.sc_CustomerType || 'unknown';
+      stats.byType[type] = (stats.byType[type] || 0) + 1;
+
+      const status = c.sc_LifecycleStatus || 'Unknown';
+      stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
+
+      stats.totalSpend += c.sc_TotalSpend || 0;
+    });
+
+    stats.avgSpend = stats.total > 0 ? Math.round(stats.totalSpend / stats.total) : 0;
+
+    // Format contacts for export
+    const contacts = filtered.map(c => ({
+      email: c.sc_Email || '',
+      name: c.sc_Name || '',
+      phone: c.sc_Phone || '',
+      language: c.sc_Language || 'en',
+      customerType: c.sc_CustomerType || '',
+      lifecycleStatus: c.sc_LifecycleStatus || '',
+      isSubscribed: c.sc_IsSubscribed || false,
+      orderCount: c.sc_OrderCount || 0,
+      totalSpend: c.sc_TotalSpend || 0,
+      avgOrderValue: c.sc_AvgOrderValue || 0,
+      daysSinceOrder: c.sc_DaysSinceOrder || null,
+      lastOrderDate: c.sc_LastOrderDate ? _formatDate(c.sc_LastOrderDate) : '',
+      firstOrderDate: c.sc_FirstOrderDate ? _formatDate(c.sc_FirstOrderDate) : '',
+      frequentCategories: c.sc_FrequentCategories_En || '',
+      topWineries: c.sc_TopWineries_En || '',
+      priceRange: c.sc_PriceMin && c.sc_PriceMax ? `${c.sc_PriceMin}-${c.sc_PriceMax}` : '',
+      churnRisk: c.sc_ChurnRisk || '',
+      // Bundle matching hints
+      bundleMatches: _calculateBundleMatches(c)
+    }));
+
+    LoggerService.info(SERVICE_NAME, fnName, `Returning ${contacts.length} contacts`);
+    return { contacts, stats };
+  }
+
+  /**
+   * Formats a date value to YYYY-MM-DD string.
+   * @param {Date|string} dateVal - Date value
+   * @returns {string} Formatted date
+   */
+  function _formatDate(dateVal) {
+    if (!dateVal) return '';
+    try {
+      const d = dateVal instanceof Date ? dateVal : new Date(dateVal);
+      if (isNaN(d.getTime())) return '';
+      return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
+   * Calculates which bundle types match a contact's preferences.
+   * @param {Object} contact - Contact object
+   * @returns {string} Comma-separated bundle matches
+   */
+  function _calculateBundleMatches(contact) {
+    const matches = [];
+    const categories = (contact.sc_FrequentCategories_En || '').toLowerCase();
+    const priceMax = contact.sc_PriceMax || 0;
+
+    // Special Reds
+    if (categories.includes('dry red')) {
+      matches.push('Special Reds');
+    }
+
+    // Special Whites/Rosés
+    if (categories.includes('dry white') || categories.includes('rosé') || categories.includes('rose')) {
+      matches.push('Special Whites/Rosés');
+    }
+
+    // Special Variety (3+ categories - check by counting commas)
+    const categoryCount = categories ? (categories.match(/,/g) || []).length + 1 : 0;
+    if (categoryCount >= 3) {
+      matches.push('Special Variety');
+    }
+
+    // Premium Value
+    if (priceMax >= 150) {
+      matches.push('Premium Value');
+    }
+
+    return matches.join(', ');
+  }
+
+  /**
+   * Exports a segment to CSV format.
+   * @param {Object} options - Same options as getTargetSegment
+   * @returns {string} CSV content
+   */
+  function exportSegmentToCsv(options = {}) {
+    const fnName = 'exportSegmentToCsv';
+    const result = getTargetSegment(options);
+
+    if (result.contacts.length === 0) {
+      return 'No contacts match the criteria';
+    }
+
+    // CSV headers
+    const headers = [
+      'email', 'name', 'phone', 'language', 'customerType', 'lifecycleStatus',
+      'isSubscribed', 'orderCount', 'totalSpend', 'avgOrderValue', 'daysSinceOrder',
+      'lastOrderDate', 'firstOrderDate', 'frequentCategories', 'topWineries',
+      'priceRange', 'churnRisk', 'bundleMatches'
+    ];
+
+    // Build CSV rows
+    const rows = [headers.join(',')];
+
+    result.contacts.forEach(c => {
+      const row = headers.map(h => {
+        let val = c[h];
+        if (val === null || val === undefined) val = '';
+        val = String(val);
+        // Escape commas and quotes
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+      });
+      rows.push(row.join(','));
+    });
+
+    LoggerService.info(SERVICE_NAME, fnName, `Generated CSV with ${result.contacts.length} rows`);
+    return rows.join('\n');
+  }
+
+  /**
+   * Saves segment export to Google Drive.
+   * @param {Object} options - Segment options
+   * @param {string} fileName - File name (without extension)
+   * @returns {Object} { success, fileUrl, fileName, contactCount }
+   */
+  function saveSegmentExport(options = {}, fileName = null) {
+    const fnName = 'saveSegmentExport';
+    const csvContent = exportSegmentToCsv(options);
+
+    if (csvContent === 'No contacts match the criteria') {
+      return { success: false, error: 'No contacts match the criteria' };
+    }
+
+    // Generate file name if not provided
+    if (!fileName) {
+      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd-HHmm');
+      fileName = `segment-export-${timestamp}`;
+    }
+
+    // Get export folder
+    const allConfig = ConfigService.getAllConfig();
+    const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+    const exportFolder = DriveApp.getFolderById(exportFolderId);
+
+    // Create file
+    const file = exportFolder.createFile(fileName + '.csv', csvContent, MimeType.CSV);
+
+    LoggerService.info(SERVICE_NAME, fnName, `Saved segment export: ${file.getName()}`);
+
+    return {
+      success: true,
+      fileUrl: file.getUrl(),
+      fileName: file.getName(),
+      contactCount: csvContent.split('\n').length - 1 // minus header row
+    };
+  }
+
   // Public API
   return {
     clearCache: clearCache,
@@ -373,10 +681,147 @@ const CampaignService = (function () {
     upsertCampaign: upsertCampaign,
     getStats: getStats,
     importFromCsv: importFromCsv,
+    // Segment targeting
+    getTargetSegment: getTargetSegment,
+    exportSegmentToCsv: exportSegmentToCsv,
+    saveSegmentExport: saveSegmentExport,
     // Expose for testing
-    _deriveCampaignType: _deriveCampaignType
+    _deriveCampaignType: _deriveCampaignType,
+    _calculateBundleMatches: _calculateBundleMatches
   };
 })();
+
+// =============================================
+// GLOBAL FUNCTIONS FOR SEGMENT EXPORT
+// =============================================
+
+/**
+ * Export Year in Wine segment - all customers with 2025 orders.
+ * Saves CSV to exports folder.
+ */
+function exportYearInWineSegment() {
+  return CampaignService.saveSegmentExport({
+    hasOrderIn2025: true,
+    sortBy: 'totalSpend',
+    sortOrder: 'desc'
+  }, 'year-in-wine-2025');
+}
+
+/**
+ * Export Year in Wine subscribers - subscribers without 2025 orders.
+ * These get the "We don't have history with you yet" variant.
+ */
+function exportYearInWineSubscribers() {
+  return CampaignService.saveSegmentExport({
+    hasOrderIn2025: false,
+    isSubscribed: true,
+    customerType: ['prospect.subscriber', 'prospect.fresh', 'prospect.stale'],
+    sortBy: 'daysSince',
+    sortOrder: 'asc'
+  }, 'year-in-wine-subscribers');
+}
+
+/**
+ * Export Comeback segment - lapsed/dormant customers (no 2025 orders).
+ */
+function exportComebackSegment() {
+  return CampaignService.saveSegmentExport({
+    hasOrderIn2025: false,
+    lifecycleStatus: ['Lapsed', 'Dormant'],
+    sortBy: 'totalSpend',
+    sortOrder: 'desc'
+  }, 'comeback-targets');
+}
+
+/**
+ * Export Cooling segment - customers who may be at risk.
+ */
+function exportCoolingSegment() {
+  return CampaignService.saveSegmentExport({
+    lifecycleStatus: ['Cooling'],
+    sortBy: 'daysSince',
+    sortOrder: 'desc'
+  }, 'cooling-customers');
+}
+
+/**
+ * Export segment by language.
+ * @param {string} language - 'en' or 'he'
+ * @param {Object} additionalOptions - Additional filter options
+ */
+function exportSegmentByLanguage(language, additionalOptions = {}) {
+  const options = Object.assign({ language }, additionalOptions);
+  return CampaignService.saveSegmentExport(options, `segment-${language}`);
+}
+
+/**
+ * Preview a segment without saving (returns stats and first 10 contacts).
+ * @param {Object} options - Segment options
+ */
+function previewSegment(options = {}) {
+  const result = CampaignService.getTargetSegment(options);
+  return {
+    stats: result.stats,
+    sampleContacts: result.contacts.slice(0, 10).map(c => ({
+      email: c.email,
+      name: c.name,
+      type: c.customerType,
+      status: c.lifecycleStatus,
+      language: c.language,
+      spend: c.totalSpend,
+      bundles: c.bundleMatches
+    }))
+  };
+}
+
+/**
+ * Get segment counts for all major segments (dashboard overview).
+ */
+function getSegmentOverview() {
+  const allContacts = ContactService.getContacts();
+
+  // Year in Wine (2025 customers)
+  const yearInWine = allContacts.filter(c => {
+    const lastOrder = c.sc_LastOrderDate;
+    if (!lastOrder) return false;
+    const d = lastOrder instanceof Date ? lastOrder : new Date(lastOrder);
+    return d.getFullYear() === 2025;
+  });
+
+  // Subscribers without 2025 orders
+  const subscribers = allContacts.filter(c => {
+    const lastOrder = c.sc_LastOrderDate;
+    const orderedIn2025 = lastOrder && (lastOrder instanceof Date ? lastOrder : new Date(lastOrder)).getFullYear() === 2025;
+    return c.sc_IsSubscribed && !orderedIn2025 &&
+           ['prospect.subscriber', 'prospect.fresh', 'prospect.stale'].includes(c.sc_CustomerType);
+  });
+
+  // Comeback targets
+  const comeback = allContacts.filter(c => {
+    const lastOrder = c.sc_LastOrderDate;
+    const orderedIn2025 = lastOrder && (lastOrder instanceof Date ? lastOrder : new Date(lastOrder)).getFullYear() === 2025;
+    return !orderedIn2025 && ['Lapsed', 'Dormant'].includes(c.sc_LifecycleStatus);
+  });
+
+  // Cooling
+  const cooling = allContacts.filter(c => c.sc_LifecycleStatus === 'Cooling');
+
+  // Language breakdown for Year in Wine
+  const yearInWineEn = yearInWine.filter(c => (c.sc_Language || 'en').toLowerCase() === 'en');
+  const yearInWineHe = yearInWine.filter(c => (c.sc_Language || 'en').toLowerCase() === 'he');
+
+  return {
+    total: allContacts.length,
+    yearInWine: {
+      total: yearInWine.length,
+      en: yearInWineEn.length,
+      he: yearInWineHe.length
+    },
+    subscribers: subscribers.length,
+    comeback: comeback.length,
+    cooling: cooling.length
+  };
+}
 
 /**
  * Import campaigns from file in import folder.

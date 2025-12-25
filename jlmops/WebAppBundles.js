@@ -5,6 +5,97 @@
  */
 
 // =================================================================================
+// ADD NEW BUNDLE (HOT INSERT)
+// =================================================================================
+
+/**
+ * Adds a new bundle product to WebProdM and WebXltM.
+ * Simple hot insert - just registers the bundle so it can be managed.
+ * @param {string} bundleId The WooCommerce product ID
+ * @param {string} nameEn English name
+ * @param {string} nameHe Hebrew name (optional)
+ * @returns {Object} { error, data }
+ */
+function WebAppBundles_addNewBundle(bundleId, nameEn, nameHe) {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'addNewBundle';
+
+  try {
+    if (!bundleId || !nameEn) {
+      return { error: 'Bundle ID and English name are required', data: null };
+    }
+
+    LoggerService.info(serviceName, functionName, `Adding new bundle: ${bundleId} - ${nameEn}`);
+
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    // Get sheets
+    const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
+    const webXltMSheet = spreadsheet.getSheetByName('WebXltM');
+
+    if (!webProdMSheet) {
+      throw new Error('WebProdM sheet not found');
+    }
+
+    // Check if bundle ID already exists
+    const masterSchema = allConfig['schema.data.WebProdM'];
+    const masterHeaders = masterSchema.headers.split(',');
+    const mIdIdx = masterHeaders.indexOf('wpm_ID');
+
+    const masterData = webProdMSheet.getDataRange().getValues();
+    for (let i = 1; i < masterData.length; i++) {
+      if (String(masterData[i][mIdIdx] || '').trim() === String(bundleId).trim()) {
+        return { error: `Bundle ID ${bundleId} already exists in WebProdM`, data: null };
+      }
+    }
+
+    // Insert into WebProdM
+    const mTitleIdx = masterHeaders.indexOf('wpm_PostTitle');
+    const mTypeIdx = masterHeaders.indexOf('wpm_TaxProductType');
+    const mStatusIdx = masterHeaders.indexOf('wpm_PostStatus');
+
+    const newMasterRow = new Array(masterHeaders.length).fill('');
+    if (mIdIdx > -1) newMasterRow[mIdIdx] = bundleId;
+    if (mTitleIdx > -1) newMasterRow[mTitleIdx] = nameEn;
+    if (mTypeIdx > -1) newMasterRow[mTypeIdx] = 'woosb';
+    if (mStatusIdx > -1) newMasterRow[mStatusIdx] = 'publish';
+
+    webProdMSheet.appendRow(newMasterRow);
+
+    // Insert into WebXltM if available
+    if (webXltMSheet) {
+      const xltSchema = allConfig['schema.data.WebXltM'];
+      if (xltSchema) {
+        const xltHeaders = xltSchema.headers.split(',');
+        const xmOrigIdIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+        const xmTitleIdx = xltHeaders.indexOf('wxm_PostTitle');
+
+        const newXltRow = new Array(xltHeaders.length).fill('');
+        if (xmOrigIdIdx > -1) newXltRow[xmOrigIdIdx] = bundleId;
+        if (xmTitleIdx > -1) newXltRow[xmTitleIdx] = nameHe || nameEn;
+
+        webXltMSheet.appendRow(newXltRow);
+      }
+    }
+
+    LoggerService.info(serviceName, functionName, `Successfully added bundle ${bundleId}`);
+
+    return {
+      error: null,
+      data: { bundleId: bundleId, message: 'Bundle added successfully' }
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Error adding bundle: ${e.message}`, e);
+    return {
+      error: `Error adding bundle: ${e.message}`,
+      data: null
+    };
+  }
+}
+
+// =================================================================================
 // DASHBOARD DATA
 // =================================================================================
 

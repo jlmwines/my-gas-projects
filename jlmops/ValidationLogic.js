@@ -237,7 +237,7 @@ const ValidationLogic = (function() {
 
   function _executeRowCountComparison(rule, dataMaps, prebuiltMaps, sessionId) {
     const discrepancies = [];
-    
+
     // dataMaps is sheetDataCache passed from runValidationSuite
     const sourceSheetData = dataMaps[rule.source_sheet];
     const targetSheetData = dataMaps[rule.target_sheet];
@@ -246,9 +246,13 @@ const ValidationLogic = (function() {
         return { status: 'ERROR', message: `Sheet data missing for ${rule.on_failure_title}`, discrepancies: [] };
     }
 
-    // values include header row, so count is length
+    // values is data rows only (header excluded in _getSheetDataAsMap)
     const sourceRowCount = sourceSheetData.values.length;
     const targetRowCount = targetSheetData.values.length;
+
+    logger.info('ValidationLogic', '_executeRowCountComparison',
+      `Comparing ${rule.source_sheet} (${sourceRowCount} rows) vs ${rule.target_sheet} (${targetRowCount} rows)`,
+      { sessionId });
 
     if (targetRowCount < sourceRowCount) {
         discrepancies.push({

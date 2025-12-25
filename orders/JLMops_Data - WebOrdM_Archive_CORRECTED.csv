@@ -1,0 +1,729 @@
+woma_OrderId,woma_OrderNumber,woma_OrderDate,woma_Status,woma_CustomerNote,woma_BillingFirstName,woma_BillingLastName,woma_BillingEmail,woma_BillingPhone,woma_ShippingFirstName,woma_ShippingLastName,woma_ShippingAddress1,woma_ShippingAddress2,woma_ShippingCity,woma_ShippingPhone,woma_CouponItems
+7715,7715,2022-01-18 12:29:05,completed,,Bernard,Spolsky,bsposlky@gmail.com,524218146,Bernard,Spolsky,4 Nili Street,Apt 7,,Jerusalem,code:shipfree|amount:0.00
+8206,8206,2022-02-08 16:28:00,completed,,Theodore,Seitles,tseitles@gmail.com,525599055,Theodore,Seitles,Derech HaPark 23,Apt 75,,Netanya,
+8417,8417,2022-02-15 15:18:44,completed,,Yonah,Wahrhaftig,yonah@wahrhaftig.net,586684410,Yonah,Wahrhaftig,Sion 63,,,Katzrin,code:shipfree|amount:0.00;code:welcome10|amount:44.03
+8586,8586,2022-02-17 16:28:00,completed,8 th floor- ring apartment for access,Dennis,Hooton,dhooton2013@gmail.com,8169414187,Hadas,Gold,Abs Eban 8,Apartment 31,,Jerusalem,
+8809,8809,2022-02-21 18:27:04,completed,Please deliver this Wednesday February 23 to Aaron Friedman in Efrat. This is a gift so no receipt please.,Elan,Mosbacher,elanmosbacher@gmail.com,773-888-3526,Aaron,Friedman,Ha'Aluma 2/6,,,Efrat,code:shipfree|amount:0.00
+9119,9119,2022-03-07 14:38:13,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Sabina,Alush,Nahmani 19,,,Tel Aviv,code:luckyme|amount:9.83
+9125,9125,2022-03-10 12:49:28,completed,,Tarisai,Mhembere,tari@ninety9digital.com,814821485,Liron,Avraham,Yasha Hefetz 12,Apartment 10.6967236,,Tel Aviv,
+9126,9126,2022-03-10 13:01:30,completed,,Tarisai,Mhembere,tari@ninety9digital.com,814821485,Lior,Elharar,Derech Menachem Begin 160,Apartment 192,,Tel Aviv,
+9130,9130,2022-03-13 17:02:45,completed,,Yakov,Shuchatowitz,ysshucha1@gmail.com,18184003406,Yakov,Shuchatowitz,Dor Dor Ve Dorshav 7A,Building 5 First floor,,Jerusalem,code:shipfree|amount:0.00
+9131,9131,2022-03-13 17:51:46,completed,,יהודה,וועג,yehudaveg@gmail.com,972549770561+,שלמה,וועג,התאנה 4/11,,,קרית מלאכי,
+9145,9145,2022-03-14 16:24:14,completed,,נוי,מורדקוביץ,Noy@mordekovitch.co.il,544949323,נוי,מורדקוביץ,לייב יפה 24,4,,ירושלים,code:shipfree|amount:0.00
+9148,9148,2022-03-18 1:15:35,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Shilat,Anaki,Emunim 11,,,Ofra,
+9150,9150,2022-03-21 21:47:52,cancelled,,ISI,BODENSTEIN,isibodenstein@gmail.com,972544332604,ISI,BODENSTEIN,NEHARDEA 5,81,,TEL AVIV,code:shipfree|amount:0.00
+9157,9157,2022-03-24 11:56:55,completed,,David,Yammer,dymailers@gmail.com,545511913,David,Yammer,9 Mordechai HaYehudi Street,,,jerusalem,code:shipfree|amount:0.00
+9248,9248,2022-03-29 18:44:21,completed,We will be at this apartment starting April 7 if it can be delivered between that date and April please.516-455-4822 (Whatsapp),Arnold,Waldman,dklein143@gmail.com,5163164234,Arnold,Waldman,11 dor dor vedorshav,Second floor right door,,Jerusalem,code:shipfree|amount:0.00
+9256,9256,2022-04-04 11:32:55,completed,Please ask front desk of hotel to take the gift to Ohad Gabay room.,Roxanne,Matthee,roxannematthee@gmail.com,33763946416,Beverly & Ohad,GABAY,"King David St 7,",,,Jerusalem,
+9257,9257,2022-04-06 18:11:28,completed,,Mark,Notis,marknotis@gmail.com,6104398163,Ricki and Meir,Dardashti,Shalmon Street 17/7,,,Tzur Hadassah,code:shipfree|amount:0.00
+9262,9262,2022-04-07 16:00:35,completed,,Robin,Greenspan,robingreenspan@gmail.com,3106399780,Robin,Greenspan,Rashi 6,,,Ganei Modiin,code:welcome10|amount:61.03
+9263,9263,2022-04-08 14:26:45,cancelled,,ודאג,דחגטאג,merg@gmail.com,524888795,ודאג,דחגטאג,טשרניחובסקי,,,Jerusalem,
+9265,9265,2022-04-11 16:54:45,completed,Before Pesach,Benjamin,Zaslow,bccentral6@gmail.com,972537087264,Ben & Chana,Zaslow,30 Ze’ev Jabotinsky,,,Jerusalem,code:shipfree|amount:0.00
+9266,9266,2022-04-19 20:24:24,completed,,Avraham,Tate,avrahamtate@gmail.com,4047891660,Avraham,Tate,Nachal Dolev 60 Apartment 14,,,Bet Shemesh,code:shipfree|amount:0.00
+9267,9267,2022-04-20 22:02:54,completed,,בתשבע,קוטובסקי,ba7826@gmail.com,549419545,בתשבע,קוטובסקי,אצ״ל 4/4,,,ירושלים,code:shipfree|amount:0.00
+9350,9350,2022-04-29 16:20:05,completed,,Chaya,Feldman,chaichka@hotmail.com,506656156,Chaya,Feldman,Bar kokhva,7/29,,Jerusalem,
+9417,9417,2022-05-02 18:08:50,completed,,אהרון,מרדכי,arikmo@gmail.com,524642087,אהרון,מרדכי,ינובסקי דניאל,17/4,,ירושלים,code:shipfree|amount:0.00
+9479,9479,2022-05-11 16:48:46,completed,,Ayala,Young,ayala.young@gmail.com,527721838,Ayala,Young,113 Derech Hevron,Apt 6,,Jerusalem,
+9481,9481,2022-05-13 9:25:19,cancelled,,Rafy,David,ravfydav@yahoo.com,052-866-2725,Rafy,David,Ibn Shaprut 16,,052-866-2725,Jerusalem,code:shipfree|amount:0.00
+9560,9560,2022-05-17 20:09:11,completed,,ויויאן,ברזל,aviva972@gmail.com,546369244,ויויאן,ברזל,הרב ברלין 47 פינת נילי,5 . קומה 2,,ירושלים,code:shipfree|amount:0.00
+10541,10541,2022-06-16 13:07:48,completed,,Adam,Peters,adampeters@gmail.com,6138624524,Tami,Goldberg,Hadagan 8B,,,Efrat,code:shipfree|amount:0.00
+10884,10884,2022-06-23 16:20:01,completed,,Chia,Samson,chiasamson@gmail.com,97225712858,Chia,Samson,Balfour 21,,,Jerusalem,code:shipfree|amount:0.00
+11038,11038,2022-07-07 16:08:12,completed,Each bottle should be delivered to a different person - the 1848 reserve Cabernet Sauvignon should be delivered to Michael Alpern. Please attach a gift card to each bottle with the recipients name. The Flam noble to Zohar Alpern (I’ve written the card message above) and the Adir Winemaker goes to Aidan Alexander.They can be dropped at reception to be delivered to the room of Zohar and Hayley Alpern.,Tracy,Alexander,tracyalexander@live.com.au,972 2 5011555,Tracy,Alexander,"54 Hanevi'im Street - 9514109 Jerusalem, Israel","Villa Hotel Brown, Jerusalem",,Jerusalem,code:shipfree|amount:0.00
+11039,11039,2022-07-08 22:47:03,completed,,נעמי,בוביס,naomi.bubis@gmail.com,544839049,נעמי,בוביס,בודנהיימר 14,,,תל אביב,code:shipfree|amount:0.00
+11066,11066,2022-07-10 16:57:02,completed,,הדס,רוזן,rosenneh@netvision.net.il,545957687,הדס,רוזן,גבעת ישעיהו 139,,,גבעת ישעיהו,
+11073,11073,2022-07-11 15:39:37,completed,,Rachel,Alexenicer,rach220571@gmail.com,44795728829,Stephen,Joseph,kehilat safed,"1, Vert Lagoon Hotel",,Netanya,
+11074,11074,2022-07-12 11:31:16,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+11113,11113,2022-07-12 18:00:30,completed,,מוישי,קולטון,myk770@gmail.com,052-387-3383,מוישי,קולטון,רמבן 39,דירה 3,,ירושלים,code:shipfree|amount:0.00
+11162,11162,2022-07-14 23:51:44,cancelled,,Elliott,Smus,elismu1@gmail.com,547935361,Elliott,Smus,Bar Giora 25,4,,Tel Aviv,
+11163,11163,2022-07-14 23:55:59,completed,,Elliott,Smus,elliott.smus@zesty.co,547935361,Elliott,Smus,Bar Giora 25,4,,Tel Aviv,
+11189,11189,2022-07-19 17:34:52,completed,"משה דיין 42 , רמת גן , דירה 12 קומה 3. תודה רבה",Ori,Adir,oriadir@gmail.com,972544299839,Ori,Adir,Moshe Dayan 42,Apartment 12,,Ramat gan,code:shipfree|amount:0.00
+11352,11352,2022-07-26 15:40:33,completed,,J,Shapiro,jshapiro18@gmail.com,#ERROR!,J,Shapiro,10 Magshimim St,,,Chibat Tzion,
+11543,11543,2022-07-28 1:50:43,completed,,Jonathan,Nevo Junowicz,meschool@cisco.com,972 54-227-1839,Jonathan,Nevo Junowicz,Vilensky Moshe 49/1,,,Tel Aviv,
+11918,11918,2022-08-04 19:50:03,completed,,Joshua,Kruger,kruger.joshua@gmail.com,508946493,Ari,Benson,70 Binyamin,,,Modiin,
+11922,11922,2022-08-09 20:47:02,completed,Thank you for everything!!,Shoshana,Shapiro,shoshshapiro@gmail.com,585789402,Rochelle,Shapiro,הגואל 4,,,אפרת,
+11928,11928,2022-08-11 21:33:59,completed,,Adam,Jacobs,adam_jacobs7@yahoo.com.au,61402344689,,,,,,,
+12353,12353,2022-08-18 16:43:51,completed,,Bob,Dale,daleb47@gmail.com,537924388,Bob,Dale,1 Klein,Apt 27,,Jerusalem,
+12369,12369,2022-08-20 23:26:04,completed,Leave with hotel reception for room 1209.,Eli,Daiches,eli@elidaiches.com,12153808089,Eli,Daiches,HaYarkon St 145,Room 1209,,Tel Aviv,code:shipfree|amount:0.00
+12371,12371,2022-08-29 14:48:29,completed,Don't let the invoice with the delivery. This is a gift,Dan,Drai,danieldrai@hotmail.com,33620547982,Dr Alain,Hazan,Hahoshlim St 8,,,Herzlya Pituach,
+12372,12372,2022-08-29 17:04:33,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+12373,12373,2022-08-30 12:40:13,completed,,Chaim,Elata,elata@bgu.ac.il,528915551,Chaim,Elata,Shemaryahu Levin 78,1,,Jerusalem,
+12377,12377,2022-09-01 12:52:05,completed,"Please delivery on Monday September 5 in the morning. if later, please call Pablo to arrange a time.",Vanessa,Fisher,vanessa.fisher@cg-med.com,529533087,Pablo,Tittel,Barkan 140,,,Hadid,
+12379,12379,2022-09-04 13:21:58,completed,"אביתר, כפי שסוכם בנינו - אני רוצה לרכוש 5 בקבוקי יין פלוט 98 סומק, וכמובן לקבל גם את ההטבה למשלוח בחינם מעל רכישה של 399 ש""ח",אורן,לוי,orenltd2@013net.net,586245964,אורן,לוי,"""אורן אקוסטיקה"" בע""מ רחוב העמקים 6, ת.ד. 327",,,טבריה,
+12386,12386,2022-09-11 11:05:40,completed,,Esther,Garfinkel,esthergarf@gmail.com,544278705,Esther,Garfinkel,27a Hayasmin St.,,,Beit Shemesh,code:shipfree|amount:0.00
+12415,12415,2022-09-12 14:49:21,completed,,אסף,שמואלי,mcshmueli@gmail.com,546699308,אסף,שמואלי,שושן צחור 12,5,,מודיעין,code:shipfree|amount:0.00
+12416,12416,2022-09-12 23:48:07,completed,,Yakov,Shuchatowitz,ysshucha1@gmail.com,18184003406,Yakov,Shuchatowitz,Dor Dor Ve Dorshav 7A,Building 5 First floor,,Jerusalem,code:shipfree|amount:0.00
+12419,12419,2022-09-14 4:55:05,cancelled,,maria,tite,Mariapogi1020@gmail.com,9876566755,,,,,,,
+12420,12420,2022-09-14 4:14:40,completed,,מוישי,קולטון,myk770@gmail.com,052-387-3383,מוישי,קולטון,אבן עזרא 26,קומת כניסה דלת ימין,,ירושלים,code:shipfree|amount:0.00
+12421,12421,2022-09-15 4:08:31,completed,,Bob,Dale,daleb47@gmail.com,537924388,Bob,Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+12422,12422,2022-09-15 21:43:51,completed,,דוד,ליאור,lior989@gmail.com,502036473,דוד,ליאור,יהלום 24,,,עלי,code:shipfree|amount:0.00
+12423,12423,2022-09-15 20:00:54,completed,,Chana,Mockin,chanymo@yahoo.com,5854614679,Diane and joel,Seiferas,9 Nili,#4,,Jerusalem,
+12426,12426,2022-09-16 15:38:06,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Yehuda,Anaki,Emunim 11,,,Ofra,
+12427,12427,2022-09-18 20:36:50,completed,delivery on the afternoon of September 29th. we communicated by whatsapp. i will send confirmation number by whatsapp to confirm. Also - how do i get VAT receipt?,Jonathan,Gdanski,Jongdanmb@gmail.com,17869993422,Jonathan,Gdanski,15 Rechov Parush,1st Floor,,Jerusalem,code:shipfree|amount:0.00
+12430,12430,2022-09-21 17:07:26,completed,,Jill,Burwell,jburwell@rosenblumcompanies.com,5188699302,Marc,Semel,"47 Mitzpeh Street, Apt 3",,,Jerusalem,
+12431,12431,2022-09-21 18:57:43,completed,,Jonathan,Grauman,jonathan.grauman@gmail.com,4165640884,Raphi,Schorr,Reuven 18,,,Jerusalem,
+12433,12433,2022-09-21 21:33:27,completed,,Yehuda,Fried,rf180@hotmail.com,58787043,Yehuda,Fried,Narkis 41,3,,Jerusalem,code:rf180|amount:44.10;code:shipfree|amount:0.00
+12434,12434,2022-09-22 11:40:03,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+24400,24400,2022-02-02 12:08:55,cancelled,,rakesh,jha,rjha4382@gmail.com,7210094652,rakesh,jha,fsdf,fgfgfdg,,fgfgfg,
+24403,24403,2022-02-17 7:22:39,cancelled,,joel,Torras,torras.crespo@gmail.com,674330532,joel,Torras,cami camp de futbol s/n,,,vallgorguina,
+24413,24413,2022-04-26 20:15:17,cancelled,,Fatih,Karatepe,fatihkaratepe92@gmail.com,5555555555,Fatih,Karatepe,Ankara,,,Ankara,
+24427,24427,2022-08-17 8:09:22,cancelled,,test,testb,test@test.com,123654789,test,testb,856 test test,,,hanoi,
+24438,24438,2023-04-07 9:43:47,cancelled,,io,ioi,g@g.it,255555555,io,ioi,ioio,oio,,fier,
+24443,24443,2023-10-31 14:07:19,cancelled,,Lukas Nghimufe,Kushinga,lkushinga@gmail.com,814025789,Lukas Nghimufe,Kushinga,Johan Albrecht Street,,,Windhoek,
+52384,52384,2022-09-25 6:34:57,completed,,Jonathan,Grauman,jonathan.grauman@gmail.com,4165640884,Gary,Leibler,Gidon 4a,,,Jerusalem,
+52388,52388,2022-09-30 3:22:13,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Benjy,Hirsch,Rechov Yahalom 7,,,Yishuv Chashmonaim,
+52391,52391,2022-10-02 21:00:48,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+52392,52392,2022-10-03 10:21:21,completed,,Daniel,Reanick,daniresnick@gmail.com,532769310,Dani,Resnick,Rabbi Avraham Shapiro 30,4,,Beit Shemesh,code:shipfree|amount:0.00
+52411,52411,2022-10-04 15:12:17,completed,,Chaim,Landau,clandau@gmail.com,9176484060,Liran,Yemini,Aluf HaRav Goren St 77,4b,,Rosh Haayin,code:shipfree|amount:0.00
+52412,52412,2022-10-07 13:15:50,completed,,Paul,Siegel,pdsiegel@gmail.com,543197355,Paul,Siegel,16/5 Netzach Yerushalyim,,,Efrat,code:shipfree|amount:0.00
+52414,52414,2022-10-08 8:23:09,completed,,רונן,חדש,ronen@amirim-p.com,546827772,רונן,חדש,שחם 23,,,שוהם,code:shipfree|amount:0.00
+52424,52424,2022-10-25 16:56:34,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+52425,52425,2022-10-26 14:03:03,completed,,יוליה,אוסטינובה,yulia@bgu.ac.il,544640147,רות,ג'יניאו,החלוץ 41א,,,ירושלים,
+52443,52443,2022-11-03 16:45:15,completed,,Gabriel,Trajtenberg,gabriel@terceracultura.org,5491144486400,Menachem,Nadler,Haarbel 12 Pardesiya,,,Pardesiya,code:shipfree|amount:0.00
+52445,52445,2022-11-04 14:33:54,completed,,Bob,Dale,daleb47@gmail.com,537924388,Bob,Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+52553,52553,2022-11-14 16:06:52,completed,,יקטרינה,יאנדוגנובה,ekatyand@gmail.com,507267954,יקטרינה,יאנדוגנובה,כורש 14,17,,ירושלים,code:shipfree|amount:0.00
+52554,52554,2022-11-14 16:34:03,completed,,יוחנן,מונטניה,montagneyohanan@gmail.com,505882343,יוחנן,מונטניה,הנגב,96,,עתניאל,code:shipfree|amount:0.00
+52557,52557,2022-11-15 11:19:15,completed,if not home please put on front porch,Robin,Greenspan,greenspanavrohom@gmail.com,3105372160,Robin,Greenspan,Rashi 6,,,Ganei Modiin,code:shipfree|amount:0.00
+52559,52559,2022-11-16 14:24:04,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Zylberbeg,Family,Nahar HaYarden 3,,,Bet Shemesh,code:shipfree|amount:0.00
+52560,52560,2022-11-16 20:54:38,completed,,יקטרינה,יאנדוגנובה,ekatyand@gmail.com,507267954,יקטרינה,יאנדוגנובה,כורש 14,17,,ירושלים,
+52614,52614,2022-11-21 14:14:13,completed,,גרי,שורץ,shlomitgeri@gmail.com,526759200,גרי,שורץ,ז'בוטינסקי 10 קרית אונו,הגדר האפורה,,קרית אונו,code:shipfree|amount:0.00
+52617,52617,2022-11-24 11:33:16,completed,,Irina,Iakunina,irina86yak@gmail.com,548007342,Irina,Iakunina,Ishak Sadeh 4,13,,Bat Yam,
+52640,52640,2022-11-25 23:00:57,completed,,SETH,PIERREPONT,psekhon@iconiqcapital.com,2045760408,GILI,RANAAN,"5 Hamafteach Street, Michmoret",,,TEL AVIV - YAFO,
+52641,52641,2022-11-25 23:07:52,completed,,SETH,PIERREPONT,psekhon@iconiqcapital.com,2045760408,EDEN,SHOCHAT,32 Rothschild Blvd,,,TEL AVIV - YAFO,
+52642,52642,2022-11-25 23:12:47,completed,,SETH,PIERREPONT,psekhon@iconiqcapital.com,2045760408,ADAM,FISHER,"Sarona Templar Complex, Rav Aluf David Elazar St 19",,,TEL AVIV - YAFO,
+52643,52643,2022-11-25 23:17:50,completed,,SETH,PIERREPONT,psekhon@iconiqcapital.com,2045760408,AVI,SHUA,Tushiya St 3,,,TEL AVIV - YAFO,
+52644,52644,2022-11-25 23:21:21,completed,,SETH,PIERREPONT,psekhon@iconiqcapital.com,2045760408,AMIT,KARP,"Sarona Templar Complex, Rav Aluf David Elazar St 19",,,TEL AVIV - YAFO,
+52653,52653,2022-11-29 12:03:31,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+53014,53014,2022-11-30 11:53:58,completed,,David,Bokrossy,airtime_doable0k@icloud.com,-5464,Kobi,Shamama,"3 & 5 Sapir St, Ampa building","GR, MZ and 4th Floors",,Tel Aviv,
+53021,53021,2022-11-30 15:04:30,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+53030,53030,2022-11-30 16:25:15,completed,,D,Weinman,radatz@gmail.com,447956238527,Zalman & Risa,Klyne,11 Benjamin Disraeli St,,,Jerusalem,
+53078,53078,2022-12-05 23:19:04,completed,,Robin,Greenspan,greenspanavrohom@gmail.com,3105372160,avrohom,Greenspan,Rashi 6,,,Ganei Modiin,code:shipfree|amount:0.00
+53089,53089,2022-12-07 22:41:00,completed,Discount on wine please,Merrill,Weber,merrillweber@gmail.com,058-406-2386,Merrill,Weber,Rehov Dostai 3/2,,,Jerusalem,code:shipfree|amount:0.00
+53147,53147,2022-12-13 11:59:48,completed,,Graeme,Marchbank,emily.b@smyle.co.uk,1992535535,Graeme,Marchbank,11 Yehiel Paldi Street,,,Rehovot,
+53164,53164,2022-12-14 23:36:16,completed,,Katie,Windsor,katie.w@smyle.co.uk,1992535535,Oren,Sela,11 Yehiel Paldi Street,,,Rehovot,
+53167,53167,2022-12-15 11:49:36,completed,,Henri,van der Vegte,vandervegte@gmail.com,31611341746,Sivan,Ivgi,Frishman 57,6,,Tel Aviv,
+53168,53168,2022-12-15 11:54:59,completed,,Henri,van der Vegte,vandervegte@gmail.com,31611341746,Efrat,Levav,3/2 Arbel Street,,,Yokneam Elit,
+53169,53169,2022-12-15 12:00:17,completed,,Henri,van der Vegte,vandervegte@gmail.com,31611341746,Lila,Yusupov,Sokolov 47/5,,,Qiryat Ata,
+53170,53170,2022-12-15 14:27:21,completed,"Hi, I met you a while back at Levi Margolin's, when you made a delivery to him. I believe I've seen you at Chabad in Arnona and that you live around the corner from me.",Mitchell,Nathanson,1812smn@gmail.com,054-6741789,Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+53172,53172,2022-12-15 17:35:34,completed,The company name is Kipp and they are based in the Powerball offices.,Augmentum,Fintech,georgie@augmentum.vc,447980744171,Chanan,Lavi,Maskit 4 Hertzelia,Powerball,,Tel Aviv,
+53173,53173,2022-12-15 17:53:41,completed,,Augmentum,Fintech,georgie@augmentum.vc,447980744171,Joseph,Seroussi,Yigal Alon 114,WeWork 14th Floor,,Tel Aviv,
+53177,53177,2022-12-16 17:29:55,completed,,Lauren,Miller,l.miller@brightsmithgroup.com,447464095420,Avital,Michael-Meyer,"Yosef Karo St 14,",Level 3,,Tel Aviv-Yafo,
+53178,53178,2022-12-16 17:59:39,completed,,Lauren,Miller,l.miller@brightsmithgroup.com,447464095420,Kobi,Eisenberg,"Yosef Karo St 14,",Level 3,,Tel Aviv-Yafo,
+53179,53179,2022-12-16 23:20:37,completed,,Robert,Greeson,beverly.pizzurro@nortonrosefulbright.com,254.855.0558,Noa,Rosenberg-Segalovitz,Professor Racah St,Building 5.4,,Jerusalem,
+53190,53190,2022-12-20 10:32:09,completed,,Mark,Katz,jactique@hotmail.com,9175433196,Ari,rubin,Etzyon Gaver 2,Apt 3,,Jerusalem,code:shipfree|amount:0.00
+53201,53201,2022-12-21 12:19:24,completed,,Joseph,Heller,joe@mtalx.com,#ERROR!,Arie,Benjamin,HaYozma St 9,,,Ashdod,
+53202,53202,2022-12-21 12:23:10,completed,,Joseph,Heller,joe@mtalx.com,#ERROR!,Alon,Vecselberg,Kiryat Haplada 21104,,,Akko,
+53203,53203,2022-12-21 12:32:46,completed,,Joseph,Heller,joe@mtalx.com,#ERROR!,Ilia,Tsilov,Kroitzer 12,Maklef-BCL,,Beer Sheva,
+53250,53250,2022-12-29 11:09:06,completed,,Konstantinos,Chelakis,k.chelakis@kaizengaming.com,0030 6945507449,Shani,Sheleg,Ha-Shlosha St 2,34th floor,,Tel Aviv-Yafo,code:shipfree|amount:0.00
+53371,53371,2023-01-09 17:04:46,completed,,Daniel,Rabin,dhershel@gmail.com,585994240,Daniel,Rabin,Prof. Aharon Ciechanover 3,Apt 14,,Rehovot,code:shipfree|amount:0.00
+53429,53429,2023-01-10 11:06:33,completed,,Aaron,Inlender,aaron@inlender.net,584099487,Aaron,Inlender,Alterman 18,,,Raanana,code:shipfree|amount:0.00
+53431,53431,2023-01-10 15:14:40,completed,,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:53.72
+53437,53437,2023-01-11 15:41:53,completed,Please gift wrap with the incidentals included on your website for a gift.,Sandra,Teplinsky,kteplinsky1@earthlink.net,7142812880,Sandra,Teplinsky,Harkabi 6,3,,Jerusalem,
+53441,53441,2023-01-15 15:01:47,completed,,Aaron,Hershtal,ahershtal@gmail.com,053-472-8812,Aaron,Hershtal,39 gimmel Yigal alon,,,Zichron Yaakov,code:fivesix|amount:123.97
+53445,53445,2023-01-16 11:20:36,completed,,Andy,Kaye,donna.winston@ourcrowd.com,587695950,Stanley,Hirsch,28 Derech Hevron,,,Jerusalem,
+53459,53459,2023-01-22 9:36:30,completed,,Robert,Dale,daleb47@gmail.com,537924388,Robert,Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+53482,53482,2023-01-29 18:56:08,completed,Please make sure Shana is home to accept delivery. Thanks - Mitchell,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+53483,53483,2023-01-30 21:28:51,completed,Call me and I will come down to the driver and collect,Adam,Goldberger,ajgoldberger@gmail.com,533028883,Adam,Goldberger,Hamarpe 3,,,Jerusalem,code:shipfree|amount:0.00
+53876,53876,2023-02-02 12:01:05,completed,,יעקב,אבוביץ,sr2031999@gmail.com,533149243,יעקב,אבוביץ,מבוא הגומא 10,21,533149243,אשדוד,code:shipfree|amount:0.00;code:testfree|amount:0.00
+53927,53927,2023-02-21 11:37:27,completed,,יעקב,פרקש,ravpeami@gmail.com,527633632,יעקב,פרקש,מיכאל 51,קומת כניסה,,חיפה,code:shipfree|amount:0.00
+53931,53931,2023-02-21 13:47:35,completed,,Yakov,Shuchatowitz,ysshucha1@gmail.com,18184003406,Yakov,Shuchatowitz,Dor Dor Ve Dorshav 7A,Building 5 First floor,,Jerusalem,code:shipfree|amount:0.00
+53972,53972,2023-03-01 16:29:21,completed,#3131 to buzz in,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:58.76
+53973,53973,2023-03-01 20:27:16,completed,,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Joel and Ruthie,Portnoi,Rachel Imenu Katamon 48,Ground Floor,,Jerusalem,code:shipfree|amount:0.00
+53994,53994,2023-03-02 22:24:07,completed,,מנחם,סיטבון,menisitb@gmail.com,545974660,מנחם,סיטבון,רחוב אבן ספיר 22,8,,ירושלים,code:shipfree|amount:0.00;code:welcome10|amount:115.04
+54021,54021,2023-03-03 15:37:17,cancelled,La Multi ani 2023 to be under name TEOFIL . Thank you.,Andrei,Mircevi,deejay_andreas@yahoo.com,7770878395,Teofil,Tiganiuc,Los Angeles 1101,13,,Eilat,
+54026,54026,2023-03-05 22:43:05,completed,Please switch the 2 moscatos for techinah and honey,Hirsch,Simins,zvisimins@gmail.com,8454996273,סבתא וסבא,סימינס,רשב״א 18,,,ירושלים,
+54031,54031,2023-03-06 21:39:53,completed,,David,BenHaim,besalel@gmail.com,9174999200,Ira,Lipsius,3 Mevo Knesset Mordechai,Apartment 9,,Jerusalem,code:shipfree|amount:0.00
+54036,54036,2023-03-09 17:08:37,completed,,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+54118,54118,2023-03-16 2:13:56,completed,They are on the top floor,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Ari,Leblanc,12 ushiskin Jerusalem 94548,Top Floor,,Jerusalem,code:shipfree|amount:0.00
+54166,54166,2023-03-19 12:35:43,completed,,Robin,Greenspan,greenspanavrohom@gmail.com,527809637,AVROHOM,GREENSPAN,RASHI 6,,052-780-9637,GANEI MODIIN,code:ksb8|amount:102.36
+54167,54167,2023-03-19 15:39:25,completed,,Adam,Goldberger,ajgoldberger@gmail.com,533028883,Adam,Goldberger,Migdal Eder 11,,,Alon Shvut,code:shipfree|amount:0.00
+54198,54198,2023-03-21 10:19:01,completed,,Rachamim,Raymond,rr5807@gmail.com,527637418,Rachamim,Raymond,13/19 Rechov Chizkiyahu Shabtai,Ramot,,Jerusalem,code:fivesix|amount:30.00
+54206,54206,2023-03-22 9:05:17,completed,,Ari,Kellman,akellman@gmail.com,584013666,Ari,Kellman,HaArbel 9B,,,Hashmonaim,code:shipfree|amount:0.00
+54253,54253,2023-03-24 16:53:42,completed,,mor,katav nakache,morkatav95@gmail.com,545611734,mor,katav nakache,שפירא 2 באר יעקב,2 דירה 57 קומה 12,,באר יעקב,code:shipfree|amount:0.00
+54256,54256,2023-03-26 12:56:58,completed,Parking is on Kedoshe Saloniki,Rachel,Gittleman,rachelgittleman@gmail.com,534236928,Rachel,David,Derech Hebron 93,8,,Jerusalem,code:shipfree|amount:0.00;code:ksb8|amount:103.88
+54257,54257,2023-03-26 13:15:27,completed,#3131 door code - Fourth floor,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:43.68
+54269,54269,2023-03-29 0:06:39,completed,Please ensure this is wrapped and presented as a gift. Thank you so much,Mark,Diamant,avi@jkaraoke.com,447957435789,Yidele,Yidele,28 Miryam Hanevia,Apartment 26,,Bet Shemesh,
+54273,54273,2023-03-29 22:53:55,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+54274,54274,2023-03-29 23:04:12,completed,,josh,yablon,josh@3opinions.net,2122093862,Danon,Family,Ben Gurion 7,Apt 11,,Ra'anana,code:shipfree|amount:0.00
+54275,54275,2023-03-29 23:28:52,completed,,josh,yablon,josh@3opinions.net,2122093862,Chaim,Bibas,19 Ha'Arbaa St.,,,Tel Aviv,code:shipfree|amount:0.00
+54276,54276,2023-03-29 23:40:18,completed,,josh,yablon,jyablon@wmeagency.com,2122093862,Ya'ari,Family,Levi Eskol 4,,,Herzliya Pituach,
+54277,54277,2023-03-30 10:53:26,cancelled,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+54278,54278,2023-03-30 14:08:10,completed,"There are 4 bottles of wine to be sent to 4 different recipients in the building. Please make sure each bottle is gift wrapped separately and sent with a note saying:ליאת היקרהחג שמח לך ולמשפחתך!מאחלים,OurCrowdחן היקרהחג שמח לך ולמשפחתך!מאחלים,OurCrowdקטיה היקרהחג שמח לך ולמשפחתך!מאחלים,OurCrowdאור רן היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowd",Andy,Kaye,donna.winston@ourcrowd.com,587695950,Clal,"Liat Hazut, Chen Koton, Katya Zbar, Or Ran",Kiryat Atidim - 36 Raoul Wallenberg Street,"Building 8, 27th floor",,Tel Aviv,code:fivesix|amount:27.35
+54279,54279,2023-03-30 14:27:10,completed,,Andy,Kaye,donna.winston@ourcrowd.com,587695950,Nir,Ovadia,"עמיתים קרנות הפנסיה הוותיקות, ת.ד. 7280",,,תל אביב,code:ak5|amount:6.84
+54280,54280,2023-03-30 14:32:06,completed,,Andy,Kaye,donna.winston@ourcrowd.com,587695950,Nir,Moroz,"בית מנורה מבטחים, זאב-זבוטינסקי 23",,,רמת-גן,code:ak5|amount:6.84
+54281,54281,2023-03-30 14:42:43,completed,"ברוך הירש 14, בני ברק - קומה 1משלוח דואר: ת.ד 2442 בני ברק, 5112302There are 3 bottles to be gift wrapped separately and given to 3 different recipients. Please add a gift note written below to each of the recipients:אבי היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowdגיא היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowdזיו היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowd",Andy,Kaye,donna.winston@ourcrowd.com,587695950,Meitav Dash,"Avi Berkovich, Guy Mani, Ziv Tetruk",משלוח דואר: ת.ד 2442,,,בני ברק,code:shipfree|amount:0.00;code:ak5|amount:20.51
+54282,54282,2023-03-30 14:54:55,completed,"There are 3 bottles to be gift wrapped separately and given to 3 different recipients. Please add a gift note written below to each of the recipients:ארז היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowdרוני היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowdניר היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowd",Andy,Kaye,donna.winston@ourcrowd.com,587695950,Migdal,"Erez Migdali, Ronny Zakai, Nir Ginsberg",היצירה 2,,,פתח תקוה,code:shipfree|amount:0.00;code:ak5|amount:20.51
+54283,54283,2023-03-30 15:20:04,completed,"There are 2 bottles to be gift wrapped separately and given to 2 different recipients. Please add a gift note written below to each of the recipients:חנן היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowdגל היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowd",Andy,Kaye,donna.winston@ourcrowd.com,587695950,Phoenix,"Hanan Vaknin, Gal Marom",דרך השלום 53,בניין פניקס,,גבעתיים,code:ak5|amount:13.68
+54284,54284,2023-03-30 15:24:47,completed,"There are 2 bottles to be gift wrapped separately and given to 2 different recipients. Please add a gift note written below to each of the recipients:לאה היקרהחג שמח לך ולמשפחתך!מאחלים,OurCrowdלב היקרחג שמח לך ולמשפחתך!מאחלים,OurCrowd",Andy,Kaye,donna.winston@ourcrowd.com,587695950,Altshuler,"Lea Preminger, Lev Rivkov",הברזל 19א,,,תל אביב,code:ak5|amount:13.68
+54285,54285,2023-03-30 16:24:25,completed,,מריה,אוסיפוביץ,osipovich27@gmail.com,543087636,מריה,אוסיפוביץ,אסף 15,29,,רמת גן,
+54290,54290,2023-03-30 20:39:55,completed,Any time before Pesach. Chag Sameach!,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana and Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+54291,54291,2023-04-02 16:55:20,completed,,Hugh,Bauer,hughbauer@gmail.com,538502641,David and Rene,Kretzmer,15 Hahar Street,,,Kochav Yair,
+54293,54293,2023-04-03 14:21:08,completed,,Lisa,Lowe,denkermom@gmail.com,2162335693,David,Denker,David Shimoni 4,30,,Jerusalem,code:shipfree|amount:0.00
+54294,54294,2023-04-03 17:35:28,completed,,Alan,Adlerstein,akiva02@gmail.com,4917645892985,"הרה""ג משה מרדכי","פרבשטיין שליט""א",רחוב משאת משה 3,,,ירושלים,code:shipfree|amount:0.00
+54297,54297,2023-04-03 20:36:25,completed,Please deliver before Passover.,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,code:shipfree|amount:0.00
+54300,54300,2023-04-10 9:56:52,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,5 Mota gur,Apt 11,,Herzliya,
+54308,54308,2023-04-13 19:04:45,completed,,Brent,Belzberg,belzberg@torquest.com,4165610004,Franck,Azoulay,Tzemah bar 408,P0 box 114,,Kfar Adumin,code:shipfree|amount:0.00
+54360,54360,2023-04-18 19:37:15,completed,,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana and Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+54380,54380,2023-04-19 15:44:18,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+54383,54383,2023-04-20 15:01:42,completed,,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana and Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,
+54387,54387,2023-04-21 12:16:53,completed,,Yakov,Shuchatowitz,ysshucha1@gmail.com,18184003406,Yakov,Shuchatowitz,Dor Dor Ve Dorshav 7A,Building 5 First floor,,Jerusalem,code:shipfree|amount:0.00
+54388,54388,2023-04-23 12:10:06,completed,,ענבל,מלין,inbalm@cocacola.co.il,502245687,ענבל,מלין,דרור 44,,,ראשון לציון,code:shipfree|amount:0.00
+54389,54389,2023-04-23 16:10:03,completed,"Thanks, this is not urgent but over the next few days please. Thanks",aryeh,kramer,aryeh@kramer.org.uk,7956561707,Family,Davis,21 Reuven Street,4,,baka/Jerusalem,code:shipfree|amount:0.00
+54390,54390,2023-04-23 16:52:51,completed,again no rush !!! - 3rd order following.,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Rabbi,Hartman,45 Arzei Habira,2,,Jerusalem,code:shipfree|amount:0.00
+54394,54394,2023-04-24 0:33:09,completed,,משה,דויטש,md209206@gmail.com,504163256,משה,דויטש,ז'בוטינסקי 136,3,,בני ברק,code:shipfree|amount:0.00
+54411,54411,2023-04-27 18:59:05,failed,,מאור,זכריה,maorbambook@gmail.com,544970209,מאור,זכריה,שיר השירים 160,,,אלקנה,code:fivesix|amount:26.37
+54413,54413,2023-04-27 20:36:00,completed,,aryeh,kramer,aryeh@kramer.org.uk,7956561707,NIna and Yoni,kramer,15 Disraeli Street,6,,Jerusalem,code:shipfree|amount:0.00
+54475,54475,2023-05-08 10:02:29,completed,,Jonathan,Herrman,jlmwines@theherrmans.com,#ERROR!,Saar,Tamir,Maale Haashalim 19,,,Michmoret,code:shipfree|amount:0.00
+54493,54493,2023-05-16 1:17:30,completed,,Robin,Greenspan,greenspanavrohom@gmail.com,527809637,AVROHOM,GREENSPAN,RASHI 6,,,GANEI MODIIN,code:ksb8|amount:47.45
+54496,54496,2023-05-16 19:21:25,completed,,Aliks,Gor,merkava224@gmail.com,972532291109,Aliks,Gor,עזריאל 6,3,,רמת גן,code:shipfree|amount:0.00
+54512,54512,2023-05-20 23:08:48,completed,,נאום,נוזיק,amitazar30@gmail.com,546342666,נאום,נוזיק,ארזי הלבנון 22,19,,חדרה,code:shipfree|amount:0.00
+54514,54514,2023-05-21 20:57:48,cancelled,,Joel,Duerr,joel@joelduerr.com,542004329,Joel,Duerr,George Washington Street 8,11,,Jerusalem,code:shipfree|amount:0.00
+54517,54517,2023-05-22 7:39:52,completed,,Chia,Samson,chiasamson@gmail.com,97225712858,Chia,Samson,Balfour 21,,,Jerusalem,
+54518,54518,2023-05-22 9:12:22,completed,,Daniel,Reanick,daniresnick@gmail.com,532769310,Dani,Resnick,Rabbi Avraham Shapiro 30,4,,Beit Shemesh,code:shipfree|amount:0.00
+54523,54523,2023-05-23 18:25:56,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+54527,54527,2023-05-24 20:17:34,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+54953,54953,2023-05-28 11:05:43,completed,,אורן,לוי,orenltd2@013net.net,586245964,אורן,לוי,"""אורן אקוסטיקה"" בע""מ רחוב העמקים 6, ת.ד. 327",,,טבריה,
+55027,55027,2023-06-04 20:23:48,completed,"Please deliver on Thursday, June 22, 2023. That is the day we arrive in Israel in the evening. Also, please send a corkscrew with this order.",Mindy,Sroka,mrsmsroka@gmail.com,3103506509,Brian,Sroka,King George Street 60,,,Jerusalem,code:shipfree|amount:0.00
+55044,55044,2023-06-08 15:19:24,completed,Whatsapp 3238399135 with questions,Ari,Majer,majerari@gmail.com,3238399135,Naftali,Septimus,1 yam suf street,4,,Jerusalem Ramat Eshkol,code:shipfree|amount:0.00
+55053,55053,2023-06-15 8:41:13,completed,,Ron,Wald,ron.wald@unityhealth.to,053-242-6540,Prof Karl,Skorecki,Rambam Health Care Campus,PO Box 9602,,Haifa,
+55054,55054,2023-06-15 10:19:43,completed,,David,Trauttman,dtrauttman@gmail.com,534184995,David,Trauttman,22/2 Beit Israel,,,Immanuel,code:shipfree|amount:0.00
+55055,55055,2023-06-15 17:38:58,completed,,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+55059,55059,2023-06-17 22:09:22,completed,,Ari,Kellman,akellman@gmail.com,584013666,Ari,Kellman,HaArbel 9B,,,Hashmonaim,code:shipfree|amount:0.00
+55061,55061,2023-06-17 23:31:54,completed,,Lorraine,Wright,lmwright@me.com,2066054553,Orit,Harel,21 Yitzhak Rabin St,10,,Kiryat Ono,
+55063,55063,2023-06-19 12:23:33,completed,,Rachamim,Raymond,rr5807@gmail.com,527637418,Rachamim,Raymond,13/19 Rechov Chizkiyahu Shabtai,Ramot,,Jerusalem,code:shipfree|amount:0.00
+55066,55066,2023-06-19 22:45:33,completed,,מנחם,סיטבון,menisitb@gmail.com,545974660,מנחם,סיטבון,רחוב אבן ספיר 22,8,,ירושלים,
+55067,55067,2023-06-21 12:41:10,completed,"Please be sure that none of the wines are 2022 vintage, Thanksנא לשים את החבילה על ספסל ליד הדלתקומה כניסה",Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+55156,55156,2023-07-02 11:50:46,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+55215,55215,2023-07-05 8:56:11,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,
+55220,55220,2023-07-06 21:34:57,cancelled,מעוניין בבציר 2020 בלבד,אמיר יוסף,פוגל,amiryfogel@gmail.com,543974967,אמיר יוסף,פוגל,הצפירה 35,,,פרדס חנה,code:shipfree|amount:0.00
+55227,55227,2023-07-09 20:23:10,completed,Hi! Thanks so much for taking the time to speakwith me this evening. I added some suggestions to the cart. Please replace with anything you think would be better and add a Whiskey. I would like to stay at no more than 1000 please.,Ana,Obrien,ana.obrien@lw.com,13108807809,Sarit,Milman,Ha-hagana 12/36,,,Jerusalem,code:shipfree|amount:0.00
+55229,55229,2023-07-09 22:59:02,cancelled,אם אפשר להזמין יותר מחמש בבקשה להתקשרואם זה לא שורש 2021 ליצור קשר בבקשה,בן,דיין,BenDayan777@gmail.com,503664704,בן,דיין,שביל הסביונים 47 בן עמי,,,בן עמי,code:shipfree|amount:0.00
+55246,55246,2023-07-13 9:12:47,completed,נא להוסיף לי בבקשה 2 בקבוקי ברברה של הרי הגליל שלא נמצא באתר. ואשמח להנחה.תודה רבה!,מנחם,סיטבון,menisitb@gmail.com,545974660,מנחם,סיטבון,רחוב אבן ספיר 22,8,,ירושלים,code:shipfree|amount:0.00
+55258,55258,2023-07-14 13:00:45,completed,,אלברט,סיאלום,albertscialom@sfr.fr,527660625,אלברט,סיאלום,בית ישראל,25,,עמנואל,code:shipfree|amount:0.00
+55268,55268,2023-07-20 0:33:06,cancelled,,James,Green,rcharyn@crv.com,6506875630,Alan,Idelson,Albert Einshtein 26,Apt 4,,Rosh Haayin,
+55271,55271,2023-07-20 18:05:48,completed,,Chia,Samson,chiasamson@gmail.com,97225712858,Chia,Samson,Balfour 21,,,Jerusalem,
+55329,55329,2023-07-21 17:20:14,cancelled,,Caitlin,Heraghty,caitlin.heraghty@mizuhogroup.com,516-455-3702,Eynat,Guez,14 Hamada Street,,,Herzliya,
+55435,55435,2023-07-24 6:46:56,cancelled,I will pick this order up. What are your store hours today (Monday)?,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,
+55770,55770,2023-08-04 9:56:45,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,,Jerusalem,code:shipfree|amount:0.00
+55815,55815,2023-08-06 12:28:35,cancelled,,Paul,Brick,paulbrick51@gmail.com,3146191030,Paul,Brick,Bar Kochva 22,Apt. 8,,Jerusalem,code:shipfree|amount:0.00
+55821,55821,2023-08-06 13:04:19,completed,,Paul,Brick,paulbrick51@gmail.com,3146191030,Paul,Brick,Bar Kochva 22,Apt. 8,,Jerusalem,code:shipfree|amount:0.00
+55914,55914,2023-08-09 16:53:03,completed,,Tahli,Engel,tahliengel@gmail.com,-584774882,Ittay,Flescher,6 Rachel Imenu St Jerusalem ISRAEL 9314506 Israel,1,,Jerusalem,
+55985,55985,2023-08-10 22:10:09,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,code:shipfree|amount:0.00
+55995,55995,2023-08-12 23:20:29,completed,,Ella,Olevson,eladayan@013.net,507389159,Ella,Olevson,212 Jaffa str,402,,Jerusalem,code:shipfree|amount:0.00;code:profiler|amount:48.97
+56045,56045,2023-08-15 1:23:34,completed,"בניין משרדים , שעות עבודה",נתנאל,מויאל,Moyalfax@gmail.com,523670670,נתנאל,מויאל,הגדוד העברי,10,,אשקלון,code:shipfree|amount:0.00
+56051,56051,2023-08-16 13:26:01,completed,Deliver to garage (between 8-10 Helets),Glen,Leibowitz,glenleibowitz@hotmail.com,587228634,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:91.41
+56056,56056,2023-08-17 10:07:49,completed,,Anna,Abramovich,anna.abramovich2010@gmail.com,972512358938,Anna,Abramovich,117 Pesah Hevroni,41,,Jerusalem,code:profiler|amount:16.58
+56221,56221,2023-08-22 12:56:43,cancelled,,Alberto,Djadah,adjadah@gmail.com,972545679714,Alberto,Djadah,hafetz haim 20 a,,,Raanana,code:shipfree|amount:0.00
+56356,56356,2023-08-24 17:48:14,completed,,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana and Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+56435,56435,2023-08-29 8:27:44,cancelled,,עמנואל,ביסמוט,emmanuelbismuth@gmail.com,584250280,עמנואל,ביסמוט,10 Ino Shaki,,,Jerusalem,code:shipfree|amount:0.00
+56436,56436,2023-08-29 9:28:11,completed,,אדוארד,אוונס,edwardalexanderevans@yahoo.com,585194814,אדוארד,אוונס,ליסין 1,8,,תל אביב,code:shipfree|amount:0.00
+56498,56498,2023-09-04 15:12:29,completed,,דוד,מור,1997davidmoore@gmail.com,504232364,דוד,מור,הרב שאולזון 64,20,,ירושלים,
+56504,56504,2023-09-04 16:17:03,completed,,Paul,Siegel,pdsiegel@gmail.com,543197355,Paul,Siegel,16/5 Netzach Yerushalyim,,,Efrat,code:shipfree|amount:0.00
+56505,56505,2023-09-05 16:28:14,completed,,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+56506,56506,2023-09-05 16:29:34,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+56510,56510,2023-09-05 23:40:21,cancelled,,עמנואל,ביסמוט,emmanuelbismuth@gmail.com,584250280,עמנואל,ביסמוט,10 Ino Shaki,,,Jerusalem,code:shipfree|amount:0.00
+56513,56513,2023-09-06 13:16:12,completed,,Alberto,Djadah,adjadah@gmail.com,972545679714,Alberto,Djadah,hafetz haim 20 a,,,Raanana,code:shipfree|amount:0.00
+56518,56518,2023-09-07 16:46:39,completed,בבקשה לא לשלוח יין מבושל להוריד מההזמנה,joseph,dayan,joedayan77@gmail.com,543695144,joseph,dayan,השקד,9,,קיסריה,code:shipfree|amount:0.00
+56519,56519,2023-09-07 18:09:31,completed,,roseline,goldenstein,roseline.goldenstein@gmail.com,587782277,roseline,goldenstein,sderot benyamin 39/1,,,netanya,
+56523,56523,2023-09-07 20:48:22,completed,,David,Benaym,medianyc@gmail.com,587710536,David,Benaym,61 Eilat,613,,Tel Aviv,code:shipfree|amount:0.00
+56541,56541,2023-09-10 21:34:08,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,code:shipfree|amount:0.00
+56550,56550,2023-09-12 22:12:19,completed,,Daniel,Reanick,daniresnick@gmail.com,532769310,Dani,Resnick,HaRav Avraham Shapiro 30,4,,Beit Shemesh,code:shipfree|amount:0.00
+56551,56551,2023-09-13 16:51:41,completed,מבקש לעשות המשלוח ביום שישי (ערב ראש השנה) כדי שהנמען יהיה בבית לקבלו. תודה רבה.,גיל,טרויצה,gil.troitsa@gmail.com,528431141,הילית,בן גור,הנמר 11,דירה 5,,ירושלים,
+56642,56642,2023-09-19 22:06:49,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+56645,56645,2023-09-20 16:08:34,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+56646,56646,2023-09-20 16:29:57,completed,,יפעת,גזית,ran_gazit@hotmail.com,523646138,יפעת,גזית,דוד אלעזר 58,0,,רעננה,code:shipfree|amount:0.00
+56647,56647,2023-09-20 16:29:59,completed,Please adjust for FIVESIX discount that is not working,Glen,Leibowitz,glenleibowitz@hotmail.com,587228634,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:shipfree|amount:0.00
+56648,56648,2023-09-20 19:56:23,completed,Delivery must be on either September 27 or September 28. Please let me know which of those dates the order will be delivered.,Jonathan,Gdanski,Jongdanmb@gmail.com,17869993422,Jonathan,Gdanski,15 Rechov Parush,1st Floor,,Jerusalem,code:shipfree|amount:0.00
+56649,56649,2023-09-20 21:00:28,completed,,Aaron,Hershtal,ahershtal@gmail.com,4163998651,Joshua,Yunger,39 A Yigal alon,,,Zichron Yaakov,code:shipfree|amount:0.00
+56669,56669,2023-09-24 17:56:29,completed,Please WhatsApp Arnold when delivering thanks,Shayna,Klein,dklein143@gmail.com,5163164234,Arnold,Waldman,11 dor dor vedorshav,Second floor right door,,Jerusalem,code:shipfree|amount:0.00
+56674,56674,2023-09-27 18:56:06,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,
+56678,56678,2023-10-02 20:57:57,completed,,Mitchell,Nathanson,1812smn@gmail.com,507092195,Shana and Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Arnona/Jerusalem,code:shipfree|amount:0.00
+56679,56679,2023-10-03 17:34:35,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,Apartment 5,,Jerusalem,
+56680,56680,2023-10-03 22:16:54,completed,,Ilana,Menche,lonimenche@gmail.com,7183447103,Chana,Ganz,33 Betsallel,,,Jerusalem,
+56681,56681,2023-10-04 21:24:38,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,5 Mota gur,Apt 11,,Herzliya,code:shipfree|amount:0.00
+56683,56683,2023-10-05 12:07:03,completed,,Hugh,Bauer,hughbauer@gmail.com,538502641,Moshe,Peled,32 Habarzel Street,First Floor,,Tel Aviv,
+56689,56689,2023-10-17 20:35:15,completed,Can this be delivered before Friday 20th of October?,Meir,Katz,meirk@fastmail.fm,19174987253,Yaakov & Chaya,Katz,Shemaya 8,,,Jerusalem,code:shipfree|amount:0.00
+56690,56690,2023-10-18 23:28:25,completed,,Miriam,Stein,mirbear@msn.com,447939356079,Natalie,Gross,3/5 Gidon Street,,,Jerusalem,
+56692,56692,2023-10-22 10:18:18,completed,,Jonathan,Rotter,jrotter@gmail.com,13106010335,Yifat,Welt,6 HaYahalom St.,P.O. 708,,Tel Mond,code:shipfree|amount:0.00
+56693,56693,2023-10-23 14:47:02,cancelled,,לירון,ברקאי,lironait@gmail.com,522206698,ענת,מופקדי,דן 19,4 דירה 13,,ירושלים,
+56694,56694,2023-10-25 17:17:45,completed,,נאום,נוזיק,amitazar30@gmail.com,546342666,נאום,נוזיק,ארזי הלבנון 22,19,,חדרה,code:shipfree|amount:0.00
+56712,56712,2023-10-27 15:55:49,completed,,Meir,Katz,meirk@fastmail.fm,19174987253,Yitzi & Leah,Katz,Leib yaffe 6,Apt. 3,,Jerusalem,code:shipfree|amount:0.00
+56718,56718,2023-10-31 17:44:31,completed,,בעז,קראוס,boaz@boazkraus.co.il,505279878,בעז,קראוס,חגי 10,בית פרטי,,רמת גן,code:shipfree|amount:0.00
+56722,56722,2023-11-01 15:38:37,completed,,Ilana,Zoldan,ilanamama@hotmail.com,9172709392,Yosefa,Wruble,Bet Habechira,18/3,,Efrat,code:shipfree|amount:0.00
+56725,56725,2023-11-01 20:00:46,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+56726,56726,2023-11-02 13:13:54,completed,,Naava,Abelow,naava.abelow@gmail.com,5169936392,Shlomo,Tekuzener,Walter avales 9,Apt 20,,Jerusalem,
+56729,56729,2023-11-02 22:02:47,completed,,Glen,Leibowitz,glenleibowitz@hotmail.com,587228634,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:shipfree|amount:0.00
+56735,56735,2023-11-05 13:30:18,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,
+56840,56840,2023-11-09 5:23:20,completed,Whatsapp 3238399135 with questions,Ari,Majer,majerari@gmail.com,3238399135,Naftali,Septimus,1 yam suf street,4,,Jerusalem Ramat Eshkol,code:shipfree|amount:0.00
+56999,56999,2023-11-14 17:34:44,completed,,יקטרינה,יאנדוגנובה,ekatyand@gmail.com,507267954,יקטרינה,יאנדוגנובה,כורש 14,17,,ירושלים,
+57012,57012,2023-11-14 18:51:12,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+57040,57040,2023-11-15 16:19:09,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,
+57092,57092,2023-11-20 16:52:44,completed,,edmond,beniacar,info@dronim.com,534315165,edmond,beniacar,Mazeh St 5,Unit D53,,Tel Aviv,code:shipfree|amount:0.00
+57093,57093,2023-11-20 18:16:55,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,
+57094,57094,2023-11-20 21:46:38,completed,,Kimberly,Kane,kemberley.kane@next-insurance.com,5124227151,Mor,Yeger,Mordechay Biterman 10,,054-575-5956,Petach Tikva,
+57095,57095,2023-11-21 16:35:32,completed,,אמנון,אריאל,arielamnon@gmail.com,506496084,אמנון,אריאל,העצמאות 9,,,קרית אתא,code:shipfree|amount:0.00
+57096,57096,2023-11-22 8:07:06,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,
+57122,57122,2023-11-22 20:27:17,completed,,Ari,Majer,majerari@gmail.com,3238399135,Elie,Lowy,13 David Marcus St,,,Jerusalem,code:shipfree|amount:0.00
+57125,57125,2023-11-23 12:31:02,completed,,Hannah,Landes,eitan.gavson@gmail.com,547458708,Hannah,Landes,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+57126,57126,2023-11-23 13:01:27,completed,,Daniel,Reanick,daniresnick@gmail.com,532769310,Dani,Resnick,HaRav Avraham Shapiro 30,4,,Beit Shemesh,code:shipfree|amount:0.00
+57127,57127,2023-11-23 17:24:14,completed,Please leave with Hotel security for room 701,Leah,Harary,leah.harary@gmail.com,9178815960,Leah,Harary,"Jabotinsky, 3",,,Jerusalem,code:shipfree|amount:0.00
+57173,57173,2023-11-24 17:58:38,completed,,aliza,frank,alizagf@gmail.com,8475715780,Shay,Felemovicius,12 Shimon,,,Modiin,
+57211,57211,2023-11-26 12:01:14,completed,,‫תמיר,ניסמן‬‎,tamir@galiltc.co.il,523300757,‫תמיר,ניסמן‬‎,דרך הדוכיפת 1,360,,עצמון-שגב,
+57218,57218,2023-11-26 19:52:09,completed,,Binyomin,Wahrhaftig,Kosherkook@gmail.com,9294441031,B,Wahrhaftig,Alfasi 31,1,,Jerusalem,code:shipfree|amount:0.00
+57237,57237,2023-11-28 14:13:56,completed,,גילת,אברהם,gilat.av@gmail.com,523217180,גילת,אברהם,קרן קיימת לישראל 7,דירה 6,,גבעתיים,code:shipfree|amount:0.00
+57238,57238,2023-11-28 18:02:01,cancelled,Melissa Taub will pick up Thursday or Friday . thank you,Esther,herman,esti.herman@gmail.com,9173120784,melissa,TAUB,8-20 Plymouth Drive,,,Fair Lawn,
+57242,57242,2023-11-29 11:53:21,completed,Room 758 at the hotel,Eric,Turetsky,ahershtal@gmail.com,534728812,Eric,Turetsky,3 jabotinsky street,,,Jerusalem,code:shipfree|amount:0.00
+57243,57243,2023-11-29 16:23:19,completed,,Olga,Axelrod,olga@webb10.com,96042623,Robert,Kleiman,Hutzot Hayotzer 27,,,Jerusalem,
+57280,57280,2023-12-01 6:48:25,completed,,Menachem,Lester,mendellester@gmail.com,587851970,Avraham,Kelman,Tuvia ben Hefetz,14a,,Jerusale,
+57295,57295,2023-12-01 16:37:16,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+57296,57296,2023-12-01 18:49:57,completed,,Chanan,Lavi (and team),martha@augmentum.vc,447751749266,Chanan,Lavi (and team),Powerball,Maskit 4,,Hertzelia,
+57297,57297,2023-12-01 20:51:50,completed,,Susan,Moray,susanm758@gmail.com,770-841-6720,Mordechai,Katenstein,5 Bar Kochva St,Apt 15,,Jerusalem,
+57298,57298,2023-12-02 18:40:56,completed,,Susan,Fry,susan.fry1@me.com,2146761157,Kathy,Brown,Tchernichovsky 44,Apt 2,,Jerusalem,
+57299,57299,2023-12-02 18:45:48,completed,,Susan,Fry,susan.fry1@me.com,2146761157,Ida,Fry,21 Leah Porat 57,Givat Massua,,Jerusalem,
+57300,57300,2023-12-03 15:00:26,completed,please contact recipient vkia cell phone before delivery,Filippo,Taddei,filippo.taddei@gmail.com,3334355261,Yosi,Kossowsky,11a Chavatzelet,,,Bet Shemesh,code:shipfree|amount:0.00
+57303,57303,2023-12-04 5:19:32,completed,,Steven,Gerzoff,drstevengerzoff@gmail.com,050-611-9411,Steven,Gerzoff,Pitom Hakatoret,35/2 ground level,,efrat,code:shipfree|amount:0.00
+57316,57316,2023-12-07 15:13:10,completed,,Doros,Mitsingas,ang@monjasa.com,35725123200,Bunkering,Department,"9 Sakharov Str,Matam Center","Fuel Division / PO Box 1723, 31016",,Haifa,code:shipfree|amount:0.00
+57317,57317,2023-12-07 15:28:05,completed,,Carle,Momigliano,ang@monjasa.com,35725123200,Yael Kramer,Gisela Rozimblat,"HAHISTADRUT AV, 3100001, Haifa",,,Haifa,code:shipfree|amount:0.00
+57319,57319,2023-12-07 20:34:40,completed,,Mark,Katz,jactique@hotmail.com,9175433196,Moshe,Bleier,Shamgar 10,6 Floor -Apt # 24,,Jerusalem,code:shipfree|amount:0.00
+57328,57328,2023-12-09 18:15:53,completed,,רמי,נוסל,nuseladv@netvision.net.il,544665344,רמי,נוסל,המייסדים 41,,,אבן יהודה,code:shipfree|amount:0.00
+57339,57339,2023-12-14 20:29:28,completed,Remove price,Simon,Raftopoulos,ljapal@applebyglobal.com,13459494900,Louis,Glass,"28 Ha'arba'a Street 34th Floor, North Tower",,,Tel Aviv,
+57343,57343,2023-12-15 15:25:57,completed,,Simon,Smith,simonsmith17@outlook.com,#ERROR!,David,Kestenbaum,7 Haerez Street,,,Raanana,
+57344,57344,2023-12-16 20:32:37,completed,,יעקב,יעקב,yaacovtimes2@gmail.com,549495458,יעקב,יעקב,Nachal Refaim 24,7,,Beit shemesh,code:shipfree|amount:0.00
+57349,57349,2023-12-17 13:12:08,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,
+57350,57350,2023-12-17 14:46:16,completed,,Alberto,Djadah,adjadah@gmail.com,972545679714,Alberto,Djadah,hafetz haim 20 a,,,Raanana,code:shipfree|amount:0.00
+57351,57351,2023-12-17 15:22:26,completed,,Dr Joshua,Schmidt,hargamal@yahoo.com,546313999,Dr Joshua,Schmidt,25 Kaf Tet B'November,,,Zichron Yaakov,
+57353,57353,2023-12-17 19:38:46,completed,,רמי,נוסל,nuseladv@netvision.net.il,544665344,רמי,נוסל,המייסדים 41,,,אבן יהודה,code:shipfree|amount:0.00
+57357,57357,2023-12-18 13:26:34,completed,,Steven,Gerzoff,drstevengerzoff@gmail.com,050-611-9411,Steven,Gerzoff,Pitom Hakatoret,35/2 ground level,,efrat,code:shipfree|amount:0.00
+57373,57373,2023-12-18 18:02:47,completed,,דרה,רוגוף,dara.rogoff@gmail.com,545420049,דרה,רוגוף,צפורה 3,7,,ירושלים,code:shipfree|amount:0.00
+57374,57374,2023-12-18 22:23:25,completed,,Azzurra,Pearson,apearson@svb.com,2025503069,Yaron,Shapira,16 Moshe Dayan St.,F1,,Givat Shmuel,
+57375,57375,2023-12-18 22:34:12,completed,,Azzurra,Pearson,apearson@svb.com,2025503069,Tomer,Kashi,Zirelson 3,Apt 5,,Telaviv,
+57376,57376,2023-12-19 5:41:32,completed,,Robert,Greeson,beverly.pizzurro@nortonrosefulbright.com,254.855.0558,Noa,Rosenberg-Segalovitz,Professor Racah St,Building 5.4,,Jerusalem,
+57380,57380,2023-12-19 16:39:01,completed,,Ralf,Gegg,erin.rowden@broadcom.com,4915209350642,Yaron,Razinsky,30 Dov Shilansky St,,,Petach Tikva,
+57381,57381,2023-12-19 22:27:08,completed,,Yisroel,Stroh,ystroh@gmail.com,3472430786,Yisroel,Stroh,1260 Cambria ct.,,,Lakewood Township,
+57382,57382,2023-12-19 23:32:55,completed,,James,Pledger,jpledger@aol.com,9042060439,Pazit and Uri,David,10 Sa'adia Gaon Street,,,Ra'anana,
+57385,57385,2023-12-20 14:05:49,completed,054-326-1083,Tadhg,Kenny,tkenny@druidsoftware.com,876845146,Michal,Rosenbaum,8 Golda Meir St,,,Hod Hasharon,code:shipfree|amount:0.00
+57386,57386,2023-12-20 16:55:41,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+57390,57390,2023-12-20 17:39:19,completed,Dima ShlonskySeatGeek Karmiel Business phone 0544499028,Adam,Haycock,adam.hay.1994@gmail.com,7496718182,Dima,Schlonsky,Shaham 1,,,Gilon,
+57391,57391,2023-12-20 17:41:43,completed,050-730-0046,Adam,Haycock,adam.hay.1994@gmail.com,7496718182,Nati,Elya,Ofra Haza 18,Apt.12,,Kiryat Motzkin,
+57393,57393,2023-12-20 17:44:25,completed,04-601-2049,Adam,Haycock,adam.hay.1994@gmail.com,7496718182,Ofer,Proter,"13 Erez st., p.o.b 323",,,Hasolelim,
+57402,57402,2023-12-21 19:37:42,completed,,Lisa,Price,claudia.summers@warburgpincus.com,020 7306 0306,Sagive,Greenspan,2 HaAmal st,"2nd Floor, Parc Afek",,Rosh HaAyin,
+57407,57407,2023-12-24 9:35:18,completed,,Hillel,Rebibo,nrebibo@gmail.com,584375012,Hillel,Rebibo,Aizick Remba,601a,,Jerusalem,code:tt23|amount:33.42
+57408,57408,2023-12-24 11:58:08,completed,call so it can be delivered to garage between 8-10 Helez,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:78.46
+57409,57409,2023-12-24 13:15:39,cancelled,,Sayaka,Kawashima,sayashi37@gmail.com,546257300,Sayaka,Kawashima,25 כ''ט בנובמבר,,,Zichron Yaakov,
+57410,57410,2023-12-25 12:52:54,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+57411,57411,2023-12-25 14:45:39,completed,,Shalhevet,Bar-Asher,shalhevet_b@yahoo.com,528825761,Shalhevet,Bar-Asher,Menashe 8,7,,Jerusalem,code:shipfree|amount:0.00
+57414,57414,2023-12-25 17:40:49,cancelled,,Sayaka,Kawashima,sayashi37@gmail.com,546257300,Sayaka,Kawashima,25 כ''ט בנובמבר,,,Zichron Yaakov,
+57425,57425,2023-12-26 17:50:35,completed,,יוסי,אגמון,yagmon@bezeqint.net,509898296,יוסי,אגמון,הזית 34,0,,מגן שאול,
+57428,57428,2023-12-27 9:44:33,completed,,Dr Joshua,Schmidt,hargamal@yahoo.com,546257300,Dr Joshua,Schmidt,25 כ''ט בנובמבר,,,זכרון יעקב,code:tenonce|amount:27.01
+57429,57429,2023-12-27 9:51:56,completed,,מיכאל,ברגר,msberger100@gmail.com,527539563,מיכאל,ברגר,מקור חיים 39,דירה 1,,ירושלים,code:tt23|amount:37.61;code:shipfree|amount:0.00
+57433,57433,2023-12-27 17:09:51,completed,,רמי,נוסל,nuseladv@netvision.net.il,544665344,רמי,נוסל,המייסדים 41,,,אבן יהודה,code:shipfree|amount:0.00
+57439,57439,2023-12-28 12:07:11,completed,,David,Brager,dbrager@gmail.com,544679809,David,Brager,16 Mevo Hamatmid,66 8th floor,,Jerusalem,code:shipfree|amount:0.00
+57443,57443,2023-12-31 13:17:23,completed,,אדוה,לוי דדון,adva11ld@gmail.com,528951539,אדוה,לוי דדון,"ש""י עגנון",14,,חדרה,code:shipfree|amount:0.00
+57444,57444,2023-12-31 13:43:22,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,5 Mota gur,Apt 11,,Herzliya,code:shipfree|amount:0.00
+57465,57465,2023-12-31 22:08:07,completed,,גבריאל,ריפמן,gavrielasher@gmail.com,587200246,גבריאל,ריפמן,אמציה 6,12,,ירושלים,code:shipfree|amount:0.00
+57472,57472,2024-01-01 14:50:33,completed,,avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,RASHI 6,,,GANEI MODIIN,code:ksb8|amount:50.19
+57483,57483,2024-01-02 7:30:50,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+57486,57486,2024-01-02 14:02:05,completed,,Ehud,Yaari,yaari2@netvision.net.il,050-523-6012,Ehud,Yaari,5 G David Alroi,Apt 33,,Jerusalem,code:shipfree|amount:0.00
+57487,57487,2024-01-02 15:30:45,completed,,Esther,Garfinkel,esthergarf@gmail.com,544278705,Esther,Garfinkel,27a Hayasmin St.,,,Beit Shemesh,code:shipfree|amount:0.00
+57490,57490,2024-01-02 18:37:28,completed,,Menche,Ilana,lonimenche@gmail.com,7183447103,Chana,Ganz,33 Betsallel,,,Jerusalem,
+57505,57505,2024-01-08 10:14:47,completed,Please send a company corkscrew,John,Cubine,rivkacubine@gmail.com,509700955,John,Cubine,Balfour 57,,,Nahariya,code:shipfree|amount:0.00
+57512,57512,2024-01-10 19:27:09,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+57526,57526,2024-01-15 12:00:54,completed,,מתי,כהן,matescohen@gmail.com,504770781,מתי,כהן,6 שלמה המלך,,,נהריה,code:shipfree|amount:0.00
+57527,57527,2024-01-15 12:55:41,completed,,Yehuda,Fried,rf180@hotmail.com,058-787-0435,Yehuda,Fried,Narkis 41,3,,Jerusalem,
+57530,57530,2024-01-16 12:52:50,completed,,Steven,Gerzoff,drstevengerzoff@gmail.com,050-611-9411,Steven,Gerzoff,Pitom Hakatoret,35/2 ground level,,efrat,code:shipfree|amount:0.00
+57533,57533,2024-01-17 15:46:13,completed,קומה כניסה,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+57541,57541,2024-01-21 8:30:53,completed,,איתן,בוכמן,eytan.buchman@gmail.com,542069227,איתן,בוכמן,30 B Sorek,ב,,Tzur Hadassah,code:shipfree|amount:0.00
+57547,57547,2024-01-23 10:16:55,completed,,Danielle,Krieger,daniellespilz@gmail.com,587622960,Danielle,Krieger,Tchelet 77,8,,Modiin,
+57554,57554,2024-01-24 14:56:10,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,5 Mota gur,Apt 11,,Herzliya,code:shipfree|amount:0.00
+57555,57555,2024-01-24 16:08:26,completed,,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,code:shipfree|amount:0.00
+57556,57556,2024-01-24 20:50:48,completed,,Robert,Hirschman,drhirschman@gmail.com,4143774525,Reuven,Hirschman,Rechov Yud Alef 28,,,Tzfat,code:shipfree|amount:0.00
+57561,57561,2024-01-25 14:20:55,completed,,Yehuda,Fried,rf180@hotmail.com,58787043,Yehuda,Fried,Narkis 41,3,,Jerusalem,
+57565,57565,2024-01-26 10:09:36,completed,,Paul,Siegel,pdsiegel@gmail.com,543197355,Paul,Siegel,16/5 Netzach Yerushalyim,,,Efrat,code:shipfree|amount:0.00
+57605,57605,2024-01-31 20:14:39,completed,,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Rabbi and Mrs,Kent,chabad street 27,,,Jerusalem,code:shipfree|amount:0.00
+57608,57608,2024-01-31 21:25:26,completed,,חנניה,סונדרס,s0559795431@gmail.com,559795431,חנניה,סונדרס,דרך החורש 35,בית פרטי,,ירושלים,code:shipfree|amount:0.00
+57609,57609,2024-02-01 9:56:07,completed,Bring to 5th floor - door code is 1520*. Call ahead before delivery.,Gene,Fax,genefax@verizon.net,617-875-7292,Gene,Fax,HaPalmach 63,"Apartment 8, 5th Floor",,Jerusalem,code:shipfree|amount:0.00
+57610,57610,2024-02-01 19:42:00,completed,בנין משרדים . שעות עבודה,נתנאל,מויאל,Moyalfax@gmail.com,523670670,נתנאל,מויאל,הגדוד העברי,10,,אשקלון,code:shipfree|amount:0.00
+57611,57611,2024-02-03 19:02:41,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,
+57620,57620,2024-02-05 2:41:47,completed,"Deliver after Tuesday, or hold for pickup on Friday",Yakov,Shuchatowitz,ysshucha1@gmail.com,#ERROR!,Yakov,Shuchatowitz,Dor Dor Ve Dorshav 7A,Building 5 First floor,,Jerusalem,code:shipfree|amount:0.00
+57634,57634,2024-02-08 13:34:46,completed,,edmond,beniacar,info@dronim.com,534315165,edmond,beniacar,Mazeh St 5,Unit D53,,Tel Aviv,code:shipfree|amount:0.00
+57644,57644,2024-02-11 18:29:21,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+57645,57645,2024-02-11 19:48:51,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Yehuda,Anakai,Emunim 11,,,Ofra,
+57646,57646,2024-02-11 22:52:18,completed,,Roy,Sasson,roy@esasson.com,9545913399,Rabbi Ari,Kahn,Etrog 3,,,Givat Zeev,
+57647,57647,2024-02-11 23:16:46,completed,,אלי,שור,eli.shor@gmail.com,583280809,אלי,שור,"רשב""ם 7",9,,בני ברק,code:shipfree|amount:0.00
+57650,57650,2024-02-12 13:59:28,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+57651,57651,2024-02-12 17:55:01,completed,,אלי,שור,eli.shor@gmail.com,583280809,אלי,שור,"רשב""ם 7",9,,בני ברק,
+57659,57659,2024-02-14 17:14:51,completed,,Esther,Garfinkel,esthergarf@gmail.com,544278705,Esther,Garfinkel,27a Hayasmin St.,,,Beit Shemesh,code:shipfree|amount:0.00
+57660,57660,2024-02-14 18:17:19,completed,,avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,RASHI 6,,,GANEI MODIIN,code:ksb8|amount:54.15
+57849,57849,2024-02-18 12:25:36,completed,,איגור,אוצ'יטל,ygrec1@gmail.com,535314603,איגור,אוצ'יטל,שדרות אבא חושי 7,8,,חיפה,code:shipfree|amount:0.00
+57855,57855,2024-02-20 12:32:15,completed,,Mitchell,Nathanson,1812smn@gmail.com,546741789,Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Jerusalem,code:shipfree|amount:0.00
+57856,57856,2024-02-20 13:34:46,completed,,ליסה,ויינסוף,lisaweinsoff@gmail.com,547659646,ליסה,ויינסוף,מצפה נבו 108/3,,,צעלה אדומים,code:shipfree|amount:0.00
+57857,57857,2024-02-20 16:57:13,completed,,Melanie,Amouyal,melanie.halfon@gmail.com,5370855114,Melanie,Amouyal,החרמון 20 א,,,Tel Aviv,code:shipfree|amount:0.00
+57860,57860,2024-02-21 9:59:14,completed,,דיקלה,בראונר,machadodikla@gmail.com,507122983,דיקלה,בראונר,"בית""ר 9",5,,ירושלים,code:shipfree|amount:0.00
+57863,57863,2024-02-21 18:30:31,completed,Please gift wrap,Ari,Kupietzky,ari.kupietzky@gmail.com,545700667,Dr. Jeff,Weinberger,Yahalom 25,,,Mitzpe Yericho,code:shipfree|amount:0.00
+57888,57888,2024-02-26 12:29:18,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+57902,57902,2024-02-27 15:33:19,completed,,Yaacov,Jacob,yaacov@pstein.com,549495458,Yaacov,Jacob,Nachal Refaim,24/7,,Bet shemesh,code:shipfree|amount:0.00
+57916,57916,2024-02-29 2:32:52,completed,,Chassi,Meisel,sionamargrett@gmail.com,2482501825,Aviona,Finer,חיל נשים 3,דירה 8,,ירושלים,
+57944,57944,2024-02-29 21:57:37,completed,Please arrive by Friday March 1st.,Johanna,Perez,johanna@kirshphilanthropies.com,16467013766,Daniel,Taub,9 Otniel street,Apt 2,,Jerusalem,code:shipfree|amount:0.00
+57948,57948,2024-03-01 22:26:44,completed,,צביה,דיאמנט,zvia.diamant@il.nestle.com,546767101,צביה,דיאמנט,שבטי ישראל,0,,רעננה,code:shipfree|amount:0.00
+57953,57953,2024-03-03 17:46:26,completed,,איגור,אוצ'יטל,ygrec1@gmail.com,535314603,איגור,אוצ'יטל,שדרות אבא חושי 7,8,,חיפה,code:shipfree|amount:0.00
+57958,57958,2024-03-03 18:58:15,completed,,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,RASHI 6,,,GANEI MODIIN,code:ksb8|amount:50.60
+58027,58027,2024-03-04 17:20:26,completed,,Neil,Berns,nnberns@yahoo.com,547136584,Neil,Berns,10 Levi St,Apt 3,,Jerusalem,code:shipfree|amount:0.00
+58030,58030,2024-03-05 9:05:16,completed,,Rachamim,Raymond,rr5807@gmail.com,527637418,Rachamim,Raymond,13/19 Rechov Chizkiyahu Shabtai,Ramot,,Jerusalem,code:fivesix|amount:64.19
+58031,58031,2024-03-05 16:01:29,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+58032,58032,2024-03-05 17:35:30,completed,,Mark,Notis,marknotis@gmail.com,6104398163,Ricki and Meir,Dardashti,Shalmon Street 17/7,,,Tzur Hadassah,code:shipfree|amount:0.00
+58036,58036,2024-03-06 16:31:01,completed,,Kevin,Paskins,kevinpaskins1@gmail.com,7891848802,Barbara,Eliyahu,HaReut 5,Farnborough Avenue,,Kfar Yona,
+58043,58043,2024-03-08 11:36:15,completed,,חיים,מרקוס,chaim.marcus95@gmail.com,548328634,חיים,מרקוס,ספיר,20,,ראש צורים,code:roshtzurim|amount:24.96
+58047,58047,2024-03-10 15:45:04,completed,,Leonard,Misikoff,lenny4eyes@gmail.com,13479908884,Ludmila,Shapira,Shvil Rakefet 7/8,,,QIRYAT MOTZKIN,
+58048,58048,2024-03-10 18:14:43,completed,,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,RASHI 6,,,GANEI MODIIN,code:ksb8|amount:48.41
+58049,58049,2024-03-10 18:22:07,completed,,מיכל,כהן דדי,cohenmich1@gmail.com,524544774,מיכל,כהן דדי,מקור חיים,40/25,,ירושלים,code:shipfree|amount:0.00
+58050,58050,2024-03-10 22:18:16,completed,Please deliver between March 19-22,Aaron,Feldman,feldari@gmail.com,9172189807,מרדכי הצדיק,הנפלינג,האפוד 20,,,שילה,
+58053,58053,2024-03-11 22:14:42,completed,,Ephraim,Ben-Zeev,ebzmd@protonmail.com,972523863981,Ephraim,Ben-Zeev,54 Zeit Shemen Street,Apartment 19,,Efrat,code:roshtzurim|amount:32.22
+58054,58054,2024-03-11 23:21:05,completed,,אריאל,אפרת,arielephrat@gmail.com,545207748,אריאל,אפרת,הזורעים 17,,,אפרת,code:efrat|amount:20.26
+58055,58055,2024-03-12 2:20:44,completed,,Dina,Roemer,dinaro26@hotmail.com,528991773,Dina,Roemer,1 Rimon Street,,,Efrat,code:efrat|amount:12.22
+58056,58056,2024-03-12 3:59:27,completed,,Elka,Weber,elkweber5@gmail.com,3477711352,Elka,Weber,Rechov Halamed Hey 7,,,Efrat,code:efrat|amount:29.91
+58057,58057,2024-03-12 5:50:18,cancelled,,Yakov,Glassman,jackiglassman@gmail.com,972525522436,Yakov,Glassman,Mevo Hadar 8,,,Efrat,code:efrat|amount:18.12
+58058,58058,2024-03-12 6:57:37,completed,,יהודה,סרן,ycern66@gmail.com,544575005,יהודה,סרן,23 רימון,,,אפרתה,code:efrat|amount:19.23
+58059,58059,2024-03-12 8:14:29,completed,,Yakov,Glassman,jackiglassman@gmail.com,972525522436,Yakov,Glassman,Mevo Hadar 8,,,Efrat,code:efrat|amount:18.12
+58060,58060,2024-03-12 8:21:48,cancelled,,גד,נבט,gadnabet@gmail.com,524295468,גד,נבט,הישיבה,1,,אלון שבות,
+58061,58061,2024-03-12 8:28:03,cancelled,,גד,נבט,gadnabet@gmail.com,524295468,גד,נבט,הישיבה,1,,אלון שבות,
+58062,58062,2024-03-12 8:46:35,completed,,גד,נבט,gadnabet@gmail.com,524295468,גד,נבט,תירוש 555,8,,ירושלים,
+58065,58065,2024-03-12 9:19:00,completed,,Miriam Malka,craimer,miriamholtz@gmail.com,526130298,Miriam Malka,craimer,הזורעים 4,,,"דגן, אפרת",code:efrat|amount:25.56
+58066,58066,2024-03-12 9:48:58,completed,,אריק ואיימי,פרדז',afredj@gmail.com,543139051,אריק ואיימי,פרדז',שוהם 19,,,נוף איילון,code:shipfree|amount:0.00
+58067,58067,2024-03-12 11:00:18,cancelled,,בנימין,פולק,pollak.benny@gmail.com,547887350,הילה,קצין,ספיר 14,,,ראש צורים,code:roshtzurim|amount:61.97
+58068,58068,2024-03-12 11:07:22,completed,,חגי,קרוק,chagai03@gmail.com,525832988,חגי,קרוק,ראש צורים,,,ראש צורים,code:roshtzurim|amount:9.74
+58069,58069,2024-03-12 11:11:38,completed,"הבית הפרטי האחרון ברחוב, מול הדשא הגדול",חגי,אקרמן,chagaya@gmail.com,544975827,חגי,אקרמן,ברכת שמים 10,,,טלמון,
+58070,58070,2024-03-12 11:26:00,completed,Delivery by Reuven,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:efrat|amount:52.74
+58071,58071,2024-03-12 12:41:32,completed,,ג'ודי,סופיר,eljuds55@gmail.com,526842199,ג'ודי,סופיר,מתתיהו הכהן,20/3,,אפרת,code:efrat|amount:31.03
+58072,58072,2024-03-12 12:55:57,completed,Please leave at concierge desk of Orient Hotel for Mermelstein F2,Adam,Mermelstein,amermelstein@treetopdev.com,2016479591,Adam,Mermelstein,Emek Refaim 3,Residences F2,,Jerusalem,code:shipfree|amount:0.00;code:gushwarriors|amount:47.61
+58073,58073,2024-03-12 13:14:03,completed,מבקשת 2 אריזות מתנה ליין,ענת,שובע,ANATI.SOVA@GMAIL.com,509231265,ענת,שובע,ישראל שפירא 8,14,,גבעתיים,
+58074,58074,2024-03-12 13:17:31,completed,,Meira,Bar-Lev,meirajen@gmail.com,507223065,Meira,Bar-Lev,54/2 Zayit Shemen,,,Efrat,code:efrat|amount:32.22
+58075,58075,2024-03-12 13:45:15,completed,,אילת השחר,כהן,ayelet.h.s@gmail.com,546678232,אילת השחר,כהן,לשם 28,,,ראש צורים,code:roshtzurim|amount:13.93
+58076,58076,2024-03-12 15:35:27,completed,,Reuven,Rosenstark,rrosenstarkoeg@gmail.com,544897577,Reuven,Rosenstark,9 Netzach Yerushalayim,,,Efrat,code:efrat|amount:22.74
+58077,58077,2024-03-12 16:14:30,completed,,שמעון,ליבוביץ,sleibowitz@gmail.com,526071842,שמעון,ליבוביץ,התאנה 17,,,אפרת,code:efrat|amount:14.96
+58078,58078,2024-03-12 18:24:58,completed,,JOEL,BURSTEIN,JDBURSTEIN60@GMAIL.COM,555001296,JOEL,BURSTEIN,ZEIT SHEMEN 60,,,EFRAT,
+58079,58079,2024-03-12 19:06:19,completed,,Danny,Koor,danny.koor@gmail.com,528338643,Danny,Koor,Hamaayan 4,,,Efrat,code:efrat|amount:38.63
+58080,58080,2024-03-12 19:35:17,cancelled,,‫כנה,שכטר‬‎,studiokanas@gmail.com,544336820,‫כנה,שכטר‬‎,האודם 25,,,ראש צורים,
+58081,58081,2024-03-12 19:37:05,completed,,‫כנה,שכטר‬‎,studiokanas@gmail.com,544336820,‫כנה,שכטר‬‎,האודם 25,,,ראש צורים,
+58082,58082,2024-03-12 20:13:23,completed,,יעקב,קרנץ,yakov.k.home@gmail.com,527906234,יעקב,קרנץ,חלמיש,,,ראש צורים,code:roshtzurim|amount:7.52
+58094,58094,2024-03-12 21:10:26,completed,,מיכה,פרנקנבורג,yifatburg@gmail.com,506276836,מיכה,פרנקנבורג,ספיר,38,,ראש צורים,code:roshtzurim|amount:23.76
+58095,58095,2024-03-03 13:32:03,cancelled,,אלון,לוטן,alonlotan1@gmail.com,558807222,אלון,לוטן,חלמונית,8,558807222,בת חפר,code:shipfree|amount:0.00
+58096,58096,2024-03-08 9:13:25,completed,,טל,קלמן,talazar1993@gmail.com,522856387,טל,קלמן,חלמיש 25,,522856387,ראש צורים,
+58097,58097,2024-03-11 12:18:53,cancelled,,Tzvi,Nehemia,tzvi6251@gmail.com,525268631,Tzvi,Nehemia,הרופאים,,525268631,יבנאל,
+58098,58098,2024-03-12 22:15:56,completed,,ידותון,גרוסמן,liorasarag@gmail.com,584584320,ידותון,גרוסמן,ראש צורים,,,ראש צורים,code:roshtzurim|amount:55.38
+58099,58099,2024-03-12 20:17:36,completed,,קאופמן,אלון,alon@shahar.org,544286198,קאופמן,אלון,"4, האלון",,544286198,יונתן,code:shipfree|amount:0.00
+58100,58100,2024-03-12 23:57:55,cancelled,,אודיה,כהן,odeyaco12345@gmail.com,502170681,אודיה,כהן,ראש צורים,2,,ראש צורים,code:gushwarriors|amount:33.33
+58101,58101,2024-03-13 0:02:35,completed,,אודיה,כהן,odeyaco12345@gmail.com,502170681,אודיה,כהן,ראש צורים,2,,ראש צורים,
+58102,58102,2024-03-13 4:32:34,completed,,אברהם,פלוסקונוס,ashaplevi@gmail.com,547807919,אברהם,פלוסקונוס,ש. ג בת עין,דירה 1,,בת עין,
+58103,58103,2024-03-13 7:18:46,completed,,ידין,דיטור,nditur@gmail.com,546700655,ידין,דיטור,אודם,2,,ראש צורים,code:roshtzurim|amount:44.27
+58108,58108,2024-03-12 9:50:32,cancelled,,זאב,מאירסון,velvam@gmail.com,526048415,זאב,מאירסון,החלמיש 105-6,,526048415,ראש צורים,code:roshtzurim|amount:26.08
+58109,58109,2024-03-13 11:28:13,completed,,Yehuda,Fried,rf180@hotmail.com,58787043,Yehuda,Fried,Narkis 41,3,,Jerusalem,
+58110,58110,2024-03-13 11:53:12,completed,,יגאל,סמואל,yigalsa7@gmail.com,545346621,יגאל,סמואל,ראש צורים,,,ראש צורים,code:roshtzurim|amount:14.02
+58111,58111,2024-03-13 12:41:07,completed,,ליאורה,ציון-תאיר,lioratair17@gmail.com,547230075,ליאורה,ציון-תאיר,החלמיש 23,,,ראש צורים,code:roshtzurim|amount:19.83
+58112,58112,2024-03-13 12:45:37,completed,,Leah,Dobro,dobroleah@gmail.com,058-407-2135,Leah,Dobro,Morit 6,,,Efrat,code:efrat|amount:39.74
+58113,58113,2024-03-13 13:06:33,completed,,עדינה,הרשברג,ahershberg@gmail.com,545925557,עדינה,הרשברג,החלמיש 59,,,ראש צורים,code:roshtzurim|amount:6.67
+58115,58115,2024-03-13 13:52:22,completed,,אריאל,שבט,Arielchwat@gmail.com,523134553,אריאל,שבט,רחוב חלמיש 19,,,ראש צורים,code:roshtzurim|amount:36.75
+58118,58118,2024-03-13 15:59:26,completed,delivery to Rosh Tzurim (whats exact location?),Rachel,Wolf,rdwolves2@gmail.com,504012080,Rachel,Wolf,14 Ha'Zayit,1,,Alon Shvut,code:roshtzurim|amount:34.96
+58125,58125,2024-03-13 16:59:03,completed,,Jonathan,Wiesen,jwiesen1@gmail.com,587795325,Jonathan,Wiesen,29/1 Pitum Haketoret,,,Efrat,code:efrat|amount:41.54
+58133,58133,2024-03-13 17:30:01,completed,,Hershel,Ginsburg,ginzy@netvision.net.il,050-744-6842,Hershel,Ginsburg,Rimon 27,,,Efrat,code:efrat|amount:45.98
+58136,58136,2024-03-13 21:59:32,completed,,שירה,שינדלר,shirashindler1@gmail.com,545399014,שירה,שינדלר,"רחוב חלמיש 48 ראש צורים, גוש עצי",48,,ראש צורים,code:roshtzurim|amount:9.74
+58139,58139,2024-03-14 8:05:46,completed,,ראובן,כהן,tstorem@gmail.com,054-7000375,ראובן,כהן,זית שמן 60,2,,אפרת,code:efrat|amount:97.86
+58140,58140,2024-03-14 8:55:57,completed,,ARIELLA,BASTOMSKI,ariellabast@gmail.com,3239975151,YECHIEL,FRISCHMAN,YEHUDA HANASI 65/3,,,ELAD,code:shipfree|amount:0.00
+58141,58141,2024-03-14 16:31:14,completed,,מנוחה,פרידסון,sirwaldo@gmail.com,548067110,מנוחה,פרידסון,זית שמן 60,,,אפרת,code:efrat|amount:48.46
+58142,58142,2024-03-14 16:44:52,cancelled,,יהודה,אבריק,yaverick10@gmail.com,503566681,יהודה,אבריק,התאנה 23,13,,אלון שבות,code:gushwarriors|amount:12.99
+58143,58143,2024-03-14 16:46:35,completed,,יהודה,אבריק,yaverick10@gmail.com,503566681,יהודה,אבריק,התאנה 23,13,,אלון שבות,
+58144,58144,2024-03-14 17:35:05,completed,,אורן,אמסילי,amsilior@gmail.com,050-6505013,אורן,אמסילי,"ראש צורים, גוש עציון",חלמיש 50,,ראש צורים,code:roshtzurim|amount:29.06
+58148,58148,2024-03-14 21:05:46,completed,,יובל,איזנמן,yuvall165@gmail.com,526075577,יובל,איזנמן,לשם 22,,,ראש צורים,code:roshtzurim|amount:10.85
+58149,58149,2024-03-15 14:35:00,completed,,אסף,ברוש,asafbrosh1@gmail.com,528522668,אסף,ברוש,ראש צורים,,,ראש צורים,code:roshtzurim|amount:15.21
+58150,58150,2024-03-15 16:18:53,completed,,שמעון,פיינגאלד,sfeingold@gmail.com,509194466,שמעון,פיינגאלד,החלמיש,63,,ראש צורים,code:roshtzurim|amount:16.50
+58155,58155,2024-03-17 18:10:34,completed,נא לוודא שמתנה תגיע ללא מחיר/חשבןנית,שגב,מזובסקי,segev.maz@gmail.com,17379005461,ליאורה,היימן,הגפן 52,5,,אפרת,
+58158,58158,2024-03-18 14:47:23,completed,,Efraim,Stefansky,efraimstefansky@gmail.com,13472072760,Daniel,Ben Yehuda,3 Arieh Shenkar Street,Third Floor,,Herzeliya Pituach,
+58177,58177,2024-03-20 11:23:34,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+58180,58180,2024-03-21 21:02:21,completed,,Yonah,Bastomski,ybastomski@gmail.com,534713351,Yonah,Bastomski,דרך עזה 48,"דירה 14, קומה 5",,ירושלים,code:shipfree|amount:0.00;code:welcome10|amount:36.75
+58195,58195,2024-03-24 22:03:20,completed,,שמעון,מלכיאל,malkiels@neto.net.il,506783566,שמעון,מלכיאל,מתתיהו הכהן 42,1,,אפרת,
+58200,58200,2024-03-27 1:25:01,completed,,Aaron,Weiss,roniweiss24@gmail.com,585409900,Aaron,Weiss,2 Sderot Levi eshkol,Entrance 1 apartment 4,,Jerusalem,
+58209,58209,2024-03-29 12:16:11,completed,,Ellen,Hall,echall850@gmail.com,972524285230,Ellen,Hall,44 Midbar Sinai,,,Jerusalem,
+58213,58213,2024-03-31 18:24:36,completed,,איגור,אוצ'יטל,ygrec1@gmail.com,535314603,איגור,אוצ'יטל,שדרות אבא חושי 7,8,,חיפה,code:shipfree|amount:0.00
+58214,58214,2024-04-01 3:42:46,completed,,Gidon,Rothstein,grothst@gmail.com,534272538,Gidon,Rothstein,Tsvi Graetz 11,12,,Jerusalem,code:shipfree|amount:0.00
+58238,58238,2024-04-02 15:32:29,completed,,Golberg,Gaby,goldberg.gaby@gmail.com,587442281,Golberg,Gaby,Ha-Hartsit,1ב,,Bet Shemesh,code:shipfree|amount:0.00
+58239,58239,2024-04-02 21:12:58,completed,,אלכסנדר,קסל,ajmyk0201@gmail.com,543152852,אלכסנדר,קסל,החרש,20,,תל אביב - יפו,
+58240,58240,2024-04-02 23:44:18,completed,,Shlomit,Metz-Poolat,lockemup25@yahoo.com,555001619,Shlomit,Metz-Poolat,Brandeis 11b,5,,Ra'anana,code:shipfree|amount:0.00
+58246,58246,2024-04-03 13:29:16,completed,,איתן,שקד,eitans252@gmail.com,542222948,איתן,שקד,כפר יונה,נחל בשור 154,,כפר יונה,code:shipfree|amount:0.00
+58249,58249,2024-04-03 20:02:39,completed,Please send a corkscrew . Let me know if it will arrive before Shabbos,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,4030 locust,,,Long Beach,code:ksb8|amount:77.81
+58250,58250,2024-04-04 7:08:29,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+58279,58279,2024-04-04 11:58:37,completed,,אבי,שלום,Avi.Sholom@gmail.com,549253660,אבי,שלום,זלמן שזר 2,7,,מודיעין מכבים רעות,code:shipfree|amount:0.00
+58293,58293,2024-04-04 18:26:38,completed,,אוולין,אלבוגן,evelynre7@gmail.com,525542689,אוולין,אלבוגן,השופט חיים כהן,16,,ירושלים,code:shipfree|amount:0.00
+58297,58297,2024-04-05 15:50:57,completed,please call before delivery-delivery will go to garage on Helets 8,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:153.72
+58298,58298,2024-04-05 16:59:20,completed,,Marc,Bensabath,marcntal@gmail.com,050-688-5177,Marc,Bensabath,המלכים 13,,,נתניה,code:shipfree|amount:0.00;code:welcome10|amount:53.16
+58299,58299,2024-04-07 7:36:04,completed,If you could add 2 bottles of sweet basic kiddush wine.,Chaim,Drizin,cdrizin@gmail.com,3474469410,Faigie,Drizin,Eliyahu Shama St 15,1,,Jerusalem,code:shipfree|amount:0.00
+58303,58303,2024-04-07 20:40:26,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Fuchs,Family,Borochov St 2,Apartment 6,,Kiryat Hayovel Jerusalem,code:shipfree|amount:0.00
+58307,58307,2024-04-08 13:32:38,completed,,Jo,Friedman,jo.friedman@gmail.com,545691134,Jo,Friedman,זית שמן 54,12,,אפרת,code:efrat|amount:34.36
+58308,58308,2024-04-08 14:15:53,completed,,Harold,Berman,radfordlane@gmail.com,527906004,Harold,Berman,13 HaGoren,,,Efrat,code:efrat|amount:43.76
+58309,58309,2024-04-08 15:33:44,completed,,Russel,Kelner,russel@mail.com,587247871,Russel,Kelner,35 Zrubaval,,,Efrat,code:efrat|amount:50.43
+58310,58310,2024-04-08 15:53:10,completed,,Susan,Wolf,susanwolf613@gmail.com,545883061,Susan,Wolf,Hashayarot 20,,,Alon Shvut,code:roshtzurim|amount:8.97
+58311,58311,2024-04-08 16:59:23,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+58312,58312,2024-04-08 17:32:42,completed,,יאיר,קאופמן,yairk100@gmail.com,525423939,יאיר,קאופמן,פיטום הקטורת 29,3,,אפרת,code:efrat|amount:16.15
+58313,58313,2024-04-08 20:45:52,completed,,נחום,אבניאל,zenachum@gmail.com,547722841,נחום,אבניאל,מוריה,30,,אפרת,code:efrat|amount:21.37
+58316,58316,2024-04-08 21:29:56,completed,,Tal,Gilboa,talgilboa@live.ca,535214709,Tal,Gilboa,זית שמן 18/7,,,אפרת,code:efrat|amount:20.68
+58317,58317,2024-04-08 22:11:13,completed,,Eva,Kesselman,Evamoshe1@yahoo.com,523838683,Eva,Kesselman,Hamenorah 25,,,Efrat,code:efrat|amount:38.63
+58321,58321,2024-04-09 10:58:07,completed,,Anne,Sendor,anne.sendor@gmail.com,586276785,Anne,Sendor,Mishol HaKramim 17,,,Efrat,code:efrat|amount:90.09
+58322,58322,2024-04-09 12:29:29,completed,,David,Kupferberg,kuferdoc@gmail.com,587802014,David,Kupferberg,Pitum Haketoret 70,2,,Efrat,code:efrat|amount:44.87
+58323,58323,2024-04-09 12:30:00,completed,,‫תמיר,ניסמן‬‎,tamir@galiltc.co.il,523300757,‫תמיר,ניסמן‬‎,דרך הדוכיפת,1,,עצמון-שגב,code:shipfree|amount:0.00
+58324,58324,2024-04-09 12:51:29,completed,Please call when you intend to come. My wife recently has surgery and we have lots of medical appointments. This Friday morning would be ok.,Robert (Bob),Dale,daleb47@gmail.com,537924388,Robert (Bob),Dale,1 Klein,Apt 27,,Jerusalem,
+58325,58325,2024-04-09 15:14:17,completed,,Meira,Golbert Bar-Lev,meirajen@gmail.com,972507223065,Meira,Golbert Bar-Lev,54/2 Zayit Shemen,,,Efrat,code:efrat|amount:31.79
+58327,58327,2024-04-09 17:08:45,completed,,Ephraim,Ben-Zeev,ebzmd@protonmail.com,972523863981,Ephraim,Ben-Zeev,54 Zeit Shemen Street,Apartment 19,,Efrat,code:efrat|amount:45.64
+58328,58328,2024-04-09 17:49:30,completed,תודה רבה🩷 גם אנחנו מילואימניקים והכי איתכם בעולם!! חג שמח💚,שירה ואבי,גולדשטיין,shira3610@gmail.com,505803600,שירה ואבי,גולדשטיין,פני קדם,,,אספר,code:efrat|amount:7.44
+58329,58329,2024-04-09 18:19:50,completed,,Danielle,Zimmerman,Esthergoodman9@gmail.com,972546368248,Menucha,Zimmerman,Zeit shemen 60,,,Efrat,code:efrat|amount:42.13
+58330,58330,2024-04-09 18:37:04,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Elmaleh,Family,12B Ha-Khavatselet St,12B,,Beit Shemesh,
+58331,58331,2024-04-09 18:44:10,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Yoseph,Silverman,Nachal Snir St 16,5,,Beit Shemesh,
+58332,58332,2024-04-09 18:48:44,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Goldsmith,Family,Hayasmin St 13B,13B,,Beit Shemesh,
+58333,58333,2024-04-09 18:50:36,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Jason,Knapel,Ha-Khartsit St 8B,8B,,Beit Shemesh,
+58334,58334,2024-04-09 19:08:57,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Turetsky,Family,Gefen St 2,,,Shaalvim,
+58335,58335,2024-04-09 19:12:40,completed,,Mark,Kogan,mekogan@nationalcabinetllc.com,7739831510,Ifrah,Family,Aviad St 6,,,Givat Mordechai,
+58336,58336,2024-04-09 20:19:15,completed,,Batia,Burak,batiabu@gmail.com,545502159,Batia,Burak,אפרת,304,,אפרת,code:efrat|amount:9.91
+58337,58337,2024-04-09 20:38:35,completed,,רוני,חדיד,rony@familypack.co.il,525583380,רוני,חדיד,כ״ח באייר 54,,,אלון שבות,code:roshtzurim|amount:30.60
+58340,58340,2024-04-10 11:59:11,completed,,Hillel,Davis,hillel.davis1@gmail.com,527501777,Hillel,Davis,12 Trumpeldor,2,,Jerusalem,
+58341,58341,2024-04-10 12:23:59,completed,,יחיאל,פיקהולץ,picki@actcom.net.il,587993155,יחיאל,פיקהולץ,"נצר ישי 5,",,,אפרת,code:efrat|amount:14.02
+58342,58342,2024-04-10 20:52:18,completed,,Vanessa,Schweke,vbarugel@gmail.com,587077797,Vanessa,Schweke,הרכסים 58,,,רמת גן,
+58352,58352,2024-04-11 13:47:58,completed,,David,Gurtler,davidgurtler@gmail.com,972547605355,David,Gurtler,3 Rechov Hametsuda,,,Jerusalem,code:fivesix|amount:37.78
+58353,58353,2024-04-11 19:19:08,completed,,אסף,ברוש,asafbrosh1@gmail.com,528522668,אסף,ברוש,ראש צורים,,,ראש צורים,code:roshtzurim|amount:9.74
+58354,58354,2024-04-11 20:15:28,completed,,רחל,לוי,rachel_klmn@yahoo.com,526832867,רחל,לוי,הדגן 10ג,,,אפרת,code:efrat|amount:11.97
+58356,58356,2024-04-11 20:53:29,completed,,Henry,Topas,debbietopas@gmail.com,5142950677,Debbie,Topas Oziel,Matityahu HaCohen 5/7,,,Efrat,code:efrat|amount:43.68
+58431,58431,2024-04-11 21:35:45,completed,,אורי,קרניאל,urikarniel@gmail.com,507729828,אורי,קרניאל,כפר עציון 1,,,כפר עציון,code:roshtzurim|amount:23.33
+58433,58433,2024-04-12 0:06:15,completed,,Rivkah,Moriah,rivkahmoriah@gmail.com,526996748,Rivkah,Moriah,47 Zeit Shemen,13,,Efrat,code:efrat|amount:45.30
+58437,58437,2024-04-12 15:37:19,completed,,Elyse,Davis,elysedavis@sbcglobal.net,2034821432,Rachel & Zion,Mizrachi,2 Ingram Drive,,,Monroe Township,
+58438,58438,2024-04-12 16:37:50,completed,,יונתן,טבול,tzionatan@gmail.com,502404756,יונתן,טבול,רחוב חלמיש 44,234/3,,ראש צורים,code:roshtzurim|amount:49.15
+58439,58439,2024-04-14 4:05:10,completed,,ניר,פיירמן,nfireman@gmail.com,64223272685,צבי,פיירמן,משה וילנסקי 4,5,,תל אביב,
+58443,58443,2024-04-14 13:24:15,completed,,אנדרי,דולקין,adulkin@gmail.com,528792290,אנדרי,דולקין,אריק איינשטיין 3,"קומה 8, מיקסר",,הרצליה,code:shipfree|amount:0.00
+58444,58444,2024-04-14 13:29:11,completed,"Please deliver between 17–19 April, this week. Thank you.",Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+58445,58445,2024-04-14 13:44:29,completed,,Marc,Temerlies,marc.temerlies@gmail.com,546684253,Marc,Temerlies,Sirkin 6,,,Raanana,code:shipfree|amount:0.00
+58446,58446,2024-04-14 14:13:35,completed,,ציון,פלוס,zion1234in@gmail.com,523993517,ציון,פלוס,לשם,12,,ראש צורים,code:roshtzurim|amount:17.69
+58447,58447,2024-04-14 14:44:30,completed,,הילה,דה ליאון,Exacthy@gmail.com,525841830,הילה,דה ליאון,ברקת 1,,,ראש צורים,code:roshtzurim|amount:7.95
+58448,58448,2024-04-14 16:52:35,completed,Please leave by concierge of Isrotel Orient Hotel,Adam,Mermelstein,adam@treetopdev.com,2016479591,adam,mermelstein,Emek Refaim 3,Orient Residences F2,,Jerusalem,code:shipfree|amount:0.00
+58449,58449,2024-04-14 21:04:14,completed,,Simcha,Barkai,simcha.barkai@gmail.com,6176378027,Tzvi,Barkai,חלמיש 65,,,ראש צורים,code:roshtzurim|amount:153.01
+58450,58450,2024-04-14 21:36:52,completed,,צבי,ברקאי,barkaisw@gmail.com,547775517,צבי,ברקאי,חלמיש 65,,,ראש צורים,code:shipfree|amount:0.00;code:roshtzurim|amount:49.67
+58451,58451,2024-04-14 21:43:48,completed,,Asher,Steene,asher@steene.co.uk,#ERROR!,Leah,Palmer,צבי בורנשטיין 657,,,ירוחם,
+58455,58455,2024-04-15 10:06:47,completed,,שלמה,ציון,shlomozion@gmail.com,545351531,שלמה,ציון,החלמיש 23,,,ראש צורים,
+58467,58467,2024-04-16 12:31:48,completed,,Asher,Steene,asher@steene.co.uk,#ERROR!,Harry,Carroll,"35/8 Rupin, Kfar Saba, 4420937",,,Kfar Saba,
+58470,58470,2024-04-16 22:31:09,completed,Please add one vodka kosher for pesach and one Arak (kitniot ok),Shira,Reiz,shirareiz@gmail.com,9736505338,Nikki,London,Bustenai 11,7,,Jerusalem,code:shipfree|amount:0.00
+58473,58473,2024-04-17 18:25:26,completed,"please call him on Friday and just say you have a delivery, as per my messages Thanks so much Htazlach and Chag Kasher Vasemach",aryeh,kramer,aryeh@kramer.org.uk,7956561707,Mr and Mrs,Lopian,unkown 2344,,,Jerusalem,code:shipfree|amount:0.00
+58474,58474,2024-04-17 18:27:51,completed,,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Mr and Mrs,Leblanc,Ari Leblanc 12 ushiskin Jerusalem 94548 Top Floor Jerusalem 94548,,,Jerusalem,code:shipfree|amount:0.00
+58475,58475,2024-04-17 19:06:22,completed,,Benjamin,Notis,bennotis@gmail.com,972584572708,Benjamin,Notis,Sokolov 3B Entrance A,,,Jerusalem,code:shipfree|amount:0.00
+58480,58480,2024-04-21 13:45:49,completed,,Rabbi Dr Norman,Solomon,normansolomon@btinternet.com,441865243424,Jacob,Solomon,4,2,,Jerusalem,
+58481,58481,2024-04-25 19:17:20,completed,,‫גילעד,הסה‬‎,hesse67@gmail.com,507240046,‫גילעד,הסה‬‎,הרב הרצוג 41 דירה 6,,,ירושלים,code:shipfree|amount:0.00
+58482,58482,2024-04-27 0:34:43,cancelled,,טלי,לדרמן,tali.barak88@gmail.com,543126087,טלי,לדרמן,סוטין 29,402,,תל אביב,code:shipfree|amount:0.00
+58483,58483,2024-04-29 22:05:38,completed,,Vanessa,Schweke,vbarugel@gmail.com,587077797,Vanessa,Schweke,הרכסים 58,,,רמת גן,
+58492,58492,2024-05-02 15:48:03,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,
+58493,58493,2024-05-03 8:32:35,completed,,רן,קדם,kedemr@hfn.co.il,547787419,רן,קדם,מלכי ישראל 11,8,,הרצליה,code:shipfree|amount:0.00
+58503,58503,2024-05-04 22:00:23,completed,,ilana,kochen,kochenilana@gmail.com,9175261623,Colin,Frank,7 Hanania Street,3rd Floor,050-751-6876,Jerusalem,code:shipfree|amount:0.00
+58508,58508,2024-05-05 15:08:14,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,
+58509,58509,2024-05-05 15:37:16,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+58512,58512,2024-05-06 13:38:02,completed,,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,rashi 6,,,Ganei Modiin,code:ksb8|amount:66.67
+58513,58513,2024-05-06 17:39:05,completed,,רפאל,זרביב,raphael@metaline.co.il,543211011,רפאל,זרביב,חרוב 17,,,אליאב,code:shipfree|amount:0.00
+58527,58527,2024-05-09 7:45:50,completed,Please take it to the correct apartment.,Tuli,kagan,naftulikagan@gmail.com,13475981894,Family,Ludmir,13 Chana street,,,Jerusalem,
+58531,58531,2024-05-10 10:14:44,completed,,יוני,וינגרטן,jweinhi@gmail.com,584006552,יוני,וינגרטן,הנשיא 47,דירה 49 קומה 13,,גבעת שמואל,code:shipfree|amount:0.00
+58532,58532,2024-05-12 6:54:33,completed,,דני,רבין,donnyrobin68@gmail.com,506270492,דני,רבין,שבטי ישראל 3,18,,בית שמש,
+58569,58569,2024-05-18 19:24:18,completed,,גיא,פלק,guyfalk140@gmail.com,529243907,גיא,פלק,הכרמל 23,,,בנימינה-גבעת עדה,
+58573,58573,2024-05-20 19:20:41,completed,,דיקלה,בראונר,machadodikla@gmail.com,507122983,דיקלה,בראונר,"בית""ר 9",5,,ירושלים,code:shipfree|amount:0.00
+58576,58576,2024-05-21 12:30:53,completed,,גדעון,מהלה,gidonmahalla@gmail.com,543559258,גדעון,מהלה,אלי כהן 1,,,רעננה,
+58579,58579,2024-05-22 15:43:42,completed,,אברהם,פלוסקונוס,ashaplevi@gmail.com,547807919,אברהם,פלוסקונוס,ש. ג בת עין,דירה 1,,בת עין,code:shipfree|amount:0.00
+58584,58584,2024-05-23 11:50:45,completed,,דינה,הרבט,drdina@012.net.il,547792624,דינה,הרבט,שמשון 22/1 דירה 9 קומה 3,בנין פינתי. הכניסה מרחוב אפרים,,ירושלים,code:shipfree|amount:0.00
+58587,58587,2024-05-24 15:09:20,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Elanit,"Weijel , Adv","The Jerusalem Technology Park Building One,Entrance B First Floor",,,Ofra,
+58590,58590,2024-05-26 14:12:15,completed,,Meir,Sendor,meir@sendor.org,586612704,Meir,Sendor,Mishol Hakramim 17,,,Efrat,code:shipfree|amount:0.00
+58591,58591,2024-05-26 14:56:16,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+58592,58592,2024-05-26 16:03:01,completed,,edmond,beniacar,info@dronim.com,534315165,edmond,beniacar,Mazeh St 5,Unit D53,,Tel Aviv,code:shipfree|amount:0.00
+58600,58600,2024-05-27 21:09:42,completed,,Nina,Waldfogel,nwaldfogel@me.com,549058657,Nina,Waldfogel,Ha-Gat 8,Dira 17,,Ramat Gan,
+58601,58601,2024-05-28 2:46:57,completed,,Mia,Ziering,mziering@outlook.com,2035617239,Uri,Gordon,4 Ashriel Bouzaglo Street Apt. # 50,#50,,Jerusalem,code:shipfree|amount:0.00
+58620,58620,2024-05-28 18:35:10,completed,,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,rashi 6,,,Ganei Modiin,code:ksb8|amount:54.02
+58623,58623,2024-05-29 13:17:12,completed,,Ari,Ginsberg,Ariginsberg1@gmail.com,544844998,Ari,Ginsberg,18 Gad Street,,,Bet Shemesh,code:shipfree|amount:0.00
+58627,58627,2024-05-30 7:45:17,completed,,עמנואל,ביסמוט,emmanuelbismuth@gmail.com,584250280,עמנואל,ביסמוט,10 Ino Shaki,,,Jerusalem,code:shipfree|amount:0.00
+58633,58633,2024-05-30 17:56:19,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+58638,58638,2024-06-01 2:50:52,completed,,Anna,Abramovich,anna.abramovich2010@gmail.com,972512358938,Anna,Abramovich,117 Pesah Hevroni,41,,Jerusalem,
+58639,58639,2024-06-01 23:27:28,completed,,Talya,Dekel,talyadekel66@gmail.com,523337963,Talya,Dekel,התבור 1א,3,,אריאל,
+58640,58640,2024-06-02 8:05:43,completed,,נחום,שמואלביץ,nsh2323@gmail.com,587600704,נחום,שמואלביץ,המלך ג׳ורג׳ 22,,,ירושלים,code:shipfree|amount:0.00
+58644,58644,2024-06-02 15:48:47,completed,,אלדד,קניאל,eldadkaniel@gmail.com,502270665,אלדד,קניאל,מבצע מכבי 35,6,,כרמיאל,code:shipfree|amount:0.00;code:welcome10|amount:53.85
+58647,58647,2024-06-03 11:52:00,completed,If possible can you please replace the Heter Mechira bottle as I don't know if they rely on heter mechira or not.,aryeh,kramer,aryeh@kramer.org.uk,7956561707,Rabbi and Mrs Joel and Ruthie,Portnoi,Rachel Imenu Katamon 48 Ground Floor Jerusalem,,,Jerusalem,
+58648,58648,2024-06-03 11:58:02,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+58653,58653,2024-06-04 12:12:46,cancelled,,Dr Joshua,Schmidt,hargamal@yahoo.com,546257300,Dr Joshua,Schmidt,25 Kaf Tet B'November,,,Zichron Ya'akov,
+58697,58697,2024-06-07 11:13:42,completed,,Jonathan,Weingarten,jweingi@gmail.com,584006552,Jonathan,Weingarten,הנשיא 47,דירה 49 קומה 13,,גבעת שמואל,code:shipfree|amount:0.00
+58698,58698,2024-06-08 21:20:45,completed,,Meira,Golbert Bar-Lev,meirajen@gmail.com,972507223065,Meira,Golbert Bar-Lev,54/2 Zayit Shemen,Apt. 2,,Efrat,code:shipfree|amount:0.00
+58699,58699,2024-06-09 9:55:07,completed,"Please advise before delivery so that we are home,",Vera,Sperling,sperve05@yahoo.com,535274967,Vera,Sperling,Jabotinsky 13,3,,Jerusalem,code:shipfree|amount:0.00
+58708,58708,2024-06-09 16:17:50,completed,,Akiva,Adlerstein,a.adlerstein@rabbinerseminar.de,4917645892985,"הרה""ג משה מרדכי","פרבשטיין שליט""א",רחוב משאת משה 3,,,ירושלים,
+58742,58742,2024-06-14 16:30:53,completed,,Paul,Siegel,pdsiegel@gmail.com,543197355,Paul,Siegel,16/5 Netzach Yerushalyim,,,Efrat,code:shipfree|amount:0.00
+58743,58743,2024-06-15 23:28:37,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,Hanassi Yitzhak ben Zvi 64,,,Herzliya,code:shipfree|amount:0.00
+58756,58756,2024-06-17 22:04:28,completed,,ליטל,אגמי,litalsul12@gmail.com,504841414,ליטל,אגמי,הדס 12,14 קומה 4,,חולון,code:shipfree|amount:0.00
+58760,58760,2024-06-18 16:17:23,cancelled,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+58761,58761,2024-06-18 16:58:09,completed,,Solomon,Jacob,simonj@datalife.com,058-731-1567,Solomon,Jacob,19 Pele Yoetz,,,Jerusalem,code:shipfree|amount:0.00
+58762,58762,2024-06-18 17:04:58,completed,,מתן,שמיר,mshmir45@gmail.com,528848623,מתן,שמיר,קטיף 62,,,נתיבות,
+58763,58763,2024-06-18 17:56:02,completed,Turetsky’s to hold for pickup by Hershtal. Please deliver on Thursday June 20.,Zev,Hershtal,zevh@sympatico.ca,14166187470,Eric,Turetsky,Ze’ev Jabotinsky St.3,,,Jerusalem,code:shipfree|amount:0.00
+58766,58766,2024-06-19 16:47:33,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+58771,58771,2024-06-20 12:53:49,completed,,שניאור,פינסקי,shneor521@gmail.com,584888903,שניאור,פינסקי,טשרניחובסקי 10,1,,ירושלים,
+58775,58775,2024-06-20 20:29:04,completed,,Joseph,van Ments,vanments@xs4all.nl,972535203067,Joseph,van Ments,Kfar Etsyon Street 14,3,,jerusalem,code:shipfree|amount:0.00
+58820,58820,2024-06-25 21:42:56,completed,,Solomon,Jacob,simonj@datalife.com,058-731-1567,Solomon,Jacob,19 Pele Yoetz,,,Jerusalem,code:shipfree|amount:0.00
+58823,58823,2024-06-26 7:06:50,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+58856,58856,2024-07-01 9:22:49,completed,אשמח לקבל בקופסא נפרדת את היינות באיםTeperberg Inspire Malbec MarselanMeshek Achiya TeneRamat Negev Kadesh Barnea GewurztraminerMony M Red Muscat,Anna,Abramovich,anna.abramovich2010@gmail.com,972512358938,Anna,Abramovich,117 Pesah Hevroni,41,,Jerusalem,code:shipfree|amount:0.00
+58883,58883,2024-07-03 19:12:13,completed,,Elliot,Goldofsky,egoldofsky@aol.com,516-410-3223,Jeff,Dykan,Shai Agnon 15,Kenisa Gimmel,,Ranaana,
+58889,58889,2024-07-04 19:16:38,completed,,Mark,Katz,jactique@hotmail.com,9175433196,Moshe,Bleier,Shamgar 10,6 Floor -Apt # 24,,Jerusalem,code:shipfree|amount:0.00
+58895,58895,2024-07-07 12:07:56,completed,,עוזיאל,בונדרמן,obonderman@gmail.com,556640303,אשר,מאייר,חשמונאים 8,,,פתח תקווה,
+58995,58995,2024-07-09 19:46:22,completed,,Vanessa,Schweke,vbarugel@gmail.com,587077797,Vanessa,Schweke,הרכסים 58,,,רמת גן,code:shipfree|amount:0.00
+58996,58996,2024-07-10 20:02:45,completed,"Please deliver on Monday, July 15th.",Rebecca,Yosipovich,yosipov@yahoo.com,9058826339,Drs. Ron and Rachel,Wald,10 Eliezer Hagadol,Apt.22,,Jersusalem,
+59040,59040,2024-07-16 21:21:23,completed,,Malcolm,Chesno,malcolm.chesno@gmail.com,534270656,Malcolm,Chesno,Dugit 2,2,,Nahariya,code:shipfree|amount:0.00
+59044,59044,2024-07-17 13:31:13,completed,,Ari,Kupietzky,ari.kupietzky@gmail.com,545700667,Dr. Jeff,Weinberger,Radak 30,,,Jerusalem,
+59079,59079,2024-07-17 15:17:47,completed,,edmond,beniacar,info@dronim.com,534315165,edmond,beniacar,Mazeh St 5,Unit D53,,Tel Aviv,code:shipfree|amount:0.00
+59132,59132,2024-07-17 19:49:36,completed,,Chia,Samson,chiasamson@gmail.com,97225712858,Chia,Samson,Balfour 21,,,Jerusalem,code:shipfree|amount:0.00
+59141,59141,2024-07-18 14:51:12,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+59148,59148,2024-07-18 19:09:24,completed,Please confirm there are no heter mechira wines in the order.,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,,Jerusalem,code:fivesix|amount:58.85
+59153,59153,2024-07-21 19:21:37,completed,,איל,יקיר,eyal.y7@gmail.com,547882605,איל,יקיר,בני בנימין 22,23,,הרצליה,code:shipfree|amount:0.00
+59171,59171,2024-07-24 23:15:22,completed,,Abraham,Gilbert,esthergilbert1359@gmail.com,3474992606,Moria Elasaf,Gilbert,avnei Nezer 5,,,Modiin Illit Kiryat Sefer,code:shipfree|amount:0.00
+59175,59175,2024-07-26 7:49:02,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,,Jerusalem,code:shipfree|amount:0.00
+59178,59178,2024-07-27 20:55:22,completed,,רם,בלכר,ram@ofek.ws,507290533,רם,בלכר,"העבודה 34, ראש העין",34,,ראש העין,code:shipfree|amount:0.00
+59181,59181,2024-07-28 13:35:21,completed,,יוסף,מצליח,a0504130117@gmail.com,547968313,יוסף,מצליח,שלמה המלך 27,0,,קרית גת,code:shipfree|amount:0.00
+59182,59182,2024-07-28 15:24:51,completed,,Alexander,Luzhkov,alexander.luzhkov@gmail.com,535372941,Alexander,Luzhkov,"Moshe Sne, 9",13,,Modiin,
+59186,59186,2024-07-29 13:25:40,completed,,יוסף,מצליח,a0504130117@gmail.com,547968313,יוסף,מצליח,שלמה המלך 27,0,,קרית גת,code:ak5|amount:21.07
+59189,59189,2024-07-30 21:04:46,completed,,Goldberg,Gaby,goldberg.gaby@gmail.com,587442281,Goldberg,Gaby,Ha-Hartsit,1ב,,Bet Shemesh,code:shipfree|amount:0.00
+59190,59190,2024-07-30 22:48:35,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+59195,59195,2024-07-31 15:04:43,completed,,Justin,Lubomirsky,Lubomirskyj@gmail.com,546596323,Justin,Lubomirsky,67 Mitzpe Nevo,Apartment 5,,Maale Adumim,code:fivesix|amount:84.74
+59196,59196,2024-08-01 18:54:03,completed,,אלירן,שטרית,ranshitrit9@gmail.com,052-9423633,אלירן,שטרית,העצמאות 93,8/33,,פתח תקווה,
+59258,59258,2024-08-05 14:26:53,completed,,Ayala,Young,ayala.young@gmail.com,527721838,Ayala,Young,113 Derech Hevron,Apt 6,,Jerusalem,
+59292,59292,2024-08-07 13:35:39,completed,,Dvora,Hashimshony,hadvora1@gmail.com,547777710,Dvora,Hashimshony,35 David Raziel Street,House,,Herzliya,code:shipfree|amount:0.00
+59294,59294,2024-08-07 15:49:45,completed,,דינה,הרבט,drdina@012.net.il,547792624,דינה,הרבט,שמשון 22/1 דירה 9 קומה 3,בנין פינתי. הכניסה מרחוב אפרים,,ירושלים,code:shipfree|amount:0.00
+59316,59316,2024-08-09 11:25:54,completed,,דיקלה,בראונר,machadodikla@gmail.com,507122983,דיקלה,בראונר,"בית""ר 9",5,,ירושלים,code:shipfree|amount:0.00
+59324,59324,2024-08-09 19:22:04,completed,,נדב,לוזיה,nadav.luzia@gmail.com,525449669,נדב,לוזיה,יפת 15,דירה 10 קומה 1,,תל אביב,code:shipfree|amount:0.00
+59414,59414,2024-08-14 16:36:59,completed,נא לשים את החבילה על ספסל ליד הדלתנא לצלצל בפעמוןקומה כניסהאני בביתאל תתנו ליין להתחמםתודה,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+59424,59424,2024-08-14 22:42:48,completed,,Alta Rochel,Gniwisch,altarochel@gmail.com,4388646912,Levi and Aydel,Margolin,Ibn shafrut 21 corner of ramban st,Second floor apartment 12,,Jerusalem,
+59601,59601,2024-08-16 9:03:19,completed,,דוד,גוזל,davidgozal@yahoo.com,507874369,דוד,גוזל,שיריזלי 11,,,ירושלים,code:shipfree|amount:0.00
+59781,59781,2024-08-18 18:55:21,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,Hanassi Yitzhak Ben Zvi 64,,,Herzliya,code:shipfree|amount:0.00
+59976,59976,2024-08-19 20:37:42,completed,,אפי,שליין,effi_san@hotmail.com,549277142,אפי,שליין,אהוד 20,2,,חיפה,code:shipfree|amount:0.00
+60034,60034,2024-08-22 10:45:54,cancelled,,Test,Account,gambaruh@gmail.com,3477713851,Test,Account,Alfasi 31,,,Jerusalem,
+60035,60035,2024-08-22 18:01:14,completed,נא להתקשר בבוקר המשלוחנא לשים את החבילה על ספסל ליד הדלתנא לצלצל בפעמוןקומה כניסה,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+60392,60392,2024-08-28 22:31:26,completed,,יאיר,אבידן,yair.avidan59@gmail.com,522460987,יאיר,אבידן,האודם,5,,הוד השרון,code:shipfree|amount:0.00
+60402,60402,2024-08-29 10:26:45,completed,,יאיר,שלהב,yair@shilhav.com,547433880,יאיר,שלהב,תאשור,27,,זכרון יעקב,code:shipfree|amount:0.00
+60792,60792,2024-08-30 18:17:04,completed,,עמנואל,ביסמוט,emmanuelbismuth@gmail.com,584250280,עמנואל,ביסמוט,10 Ino Shaki,,,Jerusalem,code:shipfree|amount:0.00
+60799,60799,2024-09-01 11:37:12,completed,"Ground floor, white gate - immediately after the restaurant....",David,Shaffer,dshaffer613@gmail.com,528041443,David,Shaffer,28/1 אנטיגנוס,,,ירושלים,code:shipfree|amount:0.00
+60865,60865,2024-09-01 20:26:26,completed,,Joseph,Dancykier,jdancykier@gmail.com,8453049182,Gruny,Tzivin,Hatamid 6,Lev Shalom,,Old City - Jerusalem,code:shipfree|amount:0.00
+61023,61023,2024-09-02 16:42:59,completed,,יוחנן,כהן,yoch632213@gmail.com,050-899-8215,יוחנן,כהן,מרווה,17,,טבריה,
+61233,61233,2024-09-03 16:04:50,completed,Pinsky,Baruch,Wahrhaftig,bw@kpiscience.com,587829711,Baruch,Wahrhaftig,Alfasi 31,1,,Jerusalem,code:100|amount:256.42
+61236,61236,2024-09-04 1:55:51,completed,,אורי,שוורץ,schwartz_uri@yahoo.com,546383152,אורי,שוורץ,דרור 18,,,קיסריה,code:shipfree|amount:0.00;code:pop|amount:0.00
+61241,61241,2024-09-04 12:07:22,completed,Schedule delivery on or after 09 Sept 2024 please,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,,Nahariya,code:shipfree|amount:0.00
+61242,61242,2024-09-04 17:37:01,completed,,יצחק,ג'וזף,yitzhakjoseph@gmail.com,527459538,יצחק,ג'וזף,"40 /15, רבי עקיבא",,,ביתר עילית,
+61331,61331,2024-09-05 22:35:44,completed,,Robert,Silberstein,bobsilberstein18@gmail.com,4169841815,Timmy,Lawson,Bilu Street 5,,,Jerusalem,code:pop|amount:0.00
+61507,61507,2024-09-09 16:24:50,completed,,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,,Efrat,code:shipfree|amount:0.00
+61511,61511,2024-09-10 20:31:46,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,,Raanana,code:shipfree|amount:0.00
+61512,61512,2024-09-10 22:30:41,completed,,אבי,פרידמן,avif1988@gmail.com,524070406,אבי,פרידמן,שמעון הצדיק 17 בני ברק,,,בני ברק,
+61566,61566,2024-09-14 23:07:37,completed,,מיכאל,מוזס,gae2014@walla.com,507781200,מיכאל,מוזס,גן יבנה,6/3,,גן יבנה,code:shipfree|amount:0.00;code:pop|amount:0.00
+61573,61573,2024-09-15 12:10:05,completed,,ירון,רונן,yaron353@gmail.com,529437655,ירון,רונן,"רד""ק 14",4,,באר שבע,code:shipfree|amount:0.00
+61575,61575,2024-09-15 17:06:58,completed,"שלום,אהבנו את האקסודוס גרנד רזרב והזמנתי עוד שניים. חשבנו לנסות עוד משהו מהיקב והימרנו על המלבק, אם יש לכם הערות צרו קשר.תודה רבה,אורי",אורי,שוורץ,schwartz_uri@yahoo.com,546383152,אורי,שוורץ,דרור 18,,,קיסריה,code:shipfree|amount:0.00
+61609,61609,2024-09-17 2:26:15,completed,PLEASE WRAP FOR A GIFT AND DELIVER FOR ROSH HASHANA,Batsheva,Benquesus,batshevabenq@gmail.com,14162302849,SANDY & REUVEN,BRUDNER,SHAI AGNON 11,APT 28,,JERUSALEM,
+61614,61614,2024-09-17 15:49:07,completed,,Batsheva,Benquesus,batshevabenq@gmail.com,14162302849,BRACHA MIRIAM & TOMER,LINIADO,36 ELAH STREET,,,LESHEM,
+61615,61615,2024-09-17 16:57:57,completed,,רוני,כץ,rkatzmem@gmail.com,972534715267,רוני,כץ,עוזי חיטמן 11,דירה 72,,נתניה,code:shipfree|amount:0.00;code:pop|amount:0.00
+61616,61616,2024-09-17 17:03:58,completed,,Vera,Sperling,sperve05@yahoo.com,5352767,Vera,Sperling,13 jabotinsky,3,,Jerusalem,code:shipfree|amount:0.00
+61617,61617,2024-09-17 17:53:47,completed,When can I pick up? (Days &amp; hours.),David,Shaffer,dshaffer613@gmail.com,528041443,David,Shaffer,28/1 אנטיגנוס,,,ירושלים,
+61618,61618,2024-09-17 19:46:52,completed,,Meir,Katz,meirk@fastmail.fm,19174987253,yaakov & Chaya Katz,Katz,8 shmaya,,052-362-9298,Jerusalem,code:shipfree|amount:0.00
+61619,61619,2024-09-17 20:02:40,completed,,חגי,אקרמן,chagaya@gmail.com,972544975827,חגי,אקרמן,ברכת שמים 10,,,טלמון,
+61620,61620,2024-09-17 20:14:59,completed,Deliver before/on Friday September 20.,Meir,Katz,meirk@fastmail.fm,19174987253,Tzachi & Sharonne,Turen,Derech beit lechem 37,,,Jerusalem,
+61621,61621,2024-09-17 20:51:33,completed,,David,Gurtler,davidgurtler@gmail.com,972547605355,David,Gurtler,3 Rechov Hametsuda,,,Jerusalem,code:shipfree|amount:0.00
+61625,61625,2024-09-18 18:15:31,completed,,Mark,Notis,marknotis@gmail.com,6104398163,Ricki and Meir,Dardashti,Shalmon Street 17/7,,,Tzur Hadassah,code:shipfree|amount:0.00
+61626,61626,2024-09-19 8:03:34,completed,,עודד,ליפשיץ,odedlif@gmail.com,528990486,עודד,ליפשיץ,אדירים,386,,תקוע,
+61630,61630,2024-09-19 10:23:19,completed,,ריקרדו,סבלסקי,rikisav4@gmail.com,523676920,ריקרדו,סבלסקי,קיבוץ נחשונים,House: 60 Floor: 0 - Apartment: 60,,נחשונים,code:shipfree|amount:0.00
+61634,61634,2024-09-20 0:34:27,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,,Modiin,code:shipfree|amount:0.00
+61658,61658,2024-09-20 18:27:59,completed,,הגר,בן בסט,hagarmemlis@gmail.com,507841641,הגר,בן בסט,אורי ניסן 5,9,,רמת גן,code:shipfree|amount:0.00
+61668,61668,2024-09-22 15:12:43,completed,,Yael,Hoffman,yaelhs@gmail.com,6179530073,Shira,Galper,Einstein 7,,,Raanana,code:pop|amount:0.00
+61669,61669,2024-09-22 17:02:39,completed,,Mitchell,Nathanson,1812smn@gmail.com,546741789,Mitchell,Nathanson,Hashofet Haim Cohen 18,12,,Jerusalem,code:shipfree|amount:0.00
+61700,61700,2024-09-23 10:41:47,completed,,עמי,לנדאו,ami.landau@gmail.com,508828326,עמי,לנדאו,זית שמן 41/16,,508828326,אפרת,code:shipfree|amount:0.00
+61707,61707,2024-09-23 20:56:38,completed,,Anne,Sendor,anne.sendor@gmail.com,586276785,Anne,Sendor,Mishol Hakramim 17,,586276785,Efrat,code:shipfree|amount:0.00
+61708,61708,2024-09-24 1:06:55,completed,Please do not deliver till Thursday. I am not arriving in Israel until Wednesday.,Avrohom,Greenspan,greenspanavrohom@gmail.com,3105372160,AVROHOM,GREENSPAN,Rashi 6,,527809637,Ganei modiin,code:ksb8|amount:90.80
+61709,61709,2024-09-24 10:40:57,completed,,Colin,Schachat,colinschachat@gmail.com,544307788,Colin,Schachat,18a Bilu Street,Ra’anana,544307788,Ra’anana,code:shipfree|amount:0.00
+61726,61726,2024-09-24 17:55:53,completed,,Matteo,Saul,msaulid@gmail.com,528283223,Matteo,Saul,Haran 7,6,528283223,Jerusalem,code:shipfree|amount:0.00
+61727,61727,2024-09-24 20:28:51,completed,,ארי,קלמן,akellman@gmail.com,584013666,ארי,קלמן,הכרמל 33,,584013666,חשמונאים,code:shipfree|amount:0.00
+61730,61730,2024-09-25 11:06:56,completed,,Ari,Kupietzky,ari.kupietzky@gmail.com,545700667,Ari,Kupietzky,Radak 30,,545700667,Jerusalem,code:shipfree|amount:0.00
+61731,61731,2024-09-25 12:41:04,completed,"This is a gift, please do not include a receipt",ארי,קלמן,akellman@gmail.com,584013666,Abbey,Onn,Amnon vetamar 16/3,,53-522-1803,Herzliya,
+61732,61732,2024-09-25 17:09:36,cancelled,,סברין,ע,poorjake41@gmail.com,534944314,סברין,ע,אלנבי 69,21,534944314,תל אביב,code:shipfree|amount:0.00
+61735,61735,2024-09-26 9:19:35,completed,,John,Cubine,rivkacubine@gmail.com,509700955,John,Cubine,Kaplan 43,,509700955,Nahariya,code:shipfree|amount:0.00
+61751,61751,2024-09-26 16:19:36,completed,נא לשים את החבילה על ספסל ליד הדלתנא לצלצל בפעמוןקומה כניסה,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,054-3911542,Efrat,code:shipfree|amount:0.00
+61757,61757,2024-09-26 20:52:05,completed,"If you can combine this with my other order from today fine, if not I have already gotten enough free shipping.נא לשים את החבילה על ספסל ליד הדלתנא לצלצל בפעמוןקומה כניסה",Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,054-3911542,Efrat,
+61797,61797,2024-09-27 19:20:37,completed,,Leonie,Swaden,leon59@talktalk.net,7939254141,Elliot,Jager,Korei gadorot,37/12,#ERROR!,Jerusalem 9339352,code:pop|amount:0.00
+61798,61798,2024-09-28 0:57:27,completed,,Ari,Majer,majerari@gmail.com,3238399135,Naftali,Septimus,1 yam suf street,4,929-379-2649,Jerusalem - Ramat Eshkol,code:shipfree|amount:0.00
+61830,61830,2024-09-30 8:46:03,completed,,David,Shaffer,dshaffer613@gmail.com,528041443,David,Shaffer,28/1 אנטיגנוס,,528041443,ירושלים,code:shipfree|amount:0.00
+61831,61831,2024-09-30 12:50:52,completed,,Marc,Bensabath,marcntal@gmail.com,506885177,Boruch,Wharhaftig,31 Alfasi,,587829711,jerusalem,code:shipfree|amount:0.00;code:five|amount:21.06
+61834,61834,2024-09-30 22:14:44,completed,Please apply the remainder of my ₪400 gift card. Thank you.,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,547458708,Jerusalem,code:shipfree|amount:0.00
+61835,61835,2024-10-01 10:45:02,completed,קוד כניסה 3404קומה 1,סשה,קדישביץ,skadysh@gmail.com,549450068,סשה,קדישביץ,10 Merkaz Baaley Mlacha str,2,549450068,Tel Aviv,code:shipfree|amount:0.00;code:pop|amount:0.00
+61867,61867,2024-10-01 20:54:42,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,972587832344,Nahariya,code:shipfree|amount:0.00
+61870,61870,2024-10-06 10:49:40,completed,,מיכאל,קוגן,KMC@BEZEQINT.NET,523926462,מיכאל,קוגן,דרכי אי''ש 12,,523926462,אשקלון,
+61875,61875,2024-10-07 20:28:18,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,542299380,Raanana,code:shipfree|amount:0.00
+61876,61876,2024-10-07 23:12:16,completed,Leave order with Shomer,רוני,כץ,rkatzmem@gmail.com,972534715267,רוני,כץ,עוזי חיטמן 11,דירה 72,972534715267,נתניה,code:shipfree|amount:0.00
+61877,61877,2024-10-08 0:03:24,completed,,Marsel,Konomi,markonomi@yahoo.com,503535985,Marsel,Konomi,Mivtsa Iftah 8/22,,503535985,Petah Tikva,code:shipfree|amount:0.00
+61878,61878,2024-10-08 13:13:19,completed,,ראובן,כהן,tstorem@gmail.com,547000375,ראובן,כהן,זית שמן 60,2,547000375,אפרת,
+61879,61879,2024-10-08 18:37:52,completed,,Menashe,Frank,menashefrank@bellsouth.net,9548935650,Menashe,Frank,89 Derech Chevron,Apartment #3,053-463-2394,Jerusalem,code:fivesix|amount:108.03
+61880,61880,2024-10-08 21:59:02,completed,"1. The website is not allowing me to choose a shipping option. It should be free delivery.2. Please do not deliver before 12:00 on Monday, October 14. No one will be there to receive delivery before then. Please whatsapp me with any questions -- +1 917 843 4021.",Jonathan,Sperling,jmsperling@verizon.net,19178434021,Shoshana,Sperling,Eliyahu Mani 6,C4,19179521782,Jerusalem,code:shipfree|amount:0.00
+61897,61897,2024-10-14 10:35:28,cancelled,,עמית,אטיאס,amitattias10@gmail.com,525571014,עמית,אטיאס,אלפסי 16ב,4,525571014,ירושלים,code:shipfree|amount:0.00;code:pop|amount:0.00
+61898,61898,2024-10-14 12:46:48,completed,להתקשר לפני,שיראל,אוחנה,sbiton20791@walla.co.il,507868130,שיראל,אוחנה,הדישון 15/2,,507868130,ירושלים,code:shipfree|amount:0.00
+61899,61899,2024-10-14 19:37:33,completed,,Justin,Lubomirsky,Lubomirskyj@gmail.com,546596323,Justin,Lubomirsky,67 Mitzpe Nevo,Apartment 5,546596323,Maale Adumim,code:fivesix|amount:64.36
+61904,61904,2024-10-20 19:57:43,completed,,דיקלה,בראונר,machadodikla@gmail.com,507122983,דיקלה,בראונר,"בית""ר 9",5,507122983,ירושלים,code:shipfree|amount:0.00
+61907,61907,2024-10-25 2:56:43,completed,יישוב כרם רעים. ליד נריה/טלמון. מועצה אזורית מטה בנימין.ניסיתי להזמין יותר מ3 פורט רמת נגב אך האתר לא אפשר לי. במידה ויש עוד במלאי - אודה שתתקשרו ואעדכן את ההזמנה.,דוד,חפץ,avishag316@gmail.com,508739436,דוד,חפץ,"כרם רעים, רחוב הגולן",18,508739436,כרם רעים,code:shipfree|amount:0.00
+61909,61909,2024-10-27 10:05:48,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,972587832344,Nahariya,
+61919,61919,2024-10-27 14:35:00,completed,,Nathan,Perez,perez_nathan@hotmail.com,542082462,Nathan,Perez,Hanassi Yitzhak Ben Zvi 64,,542082462,Herzliya,code:shipfree|amount:0.00
+62053,62053,2024-11-10 21:50:10,completed,,הגר,בן בסט,hagarmemlis@gmail.com,507841641,הגר,בן בסט,אורי ניסן 5,9,507841641,רמת גן,code:hagar|amount:0.00;code:oops|amount:25.72
+62066,62066,2024-11-13 8:01:22,completed,,David,Shaffer,dshaffer613@gmail.com,528041443,David,Shaffer,28/1 אנטיגנוס,,528041443,ירושלים,code:shipfree|amount:0.00
+62085,62085,2024-11-13 16:07:13,completed,,Glen,Leibowitz,glenleibowitz@hotmail.com,6463709242,Glen,Leibowitz,10 Martha Bamberger,Apt 17,587228634,Jerusalem,code:fivesix|amount:130.54
+62136,62136,2024-11-17 11:32:20,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,542299380,Raanana,code:shipfree|amount:0.00
+62138,62138,2024-11-17 21:45:29,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,547458708,Jerusalem,code:shipfree|amount:0.00
+62143,62143,2024-11-18 11:41:50,completed,Please deliver it in the 1st week of Dec. Thank you,Sayuri,Koike,sayuri.koike@kornit.com,817033063392,Yehuda,Krasner,"Deganya 71 Street, Netanya, 4237694",,90475,Netanya,code:pop|amount:0.00
+62219,62219,2024-11-20 13:35:45,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,972587832344,Nahariya,code:shipfree|amount:0.00
+62221,62221,2024-11-20 14:01:38,completed,,Mario,Fischel,fischel.mario@yahoo.com,542299380,Mario,Fischel,Hagalim 5,,542299380,Raanana,code:shipfree|amount:0.00
+62222,62222,2024-11-20 14:20:16,completed,,Gene,Fax,genefax@verizon.net,617-875-7292,Gene,Fax,HaPalmach 63,8,053-5214715,Jerusalem,code:shipfree|amount:0.00
+62223,62223,2024-11-20 21:37:57,completed,,Daniel,Ball,dball@dablaw.com,13016740093,Itai,Tennenbaum,Bnei Moshe 31,,972547465166,Tel Aviv,code:pop|amount:0.00
+62227,62227,2024-11-21 22:41:23,completed,,יוחנן,כהן,yohanan@tiberias.muni.il,050-899-8215,יוחנן,כהן,מרווה,17,050-899-8215,טבריה,code:pop|amount:0.00
+62231,62231,2024-11-22 11:04:34,completed,,Marc,Bensabath,marcntal@gmail.com,050-688-5177,Marc,Bensabath,המלכים 13,,050-688-5177,נתניה,
+62242,62242,2024-11-26 13:43:37,completed,,Vera,Sperling,sperve05@yahooo.com,535274967,Vera,Sperling,13 Jabotinsky,3,535274967,Jerusalem,code:shipfree|amount:0.00
+62243,62243,2024-11-26 19:02:27,completed,"Evyatar, can you look this over and either substitute or remove wines if you don't think I should buy them. I was just playing around online. Mostly looking for good every day wines. I wrote you an email also. Ronnie",רוני,כץ,rkatzmem@gmail.com,972534715267,רוני,כץ,עוזי חיטמן 11,דירה 72,972534715267,נתניה,code:shipfree|amount:0.00
+62244,62244,2024-11-26 21:17:55,completed,,Neil,Berns,nnberns@yahoo.com,547136584,Neil,Berns,7 Disraeli St,Apt 5,547136584,Jerusalem,code:shipfree|amount:0.00
+62247,62247,2024-11-28 8:09:37,completed,"דירה 10,קומה 5",Linda,Sireling,sireling@msn.com,054-746-5382,Linda,Sireling,2,קהילת צפת,054-746-5382,נתניה,code:shipfree|amount:0.00;code:pop|amount:0.00
+62250,62250,2024-11-28 15:34:02,completed,,Alla,Sizova,allasizova2@gmail.com,4915158755599,Aleksandr,Zorin,"95, Herzl boulevard",apartment 7,972544687150,Jerusalem,
+62256,62256,2024-11-30 14:04:02,completed,נא לוודא שהיין הוא מבציר 2017 כפי שמצוין בפרטי המוצר באתרכם . אם לא כך נא לבטל את ההזמנה . תודה,רן,סגיב,sagivr1@netvision.net.il,544239784,רן,סגיב,קדיש לוז 15,17,544239784,חיפה,code:shipfree|amount:0.00;code:pop|amount:0.00
+62257,62257,2024-12-01 6:43:04,completed,,Anna,Abramovich,Anna.abramovich2010@gmail.com,512358938,Anna,Abramovich,117 Pesah Hebroni,"41, 9th floor",512358938,Jerysalem,code:shipfree|amount:0.00
+62270,62270,2024-12-02 10:43:05,completed,,רפאל,בן בסט,raphi.bb@gmail.com,547728610,רפאל,בן בסט,יעל הגיבורה,11,547728610,מודיעין,code:shipfree|amount:0.00
+62295,62295,2024-12-03 16:50:41,completed,,גד,נבט,gadnabet@gmail.com,524295468,גד,נבט,תירוש,555/8,524295468,ירושלים,
+62296,62296,2024-12-03 18:49:22,completed,,ראובן,גמליאל,reuven.gamliel@gmail.com,523248117,ראובן,גמליאל,יער להב 56,1,523248117,תל מונד,code:shipfree|amount:0.00;code:pop|amount:0.00
+62297,62297,2024-12-03 20:59:21,completed,,Vanessa,Schweke,vbarugel@gmail.com,587077797,Vanessa,Schweke,הרכסים 58,,587077797,רמת גן,code:shipfree|amount:0.00
+62298,62298,2024-12-04 15:03:26,completed,,ארי,קלמן,akellman@gmail.com,584013666,ארי,קלמן,הכרמל 33,,584013666,חשמונאים,code:shipfree|amount:0.00
+62299,62299,2024-12-04 18:55:20,completed,,Alexander,Sapozhnikov,sapozn@gmail.com,546892989,Alexander,Sapozhnikov,19 HaKinor St,4,546892989,Maaleh Adumim,code:pop|amount:0.00;code:shipfree|amount:0.00
+62300,62300,2024-12-04 20:29:39,completed,,אברהם שלמה,אבישי,Ashaplevi@gmail.com,547807919,אברהם שלמה,אבישי,המעיינות 26,,547807919,בת עין,code:shipfree|amount:0.00
+62303,62303,2024-12-05 12:41:12,completed,"Dear Chanan and Team, Season's greetings from the Augmentum team. Wishing you, the Kipp team and your families a healthy, happy New Year.Perry, Jess and The Augmentum team",Maliha,Moooney,maliha@augmentum.vc,7903496751,Chanan,Lavi,Maskit 4 Hertzelia,Powerball,#ERROR!,Tel Aviv,
+62305,62305,2024-12-05 22:36:44,completed,,Jill,Erak,hello@supershopdeals.com,-6872,Ofi,Horwitz,HaBarzel St 34,,#ERROR!,Tel Aviv-Yafo,code:pop|amount:0.00
+62306,62306,2024-12-05 22:37:27,completed,,Eitan,Gavson,eitan.gavson@gmail.com,547458708,Eitan,Gavson,Beit Ha-'Aravah 12,5,547458708,Jerusalem,code:shipfree|amount:0.00
+62309,62309,2024-12-08 11:34:16,completed,,Charles,Feinstein,chuck6289@gmail.com,972587832344,Charles,Feinstein,Ahad Ha'Am 11,1,972587832344,Nahariya,code:shipfree|amount:0.00
+62310,62310,2024-12-08 23:53:42,completed,,Brian,Foley,bfoley@kelleydrye.com,9735035965,Judah,Samter,Dan 21,,972-58-631-7226,Modiin,code:shipfree|amount:0.00
+62335,62335,2024-12-10 12:20:20,completed,נא לשים את החבילה על ספסל ליד הדלתנא לצלצל בפעמוןקומה כניסה,Tirtza,Schindler,tirtza.schindler@gmail.com,054-3911542,Tirtza,Schindler,Zeit Shemen 46,5,054-3911542,Efrat,code:shipfree|amount:0.00
+62351,62351,2024-12-11 11:30:56,completed,,Marc,Bensabath,marcntal@gmail.com,972506885177,Marc,Bensabath,31 Alfassi,,972506885177,Jerusalem,code:shipfree|amount:0.00
+62355,62355,2024-12-12 14:05:02,completed,,Doros,Mitsingas,ang@monjasa.com,35725123200,"Shlomo Moschovitz, Avi Saeed, Yosi-Eve Batashe, Oleg Langerman","Shlomo Moschovitz, Avi Saeed, Yosi-Eve Batashe, Oleg Langerman",Fuel Division / PO Box 1723,"9 Sakharov Str,Matam Center, 31016",00972 4 865 2991,Haifa,code:shipfree|amount:0.00
+62362,62362,2024-12-14 18:20:41,completed,,David,Shaffer,dshaffer613@gmail.com,528041443,David,Shaffer,28/1 אנטיגנוס,,528041443,ירושלים,code:shipfree|amount:0.00
+62366,62366,2024-12-15 12:27:43,completed,,תומר,גרינוולד,tomerg@gmail.com,502409019,תומר,גרינוולד,אברהם הרכבי,"13, קומה 6, דירה 23",502409019,תל אביב,code:shipfree|amount:0.00;code:pop|amount:0.00
+62367,62367,2024-12-15 19:12:30,completed,,סבטה,מוניץ,bazzille@gmail.com,972529213119,סבטה,מוניץ,"בית לחם 35, 7",,972529213119,חיפה,code:pop|amount:0.00
+62370,62370,2024-12-17 1:17:19,completed,"Happy Holidays! Have a wonderful New Year! Love, April &amp; your friends at Global Artists Agency",April,Lim,assistant@gaa-la.com,(323) 836-0320,Efrat,Dor,Yaviel 31 apt 2,Apt 2,(+972) 52-202-7560,Tel Aviv,
+62393,62393,2024-12-17 12:32:35,completed,,Carlemilio,Momigliano,bjo@monjasa.com,306971910218,"Yael Kramer, Gisela Rozi","Yael Kramer, Gisela Rozi","HA HISTADRUT RD. PO BOX 4, HAIFA 310000.",,972248788307,HAIFA,
+62394,62394,2024-12-17 12:42:03,completed,,Minas,Tsokopoulos,bjo@Monjasa.com,306971910218,Alon,Horesh,2 Pal-Yam Street 33031,,97248606677,HAIFA,
+62395,62395,2024-12-17 17:09:53,completed,Please gift wrap or include in a gift box because this is a birthday gift for Leah Breslow Katz. Thank you.,Meir,Katz,meirk@fastmail.fm,19174987253,Leah,Katz (Breslow),Leib Yaffe 6,Apt. 3,#ERROR!,Jerusalem,code:shipfree|amount:0.00
+62396,62396,2024-12-17 17:46:09,completed,,alberto,Djadah,adjadah@gmail.com,972545679714,alberto,Djadah,"Hafetz Haim, 20 A",,972545679714,רעננה ( 0 ₪ ),code:shipfree|amount:0.00
+62397,62397,2024-12-17 21:29:06,completed,,ילנה,פורטורובסקיה,lenaporturovskaya@gmail.com,972542688808,ילנה,פורטורובסקיה,זאב ברנדה 18,"כניסה ב', דירה 4",972542688808,פתח תקווה,code:shipfree|amount:0.00;code:pop|amount:0.00
+62399,62399,2024-12-18 9:05:38,completed,,חגי,אקרמן,chagaya@gmail.com,544975827,חגי,אקרמן,ברכת שמים 10,,544975827,טלמון,
+62400,62400,2024-12-18 12:25:54,completed,,aryeh,kramer,aryeh@kramer.org.uk,7956561707,"Simon and Lisa, Ari and Kalleh",Finn,8 Nachal Yaaleh,8,545402603,Bet Shemesh,code:shipfree|amount:0.00
+62405,62405,2024-12-19 14:59:33,completed,,Estee,Rose-Barak,esteebar@gmail.com,544955994,Estee,Rose-Barak,4 General Pierre Koenig,5 Floor 3,544955994,Jerusalem,code:shipfree|amount:0.00
+62406,62406,2024-12-19 21:24:24,cancelled,"Wishing you and yours a safe, happy Hanukkah, and nothing but continued success as we had into the new year!Your friends, Anthony &amp; Brad",Anthony,Sirven,Anthony.sirven@hklaw.com,7863999896,Avital,Futterman,Glil Yam 4690500,,#ERROR!,Herzliya,code:shipfree|amount:0.00
+62411,62411,2024-12-20 23:37:32,completed,Wishing you and your family the happiest holiday and New Year!,Richard,Smith,rene.camacho@sentinelone.com,4089167831,Shani,Ginat,Ha’anafa st 16/1,Pox 2384,972547770189,Kadima,
+62412,62412,2024-12-20 23:43:44,completed,,Richard,Smith,rene.camacho@sentinelone.com,4089167831,Lili,Sion,Hathia 10/15,,054-9149160,Kfar Saba,
+62413,62413,2024-12-20 23:45:56,completed,,Richard,Smith,rene.camacho@sentinelone.com,4089167831,Sharon,Elmashaly,Lea Imenu 4,4,052-6574661,Modiin,
+62414,62414,2024-12-21 0:59:33,completed,Happy Holidays from Jim and Sharon Pledger,James,Pledger,jpledger@aol.com,9042060439,Pazit and Uri,David,10 Sa’adia Gaon Street,,#ERROR!,Ra’anana 4375405,
+62415,62415,2024-12-21 19:01:34,completed,,Mitchell,Nathanson,1812smn@gmail.com,546741789,Mitchell,Nathanson,Hashofet Haim Cohen 18,12,546741789,Jerusalem,code:shipfree|amount:0.00
+62418,62418,2024-12-22 8:10:15,completed,,ענר,אריאל,anerariel99@gmail.com,546223723,ענר,אריאל,קיבוץ זיקים,להתקשר בכניסה לקיבוץ,546223723,קיבוץ זיקים,code:shipfree|amount:0.00
+62422,62422,2024-12-23 22:04:33,completed,,דביר,יוסקוביץ,yoskovich@hotmail.com,524286426,דביר,יוסקוביץ,הבנים 15,,052-428-6426,קריית שמונה,code:shipfree|amount:0.00;code:pop|amount:0.00
+62423,62423,2024-12-24 0:38:06,completed,,משה,קאופמן,kaufmanom@gmail.com,526189429,משה,קאופמן,נחל יבנאל 4,,526189429,מודיעין מכבים רעות,code:shipfree|amount:0.00
+62534,62534,2024-12-24 10:55:43,completed,This is a gift for Roy and Dudu - IT top-managers in Lumenis BE,Stanislav,Gorshenin,stas.gorsh@gmail.com,35699444876,Roy,Tal,Hakidma 9,"P.O.B. # 426, Yokneam 2069236",-9598105,Yokneam Industrial Park,code:shipfree|amount:0.00;code:pop|amount:0.00
+62535,62535,2024-12-25 7:43:42,completed,,גיל,הופמן,gillhof@gmail.com,972506510289,גיל,הופמן,"כפר אדומים, נופי פרת, דרך נחל קדם",212 על 1,972506510289,כפר אדומים / KEFAR ADUMMIM,code:pop|amount:0.00
+62542,62542,2024-12-25 19:08:00,completed,,אליס,חזיזה,ajmyk0201@gmail.com,585052135,אליס,חזיזה,עגנון 22,20,058-505-2135,בת ים,
+62546,62546,2024-12-26 11:38:31,completed,,Ari,Kupietzky,ari.kupietzky@gmail.com,545700667,Ari,Kupietzky,Radak 30,,545700667,Jerusalem,code:shipfree|amount:0.00
+62547,62547,2024-12-26 13:49:42,completed,,Daniel,Slutzky,Daniel@adsum.co.il,544566013,Daniel,Slutzky,Halotus 18,Appt 9,544566013,Raanana,code:shipfree|amount:0.00
+62548,62548,2024-12-26 14:20:32,completed,,דניאל,אמסילי,dnymsyly@gmail.com,542888528,דניאל,אמסילי,הצוללים,8,542888528,אשדוד,code:shipfree|amount:0.00
+62552,62552,2024-12-29 17:07:10,completed,"Mr. & Ms. Shamis :) Happy Hanukkah and New Year! Wishing you both an amazing year ahead, full of love, success, and great luck.All the best,Angela",Sharel,Shamis,sharels96@gmail.com,972526331546,Sharel,Shamis,Wingate 13 Haifa 3353302 Israel,,972526331546,Haifa,
+62554,62554,2024-12-30 1:17:40,completed,,משה,מויאל,mosmoy89@gmail.com,538502699,משה,מויאל,חטיבת כרמלי,15,538502699,שדרות,code:shipfree|amount:0.00;code:pop|amount:0.00
+62557,62557,2024-12-30 10:42:24,refunded,,יונה,טאוב,yonatoub1@gmail.com,972507517180,יונה,טאוב,קדיש לוז 24 ב,,972507517180,קרית מוצקין,code:shipfree|amount:0.00;code:pop|amount:0.00
+62558,62558,2024-12-31 7:03:19,completed,,Chia,Samson,chiasamson@gmail.com,97225712858,Chia,Samson,Balfour 21,,97225712858,Jerusalem,code:shipfree|amount:0.00
+62561,62561,2024-12-31 11:08:58,completed,,בוריס,סברדליק,bumerok@gmail.com,544535727,בוריס,סברדליק,תבור 10,דירה 36 קומה 7,544535727,אור יהודה,code:shipfree|amount:0.00
+62562,62562,2024-12-31 18:59:59,completed,,הגר,בן בסט,hagarmemlis@gmail.com,507841641,הגר,בן בסט,אורי ניסן 5,9,507841641,רמת גן,code:shipfree|amount:0.00

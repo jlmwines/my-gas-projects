@@ -93,12 +93,13 @@ function getFilesByPattern(folder, pattern) {
     .replace(/\*/g, '.*');                    // Replace * with .*
   const regex = new RegExp('^' + regexPattern + '$', 'i');
 
-  // Get all files and filter by pattern
+  // Get all files and filter by pattern (only .csv files)
   const matchingFiles = [];
   const allFiles = folder.getFiles();
   while (allFiles.hasNext()) {
     const file = allFiles.next();
-    if (regex.test(file.getName())) {
+    const fileName = file.getName();
+    if (regex.test(fileName) && fileName.toLowerCase().endsWith('.csv')) {
       matchingFiles.push(file);
     }
   }
@@ -195,20 +196,29 @@ const OrchestratorService = (function() {
     const sourceFolder = DriveApp.getFolderById(config.source_folder_id);
     const files = getFilesByPattern(sourceFolder, config.file_pattern);
 
-    let filesFound = 0;
+    // Find the NEWEST file matching the pattern (not all files)
+    let newestFile = null;
+    let newestDate = new Date(0);
     while (files.hasNext()) {
         const file = files.next();
-        if (isNewFile(file, registry)) {
-            logger.info(serviceName, functionName, `Discovered new Web Order file: ${file.getName()}`);
-            const archivedFile = archiveFile(file, archiveFolder);
-            // Web Orders have no dependencies, so always generate a new session ID for them
-            const sessionIdForNewJob = generateSessionId(); 
-            createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', file.getId(), file.getLastUpdated(), sessionIdForNewJob);
-            filesFound++;
+        const lastUpdated = file.getLastUpdated();
+        if (lastUpdated > newestDate) {
+            newestFile = file;
+            newestDate = lastUpdated;
         }
     }
-    if (filesFound === 0) {
-      logger.info(serviceName, functionName, 'No new Web Order files found in this run.');
+
+    if (newestFile && isNewFile(newestFile, registry)) {
+        logger.info(serviceName, functionName, `Discovered new Web Order file: ${newestFile.getName()} (${newestDate.toISOString()})`);
+        const archivedFile = archiveFile(newestFile, archiveFolder);
+        // Web Orders have no dependencies, so always generate a new session ID for them
+        const sessionIdForNewJob = generateSessionId();
+        createJob(jobQueueSheet, configName, config.processing_service, archivedFile.getId(), 'PENDING', newestFile.getId(), newestFile.getLastUpdated(), sessionIdForNewJob);
+        logger.info(serviceName, functionName, 'Web Order file queued for processing.');
+    } else if (newestFile) {
+        logger.info(serviceName, functionName, `Newest Web Order file (${newestFile.getName()}) already processed.`);
+    } else {
+        logger.info(serviceName, functionName, 'No Web Order files found in import folder.');
     }
     logger.info(serviceName, functionName, 'Web Order file discovery complete.');
   }
@@ -455,9 +465,14 @@ const OrchestratorService = (function() {
 
     const timestamp = now.toISOString().replace(/:/g, '-');
     const newFileName = `${file.getName()}_${timestamp}`;
-    
+
     const newFile = file.makeCopy(newFileName, monthFolder);
     logger.info('OrchestratorService', 'archiveFile', `Archived file as: ${newFile.getName()}`);
+
+    // Original file is NOT trashed here - it stays in place until job completes successfully.
+    // This allows examination of quarantined/failed files.
+    // Cleanup happens in finalizeJobCompletion() for COMPLETED jobs only.
+
     return newFile;
   }
 
@@ -858,15 +873,16 @@ const OrchestratorService = (function() {
     const completedJobType = completedJobDetails.job_type;
     const completedJobSessionId = completedJobDetails.session_id;
 
-    // --- Phase 1: Record file in registry if applicable ---
+    // --- Phase 1: Record file in registry and clean up original file ---
     try {
-      // Use jobQueueSheetRowNumber instead of jobQueueSheet.getLastRow() >= rowNumber
-      if (jobQueueSheetRowNumber) { // Check if row number is valid
+      if (jobQueueSheetRowNumber) {
         const jobRowData = jobQueueSheet.getRange(jobQueueSheetRowNumber, 1, 1, jobQueueHeaders.length).getValues()[0];
+        const statusIdx = jobQueueHeaders.indexOf('status');
         const archiveFileIdIdx = jobQueueHeaders.indexOf('archive_file_id');
         const originalFileIdIdx = jobQueueHeaders.indexOf('original_file_id');
         const originalTimestampIdx = jobQueueHeaders.indexOf('original_file_last_updated');
-        
+
+        const jobStatus = jobRowData[statusIdx];
         const archiveFileId = jobRowData[archiveFileIdIdx];
         const originalFileId = jobRowData[originalFileIdIdx];
         const originalFileLastUpdated = jobRowData[originalTimestampIdx];
@@ -878,10 +894,33 @@ const OrchestratorService = (function() {
           const originalFileName = archiveFileName.substring(0, archiveFileName.lastIndexOf('_'));
 
           _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
+
+          // Trash original file ONLY if job completed successfully
+          // Quarantined/failed files remain in place for examination
+          if (jobStatus === 'COMPLETED') {
+            // Permanent files that should NOT be deleted
+            const permanentFiles = ['comax products.csv', 'comaxproducts.csv'];
+            const fileNameLower = originalFileName.toLowerCase();
+
+            if (!permanentFiles.includes(fileNameLower)) {
+              try {
+                const originalFile = DriveApp.getFileById(originalFileId);
+                originalFile.setTrashed(true);
+                logger.info(serviceName, functionName, `Trashed original file: ${originalFileName}`, { originalFileId });
+              } catch (trashError) {
+                // File may already be gone or inaccessible - not critical
+                logger.warn(serviceName, functionName, `Could not trash original file: ${trashError.message}`, { originalFileId });
+              }
+            } else {
+              logger.info(serviceName, functionName, `Preserved permanent file: ${originalFileName}`);
+            }
+          } else {
+            logger.info(serviceName, functionName, `Job status is ${jobStatus} - original file preserved for examination`, { originalFileId, originalFileName });
+          }
         }
       }
     } catch(e) {
-      logger.error(serviceName, functionName, `Error during file registry update phase: ${e.message}`, e, { sessionId: completedJobSessionId, jobType: completedJobType });
+      logger.error(serviceName, functionName, `Error during file registry/cleanup phase: ${e.message}`, e, { sessionId: completedJobSessionId, jobType: completedJobType });
     }
     
     // --- Phase 2: Unblock dependent jobs in the queue ---

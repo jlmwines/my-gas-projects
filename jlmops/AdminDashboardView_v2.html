@@ -143,8 +143,15 @@
     }
 
     // Housekeeping
-    html += '<tr><td>' + statusIcon(health.housekeeping.status) + ' Housekeeping</td>';
+    var hkExtra = '';
+    if (health.housekeeping.failures && health.housekeeping.failures.length > 0) {
+      hkExtra = ' <span class="text-danger">(' + health.housekeeping.failures.length + ' failed)</span>';
+    }
+    html += '<tr><td>' + statusIcon(health.housekeeping.status) + ' Housekeeping' + hkExtra + '</td>';
     html += '<td class="text-right small text-muted">' + formatTime(health.housekeeping.timestamp) + '</td></tr>';
+    if (health.housekeeping.failures && health.housekeeping.failures.length > 0) {
+      html += '<tr><td colspan="2" class="small text-danger pl-4">Failed: ' + health.housekeeping.failures.join(', ') + '</td></tr>';
+    }
 
     // Schema Validation
     html += '<tr><td>' + statusIcon(health.schemaValidation.status) + ' Schema Validation</td>';

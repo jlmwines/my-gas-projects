@@ -310,6 +310,7 @@ function WebAppProducts_handleAdminAccept(taskId, sku, finalData) {
 function WebAppProducts_handleAdminConfirmWebUpdate(taskId) {
   try {
     TaskService.updateTaskStatus(taskId, 'Done');
+    WebAppTasks.invalidateCache();
     return { success: true, message: "Task marked as 'Done' (Web update confirmed)." };
   } catch (e) {
     LoggerService.error('WebAppProducts', 'handleAdminConfirmWebUpdate', `Error confirming web update for task ${taskId}: ${e.message}`, e);

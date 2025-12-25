@@ -25,6 +25,7 @@ const ProductService = (function() {
     // Set vertical alignment to top for all data rows
     const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
     dataRange.setVerticalAlignment('top');
+    dataRange.setWrap(false);  // Disable wrap to enforce single-row height
 
     // Set row height for single line of text (24 pixels)
     sheet.setRowHeights(2, dataRowCount, 24);
@@ -1275,8 +1276,9 @@ const ProductService = (function() {
       // 3. Update Task Status
       TaskService.updateTaskStatus(taskId, 'Review');
 
-      // 4. Invalidate cache after data modification
+      // 4. Invalidate caches after data modification
       _invalidateProductCache();
+      WebAppTasks.invalidateCache();
 
       return { success: true };
 
@@ -1344,8 +1346,9 @@ const ProductService = (function() {
       // 3. Update Task Status to "Accepted" (not "Done" - Done happens after finalize/export)
       TaskService.updateTaskStatus(taskId, 'Accepted');
 
-      // Invalidate cache after data modification
+      // Invalidate caches after data modification
       _invalidateProductCache();
+      WebAppTasks.invalidateCache();
 
       return { success: true };
 
@@ -1790,8 +1793,9 @@ const ProductService = (function() {
             }
         });
 
-        // Invalidate cache after staging cleanup
+        // Invalidate caches after staging cleanup
         _invalidateProductCache();
+        WebAppTasks.invalidateCache();
 
         logger.info(serviceName, functionName, `Completed ${count} tasks, deleted ${deletedCount} staging rows.`, { sessionId: sessionId, completedTasks: count, deletedRows: deletedCount });
         return { success: true, message: `Marked ${count} tasks as Completed. Cleaned up ${deletedCount} staging rows.` };
@@ -2051,7 +2055,8 @@ const ProductService = (function() {
       
       // 4. Complete Task
       TaskService.updateTaskStatus(onboardingTaskId, 'Done'); // TaskService needs sessionId too
-      
+      WebAppTasks.invalidateCache();
+
       // 5. Force Reload Config/Cache if needed (though product maps are usually rebuilt per request)
       skuToWebIdMap = null; // Invalidate local cache if used
       CacheService.getScriptCache().remove('skuToWebIdMap'); // Invalidate shared cache

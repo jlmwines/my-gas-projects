@@ -44,6 +44,32 @@ const ProductImportService = (function() {
     }
   }
 
+  /**
+   * Builds a detailed quarantine error message from validation results.
+   * @param {object} validationResult The result from ValidationLogic.runValidationSuite.
+   * @returns {string} Human-readable error message describing what failed.
+   */
+  function _buildQuarantineErrorMessage(validationResult) {
+    const failures = validationResult.results.filter(r => r.status === 'FAILED');
+    if (failures.length === 0) {
+      return 'Validation failed - data quarantined.';
+    }
+
+    const details = failures.map(f => {
+      const ruleName = f.rule.on_failure_title || f.rule.id || 'Unknown rule';
+      const count = f.discrepancies ? f.discrepancies.length : 0;
+      // Include first few discrepancy keys for context
+      let sample = '';
+      if (f.discrepancies && f.discrepancies.length > 0) {
+        const keys = f.discrepancies.slice(0, 3).map(d => d.key || d.sourceRowCount || d.targetRowCount || 'N/A');
+        sample = ` (${keys.join(', ')}${f.discrepancies.length > 3 ? '...' : ''})`;
+      }
+      return `${ruleName}: ${count} issue${count !== 1 ? 's' : ''}${sample}`;
+    });
+
+    return `QUARANTINED: ${details.join('; ')}`;
+  }
+
   // =================================================================================
   // STAGING HELPERS
   // =================================================================================
@@ -59,6 +85,7 @@ const ProductImportService = (function() {
     // Set vertical alignment to top for all data rows
     const dataRange = sheet.getRange(2, 1, dataRowCount, sheet.getLastColumn());
     dataRange.setVerticalAlignment('top');
+    dataRange.setWrap(false);  // Disable wrap to enforce single-row height
 
     // Set row height for single line of text (24 pixels)
     sheet.setRowHeights(2, dataRowCount, 24);
@@ -177,12 +204,15 @@ const ProductImportService = (function() {
         }
 
         const file = DriveApp.getFileById(archiveFileId);
+        const fileName = file.getName();
+        const fileMimeType = file.getMimeType();
         const fileEncoding = ConfigService.getConfig('import.drive.web_translations_he').file_encoding || 'UTF-8';
         const csvContent = file.getBlob().getDataAsString(fileEncoding);
 
-        logger.info(serviceName, functionName, `CSV content length: ${csvContent.length}, encoding: ${fileEncoding}, first 200 chars: ${csvContent.substring(0, 200)}`, { sessionId });
+        logger.info(serviceName, functionName, `Processing file: ${fileName}, MIME: ${fileMimeType}, size: ${csvContent.length} chars, first 200: ${csvContent.substring(0, 200)}`, { sessionId, archiveFileId });
 
         const translationObjects = WebAdapter.processTranslationCsv(csvContent, 'map.webtoffee.hebrew_headers');
+        logger.info(serviceName, functionName, `Parsed ${translationObjects.length} translation objects from CSV`, { sessionId });
 
         _populateStagingSheet(translationObjects, sheetNames.WebXltS, sessionId);
         LoggerService.info(serviceName, functionName, 'Successfully populated WebXltS staging sheet.', { sessionId: sessionId });
@@ -198,8 +228,9 @@ const ProductImportService = (function() {
     const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
     if (quarantineTriggered) {
+        const errorMsg = _buildQuarantineErrorMessage(validationResult);
         logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
-        _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+        _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
         return 'QUARANTINED';
     }
 
@@ -290,14 +321,15 @@ const ProductImportService = (function() {
         const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
         if (quarantineTriggered) {
+            const errorMsg = _buildQuarantineErrorMessage(validationResult);
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
-            _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+            _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
             // Write status for UI
             SyncStatusService.writeStatus(sessionId, {
               step: 3,
               stepName: 'Comax Products',
               status: 'failed',
-              message: 'Validation failed - data quarantined'
+              message: errorMsg
             });
             return 'QUARANTINED';
         }
@@ -794,14 +826,15 @@ const ProductImportService = (function() {
         const { quarantineTriggered } = ValidationOrchestratorService.processValidationResults(validationResult, sessionId);
 
         if (quarantineTriggered) {
+            const errorMsg = _buildQuarantineErrorMessage(validationResult);
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
-            _updateJobStatus(executionContext, 'QUARANTINED', 'Validation failed - data quarantined. Do not update master.');
+            _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
             // Write status for UI
             SyncStatusService.writeStatus(sessionId, {
               step: 1,
               stepName: 'Import Web Products',
               status: 'failed',
-              message: 'Validation failed - data quarantined'
+              message: errorMsg
             });
             return 'QUARANTINED';
         }

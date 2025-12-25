@@ -1,0 +1,343 @@
+email,name,phone,language,customerType,lifecycleStatus,isSubscribed,orderCount,totalSpend,avgOrderValue,daysSinceOrder,lastOrderDate,firstOrderDate,frequentCategories,topWineries,priceRange,churnRisk,bundleMatches
+ahershtal@gmail.com,Aaron Hershtal,534728812,english,core.vip,Dormant,true,6,21466.44,3578,754,2023-11-29,2023-01-15,"Dry Red, Dry White","Maia, Galil Mountain, Golan Heights",64-127,high,"Special Reds, Special Whites/Rosés"
+jongdanmb@gmail.com,Jonathan Gdanski,17869993422,english,core.vip,Dormant,true,4,12909.439999999999,3227,824,2023-09-21,2022-09-18,"Dry Red, Dry White, Dessert","Tabor, Binyamina, Golan Heights",42-134,high,"Special Reds, Special Whites/Rosés, Special Variety"
+msaulid@gmail.com,Matteo Saul,528283223,english,core.vip,Dormant,true,14,12569.000000000002,898,454,2024-09-25,2022-07-12,"Dry White, Semi-Dry, Dry Red","Binyamina, Galil Mountain, Carmel",32-79,high,"Special Reds, Special Whites/Rosés, Special Variety"
+joedayan77@gmail.com,joseph dayan,543695144,english,core.vip,Dormant,true,2,12235.960000000005,6118,837,2023-09-07,2023-09-07,Dry Red,"Binyamina, Adir, Tura",50-115,high,Special Reds
+adam@treetopdev.com,Adam Mermelstein,2016479591,english,core.vip,Dormant,true,2,9610.32,4805,617,2024-04-14,2024-04-14,"Dry Red, Rosé","Recanati, Binyamina, Gush Etzion",56-128,high,"Special Reds, Special Whites/Rosés"
+zevh@sympatico.ca,Zev Hershtal,14166187470,english,core.vip,Dormant,true,2,9312.839999999998,4656,552,2024-06-19,2024-06-18,"Dry Red, Dry White",Ella Valley,76-94,high,"Special Reds, Special Whites/Rosés"
+donna.winston@ourcrowd.com,Andy Kaye,587695950,english,core.vip,Dormant,true,16,8810.199999999997,551,998,2023-03-30,2023-01-16,Dry Red,,127-130,high,Special Reds
+majerari@gmail.com,Ari Majer,3238399135,english,noncore.gift,Dormant,true,8,8711.279999999999,1089,450,2024-09-28,2023-06-08,"Dry Red, Dry White","Galil Mountain, Mony, Teperberg",48-127,high,"Special Reds, Special Whites/Rosés"
+egoldofsky@aol.com,Elliot Goldofsky,516-410-3223,english,noncore.gift,Dormant,true,16,8463.319999999998,529,537,2024-07-04,2022-03-07,"Dry Red, Rosé, Dry White","Teperberg, Recanati, Galil Mountain",30-94,high,"Special Reds, Special Whites/Rosés, Special Variety"
+menashefrank@bellsouth.net,Menashe Frank,9548935650,english,core.vip,Dormant,true,2,8210.64,4105,440,2024-10-09,2024-10-08,Dry Red,"Tura, Castel, Tzora",66-286,high,"Special Reds, Premium Value"
+meirk@fastmail.fm,Meir Katz,19174987253,english,core.vip,Dormant,true,10,8205.119999999999,821,370,2024-12-18,2023-10-17,Dry White,,98-141,high,Special Whites/Rosés
+daniresnick@gmail.com,Daniel Reanick,532769310,english,noncore.gift,Dormant,true,8,7870.04,984,760,2023-11-23,2022-10-03,Dry Red,"Gush Etzion, Teperberg, Galil Mountain",49-114,high,Special Reds
+nuseladv@netvision.net.il,רמי נוסל,544665344,english,core.vip,Dormant,true,6,7384.56,1231,726,2023-12-28,2023-12-09,Dry Red,,103-103,high,Special Reds
+dklein143@gmail.com,Arnold Waldman,5163164234,english,core.vip,Dormant,true,4,6639.280000000001,1660,820,2023-09-25,2022-03-29,"Dessert, Dry Red","Teperberg, Tura, Ella Valley",30-188,high,"Special Reds, Premium Value"
+menisitb@gmail.com,מנחם סיטבון,545974660,hebrew,core.vip,Dormant,true,6,6408.18,1068,893,2023-07-13,2023-03-02,Dry Red,"Galil Mountain, Netofa, Adir",33-98,high,Special Reds
+myk770@gmail.com,מוישי קולטון,052-387-3383,en,core.vip,Dormant,false,4,6376.08,1594,1195,2022-09-14,2022-07-12,Dry Red,"Teperberg, Midbar, Mony",47-81,high,Special Reds
+jdancykier@gmail.com,Joseph Dancykier,8453049182,en,noncore.gift,Dormant,false,2,6348.719999999999,3174,476,2024-09-02,2024-09-01,"Dry Red, Rosé","Binyamina, Castel",41-357,high,"Special Reds, Special Whites/Rosés, Premium Value"
+davidgurtler@gmail.com,David Gurtler,972547605355,english,core.vip,Dormant,true,4,6016.360000000001,1504,460,2024-09-18,2024-04-11,"Dry Red, Dry White","Galil Mountain, Flam, Tura",67-134,high,"Special Reds, Special Whites/Rosés"
+anne.sendor@gmail.com,Anne Sendor,586276785,english,core.vip,Dormant,true,4,5940.52,1485,454,2024-09-24,2024-04-09,"Dry Red, Dry White","Adir, Galil Mountain, Shiloh",58-83,high,"Special Reds, Special Whites/Rosés"
+johanna@kirshphilanthropies.com,Johanna Perez,16467013766,en,core.vip,Dormant,false,2,5709.36,2855,661,2024-03-01,2024-02-29,"Dry Red, Dessert","Golan Heights, Netofa, Adir",171-274,high,"Special Reds, Premium Value"
+amitazar30@gmail.com,נאום נוזיק,546342666,hebrew,core.vip,Dormant,true,4,5675.2,1419,789,2023-10-26,2023-05-20,Dry Red,Galil Mountain,60-68,high,Special Reds
+simcha.barkai@gmail.com,Simcha Barkai,6176378027,en,noncore.gift,Dormant,false,2,5507.799999999998,2754,616,2024-04-15,2024-04-14,"Dry Red, Dry White","Flam, Tzora",92-137,high,"Special Reds, Special Whites/Rosés"
+mekogan@nationalcabinetllc.com,Mark Kogan,7739831510,english,noncore.gift,Dormant,true,14,5504.24,393,622,2024-04-10,2024-04-07,Dry Red,"Teperberg, Castel",137-430,high,"Special Reds, Premium Value"
+adjadah@gmail.com,Alberto Djadah,972545679714,english,core.vip,Dormant,true,6,5442.799999999999,907,370,2024-12-18,2023-09-06,"Dry Red, Dry White","Mony, Tishbi, Ella Valley",33-97,high,"Special Reds, Special Whites/Rosés"
+tstorem@gmail.com,ראובן כהן,547000375,hebrew,core.vip,Dormant,true,4,5393.080000000002,1348,440,2024-10-08,2024-03-14,"Dry Red, Semi-Dry","Binyamina, Teperberg, Tishbi",30-50,high,Special Reds
+ashaplevi@gmail.com,אברהם פלוסקונוס,547807919,en,core.vip,Dormant,false,6,5306.120000000001,884,382,2024-12-05,2024-03-13,"Dry Red, Dry White","Binyamina, Mony, Ella Valley",32-51,high,"Special Reds, Special Whites/Rosés"
+ang@monjasa.com,Doros Mitsingas,35725123200,english,noncore.gift,Dormant,true,6,4988.12,831,375,2024-12-12,2023-12-07,Dry Red,"Binyamina, Teperberg, Flam",84-122,high,Special Reds
+ygrec1@gmail.com,איגור אוצ'יטל,535314603,en,core.vip,Dormant,false,6,4841.040000000001,807,631,2024-04-01,2024-02-18,"Dry White, Dry Red",Golan Heights,42-140,high,"Special Reds, Special Whites/Rosés"
+rachelgittleman@gmail.com,Rachel Gittleman,534236928,en,noncore.gift,Dormant,false,2,4777.8,2389,1002,2023-03-26,2023-03-26,"Dessert, Dry Red","Teperberg, Mony, Binyamina",28-94,high,Special Reds
+psekhon@iconiqcapital.com,SETH PIERREPONT,2045760408,en,noncore.gift,Dormant,false,10,4683.76,468,1122,2022-11-26,2022-11-25,Dry Red,Castel,214-248,high,"Special Reds, Premium Value"
+merrillweber@gmail.com,Merrill Weber,058-406-2386,english,core.vip,Dormant,true,2,4512.84,2256,1110,2022-12-08,2022-12-07,"Dry Red, Rosé","Lueria, Recanati",77-103,high,"Special Reds, Special Whites/Rosés"
+josh@3opinions.net,josh yablon,2122093862,english,noncore.gift,Dormant,true,4,4444.48,1111,998,2023-03-30,2023-03-29,Dry Red,Castel,556-556,high,"Special Reds, Premium Value"
+jactique@hotmail.com,Mark Katz,9175433196,english,noncore.gift,Dormant,true,6,4317.959999999999,720,536,2024-07-05,2022-12-20,Dry Red,"Castel, Tura, Tishbi",33-96,high,Special Reds
+simonj@datalife.com,Solomon Jacob,058-731-1567,english,core.vip,Dormant,true,4,4058.16,1015,544,2024-06-26,2024-06-18,"Dry Red, Dry White, Rosé","Galil Mountain, Mony, Teperberg",32-81,high,"Special Reds, Special Whites/Rosés, Special Variety"
+boaz@boazkraus.co.il,בעז קראוס,505279878,en,core.vip,Dormant,false,2,3945.2799999999997,1973,783,2023-10-31,2023-10-31,Dry Red,"Galil Mountain, Castel",33-68,high,Special Reds
+besalel@gmail.com,David BenHaim,9174999200,english,noncore.gift,Dormant,true,2,3931.6399999999994,1966,1021,2023-03-07,2023-03-06,Dry Red,Castel,427-556,high,"Special Reds, Premium Value"
+ekatyand@gmail.com,יקטרינה יאנדוגנובה,507267954,hebrew,core.vip,Dormant,true,6,3897.4400000000005,650,769,2023-11-15,2022-11-14,"Dry Red, Dry White","Tabor, Binyamina, Mony",51-91,high,"Special Reds, Special Whites/Rosés"
+ajgoldberger@gmail.com,Adam Goldberger,533028883,english,core.vip,Dormant,true,4,3710.56,928,1009,2023-03-19,2023-01-30,"Dry Red, Dessert","Binyamina, Teperberg, Mony",32-64,high,Special Reds
+shirareiz@gmail.com,Shira Reiz,9736505338,english,core.vip,Dormant,true,2,3606.8399999999992,1803,614,2024-04-17,2024-04-16,"Dry Red, Dessert","Midbar, Mony, Tura",32-128,high,Special Reds
+tamir@galiltc.co.il,‫תמיר ניסמן‬‎,523300757,hebrew,core.vip,Dormant,true,4,3552.2400000000007,888,622,2024-04-09,2023-11-26,"Dry Red, Rosé","Galil Mountain, Tishbi, Midbar",32-68,high,"Special Reds, Special Whites/Rosés"
+anna.abramovich2010@gmail.com,Anna Abramovich,512358938,hebrew,core.vip,Dormant,true,8,3451.7,431,386,2024-12-01,2023-08-17,"Semi-Dry, Dry Red, Dry White","Mony, Golan Heights, Recanati",33-62,high,"Special Reds, Special Whites/Rosés, Special Variety"
+s0559795431@gmail.com,חנניה סונדרס,559795431,hebrew,core.vip,Dormant,true,2,3418.8,1709,690,2024-02-01,2024-01-31,Dry Red,,170.94-170.94,high,"Special Reds, Premium Value"
+cdrizin@gmail.com,Chaim Drizin,3474469410,en,core.vip,Dormant,false,2,3391.56,1696,624,2024-04-07,2024-04-07,"Dessert, Semi-Dry, Dry Red","Teperberg, Mony, Tura",30-85,high,"Special Reds, Special Variety"
+nsh2323@gmail.com,נחום שמואלביץ,587600704,hebrew,core.vip,Dormant,true,2,3384.6,1692,568,2024-06-02,2024-06-02,Dry Red,Flam,141.025-141.025,high,Special Reds
+denkermom@gmail.com,Lisa Lowe,2162335693,english,noncore.gift,Dormant,true,2,3370.9199999999996,1685,994,2023-04-03,2023-04-03,"Dry Red, Dry White","Agur, Ella Valley, Tabor",50-81,high,"Special Reds, Special Whites/Rosés"
+joe@mtalx.com,Joseph Heller,#ERROR!,en,noncore.gift,Dormant,false,6,3350.44,558,1097,2022-12-21,2022-12-21,Dry Red,"Flam, Golan Heights",256-291,high,"Special Reds, Premium Value"
+gilat.av@gmail.com,גילת אברהם,523217180,en,core.vip,Dormant,false,2,3346.9999999999995,1673,755,2023-11-28,2023-11-28,Dry Red,Ella Valley,76-76,high,Special Reds
+belzberg@torquest.com,Brent Belzberg,4165610004,english,noncore.gift,Dormant,true,2,3343.600000000001,1672,984,2023-04-14,2023-04-13,"Dry Red, Dry White","Ella Valley, Adir, Agur",64-77,high,"Special Reds, Special Whites/Rosés"
+bumerok@gmail.com,בוריס סברדליק,544535727,hebrew,core.vip,Lapsed,true,2,3271.84,1636,356,2024-12-31,2024-12-31,Dry Red,,85-111,high,Special Reds
+avrahamtate@gmail.com,Avraham Tate,4047891660,en,core.vip,Dormant,false,2,3241.04,1621,1343,2022-04-20,2022-04-19,Dry Red,,67.52166666666666-67.52166666666666,high,Special Reds
+a0504130117@gmail.com,יוסף מצליח,547968313,en,core.vip,Dormant,false,4,3228.5599999999995,807,511,2024-07-29,2024-07-28,Dry Red,"Tabor, Ella Valley",72-102,high,Special Reds
+gabriel@terceracultura.org,Gabriel Trajtenberg,5491144486400,en,noncore.gift,Dormant,false,2,3196.56,1598,1145,2022-11-03,2022-11-03,Dry Red,,64-248,high,"Special Reds, Premium Value"
+nnberns@yahoo.com,Neil Berns,547136584,english,core.vip,Dormant,true,4,3145.3199999999997,786,390,2024-11-27,2024-03-04,Dry Red,"Galil Mountain, Adir, Teperberg",50-80,high,Special Reds
+raphael@metaline.co.il,רפאל זרביב,543211011,english,core.vip,Dormant,true,2,3138.44,1569,595,2024-05-07,2024-05-06,Dry Red,,93-103,high,Special Reds
+medianyc@gmail.com,David Benaym,587710536,english,core.vip,Dormant,true,2,3076.92,1538,836,2023-09-08,2023-09-07,Dry Red,Tzora,128.205-128.205,high,Special Reds
+mrsmsroka@gmail.com,Mindy Sroka,3103506509,english,core.vip,Dormant,true,2,3059.8,1530,932,2023-06-05,2023-06-04,Dry Red,"Binyamina, Vitkin",44-94,high,Special Reds
+drdina@012.net.il,דינה הרבט,547792624,en,core.vip,Dormant,false,4,3046.2400000000002,762,502,2024-08-07,2024-05-23,Dry Red,"Golan Heights, Binyamina, Or Haganuz",49-85,high,Special Reds
+emmanuelbismuth@gmail.com,עמנואל ביסמוט,584250280,hebrew,core.vip,Dormant,true,4,3000.0799999999995,750,479,2024-08-31,2024-05-30,"Dry Red, Dry White","Binyamina, Galil Mountain, Golan Heights",32-76,high,"Special Reds, Special Whites/Rosés"
+inbalm@cocacola.co.il,ענבל מלין,502245687,en,core.repeat,Dormant,false,2,2923.12,1462,974,2023-04-23,2023-04-23,"Dry Red, Dry White","Teperberg, Vitkin",71-120,high,"Special Reds, Special Whites/Rosés"
+eli.shor@gmail.com,אלי שור,583280809,hebrew,core.repeat,Dormant,true,4,2871.8,718,679,2024-02-13,2024-02-11,"Dry Red, Dry White",,73-256,high,"Special Reds, Special Whites/Rosés, Premium Value"
+ebzmd@protonmail.com,Ephraim Ben-Zeev,972523863981,english,noncore.gift,Dormant,true,4,2803.08,701,622,2024-04-10,2024-03-11,"Dry Red, Dessert","Adir, Agur, Galil Mountain",29-73,high,Special Reds
+moyalfax@gmail.com,נתנאל מויאל,523670670,hebrew,core.repeat,Dormant,true,4,2745.2799999999997,686,689,2024-02-02,2023-08-15,Dry White,,30-32,high,Special Whites/Rosés
+orenltd2@013net.net,אורן לוי,586245964,hebrew,core.repeat,Dormant,true,4,2707.72,677,939,2023-05-28,2022-09-04,Dessert,Adir,85-85,high,
+avi.sholom@gmail.com,אבי שלום,549253660,en,core.repeat,Dormant,false,2,2690.5999999999995,1345,627,2024-04-04,2024-04-04,"Dry Red, Dry White","Shiloh, Gush Etzion, Or Haganuz",64-103,high,"Special Reds, Special Whites/Rosés"
+filippo.taddei@gmail.com,Filippo Taddei,3334355261,en,core.repeat,Dormant,false,2,2666.6400000000003,1333,750,2023-12-03,2023-12-03,"Dry Red, Dry White","Adir, Teperberg",103-256,high,"Special Reds, Special Whites/Rosés, Premium Value"
+ariginsberg1@gmail.com,Ari Ginsberg,544844998,en,core.repeat,Dormant,false,2,2611.96,1306,572,2024-05-29,2024-05-29,"Semi-Dry, Dry Red",Mony,33-76,high,Special Reds
+ilanamama@hotmail.com,Ilana Zoldan,9172709392,en,noncore.gift,Dormant,false,2,2603.4599999999996,1302,782,2023-11-01,2023-11-01,"Rosé, Dry White","Gush Etzion, Castel, Binyamina",33-69,high,Special Whites/Rosés
+ravpeami@gmail.com,יעקב פרקש,527633632,english,core.repeat,Dormant,true,2,2598.28,1299,1035,2023-02-21,2023-02-21,Dessert,Netofa,81.19625-81.19625,high,
+meir@sendor.org,Meir Sendor,586612704,en,core.repeat,Dormant,false,2,2574.4,1287,575,2024-05-26,2024-05-26,"Dry White, Dry Red","Midbar, Galil Mountain, Adir",33-77,high,"Special Reds, Special Whites/Rosés"
+esthergilbert1359@gmail.com,Abraham Gilbert,3474992606,en,core.repeat,Dormant,false,2,2564.12,1282,515,2024-07-25,2024-07-24,Dry Red,,256-385,high,"Special Reds, Premium Value"
+ana.obrien@lw.com,Ana Obrien,13108807809,english,core.repeat,Dormant,true,2,2512.7999999999997,1256,897,2023-07-10,2023-07-09,Dry Red,Netofa,158-171,high,"Special Reds, Premium Value"
+alon@shahar.org,קאופמן אלון,544286198,english,core.repeat,Dormant,true,2,2499.1600000000003,1250,650,2024-03-13,2024-03-12,Dry Red,,73-120,high,Special Reds
+melanie.halfon@gmail.com,Melanie Amouyal,5370855114,en,core.repeat,Dormant,false,2,2461.5200000000004,1231,671,2024-02-20,2024-02-20,Dry Red,,103-103,high,Special Reds
+yair.avidan59@gmail.com,יאיר אבידן,522460987,english,core.repeat,Dormant,true,2,2461.52,1231,480,2024-08-29,2024-08-28,Dry Red,Tzora,102.56333333333333-102.56333333333333,high,Special Reds
+yaacov@pstein.com,Yaacov Jacob,549495458,en,core.repeat,Dormant,false,2,2434.16,1217,664,2024-02-27,2024-02-27,"Semi-Dry, Dry White, Dry Red","Binyamina, Galil Mountain, Mony",32-103,high,"Special Reds, Special Whites/Rosés, Special Variety"
+mcshmueli@gmail.com,אסף שמואלי,546699308,en,core.repeat,Dormant,false,2,2420.52,1210,1197,2022-09-12,2022-09-12,Semi-Dry,,50.4275-50.4275,high,
+dara.rogoff@gmail.com,דרה רוגוף,545420049,en,core.repeat,Dormant,false,2,2359,1180,735,2023-12-19,2023-12-18,Dry Red,Vitkin,68-111,high,Special Reds
+aaron@inlender.net,Aaron Inlender,584099487,en,core.repeat,Dormant,false,2,2341.88,1171,1077,2023-01-10,2023-01-10,"Dry Red, Dry White",Teperberg,81-141,high,"Special Reds, Special Whites/Rosés"
+bsposlky@gmail.com,Bernard Spolsky,524218146,en,core.repeat,Dormant,false,2,2338.52,1169,1434,2022-01-18,2022-01-18,Dry White,"Tabor, Golan Heights, Gush Etzion",43-56,high,Special Whites/Rosés
+shalhevet_b@yahoo.com,Shalhevet Bar-Asher,528825761,en,core.repeat,Dormant,false,2,2324.8,1162,728,2023-12-25,2023-12-25,Dry Red,Castel,81-107,high,Special Reds
+eli@elidaiches.com,Eli Daiches,12153808089,en,core.repeat,Dormant,true,2,2290.6000000000004,1145,1219,2022-08-21,2022-08-20,Dry Red,Teperberg,81-124,high,Special Reds
+ayala.young@gmail.com,Ayala Young,527721838,english,core.repeat,Dormant,true,4,2287.24,572,504,2024-08-05,2022-05-11,"Dry Red, Dry White, Rosé","Teperberg, Midbar, Shiloh",44-81,high,"Special Reds, Special Whites/Rosés, Special Variety"
+ajmyk0201@gmail.com,אלכסנדר קסל,585052135,en,core.repeat,Lapsed,true,4,2256.4,564,362,2024-12-26,2024-04-02,Dry Red,,85-103,high,Special Reds
+kosherkook@gmail.com,Binyomin Wahrhaftig,9294441031,en,core.repeat,Dormant,false,2,2222.2400000000002,1111,756,2023-11-27,2023-11-26,"Dry Red, Fortified","Adir, Castel, Shiloh",85-214,high,"Special Reds, Premium Value"
+robingreenspan@gmail.com,Robin Greenspan,3106399780,english,core.repeat,Dormant,true,2,2196.92,1098,1355,2022-04-07,2022-04-07,Dry Red,,76-92,high,Special Reds
+yair@shilhav.com,יאיר שלהב,547433880,hebrew,core.repeat,Dormant,true,2,2119.6400000000003,1060,480,2024-08-29,2024-08-29,"Dry Red, Fortified",,85-128,high,Special Reds
+dtrauttman@gmail.com,David Trauttman,534184995,en,core.repeat,Dormant,false,2,2068.4,1034,921,2023-06-15,2023-06-15,"Dry Red, Rosé, Dry White","Galil Mountain, Binyamina",32-70,high,"Special Reds, Special Whites/Rosés, Special Variety"
+hargamal@yahoo.com,Dr Joshua Schmidt,546257300,en,core.repeat,Dormant,false,4,2049.24,512,726,2023-12-27,2023-12-17,"Dry White, Dessert, Dry Red","Mony, Golan Heights, Galil Mountain",32-79,high,"Special Reds, Special Whites/Rosés, Special Variety"
+liorasarag@gmail.com,ידותון גרוסמן,584584320,hebrew,noncore.gift,Dormant,true,2,1993.8000000000002,997,649,2024-03-13,2024-03-12,"Dessert, Dry Red","Mony, Galil Mountain, Adir",29-77,high,Special Reds
+vandervegte@gmail.com,Henri van der Vegte,31611341746,en,noncore.gift,Dormant,true,6,1948.6799999999998,325,1103,2022-12-15,2022-12-15,Dry White,,162-162,high,"Special Whites/Rosés, Premium Value"
+arikmo@gmail.com,אהרון מרדכי,524642087,hebrew,core.repeat,Dormant,true,2,1945.3200000000004,973,1330,2022-05-03,2022-05-02,"Dry Red, Dry White","Galil Mountain, Gush Etzion, Binyamina",32-58,high,"Special Reds, Special Whites/Rosés"
+bennotis@gmail.com,Benjamin Notis,972584572708,en,core.repeat,Dormant,false,2,1945.32,973,614,2024-04-18,2024-04-17,"Dry Red, Dry White","Tabor, Agur, Carmel",73-93,high,"Special Reds, Special Whites/Rosés"
+eldadkaniel@gmail.com,אלדד קניאל,502270665,hebrew,core.repeat,Dormant,true,2,1938.48,969,568,2024-06-02,2024-06-02,Dry Red,Golan Heights,48.462-48.462,high,Special Reds
+elanmosbacher@gmail.com,Elan Mosbacher,773-888-3526,en,core.repeat,Dormant,false,2,1907.68,954,1400,2022-02-22,2022-02-21,Dry Red,,50-205,high,"Special Reds, Premium Value"
+yoskovich@hotmail.com,דביר יוסקוביץ,524286426,en,core.repeat,Lapsed,false,2,1856.4000000000003,928,363,2024-12-24,2024-12-23,"Dry Red, Semi-Dry, Dessert","Mony, Tishbi",33-110,high,"Special Reds, Special Variety"
+noy@mordekovitch.co.il,נוי מורדקוביץ,544949323,en,core.repeat,Dormant,false,2,1846.16,923,1379,2022-03-14,2022-03-14,Dry Red,Midbar,76.92333333333333-76.92333333333333,high,Special Reds
+k.chelakis@kaizengaming.com,Konstantinos Chelakis,0030 6945507449,english,noncore.gift,Dormant,true,2,1846.1200000000003,923,1089,2022-12-29,2022-12-29,"Dry Red, Dry White, Rosé","Adir, Lueria, Recanati",81-103,high,"Special Reds, Special Whites/Rosés, Special Variety"
+leah.harary@gmail.com,Leah Harary,9178815960,english,core.repeat,Dormant,true,2,1842.7600000000002,921,760,2023-11-24,2023-11-23,Dry Red,Flam,81-141,high,Special Reds
+adampeters@gmail.com,Adam Peters,6138624524,english,noncore.gift,Dormant,true,2,1842.7199999999998,921,1285,2022-06-16,2022-06-16,"Dry Red, Dry White",,68-107,high,"Special Reds, Special Whites/Rosés"
+russel@mail.com,Russel Kelner,587247871,en,noncore.gift,Dormant,false,2,1815.3600000000001,908,623,2024-04-08,2024-04-08,"Dessert, Dry Red, Rosé","Mony, Midbar, Binyamina",27-59,high,"Special Reds, Special Whites/Rosés, Special Variety"
+hesse67@gmail.com,‫גילעד הסה‬‎,507240046,hebrew,core.repeat,Dormant,true,2,1794.88,897,606,2024-04-26,2024-04-25,"Dry White, Dry Red",,107-222,high,"Special Reds, Special Whites/Rosés, Premium Value"
+barkaisw@gmail.com,צבי ברקאי,547775517,en,noncore.gift,Dormant,false,2,1787.72,894,616,2024-04-15,2024-04-14,"Dry Red, Dessert, Dry White","Adir, Mony, Golan Heights",27-102,high,"Special Reds, Special Whites/Rosés, Special Variety"
+grothst@gmail.com,Gidon Rothstein,534272538,english,core.repeat,Dormant,true,2,1770.92,885,630,2024-04-01,2024-04-01,"Dry Red, Dessert, Rosé, Semi-Dry","Mony, Teperberg",30-137,high,"Special Reds, Special Whites/Rosés, Special Variety"
+tzionatan@gmail.com,יונתן טבול,502404756,hebrew,noncore.gift,Dormant,true,2,1769.24,885,619,2024-04-12,2024-04-12,Dry Red,"Galil Mountain, Gush Etzion",62-65,high,Special Reds
+jlmwines@theherrmans.com,Jonathan Herrman,#ERROR!,en,noncore.gift,Dormant,false,2,1764.12,882,959,2023-05-08,2023-05-08,Dry Red,,110.2575-110.2575,high,Special Reds
+eladayan@013.net,Ella Olevson,507389159,en,core.repeat,Dormant,false,2,1763.08,882,862,2023-08-13,2023-08-12,Dry Red,,34-72,high,Special Reds
+sirwaldo@gmail.com,מנוחה פרידסון,548067110,en,noncore.gift,Dormant,false,2,1744.68,872,648,2024-03-14,2024-03-14,Dry Red,"Shiloh, Golan Heights",77-115,high,Special Reds
+albertscialom@sfr.fr,אלברט סיאלום,527660625,english,core.repeat,Dormant,true,2,1729.92,865,892,2023-07-14,2023-07-14,"Dry White, Dry Red","Vitkin, Golan Heights",54-120,high,"Special Reds, Special Whites/Rosés"
+amermelstein@treetopdev.com,Adam Mermelstein,2016479591,en,noncore.gift,Dormant,false,2,1713.8000000000002,857,650,2024-03-12,2024-03-12,"Dry Red, Rosé",Mony,29-115,high,"Special Reds, Special Whites/Rosés"
+davidgozal@yahoo.com,דוד גוזל,507874369,hebrew,core.repeat,Dormant,true,2,1709.4,855,493,2024-08-16,2024-08-16,Dry Red,,137-154,high,"Special Reds, Premium Value"
+kedemr@hfn.co.il,רן קדם,547787419,en,core.repeat,Dormant,false,2,1692.32,846,598,2024-05-03,2024-05-03,Dessert,Adir,84.616-84.616,high,
+mziering@outlook.com,Mia Ziering,2035617239,en,noncore.gift,Dormant,false,2,1678.68,839,573,2024-05-28,2024-05-28,Dry Red,"Binyamina, Mony, Teperberg",32-102,high,Special Reds
+adulkin@gmail.com,אנדרי דולקין,528792290,en,core.repeat,Dormant,false,2,1675.2,838,617,2024-04-14,2024-04-14,,,,high,
+ginzy@netvision.net.il,Hershel Ginsburg,050-744-6842,english,noncore.gift,Dormant,true,2,1655.3999999999996,828,649,2024-03-13,2024-03-13,Dry Red,,84-108,high,Special Reds
+dymailers@gmail.com,David Yammer,545511913,en,core.repeat,Dormant,false,2,1637.6,819,1369,2022-03-24,2022-03-24,"Dry Red, Dessert, Rosé",Galil Mountain,30-137,high,"Special Reds, Special Whites/Rosés, Special Variety"
+rivkahmoriah@gmail.com,Rivkah Moriah,526996748,english,noncore.gift,Dormant,true,2,1630.8,815,619,2024-04-12,2024-04-12,Dry Red,Golan Heights,73-123,high,Special Reds
+lisaweinsoff@gmail.com,ליסה ויינסוף,547659646,english,core.repeat,Dormant,true,2,1630.7599999999998,815,671,2024-02-20,2024-02-20,"Dry Red, Dry White",,102-103,high,"Special Reds, Special Whites/Rosés"
+bccentral6@gmail.com,Benjamin Zaslow,972537087264,english,core.repeat,Dormant,true,2,1623.92,812,1351,2022-04-11,2022-04-11,"Dry Red, Dry White","Vitkin, Teperberg",77-115,high,"Special Reds, Special Whites/Rosés"
+kuferdoc@gmail.com,David Kupferberg,587802014,english,noncore.gift,Dormant,true,2,1615.3600000000001,808,622,2024-04-09,2024-04-09,"Rosé, Dessert","Galil Mountain, Gush Etzion, Tura",27-68,high,Special Whites/Rosés
+jburwell@rosenblumcompanies.com,Jill Burwell,5188699302,en,noncore.gift,Dormant,false,2,1606.8400000000001,803,1188,2022-09-22,2022-09-21,"Dry Red, Dry White",Castel,128-137,high,"Special Reds, Special Whites/Rosés"
+md209206@gmail.com,משה דויטש,504163256,hebrew,core.repeat,Dormant,true,2,1600,800,973,2023-04-24,2023-04-24,Dry Red,,77-85,high,Special Reds
+oriadir@gmail.com,Ori Adir,972544299839,en,core.repeat,Dormant,false,2,1596.5600000000002,798,1252,2022-07-20,2022-07-19,"Dry White, Dry Red","Recanati, Midbar",47-77,high,"Special Reds, Special Whites/Rosés"
+nditur@gmail.com,ידין דיטור,546700655,hebrew,noncore.gift,Dormant,true,2,1593.8400000000001,797,649,2024-03-13,2024-03-13,Dry Red,"Adir, Binyamina",68-123,high,Special Reds
+yonah@wahrhaftig.net,Yonah Wahrhaftig,586684410,en,core.repeat,Dormant,false,2,1584.6400000000003,792,1406,2022-02-15,2022-02-15,Dry Red,"Binyamina, Teperberg",29-59,high,Special Reds
+esteebar@gmail.com,Estee Rose-Barak,544955994,english,core.repeat,Dormant,true,2,1577.7999999999997,789,368,2024-12-19,2024-12-19,"Dry Red, Dry White",,76-103,high,"Special Reds, Special Whites/Rosés"
+radfordlane@gmail.com,Harold Berman,527906004,en,noncore.gift,Dormant,false,2,1575.36,788,623,2024-04-08,2024-04-08,Dry Red,Shiloh,45-99,high,Special Reds
+debbietopas@gmail.com,Henry Topas,5142950677,english,noncore.gift,Dormant,true,2,1572.3199999999997,786,619,2024-04-12,2024-04-11,"Dry Red, Dry White","Midbar, Binyamina",29-45,high,"Special Reds, Special Whites/Rosés"
+tomerg@gmail.com,תומר גרינוולד,502409019,en,core.repeat,Dormant,false,2,1565.84,783,372,2024-12-15,2024-12-15,"Dry Red, Dessert",,50-103,high,Special Reds
+ronen@amirim-p.com,רונן חדש,546827772,en,core.repeat,Dormant,false,2,1558.96,779,1171,2022-10-08,2022-10-08,Dry Red,,32.47833333333333-32.47833333333333,high,Special Reds
+adva11ld@gmail.com,אדוה לוי דדון,528951539,hebrew,core.repeat,Dormant,true,2,1558.96,779,722,2023-12-31,2023-12-31,Dry White,,32.47833333333333-32.47833333333333,high,Special Whites/Rosés
+cohenmich1@gmail.com,מיכל כהן דדי,524544774,hebrew,core.repeat,Dormant,true,2,1558.96,779,652,2024-03-11,2024-03-10,Dessert,Teperberg,30-30,high,
+raphi.bb@gmail.com,רפאל בן בסט,547728610,en,core.repeat,Dormant,false,2,1538.48,769,385,2024-12-02,2024-12-02,Dry Red,,128.20666666666668-128.20666666666668,high,Special Reds
+chagaya@gmail.com,חגי אקרמן,544975827,hebrew,core.vip,Dormant,true,6,1531.6,255,369,2024-12-18,2024-03-12,"Dessert, Dry Red","Midbar, Mony",30-82,high,Special Reds
+drhirschman@gmail.com,Robert Hirschman,4143774525,english,core.repeat,Dormant,true,2,1521.36,761,697,2024-01-25,2024-01-24,Dry Red,Mony,76.068-76.068,high,Special Reds
+eyal.y7@gmail.com,איל יקיר,547882605,hebrew,core.repeat,Dormant,true,2,1521.36,761,519,2024-07-22,2024-07-21,Dry Red,,76.068-76.068,high,Special Reds
+zvia.diamant@il.nestle.com,צביה דיאמנט,546767101,en,core.repeat,Dormant,false,2,1517.92,759,660,2024-03-02,2024-03-01,Dessert,Adir,84.615-84.615,high,
+esthergoodman9@gmail.com,Danielle Zimmerman,972546368248,en,noncore.gift,Dormant,false,2,1516.9599999999996,758,622,2024-04-10,2024-04-09,"Dry Red, Dessert","Teperberg, Gush Etzion, Or Haganuz",27-76,high,Special Reds
+ran_gazit@hotmail.com,יפעת גזית,523646138,hebrew,core.repeat,Dormant,true,2,1514.56,757,824,2023-09-20,2023-09-20,"Dry White, Dry Red","Barkan, Tishbi",36-64,high,"Special Reds, Special Whites/Rosés"
+aviva972@gmail.com,ויויאן ברזל,546369244,en,core.repeat,Dormant,false,2,1504.2800000000002,752,1315,2022-05-18,2022-05-17,Dry Red,Teperberg,77-111,high,Special Reds
+arielamnon@gmail.com,אמנון אריאל,506496084,hebrew,core.repeat,Dormant,true,2,1504.28,752,762,2023-11-21,2023-11-21,"Dry Red, Dry White",Mony,47-47,high,"Special Reds, Special Whites/Rosés"
+stas.gorsh@gmail.com,Stanislav Gorshenin,35699444876,english,noncore.gift,Lapsed,true,2,1504.28,752,363,2024-12-24,2024-12-24,Dry Red,,188.035-188.035,high,"Special Reds, Premium Value"
+eitans252@gmail.com,איתן שקד,542222948,hebrew,core.repeat,Dormant,true,2,1500.84,750,628,2024-04-03,2024-04-03,"Dry Red, Dry White","Galil Mountain, Tabor",32-41,high,"Special Reds, Special Whites/Rosés"
+markonomi@yahoo.com,Marsel Konomi,503535985,english,core.repeat,Dormant,true,2,1500.84,750,440,2024-10-08,2024-10-08,"Dry Red, Dry White","Tzora, Castel",68-308,high,"Special Reds, Special Whites/Rosés, Premium Value"
+dnymsyly@gmail.com,דניאל אמסילי,542888528,hebrew,core.repeat,Lapsed,true,2,1497.48,749,361,2024-12-26,2024-12-26,Dry Red,Vitkin,50-94,high,Special Reds
+gae2014@walla.com,מיכאל מוזס,507781200,hebrew,core.repeat,Dormant,true,2,1497.44,749,463,2024-09-15,2024-09-14,Dry Red,,77-110,high,Special Reds
+jwiesen1@gmail.com,Jonathan Wiesen,587795325,en,noncore.gift,Dormant,false,2,1495.3199999999997,748,649,2024-03-13,2024-03-13,Dry Red,Gush Etzion,45-81,high,Special Reds
+ba7826@gmail.com,בתשבע קוטובסקי,549419545,en,core.repeat,Dormant,false,2,1487.16,744,1341,2022-04-21,2022-04-20,Dry Red,,74.358-74.358,high,Special Reds
+sr2031999@gmail.com,יעקב אבוביץ,533149243,en,core.repeat,Dormant,false,2,1487.16,744,1054,2023-02-02,2023-02-02,Dessert,Tura,123.93-123.93,high,
+reuven.gamliel@gmail.com,ראובן גמליאל,523248117,en,core.repeat,Dormant,false,2,1483.7199999999998,742,384,2024-12-04,2024-12-03,Dry White,"Castel, Mony",50-68,high,Special Whites/Rosés
+yaron353@gmail.com,ירון רונן,529437655,en,core.repeat,Dormant,false,2,1470.12,735,463,2024-09-15,2024-09-15,Dry Red,Castel,128-239,high,"Special Reds, Premium Value"
+daniel@adsum.co.il,Daniel Slutzky,544566013,english,core.repeat,Lapsed,true,2,1470.08,735,361,2024-12-26,2024-12-26,Dry Red,,81-103,high,Special Reds
+morkatav95@gmail.com,mor katav nakache,545611734,en,core.repeat,Dormant,false,2,1466.68,733,1004,2023-03-24,2023-03-24,"Semi-Dry, Dry White",Mony,33-33,high,Special Whites/Rosés
+clandau@gmail.com,Chaim Landau,9176484060,en,noncore.gift,Dormant,false,2,1466.6799999999998,733,1175,2022-10-04,2022-10-04,Dry Red,Golan Heights,127-239,high,"Special Reds, Premium Value"
+hadvora1@gmail.com,Dvora Hashimshony,547777710,english,core.repeat,Dormant,true,2,1466.6799999999998,733,502,2024-08-07,2024-08-07,Dry White,Mony,33-33,high,Special Whites/Rosés
+bjo@monjasa.com,Carlemilio Momigliano,306971910218,english,noncore.gift,Dormant,true,4,1466.6799999999998,367,370,2024-12-17,2024-12-17,Dry Red,Teperberg,85-188,high,"Special Reds, Premium Value"
+montagneyohanan@gmail.com,יוחנן מונטניה,505882343,en,core.repeat,Dormant,false,2,1466.6399999999999,733,1134,2022-11-14,2022-11-14,"Dry Red, Rosé",Gush Etzion,59-103,high,"Special Reds, Special Whites/Rosés"
+gavrielasher@gmail.com,גבריאל ריפמן,587200246,english,core.repeat,Dormant,true,2,1466.6399999999999,733,721,2024-01-01,2023-12-31,Dry Red,,93-137,high,Special Reds
+eytan.buchman@gmail.com,איתן בוכמן,542069227,english,core.repeat,Dormant,true,2,1463.2799999999997,732,701,2024-01-21,2024-01-21,Dry Red,"Mony, Tishbi",32-70,high,Special Reds
+jweinhi@gmail.com,יוני וינגרטן,584006552,en,core.repeat,Dormant,true,2,1449.56,725,591,2024-05-10,2024-05-10,Dry Red,,111-127,high,Special Reds
+rikisav4@gmail.com,ריקרדו סבלסקי,523676920,hebrew,core.repeat,Dormant,true,2,1449.56,725,459,2024-09-19,2024-09-19,"Semi-Dry, Rosé",Mony,32-33,high,Special Whites/Rosés
+jweingi@gmail.com,Jonathan Weingarten,584006552,english,core.repeat,Dormant,true,2,1435.92,718,563,2024-06-07,2024-06-07,Dry Red,,107-128,high,Special Reds
+ram@ofek.ws,רם בלכר,507290533,en,core.repeat,Dormant,false,2,1435.88,718,512,2024-07-28,2024-07-27,Dry Red,Tzora,89.7425-89.7425,high,Special Reds
+dobroleah@gmail.com,Leah Dobro,058-407-2135,english,noncore.gift,Dormant,true,2,1430.72,715,649,2024-03-13,2024-03-13,"Dry Red, Dry White, Dessert","Galil Mountain, Binyamina, Adir",38-75,high,"Special Reds, Special Whites/Rosés, Special Variety"
+sireling@msn.com,Linda Sireling,054-746-5382,english,core.repeat,Dormant,true,2,1429.0400000000002,715,389,2024-11-28,2024-11-28,"Dry Red, Fortified, Dessert",Mony,33-137,high,"Special Reds, Special Variety"
+sbiton20791@walla.co.il,שיראל אוחנה,507868130,hebrew,core.repeat,Dormant,true,2,1425.6399999999999,713,434,2024-10-14,2024-10-14,Dry Red,Tzora,85-103,high,Special Reds
+yaari2@netvision.net.il,Ehud Yaari,050-523-6012,english,core.repeat,Dormant,true,2,1422.1999999999998,711,720,2024-01-02,2024-01-02,Dry White,Mony,33-94,high,Special Whites/Rosés
+matescohen@gmail.com,מתי כהן,504770781,hebrew,core.repeat,Dormant,true,2,1418.7599999999998,709,707,2024-01-15,2024-01-15,"Dry Red, Dessert",Teperberg,30-81,high,Special Reds
+dbrager@gmail.com,David Brager,544679809,en,core.repeat,Dormant,false,2,1411.9999999999998,706,725,2023-12-28,2023-12-28,Dry Red,Tishbi,28-55,high,Special Reds
+edwardalexanderevans@yahoo.com,אדוארד אוונס,585194814,hebrew,core.repeat,Dormant,true,2,1411.96,706,846,2023-08-29,2023-08-29,Dry Red,,50.42714285714286-50.42714285714286,high,Special Reds
+tkenny@druidsoftware.com,Tadhg Kenny,876845146,english,noncore.gift,Dormant,true,2,1411.9599999999998,706,733,2023-12-20,2023-12-20,Dry Red,Teperberg,73-103,high,Special Reds
+nadav.luzia@gmail.com,נדב לוזיה,525449669,hebrew,core.repeat,Dormant,true,2,1401.72,701,500,2024-08-10,2024-08-09,"Dry White, Dry Red","Teperberg, Midbar, Tzora",73-103,high,"Special Reds, Special Whites/Rosés"
+vanments@xs4all.nl,Joseph van Ments,972535203067,english,core.repeat,Dormant,true,2,1398.3600000000001,699,549,2024-06-21,2024-06-20,"Rosé, Dry White, Dry Red","Mony, Ella Valley, Galil Mountain",32-59,high,"Special Reds, Special Whites/Rosés, Special Variety"
+dhershel@gmail.com,Daniel Rabin,585994240,english,core.repeat,Dormant,true,2,1398.3200000000002,699,1078,2023-01-10,2023-01-09,"Dry Red, Dry White, Dessert","Mony, Netofa",56-81,high,"Special Reds, Special Whites/Rosés, Special Variety"
+evamoshe1@yahoo.com,Eva Kesselman,523838683,en,noncore.gift,Dormant,false,2,1390.8,695,622,2024-04-09,2024-04-08,Dessert,Teperberg,25-27,high,
+danny.koor@gmail.com,Danny Koor,528338643,en,noncore.gift,Dormant,false,2,1390.76,695,650,2024-03-13,2024-03-12,"Semi-Dry, Dry Red",Binyamina,29-96,high,Special Reds
+kaufmanom@gmail.com,משה קאופמן,526189429,hebrew,core.repeat,Lapsed,true,2,1388.04,694,363,2024-12-24,2024-12-24,Dry Red,Galil Mountain,64-74,high,Special Reds
+shlomitgeri@gmail.com,גרי שורץ,526759200,hebrew,core.repeat,Dormant,true,2,1384.64,692,1127,2022-11-21,2022-11-21,Dry Red,"Vitkin, Flam",56-291,high,"Special Reds, Premium Value"
+gadnabet@gmail.com,גד נבט,524295468,en,core.repeat,Dormant,false,4,1384.6399999999999,346,384,2024-12-03,2024-03-12,"Dry Red, Dry White","Adir, Binyamina, Galil Mountain",32-75,high,"Special Reds, Special Whites/Rosés"
+lior989@gmail.com,דוד ליאור,502036473,en,core.repeat,Dormant,false,2,1384.6,692,1193,2022-09-16,2022-09-15,"Rosé, Dessert","Gush Etzion, Tura",56-124,high,Special Whites/Rosés
+lockemup25@yahoo.com,Shlomit Metz-Poolat,555001619,en,core.repeat,Dormant,false,2,1381.2,691,628,2024-04-03,2024-04-02,"Semi-Dry, Dessert","Mony, Teperberg",30-85,high,
+afredj@gmail.com,אריק ואיימי פרדז',543139051,en,core.repeat,Dormant,false,2,1374.48,687,650,2024-03-12,2024-03-12,Dry Red,Galil Mountain,57-57,high,Special Reds
+mosmoy89@gmail.com,משה מויאל,538502699,hebrew,core.repeat,Lapsed,true,2,1370.9599999999998,685,357,2024-12-30,2024-12-30,Dry Red,Teperberg,50-67,high,Special Reds
+akiva02@gmail.com,Alan Adlerstein,4917645892985,en,noncore.gift,Dormant,false,2,1367.56,684,994,2023-04-04,2023-04-03,Dry Red,Teperberg,128-214,high,"Special Reds, Premium Value"
+apearson@svb.com,Azzurra Pearson,2025503069,english,noncore.gift,Dormant,true,4,1367.52,342,734,2023-12-19,2023-12-18,Dry Red,Adir,171-171,high,"Special Reds, Premium Value"
+asher@steene.co.uk,Asher Steene,#ERROR!,english,noncore.gift,Dormant,true,4,1367.52,342,615,2024-04-16,2024-04-14,Dry Red,Yatir,171-171,high,"Special Reds, Premium Value"
+effi_san@hotmail.com,אפי שליין,549277142,en,core.repeat,Dormant,false,2,1367.52,684,489,2024-08-20,2024-08-19,Dry White,Ella Valley,34.188-34.188,high,Special Whites/Rosés
+ami.landau@gmail.com,עמי לנדאו,508828326,hebrew,core.repeat,Dormant,true,2,1367.52,684,455,2024-09-23,2024-09-23,Fortified,,85.47-85.47,high,
+litalsul12@gmail.com,ליטל אגמי,504841414,hebrew,core.repeat,Dormant,true,2,1364.12,682,552,2024-06-18,2024-06-17,"Dry Red, Dry White, Semi-Dry","Teperberg, Binyamina",32-81,high,"Special Reds, Special Whites/Rosés, Special Variety"
+msberger100@gmail.com,מיכאל ברגר,527539563,en,core.repeat,Dormant,false,2,1353.88,677,726,2023-12-27,2023-12-27,Dry Red,,73-92,high,Special Reds
+talazar1993@gmail.com,טל קלמן,522856387,en,core.repeat,Dormant,false,2,1343.6,672,654,2024-03-08,2024-03-08,"Dry Red, Rosé, Dessert, Semi-Dry","Vitkin, Gush Etzion",30-80,high,"Special Reds, Special Whites/Rosés, Special Variety"
+georgie@augmentum.vc,Augmentum Fintech,447980744171,en,noncore.gift,Dormant,false,4,1333.32,333,1103,2022-12-16,2022-12-15,Dry Red,,111-111,high,Special Reds
+arielchwat@gmail.com,אריאל שבט,523134553,hebrew,noncore.gift,Dormant,true,2,1323.04,662,649,2024-03-13,2024-03-13,"Dry Red, Dry White, Rosé","Tishbi, Binyamina, Mony",29-63,high,"Special Reds, Special Whites/Rosés, Special Variety"
+ybastomski@gmail.com,Yonah Bastomski,534713351,english,core.repeat,Dormant,true,2,1323.04,662,640,2024-03-22,2024-03-21,Dry Red,Binyamina,45-68,high,Special Reds
+guyfalk140@gmail.com,גיא פלק,529243907,en,core.repeat,Dormant,false,2,1299.12,650,583,2024-05-19,2024-05-18,Dry Red,Tabor,94-137,high,Special Reds
+normansolomon@btinternet.com,Rabbi Dr Norman Solomon,441865243424,en,core.repeat,Dormant,false,2,1295.7199999999998,648,610,2024-04-21,2024-04-21,"Dry Red, Dry White",Binyamina,64-120,high,"Special Reds, Special Whites/Rosés"
+elata@bgu.ac.il,Chaim Elata,528915551,en,core.repeat,Dormant,false,2,1292.3200000000002,646,1210,2022-08-30,2022-08-30,"Dry White, Semi-Dry",Recanati,32-64,high,Special Whites/Rosés
+yitzhakjoseph@gmail.com,יצחק ג'וזף,527459538,hebrew,core.repeat,Dormant,true,2,1282.0800000000002,641,474,2024-09-05,2024-09-04,Dry Red,"Tura, Tabor",73-94,high,Special Reds
+rdwolves2@gmail.com,Rachel Wolf,504012080,english,noncore.gift,Dormant,true,2,1258.48,629,649,2024-03-13,2024-03-13,Dry Red,"Binyamina, Galil Mountain, Recanati",62-100,high,Special Reds
+gidonmahalla@gmail.com,גדעון מהלה,543559258,english,core.repeat,Dormant,true,2,1258.1599999999999,629,580,2024-05-21,2024-05-21,"Dry Red, Dry White, Rosé","Teperberg, Midbar, Mony",32-63,high,"Special Reds, Special Whites/Rosés, Special Variety"
+jo.friedman@gmail.com,Jo Friedman,545691134,english,noncore.gift,Dormant,true,2,1236.96,618,623,2024-04-08,2024-04-08,"Dry Red, Dry White, Dessert",,25-85,high,"Special Reds, Special Whites/Rosés, Special Variety"
+jshapiro18@gmail.com,J Shapiro,#ERROR!,english,core.repeat,Dormant,true,2,1210.24,605,1245,2022-07-26,2022-07-26,Dry Red,Binyamina,50.42666666666667-50.42666666666667,high,Special Reds
+zvisimins@gmail.com,Hirsch Simins,8454996273,en,core.repeat,Dormant,false,2,1205.1,603,1022,2023-03-06,2023-03-05,Dry Red,Golan Heights,256.41-256.41,high,"Special Reds, Premium Value"
+nrebibo@gmail.com,Hillel Rebibo,584375012,english,core.repeat,Dormant,true,2,1203.0800000000002,602,729,2023-12-24,2023-12-24,"Dry Red, Dry White","Galil Mountain, Gush Etzion, Teperberg",31-65,high,"Special Reds, Special Whites/Rosés"
+merkava224@gmail.com,Aliks Gor,972532291109,english,core.repeat,Dormant,true,2,1200,600,951,2023-05-17,2023-05-16,Dry White,,33.333333333333336-33.333333333333336,high,Special Whites/Rosés
+donnyrobin68@gmail.com,דני רבין,506270492,hebrew,core.repeat,Dormant,true,2,1196.6,598,589,2024-05-12,2024-05-12,Dessert,,29.915-29.915,high,
+odedlif@gmail.com,עודד ליפשיץ,528990486,hebrew,core.repeat,Dormant,true,2,1155.56,578,459,2024-09-19,2024-09-19,Dry Red,"Galil Mountain, Ella Valley",68-76,high,Special Reds
+roniweiss24@gmail.com,Aaron Weiss,585409900,en,core.repeat,Dormant,false,2,1128.2,564,635,2024-03-27,2024-03-27,Dry Red,,94.01666666666667-94.01666666666667,high,Special Reds
+echall850@gmail.com,Ellen Hall,972524285230,en,core.repeat,Dormant,false,2,1128.2,564,633,2024-03-29,2024-03-29,Dry Red,,94.01666666666667-94.01666666666667,high,Special Reds
+yohanan@tiberias.muni.il,יוחנן כהן,050-899-8215,hebrew,core.repeat,Dormant,true,2,1124.8000000000002,562,395,2024-11-22,2024-11-21,"Dry Red, Fortified","Dalton, Tura",50-85,high,Special Reds
+eljuds55@gmail.com,ג'ודי סופיר,526842199,hebrew,noncore.gift,Dormant,true,2,1116.92,558,650,2024-03-12,2024-03-12,Dry Red,"Adir, Binyamina",29-84,high,Special Reds
+rony@familypack.co.il,רוני חדיד,525583380,hebrew,noncore.gift,Dormant,true,2,1101.52,551,621,2024-04-10,2024-04-09,Semi-Dry,Tura,68-69,high,
+naftulikagan@gmail.com,Tuli kagan,13475981894,en,core.repeat,Dormant,false,2,1094,547,592,2024-05-09,2024-05-09,Dry Red,Yatir,273.5-273.5,high,"Special Reds, Premium Value"
+leon59@talktalk.net,Leonie Swaden,7939254141,english,noncore.gift,Dormant,true,2,1094,547,451,2024-09-28,2024-09-27,Dry Red,Yatir,273.5-273.5,high,"Special Reds, Premium Value"
+hello@supershopdeals.com,Jill Erak,-6872,english,noncore.gift,Dormant,true,2,1094,547,381,2024-12-06,2024-12-05,Dry Red,Yatir,273.5-273.5,high,"Special Reds, Premium Value"
+elkweber5@gmail.com,Elka Weber,3477711352,english,noncore.gift,Dormant,true,2,1076.92,538,650,2024-03-12,2024-03-12,Dessert,Teperberg,26.923000000000002-26.923000000000002,high,
+sionamargrett@gmail.com,Chassi Meisel,2482501825,en,noncore.gift,Dormant,false,2,1070.12,535,662,2024-02-29,2024-02-29,Dry Red,Ella Valley,76-110,high,Special Reds
+tseitles@gmail.com,Theodore Seitles,525599055,en,core.repeat,Dormant,false,2,1070.08,535,1413,2022-02-08,2022-02-08,"Fortified, Dry White",Golan Heights,62-103,high,Special Whites/Rosés
+odeyaco12345@gmail.com,אודיה כהן,502170681,hebrew,core.repeat,Dormant,true,2,1063.28,532,649,2024-03-13,2024-03-13,"Dry Red, Dry White, Semi-Dry","Ella Valley, Binyamina, Tishbi",32-34,high,"Special Reds, Special Whites/Rosés, Special Variety"
+kruger.joshua@gmail.com,Joshua Kruger,508946493,english,noncore.gift,Dormant,true,2,1059.8400000000001,530,1236,2022-08-05,2022-08-04,"Dry White, Dry Red",,128-137,high,"Special Reds, Special Whites/Rosés"
+allasizova2@gmail.com,Alla Sizova,4915158755599,en,noncore.gift,Dormant,false,2,1053,527,389,2024-11-28,2024-11-28,Dry Red,,50-137,high,Special Reds
+tracyalexander@live.com.au,Tracy Alexander,972 2 5011555,en,core.repeat,Dormant,false,2,1051.2800000000002,526,1264,2022-07-07,2022-07-07,Dry Red,"Adir, Flam",106-260,high,"Special Reds, Premium Value"
+amsilior@gmail.com,אורן אמסילי,050-6505013,hebrew,noncore.gift,Dormant,true,2,1046.16,523,648,2024-03-14,2024-03-14,"Dry Red, Semi-Dry",Binyamina,29-58,high,Special Reds
+jonathan.grauman@gmail.com,Jonathan Grauman,4165640884,english,noncore.gift,Dormant,true,4,1025.68,256,1184,2022-09-25,2022-09-21,Dry Red,Tzora,128-128,high,Special Reds
+jyablon@wmeagency.com,josh yablon,2122093862,en,noncore.gift,Dormant,true,2,1025.64,513,998,2023-03-30,2023-03-29,Dry Red,,256.41-256.41,high,"Special Reds, Premium Value"
+bobsilberstein18@gmail.com,Robert Silberstein,4169841815,english,noncore.gift,Dormant,true,2,1025.64,513,472,2024-09-06,2024-09-05,Dry Red,,256.41-256.41,high,"Special Reds, Premium Value"
+adam.hay.1994@gmail.com,Adam Haycock,7496718182,english,core.vip,Dormant,true,6,1025.6,171,733,2023-12-21,2023-12-20,Fortified,,103-103,high,
+rene.camacho@sentinelone.com,Richard Smith,4089167831,en,noncore.gift,Dormant,false,6,1015.44,169,366,2024-12-21,2024-12-20,Dry Red,Teperberg,85-85,high,Special Reds
+gil.troitsa@gmail.com,גיל טרויצה,528431141,en,noncore.gift,Dormant,false,2,991.48,496,831,2023-09-13,2023-09-13,Dry Red,"Binyamina, Tzora",120-128,high,Special Reds
+lonimenche@gmail.com,Ilana Menche,7183447103,en,noncore.gift,Dormant,false,4,974.4000000000001,244,720,2024-01-03,2023-10-03,Dry Red,Binyamina,32-68,high,Special Reds
+kevinpaskins1@gmail.com,Kevin Paskins,7891848802,en,noncore.gift,Dormant,false,2,974.3600000000001,487,656,2024-03-06,2024-03-06,Dry Red,,107-137,high,Special Reds
+naomi.bubis@gmail.com,נעמי בוביס,544839049,en,core.repeat,Dormant,false,2,974.36,487,1262,2022-07-09,2022-07-08,Dry Red,,81.19666666666667-81.19666666666667,high,Special Reds
+beverly.pizzurro@nortonrosefulbright.com,Robert Greeson,254.855.0558,en,noncore.gift,Dormant,false,4,957.24,239,734,2023-12-19,2022-12-16,"Dry Red, Dry White",,103-137,high,"Special Reds, Special Whites/Rosés"
+avishag316@gmail.com,דוד חפץ,508739436,hebrew,core.repeat,Dormant,true,2,940.14,470,423,2024-10-25,2024-10-25,Fortified,,102.56-102.56,high,
+yulia@bgu.ac.il,יוליה אוסטינובה,544640147,hebrew,noncore.gift,Dormant,true,2,923.0800000000002,462,1153,2022-10-26,2022-10-26,"Dry White, Dry Red",Tzora,103-128,high,"Special Reds, Special Whites/Rosés"
+yosipov@yahoo.com,Rebecca Yosipovich,9058826339,en,core.repeat,Dormant,false,2,923.0799999999999,462,530,2024-07-11,2024-07-10,Dry Red,Tura,111-120,high,Special Reds
+miriamholtz@gmail.com,Miriam Malka craimer,526130298,en,noncore.gift,Dormant,false,2,920,460,650,2024-03-12,2024-03-12,Dessert,Adir,25-76,high,
+studiokanas@gmail.com,‫כנה שכטר‬‎,544336820,hebrew,core.repeat,Dormant,true,2,916.28,458,650,2024-03-13,2024-03-12,Dry Red,"Binyamina, Tishbi",32-33,high,Special Reds
+asafbrosh1@gmail.com,אסף ברוש,528522668,en,noncore.gift,Dormant,false,4,898.48,225,620,2024-04-12,2024-03-15,Dry Red,,29-29,high,Special Reds
+chaim.marcus95@gmail.com,חיים מרקוס,548328634,hebrew,noncore.gift,Dormant,true,2,898.4399999999999,449,654,2024-03-08,2024-03-08,"Dry White, Dry Red, Dessert","Ella Valley, Binyamina, Or Haganuz",29-58,high,"Special Reds, Special Whites/Rosés, Special Variety"
+chaichka@hotmail.com,Chaya Feldman,506656156,en,core.repeat,Dormant,false,2,892.32,446,1333,2022-04-29,2022-04-29,Dry Red,,74.36-74.36,high,Special Reds
+martha@augmentum.vc,Chanan Lavi (and team),447751749266,en,core.repeat,Dormant,false,2,888.88,444,752,2023-12-02,2023-12-01,Dry Red,,111.11-111.11,high,Special Reds
+dball@dablaw.com,Daniel Ball,13016740093,english,noncore.gift,Dormant,true,2,882.04,441,396,2024-11-21,2024-11-20,Dry Red,,68-85,high,Special Reds
+l.miller@brightsmithgroup.com,Lauren Miller,447464095420,en,noncore.gift,Dormant,false,4,871.8,218,1102,2022-12-17,2022-12-16,Dry Red,,107-111,high,Special Reds
+yifatburg@gmail.com,מיכה פרנקנבורג,506276836,en,noncore.gift,Dormant,false,2,855.3599999999999,428,649,2024-03-13,2024-03-12,"Dry Red, Rosé","Galil Mountain, Adir, Mony",42-68,high,"Special Reds, Special Whites/Rosés"
+kteplinsky1@earthlink.net,Sandra Teplinsky,7142812880,en,core.repeat,Dormant,false,2,854.72,427,1076,2023-01-11,2023-01-11,Dry Red,Castel,213.68-213.68,high,"Special Reds, Premium Value"
+olga@webb10.com,Olga Axelrod,96042623,en,noncore.gift,Dormant,false,2,854.72,427,754,2023-11-29,2023-11-29,Dry Red,Castel,213.68-213.68,high,"Special Reds, Premium Value"
+claudia.summers@warburgpincus.com,Lisa Price,020 7306 0306,en,noncore.gift,Dormant,false,2,854.72,427,731,2023-12-22,2023-12-21,Dry Red,Castel,213.68-213.68,high,"Special Reds, Premium Value"
+roy@esasson.com,Roy Sasson,9545913399,en,noncore.gift,Dormant,false,2,854.72,427,679,2024-02-12,2024-02-11,Dry Red,Castel,213.68-213.68,high,"Special Reds, Premium Value"
+lmwright@me.com,Lorraine Wright,2066054553,en,noncore.gift,Dormant,false,2,846.6,423,918,2023-06-18,2023-06-17,Dry White,Golan Heights,211.65-211.65,high,"Special Whites/Rosés, Premium Value"
+urikarniel@gmail.com,אורי קרניאל,507729828,en,noncore.gift,Dormant,false,2,840,420,619,2024-04-12,2024-04-11,Dry Red,"Binyamina, Tishbi, Midbar",29-31,high,Special Reds
+elliott.smus@zesty.co,Elliott Smus,547935361,en,core.repeat,Dormant,false,2,820.52,410,1256,2022-07-15,2022-07-14,Fortified,,102.565-102.565,high,
+rrosenstarkoeg@gmail.com,Reuven Rosenstark,544897577,english,noncore.gift,Dormant,true,2,818.4,409,650,2024-03-12,2024-03-12,Dry Red,Adir,45-68,high,Special Reds
+skadysh@gmail.com,סשה קדישביץ,549450068,hebrew,core.repeat,Dormant,true,2,811.96,406,447,2024-10-01,2024-10-01,Dry Red,Teperberg,81.196-81.196,high,Special Reds
+bazzille@gmail.com,סבטה מוניץ,972529213119,hebrew,core.repeat,Dormant,true,2,786.3199999999999,393,372,2024-12-16,2024-12-15,"Dry Red, Dry White",,85-111,high,"Special Reds, Special Whites/Rosés"
+feldari@gmail.com,Aaron Feldman,9172189807,english,core.repeat,Dormant,true,2,782.92,391,651,2024-03-11,2024-03-10,Dry Red,Binyamina,76-120,high,Special Reds
+roseline.goldenstein@gmail.com,roseline goldenstein,587782277,en,core.repeat,Dormant,false,2,769.24,385,837,2023-09-08,2023-09-07,Rosé,Teperberg,38.462-38.462,high,Special Whites/Rosés
+zenachum@gmail.com,נחום אבניאל,547722841,hebrew,noncore.gift,Dormant,true,2,769.24,385,622,2024-04-09,2024-04-08,"Dry White, Dry Red",Midbar,31-100,high,"Special Reds, Special Whites/Rosés"
+roxannematthee@gmail.com,Roxanne Matthee,33763946416,english,core.repeat,Dormant,true,2,758.96,379,1358,2022-04-04,2022-04-04,"Dry White, Dry Red",Golan Heights,62-127,high,"Special Reds, Special Whites/Rosés"
+talgilboa@live.ca,Tal Gilboa,535214709,english,noncore.gift,Dormant,true,2,744.6,372,622,2024-04-09,2024-04-08,Semi-Dry,"Binyamina, Tishbi",29-30,high,
+daniellespilz@gmail.com,Danielle Krieger,587622960,en,core.repeat,Dormant,false,2,738.48,369,699,2024-01-23,2024-01-23,"Dry White, Semi-Dry, Dry Red","Ella Valley, Mony",32-50,high,"Special Reds, Special Whites/Rosés, Special Variety"
+ron.wald@unityhealth.to,Ron Wald,053-242-6540,english,noncore.gift,Dormant,true,2,735.04,368,921,2023-06-15,2023-06-15,"Dry White, Dry Red",Tura,68-115,high,"Special Reds, Special Whites/Rosés"
+arielephrat@gmail.com,אריאל אפרת,545207748,en,noncore.gift,Dormant,false,2,729.24,365,650,2024-03-12,2024-03-11,"Dry Red, Rosé","Binyamina, Recanati, Galil Mountain",29-85,high,"Special Reds, Special Whites/Rosés"
+hillel.davis1@gmail.com,Hillel Davis,527501777,en,core.repeat,Dormant,false,2,724.7200000000001,362,621,2024-04-10,2024-04-10,Dessert,Mony,27-33,high,
+lioratair17@gmail.com,ליאורה ציון-תאיר,547230075,hebrew,noncore.gift,Dormant,true,2,713.84,357,649,2024-03-13,2024-03-13,"Dessert, Dry White, Rosé, Semi-Dry","Mony, Galil Mountain, Binyamina",29-30,high,"Special Whites/Rosés, Special Variety"
+tari@ninety9digital.com,Tarisai Mhembere,814821485,english,noncore.gift,Dormant,true,4,700.84,175,1383,2022-03-10,2022-03-10,Dry Red,"Teperberg, Binyamina",38-137,high,Special Reds
+a.adlerstein@rabbinerseminar.de,Akiva Adlerstein,4917645892985,en,noncore.gift,Dormant,false,2,700.8399999999999,350,561,2024-06-09,2024-06-09,Dry Red,,64-111,high,Special Reds
+rach220571@gmail.com,Rachel Alexenicer,44795728829,english,noncore.gift,Dormant,true,2,694.04,347,1260,2022-07-11,2022-07-11,"Dry Red, Rosé, Dry White",,50-73,high,"Special Reds, Special Whites/Rosés, Special Variety"
+ycern66@gmail.com,יהודה סרן,544575005,english,noncore.gift,Dormant,true,2,692.3199999999999,346,650,2024-03-12,2024-03-12,Dry Red,,73-100,high,Special Reds
+ljapal@applebyglobal.com,Simon Raftopoulos,13459494900,en,noncore.gift,Dormant,false,2,683.76,342,738,2023-12-15,2023-12-14,Dry Red,Adir,170.94-170.94,high,"Special Reds, Premium Value"
+efraimstefansky@gmail.com,Efraim Stefansky,13472072760,en,noncore.gift,Dormant,false,2,683.76,342,644,2024-03-18,2024-03-18,Dry Red,Yatir,170.94-170.94,high,"Special Reds, Premium Value"
+mshmir45@gmail.com,מתן שמיר,528848623,en,core.repeat,Dormant,false,2,680.3199999999999,340,552,2024-06-19,2024-06-18,Dry Red,Midbar,102.56-102.56,high,Special Reds
+nwaldfogel@me.com,Nina Waldfogel,549058657,english,core.repeat,Dormant,true,2,676.92,338,573,2024-05-28,2024-05-27,Dessert,Adir,84.615-84.615,high,
+talyadekel66@gmail.com,Talya Dekel,523337963,en,core.repeat,Dormant,false,2,676.92,338,568,2024-06-02,2024-06-01,Dessert,Adir,84.615-84.615,high,
+malkiels@neto.net.il,שמעון מלכיאל,506783566,en,core.repeat,Dormant,false,2,656.4000000000001,328,637,2024-03-25,2024-03-24,Dessert,"Mony, Or Haganuz",33-64,high,
+jackiglassman@gmail.com,Yakov Glassman,972525522436,english,noncore.gift,Dormant,true,2,652.28,326,650,2024-03-12,2024-03-12,"Rosé, Semi-Dry","Binyamina, Galil Mountain, Mony",29-45,high,Special Whites/Rosés
+osipovich27@gmail.com,מריה אוסיפוביץ,543087636,en,core.repeat,Dormant,false,2,649.56,325,998,2023-03-30,2023-03-30,Dessert,Netofa,81.195-81.195,high,
+1997davidmoore@gmail.com,דוד מור,504232364,en,core.repeat,Dormant,false,2,649.56,325,840,2023-09-04,2023-09-04,Dry Red,Netofa,162.39-162.39,high,"Special Reds, Premium Value"
+alizagf@gmail.com,aliza frank,8475715780,english,noncore.gift,Dormant,true,2,649.56,325,759,2023-11-25,2023-11-24,Dry Red,Flam,162.39-162.39,high,"Special Reds, Premium Value"
+anati.sova@gmail.com,ענת שובע,509231265,hebrew,core.repeat,Dormant,true,2,649.56,325,650,2024-03-12,2024-03-12,Rosé,,81.195-81.195,high,Special Whites/Rosés
+altarochel@gmail.com,Alta Rochel Gniwisch,4388646912,english,noncore.gift,Dormant,true,2,649.56,325,494,2024-08-15,2024-08-14,Dry Red,Netofa,162.39-162.39,high,"Special Reds, Premium Value"
+zion1234in@gmail.com,ציון פלוס,523993517,hebrew,noncore.gift,Dormant,true,2,636.9200000000001,318,617,2024-04-14,2024-04-14,"Dessert, Dry Red, Rosé",Galil Mountain,25-81,high,"Special Reds, Special Whites/Rosés, Special Variety"
+jdburstein60@gmail.com,JOEL BURSTEIN,555001296,en,core.repeat,Dormant,false,2,622.24,311,650,2024-03-13,2024-03-12,"Dry White, Semi-Dry, Dry Red",Binyamina,32-73,high,"Special Reds, Special Whites/Rosés, Special Variety"
+simonsmith17@outlook.com,Simon Smith,#ERROR!,en,noncore.gift,Dormant,false,2,615.4,308,738,2023-12-15,2023-12-15,Dry Red,,153.85-153.85,high,"Special Reds, Premium Value"
+yaelhs@gmail.com,Yael Hoffman,6179530073,english,noncore.gift,Dormant,true,2,611.9599999999999,306,456,2024-09-22,2024-09-22,"Rosé, Dry White","Gush Etzion, Teperberg",38-64,high,Special Whites/Rosés
+avi@jkaraoke.com,Mark Diamant,447957435789,en,core.repeat,Dormant,false,2,598.28,299,999,2023-03-29,2023-03-29,Dry Red,,73-77,high,Special Reds
+sfeingold@gmail.com,שמעון פיינגאלד,509194466,hebrew,noncore.gift,Dormant,true,2,593.84,297,647,2024-03-15,2024-03-15,"Dessert, Dry White","Mony, Gush Etzion",27-62,high,Special Whites/Rosés
+yairk100@gmail.com,יאיר קאופמן,525423939,en,noncore.gift,Dormant,false,2,581.52,291,623,2024-04-09,2024-04-08,Dry Red,Golan Heights,48.46-48.46,high,Special Reds
+shoshshapiro@gmail.com,Shoshana Shapiro,585789402,en,core.repeat,Dormant,false,2,581.1999999999999,291,1230,2022-08-10,2022-08-09,"Dry Red, Semi-Dry","Recanati, Mony",34-64,high,Special Reds
+vanessa.fisher@cg-med.com,Vanessa Fisher,529533087,english,core.repeat,Dormant,true,2,560.68,280,1208,2022-09-01,2022-09-01,"Dry Red, Dry White",,64-76,high,"Special Reds, Special Whites/Rosés"
+avif1988@gmail.com,אבי פרידמן,524070406,hebrew,core.repeat,Dormant,true,2,560.48,280,467,2024-09-11,2024-09-10,Dry Red,,140.12-140.12,high,Special Reds
+danieldrai@hotmail.com,Dan Drai,33620547982,english,core.repeat,Dormant,true,2,547,274,1211,2022-08-29,2022-08-29,Dry Red,,136.75-136.75,high,Special Reds
+radatz@gmail.com,D Weinman,447956238527,en,noncore.gift,Dormant,false,2,547,274,1118,2022-11-30,2022-11-30,Dry Red,,136.75-136.75,high,Special Reds
+elysedavis@sbcglobal.net,Elyse Davis,2034821432,english,noncore.gift,Dormant,true,2,547,274,619,2024-04-12,2024-04-12,Dry Red,Teperberg,136.75-136.75,high,Special Reds
+ranshitrit9@gmail.com,אלירן שטרית,052-9423633,en,core.repeat,Dormant,false,2,547,274,508,2024-08-02,2024-08-01,Dry Red,Galil Mountain,68.375-68.375,high,Special Reds
+assistant@gaa-la.com,April Lim,(323) 836-0320,english,noncore.gift,Dormant,true,2,547,274,370,2024-12-17,2024-12-17,Dry Red,,136.75-136.75,high,Special Reds
+sleibowitz@gmail.com,שמעון ליבוביץ,526071842,en,noncore.gift,Dormant,false,2,538.44,269,650,2024-03-12,2024-03-12,Dry Red,,58-77,high,Special Reds
+segev.maz@gmail.com,שגב מזובסקי,17379005461,en,noncore.gift,Dormant,false,2,526.52,263,645,2024-03-18,2024-03-17,Dry Red,Tishbi,38-94,high,Special Reds
+susan.fry1@me.com,Susan Fry,2146761157,english,core.repeat,Dormant,true,4,526.48,132,751,2023-12-03,2023-12-02,"Rosé, Dry White","Mony, Binyamina, Tabor",32-33,high,Special Whites/Rosés
+yaverick10@gmail.com,יהודה אבריק,503566681,hebrew,core.repeat,Dormant,true,2,519.64,260,648,2024-03-14,2024-03-14,Dry Red,Galil Mountain,32.4775-32.4775,high,Special Reds
+mirbear@msn.com,Miriam Stein,447939356079,english,noncore.gift,Dormant,true,2,512.84,256,795,2023-10-19,2023-10-18,Dry Red,Tzora,128.21-128.21,high,Special Reds
+ystroh@gmail.com,Yisroel Stroh,3472430786,en,core.repeat,Dormant,false,2,512.84,256,733,2023-12-20,2023-12-19,Dry Red,Flam,128.21-128.21,high,Special Reds
+yigalsa7@gmail.com,יגאל סמואל,545346621,en,noncore.gift,Dormant,false,2,504.59999999999997,252,649,2024-03-13,2024-03-13,"Semi-Dry, Rosé","Binyamina, Galil Mountain",29-29,high,Special Whites/Rosés
+picki@actcom.net.il,יחיאל פיקהולץ,587993155,hebrew,noncore.gift,Dormant,true,2,504.59999999999997,252,621,2024-04-10,2024-04-10,"Dry Red, Semi-Dry","Golan Heights, Binyamina",29-48,high,Special Reds
+ayelet.h.s@gmail.com,אילת השחר כהן,546678232,hebrew,noncore.gift,Dormant,true,2,501.52,251,650,2024-03-12,2024-03-12,"Semi-Dry, Dry White, Dry Red",Mony,30-65,high,"Special Reds, Special Whites/Rosés, Special Variety"
+lenny4eyes@gmail.com,Leonard Misikoff,13479908884,english,noncore.gift,Dormant,true,2,478.64,239,652,2024-03-10,2024-03-10,Dry Red,Binyamina,119.66-119.66,high,Special Reds
+hughbauer@gmail.com,Hugh Bauer,538502641,en,noncore.gift,Dormant,false,4,475.24,119,809,2023-10-05,2023-04-02,Dry Red,,50-68,high,Special Reds
+erin.rowden@broadcom.com,Ralf Gegg,4915209350642,en,noncore.gift,Dormant,false,2,444.44,222,734,2023-12-19,2023-12-19,Dry Red,,111.11-111.11,high,Special Reds
+dinaro26@hotmail.com,Dina Roemer,528991773,en,noncore.gift,Dormant,false,2,440,220,650,2024-03-12,2024-03-12,"Semi-Dry, Dessert","Binyamina, Teperberg",27-29,high,
+rachel_klmn@yahoo.com,רחל לוי,526832867,en,noncore.gift,Dormant,false,2,430.8,215,620,2024-04-12,2024-04-11,"Dessert, Rosé",Galil Mountain,25-29,high,Special Whites/Rosés
+dhooton2013@gmail.com,Dennis Hooton,8169414187,english,core.repeat,Dormant,true,2,430.76,215,1404,2022-02-17,2022-02-17,"Dry Red, Rosé",,50-58,high,"Special Reds, Special Whites/Rosés"
+naava.abelow@gmail.com,Naava Abelow,5169936392,english,noncore.gift,Dormant,true,2,410.24,205,781,2023-11-02,2023-11-02,Dry Red,,102.56-102.56,high,Special Reds
+sharels96@gmail.com,Sharel Shamis,972526331546,en,core.repeat,Lapsed,false,2,410.24,205,358,2024-12-30,2024-12-29,Dessert,Golan Heights,102.56-102.56,high,
+yuvall165@gmail.com,יובל איזנמן,526075577,en,noncore.gift,Dormant,false,2,390.76,195,647,2024-03-15,2024-03-14,Dry Red,Or Haganuz,22-76,high,Special Reds
+yehudaveg@gmail.com,יהודה וועג,972549770561+,en,core.repeat,Dormant,false,2,376.08,188,1380,2022-03-13,2022-03-13,Dry Red,Galil Mountain,94.02-94.02,high,Special Reds
+shlomozion@gmail.com,שלמה ציון,545351531,en,core.repeat,Dormant,false,2,373.99999999999994,187,616,2024-04-15,2024-04-15,Dessert,,17-27,high,
+rosenneh@netvision.net.il,הדס רוזן,545957687,en,core.repeat,Dormant,false,2,358.96,179,1261,2022-07-10,2022-07-10,Dry Red,Tabor,89.74-89.74,high,Special Reds
+batiabu@gmail.com,Batia Burak,545502159,en,noncore.gift,Dormant,false,2,356.92,178,622,2024-04-10,2024-04-09,"Dry Red, Dessert","Binyamina, Tishbi, Mony",29-30,high,Special Reds
+chagai03@gmail.com,חגי קרוק,525832988,en,noncore.gift,Dormant,false,2,350.76,175,650,2024-03-12,2024-03-12,Semi-Dry,Binyamina,29.23-29.23,high,
+shirashindler1@gmail.com,שירה שינדלר,545399014,hebrew,noncore.gift,Dormant,true,2,350.76,175,648,2024-03-14,2024-03-13,Semi-Dry,Binyamina,29.23-29.23,high,
+gillhof@gmail.com,גיל הופמן,972506510289,hebrew,core.repeat,Lapsed,true,2,348.72,174,362,2024-12-25,2024-12-25,Dry Red,,29.060000000000002-29.060000000000002,high,Special Reds
+susanm758@gmail.com,Susan Moray,770-841-6720,en,noncore.gift,Dormant,false,2,341.88,171,751,2023-12-02,2023-12-01,Fortified,,85.47-85.47,high,
+sayuri.koike@kornit.com,Sayuri Koike,817033063392,english,core.repeat,Dormant,true,2,338.48,169,399,2024-11-18,2024-11-18,Dry Red,Teperberg,84.62-84.62,high,Special Reds
+susanwolf613@gmail.com,Susan Wolf,545883061,en,noncore.gift,Dormant,false,2,323.0400000000001,162,623,2024-04-08,2024-04-08,Dessert,Teperberg,27-27,high,
+alexander.luzhkov@gmail.com,Alexander Luzhkov,535372941,english,core.repeat,Dormant,true,2,314.52,157,512,2024-07-28,2024-07-28,Dry White,Carmel,78.63-78.63,high,Special Whites/Rosés
+airtime_doable0k@icloud.com,David Bokrossy,-5464,en,noncore.gift,Dormant,false,2,307.68,154,1118,2022-11-30,2022-11-30,Dry Red,,76.92-76.92,high,Special Reds
+emily.b@smyle.co.uk,Graeme Marchbank,1992535535,en,core.repeat,Dormant,false,2,307.68,154,1105,2022-12-13,2022-12-13,Dry Red,,76.92-76.92,high,Special Reds
+katie.w@smyle.co.uk,Katie Windsor,1992535535,en,noncore.gift,Dormant,true,2,307.68,154,1103,2022-12-15,2022-12-14,Dry Red,,76.92-76.92,high,Special Reds
+tahliengel@gmail.com,Tahli Engel,-584774882,en,noncore.gift,Dormant,false,2,307.68,154,866,2023-08-09,2023-08-09,Dry Red,,76.92-76.92,high,Special Reds
+nfireman@gmail.com,ניר פיירמן,64223272685,en,core.repeat,Dormant,false,2,304.28,152,617,2024-04-14,2024-04-14,Dry Red,,76.07-76.07,high,Special Reds
+exacthy@gmail.com,הילה דה ליאון,525841830,en,noncore.gift,Dormant,false,2,286.16,143,617,2024-04-14,2024-04-14,"Dry White, Semi-Dry",,29-42,high,Special Whites/Rosés
+yakov.k.home@gmail.com,יעקב קרנץ,527906234,en,noncore.gift,Dormant,false,2,270.76,135,650,2024-03-13,2024-03-12,,,,high,
+shira3610@gmail.com,שירה ואבי גולדשטיין,505803600,en,noncore.gift,Dormant,false,2,267.72,134,622,2024-04-10,2024-04-09,"Dessert, Semi-Dry",,25-42,high,
+yagmon@bezeqint.net,יוסי אגמון,509898296,en,core.repeat,Dormant,false,2,259.84,130,727,2023-12-27,2023-12-26,Rosé,Mony,32.48-32.48,high,Special Whites/Rosés
+ahershberg@gmail.com,עדינה הרשברג,545925557,en,noncore.gift,Dormant,false,2,240,120,649,2024-03-13,2024-03-13,Dessert,Mony,30-30,high,
+irina86yak@gmail.com,Irina Iakunina,548007342,english,core.repeat,Dormant,true,2,239.32,120,1124,2022-11-24,2022-11-24,Dessert,Teperberg,29.915-29.915,high,
+kmc@bezeqint.net,מיכאל קוגן,523926462,en,core.repeat,Dormant,false,2,239.32,120,442,2024-10-06,2024-10-06,,,,high,
+adam_jacobs7@yahoo.com.au,Adam Jacobs,61402344689,en,core.repeat,Dormant,false,2,200,100,1228,2022-08-12,2022-08-11,,,,high,
+mendellester@gmail.com,Menachem Lester,587851970,english,noncore.gift,Dormant,true,2,143.6,72,752,2023-12-01,2023-12-01,Dry Red,,35.9-35.9,high,Special Reds
+meschool@cisco.com,Jonathan Nevo Junowicz,972 54-227-1839,en,core.repeat,Dormant,false,2,129.92,65,1243,2022-07-28,2022-07-28,Dry White,,32.48-32.48,high,Special Whites/Rosés
+kemberley.kane@next-insurance.com,Kimberly Kane,5124227151,en,noncore.gift,Dormant,false,2,129.92,65,762,2023-11-21,2023-11-20,Dry Red,Binyamina,32.48-32.48,high,Special Reds
+chanymo@yahoo.com,Chana Mockin,5854614679,english,noncore.gift,Dormant,true,2,119.64,60,1194,2022-09-16,2022-09-15,Dessert,,29.91-29.91,high,
+bw@kpiscience.com,Baruch Wahrhaftig,587829711,english,core.repeat,Dormant,true,2,0,0,475,2024-09-03,2024-09-03,Dry Red,"Mony, Golan Heights",59-100,high,Special Reds

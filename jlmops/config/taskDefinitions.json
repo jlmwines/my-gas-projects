@@ -493,5 +493,16 @@
         "initial_status", "New",
         "flow_pattern", "manager_direct",
         "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.data.review",
+        "Data review task for newly added lookup entries that need categorization.",
+        "stable",
+        "topic", "Data",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
     ]
 ]

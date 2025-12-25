@@ -313,12 +313,42 @@ function HousekeepingService() {
       logger.error('HousekeepingService', functionName, `Schema validation failed: ${e.message}`);
     }
 
-    // Update system health singleton task
+    // Phase 3: Service Data Updates (wrapped to track failures)
+    const phase3Failures = [];
+    const phase3Tasks = [
+      { name: 'checkBundleHealth', fn: () => this.checkBundleHealth() },
+      { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
+      { name: 'checkSubscribersReminder', fn: () => this.checkSubscribersReminder() },
+      { name: 'checkCampaignsReminder', fn: () => this.checkCampaignsReminder() },
+      { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
+      { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
+      { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
+      { name: 'backfillActivities', fn: () => this.backfillActivities() },
+      { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() }
+    ];
+
+    for (const task of phase3Tasks) {
+      try {
+        task.fn();
+      } catch (e) {
+        phase3Failures.push(task.name);
+        logger.error('HousekeepingService', functionName, `${task.name} failed: ${e.message}`);
+      }
+    }
+
+    // Update system health singleton task (AFTER all phases complete)
     try {
-      const allPassed = validationResult && testResult && schemaResult;
+      const phase2Passed = validationResult && testResult && schemaResult;
+      const phase3Passed = phase3Failures.length === 0;
+      const allPassed = phase2Passed && phase3Passed;
       const criticalSchemaIssues = schemaResult
         ? schemaResult.discrepancies.filter(d => d.severity === 'CRITICAL').length
         : -1;
+
+      let status = 'success';
+      if (!allPassed) {
+        status = phase3Failures.length > 0 ? 'failed' : 'partial';
+      }
 
       TaskService.upsertSingletonTask(
         'task.system.health_status',
@@ -329,11 +359,12 @@ function HousekeepingService() {
           updated: new Date().toISOString(),
           last_housekeeping: {
             timestamp: new Date().toISOString(),
-            status: allPassed ? 'success' : 'partial',
+            status: status,
             unit_tests: testResult ? `${testResult.passed}/${testResult.total}` : 'error',
             validation_issues: validationResult ? validationResult.failureCount : -1,
             schema_status: schemaResult ? schemaResult.status : 'error',
-            schema_critical: criticalSchemaIssues
+            schema_critical: criticalSchemaIssues,
+            phase3_failures: phase3Failures.length > 0 ? phase3Failures : null
           }
         }
       );
@@ -341,18 +372,10 @@ function HousekeepingService() {
       logger.warn('HousekeepingService', functionName, `Could not update health task: ${e.message}`);
     }
 
-    // Phase 3: Service Data Updates
-    this.checkBundleHealth();
-    this.checkBruryaReminder();
-    this.checkSubscribersReminder();
-    this.checkCampaignsReminder();
-    this.checkCouponsReminder();
-    this.refreshCrmContacts();
-    this.maintainCityLookup();
-    this.backfillActivities();
-    this.runCrmIntelligence();
-
-    logger.info('HousekeepingService', functionName, "Daily maintenance completed.");
+    logger.info('HousekeepingService', functionName,
+      phase3Failures.length > 0
+        ? `Daily maintenance completed with failures: ${phase3Failures.join(', ')}`
+        : "Daily maintenance completed.");
   };
 
   /**
@@ -542,14 +565,29 @@ function HousekeepingService() {
    */
   this.refreshCrmContacts = function() {
     const functionName = 'refreshCrmContacts';
-    logger.info('HousekeepingService', functionName, "Starting CRM contact refresh.");
 
     try {
       // Check if ContactService exists (CRM may not be fully deployed yet)
       if (typeof ContactService === 'undefined' || !ContactService.refreshAllContacts) {
-        logger.info('HousekeepingService', functionName, 'ContactService not available yet. Skipping CRM refresh.');
+        logger.info('HousekeepingService', functionName, 'ContactService not available yet. Skipping.');
         return true;
       }
+
+      // Skip if no sync completed since last CRM refresh
+      const lastRefreshConfig = ConfigService.getConfig('system.crm.last_refresh');
+      const lastRefresh = lastRefreshConfig?.value ? new Date(lastRefreshConfig.value) : null;
+
+      const syncSession = SyncStateService.getActiveSession();
+      const lastSync = syncSession?.lastUpdated ? new Date(syncSession.lastUpdated) : null;
+
+      if (lastRefresh && lastSync && syncSession.currentStage === 'COMPLETE') {
+        if (lastSync <= lastRefresh) {
+          logger.info('HousekeepingService', functionName, 'No sync since last refresh, skipping CRM contacts');
+          return true;
+        }
+      }
+
+      logger.info('HousekeepingService', functionName, "Starting CRM contact refresh.");
 
       ContactService.refreshAllContacts();
       logger.info('HousekeepingService', functionName, "CRM contact refresh completed.");
@@ -559,6 +597,9 @@ function HousekeepingService() {
         const enrichResult = ContactEnrichmentService.enrichAllContacts();
         logger.info('HousekeepingService', functionName, `CRM enrichment: ${enrichResult.enriched} enriched, ${enrichResult.skipped} skipped`);
       }
+
+      // Update last refresh timestamp
+      ConfigService.setConfig('system.crm.last_refresh', new Date().toISOString());
 
       return true;
     } catch (e) {
@@ -600,9 +641,24 @@ function HousekeepingService() {
    */
   this.checkBundleHealth = function() {
     const functionName = 'checkBundleHealth';
-    logger.info('HousekeepingService', functionName, "Starting bundle health check.");
 
     try {
+      // Skip if no sync completed since last bundle health check
+      const lastCheckConfig = ConfigService.getConfig('system.bundle_health.last_check');
+      const lastCheck = lastCheckConfig?.value ? new Date(lastCheckConfig.value) : null;
+
+      const syncSession = SyncStateService.getActiveSession();
+      const lastSync = syncSession?.lastUpdated ? new Date(syncSession.lastUpdated) : null;
+
+      if (lastCheck && lastSync && syncSession.currentStage === 'COMPLETE') {
+        if (lastSync <= lastCheck) {
+          logger.info('HousekeepingService', functionName, 'No sync since last check, skipping bundle health');
+          return;
+        }
+      }
+
+      logger.info('HousekeepingService', functionName, "Starting bundle health check.");
+
       // Get bundles with low inventory (BundleService uses system.inventory.minimum_stock)
       const bundlesWithIssues = BundleService.getBundlesWithLowInventory();
 
@@ -673,6 +729,9 @@ function HousekeepingService() {
           }
         }
       }
+
+      // Update last check timestamp
+      ConfigService.setConfig('system.bundle_health.last_check', new Date().toISOString());
 
       logger.info('HousekeepingService', functionName, `Bundle health check complete. Critical: ${criticalTasksCreated}, Low inventory: ${lowInventoryTasksCreated}`);
       return true;
@@ -1239,32 +1298,11 @@ function HousekeepingService() {
 
   /**
    * Backfills activity records from order history and subscriptions.
-   * Runs ActivityBackfillService.runFullBackfill() to ensure activities are current.
-   * This is idempotent - existing activities are skipped.
+   * DISABLED: One-time migration completed. New activities are created through normal order/subscription flows.
    */
   this.backfillActivities = function() {
-    const functionName = 'backfillActivities';
-    logger.info('HousekeepingService', functionName, 'Starting activity backfill');
-
-    try {
-      const result = ActivityBackfillService.runFullBackfill();
-
-      if (result.totalCreated > 0) {
-        logger.info('HousekeepingService', functionName,
-          `Activity backfill complete: ${result.totalCreated} created, ${result.totalSkipped} skipped`);
-      } else {
-        logger.info('HousekeepingService', functionName, 'Activity backfill complete: no new activities');
-      }
-
-      if (result.totalErrors > 0) {
-        logger.warn('HousekeepingService', functionName, `Activity backfill had ${result.totalErrors} errors`);
-      }
-
-      return true;
-    } catch (e) {
-      logger.warn('HousekeepingService', functionName, `Activity backfill failed: ${e.message}`);
-      return false;
-    }
+    // One-time backfill completed - no longer needed
+    return true;
   };
 
   /**
@@ -1273,13 +1311,26 @@ function HousekeepingService() {
    */
   this.runCrmIntelligence = function() {
     const functionName = 'runCrmIntelligence';
-    logger.info('HousekeepingService', functionName, 'Starting CRM intelligence analysis');
 
     try {
       if (typeof CrmIntelligenceService === 'undefined' || !CrmIntelligenceService.runAnalysis) {
-        logger.info('HousekeepingService', functionName, 'CrmIntelligenceService not available. Skipping intelligence analysis.');
+        logger.info('HousekeepingService', functionName, 'CrmIntelligenceService not available. Skipping.');
         return true;
       }
+
+      // Skip if no contacts refreshed since last intelligence run
+      const lastRunConfig = ConfigService.getConfig('system.crm_intelligence.last_run');
+      const lastRun = lastRunConfig?.value ? new Date(lastRunConfig.value) : null;
+
+      const lastRefreshConfig = ConfigService.getConfig('system.crm.last_refresh');
+      const lastRefresh = lastRefreshConfig?.value ? new Date(lastRefreshConfig.value) : null;
+
+      if (lastRun && lastRefresh && lastRefresh <= lastRun) {
+        logger.info('HousekeepingService', functionName, 'No contact refresh since last run, skipping CRM intelligence');
+        return true;
+      }
+
+      logger.info('HousekeepingService', functionName, 'Starting CRM intelligence analysis');
 
       const result = CrmIntelligenceService.runAnalysis();
 
@@ -1292,6 +1343,9 @@ function HousekeepingService() {
       } else {
         logger.info('HousekeepingService', functionName, 'CRM intelligence: no campaign opportunities detected');
       }
+
+      // Update last run timestamp
+      ConfigService.setConfig('system.crm_intelligence.last_run', new Date().toISOString());
 
       return true;
     } catch (e) {

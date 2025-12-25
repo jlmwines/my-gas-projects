@@ -234,10 +234,12 @@
 
             var isCompleted = stepStatus === 'completed' && prevStatus !== 'completed';
             var isSkipped = stepStatus === 'skipped' && prevStatus !== 'skipped';
+            // Detect step 3 export ready (waiting after processing) - needs confirmation
+            var isOrderExportReady = i === 3 && stepStatus === 'waiting' && prevStatus === 'processing';
             // Detect step 5 export ready (waiting after processing)
             var isExportReady = i === 5 && stepStatus === 'waiting' && prevStatus === 'processing';
 
-            if (isCompleted || isSkipped || isExportReady) {
+            if (isCompleted || isSkipped || isExportReady || isOrderExportReady) {
                 var logMsg = '';
                 var msg = stepData.message || '';
 
@@ -253,6 +255,10 @@
                     case 3: // Update Comax Orders
                         if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0)) {
                             logMsg = 'No orders to export (skipped)';
+                        } else if (isOrderExportReady) {
+                            // Extract count from message like "Export complete. 2 orders exported."
+                            var countMatch = msg.match(/(\d+)\s*orders?\s*exported/i);
+                            logMsg = 'Orders exported' + (countMatch ? ' (' + countMatch[1] + ')' : '') + ' - awaiting confirmation';
                         } else {
                             logMsg = 'Orders exported to Comax';
                         }
@@ -388,9 +394,10 @@
                 previousStepStatuses.syncComplete = true;
             }
         }
-        // Failed
+        // Failed - show retry button
         else if (stage === 'FAILED') {
             message = '<span class="text-danger">Failed: ' + (status.errorMessage || 'Unknown') + '</span>';
+            actionHtml = btn('retryFailed', 'Retry');
         }
         // IDLE - no session (check last so processing states take priority)
         else if (stage === 'IDLE' || !status.sessionId) {
@@ -663,6 +670,9 @@
     }
 
     function confirmWeb() {
+        if (!confirm('Confirm that web inventory has been uploaded to the website?')) {
+            return;
+        }
         if (actionInProgress) return;
         actionInProgress = true;
         lastActionTime = Date.now();
@@ -791,6 +801,22 @@
             .resetSyncStateBackend();
     }
 
+    function retryFailed() {
+        lastActionTime = Date.now();
+        document.getElementById('footerStatus').textContent = 'Retrying...';
+
+        google.script.run
+            .withSuccessHandler(function(status) {
+                updateUI(status);
+                adjustPolling(status);
+                document.getElementById('footerStatus').textContent = 'Ready to retry';
+            })
+            .withFailureHandler(function(err) {
+                document.getElementById('footerStatus').textContent = 'Retry failed: ' + (err.message || err);
+            })
+            .retryFailedStepBackend();
+    }
+
     function refreshStatus() {
         var timeSinceAction = Date.now() - lastActionTime;
         if (timeSinceAction < ACTION_GRACE_PERIOD_MS) {
@@ -856,6 +882,7 @@
         generateWebExport: generateWebExport,
         confirmWeb: confirmWeb,
         resetSync: resetSync,
+        retryFailed: retryFailed,
         dismissFailures: dismissFailures
     };
 

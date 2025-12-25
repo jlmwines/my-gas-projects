@@ -126,6 +126,7 @@ const SyncStateService = (function() {
           lastUpdated: parsed.lastUpdated || null,
           errorMessage: parsed.errorMessage || null,
           ordersPendingExportCount: parsed.ordersPendingExportCount || 0,
+          comaxOrdersExported: parsed.comaxOrdersExported || false,
           webExportFilename: parsed.webExportFilename || null,
           invoiceFileCount: parsed.invoiceFileCount || 0
         };
@@ -133,7 +134,7 @@ const SyncStateService = (function() {
     } catch (e) {
       logger.error(SERVICE_NAME, functionName, `Error reading active session: ${e.message}`, e);
     }
-    return { sessionId: null, currentStage: 'IDLE', lastUpdated: null, errorMessage: null };
+    return { sessionId: null, currentStage: 'IDLE', lastUpdated: null, errorMessage: null, comaxOrdersExported: false };
   }
 
   return {

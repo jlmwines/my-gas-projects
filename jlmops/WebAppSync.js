@@ -331,6 +331,83 @@ function resetSyncStateBackend() {
   }
 }
 
+/**
+ * Retries the failed step by resetting the stage to the pre-failure state.
+ * Accessible from frontend via `google.script.run.retryFailedStepBackend()`.
+ * @returns {object} The updated sync status.
+ */
+function retryFailedStepBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'retryFailedStepBackend';
+  logger.info(serviceName, functionName, 'Retrying failed sync step.');
+
+  try {
+    const currentState = SyncStateService.getSyncState();
+
+    if (currentState.currentStage !== 'FAILED') {
+      throw new Error('Cannot retry - sync is not in FAILED state.');
+    }
+
+    const sessionId = currentState.sessionId;
+    if (!sessionId) {
+      throw new Error('No session ID found. Please start a new sync.');
+    }
+
+    // Find which step failed by checking step statuses
+    const mergedStatus = _getMergedStatus(sessionId);
+    let failedStep = null;
+
+    for (let i = 1; i <= 5; i++) {
+      const stepKey = 's' + i;
+      if (mergedStatus[stepKey] === 'failed') {
+        failedStep = i;
+        break;
+      }
+    }
+
+    // Map failed step to retry stage
+    let retryStage;
+    switch (failedStep) {
+      case 1:
+      case 2:
+        // Web import failed - need full restart
+        throw new Error('Web import failed. Please use Reset to start over.');
+      case 3:
+        retryStage = 'WAITING_FOR_COMAX';
+        break;
+      case 4:
+        retryStage = 'READY_FOR_COMAX_IMPORT';
+        break;
+      case 5:
+        retryStage = 'READY_FOR_WEB_EXPORT';
+        break;
+      default:
+        throw new Error('Could not determine failed step. Please use Reset.');
+    }
+
+    // Reset the failed step status to waiting
+    SyncStatusService.writeStatus(sessionId, {
+      step: failedStep,
+      stepName: mergedStatus['step' + failedStep + 'Name'] || '',
+      status: 'waiting',
+      message: 'Ready to retry'
+    });
+
+    // Update stage
+    currentState.currentStage = retryStage;
+    currentState.errorMessage = null;
+    currentState.lastUpdated = new Date().toISOString();
+    SyncStateService.setSyncState(currentState);
+
+    logger.info(serviceName, functionName, `Reset to stage ${retryStage} for retry.`, { sessionId });
+
+    return _getMergedStatus(sessionId);
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error retrying failed step: ${e.message}`, e);
+    throw e;
+  }
+}
+
 // Helper function that the Orchestrator will call to update the UI state
 function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
   const serviceName = 'WebAppSync';

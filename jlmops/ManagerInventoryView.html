@@ -87,6 +87,8 @@
                 </div>
             </div>
         </div>
+        <button id="brurya-export-button" class="btn btn-light btn-sm mr-2" type="button">Export to Sheet</button>
+        <button id="brurya-import-button" class="btn btn-light btn-sm mr-2" type="button">Import from Sheet</button>
         <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
     </div>
     <div class="card-body">
@@ -275,6 +277,8 @@
                 addProductInput.addEventListener('keyup', handleAutocompleteSearch);
                 addProductBtn.addEventListener('click', handleAddProduct);
                 saveBtn.addEventListener('click', handleSaveInventory);
+                document.getElementById('brurya-export-button').addEventListener('click', handleBruryaExport);
+                document.getElementById('brurya-import-button').addEventListener('click', handleBruryaImport);
                 document.addEventListener('click', (e) => {
                     const autocompleteContainer = document.getElementById('autocomplete-results');
                     if (autocompleteContainer && !autocompleteContainer.contains(e.target) && e.target !== addProductInput) {
@@ -491,6 +495,54 @@
                         saveBtn.textContent = 'Save';
                     })
                     .WebAppInventory_updateBruryaInventory(inventoryData);
+            }
+
+            function handleBruryaExport() {
+                const exportBtn = document.getElementById('brurya-export-button');
+                exportBtn.disabled = true;
+                exportBtn.textContent = 'Exporting...';
+
+                google.script.run
+                    .withSuccessHandler(sheetUrl => {
+                        showToast('Brurya export created. Opening sheet...');
+                        window.open(sheetUrl, '_blank');
+                        exportBtn.disabled = false;
+                        exportBtn.textContent = 'Export to Sheet';
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Export failed: ${err.message}`, 'error');
+                        exportBtn.disabled = false;
+                        exportBtn.textContent = 'Export to Sheet';
+                    })
+                    .WebAppInventory_exportBruryaToSheet();
+            }
+
+            function handleBruryaImport() {
+                if (!confirm("Import Brurya counts from the most recent 'BruryaCount_' sheet?\n\nThis will update existing products and add new ones.")) {
+                    return;
+                }
+
+                const importBtn = document.getElementById('brurya-import-button');
+                importBtn.disabled = true;
+                importBtn.textContent = 'Importing...';
+
+                google.script.run
+                    .withSuccessHandler(result => {
+                        if (result.success) {
+                            showToast(result.message);
+                            loadBruryaInventoryData();
+                        } else {
+                            showToast(result.message, 'error');
+                        }
+                        importBtn.disabled = false;
+                        importBtn.textContent = 'Import from Sheet';
+                    })
+                    .withFailureHandler(err => {
+                        showToast(`Import failed: ${err.message}`, 'error');
+                        importBtn.disabled = false;
+                        importBtn.textContent = 'Import from Sheet';
+                    })
+                    .WebAppInventory_importBruryaFromSheet();
             }
 
             function renderBruryaInventory(inventoryData) {

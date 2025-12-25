@@ -64,15 +64,27 @@ function _getSystemHealthData() {
     const hasIssues = hk.validation_issues > 0;
     const testsOk = hk.unit_tests && !hk.unit_tests.includes('error');
 
+    // Map housekeeping status to display status
+    let hkStatus = 'ok';
+    if (hk.status === 'failed') {
+      hkStatus = 'error';
+    } else if (hk.status === 'partial') {
+      hkStatus = 'partial';
+    } else if (hk.status !== 'success') {
+      hkStatus = 'unknown';
+    }
+
     return {
       available: true,
       housekeeping: {
-        status: hk.status === 'success' ? 'ok' : 'partial',
-        timestamp: hk.timestamp || null
+        status: hkStatus,
+        timestamp: hk.timestamp || null,
+        failures: hk.phase3_failures || null
       },
       schemaValidation: {
-        status: 'ok', // Schema validation runs as part of housekeeping
-        timestamp: hk.timestamp || null
+        status: (hk.schema_status === 'OK' || hk.schema_status === 'PASSED') ? 'ok' : (hk.schema_critical > 0 ? 'error' : 'partial'),
+        timestamp: hk.timestamp || null,
+        critical: hk.schema_critical ?? 0
       },
       dataValidation: {
         status: hasIssues ? 'issues' : 'ok',

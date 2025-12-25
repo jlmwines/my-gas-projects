@@ -734,5 +734,13 @@
         "value",
         "",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.activity_backfill_complete",
+        "Flag to skip activity backfill in housekeeping (one-time migration complete)",
+        "stable",
+        "value",
+        "true",
+        "", "", "", "", "", "", "", ""
     ]
 ]

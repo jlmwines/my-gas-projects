@@ -1,5 +1,20 @@
 # JLMOps Session Guidelines
 
+## Follow Instructions Literally
+
+When the user tells you to do something, do exactly that. Not your interpretation of it.
+
+- "Copy X and modify it" → Read X, copy X, modify only what's needed
+- "Look at how Y works" → Actually read Y before writing anything
+- "Do it like Z" → Find Z, understand Z, replicate Z
+
+Do NOT:
+- Write from memory when told to copy
+- Rewrite or "improve" when told to modify
+- Guess at patterns when told to look at examples
+
+If instructions are unclear, ask. Do not substitute your judgment for the user's instructions.
+
 ## Session Workflow
 
 **Git and Deployment:**
@@ -40,23 +55,40 @@ Config files: `headers.json`, `system.json`, `jobs.json`, `schemas.json`, `mappi
 
 ### UI Constraints
 
-**Bootstrap button classes only:**
-```
-btn-primary    - Main actions (blue)
-btn-secondary  - Cancel/back (gray)
-btn-success    - Confirm/save (green)
-btn-danger     - Delete/destructive (red)
-btn-warning    - Caution actions (yellow)
-btn-outline-*  - Less prominent variants
-btn-sm         - Small buttons in tables/cards
-btn-lg         - Large call-to-action
-```
+**CRITICAL: Copy existing patterns exactly. Do not invent.**
 
-**Do NOT use:** Custom colors, inline styles on buttons, or non-Bootstrap button classes.
+**Buttons - YOU WILL GET THIS WRONG. STOP AND READ FIRST.**
+
+Claude repeatedly fails at buttons. Before writing ANY button:
+1. Run: `grep -n "class=\"btn" <filename>`
+2. Look at the output
+3. Copy one of those classes exactly
+
+Do not write `btn-primary`, `btn-secondary`, or any color class unless you SEE it in the grep output.
+
+**Modals - MANDATORY RULES:**
+1. Do NOT use Bootstrap modal (`$().modal()`)
+2. Use the `modal-overlay` pattern with `style.display = 'flex'` / `'none'`
+3. Copy an existing modal structure from AdminProductsView.html
+4. Example:
+```html
+<div class="modal-overlay" id="my-modal" style="display:none;">
+  <div class="modal-container" style="max-width: 500px;">
+    <div class="modal-header">...</div>
+    <div class="form-body">...</div>
+    <div class="modal-footer bg-light">
+      <button class="btn" onclick="document.getElementById('my-modal').style.display='none'">Cancel</button>
+      <button class="btn" id="btn-submit">Submit</button>
+    </div>
+  </div>
+</div>
+```
 
 **Tables:** Use `table table-sm table-hover` for data tables.
 
 **Cards:** Use Bootstrap card classes, not custom styling.
+
+**Golden Rule:** When adding ANY UI element, find the same element type already working in the file and copy it exactly.
 
 ### Task Notes Pattern
 Tasks can store structured data in `st_Notes` as JSON:
@@ -99,9 +131,11 @@ During normal work, briefly flag obvious issues in code you're touching:
 1. **Wrong field names:** `st_TaskTypeId` not `st_TypeId`
 2. **Editing SetupConfig.js directly:** Always edit config/*.json
 3. **Pushing code:** User handles deployment
-4. **Guessing Bootstrap classes:** Check existing widgets for patterns
-5. **Repeating plans:** Focus on the question at hand
-6. **Starting implementation in plan mode:** Wait for explicit permission
+4. **Inventing button styles:** NEVER add btn-primary, btn-secondary, etc. unless existing buttons in the same file use them. Copy exactly.
+5. **Using Bootstrap modals:** This project uses `modal-overlay` with `style.display`, NOT `$().modal()`
+6. **Repeating plans:** Focus on the question at hand
+7. **Starting implementation in plan mode:** Wait for explicit permission
+8. **Not copying existing patterns:** Before adding ANY UI element, find a working example in the same file and copy it exactly
 
 ## Key Files Reference
 

@@ -1,5 +1,43 @@
 # Session Summary
 
+## Session: 2025-12-25
+
+### Accomplishments
+
+#### Import System Fixes
+- **CSV file filter**: `getFilesByPattern` now only picks up `.csv` files, preventing Google Sheets from being mistakenly processed as CSV imports
+- **Validation rule fix**: Fixed `web_translations.master_missing_from_staging` to compare `WpmlOriginalId` (stable English product ID link) instead of `ID` (Hebrew product ID)
+- **Quarantine file preservation**: Original import files now stay in import folder when jobs fail/quarantine, enabling examination of problem files
+- **Detailed error messages**: Quarantine errors now show specific rule failures (e.g., "QUARANTINED: Translations Row Count Drop: 1 issue (master 750, import 0)") instead of generic message
+
+#### Diagnostic Improvements
+- Added file info logging: name, MIME type, size, first 200 chars
+- Added parse count logging: "Parsed X translation objects from CSV"
+- Added validation row count logging: "Comparing WebXltM (X rows) vs WebXltS (Y rows)"
+
+### Root Cause Analysis
+- Hebrew import was quarantining due to Google Sheet with matching name pattern being picked up instead of CSV
+- Validation was comparing wrong fields (Hebrew ID vs Hebrew ID instead of English Original ID)
+- Stale bundle data below row 747 in WebXltM caused row count mismatch (750 vs 747)
+
+### Files Modified
+- jlmops/OrchestratorService.js (CSV filter, quarantine file preservation)
+- jlmops/ProductImportService.js (diagnostic logging, quarantine error messages)
+- jlmops/ProductService.js (setWrap formatting, cache invalidation)
+- jlmops/ValidationLogic.js (row count comparison logging)
+- jlmops/config/validation.json (WpmlOriginalId fix)
+
+### Testing Status
+- Hebrew translation import: Tested, working (747 rows synced successfully)
+- English product import: Working
+- Comax import: Working
+
+### Next Steps
+1. Monitor bundle additions to see if stale data issue recurs
+2. Consider adding automatic cleanup of rows below data range during upsert
+
+---
+
 ## Session: 2025-12-22
 
 ### Accomplishments

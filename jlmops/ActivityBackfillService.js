@@ -579,29 +579,62 @@ const ActivityBackfillService = (function () {
   }
 
   /**
-   * Runs full activity backfill.
+   * Runs full activity backfill with time budget to avoid timeout.
+   * Exits gracefully if approaching execution time limit.
    * @returns {Object} Combined results
    */
   function runFullBackfill() {
     const fnName = 'runFullBackfill';
+    const startTime = Date.now();
+    const MAX_EXECUTION_MS = 4 * 60 * 1000; // 4 minutes (leaves 2 min buffer for housekeeping)
+
     LoggerService.info(SERVICE_NAME, fnName, 'Starting full activity backfill');
 
-    const orderResult = backfillOrderActivity();
-    const subscriptionResult = backfillSubscriptionActivity();
-    const couponResult = backfillCouponActivity();
-    const campaignResult = backfillCampaignActivity();
-
     const result = {
-      orders: orderResult,
-      subscriptions: subscriptionResult,
-      coupons: couponResult,
-      campaigns: campaignResult,
-      totalCreated: orderResult.created + subscriptionResult.created + couponResult.created + campaignResult.created,
-      totalSkipped: orderResult.skipped + subscriptionResult.skipped + couponResult.skipped + campaignResult.skipped,
-      totalErrors: orderResult.errors + subscriptionResult.errors + couponResult.errors + campaignResult.errors
+      orders: { created: 0, skipped: 0, errors: 0 },
+      subscriptions: { created: 0, skipped: 0, errors: 0 },
+      coupons: { created: 0, skipped: 0, errors: 0 },
+      campaigns: { created: 0, skipped: 0, errors: 0 },
+      totalCreated: 0,
+      totalSkipped: 0,
+      totalErrors: 0,
+      timedOut: false
     };
 
-    LoggerService.info(SERVICE_NAME, fnName, `Full backfill complete: ${result.totalCreated} activities created`);
+    // Run backfills in order of importance, checking time budget
+    result.orders = backfillOrderActivity();
+    if (Date.now() - startTime > MAX_EXECUTION_MS) {
+      LoggerService.info(SERVICE_NAME, fnName, 'Time budget exceeded after orders, stopping');
+      result.timedOut = true;
+      return _finalizeResult(result);
+    }
+
+    result.subscriptions = backfillSubscriptionActivity();
+    if (Date.now() - startTime > MAX_EXECUTION_MS) {
+      LoggerService.info(SERVICE_NAME, fnName, 'Time budget exceeded after subscriptions, stopping');
+      result.timedOut = true;
+      return _finalizeResult(result);
+    }
+
+    result.coupons = backfillCouponActivity();
+    if (Date.now() - startTime > MAX_EXECUTION_MS) {
+      LoggerService.info(SERVICE_NAME, fnName, 'Time budget exceeded after coupons, stopping');
+      result.timedOut = true;
+      return _finalizeResult(result);
+    }
+
+    result.campaigns = backfillCampaignActivity();
+
+    return _finalizeResult(result);
+  }
+
+  function _finalizeResult(result) {
+    result.totalCreated = result.orders.created + result.subscriptions.created + result.coupons.created + result.campaigns.created;
+    result.totalSkipped = result.orders.skipped + result.subscriptions.skipped + result.coupons.skipped + result.campaigns.skipped;
+    result.totalErrors = result.orders.errors + result.subscriptions.errors + result.coupons.errors + result.campaigns.errors;
+
+    LoggerService.info(SERVICE_NAME, 'runFullBackfill',
+      `Backfill ${result.timedOut ? 'partial' : 'complete'}: ${result.totalCreated} activities created`);
     return result;
   }
 

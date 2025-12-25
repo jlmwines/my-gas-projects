@@ -1,3 +1,8 @@
+<style>
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 80px; overflow-y: auto; }
+.modal-container { background: white; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.form-body { padding: 20px; }
+</style>
 <div class="container-fluid">
   <!-- Section 1: Bundle Dashboard -->
   <div class="row mb-4">
@@ -7,6 +12,7 @@
           <h5>Bundle Management</h5>
           <div>
             <button id="btn-refresh-bundles" class="btn btn-sm mr-2">Refresh</button>
+            <button id="btn-add-bundle" class="btn btn-sm mr-2">Add New Bundle</button>
             <button id="btn-reimport-bundles" class="btn btn-sm">Re-import from WooCommerce</button>
           </div>
         </div>
@@ -152,6 +158,36 @@
   </div>
 </div>
 
+<!-- Add New Bundle Modal -->
+<div class="modal-overlay" id="add-bundle-modal" style="display:none;">
+  <div class="modal-container" style="max-width: 500px;">
+    <div class="modal-header">
+      <h5 class="mb-0">Add New Bundle</h5>
+      <button type="button" class="close" onclick="document.getElementById('add-bundle-modal').style.display='none'">&times;</button>
+    </div>
+    <div class="form-body">
+      <p class="text-muted small">Enter the WooCommerce bundle details to register it in the system.</p>
+      <div class="form-group">
+        <label>Bundle ID (WooCommerce Product ID) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="add-bundle-id" placeholder="e.g. 12345">
+      </div>
+      <div class="form-group">
+        <label>Name (English) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="add-bundle-name-en" placeholder="Bundle name in English">
+      </div>
+      <div class="form-group">
+        <label>Name (Hebrew)</label>
+        <input type="text" class="form-control" id="add-bundle-name-he" placeholder="Bundle name in Hebrew" dir="rtl">
+      </div>
+      <div id="add-bundle-status" class="small mt-2"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('add-bundle-modal').style.display='none'">Cancel</button>
+      <button class="btn" id="btn-submit-add-bundle">Add Bundle</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -197,6 +233,8 @@
     });
 
     document.getElementById('btn-reimport-bundles').addEventListener('click', reimportBundles);
+    document.getElementById('btn-add-bundle').addEventListener('click', openAddBundleModal);
+    document.getElementById('btn-submit-add-bundle').addEventListener('click', submitAddBundle);
     document.getElementById('btn-apply-replacements').addEventListener('click', applyReplacements);
     document.getElementById('btn-add-text-slot').addEventListener('click', function() { addSlot('Text'); });
     document.getElementById('btn-add-product-slot').addEventListener('click', function() { addSlot('Product'); });
@@ -1060,6 +1098,62 @@
         if (priceSpan) priceSpan.textContent = '';
       })
       .WebAppBundles_getProductName(sku);
+  }
+
+  // =================================================================================
+  // ADD NEW BUNDLE
+  // =================================================================================
+
+  function openAddBundleModal() {
+    document.getElementById('add-bundle-id').value = '';
+    document.getElementById('add-bundle-name-en').value = '';
+    document.getElementById('add-bundle-name-he').value = '';
+    document.getElementById('add-bundle-status').textContent = '';
+    document.getElementById('add-bundle-modal').style.display = 'flex';
+  }
+
+  function submitAddBundle() {
+    var bundleId = document.getElementById('add-bundle-id').value.trim();
+    var nameEn = document.getElementById('add-bundle-name-en').value.trim();
+    var nameHe = document.getElementById('add-bundle-name-he').value.trim();
+    var statusDiv = document.getElementById('add-bundle-status');
+
+    if (!bundleId || !nameEn) {
+      statusDiv.className = 'small mt-2 text-danger';
+      statusDiv.textContent = 'Bundle ID and English name are required.';
+      return;
+    }
+
+    var btn = document.getElementById('btn-submit-add-bundle');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Adding...';
+    statusDiv.className = 'small mt-2 text-info';
+    statusDiv.textContent = 'Adding bundle...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Add Bundle';
+        if (result.error) {
+          statusDiv.className = 'small mt-2 text-danger';
+          statusDiv.textContent = 'Error: ' + result.error;
+          return;
+        }
+        statusDiv.className = 'small mt-2 text-success';
+        statusDiv.textContent = 'Bundle added successfully!';
+        setTimeout(function() {
+          document.getElementById('add-bundle-modal').style.display = 'none';
+          loadStats();
+          loadBundleList();
+        }, 1000);
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Add Bundle';
+        statusDiv.className = 'small mt-2 text-danger';
+        statusDiv.textContent = 'Failed: ' + err.message;
+      })
+      .WebAppBundles_addNewBundle(bundleId, nameEn, nameHe);
   }
 
   // =================================================================================

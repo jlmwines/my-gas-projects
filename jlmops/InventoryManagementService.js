@@ -310,7 +310,8 @@ const InventoryManagementService = (function() {
             throw new Error(`Required columns 'pa_SKU' or 'pa_BruryaQty' not found in '${auditSheetName}'.`);
         }
 
-        const rowIndex = auditData.findIndex((row, index) => index > 0 && row[auditSkuColIdx] === sku);
+        const skuStr = String(sku).trim();
+        const rowIndex = auditData.findIndex((row, index) => index > 0 && String(row[auditSkuColIdx]).trim() === skuStr);
 
         if (rowIndex !== -1) {
             // Item exists, update it.

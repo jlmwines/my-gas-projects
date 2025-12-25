@@ -83,6 +83,49 @@ The backend is designed as a collection of services that are controlled by a sin
         *   **Generic Rule Execution:** Centralizes the execution logic for configurable validation rules (defined by `test_type` in `SysConfig`), making it the single engine for executing validation rules.
 *   **`AuditService`**: Manages stock levels for various locations (Brurya, Storage, Office, Shop) in the `SysProductAudit` sheet (prefix `pa_`).
 
+### 2.5.5. Validation Architecture
+
+The system runs validation suites at strategic points to ensure data integrity.
+
+**Validation Suites:**
+
+| Suite | Trigger | Purpose |
+|-------|---------|---------|
+| `web_staging` | Web product import | Validate before WebProdM upsert |
+| `web_xlt_staging` | Translation import | Validate before WebXltM upsert |
+| `order_staging` | Order import | Validate before WebOrdM upsert |
+| `comax_staging` | Comax import | Validate before CmxProdM upsert |
+| `master_master` | End of sync + housekeeping | Cross-system consistency check |
+
+**Rule Types:**
+- `EXISTENCE_CHECK`: Verify records exist across sheets
+- `FIELD_COMPARISON`: Compare field values between sheets
+- `INTERNAL_AUDIT`: Check data quality within a single sheet
+- `ROW_COUNT`: Detect unexpected row count changes
+
+### 2.5.6. Housekeeping Phases
+
+Daily maintenance runs in three phases:
+
+**Phase 1: Cleanup**
+- `cleanOldLogs()` - Archive old SysLog entries (keep 1000 recent)
+- `archiveCompletedTasks()` - Move done tasks to archive
+- `archiveCompletedOrders()` - Move old orders to archive
+- `manageFileLifecycle()` - Trash old export files
+- `cleanupImportFiles()` - Archive processed import files
+
+**Phase 2: Validation & Testing**
+- Run `master_master` validation suite
+- Run unit tests via `TestRunner.runAllTests()`
+- Run schema validation via `ValidationLogic.validateDatabaseSchema()`
+- Update `task.system.health_status` with results
+
+**Phase 3: Service Updates**
+- `checkBundleHealth()` - Bundle inventory alerts
+- `checkBruryaReminder()` - Brurya warehouse reminder
+- `refreshCrmContacts()` - Update contact metrics
+- `runCrmIntelligence()` - Generate campaign suggestions
+
 ### 2.3. Data Adapters & Formatters
 
 To keep the core services clean, we use an adapter/formatter pattern to handle messy external data.

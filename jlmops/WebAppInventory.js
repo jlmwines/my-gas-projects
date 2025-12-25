@@ -315,7 +315,7 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
     
     selectedCounts.forEach(item => {
       // Pass the complete item object including taskId, sku, and all quantities
-      const updateResult = inventoryManagementService.updatePhysicalCounts(item); 
+      const updateResult = inventoryManagementService.updatePhysicalCounts(item);
       if (updateResult.success) {
         TaskService.updateTaskStatus(item.taskId, 'Review'); // Mark the task as 'Review' for admin
         updatedCount++;
@@ -323,6 +323,11 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
         LoggerService.warn('WebAppInventory', 'submitInventoryCounts', `Failed to update count for SKU ${item.sku}. Task ${item.taskId} not completed.`);
       }
     });
+
+    // Invalidate task cache after status updates
+    if (updatedCount > 0) {
+      WebAppTasks.invalidateCache();
+    }
 
     return { success: true, updated: updatedCount };
   } catch (e) {
@@ -466,6 +471,12 @@ function WebAppInventory_acceptInventoryCounts(taskIds) {
       }
     }
     SpreadsheetApp.flush();
+
+    // Invalidate task cache after status updates
+    if (completedCount > 0) {
+      WebAppTasks.invalidateCache();
+    }
+
     return { success: true, completed: completedCount };
   } catch (e) {
     LoggerService.error('WebAppInventory', 'acceptInventoryCounts', e.message, e);
@@ -811,5 +822,213 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
   } catch (e) {
     LoggerService.error('WebAppInventory', 'importCountsFromSheet', e.message, e);
     return { success: false, message: `Error importing counts: ${e.message}` };
+  }
+}
+
+/**
+ * Exports Brurya inventory to a new Google Sheet for mobile editing.
+ * Includes all products with Brurya stock plus option to add new SKUs.
+ * @returns {string} The URL of the newly created Google Sheet.
+ */
+function WebAppInventory_exportBruryaToSheet() {
+  const fnName = 'exportBruryaToSheet';
+  try {
+    const inventoryManagementService = InventoryManagementService;
+    // Get current Brurya stock
+    const bruryaStock = inventoryManagementService.getBruryaStockList();
+
+    const config = ConfigService.getConfig('system.folder.jlmops_exports');
+    const exportFolderId = config ? config.id : null;
+    if (!exportFolderId) {
+      throw new Error('Export folder not configured (system.folder.jlmops_exports).');
+    }
+
+    const folder = DriveApp.getFolderById(exportFolderId);
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+    const sheetName = `BruryaCount_${timestamp}`;
+
+    const newSpreadsheet = SpreadsheetApp.create(sheetName);
+    const sheet = newSpreadsheet.getSheets()[0];
+
+    // Headers
+    const headers = ['SKU', 'Product Name', 'Current Qty', 'New Qty'];
+    sheet.appendRow(headers);
+
+    // Populate with current Brurya stock
+    if (bruryaStock.length > 0) {
+      const data = bruryaStock.map(item => [
+        item.sku,
+        item.Name || '',
+        item.bruryaQty || 0,
+        '' // New Qty - empty for input
+      ]);
+      sheet.getRange(2, 1, data.length, 4).setValues(data);
+    }
+
+    // Add 20 blank rows for new SKUs
+    const startRow = bruryaStock.length + 2;
+    const blankRows = Array(20).fill(['', '', '', '']);
+    sheet.getRange(startRow, 1, 20, 4).setValues(blankRows);
+
+    // Formatting
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, 4);
+
+    // Highlight input columns (New Qty and blank SKU rows)
+    const inputColor = '#FFF2CC';
+    const newQtyRange = sheet.getRange(2, 4, bruryaStock.length + 20, 1); // Col D
+    newQtyRange.setBackground(inputColor);
+
+    // Highlight blank rows for new SKUs
+    if (bruryaStock.length > 0) {
+      const blankRowsRange = sheet.getRange(startRow, 1, 20, 4);
+      blankRowsRange.setBackground('#E8F5E9'); // Light green for new entries
+    }
+
+    // Protection - protect columns A-C for existing rows, allow D and new rows
+    const protection = sheet.protect().setDescription('Brurya Inventory - Edit New Qty or Add New SKUs');
+    const unprotectedRanges = [
+      sheet.getRange(2, 4, bruryaStock.length + 20, 1), // New Qty column
+      sheet.getRange(startRow, 1, 20, 4) // New SKU rows
+    ];
+    protection.setUnprotectedRanges(unprotectedRanges);
+
+    // Move to export folder
+    const file = DriveApp.getFileById(newSpreadsheet.getId());
+    file.moveTo(folder);
+
+    LoggerService.info('WebAppInventory', fnName, `Exported ${bruryaStock.length} Brurya products to sheet: ${newSpreadsheet.getUrl()}`);
+    return newSpreadsheet.getUrl();
+
+  } catch (e) {
+    LoggerService.error('WebAppInventory', fnName, e.message, e);
+    throw e;
+  }
+}
+
+/**
+ * Imports Brurya inventory from a Google Sheet.
+ * Updates existing SKUs and creates new entries for new SKUs (if found in CmxProdM).
+ * @param {string} [sheetIdOrUrl] Sheet ID or URL. If omitted, finds latest BruryaCount_* file.
+ * @returns {Object} Result with counts of updates, creates, and errors.
+ */
+function WebAppInventory_importBruryaFromSheet(sheetIdOrUrl) {
+  const fnName = 'importBruryaFromSheet';
+  try {
+    const inventoryManagementService = InventoryManagementService;
+    let ss;
+
+    if (!sheetIdOrUrl) {
+      // Auto-discover latest BruryaCount_* file
+      const config = ConfigService.getConfig('system.folder.jlmops_exports');
+      const exportFolderId = config ? config.id : null;
+      if (!exportFolderId) {
+        throw new Error('Export folder not configured.');
+      }
+
+      const folder = DriveApp.getFolderById(exportFolderId);
+      const files = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+
+      let latestFile = null;
+      let latestDate = new Date(0);
+
+      while (files.hasNext()) {
+        const file = files.next();
+        if (file.getName().startsWith('BruryaCount_')) {
+          const fileDate = file.getLastUpdated();
+          if (fileDate > latestDate) {
+            latestFile = file;
+            latestDate = fileDate;
+          }
+        }
+      }
+
+      if (!latestFile) {
+        throw new Error('No BruryaCount_* file found in export folder.');
+      }
+
+      ss = SpreadsheetApp.openById(latestFile.getId());
+      LoggerService.info('WebAppInventory', fnName, `Auto-discovered file: ${latestFile.getName()}`);
+    } else {
+      // Parse sheet ID from URL if needed
+      let sheetId = sheetIdOrUrl;
+      if (sheetIdOrUrl.includes('/')) {
+        const match = sheetIdOrUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) sheetId = match[1];
+      }
+      ss = SpreadsheetApp.openById(sheetId);
+    }
+
+    const sheet = ss.getSheets()[0];
+    const data = sheet.getDataRange().getValues();
+
+    if (data.length < 2) {
+      return { success: true, updated: 0, created: 0, message: 'Sheet is empty.' };
+    }
+
+    const headers = data[0];
+    const skuCol = headers.indexOf('SKU');
+    const newQtyCol = headers.indexOf('New Qty');
+
+    if (skuCol === -1 || newQtyCol === -1) {
+      throw new Error('Required columns not found. Expected: SKU, New Qty');
+    }
+
+    let updated = 0;
+    let created = 0;
+    const errors = [];
+    const dataRows = data.slice(1);
+
+    dataRows.forEach((row, index) => {
+      const rowNum = index + 2;
+      const sku = String(row[skuCol] || '').trim();
+      const newQtyRaw = row[newQtyCol];
+
+      // Skip if no SKU or New Qty is empty string (user didn't enter data)
+      if (!sku || newQtyRaw === '') {
+        return;
+      }
+
+      const newQty = parseInt(newQtyRaw, 10);
+      if (isNaN(newQty) || newQty < 0) {
+        errors.push(`Row ${rowNum}: Invalid quantity for SKU ${sku}`);
+        return;
+      }
+
+      try {
+        const result = inventoryManagementService.setBruryaQuantity(sku, newQty);
+        if (result.action === 'updated') {
+          updated++;
+        } else if (result.action === 'created') {
+          created++;
+        }
+      } catch (itemError) {
+        errors.push(`Row ${rowNum}: ${itemError.message}`);
+      }
+    });
+
+    // Update last Brurya update timestamp
+    if (updated > 0 || created > 0) {
+      ConfigService.setConfig('system.brurya.last_update', new Date().toISOString());
+    }
+
+    const message = `Brurya import complete: ${updated} updated, ${created} created.`;
+    LoggerService.info('WebAppInventory', fnName, message);
+
+    if (errors.length > 0) {
+      return {
+        success: true,
+        updated,
+        created,
+        errors: errors.length,
+        message: `${message} ${errors.length} errors. First: ${errors[0]}`
+      };
+    }
+
+    return { success: true, updated, created, message };
+
+  } catch (e) {
+    LoggerService.error('WebAppInventory', fnName, e.message, e);
+    return { success: false, message: `Error importing Brurya: ${e.message}` };
   }
 }
