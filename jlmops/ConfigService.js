@@ -122,9 +122,6 @@ const ConfigService = (function() {
         throw new Error(`Fatal Error: SysConfig schema mismatch. Live version is ${liveVersion}, but code requires version ${REQUIRED_SCHEMA_VERSION}. Please run migration scripts.`);
     }
 
-    // Log the sheet names object before caching for debugging
-    console.log("ConfigService: Parsed 'system.sheet_names':", parsedConfig['system.sheet_names']);
-
     configCache = parsedConfig;
     scriptCache.put('parsedSysConfig', JSON.stringify(parsedConfig), 300); // Cache for 5 minutes
     console.log(`Configuration loaded and cached. Schema version ${liveVersion} validated.`);
@@ -264,7 +261,8 @@ const ConfigService = (function() {
     // Ensure write is committed before any subsequent reads (prevents race condition)
     SpreadsheetApp.flush();
 
-    // Invalidate cache to reflect changes
+    // Invalidate ALL caches immediately after write - prevents stale reads
+    CacheService.getScriptCache().remove('parsedSysConfig');
     configCache = null;
   }
 

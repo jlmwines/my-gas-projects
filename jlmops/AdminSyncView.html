@@ -1,8 +1,20 @@
 <div class="container-fluid">
     <h1 class="mt-4">Sync</h1>
-    
-    <div id="admin-daily-sync-widget-container">
-        <!-- AdminDailySyncWidget_v2.html will be loaded here -->
+
+    <div class="row">
+        <!-- V2 Widget (full width - new widget disabled) -->
+        <div class="col-12">
+            <div id="admin-daily-sync-widget-container">
+                <!-- AdminDailySyncWidget_v2.html will be loaded here -->
+            </div>
+        </div>
+
+        <!-- NEW Widget DISABLED - causing conflicts with V2 widget
+        <div class="col-md-4">
+            <div id="new-sync-widget-container">
+            </div>
+        </div>
+        -->
     </div>
 
     <script>
@@ -19,22 +31,24 @@
         }
 
         function loadAdminDailySyncWidget() {
-            console.log('AdminSyncView: Loading AdminDailySyncWidget_v2.html (new event-driven version)');
             google.script.run
                 .withSuccessHandler(html => {
                     const container = document.getElementById('admin-daily-sync-widget-container');
                     container.innerHTML = html;
-                    executeScriptsInElement(container); // Execute scripts in the loaded content
-                    console.log('AdminSyncView: AdminDailySyncWidget_v2.html loaded and scripts executed.');
+                    executeScriptsInElement(container);
                 })
                 .withFailureHandler(err => {
-                    console.error('AdminSyncView: Failed to load AdminDailySyncWidget_v2.html', err);
                     document.getElementById('admin-daily-sync-widget-container').innerHTML = '<p class="text-danger">Failed to load sync widget.</p>';
                 })
-                .getHtmlOutput('AdminDailySyncWidget_v2'); // Updated to use new v2 widget
+                .getHtmlOutput('AdminDailySyncWidget_v2');
         }
 
-        // Call the function to load the widget when the view is rendered
+        function loadNewSyncWidget() {
+            // DISABLED - was causing conflicts with V2 widget
+        }
+
+        // Load V2 widget only (new widget disabled - was causing conflicts)
         loadAdminDailySyncWidget();
+        // loadNewSyncWidget(); // DISABLED
     </script>
 </div>

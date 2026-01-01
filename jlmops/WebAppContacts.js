@@ -437,3 +437,210 @@ function _getTypeLabel(type) {
   };
   return labels[type] || type || 'Unknown';
 }
+
+// =============================================
+// CAMPAIGN EXPORT FUNCTIONS
+// =============================================
+
+/**
+ * Gets audience breakdown for current filters.
+ * @param {Object} filters - Current filter state
+ * @returns {Object} Audience breakdown stats
+ */
+function WebAppContacts_getAudienceBreakdown(filters = {}) {
+  try {
+    const contacts = ContactService.getContacts(filters);
+
+    const breakdown = {
+      total: contacts.length,
+      byType: { vip: 0, repeat: 0, new: 0, prospect: 0, noncore: 0 },
+      byLanguage: { en: 0, he: 0 },
+      bySubscription: { subscribed: 0, notSubscribed: 0 },
+      byStatus: {}
+    };
+
+    contacts.forEach(c => {
+      // By type
+      const type = c.sc_CustomerType || '';
+      if (type.includes('vip')) breakdown.byType.vip++;
+      else if (type.includes('repeat')) breakdown.byType.repeat++;
+      else if (type.includes('new')) breakdown.byType.new++;
+      else if (type.includes('prospect')) breakdown.byType.prospect++;
+      else if (type.includes('noncore')) breakdown.byType.noncore++;
+
+      // By language
+      const lang = (c.sc_Language || 'en').toLowerCase();
+      if (lang === 'he') breakdown.byLanguage.he++;
+      else breakdown.byLanguage.en++;
+
+      // By subscription
+      if (c.sc_IsSubscribed) breakdown.bySubscription.subscribed++;
+      else breakdown.bySubscription.notSubscribed++;
+
+      // By status
+      const status = c.sc_LifecycleStatus || 'Unknown';
+      breakdown.byStatus[status] = (breakdown.byStatus[status] || 0) + 1;
+    });
+
+    return breakdown;
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'getAudienceBreakdown', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Gets CAMPAIGN projects for dropdown.
+ * @returns {Object} { projects: Array }
+ */
+function WebAppContacts_getProjects() {
+  try {
+    const projects = ProjectService.getProjectsByType('CAMPAIGN');
+
+    // Filter to active/planning only and format for dropdown
+    const formatted = projects
+      .filter(p => {
+        const status = p.status || p.spro_Status;
+        return status === 'ACTIVE' || status === 'PLANNING';
+      })
+      .map(p => ({
+        id: p.projectid || p.spro_ProjectId,
+        name: p.name || p.spro_Name,
+        status: p.status || p.spro_Status
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { projects: formatted };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'getProjects', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Creates a new campaign project.
+ * @param {string} name - Project name
+ * @returns {Object} { project } or { error }
+ */
+function WebAppContacts_createProject(name) {
+  try {
+    if (!name || !name.trim()) {
+      return { error: 'Project name is required' };
+    }
+
+    const project = ProjectService.createProject({
+      name: name.trim(),
+      type: 'CAMPAIGN',
+      status: 'ACTIVE'
+    });
+
+    return {
+      project: {
+        id: project.spro_ProjectId,
+        name: project.spro_Name,
+        status: project.spro_Status
+      }
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'createProject', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Exports audience to Google Sheet.
+ * @param {Object} options - Export options
+ * @returns {Object} Export result
+ */
+function WebAppContacts_exportAudience(options) {
+  try {
+    LoggerService.info('WebAppContacts', 'exportAudience', `Options: ${JSON.stringify(options)}`);
+
+    // Build filter options from UI filters
+    const filters = {};
+
+    if (options.filters) {
+      if (options.filters.customerType) {
+        filters.customerType = [options.filters.customerType];
+      }
+      if (options.filters.lifecycleStatus) {
+        filters.lifecycleStatus = [options.filters.lifecycleStatus];
+      }
+      if (options.filters.language) {
+        filters.language = options.filters.language;
+      }
+      if (options.filters.isSubscribed !== undefined) {
+        filters.isSubscribed = options.filters.isSubscribed;
+      }
+    }
+
+    // Build export options
+    const exportOptions = {
+      filters: filters,
+      campaignCode: options.campaignCode || '',
+      projectId: options.projectId || null,
+      dataGroups: {
+        preferences: options.includePreferences || false,
+        purchaseBehavior: options.includePurchaseBehavior || false
+      },
+      tags: {
+        category: options.tagCategory || false,
+        priceTier: options.tagPriceTier || false,
+        winery: options.tagWinery || false,
+        status: options.tagStatus || false,
+        campaign: options.tagCampaign || false
+      },
+      additionalTags: options.additionalTags || ''
+    };
+
+    const result = CampaignService.exportAudienceToSheet(exportOptions);
+
+    return result;
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'exportAudience', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Filter contacts for Year in Wine campaign.
+ * Returns list of emails that qualify based on year spend.
+ *
+ * @param {Object} options - Filter options
+ * @param {number} options.year - Year to check (default 2025)
+ * @param {number} options.minSpend - Minimum spend for year (default 1000)
+ * @returns {Object} Result with emails array
+ */
+function WebAppContacts_filterYearInWine(options = {}) {
+  try {
+    LoggerService.info('WebAppContacts', 'filterYearInWine', `Options: ${JSON.stringify(options)}`);
+    return filterYearInWine(options);
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'filterYearInWine', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Export Year in Wine data.
+ * Creates spreadsheet with:
+ * - Mailchimp sheet (preferences, referral codes, reward tiers) - split by language
+ * - Coupons sheet (WooCommerce import format)
+ *
+ * @param {Object} options - Export options
+ * @param {number} options.year - Year to export (default 2025)
+ * @param {number} options.minSpend - Minimum spend (default 1000)
+ * @param {string} options.couponExpiry - Expiry date YYYY-MM-DD (default 2026-02-01)
+ * @param {number} options.couponAmount - Discount amount (default 50)
+ * @param {boolean} options.testMode - Skip task creation (default false)
+ * @returns {Object} Result with spreadsheetUrl and counts
+ */
+function WebAppContacts_exportYearInWine2025(options = {}) {
+  try {
+    LoggerService.info('WebAppContacts', 'exportYearInWine2025', `Options: ${JSON.stringify(options)}`);
+    return exportYearInWine2025(options);
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'exportYearInWine2025', e.message, e);
+    return { error: e.message };
+  }
+}

@@ -16,7 +16,9 @@
       "Bash(node --check:*)",
       "Bash(rm:*)",
       "Bash(node:*)",
-      "Skill(session)"
+      "Skill(session)",
+      "WebSearch",
+      "Skill(wish)"
     ],
     "deny": [],
     "ask": []

@@ -35,6 +35,344 @@ function runFormatDataSheets() {
 }
 
 /**
+ * Backfill order totals by calculating from order items.
+ * This ensures wom_OrderTotal and woma_OrderTotal are always accurate.
+ * Run after initial setup or if totals are missing/incorrect.
+ */
+function backfillOrderTotals() {
+  const fnName = 'backfillOrderTotals';
+  const allConfig = ConfigService.getAllConfig();
+  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+
+  // Build order totals from order items (authoritative source)
+  const totalsByOrderId = {};
+
+  // Sum from WebOrdItemsM
+  const itemsSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdItemsM);
+  if (itemsSheet && itemsSheet.getLastRow() > 1) {
+    const itemsData = itemsSheet.getDataRange().getValues();
+    const itemHeaders = itemsData[0];
+    const orderIdIdx = itemHeaders.indexOf('woi_OrderId');
+    const itemTotalIdx = itemHeaders.indexOf('woi_ItemTotal');
+
+    for (let i = 1; i < itemsData.length; i++) {
+      const orderId = String(itemsData[i][orderIdIdx] || '').trim();
+      const itemTotal = parseFloat(itemsData[i][itemTotalIdx]) || 0;
+      if (orderId) {
+        totalsByOrderId[orderId] = (totalsByOrderId[orderId] || 0) + itemTotal;
+      }
+    }
+    console.log(`Summed items from WebOrdItemsM: ${Object.keys(totalsByOrderId).length} orders`);
+  }
+
+  // Sum from WebOrdItemsM_Archive (only for orders NOT already in master)
+  const itemsArchiveSheet = ss.getSheetByName('WebOrdItemsM_Archive');
+  if (itemsArchiveSheet && itemsArchiveSheet.getLastRow() > 1) {
+    const archiveData = itemsArchiveSheet.getDataRange().getValues();
+    const archiveHeaders = archiveData[0];
+    const orderIdIdx = archiveHeaders.indexOf('woia_OrderId');
+    const itemTotalIdx = archiveHeaders.indexOf('woia_ItemTotal');
+
+    // Track which orders are archive-only
+    const archiveOnlyOrders = new Set();
+    for (let i = 1; i < archiveData.length; i++) {
+      const orderId = String(archiveData[i][orderIdIdx] || '').trim();
+      if (orderId && !totalsByOrderId[orderId]) {
+        archiveOnlyOrders.add(orderId);
+      }
+    }
+
+    // Only sum items for archive-only orders
+    for (let i = 1; i < archiveData.length; i++) {
+      const orderId = String(archiveData[i][orderIdIdx] || '').trim();
+      const itemTotal = parseFloat(archiveData[i][itemTotalIdx]) || 0;
+      if (orderId && archiveOnlyOrders.has(orderId)) {
+        totalsByOrderId[orderId] = (totalsByOrderId[orderId] || 0) + itemTotal;
+      }
+    }
+    console.log(`Added ${archiveOnlyOrders.size} orders from WebOrdItemsM_Archive`);
+  }
+
+  console.log(`Total orders with calculated totals: ${Object.keys(totalsByOrderId).length}`);
+
+  // Round all totals to whole numbers
+  Object.keys(totalsByOrderId).forEach(orderId => {
+    totalsByOrderId[orderId] = Math.round(totalsByOrderId[orderId]);
+  });
+
+  // Update WebOrdM
+  const masterSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdM);
+  if (masterSheet && masterSheet.getLastRow() > 1) {
+    const masterData = masterSheet.getDataRange().getValues();
+    const masterHeaders = masterData[0];
+    const momOrderIdIdx = masterHeaders.indexOf('wom_OrderId');
+    const momTotalIdx = masterHeaders.indexOf('wom_OrderTotal');
+
+    if (momTotalIdx === -1) {
+      console.log('wom_OrderTotal column not found in WebOrdM');
+    } else {
+      let updated = 0;
+      for (let i = 1; i < masterData.length; i++) {
+        const orderId = String(masterData[i][momOrderIdIdx] || '').trim();
+        const existingTotal = Math.round(parseFloat(masterData[i][momTotalIdx]) || 0);
+        const calculatedTotal = totalsByOrderId[orderId] || 0;
+
+        // Update if different (fixes empty AND incorrect values)
+        if (orderId && calculatedTotal !== existingTotal) {
+          masterSheet.getRange(i + 1, momTotalIdx + 1).setValue(calculatedTotal);
+          updated++;
+        }
+      }
+      console.log(`Updated ${updated} order totals in WebOrdM`);
+    }
+  }
+
+  // Also update Archive
+  const archiveSheet = ss.getSheetByName('WebOrdM_Archive');
+  if (archiveSheet && archiveSheet.getLastRow() > 1) {
+    const archiveData = archiveSheet.getDataRange().getValues();
+    const archiveHeaders = archiveData[0];
+    const archiveOrderIdIdx = archiveHeaders.indexOf('woma_OrderId');
+    const archiveTotalIdx = archiveHeaders.indexOf('woma_OrderTotal');
+
+    if (archiveTotalIdx === -1) {
+      console.log('woma_OrderTotal column not found in WebOrdM_Archive');
+    } else {
+      let archiveUpdated = 0;
+      for (let i = 1; i < archiveData.length; i++) {
+        const orderId = String(archiveData[i][archiveOrderIdIdx] || '').trim();
+        const existingTotal = Math.round(parseFloat(archiveData[i][archiveTotalIdx]) || 0);
+        const calculatedTotal = totalsByOrderId[orderId] || 0;
+
+        // Update if different (fixes empty AND incorrect values)
+        if (orderId && calculatedTotal !== existingTotal) {
+          archiveSheet.getRange(i + 1, archiveTotalIdx + 1).setValue(calculatedTotal);
+          archiveUpdated++;
+        }
+      }
+      console.log(`Updated ${archiveUpdated} order totals in WebOrdM_Archive`);
+    }
+  }
+}
+
+/**
+ * Backfills order totals in WebOrdM_Archive from CSV file.
+ * @param {string} fileName - CSV filename (default: order_history_2025-12-16.csv)
+ */
+function backfillArchiveOrderTotalsFromCsv(fileName) {
+  fileName = fileName || 'order_history_2025-12-16.csv';
+
+  // Find the CSV file
+  const files = DriveApp.getFilesByName(fileName);
+  if (!files.hasNext()) {
+    console.log('File not found: ' + fileName);
+    return;
+  }
+  const file = files.next();
+  const csvContent = file.getBlob().getDataAsString();
+
+  // Parse CSV and build OrderId -> OrderTotal lookup
+  const rows = Utilities.parseCsv(csvContent);
+  const headers = rows[0];
+  const orderIdIdx = headers.indexOf('order_id');
+  const orderTotalIdx = headers.indexOf('order_total');
+
+  if (orderIdIdx === -1 || orderTotalIdx === -1) {
+    console.log('CSV missing order_id or order_total columns');
+    return;
+  }
+
+  const totalsByOrderId = {};
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][orderIdIdx]).trim();
+    const total = parseFloat(rows[i][orderTotalIdx]) || 0;
+    if (orderId) {
+      totalsByOrderId[orderId] = total;
+    }
+  }
+  console.log(`Loaded ${Object.keys(totalsByOrderId).length} order totals from CSV`);
+
+  // Get archive sheet
+  const allConfig = ConfigService.getAllConfig();
+  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+  const archiveSheet = ss.getSheetByName('WebOrdM_Archive');
+
+  if (!archiveSheet) {
+    console.log('WebOrdM_Archive not found');
+    return;
+  }
+
+  const archiveData = archiveSheet.getDataRange().getValues();
+  const archiveHeaders = archiveData[0];
+  const archiveOrderIdIdx = archiveHeaders.indexOf('woma_OrderId');
+  const archiveTotalIdx = archiveHeaders.indexOf('woma_OrderTotal');
+
+  if (archiveTotalIdx === -1) {
+    console.log('woma_OrderTotal column not found in archive');
+    return;
+  }
+
+  let updated = 0;
+  for (let i = 1; i < archiveData.length; i++) {
+    const orderId = String(archiveData[i][archiveOrderIdIdx]).trim();
+    const existingTotal = archiveData[i][archiveTotalIdx];
+
+    if (orderId && totalsByOrderId[orderId] !== undefined && !existingTotal) {
+      archiveSheet.getRange(i + 1, archiveTotalIdx + 1).setValue(totalsByOrderId[orderId]);
+      updated++;
+    }
+  }
+
+  console.log(`Backfilled ${updated} order totals in WebOrdM_Archive`);
+}
+
+/**
+ * Calculate and store spend for all contacts.
+ * @param {number} year - Optional calendar year (e.g., 2024). If omitted, uses rolling 12 months.
+ */
+function updateContactSpend12Month(year) {
+  const fnName = 'updateContactSpend12Month';
+  const allConfig = ConfigService.getAllConfig();
+  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+
+  // Date range: calendar year or rolling 12 months
+  let startDate, endDate;
+  if (year) {
+    startDate = new Date(year, 0, 1);  // Jan 1 of year
+    endDate = new Date(year, 11, 31, 23, 59, 59);  // Dec 31 of year
+    console.log(`Calculating spend for calendar year ${year}`);
+  } else {
+    startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 12);
+    endDate = new Date();
+    console.log(`Calculating spend since ${startDate.toISOString().split('T')[0]}`);
+  }
+
+  const spendByEmail = {};
+
+  // Helper to process order sheet
+  function processOrderSheet(sheet, dateCol, emailCol, totalCol, statusCol, orderIdCol, processedOrderIds) {
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dateIdx = headers.indexOf(dateCol);
+    const emailIdx = headers.indexOf(emailCol);
+    const totalIdx = headers.indexOf(totalCol);
+    const statusIdx = headers.indexOf(statusCol);
+    const orderIdIdx = headers.indexOf(orderIdCol);
+
+    if (dateIdx === -1 || emailIdx === -1 || totalIdx === -1 || orderIdIdx === -1) {
+      console.log(`Missing columns in ${sheet.getName()}: date=${dateIdx}, email=${emailIdx}, total=${totalIdx}, orderId=${orderIdIdx}`);
+      return;
+    }
+
+    let counted = 0;
+    let skipped = 0;
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const orderId = String(row[orderIdIdx] || '').trim();
+      const orderDate = row[dateIdx];
+      const email = (row[emailIdx] || '').toLowerCase().trim();
+      const total = parseFloat(row[totalIdx]) || 0;
+      const status = statusIdx >= 0 ? (row[statusIdx] || '').toLowerCase() : 'completed';
+
+      // Skip if already processed (prevents double-counting across sheets)
+      if (orderId && processedOrderIds.has(orderId)) {
+        skipped++;
+        continue;
+      }
+
+      // Skip non-completed orders
+      if (status !== 'completed' && status !== 'processing') continue;
+
+      // Check date is within range
+      if (!orderDate) continue;
+      const date = orderDate instanceof Date ? orderDate : new Date(orderDate);
+      if (isNaN(date.getTime()) || date < startDate || date > endDate) continue;
+
+      // Mark as processed and sum spend
+      if (orderId) processedOrderIds.add(orderId);
+      if (email && total > 0) {
+        spendByEmail[email] = (spendByEmail[email] || 0) + total;
+        counted++;
+      }
+    }
+    console.log(`${sheet.getName()}: ${counted} orders counted, ${skipped} duplicates skipped`);
+  }
+
+  // Track order IDs to prevent double-counting
+  const processedOrderIds = new Set();
+
+  // Process WebOrdM
+  const masterSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdM);
+  processOrderSheet(masterSheet, 'wom_OrderDate', 'wom_BillingEmail', 'wom_OrderTotal', 'wom_Status', 'wom_OrderId', processedOrderIds);
+
+  // Process WebOrdM_Archive (only orders not in master)
+  const archiveSheet = ss.getSheetByName('WebOrdM_Archive');
+  processOrderSheet(archiveSheet, 'woma_OrderDate', 'woma_BillingEmail', 'woma_OrderTotal', 'woma_Status', 'woma_OrderId', processedOrderIds);
+
+  console.log(`Total: ${Object.keys(spendByEmail).length} emails with spend`);
+
+  // Update SysContacts
+  const contactsSheet = ss.getSheetByName(allConfig['system.sheet_names'].SysContacts);
+  if (!contactsSheet) {
+    console.log('SysContacts not found');
+    return;
+  }
+
+  const contactData = contactsSheet.getDataRange().getValues();
+  const contactHeaders = contactData[0];
+  const emailIdx = contactHeaders.indexOf('sc_Email');
+  const spend12Idx = contactHeaders.indexOf('sc_Spend12Month');
+  const tierIdx = contactHeaders.indexOf('sc_Tier');
+
+  if (spend12Idx === -1) {
+    console.log('sc_Spend12Month column not found - add column to sheet first');
+    return;
+  }
+  if (tierIdx === -1) {
+    console.log('sc_Tier column not found - add column to sheet first');
+    return;
+  }
+
+  // Helper to calculate tier from spend (matches CampaignService._assignRewardTier)
+  function getTier(spend) {
+    if (spend >= 4000) return 'fgr03';
+    if (spend >= 2000) return 'fgr02';
+    if (spend >= 1000) return 'fgr01';
+    return '';
+  }
+
+  let updatedSpend = 0;
+  let updatedTier = 0;
+  for (let i = 1; i < contactData.length; i++) {
+    const email = (contactData[i][emailIdx] || '').toLowerCase().trim();
+    const spend = Math.round(spendByEmail[email] || 0);
+    const currentSpend = Math.round(parseFloat(contactData[i][spend12Idx]) || 0);
+    const tier = getTier(spend);
+    const currentTier = contactData[i][tierIdx] || '';
+
+    // Update spend if different
+    if (spend !== currentSpend) {
+      contactsSheet.getRange(i + 1, spend12Idx + 1).setValue(spend);
+      updatedSpend++;
+    }
+
+    // Update tier if different
+    if (tier !== currentTier) {
+      contactsSheet.getRange(i + 1, tierIdx + 1).setValue(tier);
+      updatedTier++;
+    }
+  }
+
+  console.log(`Updated ${updatedSpend} contacts with 12-month spend, ${updatedTier} with tier`);
+}
+
+/**
  * HousekeepingService provides methods for performing various maintenance tasks.
  */
 function HousekeepingService() {
@@ -136,14 +474,17 @@ function HousekeepingService() {
    * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to format.
    * @param {number} dataRowCount - Number of data rows (excluding header). If 0, uses sheet's last row.
    */
-  function _applySheetFormatting(sheet, dataRowCount) {
-    const rowCount = dataRowCount || Math.max(0, sheet.getLastRow() - 1);
-    if (rowCount <= 0) return;
+  function _applySheetFormatting(sheet, dataRowCount, schemaHeaders) {
+    const sheetName = sheet.getName();
 
-    const dataRange = sheet.getRange(2, 1, rowCount, sheet.getLastColumn());
-    dataRange.setVerticalAlignment('top');
-    dataRange.setWrap(true);
-    sheet.setRowHeights(2, rowCount, 21);
+    // Restore headers from schema if provided
+    if (schemaHeaders && schemaHeaders.length > 0) {
+      const headerRange = sheet.getRange(1, 1, 1, schemaHeaders.length);
+      headerRange.setValues([schemaHeaders]);
+      headerRange.setFontWeight('bold');
+      headerRange.setVerticalAlignment('middle');
+      console.log(`${sheetName}: Restored ${schemaHeaders.length} headers from schema`);
+    }
   }
 
 
@@ -402,7 +743,7 @@ function HousekeepingService() {
 
       if (existingTask) {
         // Update existing task notes with current days count
-        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        TaskService.updateTaskNotes(existingTask.id, notesJson);
         logger.info('HousekeepingService', functionName, `Updated Brurya task notes (${daysSinceUpdate} days).`);
       } else if (daysSinceUpdate >= 7) {
         // Create new task if overdue
@@ -447,7 +788,7 @@ function HousekeepingService() {
       const existingTask = TaskService.findOpenTaskByType('task.data.subscribers_update', 'DATA');
 
       if (existingTask) {
-        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        TaskService.updateTaskNotes(existingTask.id, notesJson);
         logger.info('HousekeepingService', functionName, `Updated subscribers task notes (${daysSinceUpdate} days).`);
       } else if (daysSinceUpdate >= 14) {
         try {
@@ -491,7 +832,7 @@ function HousekeepingService() {
       const existingTask = TaskService.findOpenTaskByType('task.data.campaigns_update', 'DATA');
 
       if (existingTask) {
-        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        TaskService.updateTaskNotes(existingTask.id, notesJson);
         logger.info('HousekeepingService', functionName, `Updated campaigns task notes (${daysSinceUpdate} days).`);
       } else if (daysSinceUpdate >= 14) {
         try {
@@ -535,7 +876,7 @@ function HousekeepingService() {
       const existingTask = TaskService.findOpenTaskByType('task.data.coupons_update', 'DATA');
 
       if (existingTask) {
-        TaskService.updateTaskNotes(existingTask.st_TaskId, notesJson);
+        TaskService.updateTaskNotes(existingTask.id, notesJson);
         logger.info('HousekeepingService', functionName, `Updated coupons task notes (${daysSinceUpdate} days).`);
       } else if (daysSinceUpdate >= 14) {
         try {
@@ -589,6 +930,13 @@ function HousekeepingService() {
 
       logger.info('HousekeepingService', functionName, "Starting CRM contact refresh.");
 
+      // Import/update contacts from orders (creates new contacts, updates existing)
+      if (typeof ContactImportService !== 'undefined' && ContactImportService.updateContactsFromOrders) {
+        const importResult = ContactImportService.updateContactsFromOrders();
+        logger.info('HousekeepingService', functionName,
+          `Contact import: ${importResult.created} created, ${importResult.updated} updated`);
+      }
+
       ContactService.refreshAllContacts();
       logger.info('HousekeepingService', functionName, "CRM contact refresh completed.");
 
@@ -597,6 +945,9 @@ function HousekeepingService() {
         const enrichResult = ContactEnrichmentService.enrichAllContacts();
         logger.info('HousekeepingService', functionName, `CRM enrichment: ${enrichResult.enriched} enriched, ${enrichResult.skipped} skipped`);
       }
+
+      // Update 12-month spend and tier for all contacts
+      updateContactSpend12Month();
 
       // Update last refresh timestamp
       ConfigService.setConfig('system.crm.last_refresh', new Date().toISOString());
@@ -1382,22 +1733,44 @@ function HousekeepingService() {
       ];
 
       let formattedCount = 0;
+      const formattedSheets = [];
+      const skippedSheets = [];
 
       for (const sheetKey of sheetsToFormat) {
         const sheetName = sheetNames[sheetKey];
-        if (!sheetName) continue;
+        if (!sheetName) {
+          skippedSheets.push(`${sheetKey}: no config`);
+          continue;
+        }
 
         const sheet = spreadsheet.getSheetByName(sheetName);
-        if (!sheet) continue;
+        if (!sheet) {
+          skippedSheets.push(`${sheetKey}: sheet not found`);
+          continue;
+        }
 
-        const rowCount = sheet.getLastRow() - 1;
-        if (rowCount <= 0) continue;
+        // Get schema headers for this sheet
+        const schemaKey = `schema.data.${sheetKey}`;
+        const schema = allConfig[schemaKey];
+        let schemaHeaders = null;
+        if (schema && schema.headers) {
+          schemaHeaders = schema.headers.split(',').map(h => h.trim());
+        }
 
-        _applySheetFormatting(sheet, rowCount);
-        formattedCount++;
+        const rowCount = Math.max(0, sheet.getLastRow() - 1);
+        try {
+          _applySheetFormatting(sheet, rowCount, schemaHeaders);
+          formattedSheets.push(sheetName);
+          formattedCount++;
+        } catch (formatError) {
+          skippedSheets.push(`${sheetName}: ${formatError.message}`);
+        }
       }
 
-      logger.info('HousekeepingService', functionName, `Formatted ${formattedCount} data sheets.`);
+      logger.info('HousekeepingService', functionName, `Formatted ${formattedCount} sheets: ${formattedSheets.join(', ')}`);
+      if (skippedSheets.length > 0) {
+        logger.warn('HousekeepingService', functionName, `Skipped sheets: ${skippedSheets.join('; ')}`);
+      }
       return true;
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Error formatting sheets: ${e.message}`, e);

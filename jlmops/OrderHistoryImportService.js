@@ -18,7 +18,7 @@ const OrderHistoryImportService = (function () {
     'woma_BillingFirstName', 'woma_BillingLastName', 'woma_BillingEmail', 'woma_BillingPhone',
     'woma_ShippingFirstName', 'woma_ShippingLastName', 'woma_ShippingAddress1',
     'woma_ShippingAddress2', 'woma_ShippingCity', 'woma_ShippingPhone',
-    'woma_CouponItems'
+    'woma_CouponItems', 'woma_OrderTotal'
   ];
 
   // Items headers for archive
@@ -269,7 +269,8 @@ const OrderHistoryImportService = (function () {
             row['shipping_address_2'] || '',            // M: woma_ShippingAddress2
             row['shipping_city'] || '',                 // N: woma_ShippingCity
             row['shipping_phone'] || '',                // O: woma_ShippingPhone
-            row['coupon_items'] || ''                   // P: woma_CouponItems
+            row['coupon_items'] || '',                  // P: woma_CouponItems
+			parseFloat(row['order_total']) || 0         // Q: woma_OrderTotal
           ];
           orderRows.push(orderRow);
           existingOrderIds.add(orderId);
@@ -358,13 +359,23 @@ const OrderHistoryImportService = (function () {
 
 /**
  * Global function to import order history from a Drive file.
- * @param {string} fileId - Google Drive file ID of the CSV
+ * @param {string} fileIdOrName - Google Drive file ID or filename (default: order_history_2025-12-16.csv)
  */
-function runOrderHistoryImport(fileId) {
-  if (!fileId) {
-    throw new Error('Please provide a Google Drive file ID for the order export CSV');
+function runOrderHistoryImport(fileIdOrName) {
+  const fileName = fileIdOrName || 'order_history_2025-12-16.csv';
+
+  // If it looks like a filename (contains .), find it by name
+  if (fileName.includes('.')) {
+    const files = DriveApp.getFilesByName(fileName);
+    if (!files.hasNext()) {
+      throw new Error('File not found: ' + fileName);
+    }
+    const file = files.next();
+    return OrderHistoryImportService.importFromDriveFile(file.getId());
   }
-  return OrderHistoryImportService.importFromDriveFile(fileId);
+
+  // Otherwise treat as file ID
+  return OrderHistoryImportService.importFromDriveFile(fileName);
 }
 
 /**

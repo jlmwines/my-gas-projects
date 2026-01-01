@@ -99,6 +99,21 @@
                 <div class="text-muted" style="font-size:12px;">Subscribed</div>
               </div>
             </div>
+
+            <!-- Audience Breakdown -->
+            <div class="bg-light rounded p-2 mb-3" style="font-size:12px;">
+              <div class="d-flex justify-content-between mb-1">
+                <span>VIP: <strong id="bd-vip">-</strong></span>
+                <span>Repeat: <strong id="bd-repeat">-</strong></span>
+                <span>New: <strong id="bd-new">-</strong></span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span>EN: <strong id="bd-en">-</strong></span>
+                <span>HE: <strong id="bd-he">-</strong></span>
+                <span>Sub: <strong id="bd-subscribed">-</strong> | Non: <strong id="bd-not-subscribed">-</strong></span>
+              </div>
+            </div>
+
             <hr>
             <div style="font-size:13px;">
               <div class="font-weight-bold mb-2">By Status</div>
@@ -108,6 +123,144 @@
             <div style="font-size:13px;">
               <div class="font-weight-bold mb-2">By Type</div>
               <div id="stats-by-type"></div>
+            </div>
+
+            <!-- Export Section (Collapsible) -->
+            <hr>
+            <div class="border rounded">
+              <div id="export-header" class="bg-light p-2 d-flex justify-content-between align-items-center" style="cursor:pointer;">
+                <span class="font-weight-bold" style="font-size:13px;">▼ Export This Audience</span>
+                <span class="badge badge-secondary" id="export-count">0</span>
+              </div>
+              <div id="export-body" style="display:none;" class="p-2">
+                <!-- Project -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Project</label>
+                  <div class="d-flex">
+                    <select id="export-project" class="form-control form-control-sm flex-grow-1">
+                      <option value="">Select project...</option>
+                      <option value="__new__">+ New Project...</option>
+                    </select>
+                  </div>
+                  <div id="new-project-form" style="display:none;" class="mt-2">
+                    <div class="input-group input-group-sm">
+                      <input type="text" id="new-project-name" class="form-control" placeholder="Project name">
+                      <div class="input-group-append">
+                        <button class="btn btn-sm" id="btn-create-project" type="button">Create</button>
+                        <button class="btn btn-sm" id="btn-cancel-project" type="button">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Campaign Code -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Campaign Code</label>
+                  <input type="text" id="export-campaign-code" class="form-control form-control-sm" placeholder="e.g., YIW25VIP">
+                </div>
+
+                <!-- Data Groups -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Include Data</label>
+                  <div class="d-flex flex-wrap" style="gap:8px;">
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="export-preferences" checked> Preferences
+                    </label>
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="export-behavior" checked> Purchase Behavior
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Tags</label>
+                  <div class="d-flex flex-wrap" style="gap:8px;">
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="tag-campaign" checked> Campaign
+                    </label>
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="tag-category" checked> Category
+                    </label>
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="tag-price"> Price
+                    </label>
+                    <label class="mb-0" style="font-size:12px;">
+                      <input type="checkbox" id="tag-status"> Status
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Additional Tags -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Additional Tags</label>
+                  <input type="text" id="export-additional-tags" class="form-control form-control-sm" placeholder="comma-separated">
+                </div>
+
+                <!-- Export Button -->
+                <button id="btn-export-audience" class="btn btn-sm btn-block">
+                  Export to Sheet
+                </button>
+                <div id="export-status" class="mt-2 small"></div>
+              </div>
+            </div>
+
+            <!-- Year in Wine Export -->
+            <hr>
+            <div class="border rounded">
+              <div id="yiw-header" class="bg-light p-2 d-flex justify-content-between align-items-center" style="cursor:pointer;">
+                <span class="font-weight-bold" style="font-size:13px;">▼ Year in Wine</span>
+                <span class="badge badge-secondary" id="yiw-count">-</span>
+              </div>
+              <div id="yiw-body" style="display:none;" class="p-2">
+                <div class="small text-muted mb-2" id="yiw-description">
+                  Filter and export contacts by year spend with referral codes and reward tiers.
+                </div>
+
+                <!-- Period Info -->
+                <div class="small text-muted mb-2">Based on spend in past 12 months</div>
+
+                <!-- Min Spend -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Min Spend (₪)</label>
+                  <input type="number" id="yiw-min-spend" class="form-control form-control-sm" value="1000">
+                </div>
+
+                <!-- Apply Filter Button -->
+                <button id="btn-yiw-filter" class="btn btn-sm btn-block mb-2">
+                  Apply Filter
+                </button>
+
+                <hr class="my-2">
+                <div class="small font-weight-bold mb-2">Export Settings</div>
+
+                <!-- Coupon Amount -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Referral Coupon Amount (₪)</label>
+                  <input type="number" id="yiw-coupon-amount" class="form-control form-control-sm" value="50">
+                </div>
+
+                <!-- Coupon Expiry -->
+                <div class="form-group mb-2">
+                  <label class="small font-weight-bold mb-1">Coupon Expiry</label>
+                  <input type="date" id="yiw-coupon-expiry" class="form-control form-control-sm" value="2026-02-01">
+                </div>
+
+                <!-- Test Mode -->
+                <div class="form-check mb-2">
+                  <input type="checkbox" class="form-check-input" id="yiw-test-mode">
+                  <label class="form-check-label small" for="yiw-test-mode">Test mode (no file created)</label>
+                </div>
+
+                <!-- Export Buttons -->
+                <button id="btn-yiw-export" class="btn btn-sm btn-block mb-1">
+                  Export Year in Wine 2025
+                </button>
+                <button id="btn-yiw-2024" class="btn btn-sm btn-block">
+                  Export Lapsed 2024 Customers
+                </button>
+                <div id="yiw-status" class="mt-2 small"></div>
+              </div>
             </div>
           </div>
 
@@ -387,6 +540,62 @@
     document.getElementById('btn-clear-filters').addEventListener('click', clearFilters);
     document.getElementById('btn-refresh').addEventListener('click', loadContacts);
 
+    // Export section toggle
+    document.getElementById('export-header').addEventListener('click', function() {
+      var body = document.getElementById('export-body');
+      var header = document.getElementById('export-header').querySelector('span');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        header.textContent = '▲ Export This Audience';
+        loadProjects();
+      } else {
+        body.style.display = 'none';
+        header.textContent = '▼ Export This Audience';
+      }
+    });
+
+    // Project dropdown
+    document.getElementById('export-project').addEventListener('change', function() {
+      if (this.value === '__new__') {
+        document.getElementById('new-project-form').style.display = 'block';
+        document.getElementById('new-project-name').focus();
+      } else {
+        document.getElementById('new-project-form').style.display = 'none';
+      }
+    });
+
+    // Create project
+    document.getElementById('btn-create-project').addEventListener('click', createNewProject);
+    document.getElementById('btn-cancel-project').addEventListener('click', function() {
+      document.getElementById('new-project-form').style.display = 'none';
+      document.getElementById('export-project').value = '';
+    });
+
+    // Export button
+    document.getElementById('btn-export-audience').addEventListener('click', exportAudience);
+
+    // Year in Wine section toggle
+    document.getElementById('yiw-header').addEventListener('click', function() {
+      var body = document.getElementById('yiw-body');
+      var header = document.getElementById('yiw-header').querySelector('span');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        header.textContent = '▲ Year in Wine';
+      } else {
+        body.style.display = 'none';
+        header.textContent = '▼ Year in Wine';
+      }
+    });
+
+    // Year in Wine filter button
+    document.getElementById('btn-yiw-filter').addEventListener('click', filterYearInWine);
+
+    // Year in Wine export button
+    document.getElementById('btn-yiw-export').addEventListener('click', exportYearInWine);
+
+    // Lapsed 2024 export button
+    document.getElementById('btn-yiw-2024').addEventListener('click', exportLapsed2024);
+
     // Tabs
     document.querySelectorAll('#detail-tabs a').forEach(function(tab) {
       tab.addEventListener('click', function(e) {
@@ -530,6 +739,10 @@
     var coreFilter = document.getElementById('filter-core').value;
 
     var filtered = contacts.filter(function(c) {
+      // Year in Wine filter (if active)
+      if (window.yiwEmails && window.yiwEmails.size > 0) {
+        if (!window.yiwEmails.has(c.email.toLowerCase())) return false;
+      }
       if (search && c.name.toLowerCase().indexOf(search) < 0 && c.email.toLowerCase().indexOf(search) < 0) return false;
       if (typeFilter && c.type !== typeFilter) return false;
       if (statusFilter && c.status !== statusFilter) return false;
@@ -570,6 +783,7 @@
 
     renderContactList(filtered);
     document.getElementById('contact-count').textContent = filtered.length;
+    updateAudienceBreakdown(filtered);
   }
 
   function clearFilters() {
@@ -578,6 +792,10 @@
     document.getElementById('filter-status').value = '';
     document.getElementById('filter-subscribed').value = '';
     document.getElementById('filter-core').value = '';
+    // Clear YIW filter
+    window.yiwEmails = null;
+    document.getElementById('yiw-count').textContent = '-';
+    document.getElementById('yiw-status').innerHTML = '';
     applyFilters();
   }
 
@@ -903,8 +1121,264 @@
   }
 
   function showSuccess(msg) {
-    // Could use toast, for now just console
-    console.log('Success: ' + msg);
+    // Success feedback - could add toast notification later
+  }
+
+  // =============================================
+  // EXPORT FUNCTIONS
+  // =============================================
+
+  function loadProjects() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) {
+          console.error('Error loading projects:', data.error);
+          return;
+        }
+        var select = document.getElementById('export-project');
+        // Keep first two options (Select... and + New)
+        select.innerHTML = '<option value="">Select project...</option><option value="__new__">+ New Project...</option>';
+        (data.projects || []).forEach(function(p) {
+          var opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          select.appendChild(opt);
+        });
+      })
+      .withFailureHandler(function(err) {
+        console.error('Failed to load projects:', err);
+      })
+      .WebAppContacts_getProjects();
+  }
+
+  function createNewProject() {
+    var name = document.getElementById('new-project-name').value.trim();
+    if (!name) {
+      alert('Please enter a project name');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.error) {
+          alert('Error creating project: ' + data.error);
+          return;
+        }
+        // Add to dropdown and select it
+        var select = document.getElementById('export-project');
+        var opt = document.createElement('option');
+        opt.value = data.project.id;
+        opt.textContent = data.project.name;
+        select.appendChild(opt);
+        select.value = data.project.id;
+        // Hide form
+        document.getElementById('new-project-form').style.display = 'none';
+        document.getElementById('new-project-name').value = '';
+        showSuccess('Project created');
+      })
+      .withFailureHandler(function(err) {
+        alert('Error creating project: ' + err.message);
+      })
+      .WebAppContacts_createProject(name);
+  }
+
+  function exportAudience() {
+    var campaignCode = document.getElementById('export-campaign-code').value.trim();
+    if (!campaignCode) {
+      alert('Please enter a campaign code');
+      return;
+    }
+
+    var projectId = document.getElementById('export-project').value;
+    if (projectId === '__new__') projectId = '';
+
+    // Gather current filters
+    var filters = {
+      customerType: document.getElementById('filter-type').value || null,
+      lifecycleStatus: document.getElementById('filter-status').value || null
+    };
+    var subFilter = document.getElementById('filter-subscribed').value;
+    if (subFilter === 'yes') filters.isSubscribed = true;
+    else if (subFilter === 'no') filters.isSubscribed = false;
+
+    var options = {
+      filters: filters,
+      campaignCode: campaignCode,
+      projectId: projectId || null,
+      includePreferences: document.getElementById('export-preferences').checked,
+      includePurchaseBehavior: document.getElementById('export-behavior').checked,
+      tagCampaign: document.getElementById('tag-campaign').checked,
+      tagCategory: document.getElementById('tag-category').checked,
+      tagPriceTier: document.getElementById('tag-price').checked,
+      tagStatus: document.getElementById('tag-status').checked,
+      additionalTags: document.getElementById('export-additional-tags').value
+    };
+
+    var statusDiv = document.getElementById('export-status');
+    statusDiv.innerHTML = '<span class="text-info">Exporting...</span>';
+    document.getElementById('btn-export-audience').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-export-audience').disabled = false;
+        if (result.error) {
+          statusDiv.innerHTML = '<span class="text-danger">Error: ' + result.error + '</span>';
+          return;
+        }
+        statusDiv.innerHTML = '<span class="text-success">Exported ' + result.totalContacts + ' contacts!</span><br>' +
+          '<a href="' + result.spreadsheetUrl + '" target="_blank" class="small">Open Spreadsheet</a>';
+        // Show sheets created
+        if (result.sheets && result.sheets.length > 0) {
+          var sheetsInfo = result.sheets.map(function(s) {
+            return s.name + ' (' + s.count + ')';
+          }).join(', ');
+          statusDiv.innerHTML += '<br><span class="text-muted small">' + sheetsInfo + '</span>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-export-audience').disabled = false;
+        statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+      })
+      .WebAppContacts_exportAudience(options);
+  }
+
+  function filterYearInWine() {
+    var minSpend = parseInt(document.getElementById('yiw-min-spend').value) || 1000;
+
+    var statusDiv = document.getElementById('yiw-status');
+    statusDiv.innerHTML = '<span class="text-info">Filtering...</span>';
+    document.getElementById('btn-yiw-filter').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-yiw-filter').disabled = false;
+        if (result.error) {
+          statusDiv.innerHTML = '<span class="text-danger">Error: ' + result.error + '</span>';
+          return;
+        }
+        // Update count badge
+        document.getElementById('yiw-count').textContent = result.emails.length;
+
+        // Apply filter to main contact list
+        if (result.emails.length > 0) {
+          applyYIWFilter(result.emails);
+          statusDiv.innerHTML = '<span class="text-success">Showing ' + result.emails.length + ' contacts</span>';
+        } else {
+          statusDiv.innerHTML = '<span class="text-warning">No contacts match criteria</span>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-yiw-filter').disabled = false;
+        statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+      })
+      .WebAppContacts_filterYearInWine({ minSpend: minSpend });
+  }
+
+  function applyYIWFilter(emails) {
+    // Store YIW emails for filtering
+    window.yiwEmails = new Set(emails.map(function(e) { return e.toLowerCase(); }));
+    // Trigger re-render of contact list with YIW filter active
+    renderContactList();
+  }
+
+  function exportYearInWine() {
+    var minSpend = parseInt(document.getElementById('yiw-min-spend').value) || 1000;
+    var couponAmount = parseInt(document.getElementById('yiw-coupon-amount').value) || 50;
+    var couponExpiry = document.getElementById('yiw-coupon-expiry').value || '2026-02-01';
+    var testMode = document.getElementById('yiw-test-mode').checked;
+
+    var options = {
+      minSpend: minSpend,
+      couponAmount: couponAmount,
+      couponExpiry: couponExpiry,
+      testMode: testMode
+    };
+
+    var statusDiv = document.getElementById('yiw-status');
+    statusDiv.innerHTML = '<span class="text-info">Exporting Year in Wine 2025...</span>';
+    document.getElementById('btn-yiw-export').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-yiw-export').disabled = false;
+        if (result.error) {
+          statusDiv.innerHTML = '<span class="text-danger">Error: ' + result.error + '</span>';
+          return;
+        }
+        var html = '<span class="text-success">' + (result.testMode ? 'TEST: ' : 'Exported ') +
+          result.totalContacts + ' contacts</span><br>' +
+          '<span class="text-muted small">Tiers: fgr01=' + result.byTier.fgr01 +
+          ', fgr02=' + result.byTier.fgr02 +
+          ', fgr03=' + result.byTier.fgr03 + '</span>';
+        if (result.spreadsheetUrl) {
+          html += '<br><a href="' + result.spreadsheetUrl + '" target="_blank" class="small">Open Spreadsheet</a>';
+        }
+        statusDiv.innerHTML = html;
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-yiw-export').disabled = false;
+        statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+      })
+      .WebAppContacts_exportYearInWine2025(options);
+  }
+
+  function exportLapsed2024() {
+    var statusDiv = document.getElementById('yiw-status');
+    statusDiv.innerHTML = '<span class="text-info">Exporting lapsed 2024 customers...</span>';
+    document.getElementById('btn-yiw-2024').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-yiw-2024').disabled = false;
+        if (result.error) {
+          statusDiv.innerHTML = '<span class="text-danger">Error: ' + result.error + '</span>';
+          return;
+        }
+        var html = '<span class="text-success">Exported ' + result.totalContacts + ' lapsed 2024 customers';
+        html += ' (EN: ' + result.english + ', HE: ' + result.hebrew + ')</span>';
+        if (result.spreadsheetUrl) {
+          html += '<br><a href="' + result.spreadsheetUrl + '" target="_blank" class="small">Open Spreadsheet</a>';
+        }
+        statusDiv.innerHTML = html;
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-yiw-2024').disabled = false;
+        statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
+      })
+      .exportLapsed2024Customers();
+  }
+
+  function updateAudienceBreakdown(filtered) {
+    var breakdown = {
+      vip: 0, repeat: 0, new: 0,
+      en: 0, he: 0,
+      subscribed: 0, notSubscribed: 0
+    };
+
+    filtered.forEach(function(c) {
+      // By type
+      var type = c.type || '';
+      if (type.indexOf('vip') >= 0) breakdown.vip++;
+      else if (type.indexOf('repeat') >= 0) breakdown.repeat++;
+      else if (type.indexOf('new') >= 0) breakdown.new++;
+
+      // By language
+      if (c.language === 'he') breakdown.he++;
+      else breakdown.en++;
+
+      // By subscription
+      if (c.isSubscribed) breakdown.subscribed++;
+      else breakdown.notSubscribed++;
+    });
+
+    document.getElementById('bd-vip').textContent = breakdown.vip;
+    document.getElementById('bd-repeat').textContent = breakdown.repeat;
+    document.getElementById('bd-new').textContent = breakdown.new;
+    document.getElementById('bd-en').textContent = breakdown.en;
+    document.getElementById('bd-he').textContent = breakdown.he;
+    document.getElementById('bd-subscribed').textContent = breakdown.subscribed;
+    document.getElementById('bd-not-subscribed').textContent = breakdown.notSubscribed;
+    document.getElementById('export-count').textContent = filtered.length;
   }
 })();
 </script>

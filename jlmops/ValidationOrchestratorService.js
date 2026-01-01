@@ -16,7 +16,11 @@ const ValidationOrchestratorService = (function() {
             const discrepancies = result.discrepancies;
 
             // Aggregation Logic
-            if (discrepancies.length > 10) {
+            // Some task types require individual tasks per entity (e.g., inventory tasks need SKU for export)
+            const noSummaryTypes = ['task.validation.comax_internal_audit'];
+            const allowSummary = !noSummaryTypes.includes(rule.on_failure_task_type);
+
+            if (discrepancies.length > 10 && allowSummary) {
                 // Create Summary Task
                 _createSummaryTask(rule, discrepancies, sessionId);
             } else {

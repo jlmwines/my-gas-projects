@@ -356,8 +356,8 @@
             message = 'Orders exported. Confirm upload';
             actionHtml = btn('confirmComax', 'Confirm');
         }
-        // Ready for Comax import
-        else if (stage === 'READY_FOR_COMAX_IMPORT') {
+        // Ready for Comax import (either explicit stage OR step 3 completed while waiting)
+        else if (stage === 'READY_FOR_COMAX_IMPORT' || (stage === 'WAITING_FOR_COMAX' && s3 === 'completed')) {
             message = 'Import Comax products';
             actionHtml = btn('startComaxImport', 'Import Comax');
         }

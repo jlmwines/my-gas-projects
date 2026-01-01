@@ -605,7 +605,6 @@
             searchInput.addEventListener('input', function() {
                 ManagerProductsView.handleSearch(this.value.trim());
             });
-            console.log('Search listener attached');
         }
     };
 
@@ -776,7 +775,6 @@
 
       google.script.run
             .withSuccessHandler(data => {
-               console.log('Received data from backend in openEditor:', data); 
                ManagerProductsView.currentSku = data.sku;
                ManagerProductsView.currentMasterData = data.masterData || {}; 
                ManagerProductsView.currentComaxData = data.comaxData || {}; // Store Comax Data

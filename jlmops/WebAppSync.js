@@ -45,6 +45,23 @@ function getSyncStateFromBackend() {
 }
 
 /**
+ * NEW: Get sync status from the new single source of truth (SyncSessionService).
+ * This is the new API that returns clear stage names and next actions.
+ * @returns {object} Status with stage, nextAction, stepDetails
+ */
+function getSyncSessionStatus() {
+  // Check if any jobs completed and advance stage if needed
+  try {
+    OrchestratorService.checkAndAdvanceSyncState();
+  } catch (e) {
+    logger.warn('WebAppSync', 'getSyncSessionStatus', `State advancement check failed: ${e.message}`);
+  }
+
+  // Read from the new single source of truth
+  return SyncSessionService.getStatus();
+}
+
+/**
  * Initiates the first stage of the Daily Sync workflow.
  * Generates a new Session ID, updates state, and queues initial import jobs.
  * Accessible from frontend via `google.script.run.startDailySyncBackend()`.
@@ -86,6 +103,13 @@ function startDailySyncBackend() {
     newState.currentStage = 'WEB_IMPORT_PROCESSING';
     newState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(newState);
+
+    // NEW: Also write to SyncSessionService (single source of truth)
+    try {
+      SyncSessionService.startSession(newSessionId);
+    } catch (sessionError) {
+      logger.warn(serviceName, functionName, `SyncSessionService.startSession failed: ${sessionError.message}`);
+    }
 
     // Queue import jobs
     OrchestratorService.queueWebFilesForSync(newSessionId);
@@ -206,17 +230,24 @@ function startComaxImportBackend() {
   try {
     const currentState = SyncStateService.getSyncState();
 
-    // Allow starting from WAITING_FOR_COMAX if there are no orders (skip confirmation step)
-    const validStages = ['READY_FOR_COMAX_IMPORT'];
-    const canSkipFromWaiting = currentState.currentStage === 'WAITING_FOR_COMAX' && currentState.ordersPendingExportCount === 0;
+    // Allow starting from READY_FOR_COMAX_IMPORT or WAITING_FOR_COMAX (if orders already confirmed)
+    const validStages = ['READY_FOR_COMAX_IMPORT', 'WAITING_FOR_COMAX'];
 
-    if (!validStages.includes(currentState.currentStage) && !canSkipFromWaiting) {
-      throw new Error(`Cannot start Comax import. Current stage is ${currentState.currentStage}, expected READY_FOR_COMAX_IMPORT.`);
+    if (!validStages.includes(currentState.currentStage)) {
+      throw new Error(`Cannot start Comax import. Current stage is ${currentState.currentStage}, expected READY_FOR_COMAX_IMPORT or WAITING_FOR_COMAX.`);
     }
 
     currentState.currentStage = 'COMAX_IMPORT_PROCESSING';
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
+
+    // NEW: Also write to SyncSessionService (single source of truth)
+    try {
+      SyncSessionService.setStage(SyncSessionService.STAGES.IMPORTING_COMAX_PRODUCTS);
+      SyncSessionService.setStepStatus(4, 'processing');
+    } catch (sessionError) {
+      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+    }
 
     // Write Step 4 processing status
     SyncStatusService.writeStatus(currentState.sessionId, {
@@ -304,6 +335,13 @@ function resetSyncStateBackend() {
 
     // THEN: Do the actual reset work
     SyncStateService.resetSyncState();
+
+    // NEW: Also reset SyncSessionService (single source of truth)
+    try {
+      SyncSessionService.reset();
+    } catch (sessionError) {
+      logger.warn(serviceName, functionName, `SyncSessionService reset failed: ${sessionError.message}`);
+    }
 
     // Clear sync status entries for this session
     if (sessionId) {
@@ -581,6 +619,15 @@ function confirmComaxUpdateBackend() {
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
 
+    // NEW: Also write to SyncSessionService (single source of truth)
+    try {
+      SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_IMPORT_COMAX_PRODUCTS);
+      SyncSessionService.setStepStatus(3, 'completed');
+      SyncSessionService.setStepStatus(4, 'waiting');
+    } catch (sessionError) {
+      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+    }
+
     // Return updated status for UI
     return _getMergedStatus(sessionId);
   } catch (e) {
@@ -694,6 +741,14 @@ function confirmWebInventoryUpdateBackend() {
     currentState.currentStage = 'COMPLETE';
     currentState.lastUpdated = new Date().toISOString();
     SyncStateService.setSyncState(currentState);
+
+    // NEW: Also write to SyncSessionService (single source of truth)
+    try {
+      SyncSessionService.setStepStatus(5, 'completed');
+      SyncSessionService.complete();
+    } catch (sessionError) {
+      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+    }
 
     // Complete the sync session task
     try {

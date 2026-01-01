@@ -894,29 +894,7 @@ const OrchestratorService = (function() {
           const originalFileName = archiveFileName.substring(0, archiveFileName.lastIndexOf('_'));
 
           _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
-
-          // Trash original file ONLY if job completed successfully
-          // Quarantined/failed files remain in place for examination
-          if (jobStatus === 'COMPLETED') {
-            // Permanent files that should NOT be deleted
-            const permanentFiles = ['comax products.csv', 'comaxproducts.csv'];
-            const fileNameLower = originalFileName.toLowerCase();
-
-            if (!permanentFiles.includes(fileNameLower)) {
-              try {
-                const originalFile = DriveApp.getFileById(originalFileId);
-                originalFile.setTrashed(true);
-                logger.info(serviceName, functionName, `Trashed original file: ${originalFileName}`, { originalFileId });
-              } catch (trashError) {
-                // File may already be gone or inaccessible - not critical
-                logger.warn(serviceName, functionName, `Could not trash original file: ${trashError.message}`, { originalFileId });
-              }
-            } else {
-              logger.info(serviceName, functionName, `Preserved permanent file: ${originalFileName}`);
-            }
-          } else {
-            logger.info(serviceName, functionName, `Job status is ${jobStatus} - original file preserved for examination`, { originalFileId, originalFileName });
-          }
+          // Original files stay in import folder - housekeeping handles cleanup
         }
       }
     } catch(e) {
@@ -1222,6 +1200,19 @@ const OrchestratorService = (function() {
           }
 
           SyncStateService.setSyncState(state);
+
+          // NEW: Also write to SyncSessionService (single source of truth)
+          try {
+            SyncSessionService.setStepStatus(1, 'completed');
+            if (ordersToExportCount === 0) {
+              SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_IMPORT_COMAX_PRODUCTS);
+              SyncSessionService.setStepStatus(3, 'skipped');
+            } else {
+              SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_EXPORT_ORDERS);
+            }
+          } catch (sessionError) {
+            logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+          }
         }
       }
 
@@ -1247,6 +1238,14 @@ const OrchestratorService = (function() {
               state.lastUpdated = new Date().toISOString();
               state.errorMessage = null;
               SyncStateService.setSyncState(state);
+
+              // NEW: Also write to SyncSessionService (single source of truth)
+              try {
+                SyncSessionService.setStepStatus(4, 'completed');
+                SyncSessionService.setStage(SyncSessionService.STAGES.VALIDATING);
+              } catch (sessionError) {
+                logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+              }
 
               // Trigger Finalization (Queue Validation Jobs)
               finalizeSync(state.sessionId);
@@ -1323,6 +1322,14 @@ const OrchestratorService = (function() {
            state.lastUpdated = new Date().toISOString();
            state.errorMessage = null; // Clear error on successful transition
            SyncStateService.setSyncState(state);
+
+           // NEW: Also write to SyncSessionService (single source of truth)
+           try {
+             SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_EXPORT_WEB_INVENTORY);
+             SyncSessionService.setStepStatus(5, 'waiting');
+           } catch (sessionError) {
+             logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
+           }
         }
       }
 

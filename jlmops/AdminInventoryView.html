@@ -301,7 +301,6 @@
    * @param {Array<object>} tasks - The array of task objects for review.
    */
   function renderReviewTable(tasks) {
-    console.log('renderReviewTable received tasks:', tasks);
     if (tasks.length === 0) {
       reviewContainer.innerHTML = '<p>No inventory counts are currently awaiting review.</p>';
       return;
@@ -781,7 +780,6 @@
    * @param {string} taskId - The ID of the confirmation task to complete.
    */
   function handleComaxConfirmClick(taskId) {
-    console.log('Confirmation clicked for task:', taskId);
     if (!taskId) {
         handleError('Error: Task ID is missing. Please check the logs.');
         return;

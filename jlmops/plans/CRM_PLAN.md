@@ -605,7 +605,7 @@ The overnight housekeeping runs in phases. CRM maintenance fits into existing st
 - WhatsApp pre-filled message templates
 - Outcome logging after conversation
 - Follow-up scheduling (coupon, email, reminder)
-- Mailchimp segment export
+- Mailchimp audience export (single file - language segmentation handled by Mailchimp groups when sending campaigns)
 
 ### Phase 7: Recommendations & Year in Wine
 

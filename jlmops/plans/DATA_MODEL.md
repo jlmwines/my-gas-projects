@@ -307,6 +307,8 @@ This set of sheets manages the entire workflow from when an order is imported un
     *   `wom_OrderDate`
     *   `wom_Status`: Essential for workflow logic (e.g., 'On-Hold').
     *   `wom_CustomerNote`
+    *   `wom_CustomerUser`: WooCommerce user ID (for coupon targeting).
+    *   `wom_MetaWpmlLanguage`: WPML language code from order (e.g., 'en', 'he').
     *   **Billing Fields:** `wom_BillingFirstName`, `wom_BillingLastName`, `wom_BillingEmail`, `wom_BillingPhone`
     *   **Shipping Fields:** `wom_ShippingFirstName`, `wom_ShippingLastName`, `wom_ShippingAddress1`, `wom_ShippingAddress2`, `wom_ShippingCity`, `wom_ShippingPhone`
 
@@ -445,6 +447,7 @@ This section defines the sheets used for customer relationship management, conta
         *   `sc_Language`: `EN` or `HE` (from order language or Mailchimp).
         *   `sc_City`: Shipping city (raw, from most recent order).
         *   `sc_Country`: Shipping country code.
+        *   `sc_WooUserId`: WooCommerce user ID (for coupon targeting by user ID list).
     *   **Classification:**
         *   `sc_CustomerType`: One of: `core.new`, `core.repeat`, `core.vip`, `noncore.gift`, `noncore.war_support`, `prospect.subscriber`, `prospect.fresh`, `prospect.stale`.
         *   `sc_LifecycleStatus`: One of: `Active` (0-30 days), `Recent` (31-90), `Cooling` (91-180), `Lapsed` (181-365), `Dormant` (365+).

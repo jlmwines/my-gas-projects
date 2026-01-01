@@ -78,7 +78,6 @@
    * This replaces the individual data fetches inside each widget.
    */
   function loadDashboardData() {
-    console.log('Fetching aggregated dashboard data...');
     google.script.run
       .withSuccessHandler(response => {
         if (!response.success) {
@@ -115,16 +114,12 @@
     if (typeof updateProductsWidget !== 'function') missing.push('updateProductsWidget');
 
     if (missing.length === 0) {
-      console.log('All widgets ready. Distributing data.');
       updateSystemHealthView(data.system);
       updateOrdersWidget(data.orders);
       updateInventoryView(data.inventory);
       updateProductsWidget(data.products);
     } else {
       // Not ready yet, wait and retry
-      if (attempts % 10 === 0) {
-          console.log(`Waiting for widgets: ${missing.join(', ')} (attempt ${attempts})`);
-      }
       setTimeout(() => distributeDataWhenReady(data, attempts + 1), 100);
     }
   }

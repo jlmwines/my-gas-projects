@@ -98,6 +98,8 @@ const ContactImportService = (function () {
         mappedRow[womIdx['wom_ShippingPhone']] = row[womaIdx['woma_ShippingPhone']];
         mappedRow[womIdx['wom_CustomerNote']] = row[womaIdx['woma_CustomerNote']];
         mappedRow[womIdx['wom_CouponItems']] = row[womaIdx['woma_CouponItems']];
+        mappedRow[womIdx['wom_CustomerUser']] = row[womaIdx['woma_CustomerUser']];
+        mappedRow[womIdx['wom_MetaWpmlLanguage']] = row[womaIdx['woma_MetaWpmlLanguage']];
         orderData.push(mappedRow);
       });
       LoggerService.info(SERVICE_NAME, fnName, `Added ${archiveData.length} orders from archive`);
@@ -186,6 +188,8 @@ const ContactImportService = (function () {
       const shippingCity = row[womIdx['wom_ShippingCity']] || '';
       const customerNote = row[womIdx['wom_CustomerNote']] || '';
       const couponItems = row[womIdx['wom_CouponItems']] || '';
+      const customerUser = row[womIdx['wom_CustomerUser']] || '';
+      const orderLanguage = (row[womIdx['wom_MetaWpmlLanguage']] || '').toLowerCase().trim() || 'en';
 
       // Get order items
       const items = itemsByOrder.get(orderId) || [];
@@ -206,8 +210,9 @@ const ContactImportService = (function () {
           sc_Name: `${billingFirstName} ${billingLastName}`.trim(),
           sc_Phone: billingPhone || shippingPhone,
           sc_City: shippingCity,
-          sc_Language: 'en', // Default, can be enriched from Mailchimp
+          sc_Language: orderLanguage,
           sc_Country: 'IL', // Default
+          sc_WooUserId: customerUser || null,
           sc_IsCustomer: true,
           sc_IsCore: true,
           sc_IsSubscribed: false,
@@ -232,9 +237,11 @@ const ContactImportService = (function () {
       }
       if (orderDateObj > contact.sc_LastOrderDate) {
         contact.sc_LastOrderDate = orderDateObj;
-        // Update phone from most recent order
+        // Update from most recent order
         if (billingPhone) contact.sc_Phone = billingPhone;
         if (shippingCity) contact.sc_City = shippingCity;
+        if (customerUser) contact.sc_WooUserId = customerUser;
+        if (orderLanguage) contact.sc_Language = orderLanguage;
       }
 
       // Track orders
@@ -396,7 +403,8 @@ const ContactImportService = (function () {
             existing.sc_SubscribedDate = new Date(optinTime);
             existing.sc_SubscriptionSource = 'mailchimp';
           }
-          if (language) existing.sc_Language = language.toLowerCase();
+          // Only set language if contact doesn't already have one (order language takes precedence)
+          if (language && !existing.sc_Language) existing.sc_Language = language.toLowerCase();
           contactsToSave.push(existing);
           updateCount++;
         } else {
@@ -476,11 +484,622 @@ const ContactImportService = (function () {
     return results;
   }
 
+  /**
+   * Updates contacts from current orders in WebOrdM.
+   * Creates new contacts for first-time customers.
+   * Updates existing contacts with latest phone, city, WooUserId.
+   * Called from nightly housekeeping.
+   * @returns {Object} Result with created/updated counts
+   */
+  function updateContactsFromOrders() {
+    const fnName = 'updateContactsFromOrders';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting contact update from orders');
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    // Load existing contacts by email
+    const existingContacts = ContactService.getContacts();
+    const contactsByEmail = new Map();
+    existingContacts.forEach(c => {
+      if (c.sc_Email) contactsByEmail.set(c.sc_Email.toLowerCase(), c);
+    });
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded ${contactsByEmail.size} existing contacts`);
+
+    // Load WebOrdM (current orders only - archive is historical)
+    const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+    if (!orderMasterSheet || orderMasterSheet.getLastRow() <= 1) {
+      LoggerService.info(SERVICE_NAME, fnName, 'No orders in WebOrdM');
+      return { created: 0, updated: 0, errors: [] };
+    }
+
+    const orderData = orderMasterSheet.getDataRange().getValues();
+    const orderHeaders = orderData.shift();
+    const womIdx = {};
+    orderHeaders.forEach((h, i) => womIdx[h] = i);
+
+    // Load order items for totals
+    const orderItemsSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+    const itemsData = orderItemsSheet ? orderItemsSheet.getDataRange().getValues() : [];
+    const itemHeaders = itemsData.length > 0 ? itemsData.shift() : [];
+    const woiIdx = {};
+    itemHeaders.forEach((h, i) => woiIdx[h] = i);
+
+    // Build items by order for totals
+    const itemsByOrder = new Map();
+    itemsData.forEach(row => {
+      const orderId = String(row[woiIdx['woi_OrderId']]);
+      if (!itemsByOrder.has(orderId)) itemsByOrder.set(orderId, []);
+      itemsByOrder.get(orderId).push({
+        quantity: parseInt(row[woiIdx['woi_Quantity']], 10) || 1,
+        total: parseFloat(row[woiIdx['woi_ItemTotal']]) || 0
+      });
+    });
+
+    // Load order log for status
+    const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
+    const orderStatusMap = new Map();
+    if (orderLogSheet && orderLogSheet.getLastRow() > 1) {
+      const logData = orderLogSheet.getDataRange().getValues();
+      const logHeaders = logData.shift();
+      const solIdx = {};
+      logHeaders.forEach((h, i) => solIdx[h] = i);
+      logData.forEach(row => {
+        orderStatusMap.set(String(row[solIdx['sol_OrderId']]), row[solIdx['sol_OrderStatus']]);
+      });
+    }
+
+    // Aggregate orders by email
+    const contactUpdates = new Map();
+    const today = new Date();
+
+    orderData.forEach(row => {
+      const orderId = String(row[womIdx['wom_OrderId']]);
+      const orderDate = row[womIdx['wom_OrderDate']];
+      const email = (row[womIdx['wom_BillingEmail']] || '').toLowerCase().trim();
+      const status = orderStatusMap.get(orderId) || row[womIdx['wom_Status']] || '';
+
+      if (!email || !orderDate) return;
+      if (['cancelled', 'refunded', 'failed'].includes(status.toLowerCase())) return;
+
+      const orderDateObj = new Date(orderDate);
+      const billingFirstName = row[womIdx['wom_BillingFirstName']] || '';
+      const billingLastName = row[womIdx['wom_BillingLastName']] || '';
+      const billingPhone = row[womIdx['wom_BillingPhone']] || '';
+      const shippingCity = row[womIdx['wom_ShippingCity']] || '';
+      const customerUser = row[womIdx['wom_CustomerUser']] || '';
+      const customerNote = row[womIdx['wom_CustomerNote']] || '';
+      const shippingLastName = row[womIdx['wom_ShippingLastName']] || '';
+      const couponItems = row[womIdx['wom_CouponItems']] || '';
+      const orderLanguage = (row[womIdx['wom_MetaWpmlLanguage']] || '').toLowerCase().trim() || 'en';
+
+      const items = itemsByOrder.get(orderId) || [];
+      const orderTotal = items.reduce((sum, item) => sum + item.total, 0);
+      const bottleCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      const isGift = ContactService._isGiftOrder({
+        customerNote: customerNote,
+        billingLastName: billingLastName,
+        shippingLastName: shippingLastName
+      });
+
+      if (!contactUpdates.has(email)) {
+        contactUpdates.set(email, {
+          email: email,
+          name: `${billingFirstName} ${billingLastName}`.trim(),
+          phone: billingPhone,
+          city: shippingCity,
+          wooUserId: customerUser,
+          language: orderLanguage,
+          firstOrderDate: orderDateObj,
+          lastOrderDate: orderDateObj,
+          orders: [],
+          giftOrders: 0,
+          warSupportOrders: 0
+        });
+      }
+
+      const update = contactUpdates.get(email);
+
+      // Track first/last order dates
+      if (orderDateObj < update.firstOrderDate) {
+        update.firstOrderDate = orderDateObj;
+      }
+      if (orderDateObj > update.lastOrderDate) {
+        update.lastOrderDate = orderDateObj;
+        if (billingPhone) update.phone = billingPhone;
+        if (shippingCity) update.city = shippingCity;
+        if (customerUser) update.wooUserId = customerUser;
+        if (orderLanguage) update.language = orderLanguage;
+      }
+
+      update.orders.push({ total: orderTotal, bottles: bottleCount, isGift: isGift });
+      if (isGift) update.giftOrders++;
+
+      const coupons = ContactService._extractCoupons(couponItems);
+      if (ContactService._hasWarSupportCoupon(coupons)) {
+        update.warSupportOrders++;
+      }
+    });
+
+    LoggerService.info(SERVICE_NAME, fnName, `Found ${contactUpdates.size} unique emails in orders`);
+
+    // Build contacts to save
+    const contactsToSave = [];
+    let created = 0;
+    let updated = 0;
+
+    contactUpdates.forEach((update, email) => {
+      const existing = contactsByEmail.get(email);
+
+      if (existing) {
+        // Update existing contact
+        let changed = false;
+
+        // Update WooUserId if we have one and existing doesn't
+        if (update.wooUserId && !existing.sc_WooUserId) {
+          existing.sc_WooUserId = update.wooUserId;
+          changed = true;
+        }
+
+        // Update phone/city from most recent order if newer
+        const existingLastOrder = existing.sc_LastOrderDate ? new Date(existing.sc_LastOrderDate) : null;
+        if (!existingLastOrder || update.lastOrderDate > existingLastOrder) {
+          if (update.phone && update.phone !== existing.sc_Phone) {
+            existing.sc_Phone = update.phone;
+            changed = true;
+          }
+          if (update.city && update.city !== existing.sc_City) {
+            existing.sc_City = update.city;
+            changed = true;
+          }
+          if (update.wooUserId && update.wooUserId !== existing.sc_WooUserId) {
+            existing.sc_WooUserId = update.wooUserId;
+            changed = true;
+          }
+          if (update.language && update.language !== existing.sc_Language) {
+            existing.sc_Language = update.language;
+            changed = true;
+          }
+          if (update.lastOrderDate > existingLastOrder) {
+            existing.sc_LastOrderDate = update.lastOrderDate;
+            changed = true;
+          }
+        }
+
+        // Update order metrics
+        const newOrderCount = update.orders.length;
+        const newTotalSpend = update.orders.reduce((sum, o) => sum + o.total, 0);
+        if (newOrderCount !== existing.sc_OrderCount || Math.abs(newTotalSpend - (existing.sc_TotalSpend || 0)) > 1) {
+          existing.sc_OrderCount = newOrderCount;
+          existing.sc_TotalSpend = newTotalSpend;
+          existing.sc_AvgOrderValue = newOrderCount > 0 ? Math.round(newTotalSpend / newOrderCount) : 0;
+          changed = true;
+        }
+
+        if (changed) {
+          contactsToSave.push(existing);
+          updated++;
+        }
+      } else {
+        // Create new contact
+        const orderCount = update.orders.length;
+        const totalSpend = update.orders.reduce((sum, o) => sum + o.total, 0);
+        const totalBottles = update.orders.reduce((sum, o) => sum + o.bottles, 0);
+
+        const newContact = {
+          sc_Email: email,
+          sc_Name: update.name,
+          sc_Phone: update.phone,
+          sc_City: update.city,
+          sc_Language: update.language || 'en',
+          sc_Country: 'IL',
+          sc_WooUserId: update.wooUserId || null,
+          sc_IsCustomer: true,
+          sc_IsCore: true,
+          sc_IsSubscribed: false,
+          sc_FirstOrderDate: update.firstOrderDate,
+          sc_LastOrderDate: update.lastOrderDate,
+          sc_OrderCount: orderCount,
+          sc_TotalSpend: totalSpend,
+          sc_AvgOrderValue: orderCount > 0 ? Math.round(totalSpend / orderCount) : 0,
+          sc_AvgBottlesPerOrder: orderCount > 0 ? Math.round(totalBottles / orderCount * 10) / 10 : 0,
+          sc_DaysSinceOrder: Math.floor((today - update.lastOrderDate) / (1000 * 60 * 60 * 24))
+        };
+
+        // Determine customer type
+        if (update.giftOrders === orderCount) {
+          newContact.sc_IsCore = false;
+          newContact.sc_CustomerType = 'noncore.gift';
+        } else if (update.warSupportOrders === orderCount) {
+          newContact.sc_IsCore = false;
+          newContact.sc_CustomerType = 'noncore.support';
+        } else {
+          newContact.sc_CustomerType = ContactService._classifyCustomerType(newContact);
+        }
+
+        newContact.sc_LifecycleStatus = ContactService._calculateLifecycleStatus(newContact.sc_DaysSinceOrder);
+
+        contactsToSave.push(newContact);
+        created++;
+      }
+    });
+
+    // Batch save
+    if (contactsToSave.length > 0) {
+      LoggerService.info(SERVICE_NAME, fnName, `Saving ${contactsToSave.length} contacts (${created} new, ${updated} updated)`);
+      ContactService.batchUpsertContacts(contactsToSave);
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName, `Complete: ${created} created, ${updated} updated`);
+    return { created, updated, errors: [] };
+  }
+
+  /**
+   * Backfills WooCommerce customer user IDs into order sheets.
+   * Reads user export CSV, matches by email, updates order rows.
+   * @param {string} userExportFileName - Partial name of user export file in import folder
+   * @returns {Object} Result with counts
+   */
+  function backfillOrderCustomerIds(userExportFileName) {
+    const fnName = 'backfillOrderCustomerIds';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting order customer ID backfill');
+
+    // Load user export file
+    const rows = getImportFileData(userExportFileName || 'user_export');
+    if (!rows || rows.length <= 1) {
+      LoggerService.warn(SERVICE_NAME, fnName, 'User export file not found or empty');
+      return { error: 'User export file not found', master: 0, archive: 0 };
+    }
+
+    // Build email → userId map from user export
+    const headers = rows[0];
+    const headerMap = {};
+    headers.forEach((h, i) => headerMap[String(h).toLowerCase().trim()] = i);
+
+    const idCol = headerMap['id'] ?? headerMap['customer_id'];
+    const emailCol = headerMap['user_email'] ?? headerMap['email'];
+
+    if (idCol === undefined || emailCol === undefined) {
+      LoggerService.error(SERVICE_NAME, fnName, 'Required columns (ID, user_email) not found in export');
+      return { error: 'Required columns not found', master: 0, archive: 0 };
+    }
+
+    const userIdByEmail = new Map();
+    for (let i = 1; i < rows.length; i++) {
+      const email = (rows[i][emailCol] || '').toLowerCase().trim();
+      const userId = String(rows[i][idCol] || '').trim();
+      if (email && userId) {
+        userIdByEmail.set(email, userId);
+      }
+    }
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded ${userIdByEmail.size} user IDs from export`);
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    let masterUpdated = 0;
+    let archiveUpdated = 0;
+
+    // Update WebOrdM
+    const masterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+    if (masterSheet && masterSheet.getLastRow() > 1) {
+      masterUpdated = _backfillSheetCustomerIds(masterSheet, 'wom_BillingEmail', 'wom_CustomerUser', userIdByEmail);
+      LoggerService.info(SERVICE_NAME, fnName, `Updated ${masterUpdated} rows in WebOrdM`);
+    }
+
+    // Update WebOrdM_Archive
+    const archiveSheet = spreadsheet.getSheetByName('WebOrdM_Archive');
+    if (archiveSheet && archiveSheet.getLastRow() > 1) {
+      archiveUpdated = _backfillSheetCustomerIds(archiveSheet, 'woma_BillingEmail', 'woma_CustomerUser', userIdByEmail);
+      LoggerService.info(SERVICE_NAME, fnName, `Updated ${archiveUpdated} rows in WebOrdM_Archive`);
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName, `Complete: ${masterUpdated} master, ${archiveUpdated} archive`);
+    return { master: masterUpdated, archive: archiveUpdated };
+  }
+
+  /**
+   * Helper to backfill customer IDs in a single sheet.
+   */
+  function _backfillSheetCustomerIds(sheet, emailColName, userIdColName, userIdByEmail) {
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return 0;
+
+    const headers = data[0];
+    const headerMap = {};
+    headers.forEach((h, i) => headerMap[h] = i);
+
+    const emailIdx = headerMap[emailColName];
+    const userIdIdx = headerMap[userIdColName];
+
+    if (emailIdx === undefined || userIdIdx === undefined) {
+      LoggerService.warn(SERVICE_NAME, '_backfillSheetCustomerIds',
+        `Columns not found: ${emailColName}=${emailIdx}, ${userIdColName}=${userIdIdx}`);
+      return 0;
+    }
+
+    let updated = 0;
+    const updates = []; // [row, col, value]
+
+    for (let i = 1; i < data.length; i++) {
+      const email = (data[i][emailIdx] || '').toLowerCase().trim();
+      const existingUserId = data[i][userIdIdx];
+
+      if (email && !existingUserId) {
+        const userId = userIdByEmail.get(email);
+        if (userId) {
+          updates.push([i + 1, userIdIdx + 1, userId]); // 1-indexed for sheet
+          updated++;
+        }
+      }
+    }
+
+    // Batch update
+    if (updates.length > 0) {
+      updates.forEach(([row, col, value]) => {
+        sheet.getRange(row, col).setValue(value);
+      });
+    }
+
+    return updated;
+  }
+
+  /**
+   * Backfills sc_WooUserId in SysContacts from user export.
+   * @param {string} userExportFileName - Partial name of user export file
+   * @returns {Object} Result with counts
+   */
+  function backfillContactData(userExportFileName) {
+    const fnName = 'backfillContactData';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting contact data backfill');
+
+    // Load user export file
+    const rows = getImportFileData(userExportFileName || 'user_export');
+    if (!rows || rows.length <= 1) {
+      LoggerService.warn(SERVICE_NAME, fnName, 'User export file not found or empty');
+      return { error: 'User export file not found', updated: 0 };
+    }
+
+    // Build email → userId map
+    const headers = rows[0];
+    const headerMap = {};
+    headers.forEach((h, i) => headerMap[String(h).toLowerCase().trim()] = i);
+
+    const idCol = headerMap['id'] ?? headerMap['customer_id'];
+    const emailCol = headerMap['user_email'] ?? headerMap['email'];
+
+    if (idCol === undefined || emailCol === undefined) {
+      return { error: 'Required columns not found', updated: 0 };
+    }
+
+    const userIdByEmail = new Map();
+    for (let i = 1; i < rows.length; i++) {
+      const email = (rows[i][emailCol] || '').toLowerCase().trim();
+      const userId = String(rows[i][idCol] || '').trim();
+      if (email && userId) {
+        userIdByEmail.set(email, userId);
+      }
+    }
+    LoggerService.info(SERVICE_NAME, fnName, `Loaded ${userIdByEmail.size} user IDs from export`);
+
+    // Load contacts
+    const contacts = ContactService.getContacts();
+    const contactsToUpdate = [];
+
+    contacts.forEach(contact => {
+      if (!contact.sc_Email) return;
+      const email = contact.sc_Email.toLowerCase();
+
+      // Update WooUserId if missing
+      if (!contact.sc_WooUserId) {
+        const userId = userIdByEmail.get(email);
+        if (userId) {
+          contact.sc_WooUserId = userId;
+          contactsToUpdate.push(contact);
+        }
+      }
+    });
+
+    // Batch update
+    if (contactsToUpdate.length > 0) {
+      LoggerService.info(SERVICE_NAME, fnName, `Updating ${contactsToUpdate.length} contacts with WooUserId`);
+      ContactService.batchUpsertContacts(contactsToUpdate);
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName, `Complete: ${contactsToUpdate.length} contacts updated`);
+    return { updated: contactsToUpdate.length };
+  }
+
+  /**
+   * Backfills WPML language into master order sheets from multiple sources.
+   * Reads from staging sheet and/or multiple import files.
+   * Use after adding wom_MetaWpmlLanguage column to master sheets.
+   * @param {Object} options - Options
+   * @param {boolean} options.fromStaging - If true, reads from WebOrdS staging sheet (default: true)
+   * @param {string|string[]} options.fileNames - File name(s) to read from import folder
+   * @returns {Object} Result with counts
+   */
+  function backfillOrderLanguage(options = {}) {
+    const fnName = 'backfillOrderLanguage';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting order language backfill');
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+
+    // Build orderId → language map from all sources
+    const languageByOrderId = new Map();
+
+    // Source 1: Staging sheet
+    if (options.fromStaging !== false) {
+      const stagingSheet = spreadsheet.getSheetByName(sheetNames.WebOrdS);
+      if (stagingSheet && stagingSheet.getLastRow() > 1) {
+        const stagingData = stagingSheet.getDataRange().getValues();
+        const stagingHeaders = stagingData.shift();
+        const wosIdx = {};
+        stagingHeaders.forEach((h, i) => wosIdx[h] = i);
+
+        const orderIdIdx = wosIdx['wos_OrderId'];
+        const langIdx = wosIdx['wos_MetaWpmlLanguage'];
+
+        if (orderIdIdx !== undefined && langIdx !== undefined) {
+          let count = 0;
+          stagingData.forEach(row => {
+            const orderId = String(row[orderIdIdx] || '').trim();
+            const lang = (row[langIdx] || '').toLowerCase().trim();
+            if (orderId && lang) {
+              languageByOrderId.set(orderId, lang);
+              count++;
+            }
+          });
+          LoggerService.info(SERVICE_NAME, fnName, `Loaded ${count} languages from staging`);
+        }
+      }
+    }
+
+    // Source 2: Import files (can be single string or array)
+    const fileNames = options.fileNames
+      ? (Array.isArray(options.fileNames) ? options.fileNames : [options.fileNames])
+      : [];
+
+    // Also support legacy 'fileName' option
+    if (options.fileName && !fileNames.includes(options.fileName)) {
+      fileNames.push(options.fileName);
+    }
+
+    for (const fileName of fileNames) {
+      const loaded = _loadLanguageFromFile(fileName, languageByOrderId);
+      LoggerService.info(SERVICE_NAME, fnName, `Loaded ${loaded} languages from "${fileName}"`);
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName, `Total unique order languages: ${languageByOrderId.size}`);
+
+    if (languageByOrderId.size === 0) {
+      LoggerService.warn(SERVICE_NAME, fnName, 'No language data found');
+      return { error: 'No language data found', master: 0, archive: 0, totalLanguages: 0 };
+    }
+
+    let masterUpdated = 0;
+    let archiveUpdated = 0;
+
+    // Update WebOrdM
+    const masterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+    if (masterSheet && masterSheet.getLastRow() > 1) {
+      masterUpdated = _backfillSheetLanguage(masterSheet, 'wom_OrderId', 'wom_MetaWpmlLanguage', languageByOrderId);
+      LoggerService.info(SERVICE_NAME, fnName, `Updated ${masterUpdated} rows in WebOrdM`);
+    }
+
+    // Update WebOrdM_Archive
+    const archiveSheet = spreadsheet.getSheetByName('WebOrdM_Archive');
+    if (archiveSheet && archiveSheet.getLastRow() > 1) {
+      archiveUpdated = _backfillSheetLanguage(archiveSheet, 'woma_OrderId', 'woma_MetaWpmlLanguage', languageByOrderId);
+      LoggerService.info(SERVICE_NAME, fnName, `Updated ${archiveUpdated} rows in WebOrdM_Archive`);
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName, `Complete: ${masterUpdated} master, ${archiveUpdated} archive`);
+    return { master: masterUpdated, archive: archiveUpdated, totalLanguages: languageByOrderId.size };
+  }
+
+  /**
+   * Helper to load language data from an import file.
+   * @returns {number} Count of languages loaded from this file
+   */
+  function _loadLanguageFromFile(fileName, languageByOrderId) {
+    const rows = getImportFileData(fileName);
+    if (!rows || rows.length <= 1) {
+      LoggerService.warn(SERVICE_NAME, '_loadLanguageFromFile', `File "${fileName}" not found or empty`);
+      return 0;
+    }
+
+    const headers = rows[0];
+    const headerMap = {};
+    headers.forEach((h, i) => headerMap[String(h).toLowerCase().trim()] = i);
+
+    // Try common column names for order ID
+    const orderIdCol = headerMap['order_id'] ?? headerMap['orderid'] ?? headerMap['wos_orderid'] ?? headerMap['id'];
+    // Try common column names for language
+    const langCol = headerMap['meta:wpml_language'] ?? headerMap['wpml_language'] ?? headerMap['language']
+      ?? headerMap['wos_metawpmllanguage'] ?? headerMap['meta_wpml_language'];
+
+    if (orderIdCol === undefined || langCol === undefined) {
+      LoggerService.warn(SERVICE_NAME, '_loadLanguageFromFile',
+        `Required columns not found in "${fileName}". Expected: order_id/id + meta:wpml_language/language`);
+      return 0;
+    }
+
+    let count = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const orderId = String(rows[i][orderIdCol] || '').trim();
+      const lang = (rows[i][langCol] || '').toLowerCase().trim();
+      if (orderId && lang) {
+        languageByOrderId.set(orderId, lang);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Helper to backfill language in a single sheet.
+   */
+  function _backfillSheetLanguage(sheet, orderIdColName, langColName, languageByOrderId) {
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return 0;
+
+    const headers = data[0];
+    const headerMap = {};
+    headers.forEach((h, i) => headerMap[h] = i);
+
+    const orderIdIdx = headerMap[orderIdColName];
+    const langIdx = headerMap[langColName];
+
+    if (orderIdIdx === undefined || langIdx === undefined) {
+      LoggerService.warn(SERVICE_NAME, '_backfillSheetLanguage',
+        `Columns not found: ${orderIdColName}=${orderIdIdx}, ${langColName}=${langIdx}`);
+      return 0;
+    }
+
+    let updated = 0;
+    const updates = []; // [row, col, value]
+
+    for (let i = 1; i < data.length; i++) {
+      const orderId = String(data[i][orderIdIdx] || '').trim();
+      const existingLang = (data[i][langIdx] || '').trim();
+
+      if (orderId && !existingLang) {
+        const lang = languageByOrderId.get(orderId);
+        if (lang) {
+          updates.push([i + 1, langIdx + 1, lang]); // 1-indexed for sheet
+          updated++;
+        }
+      }
+    }
+
+    // Batch update
+    if (updates.length > 0) {
+      updates.forEach(([row, col, value]) => {
+        sheet.getRange(row, col).setValue(value);
+      });
+    }
+
+    return updated;
+  }
+
   // Public API
   return {
     importFromOrderHistory: importFromOrderHistory,
     importFromMailchimpCsv: importFromMailchimpCsv,
-    runFullImport: runFullImport
+    runFullImport: runFullImport,
+    updateContactsFromOrders: updateContactsFromOrders,
+    backfillOrderCustomerIds: backfillOrderCustomerIds,
+    backfillContactData: backfillContactData,
+    backfillOrderLanguage: backfillOrderLanguage
   };
 })();
 
@@ -489,6 +1108,119 @@ const ContactImportService = (function () {
  */
 function runCrmImport() {
   return ContactImportService.runFullImport();
+}
+
+/**
+ * Global function to run WooCommerce user ID backfill.
+ * Backfills customer IDs in order sheets and contacts from user export file.
+ * Run once after adding wom_CustomerUser/woma_CustomerUser/sc_WooUserId columns.
+ */
+function runWooUserIdBackfill() {
+  const SERVICE_NAME = 'ContactImportService';
+  const fnName = 'runWooUserIdBackfill';
+
+  LoggerService.info(SERVICE_NAME, fnName, 'Starting WooCommerce user ID backfill');
+
+  // Step 1: Backfill order sheets with customer IDs from user export
+  const orderResult = ContactImportService.backfillOrderCustomerIds('user_export');
+  LoggerService.info(SERVICE_NAME, fnName,
+    `Order backfill: ${orderResult.master} master, ${orderResult.archive} archive`);
+
+  // Step 2: Rebuild all contacts from order history (fills gap of missing contacts)
+  // This reads both WebOrdM and WebOrdM_Archive
+  LoggerService.info(SERVICE_NAME, fnName, 'Rebuilding contacts from full order history...');
+  const importResult = ContactImportService.importFromOrderHistory();
+  LoggerService.info(SERVICE_NAME, fnName,
+    `Contact rebuild: ${importResult.imported} contacts from ${importResult.total} unique emails`);
+
+  // Step 3: Backfill any remaining contacts with WooUserId from user export
+  // (catches contacts that exist but weren't in order history, e.g., subscribers)
+  const contactResult = ContactImportService.backfillContactData('user_export');
+  LoggerService.info(SERVICE_NAME, fnName,
+    `WooUserId backfill: ${contactResult.updated} contacts updated`);
+
+  LoggerService.info(SERVICE_NAME, fnName, 'WooCommerce user ID backfill complete');
+
+  return {
+    orders: orderResult,
+    contactsRebuilt: importResult,
+    contactsBackfilled: contactResult
+  };
+}
+
+/**
+ * Global function to backfill order language from multiple sources.
+ * Use after adding wom_MetaWpmlLanguage/woma_MetaWpmlLanguage columns.
+ *
+ * Usage examples:
+ *   // From staging only
+ *   backfillOrderLanguage()
+ *
+ *   // From full history file + recent export (recommended)
+ *   backfillOrderLanguage({ fileNames: ['order_history', 'order_export'] })
+ *
+ *   // From files only (skip staging)
+ *   backfillOrderLanguage({ fromStaging: false, fileNames: ['order_history', 'order_export'] })
+ *
+ * Expected file columns: order_id (or id) + meta:wpml_language (or language)
+ */
+function backfillOrderLanguage(options) {
+  return ContactImportService.backfillOrderLanguage(options || {});
+}
+
+/**
+ * Full backfill including language. Run after adding all new columns.
+ * Reads language from full order history file + recent order export.
+ *
+ * Prerequisites:
+ * - user_export file in import folder (for customer IDs)
+ * - order_history file in import folder (full historical orders with language)
+ * - order_export file in import folder (recent orders with language)
+ *
+ * Steps:
+ * 1. Backfill customer IDs in orders from user export
+ * 2. Backfill language in orders from history + recent export files
+ * 3. Rebuild contacts from order history (captures language)
+ * 4. Backfill WooUserId in contacts from user export
+ */
+function runFullBackfill() {
+  const SERVICE_NAME = 'ContactImportService';
+  const fnName = 'runFullBackfill';
+
+  LoggerService.info(SERVICE_NAME, fnName, 'Starting full backfill');
+
+  // Step 1: Backfill customer IDs
+  const orderResult = ContactImportService.backfillOrderCustomerIds('user_export');
+  LoggerService.info(SERVICE_NAME, fnName,
+    `Customer ID backfill: ${orderResult.master} master, ${orderResult.archive} archive`);
+
+  // Step 2: Backfill language from full history + recent export
+  const langResult = ContactImportService.backfillOrderLanguage({
+    fromStaging: true,
+    fileNames: ['order_history', 'order_export']
+  });
+  LoggerService.info(SERVICE_NAME, fnName,
+    `Language backfill: ${langResult.master} master, ${langResult.archive} archive (${langResult.totalLanguages} total)`);
+
+  // Step 3: Rebuild contacts from order history
+  LoggerService.info(SERVICE_NAME, fnName, 'Rebuilding contacts from order history...');
+  const importResult = ContactImportService.importFromOrderHistory();
+  LoggerService.info(SERVICE_NAME, fnName,
+    `Contact rebuild: ${importResult.imported} contacts from ${importResult.total} unique emails`);
+
+  // Step 4: Backfill WooUserId in contacts
+  const contactResult = ContactImportService.backfillContactData('user_export');
+  LoggerService.info(SERVICE_NAME, fnName,
+    `WooUserId backfill: ${contactResult.updated} contacts updated`);
+
+  LoggerService.info(SERVICE_NAME, fnName, 'Full backfill complete');
+
+  return {
+    orderCustomerIds: orderResult,
+    orderLanguage: langResult,
+    contactsRebuilt: importResult,
+    contactsBackfilled: contactResult
+  };
 }
 
 /**
