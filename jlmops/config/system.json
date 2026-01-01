@@ -510,6 +510,21 @@
         ""
     ],
     [
+        "system.sync.step_names",
+        "Canonical names for sync steps. Format: [Source] [Type] [Import/Export]",
+        "stable",
+        "step1",
+        "Web Product Import",
+        "step2",
+        "Web Order Import",
+        "step3",
+        "Comax Order Export",
+        "step4",
+        "Comax Product Import",
+        "step5",
+        "Web Inventory Export"
+    ],
+    [
         "system.import.processing_order",
         "Defines the processing order for file import configurations.",
         "stable",

@@ -426,6 +426,20 @@ function WebAppSystem_getSystemHealthDashboardData() {
         webExportStatus === 'READY' || webExportStatus === 'DONE' || webExportStatus === 'PENDING'
     );
 
+    // --- Extract Urgent Alerts from Health Status Task ---
+    let urgentAlerts = [];
+    const healthTask = allOpenTasks.find(t => t.typeId === 'task.system.health_status');
+    if (healthTask && healthTask.notes) {
+      try {
+        const healthNotes = typeof healthTask.notes === 'string' ? JSON.parse(healthTask.notes) : healthTask.notes;
+        if (healthNotes.urgentAlerts && Array.isArray(healthNotes.urgentAlerts)) {
+          urgentAlerts = healthNotes.urgentAlerts;
+        }
+      } catch (parseError) {
+        // Ignore parse errors - notes may not be JSON
+      }
+    }
+
     // --- Daily Sync Summary ---
     // Valid step statuses: DONE, PENDING, ERROR, BLOCKED, WARNING, NEUTRAL, READY
     let syncStatusSummary = 'Daily Sync: Idle';
@@ -458,6 +472,7 @@ function WebAppSystem_getSystemHealthDashboardData() {
       inventoryCycle,
       isInventoryExportReady,
       activeFailureTasks,
+      urgentAlerts,
       syncStatusSummary: {
         text: syncStatusSummary,
         color: syncStatusColor

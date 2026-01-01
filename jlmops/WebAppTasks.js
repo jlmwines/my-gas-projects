@@ -98,6 +98,18 @@ const WebAppTasks = (() => {
       LoggerService.info('WebAppTasks', 'getOpenTasks', 'Cache miss - fetching tasks from sheet.');
       const openTasks = fetchTasksFromSheet();
 
+      // Sort by priority (Critical > High > Normal) then by created date (newest first)
+      const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2 };
+      openTasks.sort((a, b) => {
+        const pA = priorityOrder[a.st_Priority] !== undefined ? priorityOrder[a.st_Priority] : 2;
+        const pB = priorityOrder[b.st_Priority] !== undefined ? priorityOrder[b.st_Priority] : 2;
+        if (pA !== pB) return pA - pB;
+        // Secondary sort by created date (newest first)
+        const dateA = new Date(a.st_CreatedDate || 0);
+        const dateB = new Date(b.st_CreatedDate || 0);
+        return dateB - dateA;
+      });
+
       // Update cache
       taskCache = openTasks;
       taskCacheTime = Date.now();

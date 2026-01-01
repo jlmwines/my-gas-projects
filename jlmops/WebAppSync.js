@@ -92,7 +92,7 @@ function startDailySyncBackend() {
     // Write initial status for Step 1
     SyncStatusService.writeStatus(newSessionId, {
       step: 1,
-      stepName: 'Import Web Data',
+      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
       status: 'processing',
       message: 'Queueing import jobs...'
     });
@@ -117,7 +117,7 @@ function startDailySyncBackend() {
     // Update status
     SyncStatusService.writeStatus(newSessionId, {
       step: 1,
-      stepName: 'Import Web Data',
+      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
       status: 'processing',
       message: 'Processing orders, products, and translations...'
     });
@@ -135,7 +135,7 @@ function startDailySyncBackend() {
 
     SyncStatusService.writeStatus(sessionId, {
       step: 1,
-      stepName: 'Import Web Data',
+      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -252,7 +252,7 @@ function startComaxImportBackend() {
     // Write Step 4 processing status
     SyncStatusService.writeStatus(currentState.sessionId, {
       step: 4,
-      stepName: 'Import Comax Products',
+      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
       status: 'processing',
       message: 'Importing Comax product data...'
     });
@@ -270,7 +270,7 @@ function startComaxImportBackend() {
       // Write step 4 failure status
       SyncStatusService.writeStatus(currentState.sessionId, {
         step: 4,
-        stepName: 'Import Comax Products',
+        stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
         status: 'failed',
         message: `Import failed: ${result.error}`
       });
@@ -292,7 +292,7 @@ function startComaxImportBackend() {
     // Write step 4 failure status
     SyncStatusService.writeStatus(errorState.sessionId, {
       step: 4,
-      stepName: 'Import Comax Products',
+      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -482,7 +482,7 @@ function exportComaxOrdersBackend() {
     // Write processing status
     SyncStatusService.writeStatus(sessionId, {
       step: 3,
-      stepName: 'Update Comax Orders',
+      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
       status: 'processing',
       message: 'Generating order export file...'
     });
@@ -499,7 +499,7 @@ function exportComaxOrdersBackend() {
         // No orders to export - mark step 3 complete and move to step 4
         SyncStatusService.writeStatus(sessionId, {
           step: 3,
-          stepName: 'Order Export',
+          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
           status: 'completed',
           message: 'No orders to export'
         });
@@ -507,7 +507,7 @@ function exportComaxOrdersBackend() {
         // Set up step 4 as ready
         SyncStatusService.writeStatus(sessionId, {
           step: 4,
-          stepName: 'Import Comax Products',
+          stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
           status: 'waiting',
           message: 'Ready to import Comax product data'
         });
@@ -526,7 +526,7 @@ function exportComaxOrdersBackend() {
         // Write waiting status - ready for confirmation
         SyncStatusService.writeStatus(sessionId, {
           step: 3,
-          stepName: 'Update Comax Orders',
+          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
           status: 'waiting',
           message: `Export complete. ${exportedCount} orders exported. Ready to confirm upload.`
         });
@@ -535,7 +535,7 @@ function exportComaxOrdersBackend() {
       // Write failure status
       SyncStatusService.writeStatus(sessionId, {
         step: 3,
-        stepName: 'Update Comax Orders',
+        stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
         status: 'failed',
         message: `Export failed: ${result.message || 'Unknown error'}`
       });
@@ -555,7 +555,7 @@ function exportComaxOrdersBackend() {
 
     SyncStatusService.writeStatus(errorState.sessionId, {
       step: 3,
-      stepName: 'Update Comax Orders',
+      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -602,7 +602,7 @@ function confirmComaxUpdateBackend() {
     // Write Step 3 completed status
     SyncStatusService.writeStatus(sessionId, {
       step: 3,
-      stepName: 'Update Comax Orders',
+      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
       status: 'completed',
       message: 'Orders exported and uploaded to Comax'
     });
@@ -610,7 +610,7 @@ function confirmComaxUpdateBackend() {
     // Write Step 4 waiting status
     SyncStatusService.writeStatus(sessionId, {
       step: 4,
-      stepName: 'Import Comax Products',
+      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
       status: 'waiting',
       message: 'Ready to import Comax product data'
     });
@@ -636,7 +636,7 @@ function confirmComaxUpdateBackend() {
 
     SyncStatusService.writeStatus(errorState.sessionId, {
       step: 3,
-      stepName: 'Update Comax Orders',
+      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
       status: 'failed',
       message: `Confirmation failed: ${e.message}`
     });
@@ -671,7 +671,7 @@ function generateWebExportBackend() {
     // Write processing status
     SyncStatusService.writeStatus(sessionId, {
       step: 5,
-      stepName: 'Update Web Inventory',
+      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
       status: 'processing',
       message: 'Generating web inventory export file...'
     });
@@ -696,7 +696,7 @@ function generateWebExportBackend() {
 
     SyncStatusService.writeStatus(currentState.sessionId, {
       step: 5,
-      stepName: 'Update Web Inventory',
+      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -733,7 +733,7 @@ function confirmWebInventoryUpdateBackend() {
     // Write Step 5 completion status
     SyncStatusService.writeStatus(sessionId, {
       step: 5,
-      stepName: 'Update Web Inventory',
+      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
       status: 'completed',
       message: 'Web inventory exported and uploaded successfully'
     });
@@ -777,7 +777,7 @@ function confirmWebInventoryUpdateBackend() {
 
     SyncStatusService.writeStatus(errorState.sessionId, {
       step: 5,
-      stepName: 'Update Web Inventory',
+      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
       status: 'failed',
       message: `Confirmation failed: ${e.message}`
     });
@@ -953,7 +953,7 @@ function importWebProductsBackend() {
     // IMMEDIATE status update
     SyncStatusService.writeStatus(sessionId, {
       step: 1,
-      stepName: 'Import Web Products',
+      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
       status: 'processing',
       message: 'Importing translations and products...'
     });
@@ -977,7 +977,7 @@ function importWebProductsBackend() {
       // Update step 1 status to failed
       SyncStatusService.writeStatus(sessionId, {
         step: 1,
-        stepName: 'Import Web Products',
+        stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
         status: 'failed',
         message: `Import failed: ${result.error}`
       });
@@ -993,7 +993,7 @@ function importWebProductsBackend() {
       // Mark step 1 complete
       SyncStatusService.writeStatus(sessionId, {
         step: 1,
-        stepName: 'Import Web Products',
+        stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
         status: 'completed',
         message: 'Products and translations imported'
       });
@@ -1001,7 +1001,7 @@ function importWebProductsBackend() {
       // Set up step 2 as waiting
       SyncStatusService.writeStatus(sessionId, {
         step: 2,
-        stepName: 'Import Web Orders',
+        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
         status: 'waiting',
         message: 'Ready to import orders'
       });
@@ -1019,7 +1019,7 @@ function importWebProductsBackend() {
 
     SyncStatusService.writeStatus(sessionId, {
       step: 1,
-      stepName: 'Import Web Products',
+      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });
@@ -1055,7 +1055,7 @@ function importWebOrdersBackend() {
     // IMMEDIATE status update
     SyncStatusService.writeStatus(sessionId, {
       step: 2,
-      stepName: 'Import Web Orders',
+      stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
       status: 'processing',
       message: 'Processing orders...'
     });
@@ -1072,7 +1072,7 @@ function importWebOrdersBackend() {
       // Update step 2 status to failed
       SyncStatusService.writeStatus(sessionId, {
         step: 2,
-        stepName: 'Import Web Orders',
+        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
         status: 'failed',
         message: `Import failed: ${result.error}`
       });
@@ -1089,7 +1089,7 @@ function importWebOrdersBackend() {
       // Mark step 2 complete
       SyncStatusService.writeStatus(sessionId, {
         step: 2,
-        stepName: 'Import Web Orders',
+        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
         status: 'completed',
         message: `Orders imported`
       });
@@ -1112,14 +1112,14 @@ function importWebOrdersBackend() {
       if (ordersToExportCount > 0) {
         SyncStatusService.writeStatus(sessionId, {
           step: 3,
-          stepName: 'Update Comax Orders',
+          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
           status: 'waiting',
           message: `${ordersToExportCount} orders ready for export`
         });
       } else {
         SyncStatusService.writeStatus(sessionId, {
           step: 3,
-          stepName: 'Update Comax Orders',
+          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
           status: 'completed',
           message: 'No new web orders to export'
         });
@@ -1127,7 +1127,7 @@ function importWebOrdersBackend() {
         // Set up step 4 as waiting
         SyncStatusService.writeStatus(sessionId, {
           step: 4,
-          stepName: 'Import Comax Products',
+          stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
           status: 'waiting',
           message: 'Ready to import Comax product data'
         });
@@ -1146,7 +1146,7 @@ function importWebOrdersBackend() {
 
     SyncStatusService.writeStatus(sessionId, {
       step: 2,
-      stepName: 'Import Web Orders',
+      stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
       status: 'failed',
       message: `Error: ${e.message}`
     });

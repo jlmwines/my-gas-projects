@@ -17,6 +17,26 @@
 
 <script>
   /**
+   * Formats a timestamp into a relative time string (e.g., "5 min ago").
+   * @param {string} timestamp - ISO timestamp string.
+   * @returns {string} Formatted relative time.
+   */
+  function _formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now - then;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  }
+
+  /**
    * Populates the system health widget based on the final approved design.
    * @param {Object} data - The health data from the backend.
    */
@@ -74,6 +94,22 @@
         finalHtml += `<p class="mb-0 ${data.syncStatusSummary.color}">${data.syncStatusSummary.text}</p>`;
         finalHtml += `</div>`;
         finalHtml += '<hr class="my-2">'; // Divider after sync status
+    }
+
+    // Urgent Alerts from NotificationService
+    if (data.urgentAlerts && data.urgentAlerts.length > 0) {
+        finalHtml += `<div id="urgent-alerts-section" class="mt-2">`;
+        finalHtml += `<h6 class="text-danger mb-2">Urgent Alerts</h6>`;
+        data.urgentAlerts.forEach(alert => {
+            const alertClass = alert.severity === 'Critical' ? 'bg-danger text-white' : 'bg-warning';
+            const timeAgo = _formatTimeAgo(alert.timestamp);
+            finalHtml += `<div class="p-2 mb-2 rounded ${alertClass}" style="font-size: 0.85rem;">`;
+            finalHtml += `<div class="fw-bold">${alert.message}</div>`;
+            finalHtml += `<div style="font-size: 0.75rem;">${alert.context} - ${timeAgo}</div>`;
+            finalHtml += `</div>`;
+        });
+        finalHtml += `</div>`;
+        finalHtml += '<hr class="my-2">';
     }
 
     // This section (Confirmed Critical Validations) should remain in its original place relative to validation.

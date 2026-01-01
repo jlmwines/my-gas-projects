@@ -72,10 +72,19 @@ const ValidationOrchestratorService = (function() {
     let finalStatus = 'COMPLETED';
     if (quarantineTriggered) {
         finalStatus = 'QUARANTINED';
+
+        // Report quarantine through unified notification system
+        NotificationService.reportFailure(
+          `validation.${suiteName}`,
+          `Quarantine triggered: ${failureCount} critical validation issues`,
+          'Critical',
+          { suiteName: suiteName, failureCount: failureCount, sessionId: sessionId },
+          sessionId
+        );
     } else if (failureCount > 0) {
         // Use COMPLETED with warnings? or separate status?
         // Current convention is COMPLETED unless critical quarantine
-        finalStatus = 'COMPLETED'; 
+        finalStatus = 'COMPLETED';
     }
 
     logger.info(serviceName, functionName, `Validation complete. Failures: ${failureCount}. Quarantine: ${quarantineTriggered}.`, { sessionId: sessionId, finalStatus: finalStatus });

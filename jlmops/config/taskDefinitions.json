@@ -386,6 +386,17 @@
     ],
     [
         "task.template",
+        "task.system.failure",
+        "System failure notification task created by NotificationService.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
+    ],
+    [
+        "task.template",
         "task.crm.contact_followup",
         "Follow up with a contact who may need attention.",
         "stable",

@@ -587,6 +587,16 @@ const OrchestratorService = (function() {
                     jobType: jobType,
                     stuckSince: processedTimestamp.toISOString()
                 });
+
+                // Report stuck job through notification system
+                NotificationService.reportFailure(
+                  `job.${jobType}`,
+                  `Job stuck in PROCESSING for >15min (zombie killed)`,
+                  'High',
+                  { jobId: jobId, jobType: jobType, stuckSince: processedTimestamp.toISOString() },
+                  sessionId
+                );
+
                 jobQueueSheet.getRange(i + 2, statusColIdx + 1).setValue('FAILED');
                 jobQueueSheet.getRange(i + 2, errorMsgColIdx + 1).setValue('Job stuck in PROCESSING state for too long (>15min).');
                 jobQueueSheet.getRange(i + 2, processedTsColIdx + 1).setValue(new Date()); // Update processed timestamp to now
@@ -1124,7 +1134,7 @@ const OrchestratorService = (function() {
           const progressMsg = `✓ ${completedJobs.join(', ')}${pendingJobs.length > 0 ? ' | Processing: ' + pendingJobs.join(', ') : ''}`;
           SyncStatusService.writeStatus(state.sessionId, {
             step: 1,
-            stepName: 'Import Web Data',
+            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
             status: 'processing',
             message: progressMsg
           });
@@ -1133,10 +1143,20 @@ const OrchestratorService = (function() {
         if (anyFailedOrQuarantined) {
           logger.error(serviceName, functionName, `Stage 1 (Web) jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
+          // Report failure through unified notification system
+          const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
+          NotificationService.reportFailure(
+            'sync.web_product_import',
+            errorMessage,
+            severity,
+            { sessionId: state.sessionId, jobStatus: jobStatus },
+            state.sessionId
+          );
+
           // Write Step 1 failure status
           SyncStatusService.writeStatus(state.sessionId, {
             step: 1,
-            stepName: 'Import Web Data',
+            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
             status: 'failed',
             message: errorMessage
           });
@@ -1154,7 +1174,7 @@ const OrchestratorService = (function() {
           // Write Step 1 completion status
           SyncStatusService.writeStatus(state.sessionId, {
             step: 1,
-            stepName: 'Import Web Data',
+            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
             status: 'completed',
             message: 'All web data imported successfully'
           });
@@ -1257,9 +1277,19 @@ const OrchestratorService = (function() {
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
+              // Report failure through unified notification system
+              const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
+              NotificationService.reportFailure(
+                'sync.comax_product_import',
+                `Comax import failed: ${jobStatus}`,
+                severity,
+                { sessionId: state.sessionId, jobStatus: jobStatus },
+                state.sessionId
+              );
+
               SyncStatusService.writeStatus(state.sessionId, {
                 step: 4,
-                stepName: 'Import Comax Products',
+                stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
                 status: 'failed',
                 message: `Import failed: ${jobStatus}`
               });
@@ -1298,6 +1328,15 @@ const OrchestratorService = (function() {
 
         if (anyFailedOrQuarantined) {
            logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+
+           // Report failure through unified notification system
+           NotificationService.reportFailure(
+             'validation.master_master',
+             errorMessage,
+             'High',
+             { sessionId: state.sessionId },
+             state.sessionId
+           );
 
            // Validation runs silently - no UI status update
            // Clear step 5 status to prevent showing stale notifications (step 4 stays completed)
@@ -1371,10 +1410,20 @@ const OrchestratorService = (function() {
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
               logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
+              // Report failure through unified notification system
+              const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
+              NotificationService.reportFailure(
+                'sync.web_inventory_export',
+                `Web Inventory Export failed: ${jobStatus}`,
+                severity,
+                { sessionId: state.sessionId, jobStatus: jobStatus },
+                state.sessionId
+              );
+
               // Write Step 5 failure status
               SyncStatusService.writeStatus(state.sessionId, {
                 step: 5,
-                stepName: 'Update Web Inventory',
+                stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
                 status: 'failed',
                 message: `Export failed: ${jobStatus}`
               });
