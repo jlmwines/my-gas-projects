@@ -378,11 +378,12 @@ const InventoryManagementService = (function() {
         }
 
         // Create a map of SKU to its row index in the 'data' array (0-based)
-        const skuToRowIndexMap = new Map(data.map((row, index) => [row[skuColIdx], index]));
-        
+        // Use String() to ensure consistent key type (frontend sends strings)
+        const skuToRowIndexMap = new Map(data.map((row, index) => [String(row[skuColIdx]), index]));
+
         let updatedCount = 0;
         inventoryData.forEach(item => {
-            const rowIndex = skuToRowIndexMap.get(item.sku);
+            const rowIndex = skuToRowIndexMap.get(String(item.sku));
             if (rowIndex !== undefined) {
                 // Update the quantity in our in-memory 'data' array
                 data[rowIndex][bruryaQtyColIdx] = item.quantity;

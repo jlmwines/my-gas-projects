@@ -1,24 +1,24 @@
-# Session Summary - 2025-12-17 (Session 2)
+# Session Summary - 2026-01-02
 
 ## What We Accomplished
 
-### Dashboard V2 Enhancements
+### Brurya Inventory Bug Fixes
 
-**System Health Widget:**
-- Added Daily Sync status row with real-time stage display
-- Shows sync state (complete/in-progress/failed) with timestamp
-- Stage shown inline: "Daily Sync (importing orders)"
+**Bug 1: Screen edits not saving**
+- Root cause: SKU type mismatch - sheet stores numbers, frontend sends strings
+- Map lookup `Map.get("12345")` failed to find key `12345`
+- Fix: Convert SKU to String() for both Map key creation and lookup
+- File: `InventoryManagementService.js:381-386`
 
-**Orders Widget:**
-- Renamed "Packing Slips Ready" to "New Orders" for clarity
+**Bug 2: Task not updated after save**
+- Root cause: Save only updated quantities, didn't update timestamp or close task
+- Dashboard read "days since update" from task notes, which only updated daily via housekeeping
+- Fix: After successful save, update `system.brurya.last_update` config and close task
+- File: `WebAppInventory.js:498-512`
 
-**Inventory Widget:**
-- Consolidated Brurya display: single row with warning icon when reminder exists
-- Renamed "Awaiting Review" to "Counts in Review"
-
-**UI Layout:**
-- Narrowed sidebar from 250px to 160px
-- Gained 90px content space for dashboard cards
+**Housekeeping behavior confirmed:**
+- Reads config timestamp, not task done date
+- Creates new task when: no open task exists AND daysSinceUpdate >= 7
 
 ---
 
@@ -26,51 +26,25 @@
 
 | File | Changes |
 |------|---------|
-| `WebAppDashboardV2.js` | Added `_getSyncStatus()` helper function, integrated sync state into system health response |
-| `AdminDashboardView_v2.html` | Added sync row rendering, updated labels, consolidated Brurya display |
-| `AppView.html` | Reduced sidebar width, adjusted padding and nav-link styling |
+| `InventoryManagementService.js` | SKU type fix - String() conversion for Map key/lookup |
+| `WebAppInventory.js` | Added timestamp update + task close after Brurya save |
 
 ---
 
 ## Git Status
 
 **Branch:** main
-**Commit:** `18de3a7 feat: Dashboard V2 improvements - sync status, labels, layout`
+**Commit:** (pending)
 
 ---
 
-## Next Steps
+## Previous Session (2025-12-17)
 
-1. **Test dashboard** - Verify all widgets display correctly after deployment
-2. **Monitor sync display** - Confirm stage transitions show properly
-3. **SysLog investigation** - Logging stopped on 12/16 (deferred from previous session)
+### Dashboard V2 Enhancements
+- Added Daily Sync status row with real-time stage display
+- Consolidated Brurya display in Inventory widget
+- Narrowed sidebar from 250px to 160px
 
----
-
-## Previous Session (2025-12-17 Session 1)
-
-### Daily Sync Widget - Complete Overhaul & Bug Fixes
-
-**Root Cause Found:** Backend action functions were returning `SyncStatusService.getSessionStatus()` which did NOT include `currentStage` from JSON state. Widget received `undefined` for stage, defaulted to 'IDLE', showed "Start daily sync" even mid-workflow.
-
-**Key Fix:** Added `_getMergedStatus()` helper to return both session state and step statuses.
-
-**Bugs Fixed:**
-- Widget showed "Start daily sync" after step completion
-- Comax import completion wrote to wrong step
-- `clearStepsFromSession(4)` erased just-written step 4
-- Progress log showed "Orders exported" when skipped
-- Missing failure handling in multiple functions
-
----
-
-## Previous Sessions
-
-### 2025-12-15: Project-Task Integration Plan Security Review
-- Document: `PROJECT_TASK_PLAN.md` v2.0 → v2.2
-
-### 2025-12-14: Daily Sync Widget v2 + Order Management
-- Connected v2 widget, fixed 15+ UI bugs
-
-### 2025-12-12: Bundle Management System
-- Created BundleService.js, WebAppBundles.js, AdminBundlesView.html
+### Daily Sync Widget - Complete Overhaul
+- Fixed widget showing "Start daily sync" after step completion
+- Added `_getMergedStatus()` helper for proper state handling

@@ -486,13 +486,32 @@ function WebAppInventory_acceptInventoryCounts(taskIds) {
 
 /**
  * Wraps the InventoryManagementService.updateBruryaInventory function for client-side access.
+ * Also updates the last update timestamp and closes any open Brurya reminder task.
  * @param {Array<Object>} inventoryData The inventory data to save.
  * @returns {Object} A result object from the service.
  */
 function WebAppInventory_updateBruryaInventory(inventoryData) {
   try {
     const inventoryManagementService = InventoryManagementService;
-    return inventoryManagementService.updateBruryaInventory(inventoryData);
+    const result = inventoryManagementService.updateBruryaInventory(inventoryData);
+
+    // If quantities were updated, also update timestamp and close task
+    if (result.success && result.updated > 0) {
+      // Update last update timestamp
+      ConfigService.setConfig('system.brurya.last_update', 'value', new Date().toISOString());
+
+      // Close any open brurya update task
+      try {
+        TaskService.completeTaskByTypeAndEntity('task.inventory.brurya_update', 'BRURYA');
+      } catch (taskErr) {
+        // No task to close - that's fine
+      }
+
+      LoggerService.info('WebAppInventory', 'updateBruryaInventory',
+        `Updated ${result.updated} items, timestamp updated, task closed.`);
+    }
+
+    return result;
   } catch (error) {
     LoggerService.error('WebAppInventory', 'updateBruryaInventory', error.message, error);
     throw error;
