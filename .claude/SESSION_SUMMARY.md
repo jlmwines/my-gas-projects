@@ -1,4 +1,61 @@
-# Session Summary - 2026-01-02
+# Session Summary - 2026-01-05 (Evening)
+
+## What We Accomplished
+
+### Packing Slip Layout Overhaul
+
+**Problem:** Wine info order was wrong, header was verbose bilingual format
+
+**Solution:**
+- `PackingSlipService.js` — Added pairing text enrichment from `wdm_PairHar*`/`wdm_PairCon*` flags
+- `PrintService.js` — Complete layout overhaul:
+  - Compact 2-row RTL header (value before Hebrew label to fix RTL/LTR mixing)
+  - Reordered wine info: Pairings → Decant → combined Intensity/Complexity/Acidity
+  - Reduced spacing throughout (setSpacingBefore/After, setLineSpacing)
+  - 6 products per page
+
+**Commit:** `8432b1d` — Pushed to remote
+
+**Bug logged:** printme folder not in housekeeping routine
+
+---
+
+# Session Summary - 2026-01-05 (Earlier)
+
+## What We Accomplished
+
+### Content Strategy & Brand Voice Setup
+
+**Created brand foundation documents:**
+- `business/CONTENT_STRATEGY.md` — Master brand voice, customer definition, content approach
+- `content/SENSORY_FRAMEWORK.md` — Wine attribute system (Intensity/Complexity/Acidity)
+
+**Key brand decisions documented:**
+- Voice: Friendly, personal, never talks down, anti-snob
+- Customer: People who drink wine (not "wine lovers"), want convenience/consistency
+- Sensory framework: Internal tool for consistency, not customer curriculum
+- Three dimensions clarified: Intensity=Volume, Complexity=Detail, Acidity=Brightness
+
+**Created CLAUDE.md orientation files:**
+- `projects/CLAUDE.md` — Root-level map of all project areas
+- `content/CLAUDE.md` — Content guidelines quick reference
+- `business/CLAUDE.md` — Strategy docs orientation
+- `marketing/CLAUDE.md` — Marketing orientation
+- `website/CLAUDE.md` — Frontend context
+
+**Bug logged:**
+- Packing slip wine info order wrong — should be: Pairings → Decanting → Attributes
+
+### Next Steps (Content Work)
+1. Update `Intensity EN.md` — light cleanup, remove jargon
+2. Update `Complexity EN.md` — replace falafel metaphor with detail metaphor
+3. Update `Acidity EN.md` — replace lemon squeeze with brightness metaphor
+4. Add video scripts to each blog post
+5. Update remaining content files (Reds Guide, Whites Guide, etc.)
+
+---
+
+# Previous Session - 2026-01-02
 
 ## What We Accomplished
 
