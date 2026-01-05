@@ -13,28 +13,30 @@ const PrintService = (function() {
   function _getJLMopsProductDetails(item, cacheHeaderMap) {
     const isValidLine = (line) => line && line.trim().replace(/\u200E|\u200F/g, '').length > 0;
 
+    // Order: Name, Harmonize (if exists), Contrast (if exists), Decant, combined I/C/A
+    // Pairing text comes pre-formatted from PackingSlipService (e.g. "Harmonize with: rich or intense flavors")
     const hebrewDetails = [
         item[cacheHeaderMap['spc_NameHe']] || '',
+        item[cacheHeaderMap['spc_HarmonizeHe']] || '',
+        item[cacheHeaderMap['spc_ContrastHe']] || '',
+        item[cacheHeaderMap['spc_Decant']] ? `מומלץ לאוורור - ${item[cacheHeaderMap['spc_Decant']]} דקות` : '',
         [
             item[cacheHeaderMap['spc_Intensity']] ? `עוצמה (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
             item[cacheHeaderMap['spc_Complexity']] ? `מורכבות (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
             item[cacheHeaderMap['spc_Acidity']] ? `חומציות (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
-        ].filter(p => p).join(', '),
-        item[cacheHeaderMap['spc_HarmonizeHe']] || '', // Use pre-formatted value
-        item[cacheHeaderMap['spc_ContrastHe']] || '',  // Use pre-formatted value
-        item[cacheHeaderMap['spc_Decant']] ? `מומלץ לאוורור - ${item[cacheHeaderMap['spc_Decant']]} דקות` : ''
+        ].filter(p => p).join(', ')
     ].filter(isValidLine).join('\n');
 
     const englishDetails = [
         item[cacheHeaderMap['spc_NameEn']] || '',
+        item[cacheHeaderMap['spc_HarmonizeEn']] || '',
+        item[cacheHeaderMap['spc_ContrastEn']] || '',
+        item[cacheHeaderMap['spc_Decant']] ? `Recommended decanting – ${item[cacheHeaderMap['spc_Decant']]} minutes.` : '',
         [
             item[cacheHeaderMap['spc_Intensity']] ? `Intensity (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
             item[cacheHeaderMap['spc_Complexity']] ? `Complexity (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
             item[cacheHeaderMap['spc_Acidity']] ? `Acidity (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
-        ].filter(p => p).join(', '),
-        item[cacheHeaderMap['spc_HarmonizeEn']] || '', // Use pre-formatted value
-        item[cacheHeaderMap['spc_ContrastEn']] || '',  // Use pre-formatted value
-        item[cacheHeaderMap['spc_Decant']] ? `Recommended decanting – ${item[cacheHeaderMap['spc_Decant']]} minutes.` : ''
+        ].filter(p => p).join(', ')
     ].filter(isValidLine).join('\n');
 
     return { englishDetails, hebrewDetails };
@@ -173,12 +175,29 @@ const PrintService = (function() {
             const orderDate = new Date(orderInfo[womHeaderMap['wom_OrderDate']]);
             const formattedOrderDate = !isNaN(orderDate) ? Utilities.formatDate(orderDate, Session.getScriptTimeZone(), "yyyy-MM-dd") : 'Invalid Date';
 
-            packingSlipBody.appendParagraph(`${shippingFirstName} ${shippingLastName}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(true).setFontSize(13);
-            packingSlipBody.appendParagraph(`${shippingAddress1}` + (shippingAddress2 ? `, ${shippingAddress2}` : '') + `, ${shippingCity}`).setAlignment(DocumentApp.HorizontalAlignment.CENTER).setBold(false).setFontSize(null);
-            packingSlipBody.appendParagraph(`Phone ${shippingPhone} טלפון`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-            packingSlipBody.appendParagraph(`Order ${orderNumber} הזמנה`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-            packingSlipBody.appendParagraph(`Date ${formattedOrderDate} תאריך`).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-            packingSlipBody.appendParagraph("");
+            // Compact header: 2 rows, RTL layout
+            // Value BEFORE Hebrew label, colon at end of label
+            const fullAddress = `${shippingAddress1}` + (shippingAddress2 ? `, ${shippingAddress2}` : '') + `, ${shippingCity}`;
+            const fullName = `${shippingFirstName} ${shippingLastName}`;
+
+            // Row 1: Date (left) | Order# (center) | Name (right)
+            // Row 2: Address (2/3) | Phone (1/3)
+            const headerTable = packingSlipBody.appendTable([
+                [`${formattedOrderDate} :תאריך`, `${orderNumber} :הזמנה`, `${fullName} :לכבוד`],
+                [`${fullAddress} :כתובת`, '', `${shippingPhone} :טלפון`]
+            ]);
+            headerTable.setBorderWidth(0);
+            // Col 0: 320 (address), Col 1: 100 (order# wider), Col 2: 130 (phone/name)
+            headerTable.setColumnWidth(0, 320).setColumnWidth(1, 100).setColumnWidth(2, 130);
+            // Right-align all cells for RTL, minimize spacing
+            for (let r = 0; r < headerTable.getNumRows(); r++) {
+                const row = headerTable.getRow(r);
+                for (let c = 0; c < row.getNumCells(); c++) {
+                    const para = row.getCell(c).getChild(0).asParagraph();
+                    para.setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+                    para.setSpacingBefore(0).setSpacingAfter(0).setLineSpacing(1);
+                }
+            }
 
             const table = packingSlipBody.appendTable([["Item", "Qty.כמ", "פריט"]]);
             const tableWidth = 550;
@@ -188,15 +207,17 @@ const PrintService = (function() {
             table.setAttributes(attrs);
             table.setBorderWidth(0).setColumnWidth(0, 250).setColumnWidth(1, 50).setColumnWidth(2, 250);
             const headerRow = table.getRow(0).setBold(true);
-            headerRow.getCell(0).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.LEFT);
-            headerRow.getCell(1).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-            headerRow.getCell(2).getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+            // Reduce spacing on header row
+            for (let c = 0; c < 3; c++) {
+              const para = headerRow.getCell(c).getChild(0).asParagraph();
+              para.setSpacingBefore(0).setSpacingAfter(2);
+              para.setAlignment(c === 0 ? DocumentApp.HorizontalAlignment.LEFT : c === 1 ? DocumentApp.HorizontalAlignment.CENTER : DocumentApp.HorizontalAlignment.RIGHT);
+            }
 
             productsForThisPage.forEach(item => {
               const { englishDetails, hebrewDetails } = _getJLMopsProductDetails(item, cacheHeaderMap);
               const webIdEn = String(item[cacheHeaderMap['spc_WebIdEn']] || '');
               const isBundle = bundleProductIds.has(webIdEn);
-              // Show quantity for packable items only; bundles show empty cell
               const quantity = isBundle ? '' : String(item[cacheHeaderMap['spc_Quantity']] || '0');
 
               const newRow = table.appendTableRow();
@@ -204,20 +225,28 @@ const PrintService = (function() {
               const cellQTY = newRow.appendTableCell();
               const cellHE = newRow.appendTableCell();
 
+              // Helper to add paragraph with minimal spacing
+              const addLine = (cell, text, align, bold) => {
+                const p = cell.appendParagraph(text).setAlignment(align).setBold(bold);
+                p.setSpacingBefore(0).setSpacingAfter(0).setLineSpacing(1);
+                return p;
+              };
+
               cellEN.clear();
               const enLines = englishDetails.trim().split('\n');
               if (enLines.length > 0) {
-                  cellEN.appendParagraph(enLines[0]).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(true);
-                  enLines.slice(1).forEach(line => cellEN.appendParagraph(line).setAlignment(DocumentApp.HorizontalAlignment.LEFT).setBold(false));
+                  addLine(cellEN, enLines[0], DocumentApp.HorizontalAlignment.LEFT, true);
+                  enLines.slice(1).forEach(line => addLine(cellEN, line, DocumentApp.HorizontalAlignment.LEFT, false));
               }
 
-              cellQTY.clear().appendParagraph(quantity).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+              cellQTY.clear();
+              addLine(cellQTY, quantity, DocumentApp.HorizontalAlignment.CENTER, false);
 
               cellHE.clear();
               const heLines = hebrewDetails.trim().split('\n');
               if (heLines.length > 0) {
-                  cellHE.appendParagraph(heLines[0]).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(true);
-                  heLines.slice(1).forEach(line => cellHE.appendParagraph(line).setAlignment(DocumentApp.HorizontalAlignment.RIGHT).setBold(false));
+                  addLine(cellHE, heLines[0], DocumentApp.HorizontalAlignment.RIGHT, true);
+                  heLines.slice(1).forEach(line => addLine(cellHE, line, DocumentApp.HorizontalAlignment.RIGHT, false));
               }
             });
 

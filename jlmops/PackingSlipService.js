@@ -69,6 +69,46 @@ const PackingSlipService = (function() {
                 row[cacheHeaderMap['spc_Acidity']] = productDetails[webDetMHeaders.indexOf('wdm_Acidity')];
                 row[cacheHeaderMap['spc_Decant']] = productDetails[webDetMHeaders.indexOf('wdm_Decant')];
 
+                // --- Build Pairing Text from Flags ---
+                const getFlag = (field) => {
+                    const idx = webDetMHeaders.indexOf(field);
+                    if (idx === -1) return false;
+                    const val = productDetails[idx];
+                    return val == 1 || val === true || val === '1' || val === 'true' || val === 'yes';
+                };
+
+                // Helper to join flavors with "or" / "או"
+                const joinWithOr = (arr, isEn) => {
+                    if (arr.length === 0) return '';
+                    if (arr.length === 1) return arr[0];
+                    return arr.slice(0, -1).join(', ') + (isEn ? ' or ' : ' או ') + arr[arr.length - 1];
+                };
+
+                // Build pairing text - matching WooCommerceFormatter pattern exactly
+                const harFlavorsEn = [];
+                const harFlavorsHe = [];
+                if (getFlag('wdm_PairHarMild')) { harFlavorsEn.push('mild'); harFlavorsHe.push('עדינים'); }
+                if (getFlag('wdm_PairHarRich')) { harFlavorsEn.push('rich'); harFlavorsHe.push('עשירים'); }
+                if (getFlag('wdm_PairHarIntense')) { harFlavorsEn.push('intense'); harFlavorsHe.push('עזים'); }
+                if (getFlag('wdm_PairHarSweet')) { harFlavorsEn.push('sweet'); harFlavorsHe.push('מתוקים'); }
+
+                row[cacheHeaderMap['spc_HarmonizeEn']] = harFlavorsEn.length > 0
+                    ? `Harmonize with ${joinWithOr(harFlavorsEn, true)} flavors` : '';
+                row[cacheHeaderMap['spc_HarmonizeHe']] = harFlavorsHe.length > 0
+                    ? `הרמוניה עם טעמים ${joinWithOr(harFlavorsHe, false)}` : '';
+
+                const conFlavorsEn = [];
+                const conFlavorsHe = [];
+                if (getFlag('wdm_PairConMild')) { conFlavorsEn.push('mild'); conFlavorsHe.push('עדינים'); }
+                if (getFlag('wdm_PairConRich')) { conFlavorsEn.push('rich'); conFlavorsHe.push('עשירים'); }
+                if (getFlag('wdm_PairConIntense')) { conFlavorsEn.push('intense'); conFlavorsHe.push('עזים'); }
+                if (getFlag('wdm_PairConSweet')) { conFlavorsEn.push('sweet'); conFlavorsHe.push('מתוקים'); }
+
+                row[cacheHeaderMap['spc_ContrastEn']] = conFlavorsEn.length > 0
+                    ? `Contrast with ${joinWithOr(conFlavorsEn, true)} flavors` : '';
+                row[cacheHeaderMap['spc_ContrastHe']] = conFlavorsHe.length > 0
+                    ? `קונטרסט עם טעמים ${joinWithOr(conFlavorsHe, false)}` : '';
+
                 // --- Build Product Details String ---
                 const detailsEn = [];
                 const intensity = row[cacheHeaderMap['spc_Intensity']];
