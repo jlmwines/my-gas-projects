@@ -844,7 +844,6 @@ const BundleService = (function () {
     const bundles = _loadBundles().filter(b => b.status === 'Active');
     const allSlots = _loadSlots();
 
-    // Build SKU to stock map from WebProdM
     const allConfig = ConfigService.getAllConfig();
 
     // Use config threshold if not specified
@@ -855,30 +854,63 @@ const BundleService = (function () {
 
     const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
     const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const webSheet = spreadsheet.getSheetByName('WebProdM');
 
-    if (!webSheet) {
-      LoggerService.warn(SERVICE_NAME, functionName, 'WebProdM sheet not found');
+    // 1. Read CmxProdM for Comax stock (source of truth)
+    const cmxSheet = spreadsheet.getSheetByName('CmxProdM');
+    if (!cmxSheet) {
+      LoggerService.warn(SERVICE_NAME, functionName, 'CmxProdM sheet not found');
       return [];
     }
 
-    const webData = webSheet.getDataRange().getValues();
-    const webSchema = allConfig['schema.data.WebProdM'];
-    const webHeaders = webSchema.headers.split(',');
-    const webCols = {};
-    webHeaders.forEach((h, i) => webCols[h] = i);
+    const cmxData = cmxSheet.getDataRange().getValues();
+    const cmxSchema = allConfig['schema.data.CmxProdM'];
+    const cmxHeaders = cmxSchema.headers.split(',');
+    const cmxCols = {};
+    cmxHeaders.forEach((h, i) => cmxCols[h] = i);
 
-    const stockMap = {};
+    const comaxStockMap = {};
     const productMap = {};
-    for (let i = 1; i < webData.length; i++) {
-      const row = webData[i];
-      const sku = String(row[webCols.wpm_SKU] || '');
+    for (let i = 1; i < cmxData.length; i++) {
+      const row = cmxData[i];
+      const sku = String(row[cmxCols.cpm_SKU] || '');
       if (sku) {
-        stockMap[sku] = Number(row[webCols.wpm_Stock]) || 0;
+        comaxStockMap[sku] = Number(row[cmxCols.cpm_Stock]) || 0;
         productMap[sku] = {
-          nameEn: row[webCols.wpm_PostTitle] || '',
-          price: Number(row[webCols.wpm_RegularPrice]) || 0
+          nameEn: '',
+          nameHe: row[cmxCols.cpm_NameHe] || '',
+          price: Number(row[cmxCols.cpm_Price]) || 0
         };
+      }
+    }
+
+    // 2. Read SysInventoryOnHold for on-hold order quantities
+    const onHoldSheet = spreadsheet.getSheetByName('SysInventoryOnHold');
+    const onHoldMap = {};
+    if (onHoldSheet && onHoldSheet.getLastRow() > 1) {
+      const onHoldData = onHoldSheet.getDataRange().getValues();
+      // Schema: sio_SKU, sio_OnHoldQuantity
+      for (let i = 1; i < onHoldData.length; i++) {
+        const sku = String(onHoldData[i][0] || '');
+        const qty = Number(onHoldData[i][1]) || 0;
+        if (sku) onHoldMap[sku] = qty;
+      }
+    }
+
+    // 3. Read WebProdM for English names only
+    const webSheet = spreadsheet.getSheetByName('WebProdM');
+    if (webSheet) {
+      const webData = webSheet.getDataRange().getValues();
+      const webSchema = allConfig['schema.data.WebProdM'];
+      const webHeaders = webSchema.headers.split(',');
+      const webCols = {};
+      webHeaders.forEach((h, i) => webCols[h] = i);
+
+      for (let i = 1; i < webData.length; i++) {
+        const row = webData[i];
+        const sku = String(row[webCols.wpm_SKU] || '');
+        if (sku && productMap[sku]) {
+          productMap[sku].nameEn = row[webCols.wpm_PostTitle] || '';
+        }
       }
     }
 
@@ -891,8 +923,13 @@ const BundleService = (function () {
       for (const slot of bundleSlots) {
         if (!slot.activeSKU) continue;
 
-        const stock = stockMap[slot.activeSKU];
-        if (stock !== undefined && stock < threshold) {
+        // Calculate available stock: Comax stock minus on-hold quantities
+        const comaxStock = comaxStockMap[slot.activeSKU];
+        if (comaxStock === undefined) continue; // SKU not in Comax
+        const onHoldQty = onHoldMap[slot.activeSKU] || 0;
+        const stock = comaxStock - onHoldQty;
+
+        if (stock < threshold) {
           // Get suggestions
           const suggestions = getEligibleProducts(slot.slotId, {
             limit: 5,
