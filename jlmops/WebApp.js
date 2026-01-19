@@ -44,9 +44,9 @@ function doGet(e) {
 function getDashboardForRole(role) {
   switch (role) {
     case 'admin':
-      return include('AdminDashboardView.html');
     case 'manager':
-      return include('ManagerDashboardView.html');
+      // Both roles now use the unified V2 dashboard
+      return include('AdminDashboardView_v2.html');
     default:
       return '<div>Invalid role selected.</div>';
   }

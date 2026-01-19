@@ -28,6 +28,20 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 - When discussing a plan, focus on the specific point - do NOT repeat the entire plan.
 - Plans go in `jlmops/plans/` as permanent documents, not conversation output.
 
+**Centralized Assets (in `.claude/` at project root `C:\Users\B\my-gas-projects\.claude\`):**
+
+All projects share these files. Sessions can access them regardless of working directory.
+
+| File | Purpose | Command |
+|------|---------|---------|
+| `wishlist.md` | Feature ideas for all projects (jlmops, web, marketing, content) | `/wish [project] item` |
+| `bugs.md` | Known bugs for all projects | `/bug [project] item` |
+| `commands/` | Slash command definitions | - |
+| `project-context.md` | High-level project overview | - |
+| `SESSION_SUMMARY.md` | Recent session work | - |
+
+Project defaults to `jlmops` if not specified. Example: `/wish web exit popup` adds to web section.
+
 ## Communication Style
 
 **Be concise:**

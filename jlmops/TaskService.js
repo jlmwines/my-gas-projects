@@ -9,6 +9,16 @@
 const TaskService = (function() {
 
   /**
+   * Gets current date at midnight Israel time.
+   * Prevents timezone issues when creating task dates near midnight.
+   */
+  function _getIsraelMidnight() {
+    const tz = Session.getScriptTimeZone(); // Asia/Jerusalem
+    const todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    return new Date(todayStr + 'T00:00:00');
+  }
+
+  /**
    * Gets user email by role from system.users config.
    * Case-insensitive matching (e.g., 'admin' matches 'Admin').
    * @param {string} role The role to find (e.g., 'admin', 'manager').
@@ -179,7 +189,7 @@ const TaskService = (function() {
       newRow[headers.indexOf('st_LinkedEntityId')] = linkedEntityId;
       const linkedEntityNameIdx = headers.indexOf('st_LinkedEntityName');
       if (linkedEntityNameIdx > -1) newRow[linkedEntityNameIdx] = linkedEntityName;
-      newRow[headers.indexOf('st_CreatedDate')] = new Date();
+      newRow[headers.indexOf('st_CreatedDate')] = _getIsraelMidnight();
       newRow[headers.indexOf('st_Notes')] = notes;
 
       // Auto-route to project based on topic (if not explicitly provided)
@@ -210,7 +220,7 @@ const TaskService = (function() {
       }
 
       // --- Date and Status Handling ---
-      const today = new Date();
+      const today = _getIsraelMidnight();
       const duePattern = taskTypeConfig.due_pattern;
       const startDateIdx = headers.indexOf('st_StartDate');
       const dueDateIdx = headers.indexOf('st_DueDate');
@@ -322,7 +332,7 @@ const TaskService = (function() {
 
       const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
       sheet.getRange(sheetRow, statusCol + 1).setValue('Done');
-      sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
+      sheet.getRange(sheetRow, doneDateCol + 1).setValue(_getIsraelMidnight());
 
       logger.info('TaskService', 'completeTask', `Task '${taskId}' marked as 'Done'.`);
 
@@ -414,7 +424,7 @@ const TaskService = (function() {
 
       // If the new status is 'Done' or 'Closed', also set the DoneDate
       if ((newStatus === 'Done' || newStatus === 'Closed') && doneDateCol !== -1) {
-        sheet.getRange(sheetRow, doneDateCol + 1).setValue(new Date());
+        sheet.getRange(sheetRow, doneDateCol + 1).setValue(_getIsraelMidnight());
       } else if ((newStatus !== 'Done' && newStatus !== 'Closed') && doneDateCol !== -1) {
         // If status is changed from a 'Done/Closed' state to active, clear the DoneDate
         sheet.getRange(sheetRow, doneDateCol + 1).clearContent();

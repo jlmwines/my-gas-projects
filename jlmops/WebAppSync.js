@@ -826,11 +826,13 @@ function getInventoryReceiptsInfo() {
     if (receiptsFolderConfig && receiptsFolderConfig.id) {
       folderUrl = `https://drive.google.com/drive/folders/${receiptsFolderConfig.id}`;
     }
-    logger.info(serviceName, functionName, `Found ${count} inventory receipts files. Folder URL: ${folderUrl}`);
-    return { count: count, folderUrl: folderUrl };
+    // Also get inventory count reviews pending
+    const reviewCount = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length;
+    logger.info(serviceName, functionName, `Found ${count} invoice files, ${reviewCount} inventory reviews. Folder URL: ${folderUrl}`);
+    return { count: count, folderUrl: folderUrl, reviewCount: reviewCount };
   } catch (e) {
     logger.error(serviceName, functionName, `Error getting inventory receipts info: ${e.message}`, e);
-    return { count: 0, folderUrl: null, error: e.message };
+    return { count: 0, folderUrl: null, reviewCount: 0, error: e.message };
   }
 }
 

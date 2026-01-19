@@ -380,13 +380,29 @@ function HousekeepingService() {
   const EXPORT_RETENTION_DAYS = 7;
   const OLD_EXPORTS_RETENTION_DAYS = 90;
   const ARCHIVE_FOLDER_RETENTION_DAYS = 365;
+  const PRINTME_RETENTION_DAYS = 7; // Days to keep packing slips before trashing
   const MIN_LOG_ROWS = 1000; // Keep this many recent log rows regardless of age
   const IMPORT_FILE_RETENTION_DAYS = 2; // Days to keep timestamped import files
 
+  /**
+   * Gets a threshold date for comparisons, normalized to midnight Israel time.
+   * This prevents off-by-one errors when comparing dates created at different times of day.
+   */
   function _getThresholdDate(daysAgo) {
-    const date = new Date();
-    date.setDate(date.getDate() - daysAgo);
-    return date;
+    const tz = Session.getScriptTimeZone(); // Asia/Jerusalem
+    const todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    const todayMidnight = new Date(todayStr + 'T00:00:00');
+    todayMidnight.setDate(todayMidnight.getDate() - daysAgo);
+    return todayMidnight;
+  }
+
+  /**
+   * Gets current date at midnight Israel time (for task creation dates).
+   */
+  function _getIsraelDate() {
+    const tz = Session.getScriptTimeZone(); // Asia/Jerusalem
+    const todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+    return new Date(todayStr + 'T00:00:00');
   }
 
   /**
@@ -615,14 +631,26 @@ function HousekeepingService() {
     const functionName = 'performDailyMaintenance';
     logger.info('HousekeepingService', functionName, "Starting daily maintenance.");
 
-    // Phase 1: Cleanup
-    this.cleanOldLogs();
-    this.archiveCompletedTasks();
-    this.archiveCompletedOrders();
-    this.purgeOldJobs();
-    this.manageFileLifecycle();
-    this.cleanupImportFiles();
-    this.formatDataSheets();
+    // Phase 1: Cleanup (wrapped to prevent single failure from stopping all tasks)
+    const phase1Failures = [];
+    const phase1Tasks = [
+      { name: 'cleanOldLogs', fn: () => this.cleanOldLogs() },
+      { name: 'archiveCompletedTasks', fn: () => this.archiveCompletedTasks() },
+      { name: 'archiveCompletedOrders', fn: () => this.archiveCompletedOrders() },
+      { name: 'purgeOldJobs', fn: () => this.purgeOldJobs() },
+      { name: 'manageFileLifecycle', fn: () => this.manageFileLifecycle() },
+      { name: 'cleanupImportFiles', fn: () => this.cleanupImportFiles() },
+      { name: 'formatDataSheets', fn: () => this.formatDataSheets() }
+    ];
+
+    for (const task of phase1Tasks) {
+      try {
+        task.fn();
+      } catch (e) {
+        phase1Failures.push(task.name);
+        logger.error('HousekeepingService', functionName, `${task.name} failed: ${e.message}`);
+      }
+    }
 
     // Phase 2: Validation & Testing
     let validationResult = null;
@@ -678,17 +706,19 @@ function HousekeepingService() {
     }
 
     // Update system health singleton task (AFTER all phases complete)
+    const allFailures = [...phase1Failures, ...phase3Failures];
     try {
+      const phase1Passed = phase1Failures.length === 0;
       const phase2Passed = validationResult && testResult && schemaResult;
       const phase3Passed = phase3Failures.length === 0;
-      const allPassed = phase2Passed && phase3Passed;
+      const allPassed = phase1Passed && phase2Passed && phase3Passed;
       const criticalSchemaIssues = schemaResult
         ? schemaResult.discrepancies.filter(d => d.severity === 'CRITICAL').length
         : -1;
 
       let status = 'success';
       if (!allPassed) {
-        status = phase3Failures.length > 0 ? 'failed' : 'partial';
+        status = allFailures.length > 0 ? 'failed' : 'partial';
       }
 
       TaskService.upsertSingletonTask(
@@ -705,6 +735,7 @@ function HousekeepingService() {
             validation_issues: validationResult ? validationResult.failureCount : -1,
             schema_status: schemaResult ? schemaResult.status : 'error',
             schema_critical: criticalSchemaIssues,
+            phase1_failures: phase1Failures.length > 0 ? phase1Failures : null,
             phase3_failures: phase3Failures.length > 0 ? phase3Failures : null
           }
         }
@@ -714,8 +745,8 @@ function HousekeepingService() {
     }
 
     logger.info('HousekeepingService', functionName,
-      phase3Failures.length > 0
-        ? `Daily maintenance completed with failures: ${phase3Failures.join(', ')}`
+      allFailures.length > 0
+        ? `Daily maintenance completed with failures: ${allFailures.join(', ')}`
         : "Daily maintenance completed.");
   };
 
@@ -1473,6 +1504,7 @@ function HousekeepingService() {
    * 1. Source files are exempt (kept for manual re-processing).
    * 2. Trashes old files from the dedicated Archive folder.
    * 3. Moves old export files to a separate '_Old_Exports' folder and then trashes very old files from there.
+   * 4. Trashes old packing slips from the printme folder.
    */
   this.manageFileLifecycle = function() {
     logger.info('HousekeepingService', 'manageFileLifecycle', "Starting file lifecycle management.");
@@ -1495,15 +1527,20 @@ function HousekeepingService() {
         const archiveFiles = archiveFolder.getFiles();
         const archiveThresholdDate = _getThresholdDate(ARCHIVE_FOLDER_RETENTION_DAYS);
         let trashedArchiveFiles = 0;
+        let skippedArchiveFiles = 0;
         while (archiveFiles.hasNext()) {
           const file = archiveFiles.next();
           if (file.getLastUpdated() < archiveThresholdDate) {
-            file.setTrashed(true);
-            trashedArchiveFiles++;
+            try {
+              file.setTrashed(true);
+              trashedArchiveFiles++;
+            } catch (fileError) {
+              skippedArchiveFiles++;
+            }
           }
         }
-        if (trashedArchiveFiles > 0) {
-          logger.info('HousekeepingService', 'manageFileLifecycle', `Trashed ${trashedArchiveFiles} old files from Archive folder.`);
+        if (trashedArchiveFiles > 0 || skippedArchiveFiles > 0) {
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Archive cleanup: ${trashedArchiveFiles} trashed, ${skippedArchiveFiles} skipped (no permission).`);
         }
       } else {
         logger.warn('HousekeepingService', 'manageFileLifecycle', "System setting 'system.folder.archive' not found. Skipping archive folder cleanup.");
@@ -1529,21 +1566,25 @@ function HousekeepingService() {
         const oldExportTrashThresholdDate = _getThresholdDate(OLD_EXPORTS_RETENTION_DAYS);
 
         let movedExportFiles = 0;
+        let skippedMoveFiles = 0;
         let trashedOldExportFiles = 0;
+        let skippedTrashFiles = 0;
 
         // Move files from the main exports folder to the old_exports folder if they are older than EXPORT_RETENTION_DAYS
         const currentExportFiles = exportsFolder.getFiles();
         while (currentExportFiles.hasNext()) {
           const file = currentExportFiles.next();
-          // Avoid moving the _Old_Exports folder itself (though getFiles shouldn't pick it up)
-          // and verify it's not a folder
           if (file.getLastUpdated() < exportMoveThresholdDate) {
-            file.moveTo(oldExportsFolder);
-            movedExportFiles++;
+            try {
+              file.moveTo(oldExportsFolder);
+              movedExportFiles++;
+            } catch (fileError) {
+              skippedMoveFiles++;
+            }
           }
         }
-        if (movedExportFiles > 0) {
-          logger.info('HousekeepingService', 'manageFileLifecycle', `Moved ${movedExportFiles} files from Exports to _Old_Exports folder.`);
+        if (movedExportFiles > 0 || skippedMoveFiles > 0) {
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Exports move: ${movedExportFiles} moved, ${skippedMoveFiles} skipped (no permission).`);
         }
 
         // Trash files from the old_exports folder if they are older than OLD_EXPORTS_RETENTION_DAYS
@@ -1551,17 +1592,48 @@ function HousekeepingService() {
         while (oldExportedFiles.hasNext()) {
           const file = oldExportedFiles.next();
           if (file.getLastUpdated() < oldExportTrashThresholdDate) {
-            file.setTrashed(true);
-            trashedOldExportFiles++;
+            try {
+              file.setTrashed(true);
+              trashedOldExportFiles++;
+            } catch (fileError) {
+              skippedTrashFiles++;
+            }
           }
         }
-        if (trashedOldExportFiles > 0) {
-          logger.info('HousekeepingService', 'manageFileLifecycle', `Trashed ${trashedOldExportFiles} very old files from _Old_Exports folder.`);
+        if (trashedOldExportFiles > 0 || skippedTrashFiles > 0) {
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Old exports cleanup: ${trashedOldExportFiles} trashed, ${skippedTrashFiles} skipped (no permission).`);
         }
 
       } else {
         logger.warn('HousekeepingService', 'manageFileLifecycle', "System setting 'system.folder.jlmops_exports' not found. Skipping export folder management.");
       }
+
+      // 4. Trashing old packing slips from the printme folder
+      const printmeFolderId = allConfig['printing.output.folder_id']?.id;
+      if (printmeFolderId) {
+        const printmeFolder = DriveApp.getFolderById(printmeFolderId);
+        const printmeFiles = printmeFolder.getFiles();
+        const printmeThresholdDate = _getThresholdDate(PRINTME_RETENTION_DAYS);
+        let trashedPrintmeFiles = 0;
+        let skippedFiles = 0;
+        while (printmeFiles.hasNext()) {
+          const file = printmeFiles.next();
+          if (file.getLastUpdated() < printmeThresholdDate) {
+            try {
+              file.setTrashed(true);
+              trashedPrintmeFiles++;
+            } catch (fileError) {
+              skippedFiles++;
+            }
+          }
+        }
+        if (trashedPrintmeFiles > 0 || skippedFiles > 0) {
+          logger.info('HousekeepingService', 'manageFileLifecycle', `Printme cleanup: ${trashedPrintmeFiles} trashed, ${skippedFiles} skipped (no permission).`);
+        }
+      } else {
+        logger.warn('HousekeepingService', 'manageFileLifecycle', "System setting 'printing.output.folder_id' not found. Skipping printme folder cleanup.");
+      }
+
       return true;
     } catch (e) {
       logger.error('HousekeepingService', 'manageFileLifecycle', `Error during file lifecycle management: ${e.message}`, e);
@@ -1605,7 +1677,8 @@ function HousekeepingService() {
       // Patterns for timestamped files that should be cleaned up
       const cleanupPatterns = [
         /^product_export_.*\.csv$/i,      // product_export_2025-12-10-06-21-01.csv
-        /^he_product_export.*\.csv$/i     // he_product_export_2025-12-10-06-21-01.csv
+        /^he_product_export.*\.csv$/i,    // he_product_export_2025-12-10-06-21-01.csv
+        /^order_export_.*\.csv$/i         // order_export_2025-12-10-06-21-01.csv
       ];
 
       // Files to always keep (legacy format)

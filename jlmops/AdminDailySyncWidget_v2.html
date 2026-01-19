@@ -33,14 +33,15 @@
 
         <!-- 6-Step Display (Invoices + 5 Steps) -->
         <div class="row row-cols-6 g-2 mb-3">
-            <!-- Step 0: Invoices -->
+            <!-- Step 0: Pre-Sync Status -->
             <div class="col">
                 <div class="card h-100" id="invoiceCard">
                     <div class="card-body p-2 text-center">
-                        <h6 class="card-title sync-card-title">Comax Invoices</h6>
+                        <h6 class="card-title sync-card-title">Pre-Sync</h6>
                         <div id="invoiceIcon" class="sync-icon">📁</div>
                         <div id="invoiceMessage" class="small">
-                            <span id="invoiceCount" class="fw-bold">...</span>
+                            <div><span id="invoiceCount" class="fw-bold">...</span></div>
+                            <div><span id="reviewCount" class="fw-bold">...</span></div>
                         </div>
                         <div id="invoiceAction" class="mt-1"></div>
                     </div>
@@ -110,7 +111,7 @@
         <!-- Shared Message & Action Area -->
         <div class="card mt-3 border-primary">
             <div class="card-body py-3 row align-items-center">
-                <div id="sharedMessage" class="col-4" style="font-size: 1.1rem;">
+                <div id="sharedMessage" class="col-4">
                     <span class="text-muted">Ready to start sync</span>
                 </div>
                 <div id="sharedAction" class="col-4 text-center">
@@ -121,7 +122,7 @@
         </div>
 
         <!-- Progress Log -->
-        <div id="progressLog" class="mt-2 small text-muted"></div>
+        <div id="progressLog" class="mt-2 text-muted" style="font-size: 1rem;"></div>
 
         <!-- Error Display -->
         <div id="errorDisplay" class="alert alert-danger d-none"></div>
@@ -187,7 +188,7 @@
 
         var icon = isSuccess ? '✓' : '•';
         var cls = isSuccess ? 'text-success' : 'text-muted';
-        var time = new Date().toLocaleTimeString();
+        var time = new Date().toLocaleTimeString('he-IL', { timeZone: 'Asia/Jerusalem' });
         progressEntries.push('<span class="' + cls + '">' + icon + ' ' + time + ' - ' + text + '</span>');
         if (progressEntries.length > 10) progressEntries.shift();
         document.getElementById('progressLog').innerHTML = progressEntries.join('<br>');
@@ -286,9 +287,9 @@
             previousStepStatuses['step' + i] = stepStatus;
         }
 
-        // Update footer with date and time
+        // Update footer with date and time (Israel timezone)
         document.getElementById('footerStatus').textContent = status.lastUpdated ?
-            'Last updated: ' + new Date(status.lastUpdated).toLocaleString() : 'Ready';
+            'Last updated: ' + new Date(status.lastUpdated).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }) : 'Ready';
 
         // Update shared message/action area
         updateSharedArea(status);
@@ -417,6 +418,7 @@
         google.script.run
             .withSuccessHandler(function(info) {
                 var countEl = document.getElementById('invoiceCount');
+                var reviewEl = document.getElementById('reviewCount');
                 var actionEl = document.getElementById('invoiceAction');
                 var iconEl = document.getElementById('invoiceIcon');
                 var card = document.getElementById('invoiceCard');
@@ -424,26 +426,44 @@
                 // Reset card styling
                 card.className = 'card h-100';
 
+                var hasIssues = false;
+
+                // Invoice count display
                 if (info.count === 0) {
-                    countEl.innerHTML = '<span class="text-success">0 files</span>';
-                    iconEl.textContent = '✅';
-                    actionEl.innerHTML = '';
-                    card.classList.add('border-primary'); // Blue border for 0 files
+                    countEl.innerHTML = '<span class="text-success">Invoices: 0</span>';
                 } else if (info.count > 0) {
-                    countEl.innerHTML = '<span class="text-warning">' + info.count + ' file' + (info.count > 1 ? 's' : '') + '</span>';
+                    countEl.innerHTML = '<span class="text-warning">Invoices: ' + info.count + '</span>';
+                    hasIssues = true;
+                } else {
+                    countEl.innerHTML = '<span class="text-muted">Invoices: N/A</span>';
+                }
+
+                // Review count display
+                var reviewCount = info.reviewCount || 0;
+                if (reviewCount === 0) {
+                    reviewEl.innerHTML = '<span class="text-success">Reviews: 0</span>';
+                } else {
+                    reviewEl.innerHTML = '<span class="text-warning">Reviews: ' + reviewCount + '</span>';
+                    hasIssues = true;
+                }
+
+                // Icon and card styling based on overall status
+                if (hasIssues) {
                     iconEl.textContent = '⚠️';
-                    card.classList.add('border-warning'); // Warning border for pending files
+                    card.classList.add('border-warning');
                     if (info.folderUrl) {
                         actionEl.innerHTML = '<a href="' + info.folderUrl + '" target="_blank" class="small fw-bold text-primary text-decoration-none">Open Folder</a>';
                     }
                 } else {
-                    countEl.innerHTML = '<span class="text-muted">N/A</span>';
-                    iconEl.textContent = '📁';
+                    iconEl.textContent = '✅';
+                    card.classList.add('border-primary');
+                    actionEl.innerHTML = '';
                 }
             })
             .withFailureHandler(function(err) {
-                console.error('Failed to load invoice count:', err);
+                console.error('Failed to load pre-sync info:', err);
                 document.getElementById('invoiceCount').innerHTML = '<span class="text-danger">Error</span>';
+                document.getElementById('reviewCount').innerHTML = '';
             })
             .getInventoryReceiptsInfo();
     }

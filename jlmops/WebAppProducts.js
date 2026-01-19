@@ -32,7 +32,7 @@ function WebAppProducts_getProductsWidgetData() {
 
         // 1. Detail Updates (Vintage Mismatch)
         if (type === 'task.validation.vintage_mismatch') {
-          if (status === 'New') {
+          if (status === 'New' || status === 'Assigned') {
             result.detailUpdates.edit++;
           } else if (status === 'Review') {
             result.detailUpdates.review++;

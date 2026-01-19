@@ -120,6 +120,19 @@
     return '<span class="text-muted">?</span>';
   }
 
+  function formatTimeAgo(timestamp) {
+    if (!timestamp) return '';
+    var now = new Date();
+    var then = new Date(timestamp);
+    var diffMs = now - then;
+    var diffMins = Math.floor(diffMs / 60000);
+    var diffHours = Math.floor(diffMs / 3600000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return diffMins + ' min ago';
+    if (diffHours < 24) return diffHours + ' hr ago';
+    return Math.floor(diffMs / 86400000) + ' days ago';
+  }
+
   function renderSystemHealthCard(health) {
     var el = document.getElementById('card-system');
 
@@ -128,7 +141,22 @@
       return;
     }
 
-    var html = '<table class="table table-sm mb-0"><tbody>';
+    var html = '';
+
+    // Urgent Alerts first (most important)
+    if (health.urgentAlerts && health.urgentAlerts.length > 0) {
+      html += '<div class="mb-2">';
+      health.urgentAlerts.forEach(function(alert) {
+        var alertClass = alert.severity === 'Critical' ? 'bg-danger text-white' : 'bg-warning';
+        html += '<div class="p-2 mb-1 rounded small ' + alertClass + '">';
+        html += '<strong>' + alert.message + '</strong>';
+        html += '<div style="font-size: 0.75rem;">' + formatTimeAgo(alert.timestamp) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<table class="table table-sm mb-0"><tbody>';
 
     // Daily Sync
     if (health.dailySync) {
@@ -181,6 +209,12 @@
     }
 
     var html = '<table class="table table-sm mb-0"><tbody>';
+
+    // Packing slips - highlight if there are any ready
+    var packingClass = orders.packingReady > 0 ? 'table-warning' : '';
+    var packingIcon = orders.packingReady > 0 ? '<span class="text-warning">&#9888;</span> ' : '';
+    html += '<tr class="' + packingClass + '"><td>' + packingIcon + 'Packing Slips</td><td class="text-right"><strong>' + orders.packingReady + '</strong></td></tr>';
+
     html += '<tr><td>New Orders</td><td class="text-right"><strong>' + orders.newOrders + '</strong></td></tr>';
     html += '<tr><td>Orders to Export</td><td class="text-right"><strong>' + orders.ordersToExport + '</strong></td></tr>';
     html += '<tr><td>On Hold</td><td class="text-right"><strong>' + orders.onHold + '</strong></td></tr>';
@@ -258,7 +292,7 @@
       return;
     }
 
-    var html = '<table class="table table-sm mb-0"><thead><tr>';
+    var html = '<table class="table table-sm table-hover mb-0"><thead><tr>';
     html += '<th>Task</th><th>Entity</th><th>Due</th>';
     html += '</tr></thead><tbody>';
 
@@ -272,7 +306,7 @@
 
       var dueDisplay = formatDate(task.dueDate);
 
-      html += '<tr class="' + priorityClass + '">';
+      html += '<tr class="task-row ' + priorityClass + '" data-task-id="' + task.id + '" data-project-id="' + (task.projectId || '') + '" style="cursor:pointer;">';
       html += '<td title="' + task.typeId + '">' + task.name + '</td>';
       html += '<td title="' + task.entityId + '">' + entityDisplay + '</td>';
       html += '<td>' + dueDisplay + '</td>';
@@ -281,6 +315,21 @@
 
     html += '</tbody></table>';
     el.innerHTML = html;
+
+    // Add click handlers to navigate to task in Projects view
+    el.querySelectorAll('.task-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var taskId = this.dataset.taskId;
+        var projectId = this.dataset.projectId;
+        // Store selection for Projects view to pick up
+        sessionStorage.setItem('selectTaskId', taskId);
+        sessionStorage.setItem('selectProjectId', projectId);
+        // Navigate to Projects view
+        if (window.parent && window.parent.loadView) {
+          window.parent.loadView('AdminProjects');
+        }
+      });
+    });
   }
 
   // Load on init

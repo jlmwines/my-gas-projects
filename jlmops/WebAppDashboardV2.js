@@ -42,9 +42,8 @@ function _getSystemHealthData() {
   try {
     const healthTask = TaskService.findOpenTaskByType('task.system.health_status', '_SYSTEM');
 
-    // Get sync state
-    const syncSession = SyncStateService.getActiveSession();
-    const syncStatus = _getSyncStatus(syncSession);
+    // Get sync status from the daily sync task (not active session)
+    const syncStatus = _getLastSyncStatus();
 
     if (!healthTask || !healthTask.notes) {
       return {
@@ -53,11 +52,13 @@ function _getSystemHealthData() {
         schemaValidation: { status: 'unknown', timestamp: null },
         dataValidation: { status: 'unknown', timestamp: null, issues: null },
         unitTests: { status: 'unknown', timestamp: null, result: null },
-        dailySync: syncStatus
+        dailySync: syncStatus,
+        urgentAlerts: []
       };
     }
 
     const notes = typeof healthTask.notes === 'string' ? JSON.parse(healthTask.notes) : healthTask.notes;
+    const urgentAlerts = notes.urgentAlerts || [];
     const hk = notes.last_housekeeping || {};
 
     // Determine individual statuses
@@ -96,7 +97,8 @@ function _getSystemHealthData() {
         timestamp: hk.timestamp || null,
         result: hk.unit_tests || null
       },
-      dailySync: syncStatus
+      dailySync: syncStatus,
+      urgentAlerts: urgentAlerts
     };
   } catch (e) {
     return {
@@ -107,32 +109,84 @@ function _getSystemHealthData() {
 }
 
 /**
- * Gets sync status for dashboard display.
+ * Gets sync status from the daily sync task.
+ * Checks for both open (in progress) and recently completed sync tasks.
  * @private
  */
-function _getSyncStatus(syncSession) {
-  if (!syncSession || !syncSession.sessionId) {
+function _getLastSyncStatus() {
+  try {
+    // First check for an open (in-progress) sync task
+    const openSyncTask = TaskService.findOpenTaskByType('task.sync.daily_session', null);
+    if (openSyncTask) {
+      return {
+        status: 'partial',
+        timestamp: openSyncTask.notes ? _parseTimestamp(openSyncTask.notes) : null,
+        stage: 'IN_PROGRESS'
+      };
+    }
+
+    // No open task - find the most recently completed sync task
+    const allConfig = ConfigService.getAllConfig();
+    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+    const sheetNames = allConfig['system.sheet_names'];
+    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+
+    if (!taskSheet || taskSheet.getLastRow() <= 1) {
+      return { status: 'unknown', timestamp: null, stage: null };
+    }
+
+    const data = taskSheet.getDataRange().getValues();
+    const headers = data[0];
+    const typeIdx = headers.indexOf('st_TaskTypeId');
+    const statusIdx = headers.indexOf('st_Status');
+    const doneIdx = headers.indexOf('st_DoneDate');
+
+    // Find the most recent completed sync task
+    let lastSyncDate = null;
+    let lastSyncStatus = 'unknown';
+
+    for (let i = data.length - 1; i >= 1; i--) {
+      const row = data[i];
+      if (row[typeIdx] === 'task.sync.daily_session') {
+        const taskStatus = row[statusIdx];
+        const doneDate = row[doneIdx];
+
+        if (taskStatus === 'Done' && doneDate) {
+          lastSyncDate = new Date(doneDate);
+          lastSyncStatus = 'ok';
+          break;
+        } else if (taskStatus === 'Cancelled') {
+          lastSyncDate = doneDate ? new Date(doneDate) : null;
+          lastSyncStatus = 'error';
+          break;
+        }
+      }
+    }
+
+    return {
+      status: lastSyncStatus,
+      timestamp: lastSyncDate ? lastSyncDate.toISOString() : null,
+      stage: lastSyncStatus === 'ok' ? 'COMPLETE' : (lastSyncStatus === 'error' ? 'FAILED' : null)
+    };
+
+  } catch (e) {
+    LoggerService.warn('WebAppDashboardV2', '_getLastSyncStatus', 'Error getting sync status: ' + e.message);
     return { status: 'unknown', timestamp: null, stage: null };
   }
+}
 
-  const stage = syncSession.currentStage;
-  let status = 'unknown';
-
-  if (stage === 'COMPLETE') {
-    status = 'ok';
-  } else if (stage === 'FAILED') {
-    status = 'error';
-  } else if (stage === 'IDLE') {
-    status = 'unknown';
-  } else {
-    status = 'partial'; // In progress
+/**
+ * Helper to parse timestamp from task notes.
+ * @private
+ */
+function _parseTimestamp(notes) {
+  if (!notes) return null;
+  try {
+    const parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
+    return parsed.timestamp || parsed.startTime || null;
+  } catch (e) {
+    return null;
   }
-
-  return {
-    status: status,
-    timestamp: syncSession.lastUpdated || null,
-    stage: stage
-  };
 }
 
 /**
@@ -142,11 +196,38 @@ function _getSyncStatus(syncSession) {
 function _getOrdersData() {
   try {
     const orderService = new OrderService(ProductService);
+
+    // Get packing slips count from SysOrdLog
+    let packingReady = 0;
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
+      const ordLogSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysOrdLog);
+
+      if (ordLogSheet && ordLogSheet.getLastRow() > 1) {
+        const data = ordLogSheet.getDataRange().getValues();
+        const headers = data[0];
+        const statusIdx = headers.indexOf('sol_PackingStatus');
+
+        if (statusIdx !== -1) {
+          for (let i = 1; i < data.length; i++) {
+            if (data[i][statusIdx] === 'Ready') {
+              packingReady++;
+            }
+          }
+        }
+      }
+    } catch (packErr) {
+      LoggerService.warn('WebAppDashboardV2', '_getOrdersData', 'Could not get packing count: ' + packErr.message);
+    }
+
     return {
       newOrders: orderService.getNewOrdersCount(),
       ordersToExport: orderService.getComaxExportOrderCount(),
       onHold: orderService.getOnHoldOrderCount(),
-      processing: orderService.getProcessingOrderCount()
+      processing: orderService.getProcessingOrderCount(),
+      packingReady: packingReady
     };
   } catch (e) {
     return {
@@ -154,6 +235,7 @@ function _getOrdersData() {
       ordersToExport: 0,
       onHold: 0,
       processing: 0,
+      packingReady: 0,
       error: e.message
     };
   }
@@ -202,9 +284,9 @@ function _getInventoryData(allTasks) {
 function _getProductsData(allTasks) {
   try {
     return {
-      vintageUpdate: _countTasksByType(allTasks, 'task.validation.vintage_mismatch'),
-      detailReview: _countTasksByType(allTasks, 'task.validation.field_mismatch'),
-      newProductSuggestion: _countTasksByType(allTasks, 'task.onboarding.suggestion'),
+      vintageUpdate: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['New', 'Assigned']),
+      detailReview: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['Review']),
+      newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New']),
       newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
       newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
       bundleCritical: _countTasksByType(allTasks, 'task.bundle.critical_inventory'),

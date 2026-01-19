@@ -1,7 +1,7 @@
 <div class="container-fluid">
   <div class="row">
     <!-- LEFT COLUMN: Navigation -->
-    <div class="col-md-8">
+    <div id="list-column" class="col-md-8">
       <div class="card" style="height: calc(100vh - 120px);">
         <!-- Header: Nav + Breadcrumb + New button -->
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
@@ -10,7 +10,10 @@
             <button id="btn-back" class="btn btn-sm btn-light mr-2" title="Back" style="display:none;">←</button>
             <span id="breadcrumb">Projects</span>
           </div>
-          <button id="btn-new" class="btn btn-sm btn-light">+ Project</button>
+          <div>
+            <button id="btn-new" class="btn btn-sm btn-light mr-1">+ Project</button>
+            <button id="btn-toggle-panel" class="btn btn-sm btn-light" title="Expand panel">◨</button>
+          </div>
         </div>
 
         <!-- Subheader: Column headers + filters (Projects mode) -->
@@ -37,18 +40,18 @@
           <div class="row small font-weight-bold text-muted align-items-center">
             <div class="col-3">Title</div>
             <div class="col-2">
-              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
                 <option value="all">Assignee</option>
               </select>
             </div>
-            <div class="col-1">
-              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
+            <div class="col-2">
+              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
                 <option value="all">Status</option>
               </select>
             </div>
-            <div class="col-2">
-              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;">
-                <option value="all">Priority</option>
+            <div class="col-1">
+              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
+                <option value="all">Pri</option>
               </select>
             </div>
             <div class="col-1">
@@ -57,7 +60,7 @@
             <div class="col-1">Done</div>
             <div class="col-2 text-right">
               <label class="mb-0 small" style="font-weight:normal;">
-                <input type="checkbox" id="toggle-show-all"> Show all
+                <input type="checkbox" id="toggle-show-all"> All
               </label>
             </div>
           </div>
@@ -71,10 +74,11 @@
     </div>
 
     <!-- RIGHT COLUMN: Detail Panel -->
-    <div class="col-md-4">
+    <div id="detail-column" class="col-md-4">
       <div class="card" style="height: calc(100vh - 120px);">
-        <div class="card-header py-2">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
           <strong id="detail-title">Overview</strong>
+          <select id="project-switcher" class="form-control form-control-sm" style="width:auto;max-width:150px;display:none;font-size:11px;"></select>
         </div>
         <div class="card-body" style="overflow-y: auto;">
           <!-- Default: Stats summary -->
@@ -151,21 +155,21 @@
           <!-- Task detail form -->
           <div id="detail-task" style="display:none;">
             <form id="task-form">
-              <div class="form-group">
-                <label class="small font-weight-bold">Title</label>
-                <input type="text" class="form-control" id="task-field-title" readonly>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Title</label>
+                <input type="text" class="form-control form-control-sm" id="task-field-title" readonly>
               </div>
               <div class="form-row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label class="small font-weight-bold">Status</label>
-                    <select class="form-control" id="task-field-status"></select>
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Status</label>
+                    <select class="form-control form-control-sm" id="task-field-status"></select>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label class="small font-weight-bold">Priority</label>
-                    <select class="form-control" id="task-field-priority">
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Priority</label>
+                    <select class="form-control form-control-sm" id="task-field-priority">
                       <option value="Critical">Critical</option>
                       <option value="High">High</option>
                       <option value="Normal">Normal</option>
@@ -175,33 +179,43 @@
                 </div>
               </div>
               <div class="form-row">
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label class="small font-weight-bold">Assigned To</label>
-                    <input type="text" class="form-control" id="task-field-assignee" readonly>
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Assigned To</label>
+                    <input type="text" class="form-control form-control-sm" id="task-field-assignee" readonly>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-group">
-                    <label class="small font-weight-bold">Due Date</label>
-                    <input type="text" class="form-control" id="task-field-due" readonly>
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Due Date</label>
+                    <input type="text" class="form-control form-control-sm" id="task-field-due" readonly>
                   </div>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="small font-weight-bold">Linked Entity</label>
-                <input type="text" class="form-control" id="task-field-entity" readonly>
+              <div class="form-row">
+                <div class="col-8">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Linked Entity</label>
+                    <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Entity ID</label>
+                    <input type="text" class="form-control form-control-sm" id="task-field-entity-id" readonly>
+                  </div>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="small font-weight-bold">Notes</label>
-                <textarea class="form-control" id="task-field-notes" rows="3" readonly></textarea>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Notes</label>
+                <textarea class="form-control form-control-sm" id="task-field-notes" rows="3" style="font-size:12px;"></textarea>
               </div>
-              <hr>
+              <hr class="my-2">
               <div class="d-flex justify-content-between">
-                <button type="button" id="btn-save-task" class="btn btn-light">Save Status</button>
+                <button type="button" id="btn-save-task" class="btn btn-sm btn-light">Save</button>
                 <div>
-                  <button type="button" id="btn-complete-task" class="btn btn-light mr-2">Mark Done</button>
-                  <button type="button" id="btn-cancel-task" class="btn btn-light">Cancel Task</button>
+                  <button type="button" id="btn-complete-task" class="btn btn-sm btn-light mr-1">Done</button>
+                  <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Cancel</button>
                 </div>
               </div>
             </form>
@@ -213,16 +227,14 @@
 </div>
 
 <!-- Confirmation Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-body py-4">
-        <p id="confirm-message" class="mb-0 text-center">Are you sure?</p>
-      </div>
-      <div class="modal-footer py-2 justify-content-center">
-        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">No</button>
-        <button type="button" class="btn btn-sm btn-danger" id="confirm-yes">Yes</button>
-      </div>
+<div class="modal-overlay" id="confirmModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:300px;width:90%;">
+    <div style="padding:20px;text-align:center;">
+      <p id="confirm-message" class="mb-0">Are you sure?</p>
+    </div>
+    <div style="padding:10px;border-top:1px solid #dee2e6;display:flex;justify-content:center;gap:10px;">
+      <button type="button" class="btn btn-sm btn-light" id="confirm-no">No</button>
+      <button type="button" class="btn btn-sm btn-light" id="confirm-yes" style="background:#dc3545;color:white;">Yes</button>
     </div>
   </div>
 </div>
@@ -320,7 +332,10 @@
     taskAssigneeFilter: 'all',
     showAllTasks: false,
     sortField: 'name',
-    sortDir: 'asc'
+    sortDir: 'asc',
+    pendingSelectTaskId: null,
+    pendingSelectProjectId: null,
+    panelExpanded: false
   };
 
   var confirmCallback = null;
@@ -336,6 +351,24 @@
     populateFilterDropdowns();
     loadData();
     bindEventHandlers();
+
+    // Check for navigation from dashboard
+    checkDashboardNavigation();
+  }
+
+  function checkDashboardNavigation() {
+    var selectTaskId = sessionStorage.getItem('selectTaskId');
+    var selectProjectId = sessionStorage.getItem('selectProjectId');
+
+    if (selectTaskId) {
+      // Clear immediately to prevent re-triggering
+      sessionStorage.removeItem('selectTaskId');
+      sessionStorage.removeItem('selectProjectId');
+
+      // Store for use after data loads
+      state.pendingSelectTaskId = selectTaskId;
+      state.pendingSelectProjectId = selectProjectId;
+    }
   }
 
   function populateFilterDropdowns() {
@@ -400,15 +433,53 @@
           populateAssigneeFilter();
           render();
           updateStats();
+
+          // Handle pending navigation from dashboard
+          if (state.pendingSelectTaskId) {
+            navigateToTask(state.pendingSelectTaskId, state.pendingSelectProjectId);
+            state.pendingSelectTaskId = null;
+            state.pendingSelectProjectId = null;
+          }
         }
       })
       [fetchFn]();
+  }
+
+  function navigateToTask(taskId, projectId) {
+    // Find the task
+    var task = state.tasks.find(function(t) {
+      return t.st_TaskId === taskId;
+    });
+
+    if (!task) {
+      // Task not in open tasks - try loading all tasks
+      if (!state.showAllTasks) {
+        state.showAllTasks = true;
+        document.getElementById('toggle-show-all').checked = true;
+        state.pendingSelectTaskId = taskId;
+        state.pendingSelectProjectId = projectId;
+        loadTasks();
+        return;
+      }
+      console.warn('Task not found:', taskId);
+      return;
+    }
+
+    // Navigate to project first, then select task
+    var taskProjectId = task.st_ProjectId || projectId;
+    if (taskProjectId) {
+      state.selectedProjectId = taskProjectId;
+      state.mode = 'tasks';
+    }
+    state.selectedTaskId = taskId;
+    render();
   }
 
   function bindEventHandlers() {
     document.getElementById('btn-home').addEventListener('click', goHome);
     document.getElementById('btn-back').addEventListener('click', goBack);
     document.getElementById('btn-new').addEventListener('click', handleNew);
+    document.getElementById('btn-toggle-panel').addEventListener('click', togglePanel);
 
     document.getElementById('filter-project-status').addEventListener('change', function() {
       state.projectStatusFilter = this.value;
@@ -465,8 +536,19 @@
     });
 
     document.getElementById('confirm-yes').addEventListener('click', function() {
-      $('#confirmModal').modal('hide');
+      hideConfirm();
       if (confirmCallback) confirmCallback();
+    });
+
+    document.getElementById('confirm-no').addEventListener('click', function() {
+      hideConfirm();
+    });
+
+    document.getElementById('project-switcher').addEventListener('change', function() {
+      var newProjectId = this.value;
+      if (newProjectId && newProjectId !== state.selectedProjectId) {
+        selectProject(newProjectId);
+      }
     });
 
     document.getElementById('btn-create-project').addEventListener('click', createProject);
@@ -491,6 +573,27 @@
   function goBack() {
     if (state.mode === 'tasks') {
       goHome();
+    }
+  }
+
+  function togglePanel() {
+    state.panelExpanded = !state.panelExpanded;
+    var listCol = document.getElementById('list-column');
+    var detailCol = document.getElementById('detail-column');
+    var toggleBtn = document.getElementById('btn-toggle-panel');
+
+    if (state.panelExpanded) {
+      // Expand detail panel - shrink list
+      listCol.className = 'col-md-5';
+      detailCol.className = 'col-md-7';
+      toggleBtn.textContent = '◧';
+      toggleBtn.title = 'Shrink panel';
+    } else {
+      // Default: list takes more space
+      listCol.className = 'col-md-8';
+      detailCol.className = 'col-md-4';
+      toggleBtn.textContent = '◨';
+      toggleBtn.title = 'Expand panel';
     }
   }
 
@@ -660,11 +763,11 @@
       var isDone = status === 'Done' || status === 'Closed';
       var rowClass = isDone ? ' text-muted' : '';
 
-      return '<div class="row border-bottom py-2 px-2 task-row' + (isSelected ? ' bg-light' : '') + rowClass + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
+      return '<div class="row border-bottom py-1 px-2 task-row small' + (isSelected ? ' bg-light' : '') + rowClass + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
         '<div class="col-3 text-truncate">' + esc(title) + '</div>' +
         '<div class="col-2 text-truncate">' + assignee + '</div>' +
-        '<div class="col-1">' + status + '</div>' +
-        '<div class="col-2 text-center">' + priBadge + '</div>' +
+        '<div class="col-2">' + status + '</div>' +
+        '<div class="col-1 text-center">' + priBadge + '</div>' +
         '<div class="col-1 ' + dueClass + '">' + dueDate + '</div>' +
         '<div class="col-1">' + doneDate + '</div>' +
       '</div>';
@@ -682,10 +785,19 @@
     var projectDetail = document.getElementById('detail-project');
     var taskDetail = document.getElementById('detail-task');
     var title = document.getElementById('detail-title');
+    var switcher = document.getElementById('project-switcher');
 
     summary.style.display = 'none';
     projectDetail.style.display = 'none';
     taskDetail.style.display = 'none';
+
+    // Show project switcher when in tasks mode
+    if (state.mode === 'tasks') {
+      switcher.style.display = '';
+      populateProjectSwitcher();
+    } else {
+      switcher.style.display = 'none';
+    }
 
     if (state.selectedTaskId) {
       var task = getSelectedTask();
@@ -707,6 +819,18 @@
     }
   }
 
+  function populateProjectSwitcher() {
+    var switcher = document.getElementById('project-switcher');
+    var html = '';
+    state.projects.forEach(function(p) {
+      var id = p.projectid || p.spro_ProjectId;
+      var name = p.name || p.spro_Name || id;
+      var selected = id === state.selectedProjectId ? ' selected' : '';
+      html += '<option value="' + id + '"' + selected + '>' + esc(name) + '</option>';
+    });
+    switcher.innerHTML = html;
+  }
+
   function populateProjectForm(project) {
     document.getElementById('field-name').value = project.name || project.spro_Name || '';
     document.getElementById('field-type').value = project.type || project.spro_Type || 'ONE_OFF';
@@ -721,13 +845,30 @@
     document.getElementById('task-field-priority').value = task.st_Priority || 'Normal';
     document.getElementById('task-field-assignee').value = task.st_AssignedTo || '';
     document.getElementById('task-field-due').value = task.st_DueDate ? formatDate(task.st_DueDate) : '';
-    document.getElementById('task-field-entity').value = task.st_LinkedEntityName || task.st_LinkedEntityId || '';
+    document.getElementById('task-field-entity').value = task.st_LinkedEntityName || '';
+    document.getElementById('task-field-entity-id').value = task.st_LinkedEntityId || '';
     document.getElementById('task-field-notes').value = task.st_Notes || '';
 
     var isDone = task.st_Status === 'Done' || task.st_Status === 'Cancelled';
+
+    // Check if this is a system-created task (not user-created)
+    var taskType = task.st_TaskTypeId || '';
+    var isSystemTask = taskType.indexOf('task.system') === 0 ||
+                       taskType.indexOf('task.validation') === 0 ||
+                       taskType.indexOf('task.sync') === 0 ||
+                       taskType.indexOf('task.bundle') === 0 ||
+                       taskType.indexOf('task.deficiency') === 0 ||
+                       taskType.indexOf('task.inventory') === 0 ||
+                       taskType.indexOf('task.onboarding') === 0 ||
+                       taskType.indexOf('task.order') === 0 ||
+                       taskType.indexOf('task.confirmation') === 0;
+
+    // System tasks: only allow notes editing and actions
+    document.getElementById('task-field-status').disabled = isDone || isSystemTask;
+    document.getElementById('task-field-priority').disabled = isSystemTask;
     document.getElementById('btn-complete-task').disabled = isDone;
     document.getElementById('btn-cancel-task').disabled = isDone;
-    document.getElementById('task-field-status').disabled = isDone;
+    document.getElementById('btn-save-task').style.display = isSystemTask ? 'none' : '';
   }
 
   function updateStats() {
@@ -828,7 +969,12 @@
   function showConfirm(message, callback) {
     document.getElementById('confirm-message').textContent = message;
     confirmCallback = callback;
-    $('#confirmModal').modal('show');
+    document.getElementById('confirmModal').style.display = 'flex';
+  }
+
+  function hideConfirm() {
+    document.getElementById('confirmModal').style.display = 'none';
+    confirmCallback = null;
   }
 
   // === API ACTIONS ===
