@@ -249,7 +249,7 @@
         "topic", "Products",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_suggestion",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -514,6 +514,127 @@
         "default_priority", "Normal",
         "initial_status", "New",
         "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.draft",
+        "Create initial content draft.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.edit",
+        "Review and edit content draft.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.translate",
+        "Create Hebrew translation of content.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.translate_edit",
+        "Review and edit Hebrew translation.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.images",
+        "Source or create images for content.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.blog_publish",
+        "Publish content to blog in both languages.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.video_create",
+        "Create video content.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.content.video_publish",
+        "Publish video to YouTube.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.email",
+        "Include content in email newsletter.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.social",
+        "Post content to social media.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.whatsapp",
+        "Send content via WhatsApp.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
         "due_pattern", "one_week"
     ]
 ]

@@ -1,4 +1,57 @@
-<div class="container-fluid">
+<style>
+  /* Task row and header use flexbox to fill 100% width */
+  .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
+  .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }
+  .task-col-priority { text-align: center; justify-content: center; }
+  .task-col-toggle { text-align: right; }
+
+  /* Task row text size - slightly larger than small */
+  .task-row { font-size: 13px; }
+
+  /* State 1: compact (5 cols = 100%) - check, title, start, due, toggle */
+  .panel-state-1 .task-col-hideable { display: none !important; }
+  .panel-state-1 .task-col-wide-only { display: none !important; }
+  .panel-state-1 .hide-compact { display: none !important; }
+  .panel-state-1 .task-col-check { width: 4%; }
+  .panel-state-1 .task-col-title { width: 62%; }
+  .panel-state-1 .task-col-start { width: 15%; }
+  .panel-state-1 .task-col-due { width: 15%; }
+  .panel-state-1 .task-col-toggle { width: 4%; }
+
+  /* State 2: standard (10 cols = 100%) - check, title, entity, assignee, status, priority, start, due, toggle */
+  .panel-state-2 .task-col-hideable { display: flex !important; align-items: center; }
+  .panel-state-2 .task-col-wide-only { display: none !important; }
+  .panel-state-2 .task-col-check { width: 3%; }
+  .panel-state-2 .task-col-title { width: 22%; }
+  .panel-state-2 .task-col-entity { width: 14%; }
+  .panel-state-2 .task-col-assignee { width: 12%; }
+  .panel-state-2 .task-col-status { width: 11%; }
+  .panel-state-2 .task-col-priority { width: 5%; }
+  .panel-state-2 .task-col-start { width: 12%; }
+  .panel-state-2 .task-col-due { width: 12%; }
+  .panel-state-2 .task-col-toggle { width: 9%; }
+
+  /* State 3: full (12 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done, toggle */
+  .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
+  .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
+  .panel-state-3 .task-col-check { width: 3%; }
+  .panel-state-3 .task-col-session { width: 7%; }
+  .panel-state-3 .task-col-title { width: 14%; }
+  .panel-state-3 .task-col-entity { width: 10%; }
+  .panel-state-3 .task-col-entity-id { width: 8%; }
+  .panel-state-3 .task-col-assignee { width: 9%; }
+  .panel-state-3 .task-col-status { width: 8%; }
+  .panel-state-3 .task-col-priority { width: 4%; }
+  .panel-state-3 .task-col-start { width: 9%; }
+  .panel-state-3 .task-col-due { width: 9%; }
+  .panel-state-3 .task-col-done { width: 9%; }
+  .panel-state-3 .task-col-toggle { width: 10%; }
+
+  /* Inline edits fill their container */
+  .task-row .inline-edit { height: 24px; font-size: 11px; padding: 0 2px; width: 100%; box-sizing: border-box; }
+  .task-row select.inline-edit { font-size: 10px; }
+</style>
+<div class="container-fluid panel-state-2">
   <div class="row">
     <!-- LEFT COLUMN: Navigation -->
     <div id="list-column" class="col-md-8">
@@ -11,6 +64,8 @@
             <span id="breadcrumb">Projects</span>
           </div>
           <div>
+            <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Create content task stream">+ Content</button>
+            <button id="btn-content-import" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Import content tasks">Import</button>
             <button id="btn-new" class="btn btn-sm btn-light mr-1">+ Project</button>
             <button id="btn-toggle-panel" class="btn btn-sm btn-light" title="Expand panel">◨</button>
           </div>
@@ -38,31 +93,51 @@
         <!-- Subheader: Column headers + filters (Tasks mode) -->
         <div id="subheader-tasks" class="border-bottom bg-light px-2 py-1" style="display:none;">
           <div class="row small font-weight-bold text-muted align-items-center">
-            <div class="col-3">Title</div>
-            <div class="col-2">
-              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
+            <div class="task-col-check">
+              <input type="checkbox" id="select-all-tasks" title="Select all">
+            </div>
+            <div class="task-col-wide-only task-col-session">
+              <input type="text" id="filter-task-session" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;" placeholder="Stream">
+            </div>
+            <div class="task-col-title"><a href="#" class="text-muted sort-col" data-field="title">Title <span id="sort-icon-title"></span></a></div>
+            <div class="task-col-hideable task-col-entity">
+              <input type="text" id="filter-task-entity" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;" placeholder="Entity">
+            </div>
+            <div class="task-col-wide-only task-col-entity-id text-truncate">Link</div>
+            <div class="task-col-hideable task-col-assignee">
+              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
                 <option value="all">Assignee</option>
               </select>
             </div>
-            <div class="col-2">
-              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
+            <div class="task-col-hideable task-col-status">
+              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
                 <option value="all">Status</option>
               </select>
             </div>
-            <div class="col-1">
-              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;">
+            <div class="task-col-hideable task-col-priority text-center">
+              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
                 <option value="all">Pri</option>
               </select>
             </div>
-            <div class="col-1">
+            <div class="task-col-start">
+              <a href="#" class="text-muted sort-col" data-field="start">Start <span id="sort-icon-start"></span></a>
+            </div>
+            <div class="task-col-due">
               <a href="#" class="text-muted sort-col" data-field="due">Due <span id="sort-icon-due"></span></a>
             </div>
-            <div class="col-1">Done</div>
-            <div class="col-2 text-right">
+            <div class="task-col-wide-only task-col-done">
+              <a href="#" class="text-muted sort-col" data-field="done">Done <span id="sort-icon-done"></span></a>
+            </div>
+            <div class="task-col-toggle text-right">
               <label class="mb-0 small" style="font-weight:normal;">
                 <input type="checkbox" id="toggle-show-all"> All
               </label>
             </div>
+          </div>
+          <!-- Bulk action bar -->
+          <div id="bulk-action-bar" class="mt-1" style="display:none;">
+            <span id="selected-count" class="small text-muted mr-2">0 selected</span>
+            <button type="button" id="btn-cancel-selected" class="btn btn-sm btn-light">Delete Selected</button>
           </div>
         </div>
 
@@ -179,30 +254,35 @@
                 </div>
               </div>
               <div class="form-row">
-                <div class="col-6">
+                <div class="col-4">
                   <div class="form-group mb-2">
                     <label class="small font-weight-bold mb-0">Assigned To</label>
-                    <input type="text" class="form-control form-control-sm" id="task-field-assignee" readonly>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Due Date</label>
-                    <input type="text" class="form-control form-control-sm" id="task-field-due" readonly>
-                  </div>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="col-8">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Linked Entity</label>
-                    <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
+                    <select class="form-control form-control-sm" id="task-field-assignee"></select>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Entity ID</label>
-                    <input type="text" class="form-control form-control-sm" id="task-field-entity-id" readonly>
+                    <label class="small font-weight-bold mb-0">Start</label>
+                    <input type="date" class="form-control form-control-sm" id="task-field-start">
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Due</label>
+                    <input type="date" class="form-control form-control-sm" id="task-field-due">
+                  </div>
+                </div>
+              </div>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Linked Entity</label>
+                <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
+              </div>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Entity URL/ID <small class="text-muted">(Drive link for content tasks)</small></label>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control form-control-sm" id="task-field-entity-id" placeholder="https://drive.google.com/...">
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-light" id="btn-open-entity" title="Open in new tab">↗</button>
                   </div>
                 </div>
               </div>
@@ -214,9 +294,14 @@
               <div class="d-flex justify-content-between">
                 <button type="button" id="btn-save-task" class="btn btn-sm btn-light">Save</button>
                 <div>
+                  <button type="button" id="btn-view-product" class="btn btn-sm btn-light mr-1" title="View product details">View</button>
                   <button type="button" id="btn-complete-task" class="btn btn-sm btn-light mr-1">Done</button>
-                  <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Cancel</button>
+                  <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Delete</button>
                 </div>
+              </div>
+              <!-- Product Info Panel -->
+              <div id="product-info-panel" style="display:none;" class="small mt-2 p-2 border rounded bg-light">
+                <div id="product-info-content"></div>
               </div>
             </form>
           </div>
@@ -240,73 +325,119 @@
 </div>
 
 <!-- New Project Modal -->
-<div class="modal fade" id="newProjectModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">New Project</h6>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+<div class="modal-overlay" id="newProjectModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:400px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">New Project</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <input type="text" class="form-control form-control-sm" id="new-project-name" placeholder="Project name">
       </div>
-      <div class="modal-body">
-        <form id="new-project-form">
-          <div class="form-group">
-            <input type="text" class="form-control form-control-sm" id="new-project-name" placeholder="Project name" required>
-          </div>
-          <div class="form-row">
-            <div class="col">
-              <select class="form-control form-control-sm" id="new-project-type">
-                <option value="ONE_OFF">One-Off</option>
-                <option value="CAMPAIGN">Campaign</option>
-                <option value="OPERATIONAL">Operational</option>
-              </select>
-            </div>
-            <div class="col">
-              <select class="form-control form-control-sm" id="new-project-status">
-                <option value="PLANNING">Planning</option>
-                <option value="ACTIVE">Active</option>
-              </select>
-            </div>
-          </div>
-        </form>
+      <div class="form-row">
+        <div class="col">
+          <select class="form-control form-control-sm" id="new-project-type">
+            <option value="ONE_OFF">One-Off</option>
+            <option value="CAMPAIGN">Campaign</option>
+            <option value="OPERATIONAL">Operational</option>
+          </select>
+        </div>
+        <div class="col">
+          <select class="form-control form-control-sm" id="new-project-status">
+            <option value="PLANNING">Planning</option>
+            <option value="ACTIVE">Active</option>
+          </select>
+        </div>
       </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
-      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newProjectModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
     </div>
   </div>
 </div>
 
 <!-- New Task Modal -->
-<div class="modal fade" id="newTaskModal" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">New Task</h6>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+<div class="modal-overlay" id="newTaskModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:400px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">New Task</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <input type="text" class="form-control form-control-sm" id="new-task-title" placeholder="Task title">
       </div>
-      <div class="modal-body">
-        <form id="new-task-form">
-          <div class="form-group">
-            <input type="text" class="form-control form-control-sm" id="new-task-title" placeholder="Task title" required>
-          </div>
-          <div class="form-group">
-            <select class="form-control form-control-sm" id="new-task-priority">
-              <option value="Normal">Normal Priority</option>
-              <option value="High">High Priority</option>
-              <option value="Critical">Critical</option>
-              <option value="Low">Low Priority</option>
-            </select>
-          </div>
-          <div class="form-group mb-0">
-            <textarea class="form-control form-control-sm" id="new-task-notes" placeholder="Notes (optional)" rows="2"></textarea>
-          </div>
-        </form>
+      <div class="form-group">
+        <select class="form-control form-control-sm" id="new-task-priority">
+          <option value="Normal">Normal Priority</option>
+          <option value="High">High Priority</option>
+          <option value="Critical">Critical</option>
+          <option value="Low">Low Priority</option>
+        </select>
       </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm btn-light" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-sm btn-light" id="btn-create-task">Create</button>
+      <div class="form-group mb-0">
+        <textarea class="form-control form-control-sm" id="new-task-notes" placeholder="Notes (optional)" rows="2"></textarea>
       </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newTaskModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-task">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Content Stream Modal -->
+<div class="modal-overlay" id="contentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Create Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Content Name</label>
+        <input type="text" class="form-control form-control-sm" id="content-name" placeholder="e.g., Intensity, About Page">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="content-stream-id" placeholder="e.g., INT, ABOUT">
+        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Stages</label>
+        <div id="content-stages-checkboxes" class="d-flex flex-wrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Drive URL added to each task when working on it.</p>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentStreamModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-content-stream">Create Tasks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Content Import Modal -->
+<div class="modal-overlay" id="contentImportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:600px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Import Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <p class="small text-muted">CSV format: <code>contentName,stages</code></p>
+      <p class="small text-muted">Stages separated by semicolon: <code>draft;edit;translate;images;blog_publish</code></p>
+      <div class="form-group">
+        <label class="small font-weight-bold">CSV Data</label>
+        <textarea class="form-control form-control-sm" id="content-import-csv" rows="8" placeholder="contentName,stages
+Intensity,draft;edit;translate;translate_edit;images;blog_publish
+About Page,edit;translate;translate_edit;blog_publish
+Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
+      </div>
+      <div id="import-result" class="small" style="display:none;"></div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentImportModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-import-content">Import</button>
     </div>
   </div>
 </div>
@@ -323,6 +454,7 @@
     statusOptions: ['New', 'Assigned', 'Review', 'Done', 'Closed'],
     priorityOptions: ['Critical', 'High', 'Normal', 'Low'],
     assignees: [],
+    contentStages: [],  // For content task creation
     mode: 'projects',
     selectedProjectId: null,
     selectedTaskId: null,
@@ -330,12 +462,15 @@
     taskStatusFilter: 'all',
     taskPriorityFilter: 'all',
     taskAssigneeFilter: 'all',
+    taskEntityFilter: '',
+    taskSessionFilter: '',
+    selectedTaskIds: [],  // For bulk operations
     showAllTasks: false,
     sortField: 'name',
     sortDir: 'asc',
     pendingSelectTaskId: null,
     pendingSelectProjectId: null,
-    panelExpanded: false
+    panelState: 2  // 1=list 1/3, 2=list 2/3 (default), 3=list full
   };
 
   var confirmCallback = null;
@@ -350,23 +485,43 @@
   function init() {
     populateFilterDropdowns();
     loadData();
+    loadContentStages();
     bindEventHandlers();
 
     // Check for navigation from dashboard
     checkDashboardNavigation();
   }
 
+  function loadContentStages() {
+    google.script.run
+      .withSuccessHandler(function(stages) {
+        state.contentStages = stages || [];
+        populateContentStagesCheckboxes();
+      })
+      .WebAppProjects_getContentStages();
+  }
+
+  function populateContentStagesCheckboxes() {
+    var container = document.getElementById('content-stages-checkboxes');
+    container.innerHTML = state.contentStages.map(function(s) {
+      return '<label class="mr-3 mb-1 small"><input type="checkbox" class="content-stage-cb mr-1" value="' + s.id + '">' + s.label + '</label>';
+    }).join('');
+  }
+
   function checkDashboardNavigation() {
     var selectTaskId = sessionStorage.getItem('selectTaskId');
     var selectProjectId = sessionStorage.getItem('selectProjectId');
 
-    if (selectTaskId) {
-      // Clear immediately to prevent re-triggering
-      sessionStorage.removeItem('selectTaskId');
-      sessionStorage.removeItem('selectProjectId');
+    // Clear immediately to prevent re-triggering
+    sessionStorage.removeItem('selectTaskId');
+    sessionStorage.removeItem('selectProjectId');
 
-      // Store for use after data loads
+    if (selectTaskId) {
+      // Store for use after data loads - will navigate to task
       state.pendingSelectTaskId = selectTaskId;
+      state.pendingSelectProjectId = selectProjectId;
+    } else if (selectProjectId) {
+      // No task, just project - will navigate into project
       state.pendingSelectProjectId = selectProjectId;
     }
   }
@@ -381,7 +536,7 @@
 
     // Priority filter
     var filterPriority = document.getElementById('filter-task-priority');
-    filterPriority.innerHTML = '<option value="all">Pri</option>' +
+    filterPriority.innerHTML = '<option value="all">Priority</option>' +
       state.priorityOptions.map(function(p) {
         return '<option value="' + p + '">' + p + '</option>';
       }).join('');
@@ -438,6 +593,10 @@
           if (state.pendingSelectTaskId) {
             navigateToTask(state.pendingSelectTaskId, state.pendingSelectProjectId);
             state.pendingSelectTaskId = null;
+            state.pendingSelectProjectId = null;
+          } else if (state.pendingSelectProjectId) {
+            // Navigate into project (no specific task)
+            selectProject(state.pendingSelectProjectId);
             state.pendingSelectProjectId = null;
           }
         }
@@ -501,6 +660,28 @@
       render();
     });
 
+    // Session filter with debounce
+    var sessionFilterTimeout = null;
+    document.getElementById('filter-task-session').addEventListener('input', function() {
+      var val = this.value;
+      clearTimeout(sessionFilterTimeout);
+      sessionFilterTimeout = setTimeout(function() {
+        state.taskSessionFilter = val.trim().toLowerCase();
+        render();
+      }, 300);
+    });
+
+    // Entity filter with debounce
+    var entityFilterTimeout = null;
+    document.getElementById('filter-task-entity').addEventListener('input', function() {
+      var val = this.value;
+      clearTimeout(entityFilterTimeout);
+      entityFilterTimeout = setTimeout(function() {
+        state.taskEntityFilter = val.trim().toLowerCase();
+        render();
+      }, 300);
+    });
+
     document.getElementById('toggle-show-all').addEventListener('change', function() {
       state.showAllTasks = this.checked;
       loadTasks();
@@ -530,14 +711,15 @@
     });
 
     document.getElementById('btn-cancel-task').addEventListener('click', function() {
-      showConfirm('Cancel this task? This cannot be undone.', function() {
+      showConfirm('Delete this task? This cannot be undone.', function() {
         cancelTask(state.selectedTaskId);
       });
     });
 
     document.getElementById('confirm-yes').addEventListener('click', function() {
+      var callback = confirmCallback;
       hideConfirm();
-      if (confirmCallback) confirmCallback();
+      if (callback) callback();
     });
 
     document.getElementById('confirm-no').addEventListener('click', function() {
@@ -553,6 +735,220 @@
 
     document.getElementById('btn-create-project').addEventListener('click', createProject);
     document.getElementById('btn-create-task').addEventListener('click', createTask);
+
+    document.getElementById('btn-view-product').addEventListener('click', viewProductDetails);
+
+    document.getElementById('btn-open-entity').addEventListener('click', function() {
+      var entityId = document.getElementById('task-field-entity-id').value.trim();
+      if (entityId && entityId.indexOf('http') === 0) {
+        window.open(entityId, '_blank');
+      }
+    });
+
+    // Bulk selection handlers
+    document.getElementById('select-all-tasks').addEventListener('change', function() {
+      var visibleTasks = getFilteredTasks();
+      if (this.checked) {
+        // Add all visible task IDs
+        visibleTasks.forEach(function(t) {
+          if (state.selectedTaskIds.indexOf(t.st_TaskId) === -1) {
+            state.selectedTaskIds.push(t.st_TaskId);
+          }
+        });
+      } else {
+        // Remove all visible task IDs
+        var visibleIds = visibleTasks.map(function(t) { return t.st_TaskId; });
+        state.selectedTaskIds = state.selectedTaskIds.filter(function(id) {
+          return visibleIds.indexOf(id) === -1;
+        });
+      }
+      renderList();
+      updateBulkActionBar();
+    });
+
+    document.getElementById('btn-cancel-selected').addEventListener('click', function() {
+      var count = state.selectedTaskIds.length;
+      if (count === 0) return;
+      showConfirm('Delete ' + count + ' selected task(s)? This cannot be undone.', function() {
+        cancelSelectedTasks();
+      });
+    });
+
+    // Content stream buttons
+    document.getElementById('btn-content-stream').addEventListener('click', function() {
+      document.getElementById('content-name').value = '';
+      document.getElementById('content-stream-id').value = '';
+      // Uncheck all stage checkboxes
+      document.querySelectorAll('.content-stage-cb').forEach(function(cb) { cb.checked = false; });
+      document.getElementById('contentStreamModal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-content-import').addEventListener('click', function() {
+      document.getElementById('content-import-csv').value = '';
+      document.getElementById('import-result').style.display = 'none';
+      document.getElementById('contentImportModal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-create-content-stream').addEventListener('click', createContentStream);
+    document.getElementById('btn-import-content').addEventListener('click', importContentTasks);
+  }
+
+  // === CONTENT STREAM FUNCTIONS ===
+
+  function createContentStream() {
+    var name = document.getElementById('content-name').value.trim();
+    var customStreamId = document.getElementById('content-stream-id').value.trim().toUpperCase();
+
+    if (!name) {
+      alert('Please enter content name');
+      return;
+    }
+
+    // Get selected stages
+    var stages = [];
+    document.querySelectorAll('.content-stage-cb:checked').forEach(function(cb) {
+      stages.push(cb.value);
+    });
+
+    if (stages.length === 0) {
+      alert('Please select at least one stage');
+      return;
+    }
+
+    var btn = document.getElementById('btn-create-content-stream');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Create Tasks';
+        if (result.error) {
+          alert('Error: ' + result.error);
+        } else {
+          document.getElementById('contentStreamModal').style.display = 'none';
+          alert('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode);
+          loadData();
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Create Tasks';
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppProjects_createContentStream({
+        projectId: state.selectedProjectId,
+        contentName: name,
+        stages: stages,
+        streamId: customStreamId || null
+      });
+  }
+
+  function importContentTasks() {
+    var csvData = document.getElementById('content-import-csv').value.trim();
+    if (!csvData) {
+      alert('Please enter CSV data');
+      return;
+    }
+
+    var btn = document.getElementById('btn-import-content');
+    btn.disabled = true;
+    btn.textContent = 'Importing...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+        var resultDiv = document.getElementById('import-result');
+        if (result.error) {
+          resultDiv.innerHTML = '<span class="text-danger">Error: ' + esc(result.error) + '</span>';
+          resultDiv.style.display = '';
+        } else {
+          var msg = 'Imported: ' + result.data.imported + ', Failed: ' + result.data.failed;
+          if (result.data.errors && result.data.errors.length > 0) {
+            msg += '<br>' + result.data.errors.map(esc).join('<br>');
+          }
+          resultDiv.innerHTML = '<span class="' + (result.data.failed > 0 ? 'text-warning' : 'text-success') + '">' + msg + '</span>';
+          resultDiv.style.display = '';
+          if (result.data.imported > 0) {
+            loadData();
+          }
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+        document.getElementById('import-result').innerHTML = '<span class="text-danger">Error: ' + esc(err.message || 'Failed') + '</span>';
+        document.getElementById('import-result').style.display = '';
+      })
+      .WebAppProjects_importContentStreams(csvData, state.selectedProjectId);
+  }
+
+  // === PRODUCT LOOKUP ===
+
+  function viewProductDetails() {
+    var panel = document.getElementById('product-info-panel');
+
+    // Toggle - if visible, hide it
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    var entityId = document.getElementById('task-field-entity-id').value;
+    if (!entityId) {
+      document.getElementById('product-info-content').innerHTML = '<span class="text-muted">No entity ID</span>';
+      panel.style.display = '';
+      return;
+    }
+
+    // Show loading
+    document.getElementById('product-info-content').innerHTML = '<span class="text-muted">Loading...</span>';
+    panel.style.display = '';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        renderProductInfo(result, entityId);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('product-info-content').innerHTML =
+          '<span class="text-danger">Error: ' + esc(err.message || 'Failed to load') + '</span>';
+      })
+      .WebAppProducts_lookupProductBySku(entityId);
+  }
+
+  function renderProductInfo(data, sku) {
+    var content = document.getElementById('product-info-content');
+
+    if (!data || !data.comax) {
+      content.innerHTML = '<span class="text-warning">SKU not found: ' + esc(sku) + '</span>';
+      return;
+    }
+
+    var comax = data.comax;
+    var web = data.web;
+
+    // Compact 2-3 row display
+    var soldOnlineClass = comax.isWeb ? 'text-success' : 'text-danger';
+    var soldOnlineText = comax.isWeb ? 'YES' : 'NO';
+
+    var html = '<div style="line-height:1.4;">';
+    // Row 1: Sold Online (most important) + Active + Stock
+    html += '<strong class="' + soldOnlineClass + '">Sold Online: ' + soldOnlineText + '</strong>';
+    html += ' &nbsp;|&nbsp; Active: ' + (comax.isActive ? 'Yes' : 'No');
+    html += ' &nbsp;|&nbsp; Stock: ' + (comax.stock || 0);
+    html += ' &nbsp;|&nbsp; ₪' + (comax.price || 0);
+    // Row 2: Name
+    html += '<br>' + esc(comax.nameHe || '-');
+    // Row 3: Web status (if relevant)
+    if (web) {
+      html += '<br><span class="text-muted">Web: EN#' + (web.webIdEn || '-') + ' HE#' + (web.webIdHe || '-') + '</span>';
+    } else {
+      html += '<br><span class="text-muted">Not on web store</span>';
+    }
+    html += '</div>';
+
+    content.innerHTML = html;
   }
 
   // === NAVIGATION ===
@@ -577,23 +973,42 @@
   }
 
   function togglePanel() {
-    state.panelExpanded = !state.panelExpanded;
+    // Cycle through 3 states: 1 -> 2 -> 3 -> 1
+    state.panelState = (state.panelState % 3) + 1;
     var listCol = document.getElementById('list-column');
     var detailCol = document.getElementById('detail-column');
     var toggleBtn = document.getElementById('btn-toggle-panel');
+    var container = document.querySelector('.container-fluid');
 
-    if (state.panelExpanded) {
-      // Expand detail panel - shrink list
-      listCol.className = 'col-md-5';
-      detailCol.className = 'col-md-7';
+    // Remove all panel state classes
+    container.classList.remove('panel-state-1', 'panel-state-2', 'panel-state-3');
+
+    if (state.panelState === 1) {
+      // List 1/3, detail 2/3 (compact list)
+      listCol.className = 'col-md-4';
+      listCol.style.display = '';
+      detailCol.className = 'col-md-8';
+      detailCol.style.display = '';
       toggleBtn.textContent = '◧';
-      toggleBtn.title = 'Shrink panel';
-    } else {
-      // Default: list takes more space
+      toggleBtn.title = 'Expand list (2/3)';
+      container.classList.add('panel-state-1');
+    } else if (state.panelState === 2) {
+      // List 2/3, detail 1/3 (expanded list)
       listCol.className = 'col-md-8';
+      listCol.style.display = '';
       detailCol.className = 'col-md-4';
+      detailCol.style.display = '';
       toggleBtn.textContent = '◨';
-      toggleBtn.title = 'Expand panel';
+      toggleBtn.title = 'Full list (no detail)';
+      container.classList.add('panel-state-2');
+    } else {
+      // List full, detail hidden
+      listCol.className = 'col-md-12';
+      listCol.style.display = '';
+      detailCol.style.display = 'none';
+      toggleBtn.textContent = '◩';
+      toggleBtn.title = 'Compact list (1/3)';
+      container.classList.add('panel-state-3');
     }
   }
 
@@ -607,15 +1022,24 @@
   }
 
   function selectTask(taskId) {
-    state.selectedTaskId = taskId;
+    // Toggle selection: clicking same row deselects it
+    if (state.selectedTaskId === taskId) {
+      state.selectedTaskId = null;
+    } else {
+      state.selectedTaskId = taskId;
+    }
+    renderList();  // Re-render to update highlighting
     renderDetailPanel();
   }
 
   function handleNew() {
     if (state.mode === 'projects') {
-      $('#newProjectModal').modal('show');
+      document.getElementById('new-project-name').value = '';
+      document.getElementById('newProjectModal').style.display = 'flex';
     } else {
-      $('#newTaskModal').modal('show');
+      document.getElementById('new-task-title').value = '';
+      document.getElementById('new-task-notes').value = '';
+      document.getElementById('newTaskModal').style.display = 'flex';
     }
   }
 
@@ -632,17 +1056,24 @@
     var backBtn = document.getElementById('btn-back');
     var breadcrumb = document.getElementById('breadcrumb');
     var newBtn = document.getElementById('btn-new');
+    var contentStreamBtn = document.getElementById('btn-content-stream');
+    var contentImportBtn = document.getElementById('btn-content-import');
 
     if (state.mode === 'projects') {
       backBtn.style.display = 'none';
       breadcrumb.textContent = 'Projects';
       newBtn.textContent = '+ Project';
+      contentStreamBtn.style.display = 'none';
+      contentImportBtn.style.display = 'none';
     } else {
       backBtn.style.display = '';
       var project = getSelectedProject();
       var projectName = project ? (project.name || project.spro_Name) : 'Project';
       breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + esc(projectName);
       newBtn.textContent = '+ Task';
+      // Show content buttons when in tasks mode
+      contentStreamBtn.style.display = '';
+      contentImportBtn.style.display = '';
     }
   }
 
@@ -665,6 +1096,15 @@
     document.querySelectorAll('.sort-col span').forEach(function(el) {
       el.textContent = '';
     });
+    // Entity and session columns show ↕ when not active
+    var entityIcon = document.getElementById('sort-icon-entity');
+    if (entityIcon && state.sortField !== 'entity') {
+      entityIcon.textContent = '↕';
+    }
+    var sessionIcon = document.getElementById('sort-icon-session');
+    if (sessionIcon && state.sortField !== 'session') {
+      sessionIcon.textContent = '↕';
+    }
     var iconId = 'sort-icon-' + state.sortField;
     var icon = document.getElementById(iconId);
     if (icon) {
@@ -704,9 +1144,9 @@
       var taskCount = getProjectTaskCount(id);
       var isSelected = id === state.selectedProjectId;
 
-      var statusClass = status === 'ACTIVE' ? 'text-success' : status === 'PLANNING' ? 'text-warning' : 'text-muted';
+      var statusClass = isSelected ? '' : (status === 'ACTIVE' ? 'text-success' : status === 'PLANNING' ? 'text-warning' : 'text-muted');
 
-      return '<div class="row border-bottom py-2 px-2 project-row' + (isSelected ? ' bg-light' : '') + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
+      return '<div class="row border-bottom py-2 px-2 project-row' + (isSelected ? ' bg-info text-white' : '') + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
         '<div class="col-5 text-truncate">' + esc(name) + '</div>' +
         '<div class="col-3"><small class="' + statusClass + '">' + status.toLowerCase() + '</small></div>' +
         '<div class="col-2 text-center"><span class="badge badge-secondary">' + taskCount + '</span></div>' +
@@ -731,6 +1171,8 @@
       if (state.sortField === 'start') return t.st_StartDate || '9999';
       if (state.sortField === 'due') return t.st_DueDate || '9999';
       if (state.sortField === 'done') return t.st_DoneDate || '9999';
+      if (state.sortField === 'entity') return String(t.st_LinkedEntityName || '').toLowerCase();
+      if (state.sortField === 'session') return String(t.st_SessionId || '').toLowerCase();
       return '';
     });
 
@@ -739,16 +1181,31 @@
       return;
     }
 
+    // Build assignee options for inline edit
+    var assigneeOpts = '<option value="">-</option>';
+    state.assignees.forEach(function(a) {
+      var short = a.split('@')[0];
+      assigneeOpts += '<option value="' + a + '">' + short + '</option>';
+    });
+
+    // Build status options
+    var statusOpts = state.statusOptions.map(function(s) {
+      return '<option value="' + s + '">' + s + '</option>';
+    }).join('');
+
     container.innerHTML = tasks.map(function(t) {
       var id = t.st_TaskId;
       var title = t.st_Title || '-';
-      var assignee = t.st_AssignedTo ? t.st_AssignedTo.split('@')[0] : '-';
+      var assignee = t.st_AssignedTo || '';
+      var assigneeShort = assignee ? assignee.split('@')[0] : '-';
       var status = t.st_Status || 'New';
       var priority = t.st_Priority || 'Normal';
-      var createdDate = t.st_CreatedDate ? formatDateShort(t.st_CreatedDate) : '-';
-      var startDate = t.st_StartDate ? formatDateShort(t.st_StartDate) : '-';
-      var dueDate = t.st_DueDate ? formatDateShort(t.st_DueDate) : '-';
-      var doneDate = t.st_DoneDate ? formatDateShort(t.st_DoneDate) : '-';
+      var startDateVal = t.st_StartDate ? formatDateInput(t.st_StartDate) : '';
+      var dueDateVal = t.st_DueDate ? formatDateInput(t.st_DueDate) : '';
+      var doneDateVal = t.st_DoneDate ? formatDateInput(t.st_DoneDate) : '';
+      var startDateDisp = t.st_StartDate ? formatDateShort(t.st_StartDate) : '-';
+      var dueDateDisp = t.st_DueDate ? formatDateShort(t.st_DueDate) : '-';
+      var doneDateDisp = t.st_DoneDate ? formatDateShort(t.st_DoneDate) : '-';
       var isOverdue = t.st_DueDate && new Date(t.st_DueDate) < new Date() && status !== 'Done' && status !== 'Closed';
       var isSelected = id === state.selectedTaskId;
 
@@ -763,21 +1220,145 @@
       var isDone = status === 'Done' || status === 'Closed';
       var rowClass = isDone ? ' text-muted' : '';
 
-      return '<div class="row border-bottom py-1 px-2 task-row small' + (isSelected ? ' bg-light' : '') + rowClass + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
-        '<div class="col-3 text-truncate">' + esc(title) + '</div>' +
-        '<div class="col-2 text-truncate">' + assignee + '</div>' +
-        '<div class="col-2">' + status + '</div>' +
-        '<div class="col-1 text-center">' + priBadge + '</div>' +
-        '<div class="col-1 ' + dueClass + '">' + dueDate + '</div>' +
-        '<div class="col-1">' + doneDate + '</div>' +
+      var sessionId = t.st_SessionId || '';
+      var entityId = t.st_LinkedEntityId || '-';
+      var entityName = t.st_LinkedEntityName || '';
+      var isUrl = entityId.indexOf('http') === 0;
+      var entityDisplay = entityName || (entityId.length > 10 ? entityId.substring(0, 8) + '..' : entityId);
+
+      // If entity is a URL, make it clickable; show entity name as display text
+      var entityHtml = isUrl
+        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityName || entityId) + '">' + esc(entityDisplay) + '</a>'
+        : '<span title="' + esc(entityId) + '">' + esc(entityDisplay) + '</span>';
+
+      var isChecked = state.selectedTaskIds.indexOf(id) !== -1;
+
+      // Build inline assignee select with current value selected
+      var assigneeSelect = '<select class="form-control inline-edit inline-assignee" data-id="' + id + '" data-field="assignee">' +
+        assigneeOpts.replace('value="' + assignee + '"', 'value="' + assignee + '" selected') + '</select>';
+
+      // Build inline status select
+      var statusSelect = '<select class="form-control inline-edit inline-status" data-id="' + id + '" data-field="status">' +
+        statusOpts.replace('value="' + status + '"', 'value="' + status + '" selected') + '</select>';
+
+      // Entity ID link for wide view
+      var entityIdShort = entityId.length > 6 ? entityId.substring(0, 5) + '..' : entityId;
+      var entityIdHtml = isUrl
+        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityId) + '">Open</a>'
+        : '<span class="text-truncate" title="' + esc(entityId) + '">' + esc(entityIdShort) + '</span>';
+
+      return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
+        '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
+        '<div class="task-col-wide-only task-col-session text-truncate" title="' + esc(sessionId) + '">' + esc(sessionId) + '</div>' +
+        '<div class="task-col-title text-truncate" style="cursor:pointer;">' + esc(title) + '</div>' +
+        '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
+        '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
+        '<div class="task-col-hideable task-col-assignee">' + assigneeSelect + '</div>' +
+        '<div class="task-col-hideable task-col-status">' + statusSelect + '</div>' +
+        '<div class="task-col-hideable task-col-priority text-center">' + priBadge + '</div>' +
+        '<div class="task-col-start"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="start" value="' + startDateVal + '" title="' + startDateDisp + '"></div>' +
+        '<div class="task-col-due ' + dueClass + '"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="due" value="' + dueDateVal + '" title="' + dueDateDisp + '"></div>' +
+        '<div class="task-col-wide-only task-col-done"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="done" value="' + doneDateVal + '" title="' + doneDateDisp + '"></div>' +
+        '<div class="task-col-toggle"></div>' +
       '</div>';
     }).join('');
 
+    // Click on row (but not on controls) to select task
     container.querySelectorAll('.task-row').forEach(function(el) {
-      el.addEventListener('click', function() {
+      el.addEventListener('click', function(e) {
+        // Don't select when clicking on checkbox, select, input, or link
+        if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
         selectTask(this.dataset.id);
       });
     });
+
+    // Checkbox change handlers
+    container.querySelectorAll('.task-checkbox').forEach(function(cb) {
+      cb.addEventListener('change', function(e) {
+        e.stopPropagation();
+        var taskId = this.dataset.id;
+        if (this.checked) {
+          if (state.selectedTaskIds.indexOf(taskId) === -1) {
+            state.selectedTaskIds.push(taskId);
+          }
+        } else {
+          state.selectedTaskIds = state.selectedTaskIds.filter(function(id) { return id !== taskId; });
+        }
+        updateBulkActionBar();
+      });
+    });
+
+    // Inline edit handlers
+    container.querySelectorAll('.inline-edit').forEach(function(el) {
+      el.addEventListener('change', function(e) {
+        e.stopPropagation();
+        var taskId = this.dataset.id;
+        var field = this.dataset.field;
+        var value = this.value;
+        saveInlineEdit(taskId, field, value);
+      });
+    });
+  }
+
+  function saveInlineEdit(taskId, field, value) {
+    var updates = {};
+    if (field === 'assignee') updates.assignedTo = value;
+    else if (field === 'status') updates.status = value;
+    else if (field === 'start') updates.startDate = value;
+    else if (field === 'due') updates.dueDate = value;
+    else if (field === 'done') updates.doneDate = value;
+
+    // Optimistic update: update local state immediately so UI stays in sync
+    function applyLocalUpdate(t) {
+      if (!t) return;
+      if (field === 'assignee') t.st_AssignedTo = value;
+      else if (field === 'status') t.st_Status = value;
+      else if (field === 'start') t.st_StartDate = value;
+      else if (field === 'due') t.st_DueDate = value;
+      else if (field === 'done') t.st_DoneDate = value;
+    }
+    var task = state.tasks.find(function(t) { return t.st_TaskId === taskId; });
+    var allTask = state.allTasks.find(function(t) { return t.st_TaskId === taskId; });
+    applyLocalUpdate(task);
+    applyLocalUpdate(allTask);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          // Reload tasks to restore correct state after error
+          loadTasks(state.selectedProjectId);
+          return;
+        }
+        // Re-render if selected task was updated
+        if (state.selectedTaskId === taskId) {
+          renderDetailPanel();
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('Error: ' + (err.message || 'Failed to save'));
+        // Reload tasks to restore correct state after error
+        loadTasks(state.selectedProjectId);
+      })
+      .WebAppTasks_updateTask(taskId, updates);
+  }
+
+  function updateBulkActionBar() {
+    var bar = document.getElementById('bulk-action-bar');
+    var count = state.selectedTaskIds.length;
+    if (count > 0) {
+      bar.style.display = '';
+      document.getElementById('selected-count').textContent = count + ' selected';
+    } else {
+      bar.style.display = 'none';
+    }
+    // Update select-all checkbox state
+    var selectAll = document.getElementById('select-all-tasks');
+    var visibleTasks = getFilteredTasks();
+    var allChecked = visibleTasks.length > 0 && visibleTasks.every(function(t) {
+      return state.selectedTaskIds.indexOf(t.st_TaskId) !== -1;
+    });
+    selectAll.checked = allChecked;
   }
 
   function renderDetailPanel() {
@@ -837,21 +1418,55 @@
     document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
     document.getElementById('field-start-date').value = formatDateInput(project.startdate || project.spro_StartDate);
     document.getElementById('field-end-date').value = formatDateInput(project.enddate || project.spro_EndDate);
+
+    // System projects (PROJ-SYS_*) are read-only
+    var projectId = project.projectid || project.spro_ProjectId || '';
+    var isSystemProject = projectId.indexOf('PROJ-SYS_') === 0;
+
+    document.getElementById('field-name').readOnly = isSystemProject;
+    document.getElementById('field-type').disabled = isSystemProject;
+    document.getElementById('field-status').disabled = isSystemProject;
+    document.getElementById('field-start-date').readOnly = isSystemProject;
+    document.getElementById('field-end-date').readOnly = isSystemProject;
+    document.getElementById('btn-save-project').style.display = isSystemProject ? 'none' : '';
   }
 
   function populateTaskForm(task) {
+    // Hide product info panel when switching tasks
+    document.getElementById('product-info-panel').style.display = 'none';
+
     document.getElementById('task-field-title').value = task.st_Title || '';
     document.getElementById('task-field-status').value = task.st_Status || 'New';
     document.getElementById('task-field-priority').value = task.st_Priority || 'Normal';
-    document.getElementById('task-field-assignee').value = task.st_AssignedTo || '';
-    document.getElementById('task-field-due').value = task.st_DueDate ? formatDate(task.st_DueDate) : '';
+
+    // Populate assignee dropdown
+    var assigneeSelect = document.getElementById('task-field-assignee');
+    var assigneeHtml = '<option value="">- Unassigned -</option>';
+    state.assignees.forEach(function(a) {
+      var selected = a === task.st_AssignedTo ? ' selected' : '';
+      assigneeHtml += '<option value="' + a + '"' + selected + '>' + a.split('@')[0] + '</option>';
+    });
+    assigneeSelect.innerHTML = assigneeHtml;
+
+    document.getElementById('task-field-start').value = task.st_StartDate ? formatDateInput(task.st_StartDate) : '';
+    document.getElementById('task-field-due').value = task.st_DueDate ? formatDateInput(task.st_DueDate) : '';
     document.getElementById('task-field-entity').value = task.st_LinkedEntityName || '';
     document.getElementById('task-field-entity-id').value = task.st_LinkedEntityId || '';
     document.getElementById('task-field-notes').value = task.st_Notes || '';
 
+    // Show/hide View button based on whether there's an entity ID
+    var hasEntityId = !!(task.st_LinkedEntityId);
+    document.getElementById('btn-view-product').style.display = hasEntityId ? '' : 'none';
+
+    // Auto-lookup product for sold online status in entity name
+    if (hasEntityId) {
+      lookupSoldOnlineStatus(task.st_LinkedEntityId, task.st_LinkedEntityName);
+    }
+
     var isDone = task.st_Status === 'Done' || task.st_Status === 'Cancelled';
 
     // Check if this is a system-created task (not user-created)
+    // Note: task.content tasks ARE editable by admin
     var taskType = task.st_TaskTypeId || '';
     var isSystemTask = taskType.indexOf('task.system') === 0 ||
                        taskType.indexOf('task.validation') === 0 ||
@@ -861,14 +1476,67 @@
                        taskType.indexOf('task.inventory') === 0 ||
                        taskType.indexOf('task.onboarding') === 0 ||
                        taskType.indexOf('task.order') === 0 ||
-                       taskType.indexOf('task.confirmation') === 0;
+                       taskType.indexOf('task.confirmation') === 0 ||
+                       taskType.indexOf('task.data') === 0 ||
+                       taskType.indexOf('task.crm') === 0 ||
+                       taskType.indexOf('task.export') === 0;
 
-    // System tasks: only allow notes editing and actions
-    document.getElementById('task-field-status').disabled = isDone || isSystemTask;
-    document.getElementById('task-field-priority').disabled = isSystemTask;
-    document.getElementById('btn-complete-task').disabled = isDone;
-    document.getElementById('btn-cancel-task').disabled = isDone;
-    document.getElementById('btn-save-task').style.display = isSystemTask ? 'none' : '';
+    // Content tasks are fully editable
+    var isContentTask = taskType.indexOf('task.content') === 0;
+
+    // Data-carrying tasks that should be completely protected (read-only, no actions)
+    var isDataTask = taskType.indexOf('task.system') === 0 ||
+                     taskType.indexOf('task.sync') === 0;
+
+    // Tasks that allow date editing (even if system-created)
+    var allowsDateEdit = isContentTask ||
+                         taskType === 'task.deficiency.category_stock' ||
+                         taskType === 'task.deficiency.bundle_stock';
+
+    // System tasks: disable field editing (except content tasks)
+    // Done tasks remain editable so admin can adjust dates
+    document.getElementById('task-field-status').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-priority').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-assignee').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-notes').readOnly = isDataTask;
+
+    // Date fields: editable for content tasks and specific system task types
+    document.getElementById('task-field-start').readOnly = !allowsDateEdit;
+    document.getElementById('task-field-due').readOnly = !allowsDateEdit;
+
+    // Entity ID: editable for content tasks (so admin can add Drive URL)
+    document.getElementById('task-field-entity-id').readOnly = !isContentTask;
+
+    // Title: editable for content tasks (code prefix links them, rest is editable)
+    document.getElementById('task-field-title').readOnly = !isContentTask;
+
+    // Open entity button: show only if entity ID looks like a URL
+    var entityId = task.st_LinkedEntityId || '';
+    var openBtn = document.getElementById('btn-open-entity');
+    openBtn.style.display = entityId.indexOf('http') === 0 ? '' : 'none';
+
+    // Data tasks: hide all action buttons (system manages these)
+    // Content tasks: allow all actions
+    // Regular system tasks: allow Done/Cancel but not Save
+    var showSave = !isSystemTask || allowsDateEdit || isContentTask;
+    document.getElementById('btn-save-task').style.display = showSave ? '' : 'none';
+    document.getElementById('btn-complete-task').style.display = isDataTask ? 'none' : '';
+    document.getElementById('btn-cancel-task').style.display = isDataTask ? 'none' : '';
+    document.getElementById('btn-complete-task').disabled = isDone || isDataTask;
+    document.getElementById('btn-cancel-task').disabled = isDone || isDataTask;
+  }
+
+  function lookupSoldOnlineStatus(entityId, entityName) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.comax) {
+          var indicator = result.comax.isWeb ? ' [WEB]' : ' [NOT WEB]';
+          var indicatorClass = result.comax.isWeb ? 'text-success' : 'text-danger';
+          var field = document.getElementById('task-field-entity');
+          field.value = (entityName || '') + indicator;
+        }
+      })
+      .WebAppProducts_lookupProductBySku(entityId);
   }
 
   function updateStats() {
@@ -920,6 +1588,15 @@
       if (state.taskStatusFilter !== 'all' && t.st_Status !== state.taskStatusFilter) return false;
       if (state.taskPriorityFilter !== 'all' && t.st_Priority !== state.taskPriorityFilter) return false;
       if (state.taskAssigneeFilter !== 'all' && t.st_AssignedTo !== state.taskAssigneeFilter) return false;
+      if (state.taskSessionFilter) {
+        var sessionId = String(t.st_SessionId || '').toLowerCase();
+        if (sessionId.indexOf(state.taskSessionFilter) === -1) return false;
+      }
+      if (state.taskEntityFilter) {
+        var entityName = String(t.st_LinkedEntityName || '').toLowerCase();
+        var entityId = String(t.st_LinkedEntityId || '').toLowerCase();
+        if (entityName.indexOf(state.taskEntityFilter) === -1 && entityId.indexOf(state.taskEntityFilter) === -1) return false;
+      }
       return true;
     });
   }
@@ -986,8 +1663,7 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) { alert('Error: ' + result.error); return; }
-        $('#newProjectModal').modal('hide');
-        document.getElementById('new-project-form').reset();
+        document.getElementById('newProjectModal').style.display = 'none';
         loadData();
       })
       .WebAppProjects_createProject({
@@ -1005,8 +1681,7 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) { alert('Error: ' + result.error); return; }
-        $('#newTaskModal').modal('hide');
-        document.getElementById('new-task-form').reset();
+        document.getElementById('newTaskModal').style.display = 'none';
         loadData();
       })
       .WebAppTasks_createTask({
@@ -1037,33 +1712,137 @@
   function saveTaskStatus() {
     if (!state.selectedTaskId) return;
 
-    var newStatus = document.getElementById('task-field-status').value;
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) { alert('Error: ' + result.error); return; }
-        loadData();
-      })
-      .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
+    var task = getSelectedTask();
+    var taskType = task ? task.st_TaskTypeId : '';
+    var isContentTask = taskType.indexOf('task.content') === 0;
+
+    // Check if this task allows full editing
+    var allowsDateEdit = isContentTask ||
+                         taskType === 'task.deficiency.category_stock' ||
+                         taskType === 'task.deficiency.bundle_stock';
+
+    if (allowsDateEdit || isContentTask) {
+      // Save all editable fields
+      var updates = {
+        status: document.getElementById('task-field-status').value,
+        priority: document.getElementById('task-field-priority').value,
+        assignedTo: document.getElementById('task-field-assignee').value || null,
+        startDate: document.getElementById('task-field-start').value || null,
+        dueDate: document.getElementById('task-field-due').value || null,
+        notes: document.getElementById('task-field-notes').value
+      };
+      // For content tasks, also save entity ID (Drive URL) and title
+      if (isContentTask) {
+        updates.linkedEntityId = document.getElementById('task-field-entity-id').value.trim();
+        updates.title = document.getElementById('task-field-title').value.trim();
+      }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) { alert('Error: ' + result.error); return; }
+          loadData();
+        })
+        .WebAppTasks_updateTask(state.selectedTaskId, updates);
+    } else {
+      // Save status only (original behavior for system tasks)
+      var newStatus = document.getElementById('task-field-status').value;
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) { alert('Error: ' + result.error); return; }
+          loadData();
+        })
+        .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
+    }
   }
 
   function completeTask(taskId) {
+    showTaskActionSpinner('btn-complete-task');
     google.script.run
       .withSuccessHandler(function(success) {
+        hideTaskActionSpinner('btn-complete-task', 'Done');
         if (!success) { alert('Could not complete task'); return; }
         state.selectedTaskId = null;
+        render();  // Clear detail panel immediately
         loadData();
+      })
+      .withFailureHandler(function(err) {
+        hideTaskActionSpinner('btn-complete-task', 'Done');
+        alert('Error: ' + (err.message || 'Failed'));
       })
       .WebAppTasks_completeTaskById(taskId);
   }
 
   function cancelTask(taskId) {
+    showTaskActionSpinner('btn-cancel-task');
     google.script.run
       .withSuccessHandler(function(result) {
+        hideTaskActionSpinner('btn-cancel-task', 'Delete');
         if (result.error) { alert('Error: ' + result.error); return; }
         state.selectedTaskId = null;
+        render();
         loadData();
       })
-      .WebAppTasks_updateTaskStatus(taskId, 'Cancelled');
+      .withFailureHandler(function(err) {
+        hideTaskActionSpinner('btn-cancel-task', 'Delete');
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppTasks_deleteTask(taskId);
+  }
+
+  function cancelSelectedTasks() {
+    var taskIds = state.selectedTaskIds.slice();  // Copy array
+    if (taskIds.length === 0) return;
+
+    var btn = document.getElementById('btn-cancel-selected');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
+
+    var completed = 0;
+    var failed = 0;
+
+    taskIds.forEach(function(taskId) {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) failed++;
+          else completed++;
+          checkBulkDeleteComplete();
+        })
+        .withFailureHandler(function() {
+          failed++;
+          checkBulkDeleteComplete();
+        })
+        .WebAppTasks_deleteTask(taskId);
+    });
+
+    function checkBulkDeleteComplete() {
+      if (completed + failed === taskIds.length) {
+        btn.disabled = false;
+        btn.textContent = 'Delete Selected';
+        state.selectedTaskIds = [];
+        state.selectedTaskId = null;
+        updateBulkActionBar();
+        render();
+        loadData();
+        if (failed > 0) {
+          alert('Deleted ' + completed + ' task(s). ' + failed + ' failed.');
+        }
+      }
+    }
+  }
+
+  function showTaskActionSpinner(buttonId) {
+    var btn = document.getElementById(buttonId);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    document.getElementById('btn-complete-task').disabled = true;
+    document.getElementById('btn-cancel-task').disabled = true;
+  }
+
+  function hideTaskActionSpinner(buttonId, label) {
+    var btn = document.getElementById(buttonId);
+    btn.innerHTML = label;
+    btn.disabled = false;
+    document.getElementById('btn-complete-task').disabled = false;
+    document.getElementById('btn-cancel-task').disabled = false;
   }
 
 })();
