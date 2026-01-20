@@ -14,18 +14,20 @@
   .task-row:hover { background-color: #f8f9fa; }
   .task-row.expanded { background-color: #e3f2fd; }
   .task-row.overdue { color: #dc3545; }
-  .task-col-title { flex: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .task-col-topic { flex: 1; }
   .task-col-entity { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .task-col-due { flex: 1; text-align: center; }
+  .task-col-title { flex: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .task-col-status { flex: 1; }
-  .task-col-link { flex: 1; text-align: center; }
+  .task-col-priority { flex: 1; text-align: center; }
+  .task-col-due { flex: 1; text-align: center; }
+  .task-col-link { flex: 0.5; text-align: center; }
 
   /* Expanded row detail */
   .task-detail { display: none; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
   .task-detail.show { display: block; }
   .task-detail textarea { width: 100%; min-height: 80px; margin: 10px 0; }
-  .task-detail .detail-row { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
+  .task-detail .detail-row { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+  .task-detail .detail-row.justify-content-between { justify-content: space-between; }
   .task-detail label { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
 
   /* Calendar view */
@@ -36,10 +38,10 @@
   .calendar-cell { min-height: 100px; border: 1px solid #eee; padding: 6px; font-size: 11px; }
   .calendar-cell.today { background-color: #fff3cd; }
   .calendar-cell .date-num { font-weight: 600; margin-bottom: 4px; }
-  .calendar-cell .task-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 1px; cursor: pointer; }
-  .calendar-cell .task-dot.content { background-color: #17a2b8; }
-  .calendar-cell .task-dot.inventory { background-color: #28a745; }
-  .calendar-cell .task-dot.products { background-color: #ffc107; }
+  .calendar-cell .task-dot { display: inline-block; width: 8px !important; height: 8px !important; min-width: 8px; min-height: 8px; border-radius: 50%; margin: 1px; cursor: pointer; background-color: #6c757d; }
+  .calendar-cell .task-dot.topic-content { background-color: #17a2b8; }
+  .calendar-cell .task-dot.topic-inventory { background-color: #28a745; }
+  .calendar-cell .task-dot.topic-products { background-color: #ffc107; }
 
   /* View toggle */
   .view-toggle { display: flex; gap: 5px; }
@@ -107,11 +109,12 @@
           <!-- List View -->
           <div id="list-view" class="list-container">
             <div class="task-row" style="font-weight: 600; background: #f8f9fa; cursor: default;">
-              <div class="task-col-title">Title</div>
               <div class="task-col-topic">Topic</div>
               <div class="task-col-entity">Entity</div>
-              <div class="task-col-due">Due</div>
+              <div class="task-col-title">Title</div>
               <div class="task-col-status">Status</div>
+              <div class="task-col-priority">Priority</div>
+              <div class="task-col-due">Due</div>
               <div class="task-col-link">Link</div>
             </div>
             <div id="task-list" class="task-list">
@@ -353,50 +356,58 @@
         : '-';
 
       html += '<div class="task-row' + overdueClass + expandedClass + '" data-id="' + task.id + '">';
-      html += '<div class="task-col-title" title="' + escapeHtml(task.name) + '">' + escapeHtml(task.name) + '</div>';
       html += '<div class="task-col-topic"><span class="badge badge-secondary">' + task.topic + '</span></div>';
       html += '<div class="task-col-entity" title="' + escapeHtml(task.entityName) + '">' + escapeHtml(entityDisplay) + '</div>';
-      html += '<div class="task-col-due">' + formatDate(task.dueDate) + '</div>';
+      html += '<div class="task-col-title" title="' + escapeHtml(task.name) + '">' + escapeHtml(task.name) + '</div>';
       html += '<div class="task-col-status">' + task.status + '</div>';
+      html += '<div class="task-col-priority">' + (task.priority || '-') + '</div>';
+      html += '<div class="task-col-due">' + formatDate(task.dueDate) + '</div>';
       html += '<div class="task-col-link">' + linkHtml + '</div>';
       html += '</div>';
 
       // Expanded detail row
       var showClass = state.expandedTaskId === task.id ? ' show' : '';
       html += '<div class="task-detail' + showClass + '" data-id="' + task.id + '">';
-      html += '<div class="detail-row">';
-      html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
-      html += '<div><label>Due</label><div>' + formatDateFull(task.dueDate) + '</div></div>';
-      html += '<div><label>Priority</label><div>' + task.priority + '</div></div>';
-      html += '</div>';
 
+      // Single row: Stream, Start, Due, Done, Priority, Open link, Status, Revert, Save
       var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
-      if (isUrl2) {
-        html += '<div class="mb-2"><a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">Open in Drive</a></div>';
-      }
-
-      // System tasks (brurya, etc.) are read-only for manager
       var isSystemTask = task.typeId && (
         task.typeId.indexOf('task.inventory.') === 0 ||
         task.typeId.indexOf('task.validation.comax') === 0
       );
 
+      html += '<div class="detail-row justify-content-between">';
+      html += '<div class="d-flex align-items-center" style="gap:15px;">';
+      html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
+      html += '<div><label>Start</label><div>' + formatDateFull(task.startDate) + '</div></div>';
+      html += '<div><label>Due</label><div>' + formatDateFull(task.dueDate) + '</div></div>';
+      html += '<div><label>Done</label><div>' + formatDateFull(task.doneDate) + '</div></div>';
+      html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
+      if (isUrl2) {
+        html += '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">Open</a>';
+      }
+      if (!isSystemTask) {
+        html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '" style="width:100px;">';
+        ['New', 'In Progress', 'Done'].forEach(function(s) {
+          var sel = s === task.status ? ' selected' : '';
+          html += '<option value="' + s + '"' + sel + '>' + s + '</option>';
+        });
+        html += '</select>';
+        html += '<button type="button" class="btn btn-sm btn-light btn-revert-task" data-id="' + task.id + '" data-name="' + escapeHtml(task.name) + '">Revert</button>';
+      }
+      html += '</div>';
+      if (!isSystemTask) {
+        html += '<button type="button" class="btn btn-sm btn-light btn-save-task" data-id="' + task.id + '">Save</button>';
+      }
+      html += '</div>';
+
+      // Notes
       html += '<div><label>Notes</label></div>';
       if (isSystemTask) {
         html += '<div class="p-2 bg-white border rounded small">' + escapeHtml(task.notes || '-') + '</div>';
         html += '<div class="mt-2 small text-muted">System task - managed by workflow</div>';
       } else {
         html += '<textarea class="form-control task-notes" data-id="' + task.id + '">' + escapeHtml(task.notes || '') + '</textarea>';
-        html += '<div class="detail-row mt-2">';
-        html += '<div><label>Status</label>';
-        html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '" style="width:120px;">';
-        ['New', 'In Progress', 'Done'].forEach(function(s) {
-          var sel = s === task.status ? ' selected' : '';
-          html += '<option value="' + s + '"' + sel + '>' + s + '</option>';
-        });
-        html += '</select></div>';
-        html += '<button type="button" class="btn btn-sm btn-light btn-save-task" data-id="' + task.id + '">Save</button>';
-        html += '</div>';
       }
       html += '</div>';
     });
@@ -416,6 +427,14 @@
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         saveTask(this.dataset.id);
+      });
+    });
+
+    // Add revert handlers
+    container.querySelectorAll('.btn-revert-task').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        revertTask(this.dataset.id, this.dataset.name);
       });
     });
   }
@@ -462,6 +481,37 @@
       .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes, status: status });
   }
 
+  function revertTask(taskId, taskName) {
+    if (!confirm('Revert "' + taskName + '" to Admin?\n\nThis will reassign the task to Admin for handling.')) {
+      return;
+    }
+
+    var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
+    var btn = detail.querySelector('.btn-revert-task');
+    btn.disabled = true;
+    btn.textContent = 'Reverting...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Revert to Admin';
+        if (result.error) {
+          alert('Error: ' + result.error);
+        } else {
+          // Remove task from local state since it's now assigned to Admin
+          state.tasks = state.tasks.filter(function(t) { return t.id !== taskId; });
+          state.expandedTaskId = null;
+          applyFilters();
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Revert to Admin';
+        alert('Error: ' + (err.message || 'Failed to revert'));
+      })
+      .WebAppDashboardV2_revertTaskToAdmin(taskId);
+  }
+
   // === Calendar View ===
 
   function renderCalendar() {
@@ -503,7 +553,7 @@
 
       var dayTasks = tasksByDate[cellDate.getTime()] || [];
       dayTasks.forEach(function(task) {
-        var topicClass = task.topic.toLowerCase();
+        var topicClass = 'topic-' + task.topic.toLowerCase();
         html += '<div class="task-dot ' + topicClass + '" title="' + escapeHtml(task.name) + '" data-id="' + task.id + '"></div>';
       });
 

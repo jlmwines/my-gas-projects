@@ -1028,7 +1028,7 @@ function WebAppInventory_importBruryaFromSheet(sheetIdOrUrl) {
 
     // Update last Brurya update timestamp
     if (updated > 0 || created > 0) {
-      ConfigService.setConfig('system.brurya.last_update', new Date().toISOString());
+      ConfigService.setConfig('system.brurya.last_update', 'value', new Date().toISOString());
     }
 
     const message = `Brurya import complete: ${updated} updated, ${created} created.`;

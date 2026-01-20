@@ -420,6 +420,7 @@
         if (response.success) {
           showToast(`${response.completed} counts processed successfully.`);
           loadAdminViewData(); // Reload data to reflect changes
+          loadComaxSyncData(); // Reload Comax Sync section to show accepted counts
           if (window.refreshSystemHealthWidget) {
             window.refreshSystemHealthWidget();
           }

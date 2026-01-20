@@ -476,6 +476,7 @@ function WebAppDashboardV2_getManagerData() {
         projectId: task.st_ProjectId || '',
         startDate: task.st_StartDate || null,
         dueDate: task.st_DueDate || null,
+        doneDate: task.st_DoneDate || null,
         status: task.st_Status,
         priority: task.st_Priority,
         notes: task.st_Notes || ''
@@ -554,6 +555,43 @@ function WebAppDashboardV2_updateManagerTask(taskId, updates) {
     }
 
     return WebAppTasks_updateTask(taskId, allowedUpdates);
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Reverts a task to Admin by reassigning it.
+ * Used by manager to send a task back for admin handling (e.g., rejected draft).
+ * @param {string} taskId The task ID.
+ * @returns {Object} Result object with success and error.
+ */
+function WebAppDashboardV2_revertTaskToAdmin(taskId) {
+  const serviceName = 'WebAppDashboardV2';
+  const functionName = 'revertTaskToAdmin';
+
+  try {
+    // Get admin email from config
+    const users = ConfigService.getConfig('system.users');
+    let adminEmail = null;
+    if (users && Array.isArray(users)) {
+      const admin = users.find(u => u.role && u.role.toLowerCase() === 'admin');
+      adminEmail = admin ? admin.email : null;
+    }
+
+    if (!adminEmail) {
+      return { success: false, error: 'Admin user not found in config' };
+    }
+
+    // Update task assignee to admin
+    const updates = {
+      assignedTo: adminEmail,
+      status: 'Assigned' // Reset status to Assigned so admin sees it
+    };
+
+    LoggerService.info(serviceName, functionName, `Reverting task ${taskId} to admin: ${adminEmail}`);
+    return WebAppTasks_updateTask(taskId, updates);
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
     return { success: false, error: e.message };

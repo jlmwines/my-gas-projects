@@ -1,11 +1,4 @@
 <div class="container-fluid">
-  <div class="row mb-3">
-    <div class="col-12">
-      <h4>Dashboard</h4>
-      <small id="dashboard-timestamp" class="text-muted"></small>
-    </div>
-  </div>
-
   <!-- Row 1: System Health, Orders, Inventory, Products -->
   <div class="row">
     <div class="col-md-3">
@@ -82,9 +75,6 @@
 
     var data = response.data;
 
-    // Timestamp
-    document.getElementById('dashboard-timestamp').textContent =
-      'Updated: ' + new Date(data.timestamp).toLocaleTimeString();
 
     // Cards
     renderSystemHealthCard(data.systemHealth);
