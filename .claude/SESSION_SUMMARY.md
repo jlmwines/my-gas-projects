@@ -1,4 +1,40 @@
-# Session Summary - 2026-01-20
+# Session Summary - 2026-01-20 (Latest)
+
+## What We Accomplished
+
+### Manager Dashboard v2 - Production Ready
+
+**Promoted to default:**
+- Removed "Dashboard v2" test link from manager nav
+- Updated WebApp.js routing to use v2 as default
+
+**UI Improvements:**
+- Reordered task list columns: Topic → Entity → Title → Status → Priority → Due → Link
+- Consolidated expanded task row: Stream, Start, Due, Done, Priority, Open, Status, Revert, Save (all in one row)
+- Added "Revert to Admin" button with confirmation dialog
+- Fixed calendar dot sizing (CSS collision with Bootstrap `.content` class)
+- Renamed dot classes to `topic-content`, `topic-inventory`, `topic-products`
+
+**Backend:**
+- Added `WebAppDashboardV2_revertTaskToAdmin()` - reassigns task to admin
+- Added `doneDate` to manager task data
+
+### Bug Fixes
+
+**Brurya 999 days bug:**
+- Root cause: `WebAppInventory.js:1031` missing `'value'` argument in `ConfigService.setConfig()`
+- Fix applied, pending verification after housekeeping run
+
+**Inventory view refresh bug:**
+- Accepted counts disappeared from review but didn't appear in Comax sync section
+- Added `loadComaxSyncData()` call after accepting counts
+
+### Admin Dashboard
+- Removed "Dashboard" title and timestamp
+
+---
+
+# Session Summary - 2026-01-20 (Earlier)
 
 ## What We Accomplished
 

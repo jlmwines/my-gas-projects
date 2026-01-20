@@ -8,25 +8,19 @@ Projects: jlmops, web, marketing, content
 ## jlmops
 
 ### Open
-- [x] 2026-01-05: increase size of sync status notification text - FIXED: bumped from 1.1rem to 1.3rem
-- [x] 2026-01-05: sync timestamp is not local Israel time (looks like GMT) - FIXED: explicit Asia/Jerusalem timezone
-- [x] 2026-01-05: admin dashboard task counts wrong - FIXED: V1 missing 'Assigned' status, V2 wrong task type + no status filter
-- [ ] 2025-12-26: task creation timestamp is not always local Israel time
+- [ ] 2026-01-20: previous brurya task st_DoneDate jan 02, but current brurya task shows 999 days since completed - FIX APPLIED: missing 'value' arg in setConfig call, pending verification
+- [ ] 2026-01-20: accepted inventory counts are removed from admin inventory view, but do not appear below in comax sync without refreshing the view
+- [ ] 2025-12-26: task creation timestamp is not always local Israel time - FIX APPLIED: _getIsraelMidnight() helpers added, needs overnight verification
 - [ ] 2025-12-26: check if product master/detail task duplicate creation is prevented
 - [ ] 2025-12-29: sync shows export button after export starts, then refreshes to confirm stage
 - [ ] 2025-12-29: changed woo coupon plugin - auto apply url pattern changed to {site_url}/?wt_coupon={coupon_code}
 - [ ] 2025-12-29: new coupon plugin accepts email addresses separated by commas, not user id's
 - [ ] 2025-12-31: sync needs refresh to show comax product import when order export skipped
-- [x] 2026-01-02: brurya edits only possible through file import, not accepted on screen, task not updated after submission - FIXED: SKU type mismatch + missing task close
 - [ ] sc_IsCore defaulting conflict overwrites correct values from import
 - [ ] Gift detection incomplete (missing delivery keyword logic)
 - [ ] War-support detection checks wrong field (customerNote instead of wom_CouponItems)
 - [ ] Archive mapping missing CouponItems field
-- [x] Duplicate _classifyCustomerType function in ContactImportService - NOT A BUG: functions defined once in ContactService.js, correctly called from ContactImportService
-- [x] Duplicate _calculateLifecycleStatus function in ContactImportService - NOT A BUG: same as above
 - [ ] Existing contact data corrupted (inconsistent sc_IsCore/sc_CustomerType)
-- [x] 2026-01-05: Packing slip wine info order wrong - FIXED: reordered layout, compact RTL header, pairing enrichment
-- [ ] 2026-01-05: printme folder not in housekeeping routine
 
 ### Resolved
 - [x] 2025-12-29: Packing slips bundle count - VERIFIED: PrintService.js excludes bundle products
