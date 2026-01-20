@@ -524,7 +524,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -535,7 +535,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "manager_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -546,7 +546,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -557,7 +557,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "manager_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -568,7 +568,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -579,7 +579,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -590,7 +590,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "two_weeks"
     ],
     [
@@ -601,7 +601,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -612,7 +612,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -623,7 +623,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ],
     [
@@ -634,7 +634,7 @@
         "topic", "Content",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manual",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
     ]
 ]

@@ -4,6 +4,7 @@
   .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }
   .task-col-priority { text-align: center; justify-content: center; }
   .task-col-toggle { text-align: right; }
+  .panel-btn.active { background-color: #d6d6d6; font-weight: bold; }
 
   /* Task row text size - slightly larger than small */
   .task-row { font-size: 13px; }
@@ -12,11 +13,14 @@
   .panel-state-1 .task-col-hideable { display: none !important; }
   .panel-state-1 .task-col-wide-only { display: none !important; }
   .panel-state-1 .hide-compact { display: none !important; }
-  .panel-state-1 .task-col-check { width: 4%; }
-  .panel-state-1 .task-col-title { width: 62%; }
-  .panel-state-1 .task-col-start { width: 15%; }
-  .panel-state-1 .task-col-due { width: 15%; }
+  .panel-state-1 .scope-links { display: none !important; }
+  .panel-state-1 .task-col-check { width: 5%; }
+  .panel-state-1 .task-col-title { width: 55%; }
+  .panel-state-1 .task-col-start { width: 18%; }
+  .panel-state-1 .task-col-due { width: 18%; }
   .panel-state-1 .task-col-toggle { width: 4%; }
+  .panel-state-1 #panel-toggle-group { display: none; }
+  .panel-state-1 .expand-compact { display: inline-block !important; }
 
   /* State 2: standard (10 cols = 100%) - check, title, entity, assignee, status, priority, start, due, toggle */
   .panel-state-2 .task-col-hideable { display: flex !important; align-items: center; }
@@ -30,22 +34,30 @@
   .panel-state-2 .task-col-start { width: 12%; }
   .panel-state-2 .task-col-due { width: 12%; }
   .panel-state-2 .task-col-toggle { width: 9%; }
+  .panel-state-2 .scope-links { display: inline; }
+  .panel-state-2 .expand-compact { display: none !important; }
 
   /* State 3: full (12 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done, toggle */
   .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
-  .panel-state-3 .task-col-check { width: 3%; }
-  .panel-state-3 .task-col-session { width: 7%; }
-  .panel-state-3 .task-col-title { width: 14%; }
+  .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
+  .panel-state-3 .task-col-session { width: 8%; max-width: 100px; overflow: hidden; }
+  .panel-state-3 .task-col-title { width: 15%; }
   .panel-state-3 .task-col-entity { width: 10%; }
-  .panel-state-3 .task-col-entity-id { width: 8%; }
-  .panel-state-3 .task-col-assignee { width: 9%; }
-  .panel-state-3 .task-col-status { width: 8%; }
+  .panel-state-3 .task-col-entity-id { width: 5%; }
+  .panel-state-3 .task-col-assignee { width: 10%; }
+  .panel-state-3 .task-col-status { width: 10%; }
   .panel-state-3 .task-col-priority { width: 4%; }
   .panel-state-3 .task-col-start { width: 9%; }
   .panel-state-3 .task-col-due { width: 9%; }
   .panel-state-3 .task-col-done { width: 9%; }
-  .panel-state-3 .task-col-toggle { width: 10%; }
+  .panel-state-3 .task-col-toggle { width: 9%; }
+
+  .panel-state-3 .scope-links { display: inline; }
+  .panel-state-3 .expand-compact { display: none !important; }
+
+  /* Ensure session ID truncates properly */
+  .task-col-session { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Inline edits fill their container */
   .task-row .inline-edit { height: 24px; font-size: 11px; padding: 0 2px; width: 100%; box-sizing: border-box; }
@@ -67,7 +79,11 @@
             <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Create content task stream">+ Content</button>
             <button id="btn-content-import" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Import content tasks">Import</button>
             <button id="btn-new" class="btn btn-sm btn-light mr-1">+ Project</button>
-            <button id="btn-toggle-panel" class="btn btn-sm btn-light" title="Expand panel">◨</button>
+            <span class="btn-group btn-group-sm" id="panel-toggle-group">
+              <button type="button" class="btn btn-light panel-btn" data-panel="1" title="List 1/3">◧</button>
+              <button type="button" class="btn btn-light panel-btn" data-panel="2" title="List 2/3">◨</button>
+              <button type="button" class="btn btn-light panel-btn" data-panel="3" title="Full list">▣</button>
+            </span>
           </div>
         </div>
 
@@ -128,10 +144,14 @@
             <div class="task-col-wide-only task-col-done">
               <a href="#" class="text-muted sort-col" data-field="done">Done <span id="sort-icon-done"></span></a>
             </div>
-            <div class="task-col-toggle text-right">
-              <label class="mb-0 small" style="font-weight:normal;">
-                <input type="checkbox" id="toggle-show-all"> All
-              </label>
+            <div class="task-col-toggle text-right small">
+              <span class="scope-links">
+                <a href="#" class="scope-link" data-scope="open">Open</a> |
+                <a href="#" class="scope-link" data-scope="started">Started</a> |
+                <a href="#" class="scope-link" data-scope="future">Future</a> |
+                <a href="#" class="scope-link" data-scope="all">All</a>
+              </span>
+              <a href="#" class="expand-compact" style="display:none;" title="Expand view">⊕</a>
             </div>
           </div>
           <!-- Bulk action bar -->
@@ -465,7 +485,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     taskEntityFilter: '',
     taskSessionFilter: '',
     selectedTaskIds: [],  // For bulk operations
-    showAllTasks: false,
+    taskScopeFilter: 'open',  // 'open', 'started', 'future', 'all'
     sortField: 'name',
     sortDir: 'asc',
     pendingSelectTaskId: null,
@@ -487,6 +507,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     loadData();
     loadContentStages();
     bindEventHandlers();
+
+    // Set initial panel state
+    setPanelState(state.panelState);
 
     // Check for navigation from dashboard
     checkDashboardNavigation();
@@ -579,7 +602,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function loadTasks() {
-    var fetchFn = state.showAllTasks ? 'WebAppTasks_getAllTasks' : 'WebAppTasks_getAllOpenTasks';
+    // Fetch all tasks when scope is 'all' (includes Done), otherwise just open tasks
+    var fetchFn = state.taskScopeFilter === 'all' ? 'WebAppTasks_getAllTasks' : 'WebAppTasks_getAllOpenTasks';
 
     google.script.run
       .withSuccessHandler(function(result) {
@@ -612,9 +636,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     if (!task) {
       // Task not in open tasks - try loading all tasks
-      if (!state.showAllTasks) {
-        state.showAllTasks = true;
-        document.getElementById('toggle-show-all').checked = true;
+      if (state.taskScopeFilter !== 'all') {
+        state.taskScopeFilter = 'all';
         state.pendingSelectTaskId = taskId;
         state.pendingSelectProjectId = projectId;
         loadTasks();
@@ -638,7 +661,17 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('btn-home').addEventListener('click', goHome);
     document.getElementById('btn-back').addEventListener('click', goBack);
     document.getElementById('btn-new').addEventListener('click', handleNew);
-    document.getElementById('btn-toggle-panel').addEventListener('click', togglePanel);
+    document.querySelectorAll('.panel-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        setPanelState(parseInt(this.dataset.panel));
+      });
+    });
+
+    // Expand button for compact view
+    document.querySelector('.expand-compact').addEventListener('click', function(e) {
+      e.preventDefault();
+      setPanelState(2);
+    });
 
     document.getElementById('filter-project-status').addEventListener('change', function() {
       state.projectStatusFilter = this.value;
@@ -682,9 +715,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       }, 300);
     });
 
-    document.getElementById('toggle-show-all').addEventListener('change', function() {
-      state.showAllTasks = this.checked;
-      loadTasks();
+    // Scope filter links (Open, Started, Future, All)
+    document.querySelectorAll('.scope-link').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        state.taskScopeFilter = this.dataset.scope;
+        loadTasks();
+      });
     });
 
     document.querySelectorAll('.sort-col').forEach(function(el) {
@@ -972,16 +1009,19 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     }
   }
 
-  function togglePanel() {
-    // Cycle through 3 states: 1 -> 2 -> 3 -> 1
-    state.panelState = (state.panelState % 3) + 1;
+  function setPanelState(newState) {
+    state.panelState = newState;
     var listCol = document.getElementById('list-column');
     var detailCol = document.getElementById('detail-column');
-    var toggleBtn = document.getElementById('btn-toggle-panel');
     var container = document.querySelector('.container-fluid');
 
     // Remove all panel state classes
     container.classList.remove('panel-state-1', 'panel-state-2', 'panel-state-3');
+
+    // Update active button
+    document.querySelectorAll('.panel-btn').forEach(function(btn) {
+      btn.classList.toggle('active', parseInt(btn.dataset.panel) === newState);
+    });
 
     if (state.panelState === 1) {
       // List 1/3, detail 2/3 (compact list)
@@ -989,8 +1029,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       listCol.style.display = '';
       detailCol.className = 'col-md-8';
       detailCol.style.display = '';
-      toggleBtn.textContent = '◧';
-      toggleBtn.title = 'Expand list (2/3)';
       container.classList.add('panel-state-1');
     } else if (state.panelState === 2) {
       // List 2/3, detail 1/3 (expanded list)
@@ -998,16 +1036,12 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       listCol.style.display = '';
       detailCol.className = 'col-md-4';
       detailCol.style.display = '';
-      toggleBtn.textContent = '◨';
-      toggleBtn.title = 'Full list (no detail)';
       container.classList.add('panel-state-2');
     } else {
       // List full, detail hidden
       listCol.className = 'col-md-12';
       listCol.style.display = '';
       detailCol.style.display = 'none';
-      toggleBtn.textContent = '◩';
-      toggleBtn.title = 'Compact list (1/3)';
       container.classList.add('panel-state-3');
     }
   }
@@ -1089,7 +1123,20 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       projectsHeader.style.display = 'none';
       tasksHeader.style.display = '';
       updateSortIcons('title');
+      updateScopeLinks();
     }
+  }
+
+  function updateScopeLinks() {
+    document.querySelectorAll('.scope-link').forEach(function(el) {
+      if (el.dataset.scope === state.taskScopeFilter) {
+        el.style.fontWeight = 'bold';
+        el.style.color = '#212529';
+      } else {
+        el.style.fontWeight = 'normal';
+        el.style.color = '';
+      }
+    });
   }
 
   function updateSortIcons(defaultField) {
@@ -1221,7 +1268,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var rowClass = isDone ? ' text-muted' : '';
 
       var sessionId = t.st_SessionId || '';
-      var entityId = t.st_LinkedEntityId || '-';
+      var entityId = t.st_LinkedEntityId != null ? String(t.st_LinkedEntityId) : '-';
       var entityName = t.st_LinkedEntityName || '';
       var isUrl = entityId.indexOf('http') === 0;
       var entityDisplay = entityName || (entityId.length > 10 ? entityId.substring(0, 8) + '..' : entityId);
@@ -1511,7 +1558,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('task-field-title').readOnly = !isContentTask;
 
     // Open entity button: show only if entity ID looks like a URL
-    var entityId = task.st_LinkedEntityId || '';
+    var entityId = task.st_LinkedEntityId != null ? String(task.st_LinkedEntityId) : '';
     var openBtn = document.getElementById('btn-open-entity');
     openBtn.style.display = entityId.indexOf('http') === 0 ? '' : 'none';
 
@@ -1567,8 +1614,11 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function getProjectTaskCount(projectId) {
+    if (!projectId) return 0;
+    var targetId = String(projectId).trim();
     return state.tasks.filter(function(t) {
-      return t.st_ProjectId === projectId;
+      var taskProjId = t.st_ProjectId ? String(t.st_ProjectId).trim() : '';
+      return taskProjId === targetId;
     }).length;
   }
 
@@ -1583,8 +1633,15 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function getFilteredTasks() {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var selectedProjId = state.selectedProjectId ? String(state.selectedProjectId).trim() : null;
+
     return state.tasks.filter(function(t) {
-      if (state.selectedProjectId && t.st_ProjectId !== state.selectedProjectId) return false;
+      if (selectedProjId) {
+        var taskProjId = t.st_ProjectId ? String(t.st_ProjectId).trim() : '';
+        if (taskProjId !== selectedProjId) return false;
+      }
       if (state.taskStatusFilter !== 'all' && t.st_Status !== state.taskStatusFilter) return false;
       if (state.taskPriorityFilter !== 'all' && t.st_Priority !== state.taskPriorityFilter) return false;
       if (state.taskAssigneeFilter !== 'all' && t.st_AssignedTo !== state.taskAssigneeFilter) return false;
@@ -1597,6 +1654,28 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         var entityId = String(t.st_LinkedEntityId || '').toLowerCase();
         if (entityName.indexOf(state.taskEntityFilter) === -1 && entityId.indexOf(state.taskEntityFilter) === -1) return false;
       }
+
+      // Scope filter: open, started, future, all
+      // Note: 'open' shows all non-Done tasks (no date filtering)
+      if (state.taskScopeFilter === 'started' || state.taskScopeFilter === 'future') {
+        var startDate = null;
+        try {
+          if (t.st_StartDate) {
+            startDate = new Date(t.st_StartDate);
+            if (isNaN(startDate.getTime())) startDate = null;
+            else startDate.setHours(0, 0, 0, 0);
+          }
+        } catch (e) {
+          startDate = null;
+        }
+        var isStarted = startDate && startDate <= today;
+        var isFuture = !startDate || startDate > today;
+
+        if (state.taskScopeFilter === 'started' && !isStarted) return false;
+        if (state.taskScopeFilter === 'future' && !isFuture) return false;
+      }
+      // 'open' and 'all' pass all tasks through (no date filtering)
+
       return true;
     });
   }

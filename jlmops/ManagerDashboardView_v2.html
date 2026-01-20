@@ -1,0 +1,572 @@
+<style>
+  /* Role-based visibility */
+  .admin-only { display: none; }
+  .admin-focus { opacity: 0.75; }
+  .manager-focus { background-color: #fffde7; }
+  .admin-row { color: #aaa; }
+  .admin-row strong { font-weight: normal; }
+
+  /* Task widget styles */
+  .task-filters { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .task-filters select, .task-filters input { font-size: 12px; height: 28px; }
+  .task-list { max-height: calc(100vh - 320px); min-height: 300px; overflow-y: auto; }
+  .task-row { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
+  .task-row:hover { background-color: #f8f9fa; }
+  .task-row.expanded { background-color: #e3f2fd; }
+  .task-row.overdue { color: #dc3545; }
+  .task-col-title { flex: 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-col-topic { flex: 1; }
+  .task-col-entity { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-col-due { flex: 1; text-align: center; }
+  .task-col-status { flex: 1; }
+  .task-col-link { flex: 1; text-align: center; }
+
+  /* Expanded row detail */
+  .task-detail { display: none; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+  .task-detail.show { display: block; }
+  .task-detail textarea { width: 100%; min-height: 80px; margin: 10px 0; }
+  .task-detail .detail-row { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
+  .task-detail label { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+
+  /* Calendar view */
+  .calendar-container { display: none; }
+  .calendar-container.show { display: block; }
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .calendar-header { text-align: center; font-weight: 600; padding: 8px; background: #f8f9fa; font-size: 12px; }
+  .calendar-cell { min-height: 100px; border: 1px solid #eee; padding: 6px; font-size: 11px; }
+  .calendar-cell.today { background-color: #fff3cd; }
+  .calendar-cell .date-num { font-weight: 600; margin-bottom: 4px; }
+  .calendar-cell .task-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 1px; cursor: pointer; }
+  .calendar-cell .task-dot.content { background-color: #17a2b8; }
+  .calendar-cell .task-dot.inventory { background-color: #28a745; }
+  .calendar-cell .task-dot.products { background-color: #ffc107; }
+
+  /* View toggle */
+  .view-toggle { display: flex; gap: 5px; }
+  .view-toggle button { font-size: 12px; padding: 4px 12px; }
+  .view-toggle button.active { font-weight: 600; background-color: #e9ecef; }
+</style>
+
+<div class="container-fluid">
+  <!-- Row 1: Context widgets - Orders, Inventory, Products -->
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header py-2">Orders</div>
+        <div class="card-body py-2" id="card-orders">
+          <p class="text-muted mb-0">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header py-2">Inventory</div>
+        <div class="card-body py-2" id="card-inventory">
+          <p class="text-muted mb-0">Loading...</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header py-2">Products</div>
+        <div class="card-body py-2" id="card-products">
+          <p class="text-muted mb-0">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Manager Tasks (primary focus) -->
+  <div class="row mt-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <span>Tasks</span>
+          <div class="view-toggle">
+            <button type="button" id="btn-list-view" class="btn btn-sm btn-light active">List</button>
+            <button type="button" id="btn-calendar-view" class="btn btn-sm btn-light">Calendar</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Filters -->
+          <div class="task-filters">
+            <select id="filter-topic" class="form-control form-control-sm" style="width: 110px;">
+              <option value="all">All Topics</option>
+              <option value="Content">Content</option>
+              <option value="Inventory">Inventory</option>
+              <option value="Products">Products</option>
+            </select>
+            <select id="filter-status" class="form-control form-control-sm" style="width: 100px;">
+              <option value="all_unstarted" selected>All Open</option>
+              <option value="open">Started</option>
+              <option value="done">Done</option>
+            </select>
+            <input type="text" id="filter-search" class="form-control form-control-sm" placeholder="Search..." style="width: 150px;">
+          </div>
+
+          <!-- List View -->
+          <div id="list-view" class="list-container">
+            <div class="task-row" style="font-weight: 600; background: #f8f9fa; cursor: default;">
+              <div class="task-col-title">Title</div>
+              <div class="task-col-topic">Topic</div>
+              <div class="task-col-entity">Entity</div>
+              <div class="task-col-due">Due</div>
+              <div class="task-col-status">Status</div>
+              <div class="task-col-link">Link</div>
+            </div>
+            <div id="task-list" class="task-list">
+              <p class="text-muted p-3">Loading...</p>
+            </div>
+          </div>
+
+          <!-- Calendar View -->
+          <div id="calendar-view" class="calendar-container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <button type="button" id="btn-prev-week" class="btn btn-sm btn-light">&lt; Prev</button>
+              <span id="calendar-week-label" class="font-weight-bold"></span>
+              <button type="button" id="btn-next-week" class="btn btn-sm btn-light">Next &gt;</button>
+            </div>
+            <div class="calendar-grid">
+              <div class="calendar-header">Sun</div>
+              <div class="calendar-header">Mon</div>
+              <div class="calendar-header">Tue</div>
+              <div class="calendar-header">Wed</div>
+              <div class="calendar-header">Thu</div>
+              <div class="calendar-header">Fri</div>
+              <div class="calendar-header">Sat</div>
+              <div id="cal-0" class="calendar-cell"></div>
+              <div id="cal-1" class="calendar-cell"></div>
+              <div id="cal-2" class="calendar-cell"></div>
+              <div id="cal-3" class="calendar-cell"></div>
+              <div id="cal-4" class="calendar-cell"></div>
+              <div id="cal-5" class="calendar-cell"></div>
+              <div id="cal-6" class="calendar-cell"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var state = {
+    tasks: [],
+    filteredTasks: [],
+    expandedTaskId: null,
+    currentWeekStart: getWeekStart(new Date()),
+    view: 'list'
+  };
+
+  function getWeekStart(date) {
+    var d = new Date(date);
+    var day = d.getDay();
+    d.setDate(d.getDate() - day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function loadDashboard() {
+    google.script.run
+      .withSuccessHandler(handleData)
+      .withFailureHandler(handleError)
+      .WebAppDashboardV2_getManagerData();
+  }
+
+  function handleData(response) {
+    if (!response.success) {
+      handleError({ message: response.error });
+      return;
+    }
+
+    try {
+      var data = response.data;
+      state.tasks = data.managerTasks || [];
+
+      renderOrdersCard(data.orders);
+      renderInventoryCard(data.inventory);
+      renderProductsCard(data.products);
+      applyFilters();
+    } catch (e) {
+      console.error('Dashboard render error:', e);
+      handleError({ message: e.message });
+    }
+  }
+
+  function handleError(err) {
+    console.error('Dashboard error:', err);
+    var taskList = document.getElementById('task-list');
+    if (taskList) {
+      taskList.innerHTML = '<p class="text-danger p-3">Error loading data: ' + (err.message || 'Unknown error') + '</p>';
+    }
+  }
+
+  function formatDate(isoString) {
+    if (!isoString) return '-';
+    var d = new Date(isoString);
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  }
+
+  function formatDateFull(isoString) {
+    if (!isoString) return '-';
+    return new Date(isoString).toLocaleDateString();
+  }
+
+  function isOverdue(dueDate) {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
+  }
+
+  // === Context Widget Renderers ===
+  // Manager sees same data as admin, but admin-only rows are dimmed (class="admin-row")
+
+  function renderOrdersCard(orders) {
+    var el = document.getElementById('card-orders');
+    if (!el) { console.error('card-orders not found'); return; }
+    if (orders.error) {
+      el.innerHTML = '<p class="text-danger mb-0">' + orders.error + '</p>';
+      return;
+    }
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    // Packing slips - manager relevant, highlight if any ready
+    var packingClass = orders.packingReady > 0 ? 'table-warning' : '';
+    var packingIcon = orders.packingReady > 0 ? '<span class="text-warning">&#9888;</span> ' : '';
+    html += '<tr class="' + packingClass + '"><td>' + packingIcon + 'Packing Slips</td><td class="text-right"><strong>' + orders.packingReady + '</strong></td></tr>';
+    html += '<tr><td>New Orders</td><td class="text-right"><strong>' + orders.newOrders + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>Orders to Export</td><td class="text-right"><strong>' + orders.ordersToExport + '</strong></td></tr>';
+    html += '<tr><td>On Hold</td><td class="text-right"><strong>' + orders.onHold + '</strong></td></tr>';
+    html += '<tr><td>Processing</td><td class="text-right"><strong>' + orders.processing + '</strong></td></tr>';
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function renderInventoryCard(inv) {
+    var el = document.getElementById('card-inventory');
+    if (!el) { console.error('card-inventory not found'); return; }
+    if (inv.error) {
+      el.innerHTML = '<p class="text-danger mb-0">' + inv.error + '</p>';
+      return;
+    }
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    // Brurya - manager relevant, highlight if overdue
+    var bruryaDays = inv.bruryaDaysSince;
+    var bruryaOverdue = bruryaDays !== null && bruryaDays > 7;
+    var bruryaClass = bruryaOverdue ? 'table-warning' : '';
+    var bruryaIcon = bruryaOverdue ? '<span class="text-warning">&#9888;</span> ' : '';
+    var bruryaValue = bruryaDays !== null ? bruryaDays + ' days' : '-';
+    html += '<tr class="' + bruryaClass + '"><td>' + bruryaIcon + 'Brurya Update</td><td class="text-right"><strong>' + bruryaValue + '</strong></td></tr>';
+    html += '<tr><td>Negative Inventory</td><td class="text-right"><strong>' + inv.negativeInventory + '</strong></td></tr>';
+    html += '<tr><td>Count Tasks</td><td class="text-right"><strong>' + inv.inventoryCountTasks + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>Counts in Review</td><td class="text-right"><strong>' + inv.inventoryAwaitingReview + '</strong></td></tr>';
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function renderProductsCard(prod) {
+    var el = document.getElementById('card-products');
+    if (!el) { console.error('card-products not found'); return; }
+    if (prod.error) {
+      el.innerHTML = '<p class="text-danger mb-0">' + prod.error + '</p>';
+      return;
+    }
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    // Reordered: Detail Update, Detail Review, New Suggested, New Edit, Category Low, Bundle Critical, Bundle Low
+    html += '<tr><td>Detail Update</td><td class="text-right"><strong>' + prod.vintageUpdate + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>Detail Review</td><td class="text-right"><strong>' + prod.detailReview + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>New Suggested</td><td class="text-right"><strong>' + prod.newProductSuggestion + '</strong></td></tr>';
+    html += '<tr><td>New Edit</td><td class="text-right"><strong>' + prod.newProductEdit + '</strong></td></tr>';
+    html += '<tr><td>Category Low</td><td class="text-right"><strong>' + prod.categoryLow + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>Bundle Critical</td><td class="text-right"><strong>' + prod.bundleCritical + '</strong></td></tr>';
+    html += '<tr class="admin-row"><td>Bundle Low</td><td class="text-right"><strong>' + prod.bundleLow + '</strong></td></tr>';
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  function renderProjectsCard(projects) {
+    var el = document.getElementById('card-projects');
+    if (!projects || projects.length === 0) {
+      el.innerHTML = '<p class="text-muted mb-0">No projects</p>';
+      return;
+    }
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    projects.forEach(function(proj) {
+      var badge = proj.taskCount > 0 ? '<strong>' + proj.taskCount + '</strong>' : '<span class="text-success">0</span>';
+      html += '<tr><td>' + proj.name + '</td><td class="text-right">' + badge + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  }
+
+  // === Task List ===
+
+  function applyFilters() {
+    var topic = document.getElementById('filter-topic').value;
+    var status = document.getElementById('filter-status').value;
+    var search = document.getElementById('filter-search').value.toLowerCase();
+
+    state.filteredTasks = state.tasks.filter(function(task) {
+      if (topic !== 'all' && task.topic !== topic) return false;
+
+      // Status filtering
+      // "all_unstarted" = All Open (not Done, regardless of start date)
+      // "open" = Started (has start date, not Done)
+      // "done" = Done tasks only
+      if (status === 'all_unstarted' && task.status === 'Done') return false;
+      if (status === 'open') {
+        var hasStartDate = task.startDate && task.startDate !== '';
+        if (!hasStartDate || task.status === 'Done') return false;
+      }
+      if (status === 'done' && task.status !== 'Done') return false;
+
+      if (search && task.name.toLowerCase().indexOf(search) === -1 &&
+          task.entityName.toLowerCase().indexOf(search) === -1) return false;
+      return true;
+    });
+
+    renderTaskList();
+    renderCalendar();
+  }
+
+  function renderTaskList() {
+    var container = document.getElementById('task-list');
+    if (!container) { console.error('task-list not found'); return; }
+
+    if (state.filteredTasks.length === 0) {
+      container.innerHTML = '<p class="text-muted p-3">No tasks match filters</p>';
+      return;
+    }
+
+    var html = '';
+    state.filteredTasks.forEach(function(task) {
+      var overdueClass = isOverdue(task.dueDate) && task.status !== 'Done' ? ' overdue' : '';
+      var expandedClass = state.expandedTaskId === task.id ? ' expanded' : '';
+      var entityDisplay = task.entityName || task.entityId || '-';
+      if (entityDisplay.length > 20) entityDisplay = entityDisplay.substring(0, 17) + '...';
+
+      var isUrl = task.entityId && String(task.entityId).indexOf('http') === 0;
+      var linkHtml = isUrl
+        ? '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light" onclick="event.stopPropagation();">Open</a>'
+        : '-';
+
+      html += '<div class="task-row' + overdueClass + expandedClass + '" data-id="' + task.id + '">';
+      html += '<div class="task-col-title" title="' + escapeHtml(task.name) + '">' + escapeHtml(task.name) + '</div>';
+      html += '<div class="task-col-topic"><span class="badge badge-secondary">' + task.topic + '</span></div>';
+      html += '<div class="task-col-entity" title="' + escapeHtml(task.entityName) + '">' + escapeHtml(entityDisplay) + '</div>';
+      html += '<div class="task-col-due">' + formatDate(task.dueDate) + '</div>';
+      html += '<div class="task-col-status">' + task.status + '</div>';
+      html += '<div class="task-col-link">' + linkHtml + '</div>';
+      html += '</div>';
+
+      // Expanded detail row
+      var showClass = state.expandedTaskId === task.id ? ' show' : '';
+      html += '<div class="task-detail' + showClass + '" data-id="' + task.id + '">';
+      html += '<div class="detail-row">';
+      html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
+      html += '<div><label>Due</label><div>' + formatDateFull(task.dueDate) + '</div></div>';
+      html += '<div><label>Priority</label><div>' + task.priority + '</div></div>';
+      html += '</div>';
+
+      var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
+      if (isUrl2) {
+        html += '<div class="mb-2"><a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">Open in Drive</a></div>';
+      }
+
+      // System tasks (brurya, etc.) are read-only for manager
+      var isSystemTask = task.typeId && (
+        task.typeId.indexOf('task.inventory.') === 0 ||
+        task.typeId.indexOf('task.validation.comax') === 0
+      );
+
+      html += '<div><label>Notes</label></div>';
+      if (isSystemTask) {
+        html += '<div class="p-2 bg-white border rounded small">' + escapeHtml(task.notes || '-') + '</div>';
+        html += '<div class="mt-2 small text-muted">System task - managed by workflow</div>';
+      } else {
+        html += '<textarea class="form-control task-notes" data-id="' + task.id + '">' + escapeHtml(task.notes || '') + '</textarea>';
+        html += '<div class="detail-row mt-2">';
+        html += '<div><label>Status</label>';
+        html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '" style="width:120px;">';
+        ['New', 'In Progress', 'Done'].forEach(function(s) {
+          var sel = s === task.status ? ' selected' : '';
+          html += '<option value="' + s + '"' + sel + '>' + s + '</option>';
+        });
+        html += '</select></div>';
+        html += '<button type="button" class="btn btn-sm btn-light btn-save-task" data-id="' + task.id + '">Save</button>';
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+
+    container.innerHTML = html;
+
+    // Add click handlers for row expansion
+    container.querySelectorAll('.task-row').forEach(function(row) {
+      row.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+        toggleTaskExpand(this.dataset.id);
+      });
+    });
+
+    // Add save handlers
+    container.querySelectorAll('.btn-save-task').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        saveTask(this.dataset.id);
+      });
+    });
+  }
+
+  function toggleTaskExpand(taskId) {
+    if (state.expandedTaskId === taskId) {
+      state.expandedTaskId = null;
+    } else {
+      state.expandedTaskId = taskId;
+    }
+    renderTaskList();
+  }
+
+  function saveTask(taskId) {
+    var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
+    var notes = detail.querySelector('.task-notes').value;
+    var status = detail.querySelector('.task-status').value;
+
+    var btn = detail.querySelector('.btn-save-task');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+        if (result.error) {
+          alert('Error: ' + result.error);
+        } else {
+          // Update local state
+          var task = state.tasks.find(function(t) { return t.id === taskId; });
+          if (task) {
+            task.notes = notes;
+            task.status = status;
+          }
+          applyFilters();
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+        alert('Error: ' + (err.message || 'Failed to save'));
+      })
+      .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes, status: status });
+  }
+
+  // === Calendar View ===
+
+  function renderCalendar() {
+    var weekStart = state.currentWeekStart;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Update week label
+    var weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    var weekLabel = document.getElementById('calendar-week-label');
+    if (weekLabel) {
+      weekLabel.textContent = formatDateFull(weekStart.toISOString()) + ' - ' + formatDateFull(weekEnd.toISOString());
+    }
+
+    // Group tasks by due date
+    var tasksByDate = {};
+    state.filteredTasks.forEach(function(task) {
+      if (!task.dueDate) return;
+      var dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      var key = dueDate.getTime();
+      if (!tasksByDate[key]) tasksByDate[key] = [];
+      tasksByDate[key].push(task);
+    });
+
+    // Render each day cell
+    for (var i = 0; i < 7; i++) {
+      var cellDate = new Date(weekStart);
+      cellDate.setDate(cellDate.getDate() + i);
+      var cell = document.getElementById('cal-' + i);
+      if (!cell) continue;
+
+      var isToday = cellDate.getTime() === today.getTime();
+      cell.className = 'calendar-cell' + (isToday ? ' today' : '');
+
+      var dateNum = cellDate.getDate();
+      var html = '<div class="date-num">' + dateNum + '</div>';
+
+      var dayTasks = tasksByDate[cellDate.getTime()] || [];
+      dayTasks.forEach(function(task) {
+        var topicClass = task.topic.toLowerCase();
+        html += '<div class="task-dot ' + topicClass + '" title="' + escapeHtml(task.name) + '" data-id="' + task.id + '"></div>';
+      });
+
+      if (dayTasks.length > 3) {
+        html += '<div style="font-size:10px;">+' + (dayTasks.length - 3) + ' more</div>';
+      }
+
+      cell.innerHTML = html;
+
+      // Click on cell to filter to that date
+      cell.addEventListener('click', function() {
+        // For now, just expand first task of that day
+        var dots = this.querySelectorAll('.task-dot');
+        if (dots.length > 0) {
+          var taskId = dots[0].dataset.id;
+          toggleView('list');
+          state.expandedTaskId = taskId;
+          renderTaskList();
+          // Scroll to task
+          var row = document.querySelector('.task-row[data-id="' + taskId + '"]');
+          if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+  }
+
+  function toggleView(view) {
+    state.view = view;
+    var btnList = document.getElementById('btn-list-view');
+    var btnCal = document.getElementById('btn-calendar-view');
+    var listView = document.getElementById('list-view');
+    var calView = document.getElementById('calendar-view');
+    if (btnList) btnList.classList.toggle('active', view === 'list');
+    if (btnCal) btnCal.classList.toggle('active', view === 'calendar');
+    if (listView) listView.style.display = view === 'list' ? 'block' : 'none';
+    if (calView) calView.classList.toggle('show', view === 'calendar');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // === Event Listeners ===
+
+  document.getElementById('filter-topic').addEventListener('change', applyFilters);
+  document.getElementById('filter-status').addEventListener('change', applyFilters);
+  document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+  document.getElementById('btn-list-view').addEventListener('click', function() { toggleView('list'); });
+  document.getElementById('btn-calendar-view').addEventListener('click', function() { toggleView('calendar'); });
+
+  document.getElementById('btn-prev-week').addEventListener('click', function() {
+    state.currentWeekStart.setDate(state.currentWeekStart.getDate() - 7);
+    renderCalendar();
+  });
+
+  document.getElementById('btn-next-week').addEventListener('click', function() {
+    state.currentWeekStart.setDate(state.currentWeekStart.getDate() + 7);
+    renderCalendar();
+  });
+
+  // Load on init
+  loadDashboard();
+})();
+</script>

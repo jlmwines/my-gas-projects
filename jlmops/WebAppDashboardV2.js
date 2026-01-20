@@ -305,10 +305,10 @@ function _getProductsData(allTasks) {
 function _getProjectSummaries(allTasks) {
   const projects = ProjectService.getAllProjects();
 
-  // Group tasks by project
+  // Group tasks by project (normalize IDs for consistent matching)
   const tasksByProject = {};
   allTasks.forEach(task => {
-    const projId = task.st_ProjectId || 'UNASSIGNED';
+    const projId = task.st_ProjectId ? String(task.st_ProjectId).trim() : 'UNASSIGNED';
     if (!tasksByProject[projId]) {
       tasksByProject[projId] = { total: 0, critical: 0, new: 0 };
     }
@@ -322,7 +322,7 @@ function _getProjectSummaries(allTasks) {
   });
 
   return projects.map(p => {
-    const id = p.spro_ProjectId;
+    const id = p.spro_ProjectId ? String(p.spro_ProjectId).trim() : '';
     const counts = tasksByProject[id] || { total: 0, critical: 0, new: 0 };
     return {
       id: id,
@@ -432,7 +432,8 @@ function WebAppDashboardV2_confirmBruryaUpdate() {
 
 /**
  * Gets manager-specific dashboard data.
- * Returns projects and tasks filtered to manager-assignable types.
+ * Returns summary widgets (dimmed for context) and manager tasks.
+ * Manager tasks: content.edit, content.translate_edit, plus tasks from inventory/product workflows.
  * @returns {Object} Dashboard data for manager view
  */
 function WebAppDashboardV2_getManagerData() {
@@ -440,59 +441,119 @@ function WebAppDashboardV2_getManagerData() {
   const functionName = 'getManagerData';
 
   try {
-    // Get all open tasks
-    const allTasks = WebAppTasks.getOpenTasks();
+    // Get all tasks (including Done) for manager - need to show Done tasks when filtered
+    const allTasksResult = WebAppTasks_getAllTasks();
+    const allTasksIncludingDone = allTasksResult.data || [];
 
-    // Manager task types (flow_pattern = manager_direct)
+    // Also get open tasks for context widgets
+    const allOpenTasks = WebAppTasks.getOpenTasks();
+
+    // Manager task types - content review, inventory, and product tasks
     const managerTaskTypes = [
-      'task.order.packing_available',
-      'task.inventory.brurya_update',
-      'task.data.subscribers_update',
-      'task.data.campaigns_update',
-      'task.data.coupons_update',
-      'task.crm.contact_followup',
-      'task.crm.churn_risk',
-      'task.crm.vip_attention',
-      'task.crm.coupon_expiring',
-      'task.crm.suggestion',
+      // Content review
       'task.content.edit',
-      'task.content.translate_edit'
+      'task.content.translate_edit',
+      // Inventory
+      'task.inventory.brurya_update',
+      'task.validation.comax_internal_audit',  // Negative inventory counts
+      // Products
+      'task.validation.vintage_mismatch',
+      'task.onboarding.add_product'
     ];
 
-    // Filter to manager tasks
-    const managerTasks = allTasks
+    // Return manager tasks including Done (frontend filters by status)
+    const managerTasks = allTasksIncludingDone
       .filter(task => managerTaskTypes.includes(task.st_TaskTypeId))
-      .filter(task => task.st_Status !== 'Done' && task.st_Status !== 'Cancelled')
+      .filter(task => task.st_Status !== 'Cancelled')
       .map(task => ({
         id: task.st_TaskId,
         typeId: task.st_TaskTypeId,
+        topic: _getTopicFromType(task.st_TaskTypeId),  // Always derive topic from type for consistency
         name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
         entityId: task.st_LinkedEntityId || '',
         entityName: task.st_LinkedEntityName || '',
+        sessionId: task.st_SessionId || '',
         projectId: task.st_ProjectId || '',
+        startDate: task.st_StartDate || null,
         dueDate: task.st_DueDate || null,
         status: task.st_Status,
-        priority: task.st_Priority
+        priority: task.st_Priority,
+        notes: task.st_Notes || ''
       }))
       .sort((a, b) => {
-        // Critical/High first, then by due date
-        const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
-        const pA = priorityOrder[a.priority] ?? 2;
-        const pB = priorityOrder[b.priority] ?? 2;
-        if (pA !== pB) return pA - pB;
+        // Sort by due date, then priority
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
+        const dateDiff = new Date(a.dueDate) - new Date(b.dueDate);
+        if (dateDiff !== 0) return dateDiff;
+
+        const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
+        return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
       });
 
+    // Get summary data for context widgets (using open tasks only)
     const result = {
       timestamp: new Date().toISOString(),
-      projects: _getProjectSummaries(allTasks),
-      managerTasks: managerTasks.slice(0, 30)
+      orders: _getOrdersData(),
+      inventory: _getInventoryData(allOpenTasks),
+      products: _getProductsData(allOpenTasks),
+      projects: _getProjectSummaries(allOpenTasks),
+      managerTasks: managerTasks
     };
 
     return { success: true, data: result };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Gets topic from task type ID.
+ * @private
+ */
+function _getTopicFromType(typeId) {
+  if (!typeId) return 'Other';
+  if (typeId.includes('.content.')) return 'Content';
+  if (typeId.includes('.inventory.') || typeId.includes('.deficiency.')) return 'Inventory';
+  if (typeId.includes('.validation.') || typeId.includes('.onboarding.')) return 'Products';
+  if (typeId.includes('.order.')) return 'Orders';
+  if (typeId.includes('.crm.')) return 'CRM';
+  return 'Other';
+}
+
+/**
+ * Updates a manager task - limited to notes and status changes.
+ * @param {string} taskId - The task ID
+ * @param {Object} updates - { notes, status }
+ * @returns {Object} { success, error }
+ */
+function WebAppDashboardV2_updateManagerTask(taskId, updates) {
+  const serviceName = 'WebAppDashboardV2';
+  const functionName = 'updateManagerTask';
+
+  try {
+    // Only allow notes and status updates for manager
+    const allowedUpdates = {};
+    if (updates.notes !== undefined) allowedUpdates.notes = updates.notes;
+    if (updates.status !== undefined) {
+      // Restrict status changes
+      const allowedStatuses = ['New', 'In Progress', 'Done'];
+      if (allowedStatuses.includes(updates.status)) {
+        allowedUpdates.status = updates.status;
+        // Set done date if marking as Done
+        if (updates.status === 'Done') {
+          allowedUpdates.doneDate = new Date().toISOString().split('T')[0];
+        }
+      }
+    }
+
+    if (Object.keys(allowedUpdates).length === 0) {
+      return { success: false, error: 'No valid updates provided' };
+    }
+
+    return WebAppTasks_updateTask(taskId, allowedUpdates);
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
     return { success: false, error: e.message };

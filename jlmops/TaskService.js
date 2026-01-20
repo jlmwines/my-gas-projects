@@ -231,21 +231,18 @@ const TaskService = (function() {
         newRow[startDateIdx] = today;
       }
 
-      // Rule 2: If task has assignee, set all 3 fields atomically
+      // Rule 2: If task has assignee, set status to Assigned
+      // Start date and due date are NOT set automatically - task appears in "unstarted" list
+      // until someone explicitly sets a start date to begin work
       if (assignedToIdx > -1 && newRow[assignedToIdx]) {
-        // Set start date (if not already set by immediate rule or options)
-        if (startDateIdx > -1 && !newRow[startDateIdx]) {
-          newRow[startDateIdx] = today;
-        }
-
-        // Set status to Assigned
+        // Set status to Assigned (but not start/due dates unless immediate)
         if (statusIdx > -1) {
           newRow[statusIdx] = 'Assigned';
         }
 
-        // Calculate and set due date
-        if (dueDateIdx > -1 && duePattern) {
-          const startDate = newRow[startDateIdx] || today;
+        // Only set due date if start date was already set (immediate tasks or explicit options)
+        if (dueDateIdx > -1 && duePattern && newRow[startDateIdx]) {
+          const startDate = newRow[startDateIdx];
           const dueDate = calculateDueDate(startDate, duePattern);
           if (dueDate) {
             newRow[dueDateIdx] = dueDate;
