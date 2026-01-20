@@ -1,3 +1,47 @@
+# Session Summary - 2026-01-20
+
+## What We Accomplished
+
+### Manager Dashboard v2
+
+**Created and deployed ManagerDashboardView_v2.html:**
+- Cloned from AdminDashboardView_v2 with role-specific filtering
+- Admin-only rows (system health, sync status) dimmed with `.admin-row` class
+- Tasks filtered to manager-relevant types only:
+  - `task.content.edit`, `task.content.translate_edit`
+  - `task.inventory.brurya_update`, `task.validation.comax_internal_audit`
+  - `task.validation.vintage_mismatch`, `task.onboarding.add_product`
+- System tasks (brurya, inventory) are read-only for manager
+- Promoted v2 to default, removed separate v2 link
+
+### Admin Projects View Improvements
+
+**Panel toggle redesign:**
+- Changed from cycling button to 3 separate buttons (◧ ◨ ▣)
+- Direct selection of panel width: 1/3, 2/3, or full
+
+**Column alignment and truncation:**
+- Session ID column truncates with ellipsis
+- Scope filter links (Open, Started, Future, All) as text links
+- Narrow view shows only expand button, hides scope links
+
+**Bug fixes:**
+- Fixed `entityId.indexOf is not a function` - SKU was number, needs `String()`
+- Fixed null element errors in render functions
+- Fixed tasks not displaying for Inventory/Product Data Quality projects
+
+### Content Task Types
+
+Added task definitions for content workflow:
+- `task.content.draft`, `task.content.edit`, `task.content.translate`
+- `task.content.translate_edit`, `task.content.images`, `task.content.blog_publish`
+- `task.content.video_create`, `task.content.video_publish`
+- `task.content.email`, `task.content.social`, `task.content.whatsapp`
+
+**Commit:** `5d1ac05` — Pushed to remote
+
+---
+
 # Session Summary - 2026-01-05 (Evening)
 
 ## What We Accomplished
