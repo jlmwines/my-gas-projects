@@ -119,12 +119,15 @@
         <!-- Section A: Suggestions -->
         <h6 class="text-muted mb-2">Suggestions (<span id="stat-suggestions">0</span>)</h6>
         <div class="table-responsive mb-4 border rounded">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover table-sm mb-0">
               <thead class="thead-light">
                 <tr>
                   <th class="border-top-0">SKU</th>
                   <th class="border-top-0">Title</th>
-                  <th class="border-top-0">Notes</th>
+                  <th class="border-top-0">Division</th>
+                  <th class="border-top-0">Group</th>
+                  <th class="border-top-0 text-right">Price</th>
+                  <th class="border-top-0 text-right">Stock</th>
                   <th class="border-top-0">Action</th>
                 </tr>
               </thead>
@@ -1103,25 +1106,44 @@
 
     AdminProductsView.loadSuggestionList = function() {
         const tbody = document.getElementById('suggestions-list-body');
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
         google.script.run.withSuccessHandler(tasks => {
             document.getElementById('stat-suggestions').textContent = tasks ? tasks.length : 0;
             tbody.innerHTML = '';
             if (!tasks || tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No new suggestions.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No new suggestions.</td></tr>';
                 return;
             }
             tasks.forEach(t => {
                 const tr = document.createElement('tr');
+                const price = t.price ? '₪' + t.price : '-';
+                const stock = t.stock !== '' ? t.stock : '-';
                 tr.innerHTML = `
                     <td>${t.sku}</td>
                     <td>${t.title}</td>
-                    <td class="small text-muted">${t.notes || ''}</td>
-                    <td><button class="btn btn-sm" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Approve</button></td>
+                    <td class="small">${t.division || '-'}</td>
+                    <td class="small">${t.group || '-'}</td>
+                    <td class="text-right">${price}</td>
+                    <td class="text-right">${stock}</td>
+                    <td>
+                        <button class="btn btn-sm mr-1" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Accept</button>
+                        <button class="btn btn-sm" onclick="AdminProductsView.cancelSuggestion('${t.taskId}')">Cancel</button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
         }).WebAppProducts_getSuggestionTasks();
+    };
+
+    AdminProductsView.cancelSuggestion = function(taskId) {
+        if (!confirm('Cancel this suggestion? The task will be marked as Cancelled.')) return;
+        google.script.run.withSuccessHandler(result => {
+            if (result.error) {
+                alert('Error: ' + result.error);
+            } else {
+                AdminProductsView.loadSuggestionList();
+            }
+        }).WebAppTasks_updateTaskStatus(taskId, 'Cancelled');
     };
 
     AdminProductsView.loadSubmissionsList = function() {

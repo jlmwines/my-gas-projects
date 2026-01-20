@@ -327,6 +327,109 @@ function WebAppTasks_updateTaskStatus(taskId, newStatus) {
 }
 
 /**
+ * Updates task dates (start and due).
+ * @param {string} taskId The task ID.
+ * @param {string|null} startDate The start date (YYYY-MM-DD) or null.
+ * @param {string|null} dueDate The due date (YYYY-MM-DD) or null.
+ * @returns {Object} { error: string|null, success: boolean }
+ */
+function WebAppTasks_updateTaskDates(taskId, startDate, dueDate) {
+  try {
+    const result = TaskService.updateTaskDates(taskId, startDate, dueDate);
+    if (result) {
+      WebAppTasks.invalidateCache();
+    }
+    return { error: null, success: result };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'updateTaskDates', e.message, e);
+    return { error: e.message, success: false };
+  }
+}
+
+/**
+ * Updates multiple task fields at once.
+ * @param {string} taskId The task ID.
+ * @param {Object} updates The fields to update: { status, priority, assignedTo, startDate, dueDate, notes }
+ * @returns {Object} { error: string|null, success: boolean }
+ */
+function WebAppTasks_updateTask(taskId, updates) {
+  try {
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet) {
+      return { error: 'SysTasks sheet not found', success: false };
+    }
+
+    const headers = taskSchema.headers.split(',');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const data = sheet.getDataRange().getValues();
+
+    // Find the task row
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][taskIdCol] === taskId) {
+        rowIndex = i;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return { error: 'Task not found', success: false };
+    }
+
+    // Update fields
+    const row = data[rowIndex];
+    if (updates.status !== undefined) {
+      const statusCol = headers.indexOf('st_Status');
+      if (statusCol > -1) row[statusCol] = updates.status;
+    }
+    if (updates.priority !== undefined) {
+      const priorityCol = headers.indexOf('st_Priority');
+      if (priorityCol > -1) row[priorityCol] = updates.priority;
+    }
+    if (updates.assignedTo !== undefined) {
+      const assignedToCol = headers.indexOf('st_AssignedTo');
+      if (assignedToCol > -1) row[assignedToCol] = updates.assignedTo || '';
+    }
+    if (updates.startDate !== undefined) {
+      const startDateCol = headers.indexOf('st_StartDate');
+      if (startDateCol > -1) row[startDateCol] = updates.startDate || '';
+    }
+    if (updates.dueDate !== undefined) {
+      const dueDateCol = headers.indexOf('st_DueDate');
+      if (dueDateCol > -1) row[dueDateCol] = updates.dueDate || '';
+    }
+    if (updates.doneDate !== undefined) {
+      const doneDateCol = headers.indexOf('st_DoneDate');
+      if (doneDateCol > -1) row[doneDateCol] = updates.doneDate || '';
+    }
+    if (updates.notes !== undefined) {
+      const notesCol = headers.indexOf('st_Notes');
+      if (notesCol > -1) row[notesCol] = updates.notes || '';
+    }
+    if (updates.linkedEntityId !== undefined) {
+      const entityIdCol = headers.indexOf('st_LinkedEntityId');
+      if (entityIdCol > -1) row[entityIdCol] = updates.linkedEntityId || '';
+    }
+    if (updates.title !== undefined) {
+      const titleCol = headers.indexOf('st_Title');
+      if (titleCol > -1) row[titleCol] = updates.title || '';
+    }
+
+    // Write back the row
+    sheet.getRange(rowIndex + 1, 1, 1, row.length).setValues([row]);
+
+    WebAppTasks.invalidateCache();
+    return { error: null, success: true };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'updateTask', e.message, e);
+    return { error: e.message, success: false };
+  }
+}
+
+/**
  * Gets task statistics for dashboard.
  * @returns {Object} { error: string|null, data: Object }
  */
@@ -358,11 +461,54 @@ function WebAppTasks_getStats() {
 }
 
 /**
+ * Deletes a task by removing its row from the sheet.
+ * @param {string} taskId The task ID to delete.
+ * @returns {Object} { error: string|null, success: boolean }
+ */
+function WebAppTasks_deleteTask(taskId) {
+  try {
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet) {
+      return { error: 'SysTasks sheet not found', success: false };
+    }
+
+    const headers = taskSchema.headers.split(',');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    const data = sheet.getDataRange().getValues();
+
+    // Find the task row (1-indexed, skip header)
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][taskIdCol] === taskId) {
+        rowIndex = i + 1; // Sheet rows are 1-indexed
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return { error: 'Task not found', success: false };
+    }
+
+    // Delete the row
+    sheet.deleteRow(rowIndex);
+
+    WebAppTasks.invalidateCache();
+    return { error: null, success: true };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'deleteTask', e.message, e);
+    return { error: e.message, success: false };
+  }
+}
+
+/**
  * Gets valid task statuses for dropdown.
  * @returns {Array<string>} List of valid statuses.
  */
 function WebAppTasks_getStatusOptions() {
-  return ['New', 'In Progress', 'Review', 'Blocked', 'Done', 'Cancelled'];
+  return ['New', 'In Progress', 'Review', 'Blocked', 'Done'];
 }
 
 /**

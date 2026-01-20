@@ -286,7 +286,7 @@ function _getProductsData(allTasks) {
     return {
       vintageUpdate: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['New', 'Assigned']),
       detailReview: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['Review']),
-      newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New']),
+      newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New', 'Assigned']),
       newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
       newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
       bundleCritical: _countTasksByType(allTasks, 'task.bundle.critical_inventory'),
@@ -350,6 +350,7 @@ function _getAdminTasksList(allTasks) {
       name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
       entityId: task.st_LinkedEntityId || '',
       entityName: task.st_LinkedEntityName || '',
+      projectId: task.st_ProjectId || '',
       dueDate: task.st_DueDate || null,
       status: task.st_Status,
       priority: task.st_Priority
@@ -426,5 +427,74 @@ function WebAppDashboardV2_confirmBruryaUpdate() {
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
     return { success: false, message: e.message };
+  }
+}
+
+/**
+ * Gets manager-specific dashboard data.
+ * Returns projects and tasks filtered to manager-assignable types.
+ * @returns {Object} Dashboard data for manager view
+ */
+function WebAppDashboardV2_getManagerData() {
+  const serviceName = 'WebAppDashboardV2';
+  const functionName = 'getManagerData';
+
+  try {
+    // Get all open tasks
+    const allTasks = WebAppTasks.getOpenTasks();
+
+    // Manager task types (flow_pattern = manager_direct)
+    const managerTaskTypes = [
+      'task.order.packing_available',
+      'task.inventory.brurya_update',
+      'task.data.subscribers_update',
+      'task.data.campaigns_update',
+      'task.data.coupons_update',
+      'task.crm.contact_followup',
+      'task.crm.churn_risk',
+      'task.crm.vip_attention',
+      'task.crm.coupon_expiring',
+      'task.crm.suggestion',
+      'task.content.edit',
+      'task.content.translate_edit'
+    ];
+
+    // Filter to manager tasks
+    const managerTasks = allTasks
+      .filter(task => managerTaskTypes.includes(task.st_TaskTypeId))
+      .filter(task => task.st_Status !== 'Done' && task.st_Status !== 'Cancelled')
+      .map(task => ({
+        id: task.st_TaskId,
+        typeId: task.st_TaskTypeId,
+        name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
+        entityId: task.st_LinkedEntityId || '',
+        entityName: task.st_LinkedEntityName || '',
+        projectId: task.st_ProjectId || '',
+        dueDate: task.st_DueDate || null,
+        status: task.st_Status,
+        priority: task.st_Priority
+      }))
+      .sort((a, b) => {
+        // Critical/High first, then by due date
+        const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
+        const pA = priorityOrder[a.priority] ?? 2;
+        const pB = priorityOrder[b.priority] ?? 2;
+        if (pA !== pB) return pA - pB;
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+
+    const result = {
+      timestamp: new Date().toISOString(),
+      projects: _getProjectSummaries(allTasks),
+      managerTasks: managerTasks.slice(0, 30)
+    };
+
+    return { success: true, data: result };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
   }
 }

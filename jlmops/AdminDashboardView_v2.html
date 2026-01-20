@@ -275,13 +275,22 @@
 
   function renderProjectsCard(projects) {
     var el = document.getElementById('card-projects');
-    var html = '<table class="table table-sm mb-0"><tbody>';
+    var html = '<table class="table table-sm table-hover mb-0"><tbody>';
     projects.forEach(function(proj) {
       var badge = proj.taskCount > 0 ? '<strong>' + proj.taskCount + '</strong>' : '<span class="text-success">0</span>';
-      html += '<tr><td>' + proj.name + '</td><td class="text-right">' + badge + '</td></tr>';
+      html += '<tr class="project-row" data-project-id="' + proj.id + '" style="cursor:pointer;"><td>' + proj.name + '</td><td class="text-right">' + badge + '</td></tr>';
     });
     html += '</tbody></table>';
     el.innerHTML = html;
+
+    // Add click handlers to navigate to Projects view
+    el.querySelectorAll('.project-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        var projectId = this.dataset.projectId;
+        sessionStorage.setItem('selectProjectId', projectId);
+        loadView('AdminProjects');
+      });
+    });
   }
 
   function renderTasksCard(tasks) {
@@ -325,9 +334,7 @@
         sessionStorage.setItem('selectTaskId', taskId);
         sessionStorage.setItem('selectProjectId', projectId);
         // Navigate to Projects view
-        if (window.parent && window.parent.loadView) {
-          window.parent.loadView('AdminProjects');
-        }
+        loadView('AdminProjects');
       });
     });
   }

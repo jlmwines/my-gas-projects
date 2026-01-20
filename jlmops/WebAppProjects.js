@@ -159,3 +159,173 @@ function WebAppProjects_getOptions() {
     statuses: Object.values(ProjectService.PROJECT_STATUSES)
   };
 }
+
+// ===== CONTENT TASK STREAM FUNCTIONS =====
+
+/**
+ * Content stage definitions with display order.
+ */
+const CONTENT_STAGES = [
+  { id: 'draft', typeId: 'task.content.draft', label: 'Draft', title: 'Draft: ' },
+  { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ' },
+  { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ' },
+  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Translate Edit', title: 'Review Translation: ' },
+  { id: 'images', typeId: 'task.content.images', label: 'Images', title: 'Images: ' },
+  { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ' },
+  { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ' },
+  { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ' },
+  { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ' },
+  { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ' },
+  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ' }
+];
+
+/**
+ * Gets available content stages for UI.
+ * @returns {Array} Stage definitions.
+ */
+function WebAppProjects_getContentStages() {
+  return CONTENT_STAGES.map(s => ({ id: s.id, label: s.label }));
+}
+
+/**
+ * Creates a content task stream for a single content asset.
+ * Tasks are created as skeleton. Drive URL is added later as admin works on each task.
+ *
+ * Data model:
+ * - st_SessionId = Stream code (e.g., "INT" or "INTX7K") - links all tasks in same content stream
+ * - st_LinkedEntityName = Content name (e.g., "Intensity") - human readable identifier
+ * - st_LinkedEntityId = Drive URL for the specific file - set by admin when working
+ * - st_Title = Stage: Name (e.g., "Draft: Intensity") - fully editable
+ *
+ * @param {Object} params - { projectId, contentName, stages, streamId (optional) }
+ * @returns {Object} { error: string|null, data: { tasksCreated: number, taskIds: [], streamCode: string } }
+ */
+function WebAppProjects_createContentStream(params) {
+  try {
+    const { projectId, contentName, stages, streamId } = params;
+
+    if (!projectId || !contentName || !stages || stages.length === 0) {
+      return { error: 'Missing required fields: projectId, contentName, stages', data: null };
+    }
+
+    // Use custom stream ID if provided, otherwise auto-generate
+    let streamCode;
+    if (streamId && streamId.trim()) {
+      streamCode = streamId.trim().toUpperCase();
+    } else {
+      // Generate stream code from content name (first 3 letters uppercase + random suffix)
+      const baseName = contentName.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
+      const code = baseName.substring(0, 3) || 'CNT';
+      const suffix = Math.random().toString(36).substring(2, 5).toUpperCase();
+      streamCode = code + suffix;
+    }
+
+    // SessionId = stream code (links all tasks in same content stream)
+    // LinkedEntityName = content name (human readable)
+    // LinkedEntityId = stream code (used for de-duplication, admin can change to Drive URL later)
+    const linkedEntityName = contentName;
+    const linkedEntityId = streamCode;
+
+    // Notes left empty for user feedback on completed/rejected tasks
+    const taskNotes = '';
+
+    const taskIds = [];
+
+    // Create tasks for each selected stage in order
+    for (const stageId of stages) {
+      const stageDef = CONTENT_STAGES.find(s => s.id === stageId);
+      if (!stageDef) continue;
+
+      const taskTitle = stageDef.title + contentName;
+
+      const result = TaskService.createTask(
+        stageDef.typeId,
+        linkedEntityId,
+        linkedEntityName,
+        taskTitle,
+        taskNotes,
+        streamCode,
+        { projectId: projectId }
+      );
+
+      if (result && result.id) {
+        taskIds.push(result.id);
+      }
+    }
+
+    // Invalidate task cache
+    WebAppTasks.invalidateCache();
+
+    return { error: null, data: { tasksCreated: taskIds.length, taskIds: taskIds, streamCode: streamCode } };
+  } catch (e) {
+    logger.error('WebAppProjects', 'createContentStream', e.message, e);
+    return { error: e.message, data: null };
+  }
+}
+
+/**
+ * Imports content streams from CSV data.
+ * CSV format: contentName,stages
+ * stages separated by semicolon: draft;edit;translate;images
+ * @param {string} csvData - Raw CSV string.
+ * @param {string} projectId - Project to assign tasks to.
+ * @returns {Object} { error: string|null, data: { imported: number, failed: number, errors: [] } }
+ */
+function WebAppProjects_importContentStreams(csvData, projectId) {
+  try {
+    if (!csvData || !projectId) {
+      return { error: 'Missing csvData or projectId', data: null };
+    }
+
+    const lines = csvData.trim().split('\n');
+    if (lines.length < 2) {
+      return { error: 'CSV must have header row and at least one data row', data: null };
+    }
+
+    // Skip header row
+    const dataLines = lines.slice(1);
+    let imported = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const line = dataLines[i].trim();
+      if (!line) continue;
+
+      // Parse CSV (simple split - doesn't handle quoted commas)
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length < 2) {
+        errors.push(`Row ${i + 2}: Invalid format - need contentName,stages`);
+        failed++;
+        continue;
+      }
+
+      const [contentName, stagesStr] = parts;
+      const stages = stagesStr.split(/[;|]/).map(s => s.trim()).filter(s => s);
+
+      if (!contentName || stages.length === 0) {
+        errors.push(`Row ${i + 2}: Missing required fields`);
+        failed++;
+        continue;
+      }
+
+      const result = WebAppProjects_createContentStream({
+        projectId: projectId,
+        contentName: contentName,
+        stages: stages
+      });
+
+      if (result.error) {
+        errors.push(`Row ${i + 2}: ${result.error}`);
+        failed++;
+      } else {
+        imported++;
+      }
+    }
+
+    return { error: null, data: { imported: imported, failed: failed, errors: errors } };
+  } catch (e) {
+    logger.error('WebAppProjects', 'importContentStreams', e.message, e);
+    return { error: e.message, data: null };
+  }
+}

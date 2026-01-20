@@ -39,7 +39,7 @@ function WebAppProducts_getProductsWidgetData() {
           }
         }
         // 2. New Products
-        else if (type === 'task.onboarding.suggestion' && status === 'New') {
+        else if (type === 'task.onboarding.suggestion' && (status === 'New' || status === 'Assigned')) {
           result.newProducts.suggested++;
         }
         else if (type === 'task.onboarding.add_product' && status === 'Review') {
@@ -392,7 +392,7 @@ function WebAppProducts_getManagerWidgetData() {
         }
         
         // Suggestions Pending Approval
-        if (type === 'task.onboarding.suggestion' && status === 'New') {
+        if (type === 'task.onboarding.suggestion' && (status === 'New' || status === 'Assigned')) {
              result.pendingSuggestionsCount++;
         }
 
@@ -787,19 +787,37 @@ function WebAppProducts_getPendingNewTasks() {
 function WebAppProducts_getSuggestionTasks() {
   try {
     const allTasks = WebAppTasks.getOpenTasks();
-    const tasks = allTasks.filter(t => 
-        t.st_TaskTypeId === 'task.onboarding.suggestion' && 
-        t.st_Status === 'New'
+    // With admin_direct flow, status is 'Assigned' (not 'New') when assigned to admin
+    const tasks = allTasks.filter(t =>
+        t.st_TaskTypeId === 'task.onboarding.suggestion' &&
+        (t.st_Status === 'New' || t.st_Status === 'Assigned')
     );
-    
-    return tasks.map(t => ({
+
+    return tasks.map(t => {
+      const sku = t.st_LinkedEntityId;
+      let comax = null;
+      try {
+        const lookup = ProductService.lookupProductBySku(sku);
+        if (lookup && lookup.comax) {
+          comax = lookup.comax;
+        }
+      } catch (e) {
+        // Ignore lookup errors - just show task without product details
+      }
+      return {
         taskId: t.st_TaskId,
-        sku: t.st_LinkedEntityId,
+        sku: sku,
         title: t.st_Title,
         status: t.st_Status,
         createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate),
-        notes: t.st_Notes
-    }));
+        notes: t.st_Notes,
+        // Comax product details
+        division: comax ? comax.division : '',
+        group: comax ? comax.group : '',
+        price: comax ? comax.price : '',
+        stock: comax ? comax.stock : ''
+      };
+    });
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getSuggestionTasks', `Error: ${e.message}`, e);
     throw e;

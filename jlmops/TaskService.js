@@ -422,11 +422,12 @@ const TaskService = (function() {
       const sheetRow = rowIndex + 2; // +1 for 1-based index, +1 for header row
       sheet.getRange(sheetRow, statusCol + 1).setValue(newStatus);
 
-      // If the new status is 'Done' or 'Closed', also set the DoneDate
-      if ((newStatus === 'Done' || newStatus === 'Closed') && doneDateCol !== -1) {
+      // If the new status is terminal (Done, Closed, Cancelled), set the DoneDate
+      var isTerminalStatus = newStatus === 'Done' || newStatus === 'Closed' || newStatus === 'Cancelled';
+      if (isTerminalStatus && doneDateCol !== -1) {
         sheet.getRange(sheetRow, doneDateCol + 1).setValue(_getIsraelMidnight());
-      } else if ((newStatus !== 'Done' && newStatus !== 'Closed') && doneDateCol !== -1) {
-        // If status is changed from a 'Done/Closed' state to active, clear the DoneDate
+      } else if (!isTerminalStatus && doneDateCol !== -1) {
+        // If status is changed from a terminal state to active, clear the DoneDate
         sheet.getRange(sheetRow, doneDateCol + 1).clearContent();
       }
 
@@ -555,6 +556,58 @@ const TaskService = (function() {
   }
 
   /**
+   * Updates start and due dates for a task.
+   * @param {string} taskId The task ID to update.
+   * @param {string|null} startDate Start date (YYYY-MM-DD or null to clear).
+   * @param {string|null} dueDate Due date (YYYY-MM-DD or null to clear).
+   * @returns {boolean} True if updated successfully.
+   */
+  function updateTaskDates(taskId, startDate, dueDate) {
+    try {
+      const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+      const sheetName = 'SysTasks';
+      const sheet = dataSpreadsheet.getSheetByName(sheetName);
+
+      if (!sheet || sheet.getLastRow() < 2) {
+        logger.warn('TaskService', 'updateTaskDates', 'Task sheet not found or empty.');
+        return false;
+      }
+
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const headers = taskSchema.headers.split(',');
+      const taskIdCol = headers.indexOf('st_TaskId');
+      const startDateCol = headers.indexOf('st_StartDate');
+      const dueDateCol = headers.indexOf('st_DueDate');
+
+      const data = sheet.getRange(2, taskIdCol + 1, sheet.getLastRow() - 1, 1).getValues();
+
+      for (let i = 0; i < data.length; i++) {
+        if (data[i][0] === taskId) {
+          const sheetRow = i + 2;
+          if (startDateCol !== -1 && startDate !== undefined) {
+            const startVal = startDate ? new Date(startDate) : '';
+            sheet.getRange(sheetRow, startDateCol + 1).setValue(startVal);
+          }
+          if (dueDateCol !== -1 && dueDate !== undefined) {
+            const dueVal = dueDate ? new Date(dueDate) : '';
+            sheet.getRange(sheetRow, dueDateCol + 1).setValue(dueVal);
+          }
+          _invalidateWebAppTasksCache();
+          logger.info('TaskService', 'updateTaskDates', `Task '${taskId}' dates updated.`);
+          return true;
+        }
+      }
+
+      logger.warn('TaskService', 'updateTaskDates', `Task '${taskId}' not found.`);
+      return false;
+
+    } catch (e) {
+      logger.error('TaskService', 'updateTaskDates', `Error updating dates for '${taskId}': ${e.message}`, e);
+      return false;
+    }
+  }
+
+  /**
    * Finds an open task by type (and optionally entity).
    * @param {string} taskTypeId The task type to find.
    * @param {string} [linkedEntityId] Optional entity ID to match.
@@ -636,6 +689,7 @@ const TaskService = (function() {
     updateTaskStatus: updateTaskStatus,
     getTasksByProject: getTasksByProject,
     updateTaskNotes: updateTaskNotes,
+    updateTaskDates: updateTaskDates,
     findOpenTaskByType: findOpenTaskByType,
     upsertSingletonTask: upsertSingletonTask
   };

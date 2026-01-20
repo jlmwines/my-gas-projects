@@ -2453,21 +2453,33 @@ const ProductService = (function() {
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
       const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
       const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+      const cmxCmxIdIdx = cmxHeaders.indexOf('cpm_CmxId');
       const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+      const cmxDivisionIdx = cmxHeaders.indexOf('cpm_Division');
+      const cmxGroupIdx = cmxHeaders.indexOf('cpm_Group');
       const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
       const cmxIsActiveIdx = cmxHeaders.indexOf('cpm_IsActive');
       const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
       const cmxPriceIdx = cmxHeaders.indexOf('cpm_Price');
 
       let comaxData = null;
+      let foundSku = null;
       if (cmxSheet) {
         const cmxData = cmxSheet.getDataRange().getValues();
+        const searchVal = String(sku).trim();
         for (let i = 1; i < cmxData.length; i++) {
-          if (String(cmxData[i][cmxSkuIdx]).trim() === String(sku).trim()) {
+          // Try matching by SKU first, then by Comax ID
+          const rowSku = String(cmxData[i][cmxSkuIdx] || '').trim();
+          const rowCmxId = String(cmxData[i][cmxCmxIdIdx] || '').trim();
+          if (rowSku === searchVal || rowCmxId === searchVal) {
             const isWebVal = String(cmxData[i][cmxIsWebIdx] || '').trim().toLowerCase();
+            foundSku = rowSku;
             comaxData = {
-              sku: cmxData[i][cmxSkuIdx],
+              sku: rowSku,
+              cmxId: rowCmxId,
               nameHe: cmxData[i][cmxNameHeIdx] || '',
+              division: cmxData[i][cmxDivisionIdx] || '',
+              group: cmxData[i][cmxGroupIdx] || '',
               isWeb: isWebVal === '1' || isWebVal === 'true' || isWebVal === 'כן',
               isActive: !!cmxData[i][cmxIsActiveIdx],
               stock: cmxData[i][cmxStockIdx] || 0,
@@ -2479,10 +2491,11 @@ const ProductService = (function() {
       }
 
       if (!comaxData) {
-        return null; // SKU not found in Comax
+        return null; // Not found in Comax by SKU or CmxId
       }
 
-      // Lookup in WebProdM + WebDetM
+      // Lookup in WebProdM + WebDetM using the found SKU (in case we searched by CmxId)
+      const lookupSku = comaxData.sku;
       let webData = null;
       const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
       const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
@@ -2490,10 +2503,10 @@ const ProductService = (function() {
       const wpmWebIdEnIdx = webProdHeaders.indexOf('wpm_WebIdEn');
       const wpmWebIdHeIdx = webProdHeaders.indexOf('wpm_WebIdHe');
 
-      if (webProdSheet) {
+      if (webProdSheet && lookupSku) {
         const webProdData = webProdSheet.getDataRange().getValues();
         for (let i = 1; i < webProdData.length; i++) {
-          if (String(webProdData[i][wpmSkuIdx]).trim() === String(sku).trim()) {
+          if (String(webProdData[i][wpmSkuIdx]).trim() === lookupSku) {
             webData = {
               webIdEn: webProdData[i][wpmWebIdEnIdx] || '',
               webIdHe: webProdData[i][wpmWebIdHeIdx] || '',
@@ -2506,7 +2519,7 @@ const ProductService = (function() {
       }
 
       // Get web names from WebDetM
-      if (webData) {
+      if (webData && lookupSku) {
         const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
         const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
         const wdmSkuIdx = webDetHeaders.indexOf('wdm_SKU');
@@ -2516,7 +2529,7 @@ const ProductService = (function() {
         if (webDetSheet) {
           const webDetData = webDetSheet.getDataRange().getValues();
           for (let i = 1; i < webDetData.length; i++) {
-            if (String(webDetData[i][wdmSkuIdx]).trim() === String(sku).trim()) {
+            if (String(webDetData[i][wdmSkuIdx]).trim() === lookupSku) {
               webData.nameEn = webDetData[i][wdmNameEnIdx] || '';
               webData.nameHe = webDetData[i][wdmNameHeIdx] || '';
               break;

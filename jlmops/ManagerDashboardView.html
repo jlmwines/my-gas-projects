@@ -48,7 +48,7 @@
       console.error('Placeholder not found:', placeholderId);
       return;
     }
-    
+
     google.script.run
       .withSuccessHandler(html => {
         placeholder.innerHTML = html;
