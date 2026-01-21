@@ -83,10 +83,17 @@
     <div class="col-12">
       <div class="card">
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
-          <span>Tasks</span>
+          <div class="d-flex align-items-center">
+            <span class="mr-3">Tasks</span>
+            <span id="calendar-nav" class="d-flex align-items-center" style="font-size:12px;">
+              <button type="button" id="btn-prev-week" class="btn btn-sm btn-light py-0 px-2">&lt;</button>
+              <span id="calendar-week-label" class="mx-2" style="min-width:180px;text-align:center;"></span>
+              <button type="button" id="btn-next-week" class="btn btn-sm btn-light py-0 px-2">&gt;</button>
+            </span>
+          </div>
           <div class="view-toggle">
-            <button type="button" id="btn-list-view" class="btn btn-sm btn-light active">List</button>
-            <button type="button" id="btn-calendar-view" class="btn btn-sm btn-light">Calendar</button>
+            <button type="button" id="btn-list-view" class="btn btn-sm btn-light">List</button>
+            <button type="button" id="btn-calendar-view" class="btn btn-sm btn-light active">Calendar</button>
           </div>
         </div>
         <div class="card-body">
@@ -107,7 +114,7 @@
           </div>
 
           <!-- List View -->
-          <div id="list-view" class="list-container">
+          <div id="list-view" class="list-container" style="display:none;">
             <div class="task-row" style="font-weight: 600; background: #f8f9fa; cursor: default;">
               <div class="task-col-topic">Topic</div>
               <div class="task-col-entity">Entity</div>
@@ -123,12 +130,7 @@
           </div>
 
           <!-- Calendar View -->
-          <div id="calendar-view" class="calendar-container">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <button type="button" id="btn-prev-week" class="btn btn-sm btn-light">&lt; Prev</button>
-              <span id="calendar-week-label" class="font-weight-bold"></span>
-              <button type="button" id="btn-next-week" class="btn btn-sm btn-light">Next &gt;</button>
-            </div>
+          <div id="calendar-view" class="calendar-container show">
             <div class="calendar-grid">
               <div class="calendar-header">Sun</div>
               <div class="calendar-header">Mon</div>
@@ -144,6 +146,13 @@
               <div id="cal-4" class="calendar-cell"></div>
               <div id="cal-5" class="calendar-cell"></div>
               <div id="cal-6" class="calendar-cell"></div>
+              <div id="cal-7" class="calendar-cell"></div>
+              <div id="cal-8" class="calendar-cell"></div>
+              <div id="cal-9" class="calendar-cell"></div>
+              <div id="cal-10" class="calendar-cell"></div>
+              <div id="cal-11" class="calendar-cell"></div>
+              <div id="cal-12" class="calendar-cell"></div>
+              <div id="cal-13" class="calendar-cell"></div>
             </div>
           </div>
         </div>
@@ -162,7 +171,7 @@
     filteredTasks: [],
     expandedTaskId: null,
     currentWeekStart: getWeekStart(new Date()),
-    view: 'list'
+    view: 'calendar'
   };
 
   function getWeekStart(date) {
@@ -519,12 +528,12 @@
     var today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Update week label
-    var weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
+    // Update week label (2 weeks)
+    var periodEnd = new Date(weekStart);
+    periodEnd.setDate(periodEnd.getDate() + 13);
     var weekLabel = document.getElementById('calendar-week-label');
     if (weekLabel) {
-      weekLabel.textContent = formatDateFull(weekStart.toISOString()) + ' - ' + formatDateFull(weekEnd.toISOString());
+      weekLabel.textContent = formatDateFull(weekStart.toISOString()) + ' - ' + formatDateFull(periodEnd.toISOString());
     }
 
     // Group tasks by due date
@@ -538,8 +547,8 @@
       tasksByDate[key].push(task);
     });
 
-    // Render each day cell
-    for (var i = 0; i < 7; i++) {
+    // Render each day cell (14 days = 2 weeks)
+    for (var i = 0; i < 14; i++) {
       var cellDate = new Date(weekStart);
       cellDate.setDate(cellDate.getDate() + i);
       var cell = document.getElementById('cal-' + i);
@@ -586,10 +595,12 @@
     var btnCal = document.getElementById('btn-calendar-view');
     var listView = document.getElementById('list-view');
     var calView = document.getElementById('calendar-view');
+    var calNav = document.getElementById('calendar-nav');
     if (btnList) btnList.classList.toggle('active', view === 'list');
     if (btnCal) btnCal.classList.toggle('active', view === 'calendar');
     if (listView) listView.style.display = view === 'list' ? 'block' : 'none';
     if (calView) calView.classList.toggle('show', view === 'calendar');
+    if (calNav) calNav.style.display = view === 'calendar' ? 'flex' : 'none';
   }
 
   function escapeHtml(str) {
@@ -607,16 +618,17 @@
   document.getElementById('btn-calendar-view').addEventListener('click', function() { toggleView('calendar'); });
 
   document.getElementById('btn-prev-week').addEventListener('click', function() {
-    state.currentWeekStart.setDate(state.currentWeekStart.getDate() - 7);
+    state.currentWeekStart.setDate(state.currentWeekStart.getDate() - 14);
     renderCalendar();
   });
 
   document.getElementById('btn-next-week').addEventListener('click', function() {
-    state.currentWeekStart.setDate(state.currentWeekStart.getDate() + 7);
+    state.currentWeekStart.setDate(state.currentWeekStart.getDate() + 14);
     renderCalendar();
   });
 
   // Load on init
+  toggleView(state.view); // Sync initial view state
   loadDashboard();
 })();
 </script>

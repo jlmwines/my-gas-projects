@@ -17,6 +17,14 @@ function rebuildSysConfigFromSource() {
     const functionName = 'rebuildSysConfigFromSource';
     const masterConfig = getMasterConfiguration();
 
+    // Runtime state keys that should be preserved across rebuilds
+    const RUNTIME_STATE_KEYS = [
+        'system.brurya.last_update',
+        'system.mailchimp.subscribers_last_update',
+        'system.mailchimp.campaigns_last_update',
+        'system.woocommerce.coupons_last_update'
+    ];
+
     try {
         console.log('Running ' + functionName + '...');
 
@@ -27,6 +35,19 @@ function rebuildSysConfigFromSource() {
         }
         console.log('Target SysConfig sheet located.');
 
+        // Preserve runtime state values before clearing
+        const preservedValues = {};
+        const existingData = sheet.getDataRange().getValues();
+        for (let i = 1; i < existingData.length; i++) {
+            const settingName = existingData[i][0];
+            const key = existingData[i][3];  // scf_P01
+            const value = existingData[i][4]; // scf_P02
+            if (RUNTIME_STATE_KEYS.includes(settingName) && key === 'value' && value) {
+                preservedValues[settingName] = value;
+                console.log('Preserved runtime value: ' + settingName + ' = ' + value);
+            }
+        }
+
         // Clear and write data
         sheet.clear();
         console.log('Cleared existing content from SysConfig sheet.');
@@ -35,6 +56,22 @@ function rebuildSysConfigFromSource() {
         const numCols = masterConfig[0].length;
         sheet.getRange(1, 1, numRows, numCols).setValues(masterConfig);
         console.log('Wrote ' + numRows + ' rows and ' + numCols + ' columns to SysConfig.');
+
+        // Restore preserved runtime state values
+        const newData = sheet.getDataRange().getValues();
+        let restoredCount = 0;
+        for (let i = 1; i < newData.length; i++) {
+            const settingName = newData[i][0];
+            const key = newData[i][3]; // scf_P01
+            if (preservedValues[settingName] && key === 'value') {
+                sheet.getRange(i + 1, 5).setValue(preservedValues[settingName]); // Column 5 = scf_P02
+                restoredCount++;
+                console.log('Restored runtime value: ' + settingName);
+            }
+        }
+        if (restoredCount > 0) {
+            console.log('Restored ' + restoredCount + ' runtime state value(s).');
+        }
 
         // Format header
         sheet.getRange(1, 1, 1, numCols).setFontWeight('bold');

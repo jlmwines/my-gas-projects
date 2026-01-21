@@ -3,6 +3,7 @@
   .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
   .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }
   .task-col-priority { text-align: center; justify-content: center; }
+  .task-col-entity { display: flex; align-items: center; gap: 4px; }
   .task-col-toggle { text-align: right; }
   .panel-btn.active { background-color: #d6d6d6; font-weight: bold; }
 
@@ -22,36 +23,36 @@
   .panel-state-1 #panel-toggle-group { display: none; }
   .panel-state-1 .expand-compact { display: inline-block !important; }
 
-  /* State 2: standard (10 cols = 100%) - check, title, entity, assignee, status, priority, start, due, toggle */
+  /* State 2: standard (8 cols = 100%) - check, title, entity, assignee, status, priority, start, due */
   .panel-state-2 .task-col-hideable { display: flex !important; align-items: center; }
   .panel-state-2 .task-col-wide-only { display: none !important; }
   .panel-state-2 .task-col-check { width: 3%; }
   .panel-state-2 .task-col-title { width: 22%; }
-  .panel-state-2 .task-col-entity { width: 14%; }
-  .panel-state-2 .task-col-assignee { width: 12%; }
-  .panel-state-2 .task-col-status { width: 11%; }
+  .panel-state-2 .task-col-entity { width: 30%; }
+  .panel-state-2 .task-col-assignee { width: 7%; }
+  .panel-state-2 .task-col-status { width: 7%; }
   .panel-state-2 .task-col-priority { width: 5%; }
-  .panel-state-2 .task-col-start { width: 12%; }
-  .panel-state-2 .task-col-due { width: 12%; }
-  .panel-state-2 .task-col-toggle { width: 9%; }
+  .panel-state-2 .task-col-start { width: 13%; }
+  .panel-state-2 .task-col-due { width: 13%; }
+  .panel-state-2 .task-col-toggle { display: none !important; }
   .panel-state-2 .scope-links { display: inline; }
   .panel-state-2 .expand-compact { display: none !important; }
 
-  /* State 3: full (12 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done, toggle */
+  /* State 3: full (11 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done */
   .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
   .panel-state-3 .task-col-session { width: 8%; max-width: 100px; overflow: hidden; }
-  .panel-state-3 .task-col-title { width: 15%; }
-  .panel-state-3 .task-col-entity { width: 10%; }
+  .panel-state-3 .task-col-title { width: 18%; }
+  .panel-state-3 .task-col-entity { width: 14%; }
   .panel-state-3 .task-col-entity-id { width: 5%; }
   .panel-state-3 .task-col-assignee { width: 10%; }
   .panel-state-3 .task-col-status { width: 10%; }
-  .panel-state-3 .task-col-priority { width: 4%; }
+  .panel-state-3 .task-col-priority { width: 5%; }
   .panel-state-3 .task-col-start { width: 9%; }
   .panel-state-3 .task-col-due { width: 9%; }
-  .panel-state-3 .task-col-done { width: 9%; }
-  .panel-state-3 .task-col-toggle { width: 9%; }
+  .panel-state-3 .task-col-done { width: 10%; }
+  .panel-state-3 .task-col-toggle { display: none !important; }
 
   .panel-state-3 .scope-links { display: inline; }
   .panel-state-3 .expand-compact { display: none !important; }
@@ -62,6 +63,11 @@
   /* Inline edits fill their container */
   .task-row .inline-edit { height: 24px; font-size: 11px; padding: 0 2px; width: 100%; box-sizing: border-box; }
   .task-row select.inline-edit { font-size: 10px; }
+
+  /* Entity ID - click to select all for easy copying */
+  .user-select-all { cursor: pointer; }
+  .user-select-all:hover { background: #e9ecef; }
+  .task-col-entity { white-space: nowrap; }
 </style>
 <div class="container-fluid panel-state-2">
   <div class="row">
@@ -108,6 +114,16 @@
 
         <!-- Subheader: Column headers + filters (Tasks mode) -->
         <div id="subheader-tasks" class="border-bottom bg-light px-2 py-1" style="display:none;">
+          <!-- Scope filter row -->
+          <div class="d-flex justify-content-between align-items-center mb-1 hide-compact">
+            <span class="scope-links small">
+              <a href="#" class="scope-link" data-scope="open">Open</a> |
+              <a href="#" class="scope-link" data-scope="started">Started</a> |
+              <a href="#" class="scope-link" data-scope="future">Future</a> |
+              <a href="#" class="scope-link" data-scope="all">All</a>
+            </span>
+          </div>
+          <!-- Column headers row -->
           <div class="row small font-weight-bold text-muted align-items-center">
             <div class="task-col-check">
               <input type="checkbox" id="select-all-tasks" title="Select all">
@@ -117,7 +133,8 @@
             </div>
             <div class="task-col-title"><a href="#" class="text-muted sort-col" data-field="title">Title <span id="sort-icon-title"></span></a></div>
             <div class="task-col-hideable task-col-entity">
-              <input type="text" id="filter-task-entity" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;" placeholder="Entity">
+              <a href="#" class="text-muted sort-col" data-field="entity">Entity <span id="sort-icon-entity"></span></a>
+              <input type="text" id="filter-task-entity" class="form-control form-control-sm py-0 ml-1" style="height:22px;font-size:10px;flex:1;" placeholder="filter">
             </div>
             <div class="task-col-wide-only task-col-entity-id text-truncate">Link</div>
             <div class="task-col-hideable task-col-assignee">
@@ -132,7 +149,7 @@
             </div>
             <div class="task-col-hideable task-col-priority text-center">
               <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
-                <option value="all">Pri</option>
+                <option value="all">Priority</option>
               </select>
             </div>
             <div class="task-col-start">
@@ -145,12 +162,6 @@
               <a href="#" class="text-muted sort-col" data-field="done">Done <span id="sort-icon-done"></span></a>
             </div>
             <div class="task-col-toggle text-right small">
-              <span class="scope-links">
-                <a href="#" class="scope-link" data-scope="open">Open</a> |
-                <a href="#" class="scope-link" data-scope="started">Started</a> |
-                <a href="#" class="scope-link" data-scope="future">Future</a> |
-                <a href="#" class="scope-link" data-scope="all">All</a>
-              </span>
               <a href="#" class="expand-compact" style="display:none;" title="Expand view">⊕</a>
             </div>
           </div>
@@ -1268,15 +1279,14 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var rowClass = isDone ? ' text-muted' : '';
 
       var sessionId = t.st_SessionId || '';
-      var entityId = t.st_LinkedEntityId != null ? String(t.st_LinkedEntityId) : '-';
+      var entityId = t.st_LinkedEntityId != null ? String(t.st_LinkedEntityId) : '';
       var entityName = t.st_LinkedEntityName || '';
       var isUrl = entityId.indexOf('http') === 0;
-      var entityDisplay = entityName || (entityId.length > 10 ? entityId.substring(0, 8) + '..' : entityId);
 
-      // If entity is a URL, make it clickable; show entity name as display text
+      // Show full entity ID (not truncated) - user needs to see/copy UPC codes
       var entityHtml = isUrl
-        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityName || entityId) + '">' + esc(entityDisplay) + '</a>'
-        : '<span title="' + esc(entityId) + '">' + esc(entityDisplay) + '</span>';
+        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityName || entityId) + '">' + esc(entityName || 'Link') + '</a>'
+        : '<span class="user-select-all" title="' + esc(entityName) + '">' + esc(entityId || '-') + '</span>';
 
       var isChecked = state.selectedTaskIds.indexOf(id) !== -1;
 
@@ -1343,6 +1353,18 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         var field = this.dataset.field;
         var value = this.value;
         saveInlineEdit(taskId, field, value);
+      });
+    });
+
+    // Click entity ID to select text for copying
+    container.querySelectorAll('.user-select-all').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var range = document.createRange();
+        range.selectNodeContents(this);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
       });
     });
   }
