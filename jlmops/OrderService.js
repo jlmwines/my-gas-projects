@@ -23,8 +23,7 @@ function OrderService(productService) {
 
     try {
       const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+      const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
 
       const statusColIdx = jobQueueHeaders.indexOf('status');
       const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');
@@ -222,10 +221,8 @@ function OrderService(productService) {
     
     // Extract archiveFileId from the job queue using executionContext
     const allConfig = ConfigService.getAllConfig();
-    const logSheetConfig = allConfig['system.spreadsheet.logs'];
     const sheetNames = allConfig['system.sheet_names'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+    const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
     
     const archiveFileIdColIdx = jobQueueHeaders.indexOf('archive_file_id');
     if (archiveFileIdColIdx === -1) {
@@ -265,7 +262,7 @@ function OrderService(productService) {
 
       // 2. Write the structured data to the WebOrdS staging sheet
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const stagingSheet = spreadsheet.getSheetByName(sheetNames.WebOrdS);
       if (!stagingSheet) {
           throw new Error("Sheet 'WebOrdS' not found in the JLMops_Data spreadsheet.");
@@ -307,7 +304,7 @@ function OrderService(productService) {
       const allConfig = ConfigService.getAllConfig();
       const sheetNames = allConfig['system.sheet_names'];
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
       const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
 
@@ -474,7 +471,7 @@ function OrderService(productService) {
             const allConfig = ConfigService.getAllConfig();
             const sheetNames = allConfig['system.sheet_names'];
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
       
             if (!logSheet) {
@@ -505,7 +502,7 @@ function OrderService(productService) {
             const allConfig = ConfigService.getAllConfig();
             const sheetNames = allConfig['system.sheet_names'];
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
       
             if (!logSheet) {
@@ -536,7 +533,7 @@ function OrderService(productService) {
             const allConfig = ConfigService.getAllConfig();
             const sheetNames = allConfig['system.sheet_names'];
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
       
             if (!logSheet) {
@@ -572,7 +569,7 @@ function OrderService(productService) {
             const allConfig = ConfigService.getAllConfig();
             const sheetNames = allConfig['system.sheet_names'];
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
             if (!logSheet) {
@@ -611,7 +608,7 @@ function OrderService(productService) {
         const allConfig = ConfigService.getAllConfig();
         const sheetNames = allConfig['system.sheet_names'];
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
         const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
         if (!cacheSheet) {
@@ -717,7 +714,7 @@ function OrderService(productService) {
         const allConfig = ConfigService.getAllConfig();
         const sheetNames = allConfig['system.sheet_names'];
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
         const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
         const masterItemSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
         const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
@@ -948,7 +945,7 @@ function OrderService(productService) {
             const allConfig = ConfigService.getAllConfig();
             const sheetNames = allConfig['system.sheet_names'];
             const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-            const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
 
             if (!logSheet) {
@@ -1049,7 +1046,7 @@ function OrderService(productService) {
           const allConfig = ConfigService.getAllConfig();
           const sheetNames = allConfig['system.sheet_names'];
           const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-          const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+          const spreadsheet = SheetAccessor.getDataSpreadsheet();
           const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
           const masterOrderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
     
@@ -1103,7 +1100,7 @@ function OrderService(productService) {
           const allConfig = ConfigService.getAllConfig();
           const sheetNames = allConfig['system.sheet_names'];
           const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-          const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+          const spreadsheet = SheetAccessor.getDataSpreadsheet();
           const logSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
     
           if (!logSheet) {

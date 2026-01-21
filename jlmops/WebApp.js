@@ -119,8 +119,7 @@ function getPackableOrders() {
   try {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
     const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
 
@@ -353,11 +352,10 @@ function getSysConfigCsvAsBase64() {
 function runDailyCriticalValidations() {
   try {
     const allConfig = ConfigService.getAllConfig();
-    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
     const jobQueueSheetName = allConfig['system.sheet_names'].SysJobQueue;
-    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(jobQueueSheetName);
+    const jobQueueSheet = SheetAccessor.getLogSheet(jobQueueSheetName);
     if (!jobQueueSheet) {
-      throw new Error(`Sheet '${jobQueueSheetName}' not found in spreadsheet with ID '${logSpreadreadId}'.`);
+      throw new Error(`Sheet '${jobQueueSheetName}' not found in log spreadsheet.`);
     }
 
     const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');

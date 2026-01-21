@@ -8,10 +8,8 @@
  * @returns {Object} An object containing system health metrics.
  */
 function WebAppSystem_getSystemHealthMetrics() {
-  const logSpreadsheetId = ConfigService.getConfig('system.spreadsheet.logs').id;
-  const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-  const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
-  const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+  const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+  const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
 
   // --- Task-related metrics ---
   const taskSheetName = ConfigService.getConfig('system.sheet_names').SysTasks;
@@ -80,8 +78,7 @@ function WebAppSystem_getSystemHealthDashboardData() {
     };
 
     // --- Optimization: Fetch SysTasks ONCE ---
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+    const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
     if (!taskSheet) throw new Error(`Sheet '${sheetNames.SysTasks}' not found.`);
 
     let allOpenTasks = [];
@@ -123,8 +120,7 @@ function WebAppSystem_getSystemHealthDashboardData() {
     }
 
     // --- Job Queue Data - Read Last 500 Rows ---
-    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(sheetNames.SysJobQueue);
+    const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
     if (!jobQueueSheet) throw new Error(`Sheet '${sheetNames.SysJobQueue}' not found.`);
 
     const lastJobRow = jobQueueSheet.getLastRow();
@@ -500,9 +496,8 @@ function WebAppSystem_runMasterValidationAndReturnResults() {
   
   try {
     const allConfig = ConfigService.getAllConfig();
-    const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
     const jobQueueSheetName = allConfig['system.sheet_names'].SysJobQueue;
-    const jobQueueSheet = SpreadsheetApp.openById(logSpreadsheetId).getSheetByName(jobQueueSheetName);
+    const jobQueueSheet = SheetAccessor.getLogSheet(jobQueueSheetName);
     if (!jobQueueSheet) {
       throw new Error(`Sheet '${jobQueueSheetName}' not found in spreadsheet with ID '${logSpreadsheetId}'.`);
     }
@@ -548,8 +543,7 @@ function WebAppSystem_runMasterValidationAndReturnResults() {
     if (newJobRowNumber) {
         try {
              const allConfig = ConfigService.getAllConfig();
-             const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
-             const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+             const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
              const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
              const statusColIdx = jobQueueHeaders.indexOf('status');
              const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');

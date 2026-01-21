@@ -353,9 +353,7 @@ const TaskService = (function() {
   function completeTaskByTypeAndEntity(taskTypeId, linkedEntityId) {
     try {
       const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      const sheet = spreadsheet.getSheetByName('SysTasks');
+      const sheet = SheetAccessor.getDataSheet('SysTasks', false);
 
       if (!sheet || sheet.getLastRow() < 2) return false;
 

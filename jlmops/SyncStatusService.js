@@ -29,9 +29,7 @@ const SyncStatusService = (function() {
     const functionName = 'writeStatus';
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       // Get or create status sheet
       let statusSheet = logSpreadsheet.getSheetByName(STATUS_SHEET_NAME);
@@ -77,9 +75,7 @@ const SyncStatusService = (function() {
     }
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       const statusSheet = logSpreadsheet.getSheetByName(STATUS_SHEET_NAME);
       if (!statusSheet) {
@@ -179,9 +175,7 @@ const SyncStatusService = (function() {
     const functionName = 'clearSession';
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       const statusSheet = logSpreadsheet.getSheetByName(STATUS_SHEET_NAME);
       if (!statusSheet) return;
@@ -220,9 +214,7 @@ const SyncStatusService = (function() {
     const functionName = 'clearStepsFromSession';
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       const statusSheet = logSpreadsheet.getSheetByName(STATUS_SHEET_NAME);
       if (!statusSheet) return;
@@ -263,9 +255,7 @@ const SyncStatusService = (function() {
     const functionName = 'getRecentFailures';
 
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSheetConfig = allConfig['system.spreadsheet.logs'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       const jobQueueSheet = logSpreadsheet.getSheetByName('SysJobQueue');
       if (!jobQueueSheet) {

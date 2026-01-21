@@ -55,8 +55,7 @@ const ContactImportService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get order data from current and archive sheets
     const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
@@ -497,8 +496,7 @@ const ContactImportService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Load existing contacts by email
     const existingContacts = ContactService.getContacts();
@@ -779,8 +777,7 @@ const ContactImportService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     let masterUpdated = 0;
     let archiveUpdated = 0;
@@ -930,8 +927,7 @@ const ContactImportService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Build orderId → language map from all sources
     const languageByOrderId = new Map();

@@ -28,8 +28,7 @@ function WebAppBundles_addNewBundle(bundleId, nameEn, nameHe) {
     LoggerService.info(serviceName, functionName, `Adding new bundle: ${bundleId} - ${nameEn}`);
 
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get sheets
     const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
@@ -161,8 +160,7 @@ function WebAppBundles_getBundleWithSlots(bundleId) {
 
     // Load descriptions from WebProdM
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const webSheet = spreadsheet.getSheetByName('WebProdM');
 
     if (webSheet) {
@@ -596,8 +594,7 @@ function WebAppBundles_reimportAllBundles() {
     LoggerService.info(serviceName, functionName, 'Starting full bundle reimport from WebProdM...');
 
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
 
     if (!webProdMSheet) {
@@ -714,10 +711,7 @@ function WebAppBundles_reimportAllBundles() {
  */
 function WebAppBundles_getCategories() {
   try {
-    const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const lkpSheet = spreadsheet.getSheetByName('SysLkp_Texts');
+    const lkpSheet = SheetAccessor.getDataSheet('SysLkp_Texts', false);
 
     if (!lkpSheet) {
       return { error: 'SysLkp_Texts sheet not found', data: null };
@@ -780,9 +774,7 @@ function WebAppBundles_getProductName(sku) {
     }
 
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const webSheet = spreadsheet.getSheetByName('WebProdM');
+    const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     if (!webSheet) {
       return { error: 'WebProdM sheet not found', data: null };

@@ -99,7 +99,7 @@ const InventoryManagementService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+      const ss = SheetAccessor.getDataSpreadsheet();
       const sheetNames = allConfig['system.sheet_names'];
       const webOrdMSheet = ss.getSheetByName(sheetNames['WebOrdM']);
       const webOrdItemsMSheet = ss.getSheetByName(sheetNames['WebOrdItemsM']);
@@ -215,7 +215,7 @@ const InventoryManagementService = (function() {
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
         if (!dataSpreadsheetId) throw new Error("Data spreadsheet ID not found in configuration.");
         
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const sheetNames = allConfig['system.sheet_names'];
         if (!sheetNames) throw new Error("Sheet name configuration not found.");
 
@@ -293,7 +293,7 @@ const InventoryManagementService = (function() {
         const auditSheetName = sheetNames.SysProductAudit;
         const comaxSheetName = sheetNames.CmxProdM;
 
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const auditSheet = ss.getSheetByName(auditSheetName);
         const comaxSheet = ss.getSheetByName(comaxSheetName);
 
@@ -361,7 +361,7 @@ const InventoryManagementService = (function() {
         const sheetNames = allConfig['system.sheet_names'];
         const auditSheetName = sheetNames.SysProductAudit;
         
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const sheet = ss.getSheetByName(auditSheetName);
         if (!sheet) {
             throw new Error(`Sheet '${auditSheetName}' not found.`);
@@ -432,7 +432,7 @@ const InventoryManagementService = (function() {
         const auditSheetName = sheetNames.SysProductAudit;
         const comaxSheetName = sheetNames.CmxProdM;
 
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const auditSheet = ss.getSheetByName(auditSheetName);
         const comaxSheet = ss.getSheetByName(comaxSheetName);
 
@@ -504,7 +504,7 @@ const InventoryManagementService = (function() {
         const sheetNames = allConfig['system.sheet_names'];
         const auditSheetName = sheetNames.SysProductAudit;
 
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const auditSheet = ss.getSheetByName(auditSheetName);
 
         if (!auditSheet) {
@@ -620,7 +620,7 @@ const InventoryManagementService = (function() {
         const sheetNames = allConfig['system.sheet_names'];
         const auditSheetName = sheetNames.SysProductAudit;
 
-        const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+        const ss = SheetAccessor.getDataSpreadsheet();
         const auditSheet = ss.getSheetByName(auditSheetName);
 
         if (!auditSheet) {
@@ -670,7 +670,7 @@ const InventoryManagementService = (function() {
               try {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const ss = SheetAccessor.getDataSpreadsheet();
                 const sheetNames = allConfig['system.sheet_names'];
                 const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
         
@@ -764,7 +764,7 @@ const InventoryManagementService = (function() {
               try {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const ss = SheetAccessor.getDataSpreadsheet();
                 const sheetNames = allConfig['system.sheet_names'];
                 const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
                 const taskSheet = ss.getSheetByName(sheetNames.SysTasks);
@@ -863,7 +863,7 @@ const InventoryManagementService = (function() {
               try {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-                const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+                const ss = SheetAccessor.getDataSpreadsheet();
                 const sheetNames = allConfig['system.sheet_names'];
                 const productAuditSheet = ss.getSheetByName(sheetNames.SysProductAudit);
                 const taskSheet = ss.getSheetByName(sheetNames.SysTasks);
@@ -1060,7 +1060,7 @@ const InventoryManagementService = (function() {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
                 const sheetNames = allConfig['system.sheet_names'];
-                const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+                const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
         
                 if (!taskSheet || taskSheet.getLastRow() <= 1) {
                   return 0;
@@ -1095,7 +1095,7 @@ const InventoryManagementService = (function() {
                 const allConfig = ConfigService.getAllConfig();
                 const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
                 const sheetNames = allConfig['system.sheet_names'];
-                const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+                const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks);
         
                 if (!taskSheet || taskSheet.getLastRow() <= 1) {
                   return 0;

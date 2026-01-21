@@ -46,10 +46,8 @@ const CrmIntelligenceService = (function () {
   function _getContacts() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-    const sheet = spreadsheet.getSheetByName(sheetNames.SysContacts || 'SysContacts');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysContacts || 'SysContacts', false);
     if (!sheet) return [];
 
     const data = sheet.getDataRange().getValues();

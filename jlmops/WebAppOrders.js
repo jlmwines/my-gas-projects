@@ -44,8 +44,7 @@ function WebAppOrders_getOpenOrdersForManager() {
   try {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
     const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
 
@@ -131,8 +130,7 @@ function WebAppOrders_getPackableOrders() {
   try {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const orderLogSheet = spreadsheet.getSheetByName(sheetNames.SysOrdLog);
     const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
 

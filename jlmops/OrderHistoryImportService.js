@@ -196,8 +196,7 @@ const OrderHistoryImportService = (function () {
     LoggerService.info(SERVICE_NAME, fnName, 'Starting order history import');
 
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get or create archive sheets
     const ordersSheet = _getOrCreateSheet(spreadsheet, ORDERS_ARCHIVE_SHEET, ORDER_HEADERS);

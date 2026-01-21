@@ -501,15 +501,8 @@ const ValidationLogic = (function() {
       const allConfig = ConfigService.getAllConfig();
       const discrepancies = [];
 
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data']?.id;
-      const logSpreadsheetId = allConfig['system.spreadsheet.logs']?.id;
-
-      if (!dataSpreadsheetId || !logSpreadsheetId) {
-          throw new Error("Spreadsheet IDs for 'JLMops_Data' or 'JLMops_Logs' not found in SysConfig.");
-      }
-
-      const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
       const sheetSchemas = Object.keys(allConfig).filter(key => 
           key.startsWith('schema.data.') || key.startsWith('schema.log.')

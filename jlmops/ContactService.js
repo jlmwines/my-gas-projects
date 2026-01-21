@@ -69,9 +69,7 @@ const ContactService = (function () {
   function _getContactsSheet() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName(sheetNames.SysContacts);
+    return SheetAccessor.getDataSheet(sheetNames.SysContacts, false);
   }
 
   /**
@@ -81,9 +79,7 @@ const ContactService = (function () {
   function _getActivitySheet() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName(sheetNames.SysContactActivity);
+    return SheetAccessor.getDataSheet(sheetNames.SysContactActivity, false);
   }
 
   /**
@@ -913,8 +909,7 @@ const ContactService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Load contacts
     const contacts = getContacts();

@@ -58,9 +58,7 @@ const SyncSessionService = (function() {
    * Creates the sheet if it doesn't exist.
    */
   function _getSheet() {
-    const allConfig = ConfigService.getAllConfig();
-    const logSheetConfig = allConfig['system.spreadsheet.logs'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
 
     let sheet = logSpreadsheet.getSheetByName(SHEET_NAME);
     if (!sheet) {

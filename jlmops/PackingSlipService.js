@@ -27,8 +27,7 @@ const PackingSlipService = (function() {
         // 2. Get all necessary sheets
         const allConfig = ConfigService.getAllConfig();
         const sheetNames = allConfig['system.sheet_names'];
-        const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
         const cacheSheet = spreadsheet.getSheetByName(sheetNames.SysPackingCache);
         const detailSheet = spreadsheet.getSheetByName(sheetNames.WebDetM);
 

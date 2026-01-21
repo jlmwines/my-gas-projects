@@ -21,7 +21,7 @@ const ProductImportService = (function() {
 
     try {
       const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
 
       const statusColIdx = jobQueueHeaders.indexOf('status');
@@ -112,7 +112,7 @@ const ProductImportService = (function() {
     const serviceName = 'ProductImportService';
     const functionName = '_populateStagingSheet';
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const sheet = dataSpreadsheet.getSheetByName(sheetName);
     if (!sheet) {
         throw new Error(`Sheet '${sheetName}' not found in JLMops_Data spreadsheet.`);
@@ -194,7 +194,7 @@ const ProductImportService = (function() {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+        const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
@@ -245,7 +245,7 @@ const ProductImportService = (function() {
     logger.info(serviceName, functionName, 'Starting WebXltS to WebXltM full replacement process.', { sessionId: sessionId });
 
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const webXltMSheet = dataSpreadsheet.getSheetByName('WebXltM');
     const webXltSSheet = dataSpreadsheet.getSheetByName('WebXltS');
 
@@ -300,7 +300,7 @@ const ProductImportService = (function() {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+        const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
@@ -521,7 +521,7 @@ const ProductImportService = (function() {
     }
 
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
 
     // More robustly clear the sheet and rewrite headers + data
@@ -602,7 +602,7 @@ const ProductImportService = (function() {
 
     // Clear and rewrite the entire SysProductAudit sheet
     const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const sysProductAuditSheet = dataSpreadsheet.getSheetByName('SysProductAudit');
 
     sysProductAuditSheet.clear();
@@ -800,7 +800,7 @@ const ProductImportService = (function() {
         const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+        const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
         const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
@@ -1195,7 +1195,7 @@ const ProductImportService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       // 1. Get CmxProdM data for new stock and price
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);

@@ -37,7 +37,7 @@ const CampaignService = (function () {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     return spreadsheet.getSheetByName(sheetNames.SysCampaigns);
   }
 
@@ -1309,7 +1309,7 @@ function _calculateRecentSpend() {
   // Get all orders from data spreadsheet
   const allConfig = ConfigService.getAllConfig();
   const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+  const ss = SheetAccessor.getDataSpreadsheet();
   const orderSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdM);
 
   if (!orderSheet) {
@@ -1374,7 +1374,7 @@ function _calculate2025Spend(allConfig) {
   const fnName = '_calculate2025Spend';
 
   const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+  const ss = SheetAccessor.getDataSpreadsheet();
   const orderSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdM);
 
   if (!orderSheet) {

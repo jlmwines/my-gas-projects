@@ -42,8 +42,7 @@ function runFormatDataSheets() {
 function backfillOrderTotals() {
   const fnName = 'backfillOrderTotals';
   const allConfig = ConfigService.getAllConfig();
-  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+  const ss = SheetAccessor.getDataSpreadsheet();
 
   // Build order totals from order items (authoritative source)
   const totalsByOrderId = {};
@@ -195,9 +194,7 @@ function backfillArchiveOrderTotalsFromCsv(fileName) {
 
   // Get archive sheet
   const allConfig = ConfigService.getAllConfig();
-  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
-  const archiveSheet = ss.getSheetByName('WebOrdM_Archive');
+  const archiveSheet = SheetAccessor.getDataSheet('WebOrdM_Archive', false);
 
   if (!archiveSheet) {
     console.log('WebOrdM_Archive not found');
@@ -235,8 +232,7 @@ function backfillArchiveOrderTotalsFromCsv(fileName) {
 function updateContactSpend12Month(year) {
   const fnName = 'updateContactSpend12Month';
   const allConfig = ConfigService.getAllConfig();
-  const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-  const ss = SpreadsheetApp.openById(dataSpreadsheetId);
+  const ss = SheetAccessor.getDataSpreadsheet();
 
   // Date range: calendar year or rolling 12 months
   let startDate, endDate;
@@ -573,7 +569,7 @@ function HousekeepingService() {
         return false;
       }
 
-      const logsSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+      const logsSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const logSheetName = allConfig['system.sheet_names'].SysLog;
       const logArchiveSheetName = allConfig['system.sheet_names'].SysLog_Archive;
       const logSheet = logsSpreadsheet.getSheetByName(logSheetName);
@@ -1145,7 +1141,7 @@ function HousekeepingService() {
         return false;
       }
 
-      const dataSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.data'].id);
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const sheetNames = allConfig['system.sheet_names'];
 
       // Get all required sheets
@@ -1367,7 +1363,7 @@ function HousekeepingService() {
         return false;
       }
 
-      const dataSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.data'].id);
+      const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const taskSheetName = allConfig['system.sheet_names'].SysTasks;
       const taskArchiveSheetName = allConfig['system.sheet_names'].SysTasks_Archive;
       const taskSheet = dataSpreadsheet.getSheetByName(taskSheetName);
@@ -1428,9 +1424,8 @@ function HousekeepingService() {
         return false;
       }
 
-      const logsSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
       const sheetNames = allConfig['system.sheet_names'];
-      const jobQueueSheet = logsSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+      const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue, false);
 
       if (!jobQueueSheet) {
         logger.warn('HousekeepingService', functionName, 'SysJobQueue sheet not found. Skipping job purge.');
@@ -1794,8 +1789,7 @@ function HousekeepingService() {
         return false;
       }
 
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const sheetNames = allConfig['system.sheet_names'];
 
       // Sheets that need formatting

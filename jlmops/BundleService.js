@@ -28,10 +28,7 @@ const BundleService = (function () {
    * @returns {GoogleAppsScript.Spreadsheet.Sheet}
    */
   function _getBundlesSheet() {
-    const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName('SysBundles');
+    return SheetAccessor.getDataSheet('SysBundles');
   }
 
   /**
@@ -39,10 +36,7 @@ const BundleService = (function () {
    * @returns {GoogleAppsScript.Spreadsheet.Sheet}
    */
   function _getSlotsSheet() {
-    const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName('SysBundleSlots');
+    return SheetAccessor.getDataSheet('SysBundleSlots');
   }
 
   /**
@@ -231,9 +225,7 @@ const BundleService = (function () {
 
     // Build price map from WebProdM
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const webSheet = spreadsheet.getSheetByName('WebProdM');
+    const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     const priceMap = {};
     if (webSheet) {
@@ -291,9 +283,7 @@ const BundleService = (function () {
 
     // Build price map from WebProdM for price calculation
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const webSheet = spreadsheet.getSheetByName('WebProdM');
+    const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     const priceMap = {};
     if (webSheet) {
@@ -683,9 +673,7 @@ const BundleService = (function () {
     // Get minimum stock threshold from config
     const minStockConfig = allConfig['system.inventory.minimum_stock'];
     const minStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const webSheet = spreadsheet.getSheetByName('WebProdM');
+    const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     if (!webSheet) {
       LoggerService.warn(SERVICE_NAME, functionName, 'WebProdM sheet not found');
@@ -852,11 +840,8 @@ const BundleService = (function () {
       threshold = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
     }
 
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-
     // 1. Read CmxProdM for Comax stock (source of truth)
-    const cmxSheet = spreadsheet.getSheetByName('CmxProdM');
+    const cmxSheet = SheetAccessor.getDataSheet('CmxProdM', false);
     if (!cmxSheet) {
       LoggerService.warn(SERVICE_NAME, functionName, 'CmxProdM sheet not found');
       return [];

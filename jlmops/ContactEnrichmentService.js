@@ -75,10 +75,8 @@ const ContactEnrichmentService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-    const sheet = spreadsheet.getSheetByName(sheetNames.SysBrands || 'SysBrands');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysBrands || 'SysBrands', false);
     _brandsLookup = new Map();
 
     if (sheet) {
@@ -112,10 +110,8 @@ const ContactEnrichmentService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-    const sheet = spreadsheet.getSheetByName(sheetNames.SysCategories || 'SysCategories');
+    const sheet = SheetAccessor.getDataSheet(sheetNames.SysCategories || 'SysCategories', false);
     _categoriesLookup = new Map();
 
     if (sheet) {
@@ -168,10 +164,8 @@ const ContactEnrichmentService = (function () {
   function _buildBundleSkuSet() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
 
-    const webProdSheet = spreadsheet.getSheetByName(sheetNames.WebProdM || 'WebProdM');
+    const webProdSheet = SheetAccessor.getDataSheet(sheetNames.WebProdM || 'WebProdM', false);
     const bundleSkus = new Set();
     if (webProdSheet) {
       const data = webProdSheet.getDataRange().getValues();
@@ -201,8 +195,7 @@ const ContactEnrichmentService = (function () {
   function _buildProductLookup() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Load WebDetM for English names, tasting attributes, grape codes, and kashrut codes
     const webDetSheet = spreadsheet.getSheetByName(sheetNames.WebDetM || 'WebDetM');
@@ -438,8 +431,7 @@ const ContactEnrichmentService = (function () {
   function _buildItemsByEmail() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     const orderEmailMap = new Map();
     const itemsByEmail = new Map();

@@ -127,9 +127,8 @@ function _getLastSyncStatus() {
 
     // No open task - find the most recently completed sync task
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
     const sheetNames = allConfig['system.sheet_names'];
-    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+    const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!taskSheet || taskSheet.getLastRow() <= 1) {
       return { status: 'unknown', timestamp: null, stage: null };
@@ -202,8 +201,7 @@ function _getOrdersData() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const sheetNames = allConfig['system.sheet_names'];
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const ordLogSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysOrdLog);
+      const ordLogSheet = SheetAccessor.getDataSheet(sheetNames.SysOrdLog, false);
 
       if (ordLogSheet && ordLogSheet.getLastRow() > 1) {
         const data = ordLogSheet.getDataRange().getValues();

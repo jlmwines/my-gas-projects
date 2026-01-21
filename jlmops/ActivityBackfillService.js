@@ -32,8 +32,7 @@ const ActivityBackfillService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get existing activity IDs to avoid duplicates
     const existingIds = _getExistingActivityIds('order.placed');
@@ -219,8 +218,7 @@ const ActivityBackfillService = (function () {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get existing activity IDs
     const existingIds = _getExistingActivityIds('coupon.used');

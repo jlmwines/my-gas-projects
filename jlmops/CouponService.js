@@ -30,9 +30,7 @@ const CouponService = (function () {
   function _getCouponsSheet() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName(sheetNames.SysCoupons);
+    return SheetAccessor.getDataSheet(sheetNames.SysCoupons, false);
   }
 
   /**
@@ -42,9 +40,7 @@ const CouponService = (function () {
   function _getUsageSheet() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    return spreadsheet.getSheetByName(sheetNames.SysCouponUsage);
+    return SheetAccessor.getDataSheet(sheetNames.SysCouponUsage, false);
   }
 
   /**

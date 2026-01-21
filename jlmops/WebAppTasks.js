@@ -55,9 +55,8 @@ const WebAppTasks = (() => {
 
   const fetchTasksFromSheet = () => {
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
     const sheetNames = allConfig['system.sheet_names'];
-    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+    const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!taskSheet || taskSheet.getLastRow() <= 1) {
       return [];
@@ -178,9 +177,8 @@ const WebAppTasks = (() => {
   const getTaskById = (taskId) => {
     try {
       const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
       const sheetNames = allConfig['system.sheet_names'];
-      const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+      const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
       if (!taskSheet || taskSheet.getLastRow() <= 1) {
         return null;
@@ -274,9 +272,8 @@ function WebAppTasks_getAllOpenTasks() {
 function WebAppTasks_getAllTasks() {
   try {
     const allConfig = ConfigService.getAllConfig();
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
     const sheetNames = allConfig['system.sheet_names'];
-    const taskSheet = SpreadsheetApp.openById(dataSpreadsheetId).getSheetByName(sheetNames.SysTasks);
+    const taskSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
 
     if (!taskSheet || taskSheet.getLastRow() <= 1) {
       return { error: null, data: [] };

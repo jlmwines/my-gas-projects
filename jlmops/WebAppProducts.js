@@ -164,11 +164,9 @@ function WebAppProducts_getPreview(sku, formData, comaxData) {
  */
 function WebAppProducts_getManagerProductTasks() {
   try {
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    LoggerService.info('WebAppProducts', 'getManagerProductTasks', `Opening spreadsheet ID: ${dataSpreadsheetId}`);
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    LoggerService.info('WebAppProducts', 'getManagerProductTasks', 'Opening SysTasks sheet');
     const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+    const sheet = SheetAccessor.getDataSheet('SysTasks', false);
 
     if (!sheet) {
       throw new Error("Sheet 'SysTasks' not found");

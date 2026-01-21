@@ -30,7 +30,7 @@ function resolveSessionIdForJob(jobType, jobConfig, allConfig) {
   // Check for the most recent completed job of the dependency type to inherit its session ID
   const logSheetConfig = allConfig['system.spreadsheet.logs'];
   const sheetNames = allConfig['system.sheet_names'];
-  const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+  const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
   const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
   
   if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
@@ -140,7 +140,7 @@ const OrchestratorService = (function() {
     try {
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (taskType === 'hourly') {
@@ -177,7 +177,7 @@ const OrchestratorService = (function() {
       return;
     }
 
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
     const fileRegistrySheet = logSpreadsheet.getSheetByName(sheetNames.SysFileRegistry);
     const archiveFolder = DriveApp.getFolderById(archiveFolderConfig.id);
@@ -247,7 +247,7 @@ const OrchestratorService = (function() {
         'import.drive.web_orders' // Web Orders also part of sync for stock accuracy
     ];
 
-    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
     const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
     const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
@@ -332,7 +332,7 @@ const OrchestratorService = (function() {
         throw new Error(`Configuration for '${configName}' is incomplete or missing.`);
     }
 
-    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
     const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
     const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
@@ -382,8 +382,7 @@ const OrchestratorService = (function() {
     logger.info(serviceName, functionName, `Finalizing Periodic Sync Session: ${sessionId}`);
     const allConfig = ConfigService.getAllConfig();
 
-    const jobQueueSheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id)
-                                    .getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+    const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
     
     // 1. Queue Master Validation
     const validationJobType = 'job.periodic.validation.master';
@@ -414,7 +413,7 @@ const OrchestratorService = (function() {
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
     logger.info(serviceName, functionName, `Queuing Web Inventory Export job for Session: ${sessionId}`);
@@ -548,7 +547,7 @@ const OrchestratorService = (function() {
     }
     const jobQueueHeaders = jobQueueSchema.headers.split(',');
 
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(jobQueueSheetName);
     
     if (!jobQueueSheet) {
@@ -777,7 +776,7 @@ const OrchestratorService = (function() {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
@@ -848,7 +847,7 @@ const OrchestratorService = (function() {
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
 
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const fileRegistrySheet = logSpreadsheet.getSheetByName(sheetNames.SysFileRegistry);
 
       const registry = getRegistryMap(fileRegistrySheet);
@@ -870,7 +869,7 @@ const OrchestratorService = (function() {
     const allConfig = ConfigService.getAllConfig();
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
     const sheetNames = allConfig['system.sheet_names'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
     const jobQueueHeaders = allConfig['schema.log.SysJobQueue'].headers.split(',');
     
@@ -997,7 +996,7 @@ const OrchestratorService = (function() {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
@@ -1047,7 +1046,7 @@ const OrchestratorService = (function() {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
@@ -1464,7 +1463,7 @@ const OrchestratorService = (function() {
       const allConfig = ConfigService.getAllConfig();
       const logSheetConfig = allConfig['system.spreadsheet.logs'];
       const sheetNames = allConfig['system.sheet_names'];
-      const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
       const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
       if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
@@ -1614,7 +1613,7 @@ const OrchestratorService = (function() {
       'import.drive.web_products_en'
     ];
 
-    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
     const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
     const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
@@ -1684,7 +1683,7 @@ const OrchestratorService = (function() {
       throw new Error(`Configuration for '${configName}' is incomplete or missing.`);
     }
 
-    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
     const archiveFolder = DriveApp.getFolderById(allConfig['system.folder.archive'].id);
 
@@ -1719,7 +1718,7 @@ const OrchestratorService = (function() {
    */
   function getFileRegistry() {
     const allConfig = ConfigService.getAllConfig();
-    const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
     return getRegistryMap(fileRegistrySheet);
   }
@@ -1762,7 +1761,7 @@ const OrchestratorService = (function() {
     const allConfig = ConfigService.getAllConfig();
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
     const sheetNames = allConfig['system.sheet_names'];
-    const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
     const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
 
     let jobQueueData = jobQueueSheet.getDataRange().getValues();

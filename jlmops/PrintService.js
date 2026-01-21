@@ -61,8 +61,7 @@ const PrintService = (function() {
       // --- 1. Get Config and Data ---
       const allConfig = ConfigService.getAllConfig();
       const sheetNames = allConfig['system.sheet_names'];
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId); // This is JLMops_Data
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       const orderIdSet = new Set(orderIds.map(String));
 

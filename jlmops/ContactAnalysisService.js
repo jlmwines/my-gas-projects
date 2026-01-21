@@ -53,8 +53,7 @@ const ContactAnalysisService = (function() {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // city -> { count, billingCount, shippingCount, hebrewContacts, englishContacts }
     const cityData = new Map();
@@ -284,8 +283,7 @@ const ContactAnalysisService = (function() {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     const sheet = spreadsheet.getSheetByName(sheetNames.SysLkp_Cities || 'SysLkp_Cities');
     if (!sheet) {
@@ -344,8 +342,7 @@ const ContactAnalysisService = (function() {
 
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
-    const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-    const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
     // Get existing cities from lookup
     const lookupSheet = spreadsheet.getSheetByName(sheetNames.SysLkp_Cities || 'SysLkp_Cities');

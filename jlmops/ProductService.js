@@ -56,9 +56,7 @@ const ProductService = (function() {
 
     try {
       const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-      const sheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const sheet = SheetAccessor.getDataSheet(allConfig['system.sheet_names'].WebProdM, false);
       if (!sheet) {
         throw new Error('WebProdM sheet not found');
       }
@@ -209,11 +207,9 @@ const ProductService = (function() {
 
     // --- 1. Populate Staging Sheet ---
     try {
-        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-        const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+        const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
@@ -255,8 +251,7 @@ const ProductService = (function() {
     const functionName = '_upsertWebXltData';
     logger.info(serviceName, functionName, 'Starting WebXltS to WebXltM full replacement process.', { sessionId: sessionId });
 
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+    const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
     const webXltMSheet = dataSpreadsheet.getSheetByName('WebXltM');
     const webXltSSheet = dataSpreadsheet.getSheetByName('WebXltS');
 
@@ -304,11 +299,9 @@ const ProductService = (function() {
     const { jobQueueSheetRowNumber, sessionId } = executionContext;
     logger.info(serviceName, functionName, `Starting Comax import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
     try {
-        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-        const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+        const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
@@ -506,9 +499,7 @@ const ProductService = (function() {
         logger.info(serviceName, functionName, 'Sorted CmxProdM data by product name (cpm_NameHe).', { sessionId });
     }
 
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const masterSheet = dataSpreadsheet.getSheetByName('CmxProdM');
+    const masterSheet = SheetAccessor.getDataSheet('CmxProdM');
 
     // More robustly clear the sheet and rewrite headers + data
     masterSheet.clear();
@@ -588,10 +579,8 @@ const ProductService = (function() {
     });
 
     // Clear and rewrite the entire SysProductAudit sheet
-    const dataSpreadsheetId = ConfigService.getConfig('system.spreadsheet.data').id;
-    const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
-    const sysProductAuditSheet = dataSpreadsheet.getSheetByName('SysProductAudit');
-    
+    const sysProductAuditSheet = SheetAccessor.getDataSheet('SysProductAudit');
+
     sysProductAuditSheet.clear();
     sysProductAuditSheet.getRange(1, 1, 1, sysProductAuditHeaders.length).setValues([sysProductAuditHeaders]).setFontWeight('bold');
 
@@ -608,11 +597,9 @@ const ProductService = (function() {
     const { jobQueueSheetRowNumber, sessionId } = executionContext;
     logger.info(serviceName, functionName, `Starting Web Products (EN) import process for job row: ${jobQueueSheetRowNumber}.`, { sessionId: sessionId });
     try {
-        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
         const sheetNames = ConfigService.getConfig('system.sheet_names');
         const jobQueueHeaders = ConfigService.getConfig('schema.log.SysJobQueue').headers.split(',');
-        const logSpreadsheet = SpreadsheetApp.openById(logSheetConfig.id);
-        const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+        const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue);
         const archiveFileIdCol = jobQueueHeaders.indexOf('archive_file_id') + 1;
         const archiveFileId = jobQueueSheet.getRange(jobQueueSheetRowNumber, archiveFileIdCol).getValue();
 
@@ -896,7 +883,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       // 1. Get CmxProdM data for new stock and price
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
@@ -1038,7 +1025,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       LoggerService.info('ProductService', 'getProductDetails', `Fetching details for SKU ${sku} using cached maps...`);
 
@@ -1248,7 +1235,7 @@ const ProductService = (function() {
       
       // 2. Upsert into WebDetS
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
       
       const existingData = stagingSheet.getDataRange().getValues();
@@ -1318,7 +1305,7 @@ const ProductService = (function() {
 
       // 2. Upsert into WebDetM
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
 
       const existingData = masterSheet.getDataRange().getValues();
@@ -1375,7 +1362,7 @@ const ProductService = (function() {
         // 2. Fetch Data
         const allConfig = ConfigService.getAllConfig();
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
         // Helper to get map
         const getMap = (sheetName, schemaKey, keyCol) => {
@@ -1765,7 +1752,7 @@ const ProductService = (function() {
         // Prepare for WebDetS cleanup
         const allConfig = ConfigService.getAllConfig();
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-        const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
         const stagingSheetName = allConfig['system.sheet_names'].WebDetS;
         const stagingSheet = spreadsheet.getSheetByName(stagingSheetName);
         const stagingSchema = allConfig['schema.data.WebDetS'];
@@ -1876,7 +1863,7 @@ const ProductService = (function() {
       
       // Upsert to WebDetS
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
       const existingData = stagingSheet.getDataRange().getValues();
       let rowIndex = -1;
@@ -1921,7 +1908,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       // --- 1. Load Master Sheets ---
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
@@ -2093,7 +2080,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const userEmail = Session.getActiveUser().getEmail();
 
       let updatedSheets = [];
@@ -2219,7 +2206,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const userEmail = Session.getActiveUser().getEmail();
 
       let updatedSheets = [];
@@ -2363,10 +2350,7 @@ const ProductService = (function() {
    */
   function _logSkuUpdate(updateType, oldSku, newSku, userEmail, affectedSheets) {
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
-      const logSheet = logSpreadsheet.getSheetByName('SysLog');
+      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
 
       if (logSheet) {
         const timestamp = new Date();
@@ -2395,10 +2379,7 @@ const ProductService = (function() {
   function getRecentSkuUpdates(limit) {
     limit = limit || 10;
     try {
-      const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
-      const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
-      const logSheet = logSpreadsheet.getSheetByName('SysLog');
+      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
 
       if (!logSheet || logSheet.getLastRow() <= 1) {
         return [];
@@ -2447,7 +2428,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
 
       // Lookup in CmxProdM
       const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
@@ -2557,7 +2538,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const term = String(searchTerm).toLowerCase();
 
       // Get WebProdM data
@@ -2628,7 +2609,7 @@ const ProductService = (function() {
     try {
       const allConfig = ConfigService.getAllConfig();
       const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const term = String(searchTerm).toLowerCase();
 
       // Get all SKUs that are already on web (in WebProdM)

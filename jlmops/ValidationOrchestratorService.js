@@ -163,8 +163,7 @@ const ValidationOrchestratorService = (function() {
     const { jobQueueSheetRowNumber, jobQueueHeaders, jobId } = executionContext;
     try {
       const allConfig = ConfigService.getAllConfig();
-      const logSpreadsheet = SpreadsheetApp.openById(allConfig['system.spreadsheet.logs'].id);
-      const jobQueueSheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysJobQueue);
+      const jobQueueSheet = SheetAccessor.getLogSheet(allConfig['system.sheet_names'].SysJobQueue);
 
       const statusColIdx = jobQueueHeaders.indexOf('status');
       const errorMsgColIdx = jobQueueHeaders.indexOf('error_message');

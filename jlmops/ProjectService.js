@@ -30,11 +30,9 @@ const ProjectService = (function() {
    */
   function _getProjectsSheet() {
     const allConfig = ConfigService.getAllConfig();
-    const spreadsheetId = allConfig['system.spreadsheet.data'].id;
     const sheetNames = allConfig['system.sheet_names'];
     const sheetName = (sheetNames && sheetNames.SysProjects) || 'SysProjects';
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    return spreadsheet.getSheetByName(sheetName);
+    return SheetAccessor.getDataSheet(sheetName, false);
   }
 
   /**
@@ -275,11 +273,9 @@ const ProjectService = (function() {
 
     // Fallback: manual query
     const allConfig = ConfigService.getAllConfig();
-    const spreadsheetId = allConfig['system.spreadsheet.data'].id;
     const sheetNames = allConfig['system.sheet_names'];
     const sheetName = (sheetNames && sheetNames.SysTasks) || 'SysTasks';
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const sheet = spreadsheet.getSheetByName(sheetName);
+    const sheet = SheetAccessor.getDataSheet(sheetName, false);
 
     if (!sheet) return [];
 
