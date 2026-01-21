@@ -8,6 +8,7 @@ Projects: jlmops, web, marketing, content
 ## jlmops
 
 ### Open
+- [ ] 2026-01-21: dates displayed in USA format - should use universal format with 3-letter month (e.g., 21 Jan 2026)
 - [ ] 2026-01-20: previous brurya task st_DoneDate jan 02, but current brurya task shows 999 days since completed - FIX APPLIED: missing 'value' arg in setConfig call, pending verification
 - [ ] 2026-01-20: accepted inventory counts are removed from admin inventory view, but do not appear below in comax sync without refreshing the view
 - [ ] 2025-12-26: task creation timestamp is not always local Israel time - FIX APPLIED: _getIsraelMidnight() helpers added, needs overnight verification

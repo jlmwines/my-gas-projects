@@ -35,10 +35,10 @@ const SheetAccessor = (function() {
   function getLogSpreadsheet() {
     if (!logSpreadsheet) {
       const allConfig = ConfigService.getAllConfig();
-      if (!allConfig || !allConfig['system.spreadsheet.log']) {
-        throw new Error('SheetAccessor: system.spreadsheet.log config not found');
+      if (!allConfig || !allConfig['system.spreadsheet.logs']) {
+        throw new Error('SheetAccessor: system.spreadsheet.logs config not found');
       }
-      const id = allConfig['system.spreadsheet.log'].id;
+      const id = allConfig['system.spreadsheet.logs'].id;
       logSpreadsheet = SpreadsheetApp.openById(id);
     }
     return logSpreadsheet;

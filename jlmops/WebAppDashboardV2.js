@@ -6,6 +6,7 @@
 
 /**
  * Gets consolidated dashboard data in a single call.
+ * OPTIMIZED: Reads each sheet exactly once, then computes all widgets from memory.
  * @returns {Object} Complete dashboard state
  */
 function WebAppDashboardV2_getData() {
@@ -13,17 +14,42 @@ function WebAppDashboardV2_getData() {
   const functionName = 'getData';
 
   try {
-    // Get all open tasks once for efficiency
-    const allTasks = WebAppTasks.getOpenTasks();
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
 
+    // ========== READ SHEETS ONCE ==========
+    const tasksSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
+    const tasksRaw = tasksSheet ? tasksSheet.getDataRange().getValues() : [];
+
+    const ordLogSheet = SheetAccessor.getDataSheet(sheetNames.SysOrdLog, false);
+    const ordLogRaw = ordLogSheet ? ordLogSheet.getDataRange().getValues() : [];
+
+    const webOrdMSheet = SheetAccessor.getDataSheet(sheetNames.WebOrdM, false);
+    const webOrdMRaw = webOrdMSheet ? webOrdMSheet.getDataRange().getValues() : [];
+
+    const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue, false);
+    const jobQueueRaw = jobQueueSheet ? jobQueueSheet.getDataRange().getValues() : [];
+
+    // ========== CONVERT TO OBJECTS ==========
+    const allTasks = _rowsToObjects(tasksRaw);
+    const ordLog = _rowsToObjects(ordLogRaw);
+    const webOrdM = _rowsToObjects(webOrdMRaw);
+    const jobQueue = _rowsToObjects(jobQueueRaw);
+
+    // ========== DERIVE COMMON FILTERS ==========
+    const openTasks = allTasks.filter(t =>
+      t.st_Status !== 'Completed' && t.st_Status !== 'Done' && t.st_Status !== 'Cancelled'
+    );
+
+    // ========== BUILD WIDGETS FROM MEMORY ==========
     const result = {
       timestamp: new Date().toISOString(),
-      systemHealth: _getSystemHealthData(),
-      orders: _getOrdersData(),
-      inventory: _getInventoryData(allTasks),
-      products: _getProductsData(allTasks),
-      projects: _getProjectSummaries(allTasks),
-      adminTasks: _getAdminTasksList(allTasks)
+      systemHealth: _getSystemHealthData_v2(allTasks, jobQueue, allConfig),
+      orders: _getOrdersData_v2(ordLog, webOrdM),
+      inventory: _getInventoryData(openTasks),
+      products: _getProductsData(openTasks),
+      projects: _getProjectSummaries(openTasks),
+      adminTasks: _getAdminTasksList(openTasks)
     };
 
     return { success: true, data: result };
@@ -34,9 +60,227 @@ function WebAppDashboardV2_getData() {
 }
 
 /**
+ * Converts 2D array (with header row) to array of objects.
+ * @private
+ */
+function _rowsToObjects(data) {
+  if (!data || data.length <= 1) return [];
+  const headers = data[0];
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const obj = {};
+    headers.forEach((h, j) => obj[h] = data[i][j]);
+    rows.push(obj);
+  }
+  return rows;
+}
+
+/**
+ * Safely converts a date value to ISO string for JSON serialization.
+ * @param {*} val - Date, string, or null
+ * @returns {string|null} ISO string or null
+ * @private
+ */
+function _safeDate(val) {
+  if (!val) return null;
+  try {
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+    return String(val);
+  } catch (e) {
+    return String(val);
+  }
+}
+
+/**
+ * Gets system health data from pre-loaded task and job data.
+ * OPTIMIZED: No sheet reads - works with data passed in.
+ * @private
+ */
+function _getSystemHealthData_v2(allTasks, jobQueue, allConfig) {
+  try {
+    // Find health status task from pre-loaded tasks
+    const healthTask = allTasks.find(t =>
+      t.st_TaskTypeId === 'task.system.health_status' &&
+      t.st_LinkedEntityId === '_SYSTEM' &&
+      t.st_Status !== 'Done' && t.st_Status !== 'Cancelled'
+    );
+
+    // Get sync status from pre-loaded tasks
+    const syncStatus = _getLastSyncStatus_v2(allTasks);
+
+    if (!healthTask || !healthTask.st_Notes) {
+      return {
+        available: true,
+        housekeeping: { status: 'unknown', timestamp: null },
+        schemaValidation: { status: 'unknown', timestamp: null },
+        dataValidation: { status: 'unknown', timestamp: null, issues: null },
+        unitTests: { status: 'unknown', timestamp: null, result: null },
+        dailySync: syncStatus,
+        urgentAlerts: []
+      };
+    }
+
+    const notes = typeof healthTask.st_Notes === 'string' ? JSON.parse(healthTask.st_Notes) : healthTask.st_Notes;
+    const urgentAlerts = notes.urgentAlerts || [];
+    const hk = notes.last_housekeeping || {};
+
+    // Determine individual statuses
+    const hasIssues = hk.validation_issues > 0;
+    const testsOk = hk.unit_tests && !hk.unit_tests.includes('error');
+
+    // Map housekeeping status to display status
+    let hkStatus = 'ok';
+    if (hk.status === 'failed') {
+      hkStatus = 'error';
+    } else if (hk.status === 'partial') {
+      hkStatus = 'partial';
+    } else if (hk.status !== 'success') {
+      hkStatus = 'unknown';
+    }
+
+    return {
+      available: true,
+      housekeeping: {
+        status: hkStatus,
+        timestamp: hk.timestamp || null,
+        failures: hk.phase3_failures || null
+      },
+      schemaValidation: {
+        status: (hk.schema_status === 'OK' || hk.schema_status === 'PASSED') ? 'ok' : (hk.schema_critical > 0 ? 'error' : 'partial'),
+        timestamp: hk.timestamp || null,
+        critical: hk.schema_critical ?? 0
+      },
+      dataValidation: {
+        status: hasIssues ? 'issues' : 'ok',
+        timestamp: hk.timestamp || null,
+        issues: hk.validation_issues ?? 0
+      },
+      unitTests: {
+        status: testsOk ? 'ok' : 'error',
+        timestamp: hk.timestamp || null,
+        result: hk.unit_tests || null
+      },
+      dailySync: syncStatus,
+      urgentAlerts: urgentAlerts
+    };
+  } catch (e) {
+    return {
+      available: false,
+      error: e.message
+    };
+  }
+}
+
+/**
+ * Gets sync status from pre-loaded tasks.
+ * OPTIMIZED: No sheet reads.
+ * @private
+ */
+function _getLastSyncStatus_v2(allTasks) {
+  try {
+    // Check for an open (in-progress) sync task
+    const openSyncTask = allTasks.find(t =>
+      t.st_TaskTypeId === 'task.sync.daily_session' &&
+      t.st_Status !== 'Done' && t.st_Status !== 'Cancelled'
+    );
+
+    if (openSyncTask) {
+      return {
+        status: 'partial',
+        timestamp: openSyncTask.st_Notes ? _parseTimestamp(openSyncTask.st_Notes) : null,
+        stage: 'IN_PROGRESS'
+      };
+    }
+
+    // Find the most recent completed sync task (search from end)
+    let lastSyncDate = null;
+    let lastSyncStatus = 'unknown';
+
+    for (let i = allTasks.length - 1; i >= 0; i--) {
+      const task = allTasks[i];
+      if (task.st_TaskTypeId === 'task.sync.daily_session') {
+        if (task.st_Status === 'Done' && task.st_DoneDate) {
+          lastSyncDate = new Date(task.st_DoneDate);
+          lastSyncStatus = 'ok';
+          break;
+        } else if (task.st_Status === 'Cancelled') {
+          lastSyncDate = task.st_DoneDate ? new Date(task.st_DoneDate) : null;
+          lastSyncStatus = 'error';
+          break;
+        }
+      }
+    }
+
+    return {
+      status: lastSyncStatus,
+      timestamp: lastSyncDate ? lastSyncDate.toISOString() : null,
+      stage: lastSyncStatus === 'ok' ? 'COMPLETE' : (lastSyncStatus === 'error' ? 'FAILED' : null)
+    };
+
+  } catch (e) {
+    LoggerService.warn('WebAppDashboardV2', '_getLastSyncStatus_v2', 'Error: ' + e.message);
+    return { status: 'unknown', timestamp: null, stage: null };
+  }
+}
+
+/**
+ * Gets orders widget data from pre-loaded order data.
+ * OPTIMIZED: No sheet reads - computes from passed-in data.
+ * @private
+ */
+function _getOrdersData_v2(ordLog, webOrdM) {
+  try {
+    // Count by status from SysOrdLog
+    let packingReady = 0;
+    let onHold = 0;
+    let processing = 0;
+    let newOrders = 0;
+
+    ordLog.forEach(order => {
+      const packingStatus = order.sol_PackingStatus;
+      const orderStatus = order.sol_Status;
+
+      if (packingStatus === 'Ready') packingReady++;
+      if (orderStatus === 'on-hold') onHold++;
+      if (orderStatus === 'processing') processing++;
+      if (orderStatus === 'new' || orderStatus === 'pending') newOrders++;
+    });
+
+    // Count orders to export: processing status + not yet exported
+    // An order needs export if it's processing and sol_ComaxExported is not 'Yes'
+    const ordersToExport = ordLog.filter(o =>
+      o.sol_Status === 'processing' &&
+      o.sol_ComaxExported !== 'Yes' &&
+      o.sol_ComaxExported !== 'TRUE' &&
+      o.sol_ComaxExported !== true
+    ).length;
+
+    return {
+      newOrders: newOrders,
+      ordersToExport: ordersToExport,
+      onHold: onHold,
+      processing: processing,
+      packingReady: packingReady
+    };
+  } catch (e) {
+    return {
+      newOrders: 0,
+      ordersToExport: 0,
+      onHold: 0,
+      processing: 0,
+      packingReady: 0,
+      error: e.message
+    };
+  }
+}
+
+/**
  * Gets system health data from the singleton task.
  * Shows time and result of housekeeping, schema validation, data validation, unit testing.
  * @private
+ * @deprecated Use _getSystemHealthData_v2 with pre-loaded data
  */
 function _getSystemHealthData() {
   try {
@@ -342,17 +586,31 @@ function _getAdminTasksList(allTasks) {
   // Filter to admin-relevant tasks and sort by due date
   const adminTasks = allTasks
     .filter(task => task.st_Status !== 'Done' && task.st_Status !== 'Cancelled')
-    .map(task => ({
-      id: task.st_TaskId,
-      typeId: task.st_TaskTypeId,
-      name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
-      entityId: task.st_LinkedEntityId || '',
-      entityName: task.st_LinkedEntityName || '',
-      projectId: task.st_ProjectId || '',
-      dueDate: task.st_DueDate || null,
-      status: task.st_Status,
-      priority: task.st_Priority
-    }))
+    .map(task => {
+      // Safely convert dates to ISO strings for serialization
+      let dueDate = null;
+      if (task.st_DueDate) {
+        try {
+          dueDate = task.st_DueDate instanceof Date
+            ? task.st_DueDate.toISOString()
+            : String(task.st_DueDate);
+        } catch (e) {
+          dueDate = String(task.st_DueDate);
+        }
+      }
+
+      return {
+        id: task.st_TaskId,
+        typeId: task.st_TaskTypeId,
+        name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
+        entityId: task.st_LinkedEntityId || '',
+        entityName: task.st_LinkedEntityName || '',
+        projectId: task.st_ProjectId || '',
+        dueDate: dueDate,
+        status: task.st_Status,
+        priority: task.st_Priority
+      };
+    })
     .sort((a, b) => {
       // Critical/High first, then by due date
       const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
@@ -364,7 +622,11 @@ function _getAdminTasksList(allTasks) {
       if (!a.dueDate && !b.dueDate) return 0;
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
-      return new Date(a.dueDate) - new Date(b.dueDate);
+      try {
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      } catch (e) {
+        return 0;
+      }
     });
 
   return adminTasks.slice(0, 20); // Limit to 20 tasks
@@ -432,6 +694,7 @@ function WebAppDashboardV2_confirmBruryaUpdate() {
  * Gets manager-specific dashboard data.
  * Returns summary widgets (dimmed for context) and manager tasks.
  * Manager tasks: content.edit, content.translate_edit, plus tasks from inventory/product workflows.
+ * OPTIMIZED: Reads each sheet exactly once.
  * @returns {Object} Dashboard data for manager view
  */
 function WebAppDashboardV2_getManagerData() {
@@ -439,12 +702,28 @@ function WebAppDashboardV2_getManagerData() {
   const functionName = 'getManagerData';
 
   try {
-    // Get all tasks (including Done) for manager - need to show Done tasks when filtered
-    const allTasksResult = WebAppTasks_getAllTasks();
-    const allTasksIncludingDone = allTasksResult.data || [];
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
 
-    // Also get open tasks for context widgets
-    const allOpenTasks = WebAppTasks.getOpenTasks();
+    // ========== READ SHEETS ONCE ==========
+    const tasksSheet = SheetAccessor.getDataSheet(sheetNames.SysTasks, false);
+    const tasksRaw = tasksSheet ? tasksSheet.getDataRange().getValues() : [];
+
+    const ordLogSheet = SheetAccessor.getDataSheet(sheetNames.SysOrdLog, false);
+    const ordLogRaw = ordLogSheet ? ordLogSheet.getDataRange().getValues() : [];
+
+    const webOrdMSheet = SheetAccessor.getDataSheet(sheetNames.WebOrdM, false);
+    const webOrdMRaw = webOrdMSheet ? webOrdMSheet.getDataRange().getValues() : [];
+
+    // ========== CONVERT TO OBJECTS ==========
+    const allTasksIncludingDone = _rowsToObjects(tasksRaw);
+    const ordLog = _rowsToObjects(ordLogRaw);
+    const webOrdM = _rowsToObjects(webOrdMRaw);
+
+    // Filter for open tasks (used by context widgets)
+    const allOpenTasks = allTasksIncludingDone.filter(t =>
+      t.st_Status !== 'Completed' && t.st_Status !== 'Done' && t.st_Status !== 'Cancelled'
+    );
 
     // Manager task types - content review, inventory, and product tasks
     const managerTaskTypes = [
@@ -472,9 +751,9 @@ function WebAppDashboardV2_getManagerData() {
         entityName: task.st_LinkedEntityName || '',
         sessionId: task.st_SessionId || '',
         projectId: task.st_ProjectId || '',
-        startDate: task.st_StartDate || null,
-        dueDate: task.st_DueDate || null,
-        doneDate: task.st_DoneDate || null,
+        startDate: _safeDate(task.st_StartDate),
+        dueDate: _safeDate(task.st_DueDate),
+        doneDate: _safeDate(task.st_DoneDate),
         status: task.st_Status,
         priority: task.st_Priority,
         notes: task.st_Notes || ''
@@ -484,17 +763,20 @@ function WebAppDashboardV2_getManagerData() {
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
-        const dateDiff = new Date(a.dueDate) - new Date(b.dueDate);
-        if (dateDiff !== 0) return dateDiff;
+        try {
+          const dateDiff = new Date(a.dueDate) - new Date(b.dueDate);
+          if (dateDiff !== 0) return dateDiff;
+        } catch (e) { /* ignore */ }
 
         const priorityOrder = { 'Critical': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
         return (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
       });
 
     // Get summary data for context widgets (using open tasks only)
+    // OPTIMIZED: Use pre-loaded data instead of calling methods that read sheets
     const result = {
       timestamp: new Date().toISOString(),
-      orders: _getOrdersData(),
+      orders: _getOrdersData_v2(ordLog, webOrdM),
       inventory: _getInventoryData(allOpenTasks),
       products: _getProductsData(allOpenTasks),
       projects: _getProjectSummaries(allOpenTasks),
