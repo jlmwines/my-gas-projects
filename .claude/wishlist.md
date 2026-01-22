@@ -37,6 +37,7 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
 - [ ] Exit popup for website
+- [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
 
 ## marketing
 

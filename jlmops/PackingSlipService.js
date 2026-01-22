@@ -109,12 +109,19 @@ const PackingSlipService = (function() {
                     ? `קונטרסט עם טעמים ${joinWithOr(conFlavorsHe, false)}` : '';
 
                 // --- Build Product Details String ---
+                // Helper to convert number to circles
+                const numToCircles = (num) => {
+                    const n = parseInt(num, 10);
+                    if (isNaN(n) || n < 1 || n > 5) return '';
+                    return '●'.repeat(n) + '○'.repeat(5 - n);
+                };
+
                 const detailsEn = [];
                 const intensity = row[cacheHeaderMap['spc_Intensity']];
                 const complexity = row[cacheHeaderMap['spc_Complexity']];
                 const acidity = row[cacheHeaderMap['spc_Acidity']];
                 if (intensity || complexity || acidity) {
-                    detailsEn.push(`Intensity: ${intensity || 'N/A'}, Complexity: ${complexity || 'N/A'}, Acidity: ${acidity || 'N/A'}`);
+                    detailsEn.push(`Intensity: ${numToCircles(intensity)}  Complexity: ${numToCircles(complexity)}  Acidity: ${numToCircles(acidity)}`);
                 }
                 const decant = row[cacheHeaderMap['spc_Decant']];
                 if (decant) {

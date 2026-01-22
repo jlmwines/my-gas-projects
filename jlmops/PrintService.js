@@ -13,18 +13,31 @@ const PrintService = (function() {
   function _getJLMopsProductDetails(item, cacheHeaderMap) {
     const isValidLine = (line) => line && line.trim().replace(/\u200E|\u200F/g, '').length > 0;
 
+    // Helper to convert number to circles
+    const numToCircles = (num) => {
+      const n = parseInt(num, 10);
+      if (isNaN(n) || n < 1 || n > 5) return '';
+      return '●'.repeat(n) + '○'.repeat(5 - n);
+    };
+
+    const intensity = item[cacheHeaderMap['spc_Intensity']];
+    const complexity = item[cacheHeaderMap['spc_Complexity']];
+    const acidity = item[cacheHeaderMap['spc_Acidity']];
+
     // Order: Name, Harmonize (if exists), Contrast (if exists), Decant, combined I/C/A
     // Pairing text comes pre-formatted from PackingSlipService (e.g. "Harmonize with: rich or intense flavors")
+    // Build attribute line - reversed order so RTL renders correctly
+    const attrPartsHe = [];
+    if (intensity) attrPartsHe.push(`${numToCircles(intensity)} עוצמה`);
+    if (complexity) attrPartsHe.push(`${numToCircles(complexity)} מורכבות`);
+    if (acidity) attrPartsHe.push(`${numToCircles(acidity)} חומציות`);
+    const attrLineHe = attrPartsHe.join('  ');
     const hebrewDetails = [
         item[cacheHeaderMap['spc_NameHe']] || '',
         item[cacheHeaderMap['spc_HarmonizeHe']] || '',
         item[cacheHeaderMap['spc_ContrastHe']] || '',
         item[cacheHeaderMap['spc_Decant']] ? `מומלץ לאוורור - ${item[cacheHeaderMap['spc_Decant']]} דקות` : '',
-        [
-            item[cacheHeaderMap['spc_Intensity']] ? `עוצמה (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
-            item[cacheHeaderMap['spc_Complexity']] ? `מורכבות (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
-            item[cacheHeaderMap['spc_Acidity']] ? `חומציות (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
-        ].filter(p => p).join(', ')
+        attrLineHe
     ].filter(isValidLine).join('\n');
 
     const englishDetails = [
@@ -33,10 +46,10 @@ const PrintService = (function() {
         item[cacheHeaderMap['spc_ContrastEn']] || '',
         item[cacheHeaderMap['spc_Decant']] ? `Recommended decanting – ${item[cacheHeaderMap['spc_Decant']]} minutes.` : '',
         [
-            item[cacheHeaderMap['spc_Intensity']] ? `Intensity (1-5): ${item[cacheHeaderMap['spc_Intensity']]}` : null,
-            item[cacheHeaderMap['spc_Complexity']] ? `Complexity (1-5): ${item[cacheHeaderMap['spc_Complexity']]}` : null,
-            item[cacheHeaderMap['spc_Acidity']] ? `Acidity (1-5): ${item[cacheHeaderMap['spc_Acidity']]}` : null
-        ].filter(p => p).join(', ')
+            intensity ? `Intensity ${numToCircles(intensity)}` : null,
+            complexity ? `Complexity ${numToCircles(complexity)}` : null,
+            acidity ? `Acidity ${numToCircles(acidity)}` : null
+        ].filter(p => p).join('  ')
     ].filter(isValidLine).join('\n');
 
     return { englishDetails, hebrewDetails };

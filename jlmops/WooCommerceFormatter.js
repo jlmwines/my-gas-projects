@@ -138,6 +138,10 @@ const WooCommerceFormatter = (function() {
     formatDescriptionHTML: function(sku, productData, comaxData, lang, lookupMaps, isForExport) {
         let html = '';
 
+        // ========== TOGGLE: Set to false to use original formatting ==========
+        const USE_NEW_FORMATTING = true;
+        // =====================================================================
+
         // Helper to safely get string values from productData
         const getVal = (key) => productData[key] || '';
         // Helper to safely get string values from comaxData
@@ -158,7 +162,7 @@ const WooCommerceFormatter = (function() {
         const decant = getVal('wdm_Decant');
         const heterMechira = getVal('wdm_HeterMechira');
         const isMevushal = getVal('wdm_IsMevushal');
-        
+
         // Comax-specific data
         const group = getCmxVal('cpm_Group');
         const vintage = getCmxVal('cpm_Vintage');
@@ -170,7 +174,6 @@ const WooCommerceFormatter = (function() {
             const map = lookupMaps[lookupType];
             const item = map ? map.get(String(code).trim().toUpperCase()) : null;
             if (!item) {
-                // LoggerService.warn('WooCommerceFormatter', 'formatDescriptionHTML', `Lookup failed for code: ${code}, type: ${lookupType}`);
                 return fallback;
             }
             if (lookupType === 'texts') return isEn ? item.slt_TextEN : item.slt_TextHE;
@@ -179,222 +182,425 @@ const WooCommerceFormatter = (function() {
             return fallback;
         };
 
-                const addDetailLine = (labelEn, labelHe, value) => {
-                    if (!value) return '';
-                    const label = isEn ? labelEn : labelHe;
-                    return `${label}: ${value}\n`;
-                };
-        
-                // --- HTML Construction ---
+        const addDetailLine = (labelEn, labelHe, value) => {
+            if (!value) return '';
+            const label = isEn ? labelEn : labelHe;
+            return `${label}: ${value}\n`;
+        };
 
-                // Preview-only: Title and Short Description with HR dividers
-                if (!isForExport) {
-                    // 1. Product Title (preview only)
-                    if (name) {
-                        html += `<b>${name}</b>`;
-                        html += '<hr>';
+        // Helper: join array with commas and 'or'/'או' before last item
+        const joinWithOr = (arr) => {
+            if (arr.length <= 1) return arr.join('');
+            if (arr.length === 2) return arr.join(isEn ? ' or ' : ' או ');
+            return arr.slice(0, -1).join(', ') + (isEn ? ' or ' : ' או ') + arr[arr.length - 1];
+        };
+
+        // --- HTML Construction ---
+
+        // Preview-only: Title and Short Description with HR dividers
+        if (!isForExport) {
+            if (name) {
+                html += `<b>${name}</b>`;
+                html += '<hr>';
+            }
+            if (shortDescription) {
+                html += `${shortDescription}`;
+                html += '<hr>';
+            }
+        }
+
+        // Long Description
+        if (name || longDescription) {
+            html += (name ? name : '') + (name && longDescription ? ' ' : '') + (longDescription ? longDescription : '');
+            html += '<br>';
+        }
+
+        // ========== NEW FORMATTING ==========
+        if (USE_NEW_FORMATTING) {
+            // Build detail data
+            const col1Lines = [];
+            const col2Lines = [];
+
+            // Column 1: Category, Vintage, ABV, Volume, Region, Grapes
+            if (group) {
+                const categoryName = getLookupText(group, 'texts', group);
+                if (categoryName) col1Lines.push(categoryName);
+            }
+            if (vintage) col1Lines.push(`${isEn ? 'Vintage' : 'שנת בציר'}: ${vintage}`);
+            if (abv) {
+                const abvNum = parseFloat(abv);
+                const abvDisplay = !isNaN(abvNum) ? `${(abvNum * 100).toFixed(1)}%` : abv;
+                col1Lines.push(`${isEn ? 'Alcohol' : 'אלכוהול'}: ${abvDisplay}`);
+            }
+            if (size) col1Lines.push(`${isEn ? 'Volume' : 'גודל'}: ${size} ${isEn ? 'ML' : 'מ"ל'}`);
+            if (regionCode) col1Lines.push(`${isEn ? 'Region' : 'אזור'}: ${getLookupText(regionCode, 'texts', regionCode)}`);
+
+            const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
+            const grapeNames = [];
+            grapeCodes.forEach(codeKey => {
+                const code = getVal(codeKey);
+                if (code) grapeNames.push(getLookupText(code, 'grapes', code));
+            });
+            if (grapeNames.length > 0) col1Lines.push(`${isEn ? 'Grapes' : 'ענב(ים)'}: ${grapeNames.join(', ')}`);
+
+            // Column 2: Intensity, Complexity, Acidity, Pairing, Decant, Kashrut
+            if (intensityCode) {
+                const circles = getLookupText('CIRCLES' + intensityCode, 'texts', '');
+                const label = getLookupText('LABEL_IN' + intensityCode, 'texts', intensityCode);
+                col2Lines.push(`${isEn ? 'Intensity' : 'עוצמה'}: ${circles} ${label}`);
+            }
+            if (complexityCode) {
+                const circles = getLookupText('CIRCLES' + complexityCode, 'texts', '');
+                const label = getLookupText('LABEL_CO' + complexityCode, 'texts', complexityCode);
+                col2Lines.push(`${isEn ? 'Complexity' : 'מורכבות'}: ${circles} ${label}`);
+            }
+            if (acidityCode) {
+                const circles = getLookupText('CIRCLES' + acidityCode, 'texts', '');
+                const label = getLookupText('LABEL_AC' + acidityCode, 'texts', acidityCode);
+                col2Lines.push(`${isEn ? 'Acidity' : 'חומציות'}: ${circles} ${label}`);
+            }
+
+            // Pairing
+            const harFlavors = [];
+            if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'mild' : 'עדינים');
+            if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'rich' : 'עשירים');
+            if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'intense' : 'עזים');
+            if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'sweet' : 'מתוקים');
+            if (harFlavors.length > 0) {
+                col2Lines.push(`${isEn ? 'Harmonize with' : 'הרמוניה עם טעמים'}: ${joinWithOr(harFlavors)}${isEn ? ' flavors' : ''}`);
+            }
+
+            const conFlavors = [];
+            if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'mild' : 'עדינים');
+            if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'rich' : 'עשירים');
+            if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'intense' : 'עזים');
+            if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'sweet' : 'מתוקים');
+            if (conFlavors.length > 0) {
+                col2Lines.push(`${isEn ? 'Contrast with' : 'קונטרסט עם טעמים'}: ${joinWithOr(conFlavors)}${isEn ? ' flavors' : ''}`);
+            }
+
+            if (decant) {
+                col2Lines.push(isEn ? `Decant: ${decant} minutes` : `אוורור: ${decant} דקות`);
+            }
+
+            // Kashrut
+            const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
+            const kashrutNames = [];
+            kashrutCodes.forEach(codeKey => {
+                const code = getVal(codeKey);
+                if (code) kashrutNames.push(getLookupText(code, 'kashrut', code));
+            });
+            if (kashrutNames.length > 0) {
+                col2Lines.push(`${isEn ? 'Kashrut' : 'כשרות'}: ${kashrutNames.join(', ')}`);
+            }
+            if (String(heterMechira) === 'true' || heterMechira === true) {
+                col2Lines.push(`<span style="color:#c00;"><b>${isEn ? 'Heter Mechira' : 'היתר מכירה'}</b></span>`);
+            }
+            if (String(isMevushal) === 'true' || isMevushal === true) {
+                col2Lines.push(isEn ? 'Mevushal' : 'מבושל');
+            }
+
+            // Build two-column table
+            if (col1Lines.length > 0 || col2Lines.length > 0) {
+                const dir = isEn ? 'ltr' : 'rtl';
+                const textAlign = isEn ? 'left' : 'right';
+                const borderSide = isEn ? 'border-right' : 'border-left';
+                html += `<br><table style="width:100%; border:1px solid #e0e0e0; background:#fafafa; border-collapse:collapse; margin:10px 0;" dir="${dir}">`;
+                html += `<tr>`;
+                html += `<td style="vertical-align:top; padding:12px; width:50%; ${borderSide}:1px solid #e0e0e0; text-align:${textAlign};">${col1Lines.join('<br>')}</td>`;
+                html += `<td style="vertical-align:top; padding:12px; width:50%; text-align:${textAlign};">${col2Lines.join('<br>')}</td>`;
+                html += `</tr></table>`;
+            }
+
+            // --- Appendices (Export Only) - NEW FORMAT ---
+            if (isForExport) {
+                const appendedParagraphs = [];
+
+                // 1. Promo text with styled box
+                const lastDigit = String(sku).slice(-1);
+                const promoKey = 'P' + lastDigit;
+                const promoText = getLookupText(promoKey, 'texts');
+                if (promoText) {
+                    appendedParagraphs.push(`<div style="background:#f8f4e6; border-left:4px solid #c9a227; padding:12px; margin:10px 0;"><strong>★</strong> ${promoText}</div>`);
+                }
+
+                // 2. Attribute paragraphs with styled headers
+                // Header style: wine color, bold (matches Harmonize/Contrast)
+                const headerStyle = 'color:#722f37;';
+                // Link style: slightly smaller, wine color, bold
+                const linkStyle = 'font-size:0.9em; color:#722f37; font-weight:600; text-decoration:none;';
+                // Arrow direction: right for LTR (EN), left for RTL (HE)
+                const arrow = isEn ? '→' : '←';
+
+                if (intensityCode) {
+                    const intensityKey = 'IN0' + intensityCode;
+                    const text = getLookupText(intensityKey, 'texts');
+                    const url = getLookupText('URL_INTENSITY', 'texts');
+                    const label = getLookupText('LABEL_IN' + intensityCode, 'texts', intensityCode);
+                    if (text) {
+                        const header = `<strong style="${headerStyle}">${isEn ? 'Intensity:' : 'עוצמה:'}</strong> ${label} (${intensityCode} ${isEn ? 'of' : 'מתוך'} 5)`;
+                        const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
+                        appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
                     }
-
-                    // 2. Short Description (preview only)
-                    if (shortDescription) {
-                        html += `${shortDescription}`;
-                        html += '<hr>';
+                }
+                if (complexityCode) {
+                    const complexityKey = 'CO0' + complexityCode;
+                    const text = getLookupText(complexityKey, 'texts');
+                    const url = getLookupText('URL_COMPLEXITY', 'texts');
+                    const label = getLookupText('LABEL_CO' + complexityCode, 'texts', complexityCode);
+                    if (text) {
+                        const header = `<strong style="${headerStyle}">${isEn ? 'Complexity:' : 'מורכבות:'}</strong> ${label} (${complexityCode} ${isEn ? 'of' : 'מתוך'} 5)`;
+                        const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
+                        appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
+                    }
+                }
+                if (acidityCode) {
+                    const match = String(acidityCode).match(/\d+/);
+                    if (match) {
+                        const level = match[0];
+                        const acidityKey = 'AC0' + level;
+                        const text = getLookupText(acidityKey, 'texts');
+                        const url = getLookupText('URL_ACIDITY', 'texts');
+                        const label = getLookupText('LABEL_AC' + level, 'texts', level);
+                        if (text) {
+                            const header = `<strong style="${headerStyle}">${isEn ? 'Acidity:' : 'חומציות:'}</strong> ${label} (${level} ${isEn ? 'of' : 'מתוך'} 5)`;
+                            const readMore = url ? ` <a href="${url}" style="${linkStyle}">${isEn ? 'Read more' : 'קראו עוד'} ${arrow}</a>` : '';
+                            appendedParagraphs.push(`<p>${header} – ${text}${readMore}</p>`);
+                        }
                     }
                 }
 
-                // 3. Long Description (always starts with product title + space)
-                if (name || longDescription) {
-                    html += (name ? name : '') + (name && longDescription ? ' ' : '') + (longDescription ? longDescription : '');
-                    html += '<br>'; // End description line
+                // 3. Pairing sections with bold headers and flavor terms
+                const flavorDefinitions = [
+                    { code: 'MILD', har: 'wdm_PairHarMild', con: 'wdm_PairConMild', labelEn: 'Mild flavors', labelHe: 'טעמים עדינים' },
+                    { code: 'RICH', har: 'wdm_PairHarRich', con: 'wdm_PairConRich', labelEn: 'Rich flavors', labelHe: 'טעמים עשירים' },
+                    { code: 'INTENSE', har: 'wdm_PairHarIntense', con: 'wdm_PairConIntense', labelEn: 'Intense flavors', labelHe: 'טעמים עזים' },
+                    { code: 'SWEET', har: 'wdm_PairHarSweet', con: 'wdm_PairConSweet', labelEn: 'Sweet flavors', labelHe: 'טעמים מתוקים' }
+                ];
+
+                // Harmonize section
+                const activeHar = flavorDefinitions.filter(def => getVal(def.har) == 1);
+                if (activeHar.length > 0) {
+                    const header = getLookupText('HARMONIZE', 'texts');
+                    let block = `<p><strong style="${headerStyle}">${isEn ? 'Harmonizing:' : 'הרמוניה:'}</strong> ${header || ''}</p>`;
+
+                    const bullets = activeHar.map(def => {
+                        const desc = getLookupText(def.code, 'texts');
+                        const flavorLabel = isEn ? def.labelEn : def.labelHe;
+                        return `• <strong>${flavorLabel}:</strong> ${desc}`;
+                    });
+                    block += `<p>${bullets.join('<br>')}</p>`;
+                    appendedParagraphs.push(block);
                 }
 
-                // Conditional blank line - only if detail fields will follow
-                const hasDetailFields = group || vintage || abv || size || regionCode || intensityCode || complexityCode || acidityCode || decant ||
-                    getVal('wdm_GrapeG1') || getVal('wdm_GrapeG2') || getVal('wdm_GrapeG3') || getVal('wdm_GrapeG4') || getVal('wdm_GrapeG5') ||
-                    getVal('wdm_PairHarMild') || getVal('wdm_PairHarRich') || getVal('wdm_PairHarIntense') || getVal('wdm_PairHarSweet') ||
-                    getVal('wdm_PairConMild') || getVal('wdm_PairConRich') || getVal('wdm_PairConIntense') || getVal('wdm_PairConSweet');
+                // Contrast section
+                const activeCon = flavorDefinitions.filter(def => getVal(def.con) == 1);
+                if (activeCon.length > 0) {
+                    const header = getLookupText('CONTRAST', 'texts');
+                    let block = `<p><strong style="${headerStyle}">${isEn ? 'Contrasting:' : 'קונטרסט:'}</strong> ${header || ''}</p>`;
 
-                if (hasDetailFields) {
-                    html += '<br>'; // Blank row before attributes
+                    const bullets = activeCon.map(def => {
+                        const desc = getLookupText(def.code, 'texts');
+                        const flavorLabel = isEn ? def.labelEn : def.labelHe;
+                        return `• <strong>${flavorLabel}:</strong> ${desc}`;
+                    });
+                    block += `<p>${bullets.join('<br>')}</p>`;
+                    appendedParagraphs.push(block);
                 }
 
-                // 4. Details List
-                // Order: Category, Vintage, ABV, Volume, Region, Grapes, Intensity, Complexity, Acidity, Harmonize, Contrast, Kashrut, Heter Mechira, Mevushal
-                
-                        // Category (Group from Comax) - show name only, no label
-                        if (group) {
-                            const categoryName = getLookupText(group, 'texts', group);
-                            if (categoryName) html += `${categoryName}\n`;
+                // Single "Read more" link after pairing sections
+                if (activeHar.length > 0 || activeCon.length > 0) {
+                    const pairingUrl = getLookupText('URL_PAIRING', 'texts');
+                    if (pairingUrl) {
+                        appendedParagraphs.push(`<p><a href="${pairingUrl}" style="${linkStyle}">${isEn ? 'Read more about food pairing' : 'קראו עוד על התאמה'} ${arrow}</a></p>`);
+                    }
+                }
+
+                if (appendedParagraphs.length > 0) {
+                    html += '<br>\n';
+                    html += appendedParagraphs.join('\n');
+                }
+            }
+        }
+        // ========== END NEW FORMATTING ==========
+
+        // ========== ORIGINAL FORMATTING (disabled when USE_NEW_FORMATTING = true) ==========
+        if (!USE_NEW_FORMATTING) {
+            const hasDetailFields = group || vintage || abv || size || regionCode || intensityCode || complexityCode || acidityCode || decant ||
+                getVal('wdm_GrapeG1') || getVal('wdm_GrapeG2') || getVal('wdm_GrapeG3') || getVal('wdm_GrapeG4') || getVal('wdm_GrapeG5') ||
+                getVal('wdm_PairHarMild') || getVal('wdm_PairHarRich') || getVal('wdm_PairHarIntense') || getVal('wdm_PairHarSweet') ||
+                getVal('wdm_PairConMild') || getVal('wdm_PairConRich') || getVal('wdm_PairConIntense') || getVal('wdm_PairConSweet');
+
+            if (hasDetailFields) {
+                html += '<br>';
+            }
+
+            if (group) {
+                const categoryName = getLookupText(group, 'texts', group);
+                if (categoryName) html += `${categoryName}\n`;
+            }
+            if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);
+            if (abv) {
+                const abvNum = parseFloat(abv);
+                if (!isNaN(abvNum)) {
+                    html += addDetailLine('Alcohol', 'אלכוהול', `${(abvNum * 100).toFixed(1)}%`);
+                } else {
+                    html += addDetailLine('Alcohol', 'אלכוהול', abv);
+                }
+            }
+            if (size) html += addDetailLine('Volume', 'גודל', `${size} ${isEn ? 'ML' : 'מ"ל'}`);
+            if (regionCode) html += addDetailLine('Region', 'אזור', getLookupText(regionCode, 'texts', regionCode));
+
+            const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
+            const grapeNames = [];
+            grapeCodes.forEach(codeKey => {
+                const code = getVal(codeKey);
+                if (code) grapeNames.push(getLookupText(code, 'grapes', code));
+            });
+            if (grapeNames.length > 0) html += addDetailLine('Grapes', 'ענב(ים)', grapeNames.join(', '));
+
+            if (intensityCode) {
+                const circles = getLookupText('CIRCLES' + intensityCode, 'texts', '');
+                const label = getLookupText('LABEL_IN' + intensityCode, 'texts', intensityCode);
+                html += addDetailLine('Intensity', 'עוצמה', circles + ' ' + label);
+            }
+            if (complexityCode) {
+                const circles = getLookupText('CIRCLES' + complexityCode, 'texts', '');
+                const label = getLookupText('LABEL_CO' + complexityCode, 'texts', complexityCode);
+                html += addDetailLine('Complexity', 'מורכבות', circles + ' ' + label);
+            }
+            if (acidityCode) {
+                const circles = getLookupText('CIRCLES' + acidityCode, 'texts', '');
+                const label = getLookupText('LABEL_AC' + acidityCode, 'texts', acidityCode);
+                html += addDetailLine('Acidity', 'חומציות', circles + ' ' + label);
+            }
+
+            const harFlavors = [];
+            if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'mild' : 'עדינים');
+            if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'rich' : 'עשירים');
+            if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'intense' : 'עזים');
+            if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'sweet' : 'מתוקים');
+            if (harFlavors.length > 0) html += addDetailLine('Harmonize with', 'הרמוניה עם טעמים', joinWithOr(harFlavors) + (isEn ? ' flavors' : ''));
+
+            const conFlavors = [];
+            if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'mild' : 'עדינים');
+            if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'rich' : 'עשירים');
+            if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'intense' : 'עזים');
+            if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'sweet' : 'מתוקים');
+            if (conFlavors.length > 0) html += addDetailLine('Contrast with', 'קונטרסט עם טעמים', joinWithOr(conFlavors) + (isEn ? ' flavors' : ''));
+
+            if (decant) {
+                const decantText = isEn ? `Recommending decanting - ${decant} minutes` : `מומלץ לאוורור – ${decant} דקות`;
+                html += `${decantText}\n`;
+            }
+
+            const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
+            const kashrutNames = [];
+            kashrutCodes.forEach(codeKey => {
+                const code = getVal(codeKey);
+                if (code) kashrutNames.push(getLookupText(code, 'kashrut', code));
+            });
+
+            const hasKashrutSection = kashrutNames.length > 0 ||
+                (String(heterMechira) === 'true' || heterMechira === true) ||
+                (String(isMevushal) === 'true' || isMevushal === true);
+
+            if (hasKashrutSection) {
+                html += '<br>';
+            }
+
+            if (kashrutNames.length > 0) html += addDetailLine('Kashrut', 'כשרות', kashrutNames.join(', '));
+
+            if (String(heterMechira) === 'true' || heterMechira === true) {
+                const hmText = isEn ? 'Heter Mechira' : 'היתר מכירה';
+                html += `<span style="color: #ff0000;"><b>${hmText}</b></span>\n`;
+            }
+            if (String(isMevushal) === 'true' || isMevushal === true) {
+                const mevText = isEn ? 'Mevushal' : 'מבושל';
+                html += `${mevText}\n`;
+            }
+
+            // --- Appendices (Export Only) - ORIGINAL ---
+            if (isForExport) {
+                const appendedParagraphs = [];
+                const lastDigit = String(sku).slice(-1);
+                const promoKey = 'P' + lastDigit;
+                const promoText = getLookupText(promoKey, 'texts');
+                if (promoText) appendedParagraphs.push(`<b>* ${promoText}</b>`);
+
+                if (intensityCode) {
+                    const intensityKey = 'IN0' + intensityCode;
+                    const text = getLookupText(intensityKey, 'texts');
+                    const url = getLookupText('URL_INTENSITY', 'texts');
+                    if (text) {
+                        const linkedText = url ? `<a href="${url}">${text}</a>` : text;
+                        appendedParagraphs.push(linkedText);
+                    }
+                }
+                if (complexityCode) {
+                    const complexityKey = 'CO0' + complexityCode;
+                    const text = getLookupText(complexityKey, 'texts');
+                    const url = getLookupText('URL_COMPLEXITY', 'texts');
+                    if (text) {
+                        const linkedText = url ? `<a href="${url}">${text}</a>` : text;
+                        appendedParagraphs.push(linkedText);
+                    }
+                }
+                if (acidityCode) {
+                    const match = String(acidityCode).match(/\d+/);
+                    if (match) {
+                        const acidityKey = 'AC0' + match[0];
+                        const text = getLookupText(acidityKey, 'texts');
+                        const url = getLookupText('URL_ACIDITY', 'texts');
+                        if (text) {
+                            const linkedText = url ? `<a href="${url}">${text}</a>` : text;
+                            appendedParagraphs.push(linkedText);
                         }
-                        // Vintage
-                        if (vintage) html += addDetailLine('Vintage', 'שנת בציר', vintage);
-                        // ABV - stored as decimal (0.125 = 12.5%), multiply by 100 for display
-                        if (abv) {
-                             const abvNum = parseFloat(abv);
-                             if (!isNaN(abvNum)) {
-                                  html += addDetailLine('Alcohol', 'אלכוהול', `${(abvNum * 100).toFixed(1)}%`);
-                             } else {
-                                  html += addDetailLine('Alcohol', 'אלכוהול', abv);
-                             }
-                        }
-                        // Volume (Size from Comax)
-                        if (size) html += addDetailLine('Volume', 'גודל', `${size} ${isEn ? 'ML' : 'מ”ל'}`);
-                        // Region
-                        if (regionCode) html += addDetailLine('Region', 'אזור', getLookupText(regionCode, 'texts', regionCode));
-                
-                        // Grapes
-                        const grapeCodes = ['wdm_GrapeG1', 'wdm_GrapeG2', 'wdm_GrapeG3', 'wdm_GrapeG4', 'wdm_GrapeG5'];
-                        const grapeNames = [];
-                        grapeCodes.forEach(codeKey => {
-                            const code = getVal(codeKey);
-                            if (code) grapeNames.push(getLookupText(code, 'grapes', code));
-                        });
-                        if (grapeNames.length > 0) html += addDetailLine('Grapes', 'ענב(ים)', grapeNames.join(', '));
-                
-                        // Intensity
-                        if (intensityCode) html += addDetailLine('Intensity', 'עוצמה', intensityCode);
-                        // Complexity
-                        if (complexityCode) html += addDetailLine('Complexity', 'מורכבות', complexityCode);
-                        // Acidity
-                        if (acidityCode) html += addDetailLine('Acidity', 'חומציות', acidityCode);
-                                
-                // Helper: join array with commas and 'or'/'או' before last item
-                const joinWithOr = (arr) => {
-                    if (arr.length <= 1) return arr.join('');
-                    if (arr.length === 2) return arr.join(isEn ? ' or ' : ' או ');
-                    return arr.slice(0, -1).join(', ') + (isEn ? ' or ' : ' או ') + arr[arr.length - 1];
-                };
-
-                // Pairing - Harmonize
-                const harFlavors = [];
-                if (getVal('wdm_PairHarMild') == 1) harFlavors.push(isEn ? 'mild' : 'עדינים');
-                if (getVal('wdm_PairHarRich') == 1) harFlavors.push(isEn ? 'rich' : 'עשירים');
-                if (getVal('wdm_PairHarIntense') == 1) harFlavors.push(isEn ? 'intense' : 'עזים');
-                if (getVal('wdm_PairHarSweet') == 1) harFlavors.push(isEn ? 'sweet' : 'מתוקים');
-                if (harFlavors.length > 0) html += addDetailLine('Harmonize with', 'הרמוניה עם טעמים', joinWithOr(harFlavors) + (isEn ? ' flavors' : ''));
-
-                // Pairing - Contrast
-                const conFlavors = [];
-                if (getVal('wdm_PairConMild') == 1) conFlavors.push(isEn ? 'mild' : 'עדינים');
-                if (getVal('wdm_PairConRich') == 1) conFlavors.push(isEn ? 'rich' : 'עשירים');
-                if (getVal('wdm_PairConIntense') == 1) conFlavors.push(isEn ? 'intense' : 'עזים');
-                if (getVal('wdm_PairConSweet') == 1) conFlavors.push(isEn ? 'sweet' : 'מתוקים');
-                if (conFlavors.length > 0) html += addDetailLine('Contrast with', 'קונטרסט עם טעמים', joinWithOr(conFlavors) + (isEn ? ' flavors' : ''));
-
-                // Decant
-                if (decant) {
-                    const decantText = isEn ? `Recommending decanting - ${decant} minutes` : `מומלץ לאוורור – ${decant} דקות`;
-                    html += `${decantText}\n`;
+                    }
                 }
 
-                // Kashrut section
-                const kashrutCodes = ['wdm_KashrutK1', 'wdm_KashrutK2', 'wdm_KashrutK3', 'wdm_KashrutK4', 'wdm_KashrutK5'];
-                const kashrutNames = [];
-                kashrutCodes.forEach(codeKey => {
-                    const code = getVal(codeKey);
-                    if (code) kashrutNames.push(getLookupText(code, 'kashrut', code));
-                });
+                const flavorDefinitions = [
+                    { code: 'MILD', har: 'wdm_PairHarMild', con: 'wdm_PairConMild', labelEn: 'Mild', labelHe: 'עדין' },
+                    { code: 'RICH', har: 'wdm_PairHarRich', con: 'wdm_PairConRich', labelEn: 'Rich', labelHe: 'עשיר' },
+                    { code: 'INTENSE', har: 'wdm_PairHarIntense', con: 'wdm_PairConIntense', labelEn: 'Intense', labelHe: 'עוצמתי' },
+                    { code: 'SWEET', har: 'wdm_PairHarSweet', con: 'wdm_PairConSweet', labelEn: 'Sweet', labelHe: 'מתוק' }
+                ];
 
-                const hasKashrutSection = kashrutNames.length > 0 ||
-                    (String(heterMechira) === 'true' || heterMechira === true) ||
-                    (String(isMevushal) === 'true' || isMevushal === true);
-
-                // Blank row before kashrut section
-                if (hasKashrutSection) {
-                    html += '<br>';
+                const activeHar = flavorDefinitions.filter(def => getVal(def.har) == 1);
+                if (activeHar.length > 0) {
+                    const block = [];
+                    const header = getLookupText('HARMONIZE', 'texts');
+                    if (header) block.push(header);
+                    const bullets = [];
+                    activeHar.forEach(def => {
+                        const desc = getLookupText(def.code, 'texts');
+                        if (desc) bullets.push(`• ${desc}`);
+                    });
+                    if (bullets.length > 0) block.push(bullets.join('<br>\n'));
+                    if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
                 }
 
-                // Kashrut
-                if (kashrutNames.length > 0) html += addDetailLine('Kashrut', 'כשרות', kashrutNames.join(', '));
+                const activeCon = flavorDefinitions.filter(def => getVal(def.con) == 1);
+                if (activeCon.length > 0) {
+                    const block = [];
+                    const header = getLookupText('CONTRAST', 'texts');
+                    if (header) block.push(header);
+                    const bullets = [];
+                    activeCon.forEach(def => {
+                        const desc = getLookupText(def.code, 'texts');
+                        if (desc) bullets.push(`• ${desc}`);
+                    });
+                    if (bullets.length > 0) block.push(bullets.join('<br>\n'));
+                    if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
+                }
 
-                // Heter Mechira
-                if (String(heterMechira) === 'true' || heterMechira === true) {
-                    const hmText = isEn ? 'Heter Mechira' : 'היתר מכירה';
-                    html += `<span style="color: #ff0000;"><b>${hmText}</b></span>\n`;
+                if (appendedParagraphs.length > 0) {
+                    html += '<br>\n';
+                    html += appendedParagraphs.join('<br>\n<br>\n');
                 }
-                // Mevushal
-                if (String(isMevushal) === 'true' || isMevushal === true) {
-                     const mevText = isEn ? 'Mevushal' : 'מבושל';
-                     html += `${mevText}\n`;
-                }
-        
-                // --- Appendices (Export Only) ---
-                if (isForExport) {
-                     const appendedParagraphs = [];
-                     const lastDigit = String(sku).slice(-1);
-                     const promoKey = 'P' + lastDigit;
-                     const promoText = getLookupText(promoKey, 'texts');
-                     if (promoText) appendedParagraphs.push(`<b>* ${promoText}</b>`);
-        
-                     if (intensityCode) {
-                         const intensityKey = 'IN0' + intensityCode;
-                         const text = getLookupText(intensityKey, 'texts');
-                         if (text) appendedParagraphs.push(text);
-                     }
-                     if (complexityCode) {
-                         const complexityKey = 'CO0' + complexityCode;
-                         const text = getLookupText(complexityKey, 'texts');
-                         if (text) appendedParagraphs.push(text);
-                     }
-                     if (acidityCode) {
-                         const match = String(acidityCode).match(/\d+/);
-                         if (match) {
-                              const acidityKey = 'AC0' + match[0];
-                              const text = getLookupText(acidityKey, 'texts');
-                              if (text) appendedParagraphs.push(text);
-                         }
-                     }
-        
-                     const flavorDefinitions = [
-                         { code: 'MILD', har: 'wdm_PairHarMild', con: 'wdm_PairConMild', labelEn: 'Mild', labelHe: 'עדין' },
-                         { code: 'RICH', har: 'wdm_PairHarRich', con: 'wdm_PairConRich', labelEn: 'Rich', labelHe: 'עשיר' },
-                         { code: 'INTENSE', har: 'wdm_PairHarIntense', con: 'wdm_PairConIntense', labelEn: 'Intense', labelHe: 'עוצמתי' },
-                         { code: 'SWEET', har: 'wdm_PairHarSweet', con: 'wdm_PairConSweet', labelEn: 'Sweet', labelHe: 'מתוק' }
-                     ];
-        
-                     // Harmonize Bullets
-                     const activeHar = flavorDefinitions.filter(def => getVal(def.har) == 1);
-                     if (activeHar.length > 0) {
-                         const block = [];
-                         const header = getLookupText('HARMONIZE', 'texts');
-                         if (header) block.push(header);
-                         
-                         const bullets = [];
-                         activeHar.forEach(def => {
-                             const desc = getLookupText(def.code, 'texts');
-                             if (desc) {
-                                 // For export, we use the full text from the lookup, no prefix
-                                 bullets.push(`• ${desc}`);
-                             }
-                         });
-                         if (bullets.length > 0) block.push(bullets.join('<br>\n'));
-                         if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
-                     }
-        
-                     // Contrast Bullets
-                     const activeCon = flavorDefinitions.filter(def => getVal(def.con) == 1);
-                     if (activeCon.length > 0) {
-                         const block = [];
-                         const header = getLookupText('CONTRAST', 'texts');
-                         if (header) block.push(header);
-                         
-                         const bullets = [];
-                         activeCon.forEach(def => {
-                             const desc = getLookupText(def.code, 'texts');
-                             if (desc) {
-                                 // For export, we use the full text from the lookup, no prefix
-                                 bullets.push(`• ${desc}`);
-                             }
-                         });
-                         if (bullets.length > 0) block.push(bullets.join('<br>\n'));
-                         if (block.length > 0) appendedParagraphs.push(block.join('<br>\n'));
-                     }
-        
-                     if (appendedParagraphs.length > 0) {
-                         html += '<br>\n';
-                         html += appendedParagraphs.join('<br>\n<br>\n');
-                     }
-                }
+            }
+        }
+        // ========== END ORIGINAL FORMATTING ==========
 
                 // Cleanup: Remove excessive consecutive <br> tags and trailing blanks
                 html = html.replace(/(<br>\s*\n){3,}/g, '<br>\n<br>\n'); // Max 2 consecutive blank lines
