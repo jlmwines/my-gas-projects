@@ -32,6 +32,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
+- [ ] 2026-01-23: add name of comax order export file to notifications same as done with web inventory update csv
 
 ## web
 

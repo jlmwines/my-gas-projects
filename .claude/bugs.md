@@ -9,7 +9,6 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 - [ ] 2026-01-21: dates displayed in USA format - should use universal format with 3-letter month (e.g., 21 Jan 2026)
-- [ ] 2026-01-20: previous brurya task st_DoneDate jan 02, but current brurya task shows 999 days since completed - FIX APPLIED: missing 'value' arg in setConfig call, pending verification
 - [ ] 2026-01-20: accepted inventory counts are removed from admin inventory view, but do not appear below in comax sync without refreshing the view
 - [ ] 2025-12-26: task creation timestamp is not always local Israel time - FIX APPLIED: _getIsraelMidnight() helpers added, needs overnight verification
 - [ ] 2025-12-26: check if product master/detail task duplicate creation is prevented
@@ -24,6 +23,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Existing contact data corrupted (inconsistent sc_IsCore/sc_CustomerType)
 
 ### Resolved
+- [x] 2026-01-20: Brurya days showing 999 - RESOLVED 2026-01-23: code fix was correct, SysConfig row had empty value from pre-fix runs, manually set scf_P02
 - [x] 2025-12-29: Packing slips bundle count - VERIFIED: PrintService.js excludes bundle products
 - [x] 2025-12-23: Sync confirmation button not appearing after order export
 - [x] 2025-12-23: Need confirmation dialog before confirming sync steps
