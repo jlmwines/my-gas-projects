@@ -852,25 +852,13 @@ function WebAppDashboardV2_revertTaskToAdmin(taskId) {
   const functionName = 'revertTaskToAdmin';
 
   try {
-    // Get admin email from config
-    const users = ConfigService.getConfig('system.users');
-    let adminEmail = null;
-    if (users && Array.isArray(users)) {
-      const admin = users.find(u => u.role && u.role.toLowerCase() === 'admin');
-      adminEmail = admin ? admin.email : null;
-    }
-
-    if (!adminEmail) {
-      return { success: false, error: 'Admin user not found in config' };
-    }
-
-    // Update task assignee to admin
+    // Update task assignee to admin using role label (matches getInitialAssignee pattern)
     const updates = {
-      assignedTo: adminEmail,
-      status: 'Assigned' // Reset status to Assigned so admin sees it
+      assignedTo: 'Administrator',
+      status: 'Assigned'
     };
 
-    LoggerService.info(serviceName, functionName, `Reverting task ${taskId} to admin: ${adminEmail}`);
+    LoggerService.info(serviceName, functionName, `Reverting task ${taskId} to Administrator`);
     return WebAppTasks_updateTask(taskId, updates);
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
