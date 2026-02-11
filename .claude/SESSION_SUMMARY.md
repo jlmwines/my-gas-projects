@@ -1,4 +1,68 @@
-# Session Summary - 2026-01-22 (Latest)
+# Session Summary - 2026-02-11 (Latest)
+
+## What We Accomplished
+
+### Bug Fix: Duplicate Flavor Type Labels in Product Descriptions
+
+**Root cause:** SysLkp_Texts entries for MILD, RICH, INTENSE, SWEET included the label prefix (e.g., "Rich flavors: Salmon...") but the code also prepends `<strong>Rich flavors:</strong>`, causing duplication like "Rich flavors: Rich flavors: Salmon..."
+
+**Fix:** Data fix in SysLkp_Texts - strip label prefix from all 4 entries in both EN and HE columns. Code unchanged.
+
+### Description Backfill Function (Recreated)
+
+Previous `exportDescriptionBackfill()` was deployed but never committed. Recreated in ProductService.js:
+- Creates spreadsheet with separate EN and HE sheets
+- Columns: ID, WName, Description
+- Uses language-specific WooCommerce post IDs (wpm_ID for EN, wxm_ID for HE)
+- Test function: `TEST_descriptionBackfill()` with editable SKU
+- Full export: `RUN_fullDescriptionBackfill()`
+
+### Sync Widget Improvements (from prior sessions)
+
+- Comax order export: show filename in status messages and confirmation prompt
+- Web export: show filename in confirmation prompt
+- SyncStateService: added `comaxOrderExportFilename` field
+
+### Comax Export Bundle Fix
+
+- InventoryManagementService: filter out bundle SKUs (woosb/bundle type) from Comax export
+
+---
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `ProductService.js` | Added `exportDescriptionBackfill()` with language-specific product IDs |
+| `WebAppProducts.js` | Added TEST/RUN backfill wrapper functions |
+| `AdminDailySyncWidget_v2.html` | Filename display in sync status messages |
+| `SyncStateService.js` | Added `comaxOrderExportFilename` field |
+| `WebAppSync.js` | Pass filename through export status |
+| `InventoryManagementService.js` | Bundle SKU filter for Comax export |
+| `.claude/bugs.md` | New bugs: sync button timing, inventory task info, manager orders refresh |
+| `.claude/wishlist.md` | Added back button support item |
+
+## New Files
+
+| File | Purpose |
+|------|---------|
+| `.claude/commands/pformat.md` | WordPress 2-column post formatting command |
+| `content/Pairing EN_2026-01-06.post.md` | Food pairing blog post |
+| `content/guide/PRODUCT_DESCRIPTION_TEMPLATE.md` | Product description template |
+| `jlmops/plans/PACKING_SLIP_REPRINT_PLAN.md` | Plan for packing slip reprint feature |
+| `website/EXIT_POPUP_PLAN.md` | Exit popup plan |
+| `website/MEET_EVYATAR_PLAN.md` | Meet Evyatar page plan |
+
+---
+
+## Next Steps
+
+- [ ] Import full description backfill to WooCommerce (in progress)
+- [ ] Test responsive layout on mobile after import
+
+---
+
+# Session Summary - 2026-01-22 (Previous)
 
 ## What We Accomplished
 
@@ -9,103 +73,13 @@
 - Styled promo text box with star and gold (#c9a227) border
 - "Read more" links with wine-colored styling (0.9em, #722f37, semi-bold)
 - Bold Harmonize/Contrast headers in wine color
-- RTL arrow direction for Hebrew (← instead of →)
-- Right-aligned text for Hebrew table cells
-- Consolidated single "Read more about food pairing" link after both pairing sections
-- Consistent styled headers for attributes: `**Intensity:** High (4 of 5) – [text] Read more →`
-
-**Original formatting preserved** (can revert by setting toggle to false)
-
-### Product Description Backfill Export (ProductService.js, WebAppProducts.js)
-
-**New export function for WooCommerce description update:**
-- Creates spreadsheet with separate EN and HE sheets
-- Columns: ID, WName, Description
-- Uses Product ID (unique per language) instead of SKU:
-  - EN ID from WebProdM (`wpm_ID`)
-  - HE ID from WebXltM (`wxm_ID`)
-- Test function: `TEST_descriptionBackfill()` with editable SKU
-- Full export: `RUN_fullDescriptionBackfill()`
-- Successfully exported all products
+- RTL arrow direction for Hebrew
+- Consistent styled headers for attributes
 
 ### Packing Slip Circles Display (PrintService.js)
 
-**Added circles for intensity/complexity/acidity:**
-- English: `Intensity ●●●●○  Complexity ●●●○○  Acidity ●●○○○`
-- Hebrew: Reversed order for proper RTL rendering (circles first in code)
-- Removed colons to avoid bidi issues
 - `numToCircles()` helper converts 1-5 values to filled/empty circles
-
-### Bug Tracking
-
-- Date format bug already tracked in bugs.md (use universal format: 21 Jan 2026)
-
-### Wishlist
-
-- Added: "Examine website cache and other speed-related settings to optimize" (web)
-
-### Content
-
-- Saved game kit ideas to `content/guide/GAME_KIT_IDEAS.md`
-
----
-
-## Files Modified
-
-| File | Changes |
-|------|---------|
-| `WooCommerceFormatter.js` | Complete formatting overhaul with toggle, two-column table, styled promo, read more links, RTL support |
-| `ProductService.js` | Added `exportDescriptionBackfill()` with language-specific product IDs |
-| `WebAppProducts.js` | Added test wrapper and full backfill functions |
-| `PrintService.js` | Circles display for attributes, RTL fixes |
-| `PackingSlipService.js` | `numToCircles()` helper (also in PrintService) |
-| `.claude/wishlist.md` | Added web cache optimization item |
-
-## New Files
-
-| File | Purpose |
-|------|---------|
-| `content/guide/GAME_KIT_IDEAS.md` | Wine game kit concepts for customer engagement |
-| `jlmops/plans/PRODUCT_TEXT_UPDATE_PLAN.md` | Plan for SEO text update |
-
----
-
-## Responsive CSS (for Elementor)
-
-User should add to global CSS for mobile responsiveness:
-
-```css
-/* Stack table columns on mobile */
-@media (max-width: 767px) {
-    .woocommerce-Tabs-panel--description table tr {
-        display: flex;
-        flex-direction: column;
-    }
-    .woocommerce-Tabs-panel--description table td {
-        display: block;
-        width: 100% !important;
-        border-right: none !important;
-    }
-    .woocommerce-Tabs-panel--description table td:first-child {
-        border-bottom: 1px solid #e0e0e0;
-    }
-}
-
-/* Hide additional info tab */
-.woocommerce-tabs li.additional_information_tab {
-    display: none !important;
-}
-```
-
----
-
-## Next Steps
-
-All completed this session:
-- [x] Import backfill to WooCommerce
-- [x] Test responsive layout
-- [x] Investigate accordion styling
-- [x] Website cache optimization
+- RTL fixes for Hebrew packing slips
 
 ---
 

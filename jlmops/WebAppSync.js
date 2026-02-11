@@ -519,16 +519,18 @@ function exportComaxOrdersBackend() {
         SyncStateService.setSyncState(newState);
       } else {
         // Orders were exported - need confirmation
+        const exportFilename = result.fileName || '';
         newState.comaxOrdersExported = true;
+        newState.comaxOrderExportFilename = exportFilename;
         newState.lastUpdated = new Date().toISOString();
         SyncStateService.setSyncState(newState);
 
-        // Write waiting status - ready for confirmation
+        // Write waiting status - ready for confirmation (include filename)
         SyncStatusService.writeStatus(sessionId, {
           step: 3,
           stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
           status: 'waiting',
-          message: `Export complete. ${exportedCount} orders exported. Ready to confirm upload.`
+          message: `Export ready: ${exportFilename} (${exportedCount} orders)`
         });
       }
     } else {

@@ -8,6 +8,9 @@ Projects: jlmops, web, marketing, content
 ## jlmops
 
 ### Open
+- [ ] 2026-01-28: sync generate web export button visible and clickable before action can happen - clicking does not initiate file creation when button first appears
+- [ ] 2026-01-28: inventory count task - manager view lacks task date; admin view of open count tasks lacks product SKU and name
+- [ ] 2026-02-09: manager orders view seems to require refresh to reload; navigating to the page does not update orders
 - [ ] 2026-01-21: dates displayed in USA format - should use universal format with 3-letter month (e.g., 21 Jan 2026)
 - [ ] 2026-01-20: accepted inventory counts are removed from admin inventory view, but do not appear below in comax sync without refreshing the view
 - [ ] 2025-12-26: task creation timestamp is not always local Israel time - FIX APPLIED: _getIsraelMidnight() helpers added, needs overnight verification
@@ -23,6 +26,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Existing contact data corrupted (inconsistent sc_IsCore/sc_CustomerType)
 
 ### Resolved
+- [x] 2026-01-26: Bundle export to Comax - RESOLVED: bundleSkus filter added to generateComaxInventoryExport()
 - [x] 2026-01-20: Brurya days showing 999 - RESOLVED 2026-01-23: code fix was correct, SysConfig row had empty value from pre-fix runs, manually set scf_P02
 - [x] 2025-12-29: Packing slips bundle count - VERIFIED: PrintService.js excludes bundle products
 - [x] 2025-12-23: Sync confirmation button not appearing after order export

@@ -2661,6 +2661,102 @@ const ProductService = (function() {
     }
   }
 
+  /**
+   * Exports descriptions for ALL products in WebDetM, split into EN and HE sheets.
+   * Uses language-specific WooCommerce post IDs (wpm_ID for EN, wxm_ID for HE)
+   * so the output can be imported directly via WebToffee.
+   * Columns per sheet: ID, WName, Description
+   */
+  function exportDescriptionBackfill(testSku) {
+    const serviceName = 'ProductService';
+    const functionName = 'exportDescriptionBackfill';
+    logger.info(serviceName, functionName, 'Starting description backfill export.', { testSku: testSku || 'ALL' });
+    try {
+      const allConfig = ConfigService.getAllConfig();
+
+      const getMap = (sheetName, schemaKey, keyCol) => {
+        const headers = allConfig[schemaKey].headers.split(',');
+        return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
+      };
+
+      const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
+      const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
+      const webProdMap = getMap('WebProdM', 'schema.data.WebProdM', 'wpm_SKU');
+      const webXltMap = getMap('WebXltM', 'schema.data.WebXltM', 'wxm_SKU');
+
+      const lookupMaps = {
+        texts: LookupService.getLookupMap('map.text_lookups'),
+        grapes: LookupService.getLookupMap('map.grape_lookups'),
+        kashrut: LookupService.getLookupMap('map.kashrut_lookups')
+      };
+
+      const skus = testSku ? [String(testSku)] : Array.from(webDetMap.keys());
+
+      const enRows = [['ID', 'WName', 'Description']];
+      const heRows = [['ID', 'WName', 'Description']];
+      let skippedCount = 0;
+
+      skus.forEach(sku => {
+        const webDetRow = webDetMap.get(sku);
+        if (!webDetRow) { skippedCount++; return; }
+
+        const cmxRow = cmxMap.get(sku);
+        const webProdRow = webProdMap.get(sku);
+        const webXltRow = webXltMap.get(sku);
+
+        if (webProdRow) {
+          const descEn = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
+          enRows.push([webProdRow.wpm_ID, webProdRow.wpm_PostTitle || '', descEn]);
+        }
+
+        if (webXltRow) {
+          const descHe = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
+          heRows.push([webXltRow.wxm_ID, webXltRow.wxm_PostTitle || '', descHe]);
+        }
+
+        if (!webProdRow && !webXltRow) { skippedCount++; }
+      });
+
+      if (enRows.length <= 1 && heRows.length <= 1) {
+        return { success: false, message: 'No products found to export.' };
+      }
+
+      // Create spreadsheet
+      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+      const fileName = testSku ? `Desc-Backfill-TEST-${timestamp}` : `Desc-Backfill-${timestamp}`;
+      const newSpreadsheet = SpreadsheetApp.create(fileName);
+
+      // EN sheet
+      const enSheet = newSpreadsheet.getSheets()[0];
+      enSheet.setName('EN');
+      if (enRows.length > 1) {
+        enSheet.getRange(1, 1, enRows.length, 3).setValues(enRows);
+      }
+
+      // HE sheet
+      const heSheet = newSpreadsheet.insertSheet('HE');
+      if (heRows.length > 1) {
+        heSheet.getRange(1, 1, heRows.length, 3).setValues(heRows);
+      }
+
+      // Move to exports folder
+      const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+      try {
+        DriveApp.getFileById(newSpreadsheet.getId()).moveTo(DriveApp.getFolderById(exportFolderId));
+      } catch (moveError) {
+        logger.warn(serviceName, functionName, `Failed to move to exports folder: ${moveError.message}`);
+      }
+
+      const msg = `Exported ${enRows.length - 1} EN + ${heRows.length - 1} HE descriptions. Skipped: ${skippedCount}`;
+      logger.info(serviceName, functionName, msg, { fileUrl: newSpreadsheet.getUrl() });
+      return { success: true, message: msg, fileUrl: newSpreadsheet.getUrl() };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error: ${e.message}`, e);
+      throw e;
+    }
+  }
+
   return {
     // Note: processJob, runWebXltValidationAndUpsert, exportWebInventory moved to ProductImportService
     getProductWebIdBySku: getProductWebIdBySku,
@@ -2669,6 +2765,7 @@ const ProductService = (function() {
     acceptProductDetails: acceptProductDetails,
     generateDetailExport: generateDetailExport,
     generateNewProductExport: generateNewProductExport,
+    exportDescriptionBackfill: exportDescriptionBackfill,
     confirmWebUpdates: confirmWebUpdates,
     getProductHtmlPreview: getProductHtmlPreview,
     acceptProductSuggestion: acceptProductSuggestion,

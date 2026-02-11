@@ -88,6 +88,7 @@ const SyncStateService = (function() {
       invoiceFileCount: 0, // Invoice receipts awaiting processing
 
       // Filenames
+      comaxOrderExportFilename: null,
       webExportFilename: null
     };
   }
@@ -127,6 +128,7 @@ const SyncStateService = (function() {
           errorMessage: parsed.errorMessage || null,
           ordersPendingExportCount: parsed.ordersPendingExportCount || 0,
           comaxOrdersExported: parsed.comaxOrdersExported || false,
+          comaxOrderExportFilename: parsed.comaxOrderExportFilename || null,
           webExportFilename: parsed.webExportFilename || null,
           invoiceFileCount: parsed.invoiceFileCount || 0
         };

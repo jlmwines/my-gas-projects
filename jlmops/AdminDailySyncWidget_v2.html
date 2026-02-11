@@ -257,9 +257,12 @@
                         if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0)) {
                             logMsg = 'No orders to export (skipped)';
                         } else if (isOrderExportReady) {
-                            // Extract count from message like "Export complete. 2 orders exported."
-                            var countMatch = msg.match(/(\d+)\s*orders?\s*exported/i);
-                            logMsg = 'Orders exported' + (countMatch ? ' (' + countMatch[1] + ')' : '') + ' - awaiting confirmation';
+                            // Extract filename from message like "Export ready: filename.csv (X orders)"
+                            var fileMatch3 = msg.match(/Export ready:\s*([^\(]+)/);
+                            var countMatch3 = msg.match(/\((\d+)\s*orders?\)/i);
+                            var filename3 = fileMatch3 ? fileMatch3[1].trim() : '';
+                            var count3 = countMatch3 ? countMatch3[1] : '';
+                            logMsg = 'Orders exported' + (count3 ? ' (' + count3 + ')' : '') + (filename3 ? ': ' + filename3 : '');
                         } else {
                             logMsg = 'Orders exported to Comax';
                         }
@@ -354,7 +357,8 @@
         }
         // Orders exported, need confirmation
         else if (s3 === 'waiting' && status.comaxOrdersExported) {
-            message = 'Orders exported. Confirm upload';
+            var comaxFile = status.comaxOrderExportFilename || '';
+            message = comaxFile ? 'Export: ' + comaxFile : 'Orders exported. Confirm upload';
             actionHtml = btn('confirmComax', 'Confirm');
         }
         // Ready for Comax import (either explicit stage OR step 3 completed while waiting)
@@ -384,7 +388,8 @@
         }
         // Web export ready for confirmation
         else if (stage === 'WEB_EXPORT_GENERATED') {
-            message = 'Export ready. Confirm upload';
+            var webFile = status.webExportFilename || '';
+            message = webFile ? 'Export: ' + webFile : 'Export ready. Confirm upload';
             actionHtml = btn('confirmWeb', 'Confirm');
         }
         // Complete

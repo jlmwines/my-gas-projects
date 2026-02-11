@@ -872,6 +872,26 @@ const InventoryManagementService = (function() {
                   throw new Error(`Required sheets not found.`);
                 }
 
+                // 0. Build a set of bundle SKUs from WebProdM (bundles should not be exported)
+                const bundleSkus = new Set();
+                const webProdMSheet = ss.getSheetByName(sheetNames.WebProdM);
+                if (webProdMSheet) {
+                  const webProdMData = webProdMSheet.getDataRange().getValues();
+                  const webHeaders = webProdMData[0];
+                  const wpmSkuCol = webHeaders.indexOf('wpm_SKU');
+                  const wpmTypeCol = webHeaders.indexOf('wpm_TaxProductType');
+
+                  if (wpmSkuCol !== -1 && wpmTypeCol !== -1) {
+                    for (let i = 1; i < webProdMData.length; i++) {
+                      const productType = String(webProdMData[i][wpmTypeCol] || '').toLowerCase().trim();
+                      if (productType === 'woosb' || productType === 'bundle') {
+                        const sku = String(webProdMData[i][wpmSkuCol]).trim();
+                        if (sku) bundleSkus.add(sku);
+                      }
+                    }
+                  }
+                }
+
                 // 1. Find all 'Accepted' tasks to identify SKUs to export
                 const taskData = taskSheet.getDataRange().getValues();
                 const taskHeaders = taskData[0];
@@ -889,7 +909,7 @@ const InventoryManagementService = (function() {
                   const row = taskData[i];
                   if (row[tStatusCol] === 'Accepted' && relevantTypes.includes(row[tTypeCol])) {
                     const sku = String(row[tEntityCol]).trim();
-                    if (sku) {
+                    if (sku && !bundleSkus.has(sku)) {
                         skusToExport.add(sku);
                         acceptedTaskIndices.push(i); // Store row index (0-based relative to data array)
                     }

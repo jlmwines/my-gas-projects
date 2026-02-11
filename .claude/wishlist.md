@@ -33,6 +33,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Recommendation engine
 - [ ] AI/Claude integration
 - [ ] 2026-01-23: add name of comax order export file to notifications same as done with web inventory update csv
+- [ ] 2026-01-29: Back button support - hash routing should support browser back/forward navigation
 
 ## web
 

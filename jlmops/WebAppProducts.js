@@ -1015,3 +1015,20 @@ function WebAppProducts_searchProductsForReplacement(searchTerm) {
   }
 }
 
+/**
+ * Test description backfill with a single SKU.
+ * Edit the SKU below before running.
+ */
+function TEST_descriptionBackfill() {
+  const testSku = '7290017324487'; // <-- Edit this SKU
+  return ProductService.exportDescriptionBackfill(testSku);
+}
+
+/**
+ * Full description backfill for ALL products.
+ * Creates a spreadsheet with EN and HE sheets for WooCommerce import.
+ */
+function RUN_fullDescriptionBackfill() {
+  return ProductService.exportDescriptionBackfill();
+}
+

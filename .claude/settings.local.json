@@ -41,7 +41,20 @@
       "Bash(git -C \"C:/Users/B/projects/jlmops\" diff --stat)",
       "Bash(git -C \"C:/Users/B/projects/jlmops\" log --oneline -5)",
       "Bash(git -C \"C:/Users/B/projects/jlmops\" diff AdminProjectsView.html ManagerDashboardView_v2.html SetupConfig.js --stat)",
-      "Bash(git -C \"C:/Users/B/projects\" add -A)"
+      "Bash(git -C \"C:/Users/B/projects\" add -A)",
+      "Bash(git -C \"C:/Users/B/projects\" commit -m \"$\\(cat <<''EOF''\nchore: Full project state - UI fixes, config preservation, cleanup\n\njlmops:\n- AdminProjectsView: Task list column width optimization, entity sort, scope filter row\n- ManagerDashboardView_v2: 2-week calendar \\(2 rows\\), calendar as default view\n- SetupConfig: Preserve runtime state values on rebuild \\(brurya, mailchimp dates\\)\n\nProject structure:\n- Remove legacy backend-scripts, frontend-scripts folders\n- Remove temporary CSV/data files\n- Add content, business, marketing, website folders with CLAUDE.md guides\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:/Users/B/projects\" push origin main)",
+      "Bash(git -C \"C:/Users/B/projects/jlmops\" log --oneline -3)",
+      "Bash(git -C \"C:/Users/B/projects/jlmops\" add SheetAccessor.js WebAppDashboardV2.js plans/PERFORMANCE_OPTIMIZATION_PLAN.md \"../.claude/bugs.md\")",
+      "Bash(git -C \"C:/Users/B/projects/jlmops\" commit -m \"$\\(cat <<''EOF''\nperf: Dashboard optimization - read sheets once per request\n\n- Refactor WebAppDashboardV2_getData to read all sheets at top, pass data to helpers\n- Refactor WebAppDashboardV2_getManagerData with same pattern\n- Add _rowsToObjects helper for sheet-to-object conversion\n- Add _safeDate helper for proper Date serialization to JSON\n- Fix SheetAccessor config key typo \\(logs not log\\)\n- Reduces sheet reads from ~15 to 4 per dashboard load\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:/Users/B/projects/jlmops\" push origin main)",
+      "Bash(git diff:*)",
+      "WebFetch(domain:jlmeines.com)",
+      "WebFetch(domain:yoterplus.co.il)",
+      "WebFetch(domain:dilen.co.il)",
+      "Bash(git log:*)",
+      "Bash(findstr:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []
