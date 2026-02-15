@@ -374,9 +374,12 @@
     //  ACTION FUNCTIONS
     // =====================================================================
 
+    var lastError = null;
+
     function runAction(backendFn, stepNum, actionLabel) {
         if (actionInProgress) return;
         actionInProgress = true;
+        lastError = null;
         lastActionTime = Date.now();
 
         // Immediate UI feedback
@@ -400,12 +403,16 @@
             })
             .withFailureHandler(function(err) {
                 actionInProgress = false;
+                var errorMsg = err.message || String(err);
+                lastError = errorMsg;
                 if (stepNum) {
                     document.getElementById('step' + stepNum + 'Card').classList.add('border-danger');
                     document.getElementById('step' + stepNum + 'Icon').textContent = '❌';
                 }
-                msgEl.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
-                actionEl.innerHTML = '';
+                msgEl.innerHTML = '<span class="text-danger">Failed: ' + errorMsg + '</span>';
+                actionEl.innerHTML = '<button class="btn btn-sm" onclick="window.SyncWidget.refreshNow(); return false;">Refresh</button>';
+                addProgressEntry('ERROR: ' + actionLabel + ' - ' + errorMsg, false);
+                document.getElementById('footerStatus').textContent = 'Action failed - see error above';
             })
             [backendFn]();
     }
@@ -485,6 +492,9 @@
     // =====================================================================
 
     function refreshStatus() {
+        // Don't overwrite error display with poll results
+        if (lastError) return;
+
         google.script.run
             .withSuccessHandler(function(status) {
                 updateUI(status);
@@ -532,6 +542,11 @@
     //  PUBLIC API & INIT
     // =====================================================================
 
+    function refreshNow() {
+        lastError = null;
+        refreshStatus();
+    }
+
     window.SyncWidget = {
         importProducts: importProducts,
         importOrders: importOrders,
@@ -541,7 +556,8 @@
         generateWebExport: generateWebExport,
         confirmWeb: confirmWeb,
         resetSync: resetSync,
-        retryFailed: retryFailed
+        retryFailed: retryFailed,
+        refreshNow: refreshNow
     };
 
     console.log('SyncWidget: Initializing (stage-based state machine)');
