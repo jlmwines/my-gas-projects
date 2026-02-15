@@ -492,8 +492,8 @@
     // =====================================================================
 
     function refreshStatus() {
-        // Don't overwrite error display with poll results
-        if (lastError) return;
+        // Don't poll while action is running or error is showing
+        if (actionInProgress || lastError) return;
 
         google.script.run
             .withSuccessHandler(function(status) {
