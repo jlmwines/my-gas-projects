@@ -375,18 +375,25 @@
     // =====================================================================
 
     var lastError = null;
+    var actionTimeout = null;
 
     function runAction(backendFn, stepNum, actionLabel) {
-        if (actionInProgress) return;
+        if (actionInProgress) {
+            console.warn('SyncWidget: Action blocked - previous action still in progress');
+            document.getElementById('footerStatus').textContent = 'Previous action still running...';
+            return;
+        }
         actionInProgress = true;
         lastError = null;
         lastActionTime = Date.now();
+        console.log('SyncWidget: Running ' + backendFn);
 
         // Immediate UI feedback
         var msgEl = document.getElementById('sharedMessage');
         var actionEl = document.getElementById('sharedAction');
         msgEl.innerHTML = '<strong>' + actionLabel + '</strong>';
         actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+        document.getElementById('footerStatus').textContent = actionLabel;
 
         if (stepNum) {
             var card = document.getElementById('step' + stepNum + 'Card');
@@ -395,16 +402,32 @@
             icon.textContent = '🔄';
         }
 
+        // Safety: reset actionInProgress after 2 minutes if handler never fires
+        if (actionTimeout) clearTimeout(actionTimeout);
+        actionTimeout = setTimeout(function() {
+            if (actionInProgress) {
+                console.error('SyncWidget: Action timed out after 2 minutes');
+                actionInProgress = false;
+                document.getElementById('footerStatus').textContent = 'Action timed out - refreshing...';
+                refreshNow();
+            }
+        }, 120000);
+
         google.script.run
             .withSuccessHandler(function(status) {
+                if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
+                console.log('SyncWidget: ' + backendFn + ' succeeded. Stage: ' + (status && status.stage));
+                addProgressEntry(actionLabel + ' - done', true);
                 updateUI(status);
                 adjustPolling(status);
             })
             .withFailureHandler(function(err) {
+                if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
                 var errorMsg = err.message || String(err);
                 lastError = errorMsg;
+                console.error('SyncWidget: ' + backendFn + ' failed:', errorMsg);
                 if (stepNum) {
                     document.getElementById('step' + stepNum + 'Card').classList.add('border-danger');
                     document.getElementById('step' + stepNum + 'Icon').textContent = '❌';
