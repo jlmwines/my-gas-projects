@@ -118,12 +118,18 @@ Used by: health status task, Brurya reminder task, packing slip task.
 - Config keys: dot notation like `system.brurya.last_update`, `validation.rule.*`
 
 ### Sync Workflow States
+Single state machine in `SyncStateService.js`. One JSON object in SysConfig (`system.sync.state`).
 ```
-IDLE -> WEB_PRODUCTS_IMPORTING -> WEB_IMPORT_PROCESSING -> WEB_IMPORT_COMPLETE
-     -> WAITING_FOR_COMAX -> READY_FOR_COMAX_IMPORT -> COMAX_IMPORTING
-     -> WEB_EXPORT_GENERATING -> WEB_EXPORT_GENERATED -> COMPLETE
-     -> FAILED (from any state)
+IDLE → IMPORTING_PRODUCTS → IMPORTING_ORDERS
+  → WAITING_ORDER_EXPORT → EXPORTING_ORDERS → WAITING_ORDER_CONFIRM
+  → WAITING_COMAX_IMPORT → IMPORTING_COMAX → VALIDATING
+  → WAITING_WEB_EXPORT → GENERATING_WEB_EXPORT → WAITING_WEB_CONFIRM
+  → COMPLETE
+  → FAILED (from any *ING_* stage, retry returns to failedAtStage)
 ```
+- `WAITING_*` = user action needed, `*ING_*` = system processing (spinner)
+- Every backend function has a stage guard rejecting calls from wrong stages
+- Step statuses stored inline: `state.steps.step1` through `step5`
 
 Step statuses: `waiting`, `processing`, `completed`, `skipped`, `failed`
 

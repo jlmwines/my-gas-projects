@@ -24,13 +24,6 @@
     </div>
     <div class="card-body">
 
-        <!-- Failure Banner -->
-        <div id="failureBanner" class="alert alert-danger d-none mb-3">
-            <button type="button" class="close float-end" onclick="window.SyncWidget.dismissFailures()" style="background:none;border:none;font-size:1.2rem;line-height:1;opacity:0.7;">&times;</button>
-            <strong>Import Failures:</strong>
-            <span id="failureList"></span>
-        </div>
-
         <!-- 6-Step Display (Invoices + 5 Steps) -->
         <div class="row row-cols-6 g-2 mb-3">
             <!-- Step 0: Pre-Sync Status -->
@@ -54,7 +47,6 @@
                         <h6 class="card-title sync-card-title">1. Web Product Import</h6>
                         <div id="step1Icon" class="sync-icon">⏸️</div>
                         <div id="step1Message" class="text-muted small"></div>
-                        <div id="step1Action"></div>
                     </div>
                 </div>
             </div>
@@ -66,7 +58,6 @@
                         <h6 class="card-title sync-card-title">2. Web Order Import</h6>
                         <div id="step2Icon" class="sync-icon">⏸️</div>
                         <div id="step2Message" class="text-muted small"></div>
-                        <div id="step2Action"></div>
                     </div>
                 </div>
             </div>
@@ -78,7 +69,6 @@
                         <h6 class="card-title sync-card-title">3. Update Comax Orders</h6>
                         <div id="step3Icon" class="sync-icon">⏸️</div>
                         <div id="step3Message" class="text-muted small"></div>
-                        <div id="step3Action"></div>
                     </div>
                 </div>
             </div>
@@ -90,7 +80,6 @@
                         <h6 class="card-title sync-card-title">4. Import Comax Products</h6>
                         <div id="step4Icon" class="sync-icon">⏸️</div>
                         <div id="step4Message" class="text-muted small"></div>
-                        <div id="step4Action"></div>
                     </div>
                 </div>
             </div>
@@ -102,7 +91,6 @@
                         <h6 class="card-title sync-card-title">5. Update Web Inventory</h6>
                         <div id="step5Icon" class="sync-icon">⏸️</div>
                         <div id="step5Message" class="text-muted small"></div>
-                        <div id="step5Action"></div>
                     </div>
                 </div>
             </div>
@@ -151,15 +139,12 @@
     var pollInterval = null;
     var lastActionTime = 0;
     var currentPollIntervalMs = null;
-    var dismissedFailures = {};
     var progressEntries = [];
     var previousStepStatuses = {};
 
     // Constants
-    var ULTRA_FAST_POLL_MS = 500;
     var ACTIVE_POLL_MS = 1000;
     var IDLE_POLL_MS = 10000;
-    var ACTION_GRACE_PERIOD_MS = 5000;
 
     var ICONS = {
         waiting: '⏸️',
@@ -169,19 +154,132 @@
         failed: '❌'
     };
 
-    var actionInProgress = false; // Prevent double-clicks
-    var loggedActions = {}; // Track what we've logged to prevent duplicates
+    var actionInProgress = false;
+    var loggedActions = {};
 
-    function updateSharedAreaImmediate(stepNum, stepName, actionText) {
+    // =====================================================================
+    //  STAGE CONFIG LOOKUP TABLE — Single source of truth for UI rendering
+    // =====================================================================
+
+    var STAGE_CONFIG = {
+        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'] },
+        IMPORTING_PRODUCTS:     { message: 'Importing products...',                button: null, spinner: true },
+        IMPORTING_ORDERS:       { message: 'Products imported. Import orders',     button: ['importOrders', 'Import Orders'] },
+        WAITING_ORDER_EXPORT:   { message: '{count} orders to export',             button: ['exportToComax', 'Export Orders'] },
+        EXPORTING_ORDERS:       { message: 'Exporting orders...',                  button: null, spinner: true },
+        WAITING_ORDER_CONFIRM:  { message: 'Upload to Comax, then confirm',       button: ['confirmComax', 'Confirm'], confirm: true },
+        WAITING_COMAX_IMPORT:   { message: 'Import Comax products',               button: ['startComaxImport', 'Import Comax'] },
+        IMPORTING_COMAX:        { message: 'Importing Comax products...',          button: null, spinner: true },
+        VALIDATING:             { message: 'Running validation...',                button: null, spinner: true },
+        WAITING_WEB_EXPORT:     { message: 'Generate web inventory export',        button: ['generateWebExport', 'Generate'] },
+        GENERATING_WEB_EXPORT:  { message: 'Generating export...',                 button: null, spinner: true },
+        WAITING_WEB_CONFIRM:    { message: 'Upload to website, then confirm',      button: ['confirmWeb', 'Confirm'], confirm: true },
+        COMPLETE:               { message: '<span class="text-success">Sync complete</span>', button: null },
+        FAILED:                 { message: 'Failed: {error}',                      button: ['retryFailed', 'Retry'] }
+    };
+
+    // =====================================================================
+    //  UI UPDATE
+    // =====================================================================
+
+    function updateUI(status) {
+        currentSessionId = status.sessionId;
+
+        // Session display
+        document.getElementById('sessionIdDisplay').textContent =
+            status.sessionId ? 'Session: ' + status.sessionId : '';
+
+        // Update step cards
+        var steps = status.steps || {};
+        for (var i = 1; i <= 5; i++) {
+            updateStepCard(i, steps['step' + i]);
+        }
+
+        // Log progress on step transitions
+        logStepTransitions(steps);
+
+        // Update footer
+        document.getElementById('footerStatus').textContent = status.lastUpdated ?
+            'Last updated: ' + new Date(status.lastUpdated).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }) : 'Ready';
+
+        // Update shared message/action from stage lookup
+        updateSharedArea(status);
+    }
+
+    function updateStepCard(stepNum, stepData) {
+        var card = document.getElementById('step' + stepNum + 'Card');
+        var icon = document.getElementById('step' + stepNum + 'Icon');
+        var message = document.getElementById('step' + stepNum + 'Message');
+
+        card.className = 'card h-100';
+        message.innerHTML = '';
+
+        if (!stepData) {
+            icon.textContent = ICONS.waiting;
+            return;
+        }
+
+        icon.textContent = ICONS[stepData.status] || ICONS.waiting;
+
+        if (stepData.status === 'completed') {
+            card.classList.add('border-success', 'bg-light');
+        } else if (stepData.status === 'skipped') {
+            card.classList.add('border-secondary', 'bg-light');
+        } else if (stepData.status === 'failed') {
+            card.classList.add('border-danger');
+        } else if (stepData.status === 'processing') {
+            card.classList.add('border-primary', 'shadow');
+        }
+    }
+
+    function updateSharedArea(status) {
         var msgEl = document.getElementById('sharedMessage');
         var actionEl = document.getElementById('sharedAction');
-        msgEl.innerHTML = '<strong>Step ' + stepNum + ': ' + stepName + '</strong> - <span class="text-primary">' + actionText + '</span>';
-        actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
-        // Don't log "Importing..." - wait for result
+        var stage = status.stage || 'IDLE';
+
+        var config = STAGE_CONFIG[stage];
+        if (!config) {
+            msgEl.innerHTML = 'Stage: ' + stage;
+            actionEl.innerHTML = '';
+            return;
+        }
+
+        // Build message with template substitutions
+        var message = config.message;
+        message = message.replace('{count}', status.ordersPendingExportCount || 0);
+        message = message.replace('{error}', '<span class="text-danger">' + (status.errorMessage || 'Unknown') + '</span>');
+
+        // Add filename context for confirm stages
+        if (stage === 'WAITING_ORDER_CONFIRM' && status.comaxOrderExportFilename) {
+            message = 'Export: ' + status.comaxOrderExportFilename + '. Upload to Comax, then confirm';
+        }
+        if (stage === 'WAITING_WEB_CONFIRM' && status.webExportFilename) {
+            message = 'Export: ' + status.webExportFilename + '. Upload to website, then confirm';
+        }
+
+        msgEl.innerHTML = message;
+
+        // Build action button or spinner
+        if (config.spinner) {
+            actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+        } else if (config.button) {
+            actionEl.innerHTML = btn(config.button[0], config.button[1]);
+        } else {
+            actionEl.innerHTML = '';
+        }
+
+        // Log sync complete once
+        if (stage === 'COMPLETE' && !previousStepStatuses.syncComplete) {
+            addProgressEntry('Daily sync completed', true);
+            previousStepStatuses.syncComplete = true;
+        }
+    }
+
+    function btn(action, label) {
+        return '<button class="btn btn-sm" onclick="window.SyncWidget.' + action + '(); return false;">' + label + '</button>';
     }
 
     function addProgressEntry(text, isSuccess) {
-        // Prevent duplicate entries
         var key = text.replace(/\d+:\d+:\d+ [AP]M/g, '').trim();
         if (loggedActions[key]) return;
         loggedActions[key] = true;
@@ -194,230 +292,34 @@
         document.getElementById('progressLog').innerHTML = progressEntries.join('<br>');
     }
 
-    function updateUI(status) {
-        var now = Date.now();
+    function logStepTransitions(steps) {
+        var stepNames = {
+            1: 'Web products',
+            2: 'Web orders',
+            3: 'Comax orders',
+            4: 'Comax products',
+            5: 'Web inventory'
+        };
 
-        // Don't overwrite recent user actions
-        if (now - lastActionTime < ACTION_GRACE_PERIOD_MS) {
-            return;
-        }
-
-        // Track message timestamps to prevent stale overwrites
-        var messageTimestamp = new Date(status.lastUpdated || 0).getTime();
-        var currentMessageTimestamp = window.lastMessageTimestamp || 0;
-
-        if (messageTimestamp > 0 && messageTimestamp <= currentMessageTimestamp) {
-            return;
-        }
-
-        window.lastMessageTimestamp = messageTimestamp;
-
-        currentSessionId = status.sessionId;
-
-        // Update session display
-        document.getElementById('sessionIdDisplay').textContent = status.sessionId ? 'Session: ' + status.sessionId : '';
-
-        // Update each step (pass currentStep so we only show actions for the active step)
-        var currentStep = status.currentStep || 0;
-        var ordersPending = status.ordersPendingExportCount || 0;
-        updateStep(1, status.step1, currentStep === 1, currentStep);
-        updateStep(2, status.step2, currentStep === 2, currentStep);
-        updateStep(3, status.step3, currentStep === 3, currentStep, ordersPending);
-        updateStep(4, status.step4, currentStep === 4, currentStep);
-        updateStep(5, status.step5, currentStep === 5, currentStep, status.webExportFilename);
-
-        // Log progress on step completion transitions with context
-        var steps = [null, status.step1, status.step2, status.step3, status.step4, status.step5];
         for (var i = 1; i <= 5; i++) {
-            var stepData = steps[i];
-            var stepStatus = stepData ? stepData.status : null;
+            var stepData = steps['step' + i];
+            var newStatus = stepData ? stepData.status : null;
             var prevStatus = previousStepStatuses['step' + i];
+            var msg = stepData ? stepData.message : '';
 
-            var isCompleted = stepStatus === 'completed' && prevStatus !== 'completed';
-            var isSkipped = stepStatus === 'skipped' && prevStatus !== 'skipped';
-            // Detect step 3 export ready (waiting after processing) - needs confirmation
-            var isOrderExportReady = i === 3 && stepStatus === 'waiting' && prevStatus === 'processing';
-            // Detect step 5 export ready (waiting after processing)
-            var isExportReady = i === 5 && stepStatus === 'waiting' && prevStatus === 'processing';
-
-            if (isCompleted || isSkipped || isExportReady || isOrderExportReady) {
-                var logMsg = '';
-                var msg = stepData.message || '';
-
-                switch (i) {
-                    case 1: // Web Product Import
-                        var match = msg.match(/(\d+)/);
-                        logMsg = 'Web products imported' + (match ? ' (' + match[1] + ')' : '');
-                        break;
-                    case 2: // Web Order Import
-                        var match2 = msg.match(/(\d+)/);
-                        logMsg = 'Web orders imported' + (match2 ? ' (' + match2[1] + ')' : '');
-                        break;
-                    case 3: // Update Comax Orders
-                        if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('order') >= 0)) {
-                            logMsg = 'No orders to export (skipped)';
-                        } else if (isOrderExportReady) {
-                            // Extract filename from message like "Export ready: filename.csv (X orders)"
-                            var fileMatch3 = msg.match(/Export ready:\s*([^\(]+)/);
-                            var countMatch3 = msg.match(/\((\d+)\s*orders?\)/i);
-                            var filename3 = fileMatch3 ? fileMatch3[1].trim() : '';
-                            var count3 = countMatch3 ? countMatch3[1] : '';
-                            logMsg = 'Orders exported' + (count3 ? ' (' + count3 + ')' : '') + (filename3 ? ': ' + filename3 : '');
-                        } else {
-                            logMsg = 'Orders exported to Comax';
-                        }
-                        break;
-                    case 4: // Import Comax Products
-                        logMsg = 'Comax products imported';
-                        break;
-                    case 5: // Update Web Inventory
-                        if (isSkipped || (msg.indexOf('No') >= 0 && msg.indexOf('changes') >= 0)) {
-                            logMsg = 'Web inventory skipped (no changes)';
-                        } else if (isExportReady) {
-                            // Extract filename from message like "Export ready: filename.csv"
-                            var fileMatch = msg.match(/Export ready:\s*(.+)/);
-                            logMsg = 'Web export created' + (fileMatch ? ': ' + fileMatch[1] : '');
-                        } else {
-                            logMsg = 'Web inventory updated';
-                        }
-                        break;
-                }
-
-                if (logMsg) {
-                    addProgressEntry(logMsg, true);
-                }
+            if (newStatus === 'completed' && prevStatus !== 'completed') {
+                addProgressEntry(stepNames[i] + ' - ' + (msg || 'completed'), true);
+            } else if (newStatus === 'skipped' && prevStatus !== 'skipped') {
+                addProgressEntry(stepNames[i] + ' - skipped', true);
             }
-            previousStepStatuses['step' + i] = stepStatus;
-        }
 
-        // Update footer with date and time (Israel timezone)
-        document.getElementById('footerStatus').textContent = status.lastUpdated ?
-            'Last updated: ' + new Date(status.lastUpdated).toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }) : 'Ready';
-
-        // Update shared message/action area
-        updateSharedArea(status);
-
-        // Check for any failures (only if session active)
-        if (status.sessionId) {
-            checkForFailures();
+            previousStepStatuses['step' + i] = newStatus;
         }
     }
 
-    function btn(action, label) {
-        return '<button class="btn btn-sm" onclick="window.SyncWidget.' + action + '(); return false;">' + label + '</button>';
-    }
-
-    function spinner() {
-        return '<div class="spinner-border spinner-border-sm" role="status"></div>';
-    }
-
-    function updateSharedArea(status) {
-        var msgEl = document.getElementById('sharedMessage');
-        var actionEl = document.getElementById('sharedAction');
-        var stage = status.currentStage || 'IDLE';
-        var orderCount = status.ordersPendingExportCount || 0;
-
-        // Get step statuses
-        var s1 = status.step1 ? status.step1.status : null;
-        var s2 = status.step2 ? status.step2.status : null;
-        var s3 = status.step3 ? status.step3.status : null;
-        var s4 = status.step4 ? status.step4.status : null;
-        var s5 = status.step5 ? status.step5.status : null;
-
-        var message = '';
-        var actionHtml = '';
-
-        // Determine what to show based on stage + step status
-        // Check processing states first, IDLE last
-
-        // Step 1 processing
-        if ((stage === 'WEB_PRODUCTS_IMPORTING' || stage === 'WEB_IMPORT_PROCESSING') && s1 !== 'completed') {
-            message = 'Importing web products...';
-            actionHtml = spinner();
-        }
-        // Step 1 done, step 2 ready
-        else if (s1 === 'completed' && s2 !== 'completed' && s2 !== 'processing') {
-            message = 'Products imported. Import orders';
-            actionHtml = btn('importOrders', 'Import Orders');
-        }
-        // Step 2 processing
-        else if (stage === 'WEB_ORDERS_IMPORTING' || s2 === 'processing') {
-            message = 'Importing web orders...';
-            actionHtml = spinner();
-        }
-        // Step 2 done, orders to export (but not yet exported)
-        else if (stage === 'WAITING_FOR_COMAX' && orderCount > 0 && s3 !== 'completed' && !status.comaxOrdersExported) {
-            message = orderCount + ' orders to export';
-            actionHtml = btn('exportToComax', 'Export Orders');
-        }
-        // Step 2 done, no orders - skip to step 4
-        else if ((stage === 'WAITING_FOR_COMAX' || stage === 'READY_FOR_COMAX_IMPORT') && orderCount === 0 && s4 !== 'completed' && s4 !== 'processing') {
-            message = 'No orders. Import Comax products';
-            actionHtml = btn('startComaxImport', 'Import Comax');
-        }
-        // Orders exported, need confirmation
-        else if (s3 === 'waiting' && status.comaxOrdersExported) {
-            var comaxFile = status.comaxOrderExportFilename || '';
-            message = comaxFile ? 'Export: ' + comaxFile : 'Orders exported. Confirm upload';
-            actionHtml = btn('confirmComax', 'Confirm');
-        }
-        // Ready for Comax import (either explicit stage OR step 3 completed while waiting)
-        else if (stage === 'READY_FOR_COMAX_IMPORT' || (stage === 'WAITING_FOR_COMAX' && s3 === 'completed')) {
-            message = 'Import Comax products';
-            actionHtml = btn('startComaxImport', 'Import Comax');
-        }
-        // Comax importing
-        else if (stage === 'COMAX_IMPORT_PROCESSING') {
-            message = 'Importing Comax products...';
-            actionHtml = spinner();
-        }
-        // Validating
-        else if (stage === 'VALIDATING') {
-            message = 'Running validation...';
-            actionHtml = spinner();
-        }
-        // Ready for web export
-        else if (stage === 'READY_FOR_WEB_EXPORT') {
-            message = 'Generate web inventory export';
-            actionHtml = btn('generateWebExport', 'Generate');
-        }
-        // Web export processing
-        else if (stage === 'WEB_EXPORT_PROCESSING') {
-            message = 'Generating export...';
-            actionHtml = spinner();
-        }
-        // Web export ready for confirmation
-        else if (stage === 'WEB_EXPORT_GENERATED') {
-            var webFile = status.webExportFilename || '';
-            message = webFile ? 'Export: ' + webFile : 'Export ready. Confirm upload';
-            actionHtml = btn('confirmWeb', 'Confirm');
-        }
-        // Complete
-        else if (stage === 'COMPLETE') {
-            message = '<span class="text-success">Sync complete</span>';
-            if (!previousStepStatuses.syncComplete) {
-                addProgressEntry('Daily sync completed', true);
-                previousStepStatuses.syncComplete = true;
-            }
-        }
-        // Failed - show retry button
-        else if (stage === 'FAILED') {
-            message = '<span class="text-danger">Failed: ' + (status.errorMessage || 'Unknown') + '</span>';
-            actionHtml = btn('retryFailed', 'Retry');
-        }
-        // IDLE - no session (check last so processing states take priority)
-        else if (stage === 'IDLE' || !status.sessionId) {
-            message = 'Start daily sync';
-            actionHtml = btn('importProducts', 'Start Import');
-        }
-        // Fallback - show actual stage for debugging
-        else {
-            message = 'Stage: ' + stage;
-        }
-
-        msgEl.innerHTML = message;
-        actionEl.innerHTML = actionHtml;
-    }
+    // =====================================================================
+    //  INVOICE FOLDER (Pre-Sync card)
+    // =====================================================================
 
     function updateInvoiceFolder() {
         google.script.run
@@ -428,12 +330,9 @@
                 var iconEl = document.getElementById('invoiceIcon');
                 var card = document.getElementById('invoiceCard');
 
-                // Reset card styling
                 card.className = 'card h-100';
-
                 var hasIssues = false;
 
-                // Invoice count display
                 if (info.count === 0) {
                     countEl.innerHTML = '<span class="text-success">Invoices: 0</span>';
                 } else if (info.count > 0) {
@@ -443,7 +342,6 @@
                     countEl.innerHTML = '<span class="text-muted">Invoices: N/A</span>';
                 }
 
-                // Review count display
                 var reviewCount = info.reviewCount || 0;
                 if (reviewCount === 0) {
                     reviewEl.innerHTML = '<span class="text-success">Reviews: 0</span>';
@@ -452,7 +350,6 @@
                     hasIssues = true;
                 }
 
-                // Icon and card styling based on overall status
                 if (hasIssues) {
                     iconEl.textContent = '⚠️';
                     card.classList.add('border-warning');
@@ -473,357 +370,74 @@
             .getInventoryReceiptsInfo();
     }
 
-    function updateStep(stepNum, stepData, isActive, currentStep, extraData) {
-        var card = document.getElementById('step' + stepNum + 'Card');
-        var icon = document.getElementById('step' + stepNum + 'Icon');
-        var message = document.getElementById('step' + stepNum + 'Message');
-        var action = document.getElementById('step' + stepNum + 'Action');
+    // =====================================================================
+    //  ACTION FUNCTIONS
+    // =====================================================================
 
-        // Reset card styling
-        card.className = 'card h-100';
-
-        // Minimal step box display - icon only
-        // All details go to shared area and progress log
-        message.innerHTML = '';
-        action.innerHTML = '';
-
-        if (!stepData) {
-            icon.textContent = ICONS.waiting;
-            if (isActive || (stepNum === 1 && currentStep === 0)) {
-                card.classList.add('border-primary');
-            }
-            return;
-        }
-
-        // Update icon based on status
-        icon.textContent = ICONS[stepData.status] || ICONS.waiting;
-
-        // Color code card by status
-        if (isActive) {
-            card.classList.add('border-primary', 'shadow');
-        } else if (stepData.status === 'completed') {
-            card.classList.add('border-success', 'bg-light');
-        } else if (stepData.status === 'skipped') {
-            card.classList.add('border-secondary', 'bg-light');
-        } else if (stepData.status === 'failed') {
-            card.classList.add('border-danger');
-        }
-    }
-
-    // Action functions - all check actionInProgress to prevent double-clicks
-    function importProducts() {
+    function runAction(backendFn, stepNum, actionLabel) {
         if (actionInProgress) return;
         actionInProgress = true;
         lastActionTime = Date.now();
-        updateSharedAreaImmediate(1, 'Web Product Import', 'Importing...');
 
-        var step1Card = document.getElementById('step1Card');
-        var step1Icon = document.getElementById('step1Icon');
-        step1Card.className = 'card h-100 border-primary shadow';
-        step1Icon.textContent = '🔄';
+        // Immediate UI feedback
+        var msgEl = document.getElementById('sharedMessage');
+        var actionEl = document.getElementById('sharedAction');
+        msgEl.innerHTML = '<strong>' + actionLabel + '</strong>';
+        actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
 
-        var originalActionTime = lastActionTime;
+        if (stepNum) {
+            var card = document.getElementById('step' + stepNum + 'Card');
+            var icon = document.getElementById('step' + stepNum + 'Icon');
+            card.className = 'card h-100 border-primary shadow';
+            icon.textContent = '🔄';
+        }
 
         google.script.run
             .withSuccessHandler(function(status) {
                 actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
+                updateUI(status);
+                adjustPolling(status);
             })
             .withFailureHandler(function(err) {
                 actionInProgress = false;
-                step1Card.classList.add('border-danger');
-                step1Icon.textContent = '❌';
-                updateSharedAreaImmediate(1, 'Web Product Import', 'Failed: ' + (err.message || err));
+                if (stepNum) {
+                    document.getElementById('step' + stepNum + 'Card').classList.add('border-danger');
+                    document.getElementById('step' + stepNum + 'Icon').textContent = '❌';
+                }
+                msgEl.innerHTML = '<span class="text-danger">Failed: ' + (err.message || err) + '</span>';
+                actionEl.innerHTML = '';
             })
-            .importWebProductsBackend();
+            [backendFn]();
+    }
+
+    function importProducts() {
+        runAction('importWebProductsBackend', 1, 'Importing products...');
     }
 
     function importOrders() {
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(2, 'Web Order Import', 'Importing...');
-
-        var step2Card = document.getElementById('step2Card');
-        var step2Icon = document.getElementById('step2Icon');
-        step2Card.className = 'card h-100 border-primary shadow';
-        step2Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step2Card.classList.add('border-danger');
-                step2Icon.textContent = '❌';
-                updateSharedAreaImmediate(2, 'Web Order Import', 'Failed: ' + (err.message || err));
-            })
-            .importWebOrdersBackend();
+        runAction('importWebOrdersBackend', 2, 'Importing orders...');
     }
 
     function exportToComax() {
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Exporting...');
-
-        var step3Card = document.getElementById('step3Card');
-        var step3Icon = document.getElementById('step3Icon');
-        step3Card.className = 'card h-100 border-primary shadow';
-        step3Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step3Card.classList.add('border-danger');
-                step3Icon.textContent = '❌';
-                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
-            })
-            .exportComaxOrdersBackend();
+        runAction('exportComaxOrdersBackend', 3, 'Exporting orders...');
     }
 
     function confirmComax() {
-        if (!confirm('Confirm that orders have been uploaded to Comax?')) {
-            return;
-        }
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Confirming...');
-
-        var step3Card = document.getElementById('step3Card');
-        var step3Icon = document.getElementById('step3Icon');
-        step3Card.className = 'card h-100 border-primary shadow';
-        step3Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step3Card.classList.add('border-danger');
-                step3Icon.textContent = '❌';
-                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
-            })
-            .confirmComaxUpdateBackend();
+        if (!confirm('Confirm that orders have been uploaded to Comax?')) return;
+        runAction('confirmComaxUpdateBackend', 3, 'Confirming...');
     }
 
     function startComaxImport() {
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(4, 'Import Comax Products', 'Starting...');
-
-        var step4Card = document.getElementById('step4Card');
-        var step4Icon = document.getElementById('step4Icon');
-        step4Card.className = 'card h-100 border-primary shadow';
-        step4Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step4Card.classList.add('border-danger');
-                step4Icon.textContent = '❌';
-                updateSharedAreaImmediate(4, 'Import Comax Products', 'Failed: ' + (err.message || err));
-            })
-            .startComaxImportBackend();
+        runAction('startComaxImportBackend', 4, 'Importing Comax products...');
     }
 
     function generateWebExport() {
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(5, 'Update Web Inventory', 'Generating...');
-
-        var step5Card = document.getElementById('step5Card');
-        var step5Icon = document.getElementById('step5Icon');
-        step5Card.className = 'card h-100 border-primary shadow';
-        step5Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step5Card.classList.add('border-danger');
-                step5Icon.textContent = '❌';
-                updateSharedAreaImmediate(5, 'Update Web Inventory', 'Failed: ' + (err.message || err));
-            })
-            .generateWebExportBackend();
+        runAction('generateWebExportBackend', 5, 'Generating export...');
     }
 
     function confirmWeb() {
-        if (!confirm('Confirm that web inventory has been uploaded to the website?')) {
-            return;
-        }
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(5, 'Update Web Inventory', 'Confirming...');
-
-        var step5Card = document.getElementById('step5Card');
-        var step5Icon = document.getElementById('step5Icon');
-        step5Card.className = 'card h-100 border-primary shadow';
-        step5Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step5Card.classList.add('border-danger');
-                step5Icon.textContent = '❌';
-                updateSharedAreaImmediate(5, 'Update Web Inventory', 'Failed: ' + (err.message || err));
-            })
-            .confirmWebInventoryUpdateBackend();
-    }
-
-    function skipOrders() {
-        // Skip order export when there are no orders - calls same backend which handles it
-        if (actionInProgress) return;
-        actionInProgress = true;
-        lastActionTime = Date.now();
-        updateSharedAreaImmediate(3, 'Update Comax Orders', 'Skipping (no orders)...');
-        addProgressEntry('No orders to export - skipped', true);
-
-        var step3Card = document.getElementById('step3Card');
-        var step3Icon = document.getElementById('step3Icon');
-        step3Card.className = 'card h-100 border-primary shadow';
-        step3Icon.textContent = '🔄';
-
-        var originalActionTime = lastActionTime;
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                actionInProgress = false;
-                if (lastActionTime === originalActionTime) {
-                    updateUI(status);
-                    adjustPolling(status);
-                }
-            })
-            .withFailureHandler(function(err) {
-                actionInProgress = false;
-                step3Card.classList.add('border-danger');
-                step3Icon.textContent = '❌';
-                updateSharedAreaImmediate(3, 'Update Comax Orders', 'Failed: ' + (err.message || err));
-            })
-            .exportComaxOrdersBackend();
-    }
-
-    function checkForFailures() {
-        if (!currentSessionId) return;
-
-        google.script.run
-            .withSuccessHandler(function(failures) {
-                var banner = document.getElementById('failureBanner');
-                var failureList = document.getElementById('failureList');
-
-                // Filter out dismissed failures
-                var activeFailures = failures.filter(function(f) {
-                    return !dismissedFailures[f.jobType + f.error];
-                });
-
-                if (activeFailures.length > 0) {
-                    failureList.innerHTML = activeFailures.map(function(f) {
-                        return '<div class="mb-1"><strong>' + f.jobType + ':</strong> ' + f.error + '</div>';
-                    }).join('');
-                    banner.classList.remove('d-none');
-                } else {
-                    banner.classList.add('d-none');
-                }
-            })
-            .withFailureHandler(function(err) {
-                console.error('Failure check error:', err);
-            })
-            .getRecentFailures(currentSessionId);
-    }
-
-    function dismissFailures() {
-        var failureList = document.getElementById('failureList');
-        if (failureList.innerHTML) {
-            var failures = failureList.querySelectorAll('div');
-            failures.forEach(function(div) {
-                dismissedFailures[div.textContent] = true;
-            });
-        }
-        document.getElementById('failureBanner').classList.add('d-none');
-    }
-
-    function resetSync() {
-        if (!confirm('Reset the sync workflow? This will clear the current session and all progress.')) {
-            return;
-        }
-
-        lastActionTime = Date.now();
-        document.getElementById('footerStatus').textContent = 'Resetting...';
-
-        // Clear progress log and step tracking
-        progressEntries = [];
-        previousStepStatuses = {};
-        loggedActions = {};
-        document.getElementById('progressLog').innerHTML = '';
-
-        google.script.run
-            .withSuccessHandler(function(status) {
-                updateUI(status);
-                adjustPolling(status);
-                // Also refresh invoice count after reset
-                updateInvoiceFolder();
-                document.getElementById('footerStatus').textContent = 'Reset complete';
-            })
-            .withFailureHandler(function(err) {
-                document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
-            })
-            .resetSyncStateBackend();
+        if (!confirm('Confirm that web inventory has been uploaded to the website?')) return;
+        runAction('confirmWebInventoryUpdateBackend', 5, 'Confirming...');
     }
 
     function retryFailed() {
@@ -842,12 +456,35 @@
             .retryFailedStepBackend();
     }
 
-    function refreshStatus() {
-        var timeSinceAction = Date.now() - lastActionTime;
-        if (timeSinceAction < ACTION_GRACE_PERIOD_MS) {
-            return;
-        }
+    function resetSync() {
+        if (!confirm('Reset the sync workflow? This will clear the current session and all progress.')) return;
 
+        lastActionTime = Date.now();
+        document.getElementById('footerStatus').textContent = 'Resetting...';
+
+        progressEntries = [];
+        previousStepStatuses = {};
+        loggedActions = {};
+        document.getElementById('progressLog').innerHTML = '';
+
+        google.script.run
+            .withSuccessHandler(function(status) {
+                updateUI(status);
+                adjustPolling(status);
+                updateInvoiceFolder();
+                document.getElementById('footerStatus').textContent = 'Reset complete';
+            })
+            .withFailureHandler(function(err) {
+                document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
+            })
+            .resetSyncStateBackend();
+    }
+
+    // =====================================================================
+    //  POLLING
+    // =====================================================================
+
+    function refreshStatus() {
         google.script.run
             .withSuccessHandler(function(status) {
                 updateUI(status);
@@ -860,59 +497,54 @@
     }
 
     function adjustPolling(status) {
-        var now = Date.now();
-        var timeSinceAction = now - lastActionTime;
+        var stage = status.stage || 'IDLE';
+        var config = STAGE_CONFIG[stage];
         var newInterval;
 
-        if (timeSinceAction < 5000) {
-            newInterval = ULTRA_FAST_POLL_MS;
-        } else {
-            var isActive = status.sessionId && status.currentStep >= 1 && status.currentStep <= 5;
-            var anyProcessing = isActive && [status.step1, status.step2, status.step3, status.step4, status.step5]
-                .some(function(step) { return step && step.status === 'processing'; });
-
-            if (anyProcessing) {
-                newInterval = ACTIVE_POLL_MS;
-            } else if (isActive) {
-                newInterval = IDLE_POLL_MS;
-            } else {
-                if (pollInterval) {
-                    clearInterval(pollInterval);
-                    pollInterval = null;
-                    currentPollIntervalMs = null;
-                    window._syncWidgetPollInterval = null;
-                }
-                return;
+        // Processing stages (spinner) = fast poll
+        if (config && config.spinner) {
+            newInterval = ACTIVE_POLL_MS;
+        }
+        // Active session but waiting for user = slow poll
+        else if (status.sessionId && stage !== 'IDLE' && stage !== 'COMPLETE') {
+            newInterval = IDLE_POLL_MS;
+        }
+        // No session or complete = stop polling
+        else {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                currentPollIntervalMs = null;
+                window._syncWidgetPollInterval = null;
             }
+            return;
         }
 
         if (newInterval !== currentPollIntervalMs) {
-            if (pollInterval) {
-                clearInterval(pollInterval);
-            }
+            if (pollInterval) clearInterval(pollInterval);
             currentPollIntervalMs = newInterval;
             pollInterval = setInterval(refreshStatus, newInterval);
             window._syncWidgetPollInterval = pollInterval;
         }
     }
 
-    // Expose public API on window
+    // =====================================================================
+    //  PUBLIC API & INIT
+    // =====================================================================
+
     window.SyncWidget = {
         importProducts: importProducts,
         importOrders: importOrders,
         exportToComax: exportToComax,
-        skipOrders: skipOrders,
         confirmComax: confirmComax,
         startComaxImport: startComaxImport,
         generateWebExport: generateWebExport,
         confirmWeb: confirmWeb,
         resetSync: resetSync,
-        retryFailed: retryFailed,
-        dismissFailures: dismissFailures
+        retryFailed: retryFailed
     };
 
-    // Initialize widget
-    console.log('SyncWidget: Initializing (fresh load or navigation)');
+    console.log('SyncWidget: Initializing (stage-based state machine)');
     refreshStatus();
     updateInvoiceFolder();
 

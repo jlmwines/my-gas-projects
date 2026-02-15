@@ -1,756 +1,471 @@
 /**
  * @file WebAppSync.js
  * @description Backend functions exposed to the frontend UI for managing the Daily Sync workflow.
+ * Every function has a stage guard — it rejects calls from wrong stages.
+ * All state lives in SyncStateService (single JSON in SysConfig).
  */
 
-/**
- * Helper to return full merged state (session info + step statuses).
- * All backend functions should use this to ensure the widget gets complete data.
- */
-function _getMergedStatus(sessionId) {
-  const session = SyncStateService.getActiveSession();
-  const statusData = SyncStatusService.getSessionStatus(sessionId);
-  return { ...session, ...statusData };
-}
+// =========================================================================
+//  STATE RETRIEVAL
+// =========================================================================
 
 /**
- * Retrieves the current sync state.
- * Accessible from frontend via `google.script.run.getSyncStateFromBackend()`.
+ * Retrieves the current sync state for the frontend.
+ * Also checks if any background jobs completed and advances stage if needed.
  * @returns {object} The current sync state.
  */
 function getSyncStateFromBackend() {
-  // Check if any jobs completed and advance stage if needed
   try {
     OrchestratorService.checkAndAdvanceSyncState();
   } catch (e) {
     logger.warn('WebAppSync', 'getSyncStateFromBackend', `State advancement check failed: ${e.message}`);
   }
-
-  // Lightweight read: just sessionId + currentStage from config (no job queue lookups)
-  const session = SyncStateService.getActiveSession();
-
-  // Get step statuses from SysSyncStatus (single sheet read)
-  let statusData;
-  if (session.sessionId) {
-    statusData = SyncStatusService.getSessionStatus(session.sessionId);
-  } else {
-    statusData = SyncStatusService.getDefaultStatus(null);
-  }
-
-  // Merge: session info + step statuses
-  return {
-    ...session,
-    ...statusData
-  };
+  return SyncStateService.getActiveSession();
 }
 
-/**
- * NEW: Get sync status from the new single source of truth (SyncSessionService).
- * This is the new API that returns clear stage names and next actions.
- * @returns {object} Status with stage, nextAction, stepDetails
- */
-function getSyncSessionStatus() {
-  // Check if any jobs completed and advance stage if needed
-  try {
-    OrchestratorService.checkAndAdvanceSyncState();
-  } catch (e) {
-    logger.warn('WebAppSync', 'getSyncSessionStatus', `State advancement check failed: ${e.message}`);
-  }
-
-  // Read from the new single source of truth
-  return SyncSessionService.getStatus();
-}
+// =========================================================================
+//  STEP 1: IMPORT WEB PRODUCTS (translations + products)
+// =========================================================================
 
 /**
- * Initiates the first stage of the Daily Sync workflow.
- * Generates a new Session ID, updates state, and queues initial import jobs.
- * Accessible from frontend via `google.script.run.startDailySyncBackend()`.
+ * Stage guard: IDLE
+ * Imports web products (translations first, then English products).
  * @returns {object} The updated sync state.
  */
-function startDailySyncBackend() {
+function importWebProductsBackend() {
   const serviceName = 'WebAppSync';
-  const functionName = 'startDailySyncBackend';
-  logger.info(serviceName, functionName, 'Starting new Daily Sync workflow.');
+  const functionName = 'importWebProductsBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'IDLE') {
+    throw new Error(`Cannot start import: sync is at stage ${currentState.stage}, expected IDLE.`);
+  }
+
+  logger.info(serviceName, functionName, 'Starting web products import.');
 
   try {
-    const newSessionId = OrchestratorService.generateSessionId();
+    const sessionId = OrchestratorService.generateSessionId();
 
     // Create sync session tracking task
     try {
       TaskService.createTask(
         'task.sync.daily_session',
-        newSessionId,
+        sessionId,
         `Sync ${new Date().toISOString().split('T')[0]}`,
         `Daily Sync - ${new Date().toLocaleDateString()}`,
         'Sync session initiated',
-        newSessionId
+        sessionId
       );
     } catch (taskError) {
       logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
     }
 
-    // Write initial status for Step 1
-    SyncStatusService.writeStatus(newSessionId, {
-      step: 1,
-      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-      status: 'processing',
-      message: 'Queueing import jobs...'
-    });
-
-    // Keep old state for backward compatibility during transition
+    // Initialize state: IDLE -> IMPORTING_PRODUCTS
     const newState = SyncStateService.getDefaultState();
-    newState.sessionId = newSessionId;
-    newState.currentStage = 'WEB_IMPORT_PROCESSING';
+    newState.sessionId = sessionId;
+    newState.stage = 'IMPORTING_PRODUCTS';
     newState.lastUpdated = new Date().toISOString();
+    newState.steps.step1 = { status: 'processing', message: 'Importing translations and products...' };
     SyncStateService.setSyncState(newState);
 
-    // NEW: Also write to SyncSessionService (single source of truth)
-    try {
-      SyncSessionService.startSession(newSessionId);
-    } catch (sessionError) {
-      logger.warn(serviceName, functionName, `SyncSessionService.startSession failed: ${sessionError.message}`);
-    }
+    // Queue jobs: translations first, then products
+    OrchestratorService.queueWebProductsImport(sessionId);
 
-    // Queue import jobs
-    OrchestratorService.queueWebFilesForSync(newSessionId);
+    // Process jobs for this session (stops on first failure)
+    const result = OrchestratorService.processSessionJobs(sessionId);
 
-    // Update status
-    SyncStatusService.writeStatus(newSessionId, {
-      step: 1,
-      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-      status: 'processing',
-      message: 'Processing orders, products, and translations...'
-    });
-
-    // Trigger immediate job processing
-    OrchestratorService.run('hourly');
-
-    logger.info(serviceName, functionName, `Daily Sync started. Session ID: ${newSessionId}`, { sessionId: newSessionId });
-
-    // Return status for UI
-    return _getMergedStatus(newSessionId);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error starting Daily Sync: ${e.message}`, e);
-    const sessionId = OrchestratorService.generateSessionId();
-
-    SyncStatusService.writeStatus(sessionId, {
-      step: 1,
-      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    return _getMergedStatus(sessionId);
-  }
-}
-
-/**
- * Initiates the final stage of the Daily Sync workflow (Validation & Export).
- * Accessible from frontend via `google.script.run.finalizeDailySyncBackend()`.
- * @returns {object} The updated sync state.
- */
-function finalizeDailySyncBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'finalizeDailySyncBackend';
-  logger.info(serviceName, functionName, 'Finalizing Daily Sync workflow.');
-
-  try {
-    const currentState = SyncStateService.getSyncState();
-    // Validation: Ensure we are in a valid state to finalize (e.g., COMAX_IMPORT_PROCESSING completed)
-    // For now, we'll be permissive to allow manual advancement if needed, but ideally check job status.
-    
-    currentState.currentStage = 'READY_FOR_WEB_EXPORT'; // Transition to new stage for manual trigger
-    currentState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(currentState);
-
-    // Only queue Validation job. Web Export is now manually triggered.
-    OrchestratorService.finalizeSync(currentState.sessionId); 
-
-    logger.info(serviceName, functionName, `Daily Sync finalization started (Validation queued). Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
-    OrchestratorService.run('hourly'); // Force immediate processing
-    return SyncStateService.getSyncState();
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error finalizing Daily Sync: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-    return errorState;
-  }
-}
-
-/**
- * Resumes the Daily Sync workflow by processing Comax data.
- * Accessible from frontend via `google.script.run.resumeDailySyncBackend()`.
- * @returns {object} The updated sync state.
- */
-function resumeDailySyncBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'resumeDailySyncBackend';
-  logger.info(serviceName, functionName, 'Resuming Daily Sync workflow for Comax import.');
-
-  try {
-    const currentState = SyncStateService.getSyncState();
-    if (currentState.currentStage !== 'WAITING_FOR_COMAX') {
-      throw new Error(`Cannot resume sync. Current stage is ${currentState.currentStage}, expected WAITING_FOR_COMAX.`);
-    }
-
-    currentState.currentStage = 'COMAX_IMPORT_PROCESSING';
-    currentState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(currentState);
-
-    // Queue Comax import job with the current session ID
-    OrchestratorService.queueComaxFileForSync(currentState.sessionId); // New Orchestrator function
-
-    logger.info(serviceName, functionName, `Daily Sync resumed. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId, newState: currentState });
-    OrchestratorService.run('hourly'); // Force immediate processing
-    return SyncStateService.getSyncState();
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error resuming Daily Sync: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-    return errorState;
-  }
-}
-
-/**
- * Manually starts the Comax import process after the user confirms readiness.
- * Accessible from frontend via `google.script.run.startComaxImportBackend()`.
- * @returns {object} The updated sync state.
- */
-function startComaxImportBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'startComaxImportBackend';
-  logger.info(serviceName, functionName, 'Starting Comax import process.');
-
-  try {
-    const currentState = SyncStateService.getSyncState();
-
-    // Allow starting from READY_FOR_COMAX_IMPORT or WAITING_FOR_COMAX (if orders already confirmed)
-    const validStages = ['READY_FOR_COMAX_IMPORT', 'WAITING_FOR_COMAX'];
-
-    if (!validStages.includes(currentState.currentStage)) {
-      throw new Error(`Cannot start Comax import. Current stage is ${currentState.currentStage}, expected READY_FOR_COMAX_IMPORT or WAITING_FOR_COMAX.`);
-    }
-
-    currentState.currentStage = 'COMAX_IMPORT_PROCESSING';
-    currentState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(currentState);
-
-    // NEW: Also write to SyncSessionService (single source of truth)
-    try {
-      SyncSessionService.setStage(SyncSessionService.STAGES.IMPORTING_COMAX_PRODUCTS);
-      SyncSessionService.setStepStatus(4, 'processing');
-    } catch (sessionError) {
-      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-    }
-
-    // Write Step 4 processing status
-    SyncStatusService.writeStatus(currentState.sessionId, {
-      step: 4,
-      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-      status: 'processing',
-      message: 'Importing Comax product data...'
-    });
-
-    // Queue Comax import job
-    OrchestratorService.queueComaxFileForSync(currentState.sessionId);
-
-    logger.info(serviceName, functionName, `Comax import started. Session ID: ${currentState.sessionId}`, { sessionId: currentState.sessionId });
-
-    // Process queued jobs for this session
-    const result = OrchestratorService.processSessionJobs(currentState.sessionId);
     if (!result.success) {
-      logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId: currentState.sessionId });
-
-      // Write step 4 failure status
-      SyncStatusService.writeStatus(currentState.sessionId, {
-        step: 4,
-        stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-        status: 'failed',
-        message: `Import failed: ${result.error}`
-      });
-
-      // Update JSON state to FAILED
+      logger.error(serviceName, functionName, `Web products import failed: ${result.error}`, null, { sessionId });
       const failState = SyncStateService.getSyncState();
-      failState.currentStage = 'FAILED';
+      failState.stage = 'FAILED';
+      failState.failedAtStage = 'IMPORTING_PRODUCTS';
       failState.errorMessage = result.error;
       failState.lastUpdated = new Date().toISOString();
+      failState.steps.step1 = { status: 'failed', message: `Import failed: ${result.error}` };
       SyncStateService.setSyncState(failState);
-    }
-
-    // Return current status for UI
-    return _getMergedStatus(currentState.sessionId);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error starting Comax import: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-
-    // Write step 4 failure status
-    SyncStatusService.writeStatus(errorState.sessionId, {
-      step: 4,
-      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    // Update JSON state to FAILED
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-
-    return _getMergedStatus(errorState.sessionId);
-  }
-}
-
-/**
- * Resets the current Daily Sync state to IDLE.
- * Accessible from frontend via `google.script.run.resetSyncStateBackend()`.
- * @returns {object} The default (reset) sync state.
- */
-function resetSyncStateBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'resetSyncStateBackend';
-  logger.info(serviceName, functionName, 'Resetting Daily Sync state.');
-  try {
-    // Get current session ID before clearing
-    const oldState = SyncStateService.getSyncState();
-    const sessionId = oldState.sessionId;
-
-    // FIRST: Clear all step statuses to give immediate visual feedback
-    if (sessionId) {
-      for (let step = 1; step <= 5; step++) {
-        SyncStatusService.writeStatus(sessionId, {
-          step: step,
-          stepName: '',
-          status: 'pending',
-          message: ''
-        });
-      }
-    }
-
-    // THEN: Do the actual reset work
-    SyncStateService.resetSyncState();
-
-    // NEW: Also reset SyncSessionService (single source of truth)
-    try {
-      SyncSessionService.reset();
-    } catch (sessionError) {
-      logger.warn(serviceName, functionName, `SyncSessionService reset failed: ${sessionError.message}`);
-    }
-
-    // Clear sync status entries for this session
-    if (sessionId) {
-      SyncStatusService.clearSession(sessionId);
-      logger.info(serviceName, functionName, `Cleared sync status for session ${sessionId}`);
-
-      // Close any open sync session task
-      try {
-        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
-      } catch (taskError) {
-        logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
-      }
-    }
-
-    // Return default status (no session)
-    return SyncStatusService.getDefaultStatus(null);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error resetting Daily Sync state: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-    return errorState;
-  }
-}
-
-/**
- * Retries the failed step by resetting the stage to the pre-failure state.
- * Accessible from frontend via `google.script.run.retryFailedStepBackend()`.
- * @returns {object} The updated sync status.
- */
-function retryFailedStepBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'retryFailedStepBackend';
-  logger.info(serviceName, functionName, 'Retrying failed sync step.');
-
-  try {
-    const currentState = SyncStateService.getSyncState();
-
-    if (currentState.currentStage !== 'FAILED') {
-      throw new Error('Cannot retry - sync is not in FAILED state.');
-    }
-
-    const sessionId = currentState.sessionId;
-    if (!sessionId) {
-      throw new Error('No session ID found. Please start a new sync.');
-    }
-
-    // Find which step failed by checking step statuses
-    const mergedStatus = _getMergedStatus(sessionId);
-    let failedStep = null;
-
-    for (let i = 1; i <= 5; i++) {
-      const stepKey = 's' + i;
-      if (mergedStatus[stepKey] === 'failed') {
-        failedStep = i;
-        break;
-      }
-    }
-
-    // Map failed step to retry stage
-    let retryStage;
-    switch (failedStep) {
-      case 1:
-      case 2:
-        // Web import failed - need full restart
-        throw new Error('Web import failed. Please use Reset to start over.');
-      case 3:
-        retryStage = 'WAITING_FOR_COMAX';
-        break;
-      case 4:
-        retryStage = 'READY_FOR_COMAX_IMPORT';
-        break;
-      case 5:
-        retryStage = 'READY_FOR_WEB_EXPORT';
-        break;
-      default:
-        throw new Error('Could not determine failed step. Please use Reset.');
-    }
-
-    // Reset the failed step status to waiting
-    SyncStatusService.writeStatus(sessionId, {
-      step: failedStep,
-      stepName: mergedStatus['step' + failedStep + 'Name'] || '',
-      status: 'waiting',
-      message: 'Ready to retry'
-    });
-
-    // Update stage
-    currentState.currentStage = retryStage;
-    currentState.errorMessage = null;
-    currentState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(currentState);
-
-    logger.info(serviceName, functionName, `Reset to stage ${retryStage} for retry.`, { sessionId });
-
-    return _getMergedStatus(sessionId);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error retrying failed step: ${e.message}`, e);
-    throw e;
-  }
-}
-
-// Helper function that the Orchestrator will call to update the UI state
-function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
-  const serviceName = 'WebAppSync';
-  const functionName = 'updateSyncStateFromOrchestrator';
-  try {
-    const currentState = SyncStateService.getSyncState();
-    if (currentState.sessionId === sessionId) {
-      Object.assign(currentState, statusUpdate); // Merge updates
-      currentState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(currentState);
-      logger.info(serviceName, functionName, `Sync state updated by Orchestrator.`, { sessionId: sessionId, statusUpdate: statusUpdate });
     } else {
-      logger.warn(SERVICE_NAME, functionName, `Orchestrator tried to update state for a non-current session.`, { currentSessionId: currentState.sessionId, attemptedSessionId: sessionId, statusUpdate: statusUpdate });
+      logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
+      const doneState = SyncStateService.getSyncState();
+      doneState.stage = 'IMPORTING_ORDERS';
+      doneState.lastUpdated = new Date().toISOString();
+      doneState.steps.step1 = { status: 'completed', message: 'Products and translations imported' };
+      doneState.steps.step2 = { status: 'waiting', message: 'Ready to import orders' };
+      SyncStateService.setSyncState(doneState);
     }
+
+    return SyncStateService.getSyncState();
   } catch (e) {
-    logger.error(serviceName, functionName, `Error updating sync state from Orchestrator: ${e.message}`, e, { sessionId: sessionId, statusUpdate: statusUpdate });
+    logger.error(serviceName, functionName, `Error starting web products import: ${e.message}`, e);
+    // If we already wrote state, mark it failed
+    const errState = SyncStateService.getSyncState();
+    if (errState.stage !== 'IDLE') {
+      errState.stage = 'FAILED';
+      errState.failedAtStage = 'IMPORTING_PRODUCTS';
+      errState.errorMessage = e.message;
+      errState.lastUpdated = new Date().toISOString();
+      errState.steps.step1 = { status: 'failed', message: `Error: ${e.message}` };
+      SyncStateService.setSyncState(errState);
+    }
+    return SyncStateService.getSyncState();
   }
 }
 
+// =========================================================================
+//  STEP 2: IMPORT WEB ORDERS
+// =========================================================================
+
 /**
- * Exports orders to Comax and returns the file URL.
- * Accessible from frontend via `google.script.run.exportComaxOrdersBackend()`.
- * @returns {object} { success: true, fileUrl: '...' }
+ * Stage guard: IMPORTING_ORDERS
+ * Imports web orders. Auto-called after products succeed.
+ * @returns {object} The updated sync state.
+ */
+function importWebOrdersBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'importWebOrdersBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'IMPORTING_ORDERS') {
+    throw new Error(`Cannot import orders: sync is at stage ${currentState.stage}, expected IMPORTING_ORDERS.`);
+  }
+
+  logger.info(serviceName, functionName, 'Starting web orders import.');
+  const sessionId = currentState.sessionId;
+
+  try {
+    // Update step status
+    SyncStateService.updateStep(2, 'processing', 'Processing orders...');
+
+    // Queue orders import job
+    OrchestratorService.queueWebOrdersImport(sessionId);
+
+    // Process jobs for this session
+    const result = OrchestratorService.processSessionJobs(sessionId);
+
+    if (!result.success) {
+      logger.error(serviceName, functionName, `Web orders import failed: ${result.error}`, null, { sessionId });
+      const failState = SyncStateService.getSyncState();
+      failState.stage = 'FAILED';
+      failState.failedAtStage = 'IMPORTING_ORDERS';
+      failState.errorMessage = result.error;
+      failState.lastUpdated = new Date().toISOString();
+      failState.steps.step2 = { status: 'failed', message: `Import failed: ${result.error}` };
+      SyncStateService.setSyncState(failState);
+    } else {
+      logger.info(serviceName, functionName, `Web orders import completed.`, { sessionId });
+
+      // Calculate pending orders and set up step 3
+      const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
+      const invoiceCount = OrchestratorService.getInvoiceFileCount();
+
+      const doneState = SyncStateService.getSyncState();
+      doneState.ordersPendingExportCount = ordersToExportCount;
+      doneState.invoiceFileCount = invoiceCount;
+      doneState.lastUpdated = new Date().toISOString();
+      doneState.steps.step2 = { status: 'completed', message: `Orders imported` };
+
+      if (ordersToExportCount > 0) {
+        doneState.stage = 'WAITING_ORDER_EXPORT';
+        doneState.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
+      } else {
+        // Skip step 3 entirely — go straight to Comax import
+        doneState.stage = 'WAITING_COMAX_IMPORT';
+        doneState.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
+        doneState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+      }
+
+      SyncStateService.setSyncState(doneState);
+    }
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error importing web orders: ${e.message}`, e);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'IMPORTING_ORDERS';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step2 = { status: 'failed', message: `Error: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
+  }
+}
+
+// =========================================================================
+//  STEP 3: EXPORT ORDERS TO COMAX
+// =========================================================================
+
+/**
+ * Stage guard: WAITING_ORDER_EXPORT
+ * Exports orders to Comax file.
+ * @returns {object} The updated sync state.
  */
 function exportComaxOrdersBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'exportComaxOrdersBackend';
 
-  try {
-    const currentState = SyncStateService.getSyncState();
-    const sessionId = currentState.sessionId;
-    logger.info(serviceName, functionName, `Exporting Comax orders for session: ${sessionId}`);
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_ORDER_EXPORT') {
+    throw new Error(`Cannot export orders: sync is at stage ${currentState.stage}, expected WAITING_ORDER_EXPORT.`);
+  }
 
-    // Write processing status
-    SyncStatusService.writeStatus(sessionId, {
-      step: 3,
-      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-      status: 'processing',
-      message: 'Generating order export file...'
-    });
+  const sessionId = currentState.sessionId;
+  logger.info(serviceName, functionName, `Exporting Comax orders for session: ${sessionId}`);
+
+  try {
+    // Transition to EXPORTING_ORDERS
+    currentState.stage = 'EXPORTING_ORDERS';
+    currentState.lastUpdated = new Date().toISOString();
+    currentState.steps.step3 = { status: 'processing', message: 'Generating order export file...' };
+    SyncStateService.setSyncState(currentState);
 
     const orderService = new OrderService(ProductService);
     const result = orderService.exportOrdersToComax(sessionId);
 
-    // After successful export, update the state
     if (result.success) {
       const newState = SyncStateService.getSyncState();
       const exportedCount = result.exportedCount || 0;
 
       if (exportedCount === 0) {
-        // No orders to export - mark step 3 complete and move to step 4
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-          status: 'completed',
-          message: 'No orders to export'
-        });
-
-        // Set up step 4 as ready
-        SyncStatusService.writeStatus(sessionId, {
-          step: 4,
-          stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-          status: 'waiting',
-          message: 'Ready to import Comax product data'
-        });
-
-        // Update state - skip confirmation since nothing was exported
-        newState.comaxOrdersExported = true; // Mark as done (nothing to do)
-        newState.currentStage = 'READY_FOR_COMAX_IMPORT';
+        // No orders — skip confirmation, go to Comax import
+        newState.stage = 'WAITING_COMAX_IMPORT';
         newState.lastUpdated = new Date().toISOString();
-        SyncStateService.setSyncState(newState);
+        newState.steps.step3 = { status: 'completed', message: 'No orders to export' };
+        newState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
       } else {
-        // Orders were exported - need confirmation
-        const exportFilename = result.fileName || '';
-        newState.comaxOrdersExported = true;
-        newState.comaxOrderExportFilename = exportFilename;
+        // Orders exported — need user confirmation
+        newState.stage = 'WAITING_ORDER_CONFIRM';
+        newState.comaxOrderExportFilename = result.fileName || '';
         newState.lastUpdated = new Date().toISOString();
-        SyncStateService.setSyncState(newState);
-
-        // Write waiting status - ready for confirmation (include filename)
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-          status: 'waiting',
-          message: `Export ready: ${exportFilename} (${exportedCount} orders)`
-        });
+        newState.steps.step3 = { status: 'waiting', message: `Export ready: ${result.fileName || ''} (${exportedCount} orders)` };
       }
+      SyncStateService.setSyncState(newState);
     } else {
-      // Write failure status
-      SyncStatusService.writeStatus(sessionId, {
-        step: 3,
-        stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-        status: 'failed',
-        message: `Export failed: ${result.message || 'Unknown error'}`
-      });
-
-      // Update JSON state to FAILED
       const failState = SyncStateService.getSyncState();
-      failState.currentStage = 'FAILED';
+      failState.stage = 'FAILED';
+      failState.failedAtStage = 'EXPORTING_ORDERS';
       failState.errorMessage = result.message || 'Export failed';
       failState.lastUpdated = new Date().toISOString();
+      failState.steps.step3 = { status: 'failed', message: `Export failed: ${result.message || 'Unknown error'}` };
       SyncStateService.setSyncState(failState);
     }
 
-    return _getMergedStatus(sessionId);
+    return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error exporting Comax orders: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-
-    SyncStatusService.writeStatus(errorState.sessionId, {
-      step: 3,
-      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    // Update JSON state to FAILED
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-
-    return _getMergedStatus(errorState.sessionId);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'EXPORTING_ORDERS';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step3 = { status: 'failed', message: `Error: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
   }
 }
 
+// =========================================================================
+//  STEP 3b: CONFIRM COMAX ORDER UPLOAD
+// =========================================================================
+
 /**
- * Confirms that Comax orders have been updated/uploaded externally.
- * Accessible from frontend via `google.script.run.confirmComaxUpdateBackend()`.
+ * Stage guard: WAITING_ORDER_CONFIRM
+ * Confirms that orders have been uploaded to Comax externally.
  * @returns {object} The updated sync state.
  */
 function confirmComaxUpdateBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'confirmComaxUpdateBackend';
-  logger.info(serviceName, functionName, 'Confirming Comax update and moving to Comax import stage.');
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_ORDER_CONFIRM') {
+    throw new Error(`Cannot confirm Comax update: sync is at stage ${currentState.stage}, expected WAITING_ORDER_CONFIRM.`);
+  }
+
+  logger.info(serviceName, functionName, 'Confirming Comax update.');
 
   try {
-    const currentState = SyncStateService.getSyncState();
-    const sessionId = currentState.sessionId;
-
-    if (currentState.currentStage !== 'WAITING_FOR_COMAX' || !currentState.comaxOrdersExported) {
-      throw new Error(`Cannot confirm Comax update. Current stage is ${currentState.currentStage} or Comax orders not exported.`);
-    }
-
     // Complete the Comax order export confirmation task
     try {
       const openTask = TaskService.findOpenTaskByType('task.confirmation.comax_order_export');
       if (openTask) {
         TaskService.completeTask(openTask.id);
-        logger.info(serviceName, functionName, `Completed Comax order export confirmation task: ${openTask.id}`);
       }
     } catch (taskError) {
       logger.warn(serviceName, functionName, `Could not complete confirmation task: ${taskError.message}`);
     }
 
-    // Write Step 3 completed status
-    SyncStatusService.writeStatus(sessionId, {
-      step: 3,
-      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-      status: 'completed',
-      message: 'Orders exported and uploaded to Comax'
-    });
-
-    // Write Step 4 waiting status
-    SyncStatusService.writeStatus(sessionId, {
-      step: 4,
-      stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-      status: 'waiting',
-      message: 'Ready to import Comax product data'
-    });
-
-    currentState.currentStage = 'READY_FOR_COMAX_IMPORT'; // Move to intermediate stage
+    currentState.stage = 'WAITING_COMAX_IMPORT';
     currentState.lastUpdated = new Date().toISOString();
+    currentState.steps.step3 = { status: 'completed', message: 'Orders exported and uploaded to Comax' };
+    currentState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
     SyncStateService.setSyncState(currentState);
 
-    // NEW: Also write to SyncSessionService (single source of truth)
-    try {
-      SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_IMPORT_COMAX_PRODUCTS);
-      SyncSessionService.setStepStatus(3, 'completed');
-      SyncSessionService.setStepStatus(4, 'waiting');
-    } catch (sessionError) {
-      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-    }
-
-    // Return updated status for UI
-    return _getMergedStatus(sessionId);
+    return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error confirming Comax update: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
-
-    SyncStatusService.writeStatus(errorState.sessionId, {
-      step: 3,
-      stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-      status: 'failed',
-      message: `Confirmation failed: ${e.message}`
-    });
-
-    errorState.currentStage = 'FAILED'; // Mark as failed if confirmation fails
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-
-    return _getMergedStatus(errorState.sessionId);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'WAITING_ORDER_CONFIRM';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step3 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
   }
 }
 
+// =========================================================================
+//  STEP 4: IMPORT COMAX PRODUCTS
+// =========================================================================
+
 /**
- * Manually starts the process of generating the Web Inventory Export.
- * Accessible from frontend via `google.script.run.generateWebExportBackend()`.
+ * Stage guard: WAITING_COMAX_IMPORT
+ * Starts the Comax product import.
+ * @returns {object} The updated sync state.
+ */
+function startComaxImportBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'startComaxImportBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_COMAX_IMPORT') {
+    throw new Error(`Cannot start Comax import: sync is at stage ${currentState.stage}, expected WAITING_COMAX_IMPORT.`);
+  }
+
+  logger.info(serviceName, functionName, 'Starting Comax import process.');
+  const sessionId = currentState.sessionId;
+
+  try {
+    // Transition to IMPORTING_COMAX
+    currentState.stage = 'IMPORTING_COMAX';
+    currentState.lastUpdated = new Date().toISOString();
+    currentState.steps.step4 = { status: 'processing', message: 'Importing Comax product data...' };
+    SyncStateService.setSyncState(currentState);
+
+    // Queue Comax import job
+    OrchestratorService.queueComaxFileForSync(sessionId);
+
+    // Process queued jobs for this session
+    const result = OrchestratorService.processSessionJobs(sessionId);
+
+    if (!result.success) {
+      logger.error(serviceName, functionName, `Comax import failed: ${result.error}`, null, { sessionId });
+      const failState = SyncStateService.getSyncState();
+      failState.stage = 'FAILED';
+      failState.failedAtStage = 'IMPORTING_COMAX';
+      failState.errorMessage = result.error;
+      failState.lastUpdated = new Date().toISOString();
+      failState.steps.step4 = { status: 'failed', message: `Import failed: ${result.error}` };
+      SyncStateService.setSyncState(failState);
+    }
+    // On success, _checkAndAdvanceSyncState will handle the transition
+    // to VALIDATING and then WAITING_WEB_EXPORT
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error starting Comax import: ${e.message}`, e);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'IMPORTING_COMAX';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step4 = { status: 'failed', message: `Error: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
+  }
+}
+
+// =========================================================================
+//  STEP 5: GENERATE WEB INVENTORY EXPORT
+// =========================================================================
+
+/**
+ * Stage guard: WAITING_WEB_EXPORT
+ * Generates the web inventory export file.
  * @returns {object} The updated sync state.
  */
 function generateWebExportBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'generateWebExportBackend';
-  logger.info(serviceName, functionName, 'Manually starting Web Inventory Export generation.');
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_WEB_EXPORT') {
+    throw new Error(`Cannot generate Web Export: sync is at stage ${currentState.stage}, expected WAITING_WEB_EXPORT.`);
+  }
+
+  logger.info(serviceName, functionName, 'Starting Web Inventory Export generation.');
+  const sessionId = currentState.sessionId;
 
   try {
-    const currentState = SyncStateService.getSyncState();
-    const sessionId = currentState.sessionId;
-
-    if (currentState.currentStage !== 'READY_FOR_WEB_EXPORT') {
-      throw new Error(`Cannot generate Web Export. Current stage is ${currentState.currentStage}, expected READY_FOR_WEB_EXPORT.`);
-    }
-
-    // Write processing status
-    SyncStatusService.writeStatus(sessionId, {
-      step: 5,
-      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
-      status: 'processing',
-      message: 'Generating web inventory export file...'
-    });
-
-    currentState.currentStage = 'WEB_EXPORT_PROCESSING';
+    // Transition to GENERATING_WEB_EXPORT
+    currentState.stage = 'GENERATING_WEB_EXPORT';
     currentState.lastUpdated = new Date().toISOString();
+    currentState.steps.step5 = { status: 'processing', message: 'Generating web inventory export file...' };
     SyncStateService.setSyncState(currentState);
 
     // Queue Web Inventory Export job
     OrchestratorService.queueWebInventoryExport(sessionId);
 
-    logger.info(serviceName, functionName, `Web Export generation started. Session ID: ${sessionId}. Jobs queued and processing...`, { sessionId: sessionId });
-
     // Trigger immediate job processing
     OrchestratorService.run('hourly');
 
-    // Return status for UI
-    return _getMergedStatus(sessionId);
+    // The job runs asynchronously — _checkAndAdvanceSyncState will handle
+    // the transition to WAITING_WEB_CONFIRM or COMPLETE
+
+    return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error generating Web Export: ${e.message}`, e);
-    const currentState = SyncStateService.getSyncState();
-
-    SyncStatusService.writeStatus(currentState.sessionId, {
-      step: 5,
-      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    const errorState = SyncStateService.getSyncState();
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
-
-    return _getMergedStatus(errorState.sessionId);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'GENERATING_WEB_EXPORT';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
   }
 }
 
+// =========================================================================
+//  STEP 5b: CONFIRM WEB INVENTORY UPLOAD
+// =========================================================================
+
 /**
- * Confirms that the Web Inventory Update has been completed externally.
- * Accessible from frontend via `google.script.run.confirmWebInventoryUpdateBackend()`.
+ * Stage guard: WAITING_WEB_CONFIRM
+ * Confirms that the web inventory update has been uploaded externally.
  * @returns {object} The updated sync state.
  */
 function confirmWebInventoryUpdateBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'confirmWebInventoryUpdateBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_WEB_CONFIRM') {
+    throw new Error(`Cannot confirm Web Inventory Update: sync is at stage ${currentState.stage}, expected WAITING_WEB_CONFIRM.`);
+  }
+
   logger.info(serviceName, functionName, 'Confirming Web Inventory Update and completing sync cycle.');
+  const sessionId = currentState.sessionId;
 
   try {
-    const currentState = SyncStateService.getSyncState();
-    const sessionId = currentState.sessionId;
+    // Verify export job actually completed
     const webExportJobStatus = OrchestratorService.getJobStatusInSession('export.web.inventory', sessionId);
-
     if (webExportJobStatus !== 'COMPLETED') {
-        throw new Error(`Cannot confirm Web Inventory Update. Export job status is ${webExportJobStatus}, expected COMPLETED.`);
+      throw new Error(`Cannot confirm: export job status is ${webExportJobStatus}, expected COMPLETED.`);
     }
 
-    // Write Step 5 completion status
-    SyncStatusService.writeStatus(sessionId, {
-      step: 5,
-      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
-      status: 'completed',
-      message: 'Web inventory exported and uploaded successfully'
-    });
-
-    currentState.currentStage = 'COMPLETE';
+    // Transition to COMPLETE
+    currentState.stage = 'COMPLETE';
     currentState.lastUpdated = new Date().toISOString();
+    currentState.steps.step5 = { status: 'completed', message: 'Web inventory exported and uploaded successfully' };
     SyncStateService.setSyncState(currentState);
-
-    // NEW: Also write to SyncSessionService (single source of truth)
-    try {
-      SyncSessionService.setStepStatus(5, 'completed');
-      SyncSessionService.complete();
-    } catch (sessionError) {
-      logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-    }
 
     // Complete the sync session task
     try {
@@ -759,53 +474,193 @@ function confirmWebInventoryUpdateBackend() {
       logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
     }
 
-    // Complete the web inventory export confirmation task
+    // Complete web inventory export confirmation tasks
     try {
       const confirmTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.web_inventory_export');
       if (confirmTasks && confirmTasks.length > 0) {
-        confirmTasks.forEach(task => {
+        confirmTasks.forEach(function(task) {
           TaskService.completeTask(task.st_TaskId);
         });
-        logger.info(serviceName, functionName, `Completed ${confirmTasks.length} web inventory confirmation task(s).`);
       }
     } catch (taskError) {
       logger.warn(serviceName, functionName, `Could not complete web inventory confirmation task: ${taskError.message}`);
     }
 
-    return _getMergedStatus(sessionId);
+    // Register all session files in registry (deferred registration)
+    _registerSessionFiles(currentState);
+
+    return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error confirming Web Inventory Update: ${e.message}`, e);
-    const errorState = SyncStateService.getSyncState();
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'WAITING_WEB_CONFIRM';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    errState.steps.step5 = { status: 'failed', message: `Confirmation failed: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
+  }
+}
 
-    SyncStatusService.writeStatus(errorState.sessionId, {
-      step: 5,
-      stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
-      status: 'failed',
-      message: `Confirmation failed: ${e.message}`
-    });
+// =========================================================================
+//  RETRY & RESET
+// =========================================================================
 
-    errorState.currentStage = 'FAILED';
-    errorState.errorMessage = e.message;
-    errorState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(errorState);
+/**
+ * Stage guard: FAILED
+ * Retries the failed step by returning to the stage before failure.
+ * @returns {object} The updated sync state.
+ */
+function retryFailedStepBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'retryFailedStepBackend';
 
-    return _getMergedStatus(errorState.sessionId);
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'FAILED') {
+    throw new Error('Cannot retry: sync is not in FAILED state.');
+  }
+
+  if (!currentState.failedAtStage) {
+    throw new Error('Cannot retry: no failedAtStage recorded. Please use Reset.');
+  }
+
+  logger.info(serviceName, functionName, `Retrying from stage: ${currentState.failedAtStage}`);
+
+  currentState.stage = currentState.failedAtStage;
+  currentState.errorMessage = null;
+  currentState.lastUpdated = new Date().toISOString();
+  // Don't clear failedAtStage — it stays as a breadcrumb until next successful transition
+  SyncStateService.setSyncState(currentState);
+
+  return SyncStateService.getSyncState();
+}
+
+/**
+ * Stage guard: Any (always allowed)
+ * Resets the sync state to IDLE.
+ * @returns {object} The default (reset) sync state.
+ */
+function resetSyncStateBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'resetSyncStateBackend';
+  logger.info(serviceName, functionName, 'Resetting Daily Sync state.');
+
+  try {
+    const oldState = SyncStateService.getSyncState();
+    const sessionId = oldState.sessionId;
+
+    // Reset state to IDLE
+    SyncStateService.resetSyncState();
+
+    // Close any open sync session task
+    if (sessionId) {
+      try {
+        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', sessionId);
+      } catch (taskError) {
+        logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+      }
+    }
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error resetting Daily Sync state: ${e.message}`, e);
+    throw e;
+  }
+}
+
+// =========================================================================
+//  HELPER FUNCTIONS
+// =========================================================================
+
+/**
+ * Registers all archived files from the session in SysFileRegistry.
+ * Called at COMPLETE transition (deferred registration).
+ * @param {object} state The current sync state with archiveFileIds.
+ */
+function _registerSessionFiles(state) {
+  const serviceName = 'WebAppSync';
+  const functionName = '_registerSessionFiles';
+
+  if (!state.archiveFileIds || Object.keys(state.archiveFileIds).length === 0) {
+    logger.info(serviceName, functionName, 'No archive file IDs to register.');
+    return;
+  }
+
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+    const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
+
+    const registry = OrchestratorService.getFileRegistry();
+
+    for (const [configName, fileInfo] of Object.entries(state.archiveFileIds)) {
+      if (fileInfo && fileInfo.originalFileId && fileInfo.originalFileLastUpdated) {
+        registry.set(fileInfo.originalFileId, {
+          name: fileInfo.originalFileName || configName,
+          lastUpdated: new Date(fileInfo.originalFileLastUpdated)
+        });
+        logger.info(serviceName, functionName, `Registered file: ${fileInfo.originalFileName || configName} (${fileInfo.originalFileId})`);
+      }
+    }
+
+    // Write updated registry back
+    const schema = allConfig['schema.log.SysFileRegistry'];
+    fileRegistrySheet.clear();
+    const headers = schema.headers.split(',');
+    fileRegistrySheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+
+    if (registry.size > 0) {
+      const data = Array.from(registry, function([fileId, entry]) {
+        return [fileId, entry.name, entry.lastUpdated];
+      });
+      fileRegistrySheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+    }
+
+    logger.info(serviceName, functionName, `Registered ${Object.keys(state.archiveFileIds).length} files in SysFileRegistry.`);
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error registering session files: ${e.message}`, e);
+    // Don't throw — file registration failure shouldn't break COMPLETE
   }
 }
 
 /**
- * Generates/Retrieves the Web Inventory Export file URL.
- * Accessible from frontend via `google.script.run.getWebInventoryExportBackend()`.
+ * Helper to update sync state from the Orchestrator.
+ * Used when background jobs complete and need to advance state.
+ */
+function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
+  const serviceName = 'WebAppSync';
+  const functionName = 'updateSyncStateFromOrchestrator';
+  try {
+    const currentState = SyncStateService.getSyncState();
+    if (currentState.sessionId === sessionId) {
+      Object.assign(currentState, statusUpdate);
+      currentState.lastUpdated = new Date().toISOString();
+      SyncStateService.setSyncState(currentState);
+      logger.info(serviceName, functionName, `Sync state updated by Orchestrator.`, { sessionId, statusUpdate });
+    } else {
+      logger.warn(serviceName, functionName, `Orchestrator tried to update state for non-current session.`, { currentSessionId: currentState.sessionId, attemptedSessionId: sessionId });
+    }
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error updating sync state from Orchestrator: ${e.message}`, e, { sessionId, statusUpdate });
+  }
+}
+
+// =========================================================================
+//  UTILITY FUNCTIONS (existing, kept)
+// =========================================================================
+
+/**
+ * Retrieves the Web Inventory Export file URL.
  * @returns {object} { success: true, fileUrl: '...' }
  */
 function getWebInventoryExportBackend() {
   const serviceName = 'WebAppSync';
   const functionName = 'getWebInventoryExportBackend';
-  
   try {
     logger.info(serviceName, functionName, `Retrieving Web Inventory Export...`);
-    const result = ProductService.exportWebInventory();
-    return result;
+    return ProductService.exportWebInventory();
   } catch (e) {
     logger.error(serviceName, functionName, `Error retrieving Web Inventory Export: ${e.message}`, e);
     throw e;
@@ -813,9 +668,8 @@ function getWebInventoryExportBackend() {
 }
 
 /**
- * Retrieves the count of inventory receipts files and the URL of the receipts folder.
- * Accessible from frontend via `google.script.run.getInventoryReceiptsInfo()`.
- * @returns {object} An object containing { count: number, folderUrl: string|null }.
+ * Retrieves invoice/receipt info for the pre-sync card.
+ * @returns {object} { count, folderUrl, reviewCount }
  */
 function getInventoryReceiptsInfo() {
   const serviceName = 'WebAppSync';
@@ -828,9 +682,7 @@ function getInventoryReceiptsInfo() {
     if (receiptsFolderConfig && receiptsFolderConfig.id) {
       folderUrl = `https://drive.google.com/drive/folders/${receiptsFolderConfig.id}`;
     }
-    // Also get inventory count reviews pending
     const reviewCount = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length;
-    logger.info(serviceName, functionName, `Found ${count} invoice files, ${reviewCount} inventory reviews. Folder URL: ${folderUrl}`);
     return { count: count, folderUrl: folderUrl, reviewCount: reviewCount };
   } catch (e) {
     logger.error(serviceName, functionName, `Error getting inventory receipts info: ${e.message}`, e);
@@ -838,13 +690,8 @@ function getInventoryReceiptsInfo() {
   }
 }
 
-// =================================================================
-//  NEW SYNC WIDGET FUNCTIONS (v2)
-// =================================================================
-
 /**
- * Checks the freshness of web product files before importing.
- * Returns file info for UI to display/warn user if files are stale.
+ * Checks freshness of web product files before importing.
  * @returns {object} Freshness info for English products and translations files
  */
 function checkWebProductFilesFreshness() {
@@ -862,19 +709,12 @@ function checkWebProductFilesFreshness() {
     let enFile = null;
     let latestEnDate = new Date(0);
 
-    // Find latest file matching pattern
     while (enFiles.hasNext()) {
       const file = enFiles.next();
       if (file.getLastUpdated() > latestEnDate) {
         latestEnDate = file.getLastUpdated();
         enFile = file;
       }
-    }
-
-    if (enFile) {
-      logger.info(serviceName, functionName, `Found English products file: ${enFile.getName()}`);
-    } else {
-      logger.warn(serviceName, functionName, `No English products file found matching pattern: ${enConfig.file_pattern}`);
     }
 
     // Check translations file
@@ -890,12 +730,6 @@ function checkWebProductFilesFreshness() {
         latestHeDate = file.getLastUpdated();
         heFile = file;
       }
-    }
-
-    if (heFile) {
-      logger.info(serviceName, functionName, `Found translations file: ${heFile.getName()}`);
-    } else {
-      logger.warn(serviceName, functionName, `No translations file found matching pattern: ${heConfig.file_pattern}`);
     }
 
     const enRegistryEntry = enFile ? registry.get(enFile.getId()) : null;
@@ -927,293 +761,19 @@ function checkWebProductFilesFreshness() {
   }
 }
 
-/**
- * Imports web products (translations first, then English products).
- * Accessible from frontend via `google.script.run.importWebProductsBackend()`.
- * @returns {object} The updated sync status
- */
-function importWebProductsBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'importWebProductsBackend';
-  logger.info(serviceName, functionName, 'Starting web products import.');
-
-  try {
-    const sessionId = OrchestratorService.generateSessionId();
-
-    // Create sync session tracking task
-    try {
-      TaskService.createTask(
-        'task.sync.daily_session',
-        sessionId,
-        `Sync ${new Date().toISOString().split('T')[0]}`,
-        `Daily Sync - ${new Date().toLocaleDateString()}`,
-        'Sync session initiated',
-        sessionId
-      );
-    } catch (taskError) {
-      logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
-    }
-
-    // IMMEDIATE status update
-    SyncStatusService.writeStatus(sessionId, {
-      step: 1,
-      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-      status: 'processing',
-      message: 'Importing translations and products...'
-    });
-
-    // Update sync state
-    const newState = SyncStateService.getDefaultState();
-    newState.sessionId = sessionId;
-    newState.currentStage = 'WEB_PRODUCTS_IMPORTING';
-    newState.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(newState);
-
-    // Queue jobs: translations first, then products
-    OrchestratorService.queueWebProductsImport(sessionId);
-
-    // Process jobs for this session (stops on first failure)
-    const result = OrchestratorService.processSessionJobs(sessionId);
-
-    if (!result.success) {
-      logger.error(serviceName, functionName, `Web products import failed: ${result.error}`, null, { sessionId });
-
-      // Update step 1 status to failed
-      SyncStatusService.writeStatus(sessionId, {
-        step: 1,
-        stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-        status: 'failed',
-        message: `Import failed: ${result.error}`
-      });
-
-      // Update state to FAILED
-      newState.currentStage = 'FAILED';
-      newState.errorMessage = result.error;
-      newState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(newState);
-    } else {
-      logger.info(serviceName, functionName, `Web products import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
-
-      // Mark step 1 complete
-      SyncStatusService.writeStatus(sessionId, {
-        step: 1,
-        stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-        status: 'completed',
-        message: 'Products and translations imported'
-      });
-
-      // Set up step 2 as waiting
-      SyncStatusService.writeStatus(sessionId, {
-        step: 2,
-        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
-        status: 'waiting',
-        message: 'Ready to import orders'
-      });
-
-      // Update state - products done, ready for orders
-      newState.currentStage = 'WEB_ORDERS_READY';
-      newState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(newState);
-    }
-
-    return _getMergedStatus(sessionId);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error starting web products import: ${e.message}`, e);
-    const sessionId = OrchestratorService.generateSessionId();
-
-    SyncStatusService.writeStatus(sessionId, {
-      step: 1,
-      stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    return _getMergedStatus(sessionId);
-  }
-}
-
-/**
- * Imports web orders. Can be called manually or by auto-polling.
- * Accessible from frontend via `google.script.run.importWebOrdersBackend()`.
- * @returns {object} The updated sync status
- */
-function importWebOrdersBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'importWebOrdersBackend';
-  logger.info(serviceName, functionName, 'Starting web orders import.');
-
-  try {
-    // Use existing session OR create new one
-    let state = SyncStateService.getSyncState();
-    const sessionId = state.sessionId || OrchestratorService.generateSessionId();
-
-    // If no session existed, create state
-    if (!state.sessionId) {
-      const newState = SyncStateService.getDefaultState();
-      newState.sessionId = sessionId;
-      newState.currentStage = 'WEB_ORDERS_IMPORTING';
-      newState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(newState);
-    }
-
-    // IMMEDIATE status update
-    SyncStatusService.writeStatus(sessionId, {
-      step: 2,
-      stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
-      status: 'processing',
-      message: 'Processing orders...'
-    });
-
-    // Queue orders import job
-    OrchestratorService.queueWebOrdersImport(sessionId);
-
-    // Process jobs for this session (stops on first failure)
-    const result = OrchestratorService.processSessionJobs(sessionId);
-
-    if (!result.success) {
-      logger.error(serviceName, functionName, `Web orders import failed: ${result.error}`, null, { sessionId });
-
-      // Update step 2 status to failed
-      SyncStatusService.writeStatus(sessionId, {
-        step: 2,
-        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
-        status: 'failed',
-        message: `Import failed: ${result.error}`
-      });
-
-      // Update state to FAILED
-      const failState = SyncStateService.getSyncState();
-      failState.currentStage = 'FAILED';
-      failState.errorMessage = result.error;
-      failState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(failState);
-    } else {
-      logger.info(serviceName, functionName, `Web orders import completed. ${result.jobsProcessed} jobs processed.`, { sessionId });
-
-      // Mark step 2 complete
-      SyncStatusService.writeStatus(sessionId, {
-        step: 2,
-        stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
-        status: 'completed',
-        message: `Orders imported`
-      });
-
-      // Calculate pending orders and set up step 3
-      const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
-
-      // Fetch invoice count (once, after orders import - not on every poll)
-      const invoiceCount = OrchestratorService.getInvoiceFileCount();
-
-      // Update state with order count and invoice count
-      const currentState = SyncStateService.getSyncState();
-      currentState.ordersPendingExportCount = ordersToExportCount;
-      currentState.invoiceFileCount = invoiceCount;
-      currentState.currentStage = 'WAITING_FOR_COMAX';
-      currentState.lastUpdated = new Date().toISOString();
-      SyncStateService.setSyncState(currentState);
-
-      // Write step 3 status
-      if (ordersToExportCount > 0) {
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-          status: 'waiting',
-          message: `${ordersToExportCount} orders ready for export`
-        });
-      } else {
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: SeverityService.SYNC_STEPS.COMAX_ORDER_EXPORT,
-          status: 'completed',
-          message: 'No new web orders to export'
-        });
-
-        // Set up step 4 as waiting
-        SyncStatusService.writeStatus(sessionId, {
-          step: 4,
-          stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-          status: 'waiting',
-          message: 'Ready to import Comax product data'
-        });
-
-        // Advance stage since no orders
-        currentState.currentStage = 'READY_FOR_COMAX_IMPORT';
-        SyncStateService.setSyncState(currentState);
-      }
-    }
-
-    return _getMergedStatus(sessionId);
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error starting web orders import: ${e.message}`, e);
-    const state = SyncStateService.getSyncState();
-    const sessionId = state.sessionId || 'ERROR';
-
-    SyncStatusService.writeStatus(sessionId, {
-      step: 2,
-      stepName: SeverityService.SYNC_STEPS.WEB_ORDER_IMPORT,
-      status: 'failed',
-      message: `Error: ${e.message}`
-    });
-
-    return _getMergedStatus(sessionId);
-  }
-}
-
-/**
- * Gets recent failures for the current session.
- * Accessible from frontend via `google.script.run.getRecentFailures(sessionId)`.
- * @param {string} sessionId - The sync session ID
- * @returns {Array} Array of failure objects { jobType, error }
- */
-function getRecentFailures(sessionId) {
-  return SyncStatusService.getRecentFailures(sessionId);
-}
-
-// =================================================================
+// =========================================================================
 //  GLOBAL RUNNER FUNCTIONS (for manual execution from Editor)
-// =================================================================
-
-function run_startDailySync() {
-  startDailySyncBackend();
-}
-
-function run_resumeDailySync() {
-  resumeDailySyncBackend();
-}
-
-function run_finalizeDailySync() {
-  finalizeDailySyncBackend();
-}
+// =========================================================================
 
 function run_resetSyncState() {
   resetSyncStateBackend();
 }
 
 /**
- * Debug: View current sync state and optionally force confirm.
- * Run from Apps Script editor to inspect or fix stuck sync.
+ * Debug: View current sync state.
  */
-function DEBUG_inspectAndFixSyncState() {
+function DEBUG_inspectSyncState() {
   const state = SyncStateService.getSyncState();
   console.log('Current sync state:', JSON.stringify(state, null, 2));
-
-  // Check if we're stuck waiting for confirm
-  if (state.currentStage === 'WAITING_FOR_COMAX' && state.comaxOrdersExported) {
-    console.log('State looks correct for confirm. Calling confirmComaxUpdateBackend()...');
-    const result = confirmComaxUpdateBackend();
-    console.log('Confirm result:', JSON.stringify(result, null, 2));
-    return result;
-  } else if (state.currentStage === 'WAITING_FOR_COMAX' && !state.comaxOrdersExported) {
-    console.log('Orders not marked as exported. Setting comaxOrdersExported=true...');
-    state.comaxOrdersExported = true;
-    state.lastUpdated = new Date().toISOString();
-    SyncStateService.setSyncState(state);
-    console.log('Fixed. Now calling confirmComaxUpdateBackend()...');
-    const result = confirmComaxUpdateBackend();
-    console.log('Confirm result:', JSON.stringify(result, null, 2));
-    return result;
-  } else {
-    console.log('Stage is ' + state.currentStage + ', not WAITING_FOR_COMAX. No auto-fix available.');
-    return state;
-  }
+  return state;
 }

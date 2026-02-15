@@ -324,13 +324,6 @@ const ProductImportService = (function() {
             const errorMsg = _buildQuarantineErrorMessage(validationResult);
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
             _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
-            // Write status for UI
-            SyncStatusService.writeStatus(sessionId, {
-              step: 3,
-              stepName: 'Comax Products',
-              status: 'failed',
-              message: errorMsg
-            });
             return 'QUARANTINED';
         }
 
@@ -346,26 +339,11 @@ const ProductImportService = (function() {
             // The primary Comax import was successful. The export failure is a separate issue.
         }
 
-        // Write success status for UI
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: 'Comax Products',
-          status: 'completed',
-          message: 'Comax data imported successfully'
-        });
-
         return 'COMPLETED';
 
     } catch (e) {
         logger.error(serviceName, functionName, `Failed to import Comax data: ${e.message}`, e, { sessionId: sessionId });
         _updateJobStatus(executionContext, 'FAILED', `Comax import failed: ${e.message}`);
-        // Write failure status for UI
-        SyncStatusService.writeStatus(sessionId, {
-          step: 3,
-          stepName: 'Comax Products',
-          status: 'failed',
-          message: `Import failed: ${e.message}`
-        });
         return 'FAILED';
     }
   }
@@ -829,39 +807,17 @@ const ProductImportService = (function() {
             const errorMsg = _buildQuarantineErrorMessage(validationResult);
             logger.error(serviceName, functionName, 'CRITICAL: Quarantine triggered - MASTER UPDATE BLOCKED', null, { sessionId: sessionId, validationFailures: validationResult.results.filter(r => r.status === 'FAILED') });
             _updateJobStatus(executionContext, 'QUARANTINED', errorMsg);
-            // Write status for UI
-            SyncStatusService.writeStatus(sessionId, {
-              step: 1,
-              stepName: 'Import Web Products',
-              status: 'failed',
-              message: errorMsg
-            });
             return 'QUARANTINED';
         }
 
         // Only reached if validation passed - safe to update master
         _upsertWebProductsData(sessionId);
 
-        // Write success status for UI
-        SyncStatusService.writeStatus(sessionId, {
-          step: 1,
-          stepName: 'Import Web Products',
-          status: 'completed',
-          message: 'Web products imported successfully'
-        });
-
         return 'COMPLETED';
 
     } catch (e) {
         logger.error(serviceName, functionName, `Failed to import Web Products (EN) data: ${e.message}`, e, { sessionId: sessionId });
         _updateJobStatus(executionContext, 'FAILED', `Web Products (EN) import failed: ${e.message}`);
-        // Write failure status for UI
-        SyncStatusService.writeStatus(sessionId, {
-          step: 1,
-          stepName: 'Import Web Products',
-          status: 'failed',
-          message: `Import failed: ${e.message}`
-        });
         return 'FAILED';
     }
   }
@@ -1164,21 +1120,6 @@ const ProductImportService = (function() {
     } catch (e) {
       logger.error(serviceName, functionName, `Job ${jobType} failed: ${e.message}`, e, { sessionId: sessionId, jobType: jobType });
       _updateJobStatus(executionContext, 'FAILED', e.message);
-
-      // Write failure to SyncStatusService so UI can show it
-      const stepMap = {
-        'import.drive.web_translations_he': { step: 1, stepName: 'Web Products' },
-        'import.drive.web_products_en': { step: 1, stepName: 'Web Products' },
-        'import.drive.comax_products': { step: 3, stepName: 'Comax Products' },
-        'export.web.inventory': { step: 4, stepName: 'Web Inventory' }
-      };
-      const stepInfo = stepMap[jobType] || { step: 1, stepName: 'Import' };
-      SyncStatusService.writeStatus(sessionId, {
-        step: stepInfo.step,
-        stepName: stepInfo.stepName,
-        status: 'failed',
-        message: `Failed: ${e.message}`
-      });
 
       throw e; // Re-throw the error after logging and updating status
     }

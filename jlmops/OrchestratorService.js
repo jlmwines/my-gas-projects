@@ -882,7 +882,7 @@ const OrchestratorService = (function() {
     const completedJobType = completedJobDetails.job_type;
     const completedJobSessionId = completedJobDetails.session_id;
 
-    // --- Phase 1: Record file in registry and clean up original file ---
+    // --- Phase 1: Record file in registry (or defer if sync session active) ---
     try {
       if (jobQueueSheetRowNumber) {
         const jobRowData = jobQueueSheet.getRange(jobQueueSheetRowNumber, 1, 1, jobQueueHeaders.length).getValues()[0];
@@ -899,11 +899,29 @@ const OrchestratorService = (function() {
         if (originalFileId && originalFileLastUpdated) {
           const archiveFile = DriveApp.getFileById(archiveFileId);
           const archiveFileName = archiveFile.getName();
-          // Original name is everything before the last underscore, which precedes the ISO timestamp.
           const originalFileName = archiveFileName.substring(0, archiveFileName.lastIndexOf('_'));
 
-          _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
-          // Original files stay in import folder - housekeeping handles cleanup
+          // Check if a sync session is active — defer registration if so
+          const syncState = SyncStateService.getSyncState();
+          const isSyncSession = syncState.sessionId && completedJobSessionId === syncState.sessionId &&
+                                syncState.stage !== 'IDLE' && syncState.stage !== 'COMPLETE';
+
+          if (isSyncSession) {
+            // Store file info in sync state for deferred registration at COMPLETE
+            if (!syncState.archiveFileIds) syncState.archiveFileIds = {};
+            syncState.archiveFileIds[completedJobType] = {
+              originalFileId: originalFileId,
+              originalFileName: originalFileName,
+              originalFileLastUpdated: originalFileLastUpdated,
+              archiveFileId: archiveFileId
+            };
+            syncState.lastUpdated = new Date().toISOString();
+            SyncStateService.setSyncState(syncState);
+            logger.info(serviceName, functionName, `Deferred file registration for ${originalFileName} (sync session active).`);
+          } else {
+            // Not a sync session — register immediately as before
+            _recordFileInRegistry(originalFileId, originalFileName, originalFileLastUpdated);
+          }
         }
       }
     } catch(e) {
@@ -1079,363 +1097,180 @@ const OrchestratorService = (function() {
   function _checkAndAdvanceSyncState() {
     const serviceName = 'OrchestratorService';
     const functionName = '_checkAndAdvanceSyncState';
-    
+
     try {
       const state = SyncStateService.getSyncState();
-      if (!state || !state.sessionId || state.currentStage === 'IDLE' || state.currentStage === 'COMPLETE' || state.currentStage === 'FAILED') {
+      if (!state || !state.sessionId || state.stage === 'IDLE' || state.stage === 'COMPLETE' || state.stage === 'FAILED') {
         return; // Nothing to do
       }
 
-      if (state.currentStage === 'WEB_IMPORT_PROCESSING') {
-        const requiredJobs = [
-          'import.drive.web_products_en',
-          'import.drive.web_translations_he',
-          'import.drive.web_orders'
-        ];
-
-        let allCompleted = true;
-        let anyFailedOrQuarantined = false;
-        let errorMessage = '';
-
-        // Track individual job completions
-        const jobNames = {
-          'import.drive.web_orders': 'Orders',
-          'import.drive.web_products_en': 'Products',
-          'import.drive.web_translations_he': 'Translations'
-        };
-
-        const completedJobs = [];
-        const pendingJobs = [];
-
-        // Batch fetch all job statuses in a single sheet read
-        const jobStatuses = getJobStatusesBatch(requiredJobs, state.sessionId);
-
-        for (const jobType of requiredJobs) {
-          const jobStatus = jobStatuses[jobType];
-          const jobName = jobNames[jobType] || jobType;
-
-          if (jobStatus === 'COMPLETED') {
-            completedJobs.push(jobName);
-          } else if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
-            allCompleted = false;
-            pendingJobs.push(jobName);
-          }
-
-          if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-            anyFailedOrQuarantined = true;
-            errorMessage = `Required import job (${jobType}) failed or was quarantined. Current status: ${jobStatus}.`;
-            break;
-          }
-        }
-
-        // Update status message to show progress
-        if (!allCompleted && !anyFailedOrQuarantined && completedJobs.length > 0) {
-          const progressMsg = `✓ ${completedJobs.join(', ')}${pendingJobs.length > 0 ? ' | Processing: ' + pendingJobs.join(', ') : ''}`;
-          SyncStatusService.writeStatus(state.sessionId, {
-            step: 1,
-            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-            status: 'processing',
-            message: progressMsg
-          });
-        }
-
-        if (anyFailedOrQuarantined) {
-          logger.error(serviceName, functionName, `Stage 1 (Web) jobs failed for session ${state.sessionId}. Setting sync state to FAILED.`);
-
-          // Report failure through unified notification system
-          const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
-          NotificationService.reportFailure(
-            'sync.web_product_import',
-            errorMessage,
-            severity,
-            { sessionId: state.sessionId, jobStatus: jobStatus },
-            state.sessionId
-          );
-
-          // Write Step 1 failure status
-          SyncStatusService.writeStatus(state.sessionId, {
-            step: 1,
-            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-            status: 'failed',
-            message: errorMessage
-          });
-
-          // Clear all subsequent step statuses to prevent showing stale notifications
-          SyncStatusService.clearStepsFromSession(state.sessionId, 2);
-
-          state.currentStage = 'FAILED';
-          state.errorMessage = errorMessage;
-          state.lastUpdated = new Date().toISOString();
-          SyncStateService.setSyncState(state);
-        } else if (allCompleted) {
-          logger.info(serviceName, functionName, `All Stage 1 (Web) jobs completed for session ${state.sessionId}.`);
-
-          // Write Step 1 completion status
-          SyncStatusService.writeStatus(state.sessionId, {
-            step: 1,
-            stepName: SeverityService.SYNC_STEPS.WEB_PRODUCT_IMPORT,
-            status: 'completed',
-            message: 'All web data imported successfully'
-          });
-
-          // Calculate orders pending for export
-          const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
-          state.ordersPendingExportCount = ordersToExportCount;
-          state.lastUpdated = new Date().toISOString();
-
-          if (ordersToExportCount === 0) {
-            // No orders to export - skip Step 3
-            logger.info(serviceName, functionName, `No orders to export. Skipping export step and transitioning to READY_FOR_COMAX_IMPORT.`, { sessionId: state.sessionId });
-
-            SyncStatusService.writeStatus(state.sessionId, {
-              step: 3,
-              stepName: 'Update Comax Orders',
-              status: 'skipped',
-              message: 'No new web orders to export'
-            });
-
-            SyncStatusService.writeStatus(state.sessionId, {
-              step: 4,
-              stepName: 'Import Comax Products',
-              status: 'waiting',
-              message: 'Ready to import Comax product data'
-            });
-
-            state.currentStage = 'READY_FOR_COMAX_IMPORT';
-            state.comaxOrdersExported = true;
-          } else {
-            // Orders need to be exported - wait for manual export and confirmation
-            logger.info(serviceName, functionName, `${ordersToExportCount} orders pending export. Transitioning to WAITING_FOR_COMAX.`, { sessionId: state.sessionId });
-
-            SyncStatusService.writeStatus(state.sessionId, {
-              step: 3,
-              stepName: 'Update Comax Orders',
-              status: 'waiting',
-              message: `${ordersToExportCount} orders ready to export`
-            });
-
-            state.currentStage = 'WAITING_FOR_COMAX';
-            state.comaxOrdersExported = false;
-          }
-
-          SyncStateService.setSyncState(state);
-
-          // NEW: Also write to SyncSessionService (single source of truth)
-          try {
-            SyncSessionService.setStepStatus(1, 'completed');
-            if (ordersToExportCount === 0) {
-              SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_IMPORT_COMAX_PRODUCTS);
-              SyncSessionService.setStepStatus(3, 'skipped');
-            } else {
-              SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_EXPORT_ORDERS);
-            }
-          } catch (sessionError) {
-            logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-          }
-        }
-      }
-
-      // --- NEW: Automate Transition from COMAX_IMPORT_PROCESSING to VALIDATING ---
-      if (state.currentStage === 'COMAX_IMPORT_PROCESSING') {
+      // --- IMPORTING_COMAX -> VALIDATING ---
+      if (state.stage === 'IMPORTING_COMAX') {
           const jobType = 'import.drive.comax_products';
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
-          
+
           if (jobStatus === 'COMPLETED') {
-              logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING and triggering finalization.`);
+              logger.info(serviceName, functionName, `Comax import completed for session ${state.sessionId}. Advancing to VALIDATING.`);
 
-              // Write Step 4 completion status
-              SyncStatusService.writeStatus(state.sessionId, {
-                step: 4,
-                stepName: 'Import Comax Products',
-                status: 'completed',
-                message: 'Comax product data imported successfully'
-              });
-
-              // Validation runs silently - no UI status update
-              // Advance State
-              state.currentStage = 'VALIDATING';
+              state.stage = 'VALIDATING';
               state.lastUpdated = new Date().toISOString();
               state.errorMessage = null;
+              if (!state.steps) state.steps = {};
+              state.steps.step4 = { status: 'completed', message: 'Comax product data imported successfully' };
               SyncStateService.setSyncState(state);
 
-              // NEW: Also write to SyncSessionService (single source of truth)
-              try {
-                SyncSessionService.setStepStatus(4, 'completed');
-                SyncSessionService.setStage(SyncSessionService.STAGES.VALIDATING);
-              } catch (sessionError) {
-                logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-              }
-
-              // Trigger Finalization (Queue Validation Jobs)
+              // Queue validation job and process immediately
               finalizeSync(state.sessionId);
-
-              // Process the newly queued validation job immediately
-              logger.info(serviceName, functionName, 'Triggering immediate processing for newly queued validation job.');
               processPendingJobs();
 
           } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-              logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}. Setting sync state to FAILED.`);
+              logger.error(serviceName, functionName, `Comax import failed for session ${state.sessionId}.`);
 
-              // Report failure through unified notification system
-              const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
               NotificationService.reportFailure(
                 'sync.comax_product_import',
                 `Comax import failed: ${jobStatus}`,
-                severity,
+                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
                 { sessionId: state.sessionId, jobStatus: jobStatus },
                 state.sessionId
               );
 
-              SyncStatusService.writeStatus(state.sessionId, {
-                step: 4,
-                stepName: SeverityService.SYNC_STEPS.COMAX_PRODUCT_IMPORT,
-                status: 'failed',
-                message: `Import failed: ${jobStatus}`
-              });
-
-              // Clear all subsequent step statuses to prevent showing stale notifications
-              SyncStatusService.clearStepsFromSession(state.sessionId, 5);
-
-              state.currentStage = 'FAILED';
+              state.stage = 'FAILED';
+              state.failedAtStage = 'IMPORTING_COMAX';
               state.errorMessage = `Comax import job failed. Status: ${jobStatus}`;
               state.lastUpdated = new Date().toISOString();
+              if (!state.steps) state.steps = {};
+              state.steps.step4 = { status: 'failed', message: `Import failed: ${jobStatus}` };
               SyncStateService.setSyncState(state);
           }
       }
 
-      if (state.currentStage === 'VALIDATING') {
-        const requiredJobs = [
-          'job.periodic.validation.master' // Only master validation is required here
-        ];
-        
-        let allCompleted = true;
-        let anyFailedOrQuarantined = false;
-        let errorMessage = '';
+      // --- VALIDATING -> WAITING_WEB_EXPORT ---
+      if (state.stage === 'VALIDATING') {
+        const jobType = 'job.periodic.validation.master';
+        const jobStatus = getJobStatusInSession(jobType, state.sessionId);
 
-        for (const jobType of requiredJobs) {
-          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
-          if (jobStatus === 'NOT_FOUND' || jobStatus === 'PENDING' || jobStatus === 'PROCESSING') {
-            allCompleted = false;
-            break;
-          }
-          if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-            anyFailedOrQuarantined = true;
-            errorMessage = `Master Validation job (${jobType}) failed or was quarantined. Status: ${jobStatus}`;
-            break;
-          }
-        }
+        if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+           logger.error(serviceName, functionName, `Validation failed for session ${state.sessionId}.`);
 
-        if (anyFailedOrQuarantined) {
-           logger.error(serviceName, functionName, `Master Validation job failed for session ${state.sessionId}. Setting sync state to FAILED.`);
-
-           // Report failure through unified notification system
            NotificationService.reportFailure(
              'validation.master_master',
-             errorMessage,
+             `Master Validation failed: ${jobStatus}`,
              'High',
              { sessionId: state.sessionId },
              state.sessionId
            );
 
-           // Validation runs silently - no UI status update
-           // Clear step 5 status to prevent showing stale notifications (step 4 stays completed)
-           SyncStatusService.clearStepsFromSession(state.sessionId, 5);
-
-           state.currentStage = 'FAILED';
-           state.errorMessage = errorMessage;
+           state.stage = 'FAILED';
+           state.failedAtStage = 'VALIDATING';
+           state.errorMessage = `Master Validation job failed. Status: ${jobStatus}`;
            state.lastUpdated = new Date().toISOString();
            SyncStateService.setSyncState(state);
-        } else if (allCompleted) {
-           logger.info(serviceName, functionName, `Master Validation job completed for session ${state.sessionId}. Advancing to READY_FOR_WEB_EXPORT.`);
+        } else if (jobStatus === 'COMPLETED') {
+           logger.info(serviceName, functionName, `Validation completed for session ${state.sessionId}. Advancing to WAITING_WEB_EXPORT.`);
 
-           // Validation runs silently - Write Step 5 waiting status directly for Web Inventory
-           SyncStatusService.writeStatus(state.sessionId, {
-             step: 5,
-             stepName: 'Update Web Inventory',
-             status: 'waiting',
-             message: 'Ready to generate web inventory export'
-           });
-
-           state.currentStage = 'READY_FOR_WEB_EXPORT';
+           state.stage = 'WAITING_WEB_EXPORT';
            state.lastUpdated = new Date().toISOString();
-           state.errorMessage = null; // Clear error on successful transition
+           state.errorMessage = null;
+           if (!state.steps) state.steps = {};
+           state.steps.step5 = { status: 'waiting', message: 'Ready to generate web inventory export' };
            SyncStateService.setSyncState(state);
-
-           // NEW: Also write to SyncSessionService (single source of truth)
-           try {
-             SyncSessionService.setStage(SyncSessionService.STAGES.READY_TO_EXPORT_WEB_INVENTORY);
-             SyncSessionService.setStepStatus(5, 'waiting');
-           } catch (sessionError) {
-             logger.warn(serviceName, functionName, `SyncSessionService update failed: ${sessionError.message}`);
-           }
         }
       }
 
-      // --- NEW: Automate Transition from WEB_EXPORT_PROCESSING to WEB_EXPORT_GENERATED ---
-      if (state.currentStage === 'WEB_EXPORT_PROCESSING') {
+      // --- GENERATING_WEB_EXPORT -> WAITING_WEB_CONFIRM or COMPLETE ---
+      if (state.stage === 'GENERATING_WEB_EXPORT') {
           const jobType = 'export.web.inventory';
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
-          
+
           if (jobStatus === 'COMPLETED') {
               // Re-read state to get updated webExportFilename set by ProductService
               const updatedState = SyncStateService.getSyncState();
               const exportFilename = updatedState.webExportFilename || '';
               const noChanges = exportFilename === 'No Changes Detected' || !exportFilename;
 
-              logger.info(serviceName, functionName, `Web Inventory Export completed for session ${updatedState.sessionId}. File: ${exportFilename}. Advancing to WEB_EXPORT_GENERATED.`);
+              logger.info(serviceName, functionName, `Web Export completed for session ${updatedState.sessionId}. File: ${exportFilename}.`);
 
-              // Write Step 5 status based on whether a file was created
-              SyncStatusService.writeStatus(updatedState.sessionId, {
-                step: 5,
-                stepName: 'Update Web Inventory',
-                status: noChanges ? 'skipped' : 'waiting',
-                message: noChanges ? 'No inventory changes detected' : `Export ready: ${exportFilename}`
-              });
+              if (!updatedState.steps) updatedState.steps = {};
 
-              updatedState.currentStage = noChanges ? 'COMPLETE' : 'WEB_EXPORT_GENERATED';
-              updatedState.lastUpdated = new Date().toISOString();
-              updatedState.errorMessage = null; // Clear error on successful transition
-              SyncStateService.setSyncState(updatedState);
-
-              // If no changes, complete the sync session task (no confirmation needed)
               if (noChanges) {
+                updatedState.stage = 'COMPLETE';
+                updatedState.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
+
                 try {
                   TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', updatedState.sessionId);
-                  logger.info(serviceName, functionName, `Completed sync session task for session ${updatedState.sessionId} (no changes to export).`);
                 } catch (taskError) {
                   logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
                 }
-              }
-          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-              logger.error(serviceName, functionName, `Web Inventory Export failed for session ${state.sessionId}. Setting sync state to FAILED.`);
 
-              // Report failure through unified notification system
-              const severity = jobStatus === 'QUARANTINED' ? 'Critical' : 'High';
+                // Register files on auto-complete (no changes)
+                _registerSessionFilesFromOrchestrator(updatedState);
+              } else {
+                updatedState.stage = 'WAITING_WEB_CONFIRM';
+                updatedState.steps.step5 = { status: 'waiting', message: `Export ready: ${exportFilename}` };
+              }
+
+              updatedState.lastUpdated = new Date().toISOString();
+              updatedState.errorMessage = null;
+              SyncStateService.setSyncState(updatedState);
+
+          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+              logger.error(serviceName, functionName, `Web Export failed for session ${state.sessionId}.`);
+
               NotificationService.reportFailure(
                 'sync.web_inventory_export',
                 `Web Inventory Export failed: ${jobStatus}`,
-                severity,
+                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
                 { sessionId: state.sessionId, jobStatus: jobStatus },
                 state.sessionId
               );
 
-              // Write Step 5 failure status
-              SyncStatusService.writeStatus(state.sessionId, {
-                step: 5,
-                stepName: SeverityService.SYNC_STEPS.WEB_INVENTORY_EXPORT,
-                status: 'failed',
-                message: `Export failed: ${jobStatus}`
-              });
-
-              state.currentStage = 'FAILED';
+              state.stage = 'FAILED';
+              state.failedAtStage = 'GENERATING_WEB_EXPORT';
               state.errorMessage = `Web Inventory Export job failed. Status: ${jobStatus}`;
               state.lastUpdated = new Date().toISOString();
+              if (!state.steps) state.steps = {};
+              state.steps.step5 = { status: 'failed', message: `Export failed: ${jobStatus}` };
               SyncStateService.setSyncState(state);
           }
       }
-      
+
     } catch (e) {
       logger.error(serviceName, functionName, `Error checking sync state: ${e.message}`, e);
+    }
+  }
+
+  /**
+   * Helper: register session files from orchestrator context.
+   * Mirrors _registerSessionFiles in WebAppSync.js for the auto-complete path.
+   */
+  function _registerSessionFilesFromOrchestrator(state) {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_registerSessionFilesFromOrchestrator';
+
+    if (!state.archiveFileIds || Object.keys(state.archiveFileIds).length === 0) {
+      return;
+    }
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+      const fileRegistrySheet = logSpreadsheet.getSheetByName(allConfig['system.sheet_names'].SysFileRegistry);
+      const registry = getRegistryMap(fileRegistrySheet);
+
+      for (const configName in state.archiveFileIds) {
+        const fileInfo = state.archiveFileIds[configName];
+        if (fileInfo && fileInfo.originalFileId && fileInfo.originalFileLastUpdated) {
+          registry.set(fileInfo.originalFileId, {
+            name: fileInfo.originalFileName || configName,
+            lastUpdated: new Date(fileInfo.originalFileLastUpdated)
+          });
+        }
+      }
+
+      updateRegistrySheet(fileRegistrySheet, registry, allConfig['schema.log.SysFileRegistry']);
+      logger.info(serviceName, functionName, `Registered ${Object.keys(state.archiveFileIds).length} files.`);
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error registering session files: ${e.message}`, e);
     }
   }
 
@@ -1645,12 +1480,6 @@ const OrchestratorService = (function() {
         if (configName === 'import.drive.web_translations_he') {
           if (!isNewFile(latestFile, registry)) {
             logger.info(serviceName, functionName, 'Translations file unchanged since last import. Skipping.', { sessionId });
-            SyncStatusService.writeStatus(sessionId, {
-              step: 1,
-              stepName: 'Import Web Products',
-              status: 'processing',
-              message: 'Translations file unchanged - skipped'
-            });
             return; // Skip to next config
           }
         }
