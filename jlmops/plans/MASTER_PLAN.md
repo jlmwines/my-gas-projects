@@ -1,6 +1,6 @@
 # Master Plan
 
-Current priorities and work streams. Updated: 2025-12-29
+Current priorities and work streams. Updated: 2026-02-16
 
 ---
 
@@ -9,6 +9,32 @@ Current priorities and work streams. Updated: 2025-12-29
 - **Production deploy:** Stable, partner using it daily
 - **Local codebase:** Has changes not yet deployed (sync fixes, CRM, optimizations)
 - **Tech debt:** Accumulated dev code, one-time migrations, untested paths
+
+---
+
+## Session Notes (2026-02-16)
+
+### Sync Widget Poll/Action Race Condition — Fixed
+
+**Problem:** Every sync button click showed spinner briefly, then reverted to button. Clicking again showed "Previous action still running..." — backend was working correctly but UI didn't reflect it. Root cause: `google.script.run` callbacks from already-in-flight polls overwrote the spinner with a button. Additionally, long operations (Import Comax) showed no progress — polling was completely blocked during actions.
+
+**Fix (AdminDailySyncWidget_v2.html only, no backend changes):**
+
+1. **Removed `actionInProgress` from poll guard** — polls now continue during actions, providing live step card and message updates
+2. **Action-aware poll callback** — during actions, poll callbacks update step cards, message, footer, and progress log but NEVER touch `#sharedAction` (the button/spinner area). This eliminates the race.
+3. **Step messages now displayed** — `updateStepCard` shows backend messages like "Products and translations imported" in each card
+4. **Richer progress log** — action completion shows export filenames and order counts instead of generic "done"
+5. **Removed dead `lastActionTime` variable** — set in 4 places, never read
+
+**Status:** Pushed to Apps Script. Needs testing (see verification steps in plan transcript).
+
+**Testing checklist:**
+- [ ] Race condition: click button, spinner stays, button doesn't reappear until backend returns
+- [ ] Progress: during Import Comax, step cards update live, message changes between stages
+- [ ] Export filename shows in progress log after Generate
+- [ ] Step messages visible in cards after completion
+- [ ] Double-click blocked correctly
+- [ ] Error recovery works (error displayed, Retry works, polling resumes)
 
 ---
 

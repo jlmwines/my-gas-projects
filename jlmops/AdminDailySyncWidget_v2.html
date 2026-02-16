@@ -137,7 +137,6 @@
     // Module state
     var currentSessionId = null;
     var pollInterval = null;
-    var lastActionTime = 0;
     var currentPollIntervalMs = null;
     var progressEntries = [];
     var previousStepStatuses = {};
@@ -220,6 +219,7 @@
         }
 
         icon.textContent = ICONS[stepData.status] || ICONS.waiting;
+        message.innerHTML = stepData.message || '';
 
         if (stepData.status === 'completed') {
             card.classList.add('border-success', 'bg-light');
@@ -385,7 +385,6 @@
         }
         actionInProgress = true;
         lastError = null;
-        lastActionTime = Date.now();
         console.log('SyncWidget: Running ' + backendFn);
 
         // Immediate UI feedback
@@ -418,7 +417,15 @@
                 if (actionTimeout) clearTimeout(actionTimeout);
                 actionInProgress = false;
                 console.log('SyncWidget: ' + backendFn + ' succeeded. Stage: ' + (status && status.stage));
-                addProgressEntry(actionLabel + ' - done', true);
+                // Build progress message with context from status
+                var progressMsg = actionLabel + ' - done';
+                if (status.webExportFilename && status.webExportFilename !== 'No Changes Detected') {
+                    progressMsg = 'Export file: ' + status.webExportFilename;
+                }
+                if (status.ordersPendingExportCount > 0 && backendFn === 'importWebOrdersBackend') {
+                    progressMsg = 'Orders imported. ' + status.ordersPendingExportCount + ' ready for export';
+                }
+                addProgressEntry(progressMsg, true);
                 updateUI(status);
                 adjustPolling(status);
             })
@@ -471,7 +478,6 @@
     }
 
     function retryFailed() {
-        lastActionTime = Date.now();
         document.getElementById('footerStatus').textContent = 'Retrying...';
 
         google.script.run
@@ -489,7 +495,6 @@
     function resetSync() {
         if (!confirm('Reset the sync workflow? This will clear the current session and all progress.')) return;
 
-        lastActionTime = Date.now();
         document.getElementById('footerStatus').textContent = 'Resetting...';
 
         progressEntries = [];
@@ -515,11 +520,40 @@
     // =====================================================================
 
     function refreshStatus() {
-        // Don't poll while action is running or error is showing
-        if (actionInProgress || lastError) return;
+        // Don't poll while error is showing
+        if (lastError) return;
 
         google.script.run
             .withSuccessHandler(function(status) {
+                if (actionInProgress) {
+                    // Update step cards and progress — but NOT the action area
+                    var steps = status.steps || {};
+                    for (var i = 1; i <= 5; i++) {
+                        updateStepCard(i, steps['step' + i]);
+                    }
+                    logStepTransitions(steps);
+
+                    // Update message to reflect current backend stage
+                    var stage = status.stage || 'IDLE';
+                    var config = STAGE_CONFIG[stage];
+                    if (config) {
+                        var message = config.message;
+                        message = message.replace('{count}', status.ordersPendingExportCount || 0);
+                        message = message.replace('{error}', '<span class="text-danger">'
+                            + (status.errorMessage || 'Unknown') + '</span>');
+                        document.getElementById('sharedMessage').innerHTML = message;
+                    }
+
+                    // Update footer timestamp
+                    document.getElementById('footerStatus').textContent = status.lastUpdated
+                        ? 'Last updated: ' + new Date(status.lastUpdated).toLocaleString(
+                            'he-IL', { timeZone: 'Asia/Jerusalem' })
+                        : 'Processing...';
+
+                    adjustPolling(status);
+                    return;
+                }
+                // Normal path (no action running): full UI update
                 updateUI(status);
                 adjustPolling(status);
             })
