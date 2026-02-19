@@ -2199,8 +2199,11 @@ const ProductService = (function() {
     const functionName = 'webProductReassign';
     logger.info(serviceName, functionName, `Starting web product reassign: WebId ${webProductId}, ${oldSku} -> ${newSku}`, { sessionId, webProductId, oldSku, newSku, updateOldIsWeb, updateNewIsWeb });
 
-    if (!webProductId || !newSku) {
-      return { success: false, message: 'Both Web Product ID and new SKU are required.' };
+    if (!newSku) {
+      return { success: false, message: 'New SKU is required.' };
+    }
+    if (!webProductId && !oldSku) {
+      return { success: false, message: 'Either Web Product ID or old SKU is required to identify the product.' };
     }
 
     try {
@@ -2224,23 +2227,26 @@ const ProductService = (function() {
 
       const webProdData = webProdSheet.getDataRange().getValues();
       let webProdRowIdx = -1;
-      const webIdStr = String(webProductId).trim();
+      const webIdStr = webProductId ? String(webProductId).trim() : '';
+      const oldSkuStr = oldSku ? String(oldSku).trim() : '';
 
       for (let i = 1; i < webProdData.length; i++) {
         const idEn = String(webProdData[i][webIdEnIdx]).trim();
         const idHe = String(webProdData[i][webIdHeIdx]).trim();
-        if (idEn === webIdStr || idHe === webIdStr) {
+        const rowSku = String(webProdData[i][webProdSkuIdx]).trim();
+        // Match by web ID or by old SKU
+        if ((webIdStr && (idEn === webIdStr || idHe === webIdStr)) || (oldSkuStr && rowSku === oldSkuStr)) {
           webProdRowIdx = i;
           // Use passed oldSku or get from sheet
           if (!oldSku) {
-            oldSku = String(webProdData[i][webProdSkuIdx]).trim();
+            oldSku = rowSku;
           }
           break;
         }
       }
 
       if (webProdRowIdx === -1) {
-        return { success: false, message: `Web Product ID ${webProductId} not found in WebProdM.` };
+        return { success: false, message: `Product not found in WebProdM (WebId: ${webProductId || 'none'}, SKU: ${oldSku || 'none'}).` };
       }
 
       // Update WebProdM SKU
