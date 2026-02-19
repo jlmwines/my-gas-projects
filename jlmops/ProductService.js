@@ -2154,7 +2154,7 @@ const ProductService = (function() {
             const status = String(taskData[i][taskStatusIdx]).trim();
             // Only update open tasks (not Completed/Cancelled)
             if (status !== 'Completed' && status !== 'Cancelled' && status !== 'Done') {
-              if (String(taskData[i][taskEntityIdIdx]).trim() === oldSku) {
+              if (String(taskData[i][taskEntityIdIdx]).trim() === String(oldSku).trim()) {
                 taskSheet.getRange(i + 1, taskEntityIdIdx + 1).setValue(newSku);
                 taskUpdated = true;
               }
@@ -2269,13 +2269,15 @@ const ProductService = (function() {
         }
       }
 
-      // 4. Update CmxProdM IsWeb flags if requested
+      // 4. Update CmxProdM IsWeb flags if requested, and capture new product name
+      let newProductNameHe = '';
       if (updateOldIsWeb || updateNewIsWeb) {
         const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
         if (cmxSheet) {
           const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
           const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
           const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+          const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
 
           if (cmxSkuIdx >= 0 && cmxIsWebIdx >= 0) {
             const cmxData = cmxSheet.getDataRange().getValues();
@@ -2296,6 +2298,9 @@ const ProductService = (function() {
               // Set new product's IsWeb to 'כן'
               if (updateNewIsWeb && sku === newSkuStr) {
                 cmxSheet.getRange(i + 1, cmxIsWebIdx + 1).setValue('כן');
+                if (cmxNameHeIdx >= 0) {
+                  newProductNameHe = String(cmxData[i][cmxNameHeIdx] || '');
+                }
                 if (!updatedSheets.includes('CmxProdM (new IsWeb on)')) {
                   updatedSheets.push('CmxProdM (new IsWeb on)');
                 }
@@ -2305,8 +2310,45 @@ const ProductService = (function() {
         }
       }
 
+      // If we didn't capture the name from step 4 (IsWeb loop was skipped), look it up
+      if (!newProductNameHe) {
+        const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+        if (cmxSheet) {
+          const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+          const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+          const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+          if (cmxSkuIdx >= 0 && cmxNameHeIdx >= 0) {
+            const cmxData = cmxSheet.getDataRange().getValues();
+            const newSkuStr = String(newSku).trim();
+            for (let i = 1; i < cmxData.length; i++) {
+              if (String(cmxData[i][cmxSkuIdx]).trim() === newSkuStr) {
+                newProductNameHe = String(cmxData[i][cmxNameHeIdx] || '');
+                break;
+              }
+            }
+          }
+        }
+      }
+
       // 5. Log the SKU update
       _logSkuUpdate('WebProductReassign', oldSku || webProductId, newSku, userEmail, updatedSheets.join(', '));
+
+      // 6. Create vintage update task for the new product
+      try {
+        TaskService.createTask(
+          'task.validation.vintage_mismatch',
+          newSku,
+          newProductNameHe || newSku,
+          'Product Replacement: web content review needed',
+          JSON.stringify({ replacedSku: oldSku, webProductId: webProductId, reason: 'product_replacement' }),
+          sessionId
+        );
+        logger.info(serviceName, functionName, `Created vintage update task for replacement product ${newSku}`);
+      } catch (taskError) {
+        if (!taskError.message.includes('already exists')) {
+          logger.warn(serviceName, functionName, `Could not create vintage update task: ${taskError.message}`);
+        }
+      }
 
       // Invalidate caches
       _invalidateProductCache();
@@ -2332,7 +2374,7 @@ const ProductService = (function() {
   function _updateSkuInSheet(sheet, skuColIdx, oldSku, newSku) {
     const data = sheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) { // Skip header
-      if (String(data[i][skuColIdx]).trim() === oldSku) {
+      if (String(data[i][skuColIdx]).trim() === String(oldSku).trim()) {
         sheet.getRange(i + 1, skuColIdx + 1).setValue(newSku);
         return true;
       }
@@ -2662,6 +2704,66 @@ const ProductService = (function() {
   }
 
   /**
+   * Searches ALL products in CmxProdM by SKU or Hebrew name.
+   * Only excludes archived products — no isWeb or stock filtering.
+   * Used by vendor SKU update where the product is likely already on web.
+   * @param {string} searchTerm The search term (min 2 chars).
+   * @returns {Array<Object>} Array of { sku, name, isWeb, stock }
+   */
+  function searchAllProducts(searchTerm) {
+    if (!searchTerm || searchTerm.length < 2) return [];
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+      const term = String(searchTerm).toLowerCase();
+
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+      const cmxNameHeIdx = cmxHeaders.indexOf('cpm_NameHe');
+      const cmxIsArchivedIdx = cmxHeaders.indexOf('cpm_IsArchived');
+      const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
+      const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
+
+      if (!cmxSheet) return [];
+
+      const isTrue = (val) => {
+        const s = String(val || '').trim().toLowerCase();
+        return s === '1' || s === 'true' || s === 'yes' || s === 'כן';
+      };
+
+      const cmxData = cmxSheet.getDataRange().getValues();
+      const results = [];
+
+      for (let i = 1; i < cmxData.length && results.length < 50; i++) {
+        const sku = String(cmxData[i][cmxSkuIdx] || '').trim();
+        const nameHe = String(cmxData[i][cmxNameHeIdx] || '');
+        const isArchived = isTrue(cmxData[i][cmxIsArchivedIdx]);
+
+        // Skip archived products only
+        if (isArchived) continue;
+
+        // Search by SKU or Hebrew name
+        if (sku.toLowerCase().includes(term) || nameHe.includes(searchTerm)) {
+          results.push({
+            sku: sku,
+            name: nameHe,
+            isWeb: isTrue(cmxData[i][cmxIsWebIdx]),
+            stock: Number(cmxData[i][cmxStockIdx] || 0)
+          });
+        }
+      }
+
+      return results;
+
+    } catch (e) {
+      console.error(`Failed to search all products: ${e.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Exports descriptions for ALL products in WebDetM, split into EN and HE sheets.
    * Uses language-specific WooCommerce post IDs (wpm_ID for EN, wxm_ID for HE)
    * so the output can be imported directly via WebToffee.
@@ -2775,6 +2877,7 @@ const ProductService = (function() {
     getRecentSkuUpdates: getRecentSkuUpdates,
     lookupProductBySku: lookupProductBySku,
     searchWebProducts: searchWebProducts,
-    searchProductsForReplacement: searchProductsForReplacement
+    searchProductsForReplacement: searchProductsForReplacement,
+    searchAllProducts: searchAllProducts
   };
 })();

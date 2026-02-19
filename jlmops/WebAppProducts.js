@@ -1016,6 +1016,21 @@ function WebAppProducts_searchProductsForReplacement(searchTerm) {
 }
 
 /**
+ * Searches ALL products in CmxProdM (excluding archived) by SKU or name.
+ * Used by vendor SKU update where the target product may already be on web.
+ * @param {string} searchTerm The search term (min 2 chars).
+ * @returns {Array<Object>} Array of { sku, name, isWeb, stock }
+ */
+function WebAppProducts_searchAllProducts(searchTerm) {
+  try {
+    return ProductService.searchAllProducts(searchTerm);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'searchAllProducts', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
  * Test description backfill with a single SKU.
  * Edit the SKU below before running.
  */

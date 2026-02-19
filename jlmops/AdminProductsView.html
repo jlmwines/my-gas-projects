@@ -621,7 +621,8 @@
                         const div = document.createElement('div');
                         div.className = 'p-2 border-bottom cursor-pointer';
                         div.style.cursor = 'pointer';
-                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.name}`;
+                        const webBadge = p.isWeb ? '<span class="badge badge-info ml-1" style="font-size:0.7em;">Web</span>' : '';
+                        div.innerHTML = `<strong>${p.sku}</strong>${webBadge} - ${p.name}`;
                         div.onclick = () => AdminProductsView.selectVendorCurrentProduct(p.sku);
                         resultsDiv.appendChild(div);
                     });
@@ -630,7 +631,7 @@
             }).withFailureHandler(err => {
                 resultsDiv.innerHTML = '<div class="p-2 text-danger small">Search failed</div>';
                 resultsDiv.style.display = 'block';
-            }).WebAppProducts_searchProducts(term);
+            }).WebAppProducts_searchAllProducts(term);
         }, 300);
     };
 
