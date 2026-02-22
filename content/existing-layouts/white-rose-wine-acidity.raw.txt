@@ -1,0 +1,141 @@
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">All About Acidity: The Zing in Your White &amp; Rosé Wines</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Wine lovers, uncork your curiosity! Today, we're diving into the world of acidity in white and rosé wines. This might sound like a technical term, but fret not – we'll make it fun and informative!</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p><strong>The Acidity Advantage</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Acidity refers to the presence of acids like tartaric, malic, and citric acid in wine. These natural grape comrades bring a refreshing zing, influencing the wine's overall taste and texture. Think of the way adding lemon juice to a salad brings a refreshing pucker of tartness that sharpens the flavors  – that's acidity at its finest!</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
+
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p><strong>A Spectrum of Tang</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>White and rosé wines generally boast more acidity than their red counterparts. This acidity acts like a supportive backbone, providing structure and balance. But within this category, there's a range of tanginess to explore!</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li><strong class="">High Acidity All-Stars:</strong> Sauvignon Blanc, Riesling, and Pinot Gris lead the pack. These wines are known for their zesty, lip-smacking character, perfectly complementing lighter dishes like fish, salads, and creamy cheeses. High-acid wines and rich creamy foods highlight each other naturally.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><strong>The Middle Ground:</strong> Chardonnay, Sauvignon Blanc, Colombard and others finds their sweet spot here. Balanced crispness and richness, making them versatile pairing partners for milder foods.</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><strong>Subtle &amp; Smooth:</strong> Viognier and Gewürztraminer tend to have lower acidity levels. These wines are often fuller-bodied and more aromatic, ideal for those who prefer a smoother drinking experience. Low-acid wines can accompany high-acid dishes and those with hot pepper heat without overdoing it.</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column {"width":"100%"} -->
+<div class="wp-block-column" style="flex-basis:100%"><!-- wp:paragraph -->
+<p><strong>Finding Your Perfect Match</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>So, how do you discover your ideal acidity level? It's all about personal taste! Here's a quick guide:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+<li><strong>Love a refreshing burst of flavor?</strong> High-acidity wines are your zingy companions. (Acidity 4 or 5)</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><strong>Seeking a balanced experience?</strong> Explore medium-acidity options. (Acidity 3)</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
+<li><strong>Craving a smoother, fruitier sip?</strong> Lower-acidity wines might be your perfect match. (Acidity 1 or 2).</li>
+<!-- /wp:list-item --></ul>
+<!-- /wp:list --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:paragraph -->
+<p><strong>Detecting the Delightful Zing</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p>Curious how to identify acidity in your wine? It's all about taste and feel! Take a sip and pay attention to the sensation on your tongue. High-acidity wines will cause a pleasant tingle or pucker, similar to what you experience with lemonade. Lower-acidity wines will feel smoother and rounder on the palate. You can even try swishing the wine around your mouth – higher acidity wines will tend to make your mouth water more. With a little practice, you'll become an expert at detecting this delightful tang in your favorite white and rosé wines!</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p><strong>How to find acidity on jlmwines.com</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>White and rosé wine <strong>product pages</strong> show acidity using a scale from 1 to 5.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Try starting with a wine you enjoy, then find others with similar acidity level.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Catalog pages can be filtered by acidity level.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
+
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:image {"id":64602,"sizeSlug":"medium","linkDestination":"media"} -->
+<figure class="wp-block-image size-medium"><a href="https://staging6.jlmwines.com/wp-content/uploads/2025/01/acidity-product-page.jpg"><img src="https://staging6.jlmwines.com/wp-content/uploads/2025/01/acidity-product-page-300x266.jpg" alt="product page acidity" class="wp-image-64602"/></a></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:image {"id":64604,"sizeSlug":"large","linkDestination":"media"} -->
+<figure class="wp-block-image size-large"><a href="https://staging6.jlmwines.com/wp-content/uploads/2025/01/catalog-acidity.jpg"><img src="https://staging6.jlmwines.com/wp-content/uploads/2025/01/catalog-acidity-1024x447.jpg" alt="" class="wp-image-64604"/></a></figure>
+<!-- /wp:image -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Other Articles</h2>
+<!-- /wp:heading -->
+
+<!-- wp:query {"queryId":12,"query":{"perPage":3,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"exclude","inherit":false,"taxQuery":{"category":[947]}},"metadata":{"categories":["posts"],"patternName":"core/query-grid-posts","name":"Grid"}} -->
+<div class="wp-block-query"><!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"30px","right":"30px","bottom":"30px","left":"30px"}}},"layout":{"inherit":false}} -->
+<div class="wp-block-group" style="padding-top:30px;padding-right:30px;padding-bottom:30px;padding-left:30px"><!-- wp:post-title {"isLink":true} /-->
+
+<!-- wp:post-excerpt {"moreText":"Read More"} /--></div>
+<!-- /wp:group -->
+<!-- /wp:post-template --></div>
+<!-- /wp:query -->
+
+<!-- wp:paragraph -->
+<p></p>
+<!-- /wp:paragraph -->

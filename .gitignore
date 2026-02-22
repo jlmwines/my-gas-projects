@@ -1,0 +1,17 @@
+# OAuth credentials (contains tokens — never commit)
+.clasprc.json
+
+# WordPress credentials
+.wp-credentials
+
+# Content working files
+content/history/
+content/*.zip
+content/existing-layouts/*.jpg
+
+# Windows artifacts
+nul
+jlmops/nul
+
+# Exchange folder
+jlmops/exchange/

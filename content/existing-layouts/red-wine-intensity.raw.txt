@@ -1,0 +1,59 @@
+<!-- wp:paragraph -->
+<p><strong>Finding Your Perfect Red: Exploring the Spectrum of Intensity</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Dry red wines are a captivating world of flavors, but did you know they also come in different levels of intensity? This can be a great parameter that can help us pick the right wine for us. Think of it like a musical performance. A gentle acoustic guitar solo might be soothing, while a full orchestra playing a powerful symphony creates a much more intense experience. Both will be beautiful and captivating, yet completely different.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Dry red wine intensity, often described as a scale from <strong>lightness to boldness</strong>, is all about the weight and concentration of flavor. <strong>Lighter reds</strong> are characterized by delicate fruit notes, subtle tannins, and a refreshing finish. They are like a soft, melodic tune, easy to enjoy and perfect for everyday sipping. <strong>Bolder reds</strong>, on the other hand, are packed with concentrated fruit, firm tannins, and a lingering finish. They are like a robust orchestral performance, demanding attention and leaving a lasting impression.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Choosing the right intensity for your occasion is key to a satisfying wine experience. Imagine a <strong>light, fruity Pinot Noir</strong> on a warm summer evening. Its delicate flavors and lower intensity suit a light salad or grilled fish. Now, picture a <strong>bold, full-bodied Cabernet Sauvignon</strong> alongside a hearty winter stew. Its concentrated fruit, firm tannins, and rich flavors stand up to the hearty meal, creating a satisfying and balanced experience.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>The intensity of a dry red wine can also influence the mood of your gathering. A <strong>light, approachable red</strong> is perfect for a casual dinner with friends or a relaxed evening on the balcony. Its easy-drinking nature makes it a crowd-pleaser, while its subtle flavors allow for conversation to flow freely. A <strong>bold, complex red</strong>, however, might be better suited for a formal dinner party or a special celebration. Its powerful flavors and lingering finish demand attention and create a sense of occasion.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>At jlmwines.com, we understand that intensity is a matter of personal preference. That's why we've created an <strong>intensity scale from 1 to 5</strong> for our dry red wines, making it easy for you to find the perfect match for your taste and the occasion. Lower intensity reds are lighter and refreshing, ideal for everyday enjoyment. Higher intensity reds are bolder and perfect for special occasions and pairing with rich dishes.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Explore the spectrum of dry red wine intensity and discover the perfect bottle for every mood and moment. Whether you're looking for a light and refreshing sip or a bold and powerful experience, <strong>jlmwines.com</strong> is your guide to finding the perfect dry red wine for your next occasion.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:paragraph -->
+<p><strong>How to find intensity on jlmwines.com</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Red wine <strong>product pages</strong> show complexity using a scale from 1 to 5.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":62821,"sizeSlug":"large","linkDestination":"media"} -->
+<figure class="wp-block-image size-large"><a href="https://staging6.jlmwines.com/wp-content/uploads/2025/01/intensity-product.jpg"><img src="https://staging6.jlmwines.com/wp-content/uploads/2025/01/intensity-product-1024x569.jpg" alt="" class="wp-image-62821"/></a></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>Dry red wines have a link on the product page to show other wines with similar intensity levels. Try starting with a wine you enjoy, then following the link to discover wines with similar profiles.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:separator -->
+<hr class="wp-block-separator has-alpha-channel-opacity"/>
+<!-- /wp:separator -->
+
+<!-- wp:image {"id":62823,"sizeSlug":"full","linkDestination":"media"} -->
+<figure class="wp-block-image size-full"><a href="https://staging6.jlmwines.com/wp-content/uploads/2025/01/intensity-catalog.jpg"><img src="https://staging6.jlmwines.com/wp-content/uploads/2025/01/intensity-catalog.jpg" alt="" class="wp-image-62823"/></a></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>Catalog pages have filtering available to list wines by intensity level.</p>
+<!-- /wp:paragraph -->
