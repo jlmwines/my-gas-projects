@@ -17,21 +17,17 @@ Paste below into WordPress Code Editor:
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column -->
-<div class="wp-block-column"><!-- wp:paragraph -->
-<p>אנשים רבים מרגישים שהם זקוקים לתואר באומנות קולינרית כדי להתאים יין לאוכל. האמת היא שזה אמור להיות פשוט כמו בחירת תוספת לארוחה.</p>
-<!-- /wp:paragraph -->
-
-<!-- wp:paragraph -->
-<p>כלל אחד הוא החשוב ביותר - אם אתם נהנים או שיש לכם חשק לסוג יין ספציפי - כנראה זה היין שילווה בצורה הטובה ביותר את הארוחה שלך.</p>
+<!-- wp:paragraph {"style":{"typography":{"fontSize":"1.15em"}}} -->
+<p style="font-size:1.15em">אנשים רבים מרגישים שהם זקוקים לתואר באומנות קולינרית כדי להתאים יין לאוכל. האמת היא שזה אמור להיות פשוט כמו בחירת תוספת לארוחה. כלל אחד הוא החשוב ביותר - אם אתם נהנים או שיש לכם חשק לסוג יין ספציפי - כנראה זה היין שילווה בצורה הטובה ביותר את הארוחה שלך.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
 <p>אפשר כרגע להתעלם מהכללים ששמעתם עד עכשיו. הנה שתי דרכים פשוטות לחשוב על שילוב קל בין האוכל בצלחת ליין שלכם.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:heading -->
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column {"width":"55%"} -->
+<div class="wp-block-column" style="flex-basis:55%"><!-- wp:heading -->
 <h2 class="wp-block-heading">סוד 1: בחרו את סוג הקשר בין האוכל ליין</h2>
 <!-- /wp:heading -->
 
@@ -47,11 +43,19 @@ Paste below into WordPress Code Editor:
 <!-- wp:list-item -->
 <li><strong>ניגוד:</strong> היין עושה מה שהאוכל לא יכול. יין אדום נועז עם סטייק עשיר ושומני -- נוכחות היין חותכת את העושר, ומרעננת את החך בין ביסים. גם האוכל וגם היין משתפרים אחד בזכות השני.</li>
 <!-- /wp:list-item --></ul>
-<!-- /wp:list -->
+<!-- /wp:list --></div>
+<!-- /wp:column -->
 
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-harmonize.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- wp:column {"width":"45%"} -->
+<div class="wp-block-column" style="flex-basis:45%"><!-- wp:image {"id":67012,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2025/05/pairing-harmony-or-contrast.jpg" alt="שתי כוסות יין זו לצד זו — לבן ואדום — המייצגות הרמוניה וניגוד בהתאמת אוכל ויין" class="wp-image-67012"/></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:separator {"className":"is-style-wide"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/>
+<!-- /wp:separator -->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">סוד 2: להבין את סוג המזון</h2>
@@ -61,71 +65,86 @@ Paste below into WordPress Code Editor:
 <p>ניתן לקטלג כמעט כל מנה לאחת מארבע קטגוריות. ברגע שאתם יודעים מה אתם מגישים, בחירת היין הופכת להרבה יותר ברורה.</p>
 <!-- /wp:paragraph -->
 
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:image {"id":67055,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2026/02/pairing-mild.jpg" alt="יין לבן עדין לצד דג קל — התאמה למאכלים עדינים" class="wp-image-67055"/></figure>
+<!-- /wp:image -->
+
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">עדין (Mild)</h3>
+<h3 class="wp-block-heading">עדין</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>מאכלים בטעמים קלים כמו גבינות רכות, דג לבן, עוף עם תיבול עדין או פסטה ברוטב קליל.</p>
+<p>גבינות רכות, דג לבן, עוף עם תיבול עדין או פסטה ברוטב קליל.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
 <p><em>מה מתאים:</em> יין לבן טרי עם חמיצות רעננה וטעמי פרי עדינים. היין משתלב בהרמוניה עם הטעמים העדינים מבלי להכריע אותם.</p>
-<!-- /wp:paragraph -->
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
 
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-mild.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:image {"id":67043,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2026/02/pairing-cheese.jpg" alt="כוס יין לצד גבינה מיושנת וזיתים — התאמה למאכלים עשירים" class="wp-image-67043"/></figure>
+<!-- /wp:image -->
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">עשיר (Rich)</h3>
+<h3 class="wp-block-heading">עשיר</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>טעמים כבדים יותר כמו סלמון, בשר אדום, מאכלים שמנים יותר, גבינות קשות, או כל דבר עם חמאה ושמנת.</p>
+<p>סלמון, בשר אדום, מאכלים שמנים יותר, גבינות קשות, או כל דבר עם חמאה ושמנת.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><em>מה מתאים:</em> יין אדום בעוצמה בינונית עם פרי עשיר, אישיות תוססת ובהירה. בנוסף, יין לבן עם חמיצות גבוהה יותר כדי לחתוך את העושר - הרעננות גם מנקה את חך בין ביסים.</p>
-<!-- /wp:paragraph -->
+<p><em>מה מתאים:</em> יין אדום בעוצמה בינונית עם פרי עשיר. או יין לבן עם חמיצות גבוהה יותר כדי לחתוך את העושר - הרעננות מנקה את החך בין ביסים.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
 
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-rich.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:image {"id":67054,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2026/02/pairing-intense.jpg" alt="יין אדום עמוק לצד מנה מתובלת — התאמה למאכלים אינטנסיביים" class="wp-image-67054"/></figure>
+<!-- /wp:image -->
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">אינטנסיבי (Intense)</h3>
+<h3 class="wp-block-heading">אינטנסיבי</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>מנות עם אישיות גדולה -- קארי מתובל, תיבול כבד, שום נועז, או טעמים חזקים שמכריזים על עצמם.</p>
+<p>מנות מתובלות, תיבול כבד, שום נועז, או טעמים חזקים שמכריזים על עצמם.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><em>מה מתאים:</em> יין אדום מורכב עם פרי נועז יכול לעמוד מול האינטנסיביות. אבל הנה החריג החשוב: לאוכל חריף, יותר בטוח ללכת על <strong>חמיצות נמוכה יותר</strong>. יינות בעלי חומציות גבוהה מגבירים את הצריבה, בעוד שיין רך יותר מרכך את האפקט. אם תרצו אופציה לבנה - יינות לבנים עשירים וסמיכים יותר יתאימו יפה.</p>
-<!-- /wp:paragraph -->
+<p><em>מה מתאים:</em> יין אדום מורכב עם פרי נועז. לאוכל חריף, בחרו <strong>חמיצות נמוכה יותר</strong> — יינות חומציים מגבירים את הצריבה, בעוד שיינות רכים מרככים.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
 
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-intense.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:image {"id":67053,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2026/02/pairing-sweet.jpg" alt="רוזה לצד מאפה זהוב — התאמה למאכלים מתוקים" class="wp-image-67053"/></figure>
+<!-- /wp:image -->
 
 <!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">מתוק (Sweet)</h3>
+<h3 class="wp-block-heading">מתוק</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>קינוחים, מאפים, או מנות מלוחות עם זיגוג מתוק, רטבים או רכיבי פרי.</p>
+<p>קינוחים, מאפים, או מנות עם זיגוג מתוק, רטבים או רכיבי פרי.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><em>מה מתאים:</em> יין עם מתיקות פירותית משלו, או יין יבש עם טעמים עדינים. המתיקות משתלבת בהרמוניה במקום להתנגש - יינות יבשים אינטנסיביים עשויים להרגיש מרים בשילוב עם אוכל מתוק.</p>
-<!-- /wp:paragraph -->
+<p><em>מה מתאים:</em> יין עם מתיקות פירותית משלו, או יין יבש עדין. המתיקות משתלבת בהרמוניה — יינות יבשים אינטנסיביים עשויים להרגיש מרים מול אוכל מתוק.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
 
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-sweet.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- wp:separator {"className":"is-style-wide"} -->
+<hr class="wp-block-separator has-alpha-channel-opacity is-style-wide"/>
+<!-- /wp:separator -->
 
-<!-- wp:heading -->
+<!-- wp:group {"style":{"color":{"background":"#faf6f1"},"spacing":{"padding":{"top":"1.5em","bottom":"1.5em","left":"1.5em","right":"1.5em"}}},"layout":{"type":"constrained"}} -->
+<div class="wp-block-group has-background" style="background-color:#faf6f1;padding:1.5em"><!-- wp:heading -->
 <h2 class="wp-block-heading">שימוש במדד</h2>
 <!-- /wp:heading -->
 
@@ -133,7 +152,9 @@ Paste below into WordPress Code Editor:
 <p>כל יין באתר שלנו מציג מדדים פשוטים מ1-5. כך משתמשים בהם:</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:heading {"level":3} -->
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">ליינות אדומים (עוצמה ומורכבות)</h3>
 <!-- /wp:heading -->
 
@@ -145,9 +166,11 @@ Paste below into WordPress Code Editor:
 <!-- wp:list-item -->
 <li><strong>מנות אינטנסיביות</strong> משתלבות היטב עם <strong>מורכבות</strong> גבוהה יותר -- יותר שכבות של טעמים ביין פירושן יותר טעמים ליצירת אינטראקציה עם המנה.</li>
 <!-- /wp:list-item --></ul>
-<!-- /wp:list -->
+<!-- /wp:list --></div>
+<!-- /wp:column -->
 
-<!-- wp:heading {"level":3} -->
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">ליינות לבנים ורוזה (מורכבות וחמיצות)</h3>
 <!-- /wp:heading -->
 
@@ -159,11 +182,10 @@ Paste below into WordPress Code Editor:
 <!-- wp:list-item -->
 <li><strong>מאכלים חריפים</strong> מתאימים ליינות עם <strong>חמיצות נמוכה יחסית</strong> -- יינות בעלי חמיצות גבוהה מגבירים את התחושה החריפה, בעוד שיינות רכים יותר מספקים הקלה מהחריפות.</li>
 <!-- /wp:list-item --></ul>
-<!-- /wp:list -->
-
-<!-- wp:paragraph {"style":{"color":{"background":"#fff3cd"},"spacing":{"padding":{"top":"12px","bottom":"12px","left":"16px","right":"16px"}}}} -->
-<p class="has-background" style="background-color:#fff3cd;padding:12px 16px">IMAGE: pairing-scales.jpg (from EN version)</p>
-<!-- /wp:paragraph -->
+<!-- /wp:list --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns --></div>
+<!-- /wp:group -->
 
 <!-- wp:heading {"level":3} -->
 <h3 class="wp-block-heading">איך למצוא עזרה בהתאמות</h3>
@@ -173,20 +195,20 @@ Paste below into WordPress Code Editor:
 <p>אתם לא צריכים לשנן שום דבר מכל זה. גם דפי המוצר באתר וגם תעודת המשלוח שלכם מציגים הצעות להתאמה -- הרמוניה או ניגוד, ואלו סוגי אוכל עובדים בצורה הטובה ביותר.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:heading -->
-<h2 class="wp-block-heading">כלל הזהב</h2>
-<!-- /wp:heading -->
-
-<!-- wp:paragraph -->
-<p>אלו רק הצעות! אם אתם אוהבים יין אדום ומלא עם הסלט שלכם, אז זו התאמה טובה. המערכת נועדה לעזור לך לעבור מ"אני לא בטוח" ל"אני אנסה את זה" בביטחון.</p>
-<!-- /wp:paragraph -->
-
-<!-- wp:paragraph -->
-<p><strong>מוכנים למצוא התאמה?</strong> [עיינו באוסף וחפשו את הערות ההתאמה!]</p>
-<!-- /wp:paragraph --></div>
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column {"width":"40%"} -->
+<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67041,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://staging6.jlmwines.com/wp-content/uploads/2026/02/pairing-glass-in-hand.jpg" alt="יד מטה בעדינות כוס יין, יין אדום עמוק תופס אור חם" class="wp-image-67041"/></figure>
+<!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column -->
-<div class="wp-block-column"></div>
+<!-- wp:column {"width":"60%"} -->
+<div class="wp-block-column" style="flex-basis:60%"><!-- wp:pullquote {"style":{"color":{"text":"#5a4a3a"},"border":{"left":{"color":"#C0A483","width":"4px"},"top":{},"right":{},"bottom":{}}},"className":"is-style-plain"} -->
+<figure class="wp-block-pullquote is-style-plain" style="color:#5a4a3a;border-left-color:#C0A483;border-left-width:4px"><blockquote><p><strong>כלל הזהב:</strong> אלו רק הצעות! אם אתם אוהבים יין אדום ומלא עם הסלט שלכם, אז זו התאמה טובה. המערכת נועדה לעזור לך לעבור מ"אני לא בטוח" ל"אני אנסה את זה" בביטחון.</p></blockquote></figure>
+<!-- /wp:pullquote -->
+
+<!-- wp:paragraph -->
+<p><strong>מוכנים למצוא התאמה?</strong> <a href="/he/shop/">עיינו באוסף וחפשו את הערות ההתאמה!</a></p>
+<!-- /wp:paragraph --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->

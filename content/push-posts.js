@@ -24,57 +24,57 @@ const CRED_PATH = path.join(CONTENT_DIR, '..', '.wp-credentials');
 const MANIFEST = [
   {
     name: 'acidity',
-    enSlug: 'white-rose-wine-acidity',
-    heSlug: 'white-rose-wine-acidity-he',
+    enSlug: 'white-rose-wine-acidity', enId: 58896,
+    heSlug: 'white-rose-wine-acidity', heId: 58964,
     enFile: 'Acidity EN_2025-01-12.post.md',
     heFile: 'Acidity HE_2025-01-12.post.md'
   },
   {
     name: 'complexity',
-    enSlug: 'wine-complexity',
-    heSlug: 'wine-complexity-he',
+    enSlug: 'wine-complexity', enId: 62594,
+    heSlug: 'wine-complexity', heId: 62614,
     enFile: 'Complexity EN_2025-01-12.post.md',
     heFile: 'Complexity HE.post.md'
   },
   {
     name: 'intensity',
-    enSlug: 'red-wine-intensity',
-    heSlug: 'red-wine-intensity-he',
+    enSlug: 'red-wine-intensity', enId: 62818,
+    heSlug: 'red-wine-intensity', heId: 62833,
     enFile: 'Intensity EN 2026-01-15 A.post.md',
     heFile: 'Intensity HE.post.md'
   },
   {
     name: 'pairing',
-    enSlug: 'pairing-food-and-wine',
-    heSlug: 'pairing-food-and-wine-he',
+    enSlug: 'pairing-food-and-wine', enId: 65344,
+    heSlug: 'pairing-food-and-wine', heId: 65348,
     enFile: 'Pairing EN_2026-01-06.post.md',
     heFile: 'Pairing HE.post.md'
   },
   {
     name: 'good-wine',
-    enSlug: 'what-makes-a-wine-good',
-    heSlug: 'what-makes-a-wine-good-he',
+    enSlug: 'what-makes-a-wine-good', enId: 65321,
+    heSlug: 'what-makes-a-wine-good', heId: 65335,
     enFile: 'What is a Good Wine EN_2026-01-06.post.md',
     heFile: 'What is a Good Wine HE.post.md'
   },
   {
     name: 'selection',
-    enSlug: 'how-we-choose-wines',
-    heSlug: 'how-we-choose-wines-he',
+    enSlug: 'how-we-choose-wines', enId: 65338,
+    heSlug: 'how-we-choose-wines', heId: 65342,
     enFile: 'Your Private Selection EN_2026-01-06.post.md',
     heFile: 'Your Private Selection HE.post.md'
   },
   {
     name: 'price',
-    enSlug: 'does-higher-price-mean-better-wine',
-    heSlug: 'does-higher-price-mean-better-wine-he',
+    enSlug: 'does-higher-price-mean-better-wine', enId: 65779,
+    heSlug: 'does-higher-price-mean-better-wine', heId: 65809,
     enFile: 'Price vs Quality EN 2026-01-18 B.post.md',
     heFile: 'Price vs Quality HE 2026-01-18 B.post.md'
   },
   {
     name: 'evyatar',
-    enSlug: 'about-evyatar',
-    heSlug: 'about-evyatar-he',
+    enSlug: 'about-evyatar', enId: 66867,
+    heSlug: 'about-evyatar',
     enFile: 'About Evyatar EN_2026-01-08.post.md',
     heFile: 'About Evyatar HE.post.md'
   }
@@ -104,6 +104,7 @@ function parsePostMd(filePath) {
 async function pushPost(wp, entry, lang) {
   var isHe = lang === 'he';
   var slug = isHe ? entry.heSlug : entry.enSlug;
+  var postId = isHe ? entry.heId : entry.enId;
   var file = isHe ? entry.heFile : entry.enFile;
   var filePath = path.join(CONTENT_DIR, file);
 
@@ -124,7 +125,16 @@ async function pushPost(wp, entry, lang) {
     excerpt: parsed.excerpt || ''
   };
 
-  var result = await wp.upsertPost(slug, payload);
+  var result;
+  if (postId) {
+    // Direct update by ID — reliable, no slug guessing
+    payload.slug = slug;
+    var res = await wp.api('POST', '/wp-json/wp/v2/posts/' + postId, payload);
+    result = { action: 'updated', id: postId, status: res.status, data: res.data };
+  } else {
+    // Fallback: slug-based upsert (for new posts like About Evyatar HE)
+    result = await wp.upsertPost(slug, payload);
+  }
 
   if (result.status === 200 || result.status === 201) {
     console.log('  ' + (isHe ? 'HE' : 'EN') + ' ' + result.action + ' — ID ' + result.id);

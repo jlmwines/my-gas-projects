@@ -1,16 +1,18 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-22 (session 2)
+**Updated:** 2026-02-23
 
 ## Next Action
 
-- **Content push to staging6 — IN PROGRESS, new workflow established:**
-  - **Workflow:** Claude produces text as WP blocks in left column + Canva AI prompts as yellow placeholder blocks. User generates images in Canva, arranges layout in block editor.
-  - **Pairing EN** pushed and ready for user layout work (ID 65344, published). Has 7 Canva prompts (oil painting style matching featured images). Empty column pair at top for flexibility.
-  - **Pairing HE** pushed as draft (ID 67019). Same structure, image prompts reference EN images.
-  - **Next:** User finalizes Pairing EN/HE layout with images. Then Claude produces remaining 6 posts (Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality) in same format — EN with Canva prompts, HE with image references.
-  - **About Evyatar** is new (no existing post on staging6). Needs both EN and HE created.
+- **Content push to staging6 — Pairing done, 6 posts remaining:**
+  - **Workflow (final):** Claude produces complete HTML with images placed, pushes via WP REST API. No Gutenberg editing needed. User previews on front-end, gives feedback, Claude adjusts and re-pushes.
+  - **Pairing EN** (ID 65344) and **Pairing HE** (ID 65348) — complete with images, varied layout, reviewed on staging6.
+  - **Next posts to produce:** Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality — each needs EN + HE with Canva images. Same workflow: Claude writes prompts → user generates in Canva → uploads → Claude places and pushes.
+  - **About Evyatar** is new (EN draft exists ID 66867, no HE). Needs content + images for both.
   - After all posts ready: user links HE↔EN translations manually in WPML.
+  - **Image style guide:** Inline images = close-up, intimate, warm, impressionist oil painting. Featured images = wide canvas, scenic. Canva prompts: no ratios (user selects 4:3 in Canva). No text in images.
+  - **Layout patterns established:** Lead paragraph (1.15em), text|image columns (55/45, 45/55 flipped), 4-column grid (food types), tinted background group, pullquote with brand gold border, separators, full-width cover blocks. Mobile-aware: no back-to-back image stacking.
+- **push-posts.js** now uses post IDs (not just slugs) for reliable updates. Manifest has all EN/HE IDs. WPML HE slugs = same as EN (language prefix handles routing).
 - **Test SKU management fixes** (deployed, partially verified):
   1. Vendor SKU Update: search for a product already on web → should appear with [Web] badge *(not yet tested)*
   2. ~~Product Replacement: run a replacement~~ → ✓ Tested, working. WebProdM, WebDetM, WebXltM, CmxProdM all updated.
@@ -31,12 +33,13 @@
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
-- **Content pipeline:** Revised workflow. `convert-posts.js` handles docx→WP blocks (pandoc). Posts are handcrafted per-post: all text in left column, Canva AI prompts as yellow placeholder blocks, empty right column. User generates images and arranges layout in WP editor. `push-posts.js` pushes via WP REST API (slug-based upsert, preserves post status). CSS fix removed — plain `wp:columns`/`wp:column` without widths works with the theme. Featured images are Canva AI oil paintings (impressionist brushstrokes, warm palette). In-body images use same style but smaller vignettes.
+- **Content pipeline:** Fully API-driven. `push-posts.js` pushes via WP REST API with ID-based updates (slug fallback for new posts). Posts authored as `.post.md` files with complete WP block HTML including placed images. Gutenberg editor bypassed for layout — used only for emergency text edits. Canva AI generates images from Claude-written prompts (impressionist oil painting style). Orphan draft 67019 deleted.
 
 ## Known Issues
 
 1. Monitor bundle additions for stale data recurrence
 2. Consider auto-cleanup of rows below data range during upsert
+3. Gutenberg editor width doesn't match Elementor front-end (accepted limitation — use Preview or API push workflow)
 
 ## Blocked / Deferred
 
@@ -46,6 +49,15 @@
 
 ## Session History
 
+- **2026-02-23:** Content workflow finalized, Pairing EN/HE complete with images.
+  - **Push script fixed:** Added `enId`/`heId` to manifest for ID-based updates (slug lookup was failing for HE posts — WPML uses same slug with `/he/` prefix, not `-he` suffix). Deleted orphan draft 67019.
+  - **Image workflow:** Claude writes Canva AI prompts (close-up, intimate, warm oil painting style, no ratios). User generates in Canva at 4:3, uploads to WP media library. Claude places images in HTML and pushes.
+  - **Layout iterations:** Tested multiple approaches — uniform text|image columns (too repetitive), full-width images (lost column context), simpler single-column (downgrade). Final: varied column layouts with asymmetric widths, flipped sides, 4-column food type grid, tinted background section, pullquote, separators.
+  - **Hebrew fixes:** Removed English parentheticals from HE headings (Mild, Rich, Intense, Sweet). Fixed HE slugs in manifest.
+  - **Gutenberg WYSIWYG:** Attempted editor width fix via child theme CSS — caused block distortion. Reverted. Accepted that editor ≠ front-end; workflow bypasses Gutenberg for layout.
+  - **Cover block tested:** Full-width parallax cover for visual break — parallax too jarring, removed. Post works without it.
+  - Pairing images: harmony-or-contrast (67012), mild (67055), cheese/rich (67043), intense (67054), sweet (67053), glass-in-hand (67041). Pour wide (67059) and flavors (67022) available but not used in final layout.
+  - Files modified: `content/push-posts.js`, `content/Pairing EN_2026-01-06.post.md`, `content/Pairing HE.post.md`.
 - **2026-02-22b:** Content layout workflow revision.
   - **Problem:** Previous session's `convert-posts.js` used forced 58%/42% column widths, CSS `!important` overrides, and put all text in left column with right empty. This didn't match the existing working posts on staging6.
   - **Investigation:** Pulled raw block content from all 7 existing posts via WP REST API. Found existing posts use plain `wp:columns`/`wp:column` without widths or CSS hacks, with content in both columns. Some posts (Acidity, Good Wine) have images alongside text.
