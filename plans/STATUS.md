@@ -1,18 +1,20 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-23
+**Updated:** 2026-02-23b
 
 ## Next Action
 
-- **Content push to staging6 — Pairing done, 6 posts remaining:**
-  - **Workflow (final):** Claude produces complete HTML with images placed, pushes via WP REST API. No Gutenberg editing needed. User previews on front-end, gives feedback, Claude adjusts and re-pushes.
-  - **Pairing EN** (ID 65344) and **Pairing HE** (ID 65348) — complete with images, varied layout, reviewed on staging6.
-  - **Next posts to produce:** Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality — each needs EN + HE with Canva images. Same workflow: Claude writes prompts → user generates in Canva → uploads → Claude places and pushes.
-  - **About Evyatar** is new (EN draft exists ID 66867, no HE). Needs content + images for both.
-  - After all posts ready: user links HE↔EN translations manually in WPML.
-  - **Image style guide:** Inline images = close-up, intimate, warm, impressionist oil painting. Featured images = wide canvas, scenic. Canva prompts: no ratios (user selects 4:3 in Canva). No text in images.
-  - **Layout patterns established:** Lead paragraph (1.15em), text|image columns (55/45, 45/55 flipped), 4-column grid (food types), tinted background group, pullquote with brand gold border, separators, full-width cover blocks. Mobile-aware: no back-to-back image stacking.
-- **push-posts.js** now uses post IDs (not just slugs) for reliable updates. Manifest has all EN/HE IDs. WPML HE slugs = same as EN (language prefix handles routing).
+- **Content pipeline COMPLETE — all 8 blog posts live on staging6 in EN + HE:**
+  - Pairing, Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality, About Evyatar
+  - Each has Canva AI images, varied column layouts, mobile-responsive, pushed via WP REST API
+  - User to link HE↔EN translations in WPML admin for any unlinked posts
+  - User to overlay content to live site (jlmwines.com) when ready
+- **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor:
+  - EN: 5 English testimonials with 5-star ratings
+  - HE: 5 Hebrew testimonials from Google Maps (Kos Shel Bracha, 4.9 stars, 144 reviews)
+  - User must disable Elementor on each page for new content to render
+  - Files: `content/About Page EN.page.md`, `content/About Page HE.page.md`
+- **push-posts.js** has complete manifest with all EN/HE IDs. WPML HE slugs = same as EN (language prefix handles routing).
 - **Test SKU management fixes** (deployed, partially verified):
   1. Vendor SKU Update: search for a product already on web → should appear with [Web] badge *(not yet tested)*
   2. ~~Product Replacement: run a replacement~~ → ✓ Tested, working. WebProdM, WebDetM, WebXltM, CmxProdM all updated.
@@ -33,7 +35,7 @@
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
-- **Content pipeline:** Fully API-driven. `push-posts.js` pushes via WP REST API with ID-based updates (slug fallback for new posts). Posts authored as `.post.md` files with complete WP block HTML including placed images. Gutenberg editor bypassed for layout — used only for emergency text edits. Canva AI generates images from Claude-written prompts (impressionist oil painting style). Orphan draft 67019 deleted.
+- **Content pipeline:** COMPLETE. All 8 posts (16 files EN+HE) live on staging6. `push-posts.js` pushes via WP REST API with ID-based updates. Posts authored as `.post.md` files with complete WP block HTML including placed images. About Page rebuilt as clean HTML (`.page.md` files) replacing Elementor — pushed directly via REST API to page IDs. Canva AI generates images from Claude-written prompts (impressionist oil painting style).
 
 ## Known Issues
 
@@ -49,6 +51,14 @@
 
 ## Session History
 
+- **2026-02-23b:** All 8 blog posts complete, About Page rebuilt.
+  - Completed remaining posts: Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality, About Evyatar — all EN/HE with Canva images and varied layouts.
+  - About Page (EN 63644, HE 63649): Rebuilt as clean HTML+CSS replacing Elementor. Pure HTML approach (not Gutenberg blocks). EN has 5 English testimonials, HE has 5 Hebrew testimonials from Google Maps. All with 5-star gold ratings.
+  - RTL handling: same DOM order as EN, flexbox mirrors automatically. Testimonial cards respect page direction.
+  - About Evyatar fixes: slug corrected (no `-he` suffix), paragraphs moved into columns, vineyard images swapped L/R for directional reading.
+  - Key rule: never mention "no hands" in Canva prompts (triggers Canva to add hands).
+  - Files created: `content/About Page EN.page.md`, `content/About Page HE.page.md`.
+  - Files modified: all 14 `.post.md` files, `content/push-posts.js`.
 - **2026-02-23:** Content workflow finalized, Pairing EN/HE complete with images.
   - **Push script fixed:** Added `enId`/`heId` to manifest for ID-based updates (slug lookup was failing for HE posts — WPML uses same slug with `/he/` prefix, not `-he` suffix). Deleted orphan draft 67019.
   - **Image workflow:** Claude writes Canva AI prompts (close-up, intimate, warm oil painting style, no ratios). User generates in Canva at 4:3, uploads to WP media library. Claude places images in HTML and pushes.

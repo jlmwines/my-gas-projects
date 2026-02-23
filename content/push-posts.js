@@ -74,7 +74,7 @@ const MANIFEST = [
   {
     name: 'evyatar',
     enSlug: 'about-evyatar', enId: 66867,
-    heSlug: 'about-evyatar',
+    heSlug: 'about-evyatar', heId: 67158,
     enFile: 'About Evyatar EN_2026-01-08.post.md',
     heFile: 'About Evyatar HE.post.md'
   }
