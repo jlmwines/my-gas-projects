@@ -1,6 +1,22 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-23b
+**Updated:** 2026-02-24
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Phase | Stable |
+| Last Active | 2026-02-23 |
+| Revenue | Steady |
+| Deploy Version | — (check via clasp) |
+| Deploy Date | — |
+| Content | 8 posts (16 EN+HE) on staging6 |
+| CRM Contacts | 548 enriched |
+| SEO Status | Not set up |
+| Open Bugs | 2 (vendor SKU update, trim safety — untested) |
+| Next Milestone | Woo order import + campaign launch |
+| Blockers | 0 |
 
 ## Next Action
 
@@ -95,3 +111,7 @@
 ## Previous Session Summaries
 
 Detailed session history prior to standardization is in `jlmops/SESSION_SUMMARY.md`.
+
+## Inbox
+
+_(Cross-project notes captured via `/note jlm <text>`. Review and clear at session start.)_

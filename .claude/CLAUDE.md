@@ -5,11 +5,13 @@ JLM Wines is an online wine retailer in Israel. Anti-snob positioning — makes 
 ## Session Start
 
 1. Read `plans/STATUS.md` silently — single source of truth for project state.
-2. State what you found: current status, next action, any blockers.
-3. Ask: "Which area? (jlmops, website, content, marketing, business)"
-4. Wait for confirmation before doing anything.
+2. Check the **Metrics** table and **Inbox** section — surface any cross-project notes.
+3. State what you found: current status, next action, any blockers.
+4. Ask: "Which area? (jlmops, website, content, marketing, business)"
+5. Wait for confirmation before doing anything.
 
-**At session end:** Use `/session` to update STATUS.md and portfolio dashboard.
+**Mid-session:** Use `/break` to save progress (STATUS.md + wip commit + push). Run every 30-60 min.
+**End of session:** Use `/wrap` to update status, metrics, commit.
 
 ## Sub-Areas
 
@@ -23,8 +25,9 @@ JLM Wines is an online wine retailer in Israel. Anti-snob positioning — makes 
 
 ## Key Documents
 
-- `plans/STATUS.md` — master status, session history
+- `plans/STATUS.md` — master status, session history, metrics, inbox
 - `CALENDAR.md` — dated tasks and milestones
+- `website/BRAND.md` — visual identity and brand guidelines for jlmwines.com
 - `jlmops/plans/` — architecture, data model, implementation, workflows, CRM, campaigns, resource optimization, strategic plan
 
 ## Brand Voice
