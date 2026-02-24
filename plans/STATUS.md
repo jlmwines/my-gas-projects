@@ -11,26 +11,21 @@
 | Revenue | Steady |
 | Deploy Version | — (check via clasp) |
 | Deploy Date | — |
-| Content | 8 posts (16 EN+HE) on staging6 |
+| Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
-| SEO Status | Not set up |
+| SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested) |
-| Next Milestone | Deploy Woo API pull + set up credentials + campaign launch |
+| Next Milestone | SEO setup + Woo API deploy + Pesach campaign |
 | Blockers | 0 |
 
 ## Next Action
 
-- **Content pipeline COMPLETE — all 8 blog posts live on staging6 in EN + HE:**
-  - Pairing, Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality, About Evyatar
-  - Each has Canva AI images, varied column layouts, mobile-responsive, pushed via WP REST API
-  - User to link HE↔EN translations in WPML admin for any unlinked posts
-  - User to overlay content to live site (jlmwines.com) when ready
-- **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor:
-  - EN: 5 English testimonials with 5-star ratings
-  - HE: 5 Hebrew testimonials from Google Maps (Kos Shel Bracha, 4.9 stars, 144 reviews)
-  - User must disable Elementor on each page for new content to render
-  - Files: `content/About Page EN.page.md`, `content/About Page HE.page.md`
-- **push-posts.js** has complete manifest with all EN/HE IDs. WPML HE slugs = same as EN (language prefix handles routing).
+- **Content: 7 posts live on production (EN+HE).** All existing posts updated + About Evyatar added (2026-02-23). Remaining posts (Selection, Price vs Quality) resume editing/publishing in May.
+- **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
+- **Marketing ACTIVE:**
+  - Seasonal bundle update in progress targeting Pesach wine sales, email campaign in preparation
+  - Explore bundle being updated for a function this weekend
+  - Coupon active: NIS 50 off for new customers with minimum order
 - **Test SKU management fixes** (deployed, partially verified):
   1. Vendor SKU Update: search for a product already on web → should appear with [Web] badge *(not yet tested)*
   2. ~~Product Replacement: run a replacement~~ → ✓ Tested, working. WebProdM, WebDetM, WebXltM, CmxProdM all updated.
@@ -65,6 +60,43 @@
 1. Monitor bundle additions for stale data recurrence
 2. Consider auto-cleanup of rows below data range during upsert
 3. Gutenberg editor width doesn't match Elementor front-end (accepted limitation — use Preview or API push workflow)
+
+## Review Cadence
+
+Periodic business health checks — not automated, just a checklist for session review.
+
+### Weekly (any session touching jlmops or website)
+
+- [ ] New orders since last check — count, anything unusual
+- [ ] New customers — how many, EN vs HE language split
+- [ ] Open bugs or failed syncs in SysLog
+- [ ] Anything broken on the live site (spot-check homepage, a product page, cart)
+
+### Monthly (dedicated review, first session of the month)
+
+**Customers & Revenue**
+- [ ] New vs returning customer ratio
+- [ ] Language breakdown of new customers (EN vs HE) — trend over time
+- [ ] Average order value — any drift
+- [ ] Top-selling products — shifts or surprises
+
+**SEO & Content**
+- [ ] Google Search Console: indexing status, crawl errors, duplicate content flags
+- [ ] Canonical issues — are new/changed products getting proper canonical tags?
+- [ ] Blog post traffic — are the 8 posts getting impressions/clicks?
+- [ ] Product description quality — any thin or duplicate content appearing?
+
+**Marketing & Communications**
+- [ ] Campaign status — what's been sent, what's planned
+- [ ] Email list health — bounces, unsubscribes, growth
+- [ ] Comeback campaign progress (planned but not yet launched)
+- [ ] Social/referral sources — anything new driving traffic?
+
+**Technical Health**
+- [ ] Sync reliability — any recurring failures in the last 30 days
+- [ ] PageSpeed check — mobile and desktop (baseline: 57/82)
+- [ ] WooCommerce API pull status (once deployed) — errors, timing, data quality
+- [ ] Open bugs — still 2 untested? Resolve or close.
 
 ## Blocked / Deferred
 

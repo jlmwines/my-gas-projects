@@ -3,6 +3,15 @@
  * @description Handles web app requests for the JLMops system.
  */
 
+const VERSION = {
+  built: '2026-02-24 12:30',
+  commit: 'Woo REST API order pull, SysEnv credentials, bundle health fix'
+};
+
+function getVersion() {
+  return VERSION;
+}
+
 /**
  * Includes an HTML file's content.
  * @param {string} filename - The name of the HTML file to include.

@@ -17,9 +17,9 @@
 
     <!-- Section for Open Orders -->
     <div class="card mb-4">
-      <div class="card-header">
-          <i class="fas fa-box-open mr-1"></i>
-          Open Orders
+      <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-box-open mr-1"></i> Open Orders</span>
+          <button id="btn-refresh-orders" class="btn btn-sm" onclick="refreshOrders()">Refresh Orders</button>
       </div>
       <div class="card-body">
           <div id="open-orders-list"></div>
@@ -148,7 +148,37 @@
       .WebAppOrders_generatePackingSlips(orderIds);
   }
 
+  function refreshOrders() {
+    const btn = document.getElementById('btn-refresh-orders');
+    const originalText = btn.textContent;
+    btn.textContent = 'Refreshing...';
+    btn.disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        loadPackingSlipsData();
+        loadOpenOrdersData();
+      })
+      .withFailureHandler(function(err) {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        alert('Refresh failed: ' + err.message);
+      })
+      .WebAppOrders_triggerWebOrderImport();
+  }
+
   // Self-execute to load the data as soon as the view is loaded.
   loadPackingSlipsData();
-  loadOpenOrdersData(); // Load open orders data
+  loadOpenOrdersData();
+
+  // Version footer
+  google.script.run
+    .withSuccessHandler(function(v) {
+      document.getElementById('version-footer').textContent = 'jlmops v' + v.built + ' — ' + v.commit;
+    })
+    .getVersion();
 </script>
+
+<div id="version-footer" class="text-muted small text-center mt-4 mb-2"></div>

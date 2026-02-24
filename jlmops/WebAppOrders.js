@@ -251,15 +251,16 @@ function WebAppOrders_createGiftMessageDoc(orderId, noteContent) {
 function WebAppOrders_triggerWebOrderImport() {
   const serviceName = 'WebAppOrders';
   const functionName = 'triggerWebOrderImport';
-  LoggerService.info(serviceName, functionName, 'Admin manually triggering Web Order import.');
+  LoggerService.info(serviceName, functionName, 'Admin triggering Woo API order pull.');
 
   try {
-    OrchestratorService.triggerWebOrderFileProcessing(); // Discover and queue new files
-    OrchestratorService.processPendingJobs(); // Immediately process the queued jobs
-
-    return { success: true, message: 'Web Order import triggered and processing initiated.' };
+    const result = WooOrderPullService.pullOrders();
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+    return { success: true, message: result.message };
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error triggering Web Order import: ${e.message}`, e);
+    LoggerService.error(serviceName, functionName, `Error pulling orders: ${e.message}`, e);
     throw e;
   }
 }

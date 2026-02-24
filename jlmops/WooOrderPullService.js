@@ -22,18 +22,17 @@ const WooOrderPullService = (function() {
     logger.info(SERVICE_NAME, functionName, 'Starting automated order pull', { sessionId: sessionId });
 
     try {
-      // Get last pull timestamp for incremental pull
-      var apiConfig = ConfigService.getConfig('woo.api');
-      var lastPull = apiConfig ? apiConfig.orders_last_pull : '';
+      // Always pull last 30 days — older orders can still change status,
+      // and the pipeline handles upsert (update existing, insert new).
+      var thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Fetch orders from WooCommerce
-      var apiOrders = WooApiService.fetchOrders(lastPull || undefined);
-      logger.info(SERVICE_NAME, functionName, 'Received ' + apiOrders.length + ' orders from API' + (lastPull ? ' (modified after ' + lastPull + ')' : ' (full pull)'), { sessionId: sessionId });
+      var apiOrders = WooApiService.fetchOrders(thirtyDaysAgo);
+      logger.info(SERVICE_NAME, functionName, 'Received ' + apiOrders.length + ' orders from API (last 30 days)', { sessionId: sessionId });
 
       if (apiOrders.length === 0) {
         var noOrdersMsg = 'No new or modified orders found';
         logger.info(SERVICE_NAME, functionName, noOrdersMsg, { sessionId: sessionId });
-        ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
         return { success: true, orderCount: 0, message: noOrdersMsg };
       }
 
@@ -59,9 +58,6 @@ const WooOrderPullService = (function() {
 
       // Process staged orders using existing OrderService pipeline
       _triggerExistingPipeline(transformedOrders, sessionId);
-
-      // Update last pull timestamp
-      ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
 
       var message = 'Order pull complete: ' + transformedOrders.length + ' orders processed';
       logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });

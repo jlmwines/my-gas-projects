@@ -869,6 +869,7 @@ const BundleService = (function () {
     }
 
     // 2. Read SysInventoryOnHold for on-hold order quantities
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
     const onHoldSheet = spreadsheet.getSheetByName('SysInventoryOnHold');
     const onHoldMap = {};
     if (onHoldSheet && onHoldSheet.getLastRow() > 1) {

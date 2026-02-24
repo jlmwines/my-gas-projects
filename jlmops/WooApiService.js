@@ -13,8 +13,36 @@
 const WooApiService = (function() {
   const SERVICE_NAME = 'WooApiService';
 
+  /** SysEnv spreadsheet ID — stores API keys separate from code-managed SysConfig. */
+  const SYSENV_SPREADSHEET_ID = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
+
   /**
-   * Get API configuration from SysConfig.
+   * Read WooCommerce API credentials from the SysEnv sheet.
+   * SysEnv lives in a separate spreadsheet so credentials are never overwritten
+   * by rebuildSysConfigFromSource().
+   * Sheet columns: scf_SettingName | ... | scf_P01 (key type) | scf_P02 (key value)
+   * @returns {{ consumer_key: string, consumer_secret: string }}
+   */
+  function _getCredentialsFromSysEnv() {
+    var ss = SpreadsheetApp.openById(SYSENV_SPREADSHEET_ID);
+    var sheet = ss.getSheetByName('SysEnv');
+    if (!sheet) {
+      throw new Error('SysEnv sheet not found in spreadsheet ' + SYSENV_SPREADSHEET_ID);
+    }
+    var data = sheet.getDataRange().getValues();
+    var creds = {};
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === 'woo.api') {
+        creds[String(data[i][3]).trim()] = String(data[i][4]).trim();
+      }
+    }
+    return creds;
+  }
+
+  /**
+   * Get API configuration.
+   * Non-secret settings (base_url, retry) from SysConfig.
+   * Credentials (consumer_key, consumer_secret) from SysEnv sheet.
    * @returns {object} { baseUrl, consumerKey, consumerSecret, retryMax, retryDelayMs }
    */
   function _getApiConfig() {
@@ -24,11 +52,17 @@ const WooApiService = (function() {
     }
 
     const baseUrl = config.base_url;
-    const consumerKey = config.consumer_key;
-    const consumerSecret = config.consumer_secret;
+    if (!baseUrl) {
+      throw new Error('woo.api.base_url not set in SysConfig.');
+    }
 
-    if (!baseUrl || !consumerKey || !consumerSecret) {
-      throw new Error('WooCommerce API credentials incomplete. Set woo.api.consumer_key, woo.api.consumer_secret, and woo.api.base_url in SysConfig.');
+    // Credentials from SysEnv (separate spreadsheet, safe from rebuildSysConfigFromSource)
+    var creds = _getCredentialsFromSysEnv();
+    var consumerKey = creds.consumer_key;
+    var consumerSecret = creds.consumer_secret;
+
+    if (!consumerKey || !consumerSecret) {
+      throw new Error('WooCommerce API credentials not found in SysEnv sheet. Expected woo.api rows with consumer_key and consumer_secret in scf_P01/scf_P02.');
     }
 
     return {

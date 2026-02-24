@@ -510,8 +510,18 @@ function HousekeepingService() {
     const errors = [];
 
     try {
-      // Get the master schema and the live config
-      const masterConfig = SYS_CONFIG_DEFINITIONS; // Global constant from setup.js
+      // Build keyed config from getMasterConfiguration() (2D array from SetupConfig.js)
+      const masterRows = getMasterConfiguration();
+      const masterConfig = {};
+      for (let i = 1; i < masterRows.length; i++) { // skip header
+        const settingName = masterRows[i][0];
+        if (!settingName || String(settingName).startsWith('_section.')) continue;
+        const p01 = masterRows[i][3];
+        if (!masterConfig[settingName]) masterConfig[settingName] = {};
+        if (p01 !== null && p01 !== undefined && String(p01).trim() !== '') {
+          masterConfig[settingName][String(p01).trim()] = masterRows[i][4];
+        }
+      }
       const liveConfig = ConfigService.getAllConfig();
 
       if (!liveConfig) {
@@ -527,6 +537,8 @@ function HousekeepingService() {
         }
 
         // Check that all properties in the master setting exist in the live setting
+        // system.users has special array handling in ConfigService — skip property-level check
+        if (settingName === 'system.users') continue;
         for (const propName in masterConfig[settingName]) {
           if (propName === '_description') continue; // Don't validate the description itself
 
