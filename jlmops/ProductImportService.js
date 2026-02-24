@@ -598,91 +598,6 @@ const ProductImportService = (function() {
   // =================================================================================
 
   /**
-   * Custom CSV parser that handles multi-line quoted fields properly.
-   * Returns array of arrays (rows of fields).
-   * @param {string} csvContent - Raw CSV content
-   * @returns {Array<Array<string>>} - Parsed rows
-   */
-  function _parseWebToffeeCsv(csvContent) {
-    const rows = [];
-    let row = [];
-    let field = '';
-    let inQuotes = false;
-    let i = 0;
-
-    while (i < csvContent.length) {
-      const char = csvContent[i];
-      const nextChar = csvContent[i + 1];
-
-      if (inQuotes) {
-        if (char === '"') {
-          if (nextChar === '"') {
-            // Escaped quote - add single quote and skip next
-            field += '"';
-            i += 2;
-            continue;
-          } else {
-            // End of quoted field
-            inQuotes = false;
-            i++;
-            continue;
-          }
-        } else {
-          field += char;
-          i++;
-          continue;
-        }
-      } else {
-        // Not in quotes
-        if (char === '"') {
-          // Start of quoted field
-          inQuotes = true;
-          i++;
-          continue;
-        } else if (char === ',') {
-          // End of field
-          row.push(field);
-          field = '';
-          i++;
-          continue;
-        } else if (char === '\r') {
-          // Handle \r\n or standalone \r
-          row.push(field);
-          rows.push(row);
-          row = [];
-          field = '';
-          if (nextChar === '\n') {
-            i += 2;
-          } else {
-            i++;
-          }
-          continue;
-        } else if (char === '\n') {
-          // End of row
-          row.push(field);
-          rows.push(row);
-          row = [];
-          field = '';
-          i++;
-          continue;
-        } else {
-          field += char;
-          i++;
-          continue;
-        }
-      }
-    }
-
-    // Handle last field/row
-    if (field || row.length > 0) {
-      row.push(field);
-      rows.push(row);
-    }
-
-    return rows;
-  }
-
-  /**
    * Processes WebToffee CSV content into product objects.
    * Transforms WebToffee headers to internal wps_* format and converts values.
    * Uses custom CSV parser to handle multi-line HTML content fields.
@@ -718,9 +633,9 @@ const ProductImportService = (function() {
       });
     }
 
-    // Use custom CSV parser that handles multi-line quoted fields
+    // Use WebAdapter's complex CSV parser that handles multi-line quoted fields
     logger.info(serviceName, functionName, `Parsing CSV content (${csvContent.length} chars)...`);
-    const parsedData = _parseWebToffeeCsv(csvContent);
+    const parsedData = WebAdapter.parseComplexCsv(csvContent);
 
     if (parsedData.length < 2) {
       logger.warn(serviceName, functionName, 'File is empty or contains only a header.');
@@ -1270,7 +1185,10 @@ const ProductImportService = (function() {
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
-    exportWebInventory: exportWebInventory
+    exportWebInventory: exportWebInventory,
+    // Exposed for WooProductPullService (API-sourced data, same pipeline)
+    upsertWebProductsData: _upsertWebProductsData,
+    upsertWebXltData: _upsertWebXltData
   };
 
 })();

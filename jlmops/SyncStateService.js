@@ -33,7 +33,7 @@ const SyncStateService = (function() {
    * Valid transitions: from -> [allowed next stages].
    */
   const TRANSITIONS = {
-    IDLE:                   ['IMPORTING_PRODUCTS'],
+    IDLE:                   ['IMPORTING_PRODUCTS', 'WAITING_ORDER_EXPORT', 'WAITING_COMAX_IMPORT'],
     IMPORTING_PRODUCTS:     ['IMPORTING_ORDERS', 'FAILED'],
     IMPORTING_ORDERS:       ['WAITING_ORDER_EXPORT', 'WAITING_COMAX_IMPORT', 'FAILED'],
     WAITING_ORDER_EXPORT:   ['EXPORTING_ORDERS'],
@@ -223,6 +223,7 @@ const SyncStateService = (function() {
     STAGES: STAGES,
     TRANSITIONS: TRANSITIONS,
     getSyncState: getSyncState,
+    getState: getSyncState, // Alias for convenience
     setSyncState: setSyncState,
     transition: transition,
     updateStep: updateStep,

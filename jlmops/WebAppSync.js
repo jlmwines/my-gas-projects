@@ -777,3 +777,84 @@ function DEBUG_inspectSyncState() {
   console.log('Current sync state:', JSON.stringify(state, null, 2));
   return state;
 }
+
+// =========================================================================
+//  WOO API PULL BACKEND FUNCTIONS
+// =========================================================================
+
+/**
+ * Skip steps 1+2 and jump to Comax step.
+ * For use when products and orders are auto-pulled via API.
+ * @returns {object} Updated sync state.
+ */
+function skipToComaxBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'skipToComaxBackend';
+  logger.info(serviceName, functionName, 'Skipping product/order import — jumping to Comax step');
+
+  const sessionId = generateSessionId();
+  const state = SyncStateService.transition('WAITING_ORDER_EXPORT', {
+    sessionId: sessionId,
+    steps: {
+      step1: { status: 'skipped', message: 'Auto-pulled via API' },
+      step2: { status: 'skipped', message: 'Auto-pulled via API' },
+      step3: null,
+      step4: null,
+      step5: null
+    }
+  });
+
+  return state;
+}
+
+/**
+ * Pull products from WooCommerce API (manual trigger from dashboard).
+ * Runs outside the sync state machine.
+ * @returns {object} Updated sync state (for UI consistency).
+ */
+function pullWooProductsBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'pullWooProductsBackend';
+  logger.info(serviceName, functionName, 'Manual product pull triggered from dashboard');
+
+  const result = WooProductPullService.pullProducts();
+
+  if (!result.success) {
+    throw new Error(result.message);
+  }
+
+  // Return current sync state for UI update
+  return SyncStateService.getSyncState();
+}
+
+/**
+ * Pull orders from WooCommerce API (manual trigger from dashboard).
+ * Runs outside the sync state machine.
+ * @returns {object} Updated sync state (for UI consistency).
+ */
+function pullWooOrdersBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'pullWooOrdersBackend';
+  logger.info(serviceName, functionName, 'Manual order pull triggered from dashboard');
+
+  const result = WooOrderPullService.pullOrders();
+
+  if (!result.success) {
+    throw new Error(result.message);
+  }
+
+  // Return current sync state for UI update
+  return SyncStateService.getSyncState();
+}
+
+/**
+ * Get WooCommerce API pull timestamps for dashboard display.
+ * @returns {object} { productsLastPull, ordersLastPull }
+ */
+function getWooApiPullStatus() {
+  const config = ConfigService.getConfig('woo.api');
+  return {
+    productsLastPull: config ? config.products_last_pull || '' : '',
+    ordersLastPull: config ? config.orders_last_pull || '' : ''
+  };
+}

@@ -47,6 +47,10 @@
                         <h6 class="card-title sync-card-title">1. Web Product Import</h6>
                         <div id="step1Icon" class="sync-icon">⏸️</div>
                         <div id="step1Message" class="text-muted small"></div>
+                        <div id="step1Pull" class="mt-1">
+                            <div id="step1PullStatus" class="small text-muted"></div>
+                            <button class="btn btn-sm mt-1" style="font-size:0.7rem" onclick="window.SyncWidget.pullProducts(); return false;">Pull Now</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -58,6 +62,10 @@
                         <h6 class="card-title sync-card-title">2. Web Order Import</h6>
                         <div id="step2Icon" class="sync-icon">⏸️</div>
                         <div id="step2Message" class="text-muted small"></div>
+                        <div id="step2Pull" class="mt-1">
+                            <div id="step2PullStatus" class="small text-muted"></div>
+                            <button class="btn btn-sm mt-1" style="font-size:0.7rem" onclick="window.SyncWidget.pullOrders(); return false;">Pull Now</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -161,7 +169,7 @@
     // =====================================================================
 
     var STAGE_CONFIG = {
-        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'] },
+        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'], altButton: ['skipToComax', 'Skip to Comax'] },
         IMPORTING_PRODUCTS:     { message: 'Importing products...',                button: null, spinner: true },
         IMPORTING_ORDERS:       { message: 'Products imported. Import orders',     button: ['importOrders', 'Import Orders'] },
         WAITING_ORDER_EXPORT:   { message: '{count} orders to export',             button: ['exportToComax', 'Export Orders'] },
@@ -263,7 +271,11 @@
         if (config.spinner) {
             actionEl.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
         } else if (config.button) {
-            actionEl.innerHTML = btn(config.button[0], config.button[1]);
+            var buttons = btn(config.button[0], config.button[1]);
+            if (config.altButton) {
+                buttons += ' ' + btn(config.altButton[0], config.altButton[1]);
+            }
+            actionEl.innerHTML = buttons;
         } else {
             actionEl.innerHTML = '';
         }
@@ -459,6 +471,18 @@
         runAction('importWebOrdersBackend', 2, 'Importing orders...');
     }
 
+    function skipToComax() {
+        runAction('skipToComaxBackend', null, 'Skipping to Comax step...');
+    }
+
+    function pullProducts() {
+        runAction('pullWooProductsBackend', 1, 'Pulling products from WooCommerce...');
+    }
+
+    function pullOrders() {
+        runAction('pullWooOrdersBackend', 2, 'Pulling orders from WooCommerce...');
+    }
+
     function exportToComax() {
         runAction('exportComaxOrdersBackend', 3, 'Exporting orders...');
     }
@@ -600,6 +624,34 @@
     }
 
     // =====================================================================
+    //  API PULL STATUS
+    // =====================================================================
+
+    function updatePullStatus() {
+        google.script.run
+            .withSuccessHandler(function(info) {
+                var el1 = document.getElementById('step1PullStatus');
+                var el2 = document.getElementById('step2PullStatus');
+                if (info.productsLastPull) {
+                    var d = new Date(info.productsLastPull);
+                    el1.innerHTML = 'Last pull: ' + d.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+                } else {
+                    el1.innerHTML = 'No API pull yet';
+                }
+                if (info.ordersLastPull) {
+                    var d2 = new Date(info.ordersLastPull);
+                    el2.innerHTML = 'Last pull: ' + d2.toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' });
+                } else {
+                    el2.innerHTML = 'No API pull yet';
+                }
+            })
+            .withFailureHandler(function() {
+                // Silently fail - pull status is informational
+            })
+            .getWooApiPullStatus();
+    }
+
+    // =====================================================================
     //  PUBLIC API & INIT
     // =====================================================================
 
@@ -611,6 +663,9 @@
     window.SyncWidget = {
         importProducts: importProducts,
         importOrders: importOrders,
+        skipToComax: skipToComax,
+        pullProducts: pullProducts,
+        pullOrders: pullOrders,
         exportToComax: exportToComax,
         confirmComax: confirmComax,
         startComaxImport: startComaxImport,
@@ -624,6 +679,7 @@
     console.log('SyncWidget: Initializing (stage-based state machine)');
     refreshStatus();
     updateInvoiceFolder();
+    updatePullStatus();
 
 })();
 </script>

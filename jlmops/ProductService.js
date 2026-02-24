@@ -9,9 +9,12 @@
 const ProductService = (function() {
   let skuToWebIdMap = null;
   // Cached lookup data (module-level cache for small reference data)
+  // TTL: 10 minutes (same as SKU cache) — prevents stale data after lookup table updates
   let cachedRegions = null;
   let cachedGrapes = null;
   let cachedKashrut = null;
+  let lookupCacheTimestamp = 0;
+  const LOOKUP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
   // Note: Product data now uses CacheService instead of module-level cache
 
   /**
@@ -91,10 +94,23 @@ const ProductService = (function() {
   }
 
   /**
+   * Check if lookup caches have expired and clear them if so.
+   */
+  function _checkLookupCacheTtl() {
+    if (lookupCacheTimestamp && (Date.now() - lookupCacheTimestamp > LOOKUP_CACHE_TTL_MS)) {
+      cachedRegions = null;
+      cachedGrapes = null;
+      cachedKashrut = null;
+      lookupCacheTimestamp = 0;
+    }
+  }
+
+  /**
    * Get cached regions lookup data. Filters and caches the result for performance.
    * @returns {Array} Array of region objects {code, textEN, textHE}
    */
   function _getCachedRegions() {
+    _checkLookupCacheTtl();
     if (cachedRegions) {
       return cachedRegions;
     }
@@ -111,6 +127,7 @@ const ProductService = (function() {
       .sort((a, b) => (a.slt_TextHE || '').localeCompare(b.slt_TextHE || ''))
       .map(r => ({ code: r.slt_Code, textEN: r.slt_TextEN, textHE: r.slt_TextHE }));
 
+    if (!lookupCacheTimestamp) lookupCacheTimestamp = Date.now();
     return cachedRegions;
   }
 
@@ -119,6 +136,7 @@ const ProductService = (function() {
    * @returns {Array} Array of grape objects {code, textEN, textHE}
    */
   function _getCachedGrapes() {
+    _checkLookupCacheTtl();
     if (cachedGrapes) {
       return cachedGrapes;
     }
@@ -132,6 +150,7 @@ const ProductService = (function() {
       })
       .map(g => ({ code: g.slg_Code, textEN: g.slg_TextEN, textHE: g.slg_TextHE }));
 
+    if (!lookupCacheTimestamp) lookupCacheTimestamp = Date.now();
     return cachedGrapes;
   }
 
@@ -140,6 +159,7 @@ const ProductService = (function() {
    * @returns {Array} Array of kashrut objects {code, textEN, textHE}
    */
   function _getCachedKashrut() {
+    _checkLookupCacheTtl();
     if (cachedKashrut) {
       return cachedKashrut;
     }
@@ -153,6 +173,7 @@ const ProductService = (function() {
       })
       .map(k => ({ code: k.slk_Code, textEN: k.slk_TextEN, textHE: k.slk_TextHE }));
 
+    if (!lookupCacheTimestamp) lookupCacheTimestamp = Date.now();
     return cachedKashrut;
   }
 
@@ -177,6 +198,7 @@ const ProductService = (function() {
     cachedRegions = null;
     cachedGrapes = null;
     cachedKashrut = null;
+    lookupCacheTimestamp = 0;
   }
 
   // =================================================================================

@@ -308,7 +308,8 @@ const WebAdapter = (function() {
   return {
     processProductCsv: processProductCsv,
     processTranslationCsv: processTranslationCsv,
-    processOrderCsv: processOrderCsv
+    processOrderCsv: processOrderCsv,
+    parseComplexCsv: _parseComplexCsv
   };
 
 })();

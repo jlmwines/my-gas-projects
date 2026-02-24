@@ -882,5 +882,76 @@
         "MinCat.פריטי מתנה",
         "0",
         "Division=9", "", "", "", "", "", "", ""
+    ],
+    [
+        "_section.99_WooAPI",
+        "WooCommerce REST API configuration for automated product/order pulls.",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "consumer_key",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "consumer_secret",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "base_url",
+        "https://jlmwines.com",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "products_last_pull",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "orders_last_pull",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "retry_max",
+        "3",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "woo.api",
+        "WooCommerce REST API credentials and settings",
+        "stable",
+        "retry_delay_ms",
+        "2000",
+        "", "", "", "", "", "", "", ""
     ]
 ]

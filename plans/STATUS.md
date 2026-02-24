@@ -7,7 +7,7 @@
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-02-23 |
+| Last Active | 2026-02-24 |
 | Revenue | Steady |
 | Deploy Version | — (check via clasp) |
 | Deploy Date | — |
@@ -15,7 +15,7 @@
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested) |
-| Next Milestone | Woo order import + campaign launch |
+| Next Milestone | Deploy Woo API pull + set up credentials + campaign launch |
 | Blockers | 0 |
 
 ## Next Action
@@ -36,7 +36,14 @@
   2. ~~Product Replacement: run a replacement~~ → ✓ Tested, working. WebProdM, WebDetM, WebXltM, CmxProdM all updated.
   3. Trim safety: SKUs with whitespace should match correctly *(not yet tested)*
 - Check SysTasks for `task.validation.vintage_mismatch` row from the replacement test
-- **Automatic order import via Woo REST API** — high priority, plan and implement soon. See `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
+- **WooCommerce API pull IMPLEMENTED — awaiting deploy and credential setup:**
+  - WooApiService.js: HTTP client with auth, pagination, retries
+  - WooProductPullService.js: Pulls EN+HE products, feeds existing staging→validation→master pipeline
+  - WooOrderPullService.js: Pulls orders, feeds existing OrderService pipeline
+  - Sync widget updated: "Pull Now" buttons, "Skip to Comax" option, pull timestamps
+  - SyncStateService updated: IDLE can now transition directly to WAITING_ORDER_EXPORT or WAITING_COMAX_IMPORT
+  - **Prerequisites before deploy:** Create WooCommerce REST API consumer key/secret (read-only), store in SysConfig as woo.api.consumer_key and woo.api.consumer_secret via `rebuildSysConfigFromSource()`
+  - **Test:** After deploy, run `testWooApiConnection()` from script editor
 - **Website font optimization** — Open Sans loading 10 variants → 2-3 needed. Deferred pending WPML check.
 - Build `CampaignService.getTargetSegment()` for segment export
 - Start small comeback campaign testing
@@ -47,7 +54,7 @@
 - **Sync workflow:** Stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce). Imports, exports, validation all working.
 - **CRM enrichment:** Complete. 548 contacts enriched with dual-language preferences (categories, wineries, grapes, kashrut). Activity backfill working.
 - **Campaign system:** Planned (`jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md`), not yet built. Key decisions made: welcome offer NIS 50 off 399, Tuesday evening sends, 7-14 day attribution window.
-- **Import system:** Fixed Dec 2025 — CSV filter, validation rule fix, quarantine diagnostics.
+- **Import system:** Fixed Dec 2025 — CSV filter, validation rule fix, quarantine diagnostics. Woo REST API pull implemented Feb 2026 (replaces manual CSV exports).
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
@@ -67,6 +74,19 @@
 
 ## Session History
 
+- **2026-02-24:** WooCommerce REST API automated pull — full implementation.
+  - **Phase 1 — Integrity fixes:**
+    - 1a: Consolidated duplicate CSV parser. Deleted `_parseWebToffeeCsv()` from ProductImportService (78-line duplicate). Now routes through `WebAdapter.parseComplexCsv()`.
+    - 1b: Added TTL-based invalidation (10min) to region/grape/kashrut lookup caches in ProductService. Previously these were permanent until manual invalidation.
+    - 1c: No-op — `logger` is already an alias for `LoggerService` (LoggerService.js:192). No console-only logging found.
+    - 1d: No-op — sanity checks already handle `0` and `"0"` correctly with `!== '' && !== null && !== undefined`.
+  - **Phase 2 — WooApiService.js (new, 299 lines):** GAS-native WooCommerce REST API client. HTTP Basic Auth, auto-pagination (100/page, follows X-WP-TotalPages), exponential backoff retries (429/5xx). Config in SysConfig `woo.api.*`.
+  - **Phase 3 — WooProductPullService.js (new, 351 lines):** Pulls EN products → transforms to wps_* staging format → existing validation → WebProdM upsert. Pulls HE products → extracts WPML `_wpml_original_post_id` → stages translation links → WebXltM upsert. Replaces manual language-switch CSV export workflow.
+  - **Phase 4 — WooOrderPullService.js (new, 288 lines):** Pulls orders with status filter (processing, on-hold, completed, cancelled, refunded). Transforms to wos_* format with flat line item fields. Key advantage: API returns `product_id` directly — no SKU-to-WebId lookup needed. Feeds into existing OrderService.processStagedOrders pipeline.
+  - **Phase 5 — Sync simplification:** SyncStateService transitions updated (IDLE → WAITING_ORDER_EXPORT/WAITING_COMAX_IMPORT). Sync widget: added "Skip to Comax" button, "Pull Now" buttons on steps 1+2, last pull timestamps. Backend: `skipToComaxBackend()`, `pullWooProductsBackend()`, `pullWooOrdersBackend()`, `getWooApiPullStatus()` in WebAppSync.js.
+  - **Config changes:** 7 new entries in system.json (woo.api.*), 30 new entries in mappings.json (product + order + line item field maps). SetupConfig.js regenerated.
+  - Files created: WooApiService.js, WooProductPullService.js, WooOrderPullService.js
+  - Files modified: WebAdapter.js, ProductService.js, ProductImportService.js, SyncStateService.js, WebAppSync.js, AdminDailySyncWidget_v2.html, config/system.json, config/mappings.json, SetupConfig.js
 - **2026-02-23b:** All 8 blog posts complete, About Page rebuilt.
   - Completed remaining posts: Acidity, Complexity, Intensity, Good Wine, Selection, Price vs Quality, About Evyatar — all EN/HE with Canva images and varied layouts.
   - About Page (EN 63644, HE 63649): Rebuilt as clean HTML+CSS replacing Elementor. Pure HTML approach (not Gutenberg blocks). EN has 5 English testimonials, HE has 5 Hebrew testimonials from Google Maps. All with 5-star gold ratings.
