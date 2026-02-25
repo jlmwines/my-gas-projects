@@ -28,7 +28,8 @@
       "WebSearch",
       "WebFetch(domain:jlmwines.com)",
       "WebFetch(domain:staging6.jlmwines.com)",
-      "WebFetch(domain:pagespeed.web.dev)"
+      "WebFetch(domain:pagespeed.web.dev)",
+      "Bash(grep:*)"
     ],
     "deny": [
       "Bash(git -C:*)",

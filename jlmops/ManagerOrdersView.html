@@ -173,12 +173,4 @@
   loadPackingSlipsData();
   loadOpenOrdersData();
 
-  // Version footer
-  google.script.run
-    .withSuccessHandler(function(v) {
-      document.getElementById('version-footer').textContent = 'jlmops v' + v.built + ' — ' + v.commit;
-    })
-    .getVersion();
 </script>
-
-<div id="version-footer" class="text-muted small text-center mt-4 mb-2"></div>

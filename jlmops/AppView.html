@@ -60,6 +60,8 @@
             position: fixed;
             background: #f8f9fa;
             padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
         }
         .sidebar ul.nav li {
             list-style-type: none; /* Remove bullet points */
@@ -108,6 +110,7 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerProducts')">Products</a></li>
         </ul>
+        <div id="version-footer" class="text-muted small mt-auto" style="padding: 10px 20px; font-size: 0.7rem;"></div>
       </div>
 
       <div id="content" class="content">
@@ -219,7 +222,7 @@
       window.onload = function() {
         // Add event listener to the dropdown
         document.getElementById('roleSelect').addEventListener('change', switchRole);
-        
+
         // Load the initial view and set navigation based on the role passed from the server
         const initialRole = document.getElementById('roleSelect').value;
         setNavigationForRole(initialRole);
@@ -228,6 +231,13 @@
         } else if (initialRole === 'manager') {
             loadView('ManagerDashboard');
         }
+
+        // Version footer
+        google.script.run
+          .withSuccessHandler(function(v) {
+            document.getElementById('version-footer').textContent = 'v' + v.built;
+          })
+          .getVersion();
       };
     </script>
 </body>

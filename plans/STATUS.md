@@ -1,44 +1,35 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-24
+**Updated:** 2026-02-25
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-02-24 |
+| Last Active | 2026-02-25 |
 | Revenue | Steady |
-| Deploy Version | — (check via clasp) |
-| Deploy Date | — |
+| Deploy Version | @68 |
+| Deploy Date | 2026-02-24 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested) |
-| Next Milestone | SEO setup + Woo API deploy + Pesach campaign |
+| Next Milestone | SEO setup + 15-min order trigger + Pesach campaign |
 | Blockers | 0 |
 
 ## Next Action
 
-- **Content: 7 posts live on production (EN+HE).** All existing posts updated + About Evyatar added (2026-02-23). Remaining posts (Selection, Price vs Quality) resume editing/publishing in May.
+- **Woo API order pull integrated into sync flow.** `importWebOrdersBackend` now pulls fresh orders from WooCommerce API before processing (seamless — replaces CSV upload). Hourly auto-pull still runs independently. Sync widget reverted to simple linear flow (removed confusing Pull Now / Skip to Comax buttons).
+- **Content: 7 posts live on production (EN+HE).** Remaining posts (Selection, Price vs Quality) resume May.
 - **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
 - **Marketing ACTIVE:**
   - Seasonal bundle update in progress targeting Pesach wine sales, email campaign in preparation
-  - Explore bundle being updated for a function this weekend
   - Coupon active: NIS 50 off for new customers with minimum order
 - **Test SKU management fixes** (deployed, partially verified):
-  1. Vendor SKU Update: search for a product already on web → should appear with [Web] badge *(not yet tested)*
-  2. ~~Product Replacement: run a replacement~~ → ✓ Tested, working. WebProdM, WebDetM, WebXltM, CmxProdM all updated.
-  3. Trim safety: SKUs with whitespace should match correctly *(not yet tested)*
-- Check SysTasks for `task.validation.vintage_mismatch` row from the replacement test
-- **WooCommerce API pull IMPLEMENTED — awaiting deploy and credential setup:**
-  - WooApiService.js: HTTP client with auth, pagination, retries
-  - WooProductPullService.js: Pulls EN+HE products, feeds existing staging→validation→master pipeline
-  - WooOrderPullService.js: Pulls orders, feeds existing OrderService pipeline
-  - Sync widget updated: "Pull Now" buttons, "Skip to Comax" option, pull timestamps
-  - SyncStateService updated: IDLE can now transition directly to WAITING_ORDER_EXPORT or WAITING_COMAX_IMPORT
-  - **Prerequisites before deploy:** Create WooCommerce REST API consumer key/secret (read-only), store in SysConfig as woo.api.consumer_key and woo.api.consumer_secret via `rebuildSysConfigFromSource()`
-  - **Test:** After deploy, run `testWooApiConnection()` from script editor
+  1. Vendor SKU Update: *(not yet tested)*
+  2. ~~Product Replacement~~ → ✓ Tested, working.
+  3. Trim safety: *(not yet tested)*
 - **Website font optimization** — Open Sans loading 10 variants → 2-3 needed. Deferred pending WPML check.
 - Build `CampaignService.getTargetSegment()` for segment export
 - Start small comeback campaign testing
@@ -49,7 +40,7 @@
 - **Sync workflow:** Stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce). Imports, exports, validation all working.
 - **CRM enrichment:** Complete. 548 contacts enriched with dual-language preferences (categories, wineries, grapes, kashrut). Activity backfill working.
 - **Campaign system:** Planned (`jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md`), not yet built. Key decisions made: welcome offer NIS 50 off 399, Tuesday evening sends, 7-14 day attribution window.
-- **Import system:** Fixed Dec 2025 — CSV filter, validation rule fix, quarantine diagnostics. Woo REST API pull implemented Feb 2026 (replaces manual CSV exports).
+- **Import system:** Woo REST API pull deployed and tested (Feb 2026). Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet (separate from SysConfig). Replaces manual CSV exports.
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
@@ -106,6 +97,23 @@ Periodic business health checks — not automated, just a checklist for session 
 
 ## Session History
 
+- **2026-02-25:** Sync widget UX fix — reverted to simple linear flow.
+  - **Problem:** After Woo API integration, sync widget showed confusing "Start Import" + "Skip to Comax" buttons at IDLE, plus per-step "Pull Now" buttons that operated outside the state machine. User imported products and pulled orders, but state machine stayed at IDLE.
+  - **Widget fix:** Removed Skip to Comax button, Pull Now buttons, and API pull timestamps from step cards. Back to single "Start Import" → linear step flow.
+  - **Backend fix:** `importWebOrdersBackend` now calls `WooOrderPullService.pullOrders()` automatically before processing staged data. If API pull fails, logs warning and continues with existing staged data. Seamlessly replaces old CSV file upload — user experience identical to before.
+  - Files modified: `AdminDailySyncWidget_v2.html`, `WebAppSync.js`
+- **2026-02-24b:** Woo API deploy, testing, and bug fixes. Deployed @68.
+  - **Woo API credentials:** Moved to SysEnv sheet (separate spreadsheet) so `rebuildSysConfigFromSource()` can't overwrite them. Removed consumer_key/consumer_secret from system.json.
+  - **API connection verified:** 746 EN products, 746 HE products, 1237 orders.
+  - **Order pull tested:** First pull brought all 1196 orders (flooded WebOrdM/SysOrdLog). Fixed: restricted to 30-day rolling window (`modified_after`), removed timestamp-based incremental logic. Pipeline already has upsert (update existing, insert new). Re-tested: 18 orders processed correctly.
+  - **Admin order import updated:** "Import Web Orders" button now calls Woo API pull instead of file-based OrchestratorService flow.
+  - **Manager UI:** Added "Refresh Orders" button to ManagerOrdersView.
+  - **Version system:** Added VERSION constant to WebApp.js, `getVersion()` global function, version footer in AppView sidebar (visible on all pages).
+  - **Bug fixes:**
+    - BundleService.getBundlesWithLowInventory: `spreadsheet` was undefined — added `SheetAccessor.getDataSpreadsheet()`.
+    - HousekeepingService.validateCurrentConfig: `SYS_CONFIG_DEFINITIONS` global no longer exists — rebuilt from `getMasterConfiguration()`. Skips `system.users` (special array handling).
+  - **Created `/ship` skill** for JLM Wines (full release pipeline).
+  - Files modified: WooApiService.js, WooOrderPullService.js, WebAppOrders.js, WebApp.js, AppView.html, ManagerOrdersView.html, BundleService.js, HousekeepingService.js, SetupConfig.js, config/system.json
 - **2026-02-24:** WooCommerce REST API automated pull — full implementation.
   - **Phase 1 — Integrity fixes:**
     - 1a: Consolidated duplicate CSV parser. Deleted `_parseWebToffeeCsv()` from ProductImportService (78-line duplicate). Now routes through `WebAdapter.parseComplexCsv()`.

@@ -135,6 +135,16 @@ function importWebOrdersBackend() {
 
   try {
     // Update step status
+    SyncStateService.updateStep(2, 'processing', 'Pulling orders from WooCommerce...');
+
+    // Pull fresh orders from WooCommerce API before processing
+    const pullResult = WooOrderPullService.pullOrders();
+    if (!pullResult.success) {
+      logger.warn(serviceName, functionName, `API order pull failed: ${pullResult.message}. Proceeding with staged data.`);
+    } else {
+      logger.info(serviceName, functionName, `API order pull complete: ${pullResult.message}`);
+    }
+
     SyncStateService.updateStep(2, 'processing', 'Processing orders...');
 
     // Queue orders import job
