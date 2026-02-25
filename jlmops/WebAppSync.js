@@ -137,33 +137,20 @@ function importWebOrdersBackend() {
     // Update step status
     SyncStateService.updateStep(2, 'processing', 'Pulling orders from WooCommerce...');
 
-    // Pull fresh orders from WooCommerce API before processing
+    // Pull orders from WooCommerce API — this fetches, transforms, validates,
+    // and processes orders through the existing OrderService pipeline.
     const pullResult = WooOrderPullService.pullOrders();
     if (!pullResult.success) {
-      logger.warn(serviceName, functionName, `API order pull failed: ${pullResult.message}. Proceeding with staged data.`);
-    } else {
-      logger.info(serviceName, functionName, `API order pull complete: ${pullResult.message}`);
-    }
-
-    SyncStateService.updateStep(2, 'processing', 'Processing orders...');
-
-    // Queue orders import job
-    OrchestratorService.queueWebOrdersImport(sessionId);
-
-    // Process jobs for this session
-    const result = OrchestratorService.processSessionJobs(sessionId);
-
-    if (!result.success) {
-      logger.error(serviceName, functionName, `Web orders import failed: ${result.error}`, null, { sessionId });
+      logger.error(serviceName, functionName, `API order pull failed: ${pullResult.message}`);
       const failState = SyncStateService.getSyncState();
       failState.stage = 'FAILED';
       failState.failedAtStage = 'IMPORTING_ORDERS';
-      failState.errorMessage = result.error;
+      failState.errorMessage = pullResult.message;
       failState.lastUpdated = new Date().toISOString();
-      failState.steps.step2 = { status: 'failed', message: `Import failed: ${result.error}` };
+      failState.steps.step2 = { status: 'failed', message: `Import failed: ${pullResult.message}` };
       SyncStateService.setSyncState(failState);
     } else {
-      logger.info(serviceName, functionName, `Web orders import completed.`, { sessionId });
+      logger.info(serviceName, functionName, `API order pull complete: ${pullResult.message}`);
 
       // Calculate pending orders and set up step 3
       const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
