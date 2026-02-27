@@ -20,7 +20,7 @@
 
 ## Next Action
 
-- **API Pull All deployed (testing).** "API Pull" button in sync widget runs full pipeline: EN products → HE translations → orders, all via WooCommerce REST API. Fixes broken translation link (uses `translations.en` instead of missing `_wpml_original_post_id` meta). Manual CSV "Start Import" button still available as fallback. Pushed for testing — not yet deployed as new version.
+- **API Pull All in testing.** "API Pull" button in sync widget runs full pipeline: EN products → HE translations → orders, all via WooCommerce REST API. Fixes broken translation link (uses `translations.en` instead of missing `_wpml_original_post_id` meta). First test run completed — data landed, sync reached WAITING_ORDER_EXPORT correctly. Audit trail in SysLog (filter: WooProductPullService). Testing continues during normal daily syncs before deploying as new version. Manual CSV "Start Import" still available as fallback.
 - **Content: 7 posts live on production (EN+HE).** Remaining posts (Selection, Price vs Quality) resume May.
 - **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
 - **Marketing ACTIVE:**

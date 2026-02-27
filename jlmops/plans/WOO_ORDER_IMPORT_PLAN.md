@@ -1,7 +1,7 @@
 # WooCommerce API Pull Integration
 
-**Status:** Implemented
-**Updated:** 2026-02-28
+**Status:** Testing in normal use — not yet deployed as versioned release
+**Updated:** 2026-02-27
 
 ## What Was Built
 
@@ -51,8 +51,15 @@ Full WooCommerce REST API integration replacing manual CSV exports for the daily
 | `WebAppSync.js` | `apiPullAllBackend()` state machine wrapper |
 | `AdminDailySyncWidget_v2.html` | "API Pull" button + action wiring |
 
+## Testing Status
+
+- **First test:** 2026-02-27 — full pipeline completed, sync reached WAITING_ORDER_EXPORT with 1 order ready. Data landed in staging and master sheets. No silent failures.
+- **Audit trail:** SysLog sheet in JLMops_Log (filter service: `WooProductPullService`). No SysJobQueue entries (runs inline, not via OrchestratorService).
+- **Next:** Continue testing during normal daily syncs. Once trusted, integrate into main sync flow and deploy as versioned release.
+
 ## Future Considerations
 
 - Remove manual CSV import path once API pull is proven stable
 - Consider removing the broken `_extractAndStageTranslationLinks` function
 - Hourly auto-pull could be extended to include products/translations (currently orders only)
+- Add audit trail (SysJobQueue or similar) when integrating into main sync flow
