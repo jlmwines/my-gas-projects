@@ -1,35 +1,58 @@
-# Automatic Order Import via WooCommerce REST API
+# WooCommerce API Pull Integration
 
-**Status:** Not started — planning next session
-**Priority:** High — daily manual bottleneck, blocks packing slips
+**Status:** Implemented
+**Updated:** 2026-02-28
 
-## Problem
+## What Was Built
 
-Orders placed on jlmwines.com don't appear in jlmops until manual export from WooCommerce admin and import into the system. This delays packing slips and all downstream order processing. Every order waits on manual action.
+Full WooCommerce REST API integration replacing manual CSV exports for the daily sync workflow.
 
-## Proposed Solution
+### Phase 1: Order Pull (Deployed 2026-02)
 
-GAS time-driven trigger polls the WooCommerce REST API for new/updated orders and writes them directly into jlmops (SysOrdLog / order sheets). No file export/import step.
+- `WooOrderPullService.pullOrders()` — fetches orders via API, transforms, validates, upserts
+- Integrated into sync widget step 2 (`importWebOrdersBackend`)
+- Hourly auto-pull trigger runs independently
+- 30-day rolling window, upsert via existing OrderService pipeline
+- Credentials stored in SysEnv sheet
 
-## Approach: Poll from GAS
+### Phase 2: Product + Translation Pull (Deployed 2026-02-28)
 
-- Timed trigger runs every 5–15 minutes
-- Calls Woo REST API: `GET /wp-json/wc/v3/orders?after={lastCheck}&status=processing`
-- Transforms response into jlmops order format
-- Writes to order sheets (same format as current CSV import)
-- Updates `lastCheck` timestamp in SysConfig
-- Logs import activity
+- `WooProductPullService.pullAndImportAll()` — full pipeline:
+  - **Phase A:** EN products via `WooApiService.fetchProducts('en')` → `_transformApiProduct` → WebProdS_EN → validate → WebProdM
+  - **Phase B:** HE translations via `WooApiService.fetchProducts('he')` → `_transformApiTranslation` → WebXltS → validate → WebXltM
+  - **Phase C:** Orders via `WooOrderPullService.pullOrders()`
+- Key fix: `_transformApiTranslation` uses `heProd.translations.en` for `wxs_WpmlOriginalId` (the EN product ID). The old `_extractAndStageTranslationLinks` looked for `_wpml_original_post_id` in meta which the API doesn't return.
+- Full 31-column `wxs_*` mapping including 2 RankMath SEO fields and 20 woosb bundle fields.
+- Progress visible in sync widget via `SyncStateService.updateStep()` + `SpreadsheetApp.flush()` between each sub-phase.
 
-## Key Questions to Resolve During Planning
+### Sync Widget Integration
 
-1. **Woo REST API auth** — consumer key/secret already set up? Or need to create?
-2. **Which order statuses to pull** — processing only, or also on-hold/completed?
-3. **Mapping** — how does current CSV import map Woo fields to jlmops columns? Reuse that logic.
-4. **Deduplication** — how to handle orders already imported (by Woo order ID check)
-5. **Error handling** — what if API is down, rate limited, or returns partial data?
-6. **Impact on existing sync workflow** — does this replace the order import steps in the 12-state machine, or run independently?
-7. **GAS UrlFetchApp limits** — check quotas for the polling frequency
+- `apiPullAllBackend()` in WebAppSync.js — state machine wrapper (IDLE → IMPORTING_PRODUCTS → ... → WAITING_ORDER_EXPORT or WAITING_COMAX_IMPORT)
+- "API Pull" button appears alongside "Start Import" at IDLE stage via `altButton` pattern
+- Step 1 shows sub-phase progress: "Pulling EN products..." → "EN: N staged. Validating..." → "EN imported. Pulling HE translations..." → "HE: N staged. Validating..." → "Products and translations imported"
+- Step 2 shows order pull progress
+- After completion, normal sync flow continues (Comax import, web export)
 
-## Longer-Term Context
+## What Stays Unchanged
 
-This is the first step toward direct API integration with WooCommerce. Inventory/product push via Woo REST API could follow, eventually simplifying or replacing the file-based sync workflow entirely.
+- `pullProducts()` — existing standalone function, not modified
+- `_extractAndStageTranslationLinks()` — old broken function, not modified (superseded by `_transformApiTranslation`)
+- `importWebProductsBackend()` — manual CSV path via "Start Import" button
+- `importWebOrdersBackend()` — separate order import path
+- All downstream sync steps (Comax import, web export) unchanged
+
+## Files
+
+| File | Role |
+|------|------|
+| `WooApiService.js` | REST API client (fetchProducts, fetchOrders) |
+| `WooProductPullService.js` | Product + translation pull, transform, staging |
+| `WooOrderPullService.js` | Order pull, transform, staging |
+| `WebAppSync.js` | `apiPullAllBackend()` state machine wrapper |
+| `AdminDailySyncWidget_v2.html` | "API Pull" button + action wiring |
+
+## Future Considerations
+
+- Remove manual CSV import path once API pull is proven stable
+- Consider removing the broken `_extractAndStageTranslationLinks` function
+- Hourly auto-pull could be extended to include products/translations (currently orders only)

@@ -1,13 +1,13 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-27
+**Updated:** 2026-02-28
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-02-27 |
+| Last Active | 2026-02-28 |
 | Revenue | Steady |
 | Deploy Version | @68 |
 | Deploy Date | 2026-02-24 |
@@ -20,7 +20,7 @@
 
 ## Next Action
 
-- **Woo API order pull integrated into sync flow.** `importWebOrdersBackend` now pulls fresh orders from WooCommerce API before processing (seamless — replaces CSV upload). Hourly auto-pull still runs independently. Sync widget reverted to simple linear flow (removed confusing Pull Now / Skip to Comax buttons).
+- **API Pull All deployed (testing).** "API Pull" button in sync widget runs full pipeline: EN products → HE translations → orders, all via WooCommerce REST API. Fixes broken translation link (uses `translations.en` instead of missing `_wpml_original_post_id` meta). Manual CSV "Start Import" button still available as fallback. Pushed for testing — not yet deployed as new version.
 - **Content: 7 posts live on production (EN+HE).** Remaining posts (Selection, Price vs Quality) resume May.
 - **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
 - **Marketing ACTIVE:**
@@ -41,7 +41,7 @@
 - **CRM enrichment:** Complete. 548 contacts enriched with dual-language preferences (categories, wineries, grapes, kashrut). Activity backfill working.
 - **Campaign system:** Planned (`jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md`), not yet built. Key decisions made: welcome offer NIS 50 off 399, Tuesday evening sends, 7-14 day attribution window.
 - **First Mailchimp campaign:** Text and link ready (pending partner review). Two separate sends — EN and HE to language-segmented lists. Claude to build HTML email bodies. Mailchimp segments already set up.
-- **Import system:** Woo REST API pull deployed and tested (Feb 2026). Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet (separate from SysConfig). Replaces manual CSV exports.
+- **Import system:** Full Woo REST API pull (products + translations + orders) deployed Feb 2026. "API Pull" button runs entire pipeline with step-by-step progress in sync widget. Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet. Plan: `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
@@ -99,10 +99,19 @@ Periodic business health checks — not automated, just a checklist for session 
 
 ## Session History
 
+- **2026-02-27b:** Pesach email finalized (EN + HE).
+  - Added hero image (Evyatar in shop with matzah corner overlay — `content/pesach/email header.jpg`). Image added via Mailchimp Image block, not in HTML.
+  - Replaced text link CTA with charcoal button (#32373c, white text).
+  - Removed inline link from body copy — button is the single CTA.
+  - Added personal closing: "Chag Kasher v'Sameach, Evyatar" below button.
+  - Created Hebrew version with RTL support, Hebrew closing (חג כשר ושמח, אביתר), CTA links to `/he/product/seasonal-wines/`.
+  - Files: `exchange/pesach-email-en.html`, `exchange/pesach-email-he.html`
+  - **Process:** New builder in Mailchimp → Image block (hero) → Code block (paste inner HTML). Two separate sends — EN and HE to language-segmented lists. Tuesday evening after Purim.
+  - See `marketing/EMAIL_GUIDELINES.md` for reusable process and design decisions.
 - **2026-02-27:** Two bug fixes + Pesach email draft.
   - **Sync widget race condition:** Stale poll responses (initiated before an action) could arrive after the success handler and overwrite the UI with old state. This caused the Generate button to reappear after web export completed, requiring a second click. Fix: track `lastActionTimestamp`, discard poll responses with older `lastUpdated`. Files: `AdminDailySyncWidget_v2.html`
   - **Bundle health check crash:** `getEligibleProducts()` referenced undefined `spreadsheet` variable when accessing WebDetM for slots with intensity/complexity/acidity criteria. Same class of bug as the Feb 24 fix in `getBundlesWithLowInventory` — a second instance in a different function. The crash killed the entire bundle health check silently, preventing zero-stock alerts. Fix: use `SheetAccessor.getDataSheet('WebDetM', false)`. Files: `BundleService.js`
-  - **Pesach email:** Created HTML Mailchimp email draft (English) from spreadsheet content. Iterated to personal tone: no logo, no branded button, no decorative cards — just text with inline links like a personal note. Two section headlines ("How much wine?" / "Which wines?") with inline bold for Easy Starters / Dining in Style. CTA is text link to `/product/seasonal-wines/`. WP media library has 5 Pesach images (pesach-3, pesach-mosaic, pesach-banner). **In progress:** deciding whether to add an image. File: `exchange/pesach-email-en.html`
+  - **Pesach email:** Initial draft — plain text email, no image, text link CTA. Iterated to personal tone. File: `exchange/pesach-email-en.html`
 - **2026-02-25:** Sync widget UX fix — reverted to simple linear flow.
   - **Problem:** After Woo API integration, sync widget showed confusing "Start Import" + "Skip to Comax" buttons at IDLE, plus per-step "Pull Now" buttons that operated outside the state machine. User imported products and pulled orders, but state machine stayed at IDLE.
   - **Widget fix:** Removed Skip to Comax button, Pull Now buttons, and API pull timestamps from step cards. Back to single "Start Import" → linear step flow.
