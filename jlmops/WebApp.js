@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-02-28 00:30',
+  built: '2026-02-27 14:06',
   commit: 'Add API Pull All — full pipeline button in sync widget'
 };
 
