@@ -140,6 +140,7 @@
     var currentPollIntervalMs = null;
     var progressEntries = [];
     var previousStepStatuses = {};
+    var lastActionTimestamp = null;
 
     // Constants
     var ACTIVE_POLL_MS = 1000;
@@ -434,6 +435,7 @@
                     progressMsg = 'Orders imported. ' + status.ordersPendingExportCount + ' ready for export';
                 }
                 addProgressEntry(progressMsg, true);
+                lastActionTimestamp = status.lastUpdated;
                 updateUI(status);
                 adjustPolling(status);
             })
@@ -561,6 +563,13 @@
                     adjustPolling(status);
                     return;
                 }
+                // Discard stale poll responses that pre-date the last action
+                if (lastActionTimestamp && status.lastUpdated &&
+                    new Date(status.lastUpdated) < new Date(lastActionTimestamp)) {
+                    console.log('SyncWidget: Discarding stale poll (polled: ' + status.lastUpdated + ', action: ' + lastActionTimestamp + ')');
+                    return;
+                }
+                lastActionTimestamp = null;
                 // Normal path (no action running): full UI update
                 updateUI(status);
                 adjustPolling(status);

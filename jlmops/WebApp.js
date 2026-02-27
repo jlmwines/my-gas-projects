@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-02-24 12:30',
-  commit: 'Woo REST API order pull, SysEnv credentials, bundle health fix'
+  built: '2026-02-27 22:45',
+  commit: 'Fix stale poll overwriting sync widget UI after action completes'
 };
 
 function getVersion() {
