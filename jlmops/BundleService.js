@@ -691,7 +691,7 @@ const BundleService = (function () {
     // Get WebDetM for intensity/complexity/acidity if criteria specified
     let detailsMap = {};
     if (slot.intensity !== null || slot.complexity !== null || slot.acidity !== null) {
-      const detSheet = spreadsheet.getSheetByName('WebDetM');
+      const detSheet = SheetAccessor.getDataSheet('WebDetM', false);
       if (detSheet) {
         const detData = detSheet.getDataRange().getValues();
         const detSchema = allConfig['schema.data.WebDetM'];

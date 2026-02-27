@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-02-27 22:45',
-  commit: 'Fix stale poll overwriting sync widget UI after action completes'
+  built: '2026-02-27 23:00',
+  commit: 'Fix undefined spreadsheet ref in bundle eligible products check'
 };
 
 function getVersion() {
