@@ -1,20 +1,20 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-25
+**Updated:** 2026-02-27
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-02-25 |
+| Last Active | 2026-02-27 |
 | Revenue | Steady |
 | Deploy Version | @68 |
 | Deploy Date | 2026-02-24 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
-| Open Bugs | 2 (vendor SKU update, trim safety — untested) |
+| Open Bugs | 2 (vendor SKU update, trim safety — untested, both low priority) |
 | Next Milestone | SEO setup + 15-min order trigger + Pesach campaign |
 | Blockers | 0 |
 
@@ -40,6 +40,7 @@
 - **Sync workflow:** Stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce). Imports, exports, validation all working.
 - **CRM enrichment:** Complete. 548 contacts enriched with dual-language preferences (categories, wineries, grapes, kashrut). Activity backfill working.
 - **Campaign system:** Planned (`jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md`), not yet built. Key decisions made: welcome offer NIS 50 off 399, Tuesday evening sends, 7-14 day attribution window.
+- **First Mailchimp campaign:** Text and link ready (pending partner review). Two separate sends — EN and HE to language-segmented lists. Claude to build HTML email bodies. Mailchimp segments already set up.
 - **Import system:** Woo REST API pull deployed and tested (Feb 2026). Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet (separate from SysConfig). Replaces manual CSV exports.
 - **Admin UI:** Contact preferences display, activity ribbon icons.
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
@@ -94,9 +95,14 @@ Periodic business health checks — not automated, just a checklist for session 
 - Year in Wine PDF — needs PDF generation research
 - Gift recipient campaigns — lowest priority, wait
 - VIP recognition + referral program — after campaigns launch
+- **Theme replacement:** Replace KoWine theme and current plugins with a Claude-built lightweight theme for Elementor Pro with WPML. Goals: improve performance (PageSpeed baseline 57/82), add features, reduce vendor dependency. Needs planning session.
 
 ## Session History
 
+- **2026-02-27:** Two bug fixes + Pesach email draft.
+  - **Sync widget race condition:** Stale poll responses (initiated before an action) could arrive after the success handler and overwrite the UI with old state. This caused the Generate button to reappear after web export completed, requiring a second click. Fix: track `lastActionTimestamp`, discard poll responses with older `lastUpdated`. Files: `AdminDailySyncWidget_v2.html`
+  - **Bundle health check crash:** `getEligibleProducts()` referenced undefined `spreadsheet` variable when accessing WebDetM for slots with intensity/complexity/acidity criteria. Same class of bug as the Feb 24 fix in `getBundlesWithLowInventory` — a second instance in a different function. The crash killed the entire bundle health check silently, preventing zero-stock alerts. Fix: use `SheetAccessor.getDataSheet('WebDetM', false)`. Files: `BundleService.js`
+  - **Pesach email:** Created HTML Mailchimp email draft (English) from spreadsheet content. Personal tone (no logo header), varied card styles, CTA links to `/product/seasonal-wines/`. File: `exchange/pesach-email-en.html`
 - **2026-02-25:** Sync widget UX fix — reverted to simple linear flow.
   - **Problem:** After Woo API integration, sync widget showed confusing "Start Import" + "Skip to Comax" buttons at IDLE, plus per-step "Pull Now" buttons that operated outside the state machine. User imported products and pulled orders, but state machine stayed at IDLE.
   - **Widget fix:** Removed Skip to Comax button, Pull Now buttons, and API pull timestamps from step cards. Back to single "Start Import" → linear step flow.
@@ -175,3 +181,6 @@ Detailed session history prior to standardization is in `jlmops/SESSION_SUMMARY.
 ## Inbox
 
 _(Cross-project notes captured via `/note jlm <text>`. Review and clear at session start.)_
+
+- 2026-02-26: kowine theme update may be fix for recent elementor update disrupting site appearance. will apply to staging and see if that fixes appearance.
+- 2026-02-26: jlmops need a way to research product/sku state and history. what are the last tasks for this sku? when did vintage change is very important. keep product history, or rely on data?
