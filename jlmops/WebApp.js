@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-02-27 23:00',
-  commit: 'Fix undefined spreadsheet ref in bundle eligible products check'
+  built: '2026-02-28 00:30',
+  commit: 'Add API Pull All — full pipeline button in sync widget'
 };
 
 function getVersion() {

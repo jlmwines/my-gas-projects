@@ -291,6 +291,143 @@ const WooProductPullService = (function() {
     logger.info(SERVICE_NAME, functionName, 'Wrote ' + rows.length + ' rows to ' + sheetName, { sessionId: sessionId });
   }
 
+  /**
+   * Full API pull pipeline: EN products → HE translations → orders.
+   * Updates SyncStateService step progress between each phase for widget polling.
+   *
+   * Called from apiPullAllBackend() which handles the state machine wrapper.
+   * Does NOT touch the existing pullProducts() flow.
+   *
+   * @returns {object} { success, enCount, heCount, message }
+   */
+  function pullAndImportAll() {
+    var functionName = 'pullAndImportAll';
+    var sessionId = SyncStateService.getSyncState().sessionId;
+    logger.info(SERVICE_NAME, functionName, 'Starting full API pull pipeline', { sessionId: sessionId });
+
+    var sheetNames = ConfigService.getConfig('system.sheet_names');
+
+    // ── Phase A: EN Products ──
+    SyncStateService.updateStep(1, 'processing', 'Pulling EN products...');
+    SpreadsheetApp.flush();
+
+    var enProducts = WooApiService.fetchProducts('en');
+    var enStaging = [];
+    for (var i = 0; i < enProducts.length; i++) {
+      var t = _transformApiProduct(enProducts[i]);
+      if (t) enStaging.push(t);
+    }
+    _writeToStagingSheet(enStaging, sheetNames.WebProdS_EN, sessionId);
+
+    SyncStateService.updateStep(1, 'processing', 'EN: ' + enStaging.length + ' staged. Validating...');
+    SpreadsheetApp.flush();
+
+    var enValidation = ValidationLogic.runValidationSuite('web_staging', sessionId);
+    var enProcessed = ValidationOrchestratorService.processValidationResults(enValidation, sessionId);
+    if (enProcessed.quarantineTriggered) {
+      throw new Error('EN product validation triggered quarantine');
+    }
+    ProductImportService.upsertWebProductsData(sessionId);
+
+    // ── Phase B: HE Translations ──
+    SyncStateService.updateStep(1, 'processing', 'EN imported. Pulling HE translations...');
+    SpreadsheetApp.flush();
+
+    var heProducts = WooApiService.fetchProducts('he');
+    var heStaging = [];
+    for (var j = 0; j < heProducts.length; j++) {
+      var ht = _transformApiTranslation(heProducts[j]);
+      if (ht) heStaging.push(ht);
+    }
+    _writeToStagingSheet(heStaging, sheetNames.WebXltS, sessionId);
+
+    SyncStateService.updateStep(1, 'processing', 'HE: ' + heStaging.length + ' staged. Validating...');
+    SpreadsheetApp.flush();
+
+    var heValidation = ValidationLogic.runValidationSuite('web_xlt_staging', sessionId);
+    var heProcessed = ValidationOrchestratorService.processValidationResults(heValidation, sessionId);
+    if (heProcessed.quarantineTriggered) {
+      throw new Error('HE translation validation triggered quarantine');
+    }
+    ProductImportService.upsertWebXltData(sessionId);
+
+    SyncStateService.updateStep(1, 'completed', 'Products and translations imported');
+    SpreadsheetApp.flush();
+
+    // ── Phase C: Orders ──
+    SyncStateService.updateStep(2, 'processing', 'Pulling orders...');
+    SpreadsheetApp.flush();
+
+    var orderResult = WooOrderPullService.pullOrders();
+    if (!orderResult.success) {
+      throw new Error('Order pull failed: ' + orderResult.message);
+    }
+
+    SyncStateService.updateStep(2, 'completed', 'Orders imported');
+    SpreadsheetApp.flush();
+
+    // Update last pull timestamp
+    ConfigService.setConfig('woo.api', 'products_last_pull', new Date().toISOString());
+
+    var message = 'Full pipeline complete. EN: ' + enStaging.length + ', HE: ' + heStaging.length;
+    logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
+
+    return { success: true, enCount: enStaging.length, heCount: heStaging.length, message: message };
+  }
+
+  /**
+   * Transform a single HE API product to the full 31-column wxs_* staging format.
+   * Uses heProd.translations.en for the original ID (the fix for the broken _wpml_original_post_id lookup).
+   *
+   * @param {object} heProd - WooCommerce REST API product object fetched with ?lang=he
+   * @returns {object|null} Product in wxs_* format, or null if invalid
+   */
+  function _transformApiTranslation(heProd) {
+    if (!heProd || !heProd.id) return null;
+
+    var meta = heProd.meta_data;
+    var translation = {};
+
+    // Core fields
+    translation.wxs_ID = String(heProd.id);
+    translation.wxs_PostTitle = heProd.name || '';
+    translation.wxs_PostContent = heProd.description || '';
+    translation.wxs_PostExcerpt = heProd.short_description || '';
+    translation.wxs_SKU = heProd.sku || '';
+    translation.wxs_ProductPageUrl = heProd.permalink || '';
+    translation.wxs_WpmlLanguageCode = 'he';
+    translation.wxs_WpmlOriginalId = heProd.translations && heProd.translations.en ? String(heProd.translations.en) : '';
+    translation.wxs_WpmlOriginalSku = heProd.sku || '';
+
+    // RankMath SEO meta
+    translation.wxs_MetaRankMathDesc = _getMetaValue(meta, 'rank_math_description') || '';
+    translation.wxs_MetaRankMathKeyword = _getMetaValue(meta, 'rank_math_focus_keyword') || '';
+
+    // WPClever Smart Bundle fields (20 meta keys)
+    translation.wxs_WoosbAfterText = _getMetaValue(meta, 'woosb_after_text') || '';
+    translation.wxs_WoosbBeforeText = _getMetaValue(meta, 'woosb_before_text') || '';
+    translation.wxs_WoosbCustomPrice = _getMetaValue(meta, 'woosb_custom_price') || '';
+    translation.wxs_WoosbDisableAutoPrice = _getMetaValue(meta, 'woosb_disable_auto_price') || '';
+    translation.wxs_WoosbDiscount = _getMetaValue(meta, 'woosb_discount') || '';
+    translation.wxs_WoosbDiscountAmount = _getMetaValue(meta, 'woosb_discount_amount') || '';
+    translation.wxs_WoosbExcludeUnpurch = _getMetaValue(meta, 'woosb_exclude_unpurchasable') || '';
+    translation.wxs_WoosbIds = _getMetaValue(meta, 'woosb_ids') || '';
+    translation.wxs_WoosbLayout = _getMetaValue(meta, 'woosb_layout') || '';
+    translation.wxs_WoosbLimitEachMax = _getMetaValue(meta, 'woosb_limit_each_max') || '';
+    translation.wxs_WoosbLimitEachMin = _getMetaValue(meta, 'woosb_limit_each_min') || '';
+    translation.wxs_WoosbLimitEachMinDef = _getMetaValue(meta, 'woosb_limit_each_min_default') || '';
+    translation.wxs_WoosbLimitWholeMax = _getMetaValue(meta, 'woosb_limit_whole_max') || '';
+    translation.wxs_WoosbLimitWholeMin = _getMetaValue(meta, 'woosb_limit_whole_min') || '';
+    translation.wxs_WoosbManageStock = _getMetaValue(meta, 'woosb_manage_stock') || '';
+    translation.wxs_WoosbOptionalProducts = _getMetaValue(meta, 'woosb_optional_products') || '';
+    translation.wxs_WoosbShippingFee = _getMetaValue(meta, 'woosb_shipping_fee') || '';
+    translation.wxs_WoosbTotalLimits = _getMetaValue(meta, 'woosb_total_limits') || '';
+    translation.wxs_WoosbTotalLimitsMax = _getMetaValue(meta, 'woosb_total_limits_max') || '';
+    translation.wxs_WoosbTotalLimitsMin = _getMetaValue(meta, 'woosb_total_limits_min') || '';
+
+    return translation;
+  }
+
   // ============================================================
   // Helper functions
   // ============================================================
@@ -338,7 +475,8 @@ const WooProductPullService = (function() {
   }
 
   return {
-    pullProducts: pullProducts
+    pullProducts: pullProducts,
+    pullAndImportAll: pullAndImportAll
   };
 })();
 

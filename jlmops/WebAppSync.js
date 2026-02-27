@@ -845,6 +845,103 @@ function pullWooOrdersBackend() {
 }
 
 /**
+ * Stage guard: IDLE
+ * Full API pull pipeline: EN products → HE translations → orders.
+ * Replaces manual CSV import with direct WooCommerce API pull.
+ * After completion, continues into normal sync flow (Comax import, web export).
+ * @returns {object} The updated sync state.
+ */
+function apiPullAllBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'apiPullAllBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'IDLE') {
+    throw new Error(`Cannot start API pull: sync is at stage ${currentState.stage}, expected IDLE.`);
+  }
+
+  logger.info(serviceName, functionName, 'Starting full API pull pipeline.');
+
+  try {
+    const sessionId = OrchestratorService.generateSessionId();
+
+    // Create sync session tracking task
+    try {
+      TaskService.createTask(
+        'task.sync.daily_session',
+        sessionId,
+        `Sync ${new Date().toISOString().split('T')[0]}`,
+        `Daily Sync (API Pull) - ${new Date().toLocaleDateString()}`,
+        'API pull session initiated',
+        sessionId
+      );
+    } catch (taskError) {
+      logger.warn(serviceName, functionName, `Could not create sync session task: ${taskError.message}`);
+    }
+
+    // Initialize state: IDLE → IMPORTING_PRODUCTS
+    const newState = SyncStateService.getDefaultState();
+    newState.sessionId = sessionId;
+    newState.stage = 'IMPORTING_PRODUCTS';
+    newState.lastUpdated = new Date().toISOString();
+    newState.steps.step1 = { status: 'processing', message: 'Pulling EN products...' };
+    SyncStateService.setSyncState(newState);
+
+    // Run the full pipeline — updates step1 and step2 internally
+    const result = WooProductPullService.pullAndImportAll();
+
+    if (!result.success) {
+      const failState = SyncStateService.getSyncState();
+      failState.stage = 'FAILED';
+      failState.failedAtStage = 'IMPORTING_PRODUCTS';
+      failState.errorMessage = result.message;
+      failState.lastUpdated = new Date().toISOString();
+      SyncStateService.setSyncState(failState);
+    } else {
+      // Pipeline complete — determine next stage based on pending orders
+      const ordersToExportCount = (new OrderService(ProductService)).getComaxExportOrderCount();
+      const invoiceCount = OrchestratorService.getInvoiceFileCount();
+
+      const doneState = SyncStateService.getSyncState();
+      doneState.ordersPendingExportCount = ordersToExportCount;
+      doneState.invoiceFileCount = invoiceCount;
+      doneState.lastUpdated = new Date().toISOString();
+
+      if (ordersToExportCount > 0) {
+        doneState.stage = 'WAITING_ORDER_EXPORT';
+        doneState.steps.step3 = { status: 'waiting', message: `${ordersToExportCount} orders ready for export` };
+      } else {
+        doneState.stage = 'WAITING_COMAX_IMPORT';
+        doneState.steps.step3 = { status: 'skipped', message: 'No new web orders to export' };
+        doneState.steps.step4 = { status: 'waiting', message: 'Ready to import Comax product data' };
+      }
+
+      SyncStateService.setSyncState(doneState);
+    }
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error in API pull pipeline: ${e.message}`, e);
+    const errState = SyncStateService.getSyncState();
+    if (errState.stage !== 'IDLE') {
+      errState.stage = 'FAILED';
+      errState.failedAtStage = 'IMPORTING_PRODUCTS';
+      errState.errorMessage = e.message;
+      errState.lastUpdated = new Date().toISOString();
+      // Mark whichever step was processing as failed
+      if (!errState.steps.step2 || errState.steps.step2.status !== 'processing') {
+        errState.steps.step1 = { status: 'failed', message: `Failed: ${e.message}` };
+      } else {
+        errState.steps.step2 = { status: 'failed', message: `Failed: ${e.message}` };
+      }
+      SyncStateService.setSyncState(errState);
+    }
+    return SyncStateService.getSyncState();
+  }
+}
+
+/**
  * Get WooCommerce API pull timestamps for dashboard display.
  * @returns {object} { productsLastPull, ordersLastPull }
  */

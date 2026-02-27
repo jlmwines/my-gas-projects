@@ -162,7 +162,7 @@
     // =====================================================================
 
     var STAGE_CONFIG = {
-        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'] },
+        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'], altButton: ['apiPullAll', 'API Pull'] },
         IMPORTING_PRODUCTS:     { message: 'Importing products...',                button: null, spinner: true },
         IMPORTING_ORDERS:       { message: 'Products imported. Import orders',     button: ['importOrders', 'Import Orders'] },
         WAITING_ORDER_EXPORT:   { message: '{count} orders to export',             button: ['exportToComax', 'Export Orders'] },
@@ -461,6 +461,10 @@
         runAction('importWebProductsBackend', 1, 'Importing products...');
     }
 
+    function apiPullAll() {
+        runAction('apiPullAllBackend', 1, 'API Pull: products + translations + orders...');
+    }
+
     function importOrders() {
         runAction('importWebOrdersBackend', 2, 'Importing orders...');
     }
@@ -623,6 +627,7 @@
 
     window.SyncWidget = {
         importProducts: importProducts,
+        apiPullAll: apiPullAll,
         importOrders: importOrders,
         exportToComax: exportToComax,
         confirmComax: confirmComax,
