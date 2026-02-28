@@ -15,7 +15,7 @@
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested, both low priority) |
-| Next Milestone | SEO setup + 15-min order trigger + Pesach campaign |
+| Next Milestone | Theme replacement + SEO setup + Pesach campaign |
 | Blockers | 0 |
 
 ## Next Action
@@ -95,10 +95,17 @@ Periodic business health checks — not automated, just a checklist for session 
 - Year in Wine PDF — needs PDF generation research
 - Gift recipient campaigns — lowest priority, wait
 - VIP recognition + referral program — after campaigns launch
-- **Theme replacement:** Replace KoWine theme and current plugins with a Claude-built lightweight theme for Elementor Pro with WPML. Goals: improve performance (PageSpeed baseline 57/82), add features, reduce vendor dependency. Needs planning session.
+- **Theme replacement:** PLAN WRITTEN — `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine. Eliminates Wpbingo Core + Redux Framework. Pending user review.
 
 ## Session History
 
+- **2026-02-28:** Staging6 plugin diagnosis + theme replacement planning.
+  - **Diagnosis:** staging6 returning 500 after plugin updates. Used WP REST API to deactivate plugins one by one.
+  - **Culprit 1: Wpbingo Core** — crashed entire site. Deactivating restored homepage, /he/, cart, my-account.
+  - **Culprit 2: Smart Coupons for WooCommerce Pro** — crashed shop + product pages specifically. Deactivating restored /shop/ and product pages.
+  - Both plugins are essential (Wpbingo for KoWine theme, Smart Coupons for coupon system). Live site already rolled back.
+  - **Theme replacement plan written.** Minimal Elementor-compatible theme modeled on Hello Elementor. Eliminates KoWine + Wpbingo Core + Redux Framework. Existing Elementor Theme Builder header/footer templates carry over automatically. Plan: `~/.claude/plans/unified-sparking-galaxy.md`.
+  - Staging6 state: Wpbingo Core and Smart Coupons Pro deactivated. Site functional but missing those plugin features.
 - **2026-02-27b:** Pesach email finalized (EN + HE).
   - Added hero image (Evyatar in shop with matzah corner overlay — `content/pesach/email header.jpg`). Image added via Mailchimp Image block, not in HTML.
   - Replaced text link CTA with charcoal button (#32373c, white text).
