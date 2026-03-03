@@ -751,6 +751,7 @@ function WebAppDashboardV2_getManagerData() {
         entityName: task.st_LinkedEntityName || '',
         sessionId: task.st_SessionId || '',
         projectId: task.st_ProjectId || '',
+        createdDate: _safeDate(task.st_CreatedDate),
         startDate: _safeDate(task.st_StartDate),
         dueDate: _safeDate(task.st_DueDate),
         doneDate: _safeDate(task.st_DoneDate),

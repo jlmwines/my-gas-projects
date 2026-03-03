@@ -20,6 +20,7 @@
   .task-col-status { flex: 1; }
   .task-col-priority { flex: 1; text-align: center; }
   .task-col-due { flex: 1; text-align: center; }
+  .task-col-created { flex: 1; text-align: center; }
   .task-col-link { flex: 0.5; text-align: center; }
 
   /* Expanded row detail */
@@ -122,6 +123,7 @@
               <div class="task-col-status">Status</div>
               <div class="task-col-priority">Priority</div>
               <div class="task-col-due">Due</div>
+              <div class="task-col-created">Created</div>
               <div class="task-col-link">Link</div>
             </div>
             <div id="task-list" class="task-list">
@@ -371,6 +373,7 @@
       html += '<div class="task-col-status">' + task.status + '</div>';
       html += '<div class="task-col-priority">' + (task.priority || '-') + '</div>';
       html += '<div class="task-col-due">' + formatDate(task.dueDate) + '</div>';
+      html += '<div class="task-col-created">' + formatDate(task.createdDate) + '</div>';
       html += '<div class="task-col-link">' + linkHtml + '</div>';
       html += '</div>';
 
@@ -391,6 +394,7 @@
       html += '<div><label>Start</label><div>' + formatDateFull(task.startDate) + '</div></div>';
       html += '<div><label>Due</label><div>' + formatDateFull(task.dueDate) + '</div></div>';
       html += '<div><label>Done</label><div>' + formatDateFull(task.doneDate) + '</div></div>';
+      html += '<div><label>Created</label><div>' + formatDateFull(task.createdDate) + '</div></div>';
       html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
       if (isUrl2) {
         html += '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">Open</a>';

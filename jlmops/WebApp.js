@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-03-03 09:51',
-  commit: 'Fix sync timestamps (Israel time) + stale poll UI overwrite'
+  built: '2026-03-03 10:30',
+  commit: 'Manager UI: show task created date in list and detail'
 };
 
 function getVersion() {

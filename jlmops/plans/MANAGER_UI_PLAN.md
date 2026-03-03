@@ -462,4 +462,26 @@ Manager: Reviews translation...
 
 ## Status
 
-**Plan approved.** Ready for Phase 1 implementation.
+**All phases implemented and live.** Dashboard deployed and in daily use.
+
+---
+
+## Incremental Changes
+
+### 2026-03-03: Show creation date in task list and detail
+
+**Request:** Task creation date not visible when viewing list or detail. Edit not allowed for manager, but view is reasonable.
+
+**Finding:** `st_CreatedDate` exists on all tasks in SysTasks sheet but was not included in the backend task map sent to the UI.
+
+**Plan — 3 files, 5 changes:**
+
+| # | File | Change |
+|---|------|--------|
+| 1 | `WebAppDashboardV2.js` | Add `createdDate: _safeDate(task.st_CreatedDate)` to manager task map |
+| 2 | `ManagerDashboardView_v2.html` | Add `.task-col-created { flex: 1; text-align: center; }` CSS class |
+| 3 | `ManagerDashboardView_v2.html` | Add "Created" column header in list view |
+| 4 | `ManagerDashboardView_v2.html` | Add created date (compact M/D format) to each list row |
+| 5 | `ManagerDashboardView_v2.html` | Add "Created" read-only field to task detail view |
+
+**Status:** Approved. Pending implementation.
