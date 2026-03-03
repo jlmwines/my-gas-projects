@@ -52,8 +52,8 @@ function importWebProductsBackend() {
       TaskService.createTask(
         'task.sync.daily_session',
         sessionId,
-        `Sync ${new Date().toISOString().split('T')[0]}`,
-        `Daily Sync - ${new Date().toLocaleDateString()}`,
+        `Sync ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')}`,
+        `Daily Sync - ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')}`,
         'Sync session initiated',
         sessionId
       );
@@ -871,8 +871,8 @@ function apiPullAllBackend() {
       TaskService.createTask(
         'task.sync.daily_session',
         sessionId,
-        `Sync ${new Date().toISOString().split('T')[0]}`,
-        `Daily Sync (API Pull) - ${new Date().toLocaleDateString()}`,
+        `Sync ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')}`,
+        `Daily Sync (API Pull) - ${Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd')}`,
         'API pull session initiated',
         sessionId
       );

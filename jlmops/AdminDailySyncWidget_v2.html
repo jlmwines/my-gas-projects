@@ -540,23 +540,12 @@
         google.script.run
             .withSuccessHandler(function(status) {
                 if (actionInProgress) {
-                    // Update step cards and progress — but NOT the action area
+                    // Update step cards only — do NOT touch message or action area
                     var steps = status.steps || {};
                     for (var i = 1; i <= 5; i++) {
                         updateStepCard(i, steps['step' + i]);
                     }
                     logStepTransitions(steps);
-
-                    // Update message to reflect current backend stage
-                    var stage = status.stage || 'IDLE';
-                    var config = STAGE_CONFIG[stage];
-                    if (config) {
-                        var message = config.message;
-                        message = message.replace('{count}', status.ordersPendingExportCount || 0);
-                        message = message.replace('{error}', '<span class="text-danger">'
-                            + (status.errorMessage || 'Unknown') + '</span>');
-                        document.getElementById('sharedMessage').innerHTML = message;
-                    }
 
                     // Update footer timestamp
                     document.getElementById('footerStatus').textContent = status.lastUpdated

@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-03-03 08:56',
-  commit: 'Sync widget: API Pull as primary, show real counts on step completion'
+  built: '2026-03-03 09:51',
+  commit: 'Fix sync timestamps (Israel time) + stale poll UI overwrite'
 };
 
 function getVersion() {
