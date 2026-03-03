@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-02-27 14:06',
-  commit: 'Add API Pull All — full pipeline button in sync widget'
+  built: '2026-03-03 08:56',
+  commit: 'Sync widget: API Pull as primary, show real counts on step completion'
 };
 
 function getVersion() {

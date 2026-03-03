@@ -160,7 +160,7 @@ function importWebOrdersBackend() {
       doneState.ordersPendingExportCount = ordersToExportCount;
       doneState.invoiceFileCount = invoiceCount;
       doneState.lastUpdated = new Date().toISOString();
-      doneState.steps.step2 = { status: 'completed', message: `Orders imported` };
+      doneState.steps.step2 = { status: 'completed', message: `${pullResult.orderCount} orders imported` };
 
       if (ordersToExportCount > 0) {
         doneState.stage = 'WAITING_ORDER_EXPORT';

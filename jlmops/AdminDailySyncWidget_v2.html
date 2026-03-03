@@ -162,7 +162,7 @@
     // =====================================================================
 
     var STAGE_CONFIG = {
-        IDLE:                   { message: 'Start daily sync',                     button: ['importProducts', 'Start Import'], altButton: ['apiPullAll', 'API Pull'] },
+        IDLE:                   { message: 'Start daily sync',                     button: ['apiPullAll', 'API Pull'], altButton: ['importProducts', 'CSV Import'] },
         IMPORTING_PRODUCTS:     { message: 'Importing products...',                button: null, spinner: true },
         IMPORTING_ORDERS:       { message: 'Products imported. Import orders',     button: ['importOrders', 'Import Orders'] },
         WAITING_ORDER_EXPORT:   { message: '{count} orders to export',             button: ['exportToComax', 'Export Orders'] },

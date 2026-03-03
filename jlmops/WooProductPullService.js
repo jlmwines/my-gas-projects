@@ -351,7 +351,7 @@ const WooProductPullService = (function() {
     }
     ProductImportService.upsertWebXltData(sessionId);
 
-    SyncStateService.updateStep(1, 'completed', 'Products and translations imported');
+    SyncStateService.updateStep(1, 'completed', 'EN: ' + enStaging.length + ', HE: ' + heStaging.length + ' products imported');
     SpreadsheetApp.flush();
 
     // ── Phase C: Orders ──
@@ -363,7 +363,7 @@ const WooProductPullService = (function() {
       throw new Error('Order pull failed: ' + orderResult.message);
     }
 
-    SyncStateService.updateStep(2, 'completed', 'Orders imported');
+    SyncStateService.updateStep(2, 'completed', orderResult.orderCount + ' orders imported');
     SpreadsheetApp.flush();
 
     // Update last pull timestamp
