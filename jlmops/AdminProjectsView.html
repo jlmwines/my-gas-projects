@@ -8,7 +8,7 @@
   .panel-btn.active { background-color: #d6d6d6; font-weight: bold; }
 
   /* Task row text size - slightly larger than small */
-  .task-row { font-size: 13px; }
+  .task-row { font-size: 12px; }
 
   /* State 1: compact (5 cols = 100%) - check, title, start, due, toggle */
   .panel-state-1 .task-col-hideable { display: none !important; }
@@ -42,16 +42,17 @@
   .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
-  .panel-state-3 .task-col-session { width: 8%; max-width: 100px; overflow: hidden; }
-  .panel-state-3 .task-col-title { width: 18%; }
-  .panel-state-3 .task-col-entity { width: 14%; }
-  .panel-state-3 .task-col-entity-id { width: 5%; }
-  .panel-state-3 .task-col-assignee { width: 10%; }
-  .panel-state-3 .task-col-status { width: 10%; }
+  .panel-state-3 .task-col-session { width: 7%; max-width: 100px; overflow: hidden; }
+  .panel-state-3 .task-col-title { width: 17%; }
+  .panel-state-3 .task-col-entity { width: 12%; }
+  .panel-state-3 .task-col-entity-id { width: 4%; }
+  .panel-state-3 .task-col-assignee { width: 8%; }
+  .panel-state-3 .task-col-status { width: 8%; }
   .panel-state-3 .task-col-priority { width: 5%; }
-  .panel-state-3 .task-col-start { width: 9%; }
-  .panel-state-3 .task-col-due { width: 9%; }
-  .panel-state-3 .task-col-done { width: 10%; }
+  .panel-state-3 .task-col-start { width: 8%; }
+  .panel-state-3 .task-col-due { width: 8%; }
+  .panel-state-3 .task-col-done { width: 8%; }
+  .panel-state-3 .task-col-created { width: 8%; }
   .panel-state-3 .task-col-toggle { display: none !important; }
 
   .panel-state-3 .scope-links { display: inline; }
@@ -61,7 +62,7 @@
   .task-col-session { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Inline edits fill their container */
-  .task-row .inline-edit { height: 24px; font-size: 11px; padding: 0 2px; width: 100%; box-sizing: border-box; }
+  .task-row .inline-edit { height: 24px; font-size: 10px; padding: 0 2px; width: 100%; box-sizing: border-box; }
   .task-row select.inline-edit { font-size: 10px; }
 
   /* Entity ID - click to select all for easy copying */
@@ -160,6 +161,9 @@
             </div>
             <div class="task-col-wide-only task-col-done">
               <a href="#" class="text-muted sort-col" data-field="done">Done <span id="sort-icon-done"></span></a>
+            </div>
+            <div class="task-col-wide-only task-col-created">
+              <a href="#" class="text-muted sort-col" data-field="created">Created <span id="sort-icon-created"></span></a>
             </div>
             <div class="task-col-toggle text-right small">
               <a href="#" class="expand-compact" style="display:none;" title="Expand view">⊕</a>
@@ -304,6 +308,7 @@
                   </div>
                 </div>
               </div>
+              <div class="text-muted small mb-2" id="task-field-created-display" style="font-size:11px;"></div>
               <div class="form-group mb-2">
                 <label class="small font-weight-bold mb-0">Linked Entity</label>
                 <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
@@ -1264,6 +1269,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var startDateDisp = t.st_StartDate ? formatDateShort(t.st_StartDate) : '-';
       var dueDateDisp = t.st_DueDate ? formatDateShort(t.st_DueDate) : '-';
       var doneDateDisp = t.st_DoneDate ? formatDateShort(t.st_DoneDate) : '-';
+      var createdDateDisp = t.st_CreatedDate ? formatDateShort(t.st_CreatedDate) : '-';
       var isOverdue = t.st_DueDate && new Date(t.st_DueDate) < new Date() && status !== 'Done' && status !== 'Closed';
       var isSelected = id === state.selectedTaskId;
 
@@ -1316,6 +1322,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         '<div class="task-col-start"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="start" value="' + startDateVal + '" title="' + startDateDisp + '"></div>' +
         '<div class="task-col-due ' + dueClass + '"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="due" value="' + dueDateVal + '" title="' + dueDateDisp + '"></div>' +
         '<div class="task-col-wide-only task-col-done"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="done" value="' + doneDateVal + '" title="' + doneDateDisp + '"></div>' +
+        '<div class="task-col-wide-only task-col-created">' + createdDateDisp + '</div>' +
         '<div class="task-col-toggle"></div>' +
       '</div>';
     }).join('');
@@ -1519,6 +1526,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     document.getElementById('task-field-start').value = task.st_StartDate ? formatDateInput(task.st_StartDate) : '';
     document.getElementById('task-field-due').value = task.st_DueDate ? formatDateInput(task.st_DueDate) : '';
+    var createdDisp = task.st_CreatedDate ? formatDateShort(task.st_CreatedDate) : '';
+    document.getElementById('task-field-created-display').textContent = createdDisp ? 'Created: ' + createdDisp : '';
+
     document.getElementById('task-field-entity').value = task.st_LinkedEntityName || '';
     document.getElementById('task-field-entity-id').value = task.st_LinkedEntityId || '';
     document.getElementById('task-field-notes').value = task.st_Notes || '';

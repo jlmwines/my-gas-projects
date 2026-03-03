@@ -485,3 +485,25 @@ Manager: Reviews translation...
 | 5 | `ManagerDashboardView_v2.html` | Add "Created" read-only field to task detail view |
 
 **Status:** Approved. Pending implementation.
+
+### 2026-03-03: Admin Projects View — created date + column crowding fix
+
+**Request:** Same creation date visibility need, plus state 3 columns are crowded.
+
+**File:** `AdminProjectsView.html` only (admin view already has `st_CreatedDate` in its task data).
+
+**Changes (7 edits):**
+
+| # | Area | Change |
+|---|------|--------|
+| 1 | CSS | `.task-row` font-size 13px → 12px |
+| 2 | CSS | `.inline-edit` font-size 11px → 10px |
+| 3 | CSS | State 3 column widths rebalanced for 12 columns (added `.task-col-created` at 8%) |
+| 4 | Header | Added sortable "Created" column header (`task-col-wide-only`, state 3 only) |
+| 5 | Row template | Added `createdDateDisp` display-only text column in `renderTasks()` |
+| 6 | Detail panel | Added `<div id="task-field-created-display">` below Assignee/Start/Due row |
+| 7 | `populateTaskForm()` | Sets "Created: [date]" from `st_CreatedDate` via `formatDateShort()` |
+
+Sort-by-created logic already existed (line 1233). No backend changes needed — admin task map already includes `st_CreatedDate`.
+
+**Status:** Done. In test (not deployed).

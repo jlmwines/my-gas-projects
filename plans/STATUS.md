@@ -9,8 +9,8 @@
 | Phase | Stable |
 | Last Active | 2026-02-28 |
 | Revenue | Steady |
-| Deploy Version | @68 |
-| Deploy Date | 2026-02-24 |
+| Deploy Version | @69 |
+| Deploy Date | 2026-03-03 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -20,7 +20,7 @@
 
 ## Next Action
 
-- **API Pull All in testing.** "API Pull" button in sync widget runs full pipeline: EN products → HE translations → orders, all via WooCommerce REST API. Fixes broken translation link (uses `translations.en` instead of missing `_wpml_original_post_id` meta). First test run completed — data landed, sync reached WAITING_ORDER_EXPORT correctly. Audit trail in SysLog (filter: WooProductPullService). Testing continues during normal daily syncs before deploying as new version. Manual CSV "Start Import" still available as fallback.
+- **API Pull deployed (@69, 2026-03-03).** Full pipeline (EN products → HE translations → orders via Woo REST API) confirmed working in daily sync. API Pull is now the primary button in the sync widget. CSV Import remains as fallback. Timestamps throughout sync now Israel time. Stale-poll UI bug fixed (Generate button no longer reappears after action completes).
 - **Content: 7 posts live on production (EN+HE).** Remaining posts (Selection, Price vs Quality) resume May.
 - **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
 - **Marketing ACTIVE:**
@@ -42,7 +42,7 @@
 - **Campaign system:** Planned (`jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md`), not yet built. Key decisions made: welcome offer NIS 50 off 399, Tuesday evening sends, 7-14 day attribution window.
 - **First Mailchimp campaign:** Text and link ready (pending partner review). Two separate sends — EN and HE to language-segmented lists. Claude to build HTML email bodies. Mailchimp segments already set up.
 - **Import system:** Full Woo REST API pull (products + translations + orders) deployed Feb 2026. "API Pull" button runs entire pipeline with step-by-step progress in sync widget. Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet. Plan: `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
-- **Admin UI:** Contact preferences display, activity ribbon icons.
+- **Admin UI:** Contact preferences display, activity ribbon icons. Task list: created date column in state 3, created date in detail panel, reduced font sizes + rebalanced columns (in test, not deployed).
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
 - **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
 - **Content pipeline:** COMPLETE. All 8 posts (16 files EN+HE) live on staging6. `push-posts.js` pushes via WP REST API with ID-based updates. Posts authored as `.post.md` files with complete WP block HTML including placed images. About Page rebuilt as clean HTML (`.page.md` files) replacing Elementor — pushed directly via REST API to page IDs. Canva AI generates images from Claude-written prompts (impressionist oil painting style).
@@ -98,6 +98,14 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN — `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine. Eliminates Wpbingo Core + Redux Framework. Pending user review.
 
 ## Session History
+
+- **2026-03-03:** Sync widget fixes + deploy @69.
+  - **API Pull promoted to primary button.** CSV Import remains as fallback.
+  - **Step completion messages now show real counts:** EN/HE product counts and order count on step cards.
+  - **Stale poll UI bug fixed:** Generate button no longer reappears after action completes. Root cause: `lastActionTimestamp = null` was clearing stale-poll protection too early. Fix: removed that line — timestamp persists and filters all pre-action polls.
+  - **Sync timestamps fixed:** `generateSessionId()` now uses `Utilities.formatDate` + `Session.getScriptTimeZone()` instead of raw `getDate()`/`getHours()` (which return UTC in GAS). Session IDs and task labels now show Israel time.
+  - Files modified: `AdminDailySyncWidget_v2.html`, `WebAppSync.js`, `WooProductPullService.js`, `OrchestratorService.js`, `WebApp.js`
+  - Deployed @69, 2026-03-03.
 
 - **2026-02-28:** Staging6 plugin diagnosis + theme replacement planning.
   - **Diagnosis:** staging6 returning 500 after plugin updates. Used WP REST API to deactivate plugins one by one.
