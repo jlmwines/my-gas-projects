@@ -365,6 +365,7 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsArchived,cps_IsArchived",
+        "source_filter", "cpm_IsWeb,כן",
         "on_failure_task_type", "task.validation.field_mismatch",
         "on_failure_title", "Archive Status Changed",
         "on_failure_notes", "master ${cpm_IsArchived} staging ${cps_IsArchived}"
@@ -625,6 +626,7 @@
         "key_A", "wpm_SKU",
         "key_B", "cpm_SKU",
         "source_filter", "wpm_PostStatus,publish",
+        "target_filter", "cpm_Stock,!0",
         "compare_fields", "wpm_PostStatus,cpm_IsArchived",
         "field_translations_map_wpm_PostStatus", "{\"publish\":\"\"}",
         "on_failure_task_type", "task.validation.status_mismatch",

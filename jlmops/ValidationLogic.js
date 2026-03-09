@@ -134,8 +134,22 @@ const ValidationLogic = (function() {
 
               // Source Filter Logic
               if (rule.source_filter) {
-                  const [filterKey, filterValue] = rule.source_filter.split(',');
-                  if (rowA.hasOwnProperty(filterKey) && String(rowA[filterKey]) !== String(filterValue)) {
+                  const [filterKey, rawFilterValue] = rule.source_filter.split(',');
+                  const invert = rawFilterValue.startsWith('!');
+                  const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
+                  const matches = String(rowA[filterKey] || '') === String(filterValue);
+                  if (invert ? matches : !matches) {
+                      continue;
+                  }
+              }
+
+              // Target Filter Logic
+              if (rule.target_filter) {
+                  const [filterKey, rawFilterValue] = rule.target_filter.split(',');
+                  const invert = rawFilterValue.startsWith('!');
+                  const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
+                  const matches = String(rowB[filterKey] || '') === String(filterValue);
+                  if (invert ? matches : !matches) {
                       continue;
                   }
               }

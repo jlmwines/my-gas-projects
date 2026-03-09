@@ -342,6 +342,17 @@
     ],
     [
         "task.template",
+        "task.inventory.count",
+        "Task to verify physical count of a product's inventory.",
+        "stable",
+        "topic", "Inventory",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
         "task.data.subscribers_update",
         "Reminder to update Mailchimp subscriber list.",
         "stable",

@@ -265,6 +265,9 @@
         <thead>
           <tr>
             <th>Date</th>
+            <th class="text-center">SKU</th>
+            <th class="text-right">Product Name</th>
+            <th class="text-center">On Hand</th>
             <th>Task Title</th>
           </tr>
         </thead>
@@ -284,6 +287,9 @@
       tableHtml += `
         <tr>
           <td>${dateStr}</td>
+          <td class="text-center">${task.sku || '-'}</td>
+          <td class="text-right">${task.productName || '-'}</td>
+          <td class="text-center">${task.totalQty != null ? task.totalQty : '-'}</td>
           <td>${task.title}</td>
         </tr>
       `;

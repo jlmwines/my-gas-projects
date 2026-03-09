@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-03-03 10:30',
-  commit: 'Manager UI: show task created date in list and detail'
+  built: '2026-03-09 02:52',
+  commit: 'Validation filters, inventory count tasks, bundle composition refresh'
 };
 
 function getVersion() {

@@ -412,13 +412,21 @@ function WebAppInventory_getAdminInventoryViewData() {
          dateStr = String(task.st_CreatedDate);
        }
 
-       const productName = task.st_LinkedEntityName || 'Unknown Product'; // Use LinkedEntityName
+       const sku = String(task.st_LinkedEntityId || '').trim();
+       const productName = task.st_LinkedEntityName || (cmxProdMMap.has(sku) ? cmxProdMMap.get(sku).cpm_NameHe : 'Unknown Product');
+       const auditEntry = sysProductAuditMap.has(sku) ? sysProductAuditMap.get(sku) : {};
+       const bruryaQty = auditEntry.pa_BruryaQty || 0;
+       const storageQty = auditEntry.pa_StorageQty || 0;
+       const officeQty = auditEntry.pa_OfficeQty || 0;
+       const shopQty = auditEntry.pa_ShopQty || 0;
+       const totalQty = bruryaQty + storageQty + officeQty + shopQty;
 
        return {
          taskId: task.st_TaskId,
          title: task.st_Title,
-         productName: productName, // New: Add product name
-         sku: task.st_LinkedEntityId, // New: Add SKU/LinkedEntityId
+         productName: productName,
+         sku: sku,
+         totalQty: totalQty,
          createdDate: dateStr
        };
     });

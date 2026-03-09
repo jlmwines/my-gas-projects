@@ -693,6 +693,7 @@ function HousekeepingService() {
     // Phase 3: Service Data Updates (wrapped to track failures)
     const phase3Failures = [];
     const phase3Tasks = [
+      { name: 'refreshBundleComposition', fn: () => WebAppBundles_reimportAllBundles() },
       { name: 'checkBundleHealth', fn: () => this.checkBundleHealth() },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
       { name: 'checkSubscribersReminder', fn: () => this.checkSubscribersReminder() },

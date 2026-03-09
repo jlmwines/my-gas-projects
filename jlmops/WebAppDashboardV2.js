@@ -732,6 +732,7 @@ function WebAppDashboardV2_getManagerData() {
       'task.content.translate_edit',
       // Inventory
       'task.inventory.brurya_update',
+      'task.inventory.count',
       'task.validation.comax_internal_audit',  // Negative inventory counts
       // Products
       'task.validation.vintage_mismatch',
