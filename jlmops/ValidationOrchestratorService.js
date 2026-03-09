@@ -9,6 +9,23 @@ const ValidationOrchestratorService = (function() {
     let quarantineTriggered = false;
     let failureCount = 0;
 
+    // Pre-load open tasks for skip_if_open_task_type checks
+    const skipTaskTypes = new Set();
+    analysisResult.results.forEach(result => {
+        if (result.rule && result.rule.skip_if_open_task_type) {
+            skipTaskTypes.add(result.rule.skip_if_open_task_type);
+        }
+    });
+
+    const skipEntityKeys = new Set();
+    skipTaskTypes.forEach(taskType => {
+        const openTasks = WebAppTasks.getOpenTasksByTypeId(taskType);
+        openTasks.forEach(t => {
+            const entityId = String(t.st_LinkedEntityId || '').trim();
+            if (entityId) skipEntityKeys.add(taskType + ':' + entityId);
+        });
+    });
+
     analysisResult.results.forEach(result => {
         if (result.status === 'FAILED') {
             failureCount++;
@@ -26,7 +43,7 @@ const ValidationOrchestratorService = (function() {
             } else {
                 // Create Individual Tasks
                 discrepancies.forEach(discrepancy => {
-                    _createIndividualTask(rule, discrepancy, sessionId);
+                    _createIndividualTask(rule, discrepancy, sessionId, skipEntityKeys);
                 });
             }
 
@@ -132,7 +149,7 @@ const ValidationOrchestratorService = (function() {
       TaskService.createTask(rule.on_failure_task_type, 'SYSTEM', 'System', title, notes, sessionId);
   }
 
-  function _createIndividualTask(rule, discrepancy, sessionId) {
+  function _createIndividualTask(rule, discrepancy, sessionId, skipEntityKeys) {
       // Merge data and key for template context
       const contextData = { ...(discrepancy.data || {}), key: discrepancy.key };
 
@@ -147,6 +164,14 @@ const ValidationOrchestratorService = (function() {
           entityId = data.cpm_SKU || data.cps_SKU || data.wdm_SKU || data.wds_SKU || discrepancy.key;
       }
 
+      // Skip if a higher-priority task already exists for this entity
+      if (rule.skip_if_open_task_type && skipEntityKeys) {
+          const skipKey = rule.skip_if_open_task_type + ':' + entityId;
+          if (skipEntityKeys.has(skipKey)) {
+              return;
+          }
+      }
+
       const title = formatString(rule.on_failure_title, contextData);
       // Fallback if title ends up empty or just whitespace because of missing data (though unlikely)
       const finalTitle = title.trim() || rule.on_failure_title;
@@ -156,6 +181,11 @@ const ValidationOrchestratorService = (function() {
       const entityName = discrepancy.name || '';
 
       TaskService.createTask(rule.on_failure_task_type, entityId, entityName, finalTitle, notes, sessionId);
+
+      // Track newly created task so later rules in this run can skip too
+      if (skipEntityKeys) {
+          skipEntityKeys.add(rule.on_failure_task_type + ':' + entityId);
+      }
   }
 
   // Duplicate from ProductService for now, ideally shared utility

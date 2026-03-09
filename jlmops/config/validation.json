@@ -311,6 +311,7 @@
         "key_A", "cpm_SKU",
         "key_B", "cps_SKU",
         "compare_fields", "cpm_NameHe,cps_NameHe",
+        "skip_if_open_task_type", "task.validation.vintage_mismatch",
         "on_failure_task_type", "task.validation.name_mismatch",
         "on_failure_title", "Comax Name Changed",
         "on_failure_notes", "master ${cpm_NameHe} staging ${cps_NameHe}"
@@ -366,6 +367,7 @@
         "key_B", "cps_SKU",
         "compare_fields", "cpm_IsArchived,cps_IsArchived",
         "source_filter", "cpm_IsWeb,כן",
+        "skip_if_open_task_type", "task.validation.vintage_mismatch",
         "on_failure_task_type", "task.validation.field_mismatch",
         "on_failure_title", "Archive Status Changed",
         "on_failure_notes", "master ${cpm_IsArchived} staging ${cps_IsArchived}"

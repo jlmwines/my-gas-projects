@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-03-09 02:52',
-  commit: 'Validation filters, inventory count tasks, bundle composition refresh'
+  built: '2026-03-09 03:13',
+  commit: 'Skip redundant tasks when vintage exists, woosb_ids JSON fix'
 };
 
 function getVersion() {

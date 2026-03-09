@@ -1,7 +1,7 @@
 # Validation Rules & Manager Inventory View — Fix Plan
 
 **Created:** 2026-03-09
-**Status:** Draft
+**Status:** Fixes 1-6 implemented (c1af348). Fix 7 (skip redundant tasks) and Fix 8 (woosb_ids JSON) planned.
 
 ## Problem Summary
 
@@ -160,15 +160,32 @@ Add `'task.inventory.count'` to the `managerTaskTypes` array under the Inventory
 
 This makes count tasks appear in the manager dashboard task list, showing SKU (entityId) and product name (entityName) — which are already set by `createSpotCheckTask` and `generateBulkCountTasks`.
 
+### Fix 5: Admin Inventory — Open Tasks card details
+
+**File:** `AdminInventoryView.html`, `WebAppInventory.js`
+
+The "Open Inventory Tasks (Manager Queue)" card only showed Date and Task Title. Added SKU, Product Name, and On Hand (total physical count) columns — matching the detail level of the review table above it.
+
+- **Backend** (`WebAppInventory.js`): Enriched open task mapping to include `sku`, `productName` (with CmxProdM fallback), and `totalQty` (Brurya + Storage + Office + Shop) from SysProductAudit.
+- **Frontend** (`AdminInventoryView.html`): Added SKU (centered), Product Name (right-aligned), On Hand (centered) columns.
+
+### Fix 6: Auto-refresh bundle composition before health check
+
+**File:** `HousekeepingService.js`
+
+Bundle health check was using stale SysBundleSlots data — bundle composition only updated on manual "Re-import from WooCommerce" button click. Added `refreshBundleComposition` step in Phase 3 of `performDailyMaintenance`, immediately before `checkBundleHealth`. Calls `WebAppBundles_reimportAllBundles()` to refresh SysBundles + SysBundleSlots from current WebProdM data (already updated during sync).
+
 ---
 
 ## Deployment Sequence
 
 1. Edit config files: `validation.json`, `taskDefinitions.json`
-2. Edit code: `ValidationLogic.js`, `WebAppDashboardV2.js`
+2. Edit code: `ValidationLogic.js`, `WebAppDashboardV2.js`, `WebAppInventory.js`, `AdminInventoryView.html`, `HousekeepingService.js`
 3. Run `node jlmops/generate-config.js`
 4. User: `clasp push` → `rebuildSysConfigFromSource()`
 5. Test: create a spot check task from Admin Inventory view → confirm it appears in Manager dashboard with SKU and product name
+6. Verify open tasks card shows SKU, product name, on-hand count
+7. Run housekeeping or wait for next daily run to verify bundle composition refresh
 
 ## Files Modified
 
@@ -178,8 +195,111 @@ This makes count tasks appear in the manager dashboard task list, showing SKU (e
 | `config/taskDefinitions.json` | Add `task.inventory.count` definition |
 | `ValidationLogic.js` | Add `target_filter` support to `_executeFieldComparison`; add `!` prefix support to both filters |
 | `WebAppDashboardV2.js` | Add `task.inventory.count` to `managerTaskTypes` |
+| `WebAppInventory.js` | Enrich open tasks with SKU, product name, total on-hand qty |
+| `AdminInventoryView.html` | Add SKU, Product Name, On Hand columns to open tasks table |
+| `HousekeepingService.js` | Add `refreshBundleComposition` step before `checkBundleHealth` |
 | `SetupConfig.js` | Regenerated (via generate-config.js) |
+
+### Fix 7: Skip redundant name/archive tasks when vintage task exists
+
+**Problem:** Three validation rules in `comax_staging` detect changes that may indicate a vintage update:
+- `validation.comax.vintage_mismatch` → creates `task.validation.vintage_mismatch` (direct detection)
+- `validation.comax.name_mismatch` → creates `task.validation.name_mismatch` (indirect signal — name often changes with vintage)
+- `validation.comax.is_archived_mismatch` → creates `task.validation.field_mismatch` (indirect signal — old vintage archived)
+
+When vintage changes, all three fire for the same SKU. The name and archive tasks are noise — the vintage task already covers the required action. Currently there's no cross-type dedup: `TaskService.createTask` only deduplicates within the same task type + entity.
+
+**Solution:** Config-driven `skip_if_open_task_type` property on validation rules. If a rule has this property, the orchestrator checks whether an open task of that type already exists for the same entity before creating a new task. If it does, skip silently.
+
+**Why config-driven:** Follows the existing pattern of validation behavior being controlled by `validation.json` properties. Hardcoding the relationship in code would be fragile and invisible.
+
+**Execution order matters:** Vintage rule is at line 89 in `validation.json`, name at 303, archive at 357. Rules process in order, so vintage tasks are created before name/archive tasks are evaluated. This is already correct.
+
+**Step 7a — Pre-load open tasks in `ValidationOrchestratorService.processValidationResults`**
+
+Before iterating results, scan all rules for `skip_if_open_task_type` values. Collect unique task type IDs. Load open tasks for those types once via `WebAppTasks.getOpenTasksByTypeId()`. Build a Set of `taskType:entityId` keys for O(1) lookup.
+
+```javascript
+// At top of processValidationResults, before the forEach
+const skipTaskTypes = new Set();
+analysisResult.results.forEach(result => {
+    if (result.rule && result.rule.skip_if_open_task_type) {
+        skipTaskTypes.add(result.rule.skip_if_open_task_type);
+    }
+});
+
+// Pre-load open tasks for skip check (also include tasks created earlier in this same run)
+const skipEntityKeys = new Set();
+skipTaskTypes.forEach(taskType => {
+    const openTasks = WebAppTasks.getOpenTasksByTypeId(taskType);
+    openTasks.forEach(t => {
+        const entityId = String(t.st_LinkedEntityId || '').trim();
+        if (entityId) skipEntityKeys.add(taskType + ':' + entityId);
+    });
+});
+```
+
+**Step 7b — Check before creating in `_createIndividualTask`**
+
+Pass `skipEntityKeys` set to `_createIndividualTask`. Before calling `TaskService.createTask`, check:
+
+```javascript
+if (rule.skip_if_open_task_type) {
+    const skipKey = rule.skip_if_open_task_type + ':' + entityId;
+    if (skipEntityKeys.has(skipKey)) {
+        return; // Skip — higher-priority task already exists
+    }
+}
+```
+
+**Step 7c — Track tasks created during this validation run**
+
+When a task IS created (e.g., vintage task), add its `taskType:entityId` to `skipEntityKeys` so that subsequent rules in the same run also benefit. This handles the case where the vintage task didn't exist before this run but was just created moments ago.
+
+```javascript
+// After TaskService.createTask succeeds in _createIndividualTask:
+if (skipEntityKeys) {
+    skipEntityKeys.add(rule.on_failure_task_type + ':' + entityId);
+}
+```
+
+**Step 7d — Config changes in `validation.json`**
+
+Add to `validation.comax.name_mismatch` (line ~303):
+```
+"skip_if_open_task_type", "task.validation.vintage_mismatch",
+```
+
+Add to `validation.comax.is_archived_mismatch` (line ~357):
+```
+"skip_if_open_task_type", "task.validation.vintage_mismatch",
+```
+
+The web name mismatch rule (`validation.web.name_mismatch`, line ~141) is a different suite context (web vs comax). Leave it as-is unless user says otherwise.
+
+**Files modified:**
+- `config/validation.json` — add `skip_if_open_task_type` to 2 rules
+- `ValidationOrchestratorService.js` — pre-load skip tasks, check before creating, track new tasks
+- `SetupConfig.js` — regenerated
+
+### Fix 8: woosb_ids stored as GAS object string instead of JSON
+
+**Problem:** `WooProductPullService._getMetaValue()` returns `woosb_ids` meta as a native object when the WooCommerce API sends it that way (common for Hebrew translations). GAS serializes objects to `{key=value}` format when writing to sheets. `BundleService._parseWoosbJson` then fails to `JSON.parse()` this format.
+
+**Fix:** At all 3 points where `woosb_ids` is captured in `WooProductPullService.js`, check `typeof` — if object, `JSON.stringify()` before storing.
+
+**Already implemented** (not yet pushed). Three locations fixed:
+- Line 169: EN product pull
+- Line 204: HE translation extraction
+- Line 416: Full translation metadata pull
+
+**Files modified:**
+- `WooProductPullService.js` — stringify object-type woosb_ids at 3 capture points
+
+**Note:** Existing stale data in WebXltM will be corrected on next Woo API pull. The `_parseWoosbJson` fallback (warn + return empty) means bundles still function — they just miss Hebrew text slots until refreshed.
+
+---
 
 ## Risk
 
-Low. Validation filter changes reduce false positives — no new tasks created, fewer noisy ones. Task definition addition is purely additive. Dashboard filter is a one-line array addition.
+Low. Validation filter changes reduce false positives — no new tasks created, fewer noisy ones. Task definition addition is purely additive. Dashboard filter is a one-line array addition. Bundle composition refresh reuses existing reimport logic. Open tasks card is display-only, no data writes. Skip-if-open-task is additive — worst case it doesn't skip and behavior is unchanged. woosb_ids fix is defensive stringify — no behavior change for values already stored as strings.

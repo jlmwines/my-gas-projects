@@ -165,8 +165,9 @@ const WooProductPullService = (function() {
       apiProduct.attributes ? apiProduct.attributes.filter(function(a) { return a.slug === 'pa_brand'; }) : []
     );
 
-    // WPClever Smart Bundle fields
-    product.wps_WoosbIds = _getMetaValue(apiProduct.meta_data, 'woosb_ids') || '';
+    // WPClever Smart Bundle fields — API may return object instead of JSON string
+    var woosbRaw = _getMetaValue(apiProduct.meta_data, 'woosb_ids');
+    product.wps_WoosbIds = (woosbRaw && typeof woosbRaw === 'object') ? JSON.stringify(woosbRaw) : (woosbRaw || '');
 
     return product;
   }
@@ -200,8 +201,9 @@ const WooProductPullService = (function() {
         wxs_WpmlOriginalSku: '' // Will be populated during validation/upsert from EN data
       };
 
-      // Bundle fields
-      translation.wxs_WoosbIds = _getMetaValue(heProd.meta_data, 'woosb_ids') || '';
+      // Bundle fields — API may return object instead of JSON string
+      var woosbRawHe = _getMetaValue(heProd.meta_data, 'woosb_ids');
+      translation.wxs_WoosbIds = (woosbRawHe && typeof woosbRawHe === 'object') ? JSON.stringify(woosbRawHe) : (woosbRawHe || '');
 
       translations.push(translation);
     }
@@ -411,7 +413,8 @@ const WooProductPullService = (function() {
     translation.wxs_WoosbDiscount = _getMetaValue(meta, 'woosb_discount') || '';
     translation.wxs_WoosbDiscountAmount = _getMetaValue(meta, 'woosb_discount_amount') || '';
     translation.wxs_WoosbExcludeUnpurch = _getMetaValue(meta, 'woosb_exclude_unpurchasable') || '';
-    translation.wxs_WoosbIds = _getMetaValue(meta, 'woosb_ids') || '';
+    var woosbRawMeta = _getMetaValue(meta, 'woosb_ids');
+    translation.wxs_WoosbIds = (woosbRawMeta && typeof woosbRawMeta === 'object') ? JSON.stringify(woosbRawMeta) : (woosbRawMeta || '');
     translation.wxs_WoosbLayout = _getMetaValue(meta, 'woosb_layout') || '';
     translation.wxs_WoosbLimitEachMax = _getMetaValue(meta, 'woosb_limit_each_max') || '';
     translation.wxs_WoosbLimitEachMin = _getMetaValue(meta, 'woosb_limit_each_min') || '';
