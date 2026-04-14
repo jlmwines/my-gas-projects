@@ -157,10 +157,10 @@ const TaskService = (function() {
         }
       }
 
-      // --- De-duplication Check ---
-      if (sheet.getLastRow() > 1) {
+      // --- De-duplication Check (skippable via options.allowDuplicate) ---
+      if (!options.allowDuplicate && sheet.getLastRow() > 1) {
         const existingRows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
-        const duplicateRow = existingRows.find(row => 
+        const duplicateRow = existingRows.find(row =>
           row[typeIdCol] === taskTypeId &&
           String(row[entityIdCol]).trim() === String(linkedEntityId).trim() &&
           (row[statusCol] !== 'Done' && row[statusCol] !== 'Closed')

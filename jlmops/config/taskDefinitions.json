@@ -348,7 +348,7 @@
         "topic", "Inventory",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_direct",
+        "flow_pattern", "manager_to_admin_review",
         "due_pattern", "one_week"
     ],
     [

@@ -26567,7 +26567,7 @@ function getMasterConfiguration() {
         "Task to verify physical count of a product's inventory.",
         "stable",
         "flow_pattern",
-        "manager_direct",
+        "manager_to_admin_review",
         "",
         "",
         "",

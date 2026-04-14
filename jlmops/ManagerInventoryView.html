@@ -127,6 +127,8 @@
                     return;
                 }
 
+                const escapeAttr = (s) => String(s || '').replace(/"/g, '&quot;');
+
                 let tableHtml = `
                     <table class="table table-hover table-sm">
                         <thead>
@@ -137,36 +139,57 @@
                                 <th class="text-center">Storage</th>
                                 <th class="text-center">Office</th>
                                 <th class="text-center">Shop</th>
+                                <th class="text-center">Vintage</th>
+                                <th class="text-center">Link</th>
                                 <th class="text-center">SKU</th>
                                 <th class="text-right">Product Name</th>
+                                <th class="text-center"></th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
                 productsToCount.forEach(item => {
-                    // Helper to format value: null/undefined/'' -> '' (empty), 0 -> '0', number -> string
                     const formatVal = (v) => (v === null || v === undefined || v === '') ? '' : v;
 
                     const valStorage = formatVal(item.storageQty);
                     const valOffice = formatVal(item.officeQty);
                     const valShop = formatVal(item.shopQty);
-                    
-                    // Checkbox logic: Check if ANY field has a value (is not an empty string).
-                    // This ensures '0' triggers a check (counted as none), but empty (uncounted) does not.
+
                     const isChecked = (valStorage !== '' || valOffice !== '' || valShop !== '') ? 'checked' : '';
+                    const pageLink = item.pageUrl
+                        ? `<a href="${escapeAttr(item.pageUrl)}" target="_blank" rel="noopener">view</a>`
+                        : '';
+                    const vintageRef = escapeAttr(item.vintage || '');
 
                     tableHtml += `
-                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}">
+                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-vintage-ref="${vintageRef}">
                             <td class="text-center">${item.comaxQty}</td>
                             <td class="text-center" id="total-qty-${item.sku}">${item.totalQty}</td>
                             <td class="text-center">${item.bruryaQty}</td>
-                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="${valStorage}"></td>
-                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="office" value="${valOffice}"></td>
-                            <td style="width: 10%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="${valShop}"></td>
+                            <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="storage" value="${valStorage}"></td>
+                            <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="office" value="${valOffice}"></td>
+                            <td style="width: 8%;"><input type="text" class="form-control form-control-sm product-count-input" data-qty-type="shop" value="${valShop}"></td>
+                            <td class="text-center">${escapeAttr(item.vintage || '')}</td>
+                            <td class="text-center">${pageLink}</td>
                             <td class="text-center">${item.sku}</td>
                             <td class="text-right">${item.productName}</td>
+                            <td class="text-center"><button type="button" class="btn btn-light btn-sm product-details-toggle" data-sku="${item.sku}">…</button></td>
                             <td><input type="checkbox" class="product-count-checkbox" ${isChecked} disabled></td>
+                        </tr>
+                        <tr class="product-details-row" data-sku="${item.sku}" style="display: none; background: #fafafa;">
+                            <td colspan="12">
+                                <div class="form-row align-items-center">
+                                    <div class="col-auto">
+                                        <label class="small mb-0 mr-1">Vintage (actual):</label>
+                                        <input type="text" class="form-control form-control-sm product-vintage-input" data-sku="${item.sku}" style="width: 80px; display: inline-block;">
+                                    </div>
+                                    <div class="col">
+                                        <label class="small mb-0 mr-1">Comment:</label>
+                                        <input type="text" class="form-control form-control-sm product-comment-input" data-sku="${item.sku}" placeholder="Note for admin (creates vintage update task)">
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                     `;
                 });
@@ -175,6 +198,36 @@
                     </table>
                 `;
                 productCountsListDiv.innerHTML = tableHtml;
+
+                productCountsListDiv.querySelectorAll('.product-details-toggle').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const sku = e.target.dataset.sku;
+                        const detailRow = productCountsListDiv.querySelector(`tr.product-details-row[data-sku="${sku}"]`);
+                        if (detailRow) {
+                            detailRow.style.display = detailRow.style.display === 'none' ? '' : 'none';
+                        }
+                    });
+                });
+
+                productCountsListDiv.querySelectorAll('.product-vintage-input, .product-comment-input').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        const sku = e.target.dataset.sku;
+                        const mainRow = productCountsListDiv.querySelector(`tr[data-task-id][data-sku="${sku}"]`);
+                        if (!mainRow) return;
+                        const checkbox = mainRow.querySelector('.product-count-checkbox');
+                        const vintageVal = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`).value;
+                        const commentVal = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`).value;
+                        const storageInput = mainRow.querySelector('[data-qty-type="storage"]').value;
+                        const officeInput = mainRow.querySelector('[data-qty-type="office"]').value;
+                        const shopInput = mainRow.querySelector('[data-qty-type="shop"]').value;
+                        if (storageInput || officeInput || shopInput || vintageVal || commentVal) {
+                            checkbox.checked = true;
+                        } else {
+                            checkbox.checked = false;
+                        }
+                        updateSubmitButtonState();
+                    });
+                });
 
                 // Add event listeners for quantity input and checkboxes
                 productCountsListDiv.querySelectorAll('.product-count-input').forEach(input => {
@@ -229,11 +282,17 @@
                         const taskId = row.dataset.taskId;
                         const sku = row.dataset.sku;
                         const comaxStock = parseInt(row.dataset.comaxQty, 10);
+                        const vintageRef = row.dataset.vintageRef || '';
                         const storageQty = parseInt(row.querySelector('[data-qty-type="storage"]').value, 10) || 0;
                         const officeQty = parseInt(row.querySelector('[data-qty-type="office"]').value, 10) || 0;
                         const shopQty = parseInt(row.querySelector('[data-qty-type="shop"]').value, 10) || 0;
 
-                        selectedCounts.push({ taskId, sku, comaxStock, storageQty, officeQty, shopQty });
+                        const vintageInput = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
+                        const commentInput = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
+                        const vintageActual = vintageInput ? vintageInput.value.trim() : '';
+                        const comment = commentInput ? commentInput.value.trim() : '';
+
+                        selectedCounts.push({ taskId, sku, comaxStock, storageQty, officeQty, shopQty, vintageActual, vintageRef, comment });
                     }
                 });
 

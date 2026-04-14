@@ -53,57 +53,67 @@
     </div>
   </div>
 
-  <!-- Section 3: Task Creation Controls -->
+  <!-- Section 3: Unified Count Task Creation -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header">
-          <h5>Create New Count Tasks</h5>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Create Count Tasks</h5>
+          <div>
+            <span id="count-planning-loaded" class="text-muted small mr-2"></span>
+            <button id="btn-reload-planning" class="btn btn-sm btn-light">Reload Data</button>
+          </div>
         </div>
         <div class="card-body">
-          <h6>Bulk Task Creation</h6>
-          <div class="form-row align-items-end">
+          <div class="form-row align-items-end mb-2">
             <div class="col-auto">
-              <label for="max-stock-bulk">Max Stock Quantity</label>
-              <input type="number" id="max-stock-bulk" class="form-control" placeholder="e.g., 12" value="12">
+              <label for="name-filter-mode" class="small mb-1 d-block">Name filter</label>
+              <select id="name-filter-mode" class="form-control form-control-sm" style="width: 120px;">
+                <option value="startsWith" selected>starts with</option>
+                <option value="contains">contains</option>
+              </select>
+            </div>
+            <div class="col">
+              <label for="name-filter-text" class="small mb-1 d-block">&nbsp;</label>
+              <input type="text" id="name-filter-text" class="form-control form-control-sm" placeholder="e.g. Yatir">
             </div>
             <div class="col-auto">
-              <label for="max-days-bulk">Not Counted in Days</label>
-              <input type="number" id="max-days-bulk" class="form-control" placeholder="e.g., 90" value="90">
+              <label for="start-at" class="small mb-1 d-block">Start at (name)</label>
+              <input type="text" id="start-at" class="form-control form-control-sm" placeholder="empty = A">
             </div>
-             <div class="col-auto" style="padding-bottom: 10px;">
+            <div class="col-auto">
+              <label for="count-limit" class="small mb-1 d-block">Count</label>
+              <input type="number" id="count-limit" class="form-control form-control-sm" value="30" style="width: 80px;">
+            </div>
+            <div class="col-auto">
+              <label for="days-threshold" class="small mb-1 d-block">Skip if counted within</label>
+              <input type="number" id="days-threshold" class="form-control form-control-sm" placeholder="days" style="width: 100px;">
+            </div>
+          </div>
+          <div class="form-row align-items-center mb-2">
+            <div class="col-auto">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" id="chk-web-only" checked>
-                    <label class="form-check-label" for="chk-web-only">Web Products Only</label>
+                    <label class="form-check-label" for="chk-web-only">Web only</label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" id="chk-wine-only" checked>
-                    <label class="form-check-label" for="chk-wine-only">Wine Only (Div 1)</label>
+                    <label class="form-check-label" for="chk-wine-only">Wine only (Div 1)</label>
                 </div>
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" id="chk-zero-stock">
-                    <label class="form-check-label" for="chk-zero-stock">Include 0 Stock</label>
+                    <label class="form-check-label" for="chk-zero-stock">Include 0 stock</label>
                 </div>
             </div>
+            <div class="col text-right">
+              <span id="candidate-summary" class="text-muted"></span>
+            </div>
             <div class="col-auto">
-              <button id="btn-generate-bulk-tasks" class="btn">Generate Tasks</button>
+              <button id="btn-create-count-tasks" class="btn" disabled>Create tasks</button>
             </div>
           </div>
-          <hr>
-          <h6>Spot-Check Task Creation</h6>
-          <div class="form-row align-items-end" style="position: relative;">
-            <div class="col">
-                <label for="spot-check-search">Product</label>
-                <input type="text" id="spot-check-search" class="form-control" placeholder="Search by Name or SKU">
-                <!-- Autocomplete container will be appended here by JS -->
-            </div>
-            <div class="col">
-               <label for="spot-check-note">Note (Optional)</label>
-               <input type="text" id="spot-check-note" class="form-control" placeholder="Reason for check...">
-            </div>
-            <div class="col-auto">
-              <button id="btn-create-spot-task" class="btn">Create Spot Check</button>
-            </div>
+          <div id="preview-table-container" class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+            <p class="text-muted small mb-0">Loading product data…</p>
           </div>
         </div>
       </div>
@@ -130,40 +140,6 @@
   </div>
 </div>
 
-<!-- Bulk Task Preview Modal -->
-<div class="modal fade" id="bulkPreviewModal" tabindex="-1" aria-labelledby="bulkPreviewModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="bulkPreviewModalLabel">Confirm Bulk Task Generation</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p id="bulkPreviewSummary"></p>
-        <div class="table-responsive">
-            <table class="table table-sm table-striped">
-                <thead>
-                    <tr>
-                        <th>SKU</th>
-                        <th>Product Name</th>
-                        <th>Reason</th>
-                    </tr>
-                </thead>
-                <tbody id="bulkPreviewTableBody">
-                    <!-- Rows will be inserted here -->
-                </tbody>
-            </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btn-confirm-bulk-generation">Confirm & Generate</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <style>
     /* Toast Notification Styles */
@@ -482,205 +458,201 @@
     }, 3000);
   }
 
-  // --- Bulk Generation Logic ---
-  const bulkBtn = document.getElementById('btn-generate-bulk-tasks');
-  const daysInput = document.getElementById('max-days-bulk');
-  const stockInput = document.getElementById('max-stock-bulk');
-  const webOnlyChk = document.getElementById('chk-web-only');
-  const wineOnlyChk = document.getElementById('chk-wine-only');
-  const zeroStockChk = document.getElementById('chk-zero-stock');
+  // --- Count Task Creation (unified card) ---
+  const planningState = {
+    products: [],
+    loadedAt: null
+  };
 
-  function handleBulkGeneration() {
-      const days = daysInput.value;
-      const stock = stockInput.value;
-      
-      if (!days && !stock) {
-          showToast("Please enter at least one condition (Days or Stock).", 'warning');
+  const el = {
+    nameMode: document.getElementById('name-filter-mode'),
+    nameText: document.getElementById('name-filter-text'),
+    startAt: document.getElementById('start-at'),
+    countLimit: document.getElementById('count-limit'),
+    daysThreshold: document.getElementById('days-threshold'),
+    webOnly: document.getElementById('chk-web-only'),
+    wineOnly: document.getElementById('chk-wine-only'),
+    zeroStock: document.getElementById('chk-zero-stock'),
+    summary: document.getElementById('candidate-summary'),
+    preview: document.getElementById('preview-table-container'),
+    createBtn: document.getElementById('btn-create-count-tasks'),
+    reloadBtn: document.getElementById('btn-reload-planning'),
+    loadedLabel: document.getElementById('count-planning-loaded')
+  };
+
+  function loadPlanningData() {
+    el.preview.innerHTML = '<p class="text-muted small mb-0">Loading product data…</p>';
+    el.summary.textContent = '';
+    el.createBtn.disabled = true;
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.error) {
+          el.preview.innerHTML = `<p class="text-danger small mb-0">${res.error}</p>`;
           return;
-      }
-      
-      bulkBtn.disabled = true;
-      bulkBtn.textContent = 'Checking...';
-      
-      const payload = {
-          days: days,
-          stock: stock,
-          webOnly: webOnlyChk.checked,
-          wineOnly: wineOnlyChk.checked,
-          zeroStock: zeroStockChk.checked
-      };
-      
-      // Preview first
-      google.script.run
-        .withSuccessHandler(previewRes => {
-            if (previewRes.success) {
-                if (previewRes.candidates.length === 0) {
-                     showToast("No tasks match these criteria.", 'warning');
-                     bulkBtn.disabled = false;
-                     bulkBtn.textContent = 'Generate Tasks';
-                     return;
-                }
-                
-                // Populate Modal
-                const tbody = document.getElementById('bulkPreviewTableBody');
-                tbody.innerHTML = '';
-                previewRes.candidates.forEach(c => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td>${c.sku}</td><td>${c.name}</td><td>${c.reason}</td>`;
-                    tbody.appendChild(row);
-                });
-                
-                document.getElementById('bulkPreviewSummary').textContent = `Found ${previewRes.candidates.length} products matching your criteria.`;
-                
-                // Setup Confirm Button
-                const confirmBtn = document.getElementById('btn-confirm-bulk-generation');
-                // Remove old listeners to prevent duplicates (cloning node trick)
-                const newConfirmBtn = confirmBtn.cloneNode(true);
-                confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-                
-                newConfirmBtn.addEventListener('click', () => {
-                    $('#bulkPreviewModal').modal('hide'); // Hide modal (requires jQuery/Bootstrap JS)
-                    bulkBtn.textContent = 'Generating...';
-                    google.script.run
-                        .withSuccessHandler(genRes => {
-                            if (genRes.success) {
-                                showToast(`Generated ${genRes.count} new tasks.`);
-                                loadAdminViewData(); // Refresh lists
-                            } else {
-                                showToast(genRes.message, 'error');
-                            }
-                            bulkBtn.disabled = false;
-                            bulkBtn.textContent = 'Generate Tasks';
-                        })
-                        .withFailureHandler(err => {
-                            handleError(err);
-                            bulkBtn.disabled = false;
-                            bulkBtn.textContent = 'Generate Tasks';
-                        })
-                        .WebAppInventory_generateBulkTasks(payload);
-                });
-
-                // Show Modal
-                $('#bulkPreviewModal').modal('show');
-                bulkBtn.disabled = false;
-                bulkBtn.textContent = 'Generate Tasks'; // Reset button state as modal handles flow now
-
-            } else {
-                showToast(previewRes.message, 'error');
-                bulkBtn.disabled = false;
-                bulkBtn.textContent = 'Generate Tasks';
-            }
-        })
-        .withFailureHandler(err => {
-            handleError(err);
-            bulkBtn.disabled = false;
-            bulkBtn.textContent = 'Generate Tasks';
-        })
-        .WebAppInventory_previewBulkTasks(payload);
-  }
-  
-  bulkBtn.addEventListener('click', handleBulkGeneration);
-
-  // --- Spot Check Logic ---
-  const spotBtn = document.getElementById('btn-create-spot-task');
-  const spotInput = document.getElementById('spot-check-search');
-  const spotNote = document.getElementById('spot-check-note');
-  let debounceTimer;
-  let selectedSpotProduct = null;
-
-  function handleSpotSearch(e) {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            const term = e.target.value;
-            if (term.length < 2) {
-                clearAutocomplete();
-                return;
-            }
-            google.script.run
-                .withSuccessHandler(renderAutocomplete)
-                .withFailureHandler(err => showToast('Search failed: ' + err.message, 'error'))
-                .WebAppInventory_searchComaxProducts(term);
-        }, 300);
+        }
+        planningState.products = (res && res.products) || [];
+        planningState.loadedAt = res && res.loadedAt;
+        if (el.loadedLabel) {
+          const ts = planningState.loadedAt ? new Date(planningState.loadedAt).toLocaleTimeString() : '';
+          el.loadedLabel.textContent = ts ? `loaded ${ts}` : '';
+        }
+        applyFilters();
+      })
+      .withFailureHandler(err => {
+        el.preview.innerHTML = `<p class="text-danger small mb-0">Failed to load: ${err.message}</p>`;
+      })
+      .WebAppInventory_getCountPlanningData();
   }
 
-  function renderAutocomplete(results) {
-        clearAutocomplete();
-        if (!results || results.length === 0) return;
+  function filterCandidates() {
+    const nameText = (el.nameText.value || '').trim().toLowerCase();
+    const mode = el.nameMode.value;
+    const startAt = (el.startAt.value || '').trim().toLowerCase();
+    const daysThreshold = el.daysThreshold.value ? parseInt(el.daysThreshold.value, 10) : null;
+    const webOnly = el.webOnly.checked;
+    const wineOnly = el.wineOnly.checked;
+    const includeZero = el.zeroStock.checked;
+    const nowMs = Date.now();
 
-        const container = document.createElement('div');
-        container.id = 'autocomplete-results';
-        
-        results.forEach(item => {
-            const div = document.createElement('div');
-            div.textContent = `${item.name} (${item.sku})`;
-            div.addEventListener('click', () => {
-                spotInput.value = `${item.name} (${item.sku})`;
-                selectedSpotProduct = item; // Store selected item
-                clearAutocomplete();
-            });
-            container.appendChild(div);
-        });
-        
-        // Append to the parent .col of the input
-        spotInput.parentNode.style.position = 'relative';
-        spotInput.parentNode.appendChild(container);
-  }
+    const results = [];
+    for (const p of planningState.products) {
+      if (p.hasOpenTask) continue;
+      if (webOnly && !p.isWeb) continue;
+      if (wineOnly && !p.isWine) continue;
 
-  function clearAutocomplete() {
-      const el = document.getElementById('autocomplete-results');
-      if (el) el.remove();
-  }
-  
-  function handleCreateSpotTask() {
-      if (!selectedSpotProduct && !spotInput.value) {
-          showToast("Please select a product.", 'warning');
-          return;
-      }
-      // Extract SKU if user typed manually or pasted
-      let sku = selectedSpotProduct ? selectedSpotProduct.sku : null;
-      
-      // Fallback logic if they typed a SKU directly
-      if (!sku) {
-          const val = spotInput.value;
-          const match = val.match(/\(([^)]+)\)$/);
-          sku = match ? match[1] : val; 
+      if (!includeZero) {
+        if (p.stock === null || isNaN(p.stock) || p.stock <= 0) continue;
       }
 
-      spotBtn.disabled = true;
-      spotBtn.textContent = 'Creating...';
-      
-      google.script.run
-        .withSuccessHandler(res => {
-            if (res.success) {
-                showToast('Spot check task created.');
-                spotInput.value = '';
-                spotNote.value = '';
-                selectedSpotProduct = null;
-                loadAdminViewData();
-            } else {
-                showToast(res.message, 'error');
-            }
-            spotBtn.disabled = false;
-            spotBtn.textContent = 'Create Spot Check';
-        })
-        .withFailureHandler(err => {
-            handleError(err);
-            spotBtn.disabled = false;
-            spotBtn.textContent = 'Create Spot Check';
-        })
-        .WebAppInventory_createSpotCheckTask(sku, spotNote.value);
+      if (nameText) {
+        const n = (p.nameHe || '').toLowerCase();
+        if (mode === 'startsWith') {
+          if (!n.startsWith(nameText)) continue;
+        } else {
+          if (n.indexOf(nameText) === -1) continue;
+        }
+      }
+
+      if (daysThreshold !== null && !isNaN(daysThreshold)) {
+        if (p.lastCount) {
+          const last = new Date(p.lastCount).getTime();
+          if (!isNaN(last)) {
+            const diffDays = Math.ceil((nowMs - last) / (1000 * 60 * 60 * 24));
+            if (diffDays <= daysThreshold) continue;
+          }
+        }
+      }
+
+      if (startAt) {
+        const n = (p.nameHe || '').toLowerCase();
+        if (n < startAt) continue;
+      }
+
+      results.push(p);
+    }
+
+    // Already sorted by name in server payload. Apply limit.
+    const rawLimit = el.countLimit.value;
+    const limit = rawLimit ? parseInt(rawLimit, 10) : null;
+    if (limit && !isNaN(limit) && limit > 0) {
+      return { matched: results.length, sliced: results.slice(0, limit) };
+    }
+    return { matched: results.length, sliced: results };
   }
-  
-  spotInput.addEventListener('keyup', handleSpotSearch);
-  spotBtn.addEventListener('click', handleCreateSpotTask);
-  
-  // Close autocomplete on click outside
-  document.addEventListener('click', (e) => {
-      if (e.target !== spotInput) clearAutocomplete();
+
+  function applyFilters() {
+    if (!planningState.products.length) {
+      el.summary.textContent = 'No products loaded.';
+      el.preview.innerHTML = '<p class="text-muted small mb-0">No data.</p>';
+      el.createBtn.disabled = true;
+      el.createBtn.textContent = 'Create tasks';
+      return;
+    }
+    const { matched, sliced } = filterCandidates();
+    el.summary.textContent = `${matched} match — will create ${sliced.length}`;
+    el.createBtn.disabled = sliced.length === 0;
+    el.createBtn.textContent = sliced.length ? `Create ${sliced.length} tasks` : 'Create tasks';
+    renderPreview(sliced);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatLastCount(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toISOString().slice(0, 10);
+  }
+
+  function renderPreview(rows) {
+    if (!rows.length) {
+      el.preview.innerHTML = '<p class="text-muted small mb-0">No candidates for current filters.</p>';
+      return;
+    }
+    let html = '<table class="table table-sm table-hover"><thead><tr>' +
+      '<th>SKU</th><th>Name</th><th class="text-center">Vintage</th>' +
+      '<th class="text-center">Stock</th><th class="text-center">Last Counted</th>' +
+      '<th>Brand</th></tr></thead><tbody>';
+    rows.forEach(p => {
+      html += '<tr>' +
+        `<td>${escapeHtml(p.sku)}</td>` +
+        `<td>${escapeHtml(p.nameHe)}</td>` +
+        `<td class="text-center">${escapeHtml(p.vintage)}</td>` +
+        `<td class="text-center">${p.stock === null ? '' : p.stock}</td>` +
+        `<td class="text-center">${formatLastCount(p.lastCount)}</td>` +
+        `<td>${escapeHtml(p.brand || p.vendor || '')}</td>` +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    el.preview.innerHTML = html;
+  }
+
+  function handleCreateCountTasks() {
+    const { sliced } = filterCandidates();
+    if (!sliced.length) return;
+    const skus = sliced.map(p => p.sku);
+    const originalText = el.createBtn.textContent;
+    el.createBtn.disabled = true;
+    el.createBtn.textContent = 'Creating…';
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.success) {
+          const parts = [`Created ${res.created || 0}`];
+          if (res.skippedDedup) parts.push(`${res.skippedDedup} duplicates skipped`);
+          if (res.errors && res.errors.length) parts.push(`${res.errors.length} errors`);
+          showToast(parts.join(', ') + '.', res.errors && res.errors.length ? 'warning' : 'success');
+          loadPlanningData();
+          loadAdminViewData();
+        } else {
+          showToast((res && res.message) || 'Create failed', 'error');
+          el.createBtn.disabled = false;
+          el.createBtn.textContent = originalText;
+        }
+      })
+      .withFailureHandler(err => {
+        handleError(err);
+        el.createBtn.disabled = false;
+        el.createBtn.textContent = originalText;
+      })
+      .WebAppInventory_createCountTasksBulk(skus, '');
+  }
+
+  [el.nameMode, el.nameText, el.startAt, el.countLimit, el.daysThreshold,
+   el.webOnly, el.wineOnly, el.zeroStock].forEach(ctl => {
+    if (!ctl) return;
+    const evt = (ctl.tagName === 'SELECT' || ctl.type === 'checkbox') ? 'change' : 'input';
+    ctl.addEventListener(evt, applyFilters);
   });
+  el.createBtn.addEventListener('click', handleCreateCountTasks);
+  el.reloadBtn.addEventListener('click', loadPlanningData);
 
   // Initial load
   loadAdminViewData();
+  loadPlanningData();
   loadComaxSyncData(); // Load data for the new Comax Sync card
 
   /**

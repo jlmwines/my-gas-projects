@@ -1140,198 +1140,72 @@ const InventoryManagementService = (function() {
               }
             }
         
-                        /**
-                         * PRIVATE Helper to identify candidates for bulk task creation.
-                         * @param {Object} criteria { daysSinceLastCount, maxStockLevel, isWebOnly, isWineOnly, includeZeroStock }
-                         * @returns {Array<Object>} List of candidate objects { sku, name, reason }
-                         */
-                        function _getBulkCandidates(criteria) {
-                            const { daysSinceLastCount, maxStockLevel, isWebOnly, isWineOnly, includeZeroStock } = criteria;
-                            const candidates = [];
-            
-                            // Validation: At least one trigger condition must be present
-                            if ((daysSinceLastCount === null || daysSinceLastCount === '') && (maxStockLevel === null || maxStockLevel === '')) {
-                                throw new Error("At least one condition (Days or Stock) must be specified.");
-                            }
-            
-                            const allConfig = ConfigService.getAllConfig();
-                            const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
-                            const sysProductAuditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
-            
-                            // Load Data
-                            const cmxDataObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
-                            // We need rows to iterate efficiently. Use map.values() to get the row objects.
-                            const cmxRows = cmxDataObj.map.values();
-            
-                            // Audit Data (Last Count)
-                            const auditDataObj = ConfigService._getSheetDataAsMap('SysProductAudit', sysProductAuditHeaders, 'pa_SKU');
-                            const auditMap = auditDataObj.map;
-            
-                            // Open Tasks (Deduplication)
-                            const taskTypeId = 'task.inventory.count';
-                            const openTasks = WebAppTasks.getOpenTasksByTypeId(taskTypeId);
-                            const openTaskSkus = new Set(openTasks.map(t => String(t.st_LinkedEntityId).trim()));
-            
-                            const today = new Date();
-            
-                            for (const row of cmxRows) {
-                                const sku = String(row.cpm_SKU).trim();
-                                
-                                // A. Base Filter: Active Only
-                                if (row.cpm_IsArchived) continue;
-            
-                                // B. Deduplication
-                                if (openTaskSkus.has(sku)) continue;
-            
-                                // C. "Web Only" Filter
-                                if (isWebOnly && !row.cpm_IsWeb) continue;
-            
-                                // D. "Wine Only" Filter
-                                if (isWineOnly && String(row.cpm_Division) !== '1') continue;
-            
-                                // E. Trigger Conditions (Strict AND if provided)
-                                let stockConditionMet = true;
-                                if (maxStockLevel !== null && maxStockLevel !== '') {
-                                    const stock = parseFloat(row.cpm_Stock);
-                                    
-                                    // Zero Stock Handling
-                                    if (!includeZeroStock && (isNaN(stock) || stock <= 0)) {
-                                         stockConditionMet = false; // Exclude zero stock if flag is false
-                                    } else if (isNaN(stock) || stock >= maxStockLevel) {
-                                         stockConditionMet = false; // Standard max threshold check
-                                    }
-                                    // Implicitly: if includeZeroStock is true and stock <= 0, it meets the condition (as 0 < maxStockLevel)
-                                }
-                    let daysConditionMet = true;
-                    if (daysSinceLastCount !== null && daysSinceLastCount !== '') {
-                        const auditEntry = auditMap.get(sku);
-                        const lastCount = auditEntry ? new Date(auditEntry.pa_LastCount) : null;
-                        
-                        if (lastCount && !isNaN(lastCount.getTime())) {
-                            const diffTime = Math.abs(today - lastCount);
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                            if (diffDays <= daysSinceLastCount) {
-                                daysConditionMet = false;
-                            }
+            /**
+             * Creates count tasks in bulk for a client-supplied list of SKUs.
+             * Client has already applied filters/sort/limit; server re-verifies dedup
+             * against open count tasks to handle race conditions across users.
+             * @param {Array<string>} skus
+             * @param {string} [note]
+             * @returns {Object} { success, created, skippedDedup, errors: [{sku, reason}] }
+             */
+            function createCountTasksBulk(skus, note) {
+                const serviceName = 'InventoryManagementService';
+                const functionName = 'createCountTasksBulk';
+                LoggerService.info(serviceName, functionName, `Creating count tasks for ${skus ? skus.length : 0} SKUs.`);
+
+                if (!Array.isArray(skus) || skus.length === 0) {
+                    return { success: true, created: 0, skippedDedup: 0, errors: [] };
+                }
+
+                const allConfig = ConfigService.getAllConfig();
+                const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+                const cmxDataObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
+                const cmxMap = cmxDataObj.map;
+
+                const taskTypeId = 'task.inventory.count';
+                const openTasks = WebAppTasks.getOpenTasksByTypeId(taskTypeId);
+                const openTaskSkus = new Set(openTasks.map(t => String(t.st_LinkedEntityId).trim()));
+
+                let created = 0;
+                let skippedDedup = 0;
+                const errors = [];
+
+                for (const rawSku of skus) {
+                    const sku = String(rawSku).trim();
+                    if (!sku) continue;
+
+                    if (openTaskSkus.has(sku)) {
+                        skippedDedup++;
+                        continue;
+                    }
+
+                    const product = cmxMap.get(sku);
+                    if (!product) {
+                        errors.push({ sku: sku, reason: 'Not found in CmxProdM' });
+                        continue;
+                    }
+
+                    const name = product.cpm_NameHe || '';
+                    const title = `Verify Count: ${name}`;
+                    const taskNote = note ? String(note) : 'Manual bulk count creation.';
+
+                    try {
+                        const newTask = TaskService.createTask(taskTypeId, sku, name, title, taskNote);
+                        if (newTask) {
+                            created++;
+                            openTaskSkus.add(sku);
                         } else {
-                            // Never counted? Treat as condition met
-                            daysConditionMet = true;
+                            skippedDedup++;
                         }
-                    }
-
-                    if (stockConditionMet && daysConditionMet) {
-                        candidates.push({
-                            sku: sku,
-                            name: row.cpm_NameHe,
-                            reason: `Bulk Gen: ${daysConditionMet ? 'Stale Count' : ''} ${stockConditionMet ? 'Low Stock' : ''}`.trim()
-                        });
+                    } catch (err) {
+                        LoggerService.error(serviceName, functionName, `Failed for ${sku}: ${err.message}`);
+                        errors.push({ sku: sku, reason: err.message });
                     }
                 }
-                return candidates;
+
+                return { success: true, created: created, skippedDedup: skippedDedup, errors: errors };
             }
 
-            /**
-             * Previews the number of tasks that would be created by a bulk generation.
-             * @param {Object} criteria 
-             * @returns {Object} { success: true, candidates: Array<Object> }
-             */
-            function previewBulkCountTasks(criteria) {
-                const serviceName = 'InventoryManagementService';
-                const functionName = 'previewBulkCountTasks';
-                try {
-                    const candidates = _getBulkCandidates(criteria);
-                    return { success: true, candidates: candidates };
-                } catch (e) {
-                    LoggerService.error(serviceName, functionName, `Error: ${e.message}`, e);
-                    throw e;
-                }
-            }
-
-            /**
-             * Generates inventory count tasks in bulk based on criteria.
-             * @param {Object} criteria 
-             * @returns {Object} { success: true, count: number }
-             */
-            function generateBulkCountTasks(criteria) {
-                const serviceName = 'InventoryManagementService';
-                const functionName = 'generateBulkCountTasks';
-                LoggerService.info(serviceName, functionName, `Starting bulk generation with criteria: ${JSON.stringify(criteria)}`);
-
-                try {
-                    const candidates = _getBulkCandidates(criteria);
-                    const taskTypeId = 'task.inventory.count';
-                    let createdCount = 0;
-
-                    for (const item of candidates) {
-                       try {
-                           TaskService.createTask(
-                               taskTypeId, 
-                               item.sku, 
-                               item.name,
-                               `Verify Count: ${item.name}`, 
-                               `Auto-generated. Reason: ${item.reason}`
-                           );
-                           createdCount++;
-                       } catch (err) {
-                           LoggerService.error(serviceName, functionName, `Failed to create task for ${item.sku}: ${err.message}`);
-                       }
-                    }
-
-                    return { success: true, count: createdCount };
-
-                } catch (e) {
-                    LoggerService.error(serviceName, functionName, `Error: ${e.message}`, e);
-                    throw e;
-                }
-            }
-
-            /**
-             * Creates a single spot-check task.
-             * @param {string} sku 
-             * @param {string} note 
-             * @returns {Object} { success: true, taskId: string }
-             */
-            function createSpotCheckTask(sku, note) {
-                const serviceName = 'InventoryManagementService';
-                const functionName = 'createSpotCheckTask';
-                
-                try {
-                    const cleanSku = String(sku).trim();
-                    if (!cleanSku) throw new Error("SKU is required.");
-
-                    // 1. Verify Product Exists
-                    const allConfig = ConfigService.getAllConfig();
-                    const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
-                    const cmxDataObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
-                    
-                    if (!cmxDataObj.map.has(cleanSku)) {
-                        return { success: false, message: `Product with SKU '${cleanSku}' not found in Master List.` };
-                    }
-                    const productData = cmxDataObj.map.get(cleanSku);
-
-                    // 2. Check Duplicates
-                    const taskTypeId = 'task.inventory.count';
-                    const openTasks = WebAppTasks.getOpenTasksByTypeId(taskTypeId);
-                    const isDuplicate = openTasks.some(t => String(t.st_LinkedEntityId).trim() === cleanSku);
-
-                    if (isDuplicate) {
-                        return { success: false, message: `An open inventory task already exists for SKU '${cleanSku}'.` };
-                    }
-
-                    // 3. Create Task
-                    const title = `Spot Check: ${productData.cpm_NameHe}`;
-                    const finalNote = note ? `Spot Check. Note: ${note}` : `Spot Check requested manually.`;
-                    
-                    const newTask = TaskService.createTask(taskTypeId, cleanSku, productData.cpm_NameHe, title, finalNote);
-
-                    return { success: true, taskId: newTask.st_TaskId };
-
-                } catch (e) {
-                    LoggerService.error(serviceName, functionName, `Error: ${e.message}`, e);
-                    throw e;
-                }
-            }
-        
             return {
                 getStockLevel: getStockLevel,
                 updateStock: updateStock,
@@ -1349,8 +1223,6 @@ const InventoryManagementService = (function() {
                 getAcceptedSyncTasks: getAcceptedSyncTasks,
                 generateComaxInventoryExport: generateComaxInventoryExport,
                 updateLastCount: updateLastCount,
-                previewBulkCountTasks: previewBulkCountTasks,
-                generateBulkCountTasks: generateBulkCountTasks,
-                createSpotCheckTask: createSpotCheckTask
+                createCountTasksBulk: createCountTasksBulk
             };
         })();

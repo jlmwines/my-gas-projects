@@ -1,20 +1,20 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-02-28
+**Updated:** 2026-04-14
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-02-28 |
+| Last Active | 2026-04-14 |
 | Revenue | Steady |
 | Deploy Version | @69 |
 | Deploy Date | 2026-03-03 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
-| Open Bugs | 2 (vendor SKU update, trim safety — untested, both low priority) |
+| Open Bugs | 2 (vendor SKU update, trim safety — untested, low priority, rare conditions) |
 | Next Milestone | Theme replacement + SEO setup + Pesach campaign |
 | Blockers | 0 |
 
@@ -49,7 +49,7 @@
 
 ## Known Issues
 
-1. Monitor bundle additions for stale data recurrence
+1. ~~Monitor bundle additions for stale data recurrence~~ → Fixed: bundle composition auto-refreshes before health check
 2. Consider auto-cleanup of rows below data range during upsert
 3. Gutenberg editor width doesn't match Elementor front-end (accepted limitation — use Preview or API push workflow)
 
@@ -98,6 +98,26 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN — `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine. Eliminates Wpbingo Core + Redux Framework. Pending user review.
 
 ## Session History
+
+- **2026-04-14:** Inventory count task redesign implemented and pushed to test. In testing — admin verifies tomorrow.
+  - **Unified "Create Count Tasks" card** replaces old Bulk + Spot-Check cards in `AdminInventoryView.html`. Client-side filter/sort/preview over single-shot in-memory load from new `WebAppInventory_getCountPlanningData()`. Filter modes: name starts-with/contains, start-at, batch size, threshold (skip-counted-within-N-days), web/wine/zero-stock flags.
+  - **Strict atomic sheet import** replaces partial-write model. Pre-scan rejects rows with missing quantity + auxiliary data or non-numeric quantity; clean sheets proceed to write phase. Vintage-actual mismatch or comment creates `task.validation.vintage_mismatch` (dedup disabled via new `options.allowDuplicate` on `TaskService.createTask`).
+  - **Manager view enrichment:** Expandable row shows vintage, image thumbnail, product page link; inline vintage/comment inputs pass through to submit and create vintage tasks.
+  - **New export columns:** Vintage (ref), Product Page link, Vintage (actual) input column.
+  - **Bug found + fix in progress:** `task.inventory.count` used `flow_pattern: manager_direct` — on submit the task went to Review status but stayed assigned to Manager. Changed to `manager_to_admin_review` in `config/taskDefinitions.json`. Regenerated `SetupConfig.js`. Awaiting user push + `rebuildSysConfigFromSource()`.
+  - **Still pending:** `WebAppInventory.js:389` only queries `task.validation.comax_internal_audit` for the admin review table — needs to also include `task.inventory.count` Review tasks so submitted counts appear there. Not yet changed.
+  - Plan: `jlmops/plans/INVENTORY_COUNT_TASK_REDESIGN.md`
+  - Files modified: `TaskService.js`, `InventoryManagementService.js`, `WebAppInventory.js`, `AdminInventoryView.html`, `ManagerInventoryView.html`, `config/taskDefinitions.json`, `SetupConfig.js`
+
+- **2026-03-09:** Validation fixes, inventory UI, bundle composition, redundant task suppression. Two commits: c1af348, e398a29.
+  - **Validation rules tightened:** "Archive Status Changed" now only fires for web products (`cpm_IsWeb=כן`). "Published But Archived" skips zero-stock products. Added `target_filter` support and `!` prefix exclusion to validation engine.
+  - **Inventory count task definition added:** `task.inventory.count` was missing from `taskDefinitions.json` — caused "create count task" to fail. Added definition + added to `managerTaskTypes` so count tasks appear in manager dashboard.
+  - **Admin inventory open tasks card:** Added SKU, Product Name, On Hand columns (was only showing Date + Title).
+  - **Bundle composition auto-refresh:** `refreshBundleComposition` step added to housekeeping Phase 3, runs before `checkBundleHealth`. Eliminates stale bundle slot data.
+  - **Skip redundant tasks:** New `skip_if_open_task_type` config property. Name/archive change tasks skip creation when vintage update task already exists for same SKU. Pre-loads open tasks once for O(1) lookup, tracks tasks created within same run.
+  - **woosb_ids JSON fix:** `WooProductPullService` now stringifies object-type `woosb_ids` meta values. Fixes Hebrew bundle parse failures caused by GAS serializing objects as `{key=value}` instead of JSON.
+  - Plan: `jlmops/plans/VALIDATION_AND_INVENTORY_FIX_PLAN.md`
+  - Files modified: `ValidationLogic.js`, `ValidationOrchestratorService.js`, `WebAppDashboardV2.js`, `WebAppInventory.js`, `AdminInventoryView.html`, `HousekeepingService.js`, `WooProductPullService.js`, `config/validation.json`, `config/taskDefinitions.json`, `SetupConfig.js`, `WebApp.js`
 
 - **2026-03-03:** Sync widget fixes + deploy @69.
   - **API Pull promoted to primary button.** CSV Import remains as fallback.
@@ -208,3 +228,7 @@ _(Cross-project notes captured via `/note jlm <text>`. Review and clear at sessi
 
 - 2026-02-26: kowine theme update may be fix for recent elementor update disrupting site appearance. will apply to staging and see if that fixes appearance.
 - 2026-02-26: jlmops need a way to research product/sku state and history. what are the last tasks for this sku? when did vintage change is very important. keep product history, or rely on data?
+- ~~2026-03-06: Manager inventory view: 1. Create count task failed. 2. Open inventory tasks need to show entity id (SKU) and product name in list.~~ → Fixed 2026-03-09 (c1af348)
+- 2026-03-09: Vintage update tasks from late February not assigned to manager. Recent ones are fine. Check what changed — may have been the task.inventory.count fix or a routing issue.
+- 2026-03-10: jlmops task shows "Published But Archived (Summary: 446 Items)". Archived in Comax with zero inventory is OK if web shows zero stock.
+- 2026-03-10: Decanting field can be skipped — system should allow zero (0) as a valid value, not treat it as empty/skippable.
