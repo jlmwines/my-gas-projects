@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-03-09 03:13',
-  commit: 'Skip redundant tasks when vintage exists, woosb_ids JSON fix'
+  built: '2026-04-15 17:21',
+  commit: 'Admin inventory review table includes task.inventory.count Review tasks'
 };
 
 function getVersion() {

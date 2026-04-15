@@ -19,7 +19,9 @@ function WebAppInventory_getInventoryWidgetData(injectedSystemHealth) {
     // 2. Get task counts from the tasks data provider
     const openNegativeInventoryTasksCount = WebAppTasks.getOpenTasksByTypeId('task.validation.comax_internal_audit').length;
     const openInventoryCountTasksCount = WebAppTasks.getOpenTasksByTypeId('task.inventory.count').length;
-    const openInventoryCountReviewTasksCount = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length;
+    const openInventoryCountReviewTasksCount =
+      WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length +
+      WebAppTasks.getOpenTasksByTypeIdAndStatus('task.inventory.count', 'Review').length;
     LoggerService.info('WebAppInventory', 'getInventoryWidgetData', 'Got task counts.');
 
     // 3. Check for Web Inventory Export tasks
@@ -386,7 +388,8 @@ function WebAppInventory_getAdminInventoryViewData() {
     const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
     const sysProductAuditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
     
-    const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review');
+    const reviewTasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review')
+      .concat(WebAppTasks.getOpenTasksByTypeIdAndStatus('task.inventory.count', 'Review'));
     LoggerService.info('WebAppInventory', 'getAdminInventoryViewData', `Found ${reviewTasks.length} tasks in 'Review' status.`);
 
     // Fetch Open Tasks for Manager Queue (New & Assigned status)

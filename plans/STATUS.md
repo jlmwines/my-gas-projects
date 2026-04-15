@@ -1,16 +1,16 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-14
+**Updated:** 2026-04-15
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-04-14 |
+| Last Active | 2026-04-15 |
 | Revenue | Steady |
-| Deploy Version | @69 |
-| Deploy Date | 2026-03-03 |
+| Deploy Version | @70 (pending) |
+| Deploy Date | 2026-04-15 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -98,6 +98,12 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN — `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine. Eliminates Wpbingo Core + Redux Framework. Pending user review.
 
 ## Session History
+
+- **2026-04-15:** Fixed admin inventory review table missing manager-submitted count tasks.
+  - **Root cause:** `WebAppInventory_getAdminInventoryViewData` at `WebAppInventory.js:389` only queried `task.validation.comax_internal_audit` in Review status. `task.inventory.count` tasks flipped to Review by manager submit (after the `manager_to_admin_review` flow-pattern fix from 2026-04-14) were never loaded.
+  - **Fix:** Concat `task.inventory.count` Review tasks into `reviewTasks`. Existing map is SKU-generic so it renders both types. Also updated widget count at `WebAppInventory.js:22` (`openInventoryCountReviewTasksCount`) to sum both task types so the "Inventory Count Reviews" badge reflects manager submissions.
+  - Files modified: `WebAppInventory.js`, `WebApp.js` (version stamp)
+  - Closes out the "still pending" item from 2026-04-14.
 
 - **2026-04-14:** Inventory count task redesign implemented and pushed to test. In testing — admin verifies tomorrow.
   - **Unified "Create Count Tasks" card** replaces old Bulk + Spot-Check cards in `AdminInventoryView.html`. Client-side filter/sort/preview over single-shot in-memory load from new `WebAppInventory_getCountPlanningData()`. Filter modes: name starts-with/contains, start-at, batch size, threshold (skip-counted-within-N-days), web/wine/zero-stock flags.
