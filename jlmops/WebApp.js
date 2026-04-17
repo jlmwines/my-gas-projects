@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-04-15 17:21',
-  commit: 'Admin inventory review table includes task.inventory.count Review tasks'
+  built: '2026-04-17 11:13',
+  commit: 'Available Online But Archived rule now filters by web stock; filter engine supports AND conditions'
 };
 
 function getVersion() {

@@ -62,6 +62,20 @@ const ValidationLogic = (function() {
       return '';
   }
 
+  // AND-combined conditions separated by ';'. Each condition: "key,value" with optional "!" prefix on value for inversion.
+  function _rowPassesFilter(filterSpec, row) {
+      if (!filterSpec) return true;
+      const conditions = String(filterSpec).split(';');
+      for (const cond of conditions) {
+          const [filterKey, rawFilterValue] = cond.split(',');
+          const invert = rawFilterValue.startsWith('!');
+          const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
+          const matches = String(row[filterKey] || '') === String(filterValue);
+          if (invert ? matches : !matches) return false;
+      }
+      return true;
+  }
+
   // =================================================================================
   // VALIDATION EXECUTORS
   // =================================================================================
@@ -90,14 +104,7 @@ const ValidationLogic = (function() {
       const shouldFail = shouldInvert ? !existsInTarget : existsInTarget;
 
       if (shouldFail) {
-        let passesFilter = true;
-        if (rule.source_filter) {
-            const [filterKey, filterValue] = rule.source_filter.split(',');
-            if (sourceRow[filterKey] != filterValue) {
-                passesFilter = false;
-            }
-        }
-        if (passesFilter) {
+        if (_rowPassesFilter(rule.source_filter, sourceRow)) {
             discrepancies.push({
                 key: key,
                 name: _extractName(sourceRow),
@@ -132,27 +139,8 @@ const ValidationLogic = (function() {
           if (mapA.has(key)) {
               const rowA = mapA.get(key);
 
-              // Source Filter Logic
-              if (rule.source_filter) {
-                  const [filterKey, rawFilterValue] = rule.source_filter.split(',');
-                  const invert = rawFilterValue.startsWith('!');
-                  const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
-                  const matches = String(rowA[filterKey] || '') === String(filterValue);
-                  if (invert ? matches : !matches) {
-                      continue;
-                  }
-              }
-
-              // Target Filter Logic
-              if (rule.target_filter) {
-                  const [filterKey, rawFilterValue] = rule.target_filter.split(',');
-                  const invert = rawFilterValue.startsWith('!');
-                  const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
-                  const matches = String(rowB[filterKey] || '') === String(filterValue);
-                  if (invert ? matches : !matches) {
-                      continue;
-                  }
-              }
+              if (!_rowPassesFilter(rule.source_filter, rowA)) continue;
+              if (!_rowPassesFilter(rule.target_filter, rowB)) continue;
   
               let valueA = String(rowA[fieldA] || '').trim();
               let valueB = String(rowB[fieldB] || '').trim();

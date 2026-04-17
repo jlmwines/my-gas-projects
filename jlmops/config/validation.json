@@ -617,7 +617,7 @@
     [
         "validation.rule.template",
         "validation.master.published_vs_archived",
-        "[Master Sync] Field: Published web product has archived Comax match",
+        "[Master Sync] Field: Available-online web product has archived Comax match",
         "stable",
         "enabled", "TRUE",
         "priority", "HIGH",
@@ -627,12 +627,11 @@
         "sheet_B", "CmxProdM",
         "key_A", "wpm_SKU",
         "key_B", "cpm_SKU",
-        "source_filter", "wpm_PostStatus,publish",
-        "target_filter", "cpm_Stock,!0",
+        "source_filter", "wpm_PostStatus,publish;wpm_Stock,!0",
         "compare_fields", "wpm_PostStatus,cpm_IsArchived",
         "field_translations_map_wpm_PostStatus", "{\"publish\":\"\"}",
         "on_failure_task_type", "task.validation.status_mismatch",
-        "on_failure_title", "Published But Archived",
+        "on_failure_title", "Available Online But Archived",
         "on_failure_notes", "comax archived ${cpm_IsArchived}"
     ],
 

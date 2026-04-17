@@ -1,16 +1,16 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-15
+**Updated:** 2026-04-17
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-04-15 |
+| Last Active | 2026-04-17 |
 | Revenue | Steady |
-| Deploy Version | @73 |
-| Deploy Date | 2026-04-15 |
+| Deploy Version | @76 |
+| Deploy Date | 2026-04-17 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -30,7 +30,7 @@
   1. Vendor SKU Update: *(not yet tested)*
   2. ~~Product Replacement~~ → ✓ Tested, working.
   3. Trim safety: *(not yet tested)*
-- **Website font optimization** — Open Sans loading 10 variants → 2-3 needed. Deferred pending WPML check.
+- **Website performance — theme swap planning next session.** SG Optimizer toggles captured first round of wins (font-display, minify, combine CSS/JS). Remaining 1,460 ms render-block and 226 KiB unused CSS are structural limits that only a theme swap can reach. See 2026-04-15b session entry for full diagnosis.
 - Build `CampaignService.getTargetSegment()` for segment export
 - Start small comeback campaign testing
 - Research PDF generation for Year in Wine
@@ -44,7 +44,7 @@
 - **Import system:** Full Woo REST API pull (products + translations + orders) deployed Feb 2026. "API Pull" button runs entire pipeline with step-by-step progress in sync widget. Order pull: 30-day rolling window, upsert via existing OrderService pipeline. Credentials in SysEnv sheet. Plan: `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
 - **Admin UI:** Contact preferences display, activity ribbon icons. Task list: created date column in state 3, created date in detail panel, reduced font sizes + rebalanced columns (in test, not deployed).
 - **SKU management fixes:** Deployed 2026-02-19. Product replacement tested and working (bug fix: relaxed validation to find WebProdM row by SKU when web ID is empty). Vendor SKU update and trim safety still awaiting test.
-- **Website performance:** Slider Revolution deactivated, Jetpack stats/WooCommerce Analytics tracking disabled. PageSpeed: mobile 57, desktop 82. Font optimization pending.
+- **Website performance:** Round 1 of SG Optimizer tuning complete (2026-04-15). Enabled: Web Font Optimization, Combine/Minify CSS + JS, Ultrafast PHP. Captured font-display (1,230 ms) and minify CSS/JS in full. Lab LCP 11.0 s → 7.2 s, FCP 5.3 s → 3.9 s. Field CWV still Failed (28-day rolling window hasn't reflected changes yet). Remaining work requires theme swap — see 2026-04-15b session entry for full diagnosis.
 - **Content pipeline:** COMPLETE. All 8 posts (16 files EN+HE) live on staging6. `push-posts.js` pushes via WP REST API with ID-based updates. Posts authored as `.post.md` files with complete WP block HTML including placed images. About Page rebuilt as clean HTML (`.page.md` files) replacing Elementor — pushed directly via REST API to page IDs. Canva AI generates images from Claude-written prompts (impressionist oil painting style).
 
 ## Known Issues
@@ -95,9 +95,32 @@ Periodic business health checks — not automated, just a checklist for session 
 - Year in Wine PDF — needs PDF generation research
 - Gift recipient campaigns — lowest priority, wait
 - VIP recognition + referral program — after campaigns launch
-- **Theme replacement:** PLAN WRITTEN — `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine. Eliminates Wpbingo Core + Redux Framework. Pending user review.
+- **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-17:** Fixed "Published But Archived" validation rule to filter by web stock. Deployed @76.
+  - **Bug:** Rule `validation.master.published_vs_archived` flagged 446 items including published web products with zero web stock. The 2026-03-09 fix had added `target_filter: cpm_Stock,!0` — but that filters **Comax** stock (sheet_B), while the business rule cares about **web** stock (sheet_A). Zero web stock for an archived-in-Comax product is fine; non-zero web stock is the real problem.
+  - **Engine extension:** `_rowPassesFilter` helper in `ValidationLogic.js` now parses `;`-separated AND conditions in `source_filter`/`target_filter`. Backward compatible — single-condition filters split to a 1-element array. EXISTENCE_CHECK path also gained `!` prefix support (was only on FIELD_COMPARISON).
+  - **Rule change:** `source_filter` now `"wpm_PostStatus,publish;wpm_Stock,!0"`, `target_filter` removed. Title renamed "Published But Archived" → "Available Online But Archived" (customer-facing state, not WP jargon). Description updated to match.
+  - **Verified:** User ran validation after deploy — rule detected zero violations.
+  - **Deploy URL incident + fix:** Initial `clasp deploy` created orphan @75 with new URL, breaking the shared live app. Redeployed to existing deployment ID as @76 (URL restored), undeployed @75. `/ship` skill updated to always use `--deploymentId AKfycbzDvzMNI0IYyMFVjdWG8YcUs3clDsSNz4hoLq5VhFHlaYqpPcBxC0jQ3biCd6HeeqlU4A` for JLM Wines so this cannot recur. Memory saved at `~/.claude/projects/C--Users-B-projects-jlmwines/memory/jlm_stable_deploy_id.md`.
+  - Files modified: `ValidationLogic.js`, `config/validation.json`, `SetupConfig.js`, `WebApp.js`, `plans/STATUS.md`, `~/.claude/commands/ship.md`
+
+- **2026-04-15b:** Website performance — Round 1 SG Optimizer tuning + diagnosis. No code changes.
+  - **Field baseline (CrUX, Mar 17 – Apr 13):** Mobile LCP 2.9s / FCP 2.7s / TTFB 2.1s (Poor) / INP 77ms / CLS 0. Desktop LCP 3.2s / FCP 2.8s / TTFB 2.5s (Poor) / INP 44ms / CLS 0.15. Both fail Core Web Vitals Assessment. TTFB distribution mobile: Good 23% / NI 31% / **Poor 46%** — signature of inconsistent cache coverage, not uniformly slow server.
+  - **Lab before SG toggles:** FCP 5.3s, LCP 11.0s, TBT 0ms, CLS 0.005, SI 10.9s. Insights: Render-blocking 2,210ms, Font-display 1,230ms, Image delivery 244 KiB, Unused CSS 197 KiB.
+  - **Changes applied by user (SG Optimizer + hosting):** Web Font Optimization, Combine CSS, Combine JS, Minify CSS, Minify JS, Ultrafast PHP. Exact toggle list not captured — worth confirming next session.
+  - **Lab after:** FCP 3.9s (−1.4s), LCP 7.2s (−3.8s), TBT 60ms (+60), CLS 0.005, SI 10.8s. Font-display moved to Passed Audits (1,230ms captured fully). Minify CSS/JS both Passed. Payload 2,081 KiB → 1,698 KiB.
+  - **Tradeoff observed:** Combining JS/CSS captured render-block savings but grew Unused CSS (197 → 226 KiB) and introduced Unused JS (—  → 168 KiB). Main-thread work 1.4s → 2.1s, JS execution 0.3s → 0.9s. Net positive but approaching limits — no more combine-style toggles without risk.
+  - **Remaining render-blocking named:** (1) `siteground-optimizer-combined-*.css` — **243.7 KiB, 2,960 ms blocking**, of which **226 KiB is unused (93%)**. Structural limit of SG Optimizer: it can combine/minify what's registered, cannot shrink what theme/plugins register. (2) `jquery.min.js` — 35.1 KiB, **1,400 ms blocking**. Inline `<script>` callers in the document head force jQuery to load synchronously; SG Optimizer excludes jQuery from defer to avoid breaking those callers.
+  - **Third-party findings:** (a) Google Fonts — 243 KiB across 4 `.ttf` files (should be WOFF2, ~30% smaller; should be 2 weights not 4). Deferred "Open Sans 10→2-3 variants" item still unresolved. (b) `wpbingosite.com` — 44 KiB of banner JPEGs (`banner21.jpg`, `banner19.jpg`) hot-linked from the **theme vendor's demo site**. User suspects these may be admin-panel assets leaking to front-end via Redux Framework — consistent with Redux's known pattern of enqueuing globally instead of admin-only. Not confirmed, worth investigating during theme-swap scoping. (c) Elementor a11y widget — 38 KiB, **keep (legally required under Israeli accessibility law)**. (d) Mailchimp — 1 KiB, ignore.
+  - **Desktop CLS 0.15 culprit:** "Image elements do not have explicit width and height" diagnostic. Mobile CLS 0 and lab CLS 0.005 — conditional on desktop viewport. Not fixed this session.
+  - **Diagnosis verdict:** TBT 60ms + JS exec 0.9s = JavaScript is NOT the bottleneck. CSS registration is the bottleneck. 93% of the blocking CSS is unused — proves theme + Wpbingo Core + Redux Framework are registering site-wide styles that don't belong on any given page. This is the argument for theme swap, now with evidence rather than speculation.
+  - **Expected theme-swap gains:** Combined CSS 243 KiB → ~60-80 KiB, jQuery deferrable or footer-loaded, Unused CSS 226 → <50 KiB, LCP −1.5 to −3s on top of current 7.2s. Field CWV should pass over the next 28-day CrUX cycle.
+  - **Next session:** Scope theme swap using `~/.claude/plans/unified-sparking-galaxy.md` as starting point. Before committing, confirm (a) Elementor Theme Builder header/footer templates carry over cleanly, (b) a11y widget remains functional, (c) Israeli accessibility compliance not affected, (d) WPML + WooCommerce compatibility, (e) Smart Coupons Pro compatibility (crashed staging6 in Feb when combined with Wpbingo Core removal — may need separate handling).
+  - **Also outstanding, independent of theme swap:** Google Fonts weight reduction + WOFF2 (~150 KiB savings), image width/height attributes to retire desktop CLS 0.15.
+  - **Documentation gap noted:** No hosting/WP performance docs anywhere in the project before this session. Stack is SiteGround WordPress + SG Optimizer (cache + CDN + Memcached + Ultrafast PHP) — worth recording in a permanent location during theme swap planning.
 
 - **2026-04-15:** Fixed admin inventory review table missing manager-submitted count tasks.
   - **Root cause:** `WebAppInventory_getAdminInventoryViewData` at `WebAppInventory.js:389` only queried `task.validation.comax_internal_audit` in Review status. `task.inventory.count` tasks flipped to Review by manager submit (after the `manager_to_admin_review` flow-pattern fix from 2026-04-14) were never loaded.
@@ -237,5 +260,5 @@ _(Cross-project notes captured via `/note jlm <text>`. Review and clear at sessi
 - 2026-02-26: jlmops need a way to research product/sku state and history. what are the last tasks for this sku? when did vintage change is very important. keep product history, or rely on data?
 - ~~2026-03-06: Manager inventory view: 1. Create count task failed. 2. Open inventory tasks need to show entity id (SKU) and product name in list.~~ → Fixed 2026-03-09 (c1af348)
 - 2026-03-09: Vintage update tasks from late February not assigned to manager. Recent ones are fine. Check what changed — may have been the task.inventory.count fix or a routing issue.
-- 2026-03-10: jlmops task shows "Published But Archived (Summary: 446 Items)". Archived in Comax with zero inventory is OK if web shows zero stock.
+- ~~2026-03-10: jlmops task shows "Published But Archived (Summary: 446 Items)". Archived in Comax with zero inventory is OK if web shows zero stock.~~ → Fixed 2026-04-17 (@76)
 - 2026-03-10: Decanting field can be skipped — system should allow zero (0) as a valid value, not treat it as empty/skippable.
