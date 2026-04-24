@@ -224,46 +224,109 @@ function WebAppProducts_getManagerProductTasks() {
 
 /**
  * Fetches product details (master and staging) for the editor.
+ * Client passes the known SKU to skip a SysTasks lookup; also returns
+ * initial preview HTML so the modal can render without a second round-trip.
  * @param {string} taskId The ID of the task.
- * @returns {object} An object containing master and staging product data, and the SKU.
+ * @param {string} [sku] Optional SKU. If omitted, falls back to SysTasks lookup.
+ * @returns {object} An object containing master/staging/comax data, lookups, and initial preview HTML.
  */
-function WebAppProducts_loadProductEditorData(taskId) {
+function WebAppProducts_loadProductEditorData(taskId, sku) {
   try {
-    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
-    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
-    if (!sheet) throw new Error("Sheet 'SysTasks' not found");
+    if (!sku) {
+      const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+      const headers = taskSchema.headers.split(',');
+      const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
+      const task = allTasks.get(taskId);
+      if (!task) throw new Error(`Task with ID ${taskId} not found.`);
+      sku = task.st_LinkedEntityId;
+    }
 
-    const headers = taskSchema.headers.split(',');
-    const taskIdCol = headers.indexOf('st_TaskId');
-    const linkedEntityIdCol = headers.indexOf('st_LinkedEntityId');
-
-    const allTasks = ConfigService._getSheetDataAsMap('SysTasks', headers, 'st_TaskId').map;
-    const task = allTasks.get(taskId);
-
-    if (!task) throw new Error(`Task with ID ${taskId} not found.`);
-    const sku = task.st_LinkedEntityId;
-
-    // Parse the JSON string returned by ProductService
     const productDetailsJson = ProductService.getProductDetails(sku);
     const productDetails = JSON.parse(productDetailsJson);
+
+    const master = productDetails.master || {};
+    const staging = productDetails.staging || null;
+    const comax = productDetails.comax || null;
+
+    // Build initial form data (same rule as client-side getFormData: staging overrides master)
+    // so the preview renders as the modal would on first display.
+    const initialFormData = _buildInitialFormData(master, staging);
+
+    let htmlEn = '';
+    let htmlHe = '';
+    try {
+      const preview = ProductService.getProductHtmlPreview(sku, initialFormData, comax, 'EN', null, false);
+      htmlEn = preview.htmlEn;
+      htmlHe = preview.htmlHe;
+    } catch (previewErr) {
+      LoggerService.warn('WebAppProducts', 'loadProductEditorData',
+        `Preview render failed for SKU ${sku}: ${previewErr.message}`);
+    }
 
     return {
       sku: sku,
       taskId: taskId,
-      masterData: productDetails.master,
-      stagingData: productDetails.staging,
-      comaxData: productDetails.comax,
+      masterData: master,
+      stagingData: staging,
+      comaxData: comax,
       regions: productDetails.regions,
       abvOptions: productDetails.abvOptions,
       grapes: productDetails.grapes,
-      kashrut: productDetails.kashrut
+      kashrut: productDetails.kashrut,
+      htmlEn: htmlEn,
+      htmlHe: htmlHe
     };
 
   } catch (e) {
     LoggerService.error('WebAppProducts', 'loadProductEditorData', `Error loading product editor data for task ${taskId}: ${e.message}`, e);
     throw e;
   }
+}
+
+/**
+ * Builds an initial form-data object from master/staging, mirroring the client's
+ * getFormData() merge rule (staging wds_* overrides master wdm_*, output keyed as wdm_*).
+ * Used by loadProductEditorData to render the initial preview server-side.
+ * @private
+ */
+function _buildInitialFormData(master, staging) {
+  const m = master || {};
+  const s = staging || {};
+  // Mirrors client-side getFormData() exactly: staging overrides master if the
+  // wds_ key is defined (even when empty — manager may have intentionally cleared it).
+  const pick = (suffix) => {
+    if (s['wds_' + suffix] !== undefined) return s['wds_' + suffix];
+    if (m['wdm_' + suffix] !== undefined) return m['wdm_' + suffix];
+    return '';
+  };
+
+  const fd = {
+    wdm_WebIdEn: m.wdm_WebIdEn,
+    wdm_NameEn: m.wdm_NameEn,
+    wdm_NameHe: m.wdm_NameHe,
+    wdm_Region: pick('Region'),
+    wdm_ABV: pick('ABV'),
+    wdm_Intensity: pick('Intensity'),
+    wdm_Complexity: pick('Complexity'),
+    wdm_Acidity: pick('Acidity'),
+    wdm_Decant: pick('Decant'),
+    wdm_PairHarSweet: pick('PairHarSweet'),
+    wdm_PairHarIntense: pick('PairHarIntense'),
+    wdm_PairHarRich: pick('PairHarRich'),
+    wdm_PairHarMild: pick('PairHarMild'),
+    wdm_PairConSweet: pick('PairConSweet'),
+    wdm_PairConIntense: pick('PairConIntense'),
+    wdm_PairConRich: pick('PairConRich'),
+    wdm_PairConMild: pick('PairConMild'),
+    wdm_HeterMechira: pick('HeterMechira'),
+    wdm_ShortDescrEn: pick('ShortDescrEn'),
+    wdm_DescriptionEn: pick('DescriptionEn'),
+    wdm_ShortDescrHe: pick('ShortDescrHe'),
+    wdm_DescriptionHe: pick('DescriptionHe')
+  };
+  for (let i = 1; i <= 5; i++) fd['wdm_GrapeG' + i] = pick('GrapeG' + i);
+  for (let i = 1; i <= 5; i++) fd['wdm_KashrutK' + i] = pick('KashrutK' + i);
+  return fd;
 }
 
 /**

@@ -7,7 +7,9 @@
     .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 80px; overflow-y: auto; }
     .modal-container { background: white; width: 90%; max-width: 900px; max-height: 85vh; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 50px; }
     .modal-header { padding: 10px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; background-color: #f8f9fa; border-radius: 8px 8px 0 0; }
+    .modal-header-main { flex: 1; display: flex; flex-direction: column; gap: 4px; }
     .modal-product-info { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-right: 20px; }
+    .modal-header-meta { display: flex; justify-content: space-between; padding-right: 20px; color: #6c757d; font-size: 12px; }
     .header-item { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .header-left { text-align: left; font-weight: 600; color: #333; }
     .header-center { text-align: center; font-weight: 700; color: #007bff; font-size: 1.1em; }
@@ -487,10 +489,16 @@
   <div class="modal-overlay" id="editor-modal">
     <div class="modal-container">
       <div class="modal-header">
-        <div class="modal-product-info">
-            <div id="header-name-en-display" class="header-item header-left"></div>
-            <div id="header-sku-display" class="header-item header-center"></div>
-            <div id="header-name-he-display" class="header-item header-right"></div>
+        <div class="modal-header-main">
+          <div class="modal-product-info">
+              <div id="header-name-en-display" class="header-item header-left"></div>
+              <div id="header-sku-display" class="header-item header-center"></div>
+              <div id="header-name-he-display" class="header-item header-right"></div>
+          </div>
+          <div class="modal-header-meta">
+              <span id="header-position"></span>
+              <span id="header-created-date"></span>
+          </div>
         </div>
         <button type="button" class="close" aria-label="Close" onclick="AdminProductsView.closeModal()"><span aria-hidden="true">&times;</span></button>
       </div>
@@ -536,6 +544,8 @@
             <datalist id="abv-options"></datalist>
             <div class="modal-footer bg-light">
               <div id="modal-status" class="mr-auto text-muted small"></div>
+              <button class="btn btn-sm" id="btn-prev-task" onclick="AdminProductsView.navTask(-1)">&lsaquo; Prev</button>
+              <button class="btn btn-sm" id="btn-next-task" onclick="AdminProductsView.navTask(1)">Next &rsaquo;</button>
               <button class="btn btn-sm" onclick="AdminProductsView.closeModal()">Cancel</button>
               <button class="btn btn-sm" onclick="AdminProductsView.acceptChanges()">Accept & Update</button>
             </div>
@@ -550,6 +560,9 @@
     AdminProductsView.lookupRegions = [];
     AdminProductsView.lookupGrapes = [];
     AdminProductsView.lookupKashrut = [];
+    // Review queue navigation state — populated by loadReviewList, consumed by openByIndex/navTask.
+    AdminProductsView.reviewTasks = [];
+    AdminProductsView.currentIndex = -1;
 
     AdminProductsView.refreshView = function() {
       // Card 1 Refresh
@@ -987,24 +1000,25 @@
     AdminProductsView.loadReviewList = function() {
       const tbody = document.getElementById('review-list-body');
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-      
+
       google.script.run.withSuccessHandler(tasks => {
         tbody.innerHTML = '';
-        document.getElementById('stat-review').textContent = tasks ? tasks.length : 0;
-        
-        if (!tasks || tasks.length === 0) {
+        AdminProductsView.reviewTasks = tasks || [];
+        document.getElementById('stat-review').textContent = AdminProductsView.reviewTasks.length;
+
+        if (AdminProductsView.reviewTasks.length === 0) {
           tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
           return;
         }
-        
-        tasks.forEach(task => {
+
+        AdminProductsView.reviewTasks.forEach((task, i) => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${task.productName || ''}</td>
             <td>${task.sku}</td>
             <td>${task.title}</td>
             <td>${new Date(task.createdDate).toLocaleDateString()}</td>
-            <td><button class="btn btn-sm" onclick="AdminProductsView.openEditor('${task.taskId}')">Review</button></td>
+            <td><button class="btn btn-sm" onclick="AdminProductsView.openByIndex(${i})">Review</button></td>
           `;
           tbody.appendChild(tr);
         });
@@ -1316,7 +1330,49 @@
     };
 
     // --- Editor Logic (Simplified/Shared) ---
-    AdminProductsView.openEditor = function(taskId) {
+    // Opens the editor for a task at a given index in the reviewTasks queue.
+    // Enables prev/next navigation and auto-advance on accept.
+    AdminProductsView.openByIndex = function(index) {
+      const tasks = AdminProductsView.reviewTasks;
+      if (!tasks || index < 0 || index >= tasks.length) return;
+      AdminProductsView.currentIndex = index;
+      const task = tasks[index];
+      AdminProductsView.openEditor(task.taskId, task.sku, task.createdDate);
+    };
+
+    // navTask steps through the review queue without closing the modal.
+    AdminProductsView.navTask = function(delta) {
+      const next = AdminProductsView.currentIndex + delta;
+      if (next < 0 || next >= AdminProductsView.reviewTasks.length) return;
+      AdminProductsView.openByIndex(next);
+    };
+
+    // Updates prev/next button enabled state and the "N of M" position indicator.
+    AdminProductsView._updateNavUI = function() {
+      const prev = document.getElementById('btn-prev-task');
+      const next = document.getElementById('btn-next-task');
+      const pos = document.getElementById('header-position');
+      const idx = AdminProductsView.currentIndex;
+      const total = AdminProductsView.reviewTasks.length;
+      const hasQueue = idx >= 0 && total > 0;
+      prev.style.display = hasQueue ? '' : 'none';
+      next.style.display = hasQueue ? '' : 'none';
+      prev.disabled = !hasQueue || idx <= 0;
+      next.disabled = !hasQueue || idx >= total - 1;
+      pos.textContent = hasQueue ? `${idx + 1} of ${total}` : '';
+    };
+
+    // openEditor loads editor data for a task. Pass sku (from the cached list) to
+    // skip the server-side SysTasks lookup. createdDate populates the modal header.
+    // Direct callers (e.g., Submissions table) go through here without setting
+    // currentIndex; openByIndex wraps this for the Review queue with nav enabled.
+    AdminProductsView.openEditor = function(taskId, sku, createdDate) {
+      // Default: no queue nav. openByIndex re-sets currentIndex before calling.
+      if (!(AdminProductsView.currentIndex >= 0
+            && AdminProductsView.reviewTasks[AdminProductsView.currentIndex]
+            && AdminProductsView.reviewTasks[AdminProductsView.currentIndex].taskId === taskId)) {
+        AdminProductsView.currentIndex = -1;
+      }
       AdminProductsView.currentTaskId = taskId;
       document.getElementById('editor-modal').style.display = 'flex';
       document.getElementById('modal-status').textContent = 'Loading data...';
@@ -1326,27 +1382,37 @@
       document.getElementById('header-name-en-display').textContent = '';
       document.getElementById('header-sku-display').textContent = '';
       document.getElementById('header-name-he-display').textContent = '';
+      document.getElementById('header-created-date').textContent =
+        createdDate ? new Date(createdDate).toLocaleDateString() : '';
       document.getElementById('edit-ShortDescrHe').value = '';
       document.getElementById('edit-DescriptionHe').value = '';
       document.getElementById('edit-ShortDescrEn').value = '';
       document.getElementById('edit-DescriptionEn').value = '';
       document.getElementById('preview-en').innerHTML = '';
       document.getElementById('preview-he').innerHTML = '';
+      AdminProductsView._updateNavUI();
 
       google.script.run.withSuccessHandler(data => {
                AdminProductsView.currentSku = data.sku;
-               AdminProductsView.currentMasterData = data.masterData || {}; 
-               AdminProductsView.currentStagingData = data.stagingData || {}; 
+               AdminProductsView.currentMasterData = data.masterData || {};
+               AdminProductsView.currentStagingData = data.stagingData || {};
                AdminProductsView.currentComaxData = data.comaxData || {};
-               
+
                document.getElementById('header-sku-display').textContent = data.sku;
-               document.getElementById('header-name-en-display').textContent = data.masterData.wdm_NameEn || '';
-               document.getElementById('header-name-he-display').textContent = data.masterData.wdm_NameHe || '';
+               document.getElementById('header-name-en-display').textContent = (data.masterData && data.masterData.wdm_NameEn) || '';
+               document.getElementById('header-name-he-display').textContent = (data.masterData && data.masterData.wdm_NameHe) || '';
 
                AdminProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
-               AdminProductsView.updatePreview();
+
+               // Use preview HTML returned by the backend — saves a second round-trip on open.
+               if (data.htmlEn !== undefined || data.htmlHe !== undefined) {
+                 document.getElementById('preview-en').innerHTML = data.htmlEn || '';
+                 document.getElementById('preview-he').innerHTML = data.htmlHe || '';
+               } else {
+                 AdminProductsView.updatePreview();
+               }
                document.getElementById('modal-status').textContent = '';
-      }).WebAppProducts_loadProductEditorData(taskId);
+      }).WebAppProducts_loadProductEditorData(taskId, sku || null);
     };
 
     AdminProductsView.populateEditor = function(m, s, c) {
@@ -1442,7 +1508,11 @@
         });
     });
 
-    AdminProductsView.closeModal = function() { document.getElementById('editor-modal').style.display = 'none'; };
+    AdminProductsView.closeModal = function() {
+      document.getElementById('editor-modal').style.display = 'none';
+      AdminProductsView.currentIndex = -1;
+      AdminProductsView._updateNavUI();
+    };
     AdminProductsView.switchTab = function(tabName) {
         document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
         document.getElementById('tab-'+tabName).style.display='block';
@@ -1461,12 +1531,55 @@
       document.getElementById('modal-status').textContent = 'Accepting...';
       google.script.run.withSuccessHandler(res => {
         if (res.success) {
-          AdminProductsView.closeModal();
-          AdminProductsView.refreshView();
+          // Auto-advance: splice accepted task out and open the next one in place.
+          // Falls back to closing the modal when the queue is drained or we weren't
+          // opened from the queue (e.g., from the Submissions table).
+          const idx = AdminProductsView.currentIndex;
+          const tasks = AdminProductsView.reviewTasks;
+          if (idx >= 0 && idx < tasks.length) {
+            tasks.splice(idx, 1);
+            document.getElementById('stat-review').textContent = tasks.length;
+            // Re-render the review table in the background so the list stays in sync,
+            // but don't block the next open on it.
+            AdminProductsView._rerenderReviewTable();
+            if (tasks.length === 0) {
+              AdminProductsView.closeModal();
+              AdminProductsView.refreshView();
+            } else {
+              const nextIdx = Math.min(idx, tasks.length - 1);
+              AdminProductsView.openByIndex(nextIdx);
+            }
+          } else {
+            AdminProductsView.closeModal();
+            AdminProductsView.refreshView();
+          }
         } else {
           alert('Error: ' + res.message);
         }
       }).WebAppProducts_handleAdminAccept(AdminProductsView.currentTaskId, AdminProductsView.currentSku, formData);
+    };
+
+    // Re-renders the review table from the current in-memory reviewTasks array,
+    // keeping row indices in sync after auto-advance splices.
+    AdminProductsView._rerenderReviewTable = function() {
+      const tbody = document.getElementById('review-list-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (AdminProductsView.reviewTasks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
+        return;
+      }
+      AdminProductsView.reviewTasks.forEach((task, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${task.productName || ''}</td>
+          <td>${task.sku}</td>
+          <td>${task.title}</td>
+          <td>${new Date(task.createdDate).toLocaleDateString()}</td>
+          <td><button class="btn btn-sm" onclick="AdminProductsView.openByIndex(${i})">Review</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
     };
 
     AdminProductsView.refreshView();

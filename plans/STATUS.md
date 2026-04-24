@@ -1,16 +1,16 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-17
+**Updated:** 2026-04-24
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-04-17 |
+| Last Active | 2026-04-24 |
 | Revenue | Steady |
-| Deploy Version | @76 |
-| Deploy Date | 2026-04-17 |
+| Deploy Version | @77 |
+| Deploy Date | 2026-04-24 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -98,6 +98,15 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-24:** Admin vintage-review modal UX fixes. Deployed @77 (user deployed manually — clasp auth expired during session).
+  - **Three issues addressed:** (1) slow modal open — two serial GAS round-trips plus a redundant full SysTasks scan just to resolve taskId→sku; (2) no prev/next navigation between review tasks in the queue; (3) created date hidden behind the modal.
+  - **Backend (`WebAppProducts.js`):** `loadProductEditorData(taskId, sku)` accepts sku (caller already knows it from the list) to skip the SysTasks scan; falls back to the old lookup when sku omitted. Also returns `htmlEn`/`htmlHe` so the initial preview renders without a second round-trip. New `_buildInitialFormData(master, staging)` helper mirrors the client's `getFormData()` merge rule exactly (staging wds_ overrides master wdm_ whenever defined, even if empty — avoids stale values when manager has cleared a field).
+  - **Frontend (`AdminProductsView.html`):** `loadReviewList` caches the tasks array as `reviewTasks`. New `openByIndex(i)` / `navTask(±1)` / `_updateNavUI()` drive prev/next and "N of M" position indicator. Modal header gained a meta row with position + created date. Modal footer gained Prev/Next buttons (auto-hidden on direct opens from Submissions table via taskId-match check on currentIndex). `acceptChanges` auto-advances: splices the accepted task, re-renders the review table in place via `_rerenderReviewTable()`, opens the next task at the same slot; only closes + full-refreshes when the queue drains.
+  - **Result:** User confirmed better perceived performance. Raw open latency similar because the 4-sheet CacheService was already warm under prior workflow; the real win is eliminating the between-tasks refresh cycle and keeping the admin in-modal.
+  - **Known clean-up (not done):** `ProductService.getProductHtmlPreview` ignores its `lookupMaps` param and rebuilds it internally — dead parameter, out of scope.
+  - Plan: `jlmops/plans/ADMIN_VINTAGE_REVIEW_UX_PLAN.md`
+  - Files modified: `WebAppProducts.js`, `AdminProductsView.html`
 
 - **2026-04-17:** Fixed "Published But Archived" validation rule to filter by web stock. Deployed @76.
   - **Bug:** Rule `validation.master.published_vs_archived` flagged 446 items including published web products with zero web stock. The 2026-03-09 fix had added `target_filter: cpm_Stock,!0` — but that filters **Comax** stock (sheet_B), while the business rule cares about **web** stock (sheet_A). Zero web stock for an archived-in-Comax product is fine; non-zero web stock is the real problem.
