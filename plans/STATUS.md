@@ -9,7 +9,7 @@
 | Phase | Stable |
 | Last Active | 2026-04-24 |
 | Revenue | Steady |
-| Deploy Version | @77 |
+| Deploy Version | @78 |
 | Deploy Date | 2026-04-24 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
@@ -99,7 +99,7 @@ Periodic business health checks — not automated, just a checklist for session 
 
 ## Session History
 
-- **2026-04-24b:** Two bug fixes — pending real-world watch (neither can be tested immediately).
+- **2026-04-24b:** Two bug fixes. Deployed @78 — pending real-world watch (neither can be tested immediately).
   - **Bug 1: "Available Online But Archived" validation rule still counted zero-stock products despite 2026-04-17 fix.** Root cause in `ValidationLogic.js:73` `_rowPassesFilter`: `String(row[filterKey] || '')` coerced numeric 0 to empty string, so a `wpm_Stock,!0` filter condition saw `'' !== '0'` and let zero-stock rows through. Fixed: `||` → `??` (nullish coalescing) so numeric 0 stringifies as `'0'` and the `!0` invert correctly rejects zero-stock rows.
   - **Bug 2: Count-origin vintage-update tasks differed from sync-validation ones.** Two mismatches: (a) inventory count path passed `''` for `linkedEntityName` so the admin review row showed no Product name; (b) title format differed (`"Vintage Update: ${sku}"` vs `"Vintage Update"`). Fixed: both count-origin paths (`submitInventoryCounts`, `importCountsFromSheet`) now pass the product name and use title `"Vintage Update (Count)"` — deliberately distinct from rule-violation `"Vintage Update"` so admin can tell the origin at a glance (the notes differ in significance between the two flows).
   - **Client changes (`ManagerInventoryView.html`):** row gained `data-product-name` attribute; submit handler carries `productName` through `selectedCounts`.
