@@ -353,8 +353,8 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
           TaskService.createTask(
             'task.validation.vintage_mismatch',
             item.sku,
-            '',
-            `Vintage Update: ${item.sku}`,
+            item.productName || '',
+            'Vintage Update (Count)',
             note,
             null,
             { allowDuplicate: true }
@@ -822,6 +822,7 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
     const dataRows = values.slice(1);
 
     const skuCol = headers.indexOf("SKU");
+    const productNameCol = headers.indexOf("Product Name");
     const storageCol = headers.indexOf("Storage Quantity");
     const officeCol = headers.indexOf("Office Quantity");
     const shopCol = headers.indexOf("Shop Quantity");
@@ -873,10 +874,12 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
       }
 
       const taskId = String(row[taskIdCol] || '').trim();
+      const productName = productNameCol !== -1 ? String(row[productNameCol] || '').trim() : '';
       parsedRows.push({
         rowNum: rowNum,
         sku: sku,
         taskId: taskId,
+        productName: productName,
         storageQty: parsedStorage,
         officeQty: parsedOffice,
         shopQty: parsedShop,
@@ -937,8 +940,8 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
           TaskService.createTask(
             'task.validation.vintage_mismatch',
             r.sku,
-            '',
-            `Vintage Update: ${r.sku}`,
+            r.productName || '',
+            'Vintage Update (Count)',
             note,
             null,
             { allowDuplicate: true }

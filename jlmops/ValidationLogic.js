@@ -70,7 +70,9 @@ const ValidationLogic = (function() {
           const [filterKey, rawFilterValue] = cond.split(',');
           const invert = rawFilterValue.startsWith('!');
           const filterValue = invert ? rawFilterValue.substring(1) : rawFilterValue;
-          const matches = String(row[filterKey] || '') === String(filterValue);
+          // Nullish coalesce, not `||`: numeric 0 must compare as '0', not be coerced to ''.
+          // Otherwise a filter like `wpm_Stock,!0` fails to exclude zero-stock rows.
+          const matches = String(row[filterKey] ?? '') === String(filterValue);
           if (invert ? matches : !matches) return false;
       }
       return true;

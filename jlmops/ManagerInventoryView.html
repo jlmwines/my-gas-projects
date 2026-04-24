@@ -163,7 +163,7 @@
                     const vintageRef = escapeAttr(item.vintage || '');
 
                     tableHtml += `
-                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-vintage-ref="${vintageRef}">
+                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-vintage-ref="${vintageRef}" data-product-name="${escapeAttr(item.productName || '')}">
                             <td class="text-center">${item.comaxQty}</td>
                             <td class="text-center" id="total-qty-${item.sku}">${item.totalQty}</td>
                             <td class="text-center">${item.bruryaQty}</td>
@@ -281,6 +281,7 @@
                     if (checkbox.checked) {
                         const taskId = row.dataset.taskId;
                         const sku = row.dataset.sku;
+                        const productName = row.dataset.productName || '';
                         const comaxStock = parseInt(row.dataset.comaxQty, 10);
                         const vintageRef = row.dataset.vintageRef || '';
                         const storageQty = parseInt(row.querySelector('[data-qty-type="storage"]').value, 10) || 0;
@@ -292,7 +293,7 @@
                         const vintageActual = vintageInput ? vintageInput.value.trim() : '';
                         const comment = commentInput ? commentInput.value.trim() : '';
 
-                        selectedCounts.push({ taskId, sku, comaxStock, storageQty, officeQty, shopQty, vintageActual, vintageRef, comment });
+                        selectedCounts.push({ taskId, sku, productName, comaxStock, storageQty, officeQty, shopQty, vintageActual, vintageRef, comment });
                     }
                 });
 

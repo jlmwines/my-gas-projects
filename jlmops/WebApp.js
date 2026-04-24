@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-04-17 11:13',
-  commit: 'Available Online But Archived rule now filters by web stock; filter engine supports AND conditions'
+  built: '2026-04-24 08:29',
+  commit: 'Validation filter handles numeric 0 correctly; count-origin vintage tasks carry product name and are titled "Vintage Update (Count)"'
 };
 
 function getVersion() {

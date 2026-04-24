@@ -99,6 +99,14 @@ Periodic business health checks — not automated, just a checklist for session 
 
 ## Session History
 
+- **2026-04-24b:** Two bug fixes — pending real-world watch (neither can be tested immediately).
+  - **Bug 1: "Available Online But Archived" validation rule still counted zero-stock products despite 2026-04-17 fix.** Root cause in `ValidationLogic.js:73` `_rowPassesFilter`: `String(row[filterKey] || '')` coerced numeric 0 to empty string, so a `wpm_Stock,!0` filter condition saw `'' !== '0'` and let zero-stock rows through. Fixed: `||` → `??` (nullish coalescing) so numeric 0 stringifies as `'0'` and the `!0` invert correctly rejects zero-stock rows.
+  - **Bug 2: Count-origin vintage-update tasks differed from sync-validation ones.** Two mismatches: (a) inventory count path passed `''` for `linkedEntityName` so the admin review row showed no Product name; (b) title format differed (`"Vintage Update: ${sku}"` vs `"Vintage Update"`). Fixed: both count-origin paths (`submitInventoryCounts`, `importCountsFromSheet`) now pass the product name and use title `"Vintage Update (Count)"` — deliberately distinct from rule-violation `"Vintage Update"` so admin can tell the origin at a glance (the notes differ in significance between the two flows).
+  - **Client changes (`ManagerInventoryView.html`):** row gained `data-product-name` attribute; submit handler carries `productName` through `selectedCounts`.
+  - **Sheet import (`WebAppInventory.js:importCountsFromSheet`):** now reads the "Product Name" column (column B) that the export already writes. Graceful fallback to empty if column missing.
+  - Files modified: `ValidationLogic.js`, `WebAppInventory.js`, `ManagerInventoryView.html`, `WebApp.js` (version stamp).
+  - **Watch:** Both fixes can only be confirmed when a real inventory count submission and a real sync happen. Monitor next Review queue + next sync validation run.
+
 - **2026-04-24:** Admin vintage-review modal UX fixes. Deployed @77 (user deployed manually — clasp auth expired during session).
   - **Three issues addressed:** (1) slow modal open — two serial GAS round-trips plus a redundant full SysTasks scan just to resolve taskId→sku; (2) no prev/next navigation between review tasks in the queue; (3) created date hidden behind the modal.
   - **Backend (`WebAppProducts.js`):** `loadProductEditorData(taskId, sku)` accepts sku (caller already knows it from the list) to skip the SysTasks scan; falls back to the old lookup when sku omitted. Also returns `htmlEn`/`htmlHe` so the initial preview renders without a second round-trip. New `_buildInitialFormData(master, staging)` helper mirrors the client's `getFormData()` merge rule exactly (staging wds_ overrides master wdm_ whenever defined, even if empty — avoids stale values when manager has cleared a field).
