@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-04-24 08:29',
-  commit: 'Validation filter handles numeric 0 correctly; count-origin vintage tasks carry product name and are titled "Vintage Update (Count)"'
+  built: '2026-04-26 19:36',
+  commit: 'Manager dashboard filters by assignedTo=Manager so Admin-handled Review tasks no longer leak in; generateComaxInventoryExport replaces full-sheet rewrite with per-row targeted writes (eliminates silent partial-failure that left count tasks stuck in Review)'
 };
 
 function getVersion() {

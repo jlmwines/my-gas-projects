@@ -740,9 +740,13 @@ function WebAppDashboardV2_getManagerData() {
     ];
 
     // Return manager tasks including Done (frontend filters by status)
+    // Only tasks currently assigned to Manager — once a task transitions to Review
+    // (manager_to_admin_review reassigns to Administrator) it belongs to admin and
+    // must not appear on the manager dashboard.
     const managerTasks = allTasksIncludingDone
       .filter(task => managerTaskTypes.includes(task.st_TaskTypeId))
       .filter(task => task.st_Status !== 'Cancelled')
+      .filter(task => task.st_AssignedTo === 'Manager')
       .map(task => ({
         id: task.st_TaskId,
         typeId: task.st_TaskTypeId,

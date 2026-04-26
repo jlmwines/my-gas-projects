@@ -1,16 +1,16 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-24
+**Updated:** 2026-04-26
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-04-24 |
+| Last Active | 2026-04-26 |
 | Revenue | Steady |
-| Deploy Version | @78 |
-| Deploy Date | 2026-04-24 |
+| Deploy Version | @79 |
+| Deploy Date | 2026-04-26 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -98,6 +98,14 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-26:** Two task-system fixes from a live data audit (140 count tasks stuck at Review on 4/20). Deployed @79.
+  - **Bug A — Manager dashboard leaked admin tasks.** `WebAppDashboardV2_getManagerData` filtered by `managerTaskTypes` and `Cancelled`, but not by `st_AssignedTo`. After a count or vintage task transitioned to Review (which `manager_to_admin_review` reassigns to Administrator), it stayed visible on the manager calendar/list. Added `.filter(task => task.st_AssignedTo === 'Manager')`.
+  - **Bug B — `generateComaxInventoryExport` had a silent partial-failure mode.** The export (1) read SysTasks once to find Accepted rows, (2) re-read the full sheet later, modified the Accepted rows in memory, and (3) wrote the **entire sheet** back with one `setValues()`. On large batches (4/19–4/21 ran 8 exports totaling ~390 items, biggest 86) the full-sheet write could fail or partially commit, while the export file and confirmation task were still created. Result: Accepted tasks looked like they reverted to Review (or never advanced), file was on disk, Comax got updated, but the source tasks never closed. Replaced with per-row targeted reads/writes for both SysTasks (Status='Done', DoneDate=now) and SysProductAudit (Storage/Office/Shop=0, NewQty←Brurya). Per-row failures now logged individually instead of silently dropping the whole batch. Cache invalidated on completion.
+  - **Bug C — possible: Admin Inventory View allegedly not showing Review count tasks.** Code at `WebAppInventory.js:391-392` does include them since the @73 fix. User confirmed @78 is live, so the fix is deployed. Suspect this report stems from looking at the Admin Dashboard widget (which has separate counting bugs at `WebAppDashboardV2.js:508-509` — wrong task types) rather than the Admin Inventory View. Not changed this session.
+  - **Data recovery:** User will manually flip the 140 stuck Review tasks to Done.
+  - Files modified: `WebAppDashboardV2.js`, `InventoryManagementService.js`, `WebApp.js` (version stamp).
+  - Plan note: see admin dashboard widget counts (`_getInventoryData`) for a future cleanup — `inventoryCountTasks` and `inventoryAwaitingReview` count wrong types.
 
 - **2026-04-24b:** Two bug fixes. Deployed @78.
   - **Bug 1 (confirmed fixed post-deploy): "Available Online But Archived" validation rule still counted zero-stock products despite 2026-04-17 fix.** Root cause in `ValidationLogic.js:73` `_rowPassesFilter`: `String(row[filterKey] || '')` coerced numeric 0 to empty string, so a `wpm_Stock,!0` filter condition saw `'' !== '0'` and let zero-stock rows through. Fixed: `||` → `??` (nullish coalescing) so numeric 0 stringifies as `'0'` and the `!0` invert correctly rejects zero-stock rows. User verified: no false positives on next sync.

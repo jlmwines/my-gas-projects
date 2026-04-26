@@ -989,11 +989,13 @@ const InventoryManagementService = (function() {
                 LoggerService.info(serviceName, functionName, `Created export file: ${fileName} with ${exportedCount} items.`);
 
                 // 5. Update Tasks to 'Done' AND Reset WIP Counts in SysProductAudit
-                const tStatusColIdx = tStatusCol + 1; 
-                const tDoneDateColIdx = taskHeaders.indexOf('st_DoneDate') + 1;
+                // Targeted per-row writes (not full-sheet rewrite). The previous full-sheet
+                // setValues() approach was fragile: a single failure dropped every status
+                // update, and large batches risked exceeding GAS write limits silently.
+                const tDoneDateColIdx = taskHeaders.indexOf('st_DoneDate'); // 0-based
                 const now = new Date();
 
-                // Prepare Audit Sheet updates
+                // Build SKU → audit sheet row map (1-based)
                 const auditDataForReset = productAuditSheet.getDataRange().getValues();
                 const auditHeadersForReset = auditDataForReset[0];
                 const paSkuColIdx = auditHeadersForReset.indexOf('pa_SKU');
@@ -1003,50 +1005,74 @@ const InventoryManagementService = (function() {
                 const paBruryaColIdx = auditHeadersForReset.indexOf('pa_BruryaQty');
                 const paNewQtyColIdx = auditHeadersForReset.indexOf('pa_NewQty');
 
-                const skuToRowIndexMap = new Map();
+                const skuToAuditRowMap = new Map();
                 for (let i = 1; i < auditDataForReset.length; i++) {
-                    skuToRowIndexMap.set(String(auditDataForReset[i][paSkuColIdx]).trim(), i + 1); // 1-based row
+                    skuToAuditRowMap.set(String(auditDataForReset[i][paSkuColIdx]).trim(), i + 1); // 1-based
                 }
 
-                // PERFORMANCE FIX: Batch all updates instead of individual setValue() calls
-                // Phase 13 refactoring - eliminated 40-50+ API calls per export
+                const taskNumCols = taskData[0].length;
+                const auditNumCols = auditDataForReset[0].length;
+                const taskUpdateFailures = [];
+                const auditUpdateFailures = [];
+                let tasksMarkedDone = 0;
 
-                // A. Batch update task statuses - read all task data, modify in memory, write back
-                const fullTaskData = taskSheet.getDataRange().getValues();
                 acceptedTaskIndices.forEach(rowIndex => {
-                    fullTaskData[rowIndex][tStatusCol] = 'Done';
-                    if (tDoneDateColIdx > 0) {
-                        fullTaskData[rowIndex][tDoneDateColIdx - 1] = now; // -1 because tDoneDateColIdx was +1 adjusted
-                    }
-                });
-
-                // Write all task updates in one batch operation
-                taskSheet.getRange(1, 1, fullTaskData.length, fullTaskData[0].length).setValues(fullTaskData);
-
-                // B. Batch update SysProductAudit - modify in memory, write back once
-                const auditDataModified = auditDataForReset.slice(); // Clone to modify
-                acceptedTaskIndices.forEach(rowIndex => {
+                    const sheetRow = rowIndex + 1; // taskData index → sheet row (header is sheet row 1, taskData[0])
                     const sku = String(taskData[rowIndex][tEntityCol]).trim();
-                    if (skuToRowIndexMap.has(sku)) {
-                        const auditRowIndex = skuToRowIndexMap.get(sku) - 1; // Convert to 0-based for array
+                    const taskId = taskData[rowIndex][tIdCol];
 
-                        // 1. Reset partial counts to 0
-                        if (paStorageColIdx > -1) auditDataModified[auditRowIndex][paStorageColIdx] = 0;
-                        if (paOfficeColIdx > -1) auditDataModified[auditRowIndex][paOfficeColIdx] = 0;
-                        if (paShopColIdx > -1) auditDataModified[auditRowIndex][paShopColIdx] = 0;
+                    // A. Update task row: read just this row, modify, write back.
+                    try {
+                        const rowRange = taskSheet.getRange(sheetRow, 1, 1, taskNumCols);
+                        const rowData = rowRange.getValues()[0];
+                        rowData[tStatusCol] = 'Done';
+                        if (tDoneDateColIdx > -1) {
+                            rowData[tDoneDateColIdx] = now;
+                        }
+                        rowRange.setValues([rowData]);
+                        tasksMarkedDone++;
+                    } catch (e) {
+                        taskUpdateFailures.push({ taskId: taskId, sku: sku, sheetRow: sheetRow, error: e.message });
+                        LoggerService.error(serviceName, functionName,
+                            `Failed to mark task ${taskId} (SKU ${sku}) Done at row ${sheetRow}: ${e.message}`, e);
+                    }
 
-                        // 2. Reset NewQty to match BruryaQty (Base)
-                        if (paNewQtyColIdx > -1 && paBruryaColIdx > -1) {
-                            const bruryaQty = auditDataModified[auditRowIndex][paBruryaColIdx];
-                            auditDataModified[auditRowIndex][paNewQtyColIdx] = bruryaQty;
+                    // B. Reset audit row: read just this row, modify, write back.
+                    if (skuToAuditRowMap.has(sku)) {
+                        const auditSheetRow = skuToAuditRowMap.get(sku);
+                        try {
+                            const rowRange = productAuditSheet.getRange(auditSheetRow, 1, 1, auditNumCols);
+                            const rowData = rowRange.getValues()[0];
+                            if (paStorageColIdx > -1) rowData[paStorageColIdx] = 0;
+                            if (paOfficeColIdx > -1) rowData[paOfficeColIdx] = 0;
+                            if (paShopColIdx > -1) rowData[paShopColIdx] = 0;
+                            if (paNewQtyColIdx > -1 && paBruryaColIdx > -1) {
+                                rowData[paNewQtyColIdx] = rowData[paBruryaColIdx];
+                            }
+                            rowRange.setValues([rowData]);
+                        } catch (e) {
+                            auditUpdateFailures.push({ sku: sku, sheetRow: auditSheetRow, error: e.message });
+                            LoggerService.error(serviceName, functionName,
+                                `Failed to reset audit for SKU ${sku} at row ${auditSheetRow}: ${e.message}`, e);
                         }
                     }
                 });
 
-                // Write all audit updates in one batch operation
-                productAuditSheet.getRange(1, 1, auditDataModified.length, auditDataModified[0].length).setValues(auditDataModified);
+                SpreadsheetApp.flush();
 
-                SpreadsheetApp.flush(); 
+                if (taskUpdateFailures.length > 0 || auditUpdateFailures.length > 0) {
+                    LoggerService.warn(serviceName, functionName,
+                        `Export file written. Marked ${tasksMarkedDone}/${acceptedTaskIndices.length} tasks Done. ` +
+                        `${taskUpdateFailures.length} task updates and ${auditUpdateFailures.length} audit updates failed — see error log.`);
+                } else {
+                    LoggerService.info(serviceName, functionName,
+                        `Marked ${tasksMarkedDone} tasks Done and reset matching audit rows.`);
+                }
+
+                // Invalidate task cache so the dashboard reflects the new Done statuses.
+                if (typeof WebAppTasks !== 'undefined' && WebAppTasks.invalidateCache) {
+                    WebAppTasks.invalidateCache();
+                }
 
                 // 6. Create Confirmation Task
                 const taskTitle = `Export Comax adjustments (${fileName})`;
