@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-27
+**Updated:** 2026-04-27c
 
 ## Metrics
 
@@ -15,7 +15,7 @@
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested, low priority, rare conditions) |
-| Next Milestone | Theme replacement + SEO setup + Pesach campaign |
+| Next Milestone | Theme replacement + SEO setup |
 | Blockers | 0 |
 
 ## Next Action
@@ -24,14 +24,15 @@
 - **Content: 7 posts live on production (EN+HE).** Remaining posts (Selection, Price vs Quality) resume May.
 - **About Page rebuilt** (EN ID 63644, HE ID 63649) — clean HTML replacing Elementor. User must disable Elementor on each page for new content to render.
 - **Marketing ACTIVE:**
-  - Seasonal bundle update in progress targeting Pesach wine sales, email campaign in preparation
   - Coupon active: NIS 50 off for new customers with minimum order
+  - Pesach campaign sent (early March); next seasonal push TBD
 - **Test SKU management fixes** (deployed, partially verified):
   1. Vendor SKU Update: *(not yet tested)*
   2. ~~Product Replacement~~ → ✓ Tested, working.
   3. Trim safety: *(not yet tested)*
 - **Website performance — theme swap planning next session.** SG Optimizer toggles captured first round of wins (font-display, minify, combine CSS/JS). Remaining 1,460 ms render-block and 226 KiB unused CSS are structural limits that only a theme swap can reach. See 2026-04-15b session entry for full diagnosis.
 - **Design standards phase complete (2026-04-27).** `plans/design-system/` is the design contract for the theme replacement. David Libre + Rubik, no italic, single bundle/package chassis, Woo native sale flash, contextual filters, single PDP. Live homepage and About page palettes (navy/gold and tan/cream) will be rebranded to the new tokens when the theme ships. Demo at `plans/design-system/index.html`.
+- **Foundation review phase complete + theme build started (2026-04-27c).** All 7 gaps in `plans/THEME_FOUNDATIONS.md` resolved or appropriately deferred. Pre-build action items: none. Theme build phase active on staging6: `website/jlmwines-theme/` exists with v1.0.7 installed and active on staging. Phase 2 (scaffold) complete; Phase 3 (core templates + design system port) in progress — sticky header, product search, nav with submenu dropdowns, WPML lang switcher (in menu), cart icon with badge, footer (newsletter + 4-col + base) all working. Cutover model switched to SG staging-to-live push with `theme-state.json` for state portability. **Outstanding build TODOs:** free shipping monitor, mobile nav, `front-page.php`, translation harvest, Woo hook customizations (`inc/woocommerce.php`), front-page hero/sections, page templates for 16 Elementor pages, performance tuning.
 - Build `CampaignService.getTargetSegment()` for segment export
 - Start small comeback campaign testing
 - Research PDF generation for Year in Wine
@@ -99,6 +100,46 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-27c:** Theme build phase started. Closed remaining theme-prep gaps and started building `jlmwines-theme/` on staging6. Theme is installable, active on staging, with real header/footer markup, design system styling, sticky scroll, product search. No production changes; staging only.
+  - **Gap audit closure.** All 7 gaps in `THEME_FOUNDATIONS.md` resolved or appropriately deferred — pre-build action items: none. Closed Gap #5 (bundle/package theme rendering): bundle/package/accessory grids are stock WC category grids; contextual filtering is stock WC layered nav; PDP CSS is routine build-phase styling; folds into general WC theme compatibility. False-alarm "Product Bundles plugin compatibility" gap I raised was not added to the dashboard (covered by general WC theme compatibility).
+  - **Ally accessibility plugin verified.** Theme switch test: Ally icon disappeared but tab-key accessibility still worked. Ally site confirms theme-agnostic, no Elementor dependency. Build-phase note added: ensure new theme's `footer.php` calls `wp_footer()` so Ally icon renders.
+  - **Cutover model rewritten in `THEME_REPLACEMENT_PLAN.md`.** Switched from "upload theme zip via wp-admin + deactivate plugins in order" to **SG staging-to-live push** model. Plugin deactivations happen on staging (Build phase step 7); cutover is single atomic SG push-to-live. Order frequency low (hours to days between orders) makes the cutover window forgiving — retry-friendly. Added `theme-state.json` + `inc/theme-state.php` to architecture for export/import of theme-managed options across staging refresh cycles. Added "Periodic staging refresh pattern" section: zip theme + export state → SG pull from live → unzip + import + re-push posts. Removes the manual "remember to redo settings" step.
+  - **STATUS.md cleanup.** Pesach campaign reference removed from active milestone (campaign shipped early March per 2026-02-27b session).
+  - **Theme build started: `website/jlmwines-theme/`.**
+    - **Phase 2 (scaffold) complete:** `style.css`, `functions.php`, `header.php`, `footer.php`, `index.php`, plus structural stubs (`singular.php`, `archive.php`, `search.php`, `404.php`, `comments.php`, `woocommerce.php`). Theme is installable on staging6.
+    - **Critical-error during first activation:** plugins expecting Elementor crashed against bare theme. Resolved by deactivating Elementor + Elementor Pro + Wpbingo Core + Redux Framework + WPC Smart Wishlist + WP File Manager + CF7 + WPML for CF7 on staging (planned for cutover anyway). User also opportunistically deactivated Mailchimp / Jetpack / Google for testing — re-enable as needed.
+    - **Phase 3 (design system port + interactive bits):** Copied `plans/design-system/styles.css` → `assets/css/main.css` (700-line design system port). `inc/enqueue.php` registers Google Fonts (David Libre + Rubik) + main.css with `filemtime` cache busting (fixed a bug where `JLMWINES_VERSION` constant was static, causing browser cache to serve stale CSS through 4 zip uploads). Real `header.php`: SVG sprite (cart/plus/check), `the_custom_logo()` with text fallback, primary nav menu (with submenu dropdown CSS), Woo cart icon with count badge, product search form (post_type=product, hidden under 960px). Real `footer.php`: newsletter callout (MC4WP shortcode if present, else placeholder), 4-column nav, base row with copyright + WPML switcher (WPML lang switcher removed from header per user; lives in primary menu instead). `assets/js/main.js`: sticky-scroll detection, toggles `.is-scrolled` class for compress/shadow effect. CSS additions for WP integration: nav-menu list reset, submenu dropdowns (hover/focus to open), `.site-main` width constraint matching `--container-max`, custom-logo sizing (max-height 48px), block alignment helpers, screen-reader-text helper.
+    - **Latest pushed:** v1.0.7 with sticky-scroll JS + product search. Tested through 7 zip iterations.
+  - **Inbox addition:** bundle/package images need re-export with transparent bg (currently white, visible against new beige page bg). Production task, Canva "Remove background" or equivalent.
+  - **Outstanding theme-build TODO list (build-phase items):**
+    - Free shipping monitor (Woo shipping zone integration + bilingual messages + multi-position rendering — design system CSS already in main.css)
+    - Mobile nav (hamburger toggle + drawer + mini-cart on small screens)
+    - `front-page.php` — homepage with hero, bundles row, packages row, "Why Trust Me," category tiles, testimonials, Wine Talk previews
+    - Translation harvest from WPML String Translation → seed `.po` for theme strings
+    - `inc/woocommerce.php` — Woo hook customizations (gallery, loop, account menu, mini-cart drawer, floating add-to-cart bar, sale flash override, free-shipping monitor positions)
+    - `inc/wpml.php` — switcher helper, menu sync notes
+    - `inc/theme-state.php` — export/import handler for `theme-state.json`
+    - WhatsApp button + age verification modal (theme-side rebuilds)
+    - Migrate 16 Elementor pages to PHP templates
+    - Performance tuning to hit ≥90 Lighthouse
+  - **Estimate (revised aggressive cadence, daily work):** ~1–2 weeks build + 1–2 weeks verification = cutover early-to-mid May 2026. Build phase ~3–5 days, verification is the long pole.
+  - Files created: `website/jlmwines-theme/style.css`, `functions.php`, `index.php`, `header.php`, `footer.php`, `singular.php`, `archive.php`, `search.php`, `404.php`, `comments.php`, `woocommerce.php`, `inc/enqueue.php`, `assets/css/main.css`, `assets/js/main.js`. Build artifact: `exchange/jlmwines-theme.zip`.
+  - Files modified: `plans/STATUS.md`, `plans/THEME_FOUNDATIONS.md`, `plans/THEME_REPLACEMENT_PLAN.md`.
+
+- **2026-04-27b:** Foundation review for theme replacement. Captured strategic anchors and identified 7 gaps to close before build phase. No production code changed.
+  - **Foundation read.** Confirmed business model (anti-snob, EN+HE moat, retention via 57-day cycle, Evyatar-as-product), audience segments (Frustration-Avoiders / Curious Explorers / Gift Senders / Know-What-I-Want), voice rules (first-person Evyatar vs "we", no jargon, never negative, no "ritual"/"cheap wine"), Israeli context (price sensitivity, word-of-mouth, ₪399 free shipping, occasion-first navigation), and visual identity already locked in `design-system/RATIONALE.md`.
+  - **Foundation gap.** Strategic anchors existed in `business/`, `website/`, `content/` but were not anchored in `plans/`; theme replacement plan only had a one-line voice gesture. Future cold reads of theme work would miss the strategy.
+  - **Plan: `THEME_FOUNDATIONS.md`** — pointer-style strategic anchor for the entire theme workstream. Pulls business model, segments, voice rules, sensory framework note, Israeli context constraints, visual identity headline, source-doc index. Adds a live 7-gap dashboard (Open gaps — theme prep) updated as gaps progress. Cross-referenced from `THEME_REPLACEMENT_PLAN.md`, `design-system/RATIONALE.md`, `EDITORIAL_TOKEN_MIGRATION.md`.
+  - **Gap #1 plan locked: `EDITORIAL_TOKEN_MIGRATION.md`.** Migrate 18 editorial source files (16 `.post.md` + 2 `.page.md`) from ad-hoc tokens (`#faf6f1`/`#5a4a3a`/`#C0A483` cream/brown/tan + 6–10px radius + soft shadows) to design system tokens (`#ffffff` surface / `#1a1612` ink / `#a83920` terracotta + 0 radius + no shadow). Two `sed` passes specified. User confirmed callout backgrounds → surface white. Implementation awaits "go."
+  - **Gap #2 in discussion: hero / marketing imagery direction.** Three registers identified — catalog PNG (locked), Canva impressionist oil painting (locked for blog), hero/lifestyle/campaign (open). Three splits on the table:
+    - A: real photo wherever Evyatar appears; Canva for atmospheric only
+    - B: Canva everywhere lifestyle, including painted Evyatar-likeness for hero/marketing
+    - C (recommended): hybrid — real photo at highest-trust moments only (Meet Evyatar page hero, packing slip insert, exit popup); Canva impressionist for homepage hero, campaign banners, About interior. Concentrates real photography where trust is the explicit job; uses painterly register where atmosphere/seasonality matters.
+    - User has not picked.
+  - **Gaps #3–#7 not started.** Voice in `.po` strings (which components first-person vs "we"), gift sender path visibility (homepage hero CTA vs current menu placement), bundle/package content parity (theme grids must not assume EN/HE counts match), design-system open items (loading/empty states, cart layout, forms, iconography, Complianz scroll-jump), performance acceptance criteria (tool, profile, threshold).
+  - Files created: `plans/THEME_FOUNDATIONS.md`, `plans/EDITORIAL_TOKEN_MIGRATION.md`.
+  - Files modified: `plans/THEME_REPLACEMENT_PLAN.md` (cross-ref to foundations), `plans/design-system/RATIONALE.md` (cross-ref to foundations), `plans/STATUS.md`.
 
 - **2026-04-27:** Theme replacement — design system standards phase. Resolved all open typography and component decisions; demo and rationale fully aligned with the resolved spec. No production code changed.
   - **Display font:** Frank Ruhl Libre rejected on prior session as too liturgical in Hebrew. Considered Bellefair (single-weight 400, breaks scale), David Libre, sans-serif Hebrew options. Chose **David Libre** (Ismar David, 1950s revival; 400/500/700) — modern enough to read editorial, distinctly not prayerbook.
@@ -302,3 +343,4 @@ _(Cross-project notes captured via `/note jlm <text>`. Review and clear at sessi
 - 2026-03-09: Vintage update tasks from late February not assigned to manager. Recent ones are fine. Check what changed — may have been the task.inventory.count fix or a routing issue.
 - ~~2026-03-10: jlmops task shows "Published But Archived (Summary: 446 Items)". Archived in Comax with zero inventory is OK if web shows zero stock.~~ → Fixed 2026-04-17 (@76)
 - 2026-03-10: Decanting field can be skipped — system should allow zero (0) as a valid value, not treat it as empty/skippable.
+- 2026-04-27: Bundle/package product images need re-export with transparent background (currently white-bg). Catalog spec calls for transparent PNG; bundles/packages predate strict enforcement. Use Canva "Remove background" or equivalent. Surfaced when new theme's beige page bg made the white boxes visible.

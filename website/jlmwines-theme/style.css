@@ -1,0 +1,33 @@
+/*
+Theme Name: JLM Wines
+Theme URI: https://jlmwines.com
+Author: JLM Wines
+Author URI: https://jlmwines.com
+Description: Custom theme for JLM Wines — bilingual EN+HE wine retailer. Editorial-confident-warm aesthetic. WooCommerce + WPML + Product Bundles native.
+Version: 1.0.7
+Requires at least: 6.0
+Tested up to: 6.7
+Requires PHP: 8.0
+License: GPL v2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: jlmwines
+Domain Path: /languages
+WC requires at least: 9.0
+WC tested up to: 10.7
+Tags: woocommerce, rtl-language-support, custom-logo, custom-menu, translation-ready
+*/
+
+/* Minimal reset — site styles live in assets/css/main.css */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+}
