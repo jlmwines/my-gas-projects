@@ -1,13 +1,13 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-26
+**Updated:** 2026-04-27
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Stable |
-| Last Active | 2026-04-26 |
+| Last Active | 2026-04-27 |
 | Revenue | Steady |
 | Deploy Version | @79 |
 | Deploy Date | 2026-04-26 |
@@ -31,6 +31,7 @@
   2. ~~Product Replacement~~ → ✓ Tested, working.
   3. Trim safety: *(not yet tested)*
 - **Website performance — theme swap planning next session.** SG Optimizer toggles captured first round of wins (font-display, minify, combine CSS/JS). Remaining 1,460 ms render-block and 226 KiB unused CSS are structural limits that only a theme swap can reach. See 2026-04-15b session entry for full diagnosis.
+- **Design standards phase complete (2026-04-27).** `plans/design-system/` is the design contract for the theme replacement. David Libre + Rubik, no italic, single bundle/package chassis, Woo native sale flash, contextual filters, single PDP. Live homepage and About page palettes (navy/gold and tan/cream) will be rebranded to the new tokens when the theme ships. Demo at `plans/design-system/index.html`.
 - Build `CampaignService.getTargetSegment()` for segment export
 - Start small comeback campaign testing
 - Research PDF generation for Year in Wine
@@ -98,6 +99,20 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-27:** Theme replacement — design system standards phase. Resolved all open typography and component decisions; demo and rationale fully aligned with the resolved spec. No production code changed.
+  - **Display font:** Frank Ruhl Libre rejected on prior session as too liturgical in Hebrew. Considered Bellefair (single-weight 400, breaks scale), David Libre, sans-serif Hebrew options. Chose **David Libre** (Ismar David, 1950s revival; 400/500/700) — modern enough to read editorial, distinctly not prayerbook.
+  - **No italic anywhere** — Hebrew italic leans against RTL eye motion (browsers fake-skew Hebrew italic, fights reading). Voice/emphasis instead carried by family shift (David Libre among Rubik), color (terracotta), weight bump. Eyebrow becomes David Libre 18px regular in terracotta.
+  - **Bundle/package cards:** one chassis. Catalog grouping (separate Bundles/Packages sections) carries primary distinction; tag pill (ink "Bundle" / terracotta "Package") + cream vs warm-tinted background carries the rest. Dropped the dual flat-illustration vs grouped-PNG dual-track from the original spec. Bundles' contents may rotate, so imagery never identifies specific products.
+  - **Discount badge:** hooks WooCommerce native `span.onsale`. Product Bundles plugin sets `is_on_sale()` through standard API so flash fires automatically on packages and sale-priced products. Theme CSS overrides default red-circle to amber sticker top-corner. Optional `woocommerce_sale_flash` filter for "Save ₪X" copy. No custom widget.
+  - **Catalog filters:** contextual — only render attribute filters that apply to the current result set. Sensory triad ordered intensity → complexity → acidity. Bundles/packages have no sensory attributes; dry reds/whites each have 2 of 3. Kashrut and grapes are not stored as attributes — no filter UI for them.
+  - **Production features inventory** added to RATIONALE.md: sticky header, header search, mini-cart drawer, free-shipping monitor (single component, multiple positions), WhatsApp icon (+972555174805 — bottom-corner, opposite to floating cart), Elementor age gate (language-aware), Complianz cookie banner, MC4WP newsletter, Elementor a11y widget (kept for Israeli law), WPML. Theme restyles, doesn't rebuild. **Bilingual content:** bundle/package products are managed independently EN/HE — not translations.
+  - **Card layout polish:** photo well padding removed (1000×1000 PNGs fill edge-to-edge via `object-fit: contain`); shelf shadow dropped from cards (kept on hero); footer pinned to bottom of card body via `margin-top: auto`; title clamps to 2 lines AND reserves 2-line `min-height` so meta-lines align across grid rows regardless of title length; meta-line clamps to 2 lines without min-height. Wishlist feature retired (user confirmed dead).
+  - **Demo additions:** sticky header, live viewport indicator pill (top-right, shows current width + desktop/mobile mode), labeled section explaining floating add-to-cart bar is PDP-only (Intersection Observer triggered after main add-to-cart scrolls out of view, not a global element). Three real product images pulled from live site (Ella Valley Zimrat Hakerem, Azeka Blend, Ella Valley Rakia).
+  - Plan: `plans/design-system/` — RATIONALE.md (design contract), README.md (quick start), index.html (single-page demo), styles.css (~700 lines reference implementation).
+  - Files modified: `plans/design-system/RATIONALE.md`, `plans/design-system/styles.css`, `plans/design-system/index.html`, `plans/design-system/README.md`, `plans/STATUS.md`.
+  - **Imagery state confirmed:** catalog spec locked in design system; blog/editorial style locked in `content/IMAGE_RECIPE.md` (Canva impressionist oil painting). Live homepage and About page structures carry over to the new theme but their current palettes (navy/charcoal + gold for homepage; tan/cream for About) do not — both adopt the new tokens when the theme ships. Decision made — no per-page palette variants.
+  - **Still open in design system:** hero/marketing imagery direction; iconography beyond the 3 in the sprite (no wishlist — favorites icon currently in homepage nav needs removal in the new theme); loading + empty states; cart page layout; form styling beyond newsletter; Complianz scroll-jump bug investigation.
 
 - **2026-04-26:** Two task-system fixes from a live data audit (140 count tasks stuck at Review on 4/20). Deployed @79 (commit 5b6a850, deploymentId preserved live URL).
   - **Bug A — Manager dashboard leaked admin tasks.** `WebAppDashboardV2_getManagerData` filtered by `managerTaskTypes` and `Cancelled`, but not by `st_AssignedTo`. After a count or vintage task transitioned to Review (which `manager_to_admin_review` reassigns to Administrator), it stayed visible on the manager calendar/list. Added `.filter(task => task.st_AssignedTo === 'Manager')`.

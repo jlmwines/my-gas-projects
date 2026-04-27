@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JLM Wines — Design System Reference</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ─── Dev-only viewport indicator (drag window narrower than 720px) ── -->
+<div id="vp-indicator" aria-hidden="true">
+  <span id="vp-w">—</span>px <span id="vp-mode">desktop</span>
+</div>
+<script>
+  (function () {
+    var el = document.getElementById('vp-w');
+    var mode = document.getElementById('vp-mode');
+    function update() {
+      var w = window.innerWidth;
+      el.textContent = w;
+      mode.textContent = w >= 720 ? 'desktop' : 'mobile';
+      mode.className = w >= 720 ? 'is-desktop' : 'is-mobile';
+    }
+    update();
+    window.addEventListener('resize', update);
+  })();
+</script>
+
+<!-- ─── SVG sprite (defined once, referenced everywhere) ─────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+    <!-- Cart icon -->
+    <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 4h2l2.4 12a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.5L21 8H6"/>
+      <circle cx="9" cy="20" r="1.4"/>
+      <circle cx="18" cy="20" r="1.4"/>
+    </symbol>
+
+    <!-- Plus icon -->
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 5v14M5 12h14"/>
+    </symbol>
+
+    <!-- Check icon -->
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12l5 5 11-12"/>
+    </symbol>
+
+    <!-- Red wine bottle -->
+    <symbol id="bottle-red" viewBox="0 0 100 280">
+      <linearGradient id="g-red-glass" x1="0" x2="1">
+        <stop offset="0" stop-color="#1c2818"/>
+        <stop offset="0.45" stop-color="#36482e"/>
+        <stop offset="1" stop-color="#0e1a0c"/>
+      </linearGradient>
+      <linearGradient id="g-cap" x1="0" x2="1">
+        <stop offset="0" stop-color="#2a2a2a"/>
+        <stop offset="0.5" stop-color="#5a5a5a"/>
+        <stop offset="1" stop-color="#1a1a1a"/>
+      </linearGradient>
+      <rect x="40" y="0" width="20" height="32" fill="url(#g-cap)"/>
+      <rect x="42" y="32" width="16" height="58" fill="url(#g-red-glass)"/>
+      <path d="M42 90 Q30 102 26 132 L26 268 Q26 280 36 280 L64 280 Q74 280 74 268 L74 132 Q70 102 58 90 Z" fill="url(#g-red-glass)"/>
+      <rect x="29" y="158" width="42" height="86" fill="#f4ecd8"/>
+      <text x="50" y="178" font-family="David Libre, serif" font-size="7" text-anchor="middle" fill="#1a1612" font-weight="700">JLM</text>
+      <line x1="36" y1="184" x2="64" y2="184" stroke="#a83920" stroke-width="0.6"/>
+      <text x="50" y="201" font-family="David Libre, serif" font-size="9" text-anchor="middle" fill="#1a1612">Estate</text>
+      <text x="50" y="217" font-family="Rubik, sans-serif" font-size="5" text-anchor="middle" fill="#1a1612" letter-spacing="1">RESERVE</text>
+      <text x="50" y="234" font-family="Rubik, sans-serif" font-size="3.5" text-anchor="middle" fill="#7a6e62" letter-spacing="1">JERUSALEM HILLS</text>
+    </symbol>
+
+    <!-- White wine bottle -->
+    <symbol id="bottle-white" viewBox="0 0 100 280">
+      <linearGradient id="g-white-glass" x1="0" x2="1">
+        <stop offset="0" stop-color="#a8b48a"/>
+        <stop offset="0.45" stop-color="#cfd9b1"/>
+        <stop offset="1" stop-color="#7e9068"/>
+      </linearGradient>
+      <linearGradient id="g-cap-w" x1="0" x2="1">
+        <stop offset="0" stop-color="#3e3e3e"/>
+        <stop offset="0.5" stop-color="#7c7c7c"/>
+        <stop offset="1" stop-color="#2a2a2a"/>
+      </linearGradient>
+      <rect x="40" y="0" width="20" height="32" fill="url(#g-cap-w)"/>
+      <rect x="42" y="32" width="16" height="58" fill="url(#g-white-glass)"/>
+      <path d="M42 90 Q32 102 28 132 L28 268 Q28 280 38 280 L62 280 Q72 280 72 268 L72 132 Q68 102 58 90 Z" fill="url(#g-white-glass)"/>
+      <rect x="30" y="160" width="40" height="78" fill="#fffdf6"/>
+      <text x="50" y="180" font-family="David Libre, serif" font-size="7" text-anchor="middle" fill="#1a1612" font-weight="700">JLM</text>
+      <line x1="37" y1="186" x2="63" y2="186" stroke="#a83920" stroke-width="0.6"/>
+      <text x="50" y="202" font-family="David Libre, serif" font-size="8" text-anchor="middle" fill="#1a1612">Field Blanc</text>
+      <text x="50" y="218" font-family="Rubik, sans-serif" font-size="4" text-anchor="middle" fill="#7a6e62" letter-spacing="1">CHARDONNAY · VIOGNIER</text>
+      <text x="50" y="232" font-family="Rubik, sans-serif" font-size="3.5" text-anchor="middle" fill="#7a6e62" letter-spacing="1">UPPER GALILEE</text>
+    </symbol>
+
+    <!-- Rosé bottle -->
+    <symbol id="bottle-rose" viewBox="0 0 100 280">
+      <linearGradient id="g-rose-glass" x1="0" x2="1">
+        <stop offset="0" stop-color="#d8a89c"/>
+        <stop offset="0.45" stop-color="#eecabc"/>
+        <stop offset="1" stop-color="#b7847a"/>
+      </linearGradient>
+      <rect x="40" y="0" width="20" height="32" fill="url(#g-cap)"/>
+      <rect x="42" y="32" width="16" height="58" fill="url(#g-rose-glass)"/>
+      <path d="M42 90 Q32 102 28 132 L28 268 Q28 280 38 280 L62 280 Q72 280 72 268 L72 132 Q68 102 58 90 Z" fill="url(#g-rose-glass)"/>
+      <rect x="30" y="160" width="40" height="78" fill="#fffdf6"/>
+      <text x="50" y="180" font-family="David Libre, serif" font-size="7" text-anchor="middle" fill="#1a1612" font-weight="700">JLM</text>
+      <line x1="38" y1="186" x2="62" y2="186" stroke="#a83920" stroke-width="0.6"/>
+      <text x="50" y="202" font-family="David Libre, serif" font-size="8" text-anchor="middle" fill="#1a1612">Pink Day</text>
+      <text x="50" y="218" font-family="Rubik, sans-serif" font-size="4" text-anchor="middle" fill="#7a6e62" letter-spacing="1">GRENACHE · SYRAH</text>
+    </symbol>
+
+    <!-- Boxed wine -->
+    <symbol id="boxed-wine" viewBox="0 0 220 240">
+      <linearGradient id="g-box-front" x1="0" x2="1">
+        <stop offset="0" stop-color="#7a3a1c"/>
+        <stop offset="1" stop-color="#5a2614"/>
+      </linearGradient>
+      <linearGradient id="g-box-side" x1="0" x2="1">
+        <stop offset="0" stop-color="#5a2614"/>
+        <stop offset="1" stop-color="#3e1a0e"/>
+      </linearGradient>
+      <!-- side panel -->
+      <polygon points="20,40 60,15 60,225 20,240" fill="url(#g-box-side)"/>
+      <!-- top panel -->
+      <polygon points="60,15 200,15 168,30 60,30" fill="#3a1a0e"/>
+      <!-- front panel -->
+      <polygon points="60,30 200,30 200,225 60,225" fill="url(#g-box-front)"/>
+      <!-- label area -->
+      <rect x="78" y="60" width="104" height="140" fill="#f4ecd8"/>
+      <text x="130" y="85" font-family="David Libre, serif" font-size="14" text-anchor="middle" fill="#1a1612" font-weight="700">JLM</text>
+      <line x1="100" y1="92" x2="160" y2="92" stroke="#a83920" stroke-width="1.2"/>
+      <text x="130" y="115" font-family="David Libre, serif" font-size="16" text-anchor="middle" fill="#1a1612">Everyday</text>
+      <text x="130" y="138" font-family="Rubik, sans-serif" font-size="9" text-anchor="middle" fill="#1a1612" letter-spacing="2">RED 3L</text>
+      <text x="130" y="170" font-family="Rubik, sans-serif" font-size="6" text-anchor="middle" fill="#7a6e62" letter-spacing="1.5">CARIGNAN BLEND</text>
+      <text x="130" y="184" font-family="Rubik, sans-serif" font-size="6" text-anchor="middle" fill="#7a6e62" letter-spacing="1.5">UPPER GALILEE</text>
+      <!-- spout -->
+      <rect x="100" y="195" width="60" height="20" fill="#1a1612"/>
+      <circle cx="130" cy="205" r="4" fill="#7a6e62"/>
+    </symbol>
+
+    <!-- Corkscrew (accessory) -->
+    <symbol id="acc-corkscrew" viewBox="0 0 120 240">
+      <!-- handle -->
+      <rect x="20" y="20" width="80" height="38" rx="6" fill="#1a1612"/>
+      <rect x="28" y="28" width="64" height="22" rx="3" fill="#36281a"/>
+      <text x="60" y="44" font-family="Rubik, sans-serif" font-size="9" text-anchor="middle" fill="#f4ecd8" letter-spacing="1.5">JLM</text>
+      <!-- arms -->
+      <rect x="46" y="58" width="6" height="60" rx="3" fill="#a8a8a8"/>
+      <rect x="68" y="58" width="6" height="60" rx="3" fill="#a8a8a8"/>
+      <!-- body -->
+      <rect x="42" y="118" width="36" height="40" rx="4" fill="#7a7a7a"/>
+      <!-- screw -->
+      <path d="M60 158 Q50 165 60 175 Q70 185 60 195 Q50 205 60 215 Q70 225 60 232" stroke="#5a5a5a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </symbol>
+
+  </defs>
+</svg>
+
+
+<!-- ─── HEADER ─────────────────────────────────────────────────────── -->
+<header class="site-header">
+  <div class="container site-header-inner">
+    <a class="site-logo" href="#">JLM <span style="color:var(--c-accent)">·</span> Wines</a>
+    <nav class="site-nav">
+      <a href="#">Shop</a>
+      <a href="#">Packages</a>
+      <a href="#">Bundles</a>
+      <a href="#">Wine Talk</a>
+      <a href="#">About</a>
+    </nav>
+    <div class="site-tools">
+      <span class="lang-switch"><a class="active" href="#">EN</a><a href="#">עב</a></span>
+      <a class="cart-icon" href="#" aria-label="Cart"><svg width="20" height="20"><use href="#i-cart"/></svg><span class="cart-icon-count">2</span></a>
+    </div>
+  </div>
+</header>
+
+
+<!-- ─── HERO (English) ─────────────────────────────────────────────── -->
+<section class="container hero">
+  <div class="hero-grid">
+    <div>
+      <div class="t-eyebrow hero-eyebrow">— Curated by Evyatar</div>
+      <h1 class="t-display-1 hero-headline">Good wine, no homework.</h1>
+      <p class="hero-subline">We taste it all so you don't have to. Browse the cellar, build a bundle, or let us pick. Either way, no jargon.</p>
+      <div class="hero-cta">
+        <a class="btn" href="#">Shop the cellar</a>
+        <a class="btn btn--ghost" href="#">Browse packages</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-shelf-shadow"></div>
+      <div class="hero-shelf"></div>
+      <svg class="hero-bottle" viewBox="0 0 100 280"><use href="#bottle-red"/></svg>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Color palette ────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">01</span><span class="label">Color System</span></div>
+      <h2 class="demo-title">Eight tokens, no more.</h2>
+      <p class="demo-desc">Warm cream base, warm-black ink, single confident accent in deep terracotta. Terracotta is food-coded and Mediterranean — distinctly not the obvious wine red. Functional colors (success / warning / error) sit alongside but stay quiet.</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#f7f3ec"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Base</div>
+          <div class="swatch-hex">#f7f3ec</div>
+          <div class="swatch-use">Page background. Warm cream — not stark white. Welcoming, not clinical.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#ffffff;border-bottom:1px solid var(--c-ink-12)"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Surface</div>
+          <div class="swatch-hex">#ffffff</div>
+          <div class="swatch-use">Cards and elevated surfaces. Subtle contrast against base creates visual lift without shadow.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#1a1612"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Ink</div>
+          <div class="swatch-hex">#1a1612</div>
+          <div class="swatch-use">All body text and headings. Warm near-black — never pure #000 (too cold).</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#7a6e62"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Muted</div>
+          <div class="swatch-hex">#7a6e62</div>
+          <div class="swatch-use">Secondary text, captions, borders. Warm gray. AA on cream base.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#a83920"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Accent</div>
+          <div class="swatch-hex">#a83920</div>
+          <div class="swatch-use">CTAs, links, highlights, brand moments. Deep terracotta — earthy, food-coded, not wine-cliché.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#4a7a3e"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Success</div>
+          <div class="swatch-hex">#4a7a3e</div>
+          <div class="swatch-use">Free-shipping qualified, success messages. Sage — natural, restrained.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#c9882c"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Warning</div>
+          <div class="swatch-hex">#c9882c</div>
+          <div class="swatch-use">Sale badges, low-stock notices. Warm amber — attention without alarm.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#8a2018"></div>
+        <div class="swatch-meta">
+          <div class="swatch-name">Error</div>
+          <div class="swatch-hex">#8a2018</div>
+          <div class="swatch-use">Form errors, destructive states. Distinguishable from accent.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Typography ───────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">02</span><span class="label">Typography</span></div>
+      <h2 class="demo-title">Two fonts. Both bilingual. No compromise on Hebrew.</h2>
+      <p class="demo-desc"><strong style="color:var(--c-ink)">David Libre</strong> (display) handles headlines, eyebrows, section markers, and pull quotes. Mid-century Hebrew serif (Ismar David, 1950s) — modern enough to read editorial, distinctly not liturgical. Three weights: 400 / 500 / 700. <strong style="color:var(--c-ink)">Rubik</strong> (UI) handles everything functional: body, prices, navigation, buttons, micro-text. The pair gives JLM a voice no other Israeli wine site has. <strong style="color:var(--c-ink)">No italic anywhere</strong> — Hebrew italic leans against right-to-left reading, so the system uses color and weight shifts for emphasis instead.</p>
+    </div>
+    <div>
+      <div class="type-row">
+        <div class="label">H1 / Display</div>
+        <div>
+          <div class="type-sample-en t-display-1">Good wine, no homework.</div>
+          <div class="type-sample-he t-display-1">יין טוב, בלי שיעורי בית.</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">H2 / Display</div>
+        <div>
+          <div class="type-sample-en t-display-2">This week from the cellar</div>
+          <div class="type-sample-he t-display-2">השבוע מהמרתף</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">H3 / UI Bold</div>
+        <div>
+          <div class="type-sample-en t-h3">Free shipping on orders over ₪400</div>
+          <div class="type-sample-he t-h3">משלוח חינם בהזמנות מעל ₪400</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">Body</div>
+        <div>
+          <div class="type-sample-en t-body">We taste everything. We reject what doesn't meet the bar. The wines you see are the ones we'd pour for our own table — no marketing budgets, no incentives, no apologies. If it's here, it's because Evyatar said yes.</div>
+          <div class="type-sample-he t-body">אנחנו טועמים הכל. אנחנו פוסלים את מה שלא עומד ברף. היינות שאתם רואים הם אלה שהיינו מגישים לשולחן שלנו — בלי תקציבי שיווק, בלי תמריצים, בלי התנצלויות. אם זה כאן, זה כי אביתר אמר כן.</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">Small</div>
+        <div>
+          <div class="type-sample-en t-small">Delivery 1–3 working days · Pickup available in Jerusalem</div>
+          <div class="type-sample-he t-small">משלוח 1–3 ימי עסקים · ניתן לאיסוף בירושלים</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">Micro / Caption</div>
+        <div>
+          <div class="type-sample-en t-micro">Upper Galilee · Cabernet Sauvignon</div>
+          <div class="type-sample-he t-micro">גליל עליון · קברנה סוביניון</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">Eyebrow</div>
+        <div>
+          <div class="type-sample-en t-eyebrow">— Curated by Evyatar</div>
+          <div class="type-sample-he t-eyebrow">— באוצרות אביתר</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <div class="label">Price</div>
+        <div>
+          <div class="type-sample-en"><span class="t-price">₪89.00</span> &nbsp;<span style="color:var(--c-muted);font-size:14px;">tabular numerals, slight negative tracking</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Buttons ──────────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">03</span><span class="label">Buttons & Links</span></div>
+      <h2 class="demo-title">Decisive, not soft.</h2>
+      <p class="demo-desc">Rectangular buttons, no pills. The accent CTA does heavy lifting; ghost variant for secondary actions. Focus state is high-contrast (ink outline, not a soft glow) for accessibility.</p>
+    </div>
+    <div class="flex-row" style="gap:var(--s-4)">
+      <button class="btn">Add to cart</button>
+      <button class="btn btn--small">Add to cart</button>
+      <button class="btn btn--ghost">Browse packages</button>
+      <button class="btn btn--ghost btn--small">Learn more</button>
+      <button class="btn" disabled>Out of stock</button>
+    </div>
+    <div style="margin-top:var(--s-6)" class="flex-row">
+      <a class="link" href="#">Read about how we choose wines</a>
+      <span style="color:var(--c-muted)">·</span>
+      <a class="link" href="#">See all 2026 vintages</a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Product cards ───────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">04</span><span class="label">Product Cards</span></div>
+      <h2 class="demo-title">The bottle is the hero. Everything else gets out of the way.</h2>
+      <p class="demo-desc">Cards are nearly chrome-free: white surface, the transparent-PNG bottle sized at 60% of the photo well, a soft radial shelf shadow grounding it (so it doesn't feel sterile), then minimal text. Hover lifts the whole card subtly and nudges the bottle up — a small indication of interactivity without animation noise. Discount sticker uses WooCommerce native <code>.onsale</code> markup so theme styling inherits the existing sale logic.</p>
+    </div>
+    <div class="product-grid">
+      <article class="card">
+        <div class="card-photo">
+          <img src="https://jlmwines.com/wp-content/uploads/2025/02/Ella-Valley-Zimrat-Hakerem-Red-2017.png" alt="Ella Valley Zimrat Hakerem Red">
+        </div>
+        <div class="card-body">
+          <div class="card-meta">Red · Ella Valley</div>
+          <div class="card-title">Zimrat Hakerem Red</div>
+          <div class="card-meta-line">Full body, ripe black fruit, oak</div>
+          <div class="card-footer">
+            <span class="card-price">89<span class="card-price-currency">₪</span></span>
+            <button class="card-cart-btn" aria-label="Add to cart"><svg><use href="#i-plus"/></svg></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-photo">
+          <img src="https://jlmwines.com/wp-content/uploads/2025/09/Azeka-Blend.png" alt="Azeka Blend">
+        </div>
+        <div class="card-body">
+          <div class="card-meta">Red blend · Judean Hills</div>
+          <div class="card-title">Azeka Blend</div>
+          <div class="card-meta-line">Medium body, plum, soft tannin</div>
+          <div class="card-footer">
+            <span class="card-price">72<span class="card-price-currency">₪</span></span>
+            <button class="card-cart-btn" aria-label="Add to cart"><svg><use href="#i-plus"/></svg></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <span class="onsale">Save ₪15</span>
+        <div class="card-photo">
+          <img src="https://jlmwines.com/wp-content/uploads/2025/12/Ella-Valley-Rakia.png" alt="Ella Valley Rakia">
+        </div>
+        <div class="card-body">
+          <div class="card-meta">Spirit · Ella Valley</div>
+          <div class="card-title">Ella Valley Rakia</div>
+          <div class="card-meta-line">Pomace brandy, herbal finish</div>
+          <div class="card-footer">
+            <span class="card-price">58<span class="card-price-currency">₪</span></span>
+            <button class="card-cart-btn" aria-label="Add to cart"><svg><use href="#i-plus"/></svg></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-photo">
+          <svg viewBox="0 0 220 240"><use href="#boxed-wine"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="card-meta">Boxed · 3L · Everyday</div>
+          <div class="card-title">Everyday Red · Carignan blend</div>
+          <div class="card-meta-line">Equal to 4 bottles · 6 weeks once opened</div>
+          <div class="card-footer">
+            <span class="card-price">189<span class="card-price-currency">₪</span></span>
+            <button class="card-cart-btn" aria-label="Add to cart"><svg><use href="#i-plus"/></svg></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-photo card-photo--accessory">
+          <svg viewBox="0 0 120 240"><use href="#acc-corkscrew"/></svg>
+        </div>
+        <div class="card-body">
+          <div class="card-meta">Accessory</div>
+          <div class="card-title">JLM Wing Corkscrew</div>
+          <div class="card-meta-line">Ours since 2019, still going</div>
+          <div class="card-footer">
+            <span class="card-price">42<span class="card-price-currency">₪</span></span>
+            <button class="card-cart-btn" aria-label="Add to cart"><svg><use href="#i-plus"/></svg></button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Bundle cards ────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">05</span><span class="label">Bundles &amp; Packages</span></div>
+      <h2 class="demo-title">Same chassis. Tag pill carries the kind.</h2>
+      <p class="demo-desc">Bundles and packages share one card chassis. Catalog grouping (separate Bundles and Packages sections) does the heavy lifting; on the card itself, the tag pill (ink "Bundle" / terracotta "Package") plus a subtle background tint on packages signals the kind. Bundle imagery never identifies specific products — contents may rotate without invalidating the image. Packages, being fixed by definition, can use richer imagery if the catalog gets one.</p>
+    </div>
+    <div class="bundle-grid">
+
+      <article class="bundle-card">
+        <div class="bundle-card-head">
+          <span class="bundle-card-tag">Bundle</span>
+          <div class="bundle-card-bottles">
+            <svg viewBox="0 0 100 280"><use href="#bottle-red"/></svg>
+            <svg viewBox="0 0 100 280"><use href="#bottle-white"/></svg>
+            <svg viewBox="0 0 100 280"><use href="#bottle-rose"/></svg>
+          </div>
+        </div>
+        <div class="bundle-card-body">
+          <div class="card-meta">Build Your Own · 6 bottles</div>
+          <h3 class="bundle-card-title">Mix Six</h3>
+          <p class="bundle-card-desc">Pick any six bottles from the cellar. We'll pack them safely, you save on shipping.</p>
+          <div class="bundle-card-footer">
+            <span class="card-price">from 480<span class="card-price-currency">₪</span></span>
+            <a class="link" href="#">Build the bundle →</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="bundle-card">
+        <span class="onsale">Save ₪38</span>
+        <div class="bundle-card-head bundle-card-head--package">
+          <span class="bundle-card-tag bundle-card-tag--package">Package</span>
+          <div class="bundle-card-bottles">
+            <svg viewBox="0 0 100 280"><use href="#bottle-red"/></svg>
+            <svg viewBox="0 0 100 280"><use href="#bottle-white"/></svg>
+            <svg viewBox="0 0 100 280"><use href="#bottle-rose"/></svg>
+          </div>
+        </div>
+        <div class="bundle-card-body">
+          <div class="card-meta">Curated · 3 bottles · fixed selection</div>
+          <h3 class="bundle-card-title">An Israeli Sampler</h3>
+          <p class="bundle-card-desc">A red, a white, a rosé — three bottles that say what Israeli wine actually tastes like in 2026. Hand-picked, gift-ready.</p>
+          <div class="bundle-card-footer">
+            <span class="card-price">219<span class="card-price-currency">₪</span></span>
+            <span class="bundle-savings">was ₪257</span>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Free shipping monitor ────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">06</span><span class="label">Conversion Components</span></div>
+      <h2 class="demo-title">Quietly persuasive.</h2>
+      <p class="demo-desc">The free-shipping monitor sits in the cart and mini-cart. Two states: <strong>in-progress</strong> (terracotta accent fill, current/target prices flanking the bar) and <strong>qualified</strong> (sage green, success message). Bilingual via WPML strings. Every label is editable.</p>
+    </div>
+
+    <div style="display:grid;gap:var(--s-4);max-width:680px">
+      <div class="shipping-monitor">
+        <div class="shipping-monitor-head">
+          <div class="shipping-monitor-message">Add <strong>₪124</strong> for free shipping</div>
+          <div class="shipping-monitor-amounts">₪276 / ₪400</div>
+        </div>
+        <div class="shipping-monitor-bar"><div class="shipping-monitor-fill" style="width:69%"></div></div>
+      </div>
+
+      <div class="shipping-monitor qualified">
+        <div class="shipping-monitor-head">
+          <div class="shipping-monitor-message">
+            <svg width="18" height="18"><use href="#i-check"/></svg>
+            You qualify for <strong>free shipping</strong>
+          </div>
+          <div class="shipping-monitor-amounts">₪432 / ₪400</div>
+        </div>
+        <div class="shipping-monitor-bar"><div class="shipping-monitor-fill" style="width:100%"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: RTL versions ─────────────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">07</span><span class="label">Hebrew · RTL</span></div>
+      <h2 class="demo-title">Hebrew is a peer, not a translation.</h2>
+      <p class="demo-desc">Same components, flipped. Notice: card-cart-btn moves to the start (which is now the right), prices stay tabular, the shelf shadow stays centered, the eyebrow's em-dash flips correctly. Hebrew gets a +1px bump on body (per the type system) and a tighter line-height — it reads better that way.</p>
+    </div>
+
+    <div class="locale-pair">
+
+      <!-- HE Hero -->
+      <div dir="rtl">
+        <div class="locale-tag">Hero · Hebrew</div>
+        <div style="background:var(--c-surface);padding:var(--s-8);border:1px solid var(--c-ink-12)">
+          <div class="t-eyebrow" style="margin-bottom:var(--s-3)">— באוצרות אביתר</div>
+          <h2 class="t-display-2" style="margin-bottom:var(--s-3);max-width:14ch">יין טוב, בלי שיעורי בית.</h2>
+          <p class="t-body" style="max-width:36ch;margin-bottom:var(--s-6)">אנחנו טועמים הכל כדי שאתם לא תצטרכו. עיינו במרתף, בנו חבילה, או תנו לנו לבחור. בכל מקרה — בלי ז'רגון.</p>
+          <div class="flex-row">
+            <a class="btn" href="#">לקנייה במרתף</a>
+            <a class="btn btn--ghost" href="#">חבילות מומלצות</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- HE Product card -->
+      <div dir="rtl">
+        <div class="locale-tag">Product card · Hebrew</div>
+        <div style="max-width:300px">
+          <article class="card">
+            <div class="card-photo">
+              <svg viewBox="0 0 100 280"><use href="#bottle-red"/></svg>
+            </div>
+            <div class="card-body">
+              <div class="card-meta">אדום · הרי ירושלים</div>
+              <div class="card-title">אסטייט רזרב · קברנה סוביניון</div>
+              <div class="card-meta-line">גוף מלא, עשבי תיבול וקאסיס</div>
+              <div class="card-footer">
+                <span class="card-price">₪89</span>
+                <button class="card-cart-btn" aria-label="הוסף לעגלה"><svg><use href="#i-plus"/></svg></button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="divider">
+
+    <div dir="rtl" style="max-width:680px">
+      <div class="locale-tag">Free shipping monitor · Hebrew</div>
+      <div class="shipping-monitor">
+        <div class="shipping-monitor-head">
+          <div class="shipping-monitor-message">הוסיפו <strong>₪124</strong> למשלוח חינם</div>
+          <div class="shipping-monitor-amounts">₪276 / ₪400</div>
+        </div>
+        <div class="shipping-monitor-bar"><div class="shipping-monitor-fill" style="width:69%"></div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Image treatment notebook ─────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">08</span><span class="label">Image Treatment</span></div>
+      <h2 class="demo-title">The catalog spec is a feature.</h2>
+    </div>
+    <div class="notebook">
+      <p style="margin-bottom:12px"><strong>Catalog standard (locked):</strong> 1000px square, transparent PNG, bottle visible, year obscured. Boxed wine shows the box. Accessories use the same standard. Renders at 60% of the card photo well — the bottle has room to breathe.</p>
+      <p style="margin-bottom:12px"><strong>Grounding treatment:</strong> a soft radial shelf shadow under the bottle (low-opacity ink ellipse, 8px tall, blurred), inside the photo well. Prevents the floating-sterile look of pure transparent PNGs on white. The shadow stays even when the bottle nudges up on hover — the bottle moves over its shadow, the shadow stays put.</p>
+      <p style="margin-bottom:12px"><strong>Bundles vs packages:</strong> one card chassis. Catalog grouping (separate Bundles / Packages sections) is the primary signal. On the card itself: ink "Bundle" tag pill + cream-base photo well, OR terracotta "Package" tag pill + warm tinted gradient photo well. Bundle imagery never identifies specific products (contents may rotate); package imagery can be richer because contents are fixed.</p>
+      <p style="margin-bottom:12px"><strong>Discount badges:</strong> WooCommerce native sale flash (<code>span.onsale</code>). The Product Bundles plugin sets <code>is_on_sale()</code> through the standard API, so the flash fires automatically on any package or sale-priced product. Theme overrides default styling to amber sticker, top corner. Optional <code>woocommerce_sale_flash</code> filter swaps "Sale!" for "Save ₪50" / "חיסכון ₪50" by reading <code>regular_price - sale_price</code>.</p>
+      <p style="margin-bottom:12px"><strong>Format pipeline:</strong> archival masters stay PNG-1000 (lossless, source of truth). Theme serves WebP-with-alpha at runtime via <code>&lt;picture&gt;</code> + <code>srcset</code>. Reduces a 240 KB PNG to ~60–80 KB WebP with no visible loss. Fallback to PNG for ancient browsers (~0.3% of traffic).</p>
+      <p style="margin-bottom:12px"><strong>Sizes per slot:</strong> card thumb 360w, card 2x retina 720w, single product hero 1000w, single product zoom 2000w (upscaled if needed). All cropped square. Lazy-loaded except for above-the-fold.</p>
+      <p><strong>Lifestyle / hero / blog imagery:</strong> separate spec — atmospheric, food-and-table moments, bright daylight (not vineyard sunsets). Catalog and lifestyle never appear in the same component.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── DEMO: Production features the theme inherits ───────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">09</span><span class="label">Production Features</span></div>
+      <h2 class="demo-title">What the new theme inherits — restyled, not rebuilt.</h2>
+      <p class="demo-desc">The live site already runs sticky header, header search, age verification, Complianz consent, Mailchimp signup (MC4WP), WhatsApp click-to-chat, the Elementor accessibility widget, WPML, and Product Bundles. The theme replacement keeps these plugins; the design system tells them how to look.</p>
+    </div>
+    <div class="notebook">
+      <p style="margin-bottom:12px"><strong>Sticky header:</strong> compresses on scroll (logo shrinks, nav stays, cart + search + lang switcher persist). Shadow appears only when scrolled. Background remains <code>--c-base</code> with a 1px <code>--c-ink-12</code> bottom border.</p>
+      <p style="margin-bottom:12px"><strong>Header search:</strong> always-visible input next to the language switcher. WooCommerce native product search backs it. Field uses the footer-input pattern (transparent, ink border, terracotta on focus).</p>
+      <p style="margin-bottom:12px"><strong>Mini-cart:</strong> opens as a drawer from the cart icon click. Contains the free-shipping monitor at the top, line items in compact horizontal layout, totals + checkout CTA at the bottom. Not always-visible — the header cart icon + count badge does the persistent signaling.</p>
+      <p style="margin-bottom:12px"><strong>Free-shipping monitor:</strong> single component, multiple positions. Slim sticky strip under the header on cart-bearing pages, top of the mini-cart drawer, top of the cart page, above the PDP add-to-cart. Data-driven (current cart total + threshold).</p>
+      <p style="margin-bottom:12px"><strong>WhatsApp floating icon:</strong> bottom-corner circle, opposite horizontal corner from the floating add-to-cart bar. 4-6 second appearance delay. Tap opens chat with +972555174805. Both icons flip together in RTL.</p>
+      <p style="margin-bottom:12px"><strong>Age verification gate:</strong> appears in the language of the page the user landed on. Footer of the modal carries a small language toggle that re-routes to the equivalent page in the other language. "Yes 18+" stores cookie/localStorage, proceeds to original URL. "No" redirects off-site.</p>
+      <p style="margin-bottom:12px"><strong>Complianz cookie banner:</strong> existing plugin. Theme styles the banner to match the system: cream-base background, ink text, terracotta CTA. Close button must not affect scroll position (current bug — investigate or replace).</p>
+      <p style="margin-bottom:12px"><strong>Newsletter form (MC4WP):</strong> styled to match the footer-form pattern. Plugin emits the markup, theme CSS does the rest.</p>
+      <p style="margin-bottom:12px"><strong>Accessibility widget:</strong> Elementor a11y widget remains for Israeli law compliance. Self-contained 38 KiB, theme-agnostic.</p>
+      <p style="margin-bottom:12px"><strong>Catalog filter UI:</strong> contextual — only renders attribute filters that apply to the current result set. Sensory triad, when shown, ordered <strong>intensity → complexity → acidity</strong>. Bundles/packages have no sensory attributes; dry reds/whites each have 2 of 3. Kashrut and grapes are not stored as attributes — no catalog filter.</p>
+      <p><strong>Bilingual content:</strong> bundle and package products are managed independently in EN and HE — not translations. Design must not assume parity. WPML still drives the language switch and dir attribute for everything else.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── FOOTER ─────────────────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div class="container">
+
+    <div class="footer-newsletter">
+      <div>
+        <h2>Stay close to the cellar.</h2>
+        <p>One short note when something special arrives. No daily blasts. No "act now."</p>
+      </div>
+      <form class="footer-form" onsubmit="event.preventDefault()">
+        <input type="email" placeholder="your@email" aria-label="Email">
+        <button type="submit">Subscribe</button>
+      </form>
+    </div>
+
+    <div class="footer-cols">
+      <div class="footer-col">
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#">All wines</a></li>
+          <li><a href="#">Reds</a></li>
+          <li><a href="#">Whites &amp; Rosés</a></li>
+          <li><a href="#">Boxed wines</a></li>
+          <li><a href="#">Accessories</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Bundles</h4>
+        <ul>
+          <li><a href="#">Mix Six</a></li>
+          <li><a href="#">Mix Twelve</a></li>
+          <li><a href="#">Israeli Sampler</a></li>
+          <li><a href="#">Gift packages</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <ul>
+          <li><a href="#">How we choose wines</a></li>
+          <li><a href="#">Meet Evyatar</a></li>
+          <li><a href="#">Wine Talk (blog)</a></li>
+          <li><a href="#">Visit us in Jerusalem</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Help</h4>
+        <ul>
+          <li><a href="#">Shipping &amp; returns</a></li>
+          <li><a href="#">Contact</a></li>
+          <li><a href="#">Terms</a></li>
+          <li><a href="#">Privacy</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-base">
+      <div>© 2026 JLM Wines · Jerusalem · עוסק מורשה 123456789</div>
+      <div class="footer-lang">
+        <a class="active" href="#">English</a>
+        <a href="#">עברית</a>
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+
+<!-- ─── DEMO: Scoped to PDP only ──────────────────────────────────── -->
+<section class="demo-section">
+  <div class="container">
+    <div class="demo-header">
+      <div class="section-marker"><span class="num">10</span><span class="label">PDP-Only Component</span></div>
+      <h2 class="demo-title">Floating add-to-cart — product page only.</h2>
+      <p class="demo-desc">Below is a sticky bottom bar that only appears on a single product page (PDP), and only after the main add-to-cart button scrolls out of view (Intersection Observer triggers it). It does not follow the user across catalog, home, cart, or other pages. Shown here at the bottom of the demo for reference.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FLOATING ADD-TO-CART (sticky bottom — PDP only) ────────────── -->
+<div class="floating-cart">
+  <div class="container floating-cart-inner">
+    <div class="floating-cart-thumb">
+      <svg viewBox="0 0 100 280"><use href="#bottle-red"/></svg>
+    </div>
+    <div class="floating-cart-info">
+      <span class="floating-cart-title">Estate Reserve · Cabernet Sauvignon</span>
+      <span class="floating-cart-meta">Red · Jerusalem Hills · 750ml</span>
+    </div>
+    <span class="floating-cart-price">₪89</span>
+    <div class="floating-cart-qty">
+      <button aria-label="Decrease">−</button>
+      <input type="text" value="1" aria-label="Quantity">
+      <button aria-label="Increase">+</button>
+    </div>
+    <button class="floating-cart-cta">Add to cart</button>
+  </div>
+</div>
+
+</body>
+</html>
