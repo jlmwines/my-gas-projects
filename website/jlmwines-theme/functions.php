@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('JLMWINES_VERSION', '1.0.0');
+define('JLMWINES_VERSION', '1.0.13');
 
 if (!isset($content_width)) {
     $content_width = 1140;
@@ -46,3 +46,7 @@ function jlmwines_setup() {
 add_action('after_setup_theme', 'jlmwines_setup');
 
 require_once get_template_directory() . '/inc/enqueue.php';
+require_once get_template_directory() . '/inc/free-shipping.php';
+require_once get_template_directory() . '/inc/breadcrumbs.php';
+require_once get_template_directory() . '/inc/mini-cart.php';
+require_once get_template_directory() . '/inc/bottom-nav.php';

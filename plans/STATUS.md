@@ -1,21 +1,21 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-04-27c
+**Updated:** 2026-04-28
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phase | Stable |
-| Last Active | 2026-04-27 |
+| Phase | Stable / theme build active on staging |
+| Last Active | 2026-04-28 |
 | Revenue | Steady |
-| Deploy Version | @79 |
-| Deploy Date | 2026-04-26 |
+| Deploy Version | jlmops @79 · theme v1.0.13 (staging only) |
+| Deploy Date | jlmops 2026-04-26 · theme 2026-04-28 |
 | Content | 7 posts live on production (EN+HE), remaining resume May |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 2 (vendor SKU update, trim safety — untested, low priority, rare conditions) |
-| Next Milestone | Theme replacement + SEO setup |
+| Next Milestone | Theme cutover (after front-page.php + Woo hook customizations + Elementor page migrations + perf tuning) |
 | Blockers | 0 |
 
 ## Next Action
@@ -100,6 +100,35 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-04-28:** **Theme build phase 3 — interactive components, mobile UX, FTP deploy tooling.** Theme advanced from v1.0.7 (last session's snapshot) to **v1.0.13** through eight iterations on staging6. Each version was built locally, zipped, then installed via wp-admin until the FTP deploy script landed mid-session and replaced the manual upload loop.
+  - **v1.0.8 — search box + free shipping monitor + mobile nav drawer.** Header `<input type="search">` was bare; added `#i-search` SVG to the sprite + `<button type="submit">` on the leading edge (auto-flips for HE via `inset-inline-start`). Free-shipping monitor: `inc/free-shipping.php` reads first enabled `free_shipping` method's `min_amount` from WC zones; renders slim strip under header on shop/PDP pages and box variant on the cart page (`woocommerce_before_cart`). Auto-refreshes via `woocommerce_add_to_cart_fragments`. Mobile nav drawer: hamburger toggle visible <720px, slide-in panel with embedded search + David Libre 22px menu, ESC/backdrop/× close + focus management + body scroll lock.
+  - **v1.0.9 — interactive mini-cart drawer + breadcrumbs + slim strip centering.** Cart icon → drawer with WC mini-cart inside; line items get inline `[− N +]` qty controls + remove × per row. Quantity changes commit via custom `wc_ajax_jlmwines_update_qty` endpoint, returns fresh fragments in one round-trip (`.widget_shopping_cart_content` + cart-icon badge). WC mini-cart template overridden at `woocommerce/cart/mini-cart.php`. Without JS the cart icon falls back to `/cart/` link (graceful). Breadcrumbs via WC native at `woocommerce_before_main_content` priority 15 — though this proved insufficient and was rewritten in v1.0.12.
+  - **v1.0.10 — cart layout fix + `--s-5` token bug.** First mini-cart layout had remove × overlapping the title because the × was `position: absolute` over the body cell. Fixed by giving × its own grid column (`grid-template-columns: 64px minmax(0,1fr) 28px`) and using `align-self: start`. Also overrode WC's `red !important` on `.remove` and floated thumbnail with scoped `.cart-drawer` selectors. **Major bug:** discovered the design system tokens are `--s-1, 2, 3, 4, 6, 8, 12, 16, 24` — there's no `--s-5` or `--s-10`, but several CSS rules used those. Undefined CSS custom properties resolve to nothing, so the cart-drawer head/monitor/content sections silently had **zero horizontal padding** (text touched the edges). Replaced all `--s-5` → `--s-6` (24px) and `--s-10` → `--s-8` (32px) globally.
+  - **v1.0.11 — mobile redesign: header restructure + bottom nav.** Header on mobile (<720px) became 3-zone CSS Grid: `[hamburger][centered logo][cart]`. Hamburger moved out of `.site-tools` to its own slot, first DOM child (leading edge in both LTR and RTL via flex order). Bottom nav fixed to viewport bottom, hidden ≥720px: 4 icons (Shop → `wc_get_page_permalink('shop')`, Account → `wc_get_page_permalink('myaccount')`, Search → opens nav drawer + auto-focuses drawer search input, WhatsApp → `wa.me/972555174805`). Active state via `is_shop()` / `is_account_page()`. Safe-area insets respected (`env(safe-area-inset-bottom)`). Body padding-bottom adjusted on mobile so content doesn't hide under the bar.
+  - **v1.0.12 — cart restructure + breadcrumb fix + padding bug fix.** Mini-cart drawer rebuilt per user spec: `subtotal → shipping fee (₪40 / ✓ Free) → free-shipping progress monitor → buttons`. Removed redundant top-of-drawer box monitor and the line-near-subtotal added in v1.0.10 (both showed the same message). New `jlmwines_get_shipping_fee()` reads first non-`free_shipping` method's `cost` from zones. Slim variant of monitor used in-cart (no nested box-on-box). Breadcrumbs visibility fix: theme's `woocommerce.php` wrapper calls `woocommerce_content()` which only fires `woocommerce_before_main_content` for archive pages — single product, cart, account, blog all missed it. Removed WC's default breadcrumb action, render globally from `header.php` after the slim strip. Also fixed the `--s-5`/`--s-10` undefined-token padding bug.
+  - **v1.0.13 — theme screenshot + sanitized public metadata.** `screenshot.png` 1200×900: design system cream bg (`#f7f3ec`), centered BW logo (downloaded from staging media library, source ID 62856), terracotta accent bar (`#a83920`). Composed via PowerShell + `System.Drawing` — no external image tools. `style.css` description sanitized (was `"Editorial-confident-warm aesthetic"` — publicly served via `/wp-content/themes/jlmwines-theme/style.css`); now neutral. `main.css:123` voice comment rewritten — kept only the technical RTL constraint.
+  - **FTP deploy tooling — replaces wp-admin zip upload.** `website/deploy-theme.ps1` reads `.sftp-credentials` (gitignored), walks `website/jlmwines-theme/`, FTPS-uploads with auto-retry (3 attempts, 800ms backoff for transient 451 data-channel errors). SiteGround serves cert for underlying server hostname not customer domain — script accepts cert via `ServerCertificateValidationCallback = $true` (connection still TLS-encrypted). FTP user is filesystem-chrooted to `/staging6.jlmwines.com/public_html` so credentials cannot reach production. Dev loop now: edit code → bump version → run script → reload (no manual zip + wp-admin upload). v1.0.13 deployed cleanly at session end; user confirmed cart drawer renders correctly.
+  - **Plugin state tooling.** `website/wp-plugins.js` (Node, reuses `tools/wp-api.js` factory) manages plugin activation states via WP REST. Commands: `list`, `snapshot [out.json]`, `apply [baseline.json]`, `activate <plugin>`, `deactivate <plugin>`. Pinned current staging plugin state to `website/staging-plugin-baseline.json` (36 plugins). Allows one-command restore of the test plugin config after any SiteGround staging refresh from production. `apply` is convergent: skips already-correct plugins, warns on missing/orphan, exits non-zero on failures.
+  - **Inbox additions captured during session** (in Inbox section): footer needs work (contact details + nav anchor, MC4WP language-group tag for Mailchimp, payment icons, Terms link); breadcrumbs styling decision; coupon first-purchase question; checkout appearance polish; mobile UI redesign direction (now implemented in v1.0.11).
+  - **Memory: credential templates** — saved feedback memory: credential template files (`.wp-credentials`, `.sftp-credentials`, `.env` etc.) get only the key skeleton, not embedded setup instructions. Surrounding chat reply carries the context.
+  - **Files created:** `website/jlmwines-theme/inc/free-shipping.php`, `inc/mini-cart.php`, `inc/breadcrumbs.php`, `inc/bottom-nav.php`, `woocommerce/cart/mini-cart.php`, `screenshot.png`; `website/wp-plugins.js`, `website/staging-plugin-baseline.json`, `website/deploy-theme.ps1`. Files modified: `website/jlmwines-theme/style.css`, `functions.php`, `header.php`, `footer.php`, `assets/css/main.css`, `assets/js/main.js`; `.gitignore` (adds `.sftp-credentials`); `plans/STATUS.md` (Inbox notes).
+  - **Outstanding theme TODO** (revised from 2026-04-27c list — many items completed this session):
+    - ~~Free shipping monitor~~ ✓
+    - ~~Mobile nav (hamburger + drawer + mini-cart)~~ ✓ (mini-cart is its own drawer; nav drawer is separate)
+    - ~~Mini-cart drawer~~ ✓
+    - ~~Bottom nav for mobile~~ ✓
+    - ~~Theme screenshot~~ ✓
+    - `front-page.php` — homepage with hero, bundles row, packages row, "Why Trust Me," category tiles, testimonials, Wine Talk previews
+    - Translation harvest from WPML String Translation → seed `.po` for theme strings
+    - `inc/woocommerce.php` — Woo hook customizations (gallery, loop, account menu, sale flash override, floating add-to-cart bar)
+    - `inc/wpml.php` — switcher helper, menu sync notes
+    - `inc/theme-state.php` — export/import handler for `theme-state.json`
+    - WhatsApp floating-corner button + age verification modal
+    - Migrate 16 Elementor pages to PHP templates
+    - Footer rebuild (per Inbox: contact details + anchor, MC4WP language groups, payment icons, T&C)
+    - Breadcrumbs styling (currently rendered, not yet styled per design system)
+    - Performance tuning to hit ≥90 Lighthouse
 
 - **2026-04-27c:** Theme build phase started. Closed remaining theme-prep gaps and started building `jlmwines-theme/` on staging6. Theme is installable, active on staging, with real header/footer markup, design system styling, sticky scroll, product search. No production changes; staging only.
   - **Gap audit closure.** All 7 gaps in `THEME_FOUNDATIONS.md` resolved or appropriately deferred — pre-build action items: none. Closed Gap #5 (bundle/package theme rendering): bundle/package/accessory grids are stock WC category grids; contextual filtering is stock WC layered nav; PDP CSS is routine build-phase styling; folds into general WC theme compatibility. False-alarm "Product Bundles plugin compatibility" gap I raised was not added to the dashboard (covered by general WC theme compatibility).
@@ -344,3 +373,16 @@ _(Cross-project notes captured via `/note jlm <text>`. Review and clear at sessi
 - ~~2026-03-10: jlmops task shows "Published But Archived (Summary: 446 Items)". Archived in Comax with zero inventory is OK if web shows zero stock.~~ → Fixed 2026-04-17 (@76)
 - 2026-03-10: Decanting field can be skipped — system should allow zero (0) as a valid value, not treat it as empty/skippable.
 - 2026-04-27: Bundle/package product images need re-export with transparent background (currently white-bg). Catalog spec calls for transparent PNG; bundles/packages predate strict enforcement. Use Canva "Remove background" or equivalent. Surfaced when new theme's beige page bg made the white boxes visible.
+- 2026-04-28: Theme breadcrumbs — add to shop/PDP/cart/account flow (`woocommerce_before_main_content`). Style with David Libre or Rubik UI? Probably Rubik 13px muted. Decide before `inc/woocommerce.php` build.
+- 2026-04-28: Coupon behavior — can the free-shipping (or NIS 50) coupon be restricted to first-purchase customers only? Smart Coupons Pro likely supports usage-restriction by customer history. Worth a check when next on coupons.
+- 2026-04-28: Checkout appearance — improve the WooCommerce checkout look (form layout, payment-method visuals, order-review polish). Currently using Woo defaults under the new theme; styling pass needed when `inc/woocommerce.php` lands.
+- 2026-04-28: Mobile UI redesign direction (KoWine pattern, user-confirmed):
+  - Header (mobile): `[hamburger] [centered logo] [cart]` — restructure `.site-header-inner` to 3-zone (likely CSS grid `auto 1fr auto`)
+  - Bottom nav bar (mobile only): icons for **shop, account, search, whatsapp** (user-confirmed 4th = WhatsApp; wishlist retired). Fixed bottom, hidden ≥720px. New SVG symbols needed (`#i-shop`, `#i-account`, `#i-whatsapp`).
+  - Search button can move out of header tools if it lives in the bottom nav.
+  - WhatsApp icon at +972555174805 — replaces the existing floating-corner WhatsApp button on mobile (still kept on desktop per design system spec).
+- 2026-04-28: Theme footer needs work (not just newsletter + 4-col stub):
+  - Contact details block (address/phone/hours) + anchor target so the nav "Contact" link can deep-link to it
+  - Newsletter optin must pass MC4WP a language-group tag (Mailchimp uses language as a grouping, not separate lists per current setup) — EN signups vs HE signups end up in the same list with the right group
+  - Payment method icons row (whatever Woo gateways are active — likely cards + bit + bank transfer)
+  - Terms & Conditions link in legal column (currently only Privacy + Terms stub — confirm both pages exist, link to them)

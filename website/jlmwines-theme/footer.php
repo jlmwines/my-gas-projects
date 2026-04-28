@@ -82,6 +82,11 @@
     </div>
 </footer>
 
-<?php wp_footer(); ?>
+<?php
+if (function_exists('jlmwines_render_bottom_nav')) {
+    jlmwines_render_bottom_nav();
+}
+wp_footer();
+?>
 </body>
 </html>

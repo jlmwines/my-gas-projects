@@ -3,6 +3,7 @@
 
 # WordPress credentials
 .wp-credentials
+.sftp-credentials
 
 # Content working files
 content/history/
