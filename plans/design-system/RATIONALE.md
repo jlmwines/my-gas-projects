@@ -3,6 +3,7 @@
 **Date:** 2026-04-27 (font + components revised; production-feature inventory added)
 **Demo:** open `index.html` in any modern browser
 **Source:** `styles.css` is the design system; the HTML demo consumes it
+**Strategic anchor:** `../THEME_FOUNDATIONS.md` — the brief this design system answers (audience, voice, business model)
 
 This is a reference design system for the WordPress theme replacement. It locks in tokens, type, color, components, and image treatment **before** any PHP is written. The actual theme will translate these into the proper template files.
 
@@ -176,10 +177,10 @@ Sticky bottom bar with:
 Mobile collapses meta line and reduces thumbnail to 48px. The bar uses sticky positioning at the bottom of its container — in production it should appear when the main add-to-cart scrolls out of view (Intersection Observer).
 
 ### Footer
-Dark (ink) — the only dark surface in the system. Provides intentional contrast and a "you've reached the end" feeling.
-- Newsletter callout: display headline + subtle copy + inline form (terracotta CTA against ink — high contrast)
-- Four utility columns
-- Base row: copyright + business registration (Israeli convention) + language switcher
+Light (base cream) with a `--c-ink-12` top border — keeps the page in one warm tonal range from header to footer. Originally specified dark; reverted on 2026-04-28 after building it: the dark surface fought the payment-logo composite (white-bg image), the social-icon brand colors, and the WPML language switcher, requiring filter hacks and contrast workarounds to look right. The "you've reached the end" feeling is now carried by the top border + newsletter band + content density change rather than a tonal flip.
+- Newsletter callout (top): display headline + subtle copy + inline form (terracotta CTA — still the same high-contrast moment, just now against cream instead of ink)
+- Three-column compact band: contact (left, stacked address/tel/email) | payment composite + social icons (middle) | legal links + copyright + language switcher (right)
+- Drops the prior "four utility columns" spec — Shop / About / Help links live in the header nav, no need to duplicate
 
 ---
 
@@ -293,7 +294,7 @@ Things to validate before committing to PHP:
 - **Free shipping bar contrast** — the terracotta fill on cream-base is intentional but should be tested with users to confirm the bar is visible enough to register peripherally.
 - **Floating cart bar + WhatsApp icon collision** — both target the bottom of viewport. Spec says opposite horizontal corners, but mobile viewports under 360px may still feel crowded. May need a collapsed cart bar state on the smallest screens.
 - **Complianz cookie banner** — current production has a scroll-jump bug on close. Verify with the new theme styling or budget plugin replacement.
-- **Footer dark surface** — is the only dark moment in the system. Consider whether My Account / Checkout flows benefit from a similar dark accent or whether they should stay all-light. Lean toward all-light for transactional pages.
+- **Surface tonality** — system is now uniformly light (cream base + ink text). Reconsider whether any moment benefits from a dark accent (originally the footer was dark; reverted because the cost-benefit didn't hold once content was assembled in it).
 
 ---
 

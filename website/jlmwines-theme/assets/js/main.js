@@ -89,6 +89,59 @@
         }
     });
 
+    // Bottom-nav "Top" button → smooth scroll to viewport top.
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-bottom-nav-top]');
+        if (!btn) return;
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // ─── Floating add-to-cart bar (PDP) ────────────────────────────
+    // Visibility logic: show only when (main CTA is OUT of view) AND (footer
+    // is NOT in view). Hiding near the footer prevents the bar from
+    // overlapping legal links and the newsletter form when the user scrolls
+    // to the bottom of the page.
+    var floatingCart = document.getElementById('floating-cart');
+    var mainAddBtn   = document.querySelector('form.cart .single_add_to_cart_button');
+    var siteFooter   = document.querySelector('.site-footer');
+    if (floatingCart && mainAddBtn && 'IntersectionObserver' in window) {
+        var mainInView   = false;
+        var footerInView = false;
+
+        var updateFcVisibility = function () {
+            var show = !mainInView && !footerInView;
+            floatingCart.classList.toggle('is-visible', show);
+            floatingCart.setAttribute('aria-hidden', show ? 'false' : 'true');
+        };
+
+        var mainIo = new IntersectionObserver(function (entries) {
+            mainInView = entries[0].isIntersecting;
+            updateFcVisibility();
+        }, { rootMargin: '0px 0px -20px 0px' });
+        mainIo.observe(mainAddBtn);
+
+        if (siteFooter) {
+            var footerIo = new IntersectionObserver(function (entries) {
+                footerInView = entries[0].isIntersecting;
+                updateFcVisibility();
+            });
+            footerIo.observe(siteFooter);
+        }
+
+        var floatingAdd = floatingCart.querySelector('[data-floating-cart-add]');
+        if (floatingAdd) {
+            floatingAdd.addEventListener('click', function () {
+                // Delegate to the main add-to-cart button so all WC flows fire
+                // (variation validation, hooks, AJAX add). If the main button is
+                // disabled (e.g. variation not selected), nothing happens.
+                if (!mainAddBtn.disabled) {
+                    mainAddBtn.click();
+                }
+            });
+        }
+    }
+
     // ─── Global ESC closes whichever drawer is open ────────────────
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;

@@ -18,7 +18,6 @@ function jlmwines_render_bottom_nav() {
 
     $shop_url    = wc_get_page_permalink('shop');
     $account_url = wc_get_page_permalink('myaccount');
-    $wa_url      = 'https://wa.me/972555174805';
 
     $is_shop_active    = (function_exists('is_shop') && is_shop()) || is_post_type_archive('product') || is_tax('product_cat');
     $is_account_active = function_exists('is_account_page') && is_account_page();
@@ -36,10 +35,10 @@ function jlmwines_render_bottom_nav() {
             <svg width="22" height="22" aria-hidden="true"><use href="#i-search"/></svg>
             <span><?php esc_html_e('Search', 'jlmwines'); ?></span>
         </button>
-        <a class="bottom-nav-item" href="<?php echo esc_url($wa_url); ?>" target="_blank" rel="noopener">
-            <svg width="22" height="22" aria-hidden="true"><use href="#i-whatsapp"/></svg>
-            <span><?php esc_html_e('Chat', 'jlmwines'); ?></span>
-        </a>
+        <button type="button" class="bottom-nav-item" data-bottom-nav-top aria-label="<?php esc_attr_e('Back to top', 'jlmwines'); ?>">
+            <svg width="22" height="22" aria-hidden="true"><use href="#i-arrow-up"/></svg>
+            <span><?php esc_html_e('Top', 'jlmwines'); ?></span>
+        </button>
     </nav>
     <?php
 }

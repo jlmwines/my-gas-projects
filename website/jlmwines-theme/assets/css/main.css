@@ -517,12 +517,27 @@ ul { padding: 0; margin: 0; list-style: none; }
 
 /* ─── Floating add to cart bar ───────────────────────────────────── */
 .floating-cart {
-  position: sticky; bottom: 0; z-index: 50;
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 60;
   background: var(--c-surface);
   border-top: 1px solid var(--c-ink-12);
   box-shadow: var(--shadow-bar);
   padding: 12px 0;
-  margin-top: var(--s-12);
+  transform: translateY(100%);
+  transition: transform var(--transition-med);
+  visibility: hidden;
+  pointer-events: none;
+}
+.floating-cart.is-visible {
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+@media (max-width: 719px) {
+  /* Clear the mobile bottom nav (~64px tall) so the floating bar sits above it. */
+  .floating-cart { bottom: 64px; }
 }
 .floating-cart-inner {
   display: flex; align-items: center; gap: 16px;
@@ -534,7 +549,14 @@ ul { padding: 0; margin: 0; list-style: none; }
   display: flex; align-items: center; justify-content: center;
   padding: 6px; flex-shrink: 0;
 }
-.floating-cart-thumb svg { max-width: 100%; max-height: 100%; }
+.floating-cart-thumb svg,
+.floating-cart-thumb img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
 .floating-cart-info {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; gap: 2px;
@@ -581,71 +603,175 @@ ul { padding: 0; margin: 0; list-style: none; }
 
 /* ─── Footer ─────────────────────────────────────────────────────── */
 .site-footer {
-  background: var(--c-ink); color: var(--c-base);
+  background: var(--c-base); color: var(--c-ink);
+  border-top: 1px solid var(--c-ink-12);
   padding: var(--s-16) 0 var(--s-6);
   margin-top: var(--s-16);
 }
 .footer-newsletter {
   display: grid; gap: var(--s-6); align-items: center;
   padding-bottom: var(--s-12);
-  border-bottom: 1px solid rgba(247,243,236,0.10);
+  border-bottom: 1px solid var(--c-ink-12);
   margin-bottom: var(--s-12);
 }
 @media (min-width: 720px) {
-  .footer-newsletter { grid-template-columns: 1fr 1fr; gap: var(--s-12); }
+  /* image | text | form on desktop (image first, then content + signup) */
+  .footer-newsletter { grid-template-columns: minmax(200px, 280px) 1fr minmax(280px, 1fr); gap: var(--s-8); }
+}
+.footer-newsletter-image {
+  align-self: center;
+}
+.footer-newsletter-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-card);
 }
 .footer-newsletter h2 {
   font-family: var(--f-display); font-weight: 500;
   font-size: 30px; line-height: 1.15; margin-bottom: 10px;
 }
 .footer-newsletter p {
-  color: rgba(247,243,236,0.72); max-width: 38ch; line-height: 1.55;
+  color: var(--c-muted); max-width: 38ch; line-height: 1.55;
 }
 .footer-form { display: flex; gap: 8px; }
 .footer-form input {
   flex: 1; padding: 14px 18px;
-  background: transparent; border: 1px solid rgba(247,243,236,0.30);
-  color: var(--c-base); font-size: 15px; border-radius: 0;
+  background: transparent; border: 1px solid var(--c-ink-18);
+  color: var(--c-ink); font-size: 15px; border-radius: 0;
   min-width: 0;
 }
-.footer-form input::placeholder { color: rgba(247,243,236,0.40); }
-.footer-form input:focus { outline: none; border-color: var(--c-base); }
+.footer-form input::placeholder { color: var(--c-muted); }
+.footer-form input:focus { outline: none; border-color: var(--c-accent); }
 .footer-form button {
-  background: var(--c-accent); color: var(--c-base);
+  background: var(--c-accent); color: #ffffff;
   padding: 14px 22px; font-weight: 500; font-size: 14px; letter-spacing: 0.02em;
   white-space: nowrap;
+  border: 0;
+  cursor: pointer;
 }
-.footer-form button:hover { background: #c44a2c; }
+.footer-form button:hover { background: var(--c-accent-hover); }
 
-.footer-cols {
+/* ─── Footer band: 3 columns (contact | mid: payments+social | legal) ─── */
+.footer-band {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: var(--s-8);
-  padding-bottom: var(--s-8);
-}
-.footer-col h4 {
-  font-family: var(--f-ui); font-weight: 600;
-  font-size: var(--t-micro); letter-spacing: 0.10em; text-transform: uppercase;
-  color: rgba(247,243,236,0.55);
-  margin-bottom: 16px;
-}
-.footer-col ul { display: flex; flex-direction: column; gap: 10px; }
-.footer-col a { color: var(--c-base); font-size: 15px; }
-.footer-col a:hover { color: var(--c-accent); }
-.footer-base {
-  border-top: 1px solid rgba(247,243,236,0.10);
-  padding-top: var(--s-6);
-  display: flex; flex-direction: column; gap: var(--s-3);
-  font-size: 13px; color: rgba(247,243,236,0.55);
+  grid-template-columns: 1fr;
+  gap: var(--s-6);
 }
 @media (min-width: 720px) {
-  .footer-base {
-    flex-direction: row; justify-content: space-between; align-items: center;
+  .footer-band {
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: var(--s-8);
+    align-items: start;
   }
 }
-.footer-lang { display: inline-flex; gap: 14px; }
-.footer-lang a { color: rgba(247,243,236,0.7); font-size: 14px; }
-.footer-lang a.active { color: var(--c-base); border-bottom: 1px solid var(--c-accent); padding-bottom: 2px; }
+
+/* Contact column */
+.footer-contact {
+  scroll-margin-top: 100px;
+}
+.footer-contact-info {
+  font-style: normal;
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--c-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.footer-contact-line a {
+  color: inherit;
+  transition: color var(--transition-fast);
+}
+.footer-contact-line a:hover { color: var(--c-accent); }
+.footer-contact-key {
+  color: var(--c-muted);
+  margin-inline-end: 4px;
+}
+.footer-contact-address { font-weight: 500; }
+
+/* Middle column — payment logos + social icon row, both centered */
+.footer-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* Social icons — brand-colored filled circles to match live site */
+.footer-social-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 10px;
+}
+.footer-social-list a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #ffffff;
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+.footer-social-list a:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.footer-social-facebook  a { background: #1877f2; }
+.footer-social-instagram a { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+.footer-social-whatsapp  a { background: #25d366; }
+
+/* Legal column */
+.footer-legal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  color: var(--c-muted);
+}
+.footer-legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.footer-legal-links a {
+  color: var(--c-ink);
+  transition: color var(--transition-fast);
+}
+.footer-legal-links a:hover { color: var(--c-accent); }
+.footer-copyright {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-muted);
+}
+.footer-lang { display: inline-flex; gap: 14px; margin-top: 4px; }
+.footer-lang a { color: var(--c-muted); font-size: 14px; }
+.footer-lang a.active { color: var(--c-ink); border-bottom: 1px solid var(--c-accent); padding-bottom: 2px; }
+
+/* Mobile: center each band column's content */
+@media (max-width: 719px) {
+  .footer-band { text-align: center; gap: var(--s-8); }
+  .footer-contact-info { align-items: center; }
+  .footer-legal { align-items: center; }
+  .footer-legal-links { align-items: center; }
+  .footer-lang { justify-content: center; }
+}
+
+/* Payment methods composite image — sits inside .footer-mid */
+.footer-payments-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 24px;
+  width: auto;
+}
 
 /* ─── Demo page chrome (not part of the design system) ───────────── */
 .demo-section { padding: var(--s-16) 0; border-top: 1px solid var(--c-ink-12); }
@@ -1373,7 +1499,9 @@ body.drawer-open {
 .breadcrumbs > .container {
   padding-block: 10px;
   font-family: var(--f-ui);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
   color: var(--c-muted);
 }
 .breadcrumbs a {
@@ -1385,8 +1513,9 @@ body.drawer-open {
   color: var(--c-accent);
 }
 .breadcrumbs-sep {
-  margin-inline: 6px;
+  margin-inline: 8px;
   color: var(--c-ink-18);
+  user-select: none;
 }
 
 /* the_content() output: WP block alignment helpers */
@@ -1402,3 +1531,595 @@ body.drawer-open {
   clip-path: inset(50%); height: 1px; margin: -1px; overflow: hidden;
   padding: 0; position: absolute; width: 1px; word-wrap: normal !important;
 }
+
+/* ─── WooCommerce button overrides ────────────────────────────────
+   WC ships with a default purple button color that fights the design
+   system. Override across PDP add-to-cart, catalog AJAX add-to-cart,
+   cart-page Update / Apply, checkout, and account buttons. The
+   `.woocommerce-mini-cart__buttons` block above already covers the
+   mini-cart drawer's CTAs explicitly. */
+.woocommerce a.button,
+.woocommerce button.button,
+.woocommerce input.button,
+.woocommerce a.button.alt,
+.woocommerce button.button.alt,
+.woocommerce input.button.alt,
+.woocommerce-page a.button,
+.woocommerce-page button.button,
+.woocommerce-page input.button,
+.woocommerce #respond input#submit,
+.woocommerce #respond input#submit.alt,
+.woocommerce #place_order {
+  background: var(--c-accent);
+  color: #ffffff;
+  border: 1px solid var(--c-accent);
+  padding: 12px 22px;
+  font-family: var(--f-ui);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-input);
+  text-shadow: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.woocommerce a.button:hover,
+.woocommerce button.button:hover,
+.woocommerce input.button:hover,
+.woocommerce a.button.alt:hover,
+.woocommerce button.button.alt:hover,
+.woocommerce input.button.alt:hover,
+.woocommerce-page a.button:hover,
+.woocommerce-page button.button:hover,
+.woocommerce-page input.button:hover,
+.woocommerce #respond input#submit:hover,
+.woocommerce #place_order:hover {
+  background: var(--c-accent-hover);
+  border-color: var(--c-accent-hover);
+  color: #ffffff;
+}
+/* Disabled / not-purchasable state */
+.woocommerce a.button.disabled,
+.woocommerce button.button:disabled,
+.woocommerce button.button[disabled] {
+  background: var(--c-ink-12);
+  border-color: transparent;
+  color: var(--c-muted);
+  cursor: not-allowed;
+}
+/* "Added to cart" confirmation tick + view-cart link inherit accent too */
+.woocommerce a.added_to_cart {
+  color: var(--c-accent);
+  font-weight: 500;
+}
+
+/* PDP description: starts in the right column area below summary, then
+   continues full-width once it passes the image's bottom.
+   `clear: right` drops the description below `.summary` (which is right-
+   floated). The image is still left-floated, so description text wraps
+   to image's right edge. To align that wrap point with the title's left
+   edge, `.images` gets a small `margin-right` (below). When the description
+   exceeds the image height, the wrap constraint releases and text continues
+   to the container's full width. */
+.woocommerce div.product div.images,
+.woocommerce-page div.product div.images {
+  margin-right: 4%;
+}
+.pdp-description {
+  clear: right;
+  margin-top: var(--s-6);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--c-ink-12);
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--c-ink);
+}
+.pdp-description p { margin: 0 0 var(--s-3); }
+.pdp-description p:last-child { margin-bottom: 0; }
+.pdp-description h2,
+.pdp-description h3 {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 20px;
+  margin: var(--s-4) 0 var(--s-2);
+}
+
+/* Related products (and up-sells) — break the float so they always start
+   on a new row below the image+summary+description, never wrap up next
+   to the image when descriptions are short. */
+.woocommerce .related.products,
+.woocommerce .upsells.products,
+.related.products,
+.upsells.products {
+  clear: both;
+  padding-top: var(--s-12);
+  margin-top: var(--s-12);
+  border-top: 1px solid var(--c-ink-12);
+}
+
+
+/* Loop product cards — equal-height grid cells with bottom-aligned price
+   and add-to-cart. Card is flex-column; the WC wrapper anchor (image+
+   title+price) takes flex: 1 so it fills card height; price uses
+   margin-top: auto to pin to the bottom of the wrapper. Result: prices
+   line up across the row regardless of title length, image variation,
+   or any other internal content difference. Buttons (siblings of the
+   wrapper) sit below the wrapper at a uniform position. */
+.woocommerce ul.products li.product,
+ul.products li.product {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-align: center;
+}
+.woocommerce ul.products li.product > a:first-child,
+ul.products li.product > a:first-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  text-decoration: none;
+}
+.woocommerce ul.products li.product .woocommerce-loop-product__title,
+ul.products li.product .woocommerce-loop-product__title {
+  text-align: center;
+}
+.woocommerce ul.products li.product .price,
+ul.products li.product .price {
+  display: block;
+  text-align: center;
+  margin-top: auto;
+}
+.woocommerce ul.products li.product .button,
+.woocommerce ul.products li.product a.added_to_cart,
+ul.products li.product .button,
+ul.products li.product a.added_to_cart {
+  display: inline-block;
+  margin-inline: auto;
+}
+
+/* ─── Hero (homepage Evyatar header) ─────────────────────────────── */
+.hero {
+  padding-block: var(--s-12) var(--s-16);
+  background: var(--c-base);
+}
+.hero-inner {
+  display: grid;
+  gap: var(--s-8);
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr 1fr; gap: var(--s-12); }
+}
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.hero-headline {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 40px;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--c-ink);
+  margin: 0;
+}
+@media (min-width: 720px) { .hero-headline { font-size: 56px; } }
+@media (min-width: 1100px) { .hero-headline { font-size: 64px; } }
+.hero-body {
+  font-family: var(--f-ui);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--c-ink);
+  max-width: 50ch;
+  margin: 0;
+}
+.hero-cta { align-self: flex-start; }
+.hero-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+  border-radius: var(--radius-card);
+}
+
+/* ─── Banner (image + text, used by "Why trust me" and similar) ──── */
+.banner {
+  padding-block: var(--s-12);
+  background: var(--c-surface);
+  margin-block: var(--s-12);
+}
+.banner-inner {
+  display: grid;
+  gap: var(--s-8);
+  align-items: center;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .banner-inner { grid-template-columns: 1fr 1fr; gap: var(--s-12); }
+  /* Image trails (RTL-aware) — used for the "Why trust me" layout */
+  .banner-inner.banner-image-end .banner-content { order: 1; }
+  .banner-inner.banner-image-end .banner-image   { order: 2; }
+}
+.banner-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.banner-headline {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--c-ink);
+  margin: 0;
+}
+@media (min-width: 720px) { .banner-headline { font-size: 40px; } }
+.banner-body {
+  font-family: var(--f-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--c-ink);
+  max-width: 50ch;
+  margin: 0;
+}
+.banner-content .button-secondary { align-self: flex-start; }
+.banner-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+}
+
+/* Primary button (used by hero) */
+.button-primary {
+  display: inline-block;
+  padding: 14px 28px;
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: var(--c-accent);
+  border: 1px solid var(--c-accent);
+  text-decoration: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.button-primary:hover {
+  background: var(--c-accent-hover);
+  border-color: var(--c-accent-hover);
+  color: #ffffff;
+}
+
+/* ─── Trust banner (3 columns: free delivery / hand-picked / help) ─ */
+.trust-banner {
+  padding-block: var(--s-12);
+  background: var(--c-surface);
+  border-block: 1px solid var(--c-ink-12);
+  margin-top: var(--s-12);
+}
+.trust-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+@media (min-width: 720px) {
+  .trust-row { grid-template-columns: repeat(3, 1fr); gap: var(--s-8); }
+}
+.trust-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+}
+.trust-icon {
+  color: var(--c-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.trust-title {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--c-ink);
+}
+.trust-body {
+  font-family: var(--f-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-muted);
+  margin: 0;
+  max-width: 30ch;
+}
+
+/* ─── Homepage / page sections ───────────────────────────────────── */
+.section {
+  padding-block: var(--s-12);
+}
+.section-header {
+  text-align: center;
+  margin-bottom: var(--s-8);
+  max-width: 720px;
+  margin-inline: auto;
+}
+.section-eyebrow {
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-accent);
+  margin: 0 0 var(--s-2);
+}
+.section-heading {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 36px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--c-ink);
+  margin: 0;
+}
+@media (min-width: 720px) {
+  .section-heading { font-size: 44px; }
+}
+.section-body {
+  font-family: var(--f-ui);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--c-ink);
+  margin: var(--s-3) auto 0;
+  max-width: 56ch;
+}
+.section-question {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--c-accent);
+  margin: 0 0 var(--s-2);
+}
+.section-packages-intro {
+  padding-block: var(--s-8) 0;
+  scroll-margin-top: 24px;
+}
+.section-cta {
+  text-align: center;
+  margin-top: var(--s-8);
+}
+.section-cta .button-secondary {
+  display: inline-block;
+  padding: 12px 24px;
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--c-ink);
+  background: transparent;
+  border: 1px solid var(--c-ink);
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.section-cta .button-secondary:hover {
+  background: var(--c-ink);
+  color: var(--c-base);
+}
+
+/* ─── Product loop grid (used by jlmwines_render_product_loop) ──── */
+.section-product-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) { .section-product-grid.columns-2,
+                             .section-product-grid.columns-3,
+                             .section-product-grid.columns-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .section-product-grid.columns-3 { grid-template-columns: repeat(3, 1fr); }
+                             .section-product-grid.columns-4 { grid-template-columns: repeat(4, 1fr); } }
+.section-product-grid .product { margin: 0; }
+
+/* ─── Category cards ─────────────────────────────────────────────── */
+.category-grid {
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) { .category-grid.columns-2,
+                             .category-grid.columns-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .category-grid.columns-3 { grid-template-columns: repeat(3, 1fr); }
+                             .category-grid.columns-4 { grid-template-columns: repeat(4, 1fr); } }
+.category-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface);
+  border: 1px solid var(--c-ink-12);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--c-ink);
+  transition: box-shadow var(--transition-med), transform var(--transition-fast);
+}
+.category-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+.category-card-image {
+  aspect-ratio: var(--card-aspect, 4 / 3);
+  background: var(--c-base);
+  overflow: hidden;
+}
+.category-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.category-card-body {
+  padding: var(--s-4) var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.category-card-name {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--c-ink);
+}
+.category-card-count {
+  font-family: var(--f-ui);
+  font-size: 13px;
+  color: var(--c-muted);
+}
+
+/* ─── Testimonials ───────────────────────────────────────────────── */
+.testimonials-grid {
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) { .testimonials-grid.columns-2,
+                             .testimonials-grid.columns-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .testimonials-grid.columns-3 { grid-template-columns: repeat(3, 1fr); } }
+.testimonial {
+  margin: 0;
+  padding: var(--s-6);
+  background: var(--c-surface);
+  border: 1px solid var(--c-ink-12);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  position: relative;
+}
+.testimonial::before {
+  content: "\201C";
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 16px;
+  font-family: var(--f-display);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--c-accent);
+  opacity: 0.30;
+}
+.testimonial-rating {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--c-warning);
+  padding-top: var(--s-2);
+}
+.testimonial-quote {
+  margin: 0;
+  font-family: var(--f-ui);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--c-ink);
+}
+.testimonial-attribution {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+}
+.testimonial-name {
+  font-family: var(--f-ui);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--c-ink);
+}
+.testimonial-source {
+  font-family: var(--f-ui);
+  font-size: 14px;
+  color: var(--c-muted);
+}
+
+/* ─── Blog roll ──────────────────────────────────────────────────── */
+.blog-grid {
+  display: grid;
+  gap: var(--s-6);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) { .blog-grid.columns-2,
+                             .blog-grid.columns-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .blog-grid.columns-3 { grid-template-columns: repeat(3, 1fr); } }
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface);
+  border: 1px solid var(--c-ink-12);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: box-shadow var(--transition-med);
+}
+.blog-card:hover { box-shadow: var(--shadow-card-hover); }
+.blog-card-link {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-decoration: none;
+  color: var(--c-ink);
+}
+.blog-card-image {
+  aspect-ratio: 16 / 9;
+  background: var(--c-base);
+  overflow: hidden;
+}
+.blog-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.blog-card-body {
+  padding: var(--s-4) var(--s-6) var(--s-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  flex: 1;
+}
+.blog-card-title {
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--c-ink);
+}
+.blog-card-excerpt {
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--c-muted);
+  margin: 0;
+}
+.blog-card-readmore {
+  display: inline-block;
+  margin-top: var(--s-2);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--c-accent);
+}
+.blog-card-readmore::after {
+  content: " →";
+  transition: margin-inline-start var(--transition-fast);
+}
+.blog-card:hover .blog-card-readmore::after { margin-inline-start: 4px; }

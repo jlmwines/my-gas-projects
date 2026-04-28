@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('JLMWINES_VERSION', '1.0.13');
+define('JLMWINES_VERSION', '1.0.34');
 
 if (!isset($content_width)) {
     $content_width = 1140;
@@ -50,3 +50,5 @@ require_once get_template_directory() . '/inc/free-shipping.php';
 require_once get_template_directory() . '/inc/breadcrumbs.php';
 require_once get_template_directory() . '/inc/mini-cart.php';
 require_once get_template_directory() . '/inc/bottom-nav.php';
+require_once get_template_directory() . '/inc/woocommerce.php';
+require_once get_template_directory() . '/inc/sections.php';

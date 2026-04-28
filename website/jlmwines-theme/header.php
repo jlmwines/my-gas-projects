@@ -43,6 +43,30 @@
             <path d="M21 11.5a8.4 8.4 0 0 1-12.5 7.4l-4.4 1.1 1.2-4.2A8.4 8.4 0 1 1 21 11.5z"/>
             <path d="M9 9c0 4 3 7 7 7" stroke-width="1.4"/>
         </symbol>
+        <symbol id="i-facebook" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 7h3V3h-3a4 4 0 0 0-4 4v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1z"/>
+        </symbol>
+        <symbol id="i-instagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="5"/>
+            <circle cx="12" cy="12" r="4"/>
+            <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 14l7-7 7 7"/>
+        </symbol>
+        <symbol id="i-truck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 7h11v9H2zM13 11h5l3 3v2h-8z"/>
+            <circle cx="6" cy="18" r="2"/>
+            <circle cx="17" cy="18" r="2"/>
+        </symbol>
+        <symbol id="i-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11V5a2 2 0 0 1 4 0v6"/>
+            <path d="M13 11V4a2 2 0 0 1 4 0v8"/>
+            <path d="M17 9.5a2 2 0 0 1 4 0V14a8 8 0 0 1-8 8H10a4 4 0 0 1-3.4-1.9L4 16a2 2 0 0 1 3-2.6l2 2"/>
+        </symbol>
+        <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M12 2.5l2.95 6.45 7.05.65-5.35 4.7L18.3 21 12 17.4 5.7 21l1.65-6.7L2 9.6l7.05-.65z"/>
+        </symbol>
     </defs>
 </svg>
 
