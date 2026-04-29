@@ -446,3 +446,19 @@ add_action('woocommerce_admin_order_data_after_shipping_address', function ($ord
         echo '<p><strong>' . esc_html__('Recipient phone:', 'jlmwines') . '</strong> ' . esc_html($phone) . '</p>';
     }
 });
+
+/**
+ * Default the chosen shipping method to free_shipping when it's
+ * available in the package's rates. This hook only fires when WC has
+ * nothing in the session yet (or the previous choice has been
+ * invalidated), so a customer who manually picks a paid method later
+ * keeps that choice — the filter doesn't override active selections.
+ */
+add_filter('woocommerce_shipping_chosen_method', function ($default, $rates) {
+    foreach ($rates as $rate_id => $rate) {
+        if ('free_shipping' === $rate->method_id) {
+            return $rate_id;
+        }
+    }
+    return $default;
+}, 10, 2);

@@ -117,7 +117,29 @@ function jlmwines_get_shipping_monitor_data() {
     $subtotal  = 0;
 
     if (function_exists('WC') && WC()->cart) {
-        $subtotal = (float) WC()->cart->get_displayed_subtotal();
+        // Sum directly from cart contents using each item's product
+        // price × quantity. This bypasses WC's totals-state caching
+        // entirely — the monitor previously depended on
+        // get_displayed_subtotal(), which reads from $cart->totals
+        // populated by calculate_totals(); those totals can lag the
+        // session's cart_contents during the cart-update request flow,
+        // making the monitor read a "stale" subtotal.
+        //
+        // get_price() and quantity are the source of truth for line
+        // items; iterating them gives the same number cart shows.
+        $include_tax = WC()->cart->display_prices_including_tax();
+        foreach (WC()->cart->get_cart() as $cart_item) {
+            $product = $cart_item['data'] ?? null;
+            if (!$product || !is_a($product, 'WC_Product')) {
+                continue;
+            }
+            $qty   = (float) ($cart_item['quantity'] ?? 0);
+            $price = (float) wc_get_price_to_display($product, [
+                'price' => $product->get_price(),
+                'qty'   => 1,
+            ]);
+            $subtotal += $price * $qty;
+        }
     }
 
     $remaining = max(0, $threshold - $subtotal);
@@ -164,7 +186,19 @@ function jlmwines_render_shipping_monitor($variant = 'box') {
     }
 
     $width = number_format($data['pct'], 1, '.', '');
+    // Diagnostic comment — view-source to confirm what PHP computed
+    // vs what the message displays. Drop after monitor freshness is
+    // verified.
+    $diag = sprintf(
+        'monitor: subtotal=%s threshold=%s remaining=%s qualified=%d variant=%s',
+        $data['subtotal'],
+        $data['threshold'],
+        $data['remaining'],
+        $data['qualified'] ? 1 : 0,
+        $variant
+    );
     ?>
+    <!-- <?php echo esc_html($diag); ?> -->
     <div class="<?php echo esc_attr(implode(' ', $classes)); ?>">
         <div class="shipping-monitor-head">
             <div class="shipping-monitor-message"><?php echo $message; // wc_price html already escaped ?></div>
@@ -196,17 +230,36 @@ function jlmwines_render_shipping_monitor_strip() {
     <?php
 }
 
+// Priority 15 puts the monitor AFTER WC's notices (which print at 10),
+// so the "Cart updated" confirmation appears first and the monitor
+// below it reads as the current state, not the prior one. The wrapping
+// div gives the box a stable selector for AJAX fragment refresh below.
 add_action('woocommerce_before_cart', function () {
+    echo '<div class="shipping-monitor-cart-wrap">';
     jlmwines_render_shipping_monitor('box');
-}, 5);
+    echo '</div>';
+}, 15);
 
 /**
- * AJAX refresh on cart change. Replaces the strip wrapper so progress updates
- * without a full page reload.
+ * AJAX refresh on cart change. Replaces both the slim strip (for non-
+ * cart/checkout pages) and the cart-page box wrapper. WC fires this
+ * filter on add-to-cart AND on cart-quantity AJAX updates, so any
+ * client-side cart change triggers a fresh render.
  */
 add_filter('woocommerce_add_to_cart_fragments', function ($fragments) {
+    // Slim strip (renders empty on cart/checkout pages — harmless replace)
     ob_start();
     jlmwines_render_shipping_monitor_strip();
     $fragments['div.shipping-monitor-strip-wrap'] = ob_get_clean();
+
+    // Cart-page box variant
+    if (function_exists('is_cart') && is_cart()) {
+        ob_start();
+        echo '<div class="shipping-monitor-cart-wrap">';
+        jlmwines_render_shipping_monitor('box');
+        echo '</div>';
+        $fragments['div.shipping-monitor-cart-wrap'] = ob_get_clean();
+    }
+
     return $fragments;
 });
