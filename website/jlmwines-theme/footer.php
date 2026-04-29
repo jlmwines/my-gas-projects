@@ -73,7 +73,7 @@
 
         <div class="footer-band">
 
-            <section id="contact" class="footer-contact">
+            <section id="footer-contact" class="footer-contact">
                 <address class="footer-contact-info">
                     <?php if ($contact_address) : ?>
                         <span class="footer-contact-line footer-contact-address"><?php echo wp_kses_post($contact_address); ?></span>
@@ -123,34 +123,36 @@
                 <ul class="footer-legal-links">
                     <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php _e('Terms &amp; Conditions', 'jlmwines'); ?></a></li>
                     <li><a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php _e('Privacy', 'jlmwines'); ?></a></li>
-                </ul>
-                <p class="footer-copyright">
-                    <?php echo esc_html(date('Y')); ?> &copy; <?php bloginfo('name'); ?>
-                    <?php if ($business_id) : ?>
-                        · <?php echo esc_html($business_id); ?>
-                    <?php endif; ?>
-                </p>
-                <?php
-                if (function_exists('icl_get_languages')) :
-                    $languages = icl_get_languages('skip_missing=0&orderby=code');
-                    if (!empty($languages)) :
-                        ?>
-                        <div class="footer-lang">
-                        <?php foreach ($languages as $lang) :
-                            $class = $lang['active'] ? 'active' : '';
+                    <?php
+                    if (function_exists('icl_get_languages')) :
+                        $languages = icl_get_languages('skip_missing=0&orderby=code');
+                        if (!empty($languages)) :
                             ?>
-                            <a class="<?php echo esc_attr($class); ?>" href="<?php echo esc_url($lang['url']); ?>">
-                                <?php echo esc_html($lang['native_name']); ?>
-                            </a>
-                        <?php endforeach; ?>
-                        </div>
-                        <?php
+                            <li class="footer-lang-item">
+                                <?php $i = 0; foreach ($languages as $lang) :
+                                    if ($i++ > 0) echo ' <span class="footer-lang-sep" aria-hidden="true">·</span> ';
+                                    $class = $lang['active'] ? 'active' : '';
+                                    ?>
+                                    <a class="<?php echo esc_attr($class); ?>" href="<?php echo esc_url($lang['url']); ?>">
+                                        <?php echo esc_html($lang['native_name']); ?>
+                                    </a>
+                                <?php endforeach; ?>
+                            </li>
+                            <?php
+                        endif;
                     endif;
-                endif;
-                ?>
+                    ?>
+                </ul>
             </div>
 
         </div>
+
+        <p class="footer-copyright">
+            <?php echo esc_html(date('Y')); ?> &copy; <?php bloginfo('name'); ?>
+            <?php if ($business_id) : ?>
+                · <?php echo esc_html($business_id); ?>
+            <?php endif; ?>
+        </p>
 
     </div>
 </footer>

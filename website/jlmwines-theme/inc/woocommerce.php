@@ -340,3 +340,109 @@ function jlmwines_render_floating_cart() {
     </div>
     <?php
 }
+
+/**
+ * Checkout-fields configuration — replaces the WooCommerce Checkout
+ * Field Editor plugin entirely.
+ *
+ * Billing block:
+ *   - Hide first/last name and postcode (gift-purchase context — billing
+ *     identity is on the WP user account; the form only needs phone +
+ *     email for delivery contact).
+ *   - Require phone + email.
+ *
+ * Shipping block:
+ *   - Require first/last name.
+ *   - Hide postcode (Israeli addresses don't conventionally use it; the
+ *     active payment gateway CardCom doesn't require it either).
+ *   - Hide country (always Israel — only shipping region).
+ *   - Add a shipping_phone field labeled "Recipient phone in Israel",
+ *     pre-filled "+972 ", lenient validation (we contact the buyer
+ *     manually if the number isn't dialable).
+ *
+ * Order comments:
+ *   - Re-frame as "Order Notes/Gift Message" with a delivery+gift-text
+ *     placeholder.
+ */
+add_filter('woocommerce_checkout_fields', function ($fields) {
+    // Billing — hide first_name, last_name, postcode
+    unset($fields['billing']['billing_first_name']);
+    unset($fields['billing']['billing_last_name']);
+    unset($fields['billing']['billing_postcode']);
+
+    if (isset($fields['billing']['billing_phone'])) {
+        $fields['billing']['billing_phone']['required'] = true;
+    }
+    if (isset($fields['billing']['billing_email'])) {
+        $fields['billing']['billing_email']['required'] = true;
+    }
+
+    // Shipping — require names, hide postcode + country
+    if (isset($fields['shipping']['shipping_first_name'])) {
+        $fields['shipping']['shipping_first_name']['required'] = true;
+    }
+    if (isset($fields['shipping']['shipping_last_name'])) {
+        $fields['shipping']['shipping_last_name']['required'] = true;
+    }
+    unset($fields['shipping']['shipping_postcode']);
+    unset($fields['shipping']['shipping_country']);
+
+    // Shipping phone — added (not a WC default field).
+    $fields['shipping']['shipping_phone'] = [
+        'label'        => __('Recipient phone in Israel', 'jlmwines'),
+        'required'     => true,
+        'class'        => ['form-row-wide'],
+        'autocomplete' => 'tel',
+        'default'      => '+972 ',
+        'priority'     => 60,
+    ];
+
+    // Order comments — gift-message framing
+    if (isset($fields['order']['order_comments'])) {
+        $fields['order']['order_comments']['label']       = __('Order Notes/Gift Message', 'jlmwines');
+        $fields['order']['order_comments']['placeholder'] = __('Delivery notes and/or gift message text.', 'jlmwines');
+    }
+
+    return $fields;
+});
+
+/**
+ * Force shipping_country='IL' since the field is hidden from the form.
+ * Without this WC has no country to calculate shipping/tax against.
+ */
+add_filter('woocommerce_checkout_posted_data', function ($data) {
+    $data['shipping_country'] = 'IL';
+    return $data;
+});
+
+/**
+ * On order creation: persist shipping_phone, mirror shipping names into
+ * billing names (so order email / admin list display correctly even
+ * though the form hid the billing name fields), and lock shipping
+ * country to IL.
+ */
+add_action('woocommerce_checkout_create_order', function ($order) {
+    if (!empty($_POST['shipping_phone'])) {
+        $order->update_meta_data('_shipping_phone', sanitize_text_field(wp_unslash($_POST['shipping_phone'])));
+    }
+    if (!$order->get_billing_first_name()) {
+        $order->set_billing_first_name($order->get_shipping_first_name());
+    }
+    if (!$order->get_billing_last_name()) {
+        $order->set_billing_last_name($order->get_shipping_last_name());
+    }
+    if (!$order->get_shipping_country()) {
+        $order->set_shipping_country('IL');
+    }
+}, 10);
+
+/**
+ * Surface shipping_phone in the admin order screen, beneath the
+ * shipping address block.
+ */
+add_action('woocommerce_admin_order_data_after_shipping_address', function ($order) {
+    $phone = $order->get_meta('_shipping_phone');
+    if ($phone) {
+        echo '<p><strong>' . esc_html__('Recipient phone:', 'jlmwines') . '</strong> ' . esc_html($phone) . '</p>';
+    }
+});

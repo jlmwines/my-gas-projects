@@ -46,9 +46,34 @@ get_header();
                     </a>
                 <?php endif; ?>
             </div>
-            <?php if ($hero_image) : ?>
+            <?php
+            $hero_image_id = (int) get_theme_mod('jlmwines_hero_image_id', 0);
+            ?>
+            <?php if ($hero_image_id) : ?>
                 <div class="hero-image">
-                    <img src="<?php echo esc_url($hero_image); ?>" alt="<?php esc_attr_e('Evyatar', 'jlmwines'); ?>" loading="eager">
+                    <?php
+                    /*
+                     * Sizes attribute reflects layout: hero is 100vw on
+                     * mobile/tablet (single column), 50vw on desktop (split
+                     * with the hero copy). Browser picks the smallest srcset
+                     * variant that fits — mobile ends up with a ~300-wide
+                     * file instead of the full hero.
+                     */
+                    echo wp_get_attachment_image($hero_image_id, 'large', false, [
+                        'alt'           => esc_attr__('Evyatar', 'jlmwines'),
+                        'loading'       => 'eager',
+                        'fetchpriority' => 'high',
+                        'sizes'         => '(max-width: 899px) 100vw, 50vw',
+                    ]);
+                    ?>
+                </div>
+            <?php elseif ($hero_image) : ?>
+                <div class="hero-image">
+                    <img src="<?php echo esc_url($hero_image); ?>"
+                         alt="<?php esc_attr_e('Evyatar', 'jlmwines'); ?>"
+                         width="760" height="751"
+                         loading="eager"
+                         fetchpriority="high">
                 </div>
             <?php endif; ?>
         </div>

@@ -141,39 +141,33 @@ function jlmwines_render_shipping_monitor($variant = 'box') {
         $classes[] = 'qualified';
     }
 
-    $remaining_html = wc_price($data['remaining'], ['decimals' => 0]);
-    $subtotal_html  = wc_price($data['subtotal'],  ['decimals' => 0]);
-    $threshold_html = wc_price($data['threshold'], ['decimals' => 0]);
+    $is_he = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
 
+    $remaining_html = '<strong>' . wc_price($data['remaining'], ['decimals' => 0]) . '</strong>';
+    $threshold_html = '<strong>' . wc_price($data['threshold'], ['decimals' => 0]) . '</strong>';
+
+    // Per-language hardcoded copy (matches the pattern used in
+    // template-articles.php — proper .po harvest still on the deferred
+    // TODO). Three states: qualified / empty cart / below threshold.
     if ($data['qualified']) {
-        $message = '<svg width="18" height="18" aria-hidden="true"><use href="#i-check"/></svg> '
-            . sprintf(
-                /* translators: %s: bolded "free shipping" phrase */
-                esc_html__('You qualify for %s', 'jlmwines'),
-                '<strong>' . esc_html__('free shipping', 'jlmwines') . '</strong>'
-            );
+        $message = $is_he
+            ? 'מזל טוב, המשלוח עלינו!'
+            : 'Congratulations, the shipping is on us!';
     } elseif ($data['subtotal'] <= 0) {
-        $message = sprintf(
-            /* translators: %s: threshold amount */
-            esc_html__('Free shipping on orders over %s', 'jlmwines'),
-            '<strong>' . $threshold_html . '</strong>'
-        );
+        $message = $is_he
+            ? sprintf('משלוח חינם בהזמנה של %s ומעלה.', $threshold_html)
+            : sprintf('Free delivery with order of %s or more.', $threshold_html);
     } else {
-        $message = sprintf(
-            /* translators: %s: amount remaining to qualify */
-            esc_html__('Add %s for free shipping', 'jlmwines'),
-            '<strong>' . $remaining_html . '</strong>'
-        );
+        $message = $is_he
+            ? sprintf('רק עוד %s והמשלוח חינם', $remaining_html)
+            : sprintf('Only %s more for free shipping.', $remaining_html);
     }
 
     $width = number_format($data['pct'], 1, '.', '');
     ?>
     <div class="<?php echo esc_attr(implode(' ', $classes)); ?>">
         <div class="shipping-monitor-head">
-            <div class="shipping-monitor-message"><?php echo $message; ?></div>
-            <?php if ($data['subtotal'] > 0) : ?>
-                <div class="shipping-monitor-amounts"><?php echo $subtotal_html . ' / ' . $threshold_html; ?></div>
-            <?php endif; ?>
+            <div class="shipping-monitor-message"><?php echo $message; // wc_price html already escaped ?></div>
         </div>
         <?php if ($data['subtotal'] > 0 && !$data['qualified']) : ?>
             <div class="shipping-monitor-bar"><div class="shipping-monitor-fill" style="width:<?php echo esc_attr($width); ?>%"></div></div>

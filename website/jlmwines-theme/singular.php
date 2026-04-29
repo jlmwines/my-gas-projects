@@ -12,14 +12,26 @@ get_header();
         the_post();
         ?>
         <article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-            <header class="entry-header">
-                <?php the_title('<h1 class="entry-title">', '</h1>'); ?>
-            </header>
+            <?php
+            // Blog posts with a featured image render a full-width hero
+            // with the title overlaid on the image. Pages and posts
+            // without a featured image fall back to a plain title header.
+            $use_post_hero = is_singular('post') && has_post_thumbnail();
+            ?>
 
-            <?php if (has_post_thumbnail() && !is_page()) : ?>
-                <figure class="entry-thumbnail">
-                    <?php the_post_thumbnail('large'); ?>
-                </figure>
+            <?php if ($use_post_hero) : ?>
+                <header class="post-hero">
+                    <figure class="post-hero-figure">
+                        <?php the_post_thumbnail('large', ['class' => 'post-hero-image']); ?>
+                    </figure>
+                    <div class="post-hero-content container">
+                        <h1 class="post-hero-title"><?php the_title(); ?></h1>
+                    </div>
+                </header>
+            <?php else : ?>
+                <header class="entry-header">
+                    <?php the_title('<h1 class="entry-title">', '</h1>'); ?>
+                </header>
             <?php endif; ?>
 
             <div class="entry-content">
