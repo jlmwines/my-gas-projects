@@ -1,7 +1,7 @@
 # Validation Rules & Manager Inventory View — Fix Plan
 
 **Created:** 2026-03-09
-**Status:** Fixes 1-6 implemented (c1af348). Fix 7 (skip redundant tasks) and Fix 8 (woosb_ids JSON) planned.
+**Status:** All fixes implemented. c1af348 (fixes 1-6), e398a29 (fixes 7-8). Deployed, no rebuild needed.
 
 ## Problem Summary
 

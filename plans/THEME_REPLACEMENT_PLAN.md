@@ -302,6 +302,15 @@ The current WPML configuration has been in place for years; before the cutover i
 
 Audit produces a punch list; fixes happen on staging before cutover so the new theme launches with WPML in better shape than today.
 
+**Source-string discipline (lock copy + canonicalize labels BEFORE the `.po` harvest):**
+
+Two cleanup items that must happen before strings are extracted, otherwise Hebrew translations have to be redone:
+
+1. **Free-shipping monitor copy lock.** English text in `inc/free-shipping.php` (strip + cart variants) was drafted quickly during the v1.0.8 build. Review and finalize wording before extraction.
+2. **Canonical UI labels per language.** Common labels (Cart, Shop, Account, Search, Read more, etc.) currently come from a mix of theme strings, WC textdomain, and plugin defaults. Pick one canonical translation per language for each label and pin it in WPML String Translation. Theme code uses the canonical English source string with the appropriate textdomain (`woocommerce` where WC owns it, `jlmwines-theme` where we do) so the translation flows through automatically.
+
+Both items run before the `.po` harvest pass listed in WPML setup review.
+
 ## Rank Math integration
 
 Plugin-driven, theme-agnostic. Should work without theme changes. Verify after cutover:

@@ -222,28 +222,70 @@ Activity history backfill completed: **18,788 records**
 | 4 | Cooling customer triggers | Done |
 | 4 | task.crm.suggestion task type | Done |
 
-### In Progress / Blocked
+### Resolved / Reframed (2026-04-30)
 
-| Component | Status | Blocker |
-|-----------|--------|---------|
-| Contact classification accuracy | BLOCKED | Bugs in gift/war-support detection |
-| sc_IsCore accuracy | BLOCKED | Defaulting conflict overwrites imports |
-| Preference enrichment accuracy | BLOCKED | Classification bugs affect enrichment |
+| Component | Status |
+|-----------|--------|
+| Contact classification accuracy | Resolved by SIMPLIFIED RULE below — gift detection only, war-support self-resolves |
+| sc_IsCore accuracy | Resolved — defaulting to TRUE is now correct under the new rule |
+| Preference enrichment accuracy | No longer gated on classification bugs |
 
 ### Not Started
 
-| Phase | Component |
-|-------|-----------|
-| 5 | Contact list UI (AdminContactsView.html) |
-| 5 | WebAppContacts.js data provider |
-| 6 | WhatsApp integration |
-| 6 | Mailchimp export |
-| 7 | Recommendation engine |
-| 7 | Year in Wine campaign |
+| Phase | Component | Note |
+|-------|-----------|------|
+| 5 | Contact list UI (AdminContactsView.html) | |
+| 5 | WebAppContacts.js data provider | |
+| 6 | WhatsApp + Mailchimp integration | Owned by `CONTACT_MANAGER_PLAN.md` (Half 1 + Half 2) |
+| 7 | Recommendation engine | |
+| 7 | ~~Year in Wine campaign~~ | Dropped per `CAMPAIGN_SYSTEM_PLAN.md` "What Didn't Work" |
 
 ---
 
-## Current Issues - CRITICAL FIX REQUIRED
+## Classification — SIMPLIFIED RULE (2026-04-30)
+
+The earlier "5 bugs + 2 issues" framing collapses to a single simple rule plus one self-resolving issue. The original bug list is preserved below for reference but should not drive the next fix.
+
+### The Rule
+
+- **Every customer defaults to `core`.** Subdivided by frequency: `core.new` (1 order), `core.repeat` (2+ orders), `core.vip` (5+ orders OR ≥3000 NIS spend).
+- **Customer becomes `noncore.gift` only when ALL their orders look like gifts.**
+- **Subscribers without orders** → `prospect.*` track as before (separate from core/noncore).
+
+### Gift Detection — Simplified
+
+A single order is a gift if **both**:
+1. Shipping address differs from billing address (different last name)
+2. Customer note is present (any content)
+
+Drop the `DELIVERY_KEYWORDS` exclusion logic. False positives (e.g., self-purchase shipped to office with delivery instructions) are acceptable — the goal is rough filtering for segmentation, not perfect classification.
+
+A customer is `noncore.gift` when this rule fires for **every** one of their orders.
+
+### War-Support Detection — Self-Resolving
+
+War-support purchases were a one-time wave (efrat / roshtzurim / gushwarriors / gush / tekoa coupons). Those purchasers will age into Lapsed → Dormant naturally and drop out of active outreach.
+
+**Don't fix the bug.** The category becomes irrelevant on its own. Existing classification stays as-is and is allowed to be slightly wrong.
+
+### sc_IsCore Defaulting
+
+The previous "Bug 1" — the import defaulting `sc_IsCore` to TRUE for customers when empty — is no longer a bug under this rule. The default IS the correct answer. The only override is the gift-only case.
+
+### Correction Script
+
+- One-time pass: re-evaluate every customer with the simplified gift rule
+- Set `noncore.gift` where every order qualifies as a gift; everything else → core
+- War-support category left alone
+
+This is far simpler than the original 12-step migration in the legacy bug list below.
+
+---
+
+## Legacy: Original Bug List (SUPERSEDED — preserved for context)
+
+> **All "Fix:" recommendations below are SUPERSEDED by the SIMPLIFIED RULE above.**
+> Do not apply the patches in this section. The framing predates the 2026-04-30 simplification and is kept only for traceability of how we got here.
 
 ### Summary
 

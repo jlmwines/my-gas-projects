@@ -47,6 +47,14 @@ Phases 1-13 established the core system:
 
 **Context:** Bundles are managed in WooCommerce (WPClever plugin). JLMops serves as a shadow system to monitor inventory, suggest replacements, and track content.
 
+**2026-04-30 model refinement:** Separate composition (which products are in each bundle, slow-changing) from member condition (current inventory of those products, fast-changing).
+
+- **Composition** is cached in JLMops. User pushes a "Re-sync bundle membership" button when they've actually changed a bundle in WooCommerce. Nightly `refreshBundleComposition` stays in housekeeping as belt-and-suspenders.
+- **Member condition** runs against current `wpm_StockLevel` against the cached composition; happens right after sync rather than entangled with composition refresh, so it doesn't block sync.
+- **Sync widget control:** after the user-initiated reset (post-COMPLETE → IDLE), surface a "Run bundle analysis" button that navigates to the bundle dashboard (analysis runs on page load there).
+- **No staleness timestamp UI** — the sync cadence and 3am overnight are implicit knowledge.
+- **Manual "edit current contents" override** available on the bundle dashboard for cases where user wants to apply a swap suggested by analysis.
+
 **Core Concepts:**
 - 2-Sheet Model: `SysBundles` (header) + `SysBundleSlots` (content blocks and product slots)
 - Slot Types: `'Text'` (bilingual content) or `'Product'` (criteria-based assignment)
@@ -93,3 +101,5 @@ Bidirectional WooCommerce attribute management:
 2. Attribute standardization and cleanup
 3. Safe export for descriptions and attributes
 4. Full detail update export as uploadable CSV
+
+**2026-04-30 update — narrow scope first:** A first pass focused only on **intensity / complexity / acidity** push (the three core attributes used in PDP, catalog filters, and cross-sell calculations) is deferred but well-scoped. These three change only on vintage / detail updates, so daily push alongside the inventory CSV is cheap. Open before this becomes a plan: confirm WC storage model (taxonomy attributes `pa_intensity` etc. vs custom fields — needs live check); value→term-slug mapping; push mechanism (REST API `PUT /products/{id}` likely cleaner than CSV extension); skip empty values; explicit scope discipline (does not touch other partially-removed attributes). Wider attribute cleanup remains a separate, larger effort.

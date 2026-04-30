@@ -924,56 +924,55 @@ Requires: Canva template design, print workflow, T2M account for bulk URL shorte
 
 ---
 
-## Year-End 2025 Campaigns
+## What Didn't Work (2026-04-30 retrospective)
 
-### Campaign 1: Year in Wine (Customers)
+The Year in Wine campaign (sent late-Dec 2025 / early-Jan 2026) generated pleasing customer feedback but **no real sales**. The retrospective surfaced three reasons, with implications for future campaign design:
 
-**Audience:** All contacts with orders in 2025
-**Channel:** Mailchimp (PDF attachment), WhatsApp/email for non-subscribers
-**Timing:** Late December / Early January
+### Customers don't choose wine by attribute scores
 
-**Content - Light PDF (Spotify Wrapped style):**
-Keep it simple. Core message: "We can help you get more of what you enjoy with less hassle and risk."
-- Highlights only (not every bottle)
-- Top categories/preferences
-- Brief taste profile
-- Invitation to continue in 2026
+Leading email copy with "your top wineries / your favorite categories / your intensity range" felt off. The attribute system (intensity / complexity / acidity) is valuable elsewhere — PDP, catalog filters, cross-sell calculations, packing slip — but it's an aspirational education tool, not a sales lever in marketing copy.
 
-**Tiered Rewards by 2025 Spend:**
-| 2025 Spend (NIS) | Reward Coupon | Reward Level |
-|------------------|---------------|--------------|
-| 1,000 - 1,999 | `fgr01` | Accessory (stopper, opener, etc.) |
-| 2,000 - 3,999 | `fgr02` | Entry wine |
-| 4,000+ | `fgr03` | Premium wine |
+**Implication.** Attributes stay in product surfaces. Don't lead email copy with "we've analyzed your preferences." The brand authority case (proprietary scale used consistently across products) is a positioning asset, not a hook.
 
-**Referral Coupon:**
-Every Year in Wine recipient also gets a personalized referral coupon to share:
-- Code generated from email prefix (SHELLYROBERTSON, DAVID, etc.)
-- New customer discount (₪50 fixed cart)
-- First purchase only
-- Launches ambassador program for that contact
+### The offer asked too much
 
-**What recipients receive:**
-1. Year in Wine PDF summary
-2. Reward coupon (fgr01/02/03) based on spend tier
-3. Personal referral coupon to share with friends
+Auto-applied coupons + free-gift selection at checkout + tiered rewards (fgr01 / fgr02 / fgr03) added up to a complex behavior request. Customers shouldn't have to decode a system to redeem a gift. Personal touches got buried under mechanics.
 
-**Delivery:**
-- Subscribers: Mailchimp with PDF stored per contact
-- Non-subscribers: Direct email/WhatsApp with PDF attached
+**Implication.** Drop high-effort personalization features from active roadmap. Simpler offers (single coupon, single CTA) outperform clever ones.
 
-### Campaign 1b: Year in Wine (Subscribers - No Orders)
+### Email's actual job is "we exist" reminder
 
-**Audience:** prospect.subscriber with no 2025 orders
-**Subject:** "Your Year in Wine" (same enticing subject)
+The data point that mattered: customers don't order frequently. When an email arrives, the customer is often already due to order — the campaign reminds them, doesn't convert them. Personalization theater doesn't change that.
 
-**Content - Forward-Looking:**
-- "We don't have history with you yet..."
-- "We're planning a great 2026"
-- Choice of 3 great bundles
-- Big first-purchase discount
+**Implication.** Frequency and presence matter more than sophistication. Newsletter print insert (see `marketing/NEWSLETTER_PLAN.md`) operates on this premise.
 
-**Goal:** Convert subscribers to first purchase
+### What to drop from this plan
+
+- **Year in Wine PDFs** — defer indefinitely, not the right format
+- **Tiered reward coupons (fgr01 / fgr02 / fgr03)** — recipients didn't redeem; complexity > value
+- **Free-gift-at-checkout selection mechanics** — customers shouldn't have to choose
+
+### What stays valid
+
+- Welcome offer (NIS 50 off ₪399 minimum) — simple, single-step, in market and active
+- Comeback campaign for lapsed/dormant customers — small batch testing approach is right
+- WhatsApp follow-up for new customers — see `jlmops/plans/CONTACT_MANAGER_PLAN.md`
+- Mailchimp segmentation — stays as EN / HE language pair only; richer microsegmentation isn't justified at current volume
+
+---
+
+## Year-End 2025 Campaigns (HISTORICAL — sent late-Dec 2025 / early-Jan 2026)
+
+> Sent. Outcomes summarized; mechanics retained only for traceability. **Do not use this section as a template.** See "What Didn't Work" above for the retrospective and which elements have been dropped from the active roadmap.
+
+### Campaign 1: Year in Wine (Customers) — SENT, NOT REPEATED
+
+**Audience:** All contacts with orders in 2025.
+**Outcome:** Pleasing customer feedback, no real sales. Tiered rewards (fgr01/02/03), PDF attachment, free-gift-at-checkout selection, and personalized referral coupons all dropped from future campaigns per retrospective.
+
+### Campaign 1b: Year in Wine (Subscribers - No Orders) — SENT, NOT REPEATED
+
+**Audience:** prospect.subscriber with no 2025 orders. Same outcome / same drops as Campaign 1.
 
 ### Campaign 2: Comeback Offer (Lapsed/Dormant)
 
@@ -984,9 +983,7 @@ Every Year in Wine recipient also gets a personalized referral coupon to share:
 **Admin has bandwidth** for marketing testing. Start with small batches, test messaging/offers, refine before scaling.
 
 **Content - "Here's What You Missed":**
-- Showcase the attribute rating system
 - Highlight seasonal curation ("We tasted X wines to pick these")
-- Featured bundle based on their last known preferences
 - Invitation to rediscover
 
 **Offer:**
