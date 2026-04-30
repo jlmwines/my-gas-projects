@@ -127,15 +127,21 @@ add_filter('woocommerce_sale_flash', function ($html, $post, $product) {
  */
 function jlmwines_render_product_loop($args = []) {
     $args = wp_parse_args($args, [
-        'type'       => 'featured',
-        'limit'      => 4,
-        'columns'    => 4,
-        'category'   => '',
-        'heading'    => '',
-        'eyebrow'    => '',
-        'body'       => '',
-        'cta_url'    => '',
-        'cta_text'   => __('Shop all', 'jlmwines'),
+        'type'                 => 'featured',
+        'limit'                => 4,
+        'columns'              => 4,
+        'category'             => '',
+        'heading'              => '',
+        'eyebrow'              => '',
+        'body'                 => '',
+        'cta_url'              => '',
+        'cta_text'             => __('Shop all', 'jlmwines'),
+        // Default to WC's behavior (respects the "Hide out of stock
+        // items from catalog" admin setting). Pass true to bypass —
+        // useful on landing pages like /send-wine-gifts-in-israel/
+        // where merchants want the full curated set visible even when
+        // some items are temporarily sold out.
+        'include_out_of_stock' => false,
     ]);
 
     $query_args = [
@@ -180,8 +186,35 @@ function jlmwines_render_product_loop($args = []) {
             break;
     }
 
+    // Temporarily override the WC option that drives "hide out of stock"
+    // filtering. The override has to span both the WP_Query (visibility
+    // tax_query) AND the render loop, because content-product.php calls
+    // WC_Product::is_visible() at template-render time which re-checks
+    // get_option('woocommerce_hide_out_of_stock_items') and skips
+    // out-of-stock products if it returns 'yes'. Removing the filter is
+    // deferred to after the loop renders (or to the early-return path).
+    if ($args['include_out_of_stock']) {
+        add_filter('pre_option_woocommerce_hide_out_of_stock_items', '__return_empty_string');
+
+        // Prefer in-stock products in the result ordering. WC stores
+        // stock_status as a postmeta with values 'instock',
+        // 'onbackorder', 'outofstock' — alphabetical ASC sort puts
+        // in-stock first, then backorder, then out-of-stock. Combined
+        // with the secondary date sort, sold-out products fall to the
+        // end and only show up to fill the limit.
+        if (empty($query_args['post__in'])) {
+            $query_args['meta_key'] = '_stock_status';
+            $query_args['orderby']  = [
+                'meta_value' => 'ASC',
+                'date'       => 'DESC',
+            ];
+        }
+    }
     $query = new WP_Query($query_args);
     if (!$query->have_posts()) {
+        if ($args['include_out_of_stock']) {
+            remove_filter('pre_option_woocommerce_hide_out_of_stock_items', '__return_empty_string');
+        }
         return;
     }
     ?>
@@ -200,11 +233,19 @@ function jlmwines_render_product_loop($args = []) {
             </header>
         <?php endif; ?>
 
-        <ul class="products section-product-grid columns-<?php echo (int) $args['columns']; ?>">
-            <?php while ($query->have_posts()) : $query->the_post(); ?>
-                <?php wc_get_template_part('content', 'product'); ?>
-            <?php endwhile; ?>
-        </ul>
+        <div class="section-product-grid-wrap">
+            <button type="button" class="carousel-arrow carousel-arrow-prev" aria-label="<?php esc_attr_e('Previous', 'jlmwines'); ?>">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <ul class="products section-product-grid columns-<?php echo (int) $args['columns']; ?>">
+                <?php while ($query->have_posts()) : $query->the_post(); ?>
+                    <?php wc_get_template_part('content', 'product'); ?>
+                <?php endwhile; ?>
+            </ul>
+            <button type="button" class="carousel-arrow carousel-arrow-next" aria-label="<?php esc_attr_e('Next', 'jlmwines'); ?>">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+        </div>
 
         <?php if ($args['cta_url']) : ?>
             <div class="section-cta">
@@ -216,6 +257,10 @@ function jlmwines_render_product_loop($args = []) {
     </section>
     <?php
     wp_reset_postdata();
+
+    if ($args['include_out_of_stock']) {
+        remove_filter('pre_option_woocommerce_hide_out_of_stock_items', '__return_empty_string');
+    }
 }
 
 /**

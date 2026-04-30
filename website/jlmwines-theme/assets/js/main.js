@@ -225,3 +225,28 @@
         }
     });
 })();
+
+// ─── Carousel arrows for product carousels ──────────────────────────
+// Each .section-product-grid-wrap contains prev/next buttons and the
+// scrolling grid. Click scrolls the grid by one card's width.
+// Buttons are hidden by default on desktop via CSS; visible only when
+// the grid is in carousel mode (gifts page on mobile).
+(function () {
+    document.querySelectorAll('.section-product-grid-wrap').forEach(function (wrap) {
+        var grid = wrap.querySelector('.section-product-grid');
+        var prev = wrap.querySelector('.carousel-arrow-prev');
+        var next = wrap.querySelector('.carousel-arrow-next');
+        if (!grid || !prev || !next) return;
+
+        function step(dir) {
+            var card = grid.querySelector('.product');
+            if (!card) return;
+            var styles = getComputedStyle(grid);
+            var gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+            var distance = card.offsetWidth + gap;
+            grid.scrollBy({ left: dir * distance, behavior: 'smooth' });
+        }
+        prev.addEventListener('click', function () { step(-1); });
+        next.addEventListener('click', function () { step(1); });
+    });
+})();

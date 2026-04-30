@@ -5,6 +5,9 @@
 .wp-credentials
 .sftp-credentials
 
+# Local incremental-deploy manifest (SHA-1 of last-deployed theme files)
+.deploy-theme-manifest.json
+
 # Content working files
 content/history/
 content/*.zip

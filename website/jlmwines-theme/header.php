@@ -67,6 +67,40 @@
         <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="none">
             <path d="M12 2.5l2.95 6.45 7.05.65-5.35 4.7L18.3 21 12 17.4 5.7 21l1.65-6.7L2 9.6l7.05-.65z"/>
         </symbol>
+        <symbol id="i-gift-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="8" width="18" height="13" rx="1"/>
+            <path d="M3 12h18"/>
+            <path d="M12 8v13"/>
+            <path d="M8 8c-1.6-2-1-4 1-4s2.5 1.5 3 4M16 8c1.6-2 1-4-1-4s-2.5 1.5-3 4"/>
+        </symbol>
+        <symbol id="i-champagne-bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="10" y="2" width="4" height="3" rx="0.4"/>
+            <path d="M11 5v3M13 5v3"/>
+            <path d="M10 8h4"/>
+            <path d="M10 8c-1.2 1-2 2.2-2 4v8a2 2 0 002 2h4a2 2 0 002-2v-8c0-1.8-0.8-3-2-4"/>
+        </symbol>
+        <symbol id="i-basket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8h18l-1.5 12a2 2 0 01-2 2h-11a2 2 0 01-2-2L3 8z"/>
+            <path d="M7 8a5 5 0 0110 0"/>
+            <path d="M3 12h18"/>
+        </symbol>
+        <symbol id="i-flute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6l-1.5 9c-0.2 1-0.8 1.5-1.5 1.5s-1.3-0.5-1.5-1.5z"/>
+            <circle cx="12" cy="7" r="0.5" fill="currentColor"/>
+            <circle cx="13.2" cy="9" r="0.4" fill="currentColor"/>
+            <path d="M12 13.5v6.5"/>
+            <path d="M9 21h6"/>
+        </symbol>
+        <symbol id="i-corkscrew" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 3h14v3a3 3 0 01-3 3h-3"/>
+            <path d="M13 9v3M13 12c-2 0-2 2 0 2s2 2 0 2-2 2 0 2v2"/>
+        </symbol>
+        <symbol id="i-jar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="3" width="12" height="3" rx="0.5"/>
+            <path d="M7 6v2M17 6v2"/>
+            <path d="M5 8h14v12a2 2 0 01-2 2H7a2 2 0 01-2-2z"/>
+            <path d="M7 12h10M7 16h10"/>
+        </symbol>
     </defs>
 </svg>
 

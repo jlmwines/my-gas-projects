@@ -132,3 +132,36 @@ add_action('wp_enqueue_scripts', function () {
         }
     }
 }, 100);
+
+/**
+ * Cookie-banner reopen trigger.
+ *
+ * Complianz exposes a hidden internal `.cmplz-manage-consent` element
+ * that opens its consent banner; clicking it via JS works regardless
+ * of whether the floating tab is visible. We surface a footer link
+ * with class `.cmplz-show-banner` and delegate clicks from it to the
+ * hidden control. This is the official Complianz-recommended pattern
+ * for sites that hide the floating tab but still need a manual
+ * consent-management entry point.
+ */
+add_action('wp_footer', function () {
+    ?>
+    <script>
+    (function () {
+        function delegate(eventName, selector, handler) {
+            document.addEventListener(eventName, function (e) {
+                if (e.target.closest(selector)) {
+                    handler(e);
+                }
+            });
+        }
+        delegate('click', '.cmplz-show-banner', function (e) {
+            e.preventDefault();
+            document.querySelectorAll('.cmplz-manage-consent').forEach(function (btn) {
+                btn.click();
+            });
+        });
+    })();
+    </script>
+    <?php
+}, 100);

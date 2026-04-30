@@ -73,7 +73,17 @@
 
         <div class="footer-band">
 
-            <section id="footer-contact" class="footer-contact">
+            <?php
+            // Anchor ID flips per language so HE menus / page links can
+            // target #footer-contact-he and EN menus #footer-contact —
+            // a single rendered footer can't carry both IDs without
+            // duplicate-anchor warnings, so we render the right one
+            // for the current language.
+            $jlm_contact_anchor_id = (function_exists('icl_get_current_language') && icl_get_current_language() === 'he')
+                ? 'footer-contact-he'
+                : 'footer-contact';
+            ?>
+            <section id="<?php echo esc_attr($jlm_contact_anchor_id); ?>" class="footer-contact">
                 <address class="footer-contact-info">
                     <?php if ($contact_address) : ?>
                         <span class="footer-contact-line footer-contact-address"><?php echo wp_kses_post($contact_address); ?></span>
@@ -117,6 +127,29 @@
                         <?php endforeach; ?>
                     </ul>
                 <?php endif; ?>
+
+                <?php
+                // Language switcher relocated from the legal column to
+                // sit beneath the social icons so the legal column can
+                // host the cookie-consent control instead.
+                if (function_exists('icl_get_languages')) :
+                    $languages = icl_get_languages('skip_missing=0&orderby=code');
+                    if (!empty($languages)) :
+                        ?>
+                        <div class="footer-lang">
+                            <?php $i = 0; foreach ($languages as $lang) :
+                                if ($i++ > 0) echo ' <span class="footer-lang-sep" aria-hidden="true">·</span> ';
+                                $class = $lang['active'] ? 'active' : '';
+                                ?>
+                                <a class="<?php echo esc_attr($class); ?>" href="<?php echo esc_url($lang['url']); ?>">
+                                    <?php echo esc_html($lang['native_name']); ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php
+                    endif;
+                endif;
+                ?>
             </div>
 
             <div class="footer-legal">
@@ -124,24 +157,21 @@
                     <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php _e('Terms &amp; Conditions', 'jlmwines'); ?></a></li>
                     <li><a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php _e('Privacy', 'jlmwines'); ?></a></li>
                     <?php
-                    if (function_exists('icl_get_languages')) :
-                        $languages = icl_get_languages('skip_missing=0&orderby=code');
-                        if (!empty($languages)) :
-                            ?>
-                            <li class="footer-lang-item">
-                                <?php $i = 0; foreach ($languages as $lang) :
-                                    if ($i++ > 0) echo ' <span class="footer-lang-sep" aria-hidden="true">·</span> ';
-                                    $class = $lang['active'] ? 'active' : '';
-                                    ?>
-                                    <a class="<?php echo esc_attr($class); ?>" href="<?php echo esc_url($lang['url']); ?>">
-                                        <?php echo esc_html($lang['native_name']); ?>
-                                    </a>
-                                <?php endforeach; ?>
-                            </li>
-                            <?php
-                        endif;
-                    endif;
+                    // Cookie consent control. Uses Complianz's documented
+                    // pattern: a link with class `cmplz-show-banner` that
+                    // a small footer-injected JS snippet (see
+                    // jlmwines_cmplz_show_banner_on_click in
+                    // inc/enqueue.php) delegates to Complianz's hidden
+                    // internal `.cmplz-manage-consent` button. Works
+                    // whether or not Complianz's floating tab is visible.
+                    $consent_label_he = 'הגדרות עוגיות';
+                    $consent_label_en = 'Cookie Settings';
+                    $is_he_footer     = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
+                    $consent_label    = $is_he_footer ? $consent_label_he : $consent_label_en;
                     ?>
+                    <li class="footer-consent-item">
+                        <a class="cmplz-show-banner footer-consent-link"><?php echo esc_html($consent_label); ?></a>
+                    </li>
                 </ul>
             </div>
 
