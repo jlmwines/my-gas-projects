@@ -186,19 +186,7 @@ function jlmwines_render_shipping_monitor($variant = 'box') {
     }
 
     $width = number_format($data['pct'], 1, '.', '');
-    // Diagnostic comment — view-source to confirm what PHP computed
-    // vs what the message displays. Drop after monitor freshness is
-    // verified.
-    $diag = sprintf(
-        'monitor: subtotal=%s threshold=%s remaining=%s qualified=%d variant=%s',
-        $data['subtotal'],
-        $data['threshold'],
-        $data['remaining'],
-        $data['qualified'] ? 1 : 0,
-        $variant
-    );
     ?>
-    <!-- <?php echo esc_html($diag); ?> -->
     <div class="<?php echo esc_attr(implode(' ', $classes)); ?>">
         <div class="shipping-monitor-head">
             <div class="shipping-monitor-message"><?php echo $message; // wc_price html already escaped ?></div>
@@ -230,15 +218,16 @@ function jlmwines_render_shipping_monitor_strip() {
     <?php
 }
 
-// Priority 15 puts the monitor AFTER WC's notices (which print at 10),
-// so the "Cart updated" confirmation appears first and the monitor
-// below it reads as the current state, not the prior one. The wrapping
-// div gives the box a stable selector for AJAX fragment refresh below.
-add_action('woocommerce_before_cart', function () {
+// Hooked inside the cart form (rather than woocommerce_before_cart)
+// so WC's AJAX update_wc_div() swaps it together with the form. The
+// outer hook leaves our wrap as stale DOM after Update Cart because
+// update_wc_div() only replaces .woocommerce-cart-form, .cart_totals,
+// and notices.
+add_action('woocommerce_before_cart_table', function () {
     echo '<div class="shipping-monitor-cart-wrap">';
     jlmwines_render_shipping_monitor('box');
     echo '</div>';
-}, 15);
+});
 
 /**
  * AJAX refresh on cart change. Replaces both the slim strip (for non-

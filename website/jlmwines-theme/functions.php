@@ -54,3 +54,4 @@ require_once get_template_directory() . '/inc/woocommerce.php';
 require_once get_template_directory() . '/inc/sections.php';
 require_once get_template_directory() . '/inc/customize.php';
 require_once get_template_directory() . '/inc/coupons.php';
+require_once get_template_directory() . '/inc/mc4wp.php';
