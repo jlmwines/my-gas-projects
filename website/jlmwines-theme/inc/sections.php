@@ -16,21 +16,46 @@ if (!defined('ABSPATH')) {
  * a child theme, mu-plugin, or a future custom post type).
  */
 function jlmwines_get_testimonials() {
+    // Real Google 5-star reviews. Bilingual inline per session rule
+    // (HE coverage at write time). Each entry has a short title (the
+    // reviewer's chosen headline on Google) plus quote, name, source.
+    $is_he = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
+
     $default = [
         [
-            'quote'  => __("Evyatar's recommendations are always spot-on. I've stopped guessing which wine to buy.", 'jlmwines'),
-            'name'   => 'Sarah M.',
-            'source' => 'Jerusalem',
+            'title'  => $is_he ? 'שירות מדהים' : 'Amazing Service',
+            'quote'  => $is_he
+                ? 'המקום לגלות יינות ישראלים איכותיים עם עצות טובות ושירות מדהים.'
+                : 'The place to discover quality Israeli wines with good advice and amazing service.',
+            'name'   => $is_he ? 'ארי כהן' : 'Ari Cohen',
         ],
         [
-            'quote'  => __("Best curated wine selection I've found in Israel. Free delivery sealed the deal.", 'jlmwines'),
-            'name'   => 'David L.',
-            'source' => 'Tel Aviv',
+            'title'  => $is_he ? 'מחירים סבירים' : 'Reasonably Priced',
+            'quote'  => $is_he
+                ? 'זו רק אחת מאותן פנינים נדירות... מבחר ממש טוב של יינות, במחיר סביר.'
+                : "It's just one of those rare gems... a really good selection of wines, reasonably priced.",
+            'name'   => $is_he ? 'אבישג כהן' : 'Avishag Cohen',
         ],
         [
-            'quote'  => __("The Pesach package was perfect. Found wines I would never have picked myself.", 'jlmwines'),
-            'name'   => 'Rachel B.',
-            'source' => 'Jerusalem',
+            'title'  => $is_he ? 'פשוט הכי טוב' : 'Simply the Best',
+            'quote'  => $is_he
+                ? 'פשוט חנות היין הטובה ביותר. הבעלים הוא מומחה גדול ונלהב.'
+                : 'Simply the best wine shop. The owner is a great expert and enthusiast.',
+            'name'   => $is_he ? 'בריאן קואן' : 'Brian Cowan',
+        ],
+        [
+            'title'  => $is_he ? 'עצה מצוינת' : 'Excellent Advice',
+            'quote'  => $is_he
+                ? 'אפשר לסמוך על אביתר שייתן עצות מצוינות לכל כיס. והם שולחים!'
+                : 'Evyatar can be counted on to give excellent advice for every pocket. And they deliver!',
+            'name'   => $is_he ? 'דיוויד גרטלר' : 'David Gurtler',
+        ],
+        [
+            'title'  => $is_he ? 'חנות היין הטובה ביותר' : 'Best Wine Shop',
+            'quote'  => $is_he
+                ? 'זוהי חנות היין הטובה ביותר בירושלים ושווה לצאת מגדרו.'
+                : 'This is the best wine shop in Jerusalem and worth going out of your way.',
+            'name'   => $is_he ? 'רוב רקטור' : 'Rob Rector',
         ],
     ];
     return apply_filters('jlmwines_testimonials', $default);
@@ -60,25 +85,36 @@ function jlmwines_render_testimonials($args = []) {
             </header>
         <?php endif; ?>
 
-        <div class="testimonials-grid columns-<?php echo (int) $args['columns']; ?>">
-            <?php foreach ($testimonials as $t) :
-                if (empty($t['quote'])) continue;
-                ?>
-                <figure class="testimonial">
-                    <div class="testimonial-rating" aria-label="<?php esc_attr_e('Rated 5 out of 5', 'woocommerce'); ?>">
-                        <?php for ($i = 0; $i < 5; $i++) : ?>
-                            <svg width="14" height="14" aria-hidden="true"><use href="#i-star"/></svg>
-                        <?php endfor; ?>
-                    </div>
-                    <blockquote class="testimonial-quote"><?php echo esc_html($t['quote']); ?></blockquote>
-                    <figcaption class="testimonial-attribution">
-                        <span class="testimonial-name"><?php echo esc_html($t['name'] ?? ''); ?></span>
-                        <?php if (!empty($t['source'])) : ?>
-                            <span class="testimonial-source"><?php echo esc_html($t['source']); ?></span>
+        <div class="section-testimonials-wrap">
+            <button type="button" class="carousel-arrow carousel-arrow-prev" aria-label="<?php esc_attr_e('Previous', 'woocommerce'); ?>">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <div class="testimonials-grid columns-<?php echo (int) $args['columns']; ?>">
+                <?php foreach ($testimonials as $t) :
+                    if (empty($t['quote'])) continue;
+                    ?>
+                    <figure class="testimonial">
+                        <div class="testimonial-rating" aria-label="<?php esc_attr_e('Rated 5 out of 5', 'woocommerce'); ?>">
+                            <?php for ($i = 0; $i < 5; $i++) : ?>
+                                <svg width="14" height="14" aria-hidden="true"><use href="#i-star"/></svg>
+                            <?php endfor; ?>
+                        </div>
+                        <?php if (!empty($t['title'])) : ?>
+                            <h3 class="testimonial-title"><?php echo esc_html($t['title']); ?></h3>
                         <?php endif; ?>
-                    </figcaption>
-                </figure>
-            <?php endforeach; ?>
+                        <blockquote class="testimonial-quote"><?php echo esc_html($t['quote']); ?></blockquote>
+                        <figcaption class="testimonial-attribution">
+                            <span class="testimonial-name"><?php echo esc_html($t['name'] ?? ''); ?></span>
+                            <?php if (!empty($t['source'])) : ?>
+                                <span class="testimonial-source"><?php echo esc_html($t['source']); ?></span>
+                            <?php endif; ?>
+                        </figcaption>
+                    </figure>
+                <?php endforeach; ?>
+            </div>
+            <button type="button" class="carousel-arrow carousel-arrow-next" aria-label="<?php esc_attr_e('Next', 'woocommerce'); ?>">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
         </div>
     </section>
     <?php

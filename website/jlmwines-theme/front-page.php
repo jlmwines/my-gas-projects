@@ -191,9 +191,10 @@ get_header();
         <?php
         // ─── 6. Testimonials ──────────────────────────────────────────
         if (function_exists('jlmwines_render_testimonials')) {
+            $is_he_tm = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
             jlmwines_render_testimonials([
-                'eyebrow' => __('OUR HAPPY CLIENTS', 'jlmwines'),
-                'heading' => __('What customers say', 'jlmwines'),
+                'eyebrow' => $is_he_tm ? 'מתוך ביקורות 5 כוכבים בגוגל' : 'FROM OUR 5-STAR GOOGLE REVIEWS',
+                'heading' => $is_he_tm ? 'מה הלקוחות אומרים' : 'What customers say',
             ]);
         }
         ?>

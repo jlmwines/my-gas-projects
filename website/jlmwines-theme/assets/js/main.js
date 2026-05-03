@@ -250,3 +250,26 @@
         next.addEventListener('click', function () { step(1); });
     });
 })();
+
+// ─── Carousel arrows for testimonials ───────────────────────────────
+// Mirrors the product carousel pattern. Card width drives scroll step;
+// 3-up on desktop, 1-up on mobile (CSS-controlled).
+(function () {
+    document.querySelectorAll('.section-testimonials-wrap').forEach(function (wrap) {
+        var grid = wrap.querySelector('.testimonials-grid');
+        var prev = wrap.querySelector('.carousel-arrow-prev');
+        var next = wrap.querySelector('.carousel-arrow-next');
+        if (!grid || !prev || !next) return;
+
+        function step(dir) {
+            var card = grid.querySelector('.testimonial');
+            if (!card) return;
+            var styles = getComputedStyle(grid);
+            var gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
+            var distance = card.offsetWidth + gap;
+            grid.scrollBy({ left: dir * distance, behavior: 'smooth' });
+        }
+        prev.addEventListener('click', function () { step(-1); });
+        next.addEventListener('click', function () { step(1); });
+    });
+})();

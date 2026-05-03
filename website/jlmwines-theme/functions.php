@@ -57,3 +57,4 @@ require_once get_template_directory() . '/inc/coupons.php';
 require_once get_template_directory() . '/inc/mailchimp-language-group.php';
 require_once get_template_directory() . '/inc/whatsapp-float.php';
 require_once get_template_directory() . '/inc/seo-fixes.php';
+require_once get_template_directory() . '/inc/age-gate.php';

@@ -1499,6 +1499,98 @@ body.drawer-open {
   margin: var(--s-6) 0;
 }
 
+/* ─── Age verification modal (Israeli alcohol-retail compliance) ─ */
+.age-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.age-gate[hidden] { display: none; }
+.age-gate-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+}
+.age-gate-modal {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+  max-width: 480px;
+  width: calc(100% - 40px);
+  padding: 32px 28px;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+}
+.age-gate-logo {
+  display: block;
+  margin: 0 auto 16px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+.age-gate-headline {
+  font-family: var(--font-display);
+  font-size: 24px;
+  margin: 0 0 16px;
+  color: var(--c-ink);
+}
+.age-gate-question {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 20px;
+  color: var(--c-ink);
+}
+.age-gate-body {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 24px 0 12px;
+  color: var(--c-muted);
+}
+.age-gate-warning {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--c-muted);
+  font-style: italic;
+}
+.age-gate-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+/* Yes button on visual right in both LTR and RTL.
+   DOM order [No, Yes]: LTR row → No-left, Yes-right.
+   In RTL we reverse to keep Yes on visual right. */
+.age-gate-actions:dir(rtl) {
+  flex-direction: row-reverse;
+}
+.age-gate-actions button {
+  flex: 1;
+  max-width: 140px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  border: 0;
+  cursor: pointer;
+  border-radius: 0;
+}
+.age-gate-yes {
+  background: var(--c-accent);
+  color: #ffffff;
+}
+.age-gate-yes:hover { background: var(--c-accent-hover); }
+.age-gate-no {
+  background: transparent;
+  color: var(--c-ink);
+  border: 1px solid var(--c-ink-18) !important;
+}
+.age-gate-no:hover { background: rgba(0, 0, 0, 0.04); }
+body.age-gate-locked { overflow: hidden; }
+
 /* ─── Floating WhatsApp button (product/catalog pages) ──────────── */
 .whatsapp-float {
   position: fixed;
@@ -2116,15 +2208,70 @@ ul.products li.product a.added_to_cart {
   color: var(--c-muted);
 }
 
-/* ─── Testimonials ───────────────────────────────────────────────── */
-.testimonials-grid {
-  display: grid;
-  gap: var(--s-6);
-  grid-template-columns: 1fr;
+/* ─── Testimonials carousel ──────────────────────────────────────── */
+.section-testimonials-wrap {
+  position: relative;
 }
-@media (min-width: 720px) { .testimonials-grid.columns-2,
-                             .testimonials-grid.columns-3 { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 960px) { .testimonials-grid.columns-3 { grid-template-columns: repeat(3, 1fr); } }
+.testimonials-grid {
+  display: flex;
+  gap: var(--s-6);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding-block: 4px;
+}
+.testimonials-grid::-webkit-scrollbar { display: none; }
+.testimonials-grid > .testimonial {
+  flex: 0 0 calc((100% - var(--s-6) * 2) / 3);
+  scroll-snap-align: start;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .testimonials-grid > .testimonial {
+    flex: 0 0 calc(100% - 32px);
+  }
+}
+.section-testimonials-wrap .carousel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--c-ink);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.section-testimonials-wrap .carousel-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+.section-testimonials-wrap .carousel-arrow:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+.section-testimonials-wrap .carousel-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+.section-testimonials-wrap .carousel-arrow-prev { inset-inline-start: -8px; }
+.section-testimonials-wrap .carousel-arrow-next { inset-inline-end: -8px; }
+
+/* RTL chevron flip: chevron icon paths are LTR-fixed (left/right
+   pointing). In RTL, scale-flip them so prev/next visually match
+   the document direction. Applies to all carousels in the theme. */
+.carousel-arrow svg:dir(rtl),
+[dir="rtl"] .carousel-arrow svg {
+  transform: scaleX(-1);
+}
 .testimonial {
   margin: 0;
   padding: var(--s-6);
@@ -2136,22 +2283,19 @@ ul.products li.product a.added_to_cart {
   gap: var(--s-4);
   position: relative;
 }
-.testimonial::before {
-  content: "\201C";
-  position: absolute;
-  top: 8px;
-  inset-inline-start: 16px;
-  font-family: var(--f-display);
-  font-size: 56px;
-  line-height: 1;
-  color: var(--c-accent);
-  opacity: 0.30;
-}
 .testimonial-rating {
   display: inline-flex;
   gap: 2px;
   color: var(--c-warning);
   padding-top: var(--s-2);
+}
+.testimonial-title {
+  margin: var(--s-2) 0 var(--s-1);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--c-ink);
 }
 .testimonial-quote {
   margin: 0;
