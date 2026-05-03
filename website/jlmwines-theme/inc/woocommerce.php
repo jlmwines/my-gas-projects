@@ -87,7 +87,7 @@ add_filter('woocommerce_sale_flash', function ($html, $post, $product) {
         $save = $regular - $sale;
         $copy = sprintf(
             /* translators: %s: amount saved (e.g. ₪50) */
-            __('Save %s', 'jlmwines'),
+            __('Save %s', 'woocommerce'),
             wc_price($save, ['decimals' => 0])
         );
         return '<span class="onsale">' . $copy . '</span>';
@@ -234,7 +234,7 @@ function jlmwines_render_product_loop($args = []) {
         <?php endif; ?>
 
         <div class="section-product-grid-wrap">
-            <button type="button" class="carousel-arrow carousel-arrow-prev" aria-label="<?php esc_attr_e('Previous', 'jlmwines'); ?>">
+            <button type="button" class="carousel-arrow carousel-arrow-prev" aria-label="<?php esc_attr_e('Previous', 'woocommerce'); ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
             </button>
             <ul class="products section-product-grid columns-<?php echo (int) $args['columns']; ?>">
@@ -242,7 +242,7 @@ function jlmwines_render_product_loop($args = []) {
                     <?php wc_get_template_part('content', 'product'); ?>
                 <?php endwhile; ?>
             </ul>
-            <button type="button" class="carousel-arrow carousel-arrow-next" aria-label="<?php esc_attr_e('Next', 'jlmwines'); ?>">
+            <button type="button" class="carousel-arrow carousel-arrow-next" aria-label="<?php esc_attr_e('Next', 'woocommerce'); ?>">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
         </div>
@@ -379,7 +379,7 @@ function jlmwines_render_floating_cart() {
                 <span class="floating-cart-price"><?php echo $product->get_price_html(); // phpcs:ignore ?></span>
             </div>
             <button type="button" class="floating-cart-cta" data-floating-cart-add>
-                <?php esc_html_e('Add to cart', 'jlmwines'); ?>
+                <?php esc_html_e('Add to cart', 'woocommerce'); ?>
             </button>
         </div>
     </div>

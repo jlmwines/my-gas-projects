@@ -68,7 +68,7 @@ do_action('woocommerce_before_mini_cart');
                         '<a href="%s" class="remove remove_from_cart_button mini-cart-item-remove" aria-label="%s" data-product_id="%s" data-cart_item_key="%s" data-product_sku="%s">&times;</a>',
                         esc_url(wc_get_cart_remove_url($cart_item_key)),
                         /* translators: %s is the product name */
-                        esc_attr(sprintf(__('Remove %s from cart', 'jlmwines'), wp_strip_all_tags($product_name))),
+                        esc_attr(sprintf(__('Remove %s from cart', 'woocommerce'), wp_strip_all_tags($product_name))),
                         esc_attr($product_id),
                         esc_attr($cart_item_key),
                         esc_attr($_product->get_sku())
@@ -103,11 +103,11 @@ do_action('woocommerce_before_mini_cart');
         if ($jlm_fee['amount'] !== null) :
             ?>
             <p class="woocommerce-mini-cart__shipping">
-                <strong><?php esc_html_e('Shipping:', 'jlmwines'); ?></strong>
+                <strong><?php esc_html_e('Shipping:', 'woocommerce'); ?></strong>
                 <?php if ($jlm_fee['qualified']) : ?>
                     <span class="shipping-free">
                         <svg width="14" height="14" aria-hidden="true"><use href="#i-check"/></svg>
-                        <?php esc_html_e('Free', 'jlmwines'); ?>
+                        <?php esc_html_e('Free', 'woocommerce'); ?>
                     </span>
                 <?php else : ?>
                     <span class="amount"><?php echo wc_price($jlm_fee['amount'], ['decimals' => 0]); ?></span>

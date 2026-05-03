@@ -4,7 +4,9 @@
  *
  * Fixed to the viewport bottom on screens under 720px. Four icons:
  * shop, account, search (opens nav drawer + focuses the drawer's
- * search input via JS), WhatsApp click-to-chat. Hidden on tablet/desktop.
+ * search input via JS), back-to-top. Hidden on tablet/desktop.
+ * WhatsApp moved to a floating-corner button on product/catalog pages
+ * (see inc/whatsapp-float.php).
  */
 
 if (!defined('ABSPATH')) {
@@ -25,7 +27,7 @@ function jlmwines_render_bottom_nav() {
     <nav class="bottom-nav" aria-label="<?php esc_attr_e('Quick access', 'jlmwines'); ?>">
         <a class="bottom-nav-item<?php echo $is_shop_active ? ' is-active' : ''; ?>" href="<?php echo esc_url($shop_url); ?>">
             <svg width="22" height="22" aria-hidden="true"><use href="#i-shop"/></svg>
-            <span><?php esc_html_e('Shop', 'jlmwines'); ?></span>
+            <span><?php esc_html_e('Shop', 'woocommerce'); ?></span>
         </a>
         <a class="bottom-nav-item<?php echo $is_account_active ? ' is-active' : ''; ?>" href="<?php echo esc_url($account_url); ?>">
             <svg width="22" height="22" aria-hidden="true"><use href="#i-account"/></svg>
@@ -33,7 +35,7 @@ function jlmwines_render_bottom_nav() {
         </a>
         <button type="button" class="bottom-nav-item" data-bottom-nav-search>
             <svg width="22" height="22" aria-hidden="true"><use href="#i-search"/></svg>
-            <span><?php esc_html_e('Search', 'jlmwines'); ?></span>
+            <span><?php esc_html_e('Search', 'woocommerce'); ?></span>
         </button>
         <button type="button" class="bottom-nav-item" data-bottom-nav-top aria-label="<?php esc_attr_e('Back to top', 'jlmwines'); ?>">
             <svg width="22" height="22" aria-hidden="true"><use href="#i-arrow-up"/></svg>

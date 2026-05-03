@@ -65,7 +65,7 @@ function jlmwines_render_testimonials($args = []) {
                 if (empty($t['quote'])) continue;
                 ?>
                 <figure class="testimonial">
-                    <div class="testimonial-rating" aria-label="<?php esc_attr_e('5 out of 5 stars', 'jlmwines'); ?>">
+                    <div class="testimonial-rating" aria-label="<?php esc_attr_e('Rated 5 out of 5', 'woocommerce'); ?>">
                         <?php for ($i = 0; $i < 5; $i++) : ?>
                             <svg width="14" height="14" aria-hidden="true"><use href="#i-star"/></svg>
                         <?php endfor; ?>
@@ -138,7 +138,7 @@ function jlmwines_render_blog_roll($args = []) {
                             <?php $excerpt = get_the_excerpt(); if ($excerpt) : ?>
                                 <p class="blog-card-excerpt"><?php echo esc_html(wp_trim_words($excerpt, 18, '…')); ?></p>
                             <?php endif; ?>
-                            <span class="blog-card-readmore"><?php esc_html_e('Read more', 'jlmwines'); ?></span>
+                            <span class="blog-card-readmore"><?php esc_html_e('Read more', 'woocommerce'); ?></span>
                         </div>
                     </a>
                 </article>

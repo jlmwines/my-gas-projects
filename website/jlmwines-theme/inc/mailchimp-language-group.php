@@ -4,16 +4,20 @@
  *
  * The Mailchimp for WooCommerce plugin syncs opt-in customers to Mailchimp
  * but doesn't set the Language interest group, leaving HE checkout signups
- * indistinguishable from EN. This adds a follow-up call: when an order
- * thank-you renders, if the customer opted in, PUT their subscriber record
- * with the Language interest matching the order's WPML language.
+ * indistinguishable from EN. This adds a follow-up call: when payment
+ * succeeds, if the customer opted in, PUT their subscriber record with the
+ * Language interest matching the order's WPML language.
+ *
+ * Hook: woocommerce_order_status_processing fires on the server-side
+ * payment-success transition (CardCom IPN, etc.) — independent of whether
+ * the customer's browser reaches the thank-you page. Idempotent via
+ * _jlmwines_mc_lang_synced order meta in case the order transitions
+ * through both processing and completed.
  *
  * Mailchimp PUT to /lists/{list}/members/{hash} is upsert-safe with
  * status_if_new=subscribed — runs whether the plugin synced first or not.
  *
- * Replace the four placeholder constants below with real values from
- * Mailchimp (audience ID, group category ID, EN interest ID, HE interest
- * ID). API key is read from the Mailchimp for WooCommerce plugin's stored
+ * API key is read from the Mailchimp for WooCommerce plugin's stored
  * settings — no separate credential to maintain.
  */
 
@@ -21,10 +25,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-const JLMWINES_MC_AUDIENCE_ID         = ''; // TODO: Mailchimp audience (list) ID
-const JLMWINES_MC_LANGUAGE_GROUP_ID   = ''; // TODO: "Language" group category ID
-const JLMWINES_MC_LANGUAGE_INTEREST_EN = ''; // TODO: "English" interest ID
-const JLMWINES_MC_LANGUAGE_INTEREST_HE = ''; // TODO: "Hebrew" interest ID
+const JLMWINES_MC_AUDIENCE_ID          = '8a3c6dd69c';
+const JLMWINES_MC_LANGUAGE_GROUP_ID    = '8b945481c0';
+const JLMWINES_MC_LANGUAGE_INTEREST_EN = '17072990c9';
+const JLMWINES_MC_LANGUAGE_INTEREST_HE = '962feef4ab';
 
 /**
  * Read the Mailchimp API key the WC plugin stored on connection.
@@ -128,15 +132,21 @@ function jlmwines_mc_set_language_interest($email, $lang) {
 }
 
 /**
- * Fires once on the WC thankyou page. If the order opted into the
- * newsletter, push the Language interest matching the order's language.
+ * Fires when the order transitions to processing (payment captured).
+ * Server-side hook — fires from the gateway's IPN/callback regardless of
+ * whether the customer's browser returns to the thank-you page. Some
+ * gateways skip processing and go straight to completed, so we listen on
+ * both. The _jlmwines_mc_lang_synced meta guards against double-PUT.
  */
-add_action('woocommerce_thankyou', function ($order_id) {
+function jlmwines_mc_sync_language_on_paid($order_id) {
     if (!$order_id) {
         return;
     }
     $order = wc_get_order($order_id);
     if (!$order || !jlmwines_mc_order_opted_in($order)) {
+        return;
+    }
+    if ($order->get_meta('_jlmwines_mc_lang_synced')) {
         return;
     }
     $email = $order->get_billing_email();
@@ -145,4 +155,8 @@ add_action('woocommerce_thankyou', function ($order_id) {
     }
     $lang = jlmwines_mc_order_language($order);
     jlmwines_mc_set_language_interest($email, $lang);
-}, 20, 1);
+    $order->update_meta_data('_jlmwines_mc_lang_synced', current_time('mysql'));
+    $order->save();
+}
+add_action('woocommerce_order_status_processing', 'jlmwines_mc_sync_language_on_paid', 20, 1);
+add_action('woocommerce_order_status_completed',  'jlmwines_mc_sync_language_on_paid', 20, 1);

@@ -16,11 +16,11 @@ if (!defined('ABSPATH')) {
  */
 add_filter('woocommerce_breadcrumb_defaults', function ($defaults) {
     $defaults['delimiter']   = '<span class="breadcrumbs-sep" aria-hidden="true">/</span>';
-    $defaults['wrap_before'] = '<nav class="breadcrumbs" aria-label="' . esc_attr__('Breadcrumb', 'jlmwines') . '"><div class="container">';
+    $defaults['wrap_before'] = '<nav class="breadcrumbs" aria-label="' . esc_attr__('Breadcrumbs', 'woocommerce') . '"><div class="container">';
     $defaults['wrap_after']  = '</div></nav>';
     $defaults['before']      = '';
     $defaults['after']       = '';
-    $defaults['home']        = __('Home', 'jlmwines');
+    $defaults['home']        = __('Home', 'woocommerce');
     return $defaults;
 });
 

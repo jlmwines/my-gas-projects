@@ -4,6 +4,7 @@
 # WordPress credentials
 .wp-credentials
 .sftp-credentials
+.mc-credentials
 
 # Local incremental-deploy manifest (SHA-1 of last-deployed theme files)
 .deploy-theme-manifest.json

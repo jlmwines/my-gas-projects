@@ -88,6 +88,23 @@ function Upload-File {
     throw $lastErr
 }
 
+function Delete-File {
+    param([string]$RemotePath, [int]$MaxRetries = 3)
+    $lastErr = $null
+    for ($i = 1; $i -le $MaxRetries; $i++) {
+        try {
+            (Invoke-Ftp -RemotePath $RemotePath -Method ([System.Net.WebRequestMethods+Ftp]::DeleteFile)).Close()
+            return $i
+        } catch {
+            $lastErr = $_
+            # FTP 550 = file not found; treat as already-gone success.
+            if ($_.Exception.Message -match '550') { return 0 }
+            if ($i -lt $MaxRetries) { Start-Sleep -Milliseconds 800 }
+        }
+    }
+    throw $lastErr
+}
+
 # Load existing manifest (rel_path → SHA-1 hex). Empty if -Force or
 # missing — then everything is treated as new and gets uploaded.
 $prevHashes = @{}
@@ -121,14 +138,25 @@ foreach ($f in $files) {
     }
 }
 
-if ($toUpload.Count -eq 0) {
+# Orphans = files in last manifest that no longer exist locally. Skip
+# in -Force mode (prevHashes is empty, so this list is empty anyway).
+$toDelete = @()
+foreach ($prev in $prevHashes.Keys) {
+    if (-not $newHashes.ContainsKey($prev)) {
+        $toDelete += $prev
+    }
+}
+
+if ($toUpload.Count -eq 0 -and $toDelete.Count -eq 0) {
     Write-Host "No changes since last deploy. ($($files.Count) files in manifest)"
     Write-Host "Run with -Force to re-upload everything (e.g. after staging refresh)."
     exit 0
 }
 
 $mode = if ($Force) { 'force' } else { 'incremental' }
-Write-Host "Deploying $($toUpload.Count) of $($files.Count) files to $($cred.host)$RemoteRoot/ ($mode)`n"
+$summary = "$($toUpload.Count) of $($files.Count) files"
+if ($toDelete.Count -gt 0) { $summary += " (+ $($toDelete.Count) orphan$(if ($toDelete.Count -ne 1) {'s'}) to delete)" }
+Write-Host "Deploying $summary to $($cred.host)$RemoteRoot/ ($mode)`n"
 
 # Ensure remote root + subdirectories (parents first via sort).
 # Cheap to always run; FTP MKD on existing dir just fails silently.
@@ -158,6 +186,24 @@ foreach ($f in $toUpload) {
     }
 }
 
+# Delete orphans (files in the previous manifest that no longer exist
+# locally). On failure, keep the orphan in the manifest so next run
+# retries the delete.
+$delOk = 0
+foreach ($rel in $toDelete) {
+    $remote = "$RemoteRoot/$rel"
+    Write-Host -NoNewline "  - $rel"
+    try {
+        $attempts = Delete-File -RemotePath $remote
+        if ($attempts -eq 0) { Write-Host '  GONE' } elseif ($attempts -gt 1) { Write-Host "  DELETED (retry $attempts)" } else { Write-Host '  DELETED' }
+        $delOk++
+    } catch {
+        Write-Host ('  FAILED — ' + $_.Exception.Message)
+        $fail++
+        $newHashes[$rel] = $prevHashes[$rel]
+    }
+}
+
 # Persist updated manifest. Files that failed retain their previous
 # hash (or no hash if new) so the next run will re-attempt them.
 $manifestOut = [PSCustomObject]@{
@@ -167,5 +213,5 @@ $manifestOut = [PSCustomObject]@{
 }
 $manifestOut | ConvertTo-Json -Depth 4 | Set-Content -Path $ManifestPath -Encoding UTF8
 
-Write-Host "`n$ok uploaded, $fail failed."
+Write-Host "`n$ok uploaded, $delOk deleted, $fail failed."
 if ($fail -gt 0) { exit 1 }

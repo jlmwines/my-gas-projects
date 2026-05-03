@@ -24,7 +24,7 @@ function jlmwines_render_mini_cart_drawer() {
         <div class="cart-drawer-backdrop" data-cart-drawer-close></div>
         <aside class="cart-drawer-panel" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e('Shopping cart', 'jlmwines'); ?>">
             <header class="cart-drawer-head">
-                <h2 class="cart-drawer-title"><?php esc_html_e('Your cart', 'jlmwines'); ?></h2>
+                <h2 class="cart-drawer-title"><?php esc_html_e('Your cart', 'woocommerce'); ?></h2>
                 <button type="button" class="cart-drawer-close" data-cart-drawer-close aria-label="<?php esc_attr_e('Close cart', 'jlmwines'); ?>">
                     <svg width="22" height="22" aria-hidden="true"><use href="#i-close"/></svg>
                 </button>
@@ -105,7 +105,7 @@ function jlmwines_render_cart_icon() {
     }
     $count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
     ?>
-    <a class="cart-icon" href="<?php echo esc_url(wc_get_cart_url()); ?>" aria-label="<?php esc_attr_e('Cart', 'jlmwines'); ?>" data-cart-drawer-open>
+    <a class="cart-icon" href="<?php echo esc_url(wc_get_cart_url()); ?>" aria-label="<?php esc_attr_e('Cart', 'woocommerce'); ?>" data-cart-drawer-open>
         <svg width="20" height="20"><use href="#i-cart"/></svg>
         <?php if ($count > 0) : ?>
             <span class="cart-icon-count"><?php echo esc_html($count); ?></span>

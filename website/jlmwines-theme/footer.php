@@ -28,16 +28,15 @@
 
         <?php
         // ─── Newsletter band (top) ───────────────────────────────────
-        // Language-aware: filter receives current WPML lang so a child theme /
-        // mu-plugin can return a per-language MC4WP form ID. Setup in MC4WP
-        // admin: one form per language with a hidden Mailchimp interest-group
-        // field for that language.
-        $current_lang  = function_exists('icl_get_current_language') ? icl_get_current_language() : 'en';
-        $mc4wp_form_id = apply_filters('jlmwines_mc4wp_form_id', '', $current_lang);
-        ?>
-        <?php
-        // Vineyard image for the newsletter section. RTL gets the flipped
-        // variant so Evyatar faces toward the page content, not the edge.
+        // Direct POST to Mailchimp's list-manage.com endpoint — no plugin
+        // dependency. The hidden group[CATEGORY] input pre-tags the
+        // subscriber with the Language interest matching the current
+        // WPML language, so EN signups land in the English group and HE
+        // signups in the Hebrew group. Honeypot field name is the
+        // standard b_<u>_<id> Mailchimp embed pattern.
+        $is_he_newsletter = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
+        $mc_lang_interest = $is_he_newsletter ? '962feef4ab' : '17072990c9';
+
         $newsletter_image_en = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828.jpg';
         $newsletter_image_he = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828-h.jpg';
         $newsletter_image    = is_rtl() ? $newsletter_image_he : $newsletter_image_en;
@@ -53,22 +52,20 @@
                 <h2><?php _e('Learn About Wine', 'jlmwines'); ?></h2>
                 <p><?php _e('Special offers by email, and fascinating information about the world of wine.', 'jlmwines'); ?></p>
             </div>
-            <?php
-            if (shortcode_exists('mc4wp_form')) {
-                if ($mc4wp_form_id) {
-                    echo do_shortcode('[mc4wp_form id="' . esc_attr($mc4wp_form_id) . '"]');
-                } else {
-                    echo do_shortcode('[mc4wp_form]');
-                }
-            } else {
-                ?>
-                <form class="footer-form" onsubmit="event.preventDefault()">
-                    <input type="email" placeholder="<?php esc_attr_e('your@email', 'jlmwines'); ?>" aria-label="<?php esc_attr_e('Email', 'jlmwines'); ?>">
-                    <button type="submit"><?php _e('Subscribe', 'jlmwines'); ?></button>
-                </form>
-                <?php
-            }
-            ?>
+            <form class="footer-form"
+                  action="https://jlmwines.us5.list-manage.com/subscribe/post?u=439baf502ee03aaf62e476724&amp;id=8a3c6dd69c"
+                  method="post"
+                  target="_blank"
+                  novalidate>
+                <input type="email" name="EMAIL" required
+                       placeholder="<?php esc_attr_e('your@email', 'jlmwines'); ?>"
+                       aria-label="<?php esc_attr_e('Email', 'woocommerce'); ?>">
+                <input type="hidden" name="group[8b945481c0]" value="<?php echo esc_attr($mc_lang_interest); ?>">
+                <div aria-hidden="true" style="position:absolute;left:-5000px" tabindex="-1">
+                    <input type="text" name="b_439baf502ee03aaf62e476724_8a3c6dd69c" tabindex="-1" value="">
+                </div>
+                <button type="submit"><?php _e('Subscribe', 'woocommerce'); ?></button>
+            </form>
         </div>
 
         <div class="footer-band">
@@ -90,13 +87,13 @@
                     <?php endif; ?>
                     <?php if ($contact_phone) : ?>
                         <span class="footer-contact-line">
-                            <span class="footer-contact-key"><?php esc_html_e('Tel:', 'jlmwines'); ?></span>
+                            <span class="footer-contact-key"><?php esc_html_e('Phone', 'woocommerce'); ?>:</span>
                             <a href="tel:<?php echo esc_attr(preg_replace('/[^+0-9]/', '', $contact_phone)); ?>"><?php echo esc_html($contact_phone); ?></a>
                         </span>
                     <?php endif; ?>
                     <?php if ($contact_email) : ?>
                         <span class="footer-contact-line">
-                            <span class="footer-contact-key"><?php esc_html_e('Email:', 'jlmwines'); ?></span>
+                            <span class="footer-contact-key"><?php esc_html_e('Email:', 'woocommerce'); ?></span>
                             <a href="mailto:<?php echo esc_attr($contact_email); ?>"><?php echo esc_html($contact_email); ?></a>
                         </span>
                     <?php endif; ?>
@@ -113,7 +110,7 @@
                 <?php if (file_exists($payment_image_abs)) : ?>
                     <img class="footer-payments-image"
                          src="<?php echo esc_url(get_template_directory_uri() . $payment_image_rel); ?>"
-                         alt="<?php esc_attr_e('Accepted payment methods', 'jlmwines'); ?>"
+                         alt="<?php esc_attr_e('Accepted payment methods', 'woocommerce'); ?>"
                          loading="lazy">
                 <?php endif; ?>
                 <?php if (!empty($socials)) : ?>
@@ -154,7 +151,7 @@
 
             <div class="footer-legal">
                 <ul class="footer-legal-links">
-                    <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php _e('Terms &amp; Conditions', 'jlmwines'); ?></a></li>
+                    <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php _e('Terms', 'woocommerce'); ?></a></li>
                     <li><a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php _e('Privacy', 'jlmwines'); ?></a></li>
                     <?php
                     // Cookie consent control. Uses Complianz's documented

@@ -43,8 +43,8 @@ get_header();
 
         <?php
         the_posts_pagination([
-            'prev_text' => __('Previous', 'jlmwines'),
-            'next_text' => __('Next', 'jlmwines'),
+            'prev_text' => __('Previous', 'woocommerce'),
+            'next_text' => __('Next', 'woocommerce'),
         ]);
         ?>
 

@@ -25,37 +25,60 @@ What's missing — and why nothing happens today:
 
 Replaces manual CSV with daily API pull. Same Mailchimp API key for both endpoints.
 
+**Audience IDs** (`accounts@jlmwines.com`, DC `us5`, audience `8a3c6dd69c`):
+- Language group category: `8b945481c0` (radio)
+- English interest: `17072990c9`
+- Hebrew interest: `962feef4ab`
+
 ### Subscribers Pull (daily)
 
-- **Endpoint.** `GET /3.0/lists/{list_id}/members` (paginated)
-- **Captured fields.** Email, name, status (subscribed / unsubscribed / cleaned), language group, tags
-- **Join.** On email with Woo customer data already in WebOrdM
-- **Write.** Update SysContacts: subscription state, language preference, group membership
-- **Direction.** One-way for v1. Mailchimp = source of truth for subscriber state. JLMops doesn't push back.
+- **Endpoint.** `GET /3.0/lists/8a3c6dd69c/members` (paginated, `count=1000`, iterate until exhausted)
+- **Captured fields.** Email, name, status, Language interest, last_changed
+- **Join.** On email with existing SysContacts row
+- **Write.** Update SysContacts:
+  - `sc_IsSubscribed` = `true` only when status === `subscribed`; `false` for `unsubscribed` / `cleaned` / `pending` / `transactional` / `archived`
+  - `sc_Language` = `'en'` if EN interest set, `'he'` if HE interest set; leave existing value alone if neither set (no overwrite from "no group")
+  - `sc_SubscriptionSource` = `'mailchimp'` only when creating a new prospect row
+- **Decision (2026-05-03):** keep `sc_IsSubscribed` as boolean. Adding `sc_SubscriptionStatus` would require schema migration + backfill of 548 contacts. Cleaned-vs-unsubscribed distinction is desirable but not worth the schema cost; both correctly exclude from future sends.
+- **Activity records.** Write to SysContactActivity when state changes from prior pull:
+  - status `subscribed` → not-subscribed: `subscription.unsubscribed` (or `.cleaned` based on actual status string captured in the activity summary)
+  - language interest changed: `subscription.language_changed` (edge case — rare per user, but cheap to log)
+- **Direction.** One-way. Mailchimp = source of truth. JLMops never PUTs back.
 
 ### Campaigns Pull (daily)
 
-- **Endpoint.** `GET /3.0/campaigns` (filter sent_at within last ~60 days), then `GET /3.0/reports/{campaign_id}` per campaign
+- **Endpoint.** `GET /3.0/campaigns?status=sent&since_send_time=<60d ago>` then `GET /3.0/reports/{campaign_id}` per campaign
 - **Captured fields.** Campaign metadata (name, send_date, audience), metrics (opens, clicks, bounces, unsubscribes)
 - **Refresh window.** Campaigns sent in last 60 days refresh daily (metrics keep updating as opens/clicks trickle in). Older than 60 days = stable snapshot, don't refresh.
 - **Write.** SysCampaigns. Schema already defined in `CAMPAIGN_SYSTEM_PLAN.md` (`scm_ResultOpens`, `scm_ResultClicks`, etc.).
+- **Per-contact engagement (opens/clicks per email) is out of scope.** Campaign-level totals only.
 
 ### No-Language Subscriber Handling
 
-- When the daily pull finds a subscriber with no language group set, flag in SysContacts.
-- Surface in JLMops as a small "fix in Mailchimp" list (admin view).
+- When the daily pull finds a subscriber with no Language interest set, leave `sc_Language` unchanged (existing order-language wins).
+- Surface count in JLMops admin view as a small "fix in Mailchimp" list (admin view to be designed alongside Half 2).
 - User resolves manually in Mailchimp admin (volume is low — "once in a while").
 - Tomorrow's pull picks up the resolution.
 - **No write-back to Mailchimp in v1.**
 
+### Build Steps
+
+1. Add `MAILCHIMP_API_KEY` row to SysEnv (existing pattern; same place Woo creds live).
+2. New service `MailchimpService.js` — thin HTTP wrapper: `get(path)`, `paginate(path, params)`. Pulls API key from SysEnv at call time. DC parsed from key suffix.
+3. New method `ContactImportService.importFromMailchimpApi()` replaces `importFromMailchimpCsv` as the daily path. CSV method retained as manual fallback.
+4. New service `CampaignSyncService.js` (or extend existing `CampaignService`) — `pullRecentCampaigns()` runs daily, refreshes 60-day rolling window.
+5. Wire both pulls into `HousekeepingService` daily run, before contact enrichment so language updates feed into that step.
+6. Update `system.mailchimp.subscribers_last_update` and `system.mailchimp.campaigns_last_update` per pull.
+7. Manual smoke-test trigger from DevelopmentView (one-off "Pull Mailchimp Now" buttons) before enabling the daily schedule.
+
 ### Mailchimp Plan Note
 
-Marketing API is available on **all Mailchimp plans including Free**. Only specific products like Transactional (Mandrill) require higher tiers. Confirm specific plan but odds very high that API access is already in place.
+Marketing API is available on **all Mailchimp plans including Free**. Confirmed working from `accounts@jlmwines.com` API key (verified 2026-05-03 via interest-categories + lists endpoints).
 
 ### Out of Scope
 
 - Bounce / gibberish address maintenance (defer)
-- MC4WP signup tagging on website (already configured per 2026-04-28 footer rebuild — verify still working but no new build)
+- Per-contact campaign engagement (opens/clicks per email)
 - Write-back to Mailchimp from JLMops
 
 ---
@@ -143,4 +166,4 @@ Not urgent — defer until the action layer is live and review patterns are obse
 
 ---
 
-Updated: 2026-04-30
+Updated: 2026-05-03 — Half 1 scope decisions resolved (keep `sc_IsSubscribed` boolean; subscribers + campaigns pulled together). Audience IDs captured. Stale MC4WP reference removed; theme-side signup is now direct-POST + checkout-opt-in scaffold (theme v1.0.74).

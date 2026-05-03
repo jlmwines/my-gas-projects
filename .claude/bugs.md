@@ -19,6 +19,8 @@ Projects: jlmops, web, marketing, content
 - [ ] 2025-12-29: changed woo coupon plugin - auto apply url pattern changed to {site_url}/?wt_coupon={coupon_code}
 - [ ] 2025-12-29: new coupon plugin accepts email addresses separated by commas, not user id's
 - [ ] 2025-12-31: sync needs refresh to show comax product import when order export skipped
+- [ ] 2026-03-17: Generate button remains showing after export completes (file generated and named, button doesn't reset)
+- [ ] 2026-03-17: Failed Comax import cannot recover with subsequent good file
 - [ ] sc_IsCore defaulting conflict overwrites correct values from import
 - [ ] Gift detection incomplete (missing delivery keyword logic)
 - [ ] War-support detection checks wrong field (customerNote instead of wom_CouponItems)
@@ -41,7 +43,8 @@ Projects: jlmops, web, marketing, content
 
 ## web
 
-(none)
+### Resolved
+- [x] 2026-05-03: deploy-theme.ps1 didn't delete orphan files. RESOLVED: added `Delete-File` helper + orphan detection (manifest keys absent from local tree). Script now reports orphan count in the deploy header and deletes per file with retry; FTP 550 (already gone) treated as success.
 
 ## marketing
 

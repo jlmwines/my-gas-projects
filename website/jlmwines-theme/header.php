@@ -134,11 +134,11 @@
         <div class="site-tools">
             <?php if (class_exists('WooCommerce')) : ?>
                 <form class="site-search" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
-                    <label class="screen-reader-text" for="site-search-input"><?php esc_html_e('Search wines', 'jlmwines'); ?></label>
-                    <button type="submit" class="site-search-submit" aria-label="<?php esc_attr_e('Search', 'jlmwines'); ?>">
+                    <label class="screen-reader-text" for="site-search-input"><?php esc_html_e('Search products', 'woocommerce'); ?></label>
+                    <button type="submit" class="site-search-submit" aria-label="<?php esc_attr_e('Search', 'woocommerce'); ?>">
                         <svg width="16" height="16" aria-hidden="true"><use href="#i-search"/></svg>
                     </button>
-                    <input id="site-search-input" type="search" name="s" placeholder="<?php esc_attr_e('Search wines…', 'jlmwines'); ?>" />
+                    <input id="site-search-input" type="search" name="s" placeholder="<?php esc_attr_e('Search products…', 'woocommerce'); ?>" />
                     <input type="hidden" name="post_type" value="product" />
                 </form>
             <?php endif; ?>
@@ -171,11 +171,11 @@ if (function_exists('jlmwines_render_breadcrumbs')) {
 
         <?php if (class_exists('WooCommerce')) : ?>
             <form class="nav-drawer-search site-search" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
-                <label class="screen-reader-text" for="nav-drawer-search-input"><?php esc_html_e('Search wines', 'jlmwines'); ?></label>
-                <button type="submit" class="site-search-submit" aria-label="<?php esc_attr_e('Search', 'jlmwines'); ?>">
+                <label class="screen-reader-text" for="nav-drawer-search-input"><?php esc_html_e('Search products', 'woocommerce'); ?></label>
+                <button type="submit" class="site-search-submit" aria-label="<?php esc_attr_e('Search', 'woocommerce'); ?>">
                     <svg width="16" height="16" aria-hidden="true"><use href="#i-search"/></svg>
                 </button>
-                <input id="nav-drawer-search-input" type="search" name="s" placeholder="<?php esc_attr_e('Search wines…', 'jlmwines'); ?>" />
+                <input id="nav-drawer-search-input" type="search" name="s" placeholder="<?php esc_attr_e('Search products…', 'woocommerce'); ?>" />
                 <input type="hidden" name="post_type" value="product" />
             </form>
         <?php endif; ?>

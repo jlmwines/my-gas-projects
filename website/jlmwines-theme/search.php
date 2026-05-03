@@ -12,7 +12,7 @@ get_header();
             <?php
             printf(
                 /* translators: %s: search query. */
-                esc_html__('Search results for: %s', 'jlmwines'),
+                esc_html__('Search results for: %s', 'woocommerce'),
                 '<span>' . get_search_query() . '</span>'
             );
             ?>
@@ -40,8 +40,8 @@ get_header();
 
         <?php
         the_posts_pagination([
-            'prev_text' => __('Previous', 'jlmwines'),
-            'next_text' => __('Next', 'jlmwines'),
+            'prev_text' => __('Previous', 'woocommerce'),
+            'next_text' => __('Next', 'woocommerce'),
         ]);
         ?>
 
