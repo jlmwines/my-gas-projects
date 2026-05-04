@@ -11,7 +11,7 @@
 | Revenue | Steady |
 | Deploy Version | jlmops @79 · theme v1.1.0 (staging — translation rework + Mailchimp end-to-end + mobile UX polish) |
 | Deploy Date | jlmops 2026-04-26 · theme 2026-05-04 |
-| Content | 7 posts live on production (EN+HE), remaining resume May |
+| Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) |
@@ -113,6 +113,8 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-05-04 (continued):** **KPI scope written + Drive auth + ClaudeOps project spun up.** New doc `business/KPI.md` defines 6 metrics (organic traffic EN/HE, new customers EN/HE, first-order conversion + AOV, 90-day return rate, newsletter signups + open/click, organic-source engagement). Strategic frame, exclusions, data path, sequence all captured. Goal correction: 90-day return rate (not the 57-day stat in `MARKET_CONTEXT.md` — that was observed, not goal). Drive authenticated via `accounts@jlmwines.com`; `JLMops_Data` already lives there so no new export pipeline is needed — small summary tab in `JLMops_Data` will pre-compute the 4 jlmops-source KPIs. GA4 + GSC sheet setup guide created in Drive (file ID `1QWTJmlj-wvHYk3SfdTvPj7gxskEqPx2HDEznILljRYM`) for user to run when ready (15 min × 2). New top-level project `claudeops/` created for meta-work (plugin/skill eval, MCP servers, memory curation, KPI-scoping pattern). Full content + sequence in `business/KPI.md`. Activation deferred until after cutover settles.
 
 - **2026-05-04:** **Theme v1.0.87 → v1.1.0 (13 deploys). Translation rule corrected end-to-end. Mailchimp footer signup fully working with per-language inline confirmation. Mailchimp checkout opt-in replaced with native theme code (plugin deactivated). Bundle PDP RTL fix. Mobile UX polish (drawer accordion, bottom-nav language toggle, accessibility-icon shadow-DOM positioning). Bug list consolidated. Cutover checklist updated.**
   - **Translation rule corrected.** Earlier `TRANSLATION_PLAN.md` (2026-04-30) prescribed `__('…','jlmwines')` + `.po` for static content — opposite of the user's actual rule. Rewritten 2026-05-04: only translate at runtime what cannot be stored in advance (system messages, dynamic output, WP/WC framework strings via canonical textdomain). Static page content stored in advance — real WP Page with WPML duplicates (default for content) OR inline `is_rtl()` in PHP (chrome that can't be a Page). New memory `feedback_translation_rule.md` so future sessions don't repeat the mistake.
@@ -497,6 +499,8 @@ Detailed session history prior to standardization is in `jlmops/SESSION_SUMMARY.
 
 _(Cross-project notes captured via `/note jlm <text>`. Review and clear at session start.)_
 
+- **2026-05-04: Offline-channel attribution scheme (future).** When SE-of-Katamon flyer drops + newsletter inserts ship, we need to know which leads come from where. Lightest path: **unique coupon code per offline campaign** (e.g., `JLMSE50` for the SE-Katamon flyer drop) + **UTM-tagged QR codes** that feed into GA4. The first-order coupon system already supports per-code restrictions. Define naming convention + QR generator setup when offline campaigns are about to ship. The specific neighborhood SE of Katamon (Talpiot? Arnona? Mekor Haim? Baka?) — TBD; user couldn't recall, possibly captured in a prior session not in current docs.
+- **2026-05-04: Update `website/MARKET_CONTEXT.md` "57 days" framing.** Line 99 currently calls 57 days "The Goal" but it's actually an observed average; the working goal is 90 days (per `business/KPI.md`). Reword next time MARKET_CONTEXT is touched.
 - 2026-02-26: kowine theme update may be fix for recent elementor update disrupting site appearance. will apply to staging and see if that fixes appearance.
 - 2026-02-26: jlmops need a way to research product/sku state and history. what are the last tasks for this sku? when did vintage change is very important. keep product history, or rely on data?
 - ~~2026-03-06: Manager inventory view: 1. Create count task failed. 2. Open inventory tasks need to show entity id (SKU) and product name in list.~~ → Fixed 2026-03-09 (c1af348)

@@ -102,6 +102,7 @@ Things where two areas need to meet but the connection is incomplete:
 - **Mailchimp ↔ JLMops** — manual CSV today; automated daily pull queued in Contact Manager Half 1.
 - **Packing slip ↔ newsletter** — both live in the same shipment envelope. Currently no integration (newsletter is print-monthly batch, packing slip is per-order generated).
 - **Brand consistency across channels** — see `business/BRAND_STANDARDS.md`.
+- **KPI measurement** — 6 metrics scoped 2026-05-04 in `business/KPI.md`. Data path partially in place (Drive auth done; `JLMops_Data` already in Drive). Pending: GA4 + GSC sheet setup (user, ~30 min), small summary tab in `JLMops_Data` (jlmops, ~30–60 min), Mailchimp metrics flow (comes through Half 1).
 
 ---
 
