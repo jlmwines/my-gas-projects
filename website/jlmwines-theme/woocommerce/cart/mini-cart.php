@@ -53,9 +53,9 @@ do_action('woocommerce_before_mini_cart');
 
                     <div class="mini-cart-item-meta">
                         <div class="mini-cart-qty" data-cart-item-key="<?php echo esc_attr($cart_item_key); ?>">
-                            <button type="button" class="mini-cart-qty-btn" data-qty-step="-1" aria-label="<?php esc_attr_e('Decrease quantity', 'jlmwines'); ?>">−</button>
+                            <button type="button" class="mini-cart-qty-btn" data-qty-step="-1" aria-label="<?php echo esc_attr( is_rtl() ? 'הפחת כמות' : 'Decrease quantity' ); ?>">−</button>
                             <span class="mini-cart-qty-value" aria-live="polite"><?php echo esc_html($cart_item['quantity']); ?></span>
-                            <button type="button" class="mini-cart-qty-btn" data-qty-step="1" aria-label="<?php esc_attr_e('Increase quantity', 'jlmwines'); ?>">+</button>
+                            <button type="button" class="mini-cart-qty-btn" data-qty-step="1" aria-label="<?php echo esc_attr( is_rtl() ? 'הוסף כמות' : 'Increase quantity' ); ?>">+</button>
                         </div>
                         <span class="mini-cart-item-price"><?php echo $product_price; // phpcs:ignore ?></span>
                     </div>
@@ -131,7 +131,7 @@ do_action('woocommerce_before_mini_cart');
 
 <?php else : ?>
 
-    <p class="woocommerce-mini-cart__empty-message"><?php esc_html_e('Your cart is empty.', 'jlmwines'); ?></p>
+    <p class="woocommerce-mini-cart__empty-message"><?php echo esc_html( is_rtl() ? 'סל הקניות שלך ריק.' : 'Your cart is empty.' ); ?></p>
 
 <?php endif; ?>
 

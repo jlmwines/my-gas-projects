@@ -13,7 +13,7 @@ add_action('customize_register', function ($wp_customize) {
 
     // ─── Section: Homepage Hero ────────────────────────────────────
     $wp_customize->add_section('jlmwines_hero', [
-        'title'    => __('Homepage Hero', 'jlmwines'),
+        'title'    => 'Homepage Hero',
         'priority' => 35,
     ]);
 
@@ -28,8 +28,8 @@ add_action('customize_register', function ($wp_customize) {
     ]);
     $wp_customize->add_control(new WP_Customize_Media_Control($wp_customize, 'jlmwines_hero_image_id', [
         'section'   => 'jlmwines_hero',
-        'label'     => __('Hero image', 'jlmwines'),
-        'description' => __('Upload at 1200px+ wide so WordPress generates a full range of responsive sizes.', 'jlmwines'),
+        'label'     => 'Hero image',
+        'description' => 'Upload at 1200px+ wide so WordPress generates a full range of responsive sizes.',
         'mime_type' => 'image',
     ]));
 });

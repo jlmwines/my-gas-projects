@@ -6,11 +6,13 @@
  * bottom-left in RTL (HE) — on product, shop, product category, and
  * product tag pages. Hidden on content pages, posts, cart, checkout,
  * account so it doesn't interrupt transaction flow or compete with
- * reading. On mobile (<720px) the button stacks above the bottom-nav.
+ * reading. The bottom offset is set in main.css high enough to clear
+ * bottom-nav + add-to-cart on mobile.
  *
- * Companion: pojo-accessibility plugin's floating "ally" icon should
- * sit on the opposite corner (configured via plugin settings or CSS
- * override — out of scope for this file).
+ * Companion: pojo-accessibility (ea11y) widget sits at the same height
+ * on the opposite (inline-start) corner — see main.css. Plugin should
+ * have "Exact position" disabled and corner set to bottom-left so the
+ * theme's CSS can position both icons consistently per language.
  */
 
 if (!defined('ABSPATH')) {
@@ -42,7 +44,7 @@ function jlmwines_render_whatsapp_float() {
        target="_blank"
        rel="noopener"
        aria-label="<?php echo esc_attr($aria); ?>">
-        <svg width="28" height="28" aria-hidden="true"><use href="#i-whatsapp"/></svg>
+        <svg width="24" height="24" aria-hidden="true"><use href="#i-whatsapp"/></svg>
     </a>
     <?php
 }

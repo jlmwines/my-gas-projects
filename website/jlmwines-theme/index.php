@@ -24,7 +24,7 @@ get_header();
         endwhile;
     else :
         ?>
-        <p><?php _e('Nothing here yet.', 'jlmwines'); ?></p>
+        <p><?php echo is_rtl() ? 'עדיין אין כאן כלום.' : 'Nothing here yet.'; ?></p>
         <?php
     endif;
     ?>

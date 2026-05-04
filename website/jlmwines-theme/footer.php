@@ -3,7 +3,7 @@
 
         <?php
         // ─── Theme-mod values ─────────────────────────────────────────
-        $contact_address = get_theme_mod('jlmwines_contact_address', __('Kos Shel Bracha — Halamed Hei 16, Jerusalem', 'jlmwines'));
+        $contact_address = get_theme_mod('jlmwines_contact_address', is_rtl() ? 'כוס של ברכה — הל"ה 16, ירושלים' : 'Kos Shel Bracha — Halamed Hei 16, Jerusalem');
         $contact_phone   = get_theme_mod('jlmwines_contact_phone', '02-561-1557');
         $contact_email   = get_theme_mod('jlmwines_contact_email', 'info@jlmwines.com');
         $contact_hours   = get_theme_mod('jlmwines_contact_hours', '');
@@ -34,8 +34,13 @@
         // WPML language, so EN signups land in the English group and HE
         // signups in the Hebrew group. Honeypot field name is the
         // standard b_<u>_<id> Mailchimp embed pattern.
+        // Mailchimp's `subscribe/post` endpoint uses the form-level numeric IDs
+        // for the Language interest group (visible in the hosted embed form's
+        // markup), NOT the API-level GUID interest IDs. Group: 383942.
+        // English: value="4"; Hebrew: value="8". Verified by curl against
+        // https://jlmwines.us5.list-manage.com/subscribe?u=…&id=… on 2026-05-04.
         $is_he_newsletter = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
-        $mc_lang_interest = $is_he_newsletter ? '962feef4ab' : '17072990c9';
+        $mc_lang_interest = $is_he_newsletter ? '8' : '4';
 
         $newsletter_image_en = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828.jpg';
         $newsletter_image_he = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828-h.jpg';
@@ -49,23 +54,25 @@
                 </div>
             <?php endif; ?>
             <div class="footer-newsletter-content">
-                <h2><?php _e('Learn About Wine', 'jlmwines'); ?></h2>
-                <p><?php _e('Special offers by email, and fascinating information about the world of wine.', 'jlmwines'); ?></p>
+                <h2><?php echo is_rtl() ? 'לומדים על יין' : 'Learn About Wine'; ?></h2>
+                <p><?php echo is_rtl() ? 'מבצעים מיוחדים במייל, ומידע מרתק על עולם היין.' : 'Special offers by email, and fascinating information about the world of wine.'; ?></p>
             </div>
             <form class="footer-form"
+                  data-mc-form
                   action="https://jlmwines.us5.list-manage.com/subscribe/post?u=439baf502ee03aaf62e476724&amp;id=8a3c6dd69c"
                   method="post"
                   target="_blank"
                   novalidate>
                 <input type="email" name="EMAIL" required
-                       placeholder="<?php esc_attr_e('your@email', 'jlmwines'); ?>"
+                       placeholder="your@email"
                        aria-label="<?php esc_attr_e('Email', 'woocommerce'); ?>">
-                <input type="hidden" name="group[8b945481c0]" value="<?php echo esc_attr($mc_lang_interest); ?>">
+                <input type="hidden" name="group[383942]" value="<?php echo esc_attr($mc_lang_interest); ?>">
                 <div aria-hidden="true" style="position:absolute;left:-5000px" tabindex="-1">
                     <input type="text" name="b_439baf502ee03aaf62e476724_8a3c6dd69c" tabindex="-1" value="">
                 </div>
                 <button type="submit"><?php _e('Subscribe', 'woocommerce'); ?></button>
             </form>
+            <div class="footer-form-msg" data-mc-msg role="status" aria-live="polite" hidden></div>
         </div>
 
         <div class="footer-band">
@@ -99,7 +106,7 @@
                     <?php endif; ?>
                     <?php if ($contact_hours) : ?>
                         <span class="footer-contact-line">
-                            <span class="footer-contact-key"><?php esc_html_e('Hours:', 'jlmwines'); ?></span>
+                            <span class="footer-contact-key"><?php echo is_rtl() ? 'שעות פתיחה:' : 'Hours:'; ?></span>
                             <span><?php echo wp_kses_post($contact_hours); ?></span>
                         </span>
                     <?php endif; ?>
@@ -114,7 +121,7 @@
                          loading="lazy">
                 <?php endif; ?>
                 <?php if (!empty($socials)) : ?>
-                    <ul class="footer-social-list" aria-label="<?php esc_attr_e('Social links', 'jlmwines'); ?>">
+                    <ul class="footer-social-list" aria-label="<?php echo esc_attr( is_rtl() ? 'קישורים חברתיים' : 'Social links' ); ?>">
                         <?php foreach ($socials as $key => $url) : ?>
                             <li class="footer-social-<?php echo esc_attr($key); ?>">
                                 <a href="<?php echo esc_url($url); ?>" target="_blank" rel="noopener" aria-label="<?php echo esc_attr(ucfirst($key)); ?>">
@@ -152,7 +159,7 @@
             <div class="footer-legal">
                 <ul class="footer-legal-links">
                     <li><a href="<?php echo esc_url(home_url('/terms/')); ?>"><?php _e('Terms', 'woocommerce'); ?></a></li>
-                    <li><a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php _e('Privacy', 'jlmwines'); ?></a></li>
+                    <li><a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php echo is_rtl() ? 'פרטיות' : 'Privacy'; ?></a></li>
                     <?php
                     // Cookie consent control. Uses Complianz's documented
                     // pattern: a link with class `cmplz-show-banner` that

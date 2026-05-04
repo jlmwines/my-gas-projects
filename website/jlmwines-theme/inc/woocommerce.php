@@ -94,7 +94,7 @@ add_filter('woocommerce_sale_flash', function ($html, $post, $product) {
     }
 
     if ($is_bundle) {
-        return '<span class="onsale onsale-bundle">' . esc_html__('Bundle Savings', 'jlmwines') . '</span>';
+        return '<span class="onsale onsale-bundle">' . esc_html( is_rtl() ? 'חיסכון במארז' : 'Bundle Savings' ) . '</span>';
     }
 
     return $html;
@@ -135,7 +135,7 @@ function jlmwines_render_product_loop($args = []) {
         'eyebrow'              => '',
         'body'                 => '',
         'cta_url'              => '',
-        'cta_text'             => __('Shop all', 'jlmwines'),
+        'cta_text'             => is_rtl() ? 'כל המוצרים' : 'Shop all',
         // Default to WC's behavior (respects the "Hide out of stock
         // items from catalog" admin setting). Pass true to bypass —
         // useful on landing pages like /send-wine-gifts-in-israel/
@@ -339,9 +339,12 @@ function jlmwines_render_category_cards($args = []) {
                         <h3 class="category-card-name"><?php echo esc_html($cat->name); ?></h3>
                         <span class="category-card-count">
                             <?php
+                            $cat_count_fmt = is_rtl()
+                                ? '%s יינות'
+                                : ($cat->count === 1 ? '%s wine' : '%s wines');
                             printf(
                                 /* translators: %s: number of products in this category */
-                                esc_html(_n('%s wine', '%s wines', $cat->count, 'jlmwines')),
+                                esc_html($cat_count_fmt),
                                 esc_html(number_format_i18n($cat->count))
                             );
                             ?>
@@ -434,7 +437,7 @@ add_filter('woocommerce_checkout_fields', function ($fields) {
 
     // Shipping phone — added (not a WC default field).
     $fields['shipping']['shipping_phone'] = [
-        'label'        => __('Recipient phone in Israel', 'jlmwines'),
+        'label'        => is_rtl() ? 'מספר הטלפון של הנמען' : 'Recipient phone in Israel',
         'required'     => true,
         'class'        => ['form-row-wide'],
         'autocomplete' => 'tel',
@@ -444,8 +447,8 @@ add_filter('woocommerce_checkout_fields', function ($fields) {
 
     // Order comments — gift-message framing
     if (isset($fields['order']['order_comments'])) {
-        $fields['order']['order_comments']['label']       = __('Order Notes/Gift Message', 'jlmwines');
-        $fields['order']['order_comments']['placeholder'] = __('Delivery notes and/or gift message text.', 'jlmwines');
+        $fields['order']['order_comments']['label']       = is_rtl() ? 'הערות להזמנה/הודעת מתנה' : 'Order Notes/Gift Message';
+        $fields['order']['order_comments']['placeholder'] = is_rtl() ? 'הערות למשלוח ו/או טקסט הודעת מתנה.' : 'Delivery notes and/or gift message text.';
     }
 
     return $fields;
@@ -488,7 +491,7 @@ add_action('woocommerce_checkout_create_order', function ($order) {
 add_action('woocommerce_admin_order_data_after_shipping_address', function ($order) {
     $phone = $order->get_meta('_shipping_phone');
     if ($phone) {
-        echo '<p><strong>' . esc_html__('Recipient phone:', 'jlmwines') . '</strong> ' . esc_html($phone) . '</p>';
+        echo '<p><strong>' . esc_html( is_rtl() ? 'טלפון הנמען:' : 'Recipient phone:' ) . '</strong> ' . esc_html($phone) . '</p>';
     }
 });
 

@@ -14,9 +14,7 @@ if (!defined('ABSPATH')) {
 
 get_header();
 
-// Per-language headlines. Hardcoded until theme strings are harvested
-// into the .po file via WPML String Translation.
-$is_he   = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
+$is_he   = is_rtl();
 $eyebrow = $is_he ? 'עם אביתר' : 'with Evyatar';
 $heading = $is_he ? 'שיחת יין'  : 'Wine Talk';
 ?>

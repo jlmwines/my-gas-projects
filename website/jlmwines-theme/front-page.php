@@ -17,18 +17,20 @@ get_header();
         'jlmwines_hero_image',
         'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-09.png'
     );
-    $hero_eyebrow  = get_theme_mod('jlmwines_hero_eyebrow',  __('Wine, made easy', 'jlmwines'));
-    $hero_headline = get_theme_mod('jlmwines_hero_headline', __("You don't need to be an expert.", 'jlmwines'));
+    $hero_eyebrow  = get_theme_mod('jlmwines_hero_eyebrow',  is_rtl() ? 'יין, פשוט יותר' : 'Wine, made easy');
+    $hero_headline = get_theme_mod('jlmwines_hero_headline', is_rtl() ? 'אתם לא צריכים להיות מומחים.' : "You don't need to be an expert.");
     $hero_body     = get_theme_mod(
         'jlmwines_hero_body',
-        __("I'm Evyatar. I taste everything in the shop and only stock what I'd pour for friends. Tell me what you like — I'll send you something you'll enjoy.", 'jlmwines')
+        is_rtl()
+            ? 'אני אביתר. אני טועם כל יין בחנות ושומר רק את אלה שהייתי מוזג לחברים. ספרו לי מה אתם אוהבים — ואני אשלח לכם משהו שתהנו ממנו.'
+            : "I'm Evyatar. I taste everything in the shop and only stock what I'd pour for friends. Tell me what you like — I'll send you something you'll enjoy."
     );
     // Hero CTA jumps to the packages section by default — packages are the
     // curated, guided buying path for someone who wants to actually order.
     // The shop page is reachable from the header for browsers; buyers land
     // on packages first.
     $hero_cta_url  = get_theme_mod('jlmwines_hero_cta_url',  '#packages');
-    $hero_cta_text = get_theme_mod('jlmwines_hero_cta_text', __('Find your wine', 'jlmwines'));
+    $hero_cta_text = get_theme_mod('jlmwines_hero_cta_text', is_rtl() ? 'למצוא את היין שלך' : 'Find your wine');
     ?>
     <section class="hero">
         <div class="container hero-inner">
@@ -60,7 +62,7 @@ get_header();
                      * file instead of the full hero.
                      */
                     echo wp_get_attachment_image($hero_image_id, 'large', false, [
-                        'alt'           => esc_attr__('Evyatar', 'jlmwines'),
+                        'alt'           => esc_attr( is_rtl() ? 'אביתר' : 'Evyatar' ),
                         'loading'       => 'eager',
                         'fetchpriority' => 'high',
                         'sizes'         => '(max-width: 899px) 100vw, 50vw',
@@ -70,7 +72,7 @@ get_header();
             <?php elseif ($hero_image) : ?>
                 <div class="hero-image">
                     <img src="<?php echo esc_url($hero_image); ?>"
-                         alt="<?php esc_attr_e('Evyatar', 'jlmwines'); ?>"
+                         alt="<?php echo esc_attr( is_rtl() ? 'אביתר' : 'Evyatar' ); ?>"
                          width="760" height="751"
                          loading="eager"
                          fetchpriority="high">
@@ -89,11 +91,13 @@ get_header();
                 'category' => 'bundle',
                 'limit'    => 4,
                 'columns'  => 4,
-                'eyebrow'  => __('We suggest – You choose', 'jlmwines'),
-                'heading'  => __('Wine Bundles', 'jlmwines'),
-                'body'     => __("Pick from my curated selection at every price point. You're in control. I make sure every option is worthy of your consideration.", 'jlmwines'),
+                'eyebrow'  => is_rtl() ? 'אנחנו ממליצים — אתם בוחרים' : 'We suggest – You choose',
+                'heading'  => is_rtl() ? 'מארזי יין' : 'Wine Bundles',
+                'body'     => is_rtl()
+                    ? 'בחרו מתוך המבחר האישי שלי בכל טווח מחירים. השליטה בידיים שלכם. אני מוודא שכל אופציה ראויה לתשומת לבכם.'
+                    : "Pick from my curated selection at every price point. You're in control. I make sure every option is worthy of your consideration.",
                 'cta_url'  => home_url('/product-category/bundle/'),
-                'cta_text' => __('All bundles', 'jlmwines'),
+                'cta_text' => is_rtl() ? 'כל המארזים' : 'All bundles',
             ]);
         }
         ?>
@@ -105,8 +109,8 @@ get_header();
         ?>
         <section id="packages" class="section section-packages-intro">
             <header class="section-header">
-                <p class="section-question"><?php esc_html_e('Not sure where to start?', 'jlmwines'); ?></p>
-                <p class="section-body"><?php esc_html_e('Our packages are ready to go – we choose the wines, you save. Add a gift item to make it perfect for someone special, like yourself.', 'jlmwines'); ?></p>
+                <p class="section-question"><?php echo esc_html( is_rtl() ? 'לא בטוחים מאיפה להתחיל?' : 'Not sure where to start?' ); ?></p>
+                <p class="section-body"><?php echo esc_html( is_rtl() ? 'החבילות שלנו מוכנות לדרך — אנחנו בוחרים את היינות, אתם חוסכים. הוסיפו פריט מתנה כדי להפוך אותה למושלמת למישהו מיוחד, למשל לעצמכם.' : 'Our packages are ready to go – we choose the wines, you save. Add a gift item to make it perfect for someone special, like yourself.' ); ?></p>
             </header>
         </section>
 
@@ -117,10 +121,10 @@ get_header();
                 'category' => 'packages',
                 'limit'    => 4,
                 'columns'  => 4,
-                'eyebrow'  => __('We choose – You save', 'jlmwines'),
-                'heading'  => __('Occasion Packages', 'jlmwines'),
+                'eyebrow'  => is_rtl() ? 'אנחנו בוחרים — אתם חוסכים' : 'We choose – You save',
+                'heading'  => is_rtl() ? 'חבילות לאירועים' : 'Occasion Packages',
                 'cta_url'  => home_url('/product-category/packages/'),
-                'cta_text' => __('All packages', 'jlmwines'),
+                'cta_text' => is_rtl() ? 'כל החבילות' : 'All packages',
             ]);
         }
         ?>
@@ -134,13 +138,15 @@ get_header();
         'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-10.png'
     );
     $wtm_eyebrow  = get_theme_mod('jlmwines_wtm_eyebrow',  '');
-    $wtm_headline = get_theme_mod('jlmwines_wtm_headline', __('Why trust me?', 'jlmwines'));
+    $wtm_headline = get_theme_mod('jlmwines_wtm_headline', is_rtl() ? 'למה לסמוך עלי?' : 'Why trust me?');
     $wtm_body     = get_theme_mod(
         'jlmwines_wtm_body',
-        __("I taste every wine before it reaches the site. Some wines don't make the cut. The ones that do? I'd serve them at my own table.", 'jlmwines')
+        is_rtl()
+            ? 'אני טועם כל יין לפני שהוא מגיע לאתר. חלק מהיינות לא עוברים את המבחן. אלה שעוברים? הייתי מגיש אותם אצלי בבית.'
+            : "I taste every wine before it reaches the site. Some wines don't make the cut. The ones that do? I'd serve them at my own table."
     );
     $wtm_cta_url  = get_theme_mod('jlmwines_wtm_cta_url',  home_url('/about/'));
-    $wtm_cta_text = get_theme_mod('jlmwines_wtm_cta_text', __('Meet Evyatar', 'jlmwines'));
+    $wtm_cta_text = get_theme_mod('jlmwines_wtm_cta_text', is_rtl() ? 'הכירו את אביתר' : 'Meet Evyatar');
     ?>
     <section class="banner banner-wtm">
         <div class="container banner-inner banner-image-end">
@@ -173,7 +179,7 @@ get_header();
         if (function_exists('jlmwines_render_category_cards')) {
             $cat_images_base = get_template_directory_uri() . '/assets/images/categories';
             jlmwines_render_category_cards([
-                'heading' => __('Browse The Collection', 'jlmwines'),
+                'heading' => is_rtl() ? 'לעיון בקולקציה' : 'Browse The Collection',
                 'columns' => 3,
                 'limit'   => 3,
                 'include' => [88, 89, 135], // dry-red, dry-white, rose
@@ -203,13 +209,13 @@ get_header();
         // ─── 7. Blog roll — Wine Talk ─────────────────────────────────
         if (function_exists('jlmwines_render_blog_roll')) {
             jlmwines_render_blog_roll([
-                'eyebrow'  => __('from Evyatar', 'jlmwines'),
-                'heading'  => __('Wine Talk', 'jlmwines'),
+                'eyebrow'  => is_rtl() ? 'מאביתר' : 'from Evyatar',
+                'heading'  => is_rtl() ? 'שיחות יין' : 'Wine Talk',
                 'limit'    => 3,
                 'columns'  => 3,
                 'category' => 'basics',
                 'cta_url'  => home_url('/articles/'),
-                'cta_text' => __('All articles', 'jlmwines'),
+                'cta_text' => is_rtl() ? 'כל הכתבות' : 'All articles',
             ]);
         }
         ?>
@@ -221,18 +227,18 @@ get_header();
     $trust_items = apply_filters('jlmwines_trust_items', [
         [
             'icon'  => 'truck',
-            'title' => __('Free delivery', 'jlmwines'),
-            'body'  => __('On orders over ₪399', 'jlmwines'),
+            'title' => is_rtl() ? 'משלוח חינם' : 'Free delivery',
+            'body'  => is_rtl() ? 'בהזמנות מעל ₪399' : 'On orders over ₪399',
         ],
         [
             'icon'  => 'check',
-            'title' => __('Hand-picked', 'jlmwines'),
-            'body'  => __("Every wine personally tasted before it's stocked", 'jlmwines'),
+            'title' => is_rtl() ? 'מבחר אישי' : 'Hand-picked',
+            'body'  => is_rtl() ? 'כל יין נטעם אישית לפני שהוא מוכנס למלאי' : "Every wine personally tasted before it's stocked",
         ],
         [
             'icon'  => 'whatsapp',
-            'title' => __('Personal help', 'jlmwines'),
-            'body'  => __('WhatsApp Evyatar for a recommendation', 'jlmwines'),
+            'title' => is_rtl() ? 'עזרה אישית' : 'Personal help',
+            'body'  => is_rtl() ? 'שלחו לאביתר וואטסאפ להמלצה' : 'WhatsApp Evyatar for a recommendation',
         ],
     ]);
     ?>

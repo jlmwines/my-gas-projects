@@ -24,8 +24,8 @@ const JLMWINES_FIRST_PURCHASE_META = '_jlmwines_first_purchase_only';
 add_action('woocommerce_coupon_options', function () {
     woocommerce_wp_checkbox([
         'id'          => JLMWINES_FIRST_PURCHASE_META,
-        'label'       => __('First-purchase only', 'jlmwines'),
-        'description' => __('Only valid for customers with no prior orders. Guest checkouts validate against the billing email.', 'jlmwines'),
+        'label'       => 'First-purchase only',
+        'description' => 'Only valid for customers with no prior orders. Guest checkouts validate against the billing email.',
     ]);
 }, 10);
 

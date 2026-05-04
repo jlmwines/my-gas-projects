@@ -63,7 +63,7 @@ function jlmwines_get_testimonials() {
 
 function jlmwines_render_testimonials($args = []) {
     $args = wp_parse_args($args, [
-        'heading' => __('What customers say', 'jlmwines'),
+        'heading' => is_rtl() ? 'מה הלקוחות אומרים' : 'What customers say',
         'eyebrow' => '',
         'columns' => 3,
     ]);
@@ -127,10 +127,10 @@ function jlmwines_render_blog_roll($args = []) {
     $args = wp_parse_args($args, [
         'limit'    => 3,
         'columns'  => 3,
-        'heading'  => __('Wine talk', 'jlmwines'),
+        'heading'  => is_rtl() ? 'שיחות יין' : 'Wine talk',
         'eyebrow'  => '',
         'cta_url'  => get_permalink(get_option('page_for_posts')) ?: home_url('/blog/'),
-        'cta_text' => __('All posts', 'jlmwines'),
+        'cta_text' => is_rtl() ? 'כל הפוסטים' : 'All posts',
         'category' => '',
     ]);
 

@@ -668,6 +668,15 @@ ul { padding: 0; margin: 0; list-style: none; }
 }
 .footer-form button:hover { background: var(--c-accent-hover); }
 
+/* Inline status message shown after JSONP submit replaces the form. */
+.footer-form-msg {
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--c-ink);
+  padding: 14px 0;
+}
+
 /* ─── Footer band: 3 columns (contact | mid: payments+social | legal) ─── */
 .footer-band {
   display: grid;
@@ -1180,11 +1189,35 @@ hr.divider { border: 0; border-top: 1px solid var(--c-ink-12); margin: var(--s-8
   border-inline-start: 1px solid var(--c-ink-12);
   font-family: var(--f-ui);
   font-size: 15px;
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 2px;
 }
 .nav-drawer-menu .sub-menu a { padding: 4px 0; }
+.nav-drawer-menu .menu-item-has-children.is-open > .sub-menu { display: flex; }
+
+/* Drawer accordion toggle (added by main.js) — sits inline-end of the parent
+   link so tapping the chevron expands without navigating. The link itself
+   still navigates if tapped directly. */
+.nav-drawer-menu .menu-item-has-children { position: relative; }
+.nav-drawer-menu .menu-item-has-children > a { padding-inline-end: 36px; }
+.nav-drawer-toggle {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--c-ink);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+.nav-drawer-menu .menu-item-has-children.is-open > .nav-drawer-toggle { transform: rotate(180deg); }
+.nav-drawer-toggle svg { display: block; }
 
 body.drawer-open {
   overflow: hidden;
@@ -1592,16 +1625,24 @@ body.drawer-open {
 body.age-gate-locked { overflow: hidden; }
 
 /* ─── Floating WhatsApp button (product/catalog pages) ──────────── */
+/* Pinned to the bottom inline-end corner. The accessibility (ea11y)
+   widget mirrors this on inline-start at the same `bottom` — the
+   ea11y override below uses identical bottom values so the two icons
+   sit on a single horizontal "shelf" at any viewport. Mobile bottom
+   is high enough to clear the bottom-nav (64px) AND the typical
+   add-to-cart button area when scrolled to it. */
 .whatsapp-float {
   position: fixed;
-  bottom: 20px;
+  bottom: 30px;
   inset-inline-end: 20px;
   z-index: 95;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  /* Sized to match the ea11y accessibility button (--small variant) so
+     the two floating icons align center-to-center on their shared shelf. */
+  width: 48px;
+  height: 48px;
   background: #25d366;
   color: #ffffff;
   border-radius: 50%;
@@ -1619,9 +1660,16 @@ body.age-gate-locked { overflow: hidden; }
 }
 @media (max-width: 719px) {
   .whatsapp-float {
-    bottom: calc(64px + 16px + env(safe-area-inset-bottom, 0));
+    bottom: calc(130px + env(safe-area-inset-bottom, 0));
   }
 }
+
+/* Pojo Accessibility (ea11y) widget positioning is handled in main.js
+   because the widget renders inside a Shadow DOM — outer-page CSS can't
+   reach in. The JS handler reaches through the open shadow root and
+   sets inline `bottom` / `left` / `right` on the open button so the
+   icon sits at the same shelf height as WhatsApp, mirrored across
+   inline axis, language-aware. */
 
 /* ─── Bottom nav (mobile only) ───────────────────────────────────── */
 .bottom-nav {
@@ -1780,6 +1828,12 @@ body.age-gate-locked { overflow: hidden; }
 .woocommerce-page div.product div.images {
   margin-right: 4%;
 }
+/* RTL: image floats right, summary floats left — mirror the gutter and clear direction. */
+[dir="rtl"] .woocommerce div.product div.images,
+[dir="rtl"] .woocommerce-page div.product div.images {
+  margin-right: 0;
+  margin-left: 4%;
+}
 .pdp-description {
   clear: right;
   margin-top: var(--s-6);
@@ -1788,6 +1842,7 @@ body.age-gate-locked { overflow: hidden; }
   line-height: 1.65;
   color: var(--c-ink);
 }
+[dir="rtl"] .pdp-description { clear: left; }
 .pdp-description p { margin: 0 0 var(--s-3); }
 .pdp-description p:last-child { margin-bottom: 0; }
 .pdp-description h2,
@@ -2394,6 +2449,7 @@ ul.products li.product a.added_to_cart {
   content: " →";
   transition: margin-inline-start var(--transition-fast);
 }
+[dir="rtl"] .blog-card-readmore::after { content: " ←"; }
 .blog-card:hover .blog-card-readmore::after { margin-inline-start: 4px; }
 
 /* ─── Single post hero (title overlay on featured image) ──────────

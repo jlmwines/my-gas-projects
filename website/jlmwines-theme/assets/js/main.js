@@ -273,3 +273,158 @@
         next.addEventListener('click', function () { step(1); });
     });
 })();
+
+// Mobile nav drawer — accordion-collapse top-level items that have submenus.
+// Default state: collapsed. Tap chevron toggles. Tapping the link itself
+// still navigates (no preventDefault on the link). Chevron is added by JS
+// so the markup stays standard wp_nav_menu output.
+(function () {
+    var menu = document.querySelector('.nav-drawer-panel .nav-drawer-menu');
+    if (!menu) return;
+    var isHe = document.documentElement.dir === 'rtl' ||
+               (document.documentElement.lang || '').toLowerCase().indexOf('he') === 0;
+    var expandLabel   = isHe ? 'הרחב' : 'Expand';
+    var collapseLabel = isHe ? 'כווץ' : 'Collapse';
+
+    menu.querySelectorAll('.menu-item-has-children').forEach(function (item) {
+        if (item.querySelector(':scope > .nav-drawer-toggle')) return;
+        var sub = item.querySelector(':scope > .sub-menu');
+        if (!sub) return;
+
+        var toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'nav-drawer-toggle';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', expandLabel);
+        toggle.innerHTML = '<svg width="14" height="14" aria-hidden="true"><use href="#i-chevron-down"/></svg>';
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+            var open = item.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            toggle.setAttribute('aria-label', open ? collapseLabel : expandLabel);
+        });
+        item.appendChild(toggle);
+    });
+})();
+
+// Pojo Accessibility (ea11y) widget — reposition the floating button to
+// sit on the same horizontal "shelf" as the WhatsApp float, on the
+// opposite (inline-start) side. The widget renders inside an open shadow
+// DOM, so page CSS can't reach the button; we set the inline style
+// directly through host.shadowRoot. Plugin's own inline style sets
+// `bottom: 24px !important; left: 24px !important;` — we override both
+// with our shelf values via CSSStyleDeclaration.setProperty(name, value, 'important').
+(function () {
+    var HOST_ID = 'ea11y-root';
+    var BUTTON_SEL = '.ea11y-widget-open-button';
+    var GUTTER = '20px';
+    var DESKTOP_BOTTOM = '30px';
+    var MOBILE_BOTTOM = 'calc(130px + env(safe-area-inset-bottom, 0))';
+    var MOBILE_BREAK = 720;
+
+    function applyPosition() {
+        var host = document.getElementById(HOST_ID);
+        if (!host || !host.shadowRoot) return false;
+        var btn = host.shadowRoot.querySelector(BUTTON_SEL);
+        if (!btn) return false;
+
+        var isHe = document.documentElement.dir === 'rtl' ||
+                   (document.documentElement.lang || '').toLowerCase().indexOf('he') === 0;
+        var isMobile = window.innerWidth < MOBILE_BREAK;
+        var bottom = isMobile ? MOBILE_BOTTOM : DESKTOP_BOTTOM;
+
+        btn.style.setProperty('bottom', bottom, 'important');
+        btn.style.setProperty('top', 'auto', 'important');
+        // LTR: ea11y on left (inline-start), WhatsApp on right (inline-end)
+        // RTL: ea11y on right (inline-start of RTL), WhatsApp on left
+        btn.style.setProperty('left', isHe ? 'auto' : GUTTER, 'important');
+        btn.style.setProperty('right', isHe ? GUTTER : 'auto', 'important');
+        return true;
+    }
+
+    // Try immediately; if the widget isn't mounted yet, watch for it.
+    if (applyPosition()) {
+        window.addEventListener('resize', applyPosition);
+        return;
+    }
+
+    var observer = new MutationObserver(function (_mutations, obs) {
+        if (applyPosition()) {
+            obs.disconnect();
+            window.addEventListener('resize', applyPosition);
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Safety: stop observing after 30s even if the widget never appeared.
+    setTimeout(function () { observer.disconnect(); }, 30000);
+})();
+
+// Footer newsletter signup — JSONP submit to Mailchimp's post-json endpoint
+// so the subscriber stays on jlmwines.com. Replaces the form with an inline
+// success/error message in the current language. JS-disabled fallback: form
+// submits to Mailchimp's hosted page in a new tab (target="_blank" attribute).
+(function () {
+    var form = document.querySelector('form[data-mc-form]');
+    if (!form) return;
+    var msgEl = form.parentElement.querySelector('[data-mc-msg]');
+    if (!msgEl) return;
+    if (typeof FormData === 'undefined') return; // very old browser → fallback
+
+    var isHe = document.documentElement.dir === 'rtl' ||
+               (document.documentElement.lang || '').toLowerCase().indexOf('he') === 0;
+
+    var copy = isHe ? {
+        success: 'תודה! בדקו את המייל לאישור הרשמה.',
+        already: 'אתם כבר רשומים. תודה!',
+        error:   'משהו השתבש. נסו שוב או בדקו את הכתובת.'
+    } : {
+        success: 'Thanks! Check your email to confirm your subscription.',
+        already: "You're already subscribed. Thanks!",
+        error:   'Something went wrong. Please try again or check the address.'
+    };
+
+    function showMsg(text) {
+        msgEl.textContent = text;
+        msgEl.hidden = false;
+        form.hidden = true;
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var params = [];
+        new FormData(form).forEach(function (value, key) {
+            params.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+        });
+
+        var jsonUrl = form.action.replace('/subscribe/post', '/subscribe/post-json');
+        var cbName  = 'jlmwinesMcCb_' + Date.now();
+        params.push('c=' + cbName);
+
+        var script = document.createElement('script');
+
+        function cleanup() {
+            try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+            if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[cbName] = function (resp) {
+            if (resp && resp.result === 'success') {
+                showMsg(copy.success);
+            } else if (resp && /already subscribed/i.test(resp.msg || '')) {
+                showMsg(copy.already);
+            } else {
+                showMsg(copy.error);
+            }
+            cleanup();
+        };
+
+        script.src = jsonUrl + (jsonUrl.indexOf('?') === -1 ? '?' : '&') + params.join('&');
+        script.onerror = function () {
+            showMsg(copy.error);
+            cleanup();
+        };
+        document.body.appendChild(script);
+    });
+})();

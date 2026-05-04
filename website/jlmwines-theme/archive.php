@@ -49,7 +49,7 @@ get_header();
         ?>
 
     <?php else : ?>
-        <p><?php _e('Nothing to show here yet.', 'jlmwines'); ?></p>
+        <p><?php echo is_rtl() ? 'אין מה להציג עדיין.' : 'Nothing to show here yet.'; ?></p>
     <?php endif; ?>
 </main>
 

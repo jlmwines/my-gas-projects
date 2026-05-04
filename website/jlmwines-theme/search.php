@@ -46,7 +46,7 @@ get_header();
         ?>
 
     <?php else : ?>
-        <p><?php _e('No results found. Try a different search.', 'jlmwines'); ?></p>
+        <p><?php echo is_rtl() ? 'לא נמצאו תוצאות. נסו חיפוש אחר.' : 'No results found. Try a different search.'; ?></p>
         <?php get_search_form(); ?>
     <?php endif; ?>
 </main>

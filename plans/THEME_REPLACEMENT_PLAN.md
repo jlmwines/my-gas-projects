@@ -108,7 +108,7 @@ jlmwines-theme/
 ├── functions.php          # Setup, supports, enqueues, content width
 ├── header.php             # <head>, site header (logo, nav, switcher, cart)
 ├── footer.php             # Site footer (newsletter, columns, legal)
-├── front-page.php         # Custom homepage (replaces Elementor page 9019)
+                            # NOTE: no front-page.php — homepage is a real WP Page (EN + HE WPML duplicates), rendered via page.php. See "Migration scope" below.
 ├── index.php              # Default fallback
 ├── singular.php           # Base for single post/page
 ├── single.php             # Blog post (extends singular)
@@ -170,10 +170,14 @@ Theme header: Theme Name, Version 1.0.0, WC tags (`WC requires at least`, `WC te
 - Copyright + mobile language switcher
 - `wp_footer()`
 
-### front-page.php
-Custom homepage, **fully hard-coded.** No block patterns, no theme options panel — all content lives in the PHP template, edited via Claude when changes are needed. This is a single-website theme, not a distributed product.
+### Homepage — real Page, not a template
+The homepage is a real WordPress Page set as the static front page. EN and HE are separate Page records via WPML; each holds native content in the correct language. There is **no `front-page.php`** in the theme.
 
-Section inventory deferred until staging clone is up and the current Elementor homepage is captured. Likely sections: hero, featured categories, **bundle showcase** (currently whites + lighter reds), brand statement, recent posts, newsletter CTA.
+This matches the rule in `plans/TRANSLATION_PLAN.md`: static page content is stored in the correct language in advance, never translated at runtime. The same model is used for About (EN ID 63644, HE ID 63649).
+
+Edit flow: open the Page in the WP editor (clean HTML / blocks, no Elementor), make the change, save. WPML keeps EN and HE as sibling translations.
+
+Section inventory (hero, packages, why trust me, browse, testimonials, wine talk, trust banner) is authored as block / HTML content inside the EN and HE Pages — not as PHP sections.
 
 ### singular.php / page.php / single.php
 Standard `the_content()` with proper article wrappers; post meta only on `single.php`; Rank Math schema hook points unobstructed.
@@ -213,15 +217,17 @@ Vanilla JS only. Nav toggle, cart drawer open/close, smooth scroll. Defer loaded
 
 ## Migration scope (Elementor → native)
 
-Staging audit (2026-04-26) identified **16 Elementor-built pages** out of 18 total. Each becomes a custom PHP template in the new theme. Homepage is low-touch (rare edits), so hard-coded PHP is acceptable across the board.
+Staging audit (2026-04-26) identified **16 Elementor-built pages** out of 18 total. Each becomes either a real WP Page with clean-HTML / block content (preferred for content-heavy pages with bilingual copy) or a custom PHP template (for pages whose structure is fixed and content is largely Woo-driven). Static page copy is stored in the Page itself, in both languages via WPML — not in PHP.
 
 | Page (ID) | New home |
 |-----------|----------|
-| Home Elegant (9019) | `front-page.php` |
-| About (63644) | `page-about.php` |
+| Home (kowine "Home Elegant" 9019 EN / 64199 HE — to be deleted) | New WP Page authored fresh (slug `home` if available), set as static front page, EN + HE WPML duplicates (clean HTML) — same model as About. Old kowine pages deleted, not migrated. |
+| About (63644) | Real WP Page (clean HTML), EN + HE WPML duplicates — already done |
 | Send Wine Gifts in Israel (63724) | `page-send-wine-gifts.php` |
 | Wine Talk / articles index (63813) | `page-articles.php` |
 | Subscribed (63887) | `page-subscribed.php` |
+
+**Note (2026-05-04):** The remaining `page-*.php` template assignments above (Send Wine Gifts, Wine Talk index, Subscribed, Legal) were drafted under the prior translation plan. Each should be reviewed against the rule in `plans/TRANSLATION_PLAN.md`: pages whose content is bilingual static copy should be real WP Pages with WPML duplicates (the About model), not PHP templates with translation calls. PHP templates remain appropriate where the content is structural (loops, archives) rather than authored copy.
 | Privacy Policy (3), Terms (414), Cookie Policy (65832), Accessibility (65840) | `page-legal.php` (one template, switched by slug) |
 | My Account (11), Cart (9), Shop (8), Order Tracking (14932), Thank You (2272), Order Error (2274) | Native Woo via `woocommerce.php` + Woo hook customizations |
 | Favorites (10612) | Deleted (wishlist plugin dropped) |

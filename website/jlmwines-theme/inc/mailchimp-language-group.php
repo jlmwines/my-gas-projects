@@ -66,13 +66,15 @@ function jlmwines_mc_order_language($order) {
 }
 
 /**
- * Detect newsletter opt-in on the order. The Mailchimp for WC plugin
- * stores this on the order meta — exact key has shifted across plugin
- * versions, so we check the common candidates.
+ * Detect newsletter opt-in on the order. Checks our own meta key first
+ * (set by the checkout-opt-in checkbox below), falls back to the legacy
+ * Mailchimp for WC plugin keys for backward compatibility while the
+ * plugin is being deactivated.
  */
 function jlmwines_mc_order_opted_in($order) {
     $candidates = [
-        'mailchimp_woocommerce_is_subscribed',
+        '_jlmwines_mc_optin',                           // ours
+        'mailchimp_woocommerce_is_subscribed',          // legacy plugin
         '_mailchimp_woocommerce_is_subscribed',
         'mailchimp_woocommerce_subscribed',
     ];
@@ -160,3 +162,30 @@ function jlmwines_mc_sync_language_on_paid($order_id) {
 }
 add_action('woocommerce_order_status_processing', 'jlmwines_mc_sync_language_on_paid', 20, 1);
 add_action('woocommerce_order_status_completed',  'jlmwines_mc_sync_language_on_paid', 20, 1);
+
+/**
+ * Render the newsletter opt-in checkbox at WC checkout, placed just
+ * before the place-order button. Replaces the Mailchimp for WooCommerce
+ * plugin's opt-in checkbox so the plugin can be deactivated without
+ * losing the checkout-opt-in path. Bilingual via is_rtl().
+ */
+add_action('woocommerce_review_order_before_submit', function () {
+    woocommerce_form_field('jlmwines_mc_optin', [
+        'type'    => 'checkbox',
+        'class'   => ['form-row jlmwines-mc-optin-row'],
+        'label'   => is_rtl()
+            ? 'שלחו לי מבצעים ומידע על יין במייל'
+            : 'Send me special offers and wine info by email',
+        'default' => 0,
+    ]);
+});
+
+/**
+ * Save the opt-in choice as order meta. Read by jlmwines_mc_order_opted_in()
+ * which then drives the upsert PUT to Mailchimp.
+ */
+add_action('woocommerce_checkout_create_order', function ($order) {
+    if (!empty($_POST['jlmwines_mc_optin'])) {
+        $order->update_meta_data('_jlmwines_mc_optin', '1');
+    }
+}, 20, 1);

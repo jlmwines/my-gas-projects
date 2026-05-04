@@ -14,8 +14,6 @@ if (!isset($content_width)) {
 }
 
 function jlmwines_setup() {
-    load_theme_textdomain('jlmwines', get_template_directory() . '/languages');
-
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
     add_theme_support('html5', [
@@ -38,9 +36,9 @@ function jlmwines_setup() {
     add_theme_support('wc-product-gallery-slider');
 
     register_nav_menus([
-        'primary' => __('Primary Navigation', 'jlmwines'),
-        'footer'  => __('Footer Navigation', 'jlmwines'),
-        'mobile'  => __('Mobile Navigation', 'jlmwines'),
+        'primary' => 'Primary Navigation',
+        'footer'  => 'Footer Navigation',
+        'mobile'  => 'Mobile Navigation',
     ]);
 }
 add_action('after_setup_theme', 'jlmwines_setup');
