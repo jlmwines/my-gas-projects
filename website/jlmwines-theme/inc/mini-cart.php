@@ -24,7 +24,7 @@ function jlmwines_render_mini_cart_drawer() {
         <div class="cart-drawer-backdrop" data-cart-drawer-close></div>
         <aside class="cart-drawer-panel" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr( is_rtl() ? 'סל קניות' : 'Shopping cart' ); ?>">
             <header class="cart-drawer-head">
-                <h2 class="cart-drawer-title"><?php esc_html_e('Your cart', 'woocommerce'); ?></h2>
+                <h2 class="cart-drawer-title"><?php esc_html_e('Cart', 'woocommerce'); ?></h2>
                 <button type="button" class="cart-drawer-close" data-cart-drawer-close aria-label="<?php echo esc_attr( is_rtl() ? 'סגירת סל הקניות' : 'Close cart' ); ?>">
                     <svg width="22" height="22" aria-hidden="true"><use href="#i-close"/></svg>
                 </button>

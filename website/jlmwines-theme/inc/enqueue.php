@@ -13,7 +13,7 @@ function jlmwines_enqueue_assets() {
 
     wp_enqueue_style(
         'jlmwines-fonts',
-        'https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Rubik:wght@400;500;600;700&display=swap',
+        'https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;500;600;700&display=swap',
         [],
         null
     );

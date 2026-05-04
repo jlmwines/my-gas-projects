@@ -3,11 +3,10 @@
  * Floating WhatsApp click-to-chat button.
  *
  * Pinned to the bottom inline-end corner — bottom-right in LTR (EN),
- * bottom-left in RTL (HE) — on product, shop, product category, and
- * product tag pages. Hidden on content pages, posts, cart, checkout,
- * account so it doesn't interrupt transaction flow or compete with
- * reading. The bottom offset is set in main.css high enough to clear
- * bottom-nav + add-to-cart on mobile.
+ * bottom-left in RTL (HE) — on every page. Always present on mobile
+ * so the bottom-nav row (which reserves an empty slot on this side)
+ * stays visually balanced; on desktop it's a persistent help affordance
+ * paired with the ea11y widget on the inline-start corner.
  *
  * Companion: pojo-accessibility (ea11y) widget sits at the same height
  * on the opposite (inline-start) corner — see main.css. Plugin should
@@ -20,13 +19,6 @@ if (!defined('ABSPATH')) {
 }
 
 function jlmwines_render_whatsapp_float() {
-    if (!function_exists('is_product')) {
-        return;
-    }
-    if (!(is_product() || is_shop() || is_product_category() || is_product_tag())) {
-        return;
-    }
-
     $whatsapp_number = get_theme_mod('jlmwines_whatsapp_number', '+972555174805');
     if (!$whatsapp_number) {
         return;

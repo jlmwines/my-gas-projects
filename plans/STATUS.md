@@ -6,26 +6,31 @@
 
 | Metric | Value |
 |--------|-------|
-| Phase | Cutover-ready (staging passes; pre-cutover tests pending) |
+| Phase | Cutover-ready (staging passes; user-side pre-cutover tests pending) |
 | Last Active | 2026-05-04 |
 | Revenue | Steady |
-| Deploy Version | jlmops @79 · theme v1.1.0 (staging — translation rework + Mailchimp end-to-end + mobile UX polish) |
+| Deploy Version | jlmops @79 · theme v1.2.0 (staging — catalog attribute filters + HE homepage text canonical + Secular One headlines + mobile nav restructure + Chrome RTL width fix) |
 | Deploy Date | jlmops 2026-04-26 · theme 2026-05-04 |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) |
-| Next Milestone | Theme cutover — 4 pre-cutover items remain (HE walk, real test orders + opt-in, inline confirmation test, plugin list eyeball) |
+| Next Milestone | Theme cutover — date TBD (slipped from 2026-05-04). User testing in flight; post-cutover work includes WPML String Translation cleanup for untranslated WC chrome strings |
 | Blockers | 0 |
 
 ## Next Action
 
-**Cutover-ready (theme v1.1.0 on staging). Pre-cutover remaining: 4 items, ~30 min total.**
+**Cutover-ready (theme v1.2.0 on staging). User to handle remaining testing; cutover date TBD.**
 
-1. **HE text walk** — incognito-walk every flow on staging in Hebrew. Homepage, PDP (regular + bundle), shop, cart, checkout (form only — no need to complete), account, articles, blog post, age-gate, search, mobile drawer, footer. Confirm no English bleed-through anywhere unintended.
-2. **Test orders + checkout opt-in** — place a test order on staging in EN with the newsletter checkbox ticked. Verify subscriber lands in Mailchimp with English Language interest. Repeat in HE. Idempotency: move test order processing→completed, confirm `_jlmwines_mc_lang_synced` order meta set once, no double-PUT.
-3. **Inline confirmation message test (v1.0.93+)** — submit footer signup EN + HE with plus-addressed emails (e.g., `accounts+jlmtest-en-001@jlmwines.com`). Confirm subscriber stays on jlmwines.com and sees per-language inline message, no redirect to Mailchimp's hosted page.
-4. **Eyeball live plugin list** — open wp-admin → Plugins on live; compare against expected-active list in `plans/CUTOVER_CHECKLIST.md` Stage 0.3. Resolve any drift before cutover.
+User-handled pre-cutover items (still required, user driving):
+
+1. **Test orders + checkout opt-in** — place a test order on staging in EN with the newsletter checkbox ticked. Verify subscriber lands in Mailchimp with English Language interest. Repeat in HE. Idempotency: move test order processing→completed, confirm `_jlmwines_mc_lang_synced` order meta set once, no double-PUT.
+2. **Inline confirmation message test (v1.0.93+)** — submit footer signup EN + HE with plus-addressed emails (e.g., `accounts+jlmtest-en-001@jlmwines.com`). Confirm subscriber stays on jlmwines.com and sees per-language inline message, no redirect to Mailchimp's hosted page.
+3. **Eyeball live plugin list** — open wp-admin → Plugins on live; compare against expected-active list in `plans/CUTOVER_CHECKLIST.md` Stage 0.3. Resolve any drift before cutover.
+
+Post-cutover (deferred deliberately — DB-bound work):
+
+- **WPML String Translation cleanup** — untranslated WC chrome strings (catalog result-count phrases, default WC dropdown labels, etc.) are currently patched via `gettext` / `ngettext_with_context` filters in `inc/shop-filters.php`. Proper home is WPML String Translation (DB), best done after the cutover so translation entries port cleanly across the live site.
 
 **Then cutover day** (Stages 1 + 2 in `plans/CUTOVER_CHECKLIST.md`):
 - Live SiteGround backup (rollback target)
@@ -113,6 +118,23 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-05-04 (continued, theme work):** **Theme v1.1.0 → v1.2.0. Catalog attribute filters built end-to-end. HE homepage text reverted to canonical (docx) strings. Headline font swapped David Libre → Secular One. Mobile nav restructured around floating WhatsApp + ea11y. Chrome RTL desktop-width bug fixed. Mobile filter touch targets bumped. Multiple sub-fixes.**
+
+  - **Catalog attribute filters (intensity / complexity / acidity).** New `inc/shop-filters.php` renders sidebar (desktop) + accordion (mobile) on shop, product taxonomy, and product search archives. **Exact-value model with PDP visual rhyme** — circles fill 1..N to match PDP description (`●●●○○ Moderate`); clicking circle 3 selects exact value 3 (not "≥ 3"). Cross-attribute = AND. Term-name → real-slug map handles inconsistent slugs (`pa_intensity` has `1`, `2-mild`, `3-medium`, `4-intense`, `5-very-intense`; complexity skips value 1 entirely). Disabled circles for values with zero products in current view (40% opacity instead of `--c-ink-12` which read as invisible). Whole attribute hidden when uniform across the result set. Clear-all link in WC results-meta row, hidden when no filters active. Mobile filter button (slider icon, count badge, hooked at `woocommerce_before_shop_loop` priority 22) toggles `.shop-filters.is-open`; persists open state if any filter is active on page load. Plan in `website/CATALOG_FILTERS_PLAN.md`. Touch targets bumped to 36×36 on mobile (was 28; meets AAA more comfortably).
+  - **Earlier draft used threshold (`≥ N`) semantics** but the visual rhyme broke — `●●●○○` in PDP means *value = 3*, not *value ≥ 3*. Switched to exact-value mid-build with full plan rewrite. Documented in `CATALOG_FILTERS_PLAN.md` for posterity.
+  - **HE homepage text canonical.** User flagged staging HE was paraphrased fantasy copy, not the actual live wording. Pulled `exchange/homepage he staging text.docx` as source of truth and replaced ~10 strings in `front-page.php`: hero eyebrow / headline / body / CTA, bundles heading + eyebrow + body + CTA, packages heading + eyebrow + intro body + CTA, why-trust headline + body, browse-collection heading, testimonials eyebrow, wine-talk eyebrow + heading + CTA. **Big inversion fixed**: live uses *חבילות* for bundles and *מארזים* for occasion packages; staging had them swapped. EN copy left alone (user said it was fine).
+  - **Headline font swap (David Libre → Secular One).** Both partners agreed David Libre was reading as governmental/biblical, wrong for an anti-snob brand. Surveyed alternatives (Fredoka — too playful; Varela Round — single weight, soft; Frank Ruhl Libre — milder version of same problem) and landed on **Secular One** (Hagilda foundry, Hebrew-first, confident without ceremony). Mobile nav-drawer menu also swapped from `--f-display` (now Secular One) to `--f-ui` (Rubik) since headline serif felt too formal for menu items. User raised "Simplifi" as a font name — couldn't find it in any font registry; assumed voice-to-text artefact, going with Rubik for nav.
+  - **Chrome RTL desktop-width bug.** Symptom: HE pages on Chrome (mobile + incognito) rendered as if at desktop width — content squished at right edge of viewport, ~1235px gray empty space to the left, bottom-nav not visible because `@media (max-width: 719px)` didn't fire. Diagnostic JS revealed all 393 body elements positioned at L=1234 R=1646 in a 411-wide viewport. **Root cause**: WordPress core injects an off-screen accessibility container with `style="position:absolute;left:-5000px"` for screen readers; in Chrome RTL specifically, that element extended the document past the inline-end edge despite `overflow-x: clip`/`hidden` on html and body. **Fix**: CSS rule overriding the inline style with the standard sr-only clip pattern (`clip: rect(0,0,0,0); width: 1px; height: 1px; ...`) — hides without contributing to layout dimensions. Diagnostic code removed after confirmation.
+  - **Mobile bottom-nav restructure.** Previous: 4 icons (Shop, Account, Search, Language). Built-then-discarded interim version: 4 icons (Accessibility, Search, Language, WhatsApp). Final per user: **Search + Language in middle two slots, empty placeholder spacers in slots 1 and 4 where the floating WhatsApp + ea11y icons land at the bottom-nav row level.** Floats stay floating (`position: fixed`, always visible scroll-persistent), but their `bottom` offset dropped from `calc(130px + safe-area)` to `calc(14px + safe-area)` on mobile so they sit inside the nav row. WhatsApp float now renders site-wide (was hidden on non-shop pages, which made the inline-end slot asymmetrically empty); shrunk to 40×40 on mobile (was 48×48) to fit the slot comfortably.
+  - **Category cards.** Product count replaced with **"Shop now" / "לחנות"** CTA in accent color. Titles centered (was inline-start aligned). Image-override resolution updated to traverse WPML's `wpml_object_id` filter back to the EN counterpart so a single override-map keyed by EN slug applies across languages — fixes the bug where HE pages were serving old WC term thumbnails (`/uploads/2025/02/...`) while EN pages got the new theme assets.
+  - **Three new Canva category images** placed in `content/categories/dry red.jpg`, `dry white.jpg`, `rose.jpg`; copied (renamed with hyphens) into theme assets and deployed. Prompts saved to `content/category-images-canva-prompts.md` for repeatability.
+  - **Mobile homepage cap** — 3 bundles + 2 packages on mobile (CSS `:nth-child(n+4) { display: none }` for bundles section, `n+3` for packages). Desktop unchanged.
+  - **HE WC result-count strings** translated inline via `gettext` and `ngettext_with_context` filters covering the three loop/result-count.php variants (single result / "showing all N" / "showing N–M of X"). Will be replaced post-cutover by proper WPML String Translation entries in DB.
+  - **Files created/modified this session:**
+    - **Theme:** `inc/shop-filters.php` (new), `inc/woocommerce.php` (category-card render + product-loop class), `inc/bottom-nav.php`, `inc/whatsapp-float.php`, `front-page.php`, `woocommerce.php`, `assets/css/main.css` (extensive), `assets/js/main.js`, `inc/enqueue.php`, `style.css` (v1.2.0), `functions.php` (added shop-filters require).
+    - **Plans + content:** `website/CATALOG_FILTERS_PLAN.md` (new), `content/category-images-canva-prompts.md` (new), `content/categories/dry red.jpg` + `dry white.jpg` + `rose.jpg` (new), theme `assets/images/categories/*.jpg` (replaced).
+  - **Pending (user-driven):** Real test orders + checkout opt-in (EN/HE), inline-confirmation footer signup test (EN/HE), live plugin-list eyeball, then cutover. Date TBD.
 
 - **2026-05-04 (continued):** **KPI scope written + Drive auth + ClaudeOps project spun up.** New doc `business/KPI.md` defines 6 metrics (organic traffic EN/HE, new customers EN/HE, first-order conversion + AOV, 90-day return rate, newsletter signups + open/click, organic-source engagement). Strategic frame, exclusions, data path, sequence all captured. Goal correction: 90-day return rate (not the 57-day stat in `MARKET_CONTEXT.md` — that was observed, not goal). Drive authenticated via `accounts@jlmwines.com`; `JLMops_Data` already lives there so no new export pipeline is needed — small summary tab in `JLMops_Data` will pre-compute the 4 jlmops-source KPIs. GA4 + GSC sheet setup guide created in Drive (file ID `1QWTJmlj-wvHYk3SfdTvPj7gxskEqPx2HDEznILljRYM`) for user to run when ready (15 min × 2). New top-level project `claudeops/` created for meta-work (plugin/skill eval, MCP servers, memory curation, KPI-scoping pattern). Full content + sequence in `business/KPI.md`. Activation deferred until after cutover settles.
 

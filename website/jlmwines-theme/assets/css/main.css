@@ -26,7 +26,7 @@
   --s-8:32px; --s-12:48px; --s-16:64px; --s-24:96px;
 
   /* Type families */
-  --f-display: 'David Libre', 'Times New Roman', serif;
+  --f-display: 'Secular One', 'Heebo', system-ui, sans-serif;
   --f-ui:      'Rubik', system-ui, -apple-system, sans-serif;
 
   /* Type scale — mobile */
@@ -74,7 +74,39 @@
 
 /* ─── Reset ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+}
+body {
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* RTL hard guard: WordPress core injects an off-screen accessibility
+   container with `style="position:absolute;left:-5000px"`. In Chrome
+   on RTL pages this element extends the document past the inline-end
+   edge despite overflow:clip, blowing the page width out to ~1600px
+   on mobile and pushing content into a narrow strip at the right
+   edge. Override the inline style with the standard sr-only clip
+   pattern that hides without contributing to layout dimensions. */
+[style*="left:-5000px"],
+[style*="left: -5000px"] {
+  position: absolute !important;
+  left: auto !important;
+  right: auto !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
 body {
   margin: 0;
   font-family: var(--f-ui);
@@ -84,6 +116,10 @@ body {
   background: var(--c-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Defensive horizontal-scroll guard. `clip` over `hidden` so sticky
+     positioning on descendants (.site-header) keeps working — clip
+     doesn't establish a new scroll container. */
+  overflow-x: clip;
   text-rendering: optimizeLegibility;
 }
 img, svg { display: block; max-width: 100%; height: auto; }
@@ -1095,6 +1131,11 @@ hr.divider { border: 0; border-top: 1px solid var(--c-ink-12); margin: var(--s-8
   z-index: 100;
   visibility: hidden;
   pointer-events: none;
+  /* Clip the off-canvas panel (translated past the viewport edge when
+     closed) so it doesn't extend document width — in RTL the panel
+     parks past the right edge, which otherwise creates horizontal
+     scroll on mobile. */
+  overflow: clip;
 }
 .nav-drawer.is-open {
   visibility: visible;
@@ -1168,8 +1209,12 @@ hr.divider { border: 0; border-top: 1px solid var(--c-ink-12); margin: var(--s-8
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  font-family: var(--f-display);
-  font-size: 22px;
+  /* UI sans (Rubik) for both EN and HE — the previous display serif
+     felt too formal/headline-style for menu items. Slightly smaller
+     than before because Rubik's x-height runs larger than David Libre. */
+  font-family: var(--f-ui);
+  font-weight: 500;
+  font-size: 18px;
   line-height: 1.3;
 }
 .nav-drawer-menu li { margin: 0; }
@@ -1230,6 +1275,7 @@ body.drawer-open {
   z-index: 110;
   visibility: hidden;
   pointer-events: none;
+  overflow: clip;
 }
 .cart-drawer.is-open {
   visibility: visible;
@@ -1659,8 +1705,20 @@ body.age-gate-locked { overflow: hidden; }
   outline-offset: 2px;
 }
 @media (max-width: 719px) {
+  /* Drop the WhatsApp float into the inline-end slot of the bottom-nav
+     row. Bottom-nav is ~64px tall + safe-area; centering the icon
+     vertically in the slot. The bottom-nav reserves an empty spacer in
+     this slot so the float visually lands here without competing with
+     a real nav item. Slightly smaller than desktop so it sits inside
+     the nav row comfortably. */
   .whatsapp-float {
-    bottom: calc(130px + env(safe-area-inset-bottom, 0));
+    bottom: calc(14px + env(safe-area-inset-bottom, 0));
+    width: 40px;
+    height: 40px;
+  }
+  .whatsapp-float svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1714,6 +1772,10 @@ body.age-gate-locked { overflow: hidden; }
 }
 .bottom-nav-item.is-active { color: var(--c-accent); }
 .bottom-nav-item svg { display: block; }
+/* Empty placeholder slots — keep grid alignment so floating ea11y /
+   WhatsApp icons visually land in the inline-start / inline-end
+   slot positions. */
+.bottom-nav-spacer { display: block; }
 
 /* ─── Breadcrumbs ────────────────────────────────────────────────── */
 .breadcrumbs {
@@ -2207,6 +2269,186 @@ ul.products li.product a.added_to_cart {
                              .section-product-grid.columns-4 { grid-template-columns: repeat(4, 1fr); } }
 .section-product-grid .product { margin: 0; }
 
+/* Mobile homepage length control: cap visible product cards in the
+   bundles and packages sections to 3 and 2 respectively. Desktop still
+   shows the full set the loop returned. */
+@media (max-width: 599px) {
+  .section-products--bundle .section-product-grid > li:nth-child(n+4),
+  .section-products--packages .section-product-grid > li:nth-child(n+3) {
+    display: none;
+  }
+}
+
+/* ─── Catalog attribute filters (sidebar + circles) ──────────────── */
+/* Two-column archive layout: filters | results. Single column below
+   900px (phase 3 will convert mobile to a filter-icon accordion). */
+.woocommerce-archive-grid {
+  display: grid;
+  gap: var(--s-8);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) {
+  .woocommerce-archive-grid {
+    grid-template-columns: 240px 1fr;
+    gap: var(--s-12);
+  }
+}
+.woocommerce-archive-content { min-width: 0; }
+
+.shop-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+}
+@media (min-width: 900px) {
+  .shop-filters {
+    position: sticky;
+    /* Clear the sticky .site-header (~66px tall at rest, ~50px scrolled)
+       plus a bit of breathing room. */
+    top: 84px;
+    align-self: flex-start;
+  }
+}
+/* Below 900px the sidebar is collapsed behind the filter-toggle button
+   in the catalog meta row. JS toggles `.is-open` to reveal it as an
+   inline accordion above the products grid. */
+@media (max-width: 899px) {
+  .shop-filters {
+    display: none;
+    margin-bottom: var(--s-6);
+    padding: var(--s-4);
+    background: var(--c-surface);
+    border: 1px solid var(--c-ink-12);
+    border-radius: var(--radius-card);
+  }
+  .shop-filters.is-open { display: flex; }
+}
+
+/* Filter-toggle button (mobile only). Sits in the WC catalog meta row.
+   Floats to the trailing edge so the result-count phrase has breathing
+   room. Logical `inline-end` flips correctly in RTL.
+   `--c-ink-18` is rgba(26,22,18,0.18). */
+.shop-filter-toggle {
+  display: none;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px 12px;
+  border: 1px solid var(--c-ink-18);
+  background: var(--c-base);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  color: var(--c-ink);
+  cursor: pointer;
+  border-radius: 999px;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+@media (max-width: 899px) {
+  .shop-filter-toggle {
+    display: inline-flex;
+    float: inline-end;
+  }
+}
+.shop-filter-toggle:hover,
+.shop-filter-toggle[aria-expanded="true"] {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+.shop-filter-toggle svg { display: block; }
+.shop-filter-toggle-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--c-accent);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.shop-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.shop-filter-label {
+  font-family: var(--f-ui);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  margin: 0;
+}
+
+.shop-filter-circles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+@media (max-width: 899px) {
+  .shop-filter-circles { gap: 6px; }
+  .shop-filter-circle {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+}
+/* Each circle is a 28×28 hit target wrapping the ●/○ glyph. Cursor +
+   color cues differentiate selectable / disabled / selected states.
+   Glyph stays Unicode for visual rhyme with the PDP description. */
+.shop-filter-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  line-height: 1;
+  /* Three visibility tiers: muted (empty/clickable) > accent (filled)
+     > ink-12 (disabled, essentially absent). The ●/○ glyph is small,
+     so the empty state needs full color saturation to read at all. */
+  color: var(--c-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.shop-filter-circle.is-filled {
+  color: var(--c-accent);
+}
+.shop-filter-circle.is-disabled {
+  /* Faded version of the base muted color — clearly secondary but
+     still readable as a circle (var(--c-ink-12) was too faint to see). */
+  opacity: 0.4;
+  cursor: default;
+}
+a.shop-filter-circle { cursor: pointer; }
+a.shop-filter-circle:hover { color: var(--c-accent-hover); }
+a.shop-filter-circle:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+/* Hover hint on the currently-selected circle: shift toward muted to
+   suggest "click to clear." aria-label already says it for AT users. */
+a.shop-filter-circle.is-selected:hover { color: var(--c-muted); }
+
+/* Clear-all link injected into the WC results meta row by
+   jlmwines_render_filter_clear_all(). Hidden when no filters are
+   active (the PHP doesn't emit it in that case). */
+.shop-filter-clear-all {
+  display: inline-block;
+  margin-inline-start: var(--s-3);
+  font-family: var(--f-ui);
+  font-size: 13px;
+  color: var(--c-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.shop-filter-clear-all:hover { color: var(--c-accent); }
+
 /* ─── Category cards ─────────────────────────────────────────────── */
 .category-grid {
   display: grid;
@@ -2248,6 +2490,7 @@ ul.products li.product a.added_to_cart {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: center;
 }
 .category-card-name {
   font-family: var(--f-display);
@@ -2257,11 +2500,14 @@ ul.products li.product a.added_to_cart {
   margin: 0;
   color: var(--c-ink);
 }
-.category-card-count {
+.category-card-cta {
   font-family: var(--f-ui);
   font-size: 13px;
-  color: var(--c-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--c-accent);
 }
+.category-card:hover .category-card-cta { color: var(--c-accent-hover); }
 
 /* ─── Testimonials carousel ──────────────────────────────────────── */
 .section-testimonials-wrap {

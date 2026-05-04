@@ -217,8 +217,14 @@ function jlmwines_render_product_loop($args = []) {
         }
         return;
     }
+    $section_classes = ['section', 'section-products'];
+    if ($args['type'] === 'category' && !empty($args['category'])) {
+        $section_classes[] = 'section-products--' . sanitize_html_class($args['category']);
+    } elseif ($args['type'] !== 'category' && !empty($args['type'])) {
+        $section_classes[] = 'section-products--' . sanitize_html_class($args['type']);
+    }
     ?>
-    <section class="section section-products">
+    <section class="<?php echo esc_attr(implode(' ', $section_classes)); ?>">
         <?php if ($args['heading'] || $args['eyebrow'] || $args['body']) : ?>
             <header class="section-header">
                 <?php if ($args['eyebrow']) : ?>
@@ -315,11 +321,25 @@ function jlmwines_render_category_cards($args = []) {
         <div class="category-grid columns-<?php echo (int) $args['columns']; ?>"<?php echo $aspect_style; // phpcs:ignore ?>>
             <?php foreach ($cats as $cat) :
                 // Override URL precedence: image_overrides[$slug] || image_overrides[$term_id] || term thumbnail
+                // WPML duplicates terms across languages with distinct IDs and slugs —
+                // resolve the rendered term back to its default-language (EN)
+                // counterpart so callers can pass a single override map keyed by EN
+                // slug/term_id and have it apply across languages.
+                $lookup_slug    = $cat->slug;
+                $lookup_term_id = $cat->term_id;
+                $en_term_id     = apply_filters('wpml_object_id', $cat->term_id, 'product_cat', false, 'en');
+                if ($en_term_id && (int) $en_term_id !== (int) $cat->term_id) {
+                    $en_term = get_term((int) $en_term_id, 'product_cat');
+                    if ($en_term && !is_wp_error($en_term)) {
+                        $lookup_slug    = $en_term->slug;
+                        $lookup_term_id = (int) $en_term->term_id;
+                    }
+                }
                 $override_url = '';
-                if (!empty($args['image_overrides'][$cat->slug])) {
-                    $override_url = $args['image_overrides'][$cat->slug];
-                } elseif (!empty($args['image_overrides'][$cat->term_id])) {
-                    $override_url = $args['image_overrides'][$cat->term_id];
+                if (!empty($args['image_overrides'][$lookup_slug])) {
+                    $override_url = $args['image_overrides'][$lookup_slug];
+                } elseif (!empty($args['image_overrides'][$lookup_term_id])) {
+                    $override_url = $args['image_overrides'][$lookup_term_id];
                 }
                 if ($override_url) {
                     $thumb_url = $override_url;
@@ -337,18 +357,7 @@ function jlmwines_render_category_cards($args = []) {
                     </div>
                     <div class="category-card-body">
                         <h3 class="category-card-name"><?php echo esc_html($cat->name); ?></h3>
-                        <span class="category-card-count">
-                            <?php
-                            $cat_count_fmt = is_rtl()
-                                ? '%s יינות'
-                                : ($cat->count === 1 ? '%s wine' : '%s wines');
-                            printf(
-                                /* translators: %s: number of products in this category */
-                                esc_html($cat_count_fmt),
-                                esc_html(number_format_i18n($cat->count))
-                            );
-                            ?>
-                        </span>
+                        <span class="category-card-cta"><?php echo esc_html( is_rtl() ? 'לחנות' : 'Shop now' ); ?></span>
                     </div>
                 </a>
             <?php endforeach; ?>

@@ -17,12 +17,12 @@ get_header();
         'jlmwines_hero_image',
         'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-09.png'
     );
-    $hero_eyebrow  = get_theme_mod('jlmwines_hero_eyebrow',  is_rtl() ? 'יין, פשוט יותר' : 'Wine, made easy');
-    $hero_headline = get_theme_mod('jlmwines_hero_headline', is_rtl() ? 'אתם לא צריכים להיות מומחים.' : "You don't need to be an expert.");
+    $hero_eyebrow  = get_theme_mod('jlmwines_hero_eyebrow',  is_rtl() ? 'לא מומחה יין?' : 'Wine, made easy');
+    $hero_headline = get_theme_mod('jlmwines_hero_headline', is_rtl() ? 'אתם לא צריכים להבין ביין. זאת העבודה שלי.' : "You don't need to be an expert.");
     $hero_body     = get_theme_mod(
         'jlmwines_hero_body',
         is_rtl()
-            ? 'אני אביתר. אני טועם כל יין בחנות ושומר רק את אלה שהייתי מוזג לחברים. ספרו לי מה אתם אוהבים — ואני אשלח לכם משהו שתהנו ממנו.'
+            ? 'אני אביתר, מחנות היין כוס של ברכה בירושלים. אני טועם את היינות לפני שהם מגיעים לאתר, כך שכל בקבוק בדוק ומספק את הסחורה.'
             : "I'm Evyatar. I taste everything in the shop and only stock what I'd pour for friends. Tell me what you like — I'll send you something you'll enjoy."
     );
     // Hero CTA jumps to the packages section by default — packages are the
@@ -30,7 +30,7 @@ get_header();
     // The shop page is reachable from the header for browsers; buyers land
     // on packages first.
     $hero_cta_url  = get_theme_mod('jlmwines_hero_cta_url',  '#packages');
-    $hero_cta_text = get_theme_mod('jlmwines_hero_cta_text', is_rtl() ? 'למצוא את היין שלך' : 'Find your wine');
+    $hero_cta_text = get_theme_mod('jlmwines_hero_cta_text', is_rtl() ? 'ראו את הבחירות שלי למטה' : 'Find your wine');
     ?>
     <section class="hero">
         <div class="container hero-inner">
@@ -91,13 +91,13 @@ get_header();
                 'category' => 'bundle',
                 'limit'    => 4,
                 'columns'  => 4,
-                'eyebrow'  => is_rtl() ? 'אנחנו ממליצים — אתם בוחרים' : 'We suggest – You choose',
-                'heading'  => is_rtl() ? 'מארזי יין' : 'Wine Bundles',
+                'eyebrow'  => is_rtl() ? 'אנחנו מציעים – אתם בוחרים' : 'We suggest – You choose',
+                'heading'  => is_rtl() ? 'חבילות יין' : 'Wine Bundles',
                 'body'     => is_rtl()
-                    ? 'בחרו מתוך המבחר האישי שלי בכל טווח מחירים. השליטה בידיים שלכם. אני מוודא שכל אופציה ראויה לתשומת לבכם.'
+                    ? 'בחרו מהמבחר בכל טווח מחיר. אתם בשליטה. אני מוודא שכל אפשרות שווה טעימה שלכם.'
                     : "Pick from my curated selection at every price point. You're in control. I make sure every option is worthy of your consideration.",
                 'cta_url'  => home_url('/product-category/bundle/'),
-                'cta_text' => is_rtl() ? 'כל המארזים' : 'All bundles',
+                'cta_text' => is_rtl() ? 'ראו את כל החבילות' : 'All bundles',
             ]);
         }
         ?>
@@ -110,7 +110,7 @@ get_header();
         <section id="packages" class="section section-packages-intro">
             <header class="section-header">
                 <p class="section-question"><?php echo esc_html( is_rtl() ? 'לא בטוחים מאיפה להתחיל?' : 'Not sure where to start?' ); ?></p>
-                <p class="section-body"><?php echo esc_html( is_rtl() ? 'החבילות שלנו מוכנות לדרך — אנחנו בוחרים את היינות, אתם חוסכים. הוסיפו פריט מתנה כדי להפוך אותה למושלמת למישהו מיוחד, למשל לעצמכם.' : 'Our packages are ready to go – we choose the wines, you save. Add a gift item to make it perfect for someone special, like yourself.' ); ?></p>
+                <p class="section-body"><?php echo esc_html( is_rtl() ? 'החבילות שלנו מוכנות – אנחנו בוחרים את היינות, אתם חוסכים. הוסיפו פריט מתנה כדי להפוך אותו למושלם עבור מישהו מיוחד, כמוכם.' : 'Our packages are ready to go – we choose the wines, you save. Add a gift item to make it perfect for someone special, like yourself.' ); ?></p>
             </header>
         </section>
 
@@ -121,10 +121,10 @@ get_header();
                 'category' => 'packages',
                 'limit'    => 4,
                 'columns'  => 4,
-                'eyebrow'  => is_rtl() ? 'אנחנו בוחרים — אתם חוסכים' : 'We choose – You save',
-                'heading'  => is_rtl() ? 'חבילות לאירועים' : 'Occasion Packages',
+                'eyebrow'  => is_rtl() ? 'אנחנו בוחרים – אתם חוסכים' : 'We choose – You save',
+                'heading'  => is_rtl() ? 'מארזים לאירועים' : 'Occasion Packages',
                 'cta_url'  => home_url('/product-category/packages/'),
-                'cta_text' => is_rtl() ? 'כל החבילות' : 'All packages',
+                'cta_text' => is_rtl() ? 'ראו את כל המארזים' : 'All packages',
             ]);
         }
         ?>
@@ -138,11 +138,11 @@ get_header();
         'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-10.png'
     );
     $wtm_eyebrow  = get_theme_mod('jlmwines_wtm_eyebrow',  '');
-    $wtm_headline = get_theme_mod('jlmwines_wtm_headline', is_rtl() ? 'למה לסמוך עלי?' : 'Why trust me?');
+    $wtm_headline = get_theme_mod('jlmwines_wtm_headline', is_rtl() ? 'למה לסמוך עליי?' : 'Why trust me?');
     $wtm_body     = get_theme_mod(
         'jlmwines_wtm_body',
         is_rtl()
-            ? 'אני טועם כל יין לפני שהוא מגיע לאתר. חלק מהיינות לא עוברים את המבחן. אלה שעוברים? הייתי מגיש אותם אצלי בבית.'
+            ? 'אני טועם כל יין לפני שאנחנו מזמינים אותו לאתר. יש הרבה יינות שלא מצליחים. אלו שכן? הייתי מגיש אותם בשולחן שלי.'
             : "I taste every wine before it reaches the site. Some wines don't make the cut. The ones that do? I'd serve them at my own table."
     );
     $wtm_cta_url  = get_theme_mod('jlmwines_wtm_cta_url',  home_url('/about/'));
@@ -179,7 +179,7 @@ get_header();
         if (function_exists('jlmwines_render_category_cards')) {
             $cat_images_base = get_template_directory_uri() . '/assets/images/categories';
             jlmwines_render_category_cards([
-                'heading' => is_rtl() ? 'לעיון בקולקציה' : 'Browse The Collection',
+                'heading' => is_rtl() ? 'צפו בקולקציה' : 'Browse The Collection',
                 'columns' => 3,
                 'limit'   => 3,
                 'include' => [88, 89, 135], // dry-red, dry-white, rose
@@ -199,8 +199,8 @@ get_header();
         if (function_exists('jlmwines_render_testimonials')) {
             $is_he_tm = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
             jlmwines_render_testimonials([
-                'eyebrow' => $is_he_tm ? 'מתוך ביקורות 5 כוכבים בגוגל' : 'FROM OUR 5-STAR GOOGLE REVIEWS',
-                'heading' => $is_he_tm ? 'מה הלקוחות אומרים' : 'What customers say',
+                'eyebrow' => $is_he_tm ? 'הלקוחות המאושרים שלנו' : 'FROM OUR 5-STAR GOOGLE REVIEWS',
+                'heading' => $is_he_tm ? '' : 'What customers say',
             ]);
         }
         ?>
@@ -209,13 +209,13 @@ get_header();
         // ─── 7. Blog roll — Wine Talk ─────────────────────────────────
         if (function_exists('jlmwines_render_blog_roll')) {
             jlmwines_render_blog_roll([
-                'eyebrow'  => is_rtl() ? 'מאביתר' : 'from Evyatar',
-                'heading'  => is_rtl() ? 'שיחות יין' : 'Wine Talk',
+                'eyebrow'  => is_rtl() ? 'מאת אביתר' : 'from Evyatar',
+                'heading'  => is_rtl() ? 'שיחת יין' : 'Wine Talk',
                 'limit'    => 3,
                 'columns'  => 3,
                 'category' => 'basics',
                 'cta_url'  => home_url('/articles/'),
-                'cta_text' => is_rtl() ? 'כל הכתבות' : 'All articles',
+                'cta_text' => is_rtl() ? 'ראו את כל המאמרים' : 'All articles',
             ]);
         }
         ?>

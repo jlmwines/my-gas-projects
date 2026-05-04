@@ -307,6 +307,20 @@
     });
 })();
 
+// Catalog filter toggle (mobile). Click the filter button in the WC
+// results meta row to expand/collapse the .shop-filters panel inline.
+(function () {
+    var toggle = document.querySelector('[data-shop-filter-toggle]');
+    if (!toggle) return;
+    var panel = document.getElementById('shop-filters');
+    if (!panel) return;
+    toggle.addEventListener('click', function () {
+        var open = panel.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+})();
+
+
 // Pojo Accessibility (ea11y) widget — reposition the floating button to
 // sit on the same horizontal "shelf" as the WhatsApp float, on the
 // opposite (inline-start) side. The widget renders inside an open shadow
@@ -319,7 +333,10 @@
     var BUTTON_SEL = '.ea11y-widget-open-button';
     var GUTTER = '20px';
     var DESKTOP_BOTTOM = '30px';
-    var MOBILE_BOTTOM = 'calc(130px + env(safe-area-inset-bottom, 0))';
+    // Sits inside the bottom-nav row on mobile (the bottom-nav has an
+    // empty spacer slot reserved on this side so the icon lands here
+    // without overlapping a real nav item).
+    var MOBILE_BOTTOM = 'calc(14px + env(safe-area-inset-bottom, 0))';
     var MOBILE_BREAK = 720;
 
     function applyPosition() {
