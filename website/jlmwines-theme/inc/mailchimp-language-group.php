@@ -88,10 +88,14 @@ function jlmwines_mc_order_opted_in($order) {
 }
 
 /**
- * PUT the subscriber's Language interest. Idempotent — safe to call when
- * the subscriber already exists or hasn't been synced yet.
+ * PUT the subscriber's Language interest, optionally with merge_fields
+ * (FNAME, LNAME, PHONE, ADDRESS) populated from the order's billing data.
+ * Idempotent — safe to call when the subscriber already exists or hasn't
+ * been synced yet. Mailchimp merges merge_fields rather than replacing,
+ * so JLMops-managed preference fields (WINERIES, REDGRAPE, etc.) are
+ * never overwritten by this PUT.
  */
-function jlmwines_mc_set_language_interest($email, $lang) {
+function jlmwines_mc_set_language_interest($email, $lang, $merge_fields = []) {
     $api_key   = jlmwines_mc_api_key();
     $audience  = JLMWINES_MC_AUDIENCE_ID;
     $group_cat = JLMWINES_MC_LANGUAGE_GROUP_ID;
@@ -121,6 +125,9 @@ function jlmwines_mc_set_language_interest($email, $lang) {
             ],
         ],
     ];
+    if (!empty($merge_fields)) {
+        $body['merge_fields'] = $merge_fields;
+    }
 
     wp_remote_request($url, [
         'method'  => 'PUT',
@@ -131,6 +138,30 @@ function jlmwines_mc_set_language_interest($email, $lang) {
         ],
         'body'    => wp_json_encode($body),
     ]);
+}
+
+/**
+ * Build the Mailchimp merge_fields array from a WC order's billing data.
+ * FNAME / LNAME / PHONE are required billing fields; ADDRESS is structured.
+ * Only includes ADDRESS sub-fields that are non-empty (addr2 + state are
+ * legitimately optional; rest are required at checkout).
+ */
+function jlmwines_mc_merge_fields_from_order($order) {
+    $address = array_filter([
+        'addr1'   => $order->get_billing_address_1(),
+        'addr2'   => $order->get_billing_address_2(),
+        'city'    => $order->get_billing_city(),
+        'state'   => $order->get_billing_state(),
+        'zip'     => $order->get_billing_postcode(),
+        'country' => $order->get_billing_country(),
+    ], 'strlen');
+
+    return [
+        'FNAME'   => $order->get_billing_first_name(),
+        'LNAME'   => $order->get_billing_last_name(),
+        'PHONE'   => $order->get_billing_phone(),
+        'ADDRESS' => $address,
+    ];
 }
 
 /**
@@ -156,7 +187,8 @@ function jlmwines_mc_sync_language_on_paid($order_id) {
         return;
     }
     $lang = jlmwines_mc_order_language($order);
-    jlmwines_mc_set_language_interest($email, $lang);
+    $merge = jlmwines_mc_merge_fields_from_order($order);
+    jlmwines_mc_set_language_interest($email, $lang, $merge);
     $order->update_meta_data('_jlmwines_mc_lang_synced', current_time('mysql'));
     $order->save();
 }
