@@ -31,6 +31,7 @@
 3. **Mobile LCP tuning** — current 4.0–4.1s sits on the "poor" boundary. Targets: hero image format/size, render-blocking script audit.
 4. **24–48hr error log + order monitoring** per checklist Stage 3.
 5. **WC term thumbnails refresh** — admin-side images in wp-admin → Products → Categories still old; customer-facing pages already use theme overrides.
+6. **SG Optimizer re-enablement test** — currently fully OFF on live (PDP product-card white background was missing with it on; disabling Combine/Minify alone didn't fix it). Re-enable one setting at a time with cache purge + hard refresh between each: memcached/browser cache, web fonts + emoji, then dynamic cache (flush before test), then combine, then minify. Identify and leave off whichever setting breaks rendering.
 
 **Other in-flight initiatives** (unchanged from coordination doc):
 - ~~jlmops Half 1 — Mailchimp daily pull.~~ **SHIPPED 2026-05-05 as @81.** `MailchimpService` HTTP wrapper + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3. AdminContactsView card-header has `⟳ MC` button + `MC subs/camp` freshness display. First live run: 7 new prospects, 63 subscription-state corrections, 3 unsubscribe activities; 2 campaigns upserted. Half 2 (action layer — first-order welcome trigger, partner mobile follow-up UI) is the next CONTACT_MANAGER_PLAN section, not started.
