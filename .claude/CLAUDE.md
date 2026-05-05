@@ -30,6 +30,10 @@ JLM Wines is an online wine retailer in Israel. Anti-snob positioning — makes 
 - `website/BRAND.md` — visual identity and brand guidelines for jlmwines.com
 - `jlmops/plans/` — architecture, data model, implementation, workflows, CRM, campaigns, resource optimization, strategic plan
 
+## Google Drive
+
+Drive MCP authenticated as `accounts@jlmwines.com`. Key files: `JLMops_Data` (operational data behind the jlmops GAS app — products, orders, contacts) and the JLM GA4 sheet (analytics, active for periodic review). Consider Drive content as part of orientation for jlmops / KPI / marketing / SEO work.
+
 ## Brand Voice
 
 Friendly, personal, never talks down. Polite and earnest, never negative about competitors. Goal: help people get wine they'll enjoy without making them feel dumb. Full guidelines in `business/CONTENT_STRATEGY.md`.
