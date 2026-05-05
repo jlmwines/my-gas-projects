@@ -10,6 +10,8 @@
             <span id="contact-count" class="badge badge-secondary ml-2">0</span>
           </div>
           <div class="d-flex align-items-center">
+            <span id="mc-freshness" class="text-muted small mr-2" title="Mailchimp data age">MC: —</span>
+            <button id="btn-refresh-mc" class="btn btn-sm mr-2" title="Refresh Mailchimp subscribers + campaigns">⟳ MC</button>
             <input type="text" id="search-input" class="form-control form-control-sm mr-2" placeholder="Search..." style="width:180px;">
             <button id="btn-refresh" class="btn btn-sm" title="Refresh">↻</button>
           </div>
@@ -526,6 +528,7 @@
 
   // Initialize immediately (view is dynamically loaded, DOM already ready)
   loadContacts();
+  loadMailchimpStatus();
   bindEvents();
 
   function bindEvents() {
@@ -539,6 +542,7 @@
     document.getElementById('filter-core').addEventListener('change', applyFilters);
     document.getElementById('btn-clear-filters').addEventListener('click', clearFilters);
     document.getElementById('btn-refresh').addEventListener('click', loadContacts);
+    document.getElementById('btn-refresh-mc').addEventListener('click', refreshMailchimp);
 
     // Export section toggle
     document.getElementById('export-header').addEventListener('click', function() {
@@ -689,6 +693,64 @@
         statusDiv.innerHTML = '<span class="text-danger">Error: ' + err.message + '</span>';
       })
       .WebAppContacts_sendEmail(email, subject, body);
+  }
+
+  function renderMailchimpFreshness(subsIso, campsIso) {
+    var el = document.getElementById('mc-freshness');
+    if (!el) return;
+    function fmt(iso) {
+      if (!iso) return '—';
+      var d = new Date(iso);
+      var diffMs = Date.now() - d.getTime();
+      var diffH = Math.floor(diffMs / (1000 * 60 * 60));
+      if (diffH < 1) return '<1h';
+      if (diffH < 24) return diffH + 'h';
+      return Math.floor(diffH / 24) + 'd';
+    }
+    el.textContent = 'MC subs: ' + fmt(subsIso) + ' · camp: ' + fmt(campsIso);
+  }
+
+  function loadMailchimpStatus() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && !res.error) {
+          renderMailchimpFreshness(res.subscribersLastUpdate, res.campaignsLastUpdate);
+        }
+      })
+      .withFailureHandler(function() {})
+      .WebAppContacts_getMailchimpStatus();
+  }
+
+  function refreshMailchimp() {
+    var btn = document.getElementById('btn-refresh-mc');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '… running';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        if (!res || res.error) {
+          showError((res && res.error) || 'Mailchimp refresh failed');
+          return;
+        }
+        renderMailchimpFreshness(res.subscribersLastUpdate, res.campaignsLastUpdate);
+        var s = res.subscribers || {};
+        var c = res.campaigns || {};
+        var msg = 'Mailchimp refreshed — '
+          + 'subscribers: ' + (s.imported || 0) + ' new, ' + (s.updated || 0) + ' updated, ' + (s.unsubscribed || 0) + ' unsubscribed; '
+          + 'campaigns: ' + (c.upserted || 0) + '/' + (c.fetched || 0);
+        if (typeof showToast === 'function') showToast(msg);
+        else console.log(msg);
+        loadContacts();
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        showError(err && err.message ? err.message : 'Mailchimp refresh failed');
+      })
+      .WebAppContacts_refreshMailchimp();
   }
 
   function loadContacts() {

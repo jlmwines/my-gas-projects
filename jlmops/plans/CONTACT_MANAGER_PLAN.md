@@ -25,6 +25,14 @@ What's missing — and why nothing happens today:
 
 Replaces manual CSV with daily API pull. Same Mailchimp API key for both endpoints.
 
+**Purpose (revised 2026-05-05).** With theme v1.0.91/v1.0.92 the website is now authoritative for language at signup — both footer signup and checkout opt-in POST directly to Mailchimp with the correct language interest based on page language. The pull's job is therefore narrower than originally scoped:
+
+1. **Detect subscribers added outside the website** — manual Mailchimp adds, future integrations, anything not flowing through the theme. These appear as new prospect rows in SysContacts.
+2. **Keep `sc_IsSubscribed` honest** — when someone unsubscribes or hard-bounces directly in Mailchimp, the boolean must flip in SysContacts so they're excluded from segment exports.
+3. **Refresh campaign metrics** — opens / clicks / bounces for the rolling 60-day window.
+
+Language sync is no longer a primary motivation. SysContacts and Mailchimp can't meaningfully diverge for website-sourced contacts because both signals derive from page language at signup time. See language rules below — they collapse to "set on prospect creation, never touch existing rows."
+
 **Audience IDs** (`accounts@jlmwines.com`, DC `us5`, audience `8a3c6dd69c`):
 - Language group category: `8b945481c0` (radio)
 - English interest: `17072990c9`
@@ -36,14 +44,13 @@ Replaces manual CSV with daily API pull. Same Mailchimp API key for both endpoin
 - **Captured fields.** Email, name, status, Language interest, last_changed
 - **Join.** On email with existing SysContacts row
 - **Write.** Update SysContacts:
-  - `sc_IsSubscribed` = `true` only when status === `subscribed`; `false` for `unsubscribed` / `cleaned` / `pending` / `transactional` / `archived`
-  - `sc_Language` = `'en'` if EN interest set, `'he'` if HE interest set; leave existing value alone if neither set (no overwrite from "no group")
+  - `sc_IsSubscribed` = `true` only when status === `subscribed`; `false` for `unsubscribed` / `cleaned` / `pending` / `transactional` / `archived`. **MC always wins on subscription state.**
+  - `sc_Language` — **only set on new prospect creation** (row didn't exist in SysContacts before this pull). Take `'en'` if EN interest set, `'he'` if HE interest set, blank otherwise. **Never touch `sc_Language` on existing rows** — SysContacts is authoritative for any contact already known to ops.
   - `sc_SubscriptionSource` = `'mailchimp'` only when creating a new prospect row
 - **Decision (2026-05-03):** keep `sc_IsSubscribed` as boolean. Adding `sc_SubscriptionStatus` would require schema migration + backfill of 548 contacts. Cleaned-vs-unsubscribed distinction is desirable but not worth the schema cost; both correctly exclude from future sends.
 - **Activity records.** Write to SysContactActivity when state changes from prior pull:
   - status `subscribed` → not-subscribed: `subscription.unsubscribed` (or `.cleaned` based on actual status string captured in the activity summary)
-  - language interest changed: `subscription.language_changed` (edge case — rare per user, but cheap to log)
-- **Direction.** One-way. Mailchimp = source of truth. JLMops never PUTs back.
+- **Direction.** One-way. Mailchimp = source of truth for state; SysContacts is authoritative for language on existing rows. JLMops never PUTs back.
 
 ### Campaigns Pull (daily)
 
@@ -55,11 +62,11 @@ Replaces manual CSV with daily API pull. Same Mailchimp API key for both endpoin
 
 ### No-Language Subscriber Handling
 
-- When the daily pull finds a subscriber with no Language interest set, leave `sc_Language` unchanged (existing order-language wins).
-- Surface count in JLMops admin view as a small "fix in Mailchimp" list (admin view to be designed alongside Half 2).
-- User resolves manually in Mailchimp admin (volume is low — "once in a while").
-- Tomorrow's pull picks up the resolution.
-- **No write-back to Mailchimp in v1.**
+Dropped from the plan as of 2026-05-05. With the website now authoritative on language at signup, the only subscribers without an MC Language interest are external/manual adds. For those:
+
+- New prospect row in SysContacts is created with `sc_Language` blank.
+- No admin UX, no "fix in Mailchimp" list, no write-back.
+- Language fills in when ops next interacts with the contact (first order, manual edit), or stays blank if they never engage.
 
 ### Build Steps
 
@@ -69,7 +76,7 @@ Replaces manual CSV with daily API pull. Same Mailchimp API key for both endpoin
 4. New service `CampaignSyncService.js` (or extend existing `CampaignService`) — `pullRecentCampaigns()` runs daily, refreshes 60-day rolling window.
 5. Wire both pulls into `HousekeepingService` daily run, before contact enrichment so language updates feed into that step.
 6. Update `system.mailchimp.subscribers_last_update` and `system.mailchimp.campaigns_last_update` per pull.
-7. Manual smoke-test trigger from DevelopmentView (one-off "Pull Mailchimp Now" buttons) before enabling the daily schedule.
+7. **On-demand "Refresh Mailchimp Now" button in AdminContactsView (admin CRM view).** The daily pull is the safety net; the on-demand button is what actually matters operationally, since the partner refreshes deliberately right before exporting a segment or planning a send. Place in the contacts-list card-header alongside the existing refresh icon (or next to the search input). Same code path as the scheduled pull. Surface last-pull timestamp adjacent so the partner can see freshness at a glance. (DevelopmentView smoke-test trigger remains, but the user-facing control is in AdminContactsView.)
 
 ### Mailchimp Plan Note
 
@@ -80,6 +87,10 @@ Marketing API is available on **all Mailchimp plans including Free**. Confirmed 
 - Bounce / gibberish address maintenance (defer)
 - Per-contact campaign engagement (opens/clicks per email)
 - Write-back to Mailchimp from JLMops
+
+### Follow-up — Campaign-recipient activity (calendared after Half 1)
+
+Per-contact **recipient** rows (not engagement) — record that contact X was included in campaign Y's send. Rationale: order-after-send is an attribution clue even without open/click tracking (GA4 covers that side). Equally important — this is the activity-row pattern Half 2 needs to record manager-contact outcomes, so Half 1's import paves the way. Endpoint `/reports/{id}/sent-to` (paginated). Activity type `campaign.received`, idempotent on (campaign + email).
 
 ---
 
@@ -167,3 +178,5 @@ Not urgent — defer until the action layer is live and review patterns are obse
 ---
 
 Updated: 2026-05-03 — Half 1 scope decisions resolved (keep `sc_IsSubscribed` boolean; subscribers + campaigns pulled together). Audience IDs captured. Stale MC4WP reference removed; theme-side signup is now direct-POST + checkout-opt-in scaffold (theme v1.0.74).
+
+Updated: 2026-05-05 — Half 1 purpose narrowed. With theme v1.0.91/v1.0.92 the website is authoritative for language at signup (footer + checkout both POST direct to MC with correct language interest from page language). Pull's job collapses to: external-signup detection, `sc_IsSubscribed` freshness, campaign metrics. Language sync logic simplified (set on prospect creation only, never touch existing rows). No-language admin UX dropped. On-demand "Refresh Mailchimp Now" button elevated as the operationally-meaningful trigger; daily run is the safety net.

@@ -804,6 +804,30 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.bundle_health.last_check",
+        "Tracks last bundle health check timestamp",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.crm.last_refresh",
+        "Tracks last CRM contact refresh timestamp",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.crm_intelligence.last_run",
+        "Tracks last CRM intelligence run timestamp",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.activity_backfill_complete",
         "Flag to skip activity backfill in housekeeping (one-time migration complete)",
         "stable",

@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-05 09:52',
-  commit: 'Inventory API push as alternate to manual CSV upload at WAITING_WEB_CONFIRM (CSV remains source of truth, audit trail, and fallback). Inline stuck-job reaper in _checkAndAdvanceSyncState catches stuck PROCESSING jobs at 8 min on every poll instead of waiting for the hourly trigger.'
+  built: '2026-05-05 09:03',
+  commit: 'Mailchimp Marketing API pulls (subscribers + campaigns) end-to-end: MailchimpService HTTP wrapper, ContactImportService.importFromMailchimpApi (state freshness + external-signup detection), CampaignService.pullRecentCampaigns (60-day rolling window), HousekeepingService phase-3 wiring, AdminContactsView ⟳ MC button + freshness display. Sweep: setConfig 2-arg→3-arg signature for 5 last-update markers; 3 newly declared in config/system.json (system.bundle_health.last_check, system.crm.last_refresh, system.crm_intelligence.last_run).'
 };
 
 function getVersion() {

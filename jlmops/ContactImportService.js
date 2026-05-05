@@ -441,6 +441,144 @@ const ContactImportService = (function () {
   }
 
   /**
+   * Imports Mailchimp subscribers via the Marketing API.
+   * Replaces importFromMailchimpCsv for the daily path; CSV remains as manual fallback.
+   *
+   * Scope (per CONTACT_MANAGER_PLAN.md Half 1, revised 2026-05-05):
+   *   - Detect external/manual signups (rows in MC, not in SysContacts) → create prospect
+   *   - Keep sc_IsSubscribed honest (MC always wins on subscription state)
+   *   - Language: set on prospect creation only; never touch sc_Language on existing rows
+   *   - Activity: log subscription.unsubscribed (or .cleaned) when state flips from subscribed → not
+   *
+   * @returns {Object} { imported, updated, unsubscribed, errors }
+   */
+  function importFromMailchimpApi() {
+    const fnName = 'importFromMailchimpApi';
+    LoggerService.info(SERVICE_NAME, fnName, 'Starting Mailchimp API import');
+
+    const audience = MailchimpService.AUDIENCE;
+    const fields = [
+      'members.email_address',
+      'members.full_name',
+      'members.merge_fields',
+      'members.status',
+      'members.interests',
+      'members.last_changed',
+      'total_items'
+    ].join(',');
+
+    const members = MailchimpService.paginate(
+      '/lists/' + audience.listId + '/members',
+      { fields: fields },
+      'members'
+    );
+    LoggerService.info(SERVICE_NAME, fnName, 'Pulled ' + members.length + ' members from Mailchimp');
+
+    const existingContacts = ContactService.getContacts();
+    const existingByEmail = new Map();
+    existingContacts.forEach(c => {
+      if (c.sc_Email) existingByEmail.set(c.sc_Email.toLowerCase(), c);
+    });
+    LoggerService.info(SERVICE_NAME, fnName, 'Indexed ' + existingByEmail.size + ' existing contacts');
+
+    const contactsToSave = [];
+    const activitiesToLog = [];
+    const errors = [];
+    const today = new Date();
+    let newCount = 0;
+    let updateCount = 0;
+    let unsubscribedCount = 0;
+
+    for (let i = 0; i < members.length; i++) {
+      try {
+        const m = members[i];
+        const email = (m.email_address || '').toLowerCase().trim();
+        if (!email) continue;
+
+        const status = m.status || '';
+        const isSubscribed = (status === 'subscribed');
+        const existing = existingByEmail.get(email);
+
+        if (existing) {
+          // Existing SysContacts row — never touch sc_Language. MC wins on subscription state.
+          const wasSubscribed = !!existing.sc_IsSubscribed;
+          if (wasSubscribed && !isSubscribed) {
+            // State flipped — log activity.
+            const activityType = (status === 'cleaned')
+              ? 'subscription.cleaned'
+              : 'subscription.unsubscribed';
+            activitiesToLog.push({
+              sca_Email: email,
+              sca_Timestamp: m.last_changed ? new Date(m.last_changed) : today,
+              sca_Type: activityType,
+              sca_Summary: 'Mailchimp status: ' + status,
+              sca_Details: { status: status, source: 'mailchimp.api' },
+              sca_CreatedBy: 'mailchimp.import'
+            });
+            unsubscribedCount++;
+          }
+          if (existing.sc_IsSubscribed !== isSubscribed) {
+            existing.sc_IsSubscribed = isSubscribed;
+            contactsToSave.push(existing);
+            updateCount++;
+          }
+        } else {
+          // New prospect — language from MC interests; blank if neither set.
+          const interests = m.interests || {};
+          let language = '';
+          if (interests[audience.interestEnId]) language = 'en';
+          else if (interests[audience.interestHeId]) language = 'he';
+
+          const subscribedDate = m.last_changed ? new Date(m.last_changed) : today;
+          const daysSubscribed = Math.floor((today - subscribedDate) / (1000 * 60 * 60 * 24));
+          const merge = m.merge_fields || {};
+          const fullName = (m.full_name || ((merge.FNAME || '') + ' ' + (merge.LNAME || '')).trim()) || '';
+
+          const contact = {
+            sc_Email: email,
+            sc_Name: fullName,
+            sc_Language: language,
+            sc_IsCustomer: false,
+            sc_IsCore: false,
+            sc_IsSubscribed: isSubscribed,
+            sc_SubscribedDate: subscribedDate,
+            sc_DaysSubscribed: daysSubscribed,
+            sc_SubscriptionSource: 'mailchimp',
+            sc_LifecycleStatus: 'Prospect'
+          };
+          contact.sc_CustomerType = ContactService._classifyCustomerType(contact);
+          contactsToSave.push(contact);
+          newCount++;
+        }
+      } catch (e) {
+        errors.push('Member ' + i + ': ' + e.message);
+      }
+    }
+
+    LoggerService.info(SERVICE_NAME, fnName,
+      'Saving ' + contactsToSave.length + ' contacts (' + newCount + ' new, ' + updateCount + ' updates), '
+      + activitiesToLog.length + ' activities');
+
+    const batchResult = ContactService.batchUpsertContacts(contactsToSave);
+    activitiesToLog.forEach(a => {
+      try { ContactService.createActivity(a); }
+      catch (e) { errors.push('Activity for ' + a.sca_Email + ': ' + e.message); }
+    });
+
+    ConfigService.setConfig('system.mailchimp.subscribers_last_update', 'value', new Date().toISOString());
+
+    LoggerService.info(SERVICE_NAME, fnName,
+      'Mailchimp API import complete: ' + batchResult.inserted + ' new, '
+      + batchResult.updated + ' updated, ' + unsubscribedCount + ' unsubscribed');
+    return {
+      imported: batchResult.inserted,
+      updated: batchResult.updated,
+      unsubscribed: unsubscribedCount,
+      errors: errors
+    };
+  }
+
+  /**
    * Runs full CRM data import from all sources.
    * Call this to initialize CRM data.
    */
@@ -1091,6 +1229,7 @@ const ContactImportService = (function () {
   return {
     importFromOrderHistory: importFromOrderHistory,
     importFromMailchimpCsv: importFromMailchimpCsv,
+    importFromMailchimpApi: importFromMailchimpApi,
     runFullImport: runFullImport,
     updateContactsFromOrders: updateContactsFromOrders,
     backfillOrderCustomerIds: backfillOrderCustomerIds,
@@ -1104,6 +1243,16 @@ const ContactImportService = (function () {
  */
 function runCrmImport() {
   return ContactImportService.runFullImport();
+}
+
+/**
+ * Editor-pickable wrapper for the Mailchimp API import.
+ * Use for smoke-testing before the housekeeping wiring lands.
+ */
+function runMailchimpApiImport() {
+  const result = ContactImportService.importFromMailchimpApi();
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
 /**

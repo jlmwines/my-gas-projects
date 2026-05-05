@@ -347,6 +347,48 @@ function WebAppContacts_getWhatsAppLink(email, message) {
 }
 
 /**
+ * Returns Mailchimp last-pull timestamps for the freshness indicator.
+ */
+function WebAppContacts_getMailchimpStatus() {
+  try {
+    const subs = ConfigService.getConfig('system.mailchimp.subscribers_last_update');
+    const camps = ConfigService.getConfig('system.mailchimp.campaigns_last_update');
+    return {
+      success: true,
+      subscribersLastUpdate: subs && subs.value ? subs.value : null,
+      campaignsLastUpdate: camps && camps.value ? camps.value : null
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'getMailchimpStatus', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * On-demand refresh of Mailchimp data — subscribers + campaigns.
+ * Same code path as the daily housekeeping pull. Used from AdminContactsView
+ * before campaign-prep / segment export.
+ */
+function WebAppContacts_refreshMailchimp() {
+  try {
+    const subscribers = ContactImportService.importFromMailchimpApi();
+    const campaigns = CampaignService.pullRecentCampaigns();
+    const subs = ConfigService.getConfig('system.mailchimp.subscribers_last_update');
+    const camps = ConfigService.getConfig('system.mailchimp.campaigns_last_update');
+    return {
+      success: true,
+      subscribers: subscribers,
+      campaigns: campaigns,
+      subscribersLastUpdate: subs && subs.value ? subs.value : null,
+      campaignsLastUpdate: camps && camps.value ? camps.value : null
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'refreshMailchimp', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
  * Gets filter options for the contact list.
  */
 function _getFilterOptions() {

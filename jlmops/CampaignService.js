@@ -1050,6 +1050,90 @@ const CampaignService = (function () {
     return links;
   }
 
+  /**
+   * Pulls recent campaigns from the Mailchimp Marketing API and upserts each
+   * with the latest metrics from /reports/{id}. Refreshes a rolling 60-day window
+   * by default — older campaigns are stable snapshots and aren't re-fetched.
+   *
+   * @param {number} [windowDays=60] - rolling window in days
+   * @returns {Object} { fetched, upserted, errors }
+   */
+  function pullRecentCampaigns(windowDays) {
+    const fnName = 'pullRecentCampaigns';
+    const days = windowDays || 60;
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    LoggerService.info(SERVICE_NAME, fnName, 'Pulling Mailchimp campaigns since ' + cutoff);
+
+    const campaignFields = [
+      'campaigns.id',
+      'campaigns.settings.title',
+      'campaigns.settings.subject_line',
+      'campaigns.send_time',
+      'campaigns.emails_sent',
+      'total_items'
+    ].join(',');
+
+    const campaigns = MailchimpService.paginate(
+      '/campaigns',
+      { status: 'sent', since_send_time: cutoff, fields: campaignFields },
+      'campaigns'
+    );
+    LoggerService.info(SERVICE_NAME, fnName, 'Fetched ' + campaigns.length + ' campaigns from window');
+
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    let upserted = 0;
+    const errors = [];
+
+    for (let i = 0; i < campaigns.length; i++) {
+      const c = campaigns[i];
+      try {
+        const report = MailchimpService.get('/reports/' + c.id);
+        const sendDate = c.send_time ? new Date(c.send_time) : null;
+        const sent = report.emails_sent || c.emails_sent || 0;
+        const hardBounces = (report.bounces && report.bounces.hard_bounces) || 0;
+        const softBounces = (report.bounces && report.bounces.soft_bounces) || 0;
+        const totalBounces = hardBounces + softBounces;
+        const opens = report.opens || {};
+        const clicks = report.clicks || {};
+        const ecommerce = report.ecommerce || {};
+
+        const data = {
+          scm_CampaignId: c.id,
+          scm_Title: (c.settings && c.settings.title) || '',
+          scm_Subject: (c.settings && c.settings.subject_line) || '',
+          scm_SendDate: sendDate,
+          scm_SendWeekday: sendDate ? weekdayNames[sendDate.getDay()] : '',
+          scm_Recipients: sent,
+          scm_Delivered: Math.max(sent - totalBounces, 0),
+          scm_Bounces: totalBounces,
+          scm_UniqueOpens: opens.unique_opens || 0,
+          scm_OpenRate: opens.open_rate != null ? opens.open_rate : null,
+          scm_TotalOpens: opens.opens_total || 0,
+          scm_UniqueClicks: clicks.unique_subscriber_clicks || 0,
+          scm_ClickRate: clicks.click_rate != null ? clicks.click_rate : null,
+          scm_TotalClicks: clicks.clicks_total || 0,
+          scm_Unsubscribes: report.unsubscribed || 0,
+          scm_TotalOrders: ecommerce.total_orders || 0,
+          scm_GrossSales: ecommerce.total_spent || 0,
+          scm_Revenue: ecommerce.total_spent || 0
+        };
+
+        upsertCampaign(data);
+        upserted++;
+      } catch (e) {
+        errors.push('Campaign ' + c.id + ': ' + e.message);
+        LoggerService.warn(SERVICE_NAME, fnName, 'Failed for campaign ' + c.id + ': ' + e.message);
+      }
+    }
+
+    ConfigService.setConfig('system.mailchimp.campaigns_last_update', 'value', new Date().toISOString());
+
+    LoggerService.info(SERVICE_NAME, fnName,
+      'Pull complete: ' + upserted + ' upserted, ' + errors.length + ' errors');
+    return { fetched: campaigns.length, upserted: upserted, errors: errors };
+  }
+
   // Public API
   return {
     clearCache: clearCache,
@@ -1058,6 +1142,7 @@ const CampaignService = (function () {
     upsertCampaign: upsertCampaign,
     getStats: getStats,
     importFromCsv: importFromCsv,
+    pullRecentCampaigns: pullRecentCampaigns,
     // Segment targeting
     getTargetSegment: getTargetSegment,
     exportSegmentToCsv: exportSegmentToCsv,
@@ -1248,6 +1333,16 @@ function getSegmentOverview() {
  * Import campaigns from file in import folder.
  * Looks for file containing 'campaign' in name.
  */
+/**
+ * Editor-pickable wrapper for the Mailchimp Marketing API campaigns pull.
+ * Refreshes the rolling 60-day window of sent campaigns.
+ */
+function runMailchimpCampaignsPull() {
+  const result = CampaignService.pullRecentCampaigns();
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
 function importCampaignsFromFolder() {
   const rows = getImportFileData('campaign');
   if (!rows) {

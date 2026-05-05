@@ -695,6 +695,8 @@ function HousekeepingService() {
     const phase3Tasks = [
       { name: 'refreshBundleComposition', fn: () => WebAppBundles_reimportAllBundles() },
       { name: 'checkBundleHealth', fn: () => this.checkBundleHealth() },
+      { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
+      { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
       { name: 'checkSubscribersReminder', fn: () => this.checkSubscribersReminder() },
       { name: 'checkCampaignsReminder', fn: () => this.checkCampaignsReminder() },
@@ -990,7 +992,7 @@ function HousekeepingService() {
       updateContactSpend12Month();
 
       // Update last refresh timestamp
-      ConfigService.setConfig('system.crm.last_refresh', new Date().toISOString());
+      ConfigService.setConfig('system.crm.last_refresh', 'value', new Date().toISOString());
 
       return true;
     } catch (e) {
@@ -1122,7 +1124,7 @@ function HousekeepingService() {
       }
 
       // Update last check timestamp
-      ConfigService.setConfig('system.bundle_health.last_check', new Date().toISOString());
+      ConfigService.setConfig('system.bundle_health.last_check', 'value', new Date().toISOString());
 
       logger.info('HousekeepingService', functionName, `Bundle health check complete. Critical: ${criticalTasksCreated}, Low inventory: ${lowInventoryTasksCreated}`);
       return true;
@@ -1777,7 +1779,7 @@ function HousekeepingService() {
       }
 
       // Update last run timestamp
-      ConfigService.setConfig('system.crm_intelligence.last_run', new Date().toISOString());
+      ConfigService.setConfig('system.crm_intelligence.last_run', 'value', new Date().toISOString());
 
       return true;
     } catch (e) {
