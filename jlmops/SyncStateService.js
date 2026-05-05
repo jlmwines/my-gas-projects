@@ -24,7 +24,10 @@ const SyncStateService = (function() {
     VALIDATING:             'VALIDATING',
     WAITING_WEB_EXPORT:     'WAITING_WEB_EXPORT',
     GENERATING_WEB_EXPORT:  'GENERATING_WEB_EXPORT',
+    // WAITING_WEB_CONFIRM is the post-CSV decision point. Two outgoing edges:
+    // manual confirm → COMPLETE, or API push → PUSHING_WEB_INVENTORY.
     WAITING_WEB_CONFIRM:    'WAITING_WEB_CONFIRM',
+    PUSHING_WEB_INVENTORY:  'PUSHING_WEB_INVENTORY',
     COMPLETE:               'COMPLETE',
     FAILED:                 'FAILED'
   };
@@ -44,7 +47,8 @@ const SyncStateService = (function() {
     VALIDATING:             ['WAITING_WEB_EXPORT', 'FAILED'],
     WAITING_WEB_EXPORT:     ['GENERATING_WEB_EXPORT'],
     GENERATING_WEB_EXPORT:  ['WAITING_WEB_CONFIRM', 'COMPLETE', 'FAILED'],
-    WAITING_WEB_CONFIRM:    ['COMPLETE'],
+    WAITING_WEB_CONFIRM:    ['COMPLETE', 'PUSHING_WEB_INVENTORY'],
+    PUSHING_WEB_INVENTORY:  ['COMPLETE', 'FAILED'],
     COMPLETE:               ['IDLE'],
     FAILED:                 [] // Special: retry restores failedAtStage
   };

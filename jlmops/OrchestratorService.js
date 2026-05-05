@@ -404,7 +404,7 @@ const OrchestratorService = (function() {
   function queueWebInventoryExport(sessionId) {
     const serviceName = 'OrchestratorService';
     const functionName = 'queueWebInventoryExport';
-    
+
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = allConfig['system.sheet_names'];
     const logSheetConfig = allConfig['system.spreadsheet.logs'];
@@ -428,6 +428,38 @@ const OrchestratorService = (function() {
         logger.info(serviceName, functionName, `Web Inventory Export job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
     }
     SpreadsheetApp.flush(); // Ensure job is written
+  }
+
+  /**
+   * Queue the API push job (alternate route to manual CSV upload).
+   * Triggered when the user clicks "API Push" at WAITING_WEB_CONFIRM.
+   */
+  function queueWebInventoryPush(sessionId) {
+    const serviceName = 'OrchestratorService';
+    const functionName = 'queueWebInventoryPush';
+
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+    logger.info(serviceName, functionName, `Queuing Web Inventory Push job for Session: ${sessionId}`);
+
+    const pushJobType = 'export.web.inventory.api';
+    const pushJobConfig = allConfig[pushJobType];
+    const existingPushJob = getPendingOrProcessingJob(pushJobType, sessionId);
+
+    if (!pushJobConfig) {
+      throw new Error(`Configuration for '${pushJobType}' is missing.`);
+    }
+
+    if (!existingPushJob) {
+        createJob(jobQueueSheet, pushJobType, pushJobConfig.processing_service, '', 'PENDING', '', '', sessionId);
+        logger.info(serviceName, functionName, `Queued Web Inventory Push job for Session: ${sessionId}`, { sessionId: sessionId });
+    } else {
+        logger.info(serviceName, functionName, `Web Inventory Push job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
+    }
+    SpreadsheetApp.flush();
   }
 
   // --- HELPER FUNCTIONS ---
@@ -666,6 +698,9 @@ const OrchestratorService = (function() {
                 break;
               case 'ValidationOrchestratorService':
                 ValidationOrchestratorService.processJob(executionContext);
+                break;
+              case 'WooInventoryPushService':
+                WooInventoryPushService.processJob(executionContext);
                 break;
               default:
                 throw new Error(`Unknown processing service: ${processingServiceName}`);
@@ -1089,9 +1124,92 @@ const OrchestratorService = (function() {
     }
   }
 
+  /**
+   * Inline reaper for jobs stuck in PROCESSING. The full zombie killer in
+   * processPendingJobs (line ~567) only fires when the hourly trigger runs,
+   * so a stuck job can leave the sync state machine paused for up to an hour.
+   * This helper runs on every poll-driven _checkAndAdvanceSyncState and reaps
+   * its specific (jobType, sessionId) so the FAILED branch picks it up next.
+   *
+   * Threshold is tighter than the hourly zombie killer (8 min vs 15 min)
+   * because Apps Script's hard execution limit is 6 min — any job stuck
+   * longer than 8 is dead by definition.
+   */
+  function _reapStuckJobInSession(jobType, sessionId, thresholdMinutes) {
+    const serviceName = 'OrchestratorService';
+    const functionName = '_reapStuckJobInSession';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+      const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
+
+      if (!jobQueueSheet || jobQueueSheet.getLastRow() < 2) {
+        return false;
+      }
+
+      const data = jobQueueSheet.getDataRange().getValues();
+      const headers = data[0];
+      const jobIdCol      = headers.indexOf('job_id');
+      const jobTypeCol    = headers.indexOf('job_type');
+      const statusCol     = headers.indexOf('status');
+      const sessionIdCol  = headers.indexOf('session_id');
+      const processedTsCol = headers.indexOf('processed_timestamp');
+      const errorMsgCol   = headers.indexOf('error_message');
+
+      const cutoff = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        if (row[sessionIdCol] !== sessionId) continue;
+        if (row[jobTypeCol] !== jobType) continue;
+        if (row[statusCol] !== 'PROCESSING') continue;
+
+        const processedTs = new Date(row[processedTsCol]);
+        if (isNaN(processedTs.getTime()) || processedTs >= cutoff) continue;
+
+        const jobId = row[jobIdCol];
+        const sheetRow = i + 1; // 0-indexed data row + 1 = sheet row number
+
+        logger.error(serviceName, functionName, `Reaping stuck job ${jobId} (type: ${jobType}) in session ${sessionId}. Stuck since ${processedTs.toISOString()} (>${thresholdMinutes}min).`, null, {
+          sessionId: sessionId,
+          jobId: jobId,
+          jobType: jobType,
+          stuckSince: processedTs.toISOString(),
+          thresholdMinutes: thresholdMinutes
+        });
+
+        NotificationService.reportFailure(
+          `job.${jobType}`,
+          `Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll)`,
+          'High',
+          { jobId: jobId, jobType: jobType, stuckSince: processedTs.toISOString() },
+          sessionId
+        );
+
+        jobQueueSheet.getRange(sheetRow, statusCol + 1).setValue('FAILED');
+        jobQueueSheet.getRange(sheetRow, errorMsgCol + 1).setValue(`Job stuck in PROCESSING for >${thresholdMinutes}min (reaped on poll).`);
+        jobQueueSheet.getRange(sheetRow, processedTsCol + 1).setValue(new Date());
+        SpreadsheetApp.flush();
+
+        return true;
+      }
+      return false;
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error reaping stuck job: ${e.message}`, e, { jobType: jobType, sessionId: sessionId });
+      return false;
+    }
+  }
+
   function _checkAndAdvanceSyncState() {
     const serviceName = 'OrchestratorService';
     const functionName = '_checkAndAdvanceSyncState';
+
+    // Threshold for the inline stuck-job reaper. Apps Script hard limit is
+    // 6 min, so 8 leaves a small buffer for clock skew while still catching
+    // stuck jobs much faster than the hourly zombie killer.
+    const STUCK_JOB_THRESHOLD_MIN = 8;
 
     try {
       const state = SyncStateService.getSyncState();
@@ -1102,6 +1220,7 @@ const OrchestratorService = (function() {
       // --- IMPORTING_COMAX -> VALIDATING ---
       if (state.stage === 'IMPORTING_COMAX') {
           const jobType = 'import.drive.comax_products';
+          _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
 
           if (jobStatus === 'COMPLETED') {
@@ -1142,6 +1261,7 @@ const OrchestratorService = (function() {
       // --- VALIDATING -> WAITING_WEB_EXPORT ---
       if (state.stage === 'VALIDATING') {
         const jobType = 'job.periodic.validation.master';
+        _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
         const jobStatus = getJobStatusInSession(jobType, state.sessionId);
 
         if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
@@ -1175,6 +1295,7 @@ const OrchestratorService = (function() {
       // --- GENERATING_WEB_EXPORT -> WAITING_WEB_CONFIRM or COMPLETE ---
       if (state.stage === 'GENERATING_WEB_EXPORT') {
           const jobType = 'export.web.inventory';
+          _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
           const jobStatus = getJobStatusInSession(jobType, state.sessionId);
 
           if (jobStatus === 'COMPLETED') {
@@ -1225,6 +1346,63 @@ const OrchestratorService = (function() {
               state.lastUpdated = new Date().toISOString();
               if (!state.steps) state.steps = {};
               state.steps.step5 = { status: 'failed', message: `Export failed: ${jobStatus}` };
+              SyncStateService.setSyncState(state);
+          }
+      }
+
+      // --- PUSHING_WEB_INVENTORY -> COMPLETE (or FAILED) ---
+      if (state.stage === 'PUSHING_WEB_INVENTORY') {
+          const jobType = 'export.web.inventory.api';
+          _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
+          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
+
+          if (jobStatus === 'COMPLETED') {
+              const updatedState = SyncStateService.getSyncState();
+              if (!updatedState.steps) updatedState.steps = {};
+              updatedState.stage = 'COMPLETE';
+              updatedState.steps.step5 = { status: 'completed', message: 'Inventory pushed via API' };
+              updatedState.lastUpdated = new Date().toISOString();
+              updatedState.errorMessage = null;
+              SyncStateService.setSyncState(updatedState);
+
+              try {
+                TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', updatedState.sessionId);
+              } catch (taskError) {
+                logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+              }
+
+              // Close the manual-confirm signal task (same task type the manual path closes)
+              try {
+                const confirmTasks = WebAppTasks.getOpenTasksByTypeId('task.confirmation.web_inventory_export');
+                if (confirmTasks && confirmTasks.length > 0) {
+                  confirmTasks.forEach(function(task) {
+                    TaskService.completeTask(task.st_TaskId);
+                  });
+                }
+              } catch (taskError) {
+                logger.warn(serviceName, functionName, `Could not complete web inventory confirmation task: ${taskError.message}`);
+              }
+
+              // Register the CSV file for audit (same as the no-changes auto-complete path)
+              _registerSessionFilesFromOrchestrator(updatedState);
+
+          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
+              logger.error(serviceName, functionName, `Inventory API push failed for session ${state.sessionId}.`);
+
+              NotificationService.reportFailure(
+                'sync.web_inventory_push',
+                `Inventory API push failed: ${jobStatus}`,
+                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
+                { sessionId: state.sessionId, jobStatus: jobStatus },
+                state.sessionId
+              );
+
+              state.stage = 'FAILED';
+              state.failedAtStage = 'PUSHING_WEB_INVENTORY';
+              state.errorMessage = `Inventory API push job failed. Status: ${jobStatus}`;
+              state.lastUpdated = new Date().toISOString();
+              if (!state.steps) state.steps = {};
+              state.steps.step5 = { status: 'failed', message: `Push failed: ${jobStatus}` };
               SyncStateService.setSyncState(state);
           }
       }
@@ -1557,6 +1735,7 @@ const OrchestratorService = (function() {
       queueComaxFileForSync: queueComaxFileForSync,
       finalizeSync: finalizeSync,
       queueWebInventoryExport: queueWebInventoryExport,
+      queueWebInventoryPush: queueWebInventoryPush,
       getJobStatusInSession: getJobStatusInSession,
       generateSessionId: generateSessionId,
       triggerWebOrderFileProcessing: triggerWebOrderFileProcessing,

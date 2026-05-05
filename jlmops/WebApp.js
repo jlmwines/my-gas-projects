@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-04-26 19:36',
-  commit: 'Manager dashboard filters by assignedTo=Manager so Admin-handled Review tasks no longer leak in; generateComaxInventoryExport replaces full-sheet rewrite with per-row targeted writes (eliminates silent partial-failure that left count tasks stuck in Review)'
+  built: '2026-05-05 09:52',
+  commit: 'Inventory API push as alternate to manual CSV upload at WAITING_WEB_CONFIRM (CSV remains source of truth, audit trail, and fallback). Inline stuck-job reaper in _checkAndAdvanceSyncState catches stuck PROCESSING jobs at 8 min on every poll instead of waiting for the hourly trigger.'
 };
 
 function getVersion() {

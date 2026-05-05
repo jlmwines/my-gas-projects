@@ -91,6 +91,7 @@
                         <h6 class="card-title sync-card-title">5. Update Web Inventory</h6>
                         <div id="step5Icon" class="sync-icon">⏸️</div>
                         <div id="step5Message" class="text-muted small"></div>
+                        <div id="step5Action" class="mt-1"></div>
                     </div>
                 </div>
             </div>
@@ -173,7 +174,10 @@
         VALIDATING:             { message: 'Running validation...',                button: null, spinner: true },
         WAITING_WEB_EXPORT:     { message: 'Generate web inventory export',        button: ['generateWebExport', 'Generate'] },
         GENERATING_WEB_EXPORT:  { message: 'Generating export...',                 button: null, spinner: true },
-        WAITING_WEB_CONFIRM:    { message: 'Upload to website, then confirm',      button: ['confirmWeb', 'Confirm'], confirm: true },
+        // Two delivery routes share this stage: API push (primary) or manual upload + confirm (alt).
+        // Both consume the same CSV named in state.webExportFilename.
+        WAITING_WEB_CONFIRM:    { message: 'Upload to website, then confirm',      button: ['pushWebInventory', 'API Push'], altButton: ['confirmWeb', 'I uploaded it'] },
+        PUSHING_WEB_INVENTORY:  { message: 'Pushing inventory updates via API...', button: null, spinner: true },
         COMPLETE:               { message: '<span class="text-success">Sync complete</span>', button: null },
         FAILED:                 { message: 'Failed: {error}',                      button: ['retryFailed', 'Retry'] }
     };
@@ -193,6 +197,17 @@
         var steps = status.steps || {};
         for (var i = 1; i <= 5; i++) {
             updateStepCard(i, steps['step' + i]);
+        }
+
+        // Step 5 card: show "Open in Drive" link when CSV exists. Mirrors the
+        // Pre-Sync invoice-folder pattern. Link stays visible from generation
+        // through COMPLETE so the user can inspect before clicking Reset.
+        var step5Action = document.getElementById('step5Action');
+        var fname = status.webExportFilename;
+        if (fname && fname !== 'No Changes Detected') {
+            step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.viewCsv(); return false;" class="small fw-bold text-primary text-decoration-none">Open in Drive</a>';
+        } else {
+            step5Action.innerHTML = '';
         }
 
         // Log progress on step transitions
@@ -491,6 +506,25 @@
         runAction('confirmWebInventoryUpdateBackend', 5, 'Confirming...');
     }
 
+    function pushWebInventory() {
+        runAction('pushWebInventoryBackend', 5, 'Pushing inventory updates via API...');
+    }
+
+    function viewCsv() {
+        google.script.run
+            .withSuccessHandler(function(result) {
+                if (result && result.success && result.url) {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert((result && result.message) || 'Could not open file.');
+                }
+            })
+            .withFailureHandler(function(err) {
+                alert('Error opening file: ' + (err.message || err));
+            })
+            .getWebExportFileUrlBackend();
+    }
+
     function retryFailed() {
         document.getElementById('footerStatus').textContent = 'Retrying...';
 
@@ -623,6 +657,8 @@
         startComaxImport: startComaxImport,
         generateWebExport: generateWebExport,
         confirmWeb: confirmWeb,
+        pushWebInventory: pushWebInventory,
+        viewCsv: viewCsv,
         resetSync: resetSync,
         retryFailed: retryFailed,
         refreshNow: refreshNow

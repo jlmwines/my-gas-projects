@@ -40,6 +40,7 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 
 ## Deployment
 
-- **jlmops:** `clasp push` deploys GAS middleware. Config: edit `jlmops/config/*.json` → `node jlmops/generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
-- **Git:** SSH via `github-jlmwines`. Branch `main`. Always `git push origin main`.
-- **Sessions never push code.** User pushes, tests, then tells session to update docs/git.
+- **Theme to staging:** sessions may run `pwsh -NoProfile -File website/deploy-theme.ps1` directly after a code change. Incremental FTP push to staging6. Don't ask first — make the change, deploy, then report.
+- **jlmops:** `clasp push` deploys GAS middleware. Config: edit `jlmops/config/*.json` → `node jlmops/generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`. Live deploy still needs explicit user OK.
+- **Git:** SSH via `github-jlmwines`. Branch `main`. User handles `git push origin main` after testing.
+- **Live site (jlmwines.com):** user-driven only. Sessions don't push to live without explicit per-task authorization.

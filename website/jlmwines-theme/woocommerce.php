@@ -7,13 +7,15 @@
 
 get_header();
 
-$jlmwines_is_archive = function_exists('jlmwines_is_filterable_archive') && jlmwines_is_filterable_archive();
+$jlmwines_filters_html = function_exists('jlmwines_get_shop_filters_html')
+    ? jlmwines_get_shop_filters_html()
+    : '';
 ?>
 
 <main id="content" class="site-main woocommerce-wrap">
-    <?php if ($jlmwines_is_archive) : ?>
+    <?php if ($jlmwines_filters_html !== '') : ?>
     <div class="woocommerce-archive-grid">
-        <?php jlmwines_render_shop_filters(); ?>
+        <?php echo $jlmwines_filters_html; ?>
         <div class="woocommerce-archive-content">
             <?php woocommerce_content(); ?>
         </div>

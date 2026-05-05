@@ -2749,6 +2749,27 @@ function getMasterConfiguration() {
         ""
     ],
     [
+        "export.web.inventory.api",
+        "Job to push inventory and price updates to WooCommerce via REST API. Reads the same CSV the export job produces.",
+        "stable",
+        "processing_service",
+        "WooInventoryPushService",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "_section.03_Schemas",
         "Schema definitions for staging and master sheets.",
         "",

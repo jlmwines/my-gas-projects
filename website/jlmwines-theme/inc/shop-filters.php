@@ -36,18 +36,30 @@ function jlmwines_is_filterable_archive() {
 }
 
 /**
- * Render the shop filters block. Echoes nothing on non-archive pages, when
+ * Build the shop filters block HTML. Returns '' on non-archive pages, when
  * there are no products in the current archive context, or when none of the
- * attributes have variation worth filtering.
+ * attributes have variation worth filtering. The caller (woocommerce.php)
+ * uses the empty return as a signal to skip the two-column grid wrapper —
+ * categories whose products lack the wine-scale attributes (bundle, packages,
+ * gifts) would otherwise render the content into the empty 240px sidebar
+ * track of the grid.
+ *
+ * Result is statically cached for the request so the toggle/clear-all hooks
+ * can re-check without paying the term-query cost twice.
  */
-function jlmwines_render_shop_filters() {
+function jlmwines_get_shop_filters_html() {
+    static $cache = null;
+    if ($cache !== null) {
+        return $cache;
+    }
+
     if (!jlmwines_is_filterable_archive()) {
-        return;
+        return $cache = '';
     }
 
     $base_ids = jlmwines_filter_archive_base_ids();
     if (empty($base_ids)) {
-        return;
+        return $cache = '';
     }
 
     $groups_html = '';
@@ -56,7 +68,7 @@ function jlmwines_render_shop_filters() {
     }
 
     if ($groups_html === '') {
-        return;
+        return $cache = '';
     }
 
     $aside_label = is_rtl() ? 'סינונים' : 'Filters';
@@ -70,7 +82,7 @@ function jlmwines_render_shop_filters() {
         }
     }
     $classes = 'shop-filters' . ($any_active ? ' is-open' : '');
-    echo '<aside id="shop-filters" class="' . esc_attr($classes) . '" aria-label="' . esc_attr($aside_label) . '">'
+    return $cache = '<aside id="shop-filters" class="' . esc_attr($classes) . '" aria-label="' . esc_attr($aside_label) . '">'
         . $groups_html
         . '</aside>';
 }
@@ -347,6 +359,9 @@ function jlmwines_render_filter_toggle() {
     if (!jlmwines_is_filterable_archive()) {
         return;
     }
+    if (jlmwines_get_shop_filters_html() === '') {
+        return;
+    }
     $count = 0;
     foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
         if (jlmwines_get_selected_value($taxonomy) !== null) {
@@ -378,6 +393,9 @@ add_action('woocommerce_before_shop_loop', 'jlmwines_render_filter_clear_all', 2
 
 function jlmwines_render_filter_clear_all() {
     if (!jlmwines_is_filterable_archive()) {
+        return;
+    }
+    if (jlmwines_get_shop_filters_html() === '') {
         return;
     }
     $any_active = false;

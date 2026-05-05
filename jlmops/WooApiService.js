@@ -2,7 +2,7 @@
  * @file WooApiService.js
  * @description GAS-native WooCommerce REST API client.
  * Single responsibility: HTTP communication with WooCommerce.
- * Read-only — no writes to WooCommerce.
+ * Supports GET (pull) and PUT (inventory/price push to existing products).
  *
  * Auth: HTTP Basic Auth (consumer key as username, consumer secret as password).
  * Credentials stored in SysConfig under 'woo.api'.
@@ -78,12 +78,13 @@ const WooApiService = (function() {
    * Core HTTP fetch wrapper for WooCommerce REST API.
    * Handles auth, query params, retries with exponential backoff.
    *
-   * @param {string} method - HTTP method (GET)
+   * @param {string} method - HTTP method (GET, PUT, POST)
    * @param {string} endpoint - API endpoint path (e.g., '/wc/v3/products')
    * @param {object} [params={}] - Query parameters
+   * @param {object} [body=null] - Request body (will be JSON-stringified). Required for PUT/POST.
    * @returns {object} { data: parsed JSON, headers: response headers }
    */
-  function _fetch(method, endpoint, params) {
+  function _fetch(method, endpoint, params, body) {
     params = params || {};
     const config = _getApiConfig();
 
@@ -107,6 +108,11 @@ const WooApiService = (function() {
       },
       muteHttpExceptions: true
     };
+
+    if (body !== undefined && body !== null) {
+      options.contentType = 'application/json';
+      options.payload = JSON.stringify(body);
+    }
 
     // Retry logic with exponential backoff
     let lastError = null;

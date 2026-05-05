@@ -11,14 +11,12 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-05-04: **Comax order export includes bundle parent SKU** — should export bundle members only (recurrence; prior fix appears lost). Filter pattern exists in InventoryManagementService.js (bundleSkus from WebProdM where wpm_TaxProductType in {woosb, bundle}).
 
-- [ ] 2026-05-04: **Sync state-machine hardening** (bundle). The sync widget has multiple race / stale-state issues across the 12-state pipeline:
-  - Generate web export button visible/clickable before the action can fire (orig 2026-01-28)
-  - Export button stays visible after export step starts (orig 2025-12-29)
-  - Sync widget doesn't show Comax product import stage when order export is skipped without a refresh (orig 2025-12-31)
-  - Generate button stays after export completes — file is generated and named, but button doesn't reset (orig 2026-03-17, separate from the 2026-03-03 stale-poll fix)
-  - Failed Comax import can't recover when a corrected file is uploaded — state stays stuck (orig 2026-03-17)
-
-  Action: review every state transition guard, add stale-state recovery for failed imports, add idempotent re-entry handling.
+- [ ] 2026-05-04: **Sync state-machine hardening** (bundle). Tracked in `jlmops/plans/SYNC_HARDENING_PLAN.md`. Status:
+  - Generate web export button visible/clickable before the action can fire (orig 2026-01-28) — pending staging repro; backend looks clean
+  - Export button stays visible after export step starts (orig 2025-12-29) — pending staging repro; backend looks clean
+  - Sync widget doesn't show Comax product import stage when order export is skipped without a refresh (orig 2025-12-31) — pending staging repro; backend looks clean
+  - **Generate button stays after export completes — file is generated and named, but button doesn't reset (orig 2026-03-17). FIX DEPLOYED 2026-05-05 as @80** — root cause was stuck-`PROCESSING` job in SysJobQueue (zombie killer only ran on hourly trigger, not polls). Inline reaper added to `_checkAndAdvanceSyncState` for all three async stages (IMPORTING_COMAX, VALIDATING, GENERATING_WEB_EXPORT) with 8-min threshold. Stuck spinner now caps at ~8 min instead of up to 60.
+  - Failed Comax import can't recover when a corrected file is uploaded — state stays stuck (orig 2026-03-17) — deferred (rare case)
 
 - [ ] 2026-05-04: **CRM cleanup** (bundle). Resolve in one CRM-cleanup pass:
   - `sc_IsCore` defaulting conflict overwrites correct values from import (data integrity)

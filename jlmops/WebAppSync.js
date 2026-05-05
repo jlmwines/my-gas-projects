@@ -429,6 +429,92 @@ function generateWebExportBackend() {
   }
 }
 
+/**
+ * Returns the Drive URL of the CSV named in current sync state, so the widget
+ * can open it in a new tab for inspection. Used by the "Open in Drive" link
+ * at WAITING_WEB_CONFIRM and COMPLETE.
+ * @returns {{success: boolean, url?: string, message?: string}}
+ */
+function getWebExportFileUrlBackend() {
+  try {
+    const state = SyncStateService.getSyncState();
+    if (!state.webExportFilename || state.webExportFilename === 'No Changes Detected') {
+      return { success: false, message: 'No CSV file in current sync state.' };
+    }
+    const allConfig = ConfigService.getAllConfig();
+    const folderConfig = allConfig['system.folder.jlmops_exports'];
+    if (!folderConfig || !folderConfig.id) {
+      return { success: false, message: 'system.folder.jlmops_exports not configured.' };
+    }
+    const folder = DriveApp.getFolderById(folderConfig.id);
+    const filesIter = folder.getFilesByName(state.webExportFilename);
+    if (!filesIter.hasNext()) {
+      return { success: false, message: `File not found in exports folder: ${state.webExportFilename}` };
+    }
+    const file = filesIter.next();
+    return { success: true, url: file.getUrl(), filename: state.webExportFilename };
+  } catch (e) {
+    logger.error('WebAppSync', 'getWebExportFileUrlBackend', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+// =========================================================================
+//  STEP 5 (alt): PUSH WEB INVENTORY VIA API
+// =========================================================================
+
+/**
+ * Stage guard: WAITING_WEB_CONFIRM
+ * Alternate to the manual upload + confirm flow. Reads the CSV that
+ * generateWebExportBackend wrote and PUTs each row to WooCommerce. Both
+ * delivery routes share the same WAITING_WEB_CONFIRM fork point — see
+ * jlmops/plans/INVENTORY_API_PUSH_PLAN.md.
+ *
+ * @returns {object} The updated sync state.
+ */
+function pushWebInventoryBackend() {
+  const serviceName = 'WebAppSync';
+  const functionName = 'pushWebInventoryBackend';
+
+  // --- Stage guard ---
+  const currentState = SyncStateService.getSyncState();
+  if (currentState.stage !== 'WAITING_WEB_CONFIRM') {
+    throw new Error(`Cannot push web inventory: sync is at stage ${currentState.stage}, expected WAITING_WEB_CONFIRM.`);
+  }
+  if (!currentState.webExportFilename || currentState.webExportFilename === 'No Changes Detected') {
+    throw new Error(`Cannot push: no CSV file in sync state (webExportFilename is "${currentState.webExportFilename || ''}").`);
+  }
+
+  logger.info(serviceName, functionName, `Starting Web Inventory API push. Source CSV: ${currentState.webExportFilename}`);
+  const sessionId = currentState.sessionId;
+
+  try {
+    // Transition to PUSHING_WEB_INVENTORY
+    currentState.stage = 'PUSHING_WEB_INVENTORY';
+    currentState.lastUpdated = new Date().toISOString();
+    if (!currentState.steps) currentState.steps = {};
+    currentState.steps.step5 = { status: 'processing', message: 'Pushing inventory updates via API...' };
+    SyncStateService.setSyncState(currentState);
+
+    // Queue + run. _checkAndAdvanceSyncState handles transition to COMPLETE/FAILED on poll.
+    OrchestratorService.queueWebInventoryPush(sessionId);
+    OrchestratorService.run('hourly');
+
+    return SyncStateService.getSyncState();
+  } catch (e) {
+    logger.error(serviceName, functionName, `Error during Web Inventory push: ${e.message}`, e);
+    const errState = SyncStateService.getSyncState();
+    errState.stage = 'FAILED';
+    errState.failedAtStage = 'PUSHING_WEB_INVENTORY';
+    errState.errorMessage = e.message;
+    errState.lastUpdated = new Date().toISOString();
+    if (!errState.steps) errState.steps = {};
+    errState.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
+    SyncStateService.setSyncState(errState);
+    return SyncStateService.getSyncState();
+  }
+}
+
 // =========================================================================
 //  STEP 5b: CONFIRM WEB INVENTORY UPLOAD
 // =========================================================================
@@ -525,7 +611,15 @@ function retryFailedStepBackend() {
 
   logger.info(serviceName, functionName, `Retrying from stage: ${currentState.failedAtStage}`);
 
-  currentState.stage = currentState.failedAtStage;
+  // Special case: a failed PUSHING_WEB_INVENTORY returns the user to the
+  // pre-fork WAITING_WEB_CONFIRM stage rather than back to PUSHING. The CSV
+  // is still on Drive — the user can either retry the API push or fall back
+  // to manual upload of the same file.
+  if (currentState.failedAtStage === 'PUSHING_WEB_INVENTORY') {
+    currentState.stage = 'WAITING_WEB_CONFIRM';
+  } else {
+    currentState.stage = currentState.failedAtStage;
+  }
   currentState.errorMessage = null;
   currentState.lastUpdated = new Date().toISOString();
   // Don't clear failedAtStage — it stays as a breadcrumb until next successful transition
