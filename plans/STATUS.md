@@ -6,36 +6,31 @@
 
 | Metric | Value |
 |--------|-------|
-| Phase | Cutover-ready (staging passes; user-side pre-cutover tests pending) |
+| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. |
 | Last Active | 2026-05-05 |
 | Revenue | Steady |
-| Deploy Version | jlmops @81 (Mailchimp Marketing API pulls — subscribers + campaigns; AdminContactsView ⟳ MC button + freshness display; setConfig signature sweep across 5 last-update markers) · theme v1.2.0 (staging — catalog attribute filters + HE homepage text canonical + Secular One headlines + mobile nav restructure + Chrome RTL width fix; staging also has filter-less category fix on shop-filters.php deployed 2026-05-05) |
-| Deploy Date | jlmops 2026-05-05 (@81 live) · theme 2026-05-04 (live) / 2026-05-05 (staging) |
+| Deploy Version | jlmops @82 (post-sync bundle health auto-trigger via Apps Script time trigger) · theme v1.2.1 LIVE (Mailchimp order opt-in passes FNAME/LNAME/PHONE/ADDRESS merge fields) |
+| Deploy Date | jlmops 2026-05-05 (@82 live) · theme 2026-05-05 (cutover via SiteGround staging→live promote) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
 | Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) |
-| Next Milestone | Theme cutover — date TBD (slipped from 2026-05-04). User testing in flight; post-cutover work includes WPML String Translation cleanup for untranslated WC chrome strings |
+| Next Milestone | SEO setup (top priority) — RankMath active on live, structured-data emission to verify. Mobile LCP tuning (currently 4.0–4.1s, on the "poor" boundary). |
 | Blockers | 0 |
+| Mobile PageSpeed (post-cutover) | EN: FCP 3.2 / LCP 4.1 · HE: FCP 3.5 / LCP 4.0 · TBT 210ms (was LCP 7.2 / FCP 3.9 pre-cutover — ~43% LCP improvement) |
+| Desktop PageSpeed (post-cutover) | EN: FCP 0.7 / LCP 0.8 · HE: FCP 0.7 / LCP 1.2 |
 
 ## Next Action
 
-**Cutover-ready (theme v1.2.0 on staging). User to handle remaining testing; cutover date TBD.**
+**Theme cutover SHIPPED 2026-05-05.** Approach taken: SiteGround staging→live promote (after a failed activate-in-place attempt revealed page content existed only on staging). Live now runs jlmwines-theme v1.2.1 with Mailchimp pulls + post-sync bundle health auto-trigger.
 
-User-handled pre-cutover items (still required, user driving):
+**Post-cutover follow-ups (queued):**
 
-1. **Test orders + checkout opt-in** — place a test order on staging in EN with the newsletter checkbox ticked. Verify subscriber lands in Mailchimp with English Language interest. Repeat in HE. Idempotency: move test order processing→completed, confirm `_jlmwines_mc_lang_synced` order meta set once, no double-PUT.
-2. **Inline confirmation message test (v1.0.93+)** — submit footer signup EN + HE with plus-addressed emails (e.g., `accounts+jlmtest-en-001@jlmwines.com`). Confirm subscriber stays on jlmwines.com and sees per-language inline message, no redirect to Mailchimp's hosted page.
-3. **Eyeball live plugin list** — open wp-admin → Plugins on live; compare against expected-active list in `plans/CUTOVER_CHECKLIST.md` Stage 0.3. Resolve any drift before cutover.
-
-Post-cutover (deferred deliberately — DB-bound work):
-
-- **WPML String Translation cleanup** — untranslated WC chrome strings (catalog result-count phrases, default WC dropdown labels, etc.) are currently patched via `gettext` / `ngettext_with_context` filters in `inc/shop-filters.php`. Proper home is WPML String Translation (DB), best done after the cutover so translation entries port cleanly across the live site.
-
-**Then cutover day** (Stages 1 + 2 in `plans/CUTOVER_CHECKLIST.md`):
-- Live SiteGround backup (rollback target)
-- Confirm theme zip on live (current v1.1.0)
-- Activate JLM Wines theme → Customizer reconcile → wishlist nav removal + 301 redirect → deactivate `mailchimp-woocommerce` on live → cache flush → smoke test (place real test order, verify EN+HE rendering, opt-in flow) → SEO output verify → visual sanity.
+1. **WPML String Translation cleanup** — untranslated WC chrome strings (catalog result-count phrases, default WC dropdown labels) currently patched via `gettext`/`ngettext_with_context` filters in `inc/shop-filters.php`. Move to WPML String Translation DB entries.
+2. **Catalog filter sizing** — user noted larger than desired on live; tune CSS in `inc/shop-filters.php` / main.css.
+3. **Mobile LCP tuning** — current 4.0–4.1s sits on the "poor" boundary. Targets: hero image format/size, render-blocking script audit.
+4. **24–48hr error log + order monitoring** per checklist Stage 3.
+5. **WC term thumbnails refresh** — admin-side images in wp-admin → Products → Categories still old; customer-facing pages already use theme overrides.
 
 **Other in-flight initiatives** (unchanged from coordination doc):
 - ~~jlmops Half 1 — Mailchimp daily pull.~~ **SHIPPED 2026-05-05 as @81.** `MailchimpService` HTTP wrapper + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3. AdminContactsView card-header has `⟳ MC` button + `MC subs/camp` freshness display. First live run: 7 new prospects, 63 subscription-state corrections, 3 unsubscribe activities; 2 campaigns upserted. Half 2 (action layer — first-order welcome trigger, partner mobile follow-up UI) is the next CONTACT_MANAGER_PLAN section, not started.
@@ -119,6 +114,19 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-05-05 (theme cutover + jlmops @81 → @82):** **Theme cutover shipped to live. Approach: SiteGround staging→live promote.**
+  - **Pre-cutover (jlmops @82).** Post-sync bundle stock auto-trigger — `SyncStateService.transition` schedules a one-off Apps Script time trigger when stage flips to COMPLETE. `runPostSyncBundleHealth` fires within seconds, runs `housekeepingService.checkBundleHealth`, self-cleans. Nightly composition refresh + health check kept as belt-and-suspenders per Phase 14 plan; the gate prevents double-fire. Daily impact: same-day bundle inventory visibility right after sync, no waiting for nightly.
+  - **First cutover attempt (activate-in-place) aborted.** Activated theme on live → wrong logo (per-theme Customizer setting) and **page content missing on live** (About EN/HE pages were authored on staging via REST API push, never replicated to live). Rolled back to kowine-child immediately. Lesson: activate-in-place doesn't catch staging-only content drift; staging→live promote does.
+  - **Second cutover (staging→live promote — successful).** Refreshed staging from live (destroys + recreates), applied all theme + plugin changes on the refreshed staging, pushed pages via `content/push-pages.js` (new, written this session for the About EN/HE pages — manifest-driven, slug-keyed, idempotent), promoted staging→live via SiteGround Site Tools. SG Optimizer settings reapplied on live: Web Font Optimization, Combine + Minify CSS/JS, Ultrafast PHP, Preload Combined CSS, Disable Emojis. HTML Minify deferred.
+  - **Plugin state on live post-cutover.** All 8 expected-ACTIVE plugins active (WooCommerce, WPML + WC Multilingual, WPClever Bundles, Pojo Accessibility, Complianz, SG Cachepress, Rank Math, WC Google Analytics). 5 expected-INACTIVE confirmed (mailchimp-woocommerce, woo-smart-wishlist, WPBingo, Elementor, Elementor Pro). Elementor itself was deactivated late in the session after pages confirmed Elementor-free.
+  - **PageSpeed (post-cutover).** Mobile EN FCP 3.2 / LCP 4.1, HE FCP 3.5 / LCP 4.0, TBT 210ms. Desktop EN 0.7/0.8, HE 0.7/1.2. ~43% LCP improvement vs pre-cutover baseline (was LCP 7.2 / FCP 3.9 mobile). Mobile sits on the "poor" boundary; further work needed (image formats, render-blocking script audit) but the bulk of available wins have landed. Field CWV won't reflect this for ~4 weeks.
+  - **WPML.** hreflang correct on live (en / he / x-default with `https://`); page translation linkage verified via REST API; About EN ↔ About HE preserved.
+  - **Process notes / lessons for next time.**
+    - Cutover checklist (`plans/CUTOVER_CHECKLIST.md`) described activate-in-place; the right approach for theme + DB-content cutovers is staging→live promote. Update the checklist to make this the default path.
+    - "Refresh staging from live → install everything on staging → promote" is reversible at every step until the final promote. Activate-in-place gives no such reversibility for content drift.
+    - Logo fallback: theme uses standard `the_custom_logo()` (per-theme Customizer); a hardcoded default in `header.php` would prevent the wrong-logo flash on first activation. Not done this session; queued.
+  - **Files changed:** `jlmops/SyncStateService.js` (post-sync trigger), `jlmops/WebApp.js` (@82 stamp), `content/push-pages.js` (new). Theme files unchanged in this session — current is v1.2.1 (yesterday's commit).
 
 - **2026-05-05 (jlmops @80 → @81):** **Mailchimp Marketing API pulls — subscribers + campaigns — end-to-end, plus AdminContactsView refresh control and a setConfig signature sweep.**
   - `MailchimpService.js` (new) — thin HTTP wrapper. Basic auth (any username, API key as password), DC parsed from key suffix, count/offset pagination, retry on 429/5xx with exponential backoff. Audience IDs exposed as `MailchimpService.AUDIENCE` constants. SysEnv key row added under setting `mailchimp.api`, P01='api_key'.

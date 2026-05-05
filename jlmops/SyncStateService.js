@@ -125,6 +125,23 @@ const SyncStateService = (function() {
     }
 
     setSyncState(state);
+
+    // Fire-and-forget: schedule a one-off trigger to run bundle health check
+    // when sync reaches COMPLETE. Must not block the transition (UI advances
+    // to COMPLETE on this call's return). checkBundleHealth's own gate
+    // (skip if no sync since last check) is the dedup guard.
+    if (newStage === 'COMPLETE') {
+      try {
+        ScriptApp.newTrigger('runPostSyncBundleHealth')
+          .timeBased()
+          .after(1)
+          .create();
+      } catch (e) {
+        logger.warn(SERVICE_NAME, functionName,
+          'Could not schedule post-sync bundle health trigger: ' + e.message);
+      }
+    }
+
     return state;
   }
 
@@ -241,3 +258,30 @@ const SyncStateService = (function() {
 
 // Global instance for easy access
 const syncStateService = SyncStateService;
+
+/**
+ * Trigger handler — runs bundle health check after sync reaches COMPLETE.
+ * Scheduled via SyncStateService.transition; self-cleans by deleting all
+ * pending instances of this trigger on first fire (collapses bursts of
+ * COMPLETE transitions into a single check).
+ */
+function runPostSyncBundleHealth() {
+  try {
+    const triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach(t => {
+      if (t.getHandlerFunction() === 'runPostSyncBundleHealth') {
+        try { ScriptApp.deleteTrigger(t); } catch (_) {}
+      }
+    });
+  } catch (e) {
+    LoggerService.warn('runPostSyncBundleHealth', 'cleanup',
+      'Could not clean up triggers: ' + e.message);
+  }
+
+  try {
+    housekeepingService.checkBundleHealth();
+  } catch (e) {
+    LoggerService.error('runPostSyncBundleHealth', 'run',
+      'Bundle health check failed: ' + e.message, e);
+  }
+}

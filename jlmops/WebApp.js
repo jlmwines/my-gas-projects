@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-05 09:03',
-  commit: 'Mailchimp Marketing API pulls (subscribers + campaigns) end-to-end: MailchimpService HTTP wrapper, ContactImportService.importFromMailchimpApi (state freshness + external-signup detection), CampaignService.pullRecentCampaigns (60-day rolling window), HousekeepingService phase-3 wiring, AdminContactsView ⟳ MC button + freshness display. Sweep: setConfig 2-arg→3-arg signature for 5 last-update markers; 3 newly declared in config/system.json (system.bundle_health.last_check, system.crm.last_refresh, system.crm_intelligence.last_run).'
+  built: '2026-05-05 11:59',
+  commit: 'Post-sync bundle health auto-trigger: SyncStateService.transition schedules a one-off Apps Script time trigger when stage flips to COMPLETE; runPostSyncBundleHealth fires within seconds, runs housekeepingService.checkBundleHealth, and self-cleans. Nightly composition refresh + health check kept as belt-and-suspenders per Phase 14 plan; the gate (skip if no sync since last check) prevents double-fire.'
 };
 
 function getVersion() {
