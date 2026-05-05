@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-05-04
+**Updated:** 2026-05-05
 
 ## Metrics
 
@@ -9,8 +9,8 @@
 | Phase | Cutover-ready (staging passes; user-side pre-cutover tests pending) |
 | Last Active | 2026-05-05 |
 | Revenue | Steady |
-| Deploy Version | jlmops @80 (Inventory API push as alt to manual CSV upload + inline stuck-job reaper) · theme v1.2.0 (staging — catalog attribute filters + HE homepage text canonical + Secular One headlines + mobile nav restructure + Chrome RTL width fix; staging also has filter-less category fix on shop-filters.php deployed 2026-05-05) |
-| Deploy Date | jlmops 2026-05-05 · theme 2026-05-04 (live) / 2026-05-05 (staging) |
+| Deploy Version | jlmops @81 (Mailchimp Marketing API pulls — subscribers + campaigns; AdminContactsView ⟳ MC button + freshness display; setConfig signature sweep across 5 last-update markers) · theme v1.2.0 (staging — catalog attribute filters + HE homepage text canonical + Secular One headlines + mobile nav restructure + Chrome RTL width fix; staging also has filter-less category fix on shop-filters.php deployed 2026-05-05) |
+| Deploy Date | jlmops 2026-05-05 (@81 live) · theme 2026-05-04 (live) / 2026-05-05 (staging) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Not set up — TOP PRIORITY |
@@ -38,10 +38,11 @@ Post-cutover (deferred deliberately — DB-bound work):
 - Activate JLM Wines theme → Customizer reconcile → wishlist nav removal + 301 redirect → deactivate `mailchimp-woocommerce` on live → cache flush → smoke test (place real test order, verify EN+HE rendering, opt-in flow) → SEO output verify → visual sanity.
 
 **Other in-flight initiatives** (unchanged from coordination doc):
-- jlmops Half 1 — Mailchimp daily pull. Plan resolved 2026-05-03 (`jlmops/plans/CONTACT_MANAGER_PLAN.md`). Build queued post-cutover.
+- ~~jlmops Half 1 — Mailchimp daily pull.~~ **SHIPPED 2026-05-05 as @81.** `MailchimpService` HTTP wrapper + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3. AdminContactsView card-header has `⟳ MC` button + `MC subs/camp` freshness display. First live run: 7 new prospects, 63 subscription-state corrections, 3 unsubscribe activities; 2 campaigns upserted. Half 2 (action layer — first-order welcome trigger, partner mobile follow-up UI) is the next CONTACT_MANAGER_PLAN section, not started.
 - Newsletter v1 — printed monthly insert (online + store handout). Plan written. First issue post-cutover.
 - Comeback campaign segment export + test send. Calendar item.
 - Year in Wine PDF research. Calendar item.
+- New calendar items added 2026-05-05: bundle composition / member condition split (Phase 14 in `IMPLEMENTATION_PLAN.md`), campaign-recipient activity rows on contacts (post Half 1), housekeeping last-run markers cleanup (small sweep — see `CALENDAR.md`).
 
 **Test SKU management fixes** (deployed, partially verified):
 - Vendor SKU Update: not yet tested
@@ -118,6 +119,17 @@ Periodic business health checks — not automated, just a checklist for session 
 - **Theme replacement:** PLAN WRITTEN at `~/.claude/plans/unified-sparking-galaxy.md`. Minimal Elementor-compatible theme ZIP to replace KoWine, eliminating Wpbingo Core + Redux Framework. Scoping session next — 2026-04-15 performance diagnosis confirmed theme stack is the remaining structural bottleneck.
 
 ## Session History
+
+- **2026-05-05 (jlmops @80 → @81):** **Mailchimp Marketing API pulls — subscribers + campaigns — end-to-end, plus AdminContactsView refresh control and a setConfig signature sweep.**
+  - `MailchimpService.js` (new) — thin HTTP wrapper. Basic auth (any username, API key as password), DC parsed from key suffix, count/offset pagination, retry on 429/5xx with exponential backoff. Audience IDs exposed as `MailchimpService.AUDIENCE` constants. SysEnv key row added under setting `mailchimp.api`, P01='api_key'.
+  - `ContactImportService.importFromMailchimpApi()` (new) — replaces CSV path as the daily import; CSV retained as manual fallback. Per the 2026-05-05 plan revision, scope narrowed to (a) detect external/manual MC adds → create prospect rows, (b) keep `sc_IsSubscribed` honest (MC always wins on subscription state), (c) log `subscription.unsubscribed`/`.cleaned` activity when state flips. **Language is set on prospect creation only, never touched on existing rows** — the website is authoritative for language at signup (footer + checkout opt-in both POST direct to MC with correct language interest from page language). First production run: 687 MC members → 7 new prospects, 63 subscription-state corrections (CSV drift), 3 unsubscribe activities, 0 errors.
+  - `CampaignService.pullRecentCampaigns()` (new) — 60-day rolling window. Lists `/campaigns?status=sent&since_send_time=...`, then per-campaign `/reports/{id}` for metrics. Maps to `scm_*` schema and calls existing `upsertCampaign`. First run: 2 campaigns refreshed.
+  - `HousekeepingService` phase-3 wiring — both pulls run BEFORE `refreshCrmContacts` so language updates feed into enrichment. Existing `checkSubscribersReminder` / `checkCampaignsReminder` retained as defensive belt-and-suspenders if pulls silently fail for many days.
+  - `AdminContactsView` card-header — `MC subs: <h/d> · camp: <h/d>` freshness display + `⟳ MC` button. Click runs both pulls (same code path as housekeeping), updates freshness, reloads contact list, logs one-line summary. Backend endpoints: `WebAppContacts_getMailchimpStatus` (load) + `WebAppContacts_refreshMailchimp` (click).
+  - **`setConfig` signature sweep.** During testing, the freshness display showed `MC: —` after refresh because the writer was using the buggy 2-arg `setConfig(name, value)` pattern. The function signature is `setConfig(name, key, value)`; the 2-arg form was passing the timestamp as the *key* and `undefined` as the value, appending a junk row to SysConfig each call instead of overwriting `scf_P02`. Fixed in `ContactImportService` and `CampaignService`. Same buggy pattern existed in `HousekeepingService.js` for 3 inherited markers (`system.bundle_health.last_check`, `system.crm.last_refresh`, `system.crm_intelligence.last_run`) — fixed all three plus added their predeclared rows to `config/system.json` (none had a legitimate row, so every housekeeping run was creating a fresh junk row). Regenerated `SetupConfig.js`. User ran `rebuildSysConfigFromSource()` and manually deleted accumulated junk rows.
+  - **User correction on data layout** (worth re-reading): "config is configuration" — SysConfig is generated, not a runtime state store. The pattern that's acceptable is **one predeclared row per topic** in `config/system.json` whose `scf_P02` cell gets overwritten in place — never accumulating new rows. Memory `feedback_read_arch_before_writing.md` saved so future sessions read DATA_MODEL.md / ARCHITECTURE.md before adopting any write pattern, even one that already exists in the codebase.
+  - **Deployment correction.** Old memory had wrong stable deploy ID (`AKfycbzDvzMN...`). Manager's actual live URL uses `AKfycbzxXgezKqE_dhz33Ssh5eRwAv1XsmnlqG0EukzEhySXC0wn49l26x9LK8vuIH8ELHI6yw`. Memory `jlm_stable_deploy_id.md` updated. Deployed @81 in place to that ID with `clasp deploy --deploymentId ... -d "@81: ..."`.
+  - **Files created/modified:** `jlmops/MailchimpService.js` (new), `jlmops/ContactImportService.js`, `jlmops/CampaignService.js`, `jlmops/HousekeepingService.js`, `jlmops/AdminContactsView.html`, `jlmops/WebAppContacts.js`, `jlmops/config/system.json` (3 new rows), `jlmops/SetupConfig.js` (regenerated), `jlmops/WebApp.js` (version stamp), `jlmops/plans/CONTACT_MANAGER_PLAN.md` (Half 1 scope revision), `CALENDAR.md` (3 new follow-ups).
 
 - **2026-05-04 (continued, theme work):** **Theme v1.1.0 → v1.2.0. Catalog attribute filters built end-to-end. HE homepage text reverted to canonical (docx) strings. Headline font swapped David Libre → Secular One. Mobile nav restructured around floating WhatsApp + ea11y. Chrome RTL desktop-width bug fixed. Mobile filter touch targets bumped. Multiple sub-fixes.**
 
