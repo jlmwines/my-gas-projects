@@ -19,7 +19,7 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 
 **Git and Deployment:**
 - Sessions NEVER push code. User pushes, tests, then tells session to update docs/git.
-- When user says `/session` or asks to close session: update docs and commit only.
+- When the user asks to close the session, follow the session-end protocol in the portfolio kernel (`projects/.claude/CLAUDE.md`).
 - Wait for user confirmation before any git operations.
 
 **Planning vs Execution:**
@@ -33,7 +33,8 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 | Location | Purpose |
 |----------|---------|
 | `.claude/CLAUDE.md` | Project kernel — start here |
-| `plans/STATUS.md` | Master status — current state, next action, session history |
+| `plans/STATUS.md` | Current state, next action, metrics, inbox (dashboard only — no session history) |
+| `.claude/session-log.md` | Claude-internal session log |
 | `jlmops/plans/` | Middleware implementation plans |
 | `jlmops/SESSION_SUMMARY.md` | Legacy session history (pre-standardization) |
 

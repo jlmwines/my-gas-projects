@@ -2,16 +2,15 @@
 
 JLM Wines is an online wine retailer in Israel. Anti-snob positioning — makes wine accessible, convenient, and easy. No jargon, no pretension.
 
-## Session Start
+For session protocols, file routing, and operating mechanics, see the portfolio kernel: `projects/.claude/CLAUDE.md`. Don't restate operating rules here.
 
-1. Read `plans/STATUS.md` silently — single source of truth for project state.
-2. Check the **Metrics** table and **Inbox** section — surface any cross-project notes.
-3. State what you found: current status, next action, any blockers.
-4. Ask: "Which area? (jlmops, website, content, marketing, business)"
-5. Wait for confirmation before doing anything.
+## Session Start (project-specific)
 
-**Mid-session:** Use `/break` to save progress (STATUS.md + wip commit + push). Run every 30-60 min.
-**End of session:** Use `/wrap` to update status, metrics, commit.
+After the universal session-start (per portfolio kernel — read `plans/STATUS.md` and the last 1–2 entries of `.claude/session-log.md`):
+
+1. State what you found: current status, next action, any blockers.
+2. Ask: "Which area? (jlmops, website, content, marketing, business)"
+3. Wait for confirmation before doing anything.
 
 ## Sub-Areas
 
@@ -25,7 +24,8 @@ JLM Wines is an online wine retailer in Israel. Anti-snob positioning — makes 
 
 ## Key Documents
 
-- `plans/STATUS.md` — master status, session history, metrics, inbox
+- `plans/STATUS.md` — current state, metrics, next action, inbox (dashboard only — no session history)
+- `.claude/session-log.md` — Claude-internal session log
 - `CALENDAR.md` — dated tasks and milestones
 - `website/BRAND.md` — visual identity and brand guidelines for jlmwines.com
 - `jlmops/plans/` — architecture, data model, implementation, workflows, CRM, campaigns, resource optimization, strategic plan

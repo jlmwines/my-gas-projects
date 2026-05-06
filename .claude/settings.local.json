@@ -29,7 +29,15 @@
       "WebFetch(domain:jlmwines.com)",
       "WebFetch(domain:staging6.jlmwines.com)",
       "WebFetch(domain:pagespeed.web.dev)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Read(//c/Users/B/.claude/plans/**)",
+      "Read(//c/Users/B/.claude/**)",
+      "Bash(pwsh *)",
+      "Bash(powershell.exe *)",
+      "WebFetch(domain:jlmwines.us5.list-manage.com)",
+      "Bash(powershell *)",
+      "mcp__claude_ai_Google_Drive__search_files",
+      "mcp__claude_ai_Google_Drive__read_file_content"
     ],
     "deny": [
       "Bash(git -C:*)",
