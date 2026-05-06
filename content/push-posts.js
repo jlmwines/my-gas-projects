@@ -100,6 +100,12 @@ function parsePostMd(filePath) {
   return { title: title, excerpt: excerpt, body: body };
 }
 
+// Wrap the raw HTML in a Custom HTML block so the WP block editor opens
+// it cleanly (no "block recovery" prompt, emergency edits doable in wp-admin).
+function wrapAsHtmlBlock(html) {
+  return '<!-- wp:html -->\n' + html + '\n<!-- /wp:html -->';
+}
+
 // ─── Push a single post ─────────────────────────────────────────
 async function pushPost(wp, entry, lang) {
   var isHe = lang === 'he';
@@ -121,7 +127,7 @@ async function pushPost(wp, entry, lang) {
 
   var payload = {
     title: parsed.title,
-    content: parsed.body,
+    content: wrapAsHtmlBlock(parsed.body),
     excerpt: parsed.excerpt || ''
   };
 

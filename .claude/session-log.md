@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-06 (post-cutover follow-ups: translations, SEO, structural cleanup planning)
+
+- **WPML translation import.** 35 customer-facing WC strings populated from translate.wordpress.org canonical HE PO via WPML String Translation. Reusable generator at `exchange/strings/lookup-canonical.js` (Node; Python not on this machine). Verification (cache flush + HE storefront walk) deferred to user. Page-render check still pending.
+- **SEO audit run** — `plans/SEO_AUDIT_2026-05-06.md`. Resolved same day: HE site name (`jlmwines.com` → `JLM Wines` via Blog Title in WPML String Translation), homepage meta descriptions (EN + HE, accurate copy not the legacy "Best of Israeli Wines" frame), title format (`%page%` dropped), site-wide image-URL https sweep, category/page pairs (user confirmed all translated). **Deferred:** homepage hreflang `http://` (#1) — root cause is the unconventional homepage architecture (no Page record), resolves as a side effect of Phase 1 of the homepage rebuild.
+- **Homepage architecture:** prior session unilaterally converted homepage to `front-page.php`-only with no Page record, which is the root cause of #1 + `/he/home-elegant/` stray sitemap. Saved memory `feedback_no_unilateral_architecture.md` (in user global) as a tripwire — sessions should not silently refactor architectural choices in user projects. Plan written at `website/HOMEPAGE_BLOCKS_PLAN.md`: Phase 1 (~1–2 hrs interim — rename `front-page.php` → custom page template, repurpose existing EN + HE `home-elegant` Pages, switch Settings → Reading) + Phase 2 (~2–3 sessions full — `jlm/product-carousel` and `jlm/post-carousel` Gutenberg blocks). Phase 1 is the highest-priority queued work; resolves all remaining homepage-related SEO issues.
+- **KPI summary tab spec** at `jlmops/plans/KPI_SUMMARY_TAB.md`. SysKPISummary schema + KPISummaryService design. 5 open questions for user before build (welcome coupon code, current-window length, language source, core filter, backfill scope).
+- **`push-pages.js` + `push-posts.js`** now wrap pushed HTML in `<!-- wp:html -->` Custom HTML blocks so the WP block editor opens cleanly (no "block recovery" prompt). Existing live posts/pages still render fine; they convert to wrapped form on next push.
+- **Next session:** Phase 1 homepage rebuild is the queued highest-priority item. Translation page-render verification (cache flush + storefront walk) is the user's task. Tagline change (Settings → General) still pending — user discussed phrasing options with partner ("Wine choices made simple" was leading) but didn't commit.
+
+---
+
 ## Migrated from STATUS.md on 2026-05-06 (operating-model restructure)
 
 ## Session History

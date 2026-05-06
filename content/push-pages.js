@@ -59,6 +59,12 @@ function parsePageFile(filePath) {
   return { title, body };
 }
 
+// Wrap the raw HTML in a Custom HTML block so the WP block editor opens
+// it cleanly (no "block recovery" prompt, emergency edits doable in wp-admin).
+function wrapAsHtmlBlock(html) {
+  return '<!-- wp:html -->\n' + html + '\n<!-- /wp:html -->';
+}
+
 async function pushPage(creds, pageId, file) {
   const filePath = path.join(CONTENT_DIR, file);
   const { title, body } = parsePageFile(filePath);
@@ -71,7 +77,7 @@ async function pushPage(creds, pageId, file) {
       'Authorization': 'Basic ' + auth,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ title, content: body })
+    body: JSON.stringify({ title, content: wrapAsHtmlBlock(body) })
   });
   const json = await res.json();
   if (!res.ok) {
