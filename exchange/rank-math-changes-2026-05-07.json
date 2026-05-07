@@ -1,0 +1,20 @@
+{
+  "titles": {
+    "pt_page_default_rich_snippet": "off",
+    "noindex_archive_subpages": "on"
+  },
+  "sitemap": {
+    "authors_sitemap": "off"
+  },
+  "modules": {
+    "3": "sitemap",
+    "4": "rich-snippet",
+    "5": "woocommerce",
+    "10": "role-manager",
+    "11": "redirections",
+    "12": "local-seo",
+    "13": "404-monitor",
+    "14": "instant-indexing",
+    "16": "image-seo"
+  }
+}

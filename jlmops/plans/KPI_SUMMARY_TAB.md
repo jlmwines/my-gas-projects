@@ -165,13 +165,13 @@ Nothing. There's no current KPI computation in jlmops to retire. This is additiv
 
 ---
 
-## Open questions for user before implementation
+## Open questions for user before implementation → **RESOLVED 2026-05-07**
 
-1. **First-purchase coupon code(s).** What's the current welcome-coupon code (the NIS 50 first-order one)? STATUS mentions it but the exact code isn't in plans I've seen. Need it for the `kpi.first_purchase_coupons` config row.
-2. **`current` window length.** Spec uses trailing 30 days. Alternatives: month-to-date (resets on the 1st), trailing 7 days, trailing 90 days. Trailing 30 days reads as "what's been happening lately" without monthly cliffs. OK?
-3. **EN/HE classification.** Spec uses `sc_Language` from `SysContacts` (which sources from order/Mailchimp language). Sounds right — but if there's a preferred field (e.g., from `wom_MetaWpmlLanguage` of the first order), say so. The `SysContacts` field consolidates both sources, so probably the right place.
-4. **Core-customer filter for #2.** Spec excludes gift purchasers and war-supporters (`sc_IsCore=TRUE`) from new-customer counts. Match that to the `business/KPI.md` strategic frame, which talks about "core" growth. OK, or do we want raw new-customer count too?
-5. **Backfill scope.** When this ships, how far back should `backfillMonths` cover? Earliest data — 2024? 2025? Or just from cutover (2026-05) onward?
+1. **First-purchase coupon code:** **`50new`**. Note: new-customer detection is decoupled from coupon — first-order-by-email defines a new customer regardless of whether the coupon was used. Coupon usage becomes a sub-metric of KPI #3 ("X% of first-orders used `50new`, AOV with vs without").
+2. **`current` window length:** **trailing 90 days throughout.** Aligns with KPI #4's 90-day return-rate definition and the GA4/GSC sheets' 90-day rolling window.
+3. **EN/HE classification:** **`sc_Language` from SysContacts** is canonical. Verify it aligns with web order language + Mailchimp group as a sanity check; flag drift if detected. (User confirmed all three sources should match.)
+4. **Core-customer filter:** **drop war-support detection** (legacy; existing categorized rows stay as-is). **Gift detection = not core.** Mailchimp campaigns are universal (no segmentation), so core/non-core isn't an email-segmentation concern. For KPIs: track BOTH raw new-customer count AND core-only count (exclude gifts), per the `business/KPI.md` strategic emphasis on "core" growth.
+5. **Backfill scope:** **full SysOrdLog history.** User confirms order history is complete in jlmops; overnight CRM activity has been continuous; no data gaps expected. Backfill all available months.
 
 ---
 

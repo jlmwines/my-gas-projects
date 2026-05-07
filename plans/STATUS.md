@@ -36,6 +36,8 @@
 8. **Unused plugin cleanup on live** — delete deactivated plugins to reduce attack surface and update noise. **DO NOT DELETE `mailchimp-woocommerce`** — its `wp_options` API key is what the theme's replacement code reads. Safe to delete: `woo-smart-wishlist`, `WPBingo`, `redux-framework`, `Elementor` + `Elementor Pro` (after verifying no remaining Elementor pages — search wp-admin → Pages for the Elementor edit indicator), `widget-importer-exporter`, `better-search-replace`, `wp-file-manager`. Verify-before-delete: `contact-form-7` + CF7 multilingual (any forms in use?), `variation-swatches-for-woocommerce` (variation selector acceptable without it?), `woocommerce-checkout-field-editor` (any custom checkout fields configured?).
 
 **Other in-flight initiatives** (cross-area, sequenced per `business/COORDINATION.md`):
+- **KPI Summary tab in `JLMops_Data`** — spec at `jlmops/plans/KPI_SUMMARY_TAB.md`; **5 open questions resolved 2026-05-07** (welcome coupon `50new`; trailing-90d window throughout; `sc_Language` canonical; drop war-support, gift = not core; backfill from full SysOrdLog history). Ready to build in next jlmops session. ~30–60 min single GAS deploy.
+- **SG Security burn-in (security plugin transition)** — Wordfence deactivated 2026-05-07; SG Security active. 24hr false-positive watch on admin login + checkout + customer accounts. If clean by 2026-05-08, delete Wordfence.
 - **CONTACT_MANAGER Half 2** — action layer: first-order welcome trigger, partner mobile follow-up UI. Half 1 shipped @81. See `jlmops/plans/CONTACT_MANAGER_PLAN.md`.
 - **Newsletter v1** — printed monthly insert (online + store handout). Plan written. First issue post-cutover.
 - **Comeback campaign** — segment export + test send. Calendar item.
