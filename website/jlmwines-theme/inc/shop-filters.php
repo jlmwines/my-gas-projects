@@ -72,19 +72,55 @@ function jlmwines_get_shop_filters_html() {
     }
 
     $aside_label = is_rtl() ? 'סינונים' : 'Filters';
-    // If any filter is active on initial render, mark the mobile accordion
-    // open so the user sees what they just selected without re-tapping.
+    $clear_label = is_rtl() ? 'אפס סינונים' : 'Clear all';
+    // If any filter is active on initial render, mark the panel open so
+    // the user sees what they just selected without re-tapping.
     $any_active = false;
+    $active_count = 0;
     foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
         if (jlmwines_get_selected_value($taxonomy) !== null) {
             $any_active = true;
-            break;
+            $active_count++;
         }
     }
     $classes = 'shop-filters' . ($any_active ? ' is-open' : '');
+
+    $clear_html = '';
+    if ($any_active) {
+        $clear_html = '<a class="shop-filter-clear-all" href="' . esc_url(jlmwines_filter_clear_url()) . '">' . esc_html($clear_label) . '</a>';
+    }
+
+    // Toggle button is the always-visible header of the panel — when
+    // collapsed only the button shows (no panel chrome); when open the
+    // groups appear below it inside the same container.
+    $toggle_label    = is_rtl() ? 'סינונים' : 'Filters';
+    $expanded        = $any_active ? 'true' : 'false';
+    $count_html      = $active_count > 0
+        ? '<span class="shop-filter-toggle-count" aria-label="' . esc_attr(sprintf(is_rtl() ? '%d פעילים' : '%d active', $active_count)) . '">' . (int) $active_count . '</span>'
+        : '';
+    $toggle_html = '<button type="button" class="shop-filter-toggle" aria-expanded="' . esc_attr($expanded) . '" aria-controls="shop-filters" data-shop-filter-toggle>'
+        . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M6 12h12M10 18h4"/></svg>'
+        . '<span class="shop-filter-toggle-label">' . esc_html($toggle_label) . '</span>'
+        . $count_html
+        . '</button>';
+
     return $cache = '<aside id="shop-filters" class="' . esc_attr($classes) . '" aria-label="' . esc_attr($aside_label) . '">'
-        . $groups_html
+        . '<div class="shop-filters-groups">' . $groups_html . $clear_html . '</div>'
+        . $toggle_html
         . '</aside>';
+}
+
+/**
+ * Build the URL that strips all of our filter params (and pagination).
+ * Used by both the in-panel "Clear all" link and any other call sites.
+ */
+function jlmwines_filter_clear_url() {
+    $params = ['paged'];
+    foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
+        $params[] = jlmwines_taxonomy_to_filter_param($taxonomy);
+        $params[] = 'query_type_' . preg_replace('/^pa_/', '', $taxonomy);
+    }
+    return remove_query_arg($params);
 }
 
 /**
@@ -342,84 +378,6 @@ function jlmwines_intersect_with_terms($product_ids, $taxonomy, $term_slugs) {
           AND tr.object_id IN ({$product_ids_in})
     ";
     return array_map('intval', $wpdb->get_col($sql));
-}
-
-/**
- * Render the mobile filter-toggle button. Hooked at priority 22 (between
- * woocommerce_result_count at 20 and woocommerce_catalog_ordering at 30).
- * CSS hides the button at ≥900px (where the sidebar is always visible).
- *
- * The button toggles `.shop-filters.is-open`; main.js wires the handler.
- * Active filter count appears as a badge so users see filters are applied
- * even when the panel is collapsed.
- */
-add_action('woocommerce_before_shop_loop', 'jlmwines_render_filter_toggle', 22);
-
-function jlmwines_render_filter_toggle() {
-    if (!jlmwines_is_filterable_archive()) {
-        return;
-    }
-    if (jlmwines_get_shop_filters_html() === '') {
-        return;
-    }
-    $count = 0;
-    foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
-        if (jlmwines_get_selected_value($taxonomy) !== null) {
-            $count++;
-        }
-    }
-    $label    = is_rtl() ? 'סינונים' : 'Filters';
-    $expanded = $count > 0 ? 'true' : 'false';
-    ?>
-    <button type="button" class="shop-filter-toggle" aria-expanded="<?php echo esc_attr($expanded); ?>" aria-controls="shop-filters" data-shop-filter-toggle>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 6h18M6 12h12M10 18h4"/>
-        </svg>
-        <span class="shop-filter-toggle-label"><?php echo esc_html($label); ?></span>
-        <?php if ($count > 0) : ?>
-            <span class="shop-filter-toggle-count" aria-label="<?php echo esc_attr(sprintf(is_rtl() ? '%d פעילים' : '%d active', $count)); ?>"><?php echo (int) $count; ?></span>
-        <?php endif; ?>
-    </button>
-    <?php
-}
-
-/**
- * Render a "Clear filters" link in the WC results meta row when at least
- * one of our attribute filters is active. Hooked at priority 25 — between
- * woocommerce_result_count (20) and woocommerce_catalog_ordering (30) —
- * so it sits inline with WC's existing count and ordering controls.
- */
-add_action('woocommerce_before_shop_loop', 'jlmwines_render_filter_clear_all', 25);
-
-function jlmwines_render_filter_clear_all() {
-    if (!jlmwines_is_filterable_archive()) {
-        return;
-    }
-    if (jlmwines_get_shop_filters_html() === '') {
-        return;
-    }
-    $any_active = false;
-    foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
-        if (jlmwines_get_selected_value($taxonomy) !== null) {
-            $any_active = true;
-            break;
-        }
-    }
-    if (!$any_active) {
-        return;
-    }
-    $params = ['paged'];
-    foreach (JLMWINES_FILTER_TAXONOMIES as $taxonomy) {
-        $params[] = jlmwines_taxonomy_to_filter_param($taxonomy);
-        $params[] = 'query_type_' . preg_replace('/^pa_/', '', $taxonomy);
-    }
-    $url   = remove_query_arg($params);
-    $label = is_rtl() ? 'אפס סינונים' : 'Clear filters';
-    printf(
-        '<a class="shop-filter-clear-all" href="%s">%s</a>',
-        esc_url($url),
-        esc_html($label)
-    );
 }
 
 /**

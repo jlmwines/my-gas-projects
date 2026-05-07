@@ -1,6 +1,11 @@
 <?php
 /**
- * Homepage template.
+ * Template Name: Homepage
+ *
+ * Selectable Page Template that mirrors the auto-loaded front-page.php
+ * layout. Assigned to the EN + HE home-elegant Pages so the homepage
+ * can be anchored on real Page records (fixes hreflang http, RankMath
+ * per-page fields, and the /he/home-elegant/ stray sitemap entry).
  *
  * Sequence: hero → bundles → packages → why trust me → browse the
  * collection → testimonials → wine talk → trust banner.

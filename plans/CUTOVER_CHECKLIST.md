@@ -1,10 +1,21 @@
 # JLM Wines — Theme Cutover Checklist
 
-**Goal:** Switch the live site's active theme from `kowine-child` to `jlmwines-theme` with zero customer-facing regression.
+**Status:** ✅ **CUTOVER COMPLETE 2026-05-05.** `jlmwines-theme` v1.2.x live. Approach used: **SiteGround staging→live promote** (after a failed activate-in-place attempt revealed page content existed only on staging — About EN/HE pages had been authored on staging via REST API push and never replicated). Document retained as the playbook for any future cutover.
 
-**Target window:** 2026-05-04 (per session 2026-05-03).
+**Key lesson learned:** activate-in-place doesn't catch staging-only content drift. For theme + DB-content cutovers, **default to staging→live promote**: refresh staging from live, install everything on staging, promote. Reversible at every step until the final promote. Update this checklist's stage structure if used as a template for future cutovers.
 
-**Time estimate:** ~1.5 hours focused work for a clean run; ~3.5 hours if remediation needed. (Stage 0.1 `.po` import dropped 2026-05-04 — saves ~10 min of pre-flight + the import-failure remediation path.)
+**Pending items from the original checklist** (these were not gated on cutover and remain open in `STATUS.md` post-cutover follow-ups #4 and #6):
+- Stage 2.6 cutover-day test order (real EN+HE checkout opt-in test) — may have happened informally; verify or run retroactively.
+- Stage 3 post-cutover stability check (24–48hr error log + order monitoring) — initial window has passed; confirm or run retroactive check.
+- SG Optimizer re-enablement test (currently fully OFF on live — see post-cutover follow-up #6).
+
+---
+
+**Original goal:** Switch the live site's active theme from `kowine-child` to `jlmwines-theme` with zero customer-facing regression.
+
+**Original target window:** 2026-05-04 (per session 2026-05-03). Actual cutover: 2026-05-05.
+
+**Time estimate (original):** ~1.5 hours focused work for a clean run; ~3.5 hours if remediation needed. (Stage 0.1 `.po` import dropped 2026-05-04 — saves ~10 min of pre-flight + the import-failure remediation path.)
 
 **Authority:** Only the user (Baruch) executes cutover steps. Claude verifies, never pushes to live without explicit per-step confirmation.
 

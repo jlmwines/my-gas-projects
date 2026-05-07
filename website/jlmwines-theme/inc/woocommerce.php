@@ -26,6 +26,16 @@ add_filter('woocommerce_product_tabs', function ($tabs) {
     return $tabs;
 }, 99);
 
+// Drop the "Showing X–Y of N results" line above catalog grids.
+remove_action('woocommerce_before_shop_loop', 'woocommerce_result_count', 20);
+
+// Suppress WC's default page title so woocommerce.php can render the
+// title alongside the sort dropdown in a flex container. Sort is also
+// rendered there directly (removed from its default before_shop_loop:30
+// hook so it doesn't double-render below the products).
+add_filter('woocommerce_show_page_title', '__return_false');
+remove_action('woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 30);
+
 add_action('wp', function () {
     if (!function_exists('is_product') || !is_product()) {
         return;
@@ -136,6 +146,8 @@ function jlmwines_render_product_loop($args = []) {
         'body'                 => '',
         'cta_url'              => '',
         'cta_text'             => is_rtl() ? 'כל המוצרים' : 'Shop all',
+        'orderby'              => 'date',
+        'order'                => 'DESC',
         // Default to WC's behavior (respects the "Hide out of stock
         // items from catalog" admin setting). Pass true to bypass —
         // useful on landing pages like /send-wine-gifts-in-israel/
@@ -148,8 +160,8 @@ function jlmwines_render_product_loop($args = []) {
         'post_type'      => 'product',
         'posts_per_page' => (int) $args['limit'],
         'post_status'    => 'publish',
-        'orderby'        => 'date',
-        'order'          => 'DESC',
+        'orderby'        => $args['orderby'],
+        'order'          => $args['order'],
         'tax_query'      => [],
     ];
 

@@ -96,17 +96,17 @@ JLM's strategy is **not** to compete on acquisition with bigger catalogs or deep
 
 ### The Goal
 
-**An order every 57 days.**
+**A return order within 90 days** (per `business/KPI.md`).
 
-That's ~6.4 orders per year per active customer. If current customers order 1-2x/year, this represents a 3-6x increase in frequency.
+The 57-day figure that previously appeared here is the *observed* average gap between orders for active customers, not the working goal. Goal is the 90-day return rate — measurable, achievable, and the basis for the KPI definition.
 
 ### The Math
 
 | Scenario | Active Customers | Orders/Year | AOV | Revenue |
 |----------|------------------|-------------|-----|---------|
 | Current (est.) | 150-200 | 1.5 avg | ₪350 | ~200K |
-| 57-day cycle | 150-200 | 6 avg | ₪300 | ~300-400K |
-| 57-day + growth | 300 | 6 avg | ₪300 | ~540K |
+| 90-day return goal | 150-200 | 4 avg | ₪300 | ~200-250K |
+| 90-day return + growth | 300 | 4 avg | ₪300 | ~360K |
 
 **The insight:** Doubling frequency from existing customers may be more achievable than doubling traffic. Content gives them a reason to come back.
 

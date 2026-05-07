@@ -1,8 +1,8 @@
 # Homepage Carousel Blocks — Plan
 
 **Created:** 2026-05-06
-**Status:** Draft — awaiting user sign-off before implementation. Two-phase plan: Phase 1 is a quick interim structural fix (no new blocks); Phase 2 is the full Gutenberg block design.
-**Pairs with:** SEO audit fix #3 (`/he/home-elegant/` sitemap stray) which becomes moot once the homepage is rebuilt as a normal Page.
+**Status:** **Phase 1 SHIPPED 2026-05-07** (theme v1.2.16). Phase 2 (Gutenberg blocks) queued for a future multi-session build. Phase 1 anchored the homepage on real EN+HE Pages with the existing layout via a custom Page Template; SEO surface issues #1 and #3 cleared as side effects.
+**Pairs with:** SEO audit fix #3 (`/he/home-elegant/` sitemap stray) — RESOLVED via Phase 1.
 
 ---
 
@@ -27,7 +27,10 @@ Restore the homepage to a normal WordPress Page-based structure, with reusable c
 
 ---
 
-## Phase 1 — Interim solution (custom page template, no new blocks)
+## Phase 1 — Interim solution (custom page template, no new blocks) → **SHIPPED 2026-05-07**
+
+**Outcome:** Theme v1.2.16. `template-homepage.php` (copy of `front-page.php` with `Template Name: Homepage` header) deployed at theme root. EN home-elegant Page #9109 restored from trash + published + WPML-linked to HE home-elegant Page #64199. Both Pages assigned the Homepage template via Page Attributes. Settings → Reading switched to "A static page" → home-elegant. Verified live: hreflang on `/` now `https://` (en/he/x-default), `/he/home-elegant/` no longer in `page-sitemap.xml` (replaced by clean `/he/` entry), per-page RankMath fields now usable on the EN+HE Home Pages. The original `front-page.php` was kept (not deleted) so the cutover happened with no downtime risk; both `template-homepage.php` and `front-page.php` are functionally redundant now and both are slated for deletion in Phase 2.
+
 
 ### Steps
 

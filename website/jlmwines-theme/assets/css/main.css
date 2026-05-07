@@ -2279,79 +2279,87 @@ ul.products li.product a.added_to_cart {
   }
 }
 
-/* ─── Catalog attribute filters (sidebar + circles) ──────────────── */
-/* Two-column archive layout: filters | results. Single column below
-   900px (phase 3 will convert mobile to a filter-icon accordion). */
-.woocommerce-archive-grid {
-  display: grid;
-  gap: var(--s-8);
-  grid-template-columns: 1fr;
-}
-@media (min-width: 900px) {
-  .woocommerce-archive-grid {
-    grid-template-columns: 240px 1fr;
-    gap: var(--s-12);
-  }
-}
-.woocommerce-archive-content { min-width: 0; }
-
+/* ─── Catalog attribute filters (above-title panel + circles) ────── */
+/* Toggle button is the panel's always-visible trailing-edge control.
+   When closed, only the button shows (no chrome). When .is-open, the
+   groups appear inline to the leading side of the button on the SAME
+   row — opening expands the panel horizontally, not vertically. On
+   narrow viewports flex-wrap pushes the groups to a second row when
+   they don't fit alongside the button. */
 .shop-filters {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-6);
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--s-3) var(--s-6);
+  margin-bottom: var(--s-3);
+  /* Asymmetric padding: leading + block padding gives groups breathing
+     room from the panel border; trailing padding is 0 so the toggle
+     button's right edge aligns flush with the sort dropdown's right
+     edge in the catalog-header below. */
+  padding-block: var(--s-3);
+  padding-inline-start: var(--s-6);
+  padding-inline-end: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
 }
-@media (min-width: 900px) {
-  .shop-filters {
-    position: sticky;
-    /* Clear the sticky .site-header (~66px tall at rest, ~50px scrolled)
-       plus a bit of breathing room. */
-    top: 84px;
-    align-self: flex-start;
-  }
+.shop-filters.is-open {
+  background: var(--c-surface);
+  border-color: var(--c-ink-12);
 }
-/* Below 900px the sidebar is collapsed behind the filter-toggle button
-   in the catalog meta row. JS toggles `.is-open` to reveal it as an
-   inline accordion above the products grid. */
-@media (max-width: 899px) {
-  .shop-filters {
-    display: none;
-    margin-bottom: var(--s-6);
-    padding: var(--s-4);
-    background: var(--c-surface);
-    border: 1px solid var(--c-ink-12);
-    border-radius: var(--radius-card);
-  }
-  .shop-filters.is-open { display: flex; }
+.shop-filters-groups { display: none; }
+.shop-filters.is-open .shop-filters-groups {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
 }
 
-/* Filter-toggle button (mobile only). Sits in the WC catalog meta row.
-   Floats to the trailing edge so the result-count phrase has breathing
-   room. Logical `inline-end` flips correctly in RTL.
-   `--c-ink-18` is rgba(26,22,18,0.18). */
-.shop-filter-toggle {
-  display: none;
+/* Custom catalog-header rendered by woocommerce.php — title leading-
+   edge, sort dropdown trailing-edge. Wraps to a second row on narrow
+   viewports. */
+.catalog-header {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-bottom: var(--s-6);
+}
+.catalog-header .page-title { margin: 0; }
+.catalog-header .woocommerce-ordering { margin: 0; }
+
+/* Filter-toggle button — ghost variant per design system: transparent
+   bg, ink border, square corners. Inverts to ink fill on hover and when
+   the panel is open. Sits inline in the WC catalog meta row, floated to
+   the trailing edge (logical `inline-end` flips correctly in RTL). */
+.shop-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: var(--s-2);
-  padding: 6px 12px;
-  border: 1px solid var(--c-ink-18);
-  background: var(--c-base);
+  min-height: 38px;
+  padding: 0 18px;
+  border: 1px solid var(--c-ink);
+  background: transparent;
   font-family: var(--f-ui);
+  font-weight: 500;
   font-size: 14px;
   color: var(--c-ink);
   cursor: pointer;
-  border-radius: 999px;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  border-radius: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
-@media (max-width: 899px) {
-  .shop-filter-toggle {
-    display: inline-flex;
-    float: inline-end;
-  }
+.shop-filter-toggle:hover {
+  background: var(--c-ink);
+  color: #fff;
 }
-.shop-filter-toggle:hover,
-.shop-filter-toggle[aria-expanded="true"] {
-  border-color: var(--c-accent);
-  color: var(--c-accent);
+.shop-filter-toggle:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 3px;
 }
 .shop-filter-toggle svg { display: block; }
 .shop-filter-toggle-count {
@@ -2435,12 +2443,12 @@ a.shop-filter-circle:focus-visible {
    suggest "click to clear." aria-label already says it for AT users. */
 a.shop-filter-circle.is-selected:hover { color: var(--c-muted); }
 
-/* Clear-all link injected into the WC results meta row by
-   jlmwines_render_filter_clear_all(). Hidden when no filters are
-   active (the PHP doesn't emit it in that case). */
+/* Clear-all link rendered as the last child of .shop-filters-groups,
+   pushed to the trailing edge via margin-inline-start: auto. PHP omits
+   it when no filters are active, so no display: none variant needed. */
 .shop-filter-clear-all {
-  display: inline-block;
-  margin-inline-start: var(--s-3);
+  margin-inline-start: auto;
+  align-self: center;
   font-family: var(--f-ui);
   font-size: 13px;
   color: var(--c-muted);
@@ -2448,6 +2456,39 @@ a.shop-filter-circle.is-selected:hover { color: var(--c-muted); }
   text-underline-offset: 2px;
 }
 .shop-filter-clear-all:hover { color: var(--c-accent); }
+
+/* WC sort dropdown — strip native chrome, restyle to match the design
+   system: ink border, square corners, cream base, ink text, Rubik UI,
+   custom caret. Width capped so longer option labels don't bloat the
+   closed control. */
+.woocommerce-ordering select.orderby {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  min-height: 38px;
+  max-width: 200px;
+  padding: 0 36px 0 14px;
+  border: 1px solid var(--c-ink);
+  border-radius: 0;
+  background-color: var(--c-base);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%231a1612' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1l5 5 5-5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  font-family: var(--f-ui);
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--c-ink);
+  cursor: pointer;
+  line-height: 1.2;
+}
+[dir="rtl"] .woocommerce-ordering select.orderby {
+  padding: 0 14px 0 36px;
+  background-position: left 12px center;
+}
+.woocommerce-ordering select.orderby:focus-visible {
+  outline: 2px solid var(--c-ink);
+  outline-offset: 3px;
+}
 
 /* ─── Category cards ─────────────────────────────────────────────── */
 .category-grid {

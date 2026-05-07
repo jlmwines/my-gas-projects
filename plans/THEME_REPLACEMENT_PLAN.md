@@ -1,6 +1,8 @@
 # JLM Wines — Theme Replacement Plan
 
-**Updated:** 2026-04-27
+**Status:** ✅ **SHIPPED 2026-05-05.** `jlmwines-theme` v1.2.x live, KoWine + Elementor + WPBingo + Redux + Smart Coupons all retired. Cutover via SiteGround staging→live promote (see `CUTOVER_CHECKLIST.md` for the playbook). Document retained as historical reference for the replacement decision, scope, and approach.
+
+**Updated:** 2026-04-27 (pre-cutover); 2026-05-07 status header added.
 **Direction set 2026-04-26:** Drop both KoWine **and** Elementor. Build a proper custom theme on a staging clone, migrate Elementor-built pages to Gutenberg, deactivate the entire Elementor stack at cutover.
 
 (Supersedes the prior direction, which kept Elementor and replaced only KoWine.)

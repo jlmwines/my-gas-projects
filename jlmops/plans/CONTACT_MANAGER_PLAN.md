@@ -2,7 +2,7 @@
 
 **Purpose.** Activate the existing CRM data layer. The system already runs nightly (548 contacts enriched as of 2026-04-30) — what's missing is automated data sync and an action layer for partner follow-ups.
 
-**Status.** Plan written 2026-04-30. Build queued post theme cutover. Build in two halves.
+**Status.** Plan written 2026-04-30. **Half 1 SHIPPED 2026-05-05 as jlmops @81** (`MailchimpService.js` + `ContactImportService.importFromMailchimpApi()` + `CampaignService.pullRecentCampaigns()` wired into housekeeping phase 3; AdminContactsView refresh button live). Half 2 (action layer) not started.
 
 ---
 
