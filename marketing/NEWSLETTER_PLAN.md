@@ -2,9 +2,7 @@
 
 **Purpose.** Two-sided printed sheet, one language per side (EN / HE), distributed monthly via online order shipments and brick-and-mortar store handouts. Drives signups to the email list and reinforces JLM's editorial voice.
 
-**Status.** Operating model approved 2026-04-30. First issue queued for post theme cutover. Content engine already built.
-
-**Prep runs in parallel with theme cutover.** Post-writing, plan finalization, vendor selection, and volume estimation can advance while cutover is still in progress. What waits on cutover is only the QR destination polish (so the link target looks like the new theme) and the first physical print run.
+**Status.** Layout and content model agreed 2026-05-08. First issue (Context post) gated on Evyatar's edit + HE translation. Self-print, in-house — start small, scale to observed demand. Cutover shipped 2026-05-05, so QR destinations land on the new theme.
 
 ---
 
@@ -18,15 +16,66 @@ In-box readers and in-store readers should both feel equally welcomed. Don't add
 
 ## Layout (per language side)
 
-### Required blocks (3)
+A4 portrait, single-sided per language (one sheet, EN front / HE back, b/w print). Two-column body under a masthead, footer band at the bottom.
 
-1. **Primary post excerpt + QR code.** Lifted from the Newsletter Excerpt section already present in each blog post source file. QR points to that month's primary post on the website.
-2. **Current month's "A Year in the Vineyard" section.** Editorial text only — no link of its own. The post is sticky in the basics category, so readers reach it organically when they visit `/articles/`.
-3. **Signup CTA.** Calls out subscribing to email. The same QR from block 1 also lands on the post page, where the footer signup form is present (universal across all pages, MC4WP with language groups).
+```
+┌──────────────────────────────────────────┐
+│ [logo]      Wine Talk — from Evyatar      │  masthead (no issue#/date)
+├────────────────────┬─────────────────────┤
+│  PRIMARY ARTICLE   │  SECONDARY SLOT     │
+│  (~60% width)      │  (~40% width)       │
+│                    │                     │
+│  Title             │  Whichever is       │
+│  Lead + body       │  freshest:          │
+│                    │   • YiV month       │
+│  — Evyatar [sig]   │   • 2nd post teaser │
+│                    │   • Did You Know    │
+│  ─────────         │                     │
+│  Read the full     │  ─────────          │
+│  article           │  Special offers     │
+│      [QR]          │  by email…          │
+│  jlmwines.com/n/.. │      [QR]           │
+│                    │  jlmwines.com/n/sub │
+├────────────────────┴─────────────────────┤
+│  jlmwines.com                            │  footer (URL only)
+└──────────────────────────────────────────┘
+```
 
-### Optional block (4)
+### Masthead
+- One-color logo (top-left) + wordmark **Wine Talk — from Evyatar** (matches live site signup heading)
+- No issue number, no date. Issues drop as Evyatar produces them; monthly cadence is internal, not surfaced.
+- HE side mirrors structure, RTL flow.
 
-- **"Did you know" feature.** Included only if layout has room. Library starts with the packing slip framing (uniform attribute / pairing / decanting info across all wines, useful comparison aid). Other candidates: free shipping at ₪399, hand-picked curation, vineyard ownership, EN/HE bilingual support, store location.
+### Primary article (left column)
+- Title
+- Lead paragraph + 2–4 short body paragraphs, lifted from the post's `Newsletter Excerpt` block
+- Sign-off: `— Evyatar` with handwritten signature image (signature only at the sign-off, not in masthead)
+- Article QR + URL fallback below the sign-off
+
+### Secondary slot (right column)
+A single slot whose content rotates by what's freshest. Priority order:
+1. **Year in the Vineyard month section** — when EN+HE month sections are ready
+2. **Second post teaser** — when YiV isn't ready, or there's another strong post worth pointing at (text URL only, no second article QR — keep tracking clean)
+3. **Did You Know** — fallback when neither of the above applies
+
+### Signup CTA (right column, lower)
+Lift the live-site footer copy verbatim so print and web reinforce each other:
+- **EN:** "Special offers by email, and fascinating information about the world of wine."
+- **HE:** "מבצעים מיוחדים במייל, ומידע מרתק על עולם היין."
+- Signup QR + URL fallback below.
+
+### Footer
+- `jlmwines.com` — URL only. No store address.
+
+### Did You Know library starter
+- **Free pickup at the Katamon shop** — any order amount, choose at checkout
+- **Free delivery on orders ₪399+**
+- Hand-picked curation (every wine tasted, anything below the bar gets rejected)
+- Bilingual EN/HE customer support
+
+### Typography
+- Secular One for headlines (matches the 2026-05-04 site headline-font swap)
+- Rubik for body
 
 ---
 
@@ -52,10 +101,13 @@ In-box readers and in-store readers should both feel equally welcomed. Don't add
 
 ### QR code
 
-- One QR per language side
-- Points to that month's primary post URL on jlmwines.com
-- Static per issue — generate fresh each month, no per-customer personalization
-- Footer signup is on every page so the QR doubles as both "read more" and "sign up"
+- **Size: 3 cm × 3 cm** with 3–4 mm clean white quiet zone
+- **Error correction: Q (25%)** — survives folds, smudges, light handling in shipping boxes and shop bags
+- **Format:** SVG (vector) for layout; PNG ≥600 DPI if SVG unavailable
+- **Contrast:** pure black on pure white, no screened backgrounds
+- **URL pattern:** `jlmwines.com/n/<short-code>` (server-side redirect adds canonical UTM params). Until the redirect helper exists (jlmops wishlist 2026-05-08), use the canonical UTM'd URL directly — accept slightly denser code or bump size to 3.5 cm.
+- **Two QRs max per side:** article QR (left column), signup QR (right column). Second post in the secondary slot uses text URL only, not a third QR.
+- **Static per issue** — generate fresh each issue, no per-customer personalization.
 
 ### Content sourcing
 
@@ -65,18 +117,23 @@ In-box readers and in-store readers should both feel equally welcomed. Don't add
 
 ### Layout
 
-- Theme typography (David Libre + Rubik) per `business/BRAND_STANDARDS.md`
+- Theme typography (Secular One + Rubik) per `business/BRAND_STANDARDS.md`
 - Two-sided print, one language per side
 - Both sides identical in structure — language is the only axis of variation
 
 ---
 
+## Companion Mailchimp Campaign
+
+A separate email send (EN + HE) accompanies issue #1 launch. The print insert stays editorial and doesn't reference the website redesign; the companion email carries that message — announcing the new Context post + the new print newsletter + the site speed/simplicity improvements.
+
 ## Open Questions
 
-- **First issue timing.** Right after theme cutover (early-to-mid May 2026), to ensure QR destinations look polished
-- **Print vendor + lead time.** TBD by user
-- **Volume estimate.** TBD — needs a month or two of online + store traffic data
-- **Language-aware contact form** — already configured via MC4WP groups, verify still working post-cutover
+- **First issue timing.** Gated on Evyatar's edit + HE translation of Context. Print + drop should follow within 1–2 weeks of the post going live.
+- **Print method.** Self-print, in-house. Quantity scales with observed demand — start with a small batch, replenish as needed.
+- **Volume estimate.** TBD by observation over first 2–3 issues.
+- **Logo asset.** Confirm a one-color SVG/PNG of the JLM logo is available for the masthead (user noted we have one).
+- **Signature asset.** Source a clean handwritten signature image for the sign-off.
 
 ---
 
@@ -85,6 +142,7 @@ In-box readers and in-store readers should both feel equally welcomed. Don't add
 - Per-customer personalized inserts (Year in Wine retro showed personalization theater backfires; see `jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md` "What didn't work")
 - Per-customer referral QR codes (deferred as part of Ambassador program)
 - jlmops integration with packing-slip print job (could come later if monthly print runs prove cumbersome)
+- Reference to the website redesign in print copy (handled in the companion Mailchimp campaign instead)
 
 ---
 
@@ -94,4 +152,4 @@ Per `business/BRAND_STANDARDS.md`. Editorial, not pitchy. Consistent with the we
 
 ---
 
-Updated: 2026-04-30
+Updated: 2026-05-08

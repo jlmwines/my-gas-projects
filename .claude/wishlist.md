@@ -19,6 +19,7 @@ Projects: jlmops, web, marketing, content
 - [ ] WooCommerce API - could replace CSV sync, enable real-time order/coupon data
 - [ ] Mailchimp API - better than manual exports for campaigns/subscribers
 - [ ] URL shortener integration for campaign tracking
+- [ ] 2026-05-08: Newsletter UTM/QR helper — admin form takes target URL + campaign code (e.g., `may26-art`), returns canonical UTM-tagged URL, registers a short redirect (`jlmwines.com/n/<code>`), generates a print-ready QR (SVG, error-correction Q, optimized for ~3cm print) downloadable for layout. Pairs with URL shortener item above.
 - [ ] Hourly order sync via WooCommerce API (infrastructure exists: runHourlyTrigger())
 - [ ] Campaigns Screen - unified admin view for Mailchimp, coupons, exports
 - [ ] Coupon Service - dedicated service for coupon management
@@ -55,6 +56,8 @@ Projects: jlmops, web, marketing, content
 - [ ] YouTube channel
 - [ ] Business WhatsApp
 - [ ] Zadarma 055 for WhatsApp
+- [ ] 2026-05-07: Bilingual flyer drop in 8 Jerusalem neighborhoods (German Colony, Emek Refaim, Rechavia, Talbiyeh, Beit HaKerem, Arnona, Nayot, Ein Kerem) — vendor candidates yoterplus.co.il + dilen.co.il; ~₪2000 test budget; first surfaced 2026-02-09
+- [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
 
 ## content
 

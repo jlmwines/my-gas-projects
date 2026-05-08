@@ -119,3 +119,41 @@ breeze. Cozy evening? A bold red with presence fits the mood. Unsure
 about your guests' tastes? Medium complexity---interesting but
 approachable. Match the wine to the moment, not the label.
 [Read the full guide →]
+
+**Print Newsletter Body:**
+
+*~150–200 words for the printed Wine Talk insert (left column of one
+A4 side). Self-contained — assumes the reader may not scan the QR.
+First-person voice to match the masthead "Wine Talk — from Evyatar."
+Signs off "— Evyatar"; signature image and QR are added in print
+layout, not in this text.*
+
+**Find the wine that makes the moment**
+
+People ask me how to pick a wine, and they expect me to talk about
+regions. Honestly? Regions matter less than context.
+
+Look at three things: the weather, the food, and the people.
+
+A warm afternoon calls for brightness — a high-acidity white or rosé
+that drinks like a cooling breeze. A cozy evening wants weight — a
+bolder red that fills the room.
+
+With rich, savory food, pick a wine intense enough to hold its own.
+With light and fresh dishes, pick something with acidity to keep the
+meal feeling lively.
+
+Not sure about your guests' tastes? Medium complexity is your friend —
+interesting enough to enjoy, approachable enough for everyone. Wine
+people coming over? A more complex bottle gives them something to talk
+about.
+
+There are no wrong answers, only different moments. Match the wine to
+the moment, and you'll get it right.
+
+If you'd rather just ask, I'm here. Tell me about the food, the
+guests, and the mood — I'll help.
+
+— Evyatar
+
+Read the full guide →

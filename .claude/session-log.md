@@ -4,6 +4,20 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-08 (newsletter v1 layout finalized, post-source format spec'd, Context print body drafted)
+
+- **Newsletter v1 layout locked** in `marketing/NEWSLETTER_PLAN.md`: A4 b/w, single-side per language (EN front / HE back). Masthead = one-color logo + wordmark "Wine Talk — from Evyatar," no issue number / no date. Two-column body: left col = primary article (~60%) with sign-off and article QR; right col = secondary slot (rotates YiV month / 2nd post teaser / Did You Know) + signup CTA. Footer = jlmwines.com only.
+- **Signup CTA copy** lifted verbatim from live footer ("Special offers by email, and fascinating information about the world of wine." + HE) so print and web reinforce each other. **QR spec:** 3 cm × 3 cm, EC level Q, SVG, with `jlmwines.com/n/<short-code>` redirect pattern that the (new) jlmops wishlist item would generate.
+- **Did You Know library starter:** free pickup at Katamon (any order amount) + free delivery ₪399+; hand-picked curation; bilingual support.
+- **Post source format documented** in `content/CLAUDE.md`: required sections (TITLE, EXCERPT, NEWSLETTER EXCERPT, **PRINT NEWSLETTER BODY** [new], CTA, IMAGE PROMPTS, body); parser dependencies; work order. Template at `content/_post-template.md`. Backfill rule: existing live posts get a print body ad hoc when selected as a future newsletter lead, not retroactively.
+- **Blog vs newsletter decoupled** (also in `content/CLAUDE.md`): blog publishes encyclopedic spokes for SEO/book buildout without forcing each into the newsletter; newsletter cherry-picks the narrative ones each month. Print Newsletter Body is only required for posts that will lead a newsletter.
+- **Context print body drafted** (~170 words, first-person to match the masthead) — inserted into `content/Context EN.md` after the existing Newsletter Excerpt, exported to `content/Context EN_2026-05-08.docx` for Evyatar's edit + HE translation.
+- **Wishlist:** added jlmops UTM/QR helper item alongside existing URL-shortener item. **Semrush:** assessed and skipped — competitor keyword data doesn't drive editorial; site audit overlaps with RankMath.
+- **Book plan / queue strategy** (`content/guide/ISRAELI_WINE_GUIDE_PLAN.md`): newsletter feed runs at monthly cadence off cherry-picked posts; blog publishing runs at production pace toward the book's hub-and-spoke architecture. The 3-year vs 1-year book-buildout question dissolves once the two streams are independent.
+- **Next session:** WPML String Translation HE walk verification → retire duplicate `gettext`/`ngettext_with_context` filters in `inc/shop-filters.php` (still highest-priority queued item from prior session). Newsletter is now gated on Evyatar's Context edit + HE translation; companion Mailchimp campaign drafting can follow once that lands.
+
+---
+
 ## 2026-05-07 (continued — analytics setup confirmed, RankMath audit, security plugin transition, KPI questions answered)
 
 - **Analytics setup confirmed.** GA4 weekly sheet (ID `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU`) + GSC weekly sheet (ID `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`) both refreshed today via Google Sheets add-ons (90-day rolling window, properly configured per setup guide). Read access verified end-to-end. KPIs #1, #5, #6 now have data flowing; KPIs #2, #3, #4 still need the jlmops Summary tab (now buildable — see below).
