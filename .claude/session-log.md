@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-11 (Cadence Realignment + Campaign Architecture shipped, HE search-chrome inline-baked)
+
+- **CRM cohort throttling SHIPPED as @83.** New `crm.suggestions.cohort.enabled = false` config flag gates cooling/unconverted/winery cohort suggestions in `CrmIntelligenceService.runAnalysis()`. Holiday reminder check unaffected. Partner cleared the existing unactioned lifecycle tasks manually.
+- **Campaign Architecture foundations SHIPPED as @84/@85.** Full data model + UI + service layer. New `SysMarketingCampaigns` + `SysShortUrls` sheets, FKs (`spro_CampaignId`, `scm_MarketingCampaignId`), `MarketingCampaignService` (UTM builder + short URL CRUD + QR helper, RankMath push stubbed), `WebAppCampaigns` controller, `AdminCampaignsView`, Campaign dropdown + Campaign field + Generate Outputs modal on Projects, 16 Distribution task templates, `setupMarketingSheets()` helper. End-to-end smoke test passed. Pilot will be Newsletter Issue #1 (Context lead post).
+- **RankMath REST verified for redirections — won't work.** Their `/wp-json/rankmath/v1/updateRedirection` only attaches redirects to existing WP objects (post/term/user); can't accept arbitrary source paths like `/n/<code>`. Auto-push deferred to a future mu-plugin build; manual paste-into-wp-admin is fine at current 5–10 URLs/month.
+- **HE search-results chrome strings handled inline in theme** (v1.2.17 → v1.2.18 → v1.2.19). Removed dead `gettext`/`ngettext_with_context` filters for the retired count line; added `is_rtl()` conditional to `search.php` H1; added single narrow `gettext` filter in `inc/breadcrumbs.php` covering both WC's breadcrumb prefix and the WC product-search H1 (`Search results: &ldquo;%s&rdquo;`). HE translations drop quotes around `%s` to dodge RTL bidi reordering of ASCII quote chars. Three obsolete WPML import artifacts deleted from `exchange/strings/`.
+- **Workflow lesson saved** (`feedback_clasp_push_not_deploy.md`): clasp push and clasp deploy are separate change-points; push enables /dev testing, deploy promotes to stable URL. Each needs explicit OK.
+- **Bugs.md additions:** mixed-content schema-image (resolved via featured image on home-elegant), WC admin SKU search demotion (open, gtin-only-if-valid policy), RankMath auto-push (deferred).
+- **Next session:** pilot Newsletter Issue #1 end-to-end through the new Campaign Architecture (create Distribution Projects, work the chains, generate Outputs, manual RankMath paste, ship issue). Mobile LCP tuning still queued. Phase 2 homepage (Gutenberg blocks) still queued.
+
+---
+
 ## 2026-05-08 (newsletter v1 layout finalized, post-source format spec'd, Context print body drafted)
 
 - **Newsletter v1 layout locked** in `marketing/NEWSLETTER_PLAN.md`: A4 b/w, single-side per language (EN front / HE back). Masthead = one-color logo + wordmark "Wine Talk — from Evyatar," no issue number / no date. Two-column body: left col = primary article (~60%) with sign-off and article QR; right col = secondary slot (rotates YiV month / 2nd post teaser / Did You Know) + signup CTA. Footer = jlmwines.com only.

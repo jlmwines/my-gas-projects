@@ -33,6 +33,8 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `SysTaskTypes`         | `stt_` |
 | `SysTaskStatusWorkflow`| `stw_` |
 | `SysProjects`          | `spro_` |
+| `SysMarketingCampaigns`| `sm_`  |
+| `SysShortUrls`         | `ssu_` |
 | `SysConfig`            | `scf_` |
 | `WebOrdM_Archive`      | `woma_`|
 | `WebOrdItemsM_Archive` | `woia_`|
@@ -393,12 +395,52 @@ This section defines the sheets used to manage all types of projects, from marke
 *   **Purpose:** This sheet defines each project acting as a container for tasks and goals. It unifies marketing campaigns and operational projects.
 *   **Prefix:** `spro_`
 *   **Columns:**
-    *   `spro_ProjectId`: **Primary Key.** A unique ID for the project (e.g., `PROJ-SUMMER-SALE`, `PROJ-INV-SYNC`).
+    *   `spro_ProjectId`: **Primary Key.** A unique ID for the project (e.g., `PROJ-NL-context-2026-05-25`, `PROJ-INV-SYNC`).
     *   `spro_Name`: The human-readable name of the project.
     *   `spro_Type`: The type of project (e.g., 'CAMPAIGN', 'OPERATIONAL', 'ONE_OFF').
     *   `spro_Status`: The current state (e.g., 'PLANNING', 'ACTIVE', 'COMPLETED', 'ARCHIVED').
     *   `spro_StartDate`: The planned start date.
     *   `spro_EndDate`: The planned end date (optional for ongoing operational projects).
+    *   `spro_CampaignId`: **Nullable FK** to `SysMarketingCampaigns.sm_CampaignId`. Distribution Projects (newsletter issue, email send, flyer drop) carry this link; standalone Projects (blog posts under Core Content, ops projects) leave it blank. See `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
+
+## Marketing Campaign Data Model
+
+This section defines the sheets supporting the Campaign attribution layer. Designed for shared-attribution reporting (one row per "how did this do" question) and unified UTM/short-URL/QR generation. Full architecture in `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
+
+### 1. `SysMarketingCampaigns` (Top-level Campaign Container)
+*   **Purpose:** Each row defines a shared-attribution unit — typically a delivery-channel program (`newsletter-print`, `email-broadcast`). Distribution Projects link to one via `spro_CampaignId`. Bounded topic/promo Campaigns are supported but not seeded at launch.
+*   **Prefix:** `sm_`
+*   **Columns:**
+    *   `sm_CampaignId`: **Primary Key.** Pure slug for ongoing programs (`newsletter-print`); slug + date for rare bounded campaigns.
+    *   `sm_Name`: Human name (e.g., "Print Newsletter — Wine Talk").
+    *   `sm_Status`: PLANNING / ACTIVE / COMPLETED / ARCHIVED.
+    *   `sm_StartDate`: First distribution under this campaign.
+    *   `sm_EndDate`: Nullable. Null = ongoing. Set = bounded.
+    *   `sm_PrimaryGoal`: Free text, one line — what success looks like.
+    *   `sm_Notes`
+
+### 2. `SysShortUrls` (Short Code Registry)
+*   **Purpose:** Maps short codes to utm-tagged target URLs. Populated by the Campaign Service when the partner generates outputs for a Distribution. The redirect runtime is RankMath; jlmops pushes rule entries to RankMath when a row is created here. Each language gets its own short code (no regex unification).
+*   **Prefix:** `ssu_`
+*   **Columns:**
+    *   `ssu_ShortCode`: **Primary Key.** Unique code used in `jlmwines.com/n/<code>` URLs.
+    *   `ssu_CampaignId`: FK to `SysMarketingCampaigns.sm_CampaignId`.
+    *   `ssu_ProjectId`: Nullable FK to `SysProjects.spro_ProjectId` (null for standalone Campaign Service uses).
+    *   `ssu_Language`: `en` or `he`.
+    *   `ssu_TargetUrl`: Utm-tagged destination URL.
+    *   `ssu_CreatedDate`
+    *   `ssu_Notes`
+
+### Cross-Sheet FKs Introduced
+
+*   `SysProjects.spro_CampaignId` → `SysMarketingCampaigns.sm_CampaignId` (nullable; Distribution Projects fill in)
+*   `SysCampaigns.scm_MarketingCampaignId` → `SysMarketingCampaigns.sm_CampaignId` (nullable; Mailchimp sends rolling up under a marketing campaign)
+*   `SysShortUrls.ssu_CampaignId` → `SysMarketingCampaigns.sm_CampaignId`
+*   `SysShortUrls.ssu_ProjectId` → `SysProjects.spro_ProjectId` (nullable)
+
+Two further FKs are documented for future use but not added at launch (added when their workflows ship):
+*   `SysContactActivity.sca_CampaignId` → `SysMarketingCampaigns.sm_CampaignId` (deferred until Contact Manager Half 2)
+*   `SysCoupons.sco_CampaignId` → `SysMarketingCampaigns.sm_CampaignId` (not adding — brand position isn't discount-driven, effectively one coupon)
 
 ## Task Management Data Model
 

@@ -1,0 +1,191 @@
+<div class="container-fluid">
+  <div class="card" style="min-height: calc(100vh - 120px);">
+
+    <!-- Header -->
+    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <span class="font-weight-bold">Marketing Campaigns</span>
+        <span id="campaign-count" class="badge badge-secondary ml-2">0</span>
+      </div>
+      <div class="d-flex align-items-center">
+        <button id="btn-refresh" class="btn btn-sm" title="Refresh">↻</button>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="px-3 py-2 border-bottom bg-light small text-muted">
+      Each campaign is a shared-attribution unit — typically a delivery channel program. Click a row to see linked Projects and short URLs.
+      See <code>jlmops/plans/CAMPAIGN_ARCHITECTURE.md</code> for the data model.
+    </div>
+
+    <!-- List -->
+    <div id="campaign-list" class="px-3 py-2">
+      <p class="text-muted">Loading…</p>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  .cmp-row { cursor: pointer; border-bottom: 1px solid #dee2e6; padding: 10px 0; }
+  .cmp-row:hover { background: #f8f9fa; }
+  .cmp-row .cmp-name { font-weight: 600; }
+  .cmp-row .cmp-id { color: #6c757d; font-size: 12px; }
+  .cmp-detail { background: #f8f9fa; padding: 12px; border-bottom: 1px solid #dee2e6; }
+  .cmp-detail table { font-size: 12px; }
+  .cmp-status-active   { color: #198754; }
+  .cmp-status-planning { color: #fd7e14; }
+  .cmp-status-completed { color: #0d6efd; }
+  .cmp-status-archived { color: #6c757d; }
+</style>
+
+<script>
+(function () {
+  var state = { campaigns: [], expandedId: null, details: {} };
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatDate(v) {
+    if (!v) return '';
+    if (typeof v === 'string' && v.length >= 10) return v.substring(0, 10);
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toISOString().substring(0, 10);
+  }
+
+  function loadData() {
+    document.getElementById('campaign-list').innerHTML = '<p class="text-muted">Loading…</p>';
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (result.error) {
+          document.getElementById('campaign-list').innerHTML =
+            '<p class="text-danger">Error: ' + esc(result.error) + '</p>';
+          return;
+        }
+        state.campaigns = result.data || [];
+        document.getElementById('campaign-count').textContent = state.campaigns.length;
+        state.details = {};
+        render();
+      })
+      .WebAppCampaigns_listCampaigns();
+  }
+
+  function render() {
+    var el = document.getElementById('campaign-list');
+    if (!state.campaigns.length) {
+      el.innerHTML = '<p class="text-muted">No campaigns yet. Run <code>seedMarketingCampaigns()</code> in Apps Script to initialize.</p>';
+      return;
+    }
+    var html = '';
+    state.campaigns.forEach(function (c) {
+      var id = c.sm_CampaignId;
+      var statusClass = 'cmp-status-' + String(c.sm_Status || '').toLowerCase();
+      html += '<div class="cmp-row" data-id="' + esc(id) + '">';
+      html +=   '<div class="d-flex justify-content-between align-items-start">';
+      html +=     '<div>';
+      html +=       '<div class="cmp-name">' + esc(c.sm_Name || id) + '</div>';
+      html +=       '<div class="cmp-id">' + esc(id) + '</div>';
+      html +=     '</div>';
+      html +=     '<div class="text-right small">';
+      html +=       '<span class="' + statusClass + '">' + esc(c.sm_Status || '') + '</span>';
+      var range = '';
+      if (c.sm_StartDate || c.sm_EndDate) {
+        range = ' &middot; ' + esc(formatDate(c.sm_StartDate)) + ' → ' + esc(c.sm_EndDate ? formatDate(c.sm_EndDate) : 'ongoing');
+      }
+      html +=       '<span class="text-muted">' + range + '</span>';
+      html +=     '</div>';
+      html +=   '</div>';
+      if (c.sm_PrimaryGoal) {
+        html += '<div class="text-muted small mt-1">' + esc(c.sm_PrimaryGoal) + '</div>';
+      }
+      html += '</div>';
+      if (state.expandedId === id) {
+        html += renderDetail(id);
+      }
+    });
+    el.innerHTML = html;
+
+    el.querySelectorAll('.cmp-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var id = this.dataset.id;
+        state.expandedId = (state.expandedId === id) ? null : id;
+        if (state.expandedId && !state.details[state.expandedId]) {
+          loadDetail(state.expandedId);
+        } else {
+          render();
+        }
+      });
+    });
+  }
+
+  function loadDetail(campaignId) {
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (!result.error) {
+          state.details[campaignId] = result.data;
+        }
+        render();
+      })
+      .WebAppCampaigns_getCampaignDetail(campaignId);
+  }
+
+  function renderDetail(id) {
+    var detail = state.details[id];
+    if (!detail) {
+      return '<div class="cmp-detail"><p class="text-muted small mb-0">Loading details…</p></div>';
+    }
+    var html = '<div class="cmp-detail">';
+
+    // Linked projects
+    html += '<div class="font-weight-bold small mb-1">Linked Projects (' + (detail.projects || []).length + ')</div>';
+    if (!detail.projects || !detail.projects.length) {
+      html += '<p class="text-muted small mb-2">No Projects assigned to this Campaign yet.</p>';
+    } else {
+      html += '<table class="table table-sm table-hover mb-2"><thead><tr>';
+      html += '<th>Project ID</th><th>Name</th><th>Type</th><th>Status</th><th>Start</th><th>End</th>';
+      html += '</tr></thead><tbody>';
+      detail.projects.forEach(function (p) {
+        html += '<tr>';
+        html += '<td><code>' + esc(p.spro_ProjectId) + '</code></td>';
+        html += '<td>' + esc(p.spro_Name || '') + '</td>';
+        html += '<td>' + esc(p.spro_Type || '') + '</td>';
+        html += '<td>' + esc(p.spro_Status || '') + '</td>';
+        html += '<td>' + esc(formatDate(p.spro_StartDate)) + '</td>';
+        html += '<td>' + esc(formatDate(p.spro_EndDate)) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    // Short URLs
+    html += '<div class="font-weight-bold small mb-1">Short URLs (' + (detail.shortUrls || []).length + ')</div>';
+    if (!detail.shortUrls || !detail.shortUrls.length) {
+      html += '<p class="text-muted small mb-0">No short URLs generated for this Campaign yet.</p>';
+    } else {
+      html += '<table class="table table-sm table-hover mb-0"><thead><tr>';
+      html += '<th>Code</th><th>Lang</th><th>Project</th><th>Target URL</th><th>Created</th>';
+      html += '</tr></thead><tbody>';
+      detail.shortUrls.forEach(function (s) {
+        html += '<tr>';
+        html += '<td><code>' + esc(s.ssu_ShortCode) + '</code></td>';
+        html += '<td>' + esc(s.ssu_Language || '') + '</td>';
+        html += '<td><code>' + esc(s.ssu_ProjectId || '') + '</code></td>';
+        html += '<td style="max-width:380px;word-break:break-all;font-size:11px;">' + esc(s.ssu_TargetUrl || '') + '</td>';
+        html += '<td>' + esc(formatDate(s.ssu_CreatedDate)) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  document.getElementById('btn-refresh').addEventListener('click', loadData);
+  loadData();
+})();
+</script>

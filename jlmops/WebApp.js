@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-05 11:59',
-  commit: 'Post-sync bundle health auto-trigger: SyncStateService.transition schedules a one-off Apps Script time trigger when stage flips to COMPLETE; runPostSyncBundleHealth fires within seconds, runs housekeepingService.checkBundleHealth, and self-cleans. Nightly composition refresh + health check kept as belt-and-suspenders per Phase 14 plan; the gate (skip if no sync since last check) prevents double-fire.'
+  built: '2026-05-11 12:42',
+  commit: '@84: Campaign Architecture foundations. New SysMarketingCampaigns + SysShortUrls sheets, spro_CampaignId on SysProjects, scm_MarketingCampaignId on SysCampaigns. New MarketingCampaignService (seed, UTM builder, short URL CRUD, QR helper, RankMath push stubbed). New WebAppCampaigns controller. New AdminCampaignsView + nav link. AdminProjectsView: Campaign dropdown on Add Project, Campaign field + Generate Outputs button + modal on Project Detail. 16 new task templates for Distribution chains. See CAMPAIGN_ARCHITECTURE.md. After deploy: rebuildSysConfigFromSource() then seedMarketingCampaigns().'
 };
 
 function getVersion() {
@@ -90,6 +90,7 @@ function getView(viewName) {
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'AdminBundles': 'AdminBundlesView',
     'AdminProjects': 'AdminProjectsView',
+    'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
     'Development': 'DevelopmentView',
     'Comax': 'ComaxView',

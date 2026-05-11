@@ -679,6 +679,22 @@
         "system.sheet_names",
         "Names of the sheets in the spreadsheets",
         "stable",
+        "SysMarketingCampaigns",
+        "SysMarketingCampaigns",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
+        "SysShortUrls",
+        "SysShortUrls",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet_names",
+        "Names of the sheets in the spreadsheets",
+        "stable",
         "OrderLogArchive",
         "OrderLogArchive",
         "", "", "", "", "", "", "", ""
@@ -833,6 +849,14 @@
         "stable",
         "value",
         "true",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.suggestions.cohort.enabled",
+        "Master flag for CrmIntelligenceService cohort-based suggestions (cooling, unconverted subscribers, winery clusters). When false, no cohort suggestion tasks generated. Holiday reminder check unaffected. Parked 2026-05-11 per CADENCE_REALIGNMENT_PLAN — partner does not value cohort-driven outreach.",
+        "stable",
+        "value",
+        "false",
         "", "", "", "", "", "", "", ""
     ],
     [

@@ -381,39 +381,6 @@ function jlmwines_intersect_with_terms($product_ids, $taxonomy, $term_slugs) {
 }
 
 /**
- * Inline HE for the WC strings that surface in the catalog result-count
- * row. WC ships translations in language packs; this site isn't loading
- * the HE WC .mo (or it's incomplete), so the line shows in English on
- * RTL pages. WC's loop/result-count.php uses three separate i18n calls:
- *   • _e('Showing the single result', ...)        → `gettext`
- *   • __('Showing all %d results', ...)           → `gettext`
- *   • _nx(... 'with first and last result' ...)   → `ngettext_with_context`
- */
-add_filter('gettext', function ($translation, $text, $domain) {
-    if ($domain !== 'woocommerce' || !is_rtl()) {
-        return $translation;
-    }
-    if ($text === 'Showing the single result') {
-        return 'מציג תוצאה אחת';
-    }
-    if ($text === 'Showing all %d results') {
-        return 'מציג את כל %d התוצאות';
-    }
-    return $translation;
-}, 10, 3);
-add_filter('ngettext_with_context', function ($translation, $single, $plural, $number, $context, $domain) {
-    if ($domain !== 'woocommerce' || !is_rtl()) {
-        return $translation;
-    }
-    if ($context !== 'with first and last result') {
-        return $translation;
-    }
-    return $number === 1
-        ? 'מציג תוצאה אחת'
-        : 'מציג %1$d–%2$d מתוך %3$d תוצאות';
-}, 10, 6);
-
-/**
  * Attribute display name in the current language. wc_attribute_label() runs
  * the woocommerce_attribute_label filter, which WPML hooks for translation.
  *

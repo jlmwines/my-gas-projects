@@ -647,5 +647,181 @@
         "initial_status", "New",
         "flow_pattern", "admin_direct",
         "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.content.print_newsletter_body",
+        "Write the Print Newsletter Body section of a lead blog post (~150-200 words, self-contained, signed off — Evyatar).",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.campaign.generate_outputs",
+        "Call Campaign Service to emit utm-tagged URL + short URL + QR SVG for this Project's distribution. One run per language.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
+    ],
+    [
+        "task.template",
+        "task.newsletter.layout_lock",
+        "Finalize newsletter issue layout (masthead, columns, content allocation).",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.newsletter.confirm_lead",
+        "Confirm lead post is published, translated, and Print Newsletter Body is ready for inclusion in the issue.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.newsletter.secondary_slot",
+        "Fill the secondary slot (rotating YiV month / second-post teaser / Did You Know).",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.newsletter.print_proof",
+        "Review final print proof before sending to printer.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "manager_to_admin_review",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.newsletter.distribute",
+        "Distribute newsletter issue (in-store + online + QR landing pages active).",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.email.copy",
+        "Write email copy (subject, preheader, body) in Evyatar's voice.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.email.html_build",
+        "Build HTML email in Mailchimp using the established template; insert utm-tagged links from Campaign Service.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.email.test_send",
+        "Send Mailchimp test to internal addresses; verify rendering, links, and utm tags in both EN and HE.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.email.live_send",
+        "Schedule or trigger the live Mailchimp send to the target segment.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day"
+    ],
+    [
+        "task.template",
+        "task.email.pull_results",
+        "After attribution window closes, review send results: opens, clicks, orders. Capture in Project notes.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.flyer.design",
+        "Finalize flyer design with vendor; confirm coupon code and QR landing page URLs.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.flyer.print",
+        "Execute print run with chosen vendor; confirm delivery date.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.flyer.drop",
+        "Physical distribution in the target geography on the planned date.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.flyer.attribution_review",
+        "After attribution window, review coupon redemptions and any QR/UTM-tagged orders from this flyer round.",
+        "stable",
+        "topic", "Marketing",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "two_weeks"
     ]
 ]

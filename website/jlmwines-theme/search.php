@@ -10,11 +10,24 @@ get_header();
     <header class="archive-header">
         <h1 class="archive-title">
             <?php
-            printf(
-                /* translators: %s: search query. */
-                esc_html__('Search results for: %s', 'woocommerce'),
-                '<span>' . get_search_query() . '</span>'
-            );
+            // Inline HE for chrome text per the theme's translation rule
+            // ("only translate at runtime what cannot be stored in advance;
+            //  static page content goes in real Pages (per-language) or
+            //  inline is_rtl() PHP for chrome"). WPML's gettext path failed
+            //  to match the runtime form for this string; baking the HE in
+            //  here makes it deterministic.
+            if (is_rtl()) {
+                printf(
+                    'תוצאות חיפוש עבור: %s',
+                    '<span>' . esc_html(get_search_query()) . '</span>'
+                );
+            } else {
+                printf(
+                    /* translators: %s: search query. */
+                    esc_html__('Search results for: %s', 'woocommerce'),
+                    '<span>' . esc_html(get_search_query()) . '</span>'
+                );
+            }
             ?>
         </h1>
     </header>

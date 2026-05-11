@@ -257,8 +257,19 @@
                   </div>
                 </div>
               </div>
+              <div class="form-row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Marketing Campaign</label>
+                    <select class="form-control" id="field-campaign">
+                      <option value="">— None —</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
               <hr>
               <button type="button" id="btn-save-project" class="btn btn-light">Save Changes</button>
+              <button type="button" id="btn-generate-outputs" class="btn btn-light ml-2">Generate Outputs</button>
             </form>
           </div>
 
@@ -385,10 +396,102 @@
           </select>
         </div>
       </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label for="new-project-campaign" style="font-size:12px;color:#6c757d;margin-bottom:4px;">Marketing Campaign (optional)</label>
+        <select class="form-control form-control-sm" id="new-project-campaign">
+          <option value="">— No campaign —</option>
+        </select>
+      </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
       <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newProjectModal').style.display='none'">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Outputs Modal -->
+<div class="modal-overlay" id="generateOutputsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Generate Campaign Outputs</h6>
+      <small class="text-muted" id="gen-out-context">— project context —</small>
+    </div>
+    <div style="padding:15px;" id="gen-out-inputs">
+      <div class="form-group">
+        <label class="small font-weight-bold">Target URL</label>
+        <input type="url" class="form-control form-control-sm" id="gen-out-target" placeholder="https://jlmwines.com/blog/context">
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Language</label>
+            <select class="form-control form-control-sm" id="gen-out-language">
+              <option value="en">English</option>
+              <option value="he">Hebrew</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Slug</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-slug" placeholder="context-202605">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Medium</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-medium" placeholder="print / email / social">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Source</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-source" placeholder="wine-talk / mailchimp">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Content marker <small class="text-muted font-weight-normal">(optional)</small></label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-content" placeholder="issue date or variant">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Notes <small class="text-muted font-weight-normal">(optional)</small></label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-notes">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="gen-out-results" style="display:none;padding:15px;border-top:1px solid #dee2e6;background:#f8f9fa;">
+      <h6 class="mb-2">Outputs</h6>
+      <div class="form-group">
+        <label class="small font-weight-bold mb-1">UTM-Tagged URL</label>
+        <input type="text" class="form-control form-control-sm" id="gen-out-utm-url" readonly>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold mb-1">Short URL</label>
+        <input type="text" class="form-control form-control-sm" id="gen-out-short-url" readonly>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold mb-1">QR Image (SVG)</label>
+        <div style="display:flex;align-items:flex-start;gap:15px;">
+          <img id="gen-out-qr-preview" src="" alt="QR" style="width:140px;height:140px;border:1px solid #dee2e6;background:white;">
+          <div style="flex:1;">
+            <input type="text" class="form-control form-control-sm" id="gen-out-qr-url" readonly>
+            <small class="text-muted">Right-click image → Save As, or download from the URL above.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('generateOutputsModal').style.display='none'">Close</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-generate-outputs-submit">Generate</button>
     </div>
   </div>
 </div>
@@ -787,6 +890,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     });
 
     document.getElementById('btn-create-project').addEventListener('click', createProject);
+    document.getElementById('btn-generate-outputs').addEventListener('click', openGenerateOutputsModal);
+    document.getElementById('btn-generate-outputs-submit').addEventListener('click', submitGenerateOutputs);
     document.getElementById('btn-create-task').addEventListener('click', createTask);
 
     document.getElementById('btn-view-product').addEventListener('click', viewProductDetails);
@@ -1085,12 +1190,29 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function handleNew() {
     if (state.mode === 'projects') {
       document.getElementById('new-project-name').value = '';
+      loadCampaignOptions();
       document.getElementById('newProjectModal').style.display = 'flex';
     } else {
       document.getElementById('new-task-title').value = '';
       document.getElementById('new-task-notes').value = '';
       document.getElementById('newTaskModal').style.display = 'flex';
     }
+  }
+
+  function loadCampaignOptions() {
+    var select = document.getElementById('new-project-campaign');
+    if (!select) return;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var html = '<option value="">— No campaign —</option>';
+        if (result && !result.error && Array.isArray(result.data)) {
+          result.data.forEach(function(c) {
+            html += '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+          });
+        }
+        select.innerHTML = html;
+      })
+      .WebAppCampaigns_getCampaignOptions();
   }
 
   // === RENDERING ===
@@ -1494,6 +1616,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
     document.getElementById('field-start-date').value = formatDateInput(project.startdate || project.spro_StartDate);
     document.getElementById('field-end-date').value = formatDateInput(project.enddate || project.spro_EndDate);
+    populateCampaignField(project.campaignid || project.spro_CampaignId || '');
 
     // System projects (PROJ-SYS_*) are read-only
     var projectId = project.projectid || project.spro_ProjectId || '';
@@ -1504,7 +1627,36 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('field-status').disabled = isSystemProject;
     document.getElementById('field-start-date').readOnly = isSystemProject;
     document.getElementById('field-end-date').readOnly = isSystemProject;
+    document.getElementById('field-campaign').disabled = isSystemProject;
     document.getElementById('btn-save-project').style.display = isSystemProject ? 'none' : '';
+    document.getElementById('btn-generate-outputs').style.display = isSystemProject ? 'none' : '';
+  }
+
+  // Cache campaign options after first load. Empties on each loadData call.
+  var _campaignOptionsCache = null;
+
+  function populateCampaignField(selectedId) {
+    var select = document.getElementById('field-campaign');
+    if (!select) return;
+    if (_campaignOptionsCache) {
+      renderCampaignOptions(select, _campaignOptionsCache, selectedId);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(result) {
+        _campaignOptionsCache = (result && !result.error && Array.isArray(result.data)) ? result.data : [];
+        renderCampaignOptions(select, _campaignOptionsCache, selectedId);
+      })
+      .WebAppCampaigns_getCampaignOptions();
+  }
+
+  function renderCampaignOptions(select, options, selectedId) {
+    var html = '<option value="">— None —</option>';
+    options.forEach(function(c) {
+      var sel = (c.id === selectedId) ? ' selected' : '';
+      html += '<option value="' + esc(c.id) + '"' + sel + '>' + esc(c.name) + '</option>';
+    });
+    select.innerHTML = html;
   }
 
   function populateTaskForm(task) {
@@ -1780,7 +1932,112 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .WebAppProjects_createProject({
         name: name,
         type: document.getElementById('new-project-type').value,
-        status: document.getElementById('new-project-status').value
+        status: document.getElementById('new-project-status').value,
+        campaignId: document.getElementById('new-project-campaign').value || ''
+      });
+  }
+
+  // ===================================================================
+  // Generate Outputs — calls Campaign Service to emit utm URL + short URL + QR
+  // ===================================================================
+
+  function openGenerateOutputsModal() {
+    if (!state.selectedProjectId) { alert('No project selected'); return; }
+    var project = getSelectedProject();
+    if (!project) { alert('Project not loaded'); return; }
+
+    var campaignId = project.campaignid || project.spro_CampaignId || '';
+    if (!campaignId) {
+      alert('This project is not linked to a Marketing Campaign. Assign one via the Campaign field, save, and try again.');
+      return;
+    }
+
+    // Reset form
+    document.getElementById('gen-out-target').value = '';
+    document.getElementById('gen-out-language').value = 'en';
+    document.getElementById('gen-out-slug').value = '';
+    document.getElementById('gen-out-medium').value = '';
+    document.getElementById('gen-out-source').value = '';
+    document.getElementById('gen-out-content').value = '';
+    document.getElementById('gen-out-notes').value = '';
+    document.getElementById('gen-out-results').style.display = 'none';
+    document.getElementById('gen-out-context').textContent =
+      (project.name || project.spro_Name || state.selectedProjectId) + ' → ' + campaignId;
+
+    // Pre-fill medium/source defaults based on campaign
+    var defaults = _defaultsForCampaign(campaignId);
+    if (defaults) {
+      document.getElementById('gen-out-medium').value = defaults.medium || '';
+      document.getElementById('gen-out-source').value = defaults.source || '';
+    }
+
+    document.getElementById('generateOutputsModal').style.display = 'flex';
+  }
+
+  function _defaultsForCampaign(campaignId) {
+    // Convenience defaults — partner can override in the modal.
+    switch (campaignId) {
+      case 'newsletter-print':  return { medium: 'print',  source: 'wine-talk'  };
+      case 'email-broadcast':   return { medium: 'email',  source: 'mailchimp'  };
+      case 'flyer-acquisition': return { medium: 'flyer',  source: ''           };
+      case 'social-organic':    return { medium: 'social', source: ''           };
+      default:                  return null;
+    }
+  }
+
+  function getSelectedProject() {
+    return state.projects.find(function(p) {
+      return (p.projectid || p.spro_ProjectId) === state.selectedProjectId;
+    });
+  }
+
+  function submitGenerateOutputs() {
+    if (!state.selectedProjectId) return;
+    var project = getSelectedProject();
+    if (!project) return;
+    var campaignId = project.campaignid || project.spro_CampaignId || '';
+    if (!campaignId) return;
+
+    var targetUrl = document.getElementById('gen-out-target').value.trim();
+    var slug      = document.getElementById('gen-out-slug').value.trim();
+    var medium    = document.getElementById('gen-out-medium').value.trim();
+    var source    = document.getElementById('gen-out-source').value.trim();
+
+    if (!targetUrl) { alert('Target URL is required'); return; }
+    if (!medium)    { alert('Medium is required');     return; }
+    if (!source)    { alert('Source is required');     return; }
+
+    var btn = document.getElementById('btn-generate-outputs-submit');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        if (result.error) { alert('Error: ' + result.error); return; }
+        var data = result.data || {};
+        document.getElementById('gen-out-utm-url').value   = data.utmUrl   || '';
+        document.getElementById('gen-out-short-url').value = data.shortUrl || '';
+        document.getElementById('gen-out-qr-url').value    = data.qrImageUrl || '';
+        document.getElementById('gen-out-qr-preview').src  = data.qrImageUrl || '';
+        document.getElementById('gen-out-results').style.display = '';
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        alert('Error: ' + (err && err.message ? err.message : err));
+      })
+      .WebAppCampaigns_generateOutputs({
+        campaignId: campaignId,
+        projectId:  state.selectedProjectId,
+        language:   document.getElementById('gen-out-language').value,
+        slug:       slug,
+        targetUrl:  targetUrl,
+        medium:     medium,
+        source:     source,
+        content:    document.getElementById('gen-out-content').value.trim(),
+        notes:      document.getElementById('gen-out-notes').value.trim()
       });
   }
 
@@ -1816,7 +2073,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         type: document.getElementById('field-type').value,
         status: document.getElementById('field-status').value,
         startDate: document.getElementById('field-start-date').value || null,
-        endDate: document.getElementById('field-end-date').value || null
+        endDate: document.getElementById('field-end-date').value || null,
+        campaignId: document.getElementById('field-campaign').value || ''
       });
   }
 

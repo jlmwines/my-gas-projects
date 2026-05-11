@@ -249,31 +249,37 @@ const CrmIntelligenceService = (function () {
     const contacts = _getContacts();
     LoggerService.info(SERVICE_NAME, fnName, `Loaded ${contacts.length} contacts`);
 
+    const allConfig = ConfigService.getAllConfig();
+    const cohortCfg = allConfig['crm.suggestions.cohort.enabled'] || {};
+    const cohortEnabled = (cohortCfg.value === 'true' || cohortCfg.value === true);
+
     const suggestions = [];
     let tasksCreated = 0;
 
-    // Check cooling customers
-    const coolingSuggestion = _checkCoolingCustomers(contacts);
-    if (coolingSuggestion) {
-      suggestions.push(coolingSuggestion);
-      if (_createSuggestionTask(coolingSuggestion)) tasksCreated++;
+    if (cohortEnabled) {
+      // Cohort-driven suggestions — gated by crm.suggestions.cohort.enabled
+      const coolingSuggestion = _checkCoolingCustomers(contacts);
+      if (coolingSuggestion) {
+        suggestions.push(coolingSuggestion);
+        if (_createSuggestionTask(coolingSuggestion)) tasksCreated++;
+      }
+
+      const conversionSuggestion = _checkUnconvertedSubscribers(contacts);
+      if (conversionSuggestion) {
+        suggestions.push(conversionSuggestion);
+        if (_createSuggestionTask(conversionSuggestion)) tasksCreated++;
+      }
+
+      const winerySuggestion = _checkWineryClusters(contacts);
+      if (winerySuggestion) {
+        suggestions.push(winerySuggestion);
+        if (_createSuggestionTask(winerySuggestion)) tasksCreated++;
+      }
+    } else {
+      LoggerService.info(SERVICE_NAME, fnName, 'Cohort suggestions skipped (crm.suggestions.cohort.enabled=false)');
     }
 
-    // Check unconverted subscribers
-    const conversionSuggestion = _checkUnconvertedSubscribers(contacts);
-    if (conversionSuggestion) {
-      suggestions.push(conversionSuggestion);
-      if (_createSuggestionTask(conversionSuggestion)) tasksCreated++;
-    }
-
-    // Check winery clusters
-    const winerySuggestion = _checkWineryClusters(contacts);
-    if (winerySuggestion) {
-      suggestions.push(winerySuggestion);
-      if (_createSuggestionTask(winerySuggestion)) tasksCreated++;
-    }
-
-    // Check upcoming holidays
+    // Holiday reminders — always active
     const holidaySuggestion = _checkUpcomingHolidays();
     if (holidaySuggestion) {
       suggestions.push(holidaySuggestion);

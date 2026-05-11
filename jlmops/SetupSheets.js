@@ -1217,3 +1217,101 @@ function createLookupSheets() {
     console.log('Lookup sheets created successfully.');
 }
 
+// ============================================================================
+// Marketing Campaign Sheet Creation Functions
+// See jlmops/plans/CAMPAIGN_ARCHITECTURE.md
+// ============================================================================
+
+function createSysMarketingCampaignsHeaders() {
+    const functionName = 'createSysMarketingCampaignsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysMarketingCampaigns';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+function createSysShortUrlsHeaders() {
+    const functionName = 'createSysShortUrlsHeaders';
+    try {
+        console.log(`Running ${functionName}...`);
+
+        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const sheetName = 'SysShortUrls';
+
+        const allConfig = ConfigService.getAllConfig();
+
+        let sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = spreadsheet.insertSheet(sheetName);
+            console.log(`Sheet '${sheetName}' was not found and has been created.`);
+        }
+
+        const schema = allConfig[`schema.data.${sheetName}`];
+        if (!schema || !schema.headers) {
+            throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Please run rebuildSysConfigFromSource first.`);
+        }
+        const headers = schema.headers.split(',');
+
+        const maxCols = sheet.getMaxColumns();
+        if (maxCols > 0) {
+            sheet.getRange(1, 1, 1, maxCols).clearContent().setFontWeight('normal');
+        }
+
+        sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+        console.log(`Headers written to '${sheetName}' (${headers.length} columns).`);
+
+    } catch (error) {
+        console.error(`A critical error occurred in ${functionName}: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * Run this once after rebuildSysConfigFromSource() to set up the Campaign
+ * Architecture sheets:
+ *   - Creates SysMarketingCampaigns (new) with its schema headers
+ *   - Creates SysShortUrls (new) with its schema headers
+ *   - Refreshes SysProjects headers (adds new spro_CampaignId column)
+ *   - Refreshes SysCampaigns headers (adds new scm_MarketingCampaignId column)
+ *
+ * Idempotent — safe to re-run. Header clear-and-rewrite preserves data rows.
+ *
+ * After this, run seedMarketingCampaigns() to populate the two ongoing campaigns.
+ */
+function setupMarketingSheets() {
+    console.log('Setting up Campaign Architecture sheets...');
+    createSysMarketingCampaignsHeaders();
+    createSysShortUrlsHeaders();
+    createSysProjectsHeaders();   // refreshes header — picks up new spro_CampaignId
+    createSysCampaignsHeaders();  // refreshes header — picks up new scm_MarketingCampaignId
+    console.log('Marketing sheets setup complete. Now run seedMarketingCampaigns().');
+}
+
