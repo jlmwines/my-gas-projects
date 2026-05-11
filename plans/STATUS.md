@@ -1,6 +1,6 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-11
+**Updated:** 2026-05-11 (tech-debt cleanup pass + admin-SKU fix)
 
 ## Metrics
 
@@ -9,12 +9,12 @@
 | Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. |
 | Last Active | 2026-05-05 |
 | Revenue | Steady |
-| Deploy Version | jlmops @85 (Campaign Architecture foundations — SysMarketingCampaigns + SysShortUrls + spro_CampaignId / scm_MarketingCampaignId, MarketingCampaignService, WebAppCampaigns, AdminCampaignsView, Generate Outputs flow, 16 Distribution task templates, setupMarketingSheets — RankMath redirect push stubbed; manual paste-into-RankMath for now) · theme v1.2.19 LIVE (inline HE for search.php H1 + targeted gettext filter for WC breadcrumb prefix + WC product-search H1) |
-| Deploy Date | jlmops 2026-05-11 (@85 live) · theme 2026-05-11 (v1.2.17 → v1.2.19 — three deploys this session covering dead-filter cleanup + bidi-aware HE chrome strings) |
+| Deploy Version | jlmops @86 (tech-debt cleanup: SetupMigrate.js deleted, SetupSheets.js consolidated 1317→199 lines via `syncHeaders()` + `syncAllHeaders()`, ComaxView/WebView/Dashboard/AdminDashboardView/ManagerDashboardView/DisplayOrdersView deleted, viewMap pruned, AdminSyncView dead-widget scaffolding removed — no behavioral change; see `jlmops/plans/TECH_DEBT_AUDIT.md`) · theme v1.2.20 LIVE (inline HE for search.php H1 + targeted gettext filter for WC breadcrumb prefix + WC product-search H1 + admin-SKU restored via `is_admin()` gate on `wc_product_sku_enabled`) |
+| Deploy Date | jlmops 2026-05-11 (@85 → @86 — same session) · theme 2026-05-11 (v1.2.17 → v1.2.20 — four deploys this session: dead-filter cleanup, bidi-aware HE chrome strings, admin-SKU regression fix) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
-| Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) + 2026-05-11 additions: WC admin SKU search demotion (gtin-only-if-valid policy), auto-push to RankMath for short URL redirects (deferred — manual paste fine at current volume) |
+| Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) + 2026-05-11 additions: GTIN structured-data enrichment (deferred), auto-push to RankMath for short URL redirects (deferred — manual paste fine at current volume) |
 | Next Milestone | Pilot Campaign Architecture end-to-end with Newsletter Issue #1 (Context lead post): create the Distribution Projects, work the task chains, generate Outputs, paste short-URL redirects into RankMath manually, ship issue, observe attribution. Then revisit RankMath auto-push if volume justifies the mu-plugin build. Mobile LCP tuning (4.0–4.1s) remains queued for after the pilot. |
 | Blockers | 0 |
 | Mobile PageSpeed (post-cutover) | EN: FCP 3.2 / LCP 4.1 · HE: FCP 3.5 / LCP 4.0 · TBT 210ms (was LCP 7.2 / FCP 3.9 pre-cutover — ~43% LCP improvement) |

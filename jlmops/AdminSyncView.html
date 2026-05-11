@@ -2,30 +2,19 @@
     <h1 class="mt-4">Sync</h1>
 
     <div class="row">
-        <!-- V2 Widget (full width - new widget disabled) -->
         <div class="col-12">
             <div id="admin-daily-sync-widget-container">
                 <!-- AdminDailySyncWidget_v2.html will be loaded here -->
             </div>
         </div>
-
-        <!-- NEW Widget DISABLED - causing conflicts with V2 widget
-        <div class="col-md-4">
-            <div id="new-sync-widget-container">
-            </div>
-        </div>
-        -->
     </div>
 
     <script>
-        // Define executeScriptsInElement locally for this view
         function executeScriptsInElement(element) {
             const scripts = Array.from(element.getElementsByTagName('script'));
             scripts.forEach(s => {
                 const newScript = document.createElement('script');
                 newScript.textContent = s.textContent;
-                // Append to a temporary element to ensure scripts run sequentially or handle special cases
-                // For simplicity and direct execution, replacing the script tag works.
                 s.parentNode.replaceChild(newScript, s);
             });
         }
@@ -43,12 +32,6 @@
                 .getHtmlOutput('AdminDailySyncWidget_v2');
         }
 
-        function loadNewSyncWidget() {
-            // DISABLED - was causing conflicts with V2 widget
-        }
-
-        // Load V2 widget only (new widget disabled - was causing conflicts)
         loadAdminDailySyncWidget();
-        // loadNewSyncWidget(); // DISABLED
     </script>
 </div>

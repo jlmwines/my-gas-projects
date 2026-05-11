@@ -1,7 +1,7 @@
 # KPI Summary Tab — Implementation Spec
 
 **Created:** 2026-05-06
-**Status:** Spec drafted. Awaiting user sign-off before implementation.
+**Status:** DEFERRED / parked (2026-05-07). This spec was Claude's pitch, not the user's. User prefers periodic manual review of GA4 + GSC + JLMops_Data on cadence over a built dashboard tab. Do not re-surface as "ready to build" in session pickups.
 **Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so weekly review sessions can read 13 cells instead of parsing 3 MB of raw sheets.
 
 ---

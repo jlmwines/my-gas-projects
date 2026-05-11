@@ -19,7 +19,9 @@ if (!defined('ABSPATH')) {
  *   • If only Description tab remains (no Reviews enabled), render the
  *     description inline without tab chrome — single-tab UIs look odd
  */
-add_filter('wc_product_sku_enabled', '__return_false');
+add_filter('wc_product_sku_enabled', function ($enabled) {
+    return is_admin() ? $enabled : false;
+});
 add_filter('woocommerce_product_description_heading', '__return_empty_string');
 add_filter('woocommerce_product_tabs', function ($tabs) {
     unset($tabs['additional_information']);

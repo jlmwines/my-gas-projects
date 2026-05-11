@@ -1,5 +1,7 @@
 # Campaign System Plan
 
+**Status (2026-05-11):** This is the earlier strategic plan. Implementation has since shipped under a different shape — see `CAMPAIGN_ARCHITECTURE.md` (2026-05-11, deployed as jlmops @84/@85) for the live data model + service layer (`SysMarketingCampaigns`, `SysShortUrls`, `MarketingCampaignService`, `WebAppCampaigns`, `AdminCampaignsView`, 16 Distribution task templates). This doc is retained for strategic context (welcome offer sizing, send-cadence rationale, attribution windows) but should not be read as the implementation spec.
+
 Strategic campaign planning system leveraging CRM data and AI for targeted customer engagement.
 
 ---

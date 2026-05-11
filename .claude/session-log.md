@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-11 (continued — tech-debt audit, admin-SKU fix, SetupSheets consolidation)
+
+- **Tech-debt audit written** (`jlmops/plans/TECH_DEBT_AUDIT.md`): 7 sections covering dead/one-use code, obsolete dev UI, code-compliance drift, plan-doc accuracy, data integrity gaps, triage, legacy GAS retirement.
+- **Cheap wins shipped (local):** 6 orphan HTML views deleted (Dashboard, AdminDashboardView, ManagerDashboardView, DisplayOrdersView, ComaxView, WebView) + viewMap pruned; `AdminSyncView.html` dead-widget scaffolding cleaned; `CODING_STANDARDS.md` §9-10 rewritten against actual 14-state machine; status headers added to `KPI_SUMMARY_TAB.md` (DEFERRED) and `CAMPAIGN_SYSTEM_PLAN.md` (points at CAMPAIGN_ARCHITECTURE.md).
+- **Legacy GAS retirement (§7) shipped (local):** Deleted `SetupMigrate.js` (442 lines, fully orphan, no callers, hardcoded legacy spreadsheet ID `1YLqfcX0...`). Consolidated `SetupSheets.js` 1317 → 199 lines: 38 per-sheet `create*Headers()` + 3 hand-coded master orchestrators replaced by `syncHeaders(name, {preserveExtraColumns})` + `syncAllHeaders()` that discovers sheets from `schema.data.*` config keys. `SysProductAudit`'s preserve-extra-columns behavior preserved via option flag. `setupMarketingSheets()` retained as named entrypoint. `protectAllSheetHeaders()` + `FromUI` unchanged. `ContactAnalysisService.js` error strings updated to `syncHeaders('SysLkp_Cities')`.
+- **Theme: admin-SKU regression fixed (v1.2.20 LIVE).** Root cause: `inc/woocommerce.php:22` `add_filter('wc_product_sku_enabled', '__return_false')` was intended to hide SKU from customers but globally killed admin column + search + product-edit field. Fix: gate callback on `!is_admin()`. Customer-facing storefront unchanged.
+- **Bug reframe (.claude/bugs.md):** SKU-search bug closed (theme regression, not WC issue); GTIN reframed as structured-data enrichment deferred (separate concern).
+- **Next session:** clasp push @86 deploys this cleanup. Theme v1.2.20 already live. Pilot Campaign Architecture with Newsletter Issue #1 still next. Outstanding audit items needing decision: §1.6 drive-vs-API import paths, §1.7 test files in deploy, §2.1 DevelopmentView gating, §5.2 SysConfig predeclared rows.
+
+---
+
 ## 2026-05-11 (Cadence Realignment + Campaign Architecture shipped, HE search-chrome inline-baked)
 
 - **CRM cohort throttling SHIPPED as @83.** New `crm.suggestions.cohort.enabled = false` config flag gates cooling/unconverted/winery cohort suggestions in `CrmIntelligenceService.runAnalysis()`. Holiday reminder check unaffected. Partner cleared the existing unactioned lifecycle tasks manually.

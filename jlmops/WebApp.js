@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-11 12:42',
-  commit: '@84: Campaign Architecture foundations. New SysMarketingCampaigns + SysShortUrls sheets, spro_CampaignId on SysProjects, scm_MarketingCampaignId on SysCampaigns. New MarketingCampaignService (seed, UTM builder, short URL CRUD, QR helper, RankMath push stubbed). New WebAppCampaigns controller. New AdminCampaignsView + nav link. AdminProjectsView: Campaign dropdown on Add Project, Campaign field + Generate Outputs button + modal on Project Detail. 16 new task templates for Distribution chains. See CAMPAIGN_ARCHITECTURE.md. After deploy: rebuildSysConfigFromSource() then seedMarketingCampaigns().'
+  built: '2026-05-11 18:00',
+  commit: '@86: Tech-debt cleanup pass. (1) Deleted SetupMigrate.js (legacy GAS migration, fully orphan). (2) Consolidated SetupSheets.js from 1317 → 199 lines: 38 create*Headers() + 3 orchestrators replaced by syncHeaders(name) + syncAllHeaders() with config-driven sheet discovery. setupMarketingSheets() retained as named entrypoint. protectAllSheetHeaders() unchanged. ContactAnalysisService.js error strings updated to new function names. (3) Removed viewMap entries for Comax/Web in WebApp.js; deleted ComaxView.html + WebView.html (placeholder views). (4) Deleted orphan v1 dashboards (Dashboard, AdminDashboardView, ManagerDashboardView, DisplayOrdersView). (5) Cleaned AdminSyncView.html dead-widget scaffolding. No behavioral change. Plan: TECH_DEBT_AUDIT.md.'
 };
 
 function getVersion() {
@@ -92,9 +92,7 @@ function getView(viewName) {
     'AdminProjects': 'AdminProjectsView',
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
-    'Development': 'DevelopmentView',
-    'Comax': 'ComaxView',
-    'Web': 'WebView'
+    'Development': 'DevelopmentView'
   };
 
   if (viewMap[viewName]) {

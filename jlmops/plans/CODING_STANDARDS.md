@@ -159,20 +159,22 @@ return { error: null, data: _sanitizeForClient(results) };
 
 ## 9. Sync Widget Step Mapping
 
-**Problem:** The Daily Sync Widget (AdminDailySyncWidget_v2.html) uses a 5-step UI. The shared message area uses `currentStage` as the source of truth, not step data.
+**Problem:** The Daily Sync Widget (`AdminDailySyncWidget_v2.html`) maps the 12-state machine onto a 5-step UI. The shared message area uses `currentStage` as the source of truth, not step data.
 
-**UI Step Mapping:**
-| Step | Card Title | Stage(s) |
-|------|------------|----------|
-| 1 | Web Product Import | IDLE, WEB_IMPORT_PROCESSING |
-| 2 | Web Order Import | (part of WEB_IMPORT_PROCESSING) |
-| 3 | Update Comax Orders | WAITING_FOR_COMAX, COMAX_EXPORT_PENDING |
-| 4 | Import Comax Products | READY_FOR_COMAX_IMPORT, COMAX_IMPORT_PROCESSING, VALIDATING |
-| 5 | Update Web Inventory | READY_FOR_WEB_EXPORT, WEB_EXPORT_PROCESSING, WEB_EXPORT_GENERATED |
+**UI Step → Stage(s) (rough — verify in widget code before relying on for new work):**
+| Step | Card Title | Stages |
+|------|------------|--------|
+| 1 | Web Product Import | `IDLE`, `IMPORTING_PRODUCTS` |
+| 2 | Web Order Import | `IMPORTING_ORDERS` |
+| 3 | Update Comax Orders | `WAITING_ORDER_EXPORT`, `EXPORTING_ORDERS`, `WAITING_ORDER_CONFIRM` |
+| 4 | Import Comax Products | `WAITING_COMAX_IMPORT`, `IMPORTING_COMAX`, `VALIDATING` |
+| 5 | Update Web Inventory | `WAITING_WEB_EXPORT`, `GENERATING_WEB_EXPORT`, `WAITING_WEB_CONFIRM`, `PUSHING_WEB_INVENTORY` |
+
+Terminal states (`COMPLETE`, `FAILED`) and the `IDLE` reset are handled in the shared message area.
 
 **Important:** The shared message area in the widget uses `status.currentStage` to determine what to show, bypassing potentially mismatched step data.
 
-**Reference:** `AdminDailySyncWidget_v2.html` updateSharedArea() function
+**Reference:** `AdminDailySyncWidget_v2.html` `updateSharedArea()` function; canonical state machine in `SyncStateService.js:15-54`.
 
 ---
 
@@ -180,25 +182,31 @@ return { error: null, data: _sanitizeForClient(results) };
 
 **Problem:** Sync state uses specific stage names. Using incorrect names causes the state machine to fail to advance.
 
-**Valid Stage Names:**
-- `IDLE` - No active sync
-- `WEB_PRODUCTS_IMPORTING` - Importing web products (v2 widget)
-- `WEB_ORDERS_READY` - Products done, ready for orders import (v2 widget)
-- `WEB_ORDERS_IMPORTING` - Importing web orders (v2 widget)
-- `WEB_IMPORT_PROCESSING` - Importing web data (v1 combined flow)
-- `WAITING_FOR_COMAX` - Orders ready for export
-- `READY_FOR_COMAX_IMPORT` - Ready to import Comax data
-- `COMAX_IMPORT_PROCESSING` - Importing Comax data
-- `VALIDATING` - Running validation
-- `READY_FOR_WEB_EXPORT` - Ready to generate web inventory
-- `WEB_EXPORT_PROCESSING` - Generating export file
-- `WEB_EXPORT_GENERATED` - Export complete, awaiting confirmation
-- `COMPLETE` - Sync finished
-- `FAILED` - Error occurred
+Canonical source: `SyncStateService.js:15-33` (STATES) and `:38-54` (TRANSITIONS). Update this section together with that file.
 
-**Note:** v2 widget stages (WEB_PRODUCTS_IMPORTING, WEB_ORDERS_READY, WEB_ORDERS_IMPORTING) use step-based UI logic and may not require `_checkAndAdvanceSyncState()` handling.
+**Valid Stage Names** (14 total):
 
-**Reference:** `SyncStateService.js` line 114, `OrchestratorService.js` lines 1043-1350
+| Stage | Kind | Meaning |
+|-------|------|---------|
+| `IDLE` | resting | No active sync |
+| `IMPORTING_PRODUCTS` | processing | Web products pull in flight |
+| `IMPORTING_ORDERS` | processing | Web orders pull in flight |
+| `WAITING_ORDER_EXPORT` | user action | Orders staged, awaiting export trigger |
+| `EXPORTING_ORDERS` | processing | Order export to Comax in flight |
+| `WAITING_ORDER_CONFIRM` | user action | Order export awaiting user confirmation |
+| `WAITING_COMAX_IMPORT` | user action | Awaiting Comax product CSV drop |
+| `IMPORTING_COMAX` | processing | Comax product import in flight |
+| `VALIDATING` | processing | Running validation pass |
+| `WAITING_WEB_EXPORT` | user action | Validation done, awaiting web export trigger |
+| `GENERATING_WEB_EXPORT` | processing | Generating web inventory CSV |
+| `WAITING_WEB_CONFIRM` | user action | Post-CSV decision point: manual confirm → `COMPLETE`, or API push → `PUSHING_WEB_INVENTORY` |
+| `PUSHING_WEB_INVENTORY` | processing | API push to WC in flight |
+| `COMPLETE` | terminal | Sync finished, ready to reset to `IDLE` |
+| `FAILED` | terminal | Error occurred; retry path returns to `failedAtStage` |
+
+**Convention:** `*ING_*` = system processing (spinner in UI), `WAITING_*` = user action needed, `IDLE` / `COMPLETE` / `FAILED` are special.
+
+**Reference:** `SyncStateService.js:15-54` (definitive), `OrchestratorService.js` (transition triggers — search `_checkAndAdvanceSyncState`).
 
 ---
 

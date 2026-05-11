@@ -61,11 +61,13 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-05-11: **Mixed-content HTTP image on HE homepage** — `http://jlmwines.com/wp-content/uploads/2023/04/value-speical-sq-599x599.jpg` referenced in homepage Page #64199 (HE). Triggers Chrome "does not support secure connection" warning in private/incognito (HTTPS-Only Mode is stricter there). Fix: locate the image reference in the Page content and change to `https://` (or protocol-relative `//`). Slated AFTER WPML translation verification.
 
-- [ ] 2026-05-11: **WC admin SKU search demotion** — SKU no longer displayed or searchable in WC product admin. Investigate: (a) is this reversible via a WC setting in recent versions? (b) if not, is GTIN field a viable substitute? Policy: populate `gtin` only when value is a valid GTIN-8/12/13/14 (UPC-A counts); leave empty otherwise — no false GTIN data. For products without valid codes, find another searchable field or accept the loss.
+- [ ] 2026-05-11: **GTIN structured-data enrichment** (deferred, separate from SKU admin issue) — populating `Product.gtin` would improve product schema (currently emits `pa_winery` / `pa_complexity` taxonomy slugs). Requires Comax-side source check + new column in `CmxProdM` + `WebDetM` + WC push path + GTIN-8/12/13/14 checksum validator. Policy: only write when value passes validation; never store false GTIN data. Same dependency profile as the cross-sell deferral.
 
 - [ ] 2026-05-11: **Auto-push short URL redirects to RankMath** (deferred) — Campaign Service generates short codes and writes to `SysShortUrls`, but RankMath redirect rules are created manually in wp-admin. Acceptable at low volume (5–10 URLs/month). Build trigger: when monthly volume makes manual paste a real friction. Implementation: small WP mu-plugin exposing `POST /wp-json/jlmops/v1/redirect` that writes to `wp_rank_math_redirections` directly; jlmops `_pushToRankMath` in `MarketingCampaignService.js` calls it. RankMath's own `/wp-json/rankmath/v1/updateRedirection` is not usable — it only attaches redirects to existing WP objects, not arbitrary source paths.
 
 ### Resolved
+
+- [x] 2026-05-11: **WC admin SKU display + search gone.** RESOLVED in theme v1.2.20. Root cause: `inc/woocommerce.php:22` used `add_filter('wc_product_sku_enabled', '__return_false')` to hide SKU from customer-facing pages, but the filter is global — it also killed the admin product-list column, admin search-by-SKU, and the SKU field on the product edit screen. Fix: gate the callback on `!is_admin()` so SKU stays visible in admin while remaining hidden on the storefront.
 
 - [x] 2026-05-03: deploy-theme.ps1 didn't delete orphan files. RESOLVED: added `Delete-File` helper + orphan detection (manifest keys absent from local tree). Script now reports orphan count in the deploy header and deletes per file with retry; FTP 550 (already gone) treated as success.
 

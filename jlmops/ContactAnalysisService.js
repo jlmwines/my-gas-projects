@@ -287,7 +287,7 @@ const ContactAnalysisService = (function() {
 
     const sheet = spreadsheet.getSheetByName(sheetNames.SysLkp_Cities || 'SysLkp_Cities');
     if (!sheet) {
-      throw new Error('SysLkp_Cities sheet not found. Run createSysLkpCitiesHeaders() first.');
+      throw new Error("SysLkp_Cities sheet not found. Run syncHeaders('SysLkp_Cities') first.");
     }
 
     // Filter to Israeli cities with 2+ orders
@@ -445,7 +445,7 @@ function generateCitySeedData() {
 
 /**
  * Global function to write cities directly to SysLkp_Cities sheet.
- * Run createSysLkpCitiesHeaders() first to create the sheet.
+ * Run syncHeaders('SysLkp_Cities') first to create the sheet.
  */
 function writeCitiesToSheet() {
   return ContactAnalysisService.writeCitiesToSheet();
