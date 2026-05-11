@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-11 18:00',
-  commit: '@86: Tech-debt cleanup pass. (1) Deleted SetupMigrate.js (legacy GAS migration, fully orphan). (2) Consolidated SetupSheets.js from 1317 → 199 lines: 38 create*Headers() + 3 orchestrators replaced by syncHeaders(name) + syncAllHeaders() with config-driven sheet discovery. setupMarketingSheets() retained as named entrypoint. protectAllSheetHeaders() unchanged. ContactAnalysisService.js error strings updated to new function names. (3) Removed viewMap entries for Comax/Web in WebApp.js; deleted ComaxView.html + WebView.html (placeholder views). (4) Deleted orphan v1 dashboards (Dashboard, AdminDashboardView, ManagerDashboardView, DisplayOrdersView). (5) Cleaned AdminSyncView.html dead-widget scaffolding. No behavioral change. Plan: TECH_DEBT_AUDIT.md.'
+  built: '2026-05-11 18:30',
+  commit: '@87: Fix syncHeaders misleading error. When called without a sheetName argument, the function fell through to the schema-not-found branch and emitted "Run rebuildSysConfigFromSource() first" — wrong advice, since rebuild does not fix the missing argument. Now guards the argument and throws a clear message pointing at syncAllHeaders() (the all-sheets entrypoint).'
 };
 
 function getVersion() {

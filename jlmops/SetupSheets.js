@@ -28,6 +28,11 @@
 function syncHeaders(sheetName, options) {
     const functionName = 'syncHeaders';
     options = options || {};
+
+    if (!sheetName) {
+        throw new Error("syncHeaders requires a sheetName argument. Use syncAllHeaders() to refresh every sheet, or syncHeaders('SheetName') for a single sheet.");
+    }
+
     try {
         console.log(`${functionName}: ${sheetName}...`);
 
