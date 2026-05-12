@@ -517,21 +517,33 @@ function WebAppTasks_getCurrentUserEmail() {
 }
 
 /**
- * Returns the list of assignable users from system.users config, for the
- * project-task assignee dropdown.
- * @returns {{email: string, role: string}[]}
+ * Returns distinct assignable role labels for the project-task assignee
+ * dropdown. Matches the convention used elsewhere in the system —
+ * st_AssignedTo stores role names ('Administrator', 'Manager') rather than
+ * email addresses, including the auto-assignment path in TaskService.
+ * @returns {string[]} e.g. ['Administrator', 'Manager']
  */
 function WebAppTasks_getAssignableUsers() {
   try {
     const roleMap = AuthService.getUsersAndRoles();
-    return Object.keys(roleMap).map(email => ({
-      email: email,
-      role: roleMap[email]
-    }));
+    const labels = new Set();
+    Object.values(roleMap).forEach(function(role) {
+      const label = _roleToAssigneeLabel(role);
+      if (label) labels.add(label);
+    });
+    return Array.from(labels).sort();
   } catch (e) {
     LoggerService.error('WebAppTasks', 'getAssignableUsers', e.message, e);
     return [];
   }
+}
+
+function _roleToAssigneeLabel(role) {
+  if (!role) return '';
+  const r = String(role).toLowerCase();
+  if (r === 'admin') return 'Administrator';
+  if (r === 'manager') return 'Manager';
+  return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
 /**

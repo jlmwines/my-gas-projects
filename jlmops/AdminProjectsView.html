@@ -1248,8 +1248,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var current = state.selectedProjectId || '';
     var html = '';
     (state.projects || []).forEach(function(p) {
-      var sel = (String(p.id) === String(current)) ? ' selected' : '';
-      html += '<option value="' + esc(p.id) + '"' + sel + '>' + esc(p.name) + '</option>';
+      var id = p.projectid || p.spro_ProjectId || '';
+      var name = p.name || p.spro_Name || id;
+      var sel = (String(id) === String(current)) ? ' selected' : '';
+      html += '<option value="' + esc(id) + '"' + sel + '>' + esc(name) + '</option>';
     });
     select.innerHTML = html || '<option value="">— No projects —</option>';
   }
@@ -1258,10 +1260,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var select = document.getElementById('new-task-assignee');
     if (!select) return;
     google.script.run
-      .withSuccessHandler(function(users) {
+      .withSuccessHandler(function(roles) {
         var html = '<option value="">— Unassigned —</option>';
-        (users || []).forEach(function(u) {
-          html += '<option value="' + esc(u.email) + '">' + esc(u.email) + ' (' + esc(u.role) + ')</option>';
+        (roles || []).forEach(function(r) {
+          html += '<option value="' + esc(r) + '">' + esc(r) + '</option>';
         });
         select.innerHTML = html;
       })

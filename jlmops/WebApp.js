@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-12 09:52',
-  commit: '@90: Project task creation — now works and collects the right fields. Backend WebAppTasks_createTask added (was missing entirely; modal silently failed). New task type task.project.custom registered in taskDefinitions.json with flow_pattern: manual + due_pattern: manual. TaskService.createTask extended to accept options.topic, .priority, .status, .dueDate, .assignedTo as per-call overrides for user-created tasks. Modal expanded with Project dropdown (default current, override allowed), Topic dropdown (10 values from existing task definitions), Assignee dropdown (sourced from AuthService.getUsersAndRoles), Start + Due date pickers (both-or-neither validated). Both dates present → status auto-set to Assigned per data-model invariant. WebAppTasks_getAssignableUsers added for the assignee dropdown.'
+  built: '2026-05-12 10:19',
+  commit: '@91: Project task creation modal — two fixes. (1) Project dropdown used p.id / p.name which do not exist on the WebAppProjects_getAllProjects shape — esc(undefined) returned empty, so the selected option carried an empty value and submit failed with "Pick a project." Fixed to use the existing repo pattern: p.projectid || p.spro_ProjectId for value and p.name || p.spro_Name for label. (2) Assignee dropdown showed email+role pairs which did not match the rest of the UI (task detail panel + filter both show role labels like "Administrator" / "Manager"). Changed WebAppTasks_getAssignableUsers to return distinct role labels ["Administrator", "Manager"] and the modal stores those values in st_AssignedTo — same convention as the auto-assignment path.'
 };
 
 function getVersion() {
