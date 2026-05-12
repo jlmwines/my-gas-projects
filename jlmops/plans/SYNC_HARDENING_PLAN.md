@@ -1,7 +1,7 @@
 # Sync Widget Hardening Plan
 
 **Created:** 2026-05-05
-**Status:** Bug 4 root cause confirmed and fix #1 implemented (inline stuck-job reaper). Bugs 1, 2, 3 pending staging repro — backend looks clean.
+**Status:** **Bug 4 obsoleted 2026-05-12** — the `GENERATING_WEB_EXPORT` stage no longer exists. Web inventory export is now synchronous (`generateWebExportBackend` calls `ProductService.exportWebInventory` inline, transitions state directly). See `WEB_EXPORT_INLINE_PLAN.md` for the refactor. Bugs 1, 2, 3 still pending staging repro — backend looks clean.
 **Scope:** Daily Sync widget UI/state drift. Excludes failed-Comax-import recovery (rare; tracked separately in `.claude/bugs.md`).
 
 ## Implementation log

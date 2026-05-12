@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-11 18:30',
-  commit: '@87: Fix syncHeaders misleading error. When called without a sheetName argument, the function fell through to the schema-not-found branch and emitted "Run rebuildSysConfigFromSource() first" — wrong advice, since rebuild does not fix the missing argument. Now guards the argument and throws a clear message pointing at syncAllHeaders() (the all-sheets entrypoint).'
+  built: '2026-05-12 08:18',
+  commit: '@88: Web inventory export refactored from async-job to inline. generateWebExportBackend now calls ProductService.exportWebInventory() synchronously and transitions state directly to WAITING_WEB_CONFIRM (or COMPLETE on no-changes), returning the post-state to the widget. Removed GENERATING_WEB_EXPORT stage from state machine, removed export.web.inventory job type from jobs.json, removed orchestrator polling branch and queueWebInventoryExport, deleted duplicate exportWebInventory in ProductImportService and orphan run_exportWebInventory + getWebInventoryExportBackend. Replaces the racey three-process-must-agree pattern (job row × state × orchestrator poll) with one synchronous round-trip. confirmWebInventoryUpdateBackend guard switched from job-status check to webExportFilename check.'
 };
 
 function getVersion() {

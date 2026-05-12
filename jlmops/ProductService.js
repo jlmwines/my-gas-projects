@@ -864,10 +864,6 @@ const ProductService = (function() {
           break;
         // Note: validation jobs (job.manual.validation.master, job.periodic.validation.master)
         // are routed directly to ValidationOrchestratorService by OrchestratorService
-        case 'export.web.inventory':
-          exportWebInventory(sessionId); // Pass sessionId
-          finalJobStatus = 'COMPLETED';
-          break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }

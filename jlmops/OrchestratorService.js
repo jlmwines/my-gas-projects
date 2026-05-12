@@ -398,39 +398,6 @@ const OrchestratorService = (function() {
   }
 
   /**
-   * Queues the Web Inventory Export job for the given session.
-   * @param {string} sessionId The current sync session ID.
-   */
-  function queueWebInventoryExport(sessionId) {
-    const serviceName = 'OrchestratorService';
-    const functionName = 'queueWebInventoryExport';
-
-    const allConfig = ConfigService.getAllConfig();
-    const sheetNames = allConfig['system.sheet_names'];
-    const logSheetConfig = allConfig['system.spreadsheet.logs'];
-    const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
-    const jobQueueSheet = logSpreadsheet.getSheetByName(sheetNames.SysJobQueue);
-
-    logger.info(serviceName, functionName, `Queuing Web Inventory Export job for Session: ${sessionId}`);
-
-    const exportJobType = 'export.web.inventory';
-    const exportJobConfig = allConfig[exportJobType];
-    const existingExportJob = getPendingOrProcessingJob(exportJobType, sessionId);
-
-    if (!exportJobConfig) {
-      throw new Error(`Configuration for '${exportJobType}' is missing.`);
-    }
-
-    if (!existingExportJob) {
-        createJob(jobQueueSheet, exportJobType, exportJobConfig.processing_service, '', 'PENDING', '', '', sessionId);
-        logger.info(serviceName, functionName, `Queued Web Inventory Export job for Session: ${sessionId}`, { sessionId: sessionId });
-    } else {
-        logger.info(serviceName, functionName, `Web Inventory Export job already pending/processing for Session: ${sessionId}. Skipping queueing.`, { sessionId: sessionId });
-    }
-    SpreadsheetApp.flush(); // Ensure job is written
-  }
-
-  /**
    * Queue the API push job (alternate route to manual CSV upload).
    * Triggered when the user clicks "API Push" at WAITING_WEB_CONFIRM.
    */
@@ -1292,63 +1259,8 @@ const OrchestratorService = (function() {
         }
       }
 
-      // --- GENERATING_WEB_EXPORT -> WAITING_WEB_CONFIRM or COMPLETE ---
-      if (state.stage === 'GENERATING_WEB_EXPORT') {
-          const jobType = 'export.web.inventory';
-          _reapStuckJobInSession(jobType, state.sessionId, STUCK_JOB_THRESHOLD_MIN);
-          const jobStatus = getJobStatusInSession(jobType, state.sessionId);
-
-          if (jobStatus === 'COMPLETED') {
-              // Re-read state to get updated webExportFilename set by ProductService
-              const updatedState = SyncStateService.getSyncState();
-              const exportFilename = updatedState.webExportFilename || '';
-              const noChanges = exportFilename === 'No Changes Detected' || !exportFilename;
-
-              logger.info(serviceName, functionName, `Web Export completed for session ${updatedState.sessionId}. File: ${exportFilename}.`);
-
-              if (!updatedState.steps) updatedState.steps = {};
-
-              if (noChanges) {
-                updatedState.stage = 'COMPLETE';
-                updatedState.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
-
-                try {
-                  TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', updatedState.sessionId);
-                } catch (taskError) {
-                  logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
-                }
-
-                // Register files on auto-complete (no changes)
-                _registerSessionFilesFromOrchestrator(updatedState);
-              } else {
-                updatedState.stage = 'WAITING_WEB_CONFIRM';
-                updatedState.steps.step5 = { status: 'waiting', message: `Export ready: ${exportFilename}` };
-              }
-
-              updatedState.lastUpdated = new Date().toISOString();
-              updatedState.errorMessage = null;
-              SyncStateService.setSyncState(updatedState);
-
-          } else if (jobStatus === 'FAILED' || jobStatus === 'QUARANTINED') {
-              logger.error(serviceName, functionName, `Web Export failed for session ${state.sessionId}.`);
-
-              NotificationService.reportFailure(
-                'sync.web_inventory_export',
-                `Web Inventory Export failed: ${jobStatus}`,
-                jobStatus === 'QUARANTINED' ? 'Critical' : 'High',
-                { sessionId: state.sessionId, jobStatus: jobStatus },
-                state.sessionId
-              );
-
-              state.stage = 'FAILED';
-              state.failedAtStage = 'GENERATING_WEB_EXPORT';
-              state.errorMessage = `Web Inventory Export job failed. Status: ${jobStatus}`;
-              state.lastUpdated = new Date().toISOString();
-              if (!state.steps) state.steps = {};
-              state.steps.step5 = { status: 'failed', message: `Export failed: ${jobStatus}` };
-              SyncStateService.setSyncState(state);
-          }
-      }
+      // Note: WAITING_WEB_EXPORT → WAITING_WEB_CONFIRM (or COMPLETE on no-changes)
+      // is handled synchronously by WebAppSync.generateWebExportBackend, not here.
 
       // --- PUSHING_WEB_INVENTORY -> COMPLETE (or FAILED) ---
       if (state.stage === 'PUSHING_WEB_INVENTORY') {
@@ -1734,7 +1646,6 @@ const OrchestratorService = (function() {
       queueWebFilesForSync: queueWebFilesForSync,
       queueComaxFileForSync: queueComaxFileForSync,
       finalizeSync: finalizeSync,
-      queueWebInventoryExport: queueWebInventoryExport,
       queueWebInventoryPush: queueWebInventoryPush,
       getJobStatusInSession: getJobStatusInSession,
       generateSessionId: generateSessionId,

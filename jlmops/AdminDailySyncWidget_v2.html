@@ -173,7 +173,6 @@
         IMPORTING_COMAX:        { message: 'Importing Comax products...',          button: null, spinner: true },
         VALIDATING:             { message: 'Running validation...',                button: null, spinner: true },
         WAITING_WEB_EXPORT:     { message: 'Generate web inventory export',        button: ['generateWebExport', 'Generate'] },
-        GENERATING_WEB_EXPORT:  { message: 'Generating export...',                 button: null, spinner: true },
         // Two delivery routes share this stage: API push (primary) or manual upload + confirm (alt).
         // Both consume the same CSV named in state.webExportFilename.
         WAITING_WEB_CONFIRM:    { message: 'Upload to website, then confirm',      button: ['pushWebInventory', 'API Push'], altButton: ['confirmWeb', 'I uploaded it'] },

@@ -1014,10 +1014,6 @@ const ProductImportService = (function() {
           break;
         // Note: validation jobs (job.manual.validation.master, job.periodic.validation.master)
         // are routed directly to ValidationOrchestratorService by OrchestratorService
-        case 'export.web.inventory':
-          exportWebInventory(sessionId);
-          finalJobStatus = 'COMPLETED';
-          break;
         default:
           throw new Error(`Unknown job type: ${jobType}`);
       }
@@ -1041,161 +1037,15 @@ const ProductImportService = (function() {
   }
 
   // =================================================================================
-  // WEB INVENTORY EXPORT
-  // =================================================================================
-
-  function exportWebInventory(sessionId) {
-    const functionName = 'exportWebInventory';
-    LoggerService.info('ProductImportService', functionName, 'Starting WooCommerce inventory update export with change detection.', { sessionId: sessionId });
-
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SheetAccessor.getDataSpreadsheet();
-
-      // 1. Get CmxProdM data for new stock and price
-      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
-      if (!cmxSheet) throw new Error('CmxProdM sheet not found');
-      const cmxData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].CmxProdM, allConfig['schema.data.CmxProdM'].headers.split(','), 'cpm_SKU');
-      const cmxMap = cmxData.map;
-
-      // 2. Get On-Hold Inventory
-      const onHoldSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].SysInventoryOnHold);
-      const onHoldData = onHoldSheet.getLastRow() > 1 ? onHoldSheet.getRange(2, 1, onHoldSheet.getLastRow() - 1, 2).getValues() : [];
-      const onHoldMap = onHoldData.reduce((map, row) => {
-        map[row[0]] = row[1]; // SKU -> OnHoldQuantity
-        return map;
-      }, {});
-
-      // 3. Get WebProdM data for existing stock and price
-      const webProdMSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
-      if (!webProdMSheet) throw new Error('WebProdM sheet not found');
-      const webProdMData = ConfigService._getSheetDataAsMap(allConfig['system.sheet_names'].WebProdM, allConfig['schema.data.WebProdM'].headers.split(','), 'wpm_ID');
-      const webProdMMap = webProdMData.map;
-
-      // 4. Compare new values with existing and prepare export data for changed products
-      const exportProducts = [];
-      let productsChecked = 0;
-      let productsSkipped = 0; // Skipped because not in Comax
-
-      for (const [webIdEn, webProdMRow] of webProdMMap.entries()) {
-        productsChecked++;
-        const sku = String(webProdMRow.wpm_SKU || '').trim();
-
-        if (!cmxMap.has(sku)) {
-          productsSkipped++;
-          LoggerService.warn('ProductImportService', functionName, `Skipping product ${sku} (${webProdMRow.wpm_PostTitle}): Not found in Comax master data.`);
-          continue; // Cannot determine new price/stock, so skip.
-        }
-        const cmxProduct = cmxMap.get(sku);
-
-        // Get existing values from WebProdM
-        const oldStock = Number(webProdMRow.wpm_Stock) || 0;
-        const oldPrice = webProdMRow.wpm_RegularPrice;
-
-        // Calculate new values
-        const newPrice = cmxProduct.cpm_Price;
-        let comaxStock = Number(cmxProduct.cpm_Stock || 0);
-        const onHoldStock = Number(onHoldMap[sku] || 0);
-
-        // Apply legacy exclude logic: if cpm_Exclude is true, stock becomes 0
-        if (String(cmxProduct.cpm_Exclude).toUpperCase() === 'TRUE') {
-            comaxStock = 0;
-        }
-
-        const newStock = Math.max(0, comaxStock - onHoldStock);
-
-        // Compare and add to export list if changed
-        if (newStock !== oldStock || newPrice !== oldPrice) {
-          exportProducts.push({
-            ID: webProdMRow.wpm_ID,
-            SKU: sku,
-            WName: webProdMRow.wpm_PostTitle,
-            Stock: newStock,
-            RegularPrice: newPrice
-          });
-        }
-      }
-
-      LoggerService.info('ProductImportService', functionName, `Checked ${productsChecked} products. Skipped ${productsSkipped} (not in Comax). Found ${exportProducts.length} products with changed stock or price.`);
-
-      if (exportProducts.length === 0) {
-        LoggerService.info('ProductImportService', functionName, 'No product changes detected. Export file will not be created.');
-        if (sessionId) {
-            const currentState = SyncStateService.getSyncState();
-            if (currentState.sessionId === sessionId) {
-                currentState.webExportFilename = 'No Changes Detected';
-                currentState.lastUpdated = new Date().toISOString();
-                SyncStateService.setSyncState(currentState);
-            }
-        }
-        return { success: true, message: 'No product changes detected. Export file not created.' };
-      }
-
-      // 5. Format and save the CSV
-      const csvContent = WooCommerceFormatter.formatInventoryUpdate(exportProducts);
-
-      const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-      const namePattern = allConfig['system.files.output_names']?.web_inventory_export || 'Inv-Web-{timestamp}.csv';
-      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
-      const fileName = namePattern.replace('{timestamp}', timestamp);
-
-      const file = DriveApp.getFolderById(exportFolderId).createFile(fileName, csvContent, MimeType.CSV);
-      LoggerService.info('ProductImportService', functionName, `WooCommerce inventory update file created: ${file.getName()} (ID: ${file.getId()})`);
-
-      // Update Sync State with Filename
-      if (sessionId) {
-          const currentState = SyncStateService.getSyncState();
-          if (currentState.sessionId === sessionId) {
-              currentState.webExportFilename = fileName;
-              currentState.lastUpdated = new Date().toISOString();
-              SyncStateService.setSyncState(currentState);
-          }
-      }
-
-      // Close the "signal" task that indicated the export was ready
-      try {
-        const signalTasks = WebAppTasks.getOpenTasksByTypeId('task.export.web_inventory_ready');
-        if (signalTasks && signalTasks.length > 0) {
-          LoggerService.info('ProductImportService', functionName, `Found and closing ${signalTasks.length} 'web_inventory_ready' signal task(s).`);
-          signalTasks.forEach(task => {
-            TaskService.completeTask(task.st_TaskId);
-          });
-        }
-      } catch (e) {
-        LoggerService.error('ProductImportService', functionName, `Could not close signal task: ${e.message}`, e);
-      }
-
-      const taskTitle = 'Confirm Web Inventory Export';
-      const taskNotes = `Web inventory export file ${file.getName()} has been generated. Please confirm that the web inventory has been updated.`;
-      TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), file.getName(), taskTitle, taskNotes, sessionId);
-
-      return { success: true, message: 'Web Inventory Export file created: ' + file.getName(), fileUrl: file.getUrl() };
-
-    } catch (e) {
-      LoggerService.error('ProductImportService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);
-      throw e;
-    }
-  }
-
-  // =================================================================================
   // PUBLIC API
   // =================================================================================
 
   return {
     processJob: processJob,
     runWebXltValidationAndUpsert: _runWebXltValidationAndUpsert,
-    exportWebInventory: exportWebInventory,
     // Exposed for WooProductPullService (API-sourced data, same pipeline)
     upsertWebProductsData: _upsertWebProductsData,
     upsertWebXltData: _upsertWebXltData
   };
 
 })();
-
-/**
- * Global wrapper function to execute the Web Inventory Export from the Apps Script editor or client-side.
- */
-function run_exportWebInventory() {
-  ProductImportService.exportWebInventory();
-}

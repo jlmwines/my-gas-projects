@@ -396,33 +396,53 @@ function generateWebExportBackend() {
     throw new Error(`Cannot generate Web Export: sync is at stage ${currentState.stage}, expected WAITING_WEB_EXPORT.`);
   }
 
-  logger.info(serviceName, functionName, 'Starting Web Inventory Export generation.');
+  logger.info(serviceName, functionName, 'Starting Web Inventory Export generation (inline).');
   const sessionId = currentState.sessionId;
 
   try {
-    // Transition to GENERATING_WEB_EXPORT
-    currentState.stage = 'GENERATING_WEB_EXPORT';
-    currentState.lastUpdated = new Date().toISOString();
-    currentState.steps.step5 = { status: 'processing', message: 'Generating web inventory export file...' };
-    SyncStateService.setSyncState(currentState);
+    // Run the export inline. ProductService.exportWebInventory writes the CSV
+    // (if any diff) and updates state.webExportFilename — either to the new
+    // filename or to 'No Changes Detected'.
+    ProductService.exportWebInventory(sessionId);
 
-    // Queue Web Inventory Export job
-    OrchestratorService.queueWebInventoryExport(sessionId);
+    // Re-read state to pick up webExportFilename that the export wrote.
+    const postState = SyncStateService.getSyncState();
+    const exportFilename = postState.webExportFilename || '';
+    const noChanges = exportFilename === 'No Changes Detected' || !exportFilename;
 
-    // Trigger immediate job processing
-    OrchestratorService.run('hourly');
+    if (!postState.steps) postState.steps = {};
 
-    // The job runs asynchronously — _checkAndAdvanceSyncState will handle
-    // the transition to WAITING_WEB_CONFIRM or COMPLETE
+    if (noChanges) {
+      postState.stage = 'COMPLETE';
+      postState.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
+
+      try {
+        TaskService.completeTaskByTypeAndEntity('task.sync.daily_session', postState.sessionId);
+      } catch (taskError) {
+        logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
+      }
+    } else {
+      postState.stage = 'WAITING_WEB_CONFIRM';
+      postState.steps.step5 = { status: 'waiting', message: `Export ready: ${exportFilename}` };
+    }
+
+    postState.lastUpdated = new Date().toISOString();
+    postState.errorMessage = null;
+    SyncStateService.setSyncState(postState);
+
+    if (noChanges) {
+      _registerSessionFiles(postState);
+    }
 
     return SyncStateService.getSyncState();
   } catch (e) {
     logger.error(serviceName, functionName, `Error generating Web Export: ${e.message}`, e);
     const errState = SyncStateService.getSyncState();
     errState.stage = 'FAILED';
-    errState.failedAtStage = 'GENERATING_WEB_EXPORT';
+    errState.failedAtStage = 'WAITING_WEB_EXPORT';
     errState.errorMessage = e.message;
     errState.lastUpdated = new Date().toISOString();
+    if (!errState.steps) errState.steps = {};
     errState.steps.step5 = { status: 'failed', message: `Error: ${e.message}` };
     SyncStateService.setSyncState(errState);
     return SyncStateService.getSyncState();
@@ -538,10 +558,13 @@ function confirmWebInventoryUpdateBackend() {
   const sessionId = currentState.sessionId;
 
   try {
-    // Verify export job actually completed
-    const webExportJobStatus = OrchestratorService.getJobStatusInSession('export.web.inventory', sessionId);
-    if (webExportJobStatus !== 'COMPLETED') {
-      throw new Error(`Cannot confirm: export job status is ${webExportJobStatus}, expected COMPLETED.`);
+    // Verify the export actually produced a CSV. WAITING_WEB_CONFIRM is only
+    // reached when generateWebExportBackend set webExportFilename to a real
+    // filename, so this is a tighter guard than checking job status (and
+    // works after the export queue was removed).
+    const exportFilename = currentState.webExportFilename || '';
+    if (!exportFilename || exportFilename === 'No Changes Detected') {
+      throw new Error(`Cannot confirm: webExportFilename not set on state.`);
     }
 
     // Transition to COMPLETE
@@ -741,22 +764,6 @@ function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
 // =========================================================================
 //  UTILITY FUNCTIONS (existing, kept)
 // =========================================================================
-
-/**
- * Retrieves the Web Inventory Export file URL.
- * @returns {object} { success: true, fileUrl: '...' }
- */
-function getWebInventoryExportBackend() {
-  const serviceName = 'WebAppSync';
-  const functionName = 'getWebInventoryExportBackend';
-  try {
-    logger.info(serviceName, functionName, `Retrieving Web Inventory Export...`);
-    return ProductService.exportWebInventory();
-  } catch (e) {
-    logger.error(serviceName, functionName, `Error retrieving Web Inventory Export: ${e.message}`, e);
-    throw e;
-  }
-}
 
 /**
  * Retrieves invoice/receipt info for the pre-sync card.
