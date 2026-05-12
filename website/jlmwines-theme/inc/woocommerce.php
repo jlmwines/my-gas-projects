@@ -417,9 +417,10 @@ function jlmwines_render_floating_cart() {
  * Field Editor plugin entirely.
  *
  * Billing block:
- *   - Hide first/last name and postcode (gift-purchase context — billing
- *     identity is on the WP user account; the form only needs phone +
- *     email for delivery contact).
+ *   - Keep first/last name (buyer identity — required for guest checkout
+ *     since there's no WP user account to fall back to; WC copies billing
+ *     names to shipping when "ship to different address" is unchecked).
+ *   - Hide postcode (Israeli addresses don't conventionally use it).
  *   - Require phone + email.
  *
  * Shipping block:
@@ -436,9 +437,7 @@ function jlmwines_render_floating_cart() {
  *     placeholder.
  */
 add_filter('woocommerce_checkout_fields', function ($fields) {
-    // Billing — hide first_name, last_name, postcode
-    unset($fields['billing']['billing_first_name']);
-    unset($fields['billing']['billing_last_name']);
+    // Billing — hide postcode only (first/last name kept so guest orders capture buyer name)
     unset($fields['billing']['billing_postcode']);
 
     if (isset($fields['billing']['billing_phone'])) {
