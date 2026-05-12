@@ -736,7 +736,9 @@ function WebAppDashboardV2_getManagerData() {
       'task.validation.comax_internal_audit',  // Negative inventory counts
       // Products
       'task.validation.vintage_mismatch',
-      'task.onboarding.add_product'
+      'task.onboarding.add_product',
+      // User-created project tasks (topic carried on st_Topic per-row)
+      'task.project.custom'
     ];
 
     // Return manager tasks including Done (frontend filters by status)
@@ -750,7 +752,12 @@ function WebAppDashboardV2_getManagerData() {
       .map(task => ({
         id: task.st_TaskId,
         typeId: task.st_TaskTypeId,
-        topic: _getTopicFromType(task.st_TaskTypeId),  // Always derive topic from type for consistency
+        // For user-created project tasks the topic is whatever the modal
+        // captured into st_Topic; for system-generated types we keep the
+        // type-derived label for consistency with the existing dashboard.
+        topic: task.st_TaskTypeId === 'task.project.custom'
+          ? (task.st_Topic || 'Other')
+          : _getTopicFromType(task.st_TaskTypeId),
         name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
         entityId: task.st_LinkedEntityId || '',
         entityName: task.st_LinkedEntityName || '',

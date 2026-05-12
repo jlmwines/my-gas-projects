@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-12 10:19',
-  commit: '@91: Project task creation modal — two fixes. (1) Project dropdown used p.id / p.name which do not exist on the WebAppProjects_getAllProjects shape — esc(undefined) returned empty, so the selected option carried an empty value and submit failed with "Pick a project." Fixed to use the existing repo pattern: p.projectid || p.spro_ProjectId for value and p.name || p.spro_Name for label. (2) Assignee dropdown showed email+role pairs which did not match the rest of the UI (task detail panel + filter both show role labels like "Administrator" / "Manager"). Changed WebAppTasks_getAssignableUsers to return distinct role labels ["Administrator", "Manager"] and the modal stores those values in st_AssignedTo — same convention as the auto-assignment path.'
+  built: '2026-05-12 10:53',
+  commit: '@92: task.project.custom now appears on manager dashboard. WebAppDashboardV2_getManagerData hardcoded a type whitelist (managerTaskTypes) that did not include task.project.custom, so user-created project tasks assigned to Manager were filtered out. Added the type to the whitelist. Also fixed topic display: dashboard previously called _getTopicFromType(typeId) which returns "Other" for project.custom — replaced for this type only with the row\'s stored st_Topic field (the value the modal captured). Admin dashboard unchanged (it already filtered only by open status, not by type).'
 };
 
 function getVersion() {
