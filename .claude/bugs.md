@@ -31,6 +31,8 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-03-10: **Decanting field treats 0 as empty** — system should accept zero as a valid decanting value (some wines legitimately need no decanting), not treat it as skippable/missing. Migrated from STATUS.md inbox 2026-05-07.
 
+- [ ] 2026-05-12: **Project task creation doesn't work as intended** — user-reported. Creating a new task in a Project does not behave as expected. Symptom not yet characterized; needs repro and trace through `WebAppProjects` / `TaskService.createTask` paths.
+
 ### Resolved
 
 - [x] 2026-05-04: 2026-02-09 manager orders view requires refresh to reload → verified in code: `ManagerOrdersView.html:172-174` self-executes `loadPackingSlipsData()` + `loadOpenOrdersData()` on view render, plus manual Refresh Orders button.

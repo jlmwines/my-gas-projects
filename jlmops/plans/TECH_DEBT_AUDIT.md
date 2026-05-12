@@ -36,7 +36,7 @@ Pending: `clasp push` to retire from the deployed source tree.
 ### 1.6 Drive-import paths possibly orphaned after WC REST API pull
 - STATUS.md (Current State) says: "Full Woo REST API pull (products + translations + orders) deployed Feb 2026. 'API Pull' button runs entire pipeline." But `OrchestratorService.js`, `ProductService.js`, `OrderService.js`, `ProductImportService.js`, `HousekeepingService.js` still reference `import.drive.web_orders` / `import.drive.web_products_en` extensively (~25 sites).
 - `import.drive.comax_products` is legitimately still drive-based (Comax CSV drop).
-- **M — confirm whether `web_orders` and `web_products_en` drive paths are still live (fallback path? scheduled trigger?) or fully retired in favor of the REST pull. If retired, remove the case branches, config rows, and folder watchers; keep only `comax_products`.**
+- **CLOSED 2026-05-12** — user confirms `web_orders` and `web_products_en` drive paths are intended fallback (kept in case the REST API pull is unavailable). No removal action. Future sessions: do not re-surface this as cleanup.
 
 ### 1.7 Test files in production deploy (`*Test.js` + `TestData.js` + `TestRunner.js`)
 - `OrderServiceTest.js`, `ProductServiceTest.js`, `ComaxAdapterTest.js`, `WebAdapterTest.js`, `TestData.js`, `TestRunner.js` — ~1,343 lines total. Wired into `DevelopmentView.html` via `runUnitTests()` button.
@@ -47,11 +47,11 @@ Pending: `clasp push` to retire from the deployed source tree.
 
 ## 2. Obsolete Dev UI Controls
 
-### 2.1 `DevelopmentView.html` is in the live nav for all users
-- `AppView.html:105` adds a "Development" link to the top-nav unconditionally — no role gate. Same in the orphan `Dashboard.html:84`.
-- The panel exposes destructive/maintenance actions: Rebuild SysConfig, Protect Headers, Validate Schema, Daily Housekeeping, Run Unit Tests, Import CRM Data, Validate CRM, Correct Data, Refresh Contacts, Enrich Contacts, Run Intelligence.
-- Also has a Developer Wishlist textarea (likely superseded by `.claude/wishlist`).
-- **M — at minimum gate the nav link behind `effectiveRole === 'admin'` and probably a narrower dev-flag. Better: split into "Admin Tools" (keep) + "Developer Tools" (remove or move behind a per-user flag).**
+### 2.1 `DevelopmentView.html` audience + obsolete controls
+- **Audience CLOSED 2026-05-12** — user confirms Development view is admin-only in practice (audit's "no role gate" finding was incorrect or has been gated elsewhere).
+- **Developer Wishlist textarea DELETED 2026-05-12** — card markup, `loadWishlist`/`saveWishlist` JS, init `setTimeout`, plus backend `getDevWishlistContent` + `saveDevWishlistContent` in `WebApp.js`. Hard-coded spreadsheet ID `1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM` ("Wishlist" sheet, cell A2) no longer referenced.
+- **Run Unit Tests button KEPT** — admin-run unit tests have value (per user 2026-05-12, see §1.7 disposition).
+- The panel still exposes maintenance actions (Rebuild SysConfig, Protect Headers, Validate Schema, Daily Housekeeping, Run Unit Tests, Import CRM Data, Validate CRM, Correct Data, Refresh Contacts, Enrich Contacts, Run Intelligence). All admin-appropriate.
 
 ### 2.2 ~~`AdminSyncView.html` carries commented-out "new sync widget" scaffolding~~ — **DONE 2026-05-11**
 - Commented HTML block + JS stub removed. View now loads only the active V2 widget.

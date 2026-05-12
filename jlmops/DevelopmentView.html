@@ -35,21 +35,6 @@
   </div>
 </div>
 
-<div class="row mt-3">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <h3>Developer Wishlist</h3>
-      </div>
-      <div class="card-body">
-        <textarea id="dev-wishlist-textarea" class="form-control" rows="10" placeholder="Enter your notes here..."></textarea>
-        <button class="btn mt-2" onclick="saveWishlist()">Save Wishlist</button>
-        <div id="wishlist-status" class="mt-2"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
   function runRebuildSysConfig() {
     const resultDiv = document.getElementById('dev-tools-results');
@@ -274,37 +259,4 @@
       .runCrmIntelligence();
   }
 
-  // --- Wishlist Functions ---
-  function loadWishlist() {
-    google.script.run
-      .withSuccessHandler(content => {
-        if(document.getElementById('dev-wishlist-textarea')) {
-          document.getElementById('dev-wishlist-textarea').value = content;
-        }
-      })
-      .withFailureHandler(err => {
-        if(document.getElementById('wishlist-status')) {
-          document.getElementById('wishlist-status').innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
-        }
-      })
-      .getDevWishlistContent();
-  }
-
-  function saveWishlist() {
-    const content = document.getElementById('dev-wishlist-textarea').value;
-    const statusDiv = document.getElementById('wishlist-status');
-    statusDiv.innerHTML = '<p class="text-info">Saving...</p>';
-    google.script.run
-      .withSuccessHandler(message => {
-        statusDiv.innerHTML = `<p class="alert alert-success">${message}</p>`;
-        setTimeout(() => { statusDiv.innerHTML = ''; }, 3000);
-      })
-      .withFailureHandler(err => {
-        statusDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
-      })
-      .saveDevWishlistContent(content);
-  }
-
-  // Load wishlist content after a short delay to ensure the element exists.
-  setTimeout(loadWishlist, 200);
 </script>

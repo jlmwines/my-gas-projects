@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-12 08:18',
-  commit: '@88: Web inventory export refactored from async-job to inline. generateWebExportBackend now calls ProductService.exportWebInventory() synchronously and transitions state directly to WAITING_WEB_CONFIRM (or COMPLETE on no-changes), returning the post-state to the widget. Removed GENERATING_WEB_EXPORT stage from state machine, removed export.web.inventory job type from jobs.json, removed orchestrator polling branch and queueWebInventoryExport, deleted duplicate exportWebInventory in ProductImportService and orphan run_exportWebInventory + getWebInventoryExportBackend. Replaces the racey three-process-must-agree pattern (job row × state × orchestrator poll) with one synchronous round-trip. confirmWebInventoryUpdateBackend guard switched from job-status check to webExportFilename check.'
+  built: '2026-05-12 09:10',
+  commit: '@89: Tech-debt cleanup. Deleted Developer Wishlist surface — getDevWishlistContent + saveDevWishlistContent in WebApp.js, card markup + loadWishlist/saveWishlist JS + init setTimeout in DevelopmentView.html. Hard-coded spreadsheet ID dropped from the codebase. Audit §2.1 wishlist subitem closed and §1.6 drive-import-paths closed (confirmed intentional fallback per user).'
 };
 
 function getVersion() {
@@ -262,50 +262,6 @@ function getProductNamesBySkus(skus) {
 }
 
 // --- Admin & Developer Tools Functions ---
-
-/**
- * Functions for the Development View Wishlist.
- * Reads content from a hard-coded Google Sheet cell.
- * @returns {string} The content of the wishlist.
- */
-function getDevWishlistContent() {
-  try {
-    const spreadsheetId = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
-    const sheetName = 'Wishlist';
-    const cell = 'A2'; // Hard-coded cell for the single block of text.
-    const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
-    if (!sheet) {
-      return `Sheet "${sheetName}" not found.`;
-    }
-    return sheet.getRange(cell).getValue();
-  } catch (e) {
-    return 'Error loading wishlist: ' + e.message;
-  }
-}
-
-/**
- * Saves content to a hard-coded Google Sheet cell.
- * @param {string} content - The content to save.
- * @returns {string} A success message.
- */
-function saveDevWishlistContent(content) {
-  try {
-    const spreadsheetId = '1ESV9fJHKykPzy3kS88S9FWF46YodTuJ35O8MvfVModM';
-    const sheetName = 'Wishlist';
-    const cell = 'A2'; // Hard-coded cell
-    const ss = SpreadsheetApp.openById(spreadsheetId);
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-      sheet.getRange('A1').setValue('Wish'); // Add a header
-    }
-    sheet.getRange(cell).setValue(content);
-    return 'Wishlist saved successfully.';
-  } catch (e) {
-    throw new Error('Failed to save wishlist: ' + e.message);
-  }
-}
-
 
 
 
