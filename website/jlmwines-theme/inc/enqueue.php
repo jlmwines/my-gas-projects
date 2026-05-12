@@ -62,6 +62,43 @@ add_filter('wp_resource_hints', function ($hints, $relation_type) {
 }, 10, 2);
 
 /**
+ * Reusable predicate: routes where neither Gutenberg blocks nor WooCommerce
+ * UI is rendered, so WC's classic stylesheets + block stylesheets are pure
+ * render-blocking dead weight. Used by both the WC classic-styles filter
+ * (below) and the block-CSS dequeue (further below).
+ */
+function jlmwines_is_blockless_route() {
+    return is_front_page()
+        || (function_exists('is_shop') && is_shop())
+        || (function_exists('is_product_category') && is_product_category())
+        || (function_exists('is_product_tag') && is_product_tag())
+        || (function_exists('is_cart') && is_cart())
+        || (function_exists('is_checkout') && is_checkout())
+        || (function_exists('is_account_page') && is_account_page());
+}
+
+/**
+ * Disable WooCommerce's classic stylesheets (woocommerce-general,
+ * woocommerce-layout, woocommerce-smallscreen — totalling ~22 KiB and
+ * ~2.2 s of mobile render-blocking time per 2026-05-12 PSI audit) on
+ * routes where nothing visible needs them: the homepage front-page.php,
+ * shop/archive (theme handles styling), cart/checkout/account (Woo
+ * templates use their own dedicated CSS via the shop pages anyway —
+ * but the front page audit shows the classic bundle leaking onto pages
+ * that don't need it).
+ *
+ * Returning [] from this filter short-circuits WC's enqueue. Cleaner
+ * than wp_dequeue_style after-the-fact because the handles never get
+ * registered into the print queue.
+ */
+add_filter('woocommerce_enqueue_styles', function ($styles) {
+    if (jlmwines_is_blockless_route()) {
+        return [];
+    }
+    return $styles;
+});
+
+/**
  * Dequeue block-library + WooCommerce blocks CSS on routes that render
  * no Gutenberg block content.
  *
@@ -82,15 +119,7 @@ add_filter('wp_resource_hints', function ($hints, $relation_type) {
  * may render Gutenberg blocks authored in the editor.
  */
 add_action('wp_enqueue_scripts', function () {
-    $is_blockless_route = is_front_page()
-        || (function_exists('is_shop') && is_shop())
-        || (function_exists('is_product_category') && is_product_category())
-        || (function_exists('is_product_tag') && is_product_tag())
-        || (function_exists('is_cart') && is_cart())
-        || (function_exists('is_checkout') && is_checkout())
-        || (function_exists('is_account_page') && is_account_page());
-
-    if (!$is_blockless_route) {
+    if (!jlmwines_is_blockless_route()) {
         return;
     }
 
