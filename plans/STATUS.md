@@ -1,21 +1,21 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-11 (tech-debt cleanup pass + admin-SKU fix)
+**Updated:** 2026-05-12 (web-export inline refactor + project task modal + non-destructive rebuild)
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. |
-| Last Active | 2026-05-05 |
+| Last Active | 2026-05-12 |
 | Revenue | Steady |
-| Deploy Version | jlmops @87 (followup fix: syncHeaders argument-guard — was emitting misleading "Run rebuildSysConfigFromSource() first" advice when called without a sheetName; now throws a clear message pointing at syncAllHeaders()) · theme v1.2.20 LIVE (inline HE for search.php H1 + targeted gettext filter for WC breadcrumb prefix + WC product-search H1 + admin-SKU restored via `is_admin()` gate on `wc_product_sku_enabled`) |
-| Deploy Date | jlmops 2026-05-11 (@85 → @86 → @87 — same session) · theme 2026-05-11 (v1.2.17 → v1.2.20 — four deploys this session: dead-filter cleanup, bidi-aware HE chrome strings, admin-SKU regression fix) |
+| Deploy Version | jlmops @93 (six deploys this session: @88 web inventory export refactored from async-job-queue to inline synchronous call eliminating GENERATING_WEB_EXPORT stage + obsoleting SYNC_HARDENING_PLAN.md Bug 4; @89 wishlist surface deleted; @90 project task creation function added + modal expanded; @91 project dropdown + assignee shape fixes; @92 task.project.custom visible on manager dashboard; @93 rebuildSysConfigFromSource wrapped with snapshot+restore so 8 runtime-mutable keys including the live sync state survive a rebuild — fixes the recurring brurya-999-days root cause) · theme v1.2.20 LIVE (no change today) |
+| Deploy Date | jlmops 2026-05-12 (@88 → @89 → @90 → @91 → @92 → @93 — same session) · theme 2026-05-11 (unchanged today) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
 | Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) + 2026-05-11 additions: GTIN structured-data enrichment (deferred), auto-push to RankMath for short URL redirects (deferred — manual paste fine at current volume) |
-| Next Milestone | Pilot Campaign Architecture end-to-end with Newsletter Issue #1 (Context lead post): create the Distribution Projects, work the task chains, generate Outputs, paste short-URL redirects into RankMath manually, ship issue, observe attribution. Then revisit RankMath auto-push if volume justifies the mu-plugin build. Mobile LCP tuning (4.0–4.1s) remains queued for after the pilot. |
+| Next Milestone | **2026-05-13 morning sync — live observation of @88 web-export inline refactor.** Be present at start of the daily sync. After Generate, widget must transition `WAITING_WEB_EXPORT → WAITING_WEB_CONFIRM` in one step (with API upload button), or `→ COMPLETE` if no diff. If anything looks wrong, rollback per `jlmops/plans/WEB_EXPORT_INLINE_PLAN.md`. After that lands cleanly: Pilot Campaign Architecture end-to-end with Newsletter Issue #1. Mobile LCP tuning (4.0–4.1s) remains queued. |
 | Blockers | 0 |
 | Mobile PageSpeed (post-cutover) | EN: FCP 3.2 / LCP 4.1 · HE: FCP 3.5 / LCP 4.0 · TBT 210ms (was LCP 7.2 / FCP 3.9 pre-cutover — ~43% LCP improvement) |
 | Desktop PageSpeed (post-cutover) | EN: FCP 0.7 / LCP 0.8 · HE: FCP 0.7 / LCP 1.2 |

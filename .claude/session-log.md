@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-12 (web-export inline refactor, project task modal, non-destructive rebuild)
+
+- **Daily sync failed this morning** — web inventory export file produced (`Inv-Web-05-12-07-21.csv`) but state didn't advance to `WAITING_WEB_CONFIRM`; user clicked Generate again, second file produced, sync ended as "Web inventory - skipped" without uploading. User manually pushed the CSV.
+- **@88 — eliminated `GENERATING_WEB_EXPORT` stage.** Root cause was the 3-process consensus (SysJobQueue row × `webExportFilename` in state × orchestrator poll) — the same architecture has caused repeated sync bugs (2026-03-03, 2026-03-17, 2026-05-05, today). `generateWebExportBackend` now calls `ProductService.exportWebInventory` inline and transitions state directly in a single round-trip. Plan at `jlmops/plans/WEB_EXPORT_INLINE_PLAN.md`. Also deleted orphan `getWebInventoryExportBackend`, duplicate `ProductImportService.exportWebInventory`, orphan `run_exportWebInventory`, and the now-unused job-queue plumbing for `export.web.inventory`. SYNC_HARDENING_PLAN.md Bug 4 obsoleted. Net **-322 lines, +47 lines**.
+- **@89 — Developer Wishlist surface deleted.** Hard-coded spreadsheet ID dropped. Tech-debt audit §2.1 wishlist subitem + §1.6 drive-import-paths (confirmed intentional fallback) closed.
+- **@90/@91/@92 — project task creation fixed end-to-end.** Backend `WebAppTasks_createTask` was missing entirely (modal silently failed); added it plus `task.project.custom` registration plus modal expansion with project/topic/assignee/dates. @91 fixed two bugs found in test (project dropdown field-name shape, assignee role-vs-email shape). @92 added the type to manager dashboard whitelist with `st_Topic`-based topic display.
+- **@93 — rebuildSysConfigFromSource is now non-destructive of runtime values.** Diagnosis of today's brurya-999 recurrence: rebuild does `sheet.clear()` then rewrites predeclared rows back to empty, wiping any setConfig-written value. Eight runtime keys vulnerable including `system.sync.state` (would destroy in-flight sync). Edited `generate-config.js` (source of generated `SetupConfig.js`) to wrap the rebuild with snapshot + restore. User manually restored April 14 brurya timestamp post-deploy; future rebuilds preserve it.
+- **Feedback memory added:** `feedback_no_assumptions_in_bug_diagnosis.md` — root-cause assertions must be backed by code I actually read. Triggered by my asserting rebuild was destructive without verifying (was lucky to be right).
+- **Next session:** be present at 2026-05-13 morning sync. Verify @88 inline flow under real data. Then pilot Newsletter #1 through Campaign Architecture.
+
+---
+
 ## 2026-05-11 (continued — tech-debt audit, admin-SKU fix, SetupSheets consolidation)
 
 - **Tech-debt audit written** (`jlmops/plans/TECH_DEBT_AUDIT.md`): 7 sections covering dead/one-use code, obsolete dev UI, code-compliance drift, plan-doc accuracy, data integrity gaps, triage, legacy GAS retirement.

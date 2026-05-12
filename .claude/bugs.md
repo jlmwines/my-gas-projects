@@ -31,7 +31,7 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-03-10: **Decanting field treats 0 as empty** — system should accept zero as a valid decanting value (some wines legitimately need no decanting), not treat it as skippable/missing. Migrated from STATUS.md inbox 2026-05-07.
 
-- [ ] 2026-05-12: **Project task creation doesn't work as intended** — user-reported. Creating a new task in a Project does not behave as expected. Symptom not yet characterized; needs repro and trace through `WebAppProjects` / `TaskService.createTask` paths.
+- [x] 2026-05-12: **Project task creation doesn't work as intended** — RESOLVED 2026-05-12 across @90/@91/@92. Root cause was multi-layer: (a) the modal called `WebAppTasks_createTask` which did not exist in the backend at all — silently failed; (b) the modal lacked the fields the data model expects (assignee, dates, topic); (c) after @90 added the call and fields, the project dropdown wrote `p.id` (undefined → empty value attribute via `esc(undefined)`); (d) the manager dashboard hardcoded a task-type whitelist that excluded `task.project.custom`. Fixes: registered `task.project.custom` in `taskDefinitions.json` with `flow_pattern: manual` + `due_pattern: manual`; extended `TaskService.createTask` to accept per-call overrides for topic/priority/status/dueDate/assignedTo; added `WebAppTasks_createTask` and `WebAppTasks_getAssignableUsers`; expanded the modal (project/topic/assignee/dates); fixed the project dropdown field-name pattern; added `task.project.custom` to manager dashboard whitelist with `st_Topic`-based topic resolution.
 
 ### Resolved
 
@@ -44,6 +44,7 @@ Projects: jlmops, web, marketing, content
 - [x] 2026-05-04: War-support detection wrong field → N/A. Feature retired; remove dead code in CRM cleanup.
 - [x] 2026-01-26: Bundle export to Comax (inventory) → bundleSkus filter added to generateComaxInventoryExport().
 - [x] 2026-01-20: Brurya days showing 999 → RESOLVED 2026-01-23. Code fix was correct, SysConfig row had empty value from pre-fix runs, manually set scf_P02.
+- [x] 2026-05-12: Brurya days showing 999 recurred → root cause identified + STRUCTURAL FIX shipped 2026-05-12 as @93. The recurrence was triggered by `rebuildSysConfigFromSource()` clearing the SysConfig sheet (intended) and overwriting predeclared rows back to empty (unintended for runtime-written values). Eight runtime-mutable keys were vulnerable to the same wipe, including the live `system.sync.state` JSON. @93 wraps the rebuild with snapshot + restore around the destructive write. User manually restored the April 14 timestamp post-deploy; future rebuilds will preserve runtime values automatically. See `TECH_DEBT_AUDIT.md §5.2` — this addresses it.
 - [x] 2025-12-29: Packing slips bundle count → VERIFIED. PrintService.js excludes bundle products.
 - [x] 2025-12-23: Sync confirmation button not appearing after order export.
 - [x] 2025-12-23: Need confirmation dialog before confirming sync steps.
