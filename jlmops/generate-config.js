@@ -116,11 +116,28 @@ function generateSetupConfig() {
 
 /**
  * Overwrites the live SysConfig sheet with the master configuration defined in this script.
- * This is the authoritative source of truth for the system configuration.
+ * Runtime-mutable values (timestamps, sync state, etc. — see RUNTIME_KEYS) are
+ * snapshotted before the wipe and restored after, so a rebuild does not destroy
+ * state written at runtime by setConfig. The masterConfig is otherwise the
+ * authoritative source for every row's structure and defaults.
  */
 function rebuildSysConfigFromSource() {
     const functionName = 'rebuildSysConfigFromSource';
     const masterConfig = getMasterConfiguration();
+
+    // Runtime-mutable keys: their P02 (or other-field) values are written at
+    // runtime via ConfigService.setConfig and must survive a rebuild. Each
+    // entry names the SettingName plus the P01 field whose value is preserved.
+    const RUNTIME_KEYS = [
+        { name: 'system.brurya.last_update', key: 'value' },
+        { name: 'system.mailchimp.subscribers_last_update', key: 'value' },
+        { name: 'system.mailchimp.campaigns_last_update', key: 'value' },
+        { name: 'system.crm.last_refresh', key: 'value' },
+        { name: 'system.bundle_health.last_check', key: 'value' },
+        { name: 'system.crm_intelligence.last_run', key: 'value' },
+        { name: 'system.sync.state', key: 'json' },
+        { name: 'woo.api', key: 'products_last_pull' }
+    ];
 
     try {
         console.log('Running ' + functionName + '...');
@@ -132,7 +149,27 @@ function rebuildSysConfigFromSource() {
         }
         console.log('Target SysConfig sheet located.');
 
-        // Clear and write data
+        // ----- Snapshot runtime-mutable values BEFORE clearing -----
+        const snapshot = {};
+        try {
+            ConfigService.forceReload();
+            RUNTIME_KEYS.forEach(function(rk) {
+                try {
+                    const cfg = ConfigService.getConfig(rk.name);
+                    if (cfg && cfg[rk.key]) {
+                        snapshot[rk.name + '::' + rk.key] = cfg[rk.key];
+                    }
+                } catch (snapErr) {
+                    console.warn('Snapshot skipped for ' + rk.name + ' / ' + rk.key + ': ' + snapErr.message);
+                }
+            });
+            console.log('Snapshotted ' + Object.keys(snapshot).length + ' runtime-mutable value(s).');
+        } catch (snapshotPhaseErr) {
+            // Abort before any destructive action — we will not partially wipe.
+            throw new Error('Snapshot phase failed, aborting before clear: ' + snapshotPhaseErr.message);
+        }
+
+        // ----- Destructive rewrite from masterConfig -----
         sheet.clear();
         console.log('Cleared existing content from SysConfig sheet.');
 
@@ -145,7 +182,24 @@ function rebuildSysConfigFromSource() {
         sheet.getRange(1, 1, 1, numCols).setFontWeight('bold');
         console.log('Formatted header row.');
 
-        ConfigService.forceReload(); // Invalidate the cache
+        ConfigService.forceReload(); // Invalidate cache so the restore reads fresh rows
+
+        // ----- Restore runtime-mutable values -----
+        let restored = 0;
+        let restoreErrors = 0;
+        RUNTIME_KEYS.forEach(function(rk) {
+            const value = snapshot[rk.name + '::' + rk.key];
+            if (!value) return; // nothing snapshotted for this key
+            try {
+                ConfigService.setConfig(rk.name, rk.key, value);
+                restored++;
+            } catch (restErr) {
+                console.error('Restore failed for ' + rk.name + ' / ' + rk.key + ': ' + restErr.message);
+                restoreErrors++;
+            }
+        });
+        ConfigService.forceReload();
+        console.log('Restored ' + restored + ' runtime-mutable value(s) (' + restoreErrors + ' error(s)).');
 
         console.log(functionName + ' completed successfully.');
 

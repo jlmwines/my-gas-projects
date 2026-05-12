@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-12 10:53',
-  commit: '@92: task.project.custom now appears on manager dashboard. WebAppDashboardV2_getManagerData hardcoded a type whitelist (managerTaskTypes) that did not include task.project.custom, so user-created project tasks assigned to Manager were filtered out. Added the type to the whitelist. Also fixed topic display: dashboard previously called _getTopicFromType(typeId) which returns "Other" for project.custom — replaced for this type only with the row\'s stored st_Topic field (the value the modal captured). Admin dashboard unchanged (it already filtered only by open status, not by type).'
+  built: '2026-05-12 11:28',
+  commit: '@93: rebuildSysConfigFromSource is now non-destructive of runtime-written values. Diagnosis: the rebuild does sheet.clear() then rewrites from masterConfig — wiping any runtime-set scf_P02 value for predeclared rows. This is the recurring cause of brurya days-since-update reverting to 999, and would also wipe Mailchimp last-pull markers, woo.api products_last_pull, the CRM intelligence run timestamp, the bundle-health last-check, AND most critically the live system.sync.state JSON for an in-flight sync. Fix shape: edited generate-config.js (the source of the generated SetupConfig.js) to add a snapshot-and-restore wrapper inside rebuildSysConfigFromSource. Snapshots 8 runtime-mutable keys via ConfigService.getConfig before the sheet.clear, aborts if snapshot phase throws (no partial wipe), then restores each via setConfig after the rewrite. Per-key try/catch so one missing/bad key does not break the others. Public function name unchanged so the dev panel button and any manual editor runs get the safe behavior automatically.'
 };
 
 function getVersion() {
