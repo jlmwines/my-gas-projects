@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-12 09:10',
-  commit: '@89: Tech-debt cleanup. Deleted Developer Wishlist surface — getDevWishlistContent + saveDevWishlistContent in WebApp.js, card markup + loadWishlist/saveWishlist JS + init setTimeout in DevelopmentView.html. Hard-coded spreadsheet ID dropped from the codebase. Audit §2.1 wishlist subitem closed and §1.6 drive-import-paths closed (confirmed intentional fallback per user).'
+  built: '2026-05-12 09:52',
+  commit: '@90: Project task creation — now works and collects the right fields. Backend WebAppTasks_createTask added (was missing entirely; modal silently failed). New task type task.project.custom registered in taskDefinitions.json with flow_pattern: manual + due_pattern: manual. TaskService.createTask extended to accept options.topic, .priority, .status, .dueDate, .assignedTo as per-call overrides for user-created tasks. Modal expanded with Project dropdown (default current, override allowed), Topic dropdown (10 values from existing task definitions), Assignee dropdown (sourced from AuthService.getUsersAndRoles), Start + Due date pickers (both-or-neither validated). Both dates present → status auto-set to Assigned per data-model invariant. WebAppTasks_getAssignableUsers added for the assignee dropdown.'
 };
 
 function getVersion() {

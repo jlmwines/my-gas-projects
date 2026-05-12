@@ -515,3 +515,81 @@ function WebAppTasks_getStatusOptions() {
 function WebAppTasks_getCurrentUserEmail() {
   return Session.getActiveUser().getEmail();
 }
+
+/**
+ * Returns the list of assignable users from system.users config, for the
+ * project-task assignee dropdown.
+ * @returns {{email: string, role: string}[]}
+ */
+function WebAppTasks_getAssignableUsers() {
+  try {
+    const roleMap = AuthService.getUsersAndRoles();
+    return Object.keys(roleMap).map(email => ({
+      email: email,
+      role: roleMap[email]
+    }));
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'getAssignableUsers', e.message, e);
+    return [];
+  }
+}
+
+/**
+ * Creates a user-defined task from the Admin Projects view modal.
+ * Payload fields (all optional except title and projectId):
+ *   { projectId, title, topic, priority, assignedTo,
+ *     startDate, dueDate, notes }
+ * Dates expected as 'yyyy-MM-dd' strings from the HTML date input.
+ * @param {Object} payload
+ * @returns {Object} { success: true, taskId } or { error }
+ */
+function WebAppTasks_createTask(payload) {
+  try {
+    const p = payload || {};
+    if (!p.title || !String(p.title).trim()) {
+      return { error: 'Task title is required.' };
+    }
+    if (!p.projectId) {
+      return { error: 'Project is required.' };
+    }
+    if ((p.startDate && !p.dueDate) || (p.dueDate && !p.startDate)) {
+      return { error: 'Provide both start date and due date, or neither.' };
+    }
+
+    const toIsraelDate = function(s) {
+      if (!s) return null;
+      // 'yyyy-MM-dd' → Israel-local midnight Date.
+      return new Date(String(s) + 'T00:00:00');
+    };
+
+    const options = {
+      projectId: p.projectId,
+      topic: p.topic || null,
+      priority: p.priority || null,
+      assignedTo: p.assignedTo || null,
+      startDate: toIsraelDate(p.startDate),
+      dueDate: toIsraelDate(p.dueDate),
+      allowDuplicate: true
+    };
+
+    const result = TaskService.createTask(
+      'task.project.custom',
+      '',                                  // no linked entity for user-created tasks
+      String(p.title).trim(),              // also used as linkedEntityName
+      String(p.title).trim(),
+      p.notes ? String(p.notes) : '',
+      null,                                // sessionId — none
+      options
+    );
+
+    if (!result) {
+      return { error: 'Task creation failed (duplicate or unknown error).' };
+    }
+
+    WebAppTasks.invalidateCache();
+    return { success: true, taskId: result.id };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'createTask', e.message, e);
+    return { error: e.message };
+  }
+}

@@ -498,13 +498,33 @@
 
 <!-- New Task Modal -->
 <div class="modal-overlay" id="newTaskModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:400px;width:90%;">
+  <div style="background:white;border-radius:4px;max-width:440px;width:90%;">
     <div style="padding:15px;border-bottom:1px solid #dee2e6;">
       <h6 class="mb-0">New Task</h6>
     </div>
     <div style="padding:15px;">
       <div class="form-group">
+        <label class="small mb-1">Project</label>
+        <select class="form-control form-control-sm" id="new-task-project"></select>
+      </div>
+      <div class="form-group">
         <input type="text" class="form-control form-control-sm" id="new-task-title" placeholder="Task title">
+      </div>
+      <div class="form-group">
+        <label class="small mb-1">Topic</label>
+        <select class="form-control form-control-sm" id="new-task-topic">
+          <option value="">— Pick topic —</option>
+          <option>CRM</option>
+          <option>Campaign</option>
+          <option>Content</option>
+          <option>Data</option>
+          <option>Inventory</option>
+          <option>Marketing</option>
+          <option>Orders</option>
+          <option>Products</option>
+          <option>System</option>
+          <option>WebXlt</option>
+        </select>
       </div>
       <div class="form-group">
         <select class="form-control form-control-sm" id="new-task-priority">
@@ -513,6 +533,22 @@
           <option value="Critical">Critical</option>
           <option value="Low">Low Priority</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="small mb-1">Assign to</label>
+        <select class="form-control form-control-sm" id="new-task-assignee">
+          <option value="">— Unassigned —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label class="small mb-1">Start date</label>
+          <input type="date" class="form-control form-control-sm" id="new-task-start-date">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="small mb-1">Due date</label>
+          <input type="date" class="form-control form-control-sm" id="new-task-due-date">
+        </div>
       </div>
       <div class="form-group mb-0">
         <textarea class="form-control form-control-sm" id="new-task-notes" placeholder="Notes (optional)" rows="2"></textarea>
@@ -1195,8 +1231,44 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     } else {
       document.getElementById('new-task-title').value = '';
       document.getElementById('new-task-notes').value = '';
+      document.getElementById('new-task-start-date').value = '';
+      document.getElementById('new-task-due-date').value = '';
+      document.getElementById('new-task-topic').value = '';
+      document.getElementById('new-task-priority').value = 'Normal';
+      document.getElementById('new-task-assignee').value = '';
+      populateTaskProjectOptions();
+      populateTaskAssigneeOptions();
       document.getElementById('newTaskModal').style.display = 'flex';
     }
+  }
+
+  function populateTaskProjectOptions() {
+    var select = document.getElementById('new-task-project');
+    if (!select) return;
+    var current = state.selectedProjectId || '';
+    var html = '';
+    (state.projects || []).forEach(function(p) {
+      var sel = (String(p.id) === String(current)) ? ' selected' : '';
+      html += '<option value="' + esc(p.id) + '"' + sel + '>' + esc(p.name) + '</option>';
+    });
+    select.innerHTML = html || '<option value="">— No projects —</option>';
+  }
+
+  function populateTaskAssigneeOptions() {
+    var select = document.getElementById('new-task-assignee');
+    if (!select) return;
+    google.script.run
+      .withSuccessHandler(function(users) {
+        var html = '<option value="">— Unassigned —</option>';
+        (users || []).forEach(function(u) {
+          html += '<option value="' + esc(u.email) + '">' + esc(u.email) + ' (' + esc(u.role) + ')</option>';
+        });
+        select.innerHTML = html;
+      })
+      .withFailureHandler(function() {
+        // keep just the unassigned option
+      })
+      .WebAppTasks_getAssignableUsers();
   }
 
   function loadCampaignOptions() {
@@ -2044,7 +2116,16 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function createTask() {
     var title = document.getElementById('new-task-title').value.trim();
     if (!title) { alert('Enter task title'); return; }
-    if (!state.selectedProjectId) { alert('No project selected'); return; }
+    var projectId = document.getElementById('new-task-project').value;
+    if (!projectId) { alert('Pick a project'); return; }
+    var topic = document.getElementById('new-task-topic').value;
+    if (!topic) { alert('Pick a topic'); return; }
+    var startDate = document.getElementById('new-task-start-date').value;
+    var dueDate = document.getElementById('new-task-due-date').value;
+    if ((startDate && !dueDate) || (dueDate && !startDate)) {
+      alert('Provide both start date and due date, or neither.');
+      return;
+    }
 
     google.script.run
       .withSuccessHandler(function(result) {
@@ -2053,9 +2134,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         loadData();
       })
       .WebAppTasks_createTask({
-        projectId: state.selectedProjectId,
+        projectId: projectId,
         title: title,
+        topic: topic,
         priority: document.getElementById('new-task-priority').value,
+        assignedTo: document.getElementById('new-task-assignee').value,
+        startDate: startDate,
+        dueDate: dueDate,
         notes: document.getElementById('new-task-notes').value
       });
   }

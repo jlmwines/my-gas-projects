@@ -823,5 +823,16 @@
         "initial_status", "New",
         "flow_pattern", "admin_direct",
         "due_pattern", "two_weeks"
+    ],
+    [
+        "task.template",
+        "task.project.custom",
+        "User-created task within a project. Topic, priority, assignee, and dates are set per-task via the project view modal — config defaults are placeholders only.",
+        "stable",
+        "topic", "Custom",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manual",
+        "due_pattern", "manual"
     ]
 ]

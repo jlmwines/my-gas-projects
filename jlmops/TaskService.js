@@ -123,7 +123,12 @@ const TaskService = (function() {
    * @param {string} title A short, descriptive title for the task.
    * @param {string} notes Additional details or context for the task.
    * @param {string} [sessionId=null] The session ID associated with this task.
-   * @param {Object} [options={}] Additional options: { projectId, startDate }
+   * @param {Object} [options={}] Additional options:
+   *   { projectId, startDate, allowDuplicate,
+   *     topic, priority, status, dueDate, assignedTo }
+   *   topic/priority/status/dueDate/assignedTo override the values that would
+   *   otherwise be derived from taskTypeConfig — used by user-created custom
+   *   tasks (task.project.custom) where the modal supplies the values directly.
    * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
   function createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes, sessionId = null, options = {}) {
@@ -182,10 +187,10 @@ const TaskService = (function() {
           const sessionIdIdx = headers.indexOf('st_SessionId');
           if (sessionIdIdx > -1) newRow[sessionIdIdx] = sessionId;
       }
-      newRow[headers.indexOf('st_Topic')] = taskTypeConfig.topic;
+      newRow[headers.indexOf('st_Topic')] = options.topic || taskTypeConfig.topic;
       newRow[headers.indexOf('st_Title')] = title;
-      newRow[headers.indexOf('st_Status')] = taskTypeConfig.initial_status;
-      newRow[headers.indexOf('st_Priority')] = taskTypeConfig.default_priority;
+      newRow[headers.indexOf('st_Status')] = options.status || taskTypeConfig.initial_status;
+      newRow[headers.indexOf('st_Priority')] = options.priority || taskTypeConfig.default_priority;
       newRow[headers.indexOf('st_LinkedEntityId')] = linkedEntityId;
       const linkedEntityNameIdx = headers.indexOf('st_LinkedEntityName');
       if (linkedEntityNameIdx > -1) newRow[linkedEntityNameIdx] = linkedEntityName;
@@ -209,14 +214,23 @@ const TaskService = (function() {
         const startDateIdx = headers.indexOf('st_StartDate');
         if (startDateIdx > -1) newRow[startDateIdx] = options.startDate;
       }
+      if (options.dueDate) {
+        const dueDateIdx = headers.indexOf('st_DueDate');
+        if (dueDateIdx > -1) newRow[dueDateIdx] = options.dueDate;
+      }
 
-      // Auto-assign based on flow_pattern
+      // Auto-assign based on flow_pattern (skipped for 'manual' / unknown patterns)
       const assignedToIdx = headers.indexOf('st_AssignedTo');
       if (assignedToIdx > -1 && taskTypeConfig.flow_pattern) {
         const assignee = getInitialAssignee(taskTypeConfig.flow_pattern);
         if (assignee) {
           newRow[assignedToIdx] = assignee;
         }
+      }
+      // Explicit assignedTo override (used by user-created tasks where the
+      // modal collects the assignee directly)
+      if (options.assignedTo && assignedToIdx > -1) {
+        newRow[assignedToIdx] = options.assignedTo;
       }
 
       // --- Date and Status Handling ---
@@ -241,13 +255,23 @@ const TaskService = (function() {
         }
 
         // Only set due date if start date was already set (immediate tasks or explicit options)
-        if (dueDateIdx > -1 && duePattern && newRow[startDateIdx]) {
+        // and not already set via options.dueDate
+        if (dueDateIdx > -1 && duePattern && newRow[startDateIdx] && !newRow[dueDateIdx]) {
           const startDate = newRow[startDateIdx];
           const dueDate = calculateDueDate(startDate, duePattern);
           if (dueDate) {
             newRow[dueDateIdx] = dueDate;
           }
         }
+      }
+
+      // Rule 3: If both start date and due date are set (e.g. user-created task
+      // with explicit dates but no assignee yet), enforce status = Assigned to
+      // preserve the data-model invariant (st_StartDate present ⇒ Assigned).
+      if (startDateIdx > -1 && dueDateIdx > -1 && statusIdx > -1 &&
+          newRow[startDateIdx] && newRow[dueDateIdx] &&
+          newRow[statusIdx] !== 'Assigned') {
+        newRow[statusIdx] = 'Assigned';
       }
 
       sheet.appendRow(newRow);
