@@ -62,10 +62,11 @@ add_filter('wp_resource_hints', function ($hints, $relation_type) {
 }, 10, 2);
 
 /**
- * Reusable predicate: routes where neither Gutenberg blocks nor WooCommerce
- * UI is rendered, so WC's classic stylesheets + block stylesheets are pure
- * render-blocking dead weight. Used by both the WC classic-styles filter
- * (below) and the block-CSS dequeue (further below).
+ * Reusable predicate for routes that render no Gutenberg block content.
+ * Used by the block-CSS dequeue below. NOTE: this predicate is broader than
+ * the WC-classic-CSS filter scope — shop/category/cart/checkout legitimately
+ * need WC's classic styles for product grid / price / add-to-cart rendering;
+ * they're included here only to dequeue *block* CSS, which they don't use.
  */
 function jlmwines_is_blockless_route() {
     return is_front_page()
@@ -81,18 +82,18 @@ function jlmwines_is_blockless_route() {
  * Disable WooCommerce's classic stylesheets (woocommerce-general,
  * woocommerce-layout, woocommerce-smallscreen — totalling ~22 KiB and
  * ~2.2 s of mobile render-blocking time per 2026-05-12 PSI audit) on
- * routes where nothing visible needs them: the homepage front-page.php,
- * shop/archive (theme handles styling), cart/checkout/account (Woo
- * templates use their own dedicated CSS via the shop pages anyway —
- * but the front page audit shows the classic bundle leaking onto pages
- * that don't need it).
+ * the homepage only. The audit was a homepage measurement; extending
+ * the dequeue to shop/category/cart/checkout was overreach — those
+ * pages need WC's classic CSS for product grid / price / cart rendering.
+ * Restoring earlier broke the catalog on live; predicate now narrowed
+ * to is_front_page() only.
  *
  * Returning [] from this filter short-circuits WC's enqueue. Cleaner
  * than wp_dequeue_style after-the-fact because the handles never get
  * registered into the print queue.
  */
 add_filter('woocommerce_enqueue_styles', function ($styles) {
-    if (jlmwines_is_blockless_route()) {
+    if (is_front_page()) {
         return [];
     }
     return $styles;
