@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-13 02:37',
-  commit: '@95: sync widget — Run Bundle Analysis button added to IDLE state. Clicking it navigates to AdminBundlesView (loadView). Implements the last piece of the 2026-04-30 bundle-management refinement (IMPLEMENTATION_PLAN.md Phase 14 line 54): after the user-initiated reset from COMPLETE → IDLE, surface a button so the user can jump straight to the bundle dashboard where post-sync member-condition analysis runs on page load. The composition/condition split itself was already in place (refreshBundleComposition + checkBundleHealth as separate housekeeping steps, with post-sync auto-trigger shipped as @82); this just adds the UI hook. Implementation: extended IDLE state config with a thirdButton slot, generalized the render code to also render config.thirdButton, added runBundleAnalysis() to the SyncWidget IIFE and exposed it on window.SyncWidget. All three edits in AdminDailySyncWidget_v2.html only.'
+  built: '2026-05-13 03:37',
+  commit: '@96: ProductService.exportWebInventory now exposed on the public API. Fixes the daily-sync failure reported 2026-05-13 morning: WebAppSync.generateWebExportBackend calls ProductService.exportWebInventory inline (the @88 refactor pattern), but ProductService never added the function to its return object. The function exists at line 897 inside the IIFE; the public return at line 2886 was missing the export, so callers got "ProductService.exportWebInventory is not a function." This is the @88 watchpoint that was queued for this morning. Two callers were broken: WebAppSync.js:406 (the inline sync flow) and WebAppInventory.js:169 (the admin Re-Export button). Fix: added `exportWebInventory: exportWebInventory,` to ProductService\'s return object. Stale comment "moved to ProductImportService" removed — that was true before @88 deleted the duplicate, no longer accurate.'
 };
 
 function getVersion() {

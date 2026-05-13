@@ -2884,7 +2884,7 @@ const ProductService = (function() {
   }
 
   return {
-    // Note: processJob, runWebXltValidationAndUpsert, exportWebInventory moved to ProductImportService
+    exportWebInventory: exportWebInventory,
     getProductWebIdBySku: getProductWebIdBySku,
     getProductDetails: getProductDetails,
     submitProductDetails: submitProductDetails,
