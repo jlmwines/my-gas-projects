@@ -163,7 +163,7 @@
     // =====================================================================
 
     var STAGE_CONFIG = {
-        IDLE:                   { message: 'Start daily sync',                     button: ['apiPullAll', 'API Pull'], altButton: ['importProducts', 'CSV Import'] },
+        IDLE:                   { message: 'Start daily sync',                     button: ['apiPullAll', 'API Pull'], altButton: ['importProducts', 'CSV Import'], thirdButton: ['runBundleAnalysis', 'Run Bundle Analysis'] },
         IMPORTING_PRODUCTS:     { message: 'Importing products...',                button: null, spinner: true },
         IMPORTING_ORDERS:       { message: 'Products imported. Import orders',     button: ['importOrders', 'Import Orders'] },
         WAITING_ORDER_EXPORT:   { message: '{count} orders to export',             button: ['exportToComax', 'Export Orders'] },
@@ -281,6 +281,9 @@
             var buttons = btn(config.button[0], config.button[1]);
             if (config.altButton) {
                 buttons += ' ' + btn(config.altButton[0], config.altButton[1]);
+            }
+            if (config.thirdButton) {
+                buttons += ' ' + btn(config.thirdButton[0], config.thirdButton[1]);
             }
             actionEl.innerHTML = buttons;
         } else {
@@ -647,6 +650,10 @@
         refreshStatus();
     }
 
+    function runBundleAnalysis() {
+        loadView('AdminBundles');
+    }
+
     window.SyncWidget = {
         importProducts: importProducts,
         apiPullAll: apiPullAll,
@@ -660,7 +667,8 @@
         viewCsv: viewCsv,
         resetSync: resetSync,
         retryFailed: retryFailed,
-        refreshNow: refreshNow
+        refreshNow: refreshNow,
+        runBundleAnalysis: runBundleAnalysis
     };
 
     console.log('SyncWidget: Initializing (stage-based state machine)');
