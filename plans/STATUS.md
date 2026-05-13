@@ -1,6 +1,6 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-12 (web-export inline refactor + project task modal + non-destructive rebuild + guest-checkout name capture fix)
+**Updated:** 2026-05-13 (jlmops @94-@96 shipped: bundle SKU filter on order export + FAILED IMPORTING_COMAX retry + CRM gift rule simplified + sync widget Run Bundle Analysis button + ProductService.exportWebInventory exposure fix; bundle management refinements + EN/HE parity validator plan written)
 
 ## Metrics
 
@@ -45,7 +45,7 @@
 - **Flyer advertising — printed mailbox insert acquisition test.** Plan at `marketing/FLYER_PLAN.md` (drafted 2026-05-08). Round 1 hypothesis: French Hill (EN) + Beit HaKerem (HE), beyond walking distance from Katamon shop. Single coupon code + billing-address attribution. ~₪2,000/round test scale. Unblockers: vendor outreach (yoterplus + dilen), designer engagement, photo assets. Not scheduled.
 - **Comeback campaign** — segment export + test send. Calendar item.
 - **Year in Wine PDF** — research. Calendar item.
-- **Phase 14 bundle work** — bundle composition / member condition split. See `jlmops/plans/IMPLEMENTATION_PLAN.md`.
+- **Bundle management** — composition / member-condition split is SHIPPED (refreshBundleComposition + checkBundleHealth as separate housekeeping steps, post-sync auto-trigger @82, sync widget Run Bundle Analysis button @95). Next: `jlmops/plans/BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` (written 2026-05-13) — bundle card UI cleanup (3 named buttons replacing Refresh/Add-New/Re-import) + new EN/HE composition parity validator (atomic (product_id, qty) pair check, section-aware, EN-as-truth). Implementation pending OK. Separate future plan: API push test for bundle composition (`BUNDLE_API_PUSH_TEST_PLAN.md`, to be written) — probes whether WPClever's REST endpoint can take updates safely.
 - **CRM extras** — campaign-recipient activity rows on contacts (post Half 1); housekeeping last-run markers cleanup (small sweep).
 
 **Pending SKU management test verifications** (code deployed 2026-02-19):

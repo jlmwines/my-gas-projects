@@ -1,7 +1,7 @@
 # Web Inventory Export — Inline Refactor Plan
 
 **Created:** 2026-05-12
-**Status:** Plan — caller audit complete (2026-05-12). Pending user approval to implement.
+**Status:** SHIPPED as @88 on 2026-05-12; postscript regression fix shipped as @96 on 2026-05-13 (see end of doc).
 **Scope:** Move the daily sync's web inventory export step from the async job-queue architecture to a synchronous backend call. Eliminate the `GENERATING_WEB_EXPORT` stage. The CSV file is still produced; only the machinery wrapped around the production changes.
 **Out of scope:** All other sync stages remain on the async-job model. No change to `WAITING_WEB_CONFIRM`, `PUSHING_WEB_INVENTORY`, or the API upload path. No change to the diff logic itself.
 
@@ -232,3 +232,19 @@ Resolved 2026-05-12:
 - The `PUSHING_WEB_INVENTORY` async path (legitimate background work — Woo API call).
 - Comax product import being async (legitimate — Drive I/O + variable file size).
 - Any non-sync admin button on the inventory widget.
+
+---
+
+## Postscript — 2026-05-13: regression caught at the morning-sync watchpoint, fixed as @96
+
+The @88 refactor moved `exportWebInventory` from `ProductImportService` (duplicate, deleted) to `ProductService` (canonical, kept). It also rewrote `generateWebExportBackend` in `WebAppSync.js` to call `ProductService.exportWebInventory(sessionId)` inline instead of enqueuing a job. Both halves of the move were correct in the file bodies — but the public return object of the `ProductService` IIFE (at `ProductService.js:2886`) was never updated to expose the function.
+
+So at runtime, `ProductService.exportWebInventory` was `undefined`. The deployed code couldn't be exercised because no daily sync had been run between the @88 push (2026-05-12 afternoon) and this morning's sync, and the failure surface was specifically a public-API lookup rather than a code-body bug — invisible to static review of the file diffs and invisible to the post-deploy smoke check that didn't actually invoke Generate.
+
+When the daily sync ran on 2026-05-13 morning (the expected watchpoint queued in STATUS.md after @88), `generateWebExportBackend` failed with `"ProductService.exportWebInventory is not a function"`. Two callers were broken:
+- `WebAppSync.js:406` — the new inline sync path introduced by @88.
+- `WebAppInventory.js:169` — the admin "Re-Export" button, which used the same public-API call pattern; this was broken in @88 as well, just hadn't been exercised between push and the morning sync.
+
+**Fix shipped as @96 on 2026-05-13:** added `exportWebInventory: exportWebInventory,` to the `ProductService` return object. Removed the stale `// Note: ... moved to ProductImportService` comment that no longer reflected reality. Two-line diff in `ProductService.js`.
+
+**Lesson worth keeping:** a refactor that moves a function between modules and changes who exposes it on its public API needs a deliberate check of the destination module's return object, not just the function body and the caller. The @88 caller audit covered every caller site but did not verify that the function was actually reachable through the destination module's exported surface. For future moves of this shape, add "verify exposed in return object" to the checklist alongside "every caller updated."
