@@ -638,8 +638,13 @@ function retryFailedStepBackend() {
   // pre-fork WAITING_WEB_CONFIRM stage rather than back to PUSHING. The CSV
   // is still on Drive — the user can either retry the API push or fall back
   // to manual upload of the same file.
+  // Special case: a failed IMPORTING_COMAX returns the user to WAITING_COMAX_IMPORT
+  // (the upload UI) so a corrected CSV can be uploaded instead of re-running the
+  // import against the same bad file.
   if (currentState.failedAtStage === 'PUSHING_WEB_INVENTORY') {
     currentState.stage = 'WAITING_WEB_CONFIRM';
+  } else if (currentState.failedAtStage === 'IMPORTING_COMAX') {
+    currentState.stage = 'WAITING_COMAX_IMPORT';
   } else {
     currentState.stage = currentState.failedAtStage;
   }

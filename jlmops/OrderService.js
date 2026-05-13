@@ -354,12 +354,32 @@ function OrderService(productService) {
       const itemSkuCol = itemHeaders.indexOf('woi_SKU');
       const itemQuantityCol = itemHeaders.indexOf('woi_Quantity');
 
+      // Build bundle-SKU set so bundle parents are not exported to Comax (their member lines export instead).
+      const bundleSkus = new Set();
+      const webProdMSheet = spreadsheet.getSheetByName(sheetNames.WebProdM);
+      if (webProdMSheet) {
+        const webProdMData = webProdMSheet.getDataRange().getValues();
+        const webHeaders = webProdMData[0];
+        const wpmSkuCol = webHeaders.indexOf('wpm_SKU');
+        const wpmTypeCol = webHeaders.indexOf('wpm_TaxProductType');
+        if (wpmSkuCol !== -1 && wpmTypeCol !== -1) {
+          for (let i = 1; i < webProdMData.length; i++) {
+            const productType = String(webProdMData[i][wpmTypeCol] || '').toLowerCase().trim();
+            if (productType === 'woosb' || productType === 'bundle') {
+              const sku = String(webProdMData[i][wpmSkuCol]).trim();
+              if (sku) bundleSkus.add(sku);
+            }
+          }
+        }
+      }
+
       const comaxExportData = {}; // { SKU: quantity }
 
       for (const itemRow of itemData) {
         const orderId = itemRow[itemOrderIdCol];
         if (orderIdsToExport.has(orderId)) {
-          const sku = itemRow[itemSkuCol];
+          const sku = String(itemRow[itemSkuCol]).trim();
+          if (bundleSkus.has(sku)) continue;
           const quantity = parseFloat(itemRow[itemQuantityCol]);
           if (!isNaN(quantity)) {
             comaxExportData[sku] = (comaxExportData[sku] || 0) + quantity;

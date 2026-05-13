@@ -195,7 +195,6 @@ const ContactImportService = (function () {
       const orderTotal = items.reduce((sum, item) => sum + item.total, 0);
       const bottleCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-      // Check if gift order using ContactService logic (considers delivery keywords in note)
       const isGift = ContactService._isGiftOrder({
         customerNote: customerNote,
         billingLastName: billingLastName,

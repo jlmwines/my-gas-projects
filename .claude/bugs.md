@@ -9,21 +9,27 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
-- [ ] 2026-05-04: **Comax order export includes bundle parent SKU** — should export bundle members only (recurrence; prior fix appears lost). Filter pattern exists in InventoryManagementService.js (bundleSkus from WebProdM where wpm_TaxProductType in {woosb, bundle}).
+- [ ] 2026-05-04: **Comax order export includes bundle parent SKU** — should export bundle members only.
+  - Diagnosis (2026-05-13): `WebOrdItemsM` contains parent rows because `WooOrderPullService._transformLineItems` copies every line item from the Woo API unfiltered (parents + children). `OrderService.exportOrdersToComax` then aggregates from that sheet with no bundle filter. Prior bundle fixes lived elsewhere — `PrintService.js` (packing slips, 2025-12-29) and `InventoryManagementService.generateComaxInventoryExport` (Comax inventory export, 2026-01-26); the order export missed both passes. **First-fix, not recurrence** — git log on `OrderService.js` shows no `bundleSkus` / `TaxProductType` / `woosb` reference ever.
+  - Fix shape: build `bundleSkus` Set from WebProdM where `wpm_TaxProductType` ∈ {`woosb`, `bundle`} (same pattern as `InventoryManagementService.js:875–892`); skip rows in the aggregation loop at `OrderService.js:359–368` with `if (bundleSkus.has(sku)) continue;`.
 
 - [ ] 2026-05-04: **Sync state-machine hardening** (bundle). Tracked in `jlmops/plans/SYNC_HARDENING_PLAN.md`. Status:
   - Generate web export button visible/clickable before the action can fire (orig 2026-01-28) — pending staging repro; backend looks clean
   - Export button stays visible after export step starts (orig 2025-12-29) — pending staging repro; backend looks clean
   - Sync widget doesn't show Comax product import stage when order export is skipped without a refresh (orig 2025-12-31) — pending staging repro; backend looks clean
   - **Generate button stays after export completes — file is generated and named, but button doesn't reset (orig 2026-03-17). FIX DEPLOYED 2026-05-05 as @80** — root cause was stuck-`PROCESSING` job in SysJobQueue (zombie killer only ran on hourly trigger, not polls). Inline reaper added to `_checkAndAdvanceSyncState` for all three async stages (IMPORTING_COMAX, VALIDATING, GENERATING_WEB_EXPORT) with 8-min threshold. Stuck spinner now caps at ~8 min instead of up to 60.
-  - Failed Comax import can't recover when a corrected file is uploaded — state stays stuck (orig 2026-03-17) — deferred (rare case)
+  - Failed Comax import can't recover when a corrected file is uploaded — state stays stuck (orig 2026-03-17).
+    - Diagnosis (2026-05-13): `WebAppSync.retryFailedStepBackend` (`WebAppSync.js:641-645`) sets `state.stage = failedAtStage`, so a failed `IMPORTING_COMAX` → Retry → goes back to `IMPORTING_COMAX` (a processing state with no upload UI). User has no path to swap in the corrected CSV. Precedent for the right pattern already exists at the same site: `PUSHING_WEB_INVENTORY` failure drops back to the **pre-fork user-action stage** `WAITING_WEB_CONFIRM` instead of back to itself.
+    - Fix shape: add a second special case in `retryFailedStepBackend` so `IMPORTING_COMAX` failure drops back to `WAITING_COMAX_IMPORT` (which has the upload UI). Single elif. `VALIDATING` failures intentionally stay at `failedAtStage` (different recovery pattern — fix data in sheets, not re-upload).
 
-- [ ] 2026-05-04: **CRM cleanup** (bundle). Resolve in one CRM-cleanup pass:
-  - `sc_IsCore` defaulting conflict overwrites correct values from import (data integrity)
-  - Archive mapping missing `CouponItems` field — coupon usage history lost on archive
-  - Existing contact data corrupted: inconsistent `sc_IsCore` / `sc_CustomerType` on historical rows. **Requires a one-time data fix** on the Contacts sheet to repair existing rows, plus verifying import logic doesn't re-introduce mismatches.
+- [ ] 2026-05-04: **CRM cleanup** (bundle). Reconciled with `jlmops/plans/CRM_PLAN.md` simplified rule (2026-04-30 revision) on 2026-05-13. The simplified rule supersedes the older 12-step plan and changes what's actually on the table:
+  - **`sc_IsCore` defaulting conflict** — **STRUCK**. Per CRM_PLAN.md §271-273: under the simplified rule, defaulting `sc_IsCore` to TRUE for customers IS the correct answer; the only override is the gift-only case. Not a bug anymore.
+  - **War-support dead code removal** — **DEMOTED to optional cleanup**. Per CRM_PLAN.md §265-269: don't fix the classification — war-support purchasers will age into Lapsed → Dormant naturally. The detection code in `ContactImportService.js` becomes dead code over time; safe to remove as a separate housekeeping pass, but not required.
+  - **Archive mapping missing `CouponItems` field** — **STILL REAL** (CRM_PLAN.md §372-381 Bug 4). `woma_CouponItems` is not mapped from archive orders into `wom_CouponItems` during import. Fix shape: add `mappedRow[womIdx['wom_CouponItems']] = row[womaIdx['woma_CouponItems']];` to the archive mapping loop in `ContactImportService.js` (~line 89-104).
+  - **Wire up the simplified gift-detection rule** — per CRM_PLAN.md §255-263. Single-order gift = (different shipping address) AND (delivery keyword in customer note). Customer is `noncore.gift` only when this fires for **every** one of their orders. Needs code in `ContactService._isGiftOrder()` and the import path in `ContactImportService.js`.
+  - **One-time correction script** — per CRM_PLAN.md §275-281. After the simplified rule lands in code, run a one-time pass that re-evaluates every customer with the new gift rule; sets `noncore.gift` where every order qualifies, everything else → core. War-support category left alone (consistent with the "self-resolving" decision).
 
-  Also during this pass: remove the dead war-support detection code path (war support no longer relevant), and verify the simpler gift-detection rule is wired up (different shipping address + customer note ⇒ gift).
+  Net remaining work: 3 items (archive mapping fix, wire gift rule, run correction script) + 1 optional housekeeping (delete war-support detection code).
 
 - [ ] 2026-05-04: **Audit timestamps + date formats system-wide** (folds in 2025-12-26 task-creation Israel-time bug + 2026-01-21 inconsistent date display). Walk every place dates/times are stored or rendered: task creation, sync log, order export, dashboard, manager/admin views. Standardize on Israel time for storage and 3-letter-month universal format for display ("21 Jan 2026"). Future step, not urgent.
 

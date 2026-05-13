@@ -141,34 +141,20 @@ const ContactService = (function () {
     return digits.length >= 10 ? '+' + digits : null;
   }
 
-  // Keywords in customer note that suggest customer is directing their OWN delivery (not a gift)
-  const DELIVERY_KEYWORDS = [
-    'please', 'deliver', 'call', 'phone', 'outside', 'floor', 'door', 'gate',
-    'code', 'buzzer', 'leave', 'ring', 'knock', 'entrance', 'building'
-  ];
-
   /**
-   * Determines if an order appears to be a gift (different billing/shipping).
-   * If customer note contains delivery instructions, assume it's NOT a gift
-   * (customer is directing their own delivery).
+   * Determines if an order appears to be a gift.
+   * Simplified rule (CRM_PLAN.md §255-263): gift when shipping last name differs
+   * from billing last name AND a customer note is present (any content). False
+   * positives are acceptable; the goal is rough segmentation, not exact classification.
    * @param {Object} order - Order object with billing/shipping fields and customerNote
    * @returns {boolean}
    */
   function _isGiftOrder(order) {
-    // Check customer note for delivery keywords - suggests NOT a gift
-    const note = (order.customerNote || '').toLowerCase();
-    if (note && DELIVERY_KEYWORDS.some(kw => note.includes(kw))) {
-      return false;
-    }
-
-    // Different last names = gift
+    const note = (order.customerNote || '').trim();
+    if (!note) return false;
     const billName = (order.billingLastName || '').toLowerCase().trim();
     const shipName = (order.shippingLastName || '').toLowerCase().trim();
-    if (billName && shipName && billName !== shipName) {
-      return true;
-    }
-
-    return false;
+    return Boolean(billName && shipName && billName !== shipName);
   }
 
   /**
@@ -975,10 +961,11 @@ const ContactService = (function () {
         if (_hasWarSupportCoupon(coupons)) warSupportCount++;
       }
 
-      // Determine correct IsCore value
+      // Determine correct IsCore value (simplified rule, CRM_PLAN.md §275-281):
+      // contact is noncore.gift only when every order is a gift; war-support
+      // category is left alone per §279.
       const allGifts = giftCount === customerOrders.length && giftCount > 0;
-      const allWarSupport = warSupportCount === customerOrders.length && warSupportCount > 0;
-      const shouldBeCore = !allGifts && !allWarSupport;
+      const shouldBeCore = !allGifts;
 
       const currentIsCore = contact.sc_IsCore === true || contact.sc_IsCore === 'TRUE';
 
