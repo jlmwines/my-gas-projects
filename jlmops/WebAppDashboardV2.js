@@ -725,30 +725,13 @@ function WebAppDashboardV2_getManagerData() {
       t.st_Status !== 'Completed' && t.st_Status !== 'Done' && t.st_Status !== 'Cancelled'
     );
 
-    // Manager task types - content review, inventory, and product tasks
-    const managerTaskTypes = [
-      // Content review
-      'task.content.edit',
-      'task.content.translate_edit',
-      // Inventory
-      'task.inventory.brurya_update',
-      'task.inventory.count',
-      'task.validation.comax_internal_audit',  // Negative inventory counts
-      // Products
-      'task.validation.vintage_mismatch',
-      'task.onboarding.add_product',
-      // User-created project tasks (topic carried on st_Topic per-row)
-      'task.project.custom'
-    ];
-
-    // Return manager tasks including Done (frontend filters by status)
-    // Only tasks currently assigned to Manager — once a task transitions to Review
-    // (manager_to_admin_review reassigns to Administrator) it belongs to admin and
-    // must not appear on the manager dashboard.
+    // Assignment is the gate: any task currently assigned to Manager belongs on the
+    // manager dashboard. System-managed types (e.g. task.order.packing_available)
+    // surface as read-only — the frontend's isSystemTask check hides interactive
+    // controls so the workflow remains the single source of truth.
     const managerTasks = allTasksIncludingDone
-      .filter(task => managerTaskTypes.includes(task.st_TaskTypeId))
-      .filter(task => task.st_Status !== 'Cancelled')
       .filter(task => task.st_AssignedTo === 'Manager')
+      .filter(task => task.st_Status !== 'Cancelled')
       .map(task => ({
         id: task.st_TaskId,
         typeId: task.st_TaskTypeId,

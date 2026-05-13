@@ -86,15 +86,15 @@
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center">
             <span class="mr-3">Tasks</span>
-            <span id="calendar-nav" class="d-flex align-items-center" style="font-size:12px;">
+            <span id="calendar-nav" class="d-flex align-items-center" style="font-size:12px;display:none;">
               <button type="button" id="btn-prev-week" class="btn btn-sm btn-light py-0 px-2">&lt;</button>
               <span id="calendar-week-label" class="mx-2" style="min-width:180px;text-align:center;"></span>
               <button type="button" id="btn-next-week" class="btn btn-sm btn-light py-0 px-2">&gt;</button>
             </span>
           </div>
           <div class="view-toggle">
-            <button type="button" id="btn-list-view" class="btn btn-sm btn-light">List</button>
-            <button type="button" id="btn-calendar-view" class="btn btn-sm btn-light active">Calendar</button>
+            <button type="button" id="btn-list-view" class="btn btn-sm btn-light active">List</button>
+            <button type="button" id="btn-calendar-view" class="btn btn-sm btn-light">Calendar</button>
           </div>
         </div>
         <div class="card-body">
@@ -115,7 +115,7 @@
           </div>
 
           <!-- List View -->
-          <div id="list-view" class="list-container" style="display:none;">
+          <div id="list-view" class="list-container">
             <div class="task-row" style="font-weight: 600; background: #f8f9fa; cursor: default;">
               <div class="task-col-topic">Topic</div>
               <div class="task-col-entity">Entity</div>
@@ -132,7 +132,7 @@
           </div>
 
           <!-- Calendar View -->
-          <div id="calendar-view" class="calendar-container show">
+          <div id="calendar-view" class="calendar-container">
             <div class="calendar-grid">
               <div class="calendar-header">Sun</div>
               <div class="calendar-header">Mon</div>
@@ -173,7 +173,7 @@
     filteredTasks: [],
     expandedTaskId: null,
     currentWeekStart: getWeekStart(new Date()),
-    view: 'calendar'
+    view: 'list'
   };
 
   function getWeekStart(date) {
@@ -363,7 +363,7 @@
 
       var isUrl = task.entityId && String(task.entityId).indexOf('http') === 0;
       var linkHtml = isUrl
-        ? '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light" onclick="event.stopPropagation();">Open</a>'
+        ? '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light" onclick="event.stopPropagation();">&#8599; Document</a>'
         : '-';
 
       html += '<div class="task-row' + overdueClass + expandedClass + '" data-id="' + task.id + '">';
@@ -385,7 +385,8 @@
       var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
       var isSystemTask = task.typeId && (
         task.typeId.indexOf('task.inventory.') === 0 ||
-        task.typeId.indexOf('task.validation.comax') === 0
+        task.typeId.indexOf('task.validation.comax') === 0 ||
+        task.typeId === 'task.order.packing_available'
       );
 
       html += '<div class="detail-row justify-content-between">';
@@ -397,7 +398,7 @@
       html += '<div><label>Created</label><div>' + formatDateFull(task.createdDate) + '</div></div>';
       html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
       if (isUrl2) {
-        html += '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">Open</a>';
+        html += '<a href="' + escapeHtml(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">&#8599; Document</a>';
       }
       if (!isSystemTask) {
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '" style="width:100px;">';

@@ -698,8 +698,6 @@ function HousekeepingService() {
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
-      { name: 'checkSubscribersReminder', fn: () => this.checkSubscribersReminder() },
-      { name: 'checkCampaignsReminder', fn: () => this.checkCampaignsReminder() },
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
@@ -807,94 +805,6 @@ function HousekeepingService() {
       }
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Brurya reminder check failed: ${e.message}`);
-    }
-  };
-
-  /**
-   * Checks if Mailchimp subscribers data needs updating.
-   * Creates task if > 14 days since last update.
-   */
-  this.checkSubscribersReminder = function() {
-    const functionName = 'checkSubscribersReminder';
-
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const config = allConfig['system.mailchimp.subscribers_last_update'];
-      const lastUpdate = config?.value ? new Date(config.value) : null;
-
-      let daysSinceUpdate = lastUpdate
-        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
-        : 999;
-
-      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
-      const existingTask = TaskService.findOpenTaskByType('task.data.subscribers_update', 'DATA');
-
-      if (existingTask) {
-        TaskService.updateTaskNotes(existingTask.id, notesJson);
-        logger.info('HousekeepingService', functionName, `Updated subscribers task notes (${daysSinceUpdate} days).`);
-      } else if (daysSinceUpdate >= 14) {
-        try {
-          TaskService.createTask(
-            'task.data.subscribers_update',
-            'DATA',
-            'Data Import',
-            'Update Mailchimp Subscribers',
-            notesJson,
-            null
-          );
-          logger.info('HousekeepingService', functionName, `Created subscribers reminder task (${daysSinceUpdate} days since last update).`);
-        } catch (taskError) {
-          if (!taskError.message.includes('already exists')) {
-            logger.warn('HousekeepingService', functionName, `Could not create subscribers reminder: ${taskError.message}`);
-          }
-        }
-      }
-    } catch (e) {
-      logger.warn('HousekeepingService', functionName, `Subscribers reminder check failed: ${e.message}`);
-    }
-  };
-
-  /**
-   * Checks if Mailchimp campaigns data needs updating.
-   * Creates task if > 14 days since last update.
-   */
-  this.checkCampaignsReminder = function() {
-    const functionName = 'checkCampaignsReminder';
-
-    try {
-      const allConfig = ConfigService.getAllConfig();
-      const config = allConfig['system.mailchimp.campaigns_last_update'];
-      const lastUpdate = config?.value ? new Date(config.value) : null;
-
-      let daysSinceUpdate = lastUpdate
-        ? Math.floor((Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24))
-        : 999;
-
-      const notesJson = JSON.stringify({ daysSinceUpdate: daysSinceUpdate });
-      const existingTask = TaskService.findOpenTaskByType('task.data.campaigns_update', 'DATA');
-
-      if (existingTask) {
-        TaskService.updateTaskNotes(existingTask.id, notesJson);
-        logger.info('HousekeepingService', functionName, `Updated campaigns task notes (${daysSinceUpdate} days).`);
-      } else if (daysSinceUpdate >= 14) {
-        try {
-          TaskService.createTask(
-            'task.data.campaigns_update',
-            'DATA',
-            'Data Import',
-            'Update Mailchimp Campaigns',
-            notesJson,
-            null
-          );
-          logger.info('HousekeepingService', functionName, `Created campaigns reminder task (${daysSinceUpdate} days since last update).`);
-        } catch (taskError) {
-          if (!taskError.message.includes('already exists')) {
-            logger.warn('HousekeepingService', functionName, `Could not create campaigns reminder: ${taskError.message}`);
-          }
-        }
-      }
-    } catch (e) {
-      logger.warn('HousekeepingService', functionName, `Campaigns reminder check failed: ${e.message}`);
     }
   };
 
