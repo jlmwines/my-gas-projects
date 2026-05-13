@@ -1193,6 +1193,220 @@ const BundleService = (function () {
   }
 
   // =====================================================
+  // EN/HE COMPOSITION PARITY VALIDATION
+  // =====================================================
+
+  /**
+   * Splits an ordered slot array into sections delimited by text/HTML slots.
+   * A section = a (text-slot-header? + product-slots-following) until the next text slot.
+   * Slots before the first text slot form an implicit section with header=null.
+   * @param {Array<Object>} slots - Ordered slot objects
+   * @returns {Array<{header: Object|null, products: Array<Object>}>}
+   */
+  function _splitIntoSections(slots) {
+    const sections = [];
+    let current = { header: null, products: [] };
+    for (const slot of slots) {
+      if (slot.type === 'text') {
+        if (current.header !== null || current.products.length > 0) {
+          sections.push(current);
+        }
+        current = { header: slot, products: [] };
+      } else {
+        current.products.push(slot);
+      }
+    }
+    if (current.header !== null || current.products.length > 0) {
+      sections.push(current);
+    }
+    return sections;
+  }
+
+  /**
+   * Validates a single EN/HE bundle pair per CRM_PLAN-style atomic (product_id, qty) check.
+   * Section-aware. Returns array of issue objects (empty if no drift).
+   */
+  function _validateBundlePairParity(enBundleId, enWoosbJson, heWoosbJson, enToHeMap) {
+    const issues = [];
+
+    const enParsed = _parseWoosbJson(enWoosbJson, enBundleId, 'en');
+    const heParsed = _parseWoosbJson(heWoosbJson, enBundleId, 'he');
+
+    if (Object.keys(enParsed).length === 0) {
+      return issues;
+    }
+
+    const enSlots = Object.entries(enParsed).map(([key, val]) => Object.assign({ _key: key }, val));
+    const heSlots = Object.entries(heParsed).map(([key, val]) => Object.assign({ _key: key }, val));
+
+    const enSections = _splitIntoSections(enSlots);
+    const heSections = _splitIntoSections(heSlots);
+
+    if (enSections.length !== heSections.length) {
+      issues.push({
+        code: 'SECTION_COUNT_MISMATCH',
+        detail: `EN has ${enSections.length} sections; HE has ${heSections.length}`
+      });
+    }
+
+    const sectionsToCompare = Math.min(enSections.length, heSections.length);
+
+    for (let s = 0; s < sectionsToCompare; s++) {
+      const enSection = enSections[s];
+      const heSection = heSections[s];
+
+      const heProductsById = {};
+      for (const slot of heSection.products) {
+        if (slot.id) heProductsById[String(slot.id)] = slot;
+      }
+      const consumedHe = new Set();
+
+      for (const enSlot of enSection.products) {
+        const enProductId = String(enSlot.id || '').trim();
+        if (!enProductId) continue;
+        const enQty = Number(enSlot.qty);
+
+        const expectedHeId = enToHeMap[enProductId];
+        if (!expectedHeId) {
+          issues.push({
+            code: 'NO_TRANSLATION_PAIR',
+            section: s,
+            detail: `EN product ${enProductId} has no WPML translation pair`
+          });
+          continue;
+        }
+
+        const heMatch = heProductsById[expectedHeId];
+        if (heMatch) {
+          consumedHe.add(expectedHeId);
+          const heQty = Number(heMatch.qty);
+          if (enQty !== heQty) {
+            issues.push({
+              code: 'QTY_MISMATCH',
+              section: s,
+              detail: `Product ${enProductId} (HE ${expectedHeId}) qty differs: EN=${enQty}, HE=${heQty}`
+            });
+          }
+        } else {
+          let wrongSection = -1;
+          for (let other = 0; other < heSections.length; other++) {
+            if (other === s) continue;
+            if (heSections[other].products.some(p => String(p.id) === expectedHeId)) {
+              wrongSection = other;
+              break;
+            }
+          }
+          if (wrongSection >= 0) {
+            issues.push({
+              code: 'WRONG_SECTION',
+              section: s,
+              detail: `Product ${enProductId} (HE ${expectedHeId}) in HE section ${wrongSection}, EN places in section ${s}`
+            });
+          } else {
+            issues.push({
+              code: 'HE_MISSING',
+              section: s,
+              detail: `EN product ${enProductId} (HE ${expectedHeId}) missing from HE`
+            });
+          }
+        }
+      }
+
+      for (const heSlot of heSection.products) {
+        const heProductId = String(heSlot.id || '').trim();
+        if (!heProductId || consumedHe.has(heProductId)) continue;
+        issues.push({
+          code: 'HE_EXTRA',
+          section: s,
+          detail: `HE has product ${heProductId} with no EN counterpart in section ${s}`
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  /**
+   * Validates EN/HE composition parity for every bundle in WebProdM.
+   * Reads WebProdM (EN composition) and WebXltM (HE composition + WPML linkage).
+   * Returns per-bundle issue lists; does not write anything.
+   * @returns {Object} { error, data: { totalBundles, bundlesWithIssues, bundles: [...] } }
+   */
+  function validateAllBundleParity() {
+    const fnName = 'validateAllBundleParity';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+
+      const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
+      const webXltMSheet = spreadsheet.getSheetByName('WebXltM');
+      if (!webProdMSheet || !webXltMSheet) {
+        return { error: 'WebProdM or WebXltM sheet not found', data: null };
+      }
+
+      const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+      const wpmData = webProdMSheet.getDataRange().getValues();
+      const xltData = webXltMSheet.getDataRange().getValues();
+
+      const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
+      const wpmTypeIdx = wpmHeaders.indexOf('wpm_TaxProductType');
+      const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
+      const wpmTitleIdx = wpmHeaders.indexOf('wpm_PostTitle');
+
+      const xltIdIdx = xltHeaders.indexOf('wxm_ID');
+      const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+      const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
+
+      const enToHeProductMap = {};
+      const heBundleWoosbMap = {};
+      for (let i = 1; i < xltData.length; i++) {
+        const enId = String(xltData[i][xltOrigIdx] || '').trim();
+        const heId = String(xltData[i][xltIdIdx] || '').trim();
+        if (enId && heId) enToHeProductMap[enId] = heId;
+        if (xltWoosbIdx !== -1) {
+          const heWoosb = String(xltData[i][xltWoosbIdx] || '').trim();
+          if (enId && heWoosb) heBundleWoosbMap[enId] = heWoosb;
+        }
+      }
+
+      const bundleResults = [];
+      for (let i = 1; i < wpmData.length; i++) {
+        const productType = String(wpmData[i][wpmTypeIdx] || '').toLowerCase().trim();
+        if (productType !== 'woosb' && productType !== 'bundle') continue;
+
+        const enBundleId = String(wpmData[i][wpmIdIdx] || '').trim();
+        const enWoosb = String(wpmData[i][wpmWoosbIdx] || '').trim();
+        const bundleName = String(wpmData[i][wpmTitleIdx] || '').trim();
+        const heWoosb = heBundleWoosbMap[enBundleId] || '';
+
+        const issues = _validateBundlePairParity(enBundleId, enWoosb, heWoosb, enToHeProductMap);
+        bundleResults.push({
+          bundleId: enBundleId,
+          bundleName: bundleName,
+          issueCount: issues.length,
+          issues: issues
+        });
+      }
+
+      const bundlesWithIssues = bundleResults.filter(b => b.issueCount > 0).length;
+      LoggerService.info(SERVICE_NAME, fnName, `Validated ${bundleResults.length} bundles, ${bundlesWithIssues} have parity issues`);
+
+      return {
+        error: null,
+        data: {
+          totalBundles: bundleResults.length,
+          bundlesWithIssues: bundlesWithIssues,
+          bundles: bundleResults
+        }
+      };
+    } catch (e) {
+      LoggerService.error(SERVICE_NAME, fnName, `Validation failed: ${e.message}`, e);
+      return { error: `Validation failed: ${e.message}`, data: null };
+    }
+  }
+
+  // =====================================================
   // PUBLIC API
   // =====================================================
 
@@ -1225,6 +1439,9 @@ const BundleService = (function () {
     // Import / Duplicate
     importBundleFromWooCommerce: importBundleFromWooCommerce,
     duplicateBundle: duplicateBundle,
+
+    // EN/HE composition parity validation
+    validateAllBundleParity: validateAllBundleParity,
 
     // Stats
     getBundleStats: getBundleStats

@@ -11,9 +11,9 @@
         <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
           <h5>Bundle Management</h5>
           <div>
-            <button id="btn-refresh-bundles" class="btn btn-sm mr-2">Refresh</button>
-            <button id="btn-add-bundle" class="btn btn-sm mr-2">Add New Bundle</button>
-            <button id="btn-reimport-bundles" class="btn btn-sm">Re-import from WooCommerce</button>
+            <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
+            <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
+            <button id="btn-validate-parity" class="btn btn-sm">Validate EN/HE Parity</button>
           </div>
         </div>
         <div class="card-body">
@@ -158,34 +158,13 @@
   </div>
 </div>
 
-<!-- Add New Bundle Modal -->
-<div class="modal-overlay" id="add-bundle-modal" style="display:none;">
-  <div class="modal-container" style="max-width: 500px;">
-    <div class="modal-header">
-      <h5 class="mb-0">Add New Bundle</h5>
-      <button type="button" class="close" onclick="document.getElementById('add-bundle-modal').style.display='none'">&times;</button>
-    </div>
-    <div class="form-body">
-      <p class="text-muted small">Enter the WooCommerce bundle details to register it in the system.</p>
-      <div class="form-group">
-        <label>Bundle ID (WooCommerce Product ID) <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="add-bundle-id" placeholder="e.g. 12345">
-      </div>
-      <div class="form-group">
-        <label>Name (English) <span class="text-danger">*</span></label>
-        <input type="text" class="form-control" id="add-bundle-name-en" placeholder="Bundle name in English">
-      </div>
-      <div class="form-group">
-        <label>Name (Hebrew)</label>
-        <input type="text" class="form-control" id="add-bundle-name-he" placeholder="Bundle name in Hebrew" dir="rtl">
-      </div>
-      <div id="add-bundle-status" class="small mt-2"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="document.getElementById('add-bundle-modal').style.display='none'">Cancel</button>
-      <button class="btn" id="btn-submit-add-bundle">Add Bundle</button>
-    </div>
+<!-- Parity / Stock results panel -->
+<div class="card mb-3" id="action-results-panel" style="display:none;">
+  <div class="card-header" style="background: transparent;">
+    <span id="action-results-title" class="font-weight-bold"></span>
+    <button type="button" class="close" onclick="document.getElementById('action-results-panel').style.display='none'">&times;</button>
   </div>
+  <div class="card-body" id="action-results-body"></div>
 </div>
 
 <script>
@@ -226,15 +205,9 @@
   }
 
   function bindEvents() {
-    document.getElementById('btn-refresh-bundles').addEventListener('click', function() {
-      loadStats();
-      loadBundleList();
-      loadHealthAlerts();
-    });
-
-    document.getElementById('btn-reimport-bundles').addEventListener('click', reimportBundles);
-    document.getElementById('btn-add-bundle').addEventListener('click', openAddBundleModal);
-    document.getElementById('btn-submit-add-bundle').addEventListener('click', submitAddBundle);
+    document.getElementById('btn-update-composition').addEventListener('click', updateComposition);
+    document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
+    document.getElementById('btn-validate-parity').addEventListener('click', validateParity);
     document.getElementById('btn-apply-replacements').addEventListener('click', applyReplacements);
     document.getElementById('btn-add-text-slot').addEventListener('click', function() { addSlot('Text'); });
     document.getElementById('btn-add-product-slot').addEventListener('click', function() { addSlot('Product'); });
@@ -1101,95 +1074,111 @@
   }
 
   // =================================================================================
-  // ADD NEW BUNDLE
+  // MANAGEMENT CARD ACTIONS
   // =================================================================================
 
-  function openAddBundleModal() {
-    document.getElementById('add-bundle-id').value = '';
-    document.getElementById('add-bundle-name-en').value = '';
-    document.getElementById('add-bundle-name-he').value = '';
-    document.getElementById('add-bundle-status').textContent = '';
-    document.getElementById('add-bundle-modal').style.display = 'flex';
+  function showResults(title, html) {
+    document.getElementById('action-results-title').textContent = title;
+    document.getElementById('action-results-body').innerHTML = html;
+    document.getElementById('action-results-panel').style.display = '';
   }
 
-  function submitAddBundle() {
-    var bundleId = document.getElementById('add-bundle-id').value.trim();
-    var nameEn = document.getElementById('add-bundle-name-en').value.trim();
-    var nameHe = document.getElementById('add-bundle-name-he').value.trim();
-    var statusDiv = document.getElementById('add-bundle-status');
-
-    if (!bundleId || !nameEn) {
-      statusDiv.className = 'small mt-2 text-danger';
-      statusDiv.textContent = 'Bundle ID and English name are required.';
-      return;
-    }
-
-    var btn = document.getElementById('btn-submit-add-bundle');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Adding...';
-    statusDiv.className = 'small mt-2 text-info';
-    statusDiv.textContent = 'Adding bundle...';
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        btn.disabled = false;
-        btn.textContent = 'Add Bundle';
-        if (result.error) {
-          statusDiv.className = 'small mt-2 text-danger';
-          statusDiv.textContent = 'Error: ' + result.error;
-          return;
-        }
-        statusDiv.className = 'small mt-2 text-success';
-        statusDiv.textContent = 'Bundle added successfully!';
-        setTimeout(function() {
-          document.getElementById('add-bundle-modal').style.display = 'none';
-          loadStats();
-          loadBundleList();
-        }, 1000);
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Add Bundle';
-        statusDiv.className = 'small mt-2 text-danger';
-        statusDiv.textContent = 'Failed: ' + err.message;
-      })
-      .WebAppBundles_addNewBundle(bundleId, nameEn, nameHe);
-  }
-
-  // =================================================================================
-  // REIMPORT
-  // =================================================================================
-
-  function reimportBundles() {
-    if (!confirm('This will re-import all bundles from WooCommerce data. Continue?')) {
-      return;
-    }
-
-    // Show progress indicator
-    var btn = document.getElementById('btn-reimport-bundles');
+  function withButtonBusy(btn, label) {
     var originalText = btn.textContent;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> Importing...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span> ' + label;
+    return function restore() {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    };
+  }
+
+  function updateComposition() {
+    if (!confirm('This will run a full WooCommerce product pull (a couple of minutes) then re-derive bundle composition. Continue?')) {
+      return;
+    }
+    var btn = document.getElementById('btn-update-composition');
+    var restore = withButtonBusy(btn, 'Updating...');
 
     google.script.run
       .withSuccessHandler(function(result) {
-        btn.disabled = false;
-        btn.textContent = originalText;
-        if (result.error) {
-          alert('Error: ' + result.error);
-          return;
-        }
-        alert('Imported ' + result.data.imported + ' bundles. Failed: ' + result.data.failed + '. Skipped: ' + result.data.skipped);
+        restore();
+        if (result.error) { alert('Error: ' + result.error); return; }
+        var d = result.data || {};
+        var r = d.reimport || {};
+        var msg = 'Update Composition complete. WC pulled ' + (d.pullCount || 0) + ' products. Reimport: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
+        showResults('Update Composition', '<p>' + escapeHtml(msg) + '</p>');
         loadStats();
         loadBundleList();
         loadHealthAlerts();
       })
       .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.textContent = originalText;
+        restore();
         alert('Failed: ' + err.message);
       })
-      .WebAppBundles_reimportAllBundles();
+      .WebAppBundles_updateComposition();
+  }
+
+  function reviewStock() {
+    var btn = document.getElementById('btn-review-stock');
+    var restore = withButtonBusy(btn, 'Reviewing...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        restore();
+        if (result.error) { alert('Error: ' + result.error); return; }
+        var d = result.data || {};
+        var msg = 'Bundle stock review complete. Critical: ' + (d.criticalTasksCreated || 0) + ', Low inventory: ' + (d.lowInventoryTasksCreated || 0) + '.';
+        showResults('Review Stock', '<p>' + escapeHtml(msg) + '</p><p class="small text-muted">Tasks created for any issues. Reload the alerts panel to see them.</p>');
+        loadHealthAlerts();
+      })
+      .withFailureHandler(function(err) {
+        restore();
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_reviewStock();
+  }
+
+  function validateParity() {
+    var btn = document.getElementById('btn-validate-parity');
+    var restore = withButtonBusy(btn, 'Validating...');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        restore();
+        if (result.error) { alert('Error: ' + result.error); return; }
+        var d = result.data || {};
+        var bundles = (d.bundles || []).filter(function(b) { return b.issueCount > 0; });
+        var summary = '<p>Validated ' + (d.totalBundles || 0) + ' bundles; ' + (d.bundlesWithIssues || 0) + ' have parity issues.</p>';
+        if (bundles.length === 0) {
+          showResults('Validate EN/HE Parity', summary + '<p class="text-success">No drift detected.</p>');
+          return;
+        }
+        var rows = bundles.map(function(b) {
+          var issues = b.issues.map(function(iss) {
+            var sec = (iss.section != null) ? ' [section ' + iss.section + ']' : '';
+            return '<li><code>' + escapeHtml(iss.code) + '</code>' + sec + ' — ' + escapeHtml(iss.detail) + '</li>';
+          }).join('');
+          return '<tr><td>' + escapeHtml(b.bundleName || b.bundleId) + '</td><td>' + b.issueCount + '</td><td><ul class="mb-0 pl-3">' + issues + '</ul></td></tr>';
+        }).join('');
+        var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>#</th><th>Issues</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        showResults('Validate EN/HE Parity', summary + table);
+      })
+      .withFailureHandler(function(err) {
+        restore();
+        alert('Failed: ' + err.message);
+      })
+      .WebAppBundles_validateParity();
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // Initialize on load

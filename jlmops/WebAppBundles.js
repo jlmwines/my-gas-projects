@@ -5,96 +5,6 @@
  */
 
 // =================================================================================
-// ADD NEW BUNDLE (HOT INSERT)
-// =================================================================================
-
-/**
- * Adds a new bundle product to WebProdM and WebXltM.
- * Simple hot insert - just registers the bundle so it can be managed.
- * @param {string} bundleId The WooCommerce product ID
- * @param {string} nameEn English name
- * @param {string} nameHe Hebrew name (optional)
- * @returns {Object} { error, data }
- */
-function WebAppBundles_addNewBundle(bundleId, nameEn, nameHe) {
-  const serviceName = 'WebAppBundles';
-  const functionName = 'addNewBundle';
-
-  try {
-    if (!bundleId || !nameEn) {
-      return { error: 'Bundle ID and English name are required', data: null };
-    }
-
-    LoggerService.info(serviceName, functionName, `Adding new bundle: ${bundleId} - ${nameEn}`);
-
-    const allConfig = ConfigService.getAllConfig();
-    const spreadsheet = SheetAccessor.getDataSpreadsheet();
-
-    // Get sheets
-    const webProdMSheet = spreadsheet.getSheetByName('WebProdM');
-    const webXltMSheet = spreadsheet.getSheetByName('WebXltM');
-
-    if (!webProdMSheet) {
-      throw new Error('WebProdM sheet not found');
-    }
-
-    // Check if bundle ID already exists
-    const masterSchema = allConfig['schema.data.WebProdM'];
-    const masterHeaders = masterSchema.headers.split(',');
-    const mIdIdx = masterHeaders.indexOf('wpm_ID');
-
-    const masterData = webProdMSheet.getDataRange().getValues();
-    for (let i = 1; i < masterData.length; i++) {
-      if (String(masterData[i][mIdIdx] || '').trim() === String(bundleId).trim()) {
-        return { error: `Bundle ID ${bundleId} already exists in WebProdM`, data: null };
-      }
-    }
-
-    // Insert into WebProdM
-    const mTitleIdx = masterHeaders.indexOf('wpm_PostTitle');
-    const mTypeIdx = masterHeaders.indexOf('wpm_TaxProductType');
-    const mStatusIdx = masterHeaders.indexOf('wpm_PostStatus');
-
-    const newMasterRow = new Array(masterHeaders.length).fill('');
-    if (mIdIdx > -1) newMasterRow[mIdIdx] = bundleId;
-    if (mTitleIdx > -1) newMasterRow[mTitleIdx] = nameEn;
-    if (mTypeIdx > -1) newMasterRow[mTypeIdx] = 'woosb';
-    if (mStatusIdx > -1) newMasterRow[mStatusIdx] = 'publish';
-
-    webProdMSheet.appendRow(newMasterRow);
-
-    // Insert into WebXltM if available
-    if (webXltMSheet) {
-      const xltSchema = allConfig['schema.data.WebXltM'];
-      if (xltSchema) {
-        const xltHeaders = xltSchema.headers.split(',');
-        const xmOrigIdIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-        const xmTitleIdx = xltHeaders.indexOf('wxm_PostTitle');
-
-        const newXltRow = new Array(xltHeaders.length).fill('');
-        if (xmOrigIdIdx > -1) newXltRow[xmOrigIdIdx] = bundleId;
-        if (xmTitleIdx > -1) newXltRow[xmTitleIdx] = nameHe || nameEn;
-
-        webXltMSheet.appendRow(newXltRow);
-      }
-    }
-
-    LoggerService.info(serviceName, functionName, `Successfully added bundle ${bundleId}`);
-
-    return {
-      error: null,
-      data: { bundleId: bundleId, message: 'Bundle added successfully' }
-    };
-  } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error adding bundle: ${e.message}`, e);
-    return {
-      error: `Error adding bundle: ${e.message}`,
-      data: null
-    };
-  }
-}
-
-// =================================================================================
 // DASHBOARD DATA
 // =================================================================================
 
@@ -814,5 +724,72 @@ function WebAppBundles_getProductName(sku) {
       error: `Error looking up product: ${e.message}`,
       data: null
     };
+  }
+}
+
+// =================================================================================
+// BUNDLE MANAGEMENT CARD — TOP-LEVEL ACTIONS
+// =================================================================================
+
+/**
+ * Update Composition button: runs a full WC product pull, then re-derives
+ * SysBundles + SysBundleSlots from the fresh WebProdM data.
+ * @returns {Object} { error, data: { pullCount, reimport } }
+ */
+function WebAppBundles_updateComposition() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'updateComposition';
+  try {
+    LoggerService.info(serviceName, functionName, 'Update Composition: full WC pull + bundle re-derive');
+
+    const pullResult = WooProductPullService.pullProducts();
+    if (!pullResult.success) {
+      return { error: 'WC product pull failed: ' + pullResult.message, data: null };
+    }
+
+    const reimportResult = WebAppBundles_reimportAllBundles();
+    return {
+      error: null,
+      data: {
+        pullCount: pullResult.enCount,
+        reimport: reimportResult
+      }
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Update Composition failed: ${e.message}`, e);
+    return { error: `Update Composition failed: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Review Stock button: runs checkBundleHealth on demand.
+ * @returns {Object} { error, data }
+ */
+function WebAppBundles_reviewStock() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'reviewStock';
+  try {
+    LoggerService.info(serviceName, functionName, 'On-demand bundle stock review');
+    const result = housekeepingService.checkBundleHealth();
+    return { error: null, data: result };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Review Stock failed: ${e.message}`, e);
+    return { error: `Review Stock failed: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Validate EN/HE Parity button: walks every bundle and reports composition drift.
+ * @returns {Object} { error, data: { totalBundles, bundlesWithIssues, bundles } }
+ */
+function WebAppBundles_validateParity() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'validateParity';
+  try {
+    LoggerService.info(serviceName, functionName, 'EN/HE bundle parity validation');
+    return BundleService.validateAllBundleParity();
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Validate Parity failed: ${e.message}`, e);
+    return { error: `Validate Parity failed: ${e.message}`, data: null };
   }
 }
