@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-13 (manager dashboard filter overhaul, Mailchimp reminders retired, task archive bug fix)
+
+- **@99 manager dashboard UX**: default view = list (was calendar); list-row entity link now `↗ Document` (was bare `Open` reading as a status value).
+- **@100 manager dashboard filter restructured**: dropped the brittle `managerTaskTypes` allow-list in `WebAppDashboardV2.js`. Assignment is the gate — any task with `st_AssignedTo === 'Manager'` and not Cancelled surfaces. Fixes the silently-dropped `task.content.translate` (the type wasn't in the allow-list). `task.order.packing_available` rendered read-only via existing `isSystemTask` gate so PackingSlip/PrintService stays the source of truth.
+- **@101 Mailchimp reminder tasks retired**: `task.data.subscribers_update` and `task.data.campaigns_update` were CSV-era artifacts obsoleted by Half 1 of CONTACT_MANAGER_PLAN (@81). Removed the two `checkXxxReminder` methods + task templates + regenerated SetupConfig.js. Coupons reminder kept (no Woo coupons API pull yet). User to delete existing open rows manually + run `rebuildSysConfigFromSource()`.
+- **@103 VERSION stamp catch-up**: `WebApp.js:VERSION.built` was stale; updated to 2026-05-13 16:58. User had to ask — saved feedback memory `feedback_follow_compound_instructions_literally.md` mapping "version" token → `WebApp.js:VERSION` (not commit message). Note: trigger is the user saying "version" in the prompt, NOT every push.
+- **@104 archive bug fix**: `HousekeepingService.archiveCompletedTasks` filter checked `status === 'Completed'` but `TaskService.completeTask` writes `'Done'`. So Done tasks never matched — accumulated in SysTasks since December. Fixed to `'Done'`. Order log archival is fine — co-depends on parent order archive at 365 days (policy, not bug).
+- **Housekeeping audit done**: walked Phase 1 (`cleanOldLogs`, `archiveCompletedTasks`, `archiveCompletedOrders`, `purgeOldJobs`, `manageFileLifecycle`, `cleanupImportFiles`, `formatDataSheets`). Only the task-archive bug was real. Policy questions surfaced but not actioned: order archive threshold (365d), cancelled orders never archive, task retention measured from CreatedDate not DoneDate. `cleanupImportFiles` not yet verified.
+- **Next session**: user needs to run `rebuildSysConfigFromSource()` to drop the two retired task templates from SysConfig, then manually close the existing open subscribers/campaigns reminder rows in SysTasks. After @104 the next housekeeping run will start archiving the December Done-tasks backlog.
+
+---
+
 ## 2026-05-12 (web-export inline refactor, project task modal, non-destructive rebuild)
 
 - **Daily sync failed this morning** — web inventory export file produced (`Inv-Web-05-12-07-21.csv`) but state didn't advance to `WAITING_WEB_CONFIRM`; user clicked Generate again, second file produced, sync ended as "Web inventory - skipped" without uploading. User manually pushed the CSV.

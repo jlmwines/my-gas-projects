@@ -1320,7 +1320,7 @@ function HousekeepingService() {
       const filterTasks = (row) => {
         const status = row[statusCol];
         const createdDate = new Date(row[createdDateCol]);
-        return (status === 'Completed' || status === 'Cancelled') && createdDate < thresholdDate;
+        return (status === 'Done' || status === 'Cancelled') && createdDate < thresholdDate;
       };
 
       movedCount = _moveRowsToArchive(taskSheet, taskArchiveSheet, filterTasks);

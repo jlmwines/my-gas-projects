@@ -1,16 +1,16 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-13 (jlmops @94-@96 shipped: bundle SKU filter on order export + FAILED IMPORTING_COMAX retry + CRM gift rule simplified + sync widget Run Bundle Analysis button + ProductService.exportWebInventory exposure fix; bundle management refinements + EN/HE parity validator plan written)
+**Updated:** 2026-05-13 (jlmops @94-@104 shipped: bundle SKU filter + FAILED IMPORTING_COMAX retry + CRM gift rule simplified + sync widget Run Bundle Analysis button + ProductService.exportWebInventory exposure fix; bundle management refinements + EN/HE parity validator plan written; @99 manager dashboard default-list + ↗ Document button; @100 manager dashboard filter = assignment-as-gate (drops the brittle managerTaskTypes allow-list — packing slip becomes a read-only system task; surfaces silently-dropped task.content.translate); @101 retired Mailchimp 14-day reminder tasks (subscribers + campaigns) — CSV-era artifacts obsoleted by Half 1 API pull @81; coupons reminder kept (no Woo coupons API pull yet); @103 VERSION stamp catch-up; @104 archiveCompletedTasks filter fixed ('Completed' → 'Done' — Done tasks were accumulating in SysTasks because filter checked an unused status string))
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. |
-| Last Active | 2026-05-12 |
+| Last Active | 2026-05-13 |
 | Revenue | Steady |
-| Deploy Version | jlmops @93 (six deploys this session: @88 web inventory export refactored from async-job-queue to inline synchronous call eliminating GENERATING_WEB_EXPORT stage + obsoleting SYNC_HARDENING_PLAN.md Bug 4; @89 wishlist surface deleted; @90 project task creation function added + modal expanded; @91 project dropdown + assignee shape fixes; @92 task.project.custom visible on manager dashboard; @93 rebuildSysConfigFromSource wrapped with snapshot+restore so 8 runtime-mutable keys including the live sync state survive a rebuild — fixes the recurring brurya-999-days root cause) · theme v1.2.23 LIVE (v1.2.21 dequeue WC classic CSS on blockless routes; v1.2.22 narrowed dequeue to is_front_page() only; v1.2.23 restore billing first/last name fields on checkout — post-cutover regression where guest orders captured no name in standard meta because the theme unset billing names and shipping section is hidden by default when "ship to different address" is unchecked) |
-| Deploy Date | jlmops 2026-05-12 (@88 → @89 → @90 → @91 → @92 → @93 — same session) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
+| Deploy Version | jlmops @104 (most recent: @99 manager default-list + ↗ Document; @100 assignment-as-gate filter + packing slip system task; @101 Mailchimp reminder tasks retired; @103 VERSION stamp catch-up; @104 archiveCompletedTasks 'Completed' → 'Done' fix) · theme v1.2.23 LIVE |
+| Deploy Date | jlmops 2026-05-13 (@99 → @100 → @101 → @103 → @104) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
