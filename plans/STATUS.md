@@ -1,16 +1,16 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-14 (jlmops @105-@106 shipped: Manager CRM Half 2 + deploy hardening. @105 new ManagerContactView (mobile-first) + welcome-outreach trigger from first completed order + Action Panel with three channels + activity-record-drives-action pattern; single task type task.contact.outreach for all CRM topics; no-backfill floor stamps automatically on first sweep so historical customers don't burst. @106 deploy hardening: jlmops/deploy.ps1 wrapper forces --deploymentId from pinned .deployment-id + post-deploy verification; HousekeepingService.validateDeployment compares running deployment to pinned and creates a drift task on mismatch; CLAUDE.md forbids bare clasp deploy. Mobile UX pass for admin + manager dashboards and contacts queued next.)
+**Updated:** 2026-05-14 (jlmops @105-@116 shipped over the day: Manager CRM Half 2, deploy hardening, full mobile UX pass, pending-payment auto-follow-up automation with one-tap guest-pay link, outreach workflow polish with Open-contact deep-link from dashboard to ContactView, schema column-position bug fixed, order totals include tax, modal RTL for Hebrew, housekeeping cadence split with new runFrequentMaintenance entry point pending trigger arrangement.)
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14. |
+| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14 with mobile UX + pending-payment automation. |
 | Last Active | 2026-05-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @106 (most recent: @105 Manager CRM Half 2 — ManagerContactView + welcome trigger + Action Panel + no-backfill floor; @106 deploy hardening — pinned wrapper + housekeeping drift validation) · theme v1.2.23 LIVE |
-| Deploy Date | jlmops 2026-05-14 (@105 → @106) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
+| Deploy Version | jlmops @116 (most recent: @107 mobile chrome + primitives + dashboard sweeps, @109 server-side viewport tag fix, @110-@111 pending-payment auto-followup with order-pay link, @112 housekeeping cadence split, @113 dashboard outreach UX, @114 button styles, @115 schema column-position fix, @116 order total includes tax + modal RTL) · theme v1.2.23 LIVE |
+| Deploy Date | jlmops 2026-05-14 (@105 → @116 across the day) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
