@@ -48,6 +48,50 @@
   .view-toggle { display: flex; gap: 5px; }
   .view-toggle button { font-size: 12px; padding: 4px 12px; }
   .view-toggle button.active { font-weight: 600; background-color: #e9ecef; }
+
+  /* === Mobile overrides (≤768px) === */
+  @media (max-width: 768px) {
+    /* Filters: wrap freely, grow tap targets */
+    .task-filters { gap: 8px; }
+    .task-filters select, .task-filters input {
+      font-size: 16px !important; height: 40px !important;
+      flex: 1 1 100%; width: auto !important; min-width: 0;
+    }
+
+    /* Task row: collapse the flex grid to a stacked card */
+    .task-list { max-height: none; min-height: 200px; }
+    .task-row {
+      display: block;
+      padding: 12px;
+      font-size: 14px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .task-row [class^="task-col-"] {
+      display: block;
+      padding: 2px 0;
+      text-align: left;
+      flex: none;
+    }
+    /* Hide the list-header row entirely on mobile (labels appear inline) */
+    .list-container > .task-row:first-child { display: none; }
+    /* Inline labels per column */
+    .task-col-topic::before { content: 'Topic: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-entity::before { content: 'Entity: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-title { font-weight: 500; font-size: 15px; padding-top: 6px !important; }
+    .task-col-status::before { content: 'Status: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-priority::before { content: 'Priority: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-due::before { content: 'Due: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-created::before { content: 'Created: '; color: #6c757d; font-size: 12px; font-weight: 600; }
+    .task-col-link { padding-top: 8px !important; }
+
+    /* Calendar view doesn't fit on phone — hide its toggle + the grid itself */
+    #btn-calendar-view { display: none; }
+    .calendar-container { display: none !important; }
+
+    /* Task detail expanded view: full-width inputs */
+    .task-detail .detail-row { flex-direction: column; align-items: stretch; gap: 8px; }
+    .task-detail textarea { min-height: 100px; font-size: 16px; }
+  }
 </style>
 
 <div class="container-fluid">
@@ -381,6 +425,20 @@
       var showClass = state.expandedTaskId === task.id ? ' show' : '';
       html += '<div class="task-detail' + showClass + '" data-id="' + task.id + '">';
 
+      // CRM contact tasks: surface name/email/phone/language inline so the
+      // manager can decide channel before navigating, plus a deep-link button
+      // that opens the contact in ManagerContactView with the action panel ready.
+      var isContactTask = task.typeId && task.typeId.indexOf('task.contact.') === 0;
+      if (isContactTask) {
+        html += '<div class="detail-row contact-detail-row" style="background: #fff3cd; border-radius: 4px; padding: 8px 12px; margin-bottom: 10px;">';
+        html += '<div><label>Name</label><div>' + escapeHtml(task.entityName || '-') + '</div></div>';
+        html += '<div><label>Email</label><div>' + escapeHtml(task.entityId || '-') + '</div></div>';
+        html += '<div><label>Phone</label><div>' + escapeHtml(task.entityPhone || '-') + '</div></div>';
+        html += '<div><label>Lang</label><div>' + escapeHtml((task.entityLanguage || 'en').toUpperCase()) + '</div></div>';
+        html += '<button type="button" class="btn btn-sm btn-light btn-open-contact" data-email="' + escapeHtml(task.entityId) + '">Open contact</button>';
+        html += '</div>';
+      }
+
       // Single row: Stream, Start, Due, Done, Priority, Open link, Status, Revert, Save
       var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
       var isSystemTask = task.typeId && (
@@ -451,6 +509,21 @@
         revertTask(this.dataset.id, this.dataset.name);
       });
     });
+
+    // Open-contact deep-link: stashes the email in sessionStorage for
+    // ManagerContactView to consume on mount, then navigates.
+    container.querySelectorAll('.btn-open-contact').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var email = this.dataset.email;
+        if (email) {
+          sessionStorage.setItem('selectContactEmail', email);
+          if (typeof loadView === 'function') {
+            loadView('ManagerContacts');
+          }
+        }
+      });
+    });
   }
 
   function toggleTaskExpand(taskId) {
@@ -460,6 +533,17 @@
       state.expandedTaskId = taskId;
     }
     renderTaskList();
+
+    // After re-render, scroll the expanded row into view so the detail panel
+    // doesn't end up below the viewport requiring a manual scroll.
+    if (state.expandedTaskId) {
+      setTimeout(function() {
+        var row = document.querySelector('.task-row[data-id="' + state.expandedTaskId + '"]');
+        if (row && row.scrollIntoView) {
+          row.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      }, 50);
+    }
   }
 
   function saveTask(taskId) {

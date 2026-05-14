@@ -192,7 +192,14 @@ const ContactImportService = (function () {
 
       // Get order items
       const items = itemsByOrder.get(orderId) || [];
-      const orderTotal = items.reduce((sum, item) => sum + item.total, 0);
+      // Use the order's wom_OrderTotal (Woo populates this including tax + shipping)
+      // rather than summing line items (subtotals, no tax). Falls back to the item
+      // sum only if wom_OrderTotal is missing or zero.
+      const womOrderTotalRaw = row[womIdx['wom_OrderTotal']];
+      const womOrderTotalNum = parseFloat(womOrderTotalRaw);
+      const orderTotal = !isNaN(womOrderTotalNum) && womOrderTotalNum > 0
+        ? womOrderTotalNum
+        : items.reduce((sum, item) => sum + item.total, 0);
       const bottleCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
       const isGift = ContactService._isGiftOrder({
@@ -711,7 +718,14 @@ const ContactImportService = (function () {
       const orderLanguage = (row[womIdx['wom_MetaWpmlLanguage']] || '').toLowerCase().trim() || 'en';
 
       const items = itemsByOrder.get(orderId) || [];
-      const orderTotal = items.reduce((sum, item) => sum + item.total, 0);
+      // Use the order's wom_OrderTotal (Woo populates this including tax + shipping)
+      // rather than summing line items (subtotals, no tax). Falls back to the item
+      // sum only if wom_OrderTotal is missing or zero.
+      const womOrderTotalRaw = row[womIdx['wom_OrderTotal']];
+      const womOrderTotalNum = parseFloat(womOrderTotalRaw);
+      const orderTotal = !isNaN(womOrderTotalNum) && womOrderTotalNum > 0
+        ? womOrderTotalNum
+        : items.reduce((sum, item) => sum + item.total, 0);
       const bottleCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
       const isGift = ContactService._isGiftOrder({

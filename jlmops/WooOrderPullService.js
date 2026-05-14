@@ -84,6 +84,7 @@ const WooOrderPullService = (function() {
 
     // Direct field mappings
     order.wos_OrderId = String(apiOrder.id);
+    order.wos_OrderKey = apiOrder.order_key || '';
     order.wos_OrderNumber = String(apiOrder.number || apiOrder.id);
     order.wos_OrderDate = apiOrder.date_created || '';
     order.wos_PaidDate = apiOrder.date_paid || '';

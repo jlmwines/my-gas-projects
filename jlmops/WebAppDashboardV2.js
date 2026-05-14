@@ -732,28 +732,55 @@ function WebAppDashboardV2_getManagerData() {
     const managerTasks = allTasksIncludingDone
       .filter(task => task.st_AssignedTo === 'Manager')
       .filter(task => task.st_Status !== 'Cancelled')
-      .map(task => ({
-        id: task.st_TaskId,
-        typeId: task.st_TaskTypeId,
-        // For user-created project tasks the topic is whatever the modal
-        // captured into st_Topic; for system-generated types we keep the
-        // type-derived label for consistency with the existing dashboard.
-        topic: task.st_TaskTypeId === 'task.project.custom'
-          ? (task.st_Topic || 'Other')
-          : _getTopicFromType(task.st_TaskTypeId),
-        name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
-        entityId: task.st_LinkedEntityId || '',
-        entityName: task.st_LinkedEntityName || '',
-        sessionId: task.st_SessionId || '',
-        projectId: task.st_ProjectId || '',
-        createdDate: _safeDate(task.st_CreatedDate),
-        startDate: _safeDate(task.st_StartDate),
-        dueDate: _safeDate(task.st_DueDate),
-        doneDate: _safeDate(task.st_DoneDate),
-        status: task.st_Status,
-        priority: task.st_Priority,
-        notes: task.st_Notes || ''
-      }))
+      .map(task => {
+        const base = {
+          id: task.st_TaskId,
+          typeId: task.st_TaskTypeId,
+          // For user-created project tasks the topic is whatever the modal
+          // captured into st_Topic; for system-generated types we keep the
+          // type-derived label for consistency with the existing dashboard.
+          topic: task.st_TaskTypeId === 'task.project.custom'
+            ? (task.st_Topic || 'Other')
+            : _getTopicFromType(task.st_TaskTypeId),
+          name: task.st_Title || _formatTaskTypeName(task.st_TaskTypeId),
+          entityId: task.st_LinkedEntityId || '',
+          entityName: task.st_LinkedEntityName || '',
+          entityPhone: '',
+          entityLanguage: '',
+          sessionId: task.st_SessionId || '',
+          projectId: task.st_ProjectId || '',
+          createdDate: _safeDate(task.st_CreatedDate),
+          startDate: _safeDate(task.st_StartDate),
+          dueDate: _safeDate(task.st_DueDate),
+          doneDate: _safeDate(task.st_DoneDate),
+          status: task.st_Status,
+          priority: task.st_Priority,
+          notes: task.st_Notes || ''
+        };
+
+        // For CRM contact tasks, enrich with phone + language so the manager
+        // sees at-a-glance who they're contacting without leaving the dashboard.
+        // ContactService.getContactByEmail uses an internal cache so repeated
+        // lookups across all outreach tasks are cheap after the first hit.
+        if (typeof base.typeId === 'string' &&
+            base.typeId.indexOf('task.contact.') === 0 &&
+            base.entityId &&
+            typeof ContactService !== 'undefined' &&
+            ContactService.getContactByEmail) {
+          try {
+            const contact = ContactService.getContactByEmail(base.entityId);
+            if (contact) {
+              base.entityPhone = contact.sc_WhatsAppPhone || contact.sc_Phone || '';
+              base.entityLanguage = contact.sc_Language || '';
+              if (!base.entityName) base.entityName = contact.sc_Name || '';
+            }
+          } catch (contactErr) {
+            // Non-fatal — task still shows, just without phone enrichment
+          }
+        }
+
+        return base;
+      })
       .sort((a, b) => {
         // Sort by due date, then priority
         if (!a.dueDate && !b.dueDate) return 0;

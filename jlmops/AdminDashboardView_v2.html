@@ -1,3 +1,19 @@
+<style>
+  /* === Mobile overrides (≤768px) === */
+  @media (max-width: 768px) {
+    .card-header { font-size: 1rem; padding: 8px 12px; }
+    .card-body { padding: 8px 12px; }
+    .card { margin-bottom: 8px; }
+    /* Tasks table — let it scroll horizontally on tight widths */
+    #card-tasks {
+      max-height: none !important;
+      overflow-x: auto;
+    }
+    #card-tasks table { font-size: 14px; }
+    .row.mt-3 { margin-top: 12px !important; }
+  }
+</style>
+
 <div class="container-fluid">
   <!-- Row 1: System Health, Orders, Inventory, Products -->
   <div class="row">

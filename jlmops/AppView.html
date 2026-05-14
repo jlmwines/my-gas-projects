@@ -2,6 +2,7 @@
 <html>
 <head>
     <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
     <script src="//ssl.gstatic.com/docs/script/apps-script-impl.js"></script>
@@ -75,10 +76,110 @@
             padding: 20px;
             width: 100%;
         }
+
+        /* ===== Mobile primitives — shared across all views ===== */
+
+        /* Hamburger button — hidden on desktop, visible on mobile */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            padding: 4px 12px;
+            margin-right: 8px;
+            cursor: pointer;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        /* Sidebar backdrop for off-canvas mode */
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 60px 0 0 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1019;
+        }
+        body.sidebar-open .sidebar-backdrop { display: block; }
+
+        /* Card visibility gating — drives the four-role matrix. Cards declare
+           data-roles="admin manager" and data-viewports="mobile desktop"; CSS
+           hides anything not matching the current role + viewport. */
+        body.role-admin [data-roles]:not([data-roles~="admin"]) { display: none !important; }
+        body.role-manager [data-roles]:not([data-roles~="manager"]) { display: none !important; }
+
+        /* Responsive-stack utility: tables collapse to cards below the breakpoint.
+           Use <td data-label="X"> for the per-cell label that shows on mobile. */
+        @media (max-width: 768px) {
+            table.responsive-stack thead { display: none; }
+            table.responsive-stack tr {
+                display: block;
+                margin-bottom: 12px;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 8px;
+                background: #fff;
+            }
+            table.responsive-stack td {
+                display: block;
+                padding: 4px 0;
+                border: none;
+            }
+            table.responsive-stack td::before {
+                content: attr(data-label) ": ";
+                font-weight: 600;
+                color: #6c757d;
+                margin-right: 6px;
+            }
+            table.responsive-stack td:empty::before { content: none; }
+        }
+
+        /* ===== Mobile breakpoint: ≤768px ===== */
+        @media (max-width: 768px) {
+            /* Typography baseline — 16px body avoids iOS input auto-zoom */
+            body { font-size: 16px; }
+            .header h1 { font-size: 1.1rem; padding-left: 0; }
+
+            /* Touch targets */
+            .nav-link {
+                min-height: 44px;
+                padding: 10px 14px;
+                display: flex;
+                align-items: center;
+                font-size: 1rem !important;
+            }
+            .btn { min-height: 44px; }
+            .btn-sm { min-height: 38px; }
+            input, select, textarea {
+                font-size: 16px !important;
+                min-height: 40px;
+            }
+
+            /* Show the hamburger, hide the sidebar by default */
+            .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
+            .sidebar {
+                width: 220px;
+                z-index: 1020;
+                transform: translateX(-100%);
+                transition: transform 0.2s ease;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            }
+            body.sidebar-open .sidebar { transform: translateX(0); }
+            .content { margin-left: 0; padding: 12px; }
+
+            /* Hide non-mobile cards */
+            [data-viewports]:not([data-viewports~="mobile"]) { display: none !important; }
+        }
+
+        /* Desktop-only: hide cards explicitly mobile-only */
+        @media (min-width: 769px) {
+            [data-viewports]:not([data-viewports~="desktop"]) { display: none !important; }
+        }
     </style>
 </head>
 <body>
     <div class="header">
+        <button id="hamburger-btn" class="hamburger-btn" type="button" aria-label="Toggle navigation">&#9776;</button>
         <h1>JLM Wines</h1>
         <div class="jlmops-role-switcher">
             <select id="roleSelect" class="form-control form-control-sm" style="min-width: 150px;">
@@ -101,7 +202,8 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminBundles')">Bundles</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminProjects')">Projects</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminCampaigns')">Campaigns</a></li>
-          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminContacts')">Contacts</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminContacts')">CRM Tools</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
         </ul>
         <!-- Manager Navigation -->
@@ -119,6 +221,9 @@
         <!-- Content will be loaded here -->
       </div>
     </div>
+
+    <!-- Off-canvas sidebar backdrop (mobile only); tap dismisses -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
     <script>
       /**
@@ -142,11 +247,16 @@
       }
 
       /**
-       * Shows/hides navigation links based on role.
+       * Shows/hides navigation links based on role + sets body role class.
+       * The body class drives card-visibility CSS so per-view sections can
+       * declare data-roles="admin manager" and be filtered automatically.
        */
       function setNavigationForRole(role) {
         const adminNav = document.getElementById('admin-nav');
         const managerNav = document.getElementById('manager-nav');
+
+        document.body.classList.remove('role-admin', 'role-manager');
+        document.body.classList.add('role-' + role);
 
         if (role === 'admin') {
             adminNav.style.display = 'block';
@@ -157,6 +267,13 @@
         }
       }
 
+      /** Sidebar open/close (mobile off-canvas) */
+      function openSidebar() { document.body.classList.add('sidebar-open'); }
+      function closeSidebar() { document.body.classList.remove('sidebar-open'); }
+      function toggleSidebar() {
+        document.body.classList.toggle('sidebar-open');
+      }
+
       /**
        * Loads a view into the content area and highlights the active navigation link.
        * @param {string} viewName - The name of the view to load.
@@ -165,6 +282,9 @@
       function loadView(viewName, linkElement) {
         const viewContent = document.getElementById('content');
         viewContent.innerHTML = '<h2>Loading...</h2>';
+
+        // Auto-dismiss the off-canvas sidebar on nav click (mobile)
+        closeSidebar();
 
         // Highlight Navigation
         const activeNavId = document.getElementById('admin-nav').style.display === 'block' ? 'admin-nav' : 'manager-nav';
@@ -224,6 +344,10 @@
       window.onload = function() {
         // Add event listener to the dropdown
         document.getElementById('roleSelect').addEventListener('change', switchRole);
+
+        // Hamburger toggle + backdrop tap-to-dismiss (mobile)
+        document.getElementById('hamburger-btn').addEventListener('click', toggleSidebar);
+        document.getElementById('sidebar-backdrop').addEventListener('click', closeSidebar);
 
         // Load the initial view and set navigation based on the role passed from the server
         const initialRole = document.getElementById('roleSelect').value;

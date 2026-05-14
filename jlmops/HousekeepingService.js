@@ -19,6 +19,17 @@ function runDailyMaintenance() {
 }
 
 /**
+ * A global function intended for high-frequency triggers (e.g., every 20 minutes
+ * during business hours). Runs only the maintenance tasks that need near-real-time
+ * cadence — currently the pending-payment follow-up sweep. Other phase3 tasks
+ * (Mailchimp pulls, CRM refresh, welcome trigger, bundle housekeeping, etc.) stay
+ * in runDailyMaintenance because they are not time-sensitive at the same granularity.
+ */
+function runFrequentMaintenance() {
+    housekeepingService.performFrequentMaintenance();
+}
+
+/**
  * A global function to manually trigger order archiving.
  * Archives completed orders older than 1 year to WebOrdM_Archive.
  */
@@ -635,6 +646,31 @@ function HousekeepingService() {
    * Phase 2: Validation & Testing - master_master suite, unit tests
    * Phase 3: Service Updates - bundle health, Brurya reminder
    */
+  /**
+   * Frequent maintenance — runs only the near-real-time tasks. Intended for a
+   * 20-min trigger during business hours. Currently: pending-payment follow-up
+   * email sweep. Stays small intentionally; add tasks only when their cadence
+   * genuinely benefits from sub-hourly firing.
+   */
+  this.performFrequentMaintenance = function() {
+    const functionName = 'performFrequentMaintenance';
+    logger.info('HousekeepingService', functionName, "Starting frequent maintenance.");
+
+    const tasks = [
+      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() }
+    ];
+
+    for (const task of tasks) {
+      try {
+        task.fn();
+      } catch (e) {
+        logger.error('HousekeepingService', functionName, `${task.name} failed: ${e.message}`);
+      }
+    }
+
+    logger.info('HousekeepingService', functionName, "Frequent maintenance completed.");
+  };
+
   this.performDailyMaintenance = function() {
     const functionName = 'performDailyMaintenance';
     logger.info('HousekeepingService', functionName, "Starting daily maintenance.");
@@ -701,6 +737,7 @@ function HousekeepingService() {
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
+      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() },
       { name: 'validateDeployment', fn: () => this.validateDeployment() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
@@ -952,6 +989,18 @@ function HousekeepingService() {
         return fcd >= floorDate;
       });
 
+      // Auto-populate start (today) + due (today + 4 days) so the welcome task
+      // surfaces to the manager as immediately actionable rather than sitting
+      // in an unstarted limbo. TaskService.createTask's normal date-pattern
+      // logic only stamps dates when due_pattern === 'immediate'; we want this
+      // task to be ready to action right away.
+      const todayMidnight = (function() {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+      })();
+      const dueDate = new Date(todayMidnight.getTime() + 4 * 24 * 60 * 60 * 1000);
+
       let created = 0;
       eligible.forEach(c => {
         const notesJson = JSON.stringify({
@@ -967,7 +1016,11 @@ function HousekeepingService() {
             'Welcome — first order',
             notesJson,
             null,
-            { topic: 'Welcome — first order' }
+            {
+              topic: 'Welcome — first order',
+              startDate: todayMidnight,
+              dueDate: dueDate
+            }
           );
           if (result) created++;
         } catch (taskError) {
@@ -981,6 +1034,194 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Welcome outreach sweep failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Detects pending-payment orders that have been pending for 2+ sweeps and
+   * auto-sends a friendly follow-up email via GmailApp. Writes a SysContactActivity
+   * row (type comm.email) for visibility. No task is created — fully automated.
+   *
+   * Gates:
+   *  - crm.pending_payment_followup.enabled === 'true' (kill switch)
+   *  - Order status === 'pending' in current pull AND was pending in previous sweep
+   *  - Contact has both email and a phone (billing or shipping)
+   *  - Order has not already been sent (deduped via sent_order_ids)
+   *  - Same email has no later order in [processing, on-hold, completed, pending]
+   *    (i.e., the customer hasn't progressed or placed a fresh attempt; if they
+   *    did, this one is stale and they're already moving forward)
+   *
+   * First-time customers (zero completed orders for the email) get the NEW50
+   * coupon mention appended; existing customers do not.
+   */
+  this.createPendingPaymentFollowups = function() {
+    const functionName = 'createPendingPaymentFollowups';
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const enabledCfg = allConfig['crm.pending_payment_followup.enabled'];
+      const enabled = enabledCfg && String(enabledCfg.value).toLowerCase() === 'true';
+      if (!enabled) {
+        logger.info('HousekeepingService', functionName, 'Disabled via config. Skipping.');
+        return true;
+      }
+
+      const sheetNames = allConfig['system.sheet_names'];
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+      const orderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+      if (!orderSheet || orderSheet.getLastRow() < 2) {
+        logger.info('HousekeepingService', functionName, 'No order data. Skipping.');
+        return true;
+      }
+
+      const womHeaders = allConfig['schema.data.WebOrdM'].headers.split(',');
+      const idx = {};
+      womHeaders.forEach((h, i) => idx[h] = i);
+
+      const orderData = orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, womHeaders.length).getValues();
+
+      // Bucket orders by status + email for fast self-resolution checks
+      const allOrders = orderData.map(row => ({
+        orderId: String(row[idx.wom_OrderId]).trim(),
+        orderKey: String(row[idx.wom_OrderKey] || '').trim(),
+        orderDate: row[idx.wom_OrderDate],
+        status: String(row[idx.wom_Status] || '').toLowerCase().trim(),
+        email: String(row[idx.wom_BillingEmail] || '').toLowerCase().trim(),
+        phone: row[idx.wom_BillingPhone] || row[idx.wom_ShippingPhone] || '',
+        firstName: row[idx.wom_BillingFirstName] || '',
+        lastName: row[idx.wom_BillingLastName] || '',
+        language: String(row[idx.wom_MetaWpmlLanguage] || '').toLowerCase().trim() || 'en'
+      })).filter(o => o.orderId);
+
+      // Forward-only floor: stamp on first run, skip everything that round.
+      const floorCfg = allConfig['crm.pending_payment_followup.floor_date'];
+      let floorDate;
+      if (!floorCfg || !floorCfg.value) {
+        floorDate = new Date();
+        ConfigService.setConfig('crm.pending_payment_followup.floor_date', 'value', floorDate.toISOString());
+        // Also seed last_pending_ids so the next run starts comparing cleanly.
+        const seedIds = allOrders.filter(o => o.status === 'pending').map(o => o.orderId);
+        ConfigService.setConfig('crm.pending_payment_followup.last_pending_ids', 'value', JSON.stringify(seedIds));
+        logger.info('HousekeepingService', functionName,
+          `Pending-followup floor initialized to ${floorDate.toISOString()}. Seeded ${seedIds.length} pending IDs. No emails on first run.`);
+        return true;
+      }
+      floorDate = new Date(floorCfg.value);
+
+      const currentlyPending = allOrders.filter(o =>
+        o.status === 'pending' && new Date(o.orderDate) >= floorDate
+      );
+      const currentPendingIds = currentlyPending.map(o => o.orderId);
+
+      // Read previous sweep's pending IDs + already-sent IDs
+      let lastPendingIds = [];
+      let sentOrderIds = [];
+      try {
+        const lastCfg = allConfig['crm.pending_payment_followup.last_pending_ids'];
+        if (lastCfg && lastCfg.value) lastPendingIds = JSON.parse(lastCfg.value);
+        const sentCfg = allConfig['crm.pending_payment_followup.sent_order_ids'];
+        if (sentCfg && sentCfg.value) sentOrderIds = JSON.parse(sentCfg.value);
+      } catch (parseErr) {
+        logger.warn('HousekeepingService', functionName, `Could not parse tracking config: ${parseErr.message}. Resetting.`);
+        lastPendingIds = [];
+        sentOrderIds = [];
+      }
+
+      const lastSet = new Set(lastPendingIds);
+      const sentSet = new Set(sentOrderIds);
+
+      // Orders eligible for follow-up: pending in both this sweep and the previous,
+      // not already sent.
+      const eligible = currentlyPending.filter(o =>
+        lastSet.has(o.orderId) && !sentSet.has(o.orderId)
+      );
+
+      let sent = 0;
+      eligible.forEach(o => {
+        try {
+          if (!o.email || !o.phone) return;
+
+          // Self-resolution check: any later order from same email in a non-cancelled state
+          const laterOrder = allOrders.find(other =>
+            other.email === o.email &&
+            other.orderId !== o.orderId &&
+            new Date(other.orderDate) > new Date(o.orderDate) &&
+            ['processing', 'on-hold', 'completed', 'pending'].indexOf(other.status) >= 0
+          );
+          if (laterOrder) return;
+
+          // First-time check: zero completed orders for this email
+          const completedCount = allOrders.filter(other =>
+            other.email === o.email && other.status === 'completed'
+          ).length;
+          const isFirstTime = completedCount === 0;
+
+          // Compose
+          const lang = (o.language === 'he') ? 'he' : 'en';
+          const subjectCfg = allConfig[`crm.template.pending_payment.email.subject.${lang}`];
+          const bodyCfg = allConfig[`crm.template.pending_payment.email.body.${lang}`];
+          const addendumCfg = allConfig[`crm.template.pending_payment.first_time_addendum.${lang}`];
+          if (!subjectCfg || !bodyCfg) {
+            logger.warn('HousekeepingService', functionName, `Missing email template for lang=${lang}. Skipping ${o.orderId}.`);
+            return;
+          }
+          const subject = subjectCfg.value || '';
+          const firstTimeBlock = isFirstTime && addendumCfg && addendumCfg.value ? addendumCfg.value : '';
+          const name = String(o.firstName || '').trim() || 'there';
+
+          // Order-pay URL: prefer the guest-pay link with the captured key
+          // (one-tap payment, no login); fall back to the my-account view if
+          // the key isn't available (e.g., order pulled before @111).
+          const orderPayUrl = o.orderKey
+            ? `https://www.jlmwines.com/checkout/order-pay/${o.orderId}/?pay_for_order=true&key=${o.orderKey}`
+            : `https://www.jlmwines.com/my-account/view-order/${o.orderId}/`;
+
+          const body = String(bodyCfg.value || '')
+            .replace(/\{name\}/g, name)
+            .replace(/\{first_time_block\}/g, firstTimeBlock)
+            .replace(/\{order_pay_url\}/g, orderPayUrl);
+
+          // Send
+          GmailApp.sendEmail(o.email, subject, body);
+
+          // Log activity
+          if (typeof ContactService !== 'undefined' && ContactService.createActivity) {
+            ContactService.createActivity({
+              sca_Email: o.email,
+              sca_Timestamp: new Date(),
+              sca_Type: 'comm.email',
+              sca_Summary: `Pending-payment follow-up sent (order ${o.orderId})${isFirstTime ? ' — first-time' : ''}`,
+              sca_Details: {
+                automated: true,
+                trigger: 'pending_payment_followup',
+                orderId: o.orderId,
+                isFirstTime: isFirstTime,
+                language: lang
+              },
+              sca_CreatedBy: 'system'
+            });
+          }
+
+          sentSet.add(o.orderId);
+          sent++;
+        } catch (orderErr) {
+          logger.warn('HousekeepingService', functionName,
+            `Failed to follow up on order ${o.orderId}: ${orderErr.message}`);
+        }
+      });
+
+      // Persist updated tracking state
+      ConfigService.setConfig('crm.pending_payment_followup.last_pending_ids', 'value',
+        JSON.stringify(currentPendingIds));
+      ConfigService.setConfig('crm.pending_payment_followup.sent_order_ids', 'value',
+        JSON.stringify(Array.from(sentSet)));
+
+      logger.info('HousekeepingService', functionName,
+        `Pending-payment follow-up sweep: ${currentlyPending.length} currently pending, ${eligible.length} eligible (2+ pulls), ${sent} emails sent.`);
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Sweep failed: ${e.message}`);
       return false;
     }
   };

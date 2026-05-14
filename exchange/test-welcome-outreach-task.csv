@@ -1,0 +1,2 @@
+st_TaskId,st_TaskTypeId,st_SessionId,st_ProjectId,st_Topic,st_Title,st_Status,st_Priority,st_AssignedTo,st_LinkedEntityId,st_LinkedEntityName,st_CreatedDate,st_StartDate,st_DueDate,st_DoneDate,st_Notes
+TEST-WELCOME-OUTREACH-1,task.contact.outreach,,,Welcome — first order,Welcome — first order,Assigned,Normal,Manager,EMAIL_HERE,NAME_HERE,2026-05-14,,,,"{""topic"":""Welcome — first order"",""language"":""en""}"

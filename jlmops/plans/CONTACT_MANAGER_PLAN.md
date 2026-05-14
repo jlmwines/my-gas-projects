@@ -116,10 +116,18 @@ Pipedrive unifies these into one record. We keep them separate because `SysTasks
 
 ### Triggers (v1: welcome only)
 
-- **First `completed`-status order from a new customer** → create one `task.contact.outreach` row, `st_Topic = "Welcome — first order"`, `st_AssignedTo = 'Manager'`. Fires once per customer; later status changes don't re-fire.
+- **First `completed`-status order from a new customer** → create one `task.contact.outreach` row, `st_Topic = "Welcome — first order"`, `st_AssignedTo = 'Manager'`, `st_StartDate = today`, `st_DueDate = today + 4 days`. Fires once per customer; later status changes don't re-fire. Task auto-routes to project `PROJ-SYS_CRM` via `task.routing.topic_to_project` (Contact → PROJ-SYS_CRM mapping) so admin sees it in the CRM project view.
 - **No activity row pre-created.** Activity rows are written only when actual contact happens.
 
 Future triggers (cooling 91–180d, VIP recognition, win-back) ship as new topics on the same task type — no new task definitions, no new dashboard plumbing.
+
+### Manager dashboard integration
+
+Outreach tasks surface on the manager dashboard task list like any other manager-assigned task. The task detail panel renders a dedicated contact-info block when `task.typeId` starts with `task.contact.` — shows name, email, phone, language — plus an **"Open contact"** button that deep-links into ManagerContactView with the contact pre-loaded.
+
+Backend (`WebAppDashboardV2.getManagerData`) enriches `task.contact.*` rows with `entityPhone` and `entityLanguage` via `ContactService.getContactByEmail`. The deep-link uses `sessionStorage.setItem('selectContactEmail', email)` followed by `loadView('ManagerContacts')`; ManagerContactView reads + clears the key on mount and opens the contact directly.
+
+The task detail expansion now uses `scrollIntoView` so the panel never ends up below the viewport.
 
 ### Manager Contact View (new view — `ManagerContactView`)
 

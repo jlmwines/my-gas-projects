@@ -120,7 +120,7 @@
       <strong>Open task:</strong> <span id="mc-open-task-topic">—</span>
     </div>
 
-    <button class="btn btn-sm btn-primary mc-action-button" id="mc-new-attempt" type="button">
+    <button class="btn btn-sm btn-light mc-action-button" id="mc-new-attempt" type="button">
       + New contact attempt
     </button>
 
@@ -163,8 +163,8 @@
         </div>
       </div>
       <div class="modal-footer bg-light">
-        <button class="btn" type="button" id="mc-modal-cancel">Cancel</button>
-        <button class="btn btn-primary" type="button" id="mc-modal-submit">Send</button>
+        <button class="btn btn-sm btn-light" type="button" id="mc-modal-cancel">Cancel</button>
+        <button class="btn btn-sm btn-light" type="button" id="mc-modal-submit">Send</button>
       </div>
     </div>
   </div>
@@ -311,7 +311,10 @@
     var orderSpend = '';
     if (c.orderCount) {
       orderSpend = c.orderCount + ' · ₪' + (c.totalSpend || 0);
-      if (c.lastOrderDate) orderSpend += ' · last ' + c.lastOrderDate;
+      // Skip 1970-01-01 (epoch zero leaking through from a missing date field)
+      if (c.lastOrderDate && c.lastOrderDate.indexOf('1970-01-01') !== 0) {
+        orderSpend += ' · last ' + c.lastOrderDate;
+      }
     } else {
       orderSpend = '—';
     }
@@ -353,6 +356,12 @@
     // Task-done toggle visible only if open task exists
     document.getElementById('mc-task-toggle-row').style.display =
       state.openTask ? 'block' : 'none';
+
+    // Set text direction on inputs to match the contact's language so the
+    // manager edits Hebrew messages with proper RTL alignment.
+    var dir = (state.currentLanguage === 'he') ? 'rtl' : 'ltr';
+    document.getElementById('mc-message').setAttribute('dir', dir);
+    document.getElementById('mc-subject').setAttribute('dir', dir);
 
     updateChannelUi();
     loadTemplate();
@@ -469,7 +478,23 @@
       });
   });
 
-  // Focus the search input on mount
-  setTimeout(function() { searchInput.focus(); }, 50);
+  // Deep-link support: if another view (e.g., the manager dashboard's
+  // "Open contact" button on a task.contact.outreach row) stashed an email in
+  // sessionStorage, open that contact's detail page directly on mount instead
+  // of showing the empty search.
+  var deepLinkEmail = null;
+  try {
+    deepLinkEmail = sessionStorage.getItem('selectContactEmail');
+    if (deepLinkEmail) sessionStorage.removeItem('selectContactEmail');
+  } catch (storageErr) {
+    deepLinkEmail = null;
+  }
+
+  if (deepLinkEmail) {
+    openDetail(deepLinkEmail);
+  } else {
+    // Focus the search input on mount
+    setTimeout(function() { searchInput.focus(); }, 50);
+  }
 })();
 </script>

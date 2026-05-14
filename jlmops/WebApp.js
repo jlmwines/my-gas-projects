@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-14 03:47',
-  commit: '@106: Deploy hardening — pinned deploy wrapper + housekeeping drift validation. New jlmops/deploy.ps1 reads jlmops/.deployment-id (committed, not secret) and runs clasp deploy --deploymentId <pinned> with post-deploy verification (re-runs clasp deployments + greps for the pinned ID, fails closed if missing). New config row system.deployment.pinned_id mirrors the file for in-script comparison. New HousekeepingService.validateDeployment (wired into phase3 after createWelcomeOutreachTasks) reads ScriptApp.getService().getUrl(), extracts the deployment ID via regex, compares to the pinned. On mismatch creates task.system.deployment_drift (high priority, admin_direct) with running vs pinned IDs in notes. Editor/dev contexts return URLs without a stable deployment ID and skip silently. Combined with the wrapper this catches both deploy-time mistakes (wrapper refuses to exit clean) and post-deploy drift (housekeeping creates a task). CLAUDE.md updated to forbid bare clasp deploy and direct sessions to the wrapper. Targets the recurring orphan-deployment failure mode documented in memory jlm_stable_deploy_id.'
+  built: '2026-05-14 08:55',
+  commit: '@116: Order total includes tax; modal RTL for Hebrew. ContactImportService._aggregateOrdersByEmail (and the activity-backfill aggregation that mirrors it) now reads wom_OrderTotal (Woo populates this including tax + shipping) instead of summing line items (subtotals only, no tax). Falls back to the item-sum if wom_OrderTotal is missing or zero — defensive but rarely needed. Note: if backfillOrderTotals was previously run manually, wom_OrderTotal in WebOrdM was overwritten with the no-tax item sum; re-pulling orders from Woo restores the real totals. ManagerContactView action panel: subject and message inputs now get dir="rtl" when the contact language is "he" so the manager edits Hebrew messages with proper alignment. Email body RTL is handled implicitly by the receiving client bidi algorithm for plain-text Hebrew content.'
 };
 
 function getVersion() {
@@ -47,7 +47,8 @@ function doGet(e) {
   
   return template.evaluate()
     .setTitle('JLMops Dashboard')
-    .setSandboxMode(HtmlService.SandboxMode.IFRAME);
+    .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, shrink-to-fit=no');
 }
 
 function getDashboardForRole(role) {

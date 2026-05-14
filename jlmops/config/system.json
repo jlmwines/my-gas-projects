@@ -775,6 +775,14 @@
         "task.routing.topic_to_project",
         "Topic-to-project routing for auto-assignment",
         "stable",
+        "Contact",
+        "PROJ-SYS_CRM",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
         "Campaign",
         "PROJ-SYS_CRM",
         "", "", "", "", "", "", "", ""
@@ -849,6 +857,38 @@
         "stable",
         "value",
         "AKfycbzxXgezKqE_dhz33Ssh5eRwAv1XsmnlqG0EukzEhySXC0wn49l26x9LK8vuIH8ELHI6yw",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.pending_payment_followup.enabled",
+        "Kill switch for the automated pending-payment follow-up email. Set to 'false' to disable; housekeeping skips entirely.",
+        "stable",
+        "value",
+        "true",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.pending_payment_followup.floor_date",
+        "Forward-only floor: only orders with wom_OrderDate on/after this timestamp are eligible for follow-up. Stamped automatically on the first sweep; pre-existing pending orders (the backlog) are excluded.",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.pending_payment_followup.last_pending_ids",
+        "JSON array of pending-status order IDs from the previous housekeeping sweep. Compared against the current pending set to detect orders that have been pending for 2+ pulls (the gate for sending the follow-up).",
+        "stable",
+        "value",
+        "[]",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.pending_payment_followup.sent_order_ids",
+        "JSON array of order IDs we've already sent a pending-payment follow-up for. Dedupes — one email per order, never resent.",
+        "stable",
+        "value",
+        "[]",
         "", "", "", "", "", "", "", ""
     ],
     [
