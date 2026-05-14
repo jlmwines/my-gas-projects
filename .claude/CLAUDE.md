@@ -42,5 +42,6 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 
 - **Theme to staging:** sessions may run `pwsh -NoProfile -File website/deploy-theme.ps1` directly after a code change. Incremental FTP push to staging6. Don't ask first — make the change, deploy, then report.
 - **jlmops:** `clasp push` deploys GAS middleware. Config: edit `jlmops/config/*.json` → `node jlmops/generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`. Live deploy still needs explicit user OK.
+- **jlmops live deploy:** always use the wrapper `pwsh -NoProfile -File jlmops/deploy.ps1 "<description>"`. NEVER call bare `clasp deploy` — that's the failure mode that has historically created orphan deployment URLs (memory `jlm_stable_deploy_id`). The wrapper reads the pinned ID from `jlmops/.deployment-id`, passes `--deploymentId`, and verifies the pinned ID survived the deploy. If the pinned ID needs to change, update both `.deployment-id` and `system.deployment.pinned_id` in `config/system.json`.
 - **Git:** remote `origin` over SSH config alias `github-jlmwines` (in `~/.ssh/config`). Branch `main`. Push command: `git push origin main`. Sessions push only when explicitly asked.
 - **Live site (jlmwines.com):** user-driven only. Sessions don't push to live without explicit per-task authorization.

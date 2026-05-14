@@ -700,6 +700,8 @@ function HousekeepingService() {
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
+      { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
+      { name: 'validateDeployment', fn: () => this.validateDeployment() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() }
@@ -907,6 +909,148 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `CRM refresh failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Creates welcome outreach tasks for customers whose first completed-status order
+   * has been observed. One task per customer; TaskService.createTask handles dedupe
+   * by (taskTypeId + linkedEntityId), so re-runs are idempotent.
+   *
+   * Source signal: SysContacts.sc_FirstCompletedDate, populated by
+   * ContactImportService._aggregateOrdersByEmail when iterating order rows.
+   * Runs after refreshCrmContacts so the field is fresh.
+   */
+  this.createWelcomeOutreachTasks = function() {
+    const functionName = 'createWelcomeOutreachTasks';
+
+    try {
+      if (typeof ContactService === 'undefined' || !ContactService.getContacts) {
+        logger.info('HousekeepingService', functionName, 'ContactService not available. Skipping.');
+        return true;
+      }
+
+      // No-backfill guard. First sweep stamps the floor and creates zero tasks;
+      // subsequent sweeps only fire for first-completed orders dated on/after the floor.
+      const floorConfig = ConfigService.getConfig('system.crm.welcome_floor_date');
+      let floorDate;
+      if (!floorConfig || !floorConfig.value) {
+        floorDate = new Date();
+        ConfigService.setConfig('system.crm.welcome_floor_date', 'value', floorDate.toISOString());
+        logger.info('HousekeepingService', functionName,
+          `Welcome floor initialized to ${floorDate.toISOString()}. No tasks created on first run (backfill skipped).`);
+        return true;
+      }
+      floorDate = new Date(floorConfig.value);
+
+      const contacts = ContactService.getContacts({});
+      const eligible = contacts.filter(c => {
+        if (!c.sc_FirstCompletedDate) return false;
+        const fcd = new Date(c.sc_FirstCompletedDate);
+        if (isNaN(fcd.getTime())) return false;
+        return fcd >= floorDate;
+      });
+
+      let created = 0;
+      eligible.forEach(c => {
+        const notesJson = JSON.stringify({
+          topic: 'Welcome — first order',
+          firstCompletedDate: c.sc_FirstCompletedDate,
+          language: c.sc_Language || 'en'
+        });
+        try {
+          const result = TaskService.createTask(
+            'task.contact.outreach',
+            c.sc_Email,
+            c.sc_Name || c.sc_Email,
+            'Welcome — first order',
+            notesJson,
+            null,
+            { topic: 'Welcome — first order' }
+          );
+          if (result) created++;
+        } catch (taskError) {
+          logger.warn('HousekeepingService', functionName,
+            `Could not create welcome task for ${c.sc_Email}: ${taskError.message}`);
+        }
+      });
+
+      logger.info('HousekeepingService', functionName,
+        `Welcome outreach sweep: ${eligible.length} eligible, ${created} new (existing skipped via dedupe).`);
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Welcome outreach sweep failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Validates that the running deployment matches the pinned ID in config.
+   * Catches drift when scheduled triggers or web requests are being served from
+   * an orphan deployment (the recurring failure mode addressed by the
+   * .deployment-id wrapper + jlm_stable_deploy_id memory).
+   *
+   * Editor/dev contexts return URLs without a stable deployment ID; the check
+   * skips silently in that case.
+   */
+  this.validateDeployment = function() {
+    const functionName = 'validateDeployment';
+
+    try {
+      const pinnedCfg = ConfigService.getConfig('system.deployment.pinned_id');
+      const pinnedId = pinnedCfg && pinnedCfg.value ? String(pinnedCfg.value).trim() : '';
+      if (!pinnedId) {
+        logger.info('HousekeepingService', functionName, 'No pinned deployment ID configured. Skipping.');
+        return true;
+      }
+
+      let runningUrl = '';
+      try {
+        runningUrl = ScriptApp.getService().getUrl() || '';
+      } catch (urlErr) {
+        logger.info('HousekeepingService', functionName, `Cannot read running URL (${urlErr.message}). Skipping.`);
+        return true;
+      }
+
+      // Extract the deployment ID segment from a URL like:
+      //   https://script.google.com/.../s/<id>/exec
+      //   https://script.google.com/.../s/<id>/dev
+      const match = runningUrl.match(/\/s\/([^\/]+)\//);
+      if (!match) {
+        logger.info('HousekeepingService', functionName,
+          `Running URL has no deployment ID segment (${runningUrl}). Likely editor context. Skipping.`);
+        return true;
+      }
+      const runningId = match[1];
+
+      if (runningId === pinnedId) {
+        logger.info('HousekeepingService', functionName, `Deployment matches pinned ID (${pinnedId.substring(0, 12)}…).`);
+        return true;
+      }
+
+      // Drift detected — open a high-priority admin task. createTask dedup means
+      // re-runs are idempotent; the existing open drift task just sits there
+      // until an admin closes it.
+      const notes = JSON.stringify({
+        runningId: runningId,
+        pinnedId: pinnedId,
+        runningUrl: runningUrl,
+        detectedAt: new Date().toISOString()
+      });
+      TaskService.createTask(
+        'task.system.deployment_drift',
+        '_SYSTEM',
+        'System',
+        'Deployment drift — running ID does not match pinned',
+        notes,
+        null
+      );
+      logger.warn('HousekeepingService', functionName,
+        `Deployment drift: running=${runningId.substring(0, 12)}… pinned=${pinnedId.substring(0, 12)}…`);
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Validation failed: ${e.message}`);
       return false;
     }
   };

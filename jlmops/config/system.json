@@ -836,6 +836,22 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.crm.welcome_floor_date",
+        "Cutoff timestamp for the welcome outreach trigger. Set once on first sweep; only contacts whose sc_FirstCompletedDate is on/after this floor get a welcome task. Prevents backfill burst over historical customers.",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.deployment.pinned_id",
+        "Pinned Apps Script deployment ID for the live JLM Wines URL. Housekeeping compares against ScriptApp.getService().getUrl() and creates a drift task if they diverge. Source of truth is jlmops/.deployment-id; this config row mirrors it for in-script comparison.",
+        "stable",
+        "value",
+        "AKfycbzxXgezKqE_dhz33Ssh5eRwAv1XsmnlqG0EukzEhySXC0wn49l26x9LK8vuIH8ELHI6yw",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.crm_intelligence.last_run",
         "Tracks last CRM intelligence run timestamp",
         "stable",

@@ -812,5 +812,27 @@
         "initial_status", "New",
         "flow_pattern", "manual",
         "due_pattern", "manual"
+    ],
+    [
+        "task.template",
+        "task.contact.outreach",
+        "Manager CRM outreach task. One type for all CRM contact triggers (welcome, cooling, VIP, win-back); specific reason is set per-task via st_Topic.",
+        "stable",
+        "topic", "Contact",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week"
+    ],
+    [
+        "task.template",
+        "task.system.deployment_drift",
+        "Created by HousekeepingService.validateDeployment when the running deployment ID does not match system.deployment.pinned_id. Indicates an orphan deployment is serving requests or a scheduled trigger is pointing at the wrong deployment.",
+        "stable",
+        "topic", "System",
+        "default_priority", "High",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "immediate"
     ]
 ]

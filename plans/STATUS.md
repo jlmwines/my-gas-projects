@@ -1,16 +1,16 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-13 (jlmops @94-@104 shipped: bundle SKU filter + FAILED IMPORTING_COMAX retry + CRM gift rule simplified + sync widget Run Bundle Analysis button + ProductService.exportWebInventory exposure fix; bundle management refinements + EN/HE parity validator plan written; @99 manager dashboard default-list + ↗ Document button; @100 manager dashboard filter = assignment-as-gate (drops the brittle managerTaskTypes allow-list — packing slip becomes a read-only system task; surfaces silently-dropped task.content.translate); @101 retired Mailchimp 14-day reminder tasks (subscribers + campaigns) — CSV-era artifacts obsoleted by Half 1 API pull @81; coupons reminder kept (no Woo coupons API pull yet); @103 VERSION stamp catch-up; @104 archiveCompletedTasks filter fixed ('Completed' → 'Done' — Done tasks were accumulating in SysTasks because filter checked an unused status string))
+**Updated:** 2026-05-14 (jlmops @105-@106 shipped: Manager CRM Half 2 + deploy hardening. @105 new ManagerContactView (mobile-first) + welcome-outreach trigger from first completed order + Action Panel with three channels + activity-record-drives-action pattern; single task type task.contact.outreach for all CRM topics; no-backfill floor stamps automatically on first sweep so historical customers don't burst. @106 deploy hardening: jlmops/deploy.ps1 wrapper forces --deploymentId from pinned .deployment-id + post-deploy verification; HousekeepingService.validateDeployment compares running deployment to pinned and creates a drift task on mismatch; CLAUDE.md forbids bare clasp deploy. Mobile UX pass for admin + manager dashboards and contacts queued next.)
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. |
-| Last Active | 2026-05-13 |
+| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14. |
+| Last Active | 2026-05-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @104 (most recent: @99 manager default-list + ↗ Document; @100 assignment-as-gate filter + packing slip system task; @101 Mailchimp reminder tasks retired; @103 VERSION stamp catch-up; @104 archiveCompletedTasks 'Completed' → 'Done' fix) · theme v1.2.23 LIVE |
-| Deploy Date | jlmops 2026-05-13 (@99 → @100 → @101 → @103 → @104) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
+| Deploy Version | jlmops @106 (most recent: @105 Manager CRM Half 2 — ManagerContactView + welcome trigger + Action Panel + no-backfill floor; @106 deploy hardening — pinned wrapper + housekeeping drift validation) · theme v1.2.23 LIVE |
+| Deploy Date | jlmops 2026-05-14 (@105 → @106) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
@@ -128,6 +128,7 @@ _(Cross-project notes land here during sessions. Triaged at end of workday in cl
 
 - **2026-04-29: Nav menu structure + mobile review.** Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs what the menu currently has. Check mobile drawer appearance against design system.
 - **2026-05-07: Examine nav menu — is it optimal?** User-flagged note for a future session; no specific issue stated. Likely overlaps with the 2026-04-29 nav-review item — consider as a single audit pass.
+- **2026-05-14: Product-centered ops view (single product overview).** One-screen detail view per product showing Comax-side state, Web/WooCommerce-side state, last-update timestamps, product image, and a link to the live product page. Today the per-product picture is scattered across SysProducts row + WC admin + live site. Use case: ops triage when something looks off on a specific product. No plan doc yet; sized as an admin view alongside existing AdminProductsView. Note for later.
 
 ### Deferred
 

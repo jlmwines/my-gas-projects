@@ -604,7 +604,7 @@ const ContactService = (function () {
 
     // Update LastContactDate/Type for manual contact activities
     const actType = activity.sca_Type || '';
-    if (actType.startsWith('contact.') || actType.startsWith('note.')) {
+    if (actType.startsWith('contact.') || actType.startsWith('note.') || actType.startsWith('comm.')) {
       const email = (activity.sca_Email || '').toLowerCase().trim();
       const contact = getContactByEmail(email);
       if (contact) {

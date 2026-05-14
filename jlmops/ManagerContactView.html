@@ -1,0 +1,475 @@
+<!--
+  ManagerContactView — lean mobile-first CRM surface for the manager.
+  Scope: search contacts, view detail + activity timeline, log a contact attempt.
+  Backend: WebAppContacts_* (shared with AdminContactsView).
+-->
+<div class="manager-contacts-container">
+  <style>
+    .manager-contacts-container { padding: 12px; max-width: 760px; margin: 0 auto; }
+    .mc-search { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .mc-search input { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+    .mc-list { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .mc-list-item {
+      padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;
+      min-height: 44px; display: flex; flex-direction: column; gap: 2px;
+    }
+    .mc-list-item:hover { background: #f8f9fa; }
+    .mc-list-item:last-child { border-bottom: none; }
+    .mc-list-name { font-weight: 500; font-size: 15px; }
+    .mc-list-meta { font-size: 12px; color: #6c757d; }
+    .mc-empty { padding: 24px 12px; text-align: center; color: #6c757d; font-size: 14px; }
+
+    .mc-detail-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+      padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;
+    }
+    .mc-back { background: none; border: none; font-size: 16px; padding: 4px 8px; cursor: pointer; }
+    .mc-detail-name { font-size: 20px; font-weight: 500; flex: 1; }
+    .mc-lang-badge { padding: 2px 8px; font-size: 11px; background: #e9ecef; border-radius: 3px; }
+
+    .mc-info { font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+    .mc-info-row { display: flex; gap: 8px; }
+    .mc-info-label { color: #6c757d; min-width: 72px; }
+
+    .mc-open-task {
+      padding: 10px 12px; background: #fff3cd; border: 1px solid #ffeaa7;
+      border-radius: 4px; margin-bottom: 12px; font-size: 13px;
+    }
+
+    .mc-action-button {
+      width: 100%; padding: 12px; font-size: 15px; font-weight: 500;
+      margin-bottom: 16px; min-height: 48px;
+    }
+
+    .mc-timeline { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .mc-timeline-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; line-height: 1.4;
+    }
+    .mc-timeline-row:last-child { border-bottom: none; }
+    .mc-timeline-icon { font-size: 16px; }
+    .mc-timeline-text { flex: 1; }
+    .mc-timeline-date { font-size: 11px; color: #6c757d; white-space: nowrap; }
+
+    .mc-section-label { font-size: 12px; color: #6c757d; text-transform: uppercase;
+      letter-spacing: 0.5px; margin: 16px 0 6px; }
+
+    /* Modal overlay (modal-overlay pattern, NOT Bootstrap $().modal()) */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      align-items: center; justify-content: center; z-index: 1050; padding: 12px;
+    }
+    .modal-container {
+      background: #fff; border-radius: 6px; width: 100%; max-width: 480px;
+      max-height: 90vh; overflow: auto; display: flex; flex-direction: column;
+    }
+    .modal-header {
+      padding: 12px 16px; border-bottom: 1px solid #e0e0e0;
+      font-size: 16px; font-weight: 500;
+    }
+    .form-body { padding: 16px; }
+    .form-body label { display: block; font-size: 12px; color: #6c757d;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; margin-top: 12px; }
+    .form-body label:first-child { margin-top: 0; }
+    .form-body input[type="text"], .form-body textarea, .form-body select {
+      width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .form-body textarea { resize: vertical; min-height: 100px; }
+    .mc-radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+    .mc-radio-group label { display: inline-flex; align-items: center; gap: 4px;
+      margin: 0; font-size: 14px; text-transform: none; color: #000; letter-spacing: normal; }
+    .modal-footer {
+      padding: 12px 16px; border-top: 1px solid #e0e0e0;
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+    .modal-footer.bg-light { background: #f8f9fa; }
+
+    @media (max-width: 480px) {
+      .manager-contacts-container { padding: 8px; }
+      .mc-detail-name { font-size: 18px; }
+    }
+  </style>
+
+  <!-- Search view -->
+  <div id="mc-search-view">
+    <div class="mc-search">
+      <input id="mc-search-input" type="search" placeholder="Search by name, email, or phone" autocomplete="off">
+    </div>
+    <div id="mc-list-container">
+      <div class="mc-empty">Type at least 2 characters to search</div>
+    </div>
+  </div>
+
+  <!-- Detail view -->
+  <div id="mc-detail-view" style="display:none;">
+    <div class="mc-detail-header">
+      <button class="mc-back" id="mc-back-button" type="button" aria-label="Back">&larr;</button>
+      <div class="mc-detail-name" id="mc-detail-name">—</div>
+      <span class="mc-lang-badge" id="mc-detail-lang">—</span>
+    </div>
+
+    <div class="mc-info">
+      <div class="mc-info-row"><span class="mc-info-label">Phone</span><span id="mc-detail-phone">—</span></div>
+      <div class="mc-info-row"><span class="mc-info-label">Email</span><span id="mc-detail-email">—</span></div>
+      <div class="mc-info-row"><span class="mc-info-label">City</span><span id="mc-detail-city">—</span></div>
+      <div class="mc-info-row"><span class="mc-info-label">Status</span><span id="mc-detail-status">—</span></div>
+      <div class="mc-info-row"><span class="mc-info-label">Orders</span><span id="mc-detail-orders">—</span></div>
+    </div>
+
+    <div id="mc-open-task" class="mc-open-task" style="display:none;">
+      <strong>Open task:</strong> <span id="mc-open-task-topic">—</span>
+    </div>
+
+    <button class="btn btn-sm btn-primary mc-action-button" id="mc-new-attempt" type="button">
+      + New contact attempt
+    </button>
+
+    <div class="mc-section-label">Activity timeline</div>
+    <div class="mc-timeline" id="mc-timeline">
+      <div class="mc-empty">No activity recorded</div>
+    </div>
+  </div>
+
+  <!-- Action Panel modal -->
+  <div class="modal-overlay" id="mc-action-modal" style="display:none;">
+    <div class="modal-container">
+      <div class="modal-header">New contact attempt</div>
+      <div class="form-body">
+        <label>Channel</label>
+        <div class="mc-radio-group" id="mc-channel-group">
+          <label><input type="radio" name="mc-channel" value="whatsapp" checked> WhatsApp</label>
+          <label><input type="radio" name="mc-channel" value="email"> Email</label>
+          <label><input type="radio" name="mc-channel" value="phone"> Phone</label>
+        </div>
+
+        <label>Direction</label>
+        <div class="mc-radio-group">
+          <label><input type="radio" name="mc-direction" value="Outbound" checked> Outbound</label>
+          <label><input type="radio" name="mc-direction" value="Inbound"> Inbound</label>
+        </div>
+
+        <div id="mc-subject-row" style="display:none;">
+          <label>Subject</label>
+          <input type="text" id="mc-subject" autocomplete="off">
+        </div>
+
+        <label id="mc-message-label">Message</label>
+        <textarea id="mc-message"></textarea>
+
+        <div id="mc-task-toggle-row" style="display:none;">
+          <label class="mc-radio-group" style="margin-top: 12px;">
+            <input type="checkbox" id="mc-mark-task-done"> Mark related task done
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button class="btn" type="button" id="mc-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" type="button" id="mc-modal-submit">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var state = {
+    currentEmail: null,
+    currentContact: null,
+    currentLanguage: 'en',
+    openTask: null,
+    searchDebounce: null
+  };
+
+  var listContainer = document.getElementById('mc-list-container');
+  var searchInput = document.getElementById('mc-search-input');
+  var searchView = document.getElementById('mc-search-view');
+  var detailView = document.getElementById('mc-detail-view');
+  var actionModal = document.getElementById('mc-action-modal');
+
+  function esc(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function showError(msg) {
+    if (typeof window.showError === 'function') window.showError({ message: msg });
+    else alert(msg);
+  }
+
+  function activityIcon(type) {
+    var t = String(type || '');
+    if (t.indexOf('order') === 0) return '🛒';
+    if (t.indexOf('comm.whatsapp') === 0) return '💬';
+    if (t.indexOf('comm.email') === 0) return '✉️';
+    if (t.indexOf('comm.phone') === 0) return '📞';
+    if (t.indexOf('comm.campaign') === 0) return '📣';
+    if (t.indexOf('campaign.') === 0) return '📣';
+    if (t.indexOf('subscription.') === 0) return '🔔';
+    if (t.indexOf('coupon.') === 0) return '🎟️';
+    if (t.indexOf('contact.email') === 0) return '✉️';
+    if (t.indexOf('status.') === 0 || t.indexOf('type.') === 0) return '🔄';
+    if (t.indexOf('task.') === 0) return '📋';
+    return '•';
+  }
+
+  // --- Search ---
+
+  function runSearch(query) {
+    if (!query || query.length < 2) {
+      listContainer.innerHTML = '<div class="mc-empty">Type at least 2 characters to search</div>';
+      return;
+    }
+    listContainer.innerHTML = '<div class="mc-empty">Searching…</div>';
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data || data.error) {
+          listContainer.innerHTML = '<div class="mc-empty">' + esc(data && data.error || 'Error loading contacts') + '</div>';
+          return;
+        }
+        var contacts = (data.contacts || []).slice(0, 50);
+        if (contacts.length === 0) {
+          listContainer.innerHTML = '<div class="mc-empty">No matches</div>';
+          return;
+        }
+        var html = '<div class="mc-list">';
+        contacts.forEach(function(c) {
+          var meta = [];
+          if (c.phone) meta.push(c.phone);
+          if (c.city) meta.push(c.city);
+          if (c.orderCount) meta.push(c.orderCount + ' order' + (c.orderCount === 1 ? '' : 's'));
+          html += '<div class="mc-list-item" data-email="' + esc(c.email) + '">' +
+            '<div class="mc-list-name">' + esc(c.name || c.email) + '</div>' +
+            '<div class="mc-list-meta">' + esc(c.email) + (meta.length ? ' · ' + esc(meta.join(' · ')) : '') + '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+        listContainer.innerHTML = html;
+        Array.prototype.forEach.call(listContainer.querySelectorAll('.mc-list-item'), function(el) {
+          el.addEventListener('click', function() {
+            openDetail(el.getAttribute('data-email'));
+          });
+        });
+      })
+      .withFailureHandler(function(err) {
+        listContainer.innerHTML = '<div class="mc-empty">Error: ' + esc(err && err.message || err) + '</div>';
+      })
+      .WebAppContacts_getContactList({ search: query });
+  }
+
+  searchInput.addEventListener('input', function() {
+    var q = this.value.trim();
+    clearTimeout(state.searchDebounce);
+    state.searchDebounce = setTimeout(function() { runSearch(q); }, 250);
+  });
+
+  // --- Detail ---
+
+  function openDetail(email) {
+    if (!email) return;
+    state.currentEmail = email;
+    searchView.style.display = 'none';
+    detailView.style.display = 'block';
+    document.getElementById('mc-detail-name').textContent = 'Loading…';
+    document.getElementById('mc-timeline').innerHTML = '<div class="mc-empty">Loading…</div>';
+    document.getElementById('mc-open-task').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data || data.error) {
+          showError(data && data.error || 'Failed to load contact');
+          return;
+        }
+        renderDetail(data);
+      })
+      .withFailureHandler(function(err) { showError(err && err.message || err); })
+      .WebAppContacts_getContactDetail(email);
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data && data.success && data.task) {
+          state.openTask = data.task;
+          var label = data.task.topic || 'Open follow-up';
+          document.getElementById('mc-open-task-topic').textContent = label;
+          document.getElementById('mc-open-task').style.display = 'block';
+        } else {
+          state.openTask = null;
+        }
+      })
+      .WebAppContacts_getOpenOutreachTask(email);
+  }
+
+  function renderDetail(c) {
+    state.currentContact = c;
+    state.currentLanguage = c.language || 'en';
+    document.getElementById('mc-detail-name').textContent = c.name || c.email;
+    document.getElementById('mc-detail-lang').textContent = (c.language || 'en').toUpperCase();
+    document.getElementById('mc-detail-phone').textContent = c.phone || '—';
+    document.getElementById('mc-detail-email').textContent = c.email || '—';
+    document.getElementById('mc-detail-city').textContent = c.city || '—';
+    var orderSpend = '';
+    if (c.orderCount) {
+      orderSpend = c.orderCount + ' · ₪' + (c.totalSpend || 0);
+      if (c.lastOrderDate) orderSpend += ' · last ' + c.lastOrderDate;
+    } else {
+      orderSpend = '—';
+    }
+    document.getElementById('mc-detail-orders').textContent = orderSpend;
+    document.getElementById('mc-detail-status').textContent = c.status || '—';
+
+    var html = '';
+    (c.activities || []).forEach(function(a) {
+      var dateOnly = a.timestamp ? a.timestamp.split(' ')[0] : '';
+      html += '<div class="mc-timeline-row">' +
+        '<span class="mc-timeline-icon">' + activityIcon(a.type) + '</span>' +
+        '<span class="mc-timeline-text">' + esc(a.summary || a.type) + '</span>' +
+        '<span class="mc-timeline-date">' + esc(dateOnly) + '</span>' +
+      '</div>';
+    });
+    document.getElementById('mc-timeline').innerHTML = html ||
+      '<div class="mc-empty">No activity recorded</div>';
+  }
+
+  document.getElementById('mc-back-button').addEventListener('click', function() {
+    detailView.style.display = 'none';
+    searchView.style.display = 'block';
+    state.currentEmail = null;
+    state.currentContact = null;
+    state.openTask = null;
+  });
+
+  // --- Action Panel ---
+
+  function openActionModal() {
+    if (!state.currentEmail) return;
+    // Reset
+    document.querySelector('input[name="mc-channel"][value="whatsapp"]').checked = true;
+    document.querySelector('input[name="mc-direction"][value="Outbound"]').checked = true;
+    document.getElementById('mc-subject').value = '';
+    document.getElementById('mc-message').value = '';
+    document.getElementById('mc-mark-task-done').checked = false;
+
+    // Task-done toggle visible only if open task exists
+    document.getElementById('mc-task-toggle-row').style.display =
+      state.openTask ? 'block' : 'none';
+
+    updateChannelUi();
+    loadTemplate();
+
+    actionModal.style.display = 'flex';
+  }
+
+  function closeActionModal() {
+    actionModal.style.display = 'none';
+  }
+
+  function currentChannel() {
+    var el = document.querySelector('input[name="mc-channel"]:checked');
+    return el ? el.value : 'whatsapp';
+  }
+  function currentDirection() {
+    var el = document.querySelector('input[name="mc-direction"]:checked');
+    return el ? el.value : 'Outbound';
+  }
+
+  function updateChannelUi() {
+    var ch = currentChannel();
+    var dir = currentDirection();
+    document.getElementById('mc-subject-row').style.display = (ch === 'email') ? 'block' : 'none';
+    var label = (ch === 'phone') ? 'Note (what was discussed)' : 'Message';
+    if (dir === 'Inbound') label = 'Note (what the customer said)';
+    document.getElementById('mc-message-label').textContent = label;
+  }
+
+  function loadTemplate() {
+    if (currentDirection() === 'Inbound') {
+      // Inbound: free-form note, no template
+      document.getElementById('mc-message').value = '';
+      document.getElementById('mc-subject').value = '';
+      return;
+    }
+    var ch = currentChannel();
+    if (ch === 'phone') {
+      document.getElementById('mc-message').value = '';
+      return;
+    }
+    // Topic comes from the open task; default to welcome if none (manual outreach)
+    var topic = (state.openTask && state.openTask.topic) ? state.openTask.topic : 'welcome';
+    var topicKey = topic.toLowerCase().indexOf('welcome') >= 0 ? 'welcome' : topic.toLowerCase();
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (!data || data.error) return;
+        if (ch === 'email') {
+          document.getElementById('mc-subject').value = data.subject || '';
+          document.getElementById('mc-message').value = data.body || '';
+        } else {
+          document.getElementById('mc-message').value = data.text || '';
+        }
+      })
+      .WebAppContacts_getOutreachTemplate(topicKey, ch, state.currentLanguage || 'en');
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mc-channel"]'), function(el) {
+    el.addEventListener('change', function() { updateChannelUi(); loadTemplate(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="mc-direction"]'), function(el) {
+    el.addEventListener('change', function() { updateChannelUi(); loadTemplate(); });
+  });
+
+  document.getElementById('mc-new-attempt').addEventListener('click', openActionModal);
+  document.getElementById('mc-modal-cancel').addEventListener('click', closeActionModal);
+
+  document.getElementById('mc-modal-submit').addEventListener('click', function() {
+    if (!state.currentEmail) return;
+    var ch = currentChannel();
+    var dir = currentDirection();
+    var message = document.getElementById('mc-message').value;
+    var subject = document.getElementById('mc-subject').value;
+    var markDone = document.getElementById('mc-mark-task-done').checked;
+    var taskId = state.openTask ? state.openTask.id : '';
+
+    if (dir === 'Outbound' && ch !== 'phone' && !message) {
+      showError('Please add a message before sending.');
+      return;
+    }
+
+    var submitBtn = document.getElementById('mc-modal-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Working…';
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+        if (!data || data.error) {
+          showError(data && data.error || 'Failed to log contact attempt');
+          return;
+        }
+        // Launch channel client-side for whatsapp/phone (email is already server-sent)
+        if (data.whatsappUrl) window.open(data.whatsappUrl, '_blank');
+        else if (data.telUrl) window.location.href = data.telUrl;
+        closeActionModal();
+        // Reload detail to show the new activity row + updated task state
+        openDetail(state.currentEmail);
+      })
+      .withFailureHandler(function(err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+        showError(err && err.message || err);
+      })
+      .WebAppContacts_logContactAttempt({
+        email: state.currentEmail,
+        channel: ch,
+        direction: dir,
+        message: message,
+        subject: subject,
+        taskId: taskId,
+        markTaskDone: markDone
+      });
+  });
+
+  // Focus the search input on mount
+  setTimeout(function() { searchInput.focus(); }, 50);
+})();
+</script>

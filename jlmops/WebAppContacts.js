@@ -686,3 +686,186 @@ function WebAppContacts_exportYearInWine2025(options = {}) {
     return { error: e.message };
   }
 }
+
+/**
+ * Returns an open task.contact.outreach task for the given contact email, or null.
+ * Used by ManagerContactView to surface "open tasks" indicator inline on the contact page.
+ */
+function WebAppContacts_getOpenOutreachTask(email) {
+  try {
+    const normalized = (email || '').toLowerCase().trim();
+    if (!normalized) return { success: true, task: null };
+    const task = TaskService.findOpenTaskByType('task.contact.outreach', normalized);
+    if (!task) return { success: true, task: null };
+
+    let topic = '';
+    try {
+      if (task.notes) {
+        const parsed = (typeof task.notes === 'string') ? JSON.parse(task.notes) : task.notes;
+        if (parsed && parsed.topic) topic = parsed.topic;
+      }
+    } catch (parseErr) {
+      // notes wasn't JSON; topic stays blank
+    }
+
+    return {
+      success: true,
+      task: {
+        id: task.id || '',
+        topic: topic
+      }
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'getOpenOutreachTask', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Returns the outreach message template(s) for a given topic + channel + language.
+ * Used by ManagerContactView's Action Panel to seed the message text field.
+ *
+ * @param {string} topic - Template topic (e.g., 'welcome')
+ * @param {string} channel - 'whatsapp' | 'email' | 'phone'
+ * @param {string} language - 'en' | 'he' (falls back to 'en' if blank/unknown)
+ * @returns {Object} { text } for whatsapp/phone, or { subject, body } for email
+ */
+function WebAppContacts_getOutreachTemplate(topic, channel, language) {
+  try {
+    const lang = (language === 'he') ? 'he' : 'en';
+    const t = String(topic || '').toLowerCase();
+    const ch = String(channel || '').toLowerCase();
+
+    if (ch === 'phone') {
+      return { success: true, text: '' };
+    }
+
+    if (ch === 'email') {
+      const subjectCfg = ConfigService.getConfig(`crm.template.${t}.email.subject.${lang}`);
+      const bodyCfg = ConfigService.getConfig(`crm.template.${t}.email.body.${lang}`);
+      return {
+        success: true,
+        subject: subjectCfg && subjectCfg.value ? subjectCfg.value : '',
+        body: bodyCfg && bodyCfg.value ? bodyCfg.value : ''
+      };
+    }
+
+    // whatsapp (and any other single-text channel)
+    const cfg = ConfigService.getConfig(`crm.template.${t}.${ch}.${lang}`);
+    return {
+      success: true,
+      text: cfg && cfg.value ? cfg.value : ''
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'getOutreachTemplate', e.message, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Logs a manager-initiated contact attempt: writes a SysContactActivity row,
+ * sends email if channel=email, and optionally closes the linked task.
+ *
+ * The activity record drives the action — the row is written before any side
+ * effect, so the timeline reflects every attempt even if email send fails.
+ *
+ * @param {Object} options
+ * @param {string} options.email - Contact email
+ * @param {string} options.channel - 'whatsapp' | 'email' | 'phone'
+ * @param {string} options.direction - 'Outbound' | 'Inbound'
+ * @param {string} options.message - Message body (or note for phone/inbound)
+ * @param {string} [options.subject] - Email subject (email channel only)
+ * @param {string} [options.taskId] - Linked task ID
+ * @param {boolean} [options.markTaskDone] - If true, set linked task status to Done
+ * @returns {Object} { activityId, taskClosed, emailSent, whatsappUrl?, telUrl? }
+ */
+function WebAppContacts_logContactAttempt(options) {
+  try {
+    const opts = options || {};
+    const email = (opts.email || '').toLowerCase().trim();
+    const channel = String(opts.channel || '').toLowerCase();
+    const direction = opts.direction === 'Inbound' ? 'Inbound' : 'Outbound';
+    const message = opts.message || '';
+    const subject = opts.subject || '';
+    const taskId = opts.taskId || '';
+    const markTaskDone = !!opts.markTaskDone;
+
+    if (!email) return { error: 'Email required' };
+    if (channel !== 'whatsapp' && channel !== 'email' && channel !== 'phone') {
+      return { error: `Unknown channel: ${channel}` };
+    }
+
+    const sca_Type = `comm.${channel}`;
+    let summary;
+    if (channel === 'email') {
+      summary = `${direction} email: ${subject || '(no subject)'}`;
+    } else if (channel === 'phone') {
+      summary = `${direction} phone call`;
+    } else {
+      summary = `${direction} WhatsApp`;
+    }
+
+    const details = {
+      direction: direction,
+      message: message,
+      taskId: taskId || null
+    };
+    if (channel === 'email') details.subject = subject;
+
+    // Write activity row first — the fact of contact is captured even if a side effect fails later
+    const activityId = ContactService.createActivity({
+      sca_Email: email,
+      sca_Timestamp: new Date(),
+      sca_Type: sca_Type,
+      sca_Summary: summary,
+      sca_Details: details,
+      sca_CreatedBy: 'manager'
+    });
+
+    // Channel side effects
+    let emailSent = false;
+    let whatsappUrl = null;
+    let telUrl = null;
+
+    if (channel === 'email' && direction === 'Outbound') {
+      try {
+        GmailApp.sendEmail(email, subject || '(no subject)', message);
+        emailSent = true;
+      } catch (sendErr) {
+        LoggerService.warn('WebAppContacts', 'logContactAttempt',
+          `Activity logged but GmailApp send failed for ${email}: ${sendErr.message}`);
+      }
+    } else if (channel === 'whatsapp' && direction === 'Outbound') {
+      const link = WebAppContacts_getWhatsAppLink(email, message);
+      if (link && link.success) whatsappUrl = link.url;
+    } else if (channel === 'phone' && direction === 'Outbound') {
+      const contact = ContactService.getContactByEmail(email);
+      const phone = contact && (contact.sc_WhatsAppPhone || contact.sc_Phone);
+      if (phone) telUrl = `tel:${String(phone).replace(/\s+/g, '')}`;
+    }
+
+    // Optional task completion
+    let taskClosed = false;
+    if (taskId && markTaskDone) {
+      try {
+        TaskService.completeTask(taskId);
+        taskClosed = true;
+      } catch (taskErr) {
+        LoggerService.warn('WebAppContacts', 'logContactAttempt',
+          `Activity logged but task ${taskId} completion failed: ${taskErr.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      activityId: activityId,
+      taskClosed: taskClosed,
+      emailSent: emailSent,
+      whatsappUrl: whatsappUrl,
+      telUrl: telUrl
+    };
+  } catch (e) {
+    LoggerService.error('WebAppContacts', 'logContactAttempt', e.message, e);
+    return { error: e.message };
+  }
+}

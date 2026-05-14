@@ -4,6 +4,20 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-14 (Manager CRM Half 2 shipped + deploy hardening; Drive MCP scope clarified)
+
+- **@105 Manager CRM (Half 2 action layer per CONTACT_MANAGER_PLAN).** New `ManagerContactView` (mobile-first, lean: search + contact detail with chronological `SysContactActivity` timeline + Action Panel). Single task type `task.contact.outreach` for all CRM triggers (welcome, future cooling/VIP/win-back); topic distinguishes purpose. Welcome trigger: `ContactImportService._aggregateOrdersByEmail` now tracks `firstCompletedDate`; `HousekeepingService.createWelcomeOutreachTasks` (phase3, after `refreshCrmContacts`) creates one task per customer whose first completed order is on/after `system.crm.welcome_floor_date`. **No-backfill floor** stamped automatically on first sweep — historical customers don't burst. Backend `WebAppContacts_logContactAttempt` writes `SysContactActivity` (type `comm.{channel}`) first, runs channel side effect (GmailApp.sendEmail / wa.me URL / tel: URL), optionally completes linked task. Templates: `crm.template.welcome.{whatsapp,email.subject,email.body}.{en,he}` (6 rows). `ContactService.createActivity` now bumps `sc_LastContactDate` for `comm.*` (was `contact.*`/`note.*` only). Plan: `jlmops/plans/CONTACT_MANAGER_PLAN.md` reshaped after Pipedrive review.
+
+- **@106 Deploy hardening.** New `jlmops/deploy.ps1` reads `jlmops/.deployment-id` (committed) and runs `clasp deploy --deploymentId <pinned>` with post-deploy verification (re-runs `clasp deployments`, greps for the ID, fails closed if missing). Pinned ID mirrored to `system.deployment.pinned_id` config. New `HousekeepingService.validateDeployment` (phase3) extracts deployment ID from `ScriptApp.getService().getUrl()`; mismatch creates `task.system.deployment_drift` (high-priority, admin_direct). Targets the recurring orphan-deployment failure mode (memory `jlm_stable_deploy_id`). `.claude/CLAUDE.md` forbids bare `clasp deploy`.
+
+- **Manager bookmark.** `jlmwines.com/ops` short URL set up by user (RankMath redirect) to bypass mobile-typing friction with the long Apps Script URL. `?authuser=<work-email>` likely needed if the manager's default account is personal — to be appended when deploying for him.
+
+- **Conversation lesson on MCP scope.** Drive MCP isn't useful for `JLMops_Data` (multi-tab workbook; this MCP only exports a single CSV at a time). Useful for single-tab files (GA4/GSC sheets, docs). Mailchimp and Canva MCPs visible in CLI and likely have real leverage (interactive campaign drafting; newsletter design); not tested yet. Gmail MCP could realistically replace the deferred IMAP-polling email-inbound capture from Half 1 — needs `authenticate` flow first.
+
+- **Next session:** mobile UX pass. Scope locked to: AppView.html sidebar → hamburger nav (chrome change, benefits all views); responsive content for AdminDashboard, ManagerDashboard, AdminContacts; ManagerContactView already mobile-first. Plan general patterns (touch targets, font-size baseline, table-to-card primitives, shared utility classes) rather than view-by-view bespoke work.
+
+---
+
 ## 2026-05-13 (manager dashboard filter overhaul, Mailchimp reminders retired, task archive bug fix)
 
 - **@99 manager dashboard UX**: default view = list (was calendar); list-row entity link now `↗ Document` (was bare `Open` reading as a status value).

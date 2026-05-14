@@ -130,5 +130,53 @@
         "MinCat.פריטי מתנה",
         "0",
         "Division=9", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.whatsapp.en",
+        "Welcome outreach template — WhatsApp, English. Seeds the Action Panel message field; manager edits before sending.",
+        "stable",
+        "value",
+        "Hi! Thanks so much for your first order with JLM Wines — really hope you enjoyed it. Just checking in to see how everything was, and let me know if you'd like any suggestions for next time.",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.whatsapp.he",
+        "Welcome outreach template — WhatsApp, Hebrew. Seeds the Action Panel message field; manager edits before sending.",
+        "stable",
+        "value",
+        "שלום! המון תודה על ההזמנה הראשונה שלך מיין ירושלים — מקווה שנהנית מהיין. רציתי לבדוק שהכל בסדר ואשמח להמליץ לך משהו לפעם הבאה.",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.email.subject.en",
+        "Welcome outreach template — Email subject, English.",
+        "stable",
+        "value",
+        "Welcome to JLM Wines — how was your first order?",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.email.body.en",
+        "Welcome outreach template — Email body, English. Seeds the Action Panel message field; manager edits before sending.",
+        "stable",
+        "value",
+        "Hi,\n\nThank you so much for your first order with JLM Wines! I just wanted to reach out personally to say welcome, and to check that everything arrived well and you've been enjoying the wines.\n\nIf you'd like any suggestions for next time — whether it's something similar to what you ordered or something completely different — just let me know. Happy to help.\n\nEvyatar\nJLM Wines",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.email.subject.he",
+        "Welcome outreach template — Email subject, Hebrew.",
+        "stable",
+        "value",
+        "ברוכים הבאים ליין ירושלים — איך הייתה ההזמנה הראשונה?",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "crm.template.welcome.email.body.he",
+        "Welcome outreach template — Email body, Hebrew. Seeds the Action Panel message field; manager edits before sending.",
+        "stable",
+        "value",
+        "שלום,\n\nתודה רבה על ההזמנה הראשונה שלך מיין ירושלים! רציתי באופן אישי לברך אותך ולוודא שהכל הגיע תקין ושנהנית מהיין.\n\nאם תרצה המלצות לפעם הבאה — בין אם זה משהו דומה למה שהזמנת או משהו חדש לגמרי — אשמח להמליץ. פנה אליי בכל שאלה.\n\nאביתר\nיין ירושלים",
+        "", "", "", "", "", "", "", ""
     ]
 ]

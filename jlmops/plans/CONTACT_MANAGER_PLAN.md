@@ -94,57 +94,106 @@ Per-contact **recipient** rows (not engagement) — record that contact X was in
 
 ---
 
-## Half 2 — Action Layer (Mobile-Friendly Follow-Up)
+## Half 2 — Manager CRM (Action Layer)
 
-Designed for partner use, phone-first but works on desktop. Single screen flow: list → tap channel → native action → return to JLMops → log outcome.
+**Status.** Plan reshaped 2026-05-14 after a discovery pass on existing CRM code and a review of Pipedrive's pattern. Half 2 is no longer a single trigger-driven follow-up screen; it's a small CRM surface for the manager (search → contact → action), with the welcome trigger as the first source of work.
 
-### Trigger
+### Discovery — what's already in place
 
-- **First detection of a completed-status order from a new customer triggers the welcome follow-up.** That's it.
-- No date capture. No order-note fetch. No `processing → completed` diffing — if the order is `completed`, it has arrived.
-- Trigger fires once per customer; later status changes don't re-fire.
+A scan of `SysContactActivity` writers and `AdminContactsView`:
 
-### Follow-Up Due List
+- **`SysContactActivity` is alive.** Schema: `sca_ActivityId, sca_Email, sca_Timestamp, sca_Type, sca_Summary, sca_Details, sca_CreatedBy`. Activity types already written: `order.placed`, `coupon.used`, `subscription.started` / `subscription.unsubscribed` / `subscription.cleaned`, `campaign.received`, `comm.campaign`, `status.changed`, `type.changed`, `contact.email`, `task.created`. Per-contact coupon usage already captured.
+- **`AdminContactsView` exists** (1446 lines HTML + 688 lines `WebAppContacts.js`): search, contact detail with chronological timeline, `WebAppContacts_logActivity`, `WebAppContacts_sendEmail` (uses `GmailApp` + auto-logs `contact.email`), update notes/tags, create-task-for-contact.
 
-- Contacts surfaced by the trigger above, with no follow-up activity logged for that contact since.
-- **Capacity cap.** ~10 oldest unhandled per the campaign plan's manual-outreach capacity.
-- Once an outcome is logged (any of the three channels), the contact drops from the list. No automatic age-out window.
+What Half 2 adds: manager access, three-channel buttons (WhatsApp + phone are new; email exists), structured action-panel shape (channel + direction + drafted message + task-done toggle), templates per topic/channel/language, and a mobile-friendly view.
 
-### Three Channels — Partner Picks One per Attempt
+### Conceptual model — two records, linked by contact email
 
-- **WhatsApp.** `wa.me/972...?text=...` opens WhatsApp Business (mobile or web/desktop) with language-specific one-liner pre-filled. Templates stored as config, editable without code.
-- **Email.** `mailto:?subject=...&body=...` opens default email client with language-specific subject + 2–3 sentence body pre-filled.
-- **Phone.** `tel:+972...` dials on mobile. On desktop the link does nothing useful, so the phone number is also displayed visibly so partner can dial manually.
+- **Task (`SysTasks`, type `task.contact.outreach`)** — open obligation. Created by triggers. Surfaced on the manager dashboard via the assignment-as-gate filter (@100). One task type for all CRM topics; the "why" lives in `st_Topic`, not the type taxonomy. Manager does **not** create tasks from the contact view.
+- **Activity row (`SysContactActivity`)** — immutable history fact. One contact attempt = one row. A single task can span many activity rows over multi-touch follow-up.
 
-All three buttons render identically everywhere. Native handler does what it can per platform. No conditional UI.
+Pipedrive unifies these into one record. We keep them separate because `SysTasks` is the cross-area manager work queue (sync, packing, system); inserting CRM items there is consistent with the existing dashboard surface.
 
-### Outcome Capture (Universal Panel)
+### Triggers (v1: welcome only)
 
-- One panel per contact, regardless of channel chosen
-- Channel auto-tagged from which button was tapped
-- Free-text note (partner records what was discussed)
-- Outcome buttons: replied / no reply / follow up later
-- Logs to SysContactActivity with type `comm.whatsapp` / `comm.email` / `comm.phone` (types already exist per CRM_PLAN.md)
-- Each attempt = one activity record (multiple attempts = multiple records)
-- Contact drops from the follow-up list once any outcome is logged
-- Resurfaces on the next CRM trigger (cooling at 90 days, etc.) if applicable
+- **First `completed`-status order from a new customer** → create one `task.contact.outreach` row, `st_Topic = "Welcome — first order"`, `st_AssignedTo = 'Manager'`. Fires once per customer; later status changes don't re-fire.
+- **No activity row pre-created.** Activity rows are written only when actual contact happens.
 
-### Partner UX Principles
+Future triggers (cooling 91–180d, VIP recognition, win-back) ship as new topics on the same task type — no new task definitions, no new dashboard plumbing.
 
-- **Utility, not polish.** No fancy UI. The simplicity is the feature.
-- **Phone-first.** New "Follow-ups" view designed for mobile screen sizes.
-- **No multi-channel-per-attempt state.** One channel per attempt; if partner wants to try a different channel later, that's a new attempt later.
-- **No fancy state machine.** List + buttons + outcome panel. Done.
+### Manager Contact View (new view — `ManagerContactView`)
 
-### Customers Without WhatsApp Phone
+New lean mobile-first view (not an extension of `AdminContactsView`). Manager's CRM surface is intentionally smaller than the admin view: just contacts and their activity, with a way to act. Reuses `WebAppContacts_*` backend.
 
-- `sc_WhatsAppPhone` empty → skip from list, OR surface separately as "no WhatsApp — try email / phone"
-- Decide on display approach during build
+**In scope (v1):**
+- **Search** by name / email / phone. All contacts (manager knows them; shop walk-ins convert to online customers).
+- **Contact detail:** name, language, phone(s), email, order count, last order date, lifecycle status.
+- **Chronological activity timeline** rendered from `SysContactActivity` directly (orders + coupons + campaigns + comms + status changes already aggregate there).
+- **Open tasks indicator** — if an open `task.contact.outreach` exists for this contact, surface inline; tapping links back to the manager dashboard task.
+- **"New contact attempt"** button → Action Panel.
 
-### Extensions (Later)
+**Out of scope (admin-only — stays in `AdminContactsView`):**
+- Refresh-Mailchimp button, segment exports, bulk operations
+- Notes / tags editing (revisit if the partner asks for it)
+- Create-task-for-contact (per earlier decision: manager doesn't create tasks from the contact view)
+- Send-email-as-admin path that already exists (manager's send path is the Action Panel, not the admin send button)
 
-- Same UX, different trigger logic for cooling customers (91–180 days), VIP recognition, lapsed win-back
-- First-order welcome is the simplest entry point and should ship first
+### Action Panel (activity-record-drives-action)
+
+The activity record is drafted first, then drives the channel launch.
+
+Fields:
+- **Channel** — WhatsApp / Email / Phone
+- **Direction** — Outbound / Inbound (manager logs inbound when customer reached out first)
+- **Message text** — Outbound WhatsApp/Email pre-fills from template keyed by `topic + channel + language` (language = `sc_Language` on contact). Manager edits before sending. Phone and Inbound use the field as a free-form note.
+- **"Mark related task done?"** toggle — default OFF; visible only when an open task exists for this contact.
+
+Per-channel behavior on submit:
+
+| Channel | Activity type | Launch | Send model |
+|---|---|---|---|
+| WhatsApp | `comm.whatsapp` | `wa.me/<phone>?text=<encoded msg>` | Native app open; manager taps send |
+| Email | `comm.email` | `GmailApp.sendEmail()` | Server-side from accounts@ |
+| Phone | `comm.phone` | `tel:+<phone>` (no-op on desktop; number shown) | Manager dials |
+
+`SysContactActivity` row is written before the channel launches. If "mark task done" is ON, the linked task transitions to Done.
+
+**No outcome capture.** The activity row records the fact of contact; subsequent orders in the same timeline are the real result.
+
+### Templates
+
+Stored in config under `crm.template.{topic}.{channel}.{language}`. v1 set:
+- `crm.template.welcome.whatsapp.en` / `.he` — one-liner
+- `crm.template.welcome.email.en` / `.he` — subject + 2–3 sentence body
+- Phone has no template; note field captures what was said
+
+Language comes from `sc_Language` on the contact row. Editable in `otherSettings.json` (edit-source-not-generated).
+
+### Edge cases
+
+- **No WhatsApp phone (`sc_WhatsAppPhone` empty)** — WhatsApp button visually disabled; Email + Phone available.
+- **No language set on contact** — fall back to EN template; manager can edit.
+- **Inbound direction** — skip template, free-form note; activity row tagged `comm.{channel}` + direction noted in `sca_Details`.
+
+### Manager Dashboard — mobile pass (parallel)
+
+The manager is phone-first across the board. The existing dashboard list view (post-@100) needs a responsive CSS pass — column collapse / card layout / larger tap targets — but no logic change. Ship independently of the contact view.
+
+### Explicit deferrals
+
+- **Snooze / per-task follow-up date** — v1: "follow up later" = leave the task open; manager re-prioritizes daily from the dashboard. Revisit if volume justifies (would add `st_SnoozeUntil` + dashboard filter).
+- **Outcome reporting** — no outcome radio; orders are the result. Add a structured outcome field later if reply-rate reporting becomes valuable.
+- **Email-reply / WhatsApp-inbound auto-capture** — Pipedrive's Email Sync is paid-tier; manual inbound logging for now. IMAP polling or forward-into-system rules a much larger build.
+- **Per-contact follow-up frequency** (Pipedrive feature) — not relevant to JLM outreach patterns.
+- **Custom activity types via UI** — code-defined for now.
+
+### Build order
+
+1. Welcome trigger writes `task.contact.outreach` row on first `completed`-status order detection
+2. Templates land in config (4 entries — 2 channels × 2 languages; phone has no template)
+3. Manager Contact View — new `ManagerContactView` (lean mobile-first; not an `AdminContactsView` extension)
+4. Action Panel — channel buttons, template render, activity-row write, task-done toggle, channel launch
+5. Manager dashboard mobile CSS pass — parallel; ships independently
 
 ---
 
@@ -180,3 +229,5 @@ Not urgent — defer until the action layer is live and review patterns are obse
 Updated: 2026-05-03 — Half 1 scope decisions resolved (keep `sc_IsSubscribed` boolean; subscribers + campaigns pulled together). Audience IDs captured. Stale MC4WP reference removed; theme-side signup is now direct-POST + checkout-opt-in scaffold (theme v1.0.74).
 
 Updated: 2026-05-05 — Half 1 purpose narrowed. With theme v1.0.91/v1.0.92 the website is authoritative for language at signup (footer + checkout both POST direct to MC with correct language interest from page language). Pull's job collapses to: external-signup detection, `sc_IsSubscribed` freshness, campaign metrics. Language sync logic simplified (set on prospect creation only, never touch existing rows). No-language admin UX dropped. On-demand "Refresh Mailchimp Now" button elevated as the operationally-meaningful trigger; daily run is the safety net.
+
+Updated: 2026-05-14 — Half 2 reshaped from single trigger-driven "Follow-Ups" screen to a Manager CRM surface (search → contact → activity-record-drives-action). Discovery confirmed `SysContactActivity` is alive and `AdminContactsView` already covers most of the data layer. Pipedrive pattern reviewed; we keep tasks and activity rows separate (vs Pipedrive's unified record). Decisions captured: one `task.contact.outreach` type for all CRM triggers, topic-driven message templates per channel + language from `sc_Language`, no outcome radio (orders are the result), no v1 snooze, no auto-pre-created activity row, manager access = all contacts, parallel mobile pass on manager dashboard.

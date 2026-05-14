@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-13 16:58',
-  commit: '@99-@101: manager dashboard reliability + Mailchimp reminder cleanup. @99 default view = list (was calendar); list-row entity link shows "↗ Document" (was unclear "Open" reading as status). @100 manager dashboard filter restructured: dropped the brittle managerTaskTypes allow-list in WebAppDashboardV2.js — assignment is the gate, surface any task assigned to Manager that isn\'t Cancelled (fixes silently-dropped task.content.translate). task.order.packing_available rendered read-only via the existing isSystemTask gate so PackingSlip/PrintService stays the source of truth. @101 retired the two Mailchimp 14-day reminder tasks (task.data.subscribers_update + task.data.campaigns_update): CSV-era artifacts made obsolete by Half 1 of CONTACT_MANAGER_PLAN (shipped @81) which replaced manual CSV with daily API pull. Removed HousekeepingService.checkSubscribersReminder + checkCampaignsReminder methods + their checks-table entries, dropped the two task templates from config/taskDefinitions.json, regenerated SetupConfig.js. task.data.coupons_update kept — no Woo coupons API pull exists yet.'
+  built: '2026-05-14 03:47',
+  commit: '@106: Deploy hardening — pinned deploy wrapper + housekeeping drift validation. New jlmops/deploy.ps1 reads jlmops/.deployment-id (committed, not secret) and runs clasp deploy --deploymentId <pinned> with post-deploy verification (re-runs clasp deployments + greps for the pinned ID, fails closed if missing). New config row system.deployment.pinned_id mirrors the file for in-script comparison. New HousekeepingService.validateDeployment (wired into phase3 after createWelcomeOutreachTasks) reads ScriptApp.getService().getUrl(), extracts the deployment ID via regex, compares to the pinned. On mismatch creates task.system.deployment_drift (high priority, admin_direct) with running vs pinned IDs in notes. Editor/dev contexts return URLs without a stable deployment ID and skip silently. Combined with the wrapper this catches both deploy-time mistakes (wrapper refuses to exit clean) and post-deploy drift (housekeeping creates a task). CLAUDE.md updated to forbid bare clasp deploy and direct sessions to the wrapper. Targets the recurring orphan-deployment failure mode documented in memory jlm_stable_deploy_id.'
 };
 
 function getVersion() {
@@ -92,6 +92,7 @@ function getView(viewName) {
     'AdminProjects': 'AdminProjectsView',
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
+    'ManagerContacts': 'ManagerContactView',
     'Development': 'DevelopmentView'
   };
 

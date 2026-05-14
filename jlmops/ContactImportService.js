@@ -729,6 +729,7 @@ const ContactImportService = (function () {
           wooUserId: customerUser,
           language: orderLanguage,
           firstOrderDate: orderDateObj,
+          firstCompletedDate: null,
           lastOrderDate: orderDateObj,
           orders: [],
           giftOrders: 0,
@@ -748,6 +749,13 @@ const ContactImportService = (function () {
         if (shippingCity) update.city = shippingCity;
         if (customerUser) update.wooUserId = customerUser;
         if (orderLanguage) update.language = orderLanguage;
+      }
+
+      // Track first completed-status order date (welcome trigger source)
+      if (String(status).toLowerCase() === 'completed') {
+        if (!update.firstCompletedDate || orderDateObj < update.firstCompletedDate) {
+          update.firstCompletedDate = orderDateObj;
+        }
       }
 
       update.orders.push({ total: orderTotal, bottles: bottleCount, isGift: isGift });
@@ -814,6 +822,15 @@ const ContactImportService = (function () {
           changed = true;
         }
 
+        // Update sc_FirstCompletedDate if newly populated or earlier than existing
+        if (update.firstCompletedDate) {
+          const existingFirstCompleted = existing.sc_FirstCompletedDate ? new Date(existing.sc_FirstCompletedDate) : null;
+          if (!existingFirstCompleted || update.firstCompletedDate < existingFirstCompleted) {
+            existing.sc_FirstCompletedDate = update.firstCompletedDate;
+            changed = true;
+          }
+        }
+
         if (changed) {
           contactsToSave.push(existing);
           updated++;
@@ -836,6 +853,7 @@ const ContactImportService = (function () {
           sc_IsCore: true,
           sc_IsSubscribed: false,
           sc_FirstOrderDate: update.firstOrderDate,
+          sc_FirstCompletedDate: update.firstCompletedDate || null,
           sc_LastOrderDate: update.lastOrderDate,
           sc_OrderCount: orderCount,
           sc_TotalSpend: totalSpend,
