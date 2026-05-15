@@ -4,7 +4,7 @@
 - **Forward cursor** via SysConfig `crm.frequent_pipeline.last_modified_floor` replaces the fixed 30-day floor on `WooOrderPullService.pullOrders`. Runtime observed: 58s → 27s → 10s as the cursor stamped and bounded the `modified_after` window.
 - **Cadence guard tightened** to Israeli business hours: Sun-Thu 08:00–20:00 IL, Fri 08:00–13:00 IL, Sat off (was 07:00–23:00 every day). Apps Script trigger API can't combine 20-min intervals with day-of-week, so the schedule lives in code.
 
-**Pending user steps (Build Order 4–5):** arrange 20-min time-driven trigger in Apps Script editor (function `runFrequentMaintenance`); observe one business day.
+**Pending user steps (Build Order 4–5):** ~~arrange trigger~~ 15-min time-driven trigger arranged 2026-05-15 (Apps Script `everyMinutes()` accepts 1/5/10/15/30 — 20 isn't valid; 15 is close enough, the cadence guard handles the per-day window). Remove any standalone `pullWooOrders` time-driven trigger if one exists (redundant now — `runFrequentMaintenance` calls `pullOrders` itself with the forward cursor; a standalone trigger would duplicate the unbounded 30-day pull each fire). Observe one business day, verify cursor advances, no error spam, welcome + pending-payment fire as expected. Overnight cadence intentionally off (binary on/off rather than reduced-frequency overnight); revisit if morning reports show problematic backlog burst.
 
 **Purpose.** One time-driven trigger every ~20 minutes during business hours that pulls fresh orders from Woo and immediately runs the housekeeping sweeps that benefit from sub-hourly cadence (pending-payment follow-up, first-order welcome). Replaces the indirect path where pending-payment detection waited on the daily sync to refresh WebOrdM.
 

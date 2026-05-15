@@ -54,7 +54,7 @@
 - (Product Replacement tested and working.)
 
 **Pending operational tasks:**
-- **Arrange `runFrequentMaintenance` 20-min trigger.** Full pipeline shipped 2026-05-15 (@117 → @119; details in `jlmops/plans/FREQUENT_PIPELINE_PLAN.md`). Manual runs verified: 58s → 27s → 10s as the cursor stamped and bounded the `modified_after` window. Cadence guard restricts productive work to Sun-Thu 08:00–20:00 IL + Fri 08:00–13:00 IL (Sat off; out-of-hours fires return immediately). Last step: Apps Script editor → Triggers → Add Trigger → function `runFrequentMaintenance` → Time-driven → Minutes timer → every 20 min. Observe one business day after the trigger lands.
+- **Observe `runFrequentMaintenance` over one business day.** Pipeline shipped @117 → @119 + 15-min time-driven trigger arranged 2026-05-15 (Apps Script `everyMinutes()` accepts 1/5/10/15/30, not 20 — close enough; cadence guard handles the per-day schedule). Runs every 15 min during business hours (Sun-Thu 08–20 IL + Fri 08–13 IL); overnight + Sat intentionally off (trigger still fires, function returns on guard — no overnight pulls). Manual runs verified: 58s → 27s → 10s as cursor stamped. Confirm a prior `pullWooOrders` time-driven trigger, if any, has been removed (redundant now — `runFrequentMaintenance` calls `pullOrders` itself with the cursor; standalone wrapper would duplicate the unbounded 30-day pull each fire). After one business day, verify in SysLog: cursor advancing, no error spam, welcome + pending-payment tasks firing as expected.
 
 **Pending build items:**
 - `CampaignService.getTargetSegment()` for segment export
