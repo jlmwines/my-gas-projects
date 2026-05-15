@@ -35,12 +35,17 @@ Projects: jlmops, web, marketing, content
 - [ ] AI/Claude integration
 - [ ] 2026-01-23: add name of comax order export file to notifications same as done with web inventory update csv
 - [ ] 2026-01-29: Back button support - hash routing should support browser back/forward navigation
+- [ ] 2026-05-15: **Product-centered ops view (single product overview).** One-screen detail view per product showing Comax-side state, Web/WooCommerce-side state, last-update timestamps, product image, and a link to the live product page. Today the per-product picture is scattered across SysProducts row + WC admin + live site. Use case: ops triage when something looks off on a specific product. No plan doc yet; sized as an admin view alongside existing AdminProductsView.
+- [ ] 2026-05-15: **Replace Woo App / Jetpack with jlmops order view + status update.** Jetpack currently runs on the website solely to enable the WooCommerce mobile app, which the manager uses to view orders and change status. If jlmops gets a mobile-friendly order view with status-update capability, Jetpack can be removed (reduces plugin surface + performance overhead). Not blocking; the Woo App works today.
+- [ ] 2026-05-15: **Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). High-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow. (Broader scope than the @110-@111 pending-payment auto-followup which only covers `pending` Woo status.)
+- [ ] 2026-05-15: **Decouple Comax export + verify from sync (structural rethink).** Current sync round-trips through Comax: exports orders to reduce Comax inventory, waits for user to import the resulting Comax product file as baseline qty, then adjusts for on-hold orders not yet sent. The Comax export holds up the sync; Comax API access is too costly to use as a live check. Idea: accept the most recent Comax product file as baseline (whatever was last imported), adjust qty for ALL orders not yet exported to Comax (any status), and pull the export-to-Comax + verify steps out of the sync state machine. Net effect: sync no longer blocks on the Comax round-trip; Comax sync runs on its own cadence. Park as a structural rethink to revisit when sync architecture next opens up.
 
 ## web
 
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
 - [ ] Exit popup for website
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
+- [ ] 2026-05-15: **Nav menu structure + mobile review** (consolidates 2026-04-29 + 2026-05-07 notes). Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs. what the menu currently has. Check mobile drawer appearance against design system. Single audit pass.
 
 ## marketing
 
@@ -58,6 +63,7 @@ Projects: jlmops, web, marketing, content
 - [ ] Zadarma 055 for WhatsApp
 - [ ] 2026-05-07: Bilingual flyer drop in 8 Jerusalem neighborhoods (German Colony, Emek Refaim, Rechavia, Talbiyeh, Beit HaKerem, Arnona, Nayot, Ein Kerem) — vendor candidates yoterplus.co.il + dilen.co.il; ~₪2000 test budget; first surfaced 2026-02-09
 - [ ] 2026-05-07: Wine tasting / sampling events at restaurants and venues — previously planned by partner, canceled by war; QR-code + discount cards already produced for new-customer acquisition; revisit and execute
+- [ ] 2026-05-15: **Bundle + package imagery refresh + bundle duplicate meta.** Two distinct Canva-generated visual systems so a glance distinguishes them. **Bundles** (flexible suggestions, no built-in discount): atmospheric/thematic imagery — palette + texture + mood, no specific bottle compositions (membership changes too often, fake labels betray AI). Loose/sketchy "suggestion" feel via fanned/spread layout or ghost-shape cues; composition rides the tier axis (value = abundant, premium = sparse/refined). **Packages** (themed problem-solvers, fixed composition + discount): situational Israeli scenes rendered in naïve Israeli folk-art idiom (Reuven Rubin / Nahum Gutman lineage) — flat color, warm earth tones (terracotta, ochre, cypress green, Jerusalem stone, deep wine red), unfussy shapes. Existing package themes stay (Cheese Please, Shabbat Shalom, Al Ha-Aish, etc.) — just re-illustrated with Israeli palette and composition cues (pita/olives/labneh, low charcoal grill, cypress + bougainvillea backdrops). Drop the slot-machine "winning combination" illustration entirely — gambling+alcohol is tonally off. Also: bundles have duplicate meta (titles/descriptions across category) — fix as part of the same pass.
 
 ## content
 

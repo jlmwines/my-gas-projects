@@ -892,6 +892,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "crm.frequent_pipeline.last_modified_floor",
+        "Forward cursor for the frequent pipeline's order pull. Stores ISO timestamp of last successful runFrequentMaintenance start; the next run passes it as Woo's modified_after so only orders touched since then are fetched. Advances only on successful pull (failed pull re-pulls the same window next run). Empty default → pullOrders falls back to its 30-day window for the first run.",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.crm_intelligence.last_run",
         "Tracks last CRM intelligence run timestamp",
         "stable",

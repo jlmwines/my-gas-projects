@@ -1,6 +1,10 @@
 # Frequent Pipeline Plan
 
-**Status.** Plan written 2026-05-14. Not yet implemented. Builds on the housekeeping cadence split shipped @112 (`runFrequentMaintenance` entry point).
+**Status.** SHIPPED 2026-05-15 (@117 → @119). Build Order Steps 1–3 complete: (1) `createWelcomeOutreachTasks` refactored to derive its signal from WebOrdM directly (`HousekeepingService.js:962`); (2) full pipeline wired into `performFrequentMaintenance` with sync-state + cadence guards (`HousekeepingService.js:655`); (3) `createPendingPaymentFollowups` removed from `performDailyMaintenance` Phase 3 (lives only in frequent). Refinements during in-session testing:
+- **Forward cursor** via SysConfig `crm.frequent_pipeline.last_modified_floor` replaces the fixed 30-day floor on `WooOrderPullService.pullOrders`. Runtime observed: 58s → 27s → 10s as the cursor stamped and bounded the `modified_after` window.
+- **Cadence guard tightened** to Israeli business hours: Sun-Thu 08:00–20:00 IL, Fri 08:00–13:00 IL, Sat off (was 07:00–23:00 every day). Apps Script trigger API can't combine 20-min intervals with day-of-week, so the schedule lives in code.
+
+**Pending user steps (Build Order 4–5):** arrange 20-min time-driven trigger in Apps Script editor (function `runFrequentMaintenance`); observe one business day.
 
 **Purpose.** One time-driven trigger every ~20 minutes during business hours that pulls fresh orders from Woo and immediately runs the housekeeping sweeps that benefit from sub-hourly cadence (pending-payment follow-up, first-order welcome). Replaces the indirect path where pending-payment detection waited on the daily sync to refresh WebOrdM.
 

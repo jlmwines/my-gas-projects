@@ -647,16 +647,65 @@ function HousekeepingService() {
    * Phase 3: Service Updates - bundle health, Brurya reminder
    */
   /**
-   * Frequent maintenance — runs only the near-real-time tasks. Intended for a
-   * 20-min trigger during business hours. Currently: pending-payment follow-up
-   * email sweep. Stays small intentionally; add tasks only when their cadence
-   * genuinely benefits from sub-hourly firing.
+   * Frequent maintenance — pulls fresh orders from Woo and runs the housekeeping
+   * sweeps that benefit from sub-hourly cadence. Intended for a single 20-min
+   * trigger fired 24x7; a code-side cadence guard restricts productive work to
+   * Israeli business hours: Sun-Thu 08:00–20:00, Fri 08:00–13:00, Sat off.
+   * Fires outside that window return immediately. A sync-state guard skips when
+   * the daily 12-state sync is mid-flight to avoid racing its writes to WebOrdM.
+   * See `jlmops/plans/FREQUENT_PIPELINE_PLAN.md`.
    */
   this.performFrequentMaintenance = function() {
     const functionName = 'performFrequentMaintenance';
     logger.info('HousekeepingService', functionName, "Starting frequent maintenance.");
 
+    // Sync-state guard: skip if the daily 12-state sync is mid-flight.
+    const session = SyncStateService.getActiveSession();
+    const stage = session && session.stage;
+    if (stage && stage !== 'IDLE' && stage !== 'COMPLETE' && stage !== 'FAILED') {
+      logger.info('HousekeepingService', functionName,
+        `Daily sync in progress (${stage}). Skipping.`);
+      return;
+    }
+
+    // Cadence guard: Israeli business hours. Apps Script trigger API can't
+    // combine 20-min interval with day-of-week, so we gate in code.
+    //   Sun-Thu: 08:00-20:00 IL (12 hours, ~36 productive fires/day)
+    //   Fri:     08:00-13:00 IL (5 hours, ~15 productive fires/day)
+    //   Sat:     off
+    const dayName = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'EEE');
+    const hour = parseInt(Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'H'), 10);
+    const isSunThu = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu'].indexOf(dayName) >= 0;
+    const isFri = dayName === 'Fri';
+    const inWindow = (isSunThu && hour >= 8 && hour < 20) || (isFri && hour >= 8 && hour < 13);
+    if (!inWindow) {
+      logger.info('HousekeepingService', functionName,
+        `Outside business window (${dayName} ${hour}h). Skipping.`);
+      return;
+    }
+
+    // Order pull with forward cursor. The cursor (`crm.frequent_pipeline.last_modified_floor`)
+    // advances to run-start ISO timestamp only after a successful pull, so a failed run
+    // re-pulls the same window next time. First run (no cursor) falls back to pullOrders'
+    // default 30-day window, then advances forward.
+    const runStart = new Date().toISOString();
+    let pullSucceeded = false;
+    try {
+      const cursorCfg = ConfigService.getConfig('crm.frequent_pipeline.last_modified_floor');
+      const modifiedAfter = (cursorCfg && cursorCfg.value) ? cursorCfg.value : null;
+      const result = WooOrderPullService.pullOrders(
+        modifiedAfter ? { modifiedAfter: modifiedAfter } : undefined
+      );
+      pullSucceeded = !!(result && result.success);
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `pullOrders failed: ${e.message}`);
+    }
+    if (pullSucceeded) {
+      ConfigService.setConfig('crm.frequent_pipeline.last_modified_floor', 'value', runStart);
+    }
+
     const tasks = [
+      { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() }
     ];
 
@@ -737,7 +786,6 @@ function HousekeepingService() {
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
-      { name: 'createPendingPaymentFollowups', fn: () => this.createPendingPaymentFollowups() },
       { name: 'validateDeployment', fn: () => this.validateDeployment() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
@@ -963,11 +1011,6 @@ function HousekeepingService() {
     const functionName = 'createWelcomeOutreachTasks';
 
     try {
-      if (typeof ContactService === 'undefined' || !ContactService.getContacts) {
-        logger.info('HousekeepingService', functionName, 'ContactService not available. Skipping.');
-        return true;
-      }
-
       // No-backfill guard. First sweep stamps the floor and creates zero tasks;
       // subsequent sweeps only fire for first-completed orders dated on/after the floor.
       const floorConfig = ConfigService.getConfig('system.crm.welcome_floor_date');
@@ -981,13 +1024,43 @@ function HousekeepingService() {
       }
       floorDate = new Date(floorConfig.value);
 
-      const contacts = ContactService.getContacts({});
-      const eligible = contacts.filter(c => {
-        if (!c.sc_FirstCompletedDate) return false;
-        const fcd = new Date(c.sc_FirstCompletedDate);
-        if (isNaN(fcd.getTime())) return false;
-        return fcd >= floorDate;
+      // Read WebOrdM directly so the welcome sweep doesn't depend on the daily
+      // refreshCrmContacts pass populating sc_FirstCompletedDate. Lets the
+      // frequent pipeline fire welcome tasks within 20 min of a new completed
+      // order rather than waiting until next daily.
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+      const orderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+      if (!orderSheet || orderSheet.getLastRow() < 2) {
+        logger.info('HousekeepingService', functionName, 'No order data. Skipping.');
+        return true;
+      }
+
+      const womHeaders = allConfig['schema.data.WebOrdM'].headers.split(',');
+      const idx = {};
+      womHeaders.forEach((h, i) => idx[h] = i);
+
+      const orderData = orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, womHeaders.length).getValues();
+
+      // Group completed orders by email, find earliest completed order date per email.
+      const earliestCompletedByEmail = {};
+      orderData.forEach(row => {
+        const status = String(row[idx.wom_Status] || '').toLowerCase().trim();
+        if (status !== 'completed') return;
+        const email = String(row[idx.wom_BillingEmail] || '').toLowerCase().trim();
+        if (!email) return;
+        const d = new Date(row[idx.wom_OrderDate]);
+        if (isNaN(d.getTime())) return;
+        if (!earliestCompletedByEmail[email] || d < earliestCompletedByEmail[email]) {
+          earliestCompletedByEmail[email] = d;
+        }
       });
+
+      // Filter to emails whose earliest completed order is on/after the floor.
+      const eligibleEmails = Object.keys(earliestCompletedByEmail).filter(
+        email => earliestCompletedByEmail[email] >= floorDate
+      );
 
       // Auto-populate start (today) + due (today + 4 days) so the welcome task
       // surfaces to the manager as immediately actionable rather than sitting
@@ -1002,17 +1075,22 @@ function HousekeepingService() {
       const dueDate = new Date(todayMidnight.getTime() + 4 * 24 * 60 * 60 * 1000);
 
       let created = 0;
-      eligible.forEach(c => {
+      eligibleEmails.forEach(email => {
+        const fcd = earliestCompletedByEmail[email];
+        const contact = ContactService.getContactByEmail(email);
+        const name = (contact && contact.sc_Name) || email;
+        const language = (contact && contact.sc_Language) || 'en';
+
         const notesJson = JSON.stringify({
           topic: 'Welcome — first order',
-          firstCompletedDate: c.sc_FirstCompletedDate,
-          language: c.sc_Language || 'en'
+          firstCompletedDate: fcd.toISOString(),
+          language: language
         });
         try {
           const result = TaskService.createTask(
             'task.contact.outreach',
-            c.sc_Email,
-            c.sc_Name || c.sc_Email,
+            email,
+            name,
             'Welcome — first order',
             notesJson,
             null,
@@ -1025,12 +1103,12 @@ function HousekeepingService() {
           if (result) created++;
         } catch (taskError) {
           logger.warn('HousekeepingService', functionName,
-            `Could not create welcome task for ${c.sc_Email}: ${taskError.message}`);
+            `Could not create welcome task for ${email}: ${taskError.message}`);
         }
       });
 
       logger.info('HousekeepingService', functionName,
-        `Welcome outreach sweep: ${eligible.length} eligible, ${created} new (existing skipped via dedupe).`);
+        `Welcome outreach sweep: ${eligibleEmails.length} eligible, ${created} new (existing skipped via dedupe).`);
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Welcome outreach sweep failed: ${e.message}`);

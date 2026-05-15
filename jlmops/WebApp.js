@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-14 08:55',
-  commit: '@116: Order total includes tax; modal RTL for Hebrew. ContactImportService._aggregateOrdersByEmail (and the activity-backfill aggregation that mirrors it) now reads wom_OrderTotal (Woo populates this including tax + shipping) instead of summing line items (subtotals only, no tax). Falls back to the item-sum if wom_OrderTotal is missing or zero — defensive but rarely needed. Note: if backfillOrderTotals was previously run manually, wom_OrderTotal in WebOrdM was overwritten with the no-tax item sum; re-pulling orders from Woo restores the real totals. ManagerContactView action panel: subject and message inputs now get dir="rtl" when the contact language is "he" so the manager edits Hebrew messages with proper alignment. Email body RTL is handled implicitly by the receiving client bidi algorithm for plain-text Hebrew content.'
+  built: '2026-05-15 12:36',
+  commit: '@119: Frequent-pipeline cadence guard tightened to Israeli business hours. Replaces the prior 07:00-23:00-every-day window with day-aware gating: Sun-Thu 08:00-20:00 IL, Fri 08:00-13:00 IL, Sat off. Apps Script trigger API can not combine 20-min intervals with day-of-week, so the schedule lives in HousekeepingService.performFrequentMaintenance code; a single 20-min trigger fires 24x7 and the function returns immediately outside the business window. Day extracted via Utilities.formatDate(..., Asia/Jerusalem, EEE) and matched against {Sun,Mon,Tue,Wed,Thu} or Fri. Observed runtime after cursor was stamped: ~10s per productive run.'
 };
 
 function getVersion() {

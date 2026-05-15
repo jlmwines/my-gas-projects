@@ -9,6 +9,10 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
+- [ ] 2026-05-15: **`backfillOrderTotals` is destructive — fix or remove.** The manual function in `HousekeepingService.js` (top-level `function backfillOrderTotals()`) sums `woi_ItemTotal` per order and writes that to `wom_OrderTotal`. Doc comment says "ensures wom_OrderTotal is always accurate" — but actually it strips tax + shipping. If run on real data, contact `sc_TotalSpend` aggregates undercount. Either (a) gate so it only fills missing/zero totals and never overwrites, or (b) remove it entirely. Until then, do not run; rely on the Woo pull (which writes correct `apiOrder.total`). If backfill ever ran, re-pull Woo orders to restore correct `wom_OrderTotal`.
+
+- [ ] 2026-05-15: **ManagerContactView search latency.** Search is functional on mobile but slow — currently calls `WebAppContacts_getContactList({search: query})` which loads all ~548 contacts server-side and filters in-memory. Each keystroke (debounced 250ms) round-trips to GAS. Optimization options: cache the contact list client-side after first load and filter in JS for subsequent keystrokes; or limit server response size with a `limit` param. Easy win once measured.
+
 - [ ] 2026-05-04: **Comax order export includes bundle parent SKU** — should export bundle members only.
   - Diagnosis (2026-05-13): `WebOrdItemsM` contains parent rows because `WooOrderPullService._transformLineItems` copies every line item from the Woo API unfiltered (parents + children). `OrderService.exportOrdersToComax` then aggregates from that sheet with no bundle filter. Prior bundle fixes lived elsewhere — `PrintService.js` (packing slips, 2025-12-29) and `InventoryManagementService.generateComaxInventoryExport` (Comax inventory export, 2026-01-26); the order export missed both passes. **First-fix, not recurrence** — git log on `OrderService.js` shows no `bundleSkus` / `TaxProductType` / `woosb` reference ever.
   - Fix shape: build `bundleSkus` Set from WebProdM where `wpm_TaxProductType` ∈ {`woosb`, `bundle`} (same pattern as `InventoryManagementService.js:875–892`); skip rows in the aggregation loop at `OrderService.js:359–368` with `if (bundleSkus.has(sku)) continue;`.
@@ -34,6 +38,8 @@ Projects: jlmops, web, marketing, content
 - [ ] 2026-05-04: **Audit timestamps + date formats system-wide** (folds in 2025-12-26 task-creation Israel-time bug + 2026-01-21 inconsistent date display). Walk every place dates/times are stored or rendered: task creation, sync log, order export, dashboard, manager/admin views. Standardize on Israel time for storage and 3-letter-month universal format for display ("21 Jan 2026"). Future step, not urgent.
 
 - [ ] 2026-05-04: **Audit on-demand count-task creation** (folds in 2025-12-26 master/detail dedupe check). Walk the path that creates verification count tasks: confirm no duplicates, confirm correct-user assignment, and split data-validation tasks from count-validation tasks so they run as separate paths (don't require a count to do a data review). Future step.
+
+- [ ] 2026-05-15: **Admin Projects task delete — partial-success report + display lag.** jlmops admin Projects: deleting tasks often reports that not all records were deleted; the view display also lags after the operation. Low-priority — investigate when convenient. Not yet diagnosed.
 
 - [ ] 2026-03-10: **Decanting field treats 0 as empty** — system should accept zero as a valid decanting value (some wines legitimately need no decanting), not treat it as skippable/missing. Migrated from STATUS.md inbox 2026-05-07.
 

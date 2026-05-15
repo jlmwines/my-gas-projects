@@ -16,19 +16,22 @@ const WooOrderPullService = (function() {
    *
    * @returns {object} { success, orderCount, message }
    */
-  function pullOrders() {
+  function pullOrders(options) {
     var functionName = 'pullOrders';
     var sessionId = generateSessionId();
+    options = options || {};
     logger.info(SERVICE_NAME, functionName, 'Starting automated order pull', { sessionId: sessionId });
 
     try {
-      // Always pull last 30 days — older orders can still change status,
-      // and the pipeline handles upsert (update existing, insert new).
-      var thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Default: pull last 30 days (used by admin "API Pull" + legacy callers).
+      // Callers that maintain a forward cursor (e.g., frequent pipeline) can pass
+      // options.modifiedAfter — Woo returns only orders touched since that ISO timestamp.
+      var modifiedAfter = options.modifiedAfter
+        || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
       // Fetch orders from WooCommerce
-      var apiOrders = WooApiService.fetchOrders(thirtyDaysAgo);
-      logger.info(SERVICE_NAME, functionName, 'Received ' + apiOrders.length + ' orders from API (last 30 days)', { sessionId: sessionId });
+      var apiOrders = WooApiService.fetchOrders(modifiedAfter);
+      logger.info(SERVICE_NAME, functionName, 'Received ' + apiOrders.length + ' orders from API (modified_after=' + modifiedAfter + ')', { sessionId: sessionId });
 
       if (apiOrders.length === 0) {
         var noOrdersMsg = 'No new or modified orders found';

@@ -1,6 +1,6 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-05-14 (jlmops @105-@116 shipped over the day: Manager CRM Half 2, deploy hardening, full mobile UX pass, pending-payment auto-follow-up automation with one-tap guest-pay link, outreach workflow polish with Open-contact deep-link from dashboard to ContactView, schema column-position bug fixed, order totals include tax, modal RTL for Hebrew, housekeeping cadence split with new runFrequentMaintenance entry point pending trigger arrangement.)
+**Updated:** 2026-05-15 (deep review; Inbox triaged 9 → 0 + routing-prompt header added; frequent pipeline shipped @117 → @119 — full order-pull-and-sweep pipeline behind a forward `modified_after` cursor + Israeli business-hour cadence guard; 20-min trigger arrangement pending user)
 
 ## Metrics
 
@@ -9,8 +9,8 @@
 | Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14 with mobile UX + pending-payment automation. |
 | Last Active | 2026-05-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @116 (most recent: @107 mobile chrome + primitives + dashboard sweeps, @109 server-side viewport tag fix, @110-@111 pending-payment auto-followup with order-pay link, @112 housekeeping cadence split, @113 dashboard outreach UX, @114 button styles, @115 schema column-position fix, @116 order total includes tax + modal RTL) · theme v1.2.23 LIVE |
-| Deploy Date | jlmops 2026-05-14 (@105 → @116 across the day) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
+| Deploy Version | jlmops @119 (most recent: @117 frequent pipeline full wiring, @118 forward cursor on order pull, @119 cadence guard tightened to Israeli business hours Sun-Thu 08-20 + Fri 08-13) · theme v1.2.23 LIVE |
+| Deploy Date | jlmops 2026-05-15 (@117 → @119) · theme 2026-05-12 (v1.2.21 → v1.2.22 → v1.2.23) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
@@ -36,7 +36,7 @@
 8. **Unused plugin cleanup on live** — delete deactivated plugins to reduce attack surface and update noise. **DO NOT DELETE `mailchimp-woocommerce`** — its `wp_options` API key is what the theme's replacement code reads. Safe to delete: `woo-smart-wishlist`, `WPBingo`, `redux-framework`, `Elementor` + `Elementor Pro` (after verifying no remaining Elementor pages — search wp-admin → Pages for the Elementor edit indicator), `widget-importer-exporter`, `better-search-replace`, `wp-file-manager`. Verify-before-delete: `contact-form-7` + CF7 multilingual (any forms in use?), `variation-swatches-for-woocommerce` (variation selector acceptable without it?), `woocommerce-checkout-field-editor` (any custom checkout fields configured?).
 9. **Remove "Magnums" product category** — magnums phased out of inventory. Sequence: pull from gift bundle composition first, verify no magnums remain in gift slots or other bundles, then delete the WC `product_cat` term (EN + HE WPML pair). Tracked in `.claude/bugs.md` (web).
 
-**Other in-flight initiatives** (cross-area, sequenced per `business/COORDINATION.md`):
+**Other in-flight initiatives** (cross-area, strategic context in `business/STRATEGY.md`):
 - **Cadence Realignment + Campaign Architecture — BOTH SHIPPED 2026-05-11.** (1) `jlmops/plans/CADENCE_REALIGNMENT_PLAN.md` — CRM throttling shipped as @83: `CrmIntelligenceService.runAnalysis()` gates cooling/unconverted/winery cohort suggestions behind `crm.suggestions.cohort.enabled = false` flag; holiday reminder unaffected; first-order welcome path untouched. Existing unactioned lifecycle tasks cleared manually by user. (2) `jlmops/plans/CAMPAIGN_ARCHITECTURE.md` — full data model + UI shipped as @84/@85: new `SysMarketingCampaigns` + `SysShortUrls` sheets, two FKs added (`spro_CampaignId`, `scm_MarketingCampaignId`), `MarketingCampaignService` (seed + UTM builder + short URL CRUD + QR helper, RankMath push stubbed), `WebAppCampaigns` controller, `AdminCampaignsView` + nav link, Campaign dropdown on Project create form, Campaign field + Generate Outputs button + modal on Project Detail, 16 new task templates for Distribution chains, `setupMarketingSheets()` helper. Launch Campaigns seeded: `newsletter-print` + `email-broadcast`. End-to-end smoke test passed: campaign list, project-campaign link, Generate Outputs producing utm URL + short URL + QR. **Manual short-URL paste into RankMath wp-admin for now** (5–10 URLs/month volume; auto-push deferred per `.claude/bugs.md`). Remaining UI: AdminCampaignServiceView (standalone, nice-to-have); AdminCampaignDetailView analytics (build once first-cycle data lands).
 - **KPI Summary tab in `JLMops_Data`** — DEFERRED / parked. Spec at `jlmops/plans/KPI_SUMMARY_TAB.md` was Claude's pitch, not the user's. User prefers periodic manual review of GA4 + GSC + JLMops_Data on cadence over a built dashboard tab. Don't re-surface as "ready to build" in pickups.
 - **Inventory fill-in (in progress)** — adding products to fill category gaps after the recent full-inventory pass. Likely to surface jlmops refinements in passing: decanting field treats 0 as empty (already in `.claude/bugs.md`); new kashrut values may need to be added to the lookup list as they appear. Bring me in when there's a concrete blocker.
@@ -52,6 +52,9 @@
 - Vendor SKU Update — not yet tested
 - Trim safety — not yet tested
 - (Product Replacement tested and working.)
+
+**Pending operational tasks:**
+- **Arrange `runFrequentMaintenance` 20-min trigger.** Full pipeline shipped 2026-05-15 (@117 → @119; details in `jlmops/plans/FREQUENT_PIPELINE_PLAN.md`). Manual runs verified: 58s → 27s → 10s as the cursor stamped and bounded the `modified_after` window. Cadence guard restricts productive work to Sun-Thu 08:00–20:00 IL + Fri 08:00–13:00 IL (Sat off; out-of-hours fires return immediately). Last step: Apps Script editor → Triggers → Add Trigger → function `runFrequentMaintenance` → Time-driven → Minutes timer → every 20 min. Observe one business day after the trigger lands.
 
 **Pending build items:**
 - `CampaignService.getTargetSegment()` for segment export
@@ -122,18 +125,13 @@ Periodic business health checks — not automated, just a checklist for session 
 
 ## Inbox
 
-_(Cross-project notes land here during sessions. Triaged at end of workday in cleanup sessions; verified clean at start of next session.)_
+_**BEFORE ADDING HERE:** bug? → `.claude/bugs.md`. Idea / feature? → `.claude/wishlist.md`._
+_Operational pending task? → Next Action above. Item with a plan doc? → that doc._
+_Only cross-project notes or pending-decision items belong here._
 
 ### Active
 
-- **2026-04-29: Nav menu structure + mobile review.** Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs what the menu currently has. Check mobile drawer appearance against design system.
-- **2026-05-07: Examine nav menu — is it optimal?** User-flagged note for a future session; no specific issue stated. Likely overlaps with the 2026-04-29 nav-review item — consider as a single audit pass.
-- **2026-05-14: Product-centered ops view (single product overview).** One-screen detail view per product showing Comax-side state, Web/WooCommerce-side state, last-update timestamps, product image, and a link to the live product page. Today the per-product picture is scattered across SysProducts row + WC admin + live site. Use case: ops triage when something looks off on a specific product. No plan doc yet; sized as an admin view alongside existing AdminProductsView. Note for later.
-- **2026-05-14: Replace Woo App / Jetpack with jlmops order view + status update.** Jetpack currently runs on the website solely to enable the WooCommerce mobile app, which the manager uses to view orders and change status. If jlmops gets a mobile-friendly order view with status-update capability, Jetpack can be removed (reduces plugin surface + performance overhead). Note for later — not blocking; the Woo App works today.
-- **2026-05-14: Outreach to unpaid orders / abandoned carts / consummated-but-not-paid.** Identify customers who intended to buy but didn't complete payment (pending orders, on-hold, abandoned carts if trackable). These are high-intent contacts worth reaching. Check what data we already have (WebOrdM has pending/on-hold; abandoned cart data may require a Woo API extension or plugin). Once trackable, ship as a new topic on `task.contact.outreach` so the manager surfaces and contacts them through the same Action Panel flow.
-- **2026-05-14: ManagerContactView search latency.** Search is functional on mobile but slow — currently calls `WebAppContacts_getContactList({search: query})` which loads all ~548 contacts server-side and filters in-memory. Each keystroke (debounced 250ms) round-trips to GAS. Optimization options: cache the contact list client-side after first load and filter in JS for subsequent keystrokes; or limit server response size with a `limit` param. Easy win once measured.
-- **2026-05-14: `backfillOrderTotals` is destructive — fix or remove.** The manual function in `HousekeepingService.js` (top-level `function backfillOrderTotals()`) sums `woi_ItemTotal` per order and writes that to `wom_OrderTotal`. Doc comment says "ensures wom_OrderTotal is always accurate" — but actually it strips tax + shipping. If run on real data, contact `sc_TotalSpend` aggregates undercount. Either (a) gate so it only fills missing/zero totals and never overwrites, or (b) remove it entirely. Until then, do not run; rely on the Woo pull (which writes correct `apiOrder.total`).
-- **2026-05-14: Test `runFrequentMaintenance` + arrange 20-min trigger.** New entry point shipped @112 (`HousekeepingService.performFrequentMaintenance`); currently runs only `createPendingPaymentFollowups`. Plan for the broader pipeline (order pull + welcome trigger refactor + cadence guard) at `jlmops/plans/FREQUENT_PIPELINE_PLAN.md`. Needed: (1) confirm `runFrequentMaintenance` runs cleanly end-to-end on the Apps Script side, (2) configure a time-driven trigger in the editor (Triggers → Add Trigger → function `runFrequentMaintenance` → Time-driven → Minutes timer → every 20 min), (3) decide whether to remove `createPendingPaymentFollowups` from `performDailyMaintenance` once the frequent trigger is verified.
+_(none — Inbox triaged 2026-05-15 as part of deep review)_
 
 ### Deferred
 
