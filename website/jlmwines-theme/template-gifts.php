@@ -6,16 +6,15 @@
  * page. Page flow:
  *
  *   1. Hero (banner image + dark overlay + light headline + body +
- *      6 anchor links to each section below)
+ *      5 anchor links to each section below)
  *   2. Gift Boxed Wines (product carousel)
  *   3. "Easy / בקלות" block — image + bullet list explaining the
  *      checkout fields where the gifter enters the message and
  *      recipient details
- *   4. Magnum Size (product carousel)
- *   5. Themed Packages (product carousel)
- *   6. "Need help? / אפשר לעזור?" block — image (Evyatar) + body +
+ *   4. Themed Packages (product carousel)
+ *   5. "Need help? / אפשר לעזור?" block — image (Evyatar) + body +
  *      CTA that anchors to the language-specific footer-contact ID
- *   7. Sparkling Wines, Wine Accessories, Gift Items (product carousels)
+ *   6. Sparkling Wines, Wine Accessories, Gift Items (product carousels)
  *
  * EN + HE copy is hardcoded; WPML serves the right language based on
  * the active language. Mobile (≤599px) renders product grids as
@@ -53,12 +52,6 @@ $sections = [
         'category' => 'gift-boxed',
         'heading'  => $is_he ? 'יינות באריזת מתנה' : 'Gift Boxed Wines',
         'icon'     => 'i-gift-box',
-    ],
-    [
-        'anchor'   => 'magnums',
-        'category' => 'magnums',
-        'heading'  => $is_he ? 'מגנומים' : 'Magnum Size',
-        'icon'     => 'i-champagne-bottle',
     ],
     [
         'anchor'   => 'packages',
@@ -171,8 +164,7 @@ $help_anchor  = $is_he ? 'footer-contact-he'                  : 'footer-contact'
     </section>
 
     <div class="container">
-        <?php $render_product_section($sections[1]); // Magnums ?>
-        <?php $render_product_section($sections[2]); // Themed Packages ?>
+        <?php $render_product_section($sections[1]); // Themed Packages ?>
     </div>
 
     <section class="page-gifts-band page-gifts-help-band">
@@ -189,9 +181,9 @@ $help_anchor  = $is_he ? 'footer-contact-he'                  : 'footer-contact'
     </section>
 
     <div class="container">
-        <?php $render_product_section($sections[3]); // Sparkling ?>
-        <?php $render_product_section($sections[4]); // Accessories ?>
-        <?php $render_product_section($sections[5]); // Gift Items ?>
+        <?php $render_product_section($sections[2]); // Sparkling ?>
+        <?php $render_product_section($sections[3]); // Accessories ?>
+        <?php $render_product_section($sections[4]); // Gift Items ?>
     </div>
 </main>
 
