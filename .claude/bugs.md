@@ -9,6 +9,8 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
+- [ ] 2026-05-17: **No admin UI for adding lookup values (kashrut, grapes, wineries, regions, style).** `LookupService.js` only exposes `getLookupMap(mapName)` — read-only. Adding a new value requires manual edit of the Lookups sheet in Drive. Blocks content tagging at scale (prerequisite for the content library — see `plans/CONTENT_LIBRARY_PLAN.md` §11). Scope: per-category add/edit/deprecate UI, EN primary key + HE display name, write endpoint, admin view. Read endpoint already exists.
+
 - [ ] 2026-05-15: **`backfillOrderTotals` is destructive — fix or remove.** The manual function in `HousekeepingService.js` (top-level `function backfillOrderTotals()`) sums `woi_ItemTotal` per order and writes that to `wom_OrderTotal`. Doc comment says "ensures wom_OrderTotal is always accurate" — but actually it strips tax + shipping. If run on real data, contact `sc_TotalSpend` aggregates undercount. Either (a) gate so it only fills missing/zero totals and never overwrites, or (b) remove it entirely. Until then, do not run; rely on the Woo pull (which writes correct `apiOrder.total`). If backfill ever ran, re-pull Woo orders to restore correct `wom_OrderTotal`.
 
 - [ ] 2026-05-15: **ManagerContactView search latency.** Search is functional on mobile but slow — currently calls `WebAppContacts_getContactList({search: query})` which loads all ~548 contacts server-side and filters in-memory. Each keystroke (debounced 250ms) round-trips to GAS. Optimization options: cache the contact list client-side after first load and filter in JS for subsequent keystrokes; or limit server response size with a `limit` param. Easy win once measured.
