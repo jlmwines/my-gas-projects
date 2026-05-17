@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('JLMWINES_VERSION', '1.0.34');
+define('JLMWINES_VERSION', '1.0.36');
 
 if (!isset($content_width)) {
     $content_width = 1140;

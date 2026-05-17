@@ -60,14 +60,30 @@ get_header();
                      * with the hero copy). Browser picks the smallest srcset
                      * variant that fits — mobile ends up with a ~300-wide
                      * file instead of the full hero.
+                     *
+                     * <picture> serves WebP sidecars (.jpg.webp) when the UA
+                     * supports them — ~4× smaller than the JPG (152 KB → 35 KB
+                     * on the full-size variant). Sidecars are server-generated
+                     * by the image optimizer; the <img> JPG fallback ships if
+                     * either WebP isn't supported or a sidecar is missing.
                      */
-                    echo wp_get_attachment_image($hero_image_id, 'large', false, [
-                        'alt'           => esc_attr( is_rtl() ? 'אביתר' : 'Evyatar' ),
-                        'loading'       => 'eager',
-                        'fetchpriority' => 'high',
-                        'sizes'         => '(max-width: 899px) 100vw, 50vw',
-                    ]);
+                    $hero_sizes  = '(max-width: 899px) 100vw, 50vw';
+                    $jpg_srcset  = wp_get_attachment_image_srcset($hero_image_id, 'large');
+                    $webp_srcset = $jpg_srcset ? str_replace('.jpg', '.jpg.webp', $jpg_srcset) : '';
                     ?>
+                    <picture>
+                        <?php if ($webp_srcset) : ?>
+                            <source type="image/webp" srcset="<?php echo esc_attr($webp_srcset); ?>" sizes="<?php echo esc_attr($hero_sizes); ?>">
+                        <?php endif; ?>
+                        <?php
+                        echo wp_get_attachment_image($hero_image_id, 'large', false, [
+                            'alt'           => esc_attr( is_rtl() ? 'אביתר' : 'Evyatar' ),
+                            'loading'       => 'eager',
+                            'fetchpriority' => 'high',
+                            'sizes'         => $hero_sizes,
+                        ]);
+                        ?>
+                    </picture>
                 </div>
             <?php elseif ($hero_image) : ?>
                 <div class="hero-image">
