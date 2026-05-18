@@ -4,6 +4,19 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-18 evening (Context post end-to-end pipeline — Canva image gen + WP media upload + draft push)
+
+- **Context EN + HE drafted to live WP** as drafts 67403/67405. User originally said HE was 67404; actual ID surfaced via REST search is 67405 (slug empty, set to 'context' via push). WPML EN↔HE link still to be confirmed manually in wp-admin.
+- **Image pipeline established (one-shot but reusable).** Canva MCP `generate-design` returns 4 candidate URLs + a job ID — no single 4-up "conversation" URL is exposed via MCP (help service confirmed; the 4-up Canva AI conversation view only exists when generating directly inside Canva's UI). User opted to skip per-slot comparison: I took candidate #1 from each batch and materialized 4 designs (`DAHKB27AS9s`, `DAHKBy9H6vk`, `DAHKBx5xwWw`, `DAHKCfZkhLQ`) — user reviews in WP draft, can re-roll any slot later.
+- **`tools/wp-api.js` extended with `uploadMedia(buffer, filename, mimeType, meta)`** using WP's binary-body upload form (Content-Disposition + binary body, no multipart deps). Reusable for future posts. `meta` triggers a follow-up POST to set `alt_text`/`title`/`caption` on the media item.
+- **`.wp-credentials` retargeted from staging6.jlmwines.com to jlmwines.com** (staging gone since 2026-05-07). Existing `gamboruch` app password works against live — no regeneration needed.
+- **`content/upload-context-images.js` one-shot script** — downloads Canva exports, uploads to WP, substitutes `__IMG_N_ID__` / `__IMG_N_URL__` placeholders in both .post.md files. Keep as reference; future posts likely benefit from a generic version.
+- **Body HTML pattern locked in for Context.** Lead full-width paragraph (1.15em) + 4 alternating 2-col image+text sections (40/60 then 60/40 then 40/60 then 60/40) + transitional Beyond-the-Basics paragraph + closing CTA. Verbatim Evyatar EN + translator HE — no copy edits. WPML handles RTL via locale; no inline dir attributes.
+- **Stages 4 + 5 pending.** Newsletter A4 Canva (EN+HE) per `marketing/NEWSLETTER_PLAN.md`. Mailchimp campaign EN+HE — scope is Context post + site redesign mention (newsletter explicitly NOT part of email per user decision this session).
+- **Next session.** User reviews WP drafts 67403/67405 — re-roll any image that doesn't land (the 4 Canva designs are in their Recents). Then move to Stage 4 + 5. Also pending from earlier today: render-blocking pile (main.css critical-CSS + jQuery defer) for mobile LCP; portfolio cleanup overdue (last 2026-05-07); `runFrequentMaintenance` SysLog health check 3 business days in.
+
+---
+
 ## 2026-05-18 (mobile LCP rollback v1.2.26 + v1.2.27 — diagnostic confirmed v1.2.25 changes were effective; regression elsewhere)
 
 - **Step 1 (diagnostic).** Added temporary `wp_print_styles` priority 0 hook to `inc/enqueue.php` emitting HTML comments dumping `is_blockless_route()` truthiness, full print queue, and pattern-match status per registered handle. First curl after deploy showed dequeues NOT firing — turned out to be SiteGround OPcache lag on the freshly FTP'd file. Added a non-gated `wp_head` priority 1 marker (file-load proof), redeployed. ~5 min later, OPcache refreshed → marker appeared with `is_front_page=1, queried_id=9019, template=template-homepage.php` and full pattern-match dump showed wc-blocks-*, woosb-blocks, wp-block-library, all per-block /wp-includes/blocks/ CSS as DEQUEUED. Confirmed v1.2.25 dequeues + Elementor strip + logo strip all effective on the live homepage once OPcache caught up. Removed diagnostic, redeployed clean.

@@ -77,6 +77,13 @@ const MANIFEST = [
     heSlug: 'about-evyatar', heId: 67158,
     enFile: 'About Evyatar EN_2026-01-08.post.md',
     heFile: 'About Evyatar HE.post.md'
+  },
+  {
+    name: 'context',
+    enSlug: 'context', enId: 67403,
+    heSlug: 'context', heId: 67405,
+    enFile: 'Context EN.post.md',
+    heFile: 'Context HE.post.md'
   }
 ];
 
