@@ -9,15 +9,15 @@
 | Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14 with mobile UX + pending-payment automation. |
 | Last Active | 2026-05-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @119 · theme v1.2.27 LIVE |
-| Deploy Date | jlmops 2026-05-15 (@117 → @119) · theme 2026-05-18 (v1.2.26 + v1.2.27 — LCP rollback: preload + logo strip out; picture/WebP + dequeues + elementor strip + magnums removal kept) |
+| Deploy Version | jlmops @119 · theme v1.2.28 LIVE |
+| Deploy Date | jlmops 2026-05-15 (@117 → @119) · theme 2026-05-18 (v1.2.26 + v1.2.27 LCP rollback; v1.2.28 woosb-frontend dequeue on no-bundle-UI routes) |
 | Content | 9 editorial posts live on production (EN+HE) — Selection and Price vs Quality already shipped; 5 in pipeline (A Year in the Vineyard under review/translation; Context, Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation, planned monthly drops paired with newsletter QR) |
 | CRM Contacts | 548 enriched |
 | SEO Status | Audit run 2026-05-06 (`plans/SEO_AUDIT_2026-05-06.md`). Resolved same day: HE site name (#2), homepage meta descriptions (#7), title format (drop %page%), category pairs (#4 — actually fine), page pairs (#5 — actually fine), site-wide image URL https sweep (#6). Deferred: homepage hreflang http (#1 — resolves via Phase 1 of homepage rebuild). Remaining: gtin13 emission (#9 opportunity), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
 | Open Bugs | 1 active (Comax order export bundle SKU) + 4 grouped backlog buckets in `.claude/bugs.md` (sync hardening, CRM cleanup, timestamp/date audit, count-task creation audit) + 2026-05-11 additions: GTIN structured-data enrichment (deferred), auto-push to RankMath for short URL redirects (deferred); 2026-05-17 addition: no admin UI for adding lookup values (kashrut, grapes, etc.) — prerequisite for content library tagging |
 | Next Milestone | **2026-05-13 morning sync — live observation of @88 web-export inline refactor.** Be present at start of the daily sync. After Generate, widget must transition `WAITING_WEB_EXPORT → WAITING_WEB_CONFIRM` in one step (with API upload button), or `→ COMPLETE` if no diff. If anything looks wrong, rollback per `jlmops/plans/WEB_EXPORT_INLINE_PLAN.md`. After that lands cleanly: Pilot Campaign Architecture end-to-end with Newsletter Issue #1. Mobile LCP tuning (4.0–4.1s) remains queued. |
 | Blockers | 0 |
-| Mobile PageSpeed (post-cutover) | Baseline 2026-05-05: EN FCP 3.2 / LCP 4.1 · HE FCP 3.5 / LCP 4.0 · TBT 210ms. v1.2.25: FCP 3.6 / LCP 4.3 (regressed). v1.2.26 (preload reverted): FCP 3.6 / LCP 4.1. v1.2.27 (logo strip also reverted, SG cache+CDN flushed, multiple runs): FCP 3.6 / LCP 4.1 — LCP back to baseline; FCP 0.4s gap unattributable, likely single-measurement noise in the 2026-05-05 baseline. |
+| Mobile PageSpeed (post-cutover) | Baseline 2026-05-05: EN FCP 3.2 / LCP 4.1 · HE FCP 3.5 / LCP 4.0 · TBT 210ms. v1.2.25: FCP 3.6 / LCP 4.3 (regressed). v1.2.26 (preload reverted): FCP 3.6 / LCP 4.1. v1.2.27 (logo strip also reverted): FCP 3.6 / LCP 4.1. v1.2.28 (woosb-frontend dequeue on no-bundle-UI routes): **FCP 3.5 / LCP 4.0** — LCP now BELOW baseline; FCP 0.3s vs baseline likely single-measurement noise. |
 | Desktop PageSpeed (post-cutover) | EN: FCP 0.7 / LCP 0.8 · HE: FCP 0.7 / LCP 1.2 |
 
 ## Next Action

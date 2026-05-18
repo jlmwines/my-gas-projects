@@ -202,6 +202,25 @@ add_action('wp_enqueue_scripts', function () {
 }, 100);
 
 /**
+ * Dequeue woosb-frontend.css (3.7 KiB) on routes that never render bundle
+ * composition UI. Required on cart, checkout, and single-product (a bundle
+ * product page needs the qty/section/total styling). Dead weight on
+ * homepage and product list archives, which show products as cards
+ * without bundle interaction.
+ */
+add_action('wp_enqueue_scripts', function () {
+    $has_no_bundle_ui = is_front_page()
+        || (function_exists('is_shop') && is_shop())
+        || (function_exists('is_product_category') && is_product_category())
+        || (function_exists('is_product_tag') && is_product_tag())
+        || (function_exists('is_account_page') && is_account_page());
+    if (!$has_no_bundle_ui) {
+        return;
+    }
+    wp_dequeue_style('woosb-frontend');
+}, 100);
+
+/**
  * Cookie-banner reopen trigger.
  *
  * Complianz exposes a hidden internal `.cmplz-manage-consent` element
