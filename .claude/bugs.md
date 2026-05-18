@@ -74,7 +74,7 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
-- [ ] 2026-05-08: **Remove "Magnums" product category** — magnums being phased out of inventory. Sequence: (1) remove magnums from gift bundle composition, (2) verify no magnums remain in gift slots or other bundles, (3) delete the WC `product_cat` term (EN + HE WPML pair). Coordinate with inventory fill-in work in progress.
+- [x] 2026-05-08: **Remove "Magnums" product category — SHIPPED 2026-05-18.** Magnums not actually in bundles (earlier framing was wrong); just gifts-page section + category term. Template fix `4b630c9` deployed via v1.2.26 FTP push; EN+HE `product_cat` term pair + WPML translation deleted by user same day.
 
 - [ ] 2026-05-11: **Mixed-content HTTP image on HE homepage** — `http://jlmwines.com/wp-content/uploads/2023/04/value-speical-sq-599x599.jpg` referenced in homepage Page #64199 (HE). Triggers Chrome "does not support secure connection" warning in private/incognito (HTTPS-Only Mode is stricter there). Fix: locate the image reference in the Page content and change to `https://` (or protocol-relative `//`). Slated AFTER WPML translation verification.
 
