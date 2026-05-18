@@ -31,16 +31,43 @@
 
 | Domain | Doc |
 |--------|-----|
-| Website visual identity | `website/BRAND.md` |
-| Theme design system | `website/jlmwines-theme/plans/design-system/` |
-| Visual rationale | `plans/design-system/RATIONALE.md` |
+| Theme CSS (source of truth) | `website/jlmwines-theme/assets/css/main.css` `:root` block |
 | Sensory metaphors (visual variants) | `content/SENSORY_METAPHORS.md` |
 | Image style for posts | `content/IMAGE_RECIPE.md` (impressionist oil painting) |
 
-**Core elements (post-theme cutover):**
-- Typography: David Libre (display), Rubik (UI)
-- Palette tokens: cream / terracotta / ink (replaces legacy navy/gold and tan/cream)
-- No italic, single bundle/package chassis, Woo native sale flash, contextual filters
+**Note.** `website/BRAND.md` predates the theme cutover and has stale placeholder values — do not consume it. The single source of truth for colors and fonts is the theme CSS `:root` block; this section mirrors those values for non-developer consumption (Canva, print, etc.).
+
+### Palette
+
+| Token | Hex | Role |
+|---|---|---|
+| Cream | `#fcf9f2` | Page background — warm cream |
+| Surface | `#ffffff` | Cards, elevated panels |
+| Ink | `#1a1612` | Body text — warm near-black |
+| Muted | `#7a6e62` | Secondary text, borders — warm gray |
+| Terracotta | `#a83920` | CTAs, links, highlights — accent |
+| Terracotta hover | `#8e2f1a` | Accent hover state |
+| Sage | `#4a7a3e` | Success / qualified |
+| Amber | `#c9882c` | Sale flash, attention |
+| Deep red | `#8a2018` | Errors |
+
+### Typography
+
+- **Display / headings:** Secular One (loaded from Google Fonts; Heebo as system fallback)
+- **UI / body:** Rubik 400/500/600/700 (loaded from Google Fonts)
+- Font swap landed 2026-05-04 (replaced David Libre with Secular One — keep this section honest, prior versions of this doc named David Libre)
+
+### Other tokens
+
+- No italic
+- Container max 1200px
+- Card radius 2px, input 4px, pill 999px
+- Single bundle/package chassis, Woo native sale flash, contextual filters
+
+### Imagery
+
+- Editorial: impressionist oil painting per `content/IMAGE_RECIPE.md` (16:9 landscape, warm muted palette, no people unless specified)
+- Product: standard product photography, white/cream backgrounds, no aesthetic filter
 
 ---
 
@@ -56,7 +83,7 @@
 
 - Voice: see `marketing/EMAIL_GUIDELINES.md`
 - Visual: simple, mostly text — designed to read as a personal note rather than a marketing template
-- Mechanics: One campaign, two language copies (EN + HE) per `business/COORDINATION.md`
+- Mechanics: One campaign, two language copies (EN + HE) per `business/STRATEGY.md`
 
 ### Newsletter print insert
 
