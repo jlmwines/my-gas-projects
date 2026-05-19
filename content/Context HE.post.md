@@ -59,9 +59,18 @@ Paste below into WordPress Code Editor:
 <p>אצלנו בJLMWINES אנחנו מאמינים שפתרון לא נמצא באזורי הגידול או בנתונים הטכניים של היין אלא בהבנת הסיטואציה שאנחנו מכוונים אליה. הנה כמה שיקולים שיעזרו לנו למצוא את היין המתאים.</p>
 <!-- /wp:paragraph -->
 
+<!-- wp:html -->
+<style>
+.cols-flip { flex-direction: row-reverse; }
+@media (max-width: 781px) {
+  .cols-flip { flex-direction: column; }
+}
+</style>
+<!-- /wp:html -->
+
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67407,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67407,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-season-clock.jpg" alt="ציור אימפרסיוניסטי של כוס יין על אדן חלון מוצף שמש שעת הזהב" class="wp-image-67407"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
@@ -91,37 +100,37 @@ Paste below into WordPress Code Editor:
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"60%"} -->
+<!-- wp:columns {"className":"cols-flip"} -->
+<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67413,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-pairing-v2.jpg" alt="ציור אימפרסיוניסטי של כוס יין לצד צלחת פשוטה של לחם וגבינה על שולחן עץ" class="wp-image-67413"/></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"60%"} -->
 <div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">התפריט</h2>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>דיברנו כבר על התאמת אוכל ויין על ידי <strong>התאמה</strong> או <strong>ניגודיות</strong>. כשאנחנו בוחרים יין לפי תפריט, כדאי לנסות להבין איזה סוג אוכל יהיה מרכז האירוע.</p>
+<p>דיברנו כבר על <a href="/he/pairing-food-and-wine/">התאמת אוכל ויין על ידי <strong>התאמה</strong> או <strong>ניגודיות</strong></a>. כשאנחנו בוחרים יין לפי תפריט, כדאי לנסות להבין איזה סוג אוכל יהיה מרכז האירוע.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
-<li><strong>אוכל עשיר ומתובל:</strong> אם אתם מגישים בשר אדום או תבשיל עשיר, כדאי שיהיה יין עם טעם מספיק <strong>אינטנסיבי</strong> כדי שיוכל לעמוד מול האוכל. יין עם טעמים עדינים מדי עלול להתפספס ביחס לטעמים של האוכל.</li>
+<li><strong>אוכל עשיר ומתובל:</strong> אם אתם מגישים בשר אדום או תבשיל עשיר, כדאי שיהיה יין עם טעם מספיק <strong><a href="/he/red-wine-intensity/">אינטנסיבי</a></strong> כדי שיוכל לעמוד מול האוכל. יין עם טעמים עדינים מדי עלול להתפספס ביחס לטעמים של האוכל.</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
-<li><strong>אוכל קליל ורענן:</strong> לדגים, עוף או סלטים, יין עם <strong>חמיצות</strong> טובה יכול לרענן בדיוק כמו שלהוסיף קצת לימון למנה יכולה להחיות ורענן את הטעמים שלה.</li>
+<li><strong>אוכל קליל ורענן:</strong> לדגים, עוף או סלטים, יין עם <strong><a href="/he/white-rose-wine-acidity/">חמיצות</a></strong> טובה יכול לרענן בדיוק כמו שלהוסיף קצת לימון למנה יכולה להחיות ורענן את הטעמים שלה.</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list --></div>
-<!-- /wp:column -->
-
-<!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67408,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-pairing.jpg" alt="ציור אימפרסיוניסטי של כוס יין לצד צלחת אוכל כפרית באור נרות" class="wp-image-67408"/></figure>
-<!-- /wp:image --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67409,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67409,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-gathering.jpg" alt="ציור אימפרסיוניסטי של שלוש כוסות יין מורמות בהרמת כוסית ערב נינוחה" class="wp-image-67409"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
@@ -137,7 +146,7 @@ Paste below into WordPress Code Editor:
 
 <!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
-<li><strong>חביב הקהל:</strong> אם אתם לא בטוחים מה אנשים אוהבים, מומלץ לנסות יין שהוא בטווח הבטוח של המורכבות. יין שהוא מעניין, אבל לא שיא המורכבות בדרך כלל יהיה יין שהקהל הרחב יהנה ממנו.</li>
+<li><strong>חביב הקהל:</strong> אם אתם לא בטוחים מה אנשים אוהבים, מומלץ לנסות יין שהוא בטווח הבטוח של ה<a href="/he/wine-complexity/">מורכבות</a>. יין שהוא מעניין, אבל לא שיא המורכבות בדרך כלל יהיה יין שהקהל הרחב יהנה ממנו.</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
@@ -151,8 +160,14 @@ Paste below into WordPress Code Editor:
 <p>אין תשובה לא נכונה - יש חוויות שונות. יין אדום זורם ועדין יכול להיות מושלם לשיחה במרפסת ויין עשיר וכבד יכול לככב באירוע עם ארוחה עשירה כשהוא הכוכב של הערב.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"60%"} -->
+<!-- wp:columns {"className":"cols-flip"} -->
+<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67414,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-curation-v2.jpg" alt="ציור אימפרסיוניסטי של שורת בקבוקי יין אצורים בצורות וגוונים שונים" class="wp-image-67414"/></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"60%"} -->
 <div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">אנחנו השותפים שלכם</h2>
 <!-- /wp:heading -->
@@ -174,12 +189,6 @@ Paste below into WordPress Code Editor:
 <li><strong>המלצה להתאמה</strong> - המלצות פשוטות להתאמה לפי קטגוריות של אוכל</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list --></div>
-<!-- /wp:column -->
-
-<!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67410,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-curation.jpg" alt="ציור אימפרסיוניסטי של יד הבוחרת בקבוק יין מתוך שורה של יינות אצורים על מדף עץ" class="wp-image-67410"/></figure>
-<!-- /wp:image --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
@@ -188,5 +197,5 @@ Paste below into WordPress Code Editor:
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><a href="/he/shop/">קראו את המדריך המלא ← עיינו באוסף</a></p>
+<p><a href="/he/shop/">← עיינו באוסף</a></p>
 <!-- /wp:paragraph -->

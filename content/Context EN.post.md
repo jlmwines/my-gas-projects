@@ -66,9 +66,18 @@ Paste below into WordPress Code Editor:
 <p>At JLM Wines, we believe the secret isn't in memorizing regions; it's in understanding <strong>context</strong>. Here is how to look at your surroundings to find the perfect pour.</p>
 <!-- /wp:paragraph -->
 
+<!-- wp:html -->
+<style>
+.cols-flip { flex-direction: row-reverse; }
+@media (max-width: 781px) {
+  .cols-flip { flex-direction: column; }
+}
+</style>
+<!-- /wp:html -->
+
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67407,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67407,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-season-clock.jpg" alt="Impressionist painting of a wine glass on a sunlit windowsill at golden hour" class="wp-image-67407"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
@@ -94,37 +103,37 @@ Paste below into WordPress Code Editor:
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"60%"} -->
+<!-- wp:columns {"className":"cols-flip"} -->
+<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67413,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-pairing-v2.jpg" alt="Impressionist painting of a wine glass beside a simple plate of bread and cheese on a wooden table" class="wp-image-67413"/></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"60%"} -->
 <div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">The Menu: Match or Balance?</h2>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>We've talked about <strong>Harmonizing</strong> and <strong>Contrasting</strong> before. When choosing for an occasion, look at the star of the plate:</p>
+<p>We've talked about <a href="/pairing-food-and-wine/"><strong>Harmonizing</strong> and <strong>Contrasting</strong></a> before. When choosing for an occasion, look at the star of the plate:</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
-<li><strong>Rich &amp; Savory:</strong> If you're serving red meat or a hearty stew, you need a wine with enough <strong>Intensity</strong> to stand up to the food. A lighter-bodied wine will get drowned out by a bold meal.</li>
+<li><strong>Rich &amp; Savory:</strong> If you're serving red meat or a hearty stew, you need a wine with enough <strong><a href="/red-wine-intensity/">Intensity</a></strong> to stand up to the food. A lighter-bodied wine will get drowned out by a bold meal.</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
-<li><strong>Light &amp; Fresh:</strong> For fish, poultry, or salads, look for a wine with <strong>Acidity</strong>. It acts like a squeeze of lemon that keeps the meal feeling bright.</li>
+<li><strong>Light &amp; Fresh:</strong> For fish, poultry, or salads, look for a wine with <strong><a href="/white-rose-wine-acidity/">Acidity</a></strong>. It acts like a squeeze of lemon that keeps the meal feeling bright.</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list --></div>
-<!-- /wp:column -->
-
-<!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67408,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-pairing.jpg" alt="Impressionist painting of a wine glass beside a rustic plate of food in candlelight" class="wp-image-67408"/></figure>
-<!-- /wp:image --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67409,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67409,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-gathering.jpg" alt="Impressionist painting of three wine glasses raised in a casual evening toast" class="wp-image-67409"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
@@ -140,7 +149,7 @@ Paste below into WordPress Code Editor:
 
 <!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
-<li><strong>The Crowd-Pleasers:</strong> If you aren't sure what people like, go for the "Middle Ground" of complexity. A wine that isn't too simple but isn't a full orchestra yet is usually a hit with everyone.</li>
+<li><strong>The Crowd-Pleasers:</strong> If you aren't sure what people like, go for the "Middle Ground" of <a href="/wine-complexity/">complexity</a>. A wine that isn't too simple but isn't a full orchestra yet is usually a hit with everyone.</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
@@ -158,8 +167,14 @@ Paste below into WordPress Code Editor:
 <p>Remember, there are no "wrong" answers, only different experiences. A smooth, approachable red is perfect for a relaxed chat on the balcony, while a bold, complex red might be better suited for a formal celebration where the wine is meant to be the star.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"60%"} -->
+<!-- wp:columns {"className":"cols-flip"} -->
+<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67414,"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-curation-v2.jpg" alt="Impressionist painting of a curated row of wine bottles in different shapes and shades" class="wp-image-67414"/></figure>
+<!-- /wp:image --></div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"60%"} -->
 <div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">JLM Wines is Your Partner</h2>
 <!-- /wp:heading -->
@@ -181,12 +196,6 @@ Paste below into WordPress Code Editor:
 <li><strong>Pairing Notes:</strong> Simple suggestions for Mild, Rich, Intense, or Sweet foods.</li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list --></div>
-<!-- /wp:column -->
-
-<!-- wp:column {"width":"40%"} -->
-<div class="wp-block-column" style="flex-basis:40%"><!-- wp:image {"id":67410,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/05/context-curation.jpg" alt="Impressionist painting of a hand selecting one bottle from a row of curated wines on a wooden shelf" class="wp-image-67410"/></figure>
-<!-- /wp:image --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns -->
 
@@ -195,5 +204,5 @@ Paste below into WordPress Code Editor:
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p><a href="/shop/">Read the full guide → Browse the collection</a></p>
+<p><a href="/shop/">Browse the collection →</a></p>
 <!-- /wp:paragraph -->
