@@ -1,6 +1,6 @@
 # Content Library Plan
 
-**Status:** PLANNING — discovery + architecture reflection 2026-05-17, refined 2026-05-18 (slug conventions, sibling-language reshape, image-as-entity, MD-local revision, template channel-language split, KPI handling). No implementation yet. Major rewrite of earlier draft after realizing the original plan repeated the Frankenstein pattern.
+**Status:** PLANNING — discovery + architecture reflection 2026-05-17, refined 2026-05-18 (slug conventions, sibling-language reshape, image-as-entity, MD-local revision, template channel-language split, KPI handling), 2026-05-20 (task model retraction + write architecture + task UI shape). No implementation yet. Major rewrite of earlier draft after realizing the original plan repeated the Frankenstein pattern.
 
 **Scope:** A library + librarian system that serves as the **entity layer** for content, marketing, and (eventually) CRM work. Replaces fragmented per-domain containers (Projects, Campaigns, Content folders) with a unified entity model. Post assets first; product images later.
 
@@ -92,9 +92,24 @@ Default to **active updates** from disciplined agents (Claude, ops):
 
 ### Task vs direct-report rule
 
-- **Tasks (jlmops):** handoffs to Evyatar, async work surviving across sessions, system housekeeping.
-- **Direct session reports:** anything admin handles in conversation with Claude.
-- Don't create a task for something admin will hear about in-session anyway.
+(Retracted 2026-05-20: the original "don't create a task for in-session work" carve-out was wrong. Tasks aren't bureaucracy when the work involves human action — they carry reminder + audit + work-tracking, and a manual close after the work is a trivial click.)
+
+- **Tasks (jlmops):** any workflow action involving human work — Evyatar handoffs, admin in-session actions, sync-cycle confirmations of external state (Comax orders loaded, exports processed), system housekeeping. Task row is the work-tracking primitive; manual close preserves the audit.
+- **Direct session reports:** Claude → admin in-session updates (status, findings, prepared content). Supplement task rows, don't replace them.
+- **Non-task rows in SysTasks** (e.g., `task.system.health_status` singleton used as dashboard backing store): data storage, not workflow tasks. Worth migrating out of the table eventually; out of scope here.
+
+### Library service is the single state writer
+
+Added 2026-05-20.
+
+- **All state writes go through the library service** (server-side in GAS). Entity state changes, activity log entries, task closures — one writer, one place to enforce invariants.
+- **UI is the only direct caller** of the library service via `google.script.run`. Buttons, action panels, status changes all route through it.
+- **Claude session has no direct path** to the library service. Architecturally that's fine — Claude acts through admin's hand:
+  - For state-affecting actions (publish, lock, close): Claude prepares content + tells admin "click X in the UI." Admin clicks. UI calls service. Activity log records `actor=admin`.
+  - For artifact creation (drafting MD, generating images, calling WP REST to push posts): Claude works in the local repo and external APIs. A small local node script (sibling to `push-posts.js`) calls a thin GAS HTTP endpoint to register the new artifact in the library — single purpose: `POST { slug, type, file_path, task_id }` → ops writes the library row + activity log entry. That's Claude's only write path to the library.
+- **No general-purpose API for Claude.** Browsing, reading state, inspecting status — all via the for-claude/ flat-file exports ops emits on cadence (§5). Cadence problem if stale, not a missing-endpoint problem.
+
+If the admin-click bridge becomes painful later (e.g., Claude driving larger orchestrations), a programmatic HTTP endpoint becomes worth the auth + payload-schema cost. Not now.
 
 ---
 
@@ -128,14 +143,36 @@ Revised 2026-05-18 from the original "Drive is truth for everything" rule. The n
 
 - `for-claude/` prefix locks in the §19 open question — purpose unmistakable, no guessing.
 - `archive/` reserved for retired stuff later.
-- Templates, images, newsletters, emails, social: no Drive folders needed — their assets live native (Canva, Mailchimp) and their text/meta lives on library rows.
+- Editorial images, email HTML, newsletter PDFs and other locked-content assets DO get Drive folders (see "Drive as canonical archive" below). Templates and social posts may not need Drive depending on their lifecycle.
 
-### No content snapshots
+### Drive as canonical archive (revised 2026-05-20)
 
-- Library stores reference + timestamp, not frozen copies.
-- "Locked version" = the Drive file (or git MD) at that moment.
-- Drive version history (~30 days for Docs) is the recovery surface for DOC; git history for MD.
-- Admin handles recovery beyond that — no automated facility.
+Replaces the 2026-05-18 "live native, library indexes outward" framing. **Generation tools (Canva, Mailchimp drafting) are not archival sources** — they're surfaces used to make or distribute. The actual locked-version artifact lives in Drive.
+
+Storage rules by entity type:
+
+- **MD source** → local git repo (no change). Canonical for code paths (push-posts.js).
+- **DOC for editing** → Drive (no change). Evyatar's phone-readable edit surface.
+- **Editorial images** (used in content / marketing / newsletters / emails) → Drive. Workflow: generate in Canva → download locally → register via library service → file lands in Drive folder for the concept. Canva URL not stored on the library row.
+- **Product images** → WP media library only. No Drive copy. Tied to products which sync from Comax; no editorial flow.
+- **Email HTML** → Drive once confirmed used in a campaign. Drafted locally, registered at lock, locked version lives in Drive. Mailchimp draft URL not stored.
+- **Newsletter PDFs** → Drive.
+
+The user-readable library across systems:
+- Local repo holds MD / draft HTML / source artifacts (developer-readable, git-versioned).
+- Drive holds locked editorial assets (anyone-with-Drive-access readable).
+- WP media library holds product images and any published editorial images (anyone-with-WP-access readable).
+- Mailchimp sent-campaigns archive holds what was actually delivered.
+
+### Version rule
+
+**One slug, one current version. No intra-version history in the library.**
+
+- Library row tracks: slug → current file URL(s) + current version number.
+- New version replaces the file at the same slug under the same folder. Old version overwritten; no library-side version cascade.
+- Edits between version bumps (Canva re-rolls, mid-task Claude iterations, ad-hoc tweaks) are invisible to the library and live in external systems (Drive history ~30 days for DOC, git history for MD, Canva's own history for designs).
+- Activity log entries on a file-bearing entity are only at meaningful milestones: version locks (task close), reference graph changes (added / removed), state transitions (locked / published). Mid-version edits are not logged.
+- Reconstruction of "exactly what was published with v3" is via the publish-event timestamp + external system history. Good enough at current scale.
 
 ---
 
@@ -249,13 +286,29 @@ Generic shape; same log for any entity. SysContactActivity becomes a filtered vi
 Workflows are wiring, not a primitive:
 
 - **Trigger:** state change on an entity, or external event (order completion in WP, scheduled time, file change at watched endpoint)
-- **Action:** spawn task(s) attached to relevant entity, with appropriate references
+- **Action:** spawn task(s) attached to relevant entity, with appropriate references. **May also create new entities + artifacts as part of the chain progression** (see "Chain progression creates artifacts" below).
 - **Completion handler:** when task closes, update entity state, write activity log entry, potentially fire next workflow
 
 Examples:
 - Order completion (first for customer) → spawn outreach task on customer entity, reference welcome template
-- Blog post EN locked at v1 → spawn translate_he task on the same blog post, reference EN locked version, auto-draft HE via Google Translate
+- Blog post EN locked at v1 → workflow creates HE entity row + new Drive DOC + Google Translate auto-draft + spawns translate_he task attached to HE entity with EN as reference (one atomic step, see below)
 - All distribution events for blog post X reach "sent/posted" state → mark blog post entity as `fully_distributed`
+
+### Chain progression creates artifacts
+
+Added 2026-05-20. Workflows don't just hand off between existing entities — they CREATE new ones as needed.
+
+Example: closing `task.content.edit_en` triggers a workflow that, in one atomic call to the library service:
+
+1. Creates the HE entity row in library (slug `blog-<topic>-he`, sibling pair to EN, references EN entity).
+2. Creates a new Drive DOC at the right concept folder (`/Library/blog/<topic>/<topic>-he.doc`).
+3. Calls Google Translate to populate the DOC with an auto-draft from EN.
+4. Spawns `task.content.translate_he` attached to the new HE entity, with EN entity as reference.
+5. Writes activity log entry on the HE entity ("created from EN translation workflow") and on the EN entity ("triggered HE translation").
+
+Manager (or admin) doesn't attach anything manually — the workflow handles it. The library service is the writer for all of it (per §4 "Library service is the single state writer"). One transaction, all-or-nothing.
+
+**Manual attachment escape hatch.** For edge cases where automation doesn't fit (workflow didn't fire, ad-hoc asset, special substitution), the entity drawer and task pack expose an "Add file" action — upload local file → register + upload to Drive (or wherever the file type's home is), OR paste external URL → register URL only. Runs through the library service like everything else.
 
 ---
 
@@ -327,8 +380,57 @@ Each preset shows type-specific columns + actions. User mental model preserved �
 
 - Generic: title, type, state, last touched, references count
 - Type-specific extensions per filter (e.g., blog_post adds version columns, wp_post_id, derivative count)
-- Filter chips: state, language gap, tag, taxonomy, date range
+- Filter chips: state, language (en / he / language-agnostic), language gap (siblings present?), tag, taxonomy, date range
 - Search
+
+### Task queue filter / sort / search (Residual 2 settlement, 2026-05-20)
+
+Filters (top-level chips):
+- Status (open / done / all)
+- Type — entity type: blog / email / news / image / customer / product / project / etc. ("looking at past emails and newsletters")
+- Topic — existing: Content / Inventory / CRM / Marketing / etc.
+- Assignee — mine / Evyatar / unassigned / all
+- Language — en / he / language-agnostic (useful for finding sibling-language tasks, or filtering an EN-only or HE-only workload)
+
+Search: free text on title + entity name.
+
+Sort: due date ascending default (sequence by date). User can change to topic (visual grouping) or alphabetical.
+
+Drop:
+- Priority as filter chip. Keep as visual badge in the row (Critical / High show as colored pip; Normal / Low are unstyled).
+- Due-window filter. The sort already surfaces what's soon at the top.
+
+**Overlap rule**: pick one per axis. Sort by due date OR filter by due window, not both. Filter by topic OR sort by topic, not both. Sort orders; filter subsets; doing both on the same axis is noise.
+
+Dashboard inline list pre-applies "open + mine" filter. Sidebar Tasks opens unfiltered. Same component, different starting state.
+
+### Action-feedback loop (Residual 6 settlement, 2026-05-20)
+
+Two top-level action categories.
+
+**A. Pure server actions** — no external app launched. Most actions are this (lock, publish, close, refresh-from-Comax, register-on-create). Standard loop:
+
+1. Click → `LibraryService.doAction({ task_id, action_type, payload })` via `google.script.run`.
+2. Service does all writes atomically: validate → write entity state → write activity log → close task if applicable → return affected rows.
+3. Standardized response contract: `{ ok, updated: { task, entity?, related_tasks? }, error?, validation? }`. UI replaces local rows from `updated`; no re-fetch.
+4. Feedback: brief dismissable toast on success; inline structured message in the task row on validation failure (no popup); toast with retry on system failure (no `alert()`).
+5. Button returns to normal state from the response.
+
+Service methods always return updated rows; UI never re-fetches from the queue. Activity log is written by the service inline with the state change, never as a separate UI-driven call. One feedback widget for toasts, one for inline validation — both in the shared widget kit.
+
+**B. External-app triggers** — three sub-patterns by audit-worthiness:
+
+| Sub-pattern | When | Mechanism | Existing surface |
+|---|---|---|---|
+| **B1. Log-then-launch** | Customer-touching actions (call / text / whatsapp / send email) | Pre-action modal captures channel + topic + outcome + notes. Server logs the attempt, then launches the external app (or server-sends for email). Audit captured regardless of whether the external action succeeds. | `WebAppContacts_logContactAttempt` + ManagerContactView modal |
+| **B2. Launch + task-close audit** | Editing artifacts in external tools (open Drive DOC, open Canva, open WP to edit) | No pre-action form. User launches, edits externally, returns and closes the task. Task close = audit. Notes field captures what was done. | Existing ManagerDashboardView pattern for content edit tasks |
+| **B3. Just-launch** | Pure navigation / read-only (view a WP post, view a Comax record, view a Drive doc for reference) | Plain link or button. No audit. | Existing "Open" link patterns |
+
+Rule for choosing the sub-pattern: **audit-worthiness of the touch.** Customer-touching → B1; editing artifacts → B2 (task IS the audit); reading → B3.
+
+**Patterns combine within one pack.** A pack mixes sub-patterns per action. Outreach pack typically has "Call customer" (B1) + "View customer history" (B3) + status / notes / Save section (B2 element via task close).
+
+Cross-task or cross-entity orchestrations (e.g., publish → also spawn email + social tasks) happen server-side inside the service method; response carries `related_tasks` so the UI can update those rows too. Workflow chaining doesn't leak into the UI.
 
 ### Entity detail view (drawer)
 
@@ -344,6 +446,71 @@ Each preset shows type-specific columns + actions. User mental model preserved �
 - "Show everything that references winery Galil" → products + posts + emails + templates + tasks in one result
 - "Show entity-360 for blog post Selection" → full lifecycle in one drawer
 - These are bonus; not part of the daily workflow unless you ask
+
+### Task UI shape
+
+Added 2026-05-20. The current task UIs split into two mental models — `ManagerDashboardView_v2` treats task as the unit of work (expand-in-place); `AdminDashboardView_v2` shows a summary card and jumps to `AdminProjectsView`, which treats project as the unit. That's the Frankenstein to dissolve.
+
+Target pattern: **common skeleton + type pack + shared widget kit.**
+
+- **Common skeleton** — same on every task: title, status, due, assignee, priority, references in/out, activity log, notes, close. Task primitive renders identically regardless of type.
+- **Type pack** — slotted body region per task type:
+  - `task.contact.outreach`: customer card + call/text/whatsapp buttons (already exists in `ManagerContactView`).
+  - `task.content.edit`: file link + draft status + lock button.
+  - `task.content.blog_publish`: WP push button + version-match check.
+  - `task.order.packing_available`: order list + generate-slips button.
+  - `task.confirmation.*`: confirm-completed button + notes for what was loaded.
+  - Adding a new task type = adding a type pack, not a new view file.
+- **Shared widget kit** — small, reusable: customer card, file link chip, status pills, due chip, action button row, confirm dialog, **Comax/Web/ops side-by-side comparison widget** (per the 2026-05-15 wishlist product-overview item — same widget consumed by both drawer and task pack). Three or four core widgets plus type-specific ones; type packs compose from them. Guards against per-pack widget reinvention.
+
+**Type packs choose presentation form** per task type. Three valid forms:
+
+- **Inline expand** — quick edits, status changes, notes. Current manager-dashboard pattern. Default for lightweight packs.
+- **Modal overlay** — heavy detail comparison + edit, needs full attention but still task-scoped. Validated by `PRODUCT_VERIFICATION_PLAN.md` (`ManagerProductsView.html` `editor-modal`).
+- **Dedicated view** — multi-step or context-heavy work. Validated by `ManagerContactView` for outreach.
+
+Each pack declares its form as metadata. The queue routes the click identically; the pack renders the right surface.
+
+### Drawer vs. task pack — boundary
+
+Added 2026-05-20. The entity detail drawer and task packs both surface entity data, but they serve different purposes and should not duplicate each other.
+
+- **Drawer = read-and-reconcile.** Lived-in inspection surface, opened from an entity link. Canonical example: the 2026-05-15 wishlist "Product-centered ops view" — Comax vs. Web vs. ops side-by-side for triage when something looks off on a specific product. Shows full picture; flags contradictions; deep-links to external surfaces (WP, Comax). Entity-scoped, not task-scoped.
+- **Task pack = focused action.** Action surface for a specific task. Reuses the comparison widget where useful (vintage-update pack shows the Comax/Web comparison the drawer also uses) but adds edit affordances and stays task-scoped. Closes after the action.
+- **Both compose from the shared widget kit.** Comax/Web comparison is one widget; consumed by drawer for inspection, by task pack for verification work. Same data shape, two framings.
+- **Navigation**: task pack → entity link → drawer (inspection). Drawer → attached-tasks list → task pack (action). Two-way but distinct purposes.
+
+Risk if unclear: drawer grows action buttons; task pack grows reference panels and full activity log; both bloat. Rule of thumb: if it's "do something with this," it's pack. If it's "understand this," it's drawer.
+
+Manager dashboard is already halfway there — two inline `if` branches (`isContactTask`, `isSystemTask`) and a generic fallback body. Refactor formalizes the pattern: extract branches into named packs, add the missing ones, build the widget kit.
+
+Admin collapses to the same task-as-unit-of-work model (§18: "Projects survive only for cross-entity work"). Project becomes a filter/view over the unified task queue, not the entry point. Both dashboards converge on one task UI component.
+
+### Mobile
+
+- **Queue is responsive** — list view (skeleton row) works on phone. List → tap → focused action view, not list → expand-in-place (which doesn't scale to mobile).
+- **Per-pack action views** declare mobile or desktop-only. Packs with a real mobile use case (`task.contact.outreach` → `ManagerContactView` already shipped 2026-05-14) get a mobile-shaped action view. Packs that don't get desktop-only with "open on desktop to complete" placeholder on narrow screens.
+- **Shared widgets are responsive once.** Foundation cost paid in refactor; per-pack cost paid when a real mobile case appears.
+
+Refactor, not rewrite. Bones are right; the type-pack pattern needs formalizing; admin's project-centric path collapses into the unified queue.
+
+### Project entity + chain spawning
+
+Added 2026-05-20. Per §18 "Projects survive only for cross-entity work" — what that looks like in the UI:
+
+- **Project becomes a library entity type.** Same shape as blog / email / news — slug, title, notes, state, references[], activity log, attached tasks. Just another entity, not a special container.
+- **AdminProjectsView narrows to**: (1) a drawer for project entities, (2) a filter view on the unified task queue. Not a separate task management surface.
+- **Cross-entity coordination uses references**, not containment. A campaign project entity has `references[]` pointing at the email, newsletter mention, and social post entities under that campaign. Each child entity has its own life and tasks; the project entity coordinates.
+- **Tasks attach where the work lives**: about the email → email entity; about the project as a whole → project entity. Tasks attach to one primary entity, reference others as context.
+
+**Chain spawning as the substitute for today's project-spawn-tasks capability.** Today's "Generate Outputs" button + 16 distribution templates (shipped 2026-05-11) generalize into the library era as:
+
+- **Chain templates** are reusable definitions: N tasks with relative due dates, default assignees, topics, attachment shape. The existing 16 distribution templates migrate to this form. Examples: "Newsletter Issue Distribution," "Email Campaign Build," "Blog Post End-to-End."
+- **"Spawn chain" action available on any entity drawer** that has chain templates registered for its type. Admin opens the entity, clicks Spawn chain, picks template, system creates the tasks attached to the right entities with appropriate due dates and assignees. Generalizes the Generate Outputs button to any entity, not project-exclusive.
+- **Spawned tasks are independent.** The chain template is a one-time generator. Once spawned, admin can edit, skip, close ahead, reassign, add new ones, or delete. The template doesn't constrain after creation.
+- **Ad-hoc task creation** (today's `task.project.custom`) becomes a "Create task" action available on any entity drawer.
+
+What this preserves from today: chain-of-tasks orchestration, admin's path-planning move, reuse of the 16 distribution templates. What it gains: chain spawning everywhere, not projects-only.
 
 ---
 
@@ -465,7 +632,7 @@ Order matters; each step unblocks the next.
 1. **Lookup-add UI** (prerequisite). Small scope, immediate need.
 2. **Library schema** designed and seeded. Even if empty, lock down columns.
 3. **Single-tab Claude-readable exports pattern** — prove with one trial (e.g., GA4 trend data from 2026-05-17).
-4. **Library UI list view** (read-only against schema). Validates shape before writing.
+4. **Library UI list view + task UI refactor.** Build read-only library list using the common-skeleton + type-pack pattern with a shared widget kit (§11). Refactor `ManagerDashboardView_v2` task list to formalize the pattern; collapse `AdminDashboardView_v2` + `AdminProjectsView` task surface into the same shape — project becomes a filter over the unified queue. Validates shape before writing.
 5. **First entity types: `blog` + `image`.** Create new posts as library entities (sibling-language pair per post) with their image entities (featured + body); existing posts remain in current pattern.
 6. **Active update from Claude** on content creation — Claude writes library rows when it creates posts. Ops emits a lightweight orphan-content-files integrity report on cadence as a backstop against missed updates.
 7. **Task-chain integration** — ops spawns standard task chain when a new library row appears (via Claude's explicit call, not polling).
@@ -518,6 +685,19 @@ Added 2026-05-20:
 
 - **Outreach templates with multi-language requirement: force version alignment.** Block send if peer-language template not at same locked version. Applies to welcome, abandoned-order, and future outreach templates (cooling, VIP, win-back). Mismatch surfaces as a content gap in admin session, not a runtime fallback decision. Closes §19's cross-language mismatch question.
 - **Ops emits orphan-content-files integrity report on cadence** as a backstop against missed active updates from Claude (phase 6). Lightweight check, not a primary mechanism.
+- **§4 in-session task-row carve-out retracted.** Tasks for all workflow work involving human action; manual close is a trivial click. Sync-cycle confirmation tasks (`task.confirmation.*`) confirm external state (orders loaded into Comax), they're real work, not UI cruft. See §4.
+- **Library service is the single state writer.** UI is the only direct caller via `google.script.run`. Claude acts via admin clicks for state changes; Claude's only library write path is a register-on-create endpoint called by a local script after artifact creation. See §4 final subsection.
+- **Task UI = common skeleton + type pack + shared widget kit.** Manager dashboard is already halfway there; admin collapses from project-centric to task-as-unit-of-work; mobile via queue-responsive + per-pack action views. Refactor, not rewrite. See §11.
+- **Type packs choose presentation form** per task type: inline expand (lightweight), modal overlay (heavy comparison, validated by PRODUCT_VERIFICATION_PLAN), or dedicated view (multi-step, validated by ManagerContactView). Pack declares its form as metadata; queue routes clicks identically. See §11.
+- **Drawer vs. task pack boundary**: drawer is read-and-reconcile (lived-in inspection, e.g., wishlist 2026-05-15 product overview — Comax/Web/ops side-by-side for triage). Task pack is focused action (transient, task-scoped). Both compose from the shared widget kit; the Comax/Web comparison widget is consumed by both. See §11.
+- **Drive as canonical archive (revises 2026-05-18 "live native").** Generation tools (Canva, Mailchimp drafting) are not archival sources. Editorial images, email HTML, newsletter PDFs, DOCs all live in Drive once locked. Product images are the narrow exception — they live in WP media library only. See §5.
+- **One slug, one current version. No intra-version history in the library.** New version replaces old at the same slug. Mid-version edits live in external systems (Drive history, git, Canva); invisible to the library. Activity log only records version locks, reference-graph changes, state transitions. See §5 version rule.
+- **Activity log surface boundaries.** Three distinct logs: SysLog (system operations, existing), entity activity log (per-entity, drawer surface, new under library), task history (per-task lifecycle, inline in task pack skeleton). A single action may write to all three; they don't replicate each other. Task creation / closure are recorded on the task itself, not in the entity log — the entity log records ENTITY events with `task_id` as context.
+- **Project becomes a library entity type, not a container.** AdminProjectsView narrows to (1) drawer for project entities, (2) filter view on the unified task queue. Tasks attach where the work lives (email task → email entity; project-level task → project entity); cross-entity coordination uses references[], not containment. See §11.
+- **Chain spawning generalizes the project-spawn-tasks capability.** Existing 16 distribution templates (shipped 2026-05-11) migrate to chain templates registered against entity types. "Spawn chain" action available on any entity drawer with registered templates. Spawned tasks are independent (admin can edit / skip / close / reassign / delete; template is a one-time generator). See §11.
+- **Workflows create new entities + artifacts as part of chain progression**, not just hand off between existing entities. Closing `task.content.edit_en` triggers creation of the HE entity, Drive DOC, Google Translate auto-draft, and the `translate_he` task all atomically via the library service. Manual attachment escape hatch on entity drawer / task pack for edge cases. See §9.
+- **Task queue filters (Residual 2 settlement)**: status, type (entity type), topic, assignee, language. Sort by due date ascending default. Drop priority as filter chip (keep as visual badge); drop due-window filter (sort covers it). Overlap rule: one mechanism per axis. See §11.
+- **Action-feedback loop (Residual 6 settlement)**. Two categories: (A) pure server actions follow a standard loop (`LibraryService.doAction` → atomic write + activity log + task close → standardized response → UI replaces rows from response; toast / inline / no `alert()`); (B) external-app triggers split three ways by audit-worthiness: B1 log-then-launch (customer-touching, existing ManagerContactView modal), B2 launch + task-close audit (editing in Drive / Canva / WP), B3 just-launch (read-only navigation). Patterns combine within a pack. See §11.
 
 ---
 
