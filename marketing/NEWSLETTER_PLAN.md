@@ -2,7 +2,7 @@
 
 **Purpose.** Two-sided printed sheet, one language per side (EN / HE), distributed monthly via online order shipments and brick-and-mortar store handouts. A companion email goes to the email list the same week. Drives signups to the email list and reinforces JLM's editorial voice.
 
-**Status.** Layout and content model agreed 2026-05-08. Workflow finalized 2026-05-19 after MCP capability audit (Canva for image gen only, Mailchimp manual paste, Drive for finished-doc delivery; pandoc + reference docx templates do the layout work). First issue (Context post) launching 2026-05.
+**Status.** Layout and content model agreed 2026-05-08. Workflow revised 2026-05-19: Google Doc template per language built once in Drive; per-issue paste-source docx files (one per language, links preserved) delivered to the issue folder; user duplicates template + pastes content + drops in article QR + prints. First issue (Context post) launching 2026-05.
 
 ---
 
@@ -94,7 +94,7 @@ Lift the live-site footer copy verbatim so print and web reinforce each other. T
 ### Typography
 - Secular One for headlines (matches the 2026-05-04 site headline-font swap)
 - Rubik for body
-- Set in the reference docx template, not specified per-issue.
+- Set in the Google Doc template; not specified per-issue. Full style table in Mechanics.
 
 ---
 
@@ -118,37 +118,160 @@ Lift the live-site footer copy verbatim so print and web reinforce each other. T
 
 ## Mechanics
 
-### Workflow
+### Production approach
 
-1. **Author markdown** — issue content (primary article excerpt + Making Wine entry + Did You Know if applicable) drafted as a single markdown file: `marketing/newsletter/issues/<YYYY-MM>-<lang>.md`.
-2. **Generate images in Canva** — Evyatar runs prompts (session-provided) in Canva for any per-issue line art; saves outputs to `marketing/newsletter/images/`. The recurring banner is reused across issues.
-3. **Embed in markdown** — image references in the markdown point at local paths.
-4. **Pandoc convert** — `pandoc <issue>.md --reference-doc=marketing/newsletter/template-<lang>.docx -o <issue>.docx` produces the finished docx with masthead, banner, two-column body, footer applied from the template.
-5. **Upload to Drive** — finished docx pushed to the newsletter folder in Google Drive via Drive MCP (`create_file`). User opens, prints, distributes.
+One Google Doc template per language, built manually in Drive (one-time). Per issue: user duplicates the template, pastes content from per-issue paste-source docx files, drops in the article QR, prints. No jlmops automation for Issue #1; Library work may automate later.
 
-### Reference docx templates
+### Template — page setup
 
-Two one-time-setup files:
-- `marketing/newsletter/template-en.docx` — LTR, masthead/banner-region/two-column body/footer, with Secular One + Rubik styles configured.
-- `marketing/newsletter/template-he.docx` — RTL mirror.
+- **Paper:** A4 portrait (21 cm × 29.7 cm)
+- **Margins:** 1.5 cm top/bottom, 2 cm left/right
+- **Body width after margins:** 17 cm
+- **Single page per language side**
 
-These are the layout artifacts. Pandoc uses them as style references; the body content comes from the per-issue markdown.
+### Template — content stack (top to bottom)
 
-### QR code
+All content lives in the document body, not in Google Docs' Header/Footer features (except the footer URL band — that goes in the Footer feature so it stays anchored if a future issue ever spills to a second page).
 
-- **Size: 3 cm × 3 cm** with 3–4 mm clean white quiet zone
-- **Error correction: Q (25%)** — survives folds, smudges, light handling in shipping boxes and shop bags
-- **Format:** SVG (vector) for layout; PNG ≥600 DPI if SVG unavailable
-- **Contrast:** pure black on pure white, no screened backgrounds
-- **URL pattern:** `jlmwines.com/n/<short-code>` (server-side redirect adds canonical UTM params). Until the redirect helper exists (jlmops wishlist 2026-05-08), use the canonical UTM'd URL directly — accept slightly denser code or bump size to 3.5 cm.
-- **Two QRs max per side:** article QR (left column), signup QR (right column). Second post in the secondary slot uses text URL only, not a third QR.
-- **Static per issue** — generate fresh each issue, no per-customer personalization.
+1. **Logo + wordmark row** (~1.5 cm tall)
+   - Left: one-color JLM logo, ~3 cm wide
+   - Right of logo: wordmark "Wine Talk — from Evyatar" set in Secular One 16pt
+   - HE template: same row structure; with RTL paragraph direction the logo visually flips to the right side
+
+2. **Recurring B&W banner** (~3 cm tall, full body width)
+   - Image: `banner.png` stored in `Newsletter/templates/` (PNG; Google Docs doesn't render inline SVG reliably)
+   - Centered, no caption
+   - Identical across every issue
+
+3. **Body table** (the 2-cell working area)
+   - 1 row × 2 cells
+   - **Left cell:** 10 cm wide
+   - **Right cell:** 7 cm wide
+   - Border width: 0 (invisible)
+   - Cell padding: 0.3 cm
+   - Vertical alignment: top
+   - HE template: same cell structure with same role mapping (first cell = article, second cell = Making Wine). RTL paragraph direction handles the visual flip.
+
+4. **Footer** (Google Docs Footer feature)
+   - "jlmwines.com" centered, Rubik 9pt
+
+### Template — left cell contents (placeholder)
+
+Top to bottom:
+
+1. **Article title** — Heading 2 style placeholder: `[Article Title]`
+2. **Article excerpt** — Normal text placeholder, 2-4 paragraphs of lorem ipsum
+3. **Signature** — handwritten "Evyatar" PNG, ~4 cm wide, left-aligned, with `— ` prefix
+4. **Horizontal divider** — single-paragraph border-bottom (subtle gray)
+5. **"Read the full article"** — Normal text label
+6. **Article QR placeholder** — 3 cm × 3 cm placeholder image (any dummy PNG with correct dimensions)
+7. **URL text fallback** — Caption style, e.g., `jlmwines.com/n/<short-code>`
+
+### Template — right cell contents (placeholder)
+
+Top to bottom:
+
+1. **Section heading** — Heading 2 placeholder: `Making Wine — [topic]`
+2. **Making Wine body** — Normal text placeholder, 2-3 paragraphs
+3. **Horizontal divider** — same style as left cell
+4. **CTA copy** — *Fixed across issues.* Normal text. EN working copy: "Follow along — Evyatar's monthly notes from vineyard to bottle. Subscribe by email." HE copy TBD.
+5. **Signup QR** — *Fixed across issues.* 3 cm × 3 cm. Same image file (`qr-signup-en.png` / `qr-signup-he.png`) every issue.
+6. **URL text fallback** — Caption style, e.g., `jlmwines.com/n/sub`
+
+The divider, CTA copy, signup QR, and URL fallback below it are part of the template and never change per issue. The user only replaces the heading + body above the divider.
+
+### Template — fonts
+
+Both fonts are in Google Fonts and need to be added to the doc font picker before use:
+- **Secular One** — Font picker → More fonts → search → Add → close
+- **Rubik** — same procedure
+
+### Template — paragraph styles
+
+| Style | Font | Size | Weight | Line spacing | Use |
+|---|---|---|---|---|---|
+| Heading 1 | Secular One | 18pt | Bold | 1.15 | Wordmark |
+| Heading 2 | Secular One | 14pt | Bold | 1.15 | Article title, Making Wine heading |
+| Normal text | Rubik | 11pt | Regular | 1.15 | All body |
+| Caption | Rubik | 9pt | Regular | 1.0 | URL fallback, footer |
+
+Set via Format → Paragraph styles → [style] → "Update [style] to match" after styling a sample paragraph.
+
+### Building the HE template
+
+1. Drive: right-click `Wine Talk EN template` → Make a copy → rename `Wine Talk HE template`
+2. Tools → Preferences → check "Display right-to-left controls"
+3. File → Language → Hebrew (Israel)
+4. Select all body paragraphs, click the RTL button in the toolbar to flip paragraph direction
+5. Replace placeholder text with Hebrew:
+   - Wordmark: TBD final HE copy
+   - Article title placeholder: `[כותרת המאמר]`
+   - Article excerpt placeholder: Hebrew lorem ipsum
+   - "Read the full article": `קראו את המאמר המלא`
+   - CTA copy: TBD final HE copy
+   - URL fallbacks: same URLs (no translation)
+6. Cell widths stay the same; visual flip happens automatically.
+
+### Drive folder layout
+
+```
+Newsletter/
+├── templates/
+│   ├── Wine Talk EN template       (Google Doc)
+│   ├── Wine Talk HE template       (Google Doc)
+│   ├── banner.png                  (recurring B&W banner)
+│   ├── signature-evyatar.png       (signature placeholder/real)
+│   ├── jlm-logo-1color.png         (one-color logo)
+│   ├── qr-signup-en.png            (signup QR EN — fixed)
+│   └── qr-signup-he.png            (signup QR HE — fixed)
+└── issues/
+    └── 2026-05/
+        ├── 2026-05-en.docx                 (paste-source EN: left content → page break → right content)
+        ├── 2026-05-he.docx                 (paste-source HE: same structure)
+        ├── 2026-05-qr-article-en.png       (per-issue article QR)
+        ├── 2026-05-qr-article-he.png
+        ├── Wine Talk 2026-05 EN            (assembled EN, Google Doc)
+        └── Wine Talk 2026-05 HE            (assembled HE, Google Doc)
+```
+
+### QR code specifications
+
+- **Size: 3 cm × 3 cm** with 3-4 mm white quiet zone
+- **Error correction: Q (25%)** — survives folds, smudges, light handling
+- **Format:** PNG ≥600 DPI (vector preferred when Google Docs reliably supports SVG inline)
+- **Contrast:** pure black on pure white
+- **URL pattern:** `jlmwines.com/n/<short-code>` (server-side redirect adds canonical UTM params); until the redirect helper exists (jlmops wishlist 2026-05-08), use the canonical UTM'd URL directly and accept slightly denser code (or bump to 3.5 cm if scan reliability suffers)
+- **Two QRs max per side:** article QR (left cell), signup QR (right cell)
+- **Static per issue** — no per-customer personalization
+
+### Per-issue workflow
+
+For each issue:
+
+1. **Session produces** (uploaded to `Newsletter/issues/<YYYY-MM>/` via Drive MCP):
+   - `<YYYY-MM>-en.docx` — left content + page break + right content (hyperlinks live)
+   - `<YYYY-MM>-he.docx` — same structure
+   - `<YYYY-MM>-qr-article-en.png` — article QR EN
+   - `<YYYY-MM>-qr-article-he.png` — article QR HE
+   - Canva prompts come in chat (no docx)
+
+2. **User assembles each language (~5 min)**:
+   - Drive: right-click `Wine Talk EN template` → Make a copy → rename `Wine Talk <YYYY-MM> EN` → move to issue folder
+   - Open. Also open `<YYYY-MM>-en.docx` in a second tab.
+   - Copy the left-content block from the paste-source → paste into the template's left cell, replacing the left-cell placeholder above the divider
+   - Copy the right-content block (after the page break) → paste into the right cell, replacing the heading + body above the right-cell divider
+   - In the left cell, right-click the QR placeholder image → Replace image → Upload from computer → select `<YYYY-MM>-qr-article-en.png`
+   - File → Print
+   - Repeat for HE
 
 ### Content sourcing
 
-- **Primary article excerpt:** each blog post source file (in `content/`) contains a `## NEWSLETTER EXCERPT (web/social)` section + `## PRINT NEWSLETTER BODY` section. Lift the print body into the layout.
-- **Making Wine:** 12-month draft maintained by Evyatar; month-specific sections lifted into the issue markdown after Evyatar's edit pass.
-- **Did You Know:** static library above; rotate or repeat as needed.
+- **Article excerpt:** lifted from the blog post source file (`content/<post>.post.md`), `## PRINT NEWSLETTER BODY` section if present, else hand-distilled from the post body
+- **Making Wine entry:** Evyatar's 12-month draft, current month section, after his monthly edit pass
+- **CTA copy + signup QR:** stable; lives in the template; updated in-template if/when the copy changes
+- **Article QR target URL:** `jlmwines.com/n/<short-code>` (or canonical UTM'd URL until redirect helper exists)
+- **Signup QR target URL:** `jlmwines.com/n/sub` (fixed)
+- **Did You Know:** static library in the Layout section; rotate or repeat as needed when the right-cell secondary slot is used
 
 ---
 
