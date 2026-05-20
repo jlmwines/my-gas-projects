@@ -1210,8 +1210,7 @@ hr.divider { border: 0; border-top: 1px solid var(--c-ink-12); margin: var(--s-8
   flex-direction: column;
   gap: var(--s-2);
   /* UI sans (Rubik) for both EN and HE — the previous display serif
-     felt too formal/headline-style for menu items. Slightly smaller
-     than before because Rubik's x-height runs larger than David Libre. */
+     felt too formal/headline-style for menu items. */
   font-family: var(--f-ui);
   font-weight: 500;
   font-size: 18px;

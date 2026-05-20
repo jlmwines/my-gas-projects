@@ -467,7 +467,7 @@ Order matters; each step unblocks the next.
 3. **Single-tab Claude-readable exports pattern** — prove with one trial (e.g., GA4 trend data from 2026-05-17).
 4. **Library UI list view** (read-only against schema). Validates shape before writing.
 5. **First entity types: `blog` + `image`.** Create new posts as library entities (sibling-language pair per post) with their image entities (featured + body); existing posts remain in current pattern.
-6. **Active update from Claude** on content creation — Claude writes library rows when it creates posts.
+6. **Active update from Claude** on content creation — Claude writes library rows when it creates posts. Ops emits a lightweight orphan-content-files integrity report on cadence as a backstop against missed updates.
 7. **Task-chain integration** — ops spawns standard task chain when a new library row appears (via Claude's explicit call, not polling).
 8. **Translation button + Google Translate auto-draft** on translate task.
 9. **Detail view + action buttons** (publish, version-match check, etc.).
@@ -514,6 +514,11 @@ Added 2026-05-18:
 - **Campaign KPIs as stats columns on entity rows**, refreshed on cadence by ops from Mailchimp/GA4/orders (see §21).
 - **Latest-locked-is-active** for templates and other versioned entities. Defer `active_version` pointer for A/B testing until real need.
 
+Added 2026-05-20:
+
+- **Outreach templates with multi-language requirement: force version alignment.** Block send if peer-language template not at same locked version. Applies to welcome, abandoned-order, and future outreach templates (cooling, VIP, win-back). Mismatch surfaces as a content gap in admin session, not a runtime fallback decision. Closes §19's cross-language mismatch question.
+- **Ops emits orphan-content-files integrity report on cadence** as a backstop against missed active updates from Claude (phase 6). Lightweight check, not a primary mechanism.
+
 ---
 
 ## 19. Open questions
@@ -524,12 +529,15 @@ Closed 2026-05-18:
 - ~~Claude-readable exports folder naming.~~ Closed: `for-claude/` prefix (see §5).
 - ~~Active version vs latest locked for templates.~~ Closed: latest-locked-is-active; A/B testing pointer deferred.
 
+Closed 2026-05-20:
+
+- ~~Cross-language template mismatch in outreach: welcome EN locked at v2 but HE still at v1 — when trigger fires for HE customer, use HE v1, block task, or escalate?~~ Closed: force version alignment. Block send if peer-language template not at same locked version. Same rule for abandoned-order email and future outreach templates (cooling, VIP, win-back). Mismatch surfaces in admin session as a content gap to resolve, not as a runtime fallback decision.
+
 Still open:
 
 - Where exactly the library lives in `JLMops_Data` workbook (one sheet vs one tab per type).
 - Bidirectional Drive interaction later? Claude wanting to *write* something for ops to react to — for now no, but worth keeping in mind.
 - For multi-language content, when admin pushes to WP and EN/HE versions don't match: hard block or just warn? (Current decision: hard block, escalate to admin in-session.)
-- Cross-language template mismatch in outreach: welcome EN locked at v2 but HE still at v1 — when trigger fires for HE customer, use HE v1, block task, or escalate? (Open.)
 - Template retirement lifecycle — deprecated → archived → ? (Open.)
 - KPI refresh cadence + ownership — who runs the Mailchimp pull (jlmops housekeeping?), how often, what triggers an out-of-cadence refresh (admin button on detail view?). See §21.
 

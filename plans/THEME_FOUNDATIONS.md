@@ -113,7 +113,7 @@ The visual translation of the above is documented in `plans/design-system/RATION
 
 - **Aesthetic direction:** editorial-confident-warm. Substantial typography, generous whitespace, the bottle is the hero.
 - **Palette:** cream `#f7f3ec`, ink `#1a1612`, terracotta accent `#a83920`, sage success `#4a7a3e`, amber warning `#c9882c`. Eight tokens total.
-- **Type:** David Libre (display, mid-century Hebrew serif) + Rubik (UI/body, friendly sans for HE+EN). No italic anywhere — emphasis via family-shift, color, or weight.
+- **Type:** Secular One (display) + Rubik (UI/body, friendly sans for HE+EN). No italic anywhere — emphasis via family-shift, color, or weight.
 - **Image registers:** catalog (1000×1000 transparent PNG, locked) + blog/editorial (Canva impressionist oil painting 16:9, locked) + hero/lifestyle (open — see `EDITORIAL_TOKEN_MIGRATION.md` and pending imagery direction plan).
 - **Footer is the only dark surface** in the system.
 

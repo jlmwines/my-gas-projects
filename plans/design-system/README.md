@@ -16,7 +16,7 @@ Open `index.html` in any modern browser. No build, no server needed.
 
 The page walks through:
 1. Color system (8 tokens)
-2. Typography (David Libre + Rubik, EN + HE)
+2. Typography (Secular One + Rubik, EN + HE)
 3. Buttons & links
 4. Product cards (5 variants: red, white, rosé, boxed, accessory)
 5. Bundles & packages (standard bundle + curated package)

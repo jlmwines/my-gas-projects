@@ -55,7 +55,7 @@
 
 - **Display / headings:** Secular One (loaded from Google Fonts; Heebo as system fallback)
 - **UI / body:** Rubik 400/500/600/700 (loaded from Google Fonts)
-- Font swap landed 2026-05-04 (replaced David Libre with Secular One — keep this section honest, prior versions of this doc named David Libre)
+- Font swap landed 2026-05-04 — Secular One adopted as the display face.
 
 ### Other tokens
 
@@ -88,7 +88,7 @@
 ### Newsletter print insert
 
 - Voice: editorial, not pitchy
-- Visual: matches website typography (David Libre + Rubik)
+- Visual: matches website typography (Secular One + Rubik)
 - Operating model: `marketing/NEWSLETTER_PLAN.md`
 - Status: First issue queued for post-cutover
 

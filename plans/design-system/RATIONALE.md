@@ -54,7 +54,7 @@ Hover state for accent: `#8e2f1a` (slightly deeper) — keeps contrast with whit
 
 ## Typography (bilingual, two families — resolved 2026-04-27)
 
-**Display: David Libre** (weights 400, 500, 700)
+**Display: Secular One** (weights 400, 500, 700)
 - Mid-century Hebrew serif, drawn by Ismar David in the 1950s, Google-revived. Modern enough to read editorial; distinctly not liturgical (avoids the prayerbook association of Frank Ruhl Libre).
 - Three weights give the type scale flexibility — H1 at 500, H2 at 500, eyebrow and pull-quote at 400.
 - Latin companion is solid humanist serif. Less refined than FRL Latin but close enough, and the trade-off was worth it to escape the religious-text reading.
@@ -70,7 +70,7 @@ Hover state for accent: `#8e2f1a` (slightly deeper) — keeps contrast with whit
 **No italic anywhere — bilingual constraint.** Hebrew lacks italic by tradition; browsers fake it via skew, which leans against right-to-left reading and fights the eye. The system uses only treatments that work identically in both scripts:
 - Color shift (terracotta) for emphasis
 - Weight bump (Rubik 400 → 500) for stronger emphasis
-- Family shift (David Libre among Rubik) for register changes — this is what carries voice moments where FRL italic used to
+- Family shift (Secular One among Rubik) for register changes — this is what carries voice moments where FRL italic used to
 - Size, ornament prefix (em-dash, rule), color tone
 
 **Why this pair over alternatives considered:**
@@ -84,17 +84,17 @@ Hover state for accent: `#8e2f1a` (slightly deeper) — keeps contrast with whit
 
 | Size | Mobile | Desktop | Family | Weight | Line-height |
 |------|--------|---------|--------|--------|-------------|
-| H1 (Display) | 44px | 60px | David Libre | 500 | 1.1 |
-| H2 (Display) | 30px | 38px | David Libre | 500 | 1.3 |
+| H1 (Display) | 44px | 60px | Secular One | 500 | 1.1 |
+| H2 (Display) | 30px | 38px | Secular One | 500 | 1.3 |
 | H3 (UI) | 22px | 26px | Rubik | 600 | 1.3 |
 | Body | 16px | 17px | Rubik | 400 | 1.55 |
 | Small | 14px | 14px | Rubik | 400 | 1.55 |
 | Micro / Caption | 12px | 12px | Rubik | 600 (uppercase EN, regular HE, +0.10em tracking) | 1.4 |
 | Price | 24px | 28px | Rubik | 500 (tabular numerals, −0.01em tracking) | 1 |
-| Eyebrow | 18px | 18px | David Libre | 400 (terracotta) | 1.4 |
-| Section number | 28px | 28px | David Libre | 500 (terracotta) | 1 |
+| Eyebrow | 18px | 18px | Secular One | 400 (terracotta) | 1.4 |
+| Section number | 28px | 28px | Secular One | 500 (terracotta) | 1 |
 
-**Eyebrow treatment:** David Libre regular at 18px in terracotta. The serif-among-sans contrast itself is the voice marker — no slant, no case treatment, works identically in EN and HE. Em-dash prefix as ornamental anchor.
+**Eyebrow treatment:** Secular One regular at 18px in terracotta. The serif-among-sans contrast itself is the voice marker — no slant, no case treatment, works identically in EN and HE. Em-dash prefix as ornamental anchor.
 
 **Hebrew adjustments:**
 - +1px on body size (Hebrew letterforms read smaller at the same point size)
@@ -128,7 +128,7 @@ Available as `--s-1` through `--s-24`. No values outside this scale.
 Logo + nav + language switcher + cart icon + search. Cart icon has a small terracotta badge for item count. Language switcher uses underline (terracotta) on the active language — quiet but unmistakable. **Sticky on scroll** with subtle compress and a 1px ink-12 bottom border.
 
 ### Hero
-Eyebrow (David Libre regular, terracotta) + display headline + body subline + two CTAs (primary + ghost) + bottle visual with floating animation (6s gentle drift) and a centered shelf shadow. The shelf shadow is two layers: a hairline grey line + a soft radial shadow — gives the bottle a place to sit. (Hero retains its shelf treatment because the bottle here is a single hero element, not a catalog grid.)
+Eyebrow (Secular One regular, terracotta) + display headline + body subline + two CTAs (primary + ghost) + bottle visual with floating animation (6s gentle drift) and a centered shelf shadow. The shelf shadow is two layers: a hairline grey line + a soft radial shadow — gives the bottle a place to sit. (Hero retains its shelf treatment because the bottle here is a single hero element, not a catalog grid.)
 
 ### Product cards
 - White surface, 1px ink-12 border (almost invisible, just enough definition)
@@ -219,7 +219,7 @@ Atmospheric food-and-table moments, bright daylight, no vineyard sunsets. Catalo
 
 A few decisions in this design system imply theme structure choices:
 
-1. **Two font families, seven weights total** (David Libre 400/500/700, Rubik 400/500/600/700) = ~140 KB of font data. Single combined Google Fonts request with `font-display: swap`. Subset to Hebrew + Latin only (drop Cyrillic, Greek, etc.) — saves another ~30 KB. Self-host if Israel-EU latency to Google fonts is a problem.
+1. **Two font families, seven weights total** (Secular One 400/500/700, Rubik 400/500/600/700) = ~140 KB of font data. Single combined Google Fonts request with `font-display: swap`. Subset to Hebrew + Latin only (drop Cyrillic, Greek, etc.) — saves another ~30 KB. Self-host if Israel-EU latency to Google fonts is a problem.
 
 2. **Eight CSS custom properties for color** = the entire palette. Theme can expose via `theme.json` (for the block editor) and as CSS variables (for runtime). One source of truth.
 
@@ -271,7 +271,7 @@ The live site already runs these — the theme replacement keeps the plugins, th
 - **Iconography beyond the 3 in the sprite** — menu hamburger, account avatar, filter, search magnifier. Keep them in the same line-weight family as the cart icon (1.6px stroke, rounded caps). Wishlist icon is *not* needed — feature retired.
 - **Loading states / skeletons** — not designed yet; should follow the system (cream-tinted blocks, no shimmer, no spinning).
 - **Empty states** (empty cart, no search results, etc.) — small editorial moments, friendly tone, clear next action.
-- **Product detail page layout** — for now, single PDP layout for all products (individual wines, bundles, packages). Refine by category as needed after viewing what we have. Implied direction: large square image (or gallery), title in David Libre, body description in Rubik, sensory framework indicators, related-products grid below.
+- **Product detail page layout** — for now, single PDP layout for all products (individual wines, bundles, packages). Refine by category as needed after viewing what we have. Implied direction: large square image (or gallery), title in Secular One, body description in Rubik, sensory framework indicators, related-products grid below.
 - **Cart page layout** — implied: line items as compact horizontal cards, free-shipping monitor at the top, totals on the right (or below on mobile).
 - **Form styling beyond the newsletter input** — checkout, account, contact forms. Should follow the input pattern shown in the footer (transparent background, ink border, terracotta on focus).
 - **Complianz scroll-jump bug** — close button currently moves the user to the bottom of the page. Investigate plugin config or replace.
@@ -282,7 +282,7 @@ The live site already runs these — the theme replacement keeps the plugins, th
 
 Things I'm confident about:
 - The terracotta accent is differentiated and brand-appropriate
-- The David Libre + Rubik pairing reads modern in both scripts without religious-text association
+- The Secular One + Rubik pairing reads modern in both scripts without religious-text association
 - No-italic system handles Hebrew without leaning against reading direction
 - WooCommerce native sale-flash hookup avoids reinventing the discount badge
 - One bundle-card chassis (with tag-pill variants) is simpler than the original dual-track and matches how the data is actually structured
@@ -290,7 +290,7 @@ Things I'm confident about:
 
 Things to validate before committing to PHP:
 - **Real product PNGs** are now in the cards (Ella Valley, Azeka Blend, Rakia from the live site). Confirm the shelf shadow tunes correctly across these — the existing imagery has its own white-surface conventions.
-- **Hebrew display headline at H1 mobile (44px David Libre)** — the Hebrew demo uses H2 (30px) for layout reasons; need to verify the full 44px David Libre renders cleanly on small Android browsers.
+- **Hebrew display headline at H1 mobile (44px Secular One)** — the Hebrew demo uses H2 (30px) for layout reasons; need to verify the full 44px Secular One renders cleanly on small Android browsers.
 - **Free shipping bar contrast** — the terracotta fill on cream-base is intentional but should be tested with users to confirm the bar is visible enough to register peripherally.
 - **Floating cart bar + WhatsApp icon collision** — both target the bottom of viewport. Spec says opposite horizontal corners, but mobile viewports under 360px may still feel crowded. May need a collapsed cart bar state on the smallest screens.
 - **Complianz cookie banner** — current production has a scroll-jump bug on close. Verify with the new theme styling or budget plugin replacement.
