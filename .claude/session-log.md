@@ -4,6 +4,43 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-21 (later still — `LOOKUP_ADMIN_UI_PLAN.md` refined and locked)
+
+- Walked the lookup plan one-at-a-time through several rounds of narrowing. Starting shape (skeleton + per-pack + widget kit, two phases) collapsed under user pushback to the actual usage profile ("I almost never touch them; just make this easy").
+- **Surface decision:** card on `AdminProductsView` (Card 4 below SKU Management), not a new view + nav entry. User principle: "more view links is not better than more cards on one view that share the same purpose." Saved as memory `feedback_cards_over_view_links` for future UI defaults across jlmops.
+- **Scope collapse:** delete dropped (user handles removals manually for data-integrity reasons). Retire/soft-delete dropped. Widget kit / pack abstraction / skeleton dropped — three sections, plain. Texts folded from phase 2 to phase 1 (user wanted it now; same shape as Grapes/Kashrut).
+- **Validation locked:** key unique + EN + HE required, uniform across all three lookups. `slt_Note` free-text used as sort/filter on Texts section, no validation. User commits to normalizing existing rows so EN+HE-required is satisfiable everywhere; no migration step or legacy carve-out needed.
+- **Schema/config check, corrections made:** initial plan claimed schemas.json + mappings.json changes were needed. Verified: all three sheets already registered in `system.sheet_names` + `map.grape_lookups`/`map.kashrut_lookups`/`map.text_lookups` (each with sheet_name + key_col — I missed map.text_lookups' key_col on first read because it's split across two rows in the same key block). `LookupService.getLookupMap()` reads headers from row 1 at runtime, no `schema.data.*` consulted. **Zero config-file changes required.**
+- **Code-review pass before close.** Read `AdminProductsView.html` (1588 lines), `WebApp.js` routing, `LookupService.js`, sampled `WebAppCampaigns.js` for controller shape. Banked concrete patterns + line references in the plan: Suggestion Approval Modal (`AdminProductsView.html:430-457`) is near-perfect template for add/edit modal (already has SKU + Name EN + Name HE fields); modal-overlay toggle pattern via `style.display`; `btn btn-sm` everywhere in-card (no `btn-primary`); `{error, data}` envelope from `WebAppCampaigns_*`; `*TextEN`/`*TextHE` suffix detection for generic EN+HE validation; `AdminProductsView.lookup{Regions,Grapes,Kashrut}` state slots already declared at lines 560-562 but unused — repopulate two, add `lookupTexts`.
+- **Defaults set:** Grapes/Kashrut sort alphabetical by EN (mirrors `ProductService.js`); Texts sort by `slt_Code` ascending; per-row Edit button (not row-click) to match existing per-row Action button pattern; card appended below SKU Management as Card 4.
+- **Auth:** inherited from AdminProductsView's existing role gating (per `WebApp.js:doGet`). No separate role check on the controller. No activity logging.
+- **Plan size:** started ~95 lines, ended ~110 lines but flat in content depth — most of the additions are concrete copy-from line refs + the patterns block. STATUS.md Updated paragraph extended with thread (4); Open Bugs row updated; `.claude/bugs.md` 2026-05-17 entry rewritten to reflect locked plan; CONTENT_LIBRARY_PLAN §17 phase #1 prerequisite line updated.
+- Next session: implement the lookup card in one pass — `LookupService.js` write methods → new `WebAppLookups.js` controller → new Lookups card in `AdminProductsView.html`. Stop after each step for OK per `feedback_narrate_intent_before_action`.
+
+---
+
+## 2026-05-21 (later — §19 cleanup walkthrough + lookup-add UI plan doc)
+
+- Walked §19 of `plans/CONTENT_LIBRARY_PLAN.md` one-item-at-a-time. All four still-open items closed: (1) no third Drive write channel needed beyond the register-on-create endpoint + library service writes; (2) EN/HE version-mismatch was already settled by §14 lock-time peer-realignment — §19 listing was stale; (3) template retirement lifecycle deferred (few templates, none retired yet); (4) KPI refresh cadence + ownership out of scope for library plan (future jlmops housekeeping concern).
+- Lookup-add UI demoted from library prerequisite to independent operational bug. §13 cross-linking is future work, so scaled tagging via controlled vocabulary isn't blocked. Library work no longer gated by this UI.
+- New plan doc `jlmops/plans/LOOKUP_ADMIN_UI_PLAN.md`. Architecture: common skeleton + per-lookup pack + shared widget kit (parallels `plans/CONTENT_LIBRARY_PLAN.md` §11 task UI). Widget kit seeded here gets reused later for entity lists + task packs. Phase 1: `SysLkp_Grapes` + `SysLkp_Kashrut` (one focused session). Phase 2: `SysLkp_Texts` (multi-category browsing via type column). Out of scope: cities (rare), wineries (WP product attribute), §16 regions overhaul.
+- Schema gap noted: only `SysLkp_Cities` has a documented schema in `jlmops/config/schemas.json`. Grapes/Kashrut/Texts schemas to be added as part of their respective phase builds.
+- `.claude/bugs.md` 2026-05-17 entry shortened to a pointer at the new plan. `plans/CONTENT_LIBRARY_PLAN.md` Status line + §16 + §17 phase 1 + §18 (banked decision) + §19 (four closures, "Still open: (None)") all updated.
+- Next session: build the lookup-add UI when scheduled (one session for skeleton + Grapes + Kashrut packs), OR pick up CONTENT_LIBRARY_PLAN implementation-spec work (concrete schema additions for library table + activity log + task table, library service method inventory, register-on-create GAS route). Newsletter Issue #1 prerequisites (2026-05-26 send) still gating from earlier today.
+
+---
+
+## 2026-05-21 (Library plan review pass + session-shape memories + newsletter delay)
+
+- Newsletter Issue #1 send delayed to Tuesday 2026-05-26 (Shavuot competition + content rework). STATUS line + Newsletter v1 bullet updated.
+- `plans/CONTENT_LIBRARY_PLAN.md` major review pass with point-by-point dialogue. Key shifts: atomicity language softened (no transactional rollback claims); library is a single-tab flat sheet Claude reads via Drive MCP, no for-claude/ export pipe; references[] = necessary connections only; task attachment unified via virtual entity types; activity log actors widened (customer/system); chain progression HE-DOC carve-out DROPPED — manager creates HE doc himself via task-pack button + iterates in Gemini outside the system; both edit_en + translate_he spawn at chain-spawn with staggered dates + HE entity stub; lock-time peer-realignment prompt replaces force-version-alignment; library-screen "Add new entity" + library-service-owned canonical folder placement (auto-create folder, canonical path, move-existing-URL fallback); register-on-create endpoint design banked; §13 cross-linking reframed around existing `WooCommerceFormatter.formatDescriptionHTML()` pattern — no WP post-taxonomy sync; §16 regions overhaul concrete approach written.
+- Session-shape conversation produced four new memories: `feedback_reply_format` (outline first, brief, no tables), `feedback_discussion_vs_action` (file edits are action requiring auth; discussion verbs don't authorize edits), `feedback_by_the_way_for_tangents` (handle tangent then return to main thread), `feedback_dictation_substitutions` (run-ons + good spelling + phonetic substitutions like comex→Comax). MEMORY.md indexed.
+- Permissions scan run via `fewer-permission-prompts` skill — existing allowlist already well-tuned, nothing added.
+- Two items left open for implementation time: (a) chain dependencies vs independence — implicitly resolved (state machine handles ordering, "independent" applies to open tasks); could be banked explicitly later. (b) regions overhaul tracked in §16 but not scheduled. WC attribute purge of unused dimensions (kashrut/grape/region/style) also flagged as separate housekeeping.
+- Next session: Newsletter Issue #1 prerequisites still gate the 2026-05-26 send (reference docx templates EN+HE, Evyatar's Making Wine text confirmation, partner OK on AYiW direction, Mailchimp paste into draft 10141710). Library plan is now ~1000 lines but internally consistent.
+
+---
+
 ## 2026-05-20 (Content Library — major refinement; 6 UI/architecture residuals banked)
 
 - Long chavruta walked six residuals through to settled designs, all banked in `plans/CONTENT_LIBRARY_PLAN.md`: sidebar nav + task placement; task queue filters / sort / search (including language filter); drawer-vs-task-pack boundary; activity log surface (granularity + 3 distinct logs: SysLog, entity log, task history); project entity's fate (= library entity type, not container); action-feedback loop. No implementation yet. Plan is now ~770 lines.
