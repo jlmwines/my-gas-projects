@@ -1,145 +1,89 @@
-# JLM Wines — Coordination & Roadmap
+# JLM Wines — Strategy
 
-**Purpose.** Long-term project management view across jlmops + website + content + marketing, reviewed weekly or monthly. Designed to surface seams between areas (where work in one folder depends on, blocks, or unblocks another).
+**Purpose.** Long-horizon strategic context: posture, priorities, direction-level principles. Reviewed quarterly. Updates only when strategic direction shifts — not when individual initiatives ship.
 
-**Frame.** Business is the overarching project. The other folders (jlmops, website, marketing, content) are channels and tools that express it.
+**Not this doc:**
+- Current state, metrics, what's in flight → `plans/STATUS.md`
+- Dated milestones → `CALENDAR.md`
+- Per-area implementation detail → plan docs in `plans/` or `<area>/plans/`
 
-**What this is not.**
-- Not a session log — `plans/STATUS.md` does that
-- Not a timeline — `CALENDAR.md` does that
-- Not a roll-up of every plan doc — per-area plans remain the source of truth
-
----
-
-## Sequence
-
-The current gating event is **theme cutover** (early-to-mid May 2026, staging build active). Most cross-area work waits for cutover so it doesn't get thrown away — but a couple of tracks can advance in parallel.
-
-Two columns: **In flight now** (parallel work that can move while cutover finishes) vs **After cutover** (sequential queue, gated by cutover).
-
-### In flight (parallel)
-
-| # | Initiative | State |
-|---|-----------|-------|
-| 1 | Theme cutover (gating event) | Active build on staging (v1.0.71 as of 2026-04-30) |
-| 1p | Newsletter v1 prep — post writing, plan finalization, print vendor, volume estimate | Operating model approved; "A Year in the Vineyard" HE pending |
-
-### After cutover (sequential)
-
-| # | Initiative | State |
-|---|-----------|-------|
-| 2 | Newsletter v1 first issue | Waits on cutover for QR destination polish + first print run |
-| 3 | Contact Manager Half 1 (Mailchimp data pull) | Plan written, build queued |
-| 4 | Contact Manager Half 2 (action layer) | Plan written, build queued |
-| 5 | Cross-sell calculation + push | Plan written, build queued |
-| 6 | JLMops → WC attribute push | Deferred, lower priority |
-
-Sequence is provisional — review and revise as conditions change.
+If something here would need to change because a feature shipped or a sprint ended, it belongs in STATUS, not here.
 
 ---
 
-## Active Cross-Area Initiatives
+## Period Focus
 
-### Theme cutover
+**Acquisition — online and offline.** Online channels: organic content (blog → SEO authority via the Israeli Wine Guide architecture), email list reactivation, welcome-trigger conversion. Offline: printed newsletter insert; flyer + tasting events queued as wishlist.
 
-- **Owner.** Claude + user
-- **Areas touched.** Website (primary), jlmops (sync indirectly affected), content (republish posts after cutover), marketing (newsletter waits on this)
-- **State.** Phase 6 complete on staging — 7 posts live EN+HE, About page rebuilt, gifts page rebuilt, footer + header + cart drawer + free-shipping monitor + bottom nav + mobile drawer all working
-- **Open seams.**
-  - Free-shipping monitor stale text on /cart/ — parked diagnostic, resume next theme session
-  - Article publish post-cutover requires WPML translation step
-  - 16 Elementor pages partially migrated; remainder TBD
-- **Next milestone.** Cutover to live via SiteGround staging-to-live push
-- **Detail.** `plans/THEME_REPLACEMENT_PLAN.md`, `plans/THEME_FOUNDATIONS.md`
-
-### Newsletter v1
-
-- **Owner.** User (content + design), Claude (operational mechanics)
-- **Areas touched.** Marketing (primary), content (blog post excerpts), website (signup destination), jlmops (later — packing slip integration if automated)
-- **State.** Operating model decided. Content engine already built (each blog post source carries a Newsletter Excerpt section). "A Year in the Vineyard" post needs partner edit + translate before first issue.
-- **Open seams.**
-  - Newsletter destination QR points to that month's primary post on the website — depends on theme cutover for clean experience
-  - Signup form on every page footer (already configured via MC4WP + language groups)
-- **Next milestone.** First issue ready right after cutover
-- **Detail.** `marketing/NEWSLETTER_PLAN.md`
-
-### Contact Manager activation
-
-- **Owner.** Claude (build), user (review + use)
-- **Areas touched.** jlmops (primary), marketing (Mailchimp), business (CRM data)
-- **State.** Plan written. CRM data layer already runs nightly (548 contacts enriched). What's missing: Mailchimp data automation + action layer for partner follow-ups.
-- **Open seams.**
-  - MC4WP signup tagging on the new theme — already configured per 2026-04-28 footer rebuild but verify still working
-  - WHATSAPP_CRM_INTEGRATION.md may already cover the action layer shape — reread before build
-- **Next milestone.** Half 1 (Mailchimp data pull) post-cutover
-- **Detail.** `jlmops/plans/CONTACT_MANAGER_PLAN.md`
-
-### Cross-sell calculation + push
-
-- **Owner.** Claude (build)
-- **Areas touched.** jlmops (calculation + CSV push), website (theme rendering)
-- **State.** Plan written. Schema slot exists in DATA_MODEL.md (`wps_CrossSells`). Pushed alongside daily inventory CSV. Theme replaces native Related Products on PDP, cart cross-sells suppressed for bundle-only carts.
-- **Open seams.**
-  - Theme needs `inc/woocommerce.php` hooks to swap related-products section + add category-aware heading
-  - Calculation reads attribute values from JLMops; if attribute push (deferred) is later built, the loop closes back to the same source
-- **Next milestone.** Build post-cutover
-- **Detail.** `jlmops/plans/CROSS_SELL_PLAN.md`
-
-### JLMops → WC attribute push (deferred)
-
-- **Owner.** Claude (build, when prioritized)
-- **Areas touched.** jlmops, website (WC attribute taxonomy)
-- **State.** Deferred, lower priority. Scope locked to intensity / complexity / acidity only. WC storage model needs live confirmation before plan.
-- **Detail.** `jlmops/plans/IMPLEMENTATION_PLAN.md` Phase 14+
+Retention and optimization continue alongside but are not the lever this period. Specifically: campaign-engagement work, KPI-tab build, mobile LCP tuning are de-prioritized relative to acquisition channel activity.
 
 ---
 
-## Open Seams (cross-cutting)
+## Strategic Posture
 
-Things where two areas need to meet but the connection is incomplete:
-
-- **JLMops → website push** beyond inventory CSV — broader category, includes attribute push (deferred), description push (not planned), image push (not planned). Currently only inventory + cross-sell IDs flow; everything else is manual upload / manual edit in WC admin.
-- **Mailchimp ↔ JLMops** — manual CSV today; automated daily pull queued in Contact Manager Half 1.
-- **Packing slip ↔ newsletter** — both live in the same shipment envelope. Currently no integration (newsletter is print-monthly batch, packing slip is per-order generated).
-- **Brand consistency across channels** — see `business/BRAND_STANDARDS.md`.
-- **KPI measurement** — 6 metrics scoped 2026-05-04 in `business/KPI.md`. Data path partially in place (Drive auth done; `JLMops_Data` already in Drive). Pending: GA4 + GSC sheet setup (user, ~30 min), small summary tab in `JLMops_Data` (jlmops, ~30–60 min), Mailchimp metrics flow (comes through Half 1).
+- **Recovery posture has ended.** Theme cutover (2026-05-05) is closed; the site is in steady-state operation.
+- **Internal build pushed heavy** through April–May 2026; outbound channels were intentionally quiet. The reversal of that posture — putting outbound into active cadence — is the next period's primary work.
+- **Action layer > data layer.** The system already produces more data signals than the human can act on. Build less data infrastructure, ship more action surface. (Manager CRM Half 2 closed half this gap; outbound side remains the open half.)
 
 ---
 
-## Long-Horizon Direction by Area
+## Brand Axis
 
-### Business / Marketing
+- **Friendly, personal, never talks down.** No jargon. No teaching wine vocabulary.
+- **Anti-snob.** Curation-led trust > selection breadth. We do the work so the customer doesn't have to.
+- **Never negative about competitors / wineries / wines.** Show the position through what we do, not by criticizing.
 
-- Email = "we exist" reminder. Don't ask for behavior.
-- One campaign, two language copies (EN + HE). Microsegmentation not justified at current volume.
-- Newsletter insert = primary near-term marketing channel post-cutover.
-- Year in Wine retrospective: high-effort personalization (auto-apply coupons, free-gift selection, tiered rewards) backfires. Drop from active roadmap. See `jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md` "What didn't work."
+Full guidelines: `business/CONTENT_STRATEGY.md`. This doc holds only the axis; CONTENT_STRATEGY holds the application detail.
+
+---
+
+## Direction Principles by Area
+
+### Marketing
+
+- **Email = "we exist" reminder.** Don't ask for behavior changes in email. Restart-after-silence is the dominant near-term need.
+- **One campaign, two language copies (EN + HE).** Microsegmentation is not justified at current volume.
+- **Newsletter insert** = primary near-term offline marketing channel.
+- **Year in Wine retrospective** and similar high-effort personalization plays backfire at current volume. Dropped from active roadmap. (See `jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md` "What didn't work.")
 
 ### Website
 
-- Theme replacement is the dominant workstream. Post-cutover: SEO audit, perf tuning to ≥90 Lighthouse, integration with cross-sell loop.
+- **Theme is the customer surface.** Visual + perf changes here have the highest leverage; treat any theme work as customer-facing-priority.
+- **Performance follows content priority, not vice versa.** Mobile LCP tuning is queued because acquisition content is the lead lever, not because perf doesn't matter.
 
 ### jlmops
 
-- Sync is stable. Major build areas next: Bundle Management Phase 14 (with composition/condition split per 2026-04-30 decisions), Contact Manager (Half 1 + Half 2), Cross-sell calculation.
-- Resource discipline: no new sophistication of CRM data layer until activation works. The system already produces more than the human can act on.
+- **Sync is stable. Don't rebuild it.** Bug fixes only.
+- **Outbound side is the open frontier.** Campaign-send execution, scheduled triggers, action-layer surfaces — these are where build energy belongs.
+- **No new sophistication of CRM data layer** until the existing layer is fully exercised by actions.
 
 ### Content
 
-- 7 posts live EN+HE. Selection + Price vs Quality remain (resume May).
-- A Year in the Vineyard publishes in basics category, sticky, evergreen 12-month structure.
+- **Editorial pipeline is acquisition.** Each post is SEO authority + newsletter material + email content. Treat as a multi-channel asset, not a single-channel one.
+- **Monthly drop cadence** paired with newsletter QR. Don't accelerate just because production is faster; cadence is the discipline.
+- **Print Newsletter Body** is a required source section. The companion Mailchimp campaign rides on the same post.
+
+---
+
+## Strategic Seams (cross-cutting)
+
+Connections between areas where a directional decision in one constrains another. These are stable enough to live here; specific-implementation seams live in plan docs.
+
+- **Build-less-data, ship-more-action.** Affects every initiative — verification track design, campaign launches, KPI-tab decision (kept deferred). The default answer to "should we add a data surface?" is "no, unless an action surface needs it."
+- **Cross-sell loop** — schema exists, calculation not built. Decision deferred until campaign-engagement data justifies the work.
+- **Offline → online attribution** — flyer + tasting will need coupon codes + UTM-tagged QR. Attribution scheme is parked (Inbox `defer:2026-07-01`) because those channels aren't shipping yet.
 
 ---
 
 ## Review Cadence
 
-This document is reviewed **monthly** at minimum. Update when:
-- An initiative changes state (queued → active → done)
-- A new cross-area seam is identified
-- A long-horizon direction shifts
+This doc is reviewed **quarterly**. Updates fire only when:
+- Strategic posture shifts (e.g. acquisition → retention as period focus)
+- A direction-level principle inverts (e.g. "build less data" stops being right)
+- A new cross-cutting seam emerges that spans plan docs
 
-The per-area plans remain the source of truth for detail. This doc is the index and the seams.
+If a change to this doc seems triggered by a single initiative shipping or a single sprint ending — that change belongs in STATUS.md, not here. This file should age slowly.
 
 ---
 
-Updated: 2026-04-30
+Updated: 2026-05-15
