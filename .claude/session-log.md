@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-25 (late — Content Library phase 5 implementation steps 1/2/3/6 @125 → @127 deploy @131)
+
+- Phase 5 step 1 (@125 deploy @129): LibraryView scaffold shipped. New `jlmops/LibraryView.html` (tab switcher Tasks / Library, filter chips + search + sort, generic-skeleton expand, library list table with preset chips Library/Blog/Campaigns/Templates/Images). New `jlmops/WebAppLibrary.js` controller returning `{ tasks, library }` with `packForm` + polymorphic `entityType`/`entityId` (typed-FK fallback). New `jlmops/TaskWidgets.html` widget kit (atoms + helpers). `SheetAccessor` extended with `getLibrarySheet`. `pack_form` field added to all 76 task templates in `taskDefinitions.json` (26 packed + 50 skeleton); SetupConfig.js regenerated. WebApp.js doGet reads `library.enabled` flag; getView maps Library to LibraryView. AppView.html admin gets Library nav entry; manager Dashboard link flips to LibraryView when flag on.
+- Hotfix @126 deploy @130: `getView()` now uses `createTemplateFromFile().evaluate()` so subviews can use `<?!= include(...) ?>` scriptlets. LibraryView's TaskWidgets include was rendering raw on @125. Audited: only AppView (template-evaluated separately in doGet) and LibraryView use `<?` scriptlets, so the change is safe.
+- Phase 5 steps 2 + 3 + 6 (@127 deploy @131): Outreach + Confirmation + deep-link packs wired into LibraryView. Outreach (task.contact.* / crm.*, packForm=dedicated_view): click stashes entityId in sessionStorage.selectContactEmail + loadView('ManagerContacts'). Confirmation (task.confirmation.* + sync.daily_session, inline): editable notes + Mark Confirmed → WebAppTasks_completeTaskById (+ WebAppTasks_updateTask if notes changed). Deep-link packs (order.packing_available, inventory.count, inventory.brurya_update): Open Orders / Open Inventory buttons → loadView. Skeleton fallback for ~50 unpacked task types. `event.stopPropagation()` on expanded bodies. All four confirmed working post-deploy.
+- Pinned deploy ID survived all three deploys. Library subsystem stays behind `library.enabled=false` for the rollout; flag flip + `rebuildSysConfigFromSource()` are the manual gates.
+- Next: phase 5 steps 4 + 5 (Content edit + Content publish packs) ship as UI scaffolding only — the lock + publish actions depend on phase 7 LibraryService. Better to defer those to after phase 7. Phase 7 estimate: 2-3 sessions (LibraryService skeleton ~300-400 lines + chain-spawn integration with existing 16 CAMPAIGN_ARCHITECTURE templates + Add-new-entity modal).
+
+---
+
 ## 2026-05-25 (later still — Phase 4 image entities + LIBRARY_VIEW_PLAN + §17 reconciliation + Newsletter Issue #1 HTMLs)
 
 - Phase 4 image entities shipped. `content/register-library.js` extended (image-extension fieldMap + entry.title/notes fallbacks for non-md entries); 5 Context image rows registered into `SysLibrary`: `image-context-featured` + `image-context-body-{01..04}-{season-clock,pairing,gathering,curation}`. References both blog siblings. WP media id + url captured in `slb_Notes` (banked as the convention for image entities since §6 doesn't carry a WP-media field).
