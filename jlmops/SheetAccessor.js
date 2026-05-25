@@ -11,6 +11,7 @@ const SheetAccessor = (function() {
   // Cached spreadsheet objects
   let dataSpreadsheet = null;
   let logSpreadsheet = null;
+  let librarySpreadsheet = null;
 
   /**
    * Gets the data spreadsheet, caching it for reuse.
@@ -45,6 +46,22 @@ const SheetAccessor = (function() {
   }
 
   /**
+   * Gets the library spreadsheet, caching it for reuse.
+   * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The library spreadsheet
+   */
+  function getLibrarySpreadsheet() {
+    if (!librarySpreadsheet) {
+      const allConfig = ConfigService.getAllConfig();
+      if (!allConfig || !allConfig['system.spreadsheet.library']) {
+        throw new Error('SheetAccessor: system.spreadsheet.library config not found');
+      }
+      const id = allConfig['system.spreadsheet.library'].id;
+      librarySpreadsheet = SpreadsheetApp.openById(id);
+    }
+    return librarySpreadsheet;
+  }
+
+  /**
    * Gets a sheet from the data spreadsheet by name.
    * @param {string} sheetName - The name of the sheet
    * @param {boolean} [throwIfMissing=true] - Whether to throw if sheet not found
@@ -75,19 +92,37 @@ const SheetAccessor = (function() {
   }
 
   /**
+   * Gets a sheet from the library spreadsheet by name.
+   * @param {string} sheetName - The name of the sheet
+   * @param {boolean} [throwIfMissing=true] - Whether to throw if sheet not found
+   * @returns {GoogleAppsScript.Spreadsheet.Sheet|null} The sheet, or null if not found and throwIfMissing is false
+   */
+  function getLibrarySheet(sheetName, throwIfMissing = true) {
+    const spreadsheet = getLibrarySpreadsheet();
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet && throwIfMissing) {
+      throw new Error(`SheetAccessor: Sheet '${sheetName}' not found in library spreadsheet`);
+    }
+    return sheet;
+  }
+
+  /**
    * Clears cached spreadsheet references.
    * Call this if spreadsheet IDs change or after config reload.
    */
   function clearCache() {
     dataSpreadsheet = null;
     logSpreadsheet = null;
+    librarySpreadsheet = null;
   }
 
   return {
     getDataSpreadsheet: getDataSpreadsheet,
     getLogSpreadsheet: getLogSpreadsheet,
+    getLibrarySpreadsheet: getLibrarySpreadsheet,
     getDataSheet: getDataSheet,
     getLogSheet: getLogSheet,
+    getLibrarySheet: getLibrarySheet,
     clearCache: clearCache
   };
 })();

@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 10:59',
-  commit: '@124: Content Library phase 4 prep — SysTasks gains polymorphic columns st_EntityType + st_EntityId (sta_EntityType + sta_EntityId on SysTasks_Archive) per CONTENT_LIBRARY_PLAN.md §7. Append-only, existing typed FK columns untouched. Sets up phase 7 task-chain spawn against library entities. No code reads the new columns yet. Run rebuildSysConfigFromSource() after deploy + manually append the two columns to live SysTasks + SysTasks_Archive sheets.'
+  built: '2026-05-25 18:28',
+  commit: '@125: Content Library phase 5 step 1 — LibraryView scaffold (new HTML + WebAppLibrary controller + TaskWidgets kit + SheetAccessor.getLibrarySheet + pack_form on all 76 task templates). Behind library.enabled=false; daily-use code untouched. Manager Dashboard route flips to LibraryView when flag on; admin gets new Library nav entry. Generic skeleton only — no packs yet. Run rebuildSysConfigFromSource() after deploy to pick up pack_form values.'
 };
 
 function getVersion() {
@@ -44,6 +44,18 @@ function doGet(e) {
   }
   template.initialRole = effectiveRole;
   template.availableRoles = AuthService.getAvailableRoles();
+
+  // Library subsystem gate. When true, manager's Dashboard link routes to
+  // LibraryView (replacing ManagerDashboardView_v2) and admin gets a new
+  // Library nav entry. When false, current routing applies. Verified
+  // 2026-05-25: doGet does not parse URL params, so the flag is the only
+  // fallback mechanism (no ?v= URL hack).
+  try {
+    const libraryFlag = ConfigService.getConfig('library.enabled');
+    template.libraryEnabled = !!(libraryFlag && (libraryFlag.value === true || libraryFlag.value === 'true' || libraryFlag.value === 'TRUE'));
+  } catch (e) {
+    template.libraryEnabled = false;
+  }
   
   return template.evaluate()
     .setTitle('JLMops Dashboard')
@@ -94,6 +106,7 @@ function getView(viewName) {
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
     'ManagerContacts': 'ManagerContactView',
+    'Library': 'LibraryView',
     'Development': 'DevelopmentView'
   };
 

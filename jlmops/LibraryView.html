@@ -1,0 +1,441 @@
+<?!= include('TaskWidgets') ?>
+
+<style>
+  /* LibraryView — layout */
+  .lv-container { padding: 0 10px; }
+  .lv-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 14px;
+  }
+  .lv-tab {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #6c757d;
+    border-bottom: 2px solid transparent;
+  }
+  .lv-tab.active { color: #212529; border-bottom-color: #495057; font-weight: 600; }
+  .lv-tab:focus { outline: none; }
+
+  .lv-panel { display: none; }
+  .lv-panel.active { display: block; }
+
+  /* Task queue */
+  .lv-task-list {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+  }
+  .lv-task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f1f3f5;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .lv-task-row:hover { background: #f8f9fa; }
+  .lv-task-row.expanded { background: #e7f3ff; }
+  .lv-task-row .col-status { flex: 0 0 80px; }
+  .lv-task-row .col-name { flex: 3 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lv-task-row .col-chips { flex: 0 0 auto; display: flex; gap: 4px; }
+  .lv-task-row .col-assignee { flex: 0 0 90px; font-size: 12px; color: #6c757d; }
+  .lv-task-row .col-due { flex: 0 0 90px; }
+
+  .lv-task-detail {
+    display: none;
+    padding: 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .lv-task-detail.show { display: block; }
+  .lv-task-detail .detail-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .lv-task-detail label {
+    font-weight: 600;
+    font-size: 12px;
+    color: #495057;
+    margin-bottom: 2px;
+    display: block;
+  }
+  .lv-task-detail .detail-meta { font-size: 12px; color: #6c757d; }
+
+  /* Library list */
+  .lv-library-presets {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .lv-library-table-wrap {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+  }
+  .lv-library-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .lv-library-table th, .lv-library-table td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .lv-library-table thead th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 12px;
+    color: #495057;
+    position: sticky;
+    top: 0;
+  }
+  .lv-library-table tr:hover td { background: #f8f9fa; }
+
+  .lv-empty { padding: 24px; text-align: center; color: #6c757d; font-style: italic; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .lv-task-row { flex-direction: column; align-items: stretch; }
+    .lv-task-row [class^="col-"] { flex: none; }
+    .lv-task-row .col-name { white-space: normal; }
+    .lv-task-row .col-assignee::before { content: 'Assigned: '; color: #6c757d; }
+    .lv-task-row .col-due::before { content: 'Due: '; color: #6c757d; }
+  }
+</style>
+
+<div class="lv-container">
+
+  <!-- Tab switcher: Tasks / Library -->
+  <div class="lv-tabs">
+    <button class="lv-tab active" data-tab="tasks" onclick="LibraryView.switchTab('tasks')">Tasks</button>
+    <button class="lv-tab" data-tab="library" onclick="LibraryView.switchTab('library')">Library</button>
+  </div>
+
+  <!-- TASKS PANEL -->
+  <div class="lv-panel active" id="lv-panel-tasks">
+    <div class="tw-filter-bar">
+      <select id="lv-filter-status">
+        <option value="open">Open</option>
+        <option value="done">Done</option>
+        <option value="all">All</option>
+      </select>
+      <select id="lv-filter-entity-type">
+        <option value="">All entity types</option>
+      </select>
+      <select id="lv-filter-topic">
+        <option value="">All topics</option>
+      </select>
+      <select id="lv-filter-assignee">
+        <option value="">All assignees</option>
+      </select>
+      <select id="lv-filter-language">
+        <option value="">All languages</option>
+        <option value="en">EN</option>
+        <option value="he">HE</option>
+      </select>
+      <input type="search" id="lv-search-tasks" placeholder="Search title / entity..." />
+      <select id="lv-sort-tasks">
+        <option value="due">Sort: due date</option>
+        <option value="topic">Sort: topic</option>
+        <option value="title">Sort: title</option>
+      </select>
+    </div>
+    <div class="lv-task-list" id="lv-task-list">
+      <div class="lv-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- LIBRARY PANEL -->
+  <div class="lv-panel" id="lv-panel-library">
+    <div class="lv-library-presets">
+      <button class="tw-chip active" data-preset="all" onclick="LibraryView.switchPreset('all')">Library</button>
+      <button class="tw-chip" data-preset="blog" onclick="LibraryView.switchPreset('blog')">Blog</button>
+      <button class="tw-chip" data-preset="campaigns" onclick="LibraryView.switchPreset('campaigns')">Campaigns</button>
+      <button class="tw-chip" data-preset="template" onclick="LibraryView.switchPreset('template')">Templates</button>
+      <button class="tw-chip" data-preset="image" onclick="LibraryView.switchPreset('image')">Images</button>
+    </div>
+    <div class="tw-filter-bar">
+      <input type="search" id="lv-search-library" placeholder="Search title / slug..." />
+      <select id="lv-sort-library">
+        <option value="last_touched">Sort: last touched</option>
+        <option value="created">Sort: created</option>
+        <option value="title">Sort: title</option>
+      </select>
+    </div>
+    <div class="lv-library-table-wrap" id="lv-library-table-wrap">
+      <div class="lv-empty">Loading…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  window.LibraryView = (function() {
+    'use strict';
+
+    var state = {
+      tasks: [],
+      library: [],
+      activeTab: 'tasks',
+      activePreset: 'all',
+      expandedTaskId: null
+    };
+
+    function init() {
+      load();
+      ['lv-filter-status', 'lv-filter-entity-type', 'lv-filter-topic',
+       'lv-filter-assignee', 'lv-filter-language', 'lv-search-tasks',
+       'lv-sort-tasks'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', renderTasks);
+      });
+      ['lv-search-library', 'lv-sort-library'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', renderLibrary);
+      });
+    }
+
+    function load() {
+      google.script.run
+        .withSuccessHandler(onLoaded)
+        .withFailureHandler(onError)
+        .WebAppLibrary_getData();
+    }
+
+    function onLoaded(res) {
+      if (!res || !res.success) {
+        TaskWidgets.toast(res && res.error ? res.error : 'Failed to load LibraryView', true);
+        document.getElementById('lv-task-list').innerHTML =
+          '<div class="lv-empty">' + TaskWidgets.escape(res && res.error ? res.error : 'Load failed') + '</div>';
+        document.getElementById('lv-library-table-wrap').innerHTML =
+          '<div class="lv-empty">' + TaskWidgets.escape(res && res.error ? res.error : 'Load failed') + '</div>';
+        return;
+      }
+      state.tasks = res.data.tasks || [];
+      state.library = res.data.library || [];
+      populateFilterOptions();
+      renderTasks();
+      renderLibrary();
+    }
+
+    function onError(err) {
+      TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
+    }
+
+    function populateFilterOptions() {
+      var entityTypes = uniqueSorted(state.tasks.map(function(t) { return t.entityType; }));
+      var topics = uniqueSorted(state.tasks.map(function(t) { return t.topic; }));
+      var assignees = uniqueSorted(state.tasks.map(function(t) { return t.assignedTo; }));
+
+      fillSelect('lv-filter-entity-type', 'All entity types', entityTypes);
+      fillSelect('lv-filter-topic', 'All topics', topics);
+      fillSelect('lv-filter-assignee', 'All assignees', assignees);
+    }
+
+    function uniqueSorted(values) {
+      var seen = {};
+      values.forEach(function(v) { if (v) seen[v] = true; });
+      return Object.keys(seen).sort();
+    }
+
+    function fillSelect(id, allLabel, values) {
+      var sel = document.getElementById(id);
+      if (!sel) return;
+      var current = sel.value;
+      sel.innerHTML = '<option value="">' + allLabel + '</option>';
+      values.forEach(function(v) {
+        var o = document.createElement('option');
+        o.value = v;
+        o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.value = current;
+    }
+
+    function switchTab(tab) {
+      state.activeTab = tab;
+      document.querySelectorAll('.lv-tab').forEach(function(t) {
+        t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+      });
+      document.querySelectorAll('.lv-panel').forEach(function(p) {
+        p.classList.toggle('active', p.id === 'lv-panel-' + tab);
+      });
+    }
+
+    function switchPreset(preset) {
+      state.activePreset = preset;
+      document.querySelectorAll('.lv-library-presets .tw-chip').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-preset') === preset);
+      });
+      renderLibrary();
+    }
+
+    function renderTasks() {
+      var statusFilter = document.getElementById('lv-filter-status').value;
+      var entityTypeFilter = document.getElementById('lv-filter-entity-type').value;
+      var topicFilter = document.getElementById('lv-filter-topic').value;
+      var assigneeFilter = document.getElementById('lv-filter-assignee').value;
+      var languageFilter = document.getElementById('lv-filter-language').value;
+      var searchTerm = (document.getElementById('lv-search-tasks').value || '').toLowerCase();
+      var sortBy = document.getElementById('lv-sort-tasks').value;
+
+      var rows = state.tasks.filter(function(t) {
+        if (statusFilter === 'open' && (t.status === 'Done' || t.status === 'Cancelled')) return false;
+        if (statusFilter === 'done' && t.status !== 'Done') return false;
+        if (entityTypeFilter && t.entityType !== entityTypeFilter) return false;
+        if (topicFilter && t.topic !== topicFilter) return false;
+        if (assigneeFilter && t.assignedTo !== assigneeFilter) return false;
+        // Language filter: derive from entity slug (suffix -en / -he) when present.
+        if (languageFilter) {
+          var slug = String(t.entityId || '').toLowerCase();
+          if (!slug.endsWith('-' + languageFilter)) return false;
+        }
+        if (searchTerm) {
+          var hay = (String(t.name || '') + ' ' + String(t.entityName || '') + ' ' + String(t.entityId || '')).toLowerCase();
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) {
+        if (sortBy === 'topic') return (a.topic || '').localeCompare(b.topic || '');
+        if (sortBy === 'title') return (a.name || '').localeCompare(b.name || '');
+        // due date ascending; nulls last
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+
+      var container = document.getElementById('lv-task-list');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="lv-empty">No tasks match the current filters.</div>';
+        return;
+      }
+
+      var html = '';
+      rows.forEach(function(t) {
+        var statusClass = TaskWidgets.statusClass(t.status);
+        var priorityClass = TaskWidgets.priorityClass(t.priority);
+        var dueClass = TaskWidgets.dueClass(t.dueDate, t.status);
+        var dueText = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
+        var entityTypeChip = t.entityType
+          ? '<span class="tw-chip">' + TaskWidgets.escape(t.entityType) + '</span>'
+          : '';
+        var topicChip = t.topic
+          ? '<span class="tw-chip">' + TaskWidgets.escape(t.topic) + '</span>'
+          : '';
+        var priorityBadge = (t.priority === 'Critical' || t.priority === 'High')
+          ? '<span class="tw-priority-badge ' + priorityClass + '">' + TaskWidgets.escape(t.priority) + '</span>'
+          : '';
+        var expanded = state.expandedTaskId === t.id;
+
+        html += '<div class="lv-task-row' + (expanded ? ' expanded' : '') + '" data-id="' + TaskWidgets.escape(t.id) + '" onclick="LibraryView.toggleTask(\'' + TaskWidgets.escape(t.id) + '\')">';
+        html += '  <div class="col-status"><span class="tw-status-pill ' + statusClass + '">' + TaskWidgets.escape(t.status || '—') + '</span></div>';
+        html += '  <div class="col-name">' + TaskWidgets.escape(t.name) + (t.entityName ? ' <span class="detail-meta">· ' + TaskWidgets.escape(t.entityName) + '</span>' : '') + '</div>';
+        html += '  <div class="col-chips">' + topicChip + entityTypeChip + priorityBadge + '</div>';
+        html += '  <div class="col-assignee">' + TaskWidgets.escape(t.assignedTo || '—') + '</div>';
+        html += '  <div class="col-due"><span class="tw-due-chip ' + dueClass + '">' + dueText + '</span></div>';
+        html += '</div>';
+
+        // Generic skeleton body (v1 — no packs yet). Renders description + notes + close.
+        html += '<div class="lv-task-detail' + (expanded ? ' show' : '') + '" data-detail-id="' + TaskWidgets.escape(t.id) + '">';
+        html += '  <div class="detail-row">';
+        html += '    <div><label>Type</label><div class="detail-meta">' + TaskWidgets.escape(t.typeId) + ' <em>(' + TaskWidgets.escape(t.packForm) + ')</em></div></div>';
+        html += '    <div><label>Created</label><div class="detail-meta">' + (t.createdDate ? TaskWidgets.formatDate(t.createdDate) : '—') + '</div></div>';
+        html += '    <div><label>Due</label><div class="detail-meta">' + dueText + '</div></div>';
+        html += '    <div><label>Priority</label><div class="detail-meta">' + TaskWidgets.escape(t.priority || '—') + '</div></div>';
+        html += '  </div>';
+        html += '  <div class="detail-row"><div style="flex:1"><label>Notes</label><textarea class="tw-notes" data-task-id="' + TaskWidgets.escape(t.id) + '" readonly>' + TaskWidgets.escape(t.notes) + '</textarea></div></div>';
+        html += '  <div class="detail-row detail-meta">v1 read-only — pack actions land in subsequent build steps.</div>';
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    function toggleTask(id) {
+      state.expandedTaskId = state.expandedTaskId === id ? null : id;
+      renderTasks();
+    }
+
+    function renderLibrary() {
+      var preset = state.activePreset;
+      var searchTerm = (document.getElementById('lv-search-library').value || '').toLowerCase();
+      var sortBy = document.getElementById('lv-sort-library').value;
+
+      var rows = state.library.filter(function(e) {
+        if (preset === 'campaigns') {
+          if (['email', 'news', 'mention', 'social'].indexOf(e.contentType) === -1) return false;
+        } else if (preset !== 'all' && e.contentType !== preset) {
+          return false;
+        }
+        if (searchTerm) {
+          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) {
+        if (sortBy === 'created') return (b.createdDate || '').localeCompare(a.createdDate || '');
+        if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
+        return (b.lastTouched || '').localeCompare(a.lastTouched || '');
+      });
+
+      var container = document.getElementById('lv-library-table-wrap');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="lv-empty">No entities match the current preset / search.</div>';
+        return;
+      }
+
+      // Columns: generic + sparse per-type extension
+      var html = '<table class="lv-library-table"><thead><tr>';
+      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Ver</th><th>Last touched</th><th>Refs</th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(e) {
+        html += '<tr>';
+        html += '<td><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td>' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td>' + TaskWidgets.escape(e.language || '—') + '</td>';
+        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td>' + TaskWidgets.escape(e.version || '—') + '</td>';
+        html += '<td>' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
+        html += '<td>' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    return {
+      init: init,
+      switchTab: switchTab,
+      switchPreset: switchPreset,
+      toggleTask: toggleTask
+    };
+  })();
+
+  // Auto-init when the view loads
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.LibraryView) window.LibraryView.init();
+  });
+  // For dynamic inclusion via AppView's getView(), DOMContentLoaded may have
+  // already fired — call init directly if the document is already ready.
+  if (document.readyState !== 'loading' && window.LibraryView) {
+    window.LibraryView.init();
+  }
+</script>

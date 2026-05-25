@@ -204,6 +204,9 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminCampaigns')">Campaigns</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminContacts')">CRM Tools</a></li>
+          <? if (libraryEnabled) { ?>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Library')">Library</a></li>
+          <? } ?>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
         </ul>
         <!-- Manager Navigation -->
@@ -226,6 +229,11 @@
     <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
     <script>
+      // Library subsystem flag — set by doGet via template.libraryEnabled.
+      // When true: manager Dashboard link routes to LibraryView (replacing
+      // ManagerDashboardView_v2); admin sees a Library nav entry.
+      window.libraryEnabled = <?= libraryEnabled ? 'true' : 'false' ?>;
+
       /**
        * Displays an error message.
        */
@@ -330,11 +338,12 @@
       function switchRole() {
         const selectedRole = document.getElementById('roleSelect').value;
         setNavigationForRole(selectedRole);
-        
+
         if (selectedRole === 'admin') {
             loadView('AdminDashboard');
         } else if (selectedRole === 'manager') {
-            loadView('ManagerDashboard');
+            // Library subsystem replaces the manager Dashboard target when enabled.
+            loadView(window.libraryEnabled ? 'Library' : 'ManagerDashboard');
         } else {
             document.getElementById('content').innerHTML = '<h2>Invalid Role</h2>';
         }
@@ -355,7 +364,8 @@
         if (initialRole === 'admin') {
             loadView('AdminDashboard');
         } else if (initialRole === 'manager') {
-            loadView('ManagerDashboard');
+            // Library subsystem replaces the manager Dashboard target when enabled.
+            loadView(window.libraryEnabled ? 'Library' : 'ManagerDashboard');
         }
 
         // Version footer

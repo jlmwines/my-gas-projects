@@ -1,0 +1,176 @@
+<style>
+  /* ========================================================== */
+  /* TaskWidgets — shared widget-kit atoms for LibraryView packs */
+  /* Source patterns copied from ManagerDashboardView_v2 +       */
+  /* AdminCampaignsView per jlmops/CLAUDE.md UI conventions.     */
+  /* ========================================================== */
+
+  /* Status pill */
+  .tw-status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    background: #e9ecef;
+    color: #495057;
+  }
+  .tw-status-pill.new { background: #e3f2fd; color: #1565c0; }
+  .tw-status-pill.assigned { background: #fff3cd; color: #856404; }
+  .tw-status-pill.in-progress { background: #d1ecf1; color: #0c5460; }
+  .tw-status-pill.review { background: #f8d7da; color: #721c24; }
+  .tw-status-pill.done { background: #d4edda; color: #155724; }
+
+  /* Priority badge */
+  .tw-priority-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tw-priority-badge.critical { background: #dc3545; color: #fff; }
+  .tw-priority-badge.high { background: #fd7e14; color: #fff; }
+  .tw-priority-badge.normal { background: transparent; color: #6c757d; }
+  .tw-priority-badge.low { background: transparent; color: #adb5bd; }
+
+  /* Due chip */
+  .tw-due-chip {
+    display: inline-block;
+    font-size: 12px;
+    color: #495057;
+  }
+  .tw-due-chip.overdue { color: #dc3545; font-weight: 600; }
+  .tw-due-chip.soon { color: #856404; }
+
+  /* Topic / entity-type chip (filter + inline display) */
+  .tw-chip {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: #f1f3f5;
+    color: #495057;
+    border: 1px solid #dee2e6;
+  }
+  .tw-chip.active { background: #495057; color: #fff; border-color: #495057; }
+
+  /* Filter bar */
+  .tw-filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .tw-filter-bar select, .tw-filter-bar input {
+    font-size: 12px;
+    height: 28px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 0 8px;
+  }
+
+  /* Notes textarea */
+  .tw-notes {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+
+  /* Toast (success / failure feedback) */
+  .tw-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 16px;
+    border-radius: 4px;
+    background: #495057;
+    color: #fff;
+    font-size: 13px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .tw-toast.show { opacity: 1; }
+  .tw-toast.error { background: #dc3545; }
+
+  /* Inline validation message */
+  .tw-inline-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* Mobile overrides */
+  @media (max-width: 768px) {
+    .tw-filter-bar select, .tw-filter-bar input {
+      font-size: 16px;
+      height: 40px;
+      flex: 1 1 100%;
+    }
+    .tw-notes { font-size: 16px; min-height: 100px; }
+  }
+</style>
+
+<script>
+  // ========================================================== //
+  // TaskWidgets — small JS helpers shared by LibraryView + packs //
+  // ========================================================== //
+  window.TaskWidgets = window.TaskWidgets || {};
+
+  TaskWidgets.toast = function(message, isError) {
+    var t = document.getElementById('tw-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'tw-toast';
+      t.className = 'tw-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = message;
+    t.className = 'tw-toast show' + (isError ? ' error' : '');
+    setTimeout(function() { t.className = 'tw-toast'; }, 3000);
+  };
+
+  TaskWidgets.statusClass = function(status) {
+    if (!status) return '';
+    return String(status).toLowerCase().replace(/\s+/g, '-');
+  };
+
+  TaskWidgets.priorityClass = function(priority) {
+    if (!priority) return 'normal';
+    return String(priority).toLowerCase();
+  };
+
+  TaskWidgets.dueClass = function(dueDateIso, status) {
+    if (!dueDateIso || status === 'Done' || status === 'Cancelled') return '';
+    var d = new Date(dueDateIso);
+    if (isNaN(d.getTime())) return '';
+    var now = new Date();
+    var diffDays = (d - now) / (1000 * 60 * 60 * 24);
+    if (diffDays < 0) return 'overdue';
+    if (diffDays < 3) return 'soon';
+    return '';
+  };
+
+  TaskWidgets.formatDate = function(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toISOString().slice(0, 10);
+  };
+
+  TaskWidgets.escape = function(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  };
+</script>
