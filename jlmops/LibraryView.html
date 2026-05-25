@@ -351,23 +351,118 @@
         html += '  <div class="col-due"><span class="tw-due-chip ' + dueClass + '">' + dueText + '</span></div>';
         html += '</div>';
 
-        // Generic skeleton body (v1 — no packs yet). Renders description + notes + close.
+        // Expanded body — pack-specific. packBody() dispatches per task type.
         html += '<div class="lv-task-detail' + (expanded ? ' show' : '') + '" data-detail-id="' + TaskWidgets.escape(t.id) + '">';
         html += '  <div class="detail-row">';
-        html += '    <div><label>Type</label><div class="detail-meta">' + TaskWidgets.escape(t.typeId) + ' <em>(' + TaskWidgets.escape(t.packForm) + ')</em></div></div>';
+        html += '    <div><label>Type</label><div class="detail-meta">' + TaskWidgets.escape(t.typeId) + '</div></div>';
         html += '    <div><label>Created</label><div class="detail-meta">' + (t.createdDate ? TaskWidgets.formatDate(t.createdDate) : '—') + '</div></div>';
         html += '    <div><label>Due</label><div class="detail-meta">' + dueText + '</div></div>';
         html += '    <div><label>Priority</label><div class="detail-meta">' + TaskWidgets.escape(t.priority || '—') + '</div></div>';
         html += '  </div>';
-        html += '  <div class="detail-row"><div style="flex:1"><label>Notes</label><textarea class="tw-notes" data-task-id="' + TaskWidgets.escape(t.id) + '" readonly>' + TaskWidgets.escape(t.notes) + '</textarea></div></div>';
-        html += '  <div class="detail-row detail-meta">v1 read-only — pack actions land in subsequent build steps.</div>';
+        html += packBody(t);
         html += '</div>';
       });
 
       container.innerHTML = html;
     }
 
+    // Pack body dispatcher — returns HTML for the expanded inline body per
+    // task type. Source of truth: jlmops/plans/LIBRARY_VIEW_PLAN.md pack table.
+    function packBody(t) {
+      var typeId = t.typeId || '';
+      var stopProp = ' onclick="event.stopPropagation()"';
+      var notesEscaped = TaskWidgets.escape(t.notes);
+
+      // Confirmation pack: notes + "Mark Confirmed" button → closes task.
+      if (typeId.indexOf('task.confirmation.') === 0 || typeId === 'task.sync.daily_session') {
+        var notesId = 'lv-notes-' + TaskWidgets.escape(t.id);
+        var btnDisabled = (t.status === 'Done') ? ' disabled' : '';
+        var btnLabel = (t.status === 'Done') ? 'Confirmed' : 'Mark Confirmed';
+        var h = '';
+        h += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
+        h += '    <textarea class="tw-notes" id="' + notesId + '">' + notesEscaped + '</textarea>';
+        h += '  </div></div>';
+        h += '  <div class="detail-row"' + stopProp + '>';
+        h += '    <button class="btn btn-sm" onclick="LibraryView.confirmTask(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabled + '>' + btnLabel + '</button>';
+        h += '  </div>';
+        return h;
+      }
+
+      // Deep-link packs: button to target view.
+      if (typeId === 'task.order.packing_available') {
+        return '<div class="detail-row"' + stopProp + '>' +
+               '<button class="btn btn-sm" onclick="LibraryView.openView(\'ManagerOrders\')">Open Orders</button>' +
+               '<span class="detail-meta" style="margin-left:12px">Task closes via the packing-slips workflow.</span>' +
+               '</div>';
+      }
+      if (typeId === 'task.inventory.count' || typeId === 'task.inventory.brurya_update') {
+        var label = typeId === 'task.inventory.brurya_update' ? 'Open Inventory (Brurya)' : 'Open Inventory';
+        return '<div class="detail-row"' + stopProp + '>' +
+               '<button class="btn btn-sm" onclick="LibraryView.openView(\'ManagerInventory\')">' + label + '</button>' +
+               '<span class="detail-meta" style="margin-left:12px">Task closes via the inventory workflow.</span>' +
+               '</div>';
+      }
+
+      // Skeleton fallback — read-only notes; no action.
+      var h2 = '';
+      h2 += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
+      h2 += '    <textarea class="tw-notes" readonly>' + notesEscaped + '</textarea>';
+      h2 += '  </div></div>';
+      h2 += '  <div class="detail-row detail-meta">No pack yet — actions land in subsequent build steps.</div>';
+      return h2;
+    }
+
+    function confirmTask(taskId) {
+      var task = state.tasks.find(function(t) { return t.id === taskId; });
+      if (!task) { TaskWidgets.toast('Task not found', true); return; }
+      if (task.status === 'Done') { TaskWidgets.toast('Already confirmed'); return; }
+      var notesEl = document.getElementById('lv-notes-' + taskId);
+      var newNotes = notesEl ? notesEl.value : task.notes;
+
+      var afterUpdate = function() {
+        google.script.run
+          .withSuccessHandler(function() {
+            task.status = 'Done';
+            task.doneDate = new Date().toISOString();
+            task.notes = newNotes;
+            TaskWidgets.toast('Confirmed');
+            renderTasks();
+          })
+          .withFailureHandler(function(err) {
+            TaskWidgets.toast(err && err.message ? err.message : 'Confirm failed', true);
+          })
+          .WebAppTasks_completeTaskById(taskId);
+      };
+
+      if (notesEl && newNotes !== task.notes) {
+        google.script.run
+          .withSuccessHandler(afterUpdate)
+          .withFailureHandler(function(err) {
+            TaskWidgets.toast(err && err.message ? err.message : 'Notes update failed', true);
+          })
+          .WebAppTasks_updateTask(taskId, { notes: newNotes });
+      } else {
+        afterUpdate();
+      }
+    }
+
+    function openView(viewName) {
+      if (typeof loadView === 'function') loadView(viewName);
+    }
+
     function toggleTask(id) {
+      var task = state.tasks.find(function(t) { return t.id === id; });
+      if (task && task.packForm === 'dedicated_view' && task.entityType === 'customer') {
+        // Outreach pack: deep-link into ManagerContactView. The view picks up
+        // selectContactEmail on mount, opens the contact detail, and discovers
+        // the open outreach task for the contact automatically.
+        try { sessionStorage.setItem('selectContactEmail', task.entityId || ''); } catch (e) {}
+        if (typeof loadView === 'function') {
+          loadView('ManagerContacts');
+          return;
+        }
+      }
+      // Default: inline expand (skeleton + inline packs).
       state.expandedTaskId = state.expandedTaskId === id ? null : id;
       renderTasks();
     }
@@ -425,7 +520,9 @@
       init: init,
       switchTab: switchTab,
       switchPreset: switchPreset,
-      toggleTask: toggleTask
+      toggleTask: toggleTask,
+      confirmTask: confirmTask,
+      openView: openView
     };
   })();
 

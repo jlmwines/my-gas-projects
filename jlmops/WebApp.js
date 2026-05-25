@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 19:10',
-  commit: '@126: Hotfix to @125 — getView() now uses createTemplateFromFile().evaluate() so subviews can use scriptlets like <?!= include(TaskWidgets) ?>. LibraryView was rendering the include directive as raw text. Audited: only AppView (template-evaluated separately) and LibraryView use <? scriptlets; other views render unchanged through template evaluation. No other behavior change.'
+  built: '2026-05-25 19:22',
+  commit: '@127: Content Library phase 5 steps 2/3/6 — Outreach + Confirmation + deep-link packs wired into LibraryView. Outreach (task.contact.*/crm.*) deep-links into ManagerContactView via sessionStorage.selectContactEmail. Confirmation (task.confirmation.* + sync.daily_session) renders editable notes + Mark Confirmed button → WebAppTasks_completeTaskById (with WebAppTasks_updateTask first if notes changed). Deep-link packs (order.packing_available, inventory.count, inventory.brurya_update) route to ManagerOrders / ManagerInventory via loadView. Skeleton fallback for all other task types. Behind library.enabled.'
 };
 
 function getVersion() {
