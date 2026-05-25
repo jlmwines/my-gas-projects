@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 09:05',
-  commit: '@121: Lookup admin UI. LookupService gains addLookupValue + updateLookupRow (header-driven writes, append-only, EN/HE-required validation by *TextEN/*TextHE suffix, key-immutable on update, cache invalidation on each write). New WebAppLookups.js controller exposes getMap / addRow / updateRow in {error, data:{headers, rows}} envelope, mapName-guarded. AdminProductsView gets Card 4 (Lookups) below SKU Management with three sections — Grapes (key + EN + HE), Kashrut (key + Type as G/I/L select + EN + HE), Texts (key + EN + HE + Category) — shared modal, runtime header discovery, Texts category filter, sort by EN / Type+EN / Code respectively. No delete. Card 4 wired into refreshView. Carries @120 fixes (task date restore + CRM suggestion stop) that shipped earlier today.'
+  built: '2026-05-25 10:19',
+  commit: '@123: Content Library phase 2 — corrected placement. SysLibrary lives in a separate single-tab workbook JLMops_Library (Drive MCP single-tab compatible per reference_drive_files + CONTENT_LIBRARY_PLAN.md §4) — NOT inside JLMops_Data. New config rows system.spreadsheet.library (workbook ID) + system.folder.library (content archive folder ID). Stale system.sheet_names row for SysLibrary removed (it belongs to a different spreadsheet, not JLMops_Data). SysLibraryActivity stays inside JLMops_Data (ops-internal, no Drive MCP read need per §18). library.enabled flag carried from @122. Re-run rebuildSysConfigFromSource() after this deploy to refresh SysConfig.'
 };
 
 function getVersion() {

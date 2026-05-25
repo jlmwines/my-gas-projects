@@ -567,5 +567,35 @@
         "",
         "",
         ""
+    ],
+    [
+        "schema.data.SysLibrary",
+        "Schema for the Library Master sheet. LIVES IN THE JLMops_Library WORKBOOK (id in system.spreadsheet.library), NOT JLMops_Data — Drive MCP single-tab compatible per reference_drive_files + CONTENT_LIBRARY_PLAN.md §4. Single flat polymorphic table for content/marketing entities (blog/news/mention/email/social/template/image). Generic columns always populated; per-type extension columns sparse. Tags/Taxonomy/References stored as JSON arrays. KPI columns deferred to phase 11 per CONTENT_LIBRARY_PLAN.md §17.",
+        "stable",
+        "headers",
+        "slb_Id,slb_Slug,slb_Title,slb_ContentType,slb_Language,slb_State,slb_Version,slb_CreatedDate,slb_CreatedBy,slb_LastTouched,slb_Tags,slb_Taxonomy,slb_References,slb_Notes,slb_MdUrl,slb_DocUrl,slb_WpPostId,slb_CanvaDesignUrl,slb_IssueNumber,slb_PrintDate,slb_Excerpt,slb_Position,slb_MailchimpCampaignId,slb_SubjectLine,slb_SendDate,slb_RecipientCount,slb_Platform,slb_ExternalUrl,slb_ScheduledAt,slb_PostedAt,slb_Subject,slb_Body,slb_Channel,slb_Kind,slb_Index,slb_Descriptor",
+        "key_column",
+        "slb_Id",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "schema.data.SysLibraryActivity",
+        "Schema for the Library Activity Log sheet. Per-entity audit trail with polymorphic attachment via (slba_EntityType, slba_EntityId) — points at SysLibrary row for library types, or at SysContacts/SysOrders/SysProjects for virtual entity types. See plans/CONTENT_LIBRARY_PLAN.md §7 virtual entity types and §8 activity log.",
+        "stable",
+        "headers",
+        "slba_ActivityId,slba_EntityType,slba_EntityId,slba_Timestamp,slba_Actor,slba_ActionType,slba_Summary,slba_Details,slba_ReferencedEntities",
+        "key_column",
+        "slba_ActivityId",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
     ]
 ]
