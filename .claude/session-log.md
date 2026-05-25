@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-25 (jlmops @120 + @121 — task date fix, CRM suggestion stop, lookup admin UI)
+
+- @120: `TaskService.createTask` Rule 2 reverted to pre-2026-01-20 behavior (assigned non-immediate tasks get start=today + due=pattern). Root cause of "vintage / negative-stock tasks have no deadlines" complaint; user had been backfilling dates manually for ~4 weeks. Same deploy: `CrmIntelligenceService.runAnalysis` no longer creates `task.crm.suggestion` rows (cohort + holiday call sites dropped; `getInsights()` accumulation retained for future dashboard).
+- @121: Lookup admin UI. `LookupService` gains `addLookupValue` + `updateLookupRow` (header-driven, append-only, EN/HE-required via `*TextEN`/`*TextHE` suffix, key-immutable on update, cache invalidation per write). New `WebAppLookups.js` controller. `AdminProductsView` Card 4 with Grapes / Kashrut / Texts sections, shared modal, runtime header discovery, Texts category filter. First add (Kashrut, slk_Type select) confirmed live by user.
+- Mid-session discovery: `SysLkp_Kashrut` has 4 columns (slk_Type undocumented in plan). Plan updated to bank Type treatment: editable `<select>` with G→Global / I→Israel / L→Local label map, sort by Type then EN, no filter.
+- User-flagged separate bug: dashboard showing tasks with `st_DoneDate` set but `st_Status='Assigned'` — at least one `task.project.custom` row in snapshot. Filter is status-based so this is real. Added to STATUS Pending operational tasks; "watch for spread over coming days" per user direction.
+- One missed move during session: started Edit A without first looking at user-provided exchange CSVs when user said "look at data docs" — wasted a few turns. User pushed back ("what are you doing"). Re-anchored to read-first.
+- Next session: verify @120 + @121 over next few sync cycles. Newsletter Issue #1 send 2026-05-26 still on calendar.
+
+---
+
 ## 2026-05-21 (later still — `LOOKUP_ADMIN_UI_PLAN.md` refined and locked)
 
 - Walked the lookup plan one-at-a-time through several rounds of narrowing. Starting shape (skeleton + per-pack + widget kit, two phases) collapsed under user pushback to the actual usage profile ("I almost never touch them; just make this easy").

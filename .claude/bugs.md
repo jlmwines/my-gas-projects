@@ -9,7 +9,7 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
-- [ ] 2026-05-17: **No admin UI for adding lookup values.** `LookupService.js` is read-only; new values require manual Drive sheet edit. Plan locked 2026-05-21 (`jlmops/plans/LOOKUP_ADMIN_UI_PLAN.md`): single-phase, three sections (Grapes + Kashrut + Texts) on a new Lookups card on `AdminProductsView`, add + edit only, key-unique + EN+HE-required validation, plain look. Ready to implement in one session.
+- [x] 2026-05-17: **No admin UI for adding lookup values.** SHIPPED 2026-05-25 @121. Card 4 (Lookups) on `AdminProductsView` with three sections (Grapes / Kashrut / Texts). Add + edit only, key-unique + EN+HE-required validation, runtime header discovery. First add (Kashrut, the trickiest section due to slk_Type select) confirmed working live. See `jlmops/plans/LOOKUP_ADMIN_UI_PLAN.md`.
 
 - [ ] 2026-05-15: **`backfillOrderTotals` is destructive — fix or remove.** The manual function in `HousekeepingService.js` (top-level `function backfillOrderTotals()`) sums `woi_ItemTotal` per order and writes that to `wom_OrderTotal`. Doc comment says "ensures wom_OrderTotal is always accurate" — but actually it strips tax + shipping. If run on real data, contact `sc_TotalSpend` aggregates undercount. Either (a) gate so it only fills missing/zero totals and never overwrites, or (b) remove it entirely. Until then, do not run; rely on the Woo pull (which writes correct `apiOrder.total`). If backfill ever ran, re-pull Woo orders to restore correct `wom_OrderTotal`.
 

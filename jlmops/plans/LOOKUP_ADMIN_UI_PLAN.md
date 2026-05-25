@@ -1,7 +1,7 @@
 # Lookup Admin UI Plan
 
 **Created:** 2026-05-21
-**Status:** PLANNING. Awaiting build authorization.
+**Status:** SHIPPED 2026-05-25 @121. Card 4 (Lookups) live on `AdminProductsView`; first add (Kashrut) confirmed. Edit + Grapes/Texts add untested; surface for any UI rough edges as they come up.
 **Scope:** Small UI to add or edit values in three jlmops lookup tables: `SysLkp_Grapes`, `SysLkp_Kashrut`, `SysLkp_Texts`. Single phase, one session.
 **Out of scope:** Delete (user handles removals manually for data-integrity reasons). Retire/soft-delete state. `SysLkp_Cities` (rare, manual). Wineries (WP). §16 regions overhaul (separate concern, manual cleanup).
 
