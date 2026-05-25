@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-25 (later — Content Library phase 2 + 3 shipped @122/@123; placement miss caught + corrected)
+
+- Phase 2: new JLMops_Library workbook (separate single-tab so Drive MCP can read; SysLibrary table with 36 cols, polymorphic flat) + SysLibraryActivity tab in JLMops_Data (9 cols, polymorphic attachment). Config: system.spreadsheet.library + system.folder.library + library.enabled=false flag. @122 mistakenly placed SysLibrary inside JLMops_Data — user caught the Drive-MCP-blindness at the post-rebuild check; @123 corrected via destructive rebuildSysConfigFromSource (clears + rewrites SysConfig from SetupConfig.js, runtime-mutable keys preserved via snapshot/restore).
+- Phase 3 verified: Drive MCP read of JLMops_Library returned all 36 headers — read-around architecture validated end-to-end.
+- §17 of plan grew "Rollback + safety preconditions" with an explicit workbook-placement rule (workbook is a first-class architectural question; "Drive MCP must read X" = separate file, not a JLMops_Data tab). Memory `feedback_drive_mcp_placement` banked so a future session reads the constraint correctly.
+- SheetAccessor recon (read-only): phase 5 needs ~25-line addition — `getLibrarySpreadsheet` + `getLibrarySheet` mirroring existing data/log getters, plus `clearCache()` update. No risk to existing flows.
+- Headers CSVs in `exchange/library-headers.csv` (36 cols) + `exchange/library-activity-headers.csv` (9 cols) — user imported manually into the new tabs.
+- Commit `6da307f`. Git tag `pre-library-v0` at the pre-phase-2 commit (`3fec6c3`).
+- Next session: phase 4 (task UI refactor — single riskiest in-place edit, deserves its own plan doc before implementation) OR phase 5 (first entity types `blog` + `image`, which exercises the library workbook routing for the first time).
+
+---
+
 ## 2026-05-25 (jlmops @120 + @121 — task date fix, CRM suggestion stop, lookup admin UI)
 
 - @120: `TaskService.createTask` Rule 2 reverted to pre-2026-01-20 behavior (assigned non-immediate tasks get start=today + due=pattern). Root cause of "vintage / negative-stock tasks have no deadlines" complaint; user had been backfilling dates manually for ~4 weeks. Same deploy: `CrmIntelligenceService.runAnalysis` no longer creates `task.crm.suggestion` rows (cohort + holiday call sites dropped; `getInsights()` accumulation retained for future dashboard).
