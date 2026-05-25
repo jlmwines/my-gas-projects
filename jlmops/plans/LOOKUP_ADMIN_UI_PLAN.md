@@ -48,7 +48,7 @@ From docs (`PRODUCT_TEXT_UPDATE_PLAN.md`, `PRODUCT_VERIFICATION_PLAN.md`) + code
 | Sheet | Key | EN | HE | Other |
 |---|---|---|---|---|
 | `SysLkp_Grapes` | `slg_Code` | `slg_TextEN` | `slg_TextHE` | — |
-| `SysLkp_Kashrut` | `slk_Code` | `slk_TextEN` | `slk_TextHE` | — |
+| `SysLkp_Kashrut` | `slk_Code` | `slk_TextEN` | `slk_TextHE` | `slk_Type` (G=Global / I=Israel / L=Local kashrut authority. Categories overlap conceptually; each row carries exactly one. Editable in modal as `<select>` populated from distinct sheet values; label map G/I/L → Global/Israel/Local; sort key on the section.) |
 | `SysLkp_Texts` | `slt_Code` | `slt_TextEN` | `slt_TextHE` | `slt_Note` (type/category — free text, sort/filter only) |
 
 **Implementation note:** The form reads sheet headers at render time and surfaces all columns found, not just the four above. Any extra columns present in the sheet stay editable. This way the UI doesn't silently drop columns added later.
@@ -116,7 +116,8 @@ All three sheets are already registered:
 - **No activity logging.** Lookup writes do not emit SysLog entries.
 - **Auth inherited from AdminProductsView.** No separate role check; if a user reaches the view, they can use the card.
 - **Existing data normalized by user.** User will fill missing translations in existing rows so the EN+HE-required rule is satisfiable for every row in all three sheets. UI does not need a one-time migration step or a softer rule for legacy rows.
-- **Default sort:** Grapes / Kashrut alphabetical by EN (mirrors `ProductService.js`); Texts ascending by `slt_Code`.
+- **Default sort:** Grapes alphabetical by EN (mirrors `ProductService.js`); Kashrut by `slk_Type` then `slk_TextEN`; Texts ascending by `slt_Code`.
+- **Filter dropdowns:** Texts filters by distinct `slt_Note` values. Kashrut has no filter (user direction 2026-05-25 — three categories are not enough to justify one).
 - **Form reads sheet headers at render time.** Doesn't hardcode column lists; any extra columns in the sheet stay editable.
 - **No `schemas.json` or `mappings.json` additions.** All three lookups already registered.
 

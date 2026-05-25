@@ -256,35 +256,24 @@ const CrmIntelligenceService = (function () {
     const suggestions = [];
     let tasksCreated = 0;
 
+    // Task creation disabled — manager is not handling CRM suggestion tasks and
+    // they should not be auto-created. Suggestions still accumulate for
+    // getInsights() consumers (future dashboard surface).
     if (cohortEnabled) {
-      // Cohort-driven suggestions — gated by crm.suggestions.cohort.enabled
       const coolingSuggestion = _checkCoolingCustomers(contacts);
-      if (coolingSuggestion) {
-        suggestions.push(coolingSuggestion);
-        if (_createSuggestionTask(coolingSuggestion)) tasksCreated++;
-      }
+      if (coolingSuggestion) suggestions.push(coolingSuggestion);
 
       const conversionSuggestion = _checkUnconvertedSubscribers(contacts);
-      if (conversionSuggestion) {
-        suggestions.push(conversionSuggestion);
-        if (_createSuggestionTask(conversionSuggestion)) tasksCreated++;
-      }
+      if (conversionSuggestion) suggestions.push(conversionSuggestion);
 
       const winerySuggestion = _checkWineryClusters(contacts);
-      if (winerySuggestion) {
-        suggestions.push(winerySuggestion);
-        if (_createSuggestionTask(winerySuggestion)) tasksCreated++;
-      }
+      if (winerySuggestion) suggestions.push(winerySuggestion);
     } else {
       LoggerService.info(SERVICE_NAME, fnName, 'Cohort suggestions skipped (crm.suggestions.cohort.enabled=false)');
     }
 
-    // Holiday reminders — always active
     const holidaySuggestion = _checkUpcomingHolidays();
-    if (holidaySuggestion) {
-      suggestions.push(holidaySuggestion);
-      if (_createSuggestionTask(holidaySuggestion)) tasksCreated++;
-    }
+    if (holidaySuggestion) suggestions.push(holidaySuggestion);
 
     LoggerService.info(SERVICE_NAME, fnName, `Analysis complete: ${suggestions.length} suggestions, ${tasksCreated} tasks created`);
 

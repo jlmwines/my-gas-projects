@@ -246,6 +246,86 @@
       </div>
     </div>
 
+    <!-- CARD 4: LOOKUPS -->
+    <div class="card mb-4">
+      <div class="card-header bg-white font-weight-bold">
+        Lookups
+      </div>
+      <div class="card-body">
+
+        <!-- Section A: Grapes -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-muted mb-0">Grapes (<span id="lookup-grapes-count">0</span>)</h6>
+          <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('grapes')">Add Grape</button>
+        </div>
+        <div class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Code</th>
+                  <th class="border-top-0">English</th>
+                  <th class="border-top-0">Hebrew</th>
+                  <th class="border-top-0" style="width: 80px;"></th>
+                </tr>
+              </thead>
+              <tbody id="lookup-grapes-body">
+                <!-- Grapes populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section B: Kashrut -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-muted mb-0">Kashrut (<span id="lookup-kashrut-count">0</span>)</h6>
+          <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('kashrut')">Add Kashrut</button>
+        </div>
+        <div class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Type</th>
+                  <th class="border-top-0">Code</th>
+                  <th class="border-top-0">English</th>
+                  <th class="border-top-0">Hebrew</th>
+                  <th class="border-top-0" style="width: 80px;"></th>
+                </tr>
+              </thead>
+              <tbody id="lookup-kashrut-body">
+                <!-- Kashrut populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section C: Texts -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-muted mb-0">Texts (<span id="lookup-texts-count">0</span>)</h6>
+          <div>
+            <select id="lookup-texts-filter" class="form-control form-control-sm d-inline-block" style="width: auto;" onchange="AdminProductsView.renderLookupTable('texts')">
+              <option value="">All categories</option>
+            </select>
+            <button class="btn btn-sm ml-2" onclick="AdminProductsView.openLookupModalAdd('texts')">Add Text</button>
+          </div>
+        </div>
+        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Code</th>
+                  <th class="border-top-0">English</th>
+                  <th class="border-top-0">Hebrew</th>
+                  <th class="border-top-0">Category</th>
+                  <th class="border-top-0" style="width: 80px;"></th>
+                </tr>
+              </thead>
+              <tbody id="lookup-texts-body">
+                <!-- Texts populated here -->
+              </tbody>
+            </table>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <!-- Vendor SKU Update Modal -->
@@ -485,6 +565,43 @@
     </div>
   </div>
 
+  <!-- Lookup Add/Edit Modal -->
+  <div class="modal-overlay" id="lookup-modal">
+    <div class="modal-container" style="max-width: 500px; max-height: auto;">
+      <div class="modal-header">
+        <h5 class="mb-0" id="lookup-modal-title">Lookup</h5>
+        <button type="button" class="close" onclick="document.getElementById('lookup-modal').style.display='none'">&times;</button>
+      </div>
+      <div class="form-body">
+        <div class="form-group">
+          <label>Code</label>
+          <input type="text" class="form-control" id="lookup-field-key">
+        </div>
+        <div class="form-group" id="lookup-field-type-wrap" style="display:none;">
+          <label>Type</label>
+          <select class="form-control" id="lookup-field-type"></select>
+        </div>
+        <div class="form-group">
+          <label>English</label>
+          <input type="text" class="form-control" id="lookup-field-en">
+        </div>
+        <div class="form-group">
+          <label>Hebrew</label>
+          <input type="text" class="form-control hebrew-text" id="lookup-field-he">
+        </div>
+        <div class="form-group" id="lookup-field-note-wrap" style="display:none;">
+          <label>Category</label>
+          <input type="text" class="form-control" id="lookup-field-note">
+        </div>
+        <div id="lookup-modal-error" class="text-danger small" style="display:none;"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button class="btn btn-sm" onclick="document.getElementById('lookup-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-sm" id="lookup-modal-submit" onclick="AdminProductsView.submitLookupRow()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Product Editor Modal (Reused Structure) -->
   <div class="modal-overlay" id="editor-modal">
     <div class="modal-container">
@@ -560,6 +677,21 @@
     AdminProductsView.lookupRegions = [];
     AdminProductsView.lookupGrapes = [];
     AdminProductsView.lookupKashrut = [];
+    AdminProductsView.lookupTexts = [];
+    // Per-section header arrays (sheet order), populated by loadLookupSection.
+    AdminProductsView.lookupHeaders = { grapes: [], kashrut: [], texts: [] };
+    // Modal state (set by openLookupModalAdd / openLookupModalEdit).
+    AdminProductsView.currentLookupSection = null;
+    AdminProductsView.currentLookupEditKey = null;
+    AdminProductsView.lookupTextsSort = 'slt_Code';
+    // Static label map for slk_Type (Global / Israel / Local).
+    AdminProductsView.kashrutTypeLabels = { G: 'Global', I: 'Israel', L: 'Local' };
+    // Static map: section name → backend map name + key column.
+    AdminProductsView.lookupSectionConfig = {
+      grapes:  { mapName: 'map.grape_lookups',   keyCol: 'slg_Code' },
+      kashrut: { mapName: 'map.kashrut_lookups', keyCol: 'slk_Code' },
+      texts:   { mapName: 'map.text_lookups',    keyCol: 'slt_Code' }
+    };
     // Review queue navigation state — populated by loadReviewList, consumed by openByIndex/navTask.
     AdminProductsView.reviewTasks = [];
     AdminProductsView.currentIndex = -1;
@@ -579,6 +711,11 @@
 
       // Card 3 Refresh
       AdminProductsView.loadSkuUpdates();
+
+      // Card 4 Refresh
+      AdminProductsView.loadLookupSection('grapes');
+      AdminProductsView.loadLookupSection('kashrut');
+      AdminProductsView.loadLookupSection('texts');
     };
 
     // --- Card 3: SKU Management ---
@@ -1580,6 +1717,254 @@
         `;
         tbody.appendChild(tr);
       });
+    };
+
+    // ============================================================
+    // Card 4: Lookups (Grapes / Kashrut / Texts)
+    // ============================================================
+
+    AdminProductsView._escapeHtml = function(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+
+    AdminProductsView._stateArrayName = function(section) {
+      return 'lookup' + section.charAt(0).toUpperCase() + section.slice(1);
+    };
+
+    AdminProductsView.loadLookupSection = function(section) {
+      const cfg = AdminProductsView.lookupSectionConfig[section];
+      if (!cfg) return;
+      google.script.run.withSuccessHandler(function(res) {
+        if (!res || res.error) {
+          console.error('loadLookupSection error', section, res && res.error);
+          return;
+        }
+        const rows = (res.data && res.data.rows) || [];
+        const headers = (res.data && res.data.headers) || [];
+        AdminProductsView.lookupHeaders[section] = headers;
+        AdminProductsView[AdminProductsView._stateArrayName(section)] = rows;
+        if (section === 'texts') {
+          AdminProductsView._populateTextsFilter(rows);
+        }
+        AdminProductsView.renderLookupTable(section);
+      }).withFailureHandler(function(err) {
+        console.error('loadLookupSection failure', section, err);
+      }).WebAppLookups_getMap(cfg.mapName);
+    };
+
+    AdminProductsView._populateTextsFilter = function(rows) {
+      const sel = document.getElementById('lookup-texts-filter');
+      if (!sel) return;
+      const current = sel.value;
+      const notes = Array.from(new Set(rows.map(r => r.slt_Note).filter(v => v !== undefined && v !== null && String(v).trim() !== ''))).sort();
+      let html = '<option value="">All categories</option>';
+      notes.forEach(n => {
+        html += '<option value="' + AdminProductsView._escapeHtml(n) + '">' + AdminProductsView._escapeHtml(n) + '</option>';
+      });
+      sel.innerHTML = html;
+      // Preserve selection if still valid
+      if (current && notes.indexOf(current) !== -1) sel.value = current;
+    };
+
+    AdminProductsView.renderLookupTable = function(section) {
+      const rows = (AdminProductsView[AdminProductsView._stateArrayName(section)] || []).slice();
+      const tbody = document.getElementById('lookup-' + section + '-body');
+      const countEl = document.getElementById('lookup-' + section + '-count');
+      if (!tbody) return;
+
+      // Sort
+      if (section === 'grapes') {
+        rows.sort(function(a, b) { return String(a.slg_TextEN || '').localeCompare(String(b.slg_TextEN || '')); });
+      } else if (section === 'kashrut') {
+        rows.sort(function(a, b) {
+          const t = String(a.slk_Type || '').localeCompare(String(b.slk_Type || ''));
+          if (t !== 0) return t;
+          return String(a.slk_TextEN || '').localeCompare(String(b.slk_TextEN || ''));
+        });
+      } else if (section === 'texts') {
+        rows.sort(function(a, b) { return String(a.slt_Code || '').localeCompare(String(b.slt_Code || '')); });
+      }
+
+      // Filter (texts only)
+      let visible = rows;
+      if (section === 'texts') {
+        const filterVal = (document.getElementById('lookup-texts-filter') || {}).value || '';
+        if (filterVal) visible = rows.filter(r => String(r.slt_Note || '') === filterVal);
+      }
+
+      if (countEl) countEl.textContent = visible.length;
+
+      const esc = AdminProductsView._escapeHtml;
+      let html = '';
+      visible.forEach(function(r) {
+        if (section === 'grapes') {
+          html += '<tr>'
+            + '<td>' + esc(r.slg_Code) + '</td>'
+            + '<td>' + esc(r.slg_TextEN) + '</td>'
+            + '<td class="hebrew-text">' + esc(r.slg_TextHE) + '</td>'
+            + '<td><button class="btn btn-sm" onclick="AdminProductsView.openLookupModalEdit(\'grapes\', \'' + esc(r.slg_Code) + '\')">Edit</button></td>'
+            + '</tr>';
+        } else if (section === 'kashrut') {
+          const typeLabel = AdminProductsView.kashrutTypeLabels[r.slk_Type] || r.slk_Type || '';
+          html += '<tr>'
+            + '<td>' + esc(typeLabel) + '</td>'
+            + '<td>' + esc(r.slk_Code) + '</td>'
+            + '<td>' + esc(r.slk_TextEN) + '</td>'
+            + '<td class="hebrew-text">' + esc(r.slk_TextHE) + '</td>'
+            + '<td><button class="btn btn-sm" onclick="AdminProductsView.openLookupModalEdit(\'kashrut\', \'' + esc(r.slk_Code) + '\')">Edit</button></td>'
+            + '</tr>';
+        } else if (section === 'texts') {
+          html += '<tr>'
+            + '<td>' + esc(r.slt_Code) + '</td>'
+            + '<td>' + esc(r.slt_TextEN) + '</td>'
+            + '<td class="hebrew-text">' + esc(r.slt_TextHE) + '</td>'
+            + '<td>' + esc(r.slt_Note) + '</td>'
+            + '<td><button class="btn btn-sm" onclick="AdminProductsView.openLookupModalEdit(\'texts\', \'' + esc(r.slt_Code) + '\')">Edit</button></td>'
+            + '</tr>';
+        }
+      });
+      tbody.innerHTML = html;
+    };
+
+    AdminProductsView._populateKashrutTypeOptions = function() {
+      const sel = document.getElementById('lookup-field-type');
+      if (!sel) return;
+      // Discover distinct types from the loaded sheet rows; merge with the
+      // known label map so future codes still appear.
+      const rows = AdminProductsView.lookupKashrut || [];
+      const distinct = new Set(rows.map(r => r.slk_Type).filter(v => v !== undefined && v !== null && String(v).trim() !== ''));
+      Object.keys(AdminProductsView.kashrutTypeLabels).forEach(k => distinct.add(k));
+      const codes = Array.from(distinct).sort();
+      let html = '';
+      codes.forEach(c => {
+        const label = AdminProductsView.kashrutTypeLabels[c] ? (c + ' — ' + AdminProductsView.kashrutTypeLabels[c]) : c;
+        html += '<option value="' + AdminProductsView._escapeHtml(c) + '">' + AdminProductsView._escapeHtml(label) + '</option>';
+      });
+      sel.innerHTML = html;
+    };
+
+    AdminProductsView._showLookupFields = function(section) {
+      // Type select only visible for Kashrut.
+      document.getElementById('lookup-field-type-wrap').style.display = (section === 'kashrut') ? 'block' : 'none';
+      // Category text only visible for Texts.
+      document.getElementById('lookup-field-note-wrap').style.display = (section === 'texts') ? 'block' : 'none';
+      if (section === 'kashrut') AdminProductsView._populateKashrutTypeOptions();
+    };
+
+    AdminProductsView.openLookupModalAdd = function(section) {
+      AdminProductsView.currentLookupSection = section;
+      AdminProductsView.currentLookupEditKey = null;
+      document.getElementById('lookup-modal-title').textContent = 'Add ' + section.charAt(0).toUpperCase() + section.slice(1);
+      document.getElementById('lookup-field-key').value = '';
+      document.getElementById('lookup-field-key').readOnly = false;
+      document.getElementById('lookup-field-en').value = '';
+      document.getElementById('lookup-field-he').value = '';
+      document.getElementById('lookup-field-note').value = '';
+      AdminProductsView._showLookupFields(section);
+      document.getElementById('lookup-modal-error').style.display = 'none';
+      document.getElementById('lookup-modal-error').textContent = '';
+      document.getElementById('lookup-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.openLookupModalEdit = function(section, key) {
+      const rows = AdminProductsView[AdminProductsView._stateArrayName(section)] || [];
+      const keyCol = AdminProductsView.lookupSectionConfig[section].keyCol;
+      const target = rows.find(r => String(r[keyCol]) === String(key));
+      if (!target) return;
+      AdminProductsView.currentLookupSection = section;
+      AdminProductsView.currentLookupEditKey = String(key);
+      document.getElementById('lookup-modal-title').textContent = 'Edit ' + section.charAt(0).toUpperCase() + section.slice(1);
+      document.getElementById('lookup-field-key').value = key;
+      document.getElementById('lookup-field-key').readOnly = true;
+      AdminProductsView._showLookupFields(section);
+      if (section === 'grapes') {
+        document.getElementById('lookup-field-en').value = target.slg_TextEN || '';
+        document.getElementById('lookup-field-he').value = target.slg_TextHE || '';
+      } else if (section === 'kashrut') {
+        document.getElementById('lookup-field-type').value = target.slk_Type || '';
+        document.getElementById('lookup-field-en').value = target.slk_TextEN || '';
+        document.getElementById('lookup-field-he').value = target.slk_TextHE || '';
+      } else if (section === 'texts') {
+        document.getElementById('lookup-field-en').value = target.slt_TextEN || '';
+        document.getElementById('lookup-field-he').value = target.slt_TextHE || '';
+        document.getElementById('lookup-field-note').value = target.slt_Note || '';
+      }
+      document.getElementById('lookup-modal-error').style.display = 'none';
+      document.getElementById('lookup-modal-error').textContent = '';
+      document.getElementById('lookup-modal').style.display = 'flex';
+    };
+
+    AdminProductsView._lookupShowError = function(msg) {
+      const el = document.getElementById('lookup-modal-error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    };
+
+    AdminProductsView.submitLookupRow = function() {
+      const section = AdminProductsView.currentLookupSection;
+      if (!section) return;
+      const cfg = AdminProductsView.lookupSectionConfig[section];
+      const editKey = AdminProductsView.currentLookupEditKey;
+
+      const key = document.getElementById('lookup-field-key').value.trim();
+      const en  = document.getElementById('lookup-field-en').value.trim();
+      const he  = document.getElementById('lookup-field-he').value.trim();
+      if (!key) { AdminProductsView._lookupShowError('Code is required.'); return; }
+      if (!en)  { AdminProductsView._lookupShowError('English is required.'); return; }
+      if (!he)  { AdminProductsView._lookupShowError('Hebrew is required.'); return; }
+
+      const row = {};
+      row[cfg.keyCol] = key;
+      if (section === 'grapes') {
+        row.slg_TextEN = en;
+        row.slg_TextHE = he;
+      } else if (section === 'kashrut') {
+        const type = document.getElementById('lookup-field-type').value;
+        if (!type) { AdminProductsView._lookupShowError('Type is required.'); return; }
+        row.slk_Type = type;
+        row.slk_TextEN = en;
+        row.slk_TextHE = he;
+      } else if (section === 'texts') {
+        const note = document.getElementById('lookup-field-note').value;
+        row.slt_TextEN = en;
+        row.slt_TextHE = he;
+        row.slt_Note = note;
+      }
+
+      const submitBtn = document.getElementById('lookup-modal-submit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      const handler = function(res) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+        if (!res || res.error) {
+          AdminProductsView._lookupShowError((res && res.error) || 'Save failed.');
+          return;
+        }
+        // Refresh state from server response
+        const rows = (res.data && res.data.rows) || [];
+        const headers = (res.data && res.data.headers) || [];
+        AdminProductsView.lookupHeaders[section] = headers;
+        AdminProductsView[AdminProductsView._stateArrayName(section)] = rows;
+        if (section === 'texts') AdminProductsView._populateTextsFilter(rows);
+        AdminProductsView.renderLookupTable(section);
+        document.getElementById('lookup-modal').style.display = 'none';
+      };
+      const failure = function(err) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+        AdminProductsView._lookupShowError((err && err.message) || 'Save failed.');
+      };
+
+      if (editKey === null || editKey === undefined) {
+        google.script.run.withSuccessHandler(handler).withFailureHandler(failure)
+          .WebAppLookups_addRow(cfg.mapName, row);
+      } else {
+        google.script.run.withSuccessHandler(handler).withFailureHandler(failure)
+          .WebAppLookups_updateRow(cfg.mapName, editKey, row);
+      }
     };
 
     AdminProductsView.refreshView();

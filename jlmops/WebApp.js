@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-15 12:36',
-  commit: '@119: Frequent-pipeline cadence guard tightened to Israeli business hours. Replaces the prior 07:00-23:00-every-day window with day-aware gating: Sun-Thu 08:00-20:00 IL, Fri 08:00-13:00 IL, Sat off. Apps Script trigger API can not combine 20-min intervals with day-of-week, so the schedule lives in HousekeepingService.performFrequentMaintenance code; a single 20-min trigger fires 24x7 and the function returns immediately outside the business window. Day extracted via Utilities.formatDate(..., Asia/Jerusalem, EEE) and matched against {Sun,Mon,Tue,Wed,Thu} or Fri. Observed runtime after cursor was stamped: ~10s per productive run.'
+  built: '2026-05-25 09:05',
+  commit: '@121: Lookup admin UI. LookupService gains addLookupValue + updateLookupRow (header-driven writes, append-only, EN/HE-required validation by *TextEN/*TextHE suffix, key-immutable on update, cache invalidation on each write). New WebAppLookups.js controller exposes getMap / addRow / updateRow in {error, data:{headers, rows}} envelope, mapName-guarded. AdminProductsView gets Card 4 (Lookups) below SKU Management with three sections — Grapes (key + EN + HE), Kashrut (key + Type as G/I/L select + EN + HE), Texts (key + EN + HE + Category) — shared modal, runtime header discovery, Texts category filter, sort by EN / Type+EN / Code respectively. No delete. Card 4 wired into refreshView. Carries @120 fixes (task date restore + CRM suggestion stop) that shipped earlier today.'
 };
 
 function getVersion() {
