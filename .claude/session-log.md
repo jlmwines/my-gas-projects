@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-25 (evening — Content Library schema cleanup; slb_Id removed)
+
+- **Schema cleanup shipped**: dropped synthetic `slb_Id` from `SysLibrary`; `slb_Slug` is now the key column. Reason: §20's slug is already immutable + globally unique + human-readable, so a separate ID was dead weight (jlmops `_Id` convention didn't fit this entity model). Files: `jlmops/config/schemas.json` + `exchange/library-headers.csv` + `SetupConfig.js` regenerated + plan §6 (dropped `id` from generic columns). User manually deleted column A from `JLMops_Library` workbook before clasp push. `clasp push` + `rebuildSysConfigFromSource()` ran clean; live `SysConfig` verified via fresh local copy.
+- **Flip-flop reverted earlier same evening**: I argued the §4 write-paths design (session direct Sheets API → HTTP endpoint via `LibraryService`) needed reversing on schema-ownership grounds, made 6 edits across plan + STATUS + session-log, then walked them back after user pointed out the back-and-forth wasn't anchored to the actual workload (1-2 entities/week). Plan stands at the morning's design: session writes directly to `SysLibrary` via Sheets API; no GAS-side endpoint. New memory `feedback_no_plan_flipflop` banked to prevent recurrence (anchor decisions to workload not architectural orthodoxy; ask before reversing documented decisions).
+- **Phase 4 ready**: local node script (sibling to `push-posts.js`) writes to `SysLibrary` via Sheets API with runtime header discovery; manual Context seed (EN then HE); image entities optional follow-up. SheetAccessor + LibraryService deferred to phase 5.
+
+---
+
 ## 2026-05-25 (later — Content Library phase 2 + 3 shipped @122/@123; placement miss caught + corrected)
 
 - Phase 2: new JLMops_Library workbook (separate single-tab so Drive MCP can read; SysLibrary table with 36 cols, polymorphic flat) + SysLibraryActivity tab in JLMops_Data (9 cols, polymorphic attachment). Config: system.spreadsheet.library + system.folder.library + library.enabled=false flag. @122 mistakenly placed SysLibrary inside JLMops_Data — user caught the Drive-MCP-blindness at the post-rebuild check; @123 corrected via destructive rebuildSysConfigFromSource (clears + rewrites SysConfig from SetupConfig.js, runtime-mutable keys preserved via snapshot/restore).

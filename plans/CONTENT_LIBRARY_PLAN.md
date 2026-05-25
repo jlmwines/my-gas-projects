@@ -98,51 +98,50 @@ Default to **active updates** from disciplined agents (Claude, ops):
 - **Direct session reports:** Claude → admin in-session updates (status, findings, prepared content). Supplement task rows, don't replace them.
 - **Non-task rows in SysTasks** (e.g., `task.system.health_status` singleton used as dashboard backing store): data storage, not workflow tasks. Worth migrating out of the table eventually; out of scope here.
 
-### Library service is the single state writer
+### Write paths — UI via library service; session direct to Sheets API
 
-Added 2026-05-20.
+Added 2026-05-20, revised 2026-05-25 (HTTP-to-GAS endpoint dropped; session writes directly to the workbook).
 
-- **All state writes go through the library service** (server-side in GAS). Entity state changes, activity log entries, task closures — one writer, one place to enforce invariants.
-- **UI is the only direct caller** of the library service via `google.script.run`. Buttons, action panels, status changes all route through it.
-- **Claude session has no direct path** to the library service. Architecturally that's fine — Claude acts through admin's hand:
-  - For state-affecting actions (publish, lock, close): Claude prepares content + tells admin "click X in the UI." Admin clicks. UI calls service. Activity log records `actor=admin`.
-  - For artifact creation (drafting MD, generating images, calling WP REST to push posts): Claude works in the local repo and external APIs. A small local node script (sibling to `push-posts.js`) calls a thin GAS HTTP endpoint to register the new artifact in the library — single purpose: `POST { slug, type, file_path, task_id }` → ops writes the library row + activity log entry. That's Claude's only write path to the library.
-- **No general-purpose API for Claude.** Browsing, reading state, inspecting status — read the library file directly via Drive MCP. Library file is the scope; no parallel export pipe (see "Read-around pattern" above).
+Two write channels, each appropriate to its caller:
 
-If the admin-click bridge becomes painful later (e.g., Claude driving larger orchestrations), a programmatic HTTP endpoint becomes worth the auth + payload-schema cost. Not now.
+- **UI writes go through the library service** (server-side in GAS, `LibraryService.*` via `google.script.run`). The "Add new entity" form, lock / publish / close actions, chain-spawn — all call into the service. Service validates, writes the entity row, writes the activity log row, fires any downstream workflow. Activity log records `actor='admin'` (or the active user).
+- **Session-time registration writes directly to the JLMops_Library workbook via Sheets API.** Claude's local node script (sibling to `push-posts.js`) authenticates with local Google credentials, appends the entity row to `SysLibrary` only. No GAS involvement; ops adds nothing on the registration write because the session has every value the row needs.
+- **Session cannot write to `SysLibraryActivity`.** That tab lives inside `JLMops_Data` (multi-tab, Drive-MCP-blind, ops-only territory per §18 workbook placement). Activity log entries are written exclusively by ops via `LibraryService` on state transitions (lock / publish / close / reference changes). Registration itself does not produce an activity-log entry; the row's existence + `slb_CreatedDate` + `slb_CreatedBy` is the registration audit.
+- **State transitions (lock / publish / close) only happen via UI** through the library service. The session never transitions an entity's state, only creates new entities. Keeps the harder consistency questions (downstream workflow fires, reference-graph integrity at state change, activity log writes) on one writer.
+- **No general-purpose API for Claude.** Browsing, reading state, inspecting status: read the library file directly via Drive MCP. Library file is the scope; no parallel export pipe (see "Read-around pattern" above).
 
-### Register-on-create endpoint — design surface (banked 2026-05-21)
+Two writers each validates its own inputs (slug format, type vocabulary, language, references resolvable). Slug uniqueness enforced by read-before-write on both sides. At current registration volume (1-2 entities/week) the duplication risk between validation implementations is acceptable; the earlier 2026-05-20 "library service is the single state writer" framing was overdesigned for the workload.
 
-The thin GAS HTTP endpoint Claude's local script calls. Same library-service function handles both this endpoint AND the "Add new entity" UI on the library screen (§11) — the endpoint is just the HTTP wrapper.
+### Session registration script — design surface (revised 2026-05-25)
 
-**Auth.** Shared-secret token in `.wp-credentials` sibling file (or equivalent local credential store), sent as Authorization header. Mirrors the existing `push-posts.js` WP REST pattern. UI path uses Google OAuth via the standard GAS web-app context — actor identity is native.
+The local node script Claude invokes from a session, sibling to `push-posts.js`. Writes directly to the `JLMops_Library` workbook via Sheets API; uploads file artifacts to Drive via Drive API where needed. Does NOT touch `JLMops_Data` (multi-tab, ops-only).
 
-**Payload.** `POST { slug, type, language, file_path_or_url, references?, task_id? }`. `slug` and `type` required; `language` required for types that split by language; `file_path_or_url` may be a Drive URL, a local git repo path, or null for entities without a file (templates, mentions); `references[]` optional list of entity IDs; `task_id` optional context.
+**Auth.** Application Default Credentials (`gcloud auth application-default login`), or a service account JSON in a sibling credentials file. Identity must have edit access on `JLMops_Library` and on the library Drive folder. Same kind of local credential pattern as `.wp-credentials` for `push-posts.js`, scoped to Google APIs instead of WP REST.
 
-**Idempotency.** Same slug submitted twice (script crash + retry; manager double-clicks Submit) → endpoint dedupes and returns the existing row with `deduplicated: true`. No error on retry. Caller can tell whether it created the row or found an existing one.
+**Inputs.** CLI args (manifest-driven shape similar to `push-posts.js` is fine for recurring registrations like blog posts): `slug`, `type`, `language`, `file_path_or_url`, optional `references[]`.
 
-**Validation (reject early, structured error).**
+**Validation (client-side, in the script; reject early with structured error).**
 - Slug format: kebab-case + type prefix matches the controlled vocabulary (§20).
 - Type: in the controlled vocabulary.
 - Language: `en` / `he` / `null` (null only for bundled-language types like image-default).
 - File ref: valid Drive URL OR valid git repo path OR null.
-- References: every entity_id in `references[]` must resolve.
+- References: every `entity_id` resolves (read-before-write against `SysLibrary`).
 
-**Response shape.**
-- Success: full created entity row + `created: true`.
-- Dedupe: existing entity row + `deduplicated: true`.
-- Validation error: `{ ok: false, errors: [{ field, message }] }`.
-- System error: `{ ok: false, error: "..." }`.
+**Idempotency.** Read `SysLibrary` by slug first; if found, return the existing row with `deduplicated: true`, do not append. Otherwise append. Slug uniqueness is the read-before-write contract.
 
 **Side effects on success.**
-- Activity log row written with `actor='claude (script)'` (HTTP) or `actor='admin'` (UI path), `action_type='registered'`, details with caller info.
-- Reverse-index updates if `references[]` is non-empty (per §6 reverse-lookup support).
-- File placement: if `file_path_or_url` points outside the canonical Drive folder, library service moves it to the canonical path per §5 (file ID preserved, URL stays stable).
+- Append entity row to `SysLibrary` (`JLMops_Library` workbook).
+- File placement: if `file_path_or_url` is a local path, upload via Drive API and place at canonical Drive folder per §5 (auto-create concept folder if missing; reject silent overwrite). If a Drive URL, optionally move to canonical path if not already there (Drive file ID stable; URL preserved).
+- **No activity log entry.** `SysLibraryActivity` lives in `JLMops_Data` (multi-tab, ops-only); session has no write access there by design. Registration is audited via `slb_CreatedDate` + `slb_CreatedBy` on the row itself.
 
 **Scope (what it doesn't do).**
-- No state transitions — separate library service methods for lock / publish / close.
-- No file content upload over HTTP — caller is responsible for getting the file to Drive / git before registration. UI path may upload via DriveApp inside GAS since it has Drive write scope.
-- No content edits — registration is one-time per entity; further changes go through other library service methods.
+- No state transitions (lock / publish / close are UI-only via the library service).
+- No file content edits.
+- No activity log writes (ops territory).
+- No reverse-index maintenance (computed at query time per §6, not stored).
+- Registration is one-time per entity. Further changes go through the UI / library service.
+
+**Why direct Sheets API and not an HTTP-to-GAS endpoint** (the earlier 2026-05-21 design, retracted 2026-05-25). The session has every value the entity row needs; ops can't validate or enrich any of it. The HTTP path added auth (shared secret), deployment surface (anonymous-access deployment), and a GAS code path with no purpose beyond write-through. Direct Sheets API removes all of it: same script-sibling-to-`push-posts.js` shape, simpler write target. Activity-log writes stay on the ops side where they always belonged (multi-tab JLMops_Data, ops-only).
 
 ---
 
@@ -227,7 +226,7 @@ Added 2026-05-21. The risk to mitigate is the manager (or any caller) creating f
 - Renames the file to match `<slug>.<ext>` if the current name doesn't match
 - Then creates the entity row pointing at the (now correctly located) URL
 
-The HTTP register-on-create endpoint that Claude's local script calls uses the same library-service function and gets the same guarantees.
+The above describes the UI / library-service route for the "Add new entity" path. The session registration script (§4 "Session registration script — design surface") does its own canonical-folder placement via Drive API directly, applying the same auto-create / canonical-path / no-silent-overwrite rules in client-side code (revised 2026-05-25).
 
 ---
 
@@ -256,8 +255,7 @@ Sibling-language pairs reference each other naturally as translation pairs (the 
 
 ### Generic columns (all entities)
 
-- `id`
-- `slug` — canonical join key across Canva/Mailchimp/Drive/jlmops (see §20)
+- `slug` — canonical join key across Canva/Mailchimp/Drive/jlmops AND the key column of `SysLibrary` (see §20). Slug is immutable + globally unique + human-readable, so it serves as both the human handle and the cross-table FK (used in `references[]`, `slba_EntityId`, and `SysTasks.entity_id` for polymorphic attachment). No separate synthetic `id` — slug is the only identifier.
 - `title`
 - `content_type` (which entity type)
 - `language` (`en`, `he`, or `null` for language-agnostic like image-default)
@@ -806,12 +804,11 @@ Rule: before adding any new sheet/file/folder for this plan, answer **"does Clau
 2. **Library schema** designed and seeded. Even if empty, lock down columns.
 3. **Confirm Drive MCP read access to the library file.** One-time check that Claude can read entity rows directly from the live library sheet via Drive MCP. No separate export pipe to build (scope narrowed 2026-05-21 — library file is the read surface).
 4. **First entity types: `blog` + `image`** (reordered 2026-05-25 — was phase 5; now ahead of UI so the UI can be built against real data instead of empty scaffolding; task-UI refactor in new phase 5 remains independent of library data either way). Create new posts as library entities (sibling-language pair per post) with their image entities (featured + body); existing posts remain in current pattern. Concrete sub-steps for the next session:
-   - **SheetAccessor extension** — add `getLibrarySpreadsheet` + `getLibrarySheet` + `clearCache()` update, mirroring the existing data/log getters but reading `system.spreadsheet.library`. ~25 lines, no risk to existing flows. Sized 2026-05-25.
-   - **LibraryService skeleton** — header-driven write + read methods. Model: `LookupService.js` from @121 (runtime header discovery via row 1, append-only for adds, key-immutable on update, cache invalidation per write, EN/HE-required suffix detection adapted to library's column shape). Methods needed at minimum: `getLibrarySheet()`, `registerEntity({slug, type, language, ...})`, `getEntityBySlug(slug)`, `listByType(type, language?)`. State-transition methods (lock/publish/close) and chain-spawn methods defer to later phases.
-   - **Register-on-create HTTP endpoint** per §4 — shared-secret auth via `.wp-credentials` sibling, payload `{slug, type, language, file_path_or_url, references?, task_id?}`, validation up front (slug format / type vocabulary / language / file ref / references resolvable), idempotent on duplicate slug (returns existing row with `deduplicated: true`), structured error responses. Side effects: activity log row (`actor='claude (script)'`, `action_type='registered'`), file-move-to-canonical-path if needed (per §5).
-   - **Local node script** sibling to `push-posts.js` that calls the endpoint after artifact creation. Single purpose. Claude's only write path to the library.
-   - **Manual seed of Context as proof** — register the existing EN sibling first, then HE sibling. Exercises the full path end-to-end. Validate by Drive MCP reading `JLMops_Library` and seeing both rows.
+   - **Local node script** (sibling to `push-posts.js`) — writes directly to `SysLibrary` in `JLMops_Library` via Sheets API; uploads file artifacts to canonical Drive folder via Drive API where needed. Does NOT write to `JLMops_Data` (multi-tab, ops-only). Auth via local Google credentials (`gcloud auth application-default login` or service account JSON sibling file). Client-side validation per §20 slug pattern + controlled type/language vocabulary; read-before-write against `SysLibrary` for slug uniqueness. See §4 "Session registration script — design surface" for the full contract. **Phase 4 critical path; no GAS code touched.**
+   - **Manual seed of Context as proof** — register the existing EN sibling first via the script, then HE sibling. Exercises the full path end-to-end. Validate by Drive MCP reading `JLMops_Library` and seeing both rows.
    - **Image entities** for Context post follow the same registration path (featured + body, indexed per §20 slug pattern). May defer to a follow-up session if blog seed alone is enough proof.
+   - **SheetAccessor extension** (deferred to first ops-side library read) — add `getLibrarySpreadsheet` + `getLibrarySheet` + `clearCache()` update, mirroring the existing data/log getters but reading `system.spreadsheet.library`. ~25 lines, no risk to existing flows. Sized 2026-05-25. Not on the phase 4 critical path because the session script doesn't go through ops; lands when ops first needs to read `SysLibrary` (phase 5 UI list view or phase 6 task-chain integration).
+   - **LibraryService skeleton** — deferred to phase 5. Phase 4 has no UI write path, so no `LibraryService` needed yet. Methods come online with the "Add new entity" form and state-transition actions. Model: `LookupService.js` from @121 (runtime header discovery, append-only for adds, key-immutable on update, cache invalidation per write).
 5. **Library UI list view + task UI refactor** (reordered 2026-05-25 — was phase 4). Build read-only library list using the common-skeleton + type-pack pattern with a shared widget kit (§11). Refactor `ManagerDashboardView_v2` task list to formalize the pattern; collapse `AdminDashboardView_v2` + `AdminProjectsView` task surface into the same shape — project becomes a filter over the unified queue. **Single riskiest in-place edit per §17 safety preamble** — touches daily-use code. Own plan doc (`jlmops/plans/LIBRARY_TASK_UI_REFACTOR_PLAN.md`, to be drafted in chavruta as the first move of this phase) + extended soak before promotion. Validates the type-pack shape against real entity data created in phase 4.
 6. **Active update from Claude** on content creation — Claude writes library rows when it creates posts. Ops emits a lightweight orphan-content-files integrity report on cadence as a backstop against missed updates.
 7. **Task-chain integration** — ops spawns standard task chain when a new library row appears (via Claude's explicit call, not polling).
@@ -865,7 +862,7 @@ Added 2026-05-20:
 - **Outreach templates with multi-language requirement: force version alignment.** Block send if peer-language template not at same locked version. Applies to welcome, abandoned-order, and future outreach templates (cooling, VIP, win-back). Mismatch surfaces as a content gap in admin session, not a runtime fallback decision. Closes §19's cross-language mismatch question. **RETRACTED 2026-05-21** — replaced with lock-time peer-realignment prompt (§14 "Peer-language realignment"). Hard version alignment would force useless re-locks in the realignment-fix case. The new model: at lock time, editor is prompted whether the peer needs editing; "yes" spawns a realignment task on the peer; "no" records the choice in the activity log. Outreach/publish guard becomes "no open peer-realignment task," not "versions must match." Same rule applies to all sibling-language entity types, not just templates.
 - **Ops emits orphan-content-files integrity report on cadence** as a backstop against missed active updates from Claude (phase 6). Lightweight check, not a primary mechanism.
 - **§4 in-session task-row carve-out retracted.** Tasks for all workflow work involving human action; manual close is a trivial click. Sync-cycle confirmation tasks (`task.confirmation.*`) confirm external state (orders loaded into Comax), they're real work, not UI cruft. See §4.
-- **Library service is the single state writer.** UI is the only direct caller via `google.script.run`. Claude acts via admin clicks for state changes; Claude's only library write path is a register-on-create endpoint called by a local script after artifact creation. See §4 final subsection.
+- **Library service is the single state writer.** UI is the only direct caller via `google.script.run`. Claude acts via admin clicks for state changes; Claude's only library write path is a register-on-create endpoint called by a local script after artifact creation. See §4 final subsection. **REVISED 2026-05-25** — see updated bullet "Two write paths" in the 2026-05-25 section below.
 - **Task UI = common skeleton + type pack + shared widget kit.** Manager dashboard is already halfway there; admin collapses from project-centric to task-as-unit-of-work; mobile via queue-responsive + per-pack action views. Refactor, not rewrite. See §11.
 - **Type packs choose presentation form** per task type: inline expand (lightweight), modal overlay (heavy comparison, validated by PRODUCT_VERIFICATION_PLAN), or dedicated view (multi-step, validated by ManagerContactView). Pack declares its form as metadata; queue routes clicks identically. See §11.
 - **Drawer vs. task pack boundary**: drawer is read-and-reconcile (lived-in inspection, e.g., wishlist 2026-05-15 product overview — Comax/Web/ops side-by-side for triage). Task pack is focused action (transient, task-scoped). Both compose from the shared widget kit; the Comax/Web comparison widget is consumed by both. See §11.
@@ -888,13 +885,19 @@ Added 2026-05-21:
 - **Task lifecycle dates inherited from existing SysTasks schema.** Library plan reuses `st_CreatedDate` (always set), `st_StartDate` / `st_DueDate` (nullable until Assigned, calculated from `due_pattern`), `st_DoneDate`. Both modes work: templates with default relative due dates (`one_week` etc.) for "assign all tasks at chain spawn with staggered dates," OR date-less tasks (`due_pattern='manual'`, `initial_status='New'`) for "spawn and let admin assign calendar timing later." See `jlmops/plans/DATA_MODEL.md` SysTasks section; §7 cross-reference.
 - **Chain spawn for blog: all tasks Assigned at spawn with staggered dates; no auto-trigger on edit close.** `task.content.edit_en` and `task.content.translate_he` both spawn at chain-spawn time, both Assigned, due dates staggered (edit due first, translate due a few days later). HE entity stub exists at chain-spawn so the translate task has a primary entity to attach to. Closing the edit task fires no workflow side effect — the staggered due dates carry the natural sequencing. Replaces the 2026-05-20 "carved-out workflow creates HE entity + DOC + Translate auto-draft on edit close" model. See §9 and §10.
 - **translate_he task pack design.** "Open EN source" button (resolves EN sibling's `doc_url` from `references[]`) + "Open HE target" button (the pre-created blank HE doc, or a "Create HE doc" button if not yet created — calls library service to place blank doc at canonical Drive path per §5). Manager iterates with Gemini outside the system (side panel inside EN doc, or gemini.google.com in another tab); system doesn't orchestrate the iteration. Manager pastes final HE into the HE doc, polishes, closes task. See §11.
-- **Register-on-create endpoint design banked.** Auth via shared-secret in `.wp-credentials` sibling (HTTP path) or Google OAuth (UI path). Payload `{ slug, type, language, file_path_or_url, references?, task_id? }`. Idempotent on duplicate slug (returns existing row with `deduplicated: true`). Validation: slug/type/language/file/references all checked up front, structured errors. Response includes the created or deduped row. Side effects: activity log row written, reverse-index updates, file move to canonical Drive folder if needed. Scope: no state transitions, no HTTP file content upload, no content edits — all those are separate library-service methods. See §4 "Register-on-create endpoint — design surface."
+- **Register-on-create HTTP endpoint design banked.** Auth via shared-secret in `.wp-credentials` sibling (HTTP path) or Google OAuth (UI path). Payload `{ slug, type, language, file_path_or_url, references?, task_id? }`. Idempotent on duplicate slug. Validation up front; structured errors. Side effects: activity log row written, reverse-index updates, file move to canonical Drive folder if needed. **RETRACTED 2026-05-25** — see "Session registration script — design surface" in the 2026-05-25 section below. Ops has no role on the registration write (session has every value); the HTTP path added auth + deployment surface for no benefit. Replaced with direct Sheets API write from the local node script. Activity-log writes stay ops-only by design (multi-tab `JLMops_Data`, Drive-MCP-blind, ops territory).
 - **Workflow ops creates entity rows + tasks; file creation by ops is a single carve-out (HE Drive DOC for blog translation).** All other artifacts created externally (Claude / Canva / Mailchimp) and registered via the register-on-create endpoint. New ops-creates-file cases require explicit per-case justification. See §9.
 - **`references[]` holds necessary structural connections only.** Casual relatedness (shared topic, shared audience) lives in `taxonomy[]` or is computed at query time. Test: would the entity be incomplete or orphaned if the link were removed? See §6.
 - **Library file is the read surface; no general-purpose export pipe.** Library lives as a single flat sheet (Drive MCP single-tab compatible), read directly by Claude, written by GAS via the library service. Earlier draft imagined "for-claude/" exports of multi-tab data — out of scope. Periodic reporting exports (KPI roll-ups, trend snapshots) remain a future provision only, not foundational. See §4 read-around pattern + §5 folder structure + §17 phase 3.
 - **Library physical layout: one flat single-tab sheet, sparse per-type columns.** ~30-40 columns once all entity types are in (most null on any given row). Sheets handles that without issue. Closes the §19 open question on layout. Implication: polymorphic queries are natural; per-type queries filter on `content_type`. Activity log + task table remain separate tabs (separate concerns, different access patterns).
 - **Atomic-language softened.** Earlier wording in §4 / §9 / §11 implied transactional rollback across Sheets + Drive + Translate calls. GAS doesn't provide that. Replaced with "sequential writes inside one workflow call; each step logs to SysLog; partial-failure recovery is manual." At current scale this is rare and acceptable.
 - **Lookup-add UI demoted from library prerequisite to independent operational need.** §13 cross-linking is future work, so scaled tagging via controlled vocabulary isn't blocked. Library work no longer gated by this UI. Phase 1 scope narrowed to Grapes + Kashrut; Texts deferred to phase 2; cities skipped; wineries out of scope (WP product attribute). Plan: `jlmops/plans/LOOKUP_ADMIN_UI_PLAN.md`. See §16, §17 phase 1.
+
+Added 2026-05-25:
+
+- **Two write paths: UI via library service, session direct to Sheets API.** Revises the 2026-05-20 "library service is the single state writer" framing. UI writes (Add new entity form, lock / publish / close, chain-spawn) call `LibraryService.*` via `google.script.run`. Session-time registration writes directly to `SysLibrary` in `JLMops_Library` via Sheets API from a local node script sibling to `push-posts.js`; no GAS involvement. **Session cannot write to `SysLibraryActivity`** because that tab lives in multi-tab `JLMops_Data` (Drive-MCP-blind, ops territory). Activity log entries are ops-only, written by `LibraryService` on state transitions; row creation alone does not produce an activity log entry (the row's `slb_CreatedDate` + `slb_CreatedBy` is the registration audit). State transitions remain UI-only. See §4 "Write paths" and "Session registration script — design surface."
+- **HTTP-to-GAS register-on-create endpoint dropped.** The 2026-05-21 design routed session registration through a thin GAS HTTP endpoint with shared-secret auth. Ops has no role in the registration write (session has every value); HTTP path added auth + deployment surface for no benefit. Direct Sheets API write from the local node script is the replacement. See §4.
+- **Phase 4 sub-step list re-sequenced** to reflect the no-GAS critical path. Order: local node script (Sheets API write) → manual Context seed → image entities → (deferred) SheetAccessor extension when ops first needs to read SysLibrary → (deferred to phase 5) LibraryService skeleton when UI write paths come online. See §17 phase 4.
 
 ---
 
