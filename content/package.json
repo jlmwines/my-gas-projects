@@ -1,0 +1,9 @@
+{
+  "name": "jlmwines-content",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local content tooling for JLM Wines (WP push, library registration).",
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

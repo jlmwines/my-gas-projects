@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-25 (later still — Content Library phase 4 critical path + SysTasks polymorphic columns @124/@128 + session-discipline corrections)
+
+- Phase 4 critical path shipped. `content/register-library.js` written (sibling to `push-posts.js`, service-account JSON auth at `.gcp-credentials.json`, manifest-driven, runtime header discovery, read-before-write idempotency by slug, §20 + §6 validation). New `content/package.json` with `googleapis` dep. Context EN + HE registered into `SysLibrary` via Sheets API; Drive MCP read-around confirms both rows + sibling cross-references end-to-end. No GAS involvement on the registration write path.
+- SysTasks polymorphic columns shipped @124 → deploy @128. `st_EntityType` + `st_EntityId` appended to SysTasks; matching `sta_*` on SysTasks_Archive. schemas.json + SetupConfig.js regenerated; clasp push + rebuildSysConfigFromSource + manual column add (would have been `syncHeaders('SysTasks')` + `syncHeaders('SysTasks_Archive')` — missed it, see memory below). No code reads the columns yet — pure prep for phase 7.
+- Plan revisions: §17 phase 5 reframed from "single riskiest in-place edit" to parallel `ManagerDashboardView_v3` build (risk collapses to additive; promotion is a one-line nav swap). §4 committed to service-account JSON (over ADC). §17 phase 4 sub-list re-sequenced for no-GAS critical path. §18 grew banked decisions covering all of above.
+- Session-discipline corrections: today repeated several failure patterns the user pushed back on (manufacturing decisions the plan settles, asking about authorization the user already gave, telling user to do manual work when automation exists, telling user to create infra that already exists, carrying stale framings past their revision). Banked three durable memories: `feedback_search_automation_before_manual_instructions`, `feedback_pick_plan_options_not_pass_back`, `feedback_search_repo_before_proposing_new`. Added Pre-action checklist to `jlmwines/.claude/CLAUDE.md` future sessions read at start.
+- Next session: pick from phase 6 orphan integrity report (additive GAS), phase 12 cross-link renderer (additive GAS), phase 7 task-chain spawn (uses new polymorphic cols), or phase 5 parallel v3 view (own plan doc first). Phase 4 optional image entities for Context still pending but not gating.
+
+---
+
 ## 2026-05-25 (evening — Content Library schema cleanup; slb_Id removed)
 
 - **Schema cleanup shipped**: dropped synthetic `slb_Id` from `SysLibrary`; `slb_Slug` is now the key column. Reason: §20's slug is already immutable + globally unique + human-readable, so a separate ID was dead weight (jlmops `_Id` convention didn't fit this entity model). Files: `jlmops/config/schemas.json` + `exchange/library-headers.csv` + `SetupConfig.js` regenerated + plan §6 (dropped `id` from generic columns). User manually deleted column A from `JLMops_Library` workbook before clasp push. `clasp push` + `rebuildSysConfigFromSource()` ran clean; live `SysConfig` verified via fresh local copy.

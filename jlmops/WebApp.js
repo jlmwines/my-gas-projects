@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 10:19',
-  commit: '@123: Content Library phase 2 — corrected placement. SysLibrary lives in a separate single-tab workbook JLMops_Library (Drive MCP single-tab compatible per reference_drive_files + CONTENT_LIBRARY_PLAN.md §4) — NOT inside JLMops_Data. New config rows system.spreadsheet.library (workbook ID) + system.folder.library (content archive folder ID). Stale system.sheet_names row for SysLibrary removed (it belongs to a different spreadsheet, not JLMops_Data). SysLibraryActivity stays inside JLMops_Data (ops-internal, no Drive MCP read need per §18). library.enabled flag carried from @122. Re-run rebuildSysConfigFromSource() after this deploy to refresh SysConfig.'
+  built: '2026-05-25 10:59',
+  commit: '@124: Content Library phase 4 prep — SysTasks gains polymorphic columns st_EntityType + st_EntityId (sta_EntityType + sta_EntityId on SysTasks_Archive) per CONTENT_LIBRARY_PLAN.md §7. Append-only, existing typed FK columns untouched. Sets up phase 7 task-chain spawn against library entities. No code reads the new columns yet. Run rebuildSysConfigFromSource() after deploy + manually append the two columns to live SysTasks + SysTasks_Archive sheets.'
 };
 
 function getVersion() {

@@ -6,6 +6,13 @@
 .sftp-credentials
 .mc-credentials
 
+# Google Cloud service-account credentials (used by content/register-library.js)
+.gcp-credentials.json
+
+# Local npm install for content/ tooling
+content/node_modules/
+content/package-lock.json
+
 # Local incremental-deploy manifest (SHA-1 of last-deployed theme files)
 .deploy-theme-manifest.json
 
