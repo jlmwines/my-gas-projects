@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 18:28',
-  commit: '@125: Content Library phase 5 step 1 — LibraryView scaffold (new HTML + WebAppLibrary controller + TaskWidgets kit + SheetAccessor.getLibrarySheet + pack_form on all 76 task templates). Behind library.enabled=false; daily-use code untouched. Manager Dashboard route flips to LibraryView when flag on; admin gets new Library nav entry. Generic skeleton only — no packs yet. Run rebuildSysConfigFromSource() after deploy to pick up pack_form values.'
+  built: '2026-05-25 19:10',
+  commit: '@126: Hotfix to @125 — getView() now uses createTemplateFromFile().evaluate() so subviews can use scriptlets like <?!= include(TaskWidgets) ?>. LibraryView was rendering the include directive as raw text. Audited: only AppView (template-evaluated separately) and LibraryView use <? scriptlets; other views render unchanged through template evaluation. No other behavior change.'
 };
 
 function getVersion() {
@@ -111,7 +111,10 @@ function getView(viewName) {
   };
 
   if (viewMap[viewName]) {
-    return HtmlService.createHtmlOutputFromFile(viewMap[viewName]).getContent();
+    // Use template evaluation so views can use scriptlets like `<?!= include('TaskWidgets') ?>`.
+    // Audited 2026-05-25: only AppView (rendered separately) and LibraryView use `<?` scriptlets;
+    // other views render unchanged through template evaluation (no false matches).
+    return HtmlService.createTemplateFromFile(viewMap[viewName]).evaluate().getContent();
   }
 
   return `<div>View not found: ${viewName}</div>`;
