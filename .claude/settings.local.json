@@ -37,7 +37,36 @@
       "WebFetch(domain:jlmwines.us5.list-manage.com)",
       "Bash(powershell *)",
       "mcp__claude_ai_Google_Drive__search_files",
-      "mcp__claude_ai_Google_Drive__read_file_content"
+      "mcp__claude_ai_Google_Drive__read_file_content",
+      "Read(//tmp/**)",
+      "mcp__claude_ai_Google_Drive__download_file_content",
+      "Bash(awk 'NR>=4 && NR<=49' exchange/jlmwines-home-mobile.html)",
+      "WebFetch(domain:www.googleapis.com)",
+      "mcp__claude_ai_Canva__list-brand-kits",
+      "Bash(cygpath *)",
+      "mcp__claude_ai_Canva__generate-design",
+      "Bash(file /tmp/jlm-cand*.png)",
+      "mcp__claude_ai_Canva__list-folder-items",
+      "mcp__claude_ai_Canva__create-design-from-candidate",
+      "mcp__claude_ai_Canva__export-design",
+      "mcp__claude_ai_Intuit_Mailchimp__get_capabilities",
+      "mcp__claude_ai_Intuit_Mailchimp__edit_campaign",
+      "Bash(npx --yes qrcode \"https://jlmwines.com/context/?utm_source=newsletter-print&utm_medium=qr&utm_campaign=context-2026-05\" -t png -o marketing/newsletter/images/qr-context-en.png -w 600 -e Q --quiet)",
+      "Bash(npx --yes qrcode \"https://jlmwines.com/?utm_source=newsletter-print&utm_medium=qr&utm_campaign=newsletter-signup-2026-05\" -t png -o marketing/newsletter/images/qr-signup-en.png -w 600 -e Q --quiet)",
+      "Bash(npx --yes qrcode \"https://jlmwines.com/he/context/?utm_source=newsletter-print&utm_medium=qr&utm_campaign=context-2026-05\" -t png -o marketing/newsletter/images/qr-context-he.png -w 600 -e Q --quiet)",
+      "Bash(npx --yes qrcode \"https://jlmwines.com/he/?utm_source=newsletter-print&utm_medium=qr&utm_campaign=newsletter-signup-2026-05\" -t png -o marketing/newsletter/images/qr-signup-he.png -w 600 -e Q --quiet)",
+      "Bash(git check-ignore *)",
+      "Bash(awk -F',' 'NR>1 {print $7}' \"jlmops/exchange/JLMops_Data - SysTasks.csv\")",
+      "Bash(awk -F',' 'NR>1 {print $7}' \"/c/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysTasks.csv\")",
+      "Bash(awk -F',' 'NR>1 && $15 != \"\" && $7 != \"Done\" {print $7, $15, $2}' \"/c/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysTasks.csv\")",
+      "Bash(awk -F',' 'NR>1 && $9 == \"Manager\" && $15 != \"\" && $7 != \"Done\" {print $7, \"|done:\", $15, \"|\", $6}' \"/c/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysTasks.csv\")",
+      "Bash(awk -F',' 'NR>1 && $9 == \"Manager\" && $7 == \"Done\" {print $7, \"|\", $2, \"|\", $12, \"|done:\", $15}' \"/c/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysTasks.csv\")",
+      "Bash(awk -F',' 'NR>1 {print $1}' \"C:/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysLkp_Kashrut.csv\")",
+      "Bash(awk -F',' 'NR>1 {print $4}' \"C:/Users/B/projects/jlmwines/jlmops/exchange/JLMops_Data - SysLkp_Texts.csv\")",
+      "Bash(python3 *)",
+      "Bash(awk '/^    \\\\}\\\\\\)\\\\\\(\\\\\\);/{print NR\": \"$0}' \"C:/Users/B/projects/jlmwines/AdminProductsView.html\")",
+      "Bash(awk '/^    \\\\}\\\\\\)\\\\\\(\\\\\\);/{print NR\": \"$0}' \"C:/Users/B/projects/jlmwines/jlmops/AdminProductsView.html\")",
+      "Bash(git tag *)"
     ],
     "deny": [
       "Bash(git -C:*)",
@@ -46,5 +75,7 @@
       "Bash(git reset --hard:*)",
       "Bash(git clean:*)"
     ]
-  }
+  },
+  "outputStyle": "default",
+  "prefersReducedMotion": false
 }
