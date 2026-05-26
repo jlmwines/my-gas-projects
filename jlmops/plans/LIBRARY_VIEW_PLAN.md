@@ -1,9 +1,11 @@
 # Library View Plan
 
 **Created:** 2026-05-25
-**Status:** PLANNING — phase 5 of `plans/CONTENT_LIBRARY_PLAN.md`. No implementation yet. Mandated as precondition by §17 safety preamble.
+**Status:** PARTIAL IMPLEMENTATION — phase 5 of `plans/CONTENT_LIBRARY_PLAN.md`. Steps 1, 2, 3, 6 shipped (LibraryView scaffold + Outreach / Confirmation / deep-link packs); steps 4 + 5 land with CONTENT_LIBRARY_PLAN phase 7.
+
+**Editing discipline:** when a decision changes, revise the relevant topical section above (Surfaces / Library list view / Common skeleton / etc.) inline. Append to "Decisions banked" only for genuinely cross-cutting principles. Do not accumulate dated blocks — keep the document reading as current truth.
 **Scope:** Build `LibraryView` — a single new entity (one HTML file, role-conditional content) that surfaces both the library entity list (preset filters per §11) and the unified task queue (common-skeleton + type-pack + widget-kit per §11). LibraryView replaces `ManagerDashboardView_v2`; admin can also reach it through nav. Built alongside the existing v2; promotion is a one-line nav-route swap once soaked.
-**Out of scope:** `AdminDashboardView_v2` stays untouched (the project-centric admin path lives there and collapses in a later phase per 2026-05-25 user direction). `AdminProjectsView` stays untouched (same later collapse). LibraryService skeleton and the "Add new entity" UI affordance are deferred to phase 7 alongside task-chain spawn (one LibraryService build serves both). Comparison widget (Comax / Web / ops) deferred to phase 9 detail view. SystemHealthWidget redesign (singleton, not a queue task).
+**Out of scope:** `AdminDashboardView_v2` stays untouched (the project-centric admin path lives there and collapses in a later phase per 2026-05-25 user direction). `AdminProjectsView` stays untouched (same later collapse). LibraryService skeleton + per-chain Spawn buttons (admin) + lockVersion wiring (manager, Content edit pack) are deferred to phase 7. Add-new-entity generic form deferred indefinitely per CONTENT_LIBRARY_PLAN §18 2026-05-26 (no current ad-hoc-creation use case). Comparison widget (Comax / Web / ops) deferred to phase 9 detail view. SystemHealthWidget redesign (singleton, not a queue task).
 
 ---
 
@@ -34,7 +36,7 @@ No edits to existing v2 files. `ManagerDashboardView_v2` and `AdminDashboardView
 
 ## Library list view (per §11)
 
-LibraryView's first surface (loads when no task is open). Read-only in this phase — the "Add new entity" affordance and LibraryService write paths land in phase 7 (see forward-pointer below).
+LibraryView's first surface (loads when no task is open). Read-only in this phase — LibraryService write paths land in phase 7 (per-chain Spawn buttons admin-side + lockVersion / createBlankDoc / attachExistingDoc manager-side). Add-new-entity generic form deferred indefinitely per CONTENT_LIBRARY_PLAN §18 2026-05-26.
 
 **Structure:** one underlying view; preset filters in the side or top region toggle between Library (firehose), Blog posts, Campaigns, Templates, Images. Each preset is a filter chip on the same SysLibrary read, not a separate view file. Driven by the `feedback_cards_over_view_links` principle.
 
@@ -47,7 +49,7 @@ LibraryView's first surface (loads when no task is open). Read-only in this phas
 
 **Read path:** `WebAppLibrary.js` calls `SheetAccessor.getLibrarySheet().getRange()...` — requires the SheetAccessor extension noted in CONTENT_LIBRARY_PLAN §17 phase 4 (~25 lines: `getLibrarySpreadsheet` + `getLibrarySheet` + `clearCache()` update mirroring the existing data/log getters). That extension lands as part of this phase's step 1.
 
-**Forward-pointer:** "Add new entity" action + LibraryService skeleton land in phase 7 (alongside task-chain spawn — one LibraryService build serves both). LibraryView v1 is read-only; entity registration continues through the local node script (`content/register-library.js`) until phase 7 wires the UI.
+**Forward-pointer:** LibraryService skeleton + admin-side per-chain Spawn buttons + manager-side lockVersion wiring (Content edit pack) land in phase 7 per CONTENT_LIBRARY_PLAN §18 2026-05-26. Add-new-entity generic form deferred indefinitely (no current ad-hoc-creation use case beyond the per-chain Spawn buttons). LibraryView v1 is read-only; entity registration continues through the local node script (`content/register-library.js`) for authoring artifacts; planned content rides per-chain Spawn buttons once phase 7 lands.
 
 ---
 
@@ -122,6 +124,29 @@ Comparison widget (Comax / Web / ops side-by-side per §11) is **deferred to pha
 
 ---
 
+## Role gating
+
+LibraryView is one file serving both roles. Admin-only controls (phase 7 onward: per-chain Spawn buttons, lock, delete-entity, anything mutating library state from the admin side) must be **rendered conditionally based on active role** — never visible to manager, just as the prior dashboard hid admin-only actions. Add-new-entity generic form is listed as an example throughout the plan; per 2026-05-26 it is deferred indefinitely, but if it ever ships it would be admin-only and follow this same gate.
+
+**Mechanism: reuse the existing AppView body-class CSS gate** (`AppView.html:105-109`). `doGet` already sets `body.role-admin` / `body.role-manager` from `effectiveRole`. Any element with a `data-roles="..."` attribute that does not list the active role is hidden via CSS:
+
+```css
+body.role-admin [data-roles]:not([data-roles~="admin"]) { display: none !important; }
+body.role-manager [data-roles]:not([data-roles~="manager"]) { display: none !important; }
+```
+
+**Convention for LibraryView:**
+- Admin-only buttons / sections carry `data-roles="admin"`
+- Shared controls carry no `data-roles` attribute (visible to both by default)
+- Manager-only controls (if any) carry `data-roles="manager"`
+- Same convention applies to pack bodies — an admin-only button inside a pack still gets the attribute, not a separate pack variant
+
+No LibraryView-specific role plumbing needed — no role passed into `WebAppLibrary_getData`, no `template.effectiveRole` on the LibraryView template, no JS role checks. The AppView body class already drives everything via CSS, which is how the prior dashboard's nav gating works today.
+
+Scope: UI-only. Server-side endpoint hardening is intentionally out of scope per the trust model (managers use the UI; not a script-execution threat).
+
+---
+
 ## Build order — multi-session
 
 1. **Skeleton + queue mechanics + widget-kit atoms + SheetAccessor extension.** Build LibraryView with the generic-skeleton fallback only — every task type renders the same body (description + notes + close). No packs yet. The 25-line SheetAccessor extension lands here so the library list view can read SysLibrary. Validate routing, flag, queue filter/sort/search, and library list view end-to-end against real data. (~1 session.)
@@ -162,13 +187,15 @@ Comparison widget (Comax / Web / ops side-by-side per §11) is **deferred to pha
 - **AdminDashboardView_v2 stays untouched** — the project-centric admin path lives there; collapses in a later phase alongside `AdminProjectsView`.
 - **Six packs cover daily work; everything else falls to the generic skeleton in v1** — driven by actual task-template enumeration of `taskDefinitions.json`. Validation / bundle / chain tasks stay on skeleton until daily friction earns them a pack.
 - **`pack_form` lives in `taskDefinitions.json`** — joins existing per-task-template metadata (topic, default_priority, flow_pattern, due_pattern). No new config file.
-- **Library list view is read-only in v1** — Add-new-entity affordance + LibraryService skeleton land in phase 7 alongside task-chain spawn (one LibraryService build serves both UI write paths).
+- **Library list view is read-only in v1** — LibraryService skeleton + per-chain Spawn buttons (admin-side) land in phase 7 (CONTENT_LIBRARY_PLAN §17). Add-new-entity generic form deferred indefinitely per CONTENT_LIBRARY_PLAN §18 (no current ad-hoc use case beyond per-chain buttons).
 - **SheetAccessor library-routing extension lands in step 1** — was deferred per CONTENT_LIBRARY_PLAN §17 phase 4 sub-list to "when ops first needs to read SysLibrary"; that need arrives here.
 - **No SysTasks schema changes in phase 5** — polymorphic columns already shipped @124; LibraryView reads them, doesn't write yet (writers come in phase 7).
 - **Parallel build, not in-place refactor** — per CONTENT_LIBRARY_PLAN §17 phase 5 + §18 (2026-05-25). Risk profile collapses to additive.
 - **No comparison widget in v1 widget kit** — defer to phase 9 detail view per §11 drawer-vs-pack boundary.
 - **One `task.content.translate` task type; direction is always EN→HE.** No direction-baked variants. §11's `task.content.translate_he` is a friendly documentation label, not a separate type. The Content edit pack handles every translate instance the same way regardless of which entity it attaches to. Confirmed 2026-05-25.
 - **Every task template declares its `pack_form` explicitly.** All ~80 rows in `taskDefinitions.json` get the new field — the 26 packed types declare their pack name; the rest declare `skeleton`. No inheritance-by-absence; configuration is exhaustive. Consumer code reads the field directly; missing/undefined is a config error, not a default-to-skeleton fallback. Confirmed 2026-05-25.
+- **Role gating reuses the AppView body-class CSS gate.** Admin-only controls in LibraryView (phase 7 onward: Add-new-entity, lock, publish, delete-entity) carry `data-roles="admin"`; no LibraryView-specific role plumbing. Server-side endpoint hardening is intentionally out of scope per the trust model (managers use the UI; not a script-execution threat). Confirmed 2026-05-26.
+- **Phase 7 (CONTENT_LIBRARY_PLAN §17) lands LibraryView's manager-side and admin-side write paths together.** Manager side: `lockVersion` wired into Content edit pack closure — phase 5 step 4 of this plan ships in the same pass. Admin side: per-chain "Spawn <type> chain" buttons (blog first) calling `addEntity` + `spawnChain` from LibraryService. Phase 5 step 5 (Content publish pack) reduces to a Confirmation-pack variant (notes + Mark Published button; logs to entity activity); no publish-action method needed since blog publish stays session-side via `content/push-posts.js` and Mailchimp / social / WhatsApp / video are manual. Document attachment on edit/translate tasks is on-demand: Create/Attach buttons fire `createBlankDoc` / `attachExistingDoc` when the task opens. Add-new-entity generic form deferred indefinitely (no current ad-hoc use case). See `plans/CONTENT_LIBRARY_PLAN.md` §17 phase 7 + §18 "Added 2026-05-26" for full rationale. Confirmed 2026-05-26.
 
 ---
 
