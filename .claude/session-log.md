@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-26 (planning — CONTENT_LIBRARY phase 7 plan-vs-code verification + leftover cleanup)
+
+- Reviewed `plans/CONTENT_LIBRARY_PLAN.md` end-to-end against actual code; verified the load-bearing phase 7 line refs (CONTENT_STAGES:168, createContentStream:203, TaskService.createTask:134, dedup at 165-178, options.projectId precedent at 209-212, SheetAccessor.getLibrarySheet:100 / getDataSheet:70, completeTask:329, completeTaskById:240). All check out — phase 7 spec is grounded in real code, not imaginary surfaces.
+- Found one mis-framed "gap" then corrected after reading actual data: register-library.js writes v=1, addEntity (per spec) writes v=0. Initial framing was "two writers must agree." After reading `exchange/JLMops_Library - SysLibrary.csv` (user-provided snapshot) — the 7 existing rows are `state='published', v=1`, registered post-publish, no reconciliation needed. Real refinement: the two writers serve different lifecycle moments (UI seeds pre-work stubs at draft/v0; script catalogues completed work at v=1). §5 + §17 phase 7 updated to make the split explicit; no script change, no data change. Memory `feedback_find_precedent_before_flagging_gap` ran live and caught the over-quick framing.
+- Housekeeping: committed 4 prior-session leftover groups in logical commits (plan refinements; HE newsletter copy tweaks; library.enabled flag flip source-of-truth catch-up; .claude settings allowlist accretion). Working tree now clean of modifications; ~80 untracked entries remain (content images, exchange snapshots, screenshots, several new plan files, marketing newsletter images, temp/) — user deferred triage to a future cleanup session, local has continuous cloud backup.
+- Next session: phase 7a (3 task templates + CONTENT_STAGES extension + TaskService.createTask polymorphic options + LibraryService.addEntity + spawnContentChain + LibraryView "Create Content Tasks" admin button) OR phase 6 orphan integrity report.
+
+---
+
 ## 2026-05-25 (late — Content Library phase 5 implementation steps 1/2/3/6 @125 → @127 deploy @131)
 
 - Phase 5 step 1 (@125 deploy @129): LibraryView scaffold shipped. New `jlmops/LibraryView.html` (tab switcher Tasks / Library, filter chips + search + sort, generic-skeleton expand, library list table with preset chips Library/Blog/Campaigns/Templates/Images). New `jlmops/WebAppLibrary.js` controller returning `{ tasks, library }` with `packForm` + polymorphic `entityType`/`entityId` (typed-FK fallback). New `jlmops/TaskWidgets.html` widget kit (atoms + helpers). `SheetAccessor` extended with `getLibrarySheet`. `pack_form` field added to all 76 task templates in `taskDefinitions.json` (26 packed + 50 skeleton); SetupConfig.js regenerated. WebApp.js doGet reads `library.enabled` flag; getView maps Library to LibraryView. AppView.html admin gets Library nav entry; manager Dashboard link flips to LibraryView when flag on.
