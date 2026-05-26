@@ -2279,10 +2279,10 @@ function getMasterConfiguration() {
     ],
     [
         "library.enabled",
-        "Master feature flag for the Content Library subsystem (CONTENT_LIBRARY_PLAN.md). When false, library service methods short-circuit and the library nav is hidden. Default false until rollout is validated.",
+        "Master feature flag for the Content Library subsystem (CONTENT_LIBRARY_PLAN.md). When false, library service methods short-circuit and the library nav is hidden.",
         "stable",
         "value",
-        "false",
+        "true",
         "",
         "",
         "",
