@@ -1,6 +1,6 @@
 # Content Library Plan
 
-**Status:** PARTIAL IMPLEMENTATION — phases 2-4 + phase 5 steps 1/2/3/6 shipped (see §17 for current state per phase). Phase 7 scope locked, awaiting implementation. Originated 2026-05-17 with major rewrite after realizing the original plan repeated the Frankenstein pattern.
+**Status:** PARTIAL IMPLEMENTATION — phases 2-4 + phase 5 steps 1/2/3/6 shipped (see §17 for current state per phase). Phase 7 scope locked and verified 2026-05-26 against actual code (the chain-spawn surface is the existing `WebAppProjects_createContentStream` extended, not a new `LibraryService.spawnChain`); 2-session split 7a/7b enumerated end-of-§17-phase-7. Originated 2026-05-17 with major rewrite after realizing the original plan repeated the Frankenstein pattern.
 
 **Editing discipline:** decisions merge into topical sections at bank-time. Do not append "Added YYYY-MM-DD" blocks to §18; revise the relevant topical section instead. §18 holds only foundational principles.
 
@@ -198,6 +198,7 @@ The user-readable library across systems:
 
 **One slug, one current version. No intra-version history in the library.**
 
+- **Two write paths, two lifecycle moments.** `addEntity` (UI via `LibraryService`) creates pre-work stubs — defaults to `state='draft', version=0`. First `lockVersion` bumps to `state='locked', version=1`; subsequent re-locks increment by 1 (version increments are always lock events). `content/register-library.js` (session script) registers artifacts that already exist — typically already published — so the caller passes the actual state (e.g. `'published'`) and the script defaults `version=1`. The two writers don't share defaults because they serve different lifecycle moments: UI seeds future work; script catalogues completed work.
 - Library row tracks: slug → current file URL(s) + current version number.
 - New version replaces the file at the same slug under the same folder. Old version overwritten; no library-side version cascade.
 - Edits between version bumps (Canva re-rolls, mid-task Claude iterations, ad-hoc tweaks) are invisible to the library and live in external systems (Drive history ~30 days for DOC, git history for MD, Canva's own history for designs).
@@ -210,7 +211,7 @@ Added 2026-05-21. Revised 2026-05-26 §18 (Add-new-entity generic form deferred 
 
 **Library service owns canonical-folder lookup.** A single GAS-side function maps `(type, concept, slug, language)` to the canonical Drive path under `/JLMops_Data/Library/`. Every create / move path goes through this function. Callers don't compute paths themselves.
 
-**Admin's entry points are the per-chain Spawn buttons on the library screen, not Drive directly.** A "Spawn <type> chain" action takes type + concept/topic + language, calls addEntity + spawnChain through the library service, and returns the resulting entity row. The chain runs doc-less initially (per 2026-05-26 on-demand doc-creation decision). Admin never starts by creating a Doc in Drive on his own — that path doesn't exist in the discipline.
+**Admin's entry point is the "Create Content Tasks" modal on LibraryView, not Drive directly.** Library-era reuse of the existing `contentStreamModal` shape (`AdminProjectsView.html:565`) driven by `WebAppProjects_createContentStream` (`WebAppProjects.js:203`) — admin types content name + checks the desired stages from the `CONTENT_STAGES` list, submit creates the SysLibrary row(s) and the selected tasks in one call (see §17 phase 7 for the extension wiring). The chain runs doc-less initially (per 2026-05-26 on-demand doc-creation decision). Admin never starts by creating a Doc in Drive on his own — that path doesn't exist in the discipline.
 
 **On-demand doc creation lives in task packs (manager-facing).** When a manager opens a task whose entity has no doc yet, the pack offers "Create blank Doc" (createBlankDoc places a labeled doc at canonical path, links to entity) or "Attach existing Doc" (attachExistingDoc takes a pasted Drive URL, links it, optionally moves to canonical location). Both routes call the same library-service function; both end with the file at the canonical path and a library row pointing at it.
 
@@ -228,7 +229,7 @@ Added 2026-05-21. Revised 2026-05-26 §18 (Add-new-entity generic form deferred 
 - Renames the file to match `<slug>.<ext>` if the current name doesn't match
 - Links the file to the entity row
 
-The above describes the UI / library-service routes (per-chain Spawn buttons + on-demand Create/Attach buttons in task packs). The session registration script (§4 "Session registration script — design surface") does its own canonical-folder placement via Drive API directly, applying the same auto-create / canonical-path / no-silent-overwrite rules in client-side code (revised 2026-05-25).
+The above describes the UI / library-service routes (the LibraryView "Create Content Tasks" modal + on-demand Create/Attach buttons in task packs). The session registration script (§4 "Session registration script — design surface") does its own canonical-folder placement via Drive API directly, applying the same auto-create / canonical-path / no-silent-overwrite rules in client-side code (revised 2026-05-25).
 
 ---
 
@@ -335,9 +336,9 @@ References[] follows the same pattern — a task referencing the triggering orde
 ### Existing task types continue to work
 
 - `task.contact.outreach` — still fires from HousekeepingService, just attaches to customer entity via unified pattern (today: via `sc_*` linkage; same idea, generic shape)
-- `task.content.edit_en` — attaches to the `-en` sibling entity (e.g., `blog-context-en`)
-- `task.content.translate_he` — attaches to the `-he` sibling entity (or creates it if it doesn't exist yet)
-- New: `task.content.admin_review_en` — admin gate between Claude draft and Evyatar edit (see §10)
+- `task.content.edit` — attaches to the EN sibling entity (e.g., `blog-context-en`). Language is carried by the entity row (`slb_Language`), not the type name; this naming convention applies to all content task types per LIBRARY_VIEW_PLAN.md Decisions banked 2026-05-25.
+- `task.content.translate` — attaches to the HE sibling entity (the HE stub is created at chain spawn so the task always has its primary entity)
+- New: `task.content.admin_review` — admin gate between Claude draft and Evyatar edit (see §10)
 - New: `task.content.create_wp_stubs` — admin prerequisite before content push (see §10)
 
 ### Task taxonomy
@@ -376,33 +377,32 @@ Workflows are wiring, not a primitive:
 
 Examples:
 - Order completion (first for customer) → spawn outreach task on customer entity, reference welcome template
-- Blog post EN locked at v1 → workflow creates HE entity row + new Drive DOC + Google Translate auto-draft + spawns translate_he task attached to HE entity with EN as reference (one workflow call, see below)
+- Blog chain spawn (admin clicks "Create Content Tasks") → creates EN + HE sibling entity rows + spawns selected tasks attached to the appropriate language sibling (per "Revised chain spawn for blog" below). No Drive DOC created at spawn; DOC creation is on-demand via the task pack's "Create blank Doc" button.
 - All distribution events for blog post X reach "sent/posted" state → mark blog post entity as `fully_distributed`
 
 ### Chain progression creates entities
 
 Added 2026-05-20, narrowed 2026-05-21. Workflows don't just hand off between existing entities — they CREATE new entity rows + tasks as needed. **File creation by ops is a single carved-out case** (HE Drive DOC for blog translation). Everything else lives in external systems and reaches the library through the register-on-create endpoint after the fact.
 
-**Default chain step shape:** create entity row, create task attached to it, link references. All sheet writes. The library service is the writer (per §4).
+**Default chain step shape:** create entity row, create task attached to it, link references. All sheet writes. The extended `createContentStream` (or its library-era successor — see §11 + §17 phase 7) is the writer for chain spawns; `LibraryService` is the writer for state transitions.
 
 **No ops-side Drive DOC creation.** Earlier draft (2026-05-20) had a "carved-out case" where ops would create the HE Drive DOC + run Google Translate API during chain progression. **Dropped 2026-05-21** — too brittle (Translate API failures mid-workflow) and unnecessary (manager is going to iterate with Gemini in his Drive workspace anyway, the auto-draft step adds nothing).
 
-**Revised chain spawn for blog (2026-05-21):**
+**Revised chain spawn for blog (2026-05-21; surface clarified 2026-05-26):**
 
-When the blog distribution chain spawns, the library service creates all the tasks at once:
+When admin submits the LibraryView "Create Content Tasks" modal for a blog (per §11 chain spawning + §17 phase 7), the extended `createContentStream` creates all the rows in one call:
 
-- `task.content.edit_en` — assigned status, due date set per chain template
-- `task.content.translate_he` — assigned status, due date staggered a few days later
-- (plus images / publish / distribution tasks per the chain)
+- Two SysLibrary rows: `blog-<topic>-en` and `blog-<topic>-he` (each state `draft`, no `doc_url`, HE row references the EN sibling)
+- One task per admin-checked stage, each attached to the appropriate language sibling via `(st_EntityType='blog', st_EntityId=<slug>)`. Task type names are language-neutral (`task.content.edit`, `task.content.translate`) — language lives on the entity row (`slb_Language`), not on the type. Initial statuses + due dates fall out of each task type's existing `flow_pattern` + `due_pattern` in `taskDefinitions.json`.
 
-It also creates the entity rows the tasks attach to, including the **HE entity stub** — slug `blog-<topic>-he`, type `blog`, language `he`, state `draft`, no `doc_url` yet, references the EN sibling. The stub exists from spawn time so `task.content.translate_he` has its primary entity to attach to. Drive DOC creation happens later when the manager clicks "Create HE doc" in the task pack (§11).
+The HE entity stub exists from spawn time so `task.content.translate` (attached to the HE sibling) has its primary entity. Drive DOC creation happens later when the manager clicks "Create blank Doc" in the task pack (§11).
 
-**No auto-trigger on edit close.** Closing `task.content.edit_en` doesn't fire any workflow side effect — both tasks already existed from chain-spawn, both are already on the manager's queue, the staggered due dates carry the sequencing. He naturally reaches the translation task after finishing the edit.
+**No auto-trigger on edit close.** Closing the EN-side edit task doesn't fire any workflow side effect — every task already exists from chain-spawn, all are already on the manager's queue, the per-type `due_pattern` carries the sequencing. He naturally reaches the translation task after finishing the edit.
 
 **Where artifacts actually come from:**
 
 - **Blog MD (EN)** — Claude writes locally, registers via endpoint, file stays in git.
-- **Blog HE DOC** — manager creates via "Create HE doc" button in the translate_he task pack (button calls library service `createBlankDoc()`, which places the file at the canonical Drive path per §5). Manager translates using Gemini in his Drive workspace (see §11 task pack design) and pastes the result into the DOC.
+- **Blog HE DOC** — manager creates via "Create blank Doc" button in the translate task pack (button calls library service `createBlankDoc()`, which places the file at the canonical Drive path per §5). Manager translates using Gemini in his Drive workspace (see §11 task pack design) and pastes the result into the DOC.
 - **Newsletter PDF** — Claude builds via pandoc locally, uploads to Drive on lock, registers via endpoint.
 - **Email HTML** — Claude or admin saves locked HTML, uploads to Drive, registers via endpoint.
 - **Editorial images** — Canva generates, local script downloads, uploads to Drive, registers via endpoint.
@@ -413,6 +413,8 @@ If a future need surfaces for ops to create a file as part of chain progression,
 
 **Manual attachment escape hatch.** For edge cases where automation doesn't fit (workflow didn't fire, ad-hoc asset, special substitution), the entity drawer and task pack expose an "Add file" action — upload local file → register + upload to Drive (or wherever the file type's home is), OR paste external URL → register URL only. Runs through the library service like everything else.
 
+**Image entity attachment at chain spawn.** When a blog chain spawns, no image entities exist yet (per the on-demand rule). The `task.content.images` task attaches to the **blog entity** as its primary so it has a valid attachment from spawn time. Image entities register separately via `content/register-library.js` as Canva-produced files land; on registration, each image entity's `references[]` points at the parent blog entity. The blog entity's reverse-lookup (per §6) surfaces the image set without storing it inline. The `task.content.images` task itself does not need to be retargeted at the image entities — it's about approving the set for the blog, which is what the blog-entity attachment models.
+
 ---
 
 ## 10. Workflow walkthrough: blog post end-to-end
@@ -420,29 +422,29 @@ If a future need surfaces for ops to create a file as part of chain progression,
 ### Pre-creation
 
 - Admin decides topic (from `content/PUBLICATION_CALENDAR.md` planning).
-- Admin clicks "Spawn blog chain" on LibraryView. Form takes topic + languages; system creates `blog-<topic>-en` and `blog-<topic>-he` entity stubs (state `draft`, no docs attached yet per the on-demand rule) and spawns the chain tasks against them with staggered due dates.
+- Admin clicks "Create Content Tasks" on LibraryView, types the content name + checks the blog-chain stages (`create_wp_stubs`, `admin_review`, `edit`, `translate`, `images`, `blog_publish`) — see §11 chain spawning + §17 phase 7 for the extended `createContentStream` call. The submit creates `blog-<topic>-en` and `blog-<topic>-he` entity stubs (state `draft`, no docs attached yet per the on-demand rule) and spawns the selected tasks against them. Due dates fall out of each task type's `due_pattern` — no separate stagger config.
 - Admin manually creates linked WP stubs (empty EN post + WPML-linked empty HE post). Records both `en_wp_post_id` and `he_wp_post_id` in entity. — `task.content.create_wp_stubs` (admin)
 
 ### Draft + admin review (EN)
 
 - Claude creates EN draft (in-session, with admin).
-- `task.content.admin_review_en` fires — admin reviews (in-session or queued).
+- `task.content.admin_review` (attached to the EN sibling) fires — admin reviews (in-session or queued).
 - Admin signoff → triggers Evyatar's edit task.
 
 ### Heavy edit by Evyatar (EN)
 
-- `task.content.edit_en` — Evyatar opens, heavy edit on DOC, closes → EN locks at v1.
+- `task.content.edit` (attached to the EN sibling via `st_EntityId=blog-<topic>-en`) — Evyatar opens, heavy edit on DOC, closes → EN locks at v1. Task type names are language-neutral; language lives on the entity row (`slb_Language`).
 
 ### Translate (HE)
 
-- `task.content.translate_he` was already spawned at chain-spawn (with the HE entity stub as its primary). Staggered due date a few days after `edit_en` so it surfaces naturally after the edit.
+- `task.content.translate` (attached to the HE sibling via `st_EntityId=blog-<topic>-he`) was already spawned with the rest of the chain. Due date computed from its `due_pattern` in `taskDefinitions.json` so it surfaces naturally after the edit.
 - Evyatar opens the task pack. If the HE entity has no doc attached yet (per the on-demand rule), the pack offers "Create blank Doc" (`createBlankDoc` places labeled doc at canonical path, links to entity) or "Attach existing Doc" (paste Drive URL). Once attached, "Open EN source" + "Open HE target" buttons open both side by side.
 - He works in Gemini (side panel inside the EN doc, or gemini.google.com in another tab), iterates until satisfied, pastes the final HE text into the HE DOC, polishes, saves.
 - Closes the task → HE locks at v1.
 
 ### Images
 
-- `task.content.image_select` — Evyatar approves image set, locks.
+- `task.content.images` — Evyatar approves image set, locks.
 
 ### Publish (admin in-session)
 
@@ -460,7 +462,7 @@ If a future need surfaces for ops to create a file as part of chain progression,
 
 ### Re-edit
 
-- New task created (e.g., `task.content.edit_en` again).
+- New task created (e.g., `task.content.edit` on the EN sibling again).
 - Existing locked file pre-fills task draft.
 - Close → v2 locked.
 - Downstream distribution events: optionally re-fire (admin decides per case; no auto cascade).
@@ -487,7 +489,7 @@ Each preset shows type-specific columns + actions. User mental model preserved �
 - Type-specific extensions per filter (e.g., `blog` adds version columns, `wp_post_id`, derivative count)
 - Filter chips: state, language (en / he / language-agnostic), language gap (siblings present?), tag, taxonomy, date range
 - Search
-- **"Add new entity" generic form — DEFERRED INDEFINITELY 2026-05-26.** Originally framed (2026-05-21) as the manager's primary entry point for new entities. Reframed 2026-05-26 §18: admin (not manager) initiates content; per-chain Spawn buttons in LibraryView handle planned content; session script handles authoring artifacts; no current ad-hoc-creation use case justifies the generic form. Section retained for the canonical-folder discipline it describes — that discipline still applies via per-chain Spawn buttons (addEntity + spawnChain) and on-demand Create/Attach buttons in task packs (createBlankDoc / attachExistingDoc). See §5 "Folder placement and library-screen entity creation."
+- **"Add new entity" generic form — DEFERRED INDEFINITELY 2026-05-26.** Originally framed (2026-05-21) as the manager's primary entry point for new entities. Reframed 2026-05-26 §18: admin (not manager) initiates content; the LibraryView "Create Content Tasks" modal (extended `contentStreamModal` shape — see §17 phase 7) handles planned content; session script handles authoring artifacts; no current ad-hoc-creation use case justifies the generic form. Section retained for the canonical-folder discipline it describes — that discipline still applies via the "Create Content Tasks" modal (which calls `addEntity` + the extended `createContentStream`) and on-demand Create/Attach buttons in task packs (`createBlankDoc` / `attachExistingDoc`). See §5 "Folder placement and library-screen entity creation."
 
 ### Task queue filter / sort / search (Residual 2 settlement, 2026-05-20)
 
@@ -545,7 +547,7 @@ Cross-task or cross-entity orchestrations (e.g., publish → also spawn email + 
 - Activity log
 - Attached tasks (open + done)
 - References (in: who references this entity; out: what this entity references)
-- Action buttons in context (Lock, Open in Drive, Create HE sibling stub via `createBlankDoc`, Spawn chain). Publish from drawer is intentionally absent: blog publish stays session-side via `content/push-posts.js`; Mailchimp / social / WhatsApp / video are manual external workflows. Drawer's publish role reduces to inspection plus the §14 peer-realignment guard surfaced as a "publish-ready / blocked" indicator.
+- Action buttons in context (Lock, Open in Drive, Create HE sibling stub via `createBlankDoc`, "Create Content Tasks" — opens the same modal as the LibraryView top-level button, pre-filled with the current entity's name). Publish from drawer is intentionally absent: blog publish stays session-side via `content/push-posts.js`; Mailchimp / social / WhatsApp / video are manual external workflows. Drawer's publish role reduces to inspection plus the §14 peer-realignment guard surfaced as a "publish-ready / blocked" indicator.
 
 ### Cross-domain queries (new capability)
 
@@ -563,7 +565,7 @@ Target pattern: **common skeleton + type pack + shared widget kit.**
 - **Type pack** — slotted body region per task type:
   - `task.contact.outreach`: customer card + call/text/whatsapp buttons (already exists in `ManagerContactView`).
   - `task.content.edit`: file link + draft status + lock button.
-  - `task.content.translate_he` (worked example, 2026-05-21): "Open EN source" button (resolves the EN sibling's `doc_url` from `references[]` and opens in a new tab) + "Open HE target" button (the pre-created blank HE doc, or a "Create HE doc" button if the doc hasn't been created yet — clicking calls library service `createBlankDoc()` and lands the file at the canonical Drive path per §5) + optional "Copy EN content to clipboard" + standard notes/close. Manager iterates with Gemini outside the system (side panel inside the EN doc, or gemini.google.com in another tab — system doesn't orchestrate the iteration), pastes the final HE into the HE doc, polishes, closes the task → HE locks at v1.
+  - `task.content.translate` (worked example, 2026-05-21; attached to the HE sibling — language lives on the entity row): "Open EN source" button (resolves the EN sibling's `slb_DocUrl` via the slug-pair pattern `<en-slug>` → `<he-slug>` per §6 and opens in a new tab) + "Open HE target" button (the on-demand-created blank HE doc, or a "Create blank Doc" button if the doc hasn't been created yet — clicking calls library service `createBlankDoc()` and lands the file at the canonical Drive path per §5) + optional "Copy EN content to clipboard" + standard notes/close. Manager iterates with Gemini outside the system (side panel inside the EN doc, or gemini.google.com in another tab — system doesn't orchestrate the iteration), pastes the final HE into the HE doc, polishes, closes the task → HE locks at v1.
   - `task.content.blog_publish`: notes textarea + "Mark Published" button (Confirmation-pack variant). Optionally records channel + external URL into entity activity log via `logEntityActivity`. No publishing action method in LibraryService — blog publish stays session-side via `content/push-posts.js`. Same shape applies to `task.content.email`, `task.content.social`, `task.content.whatsapp`, `task.content.video_publish` (all manual external workflows).
   - `task.order.packing_available`: order list + generate-slips button.
   - `task.confirmation.*`: confirm-completed button + notes for what was loaded.
@@ -606,24 +608,29 @@ Refactor, not rewrite. Bones are right; the type-pack pattern needs formalizing;
 Per the foundational principle "Projects survive only for cross-entity work" — what that looks like in the UI:
 
 - **Project becomes a library entity type.** Same shape as blog / email / news — slug, title, notes, state, references[], activity log, attached tasks. Just another entity, not a special container.
-- **AdminProjectsView narrows to**: (1) a drawer for project entities, (2) a filter view on the unified task queue. Not a separate task management surface. Collapse happens in a later phase per §17; AdminProjectsView stays untouched in the meantime and keeps firing today's distribution chains via its Generate Outputs button.
+- **AdminProjectsView narrows to**: (1) a drawer for project entities, (2) a filter view on the unified task queue. Not a separate task management surface. Collapse happens in a later phase per §17; AdminProjectsView stays untouched in the meantime and keeps firing today's content streams via its "Create Content Tasks" modal (`contentStreamModal` at `AdminProjectsView.html:565` → `WebAppProjects_createContentStream`).
 - **Cross-entity coordination uses references**, not containment. A campaign project entity has `references[]` pointing at the email, newsletter mention, and social post entities under that campaign. Each child entity has its own life and tasks; the project entity coordinates.
 - **Tasks attach where the work lives**: about the email → email entity; about the project as a whole → project entity. Tasks attach to one primary entity, reference others as context.
 
-**Chain spawning generalizes today's project-spawn-tasks capability.** Today's "Generate Outputs" button + 16 distribution templates (shipped 2026-05-11) generalize into the library era as:
+**Chain spawning extends today's content-stream surface.** Live precedent: `WebAppProjects_createContentStream` (`WebAppProjects.js:203`) loops over admin-selected stages and calls `TaskService.createTask` per stage, linking them via `st_SessionId = streamCode`. Stage list is the hardcoded `CONTENT_STAGES` array (`WebAppProjects.js:168`): currently 11 content stages (draft / edit / translate / translate_edit / images / blog_publish / video_create / video_publish / email / social / whatsapp). UI is `contentStreamModal` (`AdminProjectsView.html:565`) — admin types content name + optional stream ID, checks which stages, submit → `WebAppProjects_createContentStream({ projectId, contentName, stages, streamId })`. This **is** the chain-spawn surface; phase 7 extends it, doesn't reinvent.
 
-- **Chain templates live as data, not hardcode.** New `chain_id` field on each `taskDefinitions.json` row groups tasks into chains; new `chains.json` config holds chain-level metadata per chain (`applies_to_entity_types[]`, stagger pattern, idempotency key). The 16 existing distribution templates get `chain_id` backfilled (e.g. `marketing-distribution-newsletter-print`, `marketing-distribution-email-broadcast`). New chains (blog authoring chain, etc.) get added the same way. `LibraryService.spawnChain(entityId, chainId)` becomes the single entry point; `MarketingCampaignService.generateOutputs` retargets to call into it.
-- **Admin (not manager) initiates.** Admin is the chain-spawn surface; manager works the queue. Library era retains this role split: LibraryView's spawn affordances are admin-only, gated via `data-roles="admin"` per the AppView body-class CSS pattern (see `jlmops/plans/LIBRARY_VIEW_PLAN.md` Role gating section).
-- **UI surface is per-chain Spawn buttons on LibraryView, not a generic spawn picker.** Admin clicks "Spawn blog chain" (or equivalent for whichever chains have templates defined). Each button collects minimal fields (topic / title / languages), calls `addEntity + spawnChain` in one transaction. Add-new-entity generic form is deferred indefinitely — no current ad-hoc-creation use case beyond the per-chain buttons.
+Confirmed via grep 2026-05-26: the 16 distribution templates (`task.newsletter.*`, `task.flyer.*`, `task.campaign.*`) added 2026-05-11 are **schema-only — no live spawner**. They get a spawner in phase 11 (distribution events). Earlier plan wording ("`MarketingCampaignService.generateOutputs` retargets to spawnChain") misidentified the surface — `generateOutputs` builds utm-tagged URL + short URL + QR image, not tasks.
+
+Library-era extensions (all in phase 7):
+
+- **Two new content stages added to `CONTENT_STAGES`**: `task.content.create_wp_stubs` + `task.content.admin_review` (with matching `taskDefinitions.json` rows). Blog chain admin checks the desired stages from the existing modal; existing draft / edit / translate / images / blog_publish stay as-is.
+- **`createContentStream` extended (or its library-era successor `LibraryService.spawnContentChain` — pick one at implementation per `feedback_search_repo_before_proposing_new`; prefer in-place extension)** to (a) accept `entityType` + `slug`, (b) call `LibraryService.addEntity` to write the SysLibrary row for the entity, (c) pass `entityType` + `entityId` through to `TaskService.createTask` via `options.entityType` + `options.entityId` (same pattern as existing `options.projectId`, see `TaskService.js:209-212`).
+- **No new `chains.json`, no `chain_id` field on task definitions, no `LibraryService.spawnChain` method, no `stagger_days` config, no `idempotency_key_pattern` config.** Per-task `due_pattern` (already on every task definition row) handles spacing. `TaskService.createTask` already de-dupes by `(taskTypeId, linkedEntityId, status≠Done/Closed)` (`TaskService.js:166-178`) — that's the idempotency guard.
+- **Admin (not manager) initiates.** Admin is the chain-spawn surface; manager works the queue. Library era retains this role split: LibraryView's spawn affordances are admin-only, gated via `data-roles="admin"` per the AppView body-class CSS pattern (see `jlmops/plans/LIBRARY_VIEW_PLAN.md` Role gating section). The modal copies the `contentStreamModal` shape; AdminProjectsView's copy stays live during soak.
 - **Document creation is on-demand, not eager.** Chain spawn creates entity stub + tasks, leaves Drive Doc unattached. When manager opens the relevant task and the entity has no doc, the pack offers "Create blank Doc" (`createBlankDoc` places labeled doc at canonical Drive path, links to entity) or "Attach existing Doc" (`attachExistingDoc` takes pasted Drive URL, links it, optionally moves to canonical location). Image tasks are the cleanest illustration: chain spawns the image task at the same time as the others; the actual image arrives later in Canva; the entity registers when the file is delivered.
-- **Spawned tasks are independent.** The chain template is a one-time generator. Once spawned, admin can edit, skip, close ahead, reassign, add new ones, or delete. The template doesn't constrain after creation.
-- **Ad-hoc task creation** (today's `task.project.custom`) becomes a "Create task" action available on any entity drawer.
+- **Spawned tasks are independent.** The chain is a one-time generator. Once spawned, admin can edit, skip, close ahead, reassign, add new ones, or delete. The stage list doesn't constrain after creation.
+- **Ad-hoc task creation** (today's `task.project.custom`) stays as the "Create task" action available on any entity drawer.
 
-What this preserves from today: chain-of-tasks orchestration, admin's path-planning move, reuse of the 16 distribution templates. What it gains: chain spawning everywhere, not projects-only.
+What this preserves from today: the working content-stream modal, the stage-selection UX admin already knows, `TaskService.createTask` dedup, per-task `due_pattern` spacing. What it gains: library entity creation in the same call, polymorphic entity columns set at spawn, library-era home for the surface.
 
 ### Publishing calendar boundary
 
-`content/PUBLICATION_CALENDAR.md` is the source of truth for what ships when, maintained as markdown at session end. Admin reads the calendar, decides "now's the time," manually initiates chains once or twice a month via the LibraryView Spawn buttons. Cross-entity coordination (blog feeds newsletter slot feeds companion email) is modeled via `references[]` on entity rows per §6 — that's the long-term integration path. A JLMops calendar view is deferred indefinitely; markdown is working fine at current volume. `slb_PublishDate` field on entity rows is a small forward-looking add (currently absent from §6 schema), not on the near horizon.
+`content/PUBLICATION_CALENDAR.md` is the source of truth for what ships when, maintained as markdown at session end. Admin reads the calendar, decides "now's the time," manually initiates chains once or twice a month via the LibraryView "Create Content Tasks" modal. Cross-entity coordination (blog feeds newsletter slot feeds companion email) is modeled via `references[]` on entity rows per §6 — that's the long-term integration path. A JLMops calendar view is deferred indefinitely; markdown is working fine at current volume. `slb_PublishDate` field on entity rows is a small forward-looking add (currently absent from §6 schema), not on the near horizon.
 
 ---
 
@@ -797,7 +804,7 @@ Rule: before adding any new sheet/file/folder for this plan, answer **"does Clau
 - **Data snapshot** of `JLMops_Data` (Drive → Make a Copy) so any tab schema misstep is recoverable without a live restore. Snapshot taken 2026-05-25.
 - **Library workbook does not need its own snapshot** at phase 2 — it's empty and fully reproducible from schemas.json + the headers CSV. Snapshot becomes worth taking once real entity rows accumulate.
 - **Deploy ID** already pinned in `jlmops/.deployment-id` — the stable web-app URL survives all rollback deploys.
-- **Feature flag** `library.enabled` in SysConfig (default `false`). Library service methods short-circuit when off; nav hides the library view.
+- **Feature flag** `library.enabled` in SysConfig (default `true` since 2026-05-26, after phase 5 steps 1/2/3/6 went live). Library service methods short-circuit when off; nav hides the library view. **Retirement:** flag deleted (config + all `if (libraryEnabled)` short-circuits) after phase 11 ships (distribution events live, June 2026 issue registered end-to-end, no rollback path needed). Removal is a single cleanup commit; not gated by phases 12-15.
 
 **Build discipline across phases**
 
@@ -817,24 +824,165 @@ Rule: before adding any new sheet/file/folder for this plan, answer **"does Clau
    - **Image entities** for Context post follow the same registration path (featured + body, indexed per §20 slug pattern). May defer to a follow-up session if blog seed alone is enough proof.
    - **SheetAccessor extension** (deferred to first ops-side library read) — add `getLibrarySpreadsheet` + `getLibrarySheet` + `clearCache()` update, mirroring the existing data/log getters but reading `system.spreadsheet.library`. ~25 lines, no risk to existing flows. Sized 2026-05-25. Not on the phase 4 critical path because the session script doesn't go through ops; lands when ops first needs to read `SysLibrary` (phase 5 UI list view or phase 6 task-chain integration).
    - **LibraryService skeleton** — deferred to phase 5. Phase 4 has no UI write path, so no `LibraryService` needed yet. Methods come online with the "Add new entity" form and state-transition actions. Model: `LookupService.js` from @121 (runtime header discovery, append-only for adds, key-immutable on update, cache invalidation per write).
-5. **Library list view + task UI parallel build as new entity `LibraryView`** (reordered 2026-05-25 — was phase 4; revised 2026-05-25 — parallel new view instead of in-place refactor; revised again 2026-05-25 — new entity, not v3 of the dashboard, single file role-conditional). Build read-only library list using the common-skeleton + type-pack pattern with a shared widget kit (§11). **Build new `LibraryView.html` as a parallel new file; do NOT edit `ManagerDashboardView_v2` in place.** Single file serves both manager and admin via role-conditional content (no Manager + Admin counterparts). LibraryView replaces `ManagerDashboardView_v2` at promotion; `AdminDashboardView_v2` stays untouched until the AdminProjectsView collapse phase. LibraryView reaches via the existing "Tasks" nav link with route flip on `library.enabled`; `?v=2` is the emergency fallback. Same row shape as v2 (new controller `WebAppLibrary.js` reads the polymorphic `entity_type`/`entity_id` columns from §7 with FK fallback). Promotion = one-line nav-route swap once soaked. **Own plan doc shipped 2026-05-25: `jlmops/plans/LIBRARY_VIEW_PLAN.md`** — six pack archetypes cover daily work (Outreach / Content edit / Content publish / Confirmation / Order packing / Inventory count); ~50 task types fall to the generic skeleton in v1; `pack_form` field added to `taskDefinitions.json`. Library list view is **read-only in v1**; LibraryService skeleton deferred to phase 7. Add-new-entity generic form deferred indefinitely per 2026-05-26 §18 (no current use case beyond per-chain Spawn buttons). SheetAccessor library-routing extension (~25 lines) lands in step 1 of this phase. **Risk profile collapses to additive** — daily-use code untouched, swap is reversible.
-6. **Orphan integrity report.** Active update from Claude on content creation (Claude writes library rows when it creates posts) **SHIPPED 2026-05-25** as part of phase 4 critical path via `content/register-library.js`. Remaining phase 6 work: ops emits a lightweight orphan-content-files integrity report on cadence as a backstop against missed updates from the session-side path. Reads `SysLibrary` (via the SheetAccessor extension landing in phase 5) and the canonical Drive folder under `/JLMops_Data/Library/`; flags entities without files and files without entities; writes to SysLog or a dedicated report sheet.
-7. **LibraryService skeleton + chain-spawn (admin) + lockVersion + Content edit pack (manager, phase 5 step 4 lands here).** Scope locked 2026-05-26 (see §18 "Added 2026-05-26"). Methods: `addEntity`, `spawnChain`, `createBlankDoc`, `attachExistingDoc`, `lockVersion`, `logEntityActivity`. Service shape mirrors `LookupService.js` from @121. Chain config: new `chain_id` field on `taskDefinitions.json` rows + new `chains.json` for chain-level metadata. Admin-only "Spawn <type> chain" button(s) in LibraryView via `data-roles="admin"` (one per defined chain template; blog first). Manager-side wires `lockVersion` into Content edit pack closure (phase 5 step 4 ships in same pass). Document creation is on-demand: chain leaves the entity doc-less; the pack offers Create/Attach buttons when the relevant task opens. **Add-new-entity generic form deferred indefinitely** (no current use case beyond per-chain Spawn buttons). **No new Drive OAuth scope.** AdminProjectsView stays untouched; its Generate Outputs flow keeps working in parallel until the later collapse phase. Estimate: 2-3 sessions.
+5. **Library list view + task UI parallel build as new entity `LibraryView`** (reordered 2026-05-25 — was phase 4; revised 2026-05-25 — parallel new view instead of in-place refactor; revised again 2026-05-25 — new entity, not v3 of the dashboard, single file role-conditional). Build read-only library list using the common-skeleton + type-pack pattern with a shared widget kit (§11). **Build new `LibraryView.html` as a parallel new file; do NOT edit `ManagerDashboardView_v2` in place.** Single file serves both manager and admin via role-conditional content (no Manager + Admin counterparts). LibraryView replaces `ManagerDashboardView_v2` at promotion; `AdminDashboardView_v2` stays untouched until the AdminProjectsView collapse phase. LibraryView reaches via the existing "Tasks" nav link with route flip on `library.enabled`; `?v=2` is the emergency fallback. Same row shape as v2 (new controller `WebAppLibrary.js` reads the polymorphic `entity_type`/`entity_id` columns from §7 with FK fallback). Promotion = one-line nav-route swap once soaked. **Own plan doc shipped 2026-05-25: `jlmops/plans/LIBRARY_VIEW_PLAN.md`** — six pack archetypes cover daily work (Outreach / Content edit / Content publish / Confirmation / Order packing / Inventory count); ~50 task types fall to the generic skeleton in v1; `pack_form` field added to `taskDefinitions.json`. Library list view is **read-only in v1**; LibraryService skeleton deferred to phase 7. Add-new-entity generic form deferred indefinitely per 2026-05-26 §18 (no current use case — the LibraryView "Create Content Tasks" modal in phase 7 handles planned content, and the session script handles authoring artifacts). SheetAccessor library-routing extension (~25 lines) lands in step 1 of this phase. **Risk profile collapses to additive** — daily-use code untouched, swap is reversible.
+6. **Orphan integrity report.** Active update from Claude on content creation (Claude writes library rows when it creates posts) **SHIPPED 2026-05-25** as part of phase 4 critical path via `content/register-library.js`. Remaining phase 6 work: ops emits a lightweight orphan-content-files integrity report on cadence as a backstop against missed updates from the session-side path.
+
+   **Concrete shape.** New function `runLibraryIntegrityReport()` in `HousekeepingService.js`, fired by the existing `runDailyMaintenance` cadence (15-min trigger, business hours). Reads `SysLibrary` rows via the SheetAccessor extension + walks the canonical Drive folder tree under `system.folder.library` recursively. Two SysLog rows per run: `library_integrity.orphan_entities` (entities whose `slb_DocUrl` / `slb_FileUrl` doesn't resolve to a live Drive file — JSON details with slug list) and `library_integrity.orphan_files` (Drive files under the library folder with no matching `SysLibrary` row — JSON details with file path + ID list). No email, no task spawn, no remediation action — admin reads SysLog on demand. Short-circuits when `library.enabled = false`.
+7. **LibraryService skeleton + content-stream chain spawn (admin) + lockVersion + Content edit pack + Content publish pack.** Scope locked 2026-05-26 (see §18 "Added 2026-05-26"). Rewritten 2026-05-26 after grep verification against actual code: the chain-spawn mechanic already exists as `WebAppProjects_createContentStream` (`WebAppProjects.js:203`) driven by the `CONTENT_STAGES` array (`WebAppProjects.js:168`) + `contentStreamModal` (`AdminProjectsView.html:565`). Phase 7 extends this surface to the library era; it does **not** introduce `chains.json`, a `chain_id` field on task definitions, a `spawnChain` method, a `stagger_days` config, or an `idempotency_key_pattern` config — those were imagined infrastructure (see [[feedback_search_repo_before_proposing_new]] and [[feedback_find_precedent_before_flagging_gap]]). **No new Drive OAuth scope** (DriveApp + Drive Advanced Service v2 already enabled in `appsscript.json`). AdminProjectsView stays untouched; its `contentStreamModal` keeps working in parallel until the later collapse phase.
+
+   ### Architectural picks (settled at plan-time, no implementer-side bouncing)
+
+   - **Fork `createContentStream` into `LibraryService.spawnContentChain`, do not extend in place.** Existing `WebAppProjects_createContentStream` keeps serving `AdminProjectsView` unchanged through phase 7 + soak; library-era write logic lives in `LibraryService` where it belongs. The two coexist until project absorption.
+   - **3 new task templates** (not 2 — `lockVersion` needs a realignment task type): `task.content.create_wp_stubs`, `task.content.admin_review`, `task.content.realign`.
+   - **6 LibraryService methods** (not 5): `addEntity`, `spawnContentChain`, `createBlankDoc`, `attachExistingDoc`, `lockVersion`, `logEntityActivity`.
+   - **Service shape** mirrors `LookupService.js` (`LookupService.js:6-280`): IIFE module, module-level cache (`_cache`), private helpers prefixed `_`, `SpreadsheetApp.flush()` after writes, `_cache.delete(key)` per write for invalidation. **But the library workbook is `JLMops_Library`, not `JLMops_Data`** — open via `SheetAccessor.getLibrarySheet(name)` (`SheetAccessor.js:100`), not the direct-name `DriveApp.getFilesByName` pattern LookupService uses for JLMops_Data tabs.
+   - **addEntity duplicate-slug behavior:** return `{deduplicated: true, entity: existingRow}`, do **not** error. Matches the `content/register-library.js` session-script behavior (§4). The chain caller continues with task creation; `TaskService.createTask`'s `(taskTypeId, linkedEntityId, status≠Done/Closed)` dedup (`TaskService.js:166-178`) prevents duplicate tasks. Re-spawning a chain for the same topic is therefore safe: existing entity rows are returned untouched, missing tasks fill in.
+
+   ### Config + schema changes
+
+   **Three new task templates in `taskDefinitions.json`** (use the existing `task.template` row shape — `[type_marker, taskTypeId, description, status, "topic", value, "default_priority", value, "initial_status", value, "flow_pattern", value, "due_pattern", value, "pack_form", value]`):
+
+   - `task.content.create_wp_stubs` — admin manually creates the EN+HE WPML-linked WP stub posts before content push works. `topic: Content`, `default_priority: Normal`, `initial_status: New`, `flow_pattern: admin_direct`, `due_pattern: next_business_day`, `pack_form: skeleton`.
+   - `task.content.admin_review` — admin gate between Claude EN draft and Evyatar's edit pass. `topic: Content`, `default_priority: Normal`, `initial_status: New`, `flow_pattern: admin_direct`, `due_pattern: next_business_day`, `pack_form: skeleton`.
+   - `task.content.realign` — spawned by `lockVersion` when the editor answered Yes to the peer-realignment prompt (§14). Lives on the peer-language sibling. `topic: Content`, `default_priority: Normal`, `initial_status: Assigned` (auto-assigned to manager), `flow_pattern: manager_direct`, `due_pattern: one_week`, `pack_form: skeleton` (a real pack can come later if friction shows up).
+
+   **CONTENT_STAGES extension at `WebAppProjects.js:168`.** Stage shape extends from `{ id, typeId, label, title }` to `{ id, typeId, label, title, target_sibling }`. `target_sibling` ∈ `'en'` (default) / `'he'`. Tells the spawner which language sibling to attach the task to when the entity is a sibling-language pair. Existing entries default to `'en'`; `translate` → `'he'`. Add the two new chain-pickable stages (`create_wp_stubs`, `admin_review`) — both `target_sibling: 'en'`. (`realign` is NOT in `CONTENT_STAGES` — it's lockVersion-spawned, not modal-picked.) Distribution stages land in phase 11. For language-agnostic entities (image bundled, customer, template) `target_sibling` is ignored — one entity, one attachment.
+
+   **`TaskService.createTask` options bag extended** to accept `entityType` + `entityId`, writing each to the matching SysTasks column. Mechanically identical to the existing `options.projectId` → `st_ProjectId` write at `TaskService.js:209-212`; just two more `if (options.X)` blocks. No new function, no breaking change to existing callers.
+
+   ### LibraryService method signatures
+
+   New file `jlmops/LibraryService.js`. Shape: `const LibraryService = (function() { ... return { ... }; })();`.
+
+   - **`addEntity({ slug, type, language, title, references, typeFields })`**
+     - Validates: §20 slug pattern (`<type>-<topic>[-<discriminator>][-<language>]`, kebab-case); type ∈ §6 vocab; language ∈ `'en'` / `'he'` / `null`; every entry in `references` resolves against `SysLibrary`.
+     - Reads `SysLibrary` by slug via `SheetAccessor.getLibrarySheet('SysLibrary').getDataRange()`. If found → return `{deduplicated: true, entity: existingRow}` without writing.
+     - Otherwise appends a new row: `slb_Slug`, `slb_Title`, `slb_ContentType` ← type, `slb_Language` ← language (or empty string for language-agnostic), `slb_State` ← `'draft'`, `slb_Version` ← `0` (per §5 "Two write paths, two lifecycle moments" — `addEntity` seeds pre-work stubs at draft/v0; first `lockVersion` bumps to locked/v1), `slb_CreatedDate` ← `new Date().toISOString()` (matches the format `content/register-library.js:159` writes), `slb_CreatedBy` ← `Session.getActiveUser().getEmail()`, `slb_LastTouched` ← same ISO string, `slb_References` ← JSON-stringified array, plus any `typeFields` writing to matching `slb_*` columns (e.g. `wpPostId` → `slb_WpPostId`).
+     - Returns `{deduplicated: false, entity: newRow}`.
+     - Invalidates `_cache.delete('library.entities')` if a cache is keyed there.
+
+   - **`spawnContentChain({ entityType, baseSlug, contentName, stages, streamId? })`**
+     - `entityType` from the modal (always `'blog'` for v1; future chains pass their own type).
+     - `baseSlug` derived from `contentName` per §20 + the type prefix (e.g. "Context" → `blog-context`). Caller can pass an explicit slug instead.
+     - For sibling-language types (blog / news / mention / email / social): calls `addEntity` once per language (`<baseSlug>-en`, then `<baseSlug>-he` with `references: ['<baseSlug>-en']`). For language-agnostic types: single `addEntity` with `slug: baseSlug`.
+     - For each id in `stages`, looks up the entry in `CONTENT_STAGES`, resolves the target slug: sibling-language type → `<baseSlug>-<stage.target_sibling>`; language-agnostic → `baseSlug`. Then calls `TaskService.createTask(stage.typeId, resolvedSlug, contentName, stage.title + contentName, '', streamCode, { entityType, entityId: resolvedSlug })`. Stream code generation matches existing `createContentStream` logic (lines 211–221) — first 3 letters uppercase + random suffix, or user-supplied `streamId`.
+     - Returns `{ entities: [...], tasks: [...], streamCode, deduplicated_entities: [...] }`.
+
+   - **`createBlankDoc({ entityId })`**
+     - Reads the entity row from `SysLibrary` by slug. Errors if not found.
+     - Resolves canonical concept folder: `system.folder.library` (root) → `<slb_ContentType>` → `<concept>` (concept = topic segment of slug per §20). Auto-creates each missing folder via DriveApp.
+     - Creates blank Doc via `DocumentApp.create(slug)` (lands in My Drive root), then moves to canonical folder via `DriveApp.getFileById(doc.getId()).moveTo(canonicalFolder)`.
+     - Refuses silent overwrite: if a file with name `<slug>` already exists in the canonical folder, throws before doc creation.
+     - Writes `slb_DocUrl` ← `doc.getUrl()` on the entity row; updates `slb_LastTouched`.
+     - Returns the doc URL.
+
+   - **`attachExistingDoc({ entityId, driveUrl })`**
+     - Reads the entity row by slug.
+     - Extracts file ID from URL (regex `/[-\w]{25,}/`).
+     - Reads current file via `DriveApp.getFileById(fileId)`.
+     - Resolves canonical folder per `createBlankDoc` rule. If the file's current parent != canonical folder, calls `file.moveTo(canonicalFolder)` (Drive file ID stable; URL preserved).
+     - Renames to `<slug>` if current name doesn't match.
+     - Writes `slb_DocUrl` ← (canonical URL) on the entity row; updates `slb_LastTouched`.
+     - Returns the doc URL.
+
+   - **`lockVersion({ entityId, taskId, peerNeedsRealignment })`**
+     - Reads entity by slug.
+     - Increments `slb_Version` by 1, sets `slb_State` ← `'locked'`, updates `slb_LastTouched`.
+     - Closes the originating task via `TaskService.completeTask(taskId)` (the existing function at `TaskService.js:329`).
+     - If `peerNeedsRealignment === true`: resolves peer slug via slug-pair flip (`-en` ↔ `-he`); reads peer entity row to confirm it exists; calls `TaskService.createTask('task.content.realign', peerSlug, peerEntity.slb_Title, 'Realign after peer lock: ' + peerEntity.slb_Title, '', null, { entityType: 'blog', entityId: peerSlug })`. (`entityType` derived from peer's `slb_ContentType`.)
+     - Calls `logEntityActivity({ entityId, actionType: 'version_lock', details: { version: newVersion, peerRealignmentSpawned: !!realignTaskId }, referencedEntities: realignTaskId ? [peerSlug] : [] })`.
+     - Returns `{entity: updatedRow, task: closedTaskRow, related_tasks: realignTaskId ? [realignTaskRow] : []}`.
+
+   - **`logEntityActivity({ entityId, actionType, details, referencedEntities })`**
+     - Generates `slba_ActivityId` = `Utilities.getUuid()`.
+     - Resolves the entity's type by reading its `slb_ContentType` (or accepts an explicit `entityType` for virtual entity types per §7); `slba_EntityType` ← that, `slba_EntityId` ← `entityId`.
+     - Appends row to `SysLibraryActivity` (lives in `JLMops_Data` per §8 + workbook placement rule; opened via `SheetAccessor.getDataSheet('SysLibraryActivity')` — sheet name confirmed registered at `system.json:1057`): `slba_Timestamp` ← `new Date().toISOString()`, `slba_Actor` ← `Session.getActiveUser().getEmail()`, `slba_ActionType` ← actionType, `slba_Summary` ← short label per actionType (e.g. `'Version locked'`), `slba_Details` ← `JSON.stringify(details)`, `slba_ReferencedEntities` ← `JSON.stringify(referencedEntities)`.
+     - Returns nothing.
+
+   ### WebAppLibrary controller wrappers
+
+   One wrapper per service method, each returning the §11 action envelope:
+
+   - `WebAppLibrary_addEntity(params)`, `WebAppLibrary_spawnContentChain(params)`, `WebAppLibrary_createBlankDoc(params)`, `WebAppLibrary_attachExistingDoc(params)`, `WebAppLibrary_lockVersion(params)`, `WebAppLibrary_logEntityActivity(params)`.
+   - Each wraps in `{ok: boolean, updated: {entity?, task?, related_tasks?}, error?: string, validation?: {field: message}}` per §11.
+   - Existing `WebAppLibrary_getData` (`WebAppLibrary.js:30`) keeps its current `{success, data, error}` shape — read endpoints don't churn to the action envelope (settled 2026-05-26; see Envelope shapes below).
+
+   ### Envelope shapes (settled 2026-05-26)
+
+   - **Reads** (`WebAppLibrary_getData` and any future read endpoint): keep `{success, data, error}` already in `WebAppLibrary.js:42-66`.
+   - **State-changing actions** (the 6 new endpoints above): §11 action contract — `{ok, updated: {entity?, task?, related_tasks?}, error?, validation?}`. `updated` carries affected rows in the same shape `_getQueueTasks` and `_getLibraryEntities` produce (`WebAppLibrary.js:75-181`), so the UI can swap rows without re-fetching. `validation` carries structured field errors (renders inline); `error` carries system-failure messages (renders as toast with retry).
+
+   ### Chain-level idempotency
+
+   Slug uniqueness is the guard. `addEntity` returns `{deduplicated: true}` on existing slug rather than appending, so re-spawning a chain for the same topic is safe — entity rows are returned untouched, missing tasks are filled in by `TaskService.createTask`'s own dedup. Admin manages stage selection per spawn via the modal; no separate per-chain stage list or `idempotency_key` config.
+
+   ### UI changes in LibraryView
+
+   - **"Create Content Tasks" button** in LibraryView's top region above the library list (admin-only via `data-roles="admin"` per LIBRARY_VIEW_PLAN Role gating).
+   - Click opens a modal-overlay copied from `contentStreamModal` (`AdminProjectsView.html:565`) — same shape: Content Name input, optional Stream ID input, `CONTENT_STAGES` checkboxes, "Create Tasks" submit.
+   - Submit calls `WebAppLibrary_spawnContentChain({entityType: 'blog', baseSlug, contentName, stages, streamId})`. Response's `updated.entities` + `updated.tasks` are merged into the LibraryView local state; modal closes.
+
+   - **Content edit pack** (LIBRARY_VIEW_PLAN step 4) — new `TaskPack_ContentEdit.html`. Surfaces per `LIBRARY_VIEW_PLAN.md` "Type packs": file-link chip (the entity's `slb_DocUrl` if set; else "Create blank Doc" + "Attach existing Doc" buttons calling the matching service methods), notes textarea, Lock button. Lock click opens the §14 peer-realignment modal-overlay (Yes / No, no Cancel — choice is required at lock per §14). Yes/No → `WebAppLibrary_lockVersion({entityId, taskId, peerNeedsRealignment})`. Response replaces the task row + entity row; the pack collapses.
+   - Wires the new `file-link chip` widget atom into `TaskWidgets.html`.
+
+   - **Content publish pack** (LIBRARY_VIEW_PLAN step 5) — new `TaskPack_ContentPublish.html`. Confirmation-pack variant: notes textarea + "Mark Published" button + optional external-URL input. "Mark Published" call sequence: (1) `WebAppTasks_completeTaskById(taskId)` (existing wrapper at `WebAppTasks.js:240`, unchanged) closes the task; (2) if the user filled the external-URL field, `WebAppLibrary_logEntityActivity({entityId, actionType: 'published', details: {externalUrl}, referencedEntities: []})` records the URL on the entity's activity log. No `LibraryService.publishEntity` method — blog publish stays session-side via `content/push-posts.js`; Mailchimp / social / WhatsApp / video are manual external workflows. Covers `task.content.blog_publish`, `task.content.video_publish`, `task.content.email`, `task.content.social`, `task.content.whatsapp`.
+
+   ### Implementation sequencing (2 sessions, each gated by user OK before deploy)
+
+   *Session 7a — config + service skeleton + admin spawn (no Drive ops yet):*
+
+   - Add 3 task templates to `taskDefinitions.json` (`create_wp_stubs`, `admin_review`, `realign`).
+   - Add the 2 chain-pickable stages to `CONTENT_STAGES` (`create_wp_stubs`, `admin_review`); add `target_sibling` field to all stage entries.
+   - Extend `TaskService.createTask` to accept `options.entityType` + `options.entityId`.
+   - Create `jlmops/LibraryService.js` with `addEntity` + `spawnContentChain` only.
+   - Add `WebAppLibrary_addEntity` + `WebAppLibrary_spawnContentChain` wrappers.
+   - LibraryView "Create Content Tasks" admin button + modal-overlay copied from `contentStreamModal`.
+   - `node jlmops/generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()` → smoke: open LibraryView as admin, click "Create Content Tasks", enter "Smoke Test" + check all 6 blog stages, submit. Verify two `SysLibrary` rows (`blog-smoke-test-en` + `blog-smoke-test-he`), six `SysTasks` rows with `st_EntityType=blog` + correct `st_EntityId` per stage's `target_sibling` (translate → HE, others → EN). User OK → `pwsh -NoProfile -File jlmops/deploy.ps1 "phase 7a"`.
+
+   *Session 7b — Drive ops + lock + activity + Content edit pack + Content publish pack:*
+
+   - Add `createBlankDoc`, `attachExistingDoc`, `lockVersion`, `logEntityActivity` to `LibraryService.js`.
+   - Add `WebAppLibrary_createBlankDoc` / `_attachExistingDoc` / `_lockVersion` / `_logEntityActivity` wrappers.
+   - Add `file-link chip` atom to `TaskWidgets.html`.
+   - Create `TaskPack_ContentEdit.html` + `TaskPack_ContentPublish.html`; register in LibraryView's pack router.
+   - lockVersion peer-realignment Yes/No modal-overlay.
+   - `clasp push` → smoke: open the EN edit task on `blog-smoke-test-en`, click "Create blank Doc" → verify Doc appears under `/JLMops_Data/Library/blog/smoke-test/`, `slb_DocUrl` populated; click "Lock", answer Yes → verify task closes, `slb_State='locked'`, `slb_Version=1`, `SysLibraryActivity` row appended, `task.content.realign` row spawned on the HE sibling. Open a publish task, fill external URL, click "Mark Published" → verify task closes + activity log entry. User OK → `pwsh -NoProfile -File jlmops/deploy.ps1 "phase 7b"`.
+
+   ### What does NOT change in phase 7
+
+   - `AdminProjectsView` + `contentStreamModal` + `WebAppProjects_createContentStream` — untouched. Existing project-side content streams keep firing.
+   - `MarketingCampaignService.generateOutputs` — untouched (it's the utm+QR helper at `WebAppCampaigns.js:115`, not a chain spawner).
+   - The 16 dormant distribution templates — schema-only, no spawner. Phase 11 (distribution events) adds them to `CONTENT_STAGES` and exercises them via the same modal.
+   - SysTasks schema — already has `st_EntityType` + `st_EntityId` appended @124; phase 7 just writes to them.
+   - SysLibrary / SysLibraryActivity schemas — already defined; phase 7 just writes to them.
+   - The `library.enabled` flag — already `true`. The flag stays as the rollback control until phase 11 retirement (see "Build discipline across phases" above).
 8. **SUPERSEDED 2026-05-25.** Originally: "Translation button + Google Translate auto-draft on translate task." Translation work was reassigned to phase 5's Content edit pack ("Create HE doc" button per §11); Google Translate auto-draft was dropped per 2026-05-21 revisions to §9 + §10 ("too brittle; manager iterates with Gemini outside the system anyway"). Number retained to preserve §18 cross-references.
-9. **Entity detail view (drawer) + action buttons.** Builds the §11 "Entity detail view" surface: all files / external URLs (Drive / Canva / Mailchimp / WP), state history, activity log, attached tasks (open + done), references in (who references this entity) and out (what this entity references), action buttons in context (Lock, Open in Drive, Open HE sibling / Create HE sibling stub via library-service `createBlankDoc()` per §5, Spawn chain per §11 chain spawning). Publish-from-drawer (e.g., "Push to WP") was previously listed here; per 2026-05-26 §18 publishing stays session-side (`content/push-posts.js` for blog; Mailchimp / social / WhatsApp / video manual). The drawer's role on publish reduces to inspection plus the §14 peer-realignment guard surfaced as a "publish task ready / blocked" indicator; the actual publish action remains external. Reopen if a real case for in-app publish appears. Lands the Comax / Web / ops comparison widget deferred from LIBRARY_VIEW_PLAN phase 5 — used by the drawer for inspection and by relevant task packs for verification work (same widget, two framings per §11 drawer-vs-pack boundary). Drawer reads via the same LibraryService introduced in phase 7; no new write surface beyond what LibraryService already exposes.
+9. **Entity detail view (drawer) + action buttons.** Builds the §11 "Entity detail view" surface: all files / external URLs (Drive / Canva / Mailchimp / WP), state history, activity log, attached tasks (open + done), references in (who references this entity) and out (what this entity references), action buttons in context (Lock, Open in Drive, Open HE sibling / Create HE sibling stub via library-service `createBlankDoc()` per §5, "Create Content Tasks" pre-filled with the current entity's name per §11 chain spawning). Publish-from-drawer (e.g., "Push to WP") was previously listed here; per 2026-05-26 §18 publishing stays session-side (`content/push-posts.js` for blog; Mailchimp / social / WhatsApp / video manual). The drawer's role on publish reduces to inspection plus the §14 peer-realignment guard surfaced as a "publish task ready / blocked" indicator; the actual publish action remains external. Reopen if a real case for in-app publish appears. Lands the Comax / Web / ops comparison widget deferred from LIBRARY_VIEW_PLAN phase 5 — used by the drawer for inspection and by relevant task packs for verification work (same widget, two framings per §11 drawer-vs-pack boundary). Drawer reads via the same LibraryService introduced in phase 7; no new write surface beyond what LibraryService already exposes.
+
+   **Concrete shape.** New `LibraryService.getEntityDetail(entityId)` reads the entity row, all incoming references (reverse-lookup query against `SysLibrary`), all attached tasks (query against `SysTasks` by `st_EntityType` + `st_EntityId`), and recent activity log entries (query against `SysLibraryActivity` by `slba_EntityId`). Returns one composite payload. Drawer opens from: (1) clicking any entity title in the LibraryView library list, (2) clicking any entity chip in a task row's primary/references display. Layout: right-side panel slide-in over the LibraryView, `modal-overlay` pattern but full-height; close button + Escape key dismiss. Action buttons in a top toolbar; sections rendered as collapsible groups below.
 10. **Templates as entities — migrate one family at a time.** Per §14. For each template family (welcome first; pending-payment next; cooling / VIP / win-back as they become real):
    1. Create library entity rows for each `(channel, language)` combo — typically 4 per family (email-en, email-he, whatsapp-en, whatsapp-he). Populate `slb_Subject`, `slb_Body`, `slb_Channel`, `slb_Language`; reference siblings.
+
+   **Welcome family SysConfig keys to migrate** (concrete starting set, confirmed against `jlmops/config/otherSettings.json` 2026-05-26):
+   - `template-welcome-email-en` ← `crm.template.welcome.email.subject.en` + `crm.template.welcome.email.body.en`
+   - `template-welcome-email-he` ← `crm.template.welcome.email.subject.he` + `crm.template.welcome.email.body.he`
+   - `template-welcome-whatsapp-en` ← `crm.template.welcome.whatsapp.en` (body only; WhatsApp has no subject)
+   - `template-welcome-whatsapp-he` ← `crm.template.welcome.whatsapp.he`
    2. Update outreach consumer code (TaskService / HousekeepingService / CrmIntelligenceService — whichever fires the family's tasks) to look up the active template by slug rather than `crm.template.*` SysConfig key. Lock-time peer-realignment guard per §14 (blocks send on an open peer-realignment task).
+
+   **Activity log write path.** The service that performs the send writes the per-send activity log entry inline with the send call, via `LibraryService.logEntityActivity({ entityId: <template-slug>, actionType: 'template_send', details: { contactId, channel, language }, referencedEntities: [contactId] })`. For welcome: `HousekeepingService` is the sender; the log write fires on successful send. Audit shows template + version + recipient on the template entity's activity log (the contact's history can be reconstructed via reverse-lookup on `referencedEntities`).
    3. Lock the entity rows (`slb_State = locked`, `slb_Version = 1`).
    4. After one cycle clean, retire the SysConfig rows.
 
    Each family is one focused session. Migration is opt-in per family; SysConfig content rows that haven't migrated still work the old way. No big-bang sweep.
-11. **Distribution events as entities.** Per §6: `email`, `news`, `mention`, `social` — all sibling-language. Per §21: KPI stats columns refreshed by ops on cadence. Per §18 (2026-05-20): "Campaigns absorbed into library as entity instances; `SysMarketingCampaigns` retires over time."
+11. **Distribution events as entities (and the spawner for the 16 dormant distribution task templates).** Per §6: `email`, `news`, `mention`, `social` — all sibling-language. Per §21: KPI stats columns refreshed by ops on cadence. Per §18 (2026-05-20): "Campaigns absorbed into library as entity instances; `SysMarketingCampaigns` retires over time." The 16 task templates added 2026-05-11 (`task.newsletter.*`, `task.flyer.*`, `task.campaign.*`) are currently schema-only — they live in `taskDefinitions.json` with no live caller (confirmed via grep 2026-05-26). Phase 11 adds them to `CONTENT_STAGES` (or whatever extended-stage list the chain spawn reads from) so the same "Create Content Tasks" modal can spawn distribution chains the same way it spawns blog chains.
 
    **2026-05-25 user direction: future publishing rides this model.** Newsletter Issue #1 (2026-05-26 send) is the last pre-library issue — its EN+HE Mailchimp HTML + manual docx flow are not registered as library entities. From June 2026 onward, each issue (and its companion email + mentions + any social) registers as a library entity instance under the appropriate type. Phase 11 sequence below should be ready in time for that.
 
    Order:
    1. `email` first — most concrete, existing Mailchimp integration. Register one issue as library entity pair (en + he); wire Mailchimp KPI pull.
+
+      **June 2026 issue registration path (concrete).** After Mailchimp send, run `content/register-library.js` twice (once per language) with `type=email`, `slug=email-2606-context-en` / `-he`, `file_path_or_url=` the Mailchimp campaign URL, `references=[blog-context-en]` / `[blog-context-he]`. Each row gets `mailchimp_campaign_id` from Mailchimp + `subject_line` + `send_date` populated by the session at registration time. KPI columns (`open_rate`, `click_rate`, etc.) populate later via the cadence refresh job (KPI ingest plan, downstream). Newsletter Issue #2 (June 2026) is the first instance through this path; Issue #1 (May 2026) stays pre-library and is not back-registered.
    2. `news` + `mention` together — newsletter dependency. News is the print issue; mention rows reference posts.
    3. `social` last — platform API variety; manual entry where APIs not available.
 
