@@ -507,14 +507,15 @@ const ValidationLogic = (function() {
 
       const dataSpreadsheet = SheetAccessor.getDataSpreadsheet();
       const logSpreadsheet = SheetAccessor.getLogSpreadsheet();
+      const librarySpreadsheet = SheetAccessor.getLibrarySpreadsheet();
 
-      const sheetSchemas = Object.keys(allConfig).filter(key => 
-          key.startsWith('schema.data.') || key.startsWith('schema.log.')
+      const sheetSchemas = Object.keys(allConfig).filter(key =>
+          key.startsWith('schema.data.') || key.startsWith('schema.log.') || key.startsWith('schema.library.')
       );
 
       for (const schemaKey of sheetSchemas) {
           const schema = allConfig[schemaKey];
-          const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '');
+          const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '').replace('schema.library.', '');
 
           if (!schema || !schema.headers) {
               discrepancies.push({
@@ -533,8 +534,10 @@ const ValidationLogic = (function() {
               targetSpreadsheet = dataSpreadsheet;
           } else if (schemaKey.startsWith('schema.log.')) {
               targetSpreadsheet = logSpreadsheet;
+          } else if (schemaKey.startsWith('schema.library.')) {
+              targetSpreadsheet = librarySpreadsheet;
           } else {
-              continue; 
+              continue;
           }
 
           const sheet = targetSpreadsheet.getSheetByName(sheetName);

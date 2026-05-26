@@ -3979,8 +3979,8 @@ function getMasterConfiguration() {
         ""
     ],
     [
-        "schema.data.SysLibrary",
-        "Schema for the Library Master sheet. LIVES IN THE JLMops_Library WORKBOOK (id in system.spreadsheet.library), NOT JLMops_Data — Drive MCP single-tab compatible per reference_drive_files + CONTENT_LIBRARY_PLAN.md §4. Single flat polymorphic table for content/marketing entities (blog/news/mention/email/social/template/image). Generic columns always populated; per-type extension columns sparse. Tags/Taxonomy/References stored as JSON arrays. KPI columns deferred to phase 11 per CONTENT_LIBRARY_PLAN.md §17. slb_Slug is the key column (human-readable, immutable, globally unique per §20); no separate synthetic ID — slug serves as both human handle and cross-table FK.",
+        "schema.library.SysLibrary",
+        "Schema for the Library Master sheet. LIVES IN THE JLMops_Library WORKBOOK (id in system.spreadsheet.library), NOT JLMops_Data — Drive MCP single-tab compatible per reference_drive_files + CONTENT_LIBRARY_PLAN.md §4. Schema key uses the schema.library.* prefix so validator + syncHeaders route to getLibrarySpreadsheet() instead of getDataSpreadsheet(). Single flat polymorphic table for content/marketing entities (blog/news/mention/email/social/template/image). Generic columns always populated; per-type extension columns sparse. Tags/Taxonomy/References stored as JSON arrays. KPI columns deferred to phase 11 per CONTENT_LIBRARY_PLAN.md §17. slb_Slug is the key column (human-readable, immutable, globally unique per §20); no separate synthetic ID — slug serves as both human handle and cross-table FK.",
         "stable",
         "headers",
         "slb_Slug,slb_Title,slb_ContentType,slb_Language,slb_State,slb_Version,slb_CreatedDate,slb_CreatedBy,slb_LastTouched,slb_Tags,slb_Taxonomy,slb_References,slb_Notes,slb_MdUrl,slb_DocUrl,slb_WpPostId,slb_CanvaDesignUrl,slb_IssueNumber,slb_PrintDate,slb_Excerpt,slb_Position,slb_MailchimpCampaignId,slb_SubjectLine,slb_SendDate,slb_RecipientCount,slb_Platform,slb_ExternalUrl,slb_ScheduledAt,slb_PostedAt,slb_Subject,slb_Body,slb_Channel,slb_Kind,slb_Index,slb_Descriptor",

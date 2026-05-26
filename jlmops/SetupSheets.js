@@ -1,17 +1,18 @@
 /**
  * @file SetupSheets.js
- * @description Header synchronization helpers for JLMops_Data sheets.
+ * @description Header synchronization helpers for JLMops sheets across all workbooks.
  *
  * These functions write/refresh row 1 of each sheet from its config schema
- * (`schema.data.<SheetName>`). Data rows are never touched. Run after a
- * schema change in `config/schemas.json` (after `rebuildSysConfigFromSource()`).
+ * (`schema.data.<SheetName>` for JLMops_Data, `schema.library.<SheetName>` for
+ * JLMops_Library). Data rows are never touched. Run after a schema change in
+ * `config/schemas.json` (after `rebuildSysConfigFromSource()`).
  *
  * Historical note: this file previously contained 38 per-sheet
  * `create*Headers()` functions plus 4 hand-coded master orchestrators
  * (`createJlmopsSystemSheets`, `createCrmSheets`, `createLookupSheets`,
  * `setupMarketingSheets`). They were near-identical and required manual
  * upkeep whenever a sheet was added. Replaced by `syncHeaders(name)` +
- * `syncAllHeaders()` which discovers sheets from `schema.data.*` config keys.
+ * `syncAllHeaders()` which discovers sheets from `schema.data.*` + `schema.library.*` config keys.
  */
 
 /**
@@ -37,13 +38,17 @@ function syncHeaders(sheetName, options) {
         console.log(`${functionName}: ${sheetName}...`);
 
         const allConfig = ConfigService.getAllConfig();
-        const schema = allConfig[`schema.data.${sheetName}`];
+        let schema = allConfig[`schema.data.${sheetName}`];
+        let spreadsheet = schema ? SheetAccessor.getDataSpreadsheet() : null;
+        if (!schema) {
+            schema = allConfig[`schema.library.${sheetName}`];
+            spreadsheet = schema ? SheetAccessor.getLibrarySpreadsheet() : null;
+        }
         if (!schema || !schema.headers) {
             throw new Error(`Schema for sheet '${sheetName}' not found in configuration. Run rebuildSysConfigFromSource() first.`);
         }
         const headers = schema.headers.split(',');
 
-        const spreadsheet = SheetAccessor.getDataSpreadsheet();
         let sheet = spreadsheet.getSheetByName(sheetName);
         if (!sheet) {
             sheet = spreadsheet.insertSheet(sheetName);
@@ -73,11 +78,11 @@ function syncHeaders(sheetName, options) {
  * @returns {{synced: number, failed: number}}
  */
 function syncAllHeaders() {
-    console.log('Syncing all data-sheet headers...');
+    console.log('Syncing all data + library sheet headers...');
     const allConfig = ConfigService.getAllConfig();
     const sheetNames = Object.keys(allConfig)
-        .filter(k => k.startsWith('schema.data.'))
-        .map(k => k.replace('schema.data.', ''));
+        .filter(k => k.startsWith('schema.data.') || k.startsWith('schema.library.'))
+        .map(k => k.replace('schema.data.', '').replace('schema.library.', ''));
 
     let synced = 0;
     let failed = 0;
@@ -131,7 +136,7 @@ function protectAllSheetHeadersFromUI() {
 
 /**
  * Freeze row 1 and apply WARNING-only header-row protection across every
- * data and log sheet declared in config.
+ * data, log, and library sheet declared in config.
  *
  * @returns {{protected: number, skipped: number}}
  */
@@ -143,12 +148,14 @@ function protectAllSheetHeaders() {
 
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
         const logSpreadsheetId = allConfig['system.spreadsheet.logs'].id;
+        const librarySpreadsheetId = allConfig['system.spreadsheet.library'].id;
 
         const dataSpreadsheet = SpreadsheetApp.openById(dataSpreadsheetId);
         const logSpreadsheet = SpreadsheetApp.openById(logSpreadsheetId);
+        const librarySpreadsheet = SpreadsheetApp.openById(librarySpreadsheetId);
 
         const sheetSchemas = Object.keys(allConfig).filter(key =>
-            key.startsWith('schema.data.') || key.startsWith('schema.log.')
+            key.startsWith('schema.data.') || key.startsWith('schema.log.') || key.startsWith('schema.library.')
         );
 
         let protectedCount = 0;
@@ -162,10 +169,15 @@ function protectAllSheetHeaders() {
                 continue;
             }
 
-            const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '');
-            const targetSpreadsheet = schemaKey.startsWith('schema.data.')
-                ? dataSpreadsheet
-                : logSpreadsheet;
+            const sheetName = schemaKey.replace('schema.data.', '').replace('schema.log.', '').replace('schema.library.', '');
+            let targetSpreadsheet;
+            if (schemaKey.startsWith('schema.data.')) {
+                targetSpreadsheet = dataSpreadsheet;
+            } else if (schemaKey.startsWith('schema.log.')) {
+                targetSpreadsheet = logSpreadsheet;
+            } else {
+                targetSpreadsheet = librarySpreadsheet;
+            }
 
             const sheet = targetSpreadsheet.getSheetByName(sheetName);
             if (!sheet) {

@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-26 (jlmops @128 — schema-test library-workbook routing fix)
+
+- Schema test surfaced 3 CRITICAL discrepancies. (1) `WebOrdM_Archive` missing `woma_OrderKey` — added manually as col 20/T (Woo `order_key` security token for pending-payment one-tap pay URLs per `HousekeepingService.js:1254-1256`; live `WebOrdM` already had it since @111). (2) `SysContacts` missing `sc_FirstCompletedDate` — added manually as col 53/BA (populated by `ContactImportService.js:841`, gates welcome-outreach trigger via `system.crm.welcome_floor_date`). (3) `SysLibrary` "Sheet not found in JLMops_Data" — validator code bug, not a sheet problem.
+- Root cause for #3: `ValidationLogic.js:532-538` hardcoded two prefix→spreadsheet routes (`schema.data.*` → data, `schema.log.*` → log). `SetupSheets.js#syncHeaders` had the same gap. SysLibrary's schema key was `schema.data.SysLibrary` (misleading — the entry's own description flagged the workbook placement, but routing code never caught up).
+- Fix: renamed key to `schema.library.SysLibrary` in `schemas.json` (SysLibraryActivity stays `schema.data.*` because it actually lives in JLMops_Data per §17). Added third routing branch in `ValidationLogic.validateDatabaseSchema` (`librarySpreadsheet = SheetAccessor.getLibrarySpreadsheet()`, broadened the prefix filter + strip + else-if). Extended `SetupSheets.syncHeaders` to look up schema across both prefixes and route to the right spreadsheet; `syncAllHeaders` to discover library sheets; `protectAllSheetHeaders` to know about the library spreadsheet too. `SheetAccessor.getLibrarySpreadsheet()` already existed (mirror of data/log getters).
+- generate-config → clasp push → deploy via `pwsh -NoProfile -File jlmops/deploy.ps1 "@128 schema-test library-workbook routing"`. Pinned deploy ID survived.
+- Next session: phase 7a (3 task templates + CONTENT_STAGES extension + TaskService.createTask polymorphic options + LibraryService.addEntity + spawnContentChain + LibraryView "Create Content Tasks" admin button) OR phase 6 orphan integrity report.
+
+---
+
 ## 2026-05-26 (planning — CONTENT_LIBRARY phase 7 plan-vs-code verification + leftover cleanup)
 
 - Reviewed `plans/CONTENT_LIBRARY_PLAN.md` end-to-end against actual code; verified the load-bearing phase 7 line refs (CONTENT_STAGES:168, createContentStream:203, TaskService.createTask:134, dedup at 165-178, options.projectId precedent at 209-212, SheetAccessor.getLibrarySheet:100 / getDataSheet:70, completeTask:329, completeTaskById:240). All check out — phase 7 spec is grounded in real code, not imaginary surfaces.

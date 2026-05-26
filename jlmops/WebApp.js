@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-25 19:22',
-  commit: '@127: Content Library phase 5 steps 2/3/6 — Outreach + Confirmation + deep-link packs wired into LibraryView. Outreach (task.contact.*/crm.*) deep-links into ManagerContactView via sessionStorage.selectContactEmail. Confirmation (task.confirmation.* + sync.daily_session) renders editable notes + Mark Confirmed button → WebAppTasks_completeTaskById (with WebAppTasks_updateTask first if notes changed). Deep-link packs (order.packing_available, inventory.count, inventory.brurya_update) route to ManagerOrders / ManagerInventory via loadView. Skeleton fallback for all other task types. Behind library.enabled.'
+  built: '2026-05-26 06:50',
+  commit: '@128: Schema-test library-workbook routing. ValidationLogic + SetupSheets (syncHeaders, syncAllHeaders, protectAllSheetHeaders) now route schema.library.* prefix to SheetAccessor.getLibrarySpreadsheet(). schemas.json: SysLibrary key renamed schema.data.SysLibrary → schema.library.SysLibrary (SysLibraryActivity stays schema.data.* — lives in JLMops_Data). Fixes "SysLibrary not found in JLMops_Data" critical from validateDatabaseSchema. Also lets syncHeaders(\'SysLibrary\') work end-to-end against the library workbook.'
 };
 
 function getVersion() {
