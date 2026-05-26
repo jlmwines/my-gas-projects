@@ -6,8 +6,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14 with mobile UX + pending-payment automation. Lookup admin UI SHIPPED 2026-05-25 @121. Content Library phase 2 (schema seed) + phase 3 (Drive MCP read verification) SHIPPED 2026-05-25 @123. Content Library phase 4 critical path (register-library.js + Context EN+HE seeded) + SysTasks polymorphic columns SHIPPED 2026-05-25 @124/@128, behind `library.enabled=false` flag. |
-| Last Active | 2026-05-25 |
+| Phase | Theme cutover SHIPPED 2026-05-05. New theme + Mailchimp pulls live. Manager CRM Half 2 SHIPPED 2026-05-14 with mobile UX + pending-payment automation. Lookup admin UI SHIPPED 2026-05-25 @121. Content Library phase 2 (schema seed) + phase 3 (Drive MCP read verification) SHIPPED 2026-05-25 @123. Content Library phase 4 critical path (register-library.js + Context EN+HE seeded) + SysTasks polymorphic columns SHIPPED 2026-05-25 @124/@128. Content Library phase 5 steps 1/2/3/6 (LibraryView + Outreach/Confirmation/deep-link packs) SHIPPED 2026-05-25 @125→@127 deploy @131. `library.enabled=true`. Schema-test library-workbook routing SHIPPED 2026-05-26 @128 deploy @132. |
+| Last Active | 2026-05-26 |
 | Revenue | Steady |
 | Deploy Version | jlmops @128 deploy @132 · theme v1.2.28 LIVE |
 | Deploy Date | jlmops 2026-05-26 (@128 deploy @132: schema.library.* prefix routing in ValidationLogic + SetupSheets so SysLibrary validates against JLMops_Library workbook) · jlmops 2026-05-25 (@119 → @127 deploy @131: task-date restore + CRM suggestion stop + lookup admin UI + Content Library phase 2 schema seed + phase 4 register-library.js + SysTasks polymorphic columns + LibraryView phase 5 steps 1/2/3/6) · theme 2026-05-18 (v1.2.26 + v1.2.27 LCP rollback; v1.2.28 woosb-frontend dequeue on no-bundle-UI routes) |
