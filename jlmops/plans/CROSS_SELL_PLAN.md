@@ -96,7 +96,7 @@ If the category genuinely doesn't have N in-stock candidates, the list is shorte
 - **website:** theme rendering, category-aware copy.
 - **business:** contributes the brand framing — anti-snob curation, attribute system as authority.
 
-See `business/COORDINATION.md` for the cross-area view.
+See `business/STRATEGY.md` for strategic context and `plans/STATUS.md` for current cross-area state.
 
 ---
 

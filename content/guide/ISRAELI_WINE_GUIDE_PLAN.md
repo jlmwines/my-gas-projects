@@ -95,7 +95,7 @@ Each category has one **Overview Post** (the hub/pillar) plus multiple **Individ
 
 | Category | Overview Post (Hub) | Individual Posts (Spokes) |
 |----------|---------------------|---------------------------|
-| Regions | "Israeli Wine Regions: Complete Guide" | 7 region posts |
+| Regions | "Israeli Wine Regions: Complete Guide" | 6 region posts |
 | Wineries | "Israeli Wineries: A Guide" | 10-15 winery posts |
 | Grapes | "Grape Varieties in Israel" | 8-12 grape posts |
 | History | "The History of Israeli Wine" | 4-6 period posts |
@@ -126,17 +126,16 @@ Encyclopedic, evergreen, SEO-friendly. These are the building blocks that theme 
 - Terroir diversity explanation
 - How to use this guide
 
-**Individual Posts (7):**
+**Individual Posts (6 — official map of major regions; sub-regions are sections within the parent post):**
 
-| Region | Key Characteristics | Notable Wineries | Differentiators to Highlight |
-|--------|---------------------|------------------|------------------------------|
-| Golan Heights | High altitude, volcanic basalt soil, cool nights | Golan Heights, Yarden, Odem Mountain | Altitude strategy, terroir diversity |
-| Galilee (Gilboa) | Diverse microclimates, limestone/basalt mix | Galil Mountain, Tabor, Netofa, Jezreel, Kishor | Microclimate diversity, variety experiments |
-| Judean Hills | Limestone terrain, 400m+ elevation, Jerusalem microclimate | Tzora, Castel, Gush Etzion, Flam, Sphera | First appellation (2020), ancient roots |
-| Judean Plains / Shomron | Lower elevation, warmer, historic plantings | Teperberg, Binyamina, Tishbi, Carmel | Rothschild revival history, large producers |
-| Shomron | Historic region, varied terrain | Recanati, Tishbi, Tulip | Traditional meets modern |
-| Coastal Plain | Mediterranean influence, sandy soils | Various | Climate adaptation |
-| Negev | Desert viticulture, extreme conditions | Ramat Negev, Midbar, Yatir, Sde Boker | Drip irrigation, night harvest, climate pioneer |
+| Region | Sub-regions | Notes |
+|--------|-------------|-------|
+| Galilee | — | Diverse microclimates, limestone/basalt mix |
+| Golan Heights | — | High altitude, volcanic basalt soil, cool nights |
+| Coastal Plain | — | Mediterranean influence, sandy soils |
+| Central Mountains | Gilboa, Shomron, Judean Hills | The highland spine running north → south. Each sub-region gets its own section in the post. Judean Hills covers limestone terrain around Jerusalem; Shomron the historic Rothschild-revival heartland; Gilboa the northern transition zone. |
+| Judea | Judean Foothills (Shfela) | Lowland strip west of the Judean Hills — historically planted, warmer, lower elevation than the mountain spine above. |
+| Negev | — | Desert viticulture, extreme conditions, climate-adaptation pioneer |
 
 Each region post includes:
 - Geography & climate
@@ -146,6 +145,10 @@ Each region post includes:
 - How it compares to European counterparts
 - Historical context
 - Map/visual
+
+**Composition principle — the Europe comparison.** When a region post compares to a European counterpart, name the asymmetry explicitly: European wine regions are shaped heavily by tradition (appellation law, guilds, inherited practices, available nursery stock), so terroir reads as a clean, predictable signal there. Israel has terroir too, but microclimate diversity and winemaker style do more of the work — terroir is one factor, not the dominant one. Don't write Europe-Israel comparisons as if both sides are pure-terroir stories; the inputs are different.
+
+**Promotion rule.** After drafting + editing, if a sub-region develops a distinctly unique profile (terroir, winemaker concentration, varietal character) it can be promoted to its own spoke post. Start at the major-region grain — expand later when warranted by content, not in advance.
 
 #### 2. WINERIES
 
@@ -394,7 +397,7 @@ During heavy publishing: group notifications rather than increase frequency.
 ### Launch (Week 1-2)
 Publish simultaneously to establish authority:
 - 6 overview posts (hubs)
-- 3 region posts (Golan Heights, Judean Hills, Negev - most distinctive)
+- 3 region posts (Golan Heights, Central Mountains, Negev — most distinctive)
 - 2 uniqueness posts ("No Rules", "Desert Pioneers")
 - 1 pioneer profile (Peter Stern or Eli Ben Zaken)
 - **Total: 12 posts at launch**
