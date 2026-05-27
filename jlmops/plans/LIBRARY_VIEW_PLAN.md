@@ -1,33 +1,35 @@
 # Library View Plan
 
 **Created:** 2026-05-25
-**Status:** PARTIAL IMPLEMENTATION — phase 5 of `plans/CONTENT_LIBRARY_PLAN.md`. Steps 1, 2, 3, 6 shipped (LibraryView scaffold + Outreach / Confirmation / deep-link packs); steps 4 + 5 land with CONTENT_LIBRARY_PLAN phase 7.
+**Status:** PARTIAL IMPLEMENTATION — phase 5 of `plans/CONTENT_LIBRARY_PLAN.md`. Steps 1, 2, 3, 6 shipped (LibraryView scaffold + Outreach / Confirmation / deep-link packs). Phase 7a shipped 2026-05-26 (LibraryService.addEntity + spawnContentChain + LibraryView "Create Content Tasks" admin button + modal). Steps 4 + 5 (Content edit + Content publish packs) land with CONTENT_LIBRARY_PLAN phase 7b alongside `createBlankDoc` / `attachExistingDoc` / `lockVersion` / `logEntityActivity`.
 
 **Editing discipline:** when a decision changes, revise the relevant topical section above (Surfaces / Library list view / Common skeleton / etc.) inline. Append to "Decisions banked" only for genuinely cross-cutting principles. Do not accumulate dated blocks — keep the document reading as current truth.
-**Scope:** Build `LibraryView` — a single new entity (one HTML file, role-conditional content) that surfaces both the library entity list (preset filters per §11) and the unified task queue (common-skeleton + type-pack + widget-kit per §11). LibraryView replaces `ManagerDashboardView_v2`; admin can also reach it through nav. Built alongside the existing v2; promotion is a one-line nav-route swap once soaked.
-**Out of scope:** `AdminDashboardView_v2` stays untouched (the project-centric admin path lives there and collapses in a later phase per 2026-05-25 user direction). `AdminProjectsView` stays untouched (same later collapse). LibraryService skeleton + LibraryView "Create Content Tasks" modal (extended `contentStreamModal` shape) (admin) + lockVersion wiring (manager, Content edit pack) are deferred to phase 7. Add-new-entity generic form deferred indefinitely per CONTENT_LIBRARY_PLAN §18 2026-05-26 (no current ad-hoc-creation use case). Comparison widget (Comax / Web / ops) deferred to phase 9 detail view. SystemHealthWidget redesign (singleton, not a queue task).
+**Scope:** Build `LibraryView` — a single new entity (one HTML file, role-conditional content) that surfaces both the library entity list (preset filters per §11) and the unified task queue (common-skeleton + type-pack + widget-kit per §11). **LibraryView is an additional nav entry alongside the existing Dashboard for both manager and admin** (corrected 2026-05-26 after `@127` shipped a Dashboard route-flip on `library.enabled=true`, user clarified intent at smoke test, `@134` reverted to additive-nav). `ManagerDashboardView_v2` and `AdminDashboardView_v2` continue serving the Dashboard nav link unchanged. The new "Library" nav entry is gated by `library.enabled`. No promotion-time nav-route swap.
+**Out of scope:** `AdminDashboardView_v2` stays untouched (the project-centric admin path lives there and collapses in a later phase per 2026-05-25 user direction). `ManagerDashboardView_v2` stays as the manager's daily-use dashboard indefinitely (per 2026-05-26 additive-nav correction). `AdminProjectsView` stays untouched. `lockVersion` + `createBlankDoc` + `attachExistingDoc` + `logEntityActivity` + Content edit + Content publish packs are deferred to phase 7b. Add-new-entity generic form deferred indefinitely per CONTENT_LIBRARY_PLAN §18 2026-05-26 (no current ad-hoc-creation use case). Comparison widget (Comax / Web / ops) deferred to phase 9 detail view. SystemHealthWidget redesign (singleton, not a queue task).
 
 ---
 
 ## Why a new entity (not a v3 of the dashboard)
 
-Per 2026-05-25 user direction: the v2-suffix pattern was right when v2 evolved v1 of the same surface. This work is different — it adds a library layer the dashboard never had, and the unified task queue is shaped around library entities, not project containers. Naming it `ManagerDashboardView_v3` would carry forward the wrong mental model (an iteration of the manager dashboard) when in fact this is a new surface that subsumes the dashboard. Fresh name, fresh start; old file retires at promotion.
+Per 2026-05-25 user direction: the v2-suffix pattern was right when v2 evolved v1 of the same surface. This work is different — it adds a library layer the dashboard never had, and the unified task queue is shaped around library entities, not project containers. Naming it `ManagerDashboardView_v3` would carry forward the wrong mental model (an iteration of the manager dashboard) when in fact this is a new surface that lives **alongside** the dashboard. Fresh name, fresh nav entry.
 
-The parallel-build discipline remains: LibraryView lives alongside `ManagerDashboardView_v2` throughout phase 5, behind the `library.enabled` flag. v2 stays serving daily ops until LibraryView is ready and soaked. Promotion = one nav-route swap. Reversible.
+Correction 2026-05-26: an earlier reading of this section ("subsumes the dashboard", "old file retires at promotion") was wrong — user clarified at phase 7a smoke test that LibraryView was always intended as an additional view, not a replacement. `ManagerDashboardView_v2` and `AdminDashboardView_v2` stay as the daily-use dashboards indefinitely; LibraryView coexists.
+
+The parallel-build discipline remains, but the promotion model changes: there is no nav-route swap. LibraryView is reached through its own "Library" nav entry, gated by `library.enabled`. Both dashboards stay serving the Dashboard nav link.
 
 ---
 
 ## Surfaces
 
 New files:
-- `jlmops/LibraryView.html` — the new surface. Role-conditional content (manager queue defaults vs admin queue defaults); same file for both.
+- `jlmops/LibraryView.html` — the new surface. Role-conditional content (manager queue defaults vs admin queue defaults); same file for both. Hosts a JS `packBody()` dispatcher (one case per packed task type) that renders the slotted body inline, composing `TaskWidgets` atoms.
 - `jlmops/WebAppLibrary.js` — controller. Returns the task-row shape compatible with the queue render path; adds library list reads. Reads polymorphic `st_EntityType`/`st_EntityId` from SysTasks (shipped @124), falls back to existing typed FKs when blank.
-- `jlmops/TaskPack_<Name>.html` — one HTML include per packed task type (six initially, see Type packs below). Included via the existing `<?!= include('TaskPack_…') ?>` HtmlService pattern; each renders the slotted body for one task type, composing widget-kit atoms.
-- `jlmops/TaskWidgets.html` — shared widget-kit include, used by LibraryView and all task packs.
+- `jlmops/TaskWidgets.html` — shared widget-kit include (CSS atoms + JS helpers), used by LibraryView and all packs.
+
+**Pack pattern (corrected 2026-05-26 after cleanup pass).** Early planning envisioned one `jlmops/TaskPack_<Name>.html` per packed task type, included via `<?!= include('TaskPack_…') ?>` HtmlService scriptlets. The @125 implementation went with a simpler JS dispatcher (`packBody(t)` function inside `LibraryView.html`, switching on `t.typeId` and returning an HTML string). @127 added Outreach / Confirmation / deep-link packs the same way. Phase 7b Content edit / Content publish packs follow the same JS-dispatch pattern. The HtmlService include pattern remains available if pack count or per-pack complexity ever justifies the split, but it has not been adopted.
 
 Modified files:
-- `jlmops/WebApp.js` — route flip on `library.enabled` (SysConfig). When true, the "Tasks" link routes to LibraryView (manager + admin); when false, to v2 (current default for manager) and admin's LibraryView nav entry is hidden. Verified 2026-05-25: `doGet(e)` does not currently read URL params, so the fallback mechanism is the flag itself (not a `?v=` URL hack).
-- `jlmops/AppView.html` — sidebar's "Tasks" link target shifts per flag. Adds a flag-conditional admin nav entry for LibraryView (admin reaches it through nav, not by replacing AdminDashboardView_v2).
+- `jlmops/AppView.html` — adds a flag-conditional "Library" nav entry to **both** admin and manager sidebars (gated by `library.enabled`). Dashboard nav link is unchanged for both roles — it continues to load `AdminDashboardView_v2` / `ManagerDashboardView_v2`. No route flip on `WebApp.js`. ✱ (Earlier draft of this plan described a Dashboard route flip on `library.enabled`; @127 shipped that flip, user clarified at @133 smoke test, @134 reverted.)
 - `jlmops/config/taskDefinitions.json` — add `pack_form` field to each task-template row (per-type metadata for pack presentation; values: `inline` / `modal` / `dedicated_view` / `skeleton`).
 
 No edits to existing v2 files. `ManagerDashboardView_v2` and `AdminDashboardView_v2` stay bit-for-bit identical throughout phase 5.
@@ -117,10 +119,13 @@ Comparison widget (Comax / Web / ops side-by-side per §11) is **deferred to pha
 
 ## Routing + flag wiring
 
-- `WebApp.js` `doGet`: when `library.enabled === true`, the manager's "Tasks" link routes to LibraryView; admin also gets a LibraryView nav entry. When false, manager's "Tasks" link continues to point at v2 (current default); admin sees no LibraryView entry.
-- v2 stays reachable via the flag flip (set `library.enabled = false`). Verified 2026-05-25: `doGet(e)` does not parse URL params, so no `?v=` URL-hack mechanism exists; the flag is the only fallback control. Removed in a later cleanup phase, not at promotion.
-- Sidebar nav doesn't grow a second "Tasks" link for managers — same link, different target per flag. Admin gets one new nav entry for LibraryView (no equivalent existed in admin nav before).
-- `WebAppLibrary.js` is the new controller. Row shape stays compatible with the v2 row shape (so any shared render scaffolding works); LibraryView additionally consumes the library list read.
+Corrected 2026-05-26 after `@127` shipped a Dashboard route-flip on `library.enabled=true` and `@134` reverted it. Current routing model is **additive nav, no route flip**:
+
+- `AppView.html`: when `library.enabled === true`, both admin and manager sidebars render an additional "Library" nav entry (gated by a server-side scriptlet `<? if (libraryEnabled) { ?>`). When false, neither sidebar shows the entry.
+- Existing Dashboard nav link is unchanged for both roles — it continues to load `AdminDashboardView_v2` for admin and `ManagerDashboardView_v2` for manager. **No route flip on the Dashboard link.**
+- `WebApp.js` `doGet` sets `template.libraryEnabled` from `library.enabled` SysConfig; `AppView.html` reads it for both the scriptlet-gated nav entry and the `window.libraryEnabled` JS flag (used by other views if they need to check).
+- v2 dashboards stay live indefinitely as the daily-use surface. The `library.enabled` flag now gates only the Library nav entry's visibility, not any dashboard routing.
+- `WebAppLibrary.js` is the controller for LibraryView. Row shape stays compatible with the v2 row shape (so the queue's render scaffolding ideas are shared); LibraryView additionally consumes the library list read.
 
 ---
 
@@ -152,21 +157,23 @@ Scope: UI-only. Server-side endpoint hardening is intentionally out of scope per
 1. **Skeleton + queue mechanics + widget-kit atoms + SheetAccessor extension.** Build LibraryView with the generic-skeleton fallback only — every task type renders the same body (description + notes + close). No packs yet. The 25-line SheetAccessor extension lands here so the library list view can read SysLibrary. Validate routing, flag, queue filter/sort/search, and library list view end-to-end against real data. (~1 session.)
 2. **Outreach pack** — wire `ManagerContactView` into the dedicated-view slot. Smallest delta because the view already exists; integration only. (~½ session.)
 3. **Confirmation pack** — covers the four sync-cycle confirmations + daily session. (~½ session.)
-4. **Content edit pack** — file link + lock; covers 6 content task types. (~1 session.)
-5. **Content publish pack** — channel-specific actions; covers 6 publish task types. (~1 session.)
+4. **Content edit pack** — file link + lock; covers 7 content task types per the Type packs table above (`edit`, `translate`, `translate_edit`, `images`, `print_newsletter_body`, `draft`, `video_create`). (~1 session.)
+5. **Content publish pack** — Confirmation-pack variant (notes + Mark Published + optional external URL); covers 5 publish task types (`blog_publish`, `video_publish`, `email`, `social`, `whatsapp`). (~1 session.)
 6. **Deep-link packs** (Order packing, Inventory count) — link-out only, no new affordances. (~½ session.)
-7. **Soak** — LibraryView live behind flag, daily use by manager + admin for 1–2 weeks. Bugs filed, pack polish only — no schema or controller-shape changes during soak.
-8. **Promote** — flag default-on; nav points at LibraryView by default; v2 deprecated at `?v=2`.
+7. **Soak** — LibraryView live as an additional nav entry, daily testing by admin (manager's daily UI stays on `ManagerDashboardView_v2` per 2026-05-26 user direction). Bugs filed, pack polish only — no schema or controller-shape changes during soak.
+8. **(No promotion step.)** Library is permanently an additional view; there is no nav-route swap and no v2 deprecation. Phase 8+ work refines LibraryView's surface; the dashboards stay.
 
 ---
 
-## Soak + promotion path
+## Soak + extended-use path
 
-- LibraryView reachable during phase 5 via `library.enabled = true` (toggled via SysConfig setter)
-- Manager + admin both use LibraryView daily; v2 reachable only by flipping the flag back to false (no URL-param fallback exists per `WebApp.js` 2026-05-25 audit)
+Corrected 2026-05-26: there is no "promotion" event because Library is additive, not a replacement.
+
+- LibraryView reachable via the "Library" nav entry on both admin and manager sidebars when `library.enabled = true`
+- Admin tests via the admin Library nav; manager's daily UI is still `ManagerDashboardView_v2` (the Manager Library nav entry exists for testing the manager-side packs but the manager works the Dashboard for actual ops until packs are ready for daily use)
 - Issues filed in `.claude/bugs.md`; pack polish only — no schema or controller-shape changes during soak
-- Promotion: flag default-on; nav-route swap on `WebApp.js`; v2 file stays for one cycle as flag-flip fallback, removed in a later cleanup phase
-- Reversible at any point pre-promotion or in early post-promotion by flipping the flag
+- v2 dashboards are permanent. Library is the additional surface where library-era affordances (entity list, library-aware task packs) live.
+- Reversible at any point by flipping `library.enabled = false` — Library nav entry disappears, no other UI changes
 
 ---
 
@@ -182,7 +189,7 @@ Scope: UI-only. Server-side endpoint hardening is intentionally out of scope per
 
 ## Decisions banked
 
-- **LibraryView is a new entity, not a v3 of the dashboard** — 2026-05-25 user direction. The v2-suffix pattern was right when v2 evolved v1 of the same surface; this work adds a library layer the dashboard never had and the unified task queue is shaped around library entities. Fresh name, fresh start; old file retires at promotion.
+- **LibraryView is a new entity, not a v3 of the dashboard** — 2026-05-25 user direction. The v2-suffix pattern was right when v2 evolved v1 of the same surface; this work adds a library layer the dashboard never had and the unified task queue is shaped around library entities. Fresh name, fresh nav entry. Old dashboards stay (corrected 2026-05-26 after @127 / @134 ship-and-revert) — Library is permanently additive, not a replacement.
 - **Single `LibraryView.html` for both manager and admin** — 2026-05-25 user direction. Role-conditional content within one file; no Manager + Admin counterparts. Aligns with the `feedback_cards_over_view_links` principle.
 - **AdminDashboardView_v2 stays untouched** — the project-centric admin path lives there; collapses in a later phase alongside `AdminProjectsView`.
 - **Six packs cover daily work; everything else falls to the generic skeleton in v1** — driven by actual task-template enumeration of `taskDefinitions.json`. Validation / bundle / chain tasks stay on skeleton until daily friction earns them a pack.
@@ -195,7 +202,7 @@ Scope: UI-only. Server-side endpoint hardening is intentionally out of scope per
 - **One `task.content.translate` task type; direction is always EN→HE.** No direction-baked variants. §11's `task.content.translate_he` is a friendly documentation label, not a separate type. The Content edit pack handles every translate instance the same way regardless of which entity it attaches to. Confirmed 2026-05-25.
 - **Every task template declares its `pack_form` explicitly.** All ~80 rows in `taskDefinitions.json` get the new field — the 26 packed types declare their pack name; the rest declare `skeleton`. No inheritance-by-absence; configuration is exhaustive. Consumer code reads the field directly; missing/undefined is a config error, not a default-to-skeleton fallback. Confirmed 2026-05-25.
 - **Role gating reuses the AppView body-class CSS gate.** Admin-only controls in LibraryView (phase 7 onward: Add-new-entity, lock, publish, delete-entity) carry `data-roles="admin"`; no LibraryView-specific role plumbing. Server-side endpoint hardening is intentionally out of scope per the trust model (managers use the UI; not a script-execution threat). Confirmed 2026-05-26.
-- **Phase 7 (CONTENT_LIBRARY_PLAN §17) lands LibraryView's manager-side and admin-side write paths together.** Manager side: `lockVersion` wired into Content edit pack closure — phase 5 step 4 of this plan ships in the same pass. Admin side: a LibraryView "Create Content Tasks" admin button that opens the same modal shape as `contentStreamModal` (`AdminProjectsView.html:565`) and submits to the extended `WebAppProjects_createContentStream` (or its library-era successor `LibraryService.spawnContentChain`) — which now also creates SysLibrary row(s) via `LibraryService.addEntity` and writes the polymorphic `st_EntityType`/`st_EntityId` columns via the new `TaskService.createTask` options. **No new `LibraryService.spawnChain` method, no `chains.json`, no `chain_id` field on task definitions** — the existing content-stream surface is extended, not replaced (corrected 2026-05-26 after grep verification; see `plans/CONTENT_LIBRARY_PLAN.md` §11 + §17 phase 7). Phase 5 step 5 (Content publish pack) reduces to a Confirmation-pack variant (notes + Mark Published button; logs to entity activity); no publish-action method needed since blog publish stays session-side via `content/push-posts.js` and Mailchimp / social / WhatsApp / video are manual. Document attachment on edit/translate tasks is on-demand: Create/Attach buttons fire `createBlankDoc` / `attachExistingDoc` when the task opens. Add-new-entity generic form deferred indefinitely (no current ad-hoc use case). See `plans/CONTENT_LIBRARY_PLAN.md` §17 phase 7 + §18 "Added 2026-05-26" for full rationale. Confirmed 2026-05-26.
+- **Phase 7 (CONTENT_LIBRARY_PLAN §17) lands LibraryView's manager-side and admin-side write paths together.** Admin side shipped phase 7a (2026-05-26): LibraryView "Create Content Tasks" button + modal-overlay copied from `contentStreamModal` (`AdminProjectsView.html:565`); submits to `LibraryService.spawnContentChain` (forked from `WebAppProjects_createContentStream` so AdminProjectsView's surface continues unchanged); the spawner creates SysLibrary row(s) via `LibraryService.addEntity` and writes the polymorphic `st_EntityType`/`st_EntityId` columns via the new `TaskService.createTask` options. Manager side ships phase 7b: `lockVersion` + `createBlankDoc` + `attachExistingDoc` + `logEntityActivity` wired into Content edit + Content publish packs. **No `chains.json`, no `chain_id` field on task definitions** — chain stages come from the existing `CONTENT_STAGES` array (extended phase 7a with `target_sibling` + two new chain-pickable stages). Phase 5 step 5 (Content publish pack) reduces to a Confirmation-pack variant (notes + Mark Published button; logs to entity activity); no publish-action method needed since blog publish stays session-side via `content/push-posts.js` and Mailchimp / social / WhatsApp / video are manual. Document attachment on edit/translate tasks is on-demand: Create/Attach buttons fire `createBlankDoc` / `attachExistingDoc` when the task opens. Add-new-entity generic form deferred indefinitely (no current ad-hoc use case). See `plans/CONTENT_LIBRARY_PLAN.md` §17 phase 7 + §18 "Added 2026-05-26" for full rationale. Confirmed 2026-05-26.
 
 ---
 
@@ -204,7 +211,7 @@ Scope: UI-only. Server-side endpoint hardening is intentionally out of scope per
 - `plans/CONTENT_LIBRARY_PLAN.md` §11 (UI shape — library list + task queue), §17 phase 5 + safety preamble, §18 (banked decisions)
 - `jlmops/plans/LOOKUP_ADMIN_UI_PLAN.md` (shape precedent for this doc; just-shipped pattern)
 - `jlmops/CLAUDE.md` (UI conventions — modal-overlay only, button-class grep rule, copy existing patterns exactly)
-- `jlmops/ManagerDashboardView_v2.html` (skeleton precedent — already halfway to the type-pack model per §11; stays as fallback after LibraryView promotion, removed in a later cleanup phase per Soak section)
+- `jlmops/ManagerDashboardView_v2.html` (skeleton precedent — already halfway to the type-pack model per §11; stays as the manager's daily-use dashboard indefinitely per 2026-05-26 additive-nav correction; LibraryView coexists)
 - `jlmops/ManagerContactView.html` (dedicated-view precedent; Outreach pack adopts as-is)
 - `jlmops/AdminCampaignsView.html` (controller envelope shape — `{error, data}` pattern reused by `WebAppLibrary.js`)
 - `jlmops/config/taskDefinitions.json` (~80 templates; basis for the pack enumeration and `pack_form` field addition)

@@ -4,6 +4,29 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-27 (phase 7b shipped + drift diagnosis + planning passes — wrap)
+
+- **Phase 7b SHIPPED end-to-end** @131 → @134 deploys @135 → @138. Smoke confirmed Create blank Doc, Lock + Version with peer realign Yes, first-ever SysLibraryActivity write (header-driven fieldMap pattern delivered column-mismatch safety on first write). Two patches inline: (a) `ConfigService.getConfig()` returns object — initial code passed it raw to `DriveApp.getFolderById`; first patch extracted `.value`; second patch extracted `.id` (correct for `datatype: 'id'` rows like `system.folder.library` per `ConfigService.js:97-102` loader). (b) Single-quote JS literal in VERSION.commit string broke `clasp push` — fixed by removing inline quotes from the commit description.
+- **Follow-on shipped same session @134/@138**: `task.content.realign` routes through Content edit pack (added to `isContentEditType` set in `packBody`); human-friendly title derived from peer language (`Update translation: <name>` for HE peer, `Update English version: <name>` for EN peer); `pack_form` in taskDefinitions skeleton → inline. User-friendly recovery from the over-engineered "Realign after peer lock" jargon.
+- **Drift task diagnosis**: `validateDeployment` fires daily false positives. Detector compares `ScriptApp.getService().getUrl()` deployment ID against `system.deployment.pinned_id`; on this script GAS returns a stable URL with a different ID than the wrapper's pinned target. In-script detection of bare-clasp-deploy drift is structurally limited (one URL via API; can't list deployments). Logged as bug with fix shape (in-script baseline tracking as soft warning + external `clasp deployments` diff as the hard catch); user wants the check to actually work, not be disabled.
+- **Planning-mode work** (phone-friendly, no code): phase 9 (entity drawer) 5 design decisions banked inline into §11 — mobile = desktop-only v1, drawer-to-drawer back-stack, attached-task click closes drawer + jumps to queue, state history derived from activity log filtered to `version_lock`/`state_change`, section order Files/URLs · Tasks · Refs out · Refs in · State history · Activity log. Phase 10 welcome-family migration recipe banked into §17 phase 10 — pattern-setter, no consumer rewrite (welcome has no automated consumer; pending_payment is the first consumer-bearing migration); write path = extend `content/register-library.js` with template fieldMap; initial state=locked/v=1 bypasses lockVersion; same-channel peer refs only; self-describing titles like `Welcome email (EN)`.
+- **Bugs logged in `.claude/bugs.md`**: Admin Projects task delete partial-success refinement (re-confirmed today); SKU Replacement leaves orphans on web side (new — only Comax-side, doesn't update WebProdM/Staging/WebDetM/Staging/SysTasks.st_LinkedEntityId); `validateDeployment` detector false positives + fix shape.
+- **Memories banked / recurrences**: `feedback_warn_before_new_oauth_scope` recurrence on `DocumentApp.create` requiring re-auth (user revoke + re-grant to proceed). `feedback_israel_time_powershell_not_tz` + `feedback_verify_structural_intent_before_planning` were banked yesterday (2026-05-26).
+- **Working tree** has 14+ modified files including LibraryService.js (new from phase 7b), WebApp.js, AppView.html, LibraryView.html, TaskService.js, TaskWidgets.html, WebAppLibrary.js, WebAppProjects.js, taskDefinitions.json, SetupConfig.js, plus plans (CONTENT_LIBRARY_PLAN.md + LIBRARY_VIEW_PLAN.md), bugs.md, STATUS.md. User to OK the commit.
+- Next session: phase 9 (entity drawer implementation — design fully banked, code work) OR phase 10 welcome-family migration (smaller scope). Phase 11 distribution events deferred until closer to June 2026 newsletter Issue #2.
+
+---
+
+## 2026-05-27 (state-save checkpoint — phase 7b code complete, paused before deploy)
+
+- Phase 7b code complete in working tree from yesterday's session. Not pushed/deployed. Live remains @134.
+- Touches: `LibraryService.js` (createBlankDoc, attachExistingDoc, lockVersion, logEntityActivity + helpers `_getEntityRow`, `_updateEntityRow`, `_deriveConcept`, `_getCanonicalFolder`, `_flipPeerSlug`, `_summaryForActionType`); `WebAppLibrary.js` (4 wrappers + shared `_libraryEnabledOrError`); `TaskWidgets.html` (.tw-file-link atom); `LibraryView.html` (2 packBody cases + 2 modal-overlays + 4 JS handlers + init wiring + return). Header-driven fieldMap pattern throughout for column-mismatch safety.
+- `_deriveConcept` strip rule: type prefix + language suffix removed. `blog-context-en` → `context`; `blog-june-ayiw-en` → `june-ayiw`; `image-context-featured` → `context-featured`. Multi-word topics get multi-segment folders — refine convention later if it becomes problematic.
+- `lockVersion` peer-realignment Yes/No is a required choice per §14 (Cancel button intentionally omitted; "Yes spawn realign" button hides when entity is language-agnostic).
+- Resume next session: VERSION bump (PowerShell IDT) → `clasp push` → `pwsh -NoProfile -File jlmops/deploy.ps1 "phase 7b ..."` → smoke against `blog-june-ayiw-en/he` (createBlankDoc, lockVersion with peer Yes/No, markPublished with external URL). User asked to pivot to jlmops bugs review before resuming deploy.
+
+---
+
 ## 2026-05-26 (jlmops @128 — schema-test library-workbook routing fix)
 
 - Schema test surfaced 3 CRITICAL discrepancies. (1) `WebOrdM_Archive` missing `woma_OrderKey` — added manually as col 20/T (Woo `order_key` security token for pending-payment one-tap pay URLs per `HousekeepingService.js:1254-1256`; live `WebOrdM` already had it since @111). (2) `SysContacts` missing `sc_FirstCompletedDate` — added manually as col 53/BA (populated by `ContactImportService.js:841`, gates welcome-outreach trigger via `system.crm.welcome_floor_date`). (3) `SysLibrary` "Sheet not found in JLMops_Data" — validator code bug, not a sheet problem.

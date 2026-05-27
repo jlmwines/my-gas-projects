@@ -125,10 +125,14 @@ const TaskService = (function() {
    * @param {string} [sessionId=null] The session ID associated with this task.
    * @param {Object} [options={}] Additional options:
    *   { projectId, startDate, allowDuplicate,
-   *     topic, priority, status, dueDate, assignedTo }
+   *     topic, priority, status, dueDate, assignedTo,
+   *     entityType, entityId }
    *   topic/priority/status/dueDate/assignedTo override the values that would
    *   otherwise be derived from taskTypeConfig — used by user-created custom
    *   tasks (task.project.custom) where the modal supplies the values directly.
+   *   entityType + entityId write the polymorphic SysTasks columns added @124
+   *   (CONTENT_LIBRARY_PLAN §7); set by LibraryService.spawnContentChain so
+   *   library-era tasks attach to a SysLibrary slug.
    * @returns {Object|null} The created task object, or null if a duplicate existed or creation failed.
    */
   function createTask(taskTypeId, linkedEntityId, linkedEntityName, title, notes, sessionId = null, options = {}) {
@@ -209,6 +213,14 @@ const TaskService = (function() {
       if (options.projectId) {
         const projectIdIdx = headers.indexOf('st_ProjectId');
         if (projectIdIdx > -1) newRow[projectIdIdx] = options.projectId;
+      }
+      if (options.entityType) {
+        const entityTypeIdx = headers.indexOf('st_EntityType');
+        if (entityTypeIdx > -1) newRow[entityTypeIdx] = options.entityType;
+      }
+      if (options.entityId) {
+        const entityIdIdx = headers.indexOf('st_EntityId');
+        if (entityIdIdx > -1) newRow[entityIdIdx] = options.entityId;
       }
       if (options.startDate) {
         const startDateIdx = headers.indexOf('st_StartDate');

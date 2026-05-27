@@ -1,0 +1,662 @@
+/**
+ * @file LibraryService.js
+ * @description State writer for the content library (CONTENT_LIBRARY_PLAN.md phase 7).
+ *
+ * Phase 7a shipped: addEntity + spawnContentChain.
+ * Phase 7b shipped: createBlankDoc + attachExistingDoc + lockVersion + logEntityActivity.
+ *
+ * Activity log lives in SysLibraryActivity inside JLMops_Data (ops-only territory
+ * per §8 + §17 workbook placement rule); opened via SheetAccessor.getDataSheet.
+ *
+ * Library workbook is JLMops_Library (separate from JLMops_Data) — opened via
+ * SheetAccessor.getLibrarySheet, NOT the DriveApp.getFilesByName pattern that
+ * LookupService uses for JLMops_Data tabs (see plan §4 + §17 phase 7).
+ *
+ * Behind the `library.enabled` flag at the controller layer (WebAppLibrary).
+ */
+
+const LibraryService = (function() {
+    const _cache = new Map();
+
+    const LIBRARY_SHEET = 'SysLibrary';
+
+    // §6 entity types — physical library rows. Matches content/register-library.js TYPES.
+    const VALID_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template', 'image', 'customer'];
+
+    // §6 language axis — null/empty for language-agnostic entities.
+    const VALID_LANGUAGES = ['en', 'he', null, ''];
+
+    // §6 sibling-language types (the rest are language-agnostic or virtual).
+    const SIBLING_LANGUAGE_TYPES = ['blog', 'news', 'mention', 'email', 'social'];
+
+    /**
+     * Opens the library sheet and reads all rows into objects keyed by header.
+     * @returns {{ sheet, headers, rows }} sheet handle + header array + row objects.
+     * @private
+     */
+    function _openLibrary() {
+        const sheet = SheetAccessor.getLibrarySheet(LIBRARY_SHEET);
+        const range = sheet.getDataRange();
+        const values = range.getValues();
+        const headers = values[0] || [];
+        const rows = values.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => { obj[h] = row[i]; });
+            return obj;
+        });
+        return { sheet: sheet, headers: headers, rows: rows };
+    }
+
+    /**
+     * Converts a camelCase typeField key to its slb_* column name.
+     * `wpPostId` → `slb_WpPostId`. `docUrl` → `slb_DocUrl`.
+     * @private
+     */
+    function _typeFieldToColumn(key) {
+        if (!key) return '';
+        return 'slb_' + key.charAt(0).toUpperCase() + key.slice(1);
+    }
+
+    /**
+     * Validates an entity payload per §20 slug + §6 controlled vocabulary.
+     * Throws on first failure with a descriptive message.
+     * @private
+     */
+    function _validateEntity({ slug, type, language }) {
+        if (!slug || typeof slug !== 'string') {
+            throw new Error('slug is required');
+        }
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            throw new Error(`slug "${slug}" must be lowercase kebab-case (a-z, 0-9, hyphen)`);
+        }
+        if (VALID_TYPES.indexOf(type) === -1) {
+            throw new Error(`type "${type}" not in vocabulary: ${VALID_TYPES.join(', ')}`);
+        }
+        if (!slug.startsWith(type + '-')) {
+            throw new Error(`slug "${slug}" must start with type prefix "${type}-"`);
+        }
+        const lang = language || null;
+        if (VALID_LANGUAGES.indexOf(lang) === -1) {
+            throw new Error(`language "${language}" must be one of: en, he, null`);
+        }
+        if (lang && !slug.endsWith('-' + lang)) {
+            throw new Error(`slug "${slug}" must end with language suffix "-${lang}"`);
+        }
+    }
+
+    /**
+     * Validates that every reference slug exists in the provided slug set.
+     * @private
+     */
+    function _validateReferences(references, knownSlugs) {
+        for (let i = 0; i < references.length; i++) {
+            const ref = references[i];
+            if (!knownSlugs.has(ref)) {
+                throw new Error(`reference "${ref}" does not resolve to a SysLibrary row`);
+            }
+        }
+    }
+
+    /**
+     * Creates a SysLibrary entity row keyed by slug.
+     *
+     * Seeds a pre-work stub at state='draft', version=0 — per §5 "Two write paths,
+     * two lifecycle moments". The session-side register-library.js writes
+     * state='published', version=1 for completed work; this UI/chain-spawn path
+     * writes draft/v0 for planned work. lockVersion (phase 7b) bumps to locked/v1.
+     *
+     * On existing slug → returns { deduplicated: true, entity: existingRow } without
+     * writing. Safe to call repeatedly with the same slug.
+     *
+     * @param {Object} params - { slug, type, language, title, references, typeFields }
+     * @returns {Object} { deduplicated: boolean, entity: Object }
+     */
+    function addEntity(params) {
+        const slug = params.slug;
+        const type = params.type;
+        const language = params.language || null;
+        const title = params.title || '';
+        const references = Array.isArray(params.references) ? params.references : [];
+        const typeFields = params.typeFields || {};
+
+        _validateEntity({ slug: slug, type: type, language: language });
+
+        const { sheet, headers, rows } = _openLibrary();
+        const slugColIdx = headers.indexOf('slb_Slug');
+        if (slugColIdx === -1) {
+            throw new Error(`SysLibrary missing column 'slb_Slug'`);
+        }
+
+        // Dedup: existing slug → return existing row without write.
+        const existing = rows.find(r => r.slb_Slug === slug);
+        if (existing) {
+            return { deduplicated: true, entity: existing };
+        }
+
+        // Reference resolution — must exist in current SysLibrary read.
+        // Note: spawnContentChain handles intra-call references (EN sibling
+        // added first, then HE references it) by flushing between calls.
+        const knownSlugs = new Set(rows.map(r => r.slb_Slug));
+        _validateReferences(references, knownSlugs);
+
+        const now = new Date().toISOString();
+        let createdBy = 'session';
+        try {
+            createdBy = Session.getActiveUser().getEmail() || 'session';
+        } catch (e) {
+            // Session not available in some contexts (e.g. trigger).
+        }
+
+        const fieldMap = {
+            slb_Slug: slug,
+            slb_Title: title,
+            slb_ContentType: type,
+            slb_Language: language || '',
+            slb_State: 'draft',
+            slb_Version: 0,
+            slb_CreatedDate: now,
+            slb_CreatedBy: createdBy,
+            slb_LastTouched: now,
+            slb_References: references.join(',')
+        };
+
+        // Apply typeFields → slb_* columns where they exist.
+        Object.keys(typeFields).forEach(key => {
+            const col = _typeFieldToColumn(key);
+            if (headers.indexOf(col) > -1) {
+                fieldMap[col] = typeFields[key];
+            }
+        });
+
+        const newRow = headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
+        sheet.appendRow(newRow);
+        SpreadsheetApp.flush();
+
+        _cache.delete('library.entities');
+
+        // Re-shape persisted row for return.
+        const persisted = {};
+        headers.forEach((h, i) => { persisted[h] = newRow[i]; });
+        return { deduplicated: false, entity: persisted };
+    }
+
+    /**
+     * Spawns a content task chain: entity rows + tasks attached polymorphically.
+     *
+     * For sibling-language types (blog/news/mention/email/social): creates two
+     * entity rows (`-en` + `-he` with HE referencing EN), then for each stage in
+     * `stages` creates a task attached to the sibling identified by
+     * `CONTENT_STAGES[stage].target_sibling`.
+     *
+     * For language-agnostic types (image/template): creates one entity row, all
+     * tasks attach to it.
+     *
+     * Stream code generation matches the existing WebAppProjects_createContentStream
+     * logic (first 3 letters uppercase + random suffix), or accepts a user-supplied
+     * streamId.
+     *
+     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId? }
+     * @returns {Object} { entities, tasks, streamCode, deduplicated_entities }
+     */
+    function spawnContentChain(params) {
+        const entityType = params.entityType;
+        const contentName = params.contentName;
+        const stages = params.stages || [];
+        const streamId = params.streamId;
+
+        if (!entityType) throw new Error('entityType is required');
+        if (!contentName || !contentName.trim()) throw new Error('contentName is required');
+        if (!stages.length) throw new Error('stages must not be empty');
+        if (VALID_TYPES.indexOf(entityType) === -1) {
+            throw new Error(`entityType "${entityType}" not in vocabulary: ${VALID_TYPES.join(', ')}`);
+        }
+
+        // Derive baseSlug from contentName if caller did not pass one.
+        const baseSlug = params.baseSlug || _deriveBaseSlug(entityType, contentName);
+
+        // Stream code per WebAppProjects.js:211–221.
+        let streamCode;
+        if (streamId && String(streamId).trim()) {
+            streamCode = String(streamId).trim().toUpperCase();
+        } else {
+            const cleaned = contentName.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
+            const code = cleaned.substring(0, 3) || 'CNT';
+            const suffix = Math.random().toString(36).substring(2, 5).toUpperCase();
+            streamCode = code + suffix;
+        }
+
+        const isSiblingLanguage = SIBLING_LANGUAGE_TYPES.indexOf(entityType) > -1;
+
+        // 1. Create entity rows.
+        const entities = [];
+        const deduplicated_entities = [];
+
+        if (isSiblingLanguage) {
+            const enSlug = baseSlug + '-en';
+            const heSlug = baseSlug + '-he';
+
+            const enResult = addEntity({
+                slug: enSlug, type: entityType, language: 'en',
+                title: contentName, references: []
+            });
+            entities.push(enResult.entity);
+            if (enResult.deduplicated) deduplicated_entities.push(enSlug);
+
+            const heResult = addEntity({
+                slug: heSlug, type: entityType, language: 'he',
+                title: contentName, references: [enSlug]
+            });
+            entities.push(heResult.entity);
+            if (heResult.deduplicated) deduplicated_entities.push(heSlug);
+        } else {
+            const result = addEntity({
+                slug: baseSlug, type: entityType, language: null,
+                title: contentName, references: []
+            });
+            entities.push(result.entity);
+            if (result.deduplicated) deduplicated_entities.push(baseSlug);
+        }
+
+        // 2. Spawn tasks per stage.
+        const tasks = [];
+        for (let i = 0; i < stages.length; i++) {
+            const stageId = stages[i];
+            const stageDef = CONTENT_STAGES.find(s => s.id === stageId);
+            if (!stageDef) {
+                throw new Error(`unknown stage "${stageId}"`);
+            }
+
+            const resolvedSlug = isSiblingLanguage
+                ? baseSlug + '-' + (stageDef.target_sibling || 'en')
+                : baseSlug;
+
+            const task = TaskService.createTask(
+                stageDef.typeId,
+                resolvedSlug,
+                contentName,
+                stageDef.title + contentName,
+                '',
+                streamCode,
+                { entityType: entityType, entityId: resolvedSlug }
+            );
+            if (task) tasks.push(task);
+        }
+
+        return {
+            entities: entities,
+            tasks: tasks,
+            streamCode: streamCode,
+            deduplicated_entities: deduplicated_entities
+        };
+    }
+
+    /**
+     * Derives a baseSlug from a free-text contentName per §20.
+     * "Context" → "blog-context"; "About Page" → "blog-about-page".
+     * Lowercase, kebab-case, non-alphanum collapsed to hyphens.
+     * @private
+     */
+    function _deriveBaseSlug(entityType, contentName) {
+        const topic = String(contentName).toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        if (!topic) throw new Error(`could not derive slug from contentName "${contentName}"`);
+        return entityType + '-' + topic;
+    }
+
+    // ===== PHASE 7b ADDITIONS =====
+
+    const LIBRARY_ACTIVITY_SHEET = 'SysLibraryActivity';
+
+    /**
+     * Reads a single SysLibrary row by slug.
+     * @returns {Object|null} Row object keyed by header, or null if not found.
+     * @private
+     */
+    function _getEntityRow(slug) {
+        const { rows } = _openLibrary();
+        return rows.find(r => r.slb_Slug === slug) || null;
+    }
+
+    /**
+     * Updates fields on an existing SysLibrary row identified by slug.
+     * Uses header-driven fieldMap pattern (column-mismatch-resistant).
+     * @returns {Object} The persisted row, keyed by header.
+     * @private
+     */
+    function _updateEntityRow(slug, updates) {
+        const sheet = SheetAccessor.getLibrarySheet(LIBRARY_SHEET);
+        const range = sheet.getDataRange();
+        const values = range.getValues();
+        const headers = values[0] || [];
+        const slugColIdx = headers.indexOf('slb_Slug');
+        if (slugColIdx === -1) {
+            throw new Error(`SysLibrary missing column 'slb_Slug'`);
+        }
+        for (let i = 1; i < values.length; i++) {
+            if (values[i][slugColIdx] === slug) {
+                const rowNum = i + 1;
+                const row = values[i].slice();
+                Object.keys(updates).forEach(key => {
+                    const colIdx = headers.indexOf(key);
+                    if (colIdx > -1) row[colIdx] = updates[key];
+                });
+                sheet.getRange(rowNum, 1, 1, headers.length).setValues([row]);
+                SpreadsheetApp.flush();
+                _cache.delete('library.entities');
+                const persisted = {};
+                headers.forEach((h, idx) => { persisted[h] = row[idx]; });
+                return persisted;
+            }
+        }
+        throw new Error(`Entity slug "${slug}" not found in SysLibrary`);
+    }
+
+    /**
+     * Derives the concept folder name from a slug.
+     * Concept = slug with type prefix and language suffix stripped.
+     * `blog-context-en` → `context`. `blog-june-ayiw-en` → `june-ayiw`.
+     * `image-context-featured` → `context-featured` (no language suffix).
+     * @private
+     */
+    function _deriveConcept(slug, type) {
+        let s = String(slug);
+        if (s.indexOf(type + '-') === 0) s = s.slice(type.length + 1);
+        if (s.endsWith('-en') || s.endsWith('-he')) s = s.slice(0, -3);
+        return s;
+    }
+
+    /**
+     * Finds or creates a child folder by name under the given parent.
+     * @private
+     */
+    function _getOrCreateChildFolder(parentFolder, name) {
+        const matches = parentFolder.getFoldersByName(name);
+        if (matches.hasNext()) return matches.next();
+        return parentFolder.createFolder(name);
+    }
+
+    /**
+     * Resolves /JLMops_Data/Library/<type>/<concept>/ for the given entity,
+     * auto-creating missing type or concept folders.
+     * Root folder ID from `system.folder.library` SysConfig.
+     * @private
+     */
+    function _getCanonicalFolder(type, concept) {
+        const rootCfg = ConfigService.getConfig('system.folder.library');
+        const rootFolderId = rootCfg && rootCfg.id ? String(rootCfg.id).trim() : '';
+        if (!rootFolderId) {
+            throw new Error('system.folder.library not configured (expected ConfigService.getConfig(...).id)');
+        }
+        const rootFolder = DriveApp.getFolderById(rootFolderId);
+        const typeFolder = _getOrCreateChildFolder(rootFolder, type);
+        return _getOrCreateChildFolder(typeFolder, concept);
+    }
+
+    /**
+     * Returns the active actor identifier for activity log writes / created_by
+     * fields. Falls back to 'system' if Session is not available (trigger context).
+     * @private
+     */
+    function _getActor() {
+        try {
+            return Session.getActiveUser().getEmail() || 'system';
+        } catch (e) {
+            return 'system';
+        }
+    }
+
+    /**
+     * Flips a sibling-language slug to its peer.
+     * `blog-context-en` → `blog-context-he` (and vice versa).
+     * Returns null if slug has no language suffix.
+     * @private
+     */
+    function _flipPeerSlug(slug) {
+        const s = String(slug);
+        if (s.endsWith('-en')) return s.slice(0, -3) + '-he';
+        if (s.endsWith('-he')) return s.slice(0, -3) + '-en';
+        return null;
+    }
+
+    /**
+     * Creates a blank Google Doc at the canonical Drive path for this entity.
+     * Refuses silent overwrite if a file with the same name already exists in
+     * the canonical folder.
+     * @param {Object} params - { entityId: slug }
+     * @returns {Object} { entity: updatedRow, docUrl }
+     */
+    function createBlankDoc(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        const type = entity.slb_ContentType;
+        const concept = _deriveConcept(entityId, type);
+        const canonicalFolder = _getCanonicalFolder(type, concept);
+
+        // Refuse silent overwrite.
+        if (canonicalFolder.getFilesByName(entityId).hasNext()) {
+            throw new Error(`A file named "${entityId}" already exists in the canonical folder; refusing silent overwrite`);
+        }
+
+        const doc = DocumentApp.create(entityId);
+        const file = DriveApp.getFileById(doc.getId());
+        file.moveTo(canonicalFolder);
+        const docUrl = doc.getUrl();
+
+        const now = new Date().toISOString();
+        const updated = _updateEntityRow(entityId, {
+            slb_DocUrl: docUrl,
+            slb_LastTouched: now
+        });
+
+        return { entity: updated, docUrl: docUrl };
+    }
+
+    /**
+     * Attaches an existing Drive file to this entity. Moves the file to the
+     * canonical folder if it lives elsewhere; renames to match slug if needed.
+     * Drive file ID is stable through move/rename so external links keep working.
+     * @param {Object} params - { entityId, driveUrl }
+     * @returns {Object} { entity: updatedRow, docUrl }
+     */
+    function attachExistingDoc(params) {
+        const entityId = params && params.entityId;
+        const driveUrl = params && params.driveUrl;
+        if (!entityId) throw new Error('entityId is required');
+        if (!driveUrl) throw new Error('driveUrl is required');
+
+        const match = String(driveUrl).match(/[-\w]{25,}/);
+        if (!match) throw new Error(`Could not extract Drive file ID from URL "${driveUrl}"`);
+        const fileId = match[0];
+
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        const type = entity.slb_ContentType;
+        const concept = _deriveConcept(entityId, type);
+        const canonicalFolder = _getCanonicalFolder(type, concept);
+
+        const file = DriveApp.getFileById(fileId);
+        // Move if not already in canonical folder.
+        const parents = file.getParents();
+        let inCanonical = false;
+        while (parents.hasNext()) {
+            if (parents.next().getId() === canonicalFolder.getId()) {
+                inCanonical = true;
+                break;
+            }
+        }
+        if (!inCanonical) {
+            file.moveTo(canonicalFolder);
+        }
+        // Rename if name doesn't match the slug.
+        if (file.getName() !== entityId) {
+            file.setName(entityId);
+        }
+
+        const now = new Date().toISOString();
+        const updated = _updateEntityRow(entityId, {
+            slb_DocUrl: file.getUrl(),
+            slb_LastTouched: now
+        });
+
+        return { entity: updated, docUrl: file.getUrl() };
+    }
+
+    /**
+     * Locks the entity at the next version: increments slb_Version, sets state
+     * to 'locked', updates last-touched, closes the originating task, optionally
+     * spawns a realign task on the peer-language sibling, and logs the lock to
+     * SysLibraryActivity.
+     *
+     * @param {Object} params - { entityId, taskId, peerNeedsRealignment }
+     * @returns {Object} { entity: updatedRow, task: closedTask, related_tasks: [...] }
+     */
+    function lockVersion(params) {
+        const entityId = params && params.entityId;
+        const taskId = params && params.taskId;
+        const peerNeedsRealignment = !!(params && params.peerNeedsRealignment);
+        if (!entityId) throw new Error('entityId is required');
+        if (!taskId) throw new Error('taskId is required');
+
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        const currentVersion = Number(entity.slb_Version) || 0;
+        const newVersion = currentVersion + 1;
+        const now = new Date().toISOString();
+
+        const updatedEntity = _updateEntityRow(entityId, {
+            slb_Version: newVersion,
+            slb_State: 'locked',
+            slb_LastTouched: now
+        });
+
+        // Close the originating task via existing TaskService surface.
+        TaskService.completeTask(taskId);
+
+        // Optionally spawn realign task on peer.
+        let realignTask = null;
+        let peerSlug = null;
+        if (peerNeedsRealignment) {
+            peerSlug = _flipPeerSlug(entityId);
+            if (!peerSlug) {
+                throw new Error(`Entity "${entityId}" has no language suffix; cannot derive peer slug for realignment`);
+            }
+            const peer = _getEntityRow(peerSlug);
+            if (!peer) {
+                throw new Error(`Peer entity "${peerSlug}" not found; cannot spawn realign task`);
+            }
+            const peerLanguage = peer.slb_Language || '';
+            const realignLabel = peerLanguage === 'he' ? 'Update translation'
+                : peerLanguage === 'en' ? 'Update English version'
+                : 'Update peer version';
+            realignTask = TaskService.createTask(
+                'task.content.realign',
+                peerSlug,
+                peer.slb_Title || peerSlug,
+                realignLabel + ': ' + (peer.slb_Title || peerSlug),
+                '',
+                null,
+                { entityType: peer.slb_ContentType, entityId: peerSlug }
+            );
+        }
+
+        // Activity log entry.
+        logEntityActivity({
+            entityId: entityId,
+            actionType: 'version_lock',
+            details: {
+                version: newVersion,
+                peerRealignmentSpawned: !!realignTask
+            },
+            referencedEntities: realignTask && peerSlug ? [peerSlug] : []
+        });
+
+        return {
+            entity: updatedEntity,
+            task: { id: taskId, status: 'Done' },
+            related_tasks: realignTask ? [realignTask] : []
+        };
+    }
+
+    /**
+     * Appends an activity log entry to SysLibraryActivity (lives in JLMops_Data).
+     * Uses header-driven fieldMap pattern.
+     * @param {Object} params - { entityId, actionType, details, referencedEntities, entityType? }
+     * @returns {Object} { activityId }
+     */
+    function logEntityActivity(params) {
+        const entityId = params && params.entityId;
+        const actionType = params && params.actionType;
+        const details = (params && params.details) || {};
+        const referencedEntities = (params && params.referencedEntities) || [];
+        if (!entityId) throw new Error('entityId is required');
+        if (!actionType) throw new Error('actionType is required');
+
+        // Resolve entityType: explicit param wins (for virtual entity types);
+        // otherwise look up slb_ContentType from the library entity row.
+        let entityType = params && params.entityType;
+        if (!entityType) {
+            const entity = _getEntityRow(entityId);
+            if (!entity) {
+                throw new Error(`Cannot resolve entityType for "${entityId}" — not in SysLibrary and no explicit entityType provided`);
+            }
+            entityType = entity.slb_ContentType;
+        }
+
+        const sheet = SheetAccessor.getDataSheet(LIBRARY_ACTIVITY_SHEET);
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+        const activityId = Utilities.getUuid();
+        const fieldMap = {
+            slba_ActivityId: activityId,
+            slba_EntityType: entityType,
+            slba_EntityId: entityId,
+            slba_Timestamp: new Date().toISOString(),
+            slba_Actor: _getActor(),
+            slba_ActionType: actionType,
+            slba_Summary: _summaryForActionType(actionType, details),
+            slba_Details: JSON.stringify(details),
+            slba_ReferencedEntities: JSON.stringify(referencedEntities)
+        };
+
+        const newRow = headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
+        sheet.appendRow(newRow);
+        SpreadsheetApp.flush();
+
+        return { activityId: activityId };
+    }
+
+    /**
+     * Returns a short human-readable label per action type for slba_Summary.
+     * @private
+     */
+    function _summaryForActionType(actionType, details) {
+        switch (actionType) {
+            case 'version_lock':
+                return 'Version locked' + (details && details.version ? ' (v' + details.version + ')' : '');
+            case 'published':
+                return 'Published' + (details && details.externalUrl ? ' to ' + details.externalUrl : '');
+            case 'template_send':
+                return 'Template sent';
+            case 'state_change':
+                return 'State changed' + (details && details.to ? ' to ' + details.to : '');
+            default:
+                return actionType;
+        }
+    }
+
+    return {
+        addEntity: addEntity,
+        spawnContentChain: spawnContentChain,
+        createBlankDoc: createBlankDoc,
+        attachExistingDoc: attachExistingDoc,
+        lockVersion: lockVersion,
+        logEntityActivity: logEntityActivity
+    };
+})();

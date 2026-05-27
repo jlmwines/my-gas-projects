@@ -216,6 +216,9 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerProducts')">Products</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
+          <? if (libraryEnabled) { ?>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Library')">Library</a></li>
+          <? } ?>
         </ul>
         <div id="version-footer" class="text-muted small mt-auto" style="padding: 10px 20px; font-size: 0.7rem;"></div>
       </div>
@@ -230,8 +233,8 @@
 
     <script>
       // Library subsystem flag — set by doGet via template.libraryEnabled.
-      // When true: manager Dashboard link routes to LibraryView (replacing
-      // ManagerDashboardView_v2); admin sees a Library nav entry.
+      // When true: both admin and manager get an additional "Library" nav entry
+      // alongside their existing Dashboard (no route flip on Dashboard).
       window.libraryEnabled = <?= libraryEnabled ? 'true' : 'false' ?>;
 
       /**
@@ -342,8 +345,7 @@
         if (selectedRole === 'admin') {
             loadView('AdminDashboard');
         } else if (selectedRole === 'manager') {
-            // Library subsystem replaces the manager Dashboard target when enabled.
-            loadView(window.libraryEnabled ? 'Library' : 'ManagerDashboard');
+            loadView('ManagerDashboard');
         } else {
             document.getElementById('content').innerHTML = '<h2>Invalid Role</h2>';
         }
@@ -364,8 +366,7 @@
         if (initialRole === 'admin') {
             loadView('AdminDashboard');
         } else if (initialRole === 'manager') {
-            // Library subsystem replaces the manager Dashboard target when enabled.
-            loadView(window.libraryEnabled ? 'Library' : 'ManagerDashboard');
+            loadView('ManagerDashboard');
         }
 
         // Version footer

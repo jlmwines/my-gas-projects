@@ -697,6 +697,42 @@
     ],
     [
         "task.template",
+        "task.content.create_wp_stubs",
+        "Create EN+HE WPML-linked WordPress stub posts so content push has IDs to update.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day",
+        "pack_form", "skeleton"
+    ],
+    [
+        "task.template",
+        "task.content.admin_review",
+        "Admin gate between Claude EN draft and Evyatar's edit pass.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day",
+        "pack_form", "skeleton"
+    ],
+    [
+        "task.template",
+        "task.content.realign",
+        "Update peer-language sibling after the other side locked a new version (spawned by lockVersion). Routes through Content edit pack — same UI surface as task.content.edit.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "Assigned",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
         "task.campaign.generate_outputs",
         "Call Campaign Service to emit utm-tagged URL + short URL + QR SVG for this Project's distribution. One run per language.",
         "stable",

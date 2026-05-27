@@ -179,3 +179,197 @@ function _getLibraryEntities(libraryRows) {
     descriptor: row.slb_Descriptor || ''
   }));
 }
+
+// ===== ACTION WRAPPERS (CONTENT_LIBRARY_PLAN §17 phase 7) =====
+// State-changing endpoints. Action envelope per §11:
+//   { ok, updated: {entity?, entities?, tasks?}, error?, validation? }
+// Read endpoint (WebAppLibrary_getData above) keeps its existing
+// {success, data, error} shape — settled 2026-05-26.
+
+/**
+ * Creates a SysLibrary entity row.
+ * @param {Object} params - { slug, type, language, title, references, typeFields }
+ * @returns {Object} { ok, updated: { entity }, error?, validation? }
+ */
+function WebAppLibrary_addEntity(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'addEntity';
+
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const flag = allConfig['library.enabled'];
+    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
+    if (!enabled) {
+      return { ok: false, error: 'library.enabled flag is off' };
+    }
+
+    const result = LibraryService.addEntity(params || {});
+    const shaped = _getLibraryEntities([result.entity])[0];
+    return {
+      ok: true,
+      updated: { entity: shaped },
+      deduplicated: result.deduplicated
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Spawns a content task chain: entity rows + tasks attached via the polymorphic
+ * SysTasks columns. For sibling-language types (blog/news/mention/email/social)
+ * creates EN+HE entity rows; otherwise creates a single row.
+ * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId }
+ * @returns {Object} { ok, updated: { entities, tasks }, streamCode, deduplicated_entities, error? }
+ */
+function WebAppLibrary_spawnContentChain(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'spawnContentChain';
+
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const flag = allConfig['library.enabled'];
+    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
+    if (!enabled) {
+      return { ok: false, error: 'library.enabled flag is off' };
+    }
+
+    const result = LibraryService.spawnContentChain(params || {});
+    const shapedEntities = _getLibraryEntities(result.entities);
+    // Tasks come back from TaskService.createTask as {id}; UI re-fetches via
+    // WebAppLibrary_getData to pick up the full queue shape.
+    return {
+      ok: true,
+      updated: {
+        entities: shapedEntities,
+        tasks: result.tasks
+      },
+      streamCode: result.streamCode,
+      deduplicated_entities: result.deduplicated_entities
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Library-enabled flag guard. Returns null when enabled; returns error envelope when off.
+ * @private
+ */
+function _libraryEnabledOrError() {
+  const allConfig = ConfigService.getAllConfig();
+  const flag = allConfig['library.enabled'];
+  const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
+  if (!enabled) {
+    return { ok: false, error: 'library.enabled flag is off' };
+  }
+  return null;
+}
+
+/**
+ * Creates a blank Google Doc at the canonical Drive path for this entity.
+ * @param {Object} params - { entityId }
+ * @returns {Object} { ok, updated: { entity }, docUrl, error? }
+ */
+function WebAppLibrary_createBlankDoc(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'createBlankDoc';
+
+  try {
+    const guard = _libraryEnabledOrError();
+    if (guard) return guard;
+
+    const result = LibraryService.createBlankDoc(params || {});
+    const shaped = _getLibraryEntities([result.entity])[0];
+    return {
+      ok: true,
+      updated: { entity: shaped },
+      docUrl: result.docUrl
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Attaches an existing Drive file to this entity (moves to canonical folder + renames).
+ * @param {Object} params - { entityId, driveUrl }
+ * @returns {Object} { ok, updated: { entity }, docUrl, error? }
+ */
+function WebAppLibrary_attachExistingDoc(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'attachExistingDoc';
+
+  try {
+    const guard = _libraryEnabledOrError();
+    if (guard) return guard;
+
+    const result = LibraryService.attachExistingDoc(params || {});
+    const shaped = _getLibraryEntities([result.entity])[0];
+    return {
+      ok: true,
+      updated: { entity: shaped },
+      docUrl: result.docUrl
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Locks the entity at next version, closes the originating task, optionally
+ * spawns a realign task on the peer-language sibling, logs the lock.
+ * @param {Object} params - { entityId, taskId, peerNeedsRealignment }
+ * @returns {Object} { ok, updated: { entity, task, related_tasks }, error? }
+ */
+function WebAppLibrary_lockVersion(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'lockVersion';
+
+  try {
+    const guard = _libraryEnabledOrError();
+    if (guard) return guard;
+
+    const result = LibraryService.lockVersion(params || {});
+    const shapedEntity = _getLibraryEntities([result.entity])[0];
+    return {
+      ok: true,
+      updated: {
+        entity: shapedEntity,
+        task: result.task,
+        related_tasks: result.related_tasks
+      }
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Appends a row to SysLibraryActivity for this entity.
+ * @param {Object} params - { entityId, actionType, details, referencedEntities, entityType? }
+ * @returns {Object} { ok, activityId, error? }
+ */
+function WebAppLibrary_logEntityActivity(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'logEntityActivity';
+
+  try {
+    const guard = _libraryEnabledOrError();
+    if (guard) return guard;
+
+    const result = LibraryService.logEntityActivity(params || {});
+    return {
+      ok: true,
+      activityId: result.activityId
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}

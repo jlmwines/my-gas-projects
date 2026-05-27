@@ -166,17 +166,19 @@ function WebAppProjects_getOptions() {
  * Content stage definitions with display order.
  */
 const CONTENT_STAGES = [
-  { id: 'draft', typeId: 'task.content.draft', label: 'Draft', title: 'Draft: ' },
-  { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ' },
-  { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ' },
-  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Translate Edit', title: 'Review Translation: ' },
-  { id: 'images', typeId: 'task.content.images', label: 'Images', title: 'Images: ' },
-  { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ' },
-  { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ' },
-  { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ' },
-  { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ' },
-  { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ' },
-  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ' }
+  { id: 'create_wp_stubs', typeId: 'task.content.create_wp_stubs', label: 'Create WP Stubs', title: 'Create WP Stubs: ', target_sibling: 'en' },
+  { id: 'draft', typeId: 'task.content.draft', label: 'Draft', title: 'Draft: ', target_sibling: 'en' },
+  { id: 'admin_review', typeId: 'task.content.admin_review', label: 'Admin Review', title: 'Admin Review: ', target_sibling: 'en' },
+  { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ', target_sibling: 'en' },
+  { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ', target_sibling: 'he' },
+  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Translate Edit', title: 'Review Translation: ', target_sibling: 'he' },
+  { id: 'images', typeId: 'task.content.images', label: 'Images', title: 'Images: ', target_sibling: 'en' },
+  { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ', target_sibling: 'en' },
+  { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ', target_sibling: 'en' },
+  { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ', target_sibling: 'en' },
+  { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ', target_sibling: 'en' },
+  { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ', target_sibling: 'en' },
+  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en' }
 ];
 
 /**

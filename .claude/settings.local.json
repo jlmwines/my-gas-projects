@@ -66,7 +66,9 @@
       "Bash(python3 *)",
       "Bash(awk '/^    \\\\}\\\\\\)\\\\\\(\\\\\\);/{print NR\": \"$0}' \"C:/Users/B/projects/jlmwines/AdminProductsView.html\")",
       "Bash(awk '/^    \\\\}\\\\\\)\\\\\\(\\\\\\);/{print NR\": \"$0}' \"C:/Users/B/projects/jlmwines/jlmops/AdminProductsView.html\")",
-      "Bash(git tag *)"
+      "Bash(git tag *)",
+      "Bash(pushd jlmops *)",
+      "Bash(popd)"
     ],
     "deny": [
       "Bash(git -C:*)",

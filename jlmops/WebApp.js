@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-26 06:50',
-  commit: '@128: Schema-test library-workbook routing. ValidationLogic + SetupSheets (syncHeaders, syncAllHeaders, protectAllSheetHeaders) now route schema.library.* prefix to SheetAccessor.getLibrarySpreadsheet(). schemas.json: SysLibrary key renamed schema.data.SysLibrary → schema.library.SysLibrary (SysLibraryActivity stays schema.data.* — lives in JLMops_Data). Fixes "SysLibrary not found in JLMops_Data" critical from validateDatabaseSchema. Also lets syncHeaders(\'SysLibrary\') work end-to-end against the library workbook.'
+  built: '2026-05-27 08:50',
+  commit: '@134: Phase 7b follow-on. (1) Human-friendly realign task title — derived from peer language: HE peer = "Update translation: <name>", EN peer = "Update English version: <name>". (2) task.content.realign now routes through the Content edit pack in packBody dispatcher (same surface as task.content.edit: file-link + Open Doc + Lock + Version). (3) pack_form for realign in taskDefinitions.json: skeleton → inline (now matches reality; dispatch is by typeId but cleaner if both agree). Manager closes a realign task by editing the Doc + clicking Lock + Version, same as any other edit task. Audit distinction preserved in SysTasks (typeId differs from task.content.edit).'
 };
 
 function getVersion() {
