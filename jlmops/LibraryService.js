@@ -651,12 +651,92 @@ const LibraryService = (function() {
         }
     }
 
+    /**
+     * Composite payload for the entity detail drawer (phase 9).
+     * Returns the entity row + attached tasks + references-in (entities that
+     * point at this one) + activity log entries — all raw row objects keyed
+     * by their sheet column headers. Wrapper at WebAppLibrary_getEntityDetail
+     * shapes everything to the camelCase API shape.
+     *
+     * @param {Object} params - { entityId: slug }
+     * @returns {Object} { entity, attached_tasks: [], references_in: [], activity_log: [] }
+     */
+    function getEntityDetail(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+
+        const entity = _getEntityRow(entityId);
+        if (!entity) {
+            throw new Error(`Entity "${entityId}" not found in SysLibrary`);
+        }
+
+        // Attached tasks — rows where st_EntityId matches the slug.
+        const tasksSheet = SheetAccessor.getDataSheet('SysTasks');
+        const tasksValues = tasksSheet.getDataRange().getValues();
+        const tasksHeaders = tasksValues[0] || [];
+        const taskEntityIdIdx = tasksHeaders.indexOf('st_EntityId');
+        const attachedTasks = [];
+        if (taskEntityIdIdx > -1) {
+            for (let i = 1; i < tasksValues.length; i++) {
+                if (tasksValues[i][taskEntityIdIdx] === entityId) {
+                    const taskObj = {};
+                    tasksHeaders.forEach((h, idx) => { taskObj[h] = tasksValues[i][idx]; });
+                    attachedTasks.push(taskObj);
+                }
+            }
+        }
+
+        // References in — SysLibrary rows whose slb_References (comma-joined)
+        // contains this entity's slug. Reverse-lookup; computed at query time
+        // per §6 reverse-index pattern.
+        const libSheet = SheetAccessor.getLibrarySheet(LIBRARY_SHEET);
+        const libValues = libSheet.getDataRange().getValues();
+        const libHeaders = libValues[0] || [];
+        const refColIdx = libHeaders.indexOf('slb_References');
+        const referencesIn = [];
+        if (refColIdx > -1) {
+            for (let i = 1; i < libValues.length; i++) {
+                const refsRaw = String(libValues[i][refColIdx] || '');
+                const refs = refsRaw.split(',').map(s => s.trim()).filter(Boolean);
+                if (refs.indexOf(entityId) > -1) {
+                    const rowObj = {};
+                    libHeaders.forEach((h, idx) => { rowObj[h] = libValues[i][idx]; });
+                    referencesIn.push(rowObj);
+                }
+            }
+        }
+
+        // Activity log — SysLibraryActivity rows where slba_EntityId matches.
+        const activitySheet = SheetAccessor.getDataSheet(LIBRARY_ACTIVITY_SHEET);
+        const activityValues = activitySheet.getDataRange().getValues();
+        const activityHeaders = activityValues[0] || [];
+        const slbaEntityIdIdx = activityHeaders.indexOf('slba_EntityId');
+        const activityLog = [];
+        if (slbaEntityIdIdx > -1) {
+            for (let i = 1; i < activityValues.length; i++) {
+                if (activityValues[i][slbaEntityIdIdx] === entityId) {
+                    const actObj = {};
+                    activityHeaders.forEach((h, idx) => { actObj[h] = activityValues[i][idx]; });
+                    activityLog.push(actObj);
+                }
+            }
+        }
+
+        return {
+            entity: entity,
+            attached_tasks: attachedTasks,
+            references_in: referencesIn,
+            activity_log: activityLog
+        };
+    }
+
     return {
         addEntity: addEntity,
         spawnContentChain: spawnContentChain,
         createBlankDoc: createBlankDoc,
         attachExistingDoc: attachExistingDoc,
         lockVersion: lockVersion,
-        logEntityActivity: logEntityActivity
+        logEntityActivity: logEntityActivity,
+        getEntityDetail: getEntityDetail
     };
 })();

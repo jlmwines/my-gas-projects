@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-27 08:50',
-  commit: '@134: Phase 7b follow-on. (1) Human-friendly realign task title — derived from peer language: HE peer = "Update translation: <name>", EN peer = "Update English version: <name>". (2) task.content.realign now routes through the Content edit pack in packBody dispatcher (same surface as task.content.edit: file-link + Open Doc + Lock + Version). (3) pack_form for realign in taskDefinitions.json: skeleton → inline (now matches reality; dispatch is by typeId but cleaner if both agree). Manager closes a realign task by editing the Doc + clicking Lock + Version, same as any other edit task. Audit distinction preserved in SysTasks (typeId differs from task.content.edit).'
+  built: '2026-05-27 14:02',
+  commit: '@139 phase 9d-partial: 3 drawer action buttons. (1) Open in Drive — shown when slb_DocUrl set, opens in new tab. (2) Create Content Tasks (pre-filled) — opens lvContentStreamModal with entity name pre-filled; admin-gated via data-roles. (3) Create HE sibling stub — shown only when current entity is -en + HE peer not in cached library; on click confirms + spawns peer via LibraryService.addEntity (dedups server-side if peer was created elsewhere). Lock + Version button deferred until we agree on drawer-Lock semantics (no task context). state.currentEntity stash powers handlers; load() + _loadEntityDrawer() refresh after HE sibling creation without back-stack push.'
 };
 
 function getVersion() {

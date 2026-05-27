@@ -351,6 +351,57 @@ function WebAppLibrary_lockVersion(params) {
 }
 
 /**
+ * Composite read for the entity detail drawer (phase 9).
+ * Returns entity row + attached tasks + references-in + activity log,
+ * each shaped to the same camelCase API as WebAppLibrary_getData consumers.
+ * @param {Object} params - { entityId }
+ * @returns {Object} { success, data: { entity, attached_tasks, references_in, activity_log }, error? }
+ */
+function WebAppLibrary_getEntityDetail(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'getEntityDetail';
+
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const flag = allConfig['library.enabled'];
+    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
+    if (!enabled) {
+      return { success: false, error: 'library.enabled flag is off' };
+    }
+
+    const raw = LibraryService.getEntityDetail(params || {});
+
+    const entity = _getLibraryEntities([raw.entity])[0];
+    const attachedTasks = _getQueueTasks(raw.attached_tasks, allConfig);
+    const referencesIn = _getLibraryEntities(raw.references_in);
+    const activityLog = raw.activity_log.map(row => ({
+      activityId: row.slba_ActivityId,
+      entityType: row.slba_EntityType,
+      entityId: row.slba_EntityId,
+      timestamp: _safeDate(row.slba_Timestamp),
+      actor: row.slba_Actor,
+      actionType: row.slba_ActionType,
+      summary: row.slba_Summary,
+      details: row.slba_Details,
+      referencedEntities: row.slba_ReferencedEntities
+    }));
+
+    return {
+      success: true,
+      data: {
+        entity: entity,
+        attached_tasks: attachedTasks,
+        references_in: referencesIn,
+        activity_log: activityLog
+      }
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Appends a row to SysLibraryActivity for this entity.
  * @param {Object} params - { entityId, actionType, details, referencedEntities, entityType? }
  * @returns {Object} { ok, activityId, error? }

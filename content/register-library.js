@@ -110,6 +110,72 @@ const MANIFEST = [
     references: ['blog-context-en', 'blog-context-he'],
     notes: 'wp_media_id: 67414; wp_url: /wp-content/uploads/2026/05/context-curation-v2.jpg',
   },
+  // ─── Welcome family templates (phase 10 migration 2026-05-27) ──────
+  // Content copy-pasted from current SysConfig source rows in
+  // jlmops/config/otherSettings.json — `crm.template.welcome.*`.
+  // SysConfig rows remain in place until pending_payment migration also
+  // lands; retire all crm.template.* in one pass then. Per plan §17 phase 10
+  // welcome has NO consumer code (HousekeepingService.createWelcomeOutreachTasks
+  // only spawns a task.contact.outreach; manager does outreach manually). These
+  // rows are pure pattern-setter scaffolding.
+  {
+    slug: 'template-welcome-email-en',
+    content_type: 'template',
+    language: 'en',
+    state: 'locked',
+    title: 'Welcome email (EN)',
+    channel: 'email',
+    subject: 'Welcome to JLM Wines — how was your first order?',
+    body: `Hi,
+
+Thank you so much for your first order with JLM Wines! I just wanted to reach out personally to say welcome, and to check that everything arrived well and you've been enjoying the wines.
+
+If you'd like any suggestions for next time — whether it's something similar to what you ordered or something completely different — just let me know. Happy to help.
+
+Evyatar
+JLM Wines`,
+    references: ['template-welcome-email-he'],
+  },
+  {
+    slug: 'template-welcome-email-he',
+    content_type: 'template',
+    language: 'he',
+    state: 'locked',
+    title: 'Welcome email (HE)',
+    channel: 'email',
+    subject: 'ברוכים הבאים ליין ירושלים — איך הייתה ההזמנה הראשונה?',
+    body: `שלום,
+
+תודה רבה על ההזמנה הראשונה שלך מיין ירושלים! רציתי באופן אישי לברך אותך ולוודא שהכל הגיע תקין ושנהנית מהיין.
+
+אם תרצה המלצות לפעם הבאה — בין אם זה משהו דומה למה שהזמנת או משהו חדש לגמרי — אשמח להמליץ. פנה אליי בכל שאלה.
+
+אביתר
+יין ירושלים`,
+    references: ['template-welcome-email-en'],
+  },
+  {
+    slug: 'template-welcome-whatsapp-en',
+    content_type: 'template',
+    language: 'en',
+    state: 'locked',
+    title: 'Welcome WhatsApp (EN)',
+    channel: 'whatsapp',
+    subject: '',  // WhatsApp has no subject
+    body: "Hi! Thanks so much for your first order with JLM Wines — really hope you enjoyed it. Just checking in to see how everything was, and let me know if you'd like any suggestions for next time.",
+    references: ['template-welcome-whatsapp-he'],
+  },
+  {
+    slug: 'template-welcome-whatsapp-he',
+    content_type: 'template',
+    language: 'he',
+    state: 'locked',
+    title: 'Welcome WhatsApp (HE)',
+    channel: 'whatsapp',
+    subject: '',
+    body: 'שלום! המון תודה על ההזמנה הראשונה שלך מיין ירושלים — מקווה שנהנית מהיין. רציתי לבדוק שהכל בסדר ואשמח להמליץ לך משהו לפעם הבאה.',
+    references: ['template-welcome-whatsapp-en'],
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────
@@ -179,6 +245,10 @@ function buildRow(headers, entry, derived) {
     slb_Kind: entry.kind || '',
     slb_Index: entry.index || '',
     slb_Descriptor: entry.descriptor || '',
+    // Phase 10 template fields (sparse — only populated for content_type='template')
+    slb_Subject: entry.subject || '',
+    slb_Body: entry.body || '',
+    slb_Channel: entry.channel || '',
   };
   return headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
 }

@@ -114,6 +114,131 @@
     .lv-task-row .col-assignee::before { content: 'Assigned: '; color: #6c757d; }
     .lv-task-row .col-due::before { content: 'Due: '; color: #6c757d; }
   }
+
+  /* Entity detail drawer (phase 9a) — centered modal-overlay
+     (corrected from right-side slide-in 2026-05-27 after smoke feedback;
+     matches the rest of the view's modal precedent.) */
+  .lv-drawer-panel {
+    background: #fff;
+    width: 560px;
+    max-width: 95vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .lv-drawer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+  }
+  .lv-drawer-toolbar h6 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lv-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .lv-drawer-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+  }
+  .lv-drawer-header label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .lv-drawer-header .field-value { font-size: 13px; color: #212529; }
+  .lv-drawer-header .field-value.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
+  .lv-drawer-section {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 12px;
+  }
+  .lv-drawer-section h6 {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+  }
+  .lv-drawer-section .placeholder { color: #adb5bd; font-style: italic; }
+
+  /* Clickable entity title in the library list */
+  .lv-entity-title-link {
+    color: #0d6efd;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .lv-entity-title-link:hover { text-decoration: underline; }
+
+  /* Drawer action button row (phase 9d) — sits below entity header */
+  .lv-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+  }
+  .lv-drawer-actions:empty { display: none; }
+
+  /* Drawer attached-task row + activity row */
+  .lv-drawer-task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 12px;
+  }
+  .lv-drawer-task-row:last-child { border-bottom: none; }
+  .lv-drawer-task-title { flex: 1; color: #212529; }
+  .lv-drawer-activity-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 12px;
+    color: #495057;
+  }
+  .lv-drawer-activity-row:last-child { border-bottom: none; }
+  .lv-drawer-activity-time { color: #6c757d; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
+  .lv-drawer-activity-action {
+    background: #e9ecef;
+    color: #495057;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+  }
+
+  /* Clickable entity chip in task rows (opens drawer) */
+  .lv-entity-chip {
+    cursor: pointer;
+    color: #0d6efd;
+    border-color: #b6d4fe;
+  }
+  .lv-entity-chip:hover { background: #d9e9ff; }
 </style>
 
 <div class="lv-container">
@@ -254,6 +379,37 @@
   </div>
 </div>
 
+<!-- Entity detail drawer (phase 9a) — right-side slide-in panel. Inspection only;
+     action buttons (Lock, Open in Drive, etc.) land in phase 9d. Sections
+     (Files & URLs, Attached tasks, Refs out/in, State history, Activity log)
+     content lands in phase 9b/9c; for now shows entity header + placeholders. -->
+<div class="modal-overlay" id="lvEntityDrawer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div class="lv-drawer-panel">
+    <div class="lv-drawer-toolbar">
+      <button type="button" class="btn btn-sm btn-light" id="lv-drawer-back" style="display:none;margin-right:8px" onclick="LibraryView.backEntityDrawer()" title="Back to previous entity">← Back</button>
+      <h6 id="lv-drawer-title">Entity</h6>
+      <button type="button" class="btn btn-sm btn-light" onclick="LibraryView.closeEntityDrawer()">Close</button>
+    </div>
+    <div class="lv-drawer-body">
+      <div class="lv-drawer-header">
+        <div><label>Slug</label><div class="field-value mono" id="lv-drawer-slug">—</div></div>
+        <div><label>Type</label><div class="field-value" id="lv-drawer-type">—</div></div>
+        <div><label>Language</label><div class="field-value" id="lv-drawer-language">—</div></div>
+        <div><label>State</label><div class="field-value" id="lv-drawer-state">—</div></div>
+        <div><label>Version</label><div class="field-value" id="lv-drawer-version">—</div></div>
+        <div><label>Last touched</label><div class="field-value" id="lv-drawer-lasttouched">—</div></div>
+      </div>
+      <div class="lv-drawer-actions" id="lv-drawer-actions"></div>
+      <div class="lv-drawer-section"><h6>Files &amp; URLs</h6><div id="lv-drawer-files"><span class="placeholder">—</span></div></div>
+      <div class="lv-drawer-section"><h6>Attached tasks</h6><div id="lv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
+      <div class="lv-drawer-section"><h6>References out</h6><div id="lv-drawer-refs-out"><span class="placeholder">—</span></div></div>
+      <div class="lv-drawer-section"><h6>References in</h6><div id="lv-drawer-refs-in"><span class="placeholder">—</span></div></div>
+      <div class="lv-drawer-section"><h6>State history</h6><div id="lv-drawer-state-history"><span class="placeholder">—</span></div></div>
+      <div class="lv-drawer-section"><h6>Activity log</h6><div id="lv-drawer-activity-log"><span class="placeholder">—</span></div></div>
+    </div>
+  </div>
+</div>
+
 <script>
   window.LibraryView = (function() {
     'use strict';
@@ -264,7 +420,14 @@
       contentStages: [],
       activeTab: 'tasks',
       activePreset: 'all',
-      expandedTaskId: null
+      expandedTaskId: null,
+      // Drawer back-stack (phase 9c): slugs of entities visited before the
+      // current one in this open session. Fresh opens clear it; navigateToEntity
+      // pushes the current slug before loading the new one; back pops.
+      entityStack: [],
+      currentEntitySlug: null,
+      // Phase 9d: full entity object from last drawer render, used by action handlers.
+      currentEntity: null
     };
 
     function init() {
@@ -289,6 +452,16 @@
       if (lockYesBtn) lockYesBtn.addEventListener('click', function() { submitLock(true); });
       var attachSubmitBtn = document.getElementById('lv-btn-attach-submit');
       if (attachSubmitBtn) attachSubmitBtn.addEventListener('click', submitAttachDoc);
+
+      // Escape closes the entity drawer when open (phase 9a).
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+          var drawer = document.getElementById('lvEntityDrawer');
+          if (drawer && drawer.style.display === 'flex') {
+            closeEntityDrawer();
+          }
+        }
+      });
     }
 
     function load() {
@@ -415,9 +588,15 @@
         var priorityClass = TaskWidgets.priorityClass(t.priority);
         var dueClass = TaskWidgets.dueClass(t.dueDate, t.status);
         var dueText = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
-        var entityTypeChip = t.entityType
-          ? '<span class="tw-chip">' + TaskWidgets.escape(t.entityType) + '</span>'
-          : '';
+        // Clickable when the task has a polymorphic entityId — opens the drawer.
+        // Falls back to non-clickable chip when only the type is known (legacy
+        // pre-polymorphic rows).
+        var entityTypeChip = '';
+        if (t.entityType && t.entityId) {
+          entityTypeChip = '<span class="tw-chip lv-entity-chip" onclick="event.stopPropagation();LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(t.entityId) + '\')" title="Open entity: ' + TaskWidgets.escape(t.entityId) + '">' + TaskWidgets.escape(t.entityType) + '</span>';
+        } else if (t.entityType) {
+          entityTypeChip = '<span class="tw-chip">' + TaskWidgets.escape(t.entityType) + '</span>';
+        }
         var topicChip = t.topic
           ? '<span class="tw-chip">' + TaskWidgets.escape(t.topic) + '</span>'
           : '';
@@ -667,7 +846,7 @@
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         html += '<tr>';
-        html += '<td><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
         html += '<td>' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td>' + TaskWidgets.escape(e.language || '—') + '</td>';
         html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
@@ -682,8 +861,8 @@
 
     // ===== CONTENT STREAM MODAL (CONTENT_LIBRARY_PLAN §17 phase 7a) =====
 
-    function openContentStreamModal() {
-      document.getElementById('lv-content-name').value = '';
+    function openContentStreamModal(preFilledName) {
+      document.getElementById('lv-content-name').value = preFilledName || '';
       document.getElementById('lv-content-stream-id').value = '';
       if (state.contentStages.length) {
         populateContentStagesCheckboxes();
@@ -935,6 +1114,286 @@
       }
     }
 
+    // ===== ENTITY DETAIL DRAWER (phase 9a) =====
+
+    function openEntityDrawer(slug) {
+      if (!slug) return;
+      // Fresh open from library list or task chip — clears any prior back-stack.
+      state.entityStack = [];
+      _loadEntityDrawer(slug);
+    }
+
+    function navigateToEntity(slug) {
+      if (!slug) return;
+      // No-op if clicking a chip pointing at the entity already in the drawer.
+      if (slug === state.currentEntitySlug) return;
+      // Push the current entity to the stack before loading the new one.
+      if (state.currentEntitySlug) state.entityStack.push(state.currentEntitySlug);
+      _loadEntityDrawer(slug);
+    }
+
+    function backEntityDrawer() {
+      if (!state.entityStack.length) return;
+      var prev = state.entityStack.pop();
+      _loadEntityDrawer(prev);
+    }
+
+    function _loadEntityDrawer(slug) {
+      state.currentEntitySlug = slug;
+      setDrawerLoading(slug);
+      updateDrawerBackButton();
+      document.getElementById('lvEntityDrawer').style.display = 'flex';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            TaskWidgets.toast((res && res.error) || 'Drawer load failed', true);
+            return;
+          }
+          renderEntityDrawer(res.data);
+        })
+        .withFailureHandler(function(err) {
+          TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
+        })
+        .WebAppLibrary_getEntityDetail({ entityId: slug });
+    }
+
+    function updateDrawerBackButton() {
+      var btn = document.getElementById('lv-drawer-back');
+      if (btn) btn.style.display = state.entityStack.length ? '' : 'none';
+    }
+
+    function setDrawerLoading(slug) {
+      document.getElementById('lv-drawer-title').textContent = 'Loading…';
+      document.getElementById('lv-drawer-slug').textContent = slug || '—';
+      ['lv-drawer-type', 'lv-drawer-language', 'lv-drawer-state', 'lv-drawer-version', 'lv-drawer-lasttouched'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '…';
+      });
+      var loadingPlaceholder = '<span class="placeholder">Loading…</span>';
+      ['lv-drawer-files', 'lv-drawer-attached-tasks', 'lv-drawer-refs-out', 'lv-drawer-refs-in', 'lv-drawer-state-history', 'lv-drawer-activity-log'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = loadingPlaceholder;
+      });
+      // Hide actions row during load (entity data not yet known)
+      var actionsEl = document.getElementById('lv-drawer-actions');
+      if (actionsEl) actionsEl.innerHTML = '';
+    }
+
+    function renderEntityDrawer(data) {
+      var entity = (data && data.entity) || {};
+      state.currentEntity = entity;
+      document.getElementById('lv-drawer-title').textContent = entity.title || entity.slug || 'Entity';
+      document.getElementById('lv-drawer-slug').textContent = entity.slug || '—';
+      document.getElementById('lv-drawer-type').textContent = entity.contentType || '—';
+      document.getElementById('lv-drawer-language').textContent = entity.language || '(none)';
+      document.getElementById('lv-drawer-state').textContent = entity.state || '—';
+      document.getElementById('lv-drawer-version').textContent = (entity.version !== null && entity.version !== undefined) ? String(entity.version) : '—';
+      document.getElementById('lv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
+
+      renderDrawerFiles(entity);
+      renderDrawerActions(entity);
+      renderDrawerAttachedTasks((data && data.attached_tasks) || []);
+      renderDrawerReferences((entity && entity.references) || [], 'lv-drawer-refs-out', 'No outgoing references.');
+      renderDrawerReferences(((data && data.references_in) || []).map(function(e) { return e.slug; }), 'lv-drawer-refs-in', 'No incoming references.');
+      renderDrawerActivityLog((data && data.activity_log) || []);
+      renderDrawerStateHistory((data && data.activity_log) || []);
+    }
+
+    function renderDrawerAttachedTasks(tasks) {
+      var el = document.getElementById('lv-drawer-attached-tasks');
+      if (!el) return;
+      if (!tasks.length) {
+        el.innerHTML = '<span class="placeholder">No tasks attached.</span>';
+        return;
+      }
+      // Sort: open first, then by due date asc (nulls last).
+      var sorted = tasks.slice().sort(function(a, b) {
+        var aDone = (a.status === 'Done' || a.status === 'Cancelled') ? 1 : 0;
+        var bDone = (b.status === 'Done' || b.status === 'Cancelled') ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+      var html = sorted.map(function(t) {
+        var dueChip = t.dueDate
+          ? '<span class="tw-due-chip ' + TaskWidgets.dueClass(t.dueDate, t.status) + '">' + TaskWidgets.formatDate(t.dueDate) + '</span>'
+          : '';
+        return '<div class="lv-drawer-task-row">' +
+          '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
+          '<span class="lv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
+          dueChip +
+          '</div>';
+      }).join('');
+      el.innerHTML = html;
+    }
+
+    function renderDrawerReferences(slugs, elId, emptyMsg) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!slugs || !slugs.length) {
+        el.innerHTML = '<span class="placeholder">' + emptyMsg + '</span>';
+        return;
+      }
+      // 9c: chips are clickable → navigateToEntity pushes current entity onto
+      // the drawer back-stack and loads the referenced one.
+      var html = slugs.map(function(slug) {
+        var slugEsc = TaskWidgets.escape(slug);
+        return '<span class="tw-chip lv-entity-chip" onclick="LibraryView.navigateToEntity(\'' + slugEsc + '\')" style="margin-right:4px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px" title="Open entity: ' + slugEsc + '">' + slugEsc + '</span>';
+      }).join('');
+      el.innerHTML = html;
+    }
+
+    function renderDrawerActivityLog(entries) {
+      var el = document.getElementById('lv-drawer-activity-log');
+      if (!el) return;
+      if (!entries.length) {
+        el.innerHTML = '<span class="placeholder">No activity entries.</span>';
+        return;
+      }
+      var sorted = entries.slice().sort(function(a, b) {
+        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+      });
+      var rows = sorted.map(function(e) {
+        return '<div class="lv-drawer-activity-row">' +
+          '<span class="lv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
+          '<span class="lv-drawer-activity-action">' + TaskWidgets.escape(e.actionType || '—') + '</span>' +
+          '<span>' + TaskWidgets.escape(e.summary || '—') + '</span>' +
+          '<span class="detail-meta">· ' + TaskWidgets.escape(e.actor || '—') + '</span>' +
+          '</div>';
+      }).join('');
+      el.innerHTML = rows;
+    }
+
+    function renderDrawerStateHistory(entries) {
+      var el = document.getElementById('lv-drawer-state-history');
+      if (!el) return;
+      var stateEvents = entries.filter(function(e) {
+        return e.actionType === 'version_lock' || e.actionType === 'state_change';
+      });
+      if (!stateEvents.length) {
+        el.innerHTML = '<span class="placeholder">No state changes recorded.</span>';
+        return;
+      }
+      var sorted = stateEvents.slice().sort(function(a, b) {
+        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+      });
+      var rows = sorted.map(function(e) {
+        return '<div class="lv-drawer-activity-row">' +
+          '<span class="lv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
+          '<span>' + TaskWidgets.escape(e.summary || e.actionType) + '</span>' +
+          '</div>';
+      }).join('');
+      el.innerHTML = rows;
+    }
+
+    function renderDrawerFiles(entity) {
+      var el = document.getElementById('lv-drawer-files');
+      if (!el) return;
+      var chips = [];
+      var addLink = function(label, url) {
+        chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(url) + '" target="_blank" rel="noopener" style="margin-right:6px">' + TaskWidgets.escape(label) + '</a>');
+      };
+      var addPlain = function(label) {
+        chips.push('<span class="tw-chip" style="margin-right:6px">' + TaskWidgets.escape(label) + '</span>');
+      };
+      if (entity.docUrl) addLink('Open Doc', entity.docUrl);
+      if (entity.canvaDesignUrl) addLink('Open Canva', entity.canvaDesignUrl);
+      if (entity.externalUrl) addLink('External', entity.externalUrl);
+      if (entity.mdUrl) addPlain('MD: ' + entity.mdUrl);
+      if (entity.wpPostId) addPlain('WP post: ' + entity.wpPostId);
+      if (entity.mailchimpCampaignId) addPlain('Mailchimp: ' + entity.mailchimpCampaignId);
+      if (chips.length === 0) {
+        el.innerHTML = '<span class="placeholder">No files or URLs attached.</span>';
+      } else {
+        el.innerHTML = chips.join('');
+      }
+    }
+
+    function closeEntityDrawer() {
+      document.getElementById('lvEntityDrawer').style.display = 'none';
+      state.entityStack = [];
+      state.currentEntitySlug = null;
+      state.currentEntity = null;
+    }
+
+    // ===== DRAWER ACTION BUTTONS (phase 9d-partial) =====
+
+    function renderDrawerActions(entity) {
+      var el = document.getElementById('lv-drawer-actions');
+      if (!el) return;
+      var buttons = [];
+
+      if (entity && entity.docUrl) {
+        buttons.push('<button class="btn btn-sm btn-light" onclick="LibraryView.drawerOpenInDrive()">Open in Drive</button>');
+      }
+
+      // Admin-only via the body-class CSS gate (AppView.html:108).
+      buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.drawerCreateContentTasks()">Create Content Tasks</button>');
+
+      // HE sibling stub: only meaningful for EN entities whose HE peer isn't
+      // in the cached library list. False negatives (peer not in cache) are
+      // harmless — addEntity dedups server-side.
+      if (entity && entity.slug && entity.slug.length > 3 && entity.slug.slice(-3) === '-en') {
+        var heSlug = entity.slug.slice(0, -3) + '-he';
+        var hasPeer = (state.library || []).some(function(e) { return e.slug === heSlug; });
+        if (!hasPeer) {
+          buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.drawerCreateHeSibling()">Create HE sibling stub</button>');
+        }
+      }
+
+      el.innerHTML = buttons.join('');
+    }
+
+    function drawerOpenInDrive() {
+      if (state.currentEntity && state.currentEntity.docUrl) {
+        window.open(state.currentEntity.docUrl, '_blank', 'noopener');
+      }
+    }
+
+    function drawerCreateContentTasks() {
+      if (!state.currentEntity) return;
+      var preName = state.currentEntity.title || state.currentEntity.slug || '';
+      openContentStreamModal(preName);
+    }
+
+    function drawerCreateHeSibling() {
+      if (!state.currentEntity) return;
+      var enSlug = state.currentEntity.slug;
+      if (!enSlug || enSlug.slice(-3) !== '-en') {
+        TaskWidgets.toast('Not an EN-side entity; cannot derive HE peer', true);
+        return;
+      }
+      var heSlug = enSlug.slice(0, -3) + '-he';
+      if (!confirm('Create HE sibling stub "' + heSlug + '"? It will be seeded at draft/v0 referencing ' + enSlug + '.')) return;
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.ok) {
+            TaskWidgets.toast((res && res.error) || 'Create failed', true);
+            return;
+          }
+          if (res.deduplicated) {
+            TaskWidgets.toast('HE peer "' + heSlug + '" already exists');
+          } else {
+            TaskWidgets.toast('HE sibling created');
+          }
+          load();                                      // refresh library list + tasks
+          _loadEntityDrawer(state.currentEntitySlug);  // refresh current drawer (no stack push)
+        })
+        .withFailureHandler(function(err) {
+          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
+        })
+        .WebAppLibrary_addEntity({
+          slug: heSlug,
+          type: state.currentEntity.contentType,
+          language: 'he',
+          title: state.currentEntity.title,
+          references: [enSlug]
+        });
+    }
+
     return {
       init: init,
       switchTab: switchTab,
@@ -945,7 +1404,14 @@
       createBlankDoc: createBlankDoc,
       attachExistingDoc: attachExistingDoc,
       openLockModal: openLockModal,
-      markPublished: markPublished
+      markPublished: markPublished,
+      openEntityDrawer: openEntityDrawer,
+      navigateToEntity: navigateToEntity,
+      backEntityDrawer: backEntityDrawer,
+      closeEntityDrawer: closeEntityDrawer,
+      drawerOpenInDrive: drawerOpenInDrive,
+      drawerCreateContentTasks: drawerCreateContentTasks,
+      drawerCreateHeSibling: drawerCreateHeSibling
     };
   })();
 
