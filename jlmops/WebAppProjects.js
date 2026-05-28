@@ -178,7 +178,8 @@ const CONTENT_STAGES = [
   { id: 'video_publish', typeId: 'task.content.video_publish', label: 'Video Publish', title: 'Publish Video: ', target_sibling: 'en' },
   { id: 'email', typeId: 'task.content.email', label: 'Email', title: 'Email: ', target_sibling: 'en' },
   { id: 'social', typeId: 'task.content.social', label: 'Social', title: 'Social: ', target_sibling: 'en' },
-  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en' }
+  { id: 'whatsapp', typeId: 'task.content.whatsapp', label: 'WhatsApp', title: 'WhatsApp: ', target_sibling: 'en' },
+  { id: 'newsletter', typeId: 'task.newsletter.distribute', label: 'Newsletter', title: 'Newsletter: ', target_sibling: 'en' }
 ];
 
 /**

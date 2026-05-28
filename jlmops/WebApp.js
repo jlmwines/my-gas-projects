@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 09:07',
-  commit: '@145 Content Library phase 10 pending_payment template migration. First consumer-bearing migration. createPendingPaymentFollowups now reads subject/body/addendum from SysLibrary (template-pending-payment-email-{en,he} + template-pending-payment-addendum-{en,he}) via new LibraryService.getEntityBySlug; writes per-send activity log via LibraryService.logEntityActivity (actionType=template_send); peer-realignment guard skips sweep if open task.content.realign on any family slug. Welcome family templates also seeded (originally claimed registered 2026-05-27 but SysLibrary did not contain them). SysConfig crm.template.* rows untouched — retire in a future housekeeping pass.'
+  built: '2026-05-28 10:13',
+  commit: '@146 Content Library phase 11 news v1. CONTENT_STAGES gains newsletter stage (typeId task.newsletter.distribute — reuses one of the 16 dormant 2026-05-11 distribution templates). LibraryView Create Content Tasks modal Type dropdown gains News (newsletter) option. task.newsletter.distribute routes through Content publish pack so manager closes with Mark Published + optional External URL (newsletter PDF link). Newsletter creation is manual outside the system; library tracks the task + the references to source blog/year-in-vineyard entities.'
 };
 
 function getVersion() {
