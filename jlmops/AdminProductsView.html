@@ -221,7 +221,8 @@
         <!-- Action Buttons -->
         <div class="d-flex mb-4">
           <button class="btn btn-sm mr-3" onclick="AdminProductsView.openVendorSkuModal()">Vendor SKU Update</button>
-          <button class="btn btn-sm" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
+          <button class="btn btn-sm mr-3" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
+          <button class="btn btn-sm" onclick="AdminProductsView.openFixOrphanModal()">Fix Orphan SKU</button>
         </div>
 
         <!-- Recent Updates -->
@@ -503,6 +504,32 @@
         <div id="replace-modal-status" class="mr-auto small"></div>
         <button class="btn btn-sm" onclick="AdminProductsView.closeReplacementModal()">Cancel</button>
         <button class="btn btn-sm" id="replace-submit-btn" onclick="AdminProductsView.submitReplacement()" disabled>Confirm - Update JLMops</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fix Orphan SKU Modal -->
+  <div class="modal-overlay" id="fix-orphan-modal">
+    <div class="modal-container" style="max-width: 520px;">
+      <div class="modal-header">
+        <h5 class="mb-0">Fix Orphan SKU</h5>
+        <button type="button" class="close" onclick="AdminProductsView.closeFixOrphanModal()">&times;</button>
+      </div>
+      <div class="form-body">
+        <p class="small text-muted mb-3">Use when web data still references an old SKU that Comax has already moved past (validation orphan). This rewrites the old SKU across web-side sheets <strong>only</strong>. Comax is not touched.</p>
+        <div class="form-group">
+          <label class="small font-weight-bold">Orphaned SKU (currently on web)</label>
+          <input type="text" class="form-control" id="fix-orphan-old-sku" placeholder="Old SKU still in web sheets">
+        </div>
+        <div class="form-group mb-0">
+          <label class="small font-weight-bold">New SKU (now in Comax)</label>
+          <input type="text" class="form-control" id="fix-orphan-new-sku" placeholder="Current Comax SKU">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <div id="fix-orphan-modal-status" class="mr-auto small"></div>
+        <button class="btn btn-sm" onclick="AdminProductsView.closeFixOrphanModal()">Cancel</button>
+        <button class="btn btn-sm" onclick="AdminProductsView.submitFixOrphan()">Confirm - Rewrite Web Side</button>
       </div>
     </div>
   </div>
@@ -1104,6 +1131,59 @@
             statusDiv.className = 'mr-auto small text-danger';
             document.getElementById('replace-submit-btn').disabled = false;
         }).WebAppProducts_webProductReassign(webIdEn, oldSku, newSku, true, true);
+    };
+
+    // Fix Orphan SKU Modal
+    AdminProductsView.openFixOrphanModal = function() {
+        document.getElementById('fix-orphan-old-sku').value = '';
+        document.getElementById('fix-orphan-new-sku').value = '';
+        document.getElementById('fix-orphan-modal-status').textContent = '';
+        document.getElementById('fix-orphan-modal-status').className = 'mr-auto small';
+        document.getElementById('fix-orphan-modal').style.display = 'flex';
+    };
+
+    AdminProductsView.closeFixOrphanModal = function() {
+        document.getElementById('fix-orphan-modal').style.display = 'none';
+    };
+
+    AdminProductsView.submitFixOrphan = function() {
+        const oldSku = document.getElementById('fix-orphan-old-sku').value.trim();
+        const newSku = document.getElementById('fix-orphan-new-sku').value.trim();
+        const statusDiv = document.getElementById('fix-orphan-modal-status');
+
+        if (!oldSku || !newSku) {
+            statusDiv.textContent = 'Both old and new SKU are required.';
+            statusDiv.className = 'mr-auto small text-danger';
+            return;
+        }
+        if (oldSku === newSku) {
+            statusDiv.textContent = 'Old and new SKU cannot be the same.';
+            statusDiv.className = 'mr-auto small text-danger';
+            return;
+        }
+        if (!confirm(`Rewrite SKU "${oldSku}" → "${newSku}" across web-side sheets? Comax will not be touched.`)) {
+            return;
+        }
+
+        statusDiv.textContent = 'Rewriting...';
+        statusDiv.className = 'mr-auto small text-info';
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                statusDiv.textContent = res.message;
+                statusDiv.className = 'mr-auto small text-success';
+                setTimeout(() => {
+                    AdminProductsView.closeFixOrphanModal();
+                    AdminProductsView.loadSkuUpdates();
+                }, 4000);
+            } else {
+                statusDiv.textContent = 'Error: ' + res.message;
+                statusDiv.className = 'mr-auto small text-danger';
+            }
+        }).withFailureHandler(err => {
+            statusDiv.textContent = 'Error: ' + err.message;
+            statusDiv.className = 'mr-auto small text-danger';
+        }).WebAppProducts_fixOrphanSku(oldSku, newSku);
     };
 
     AdminProductsView.loadSkuUpdates = function() {

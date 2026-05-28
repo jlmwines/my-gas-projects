@@ -1024,6 +1024,19 @@ function WebAppProducts_webProductReassign(webProductId, oldSku, newSku, updateO
 }
 
 /**
+ * Wrapper for ProductService.fixOrphanSku — repairs an orphaned web-side SKU
+ * after Comax has already moved on. Web-side rewrite only; Comax untouched.
+ */
+function WebAppProducts_fixOrphanSku(oldSku, newSku) {
+  try {
+    return ProductService.fixOrphanSku(oldSku, newSku);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'fixOrphanSku', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+/**
  * Gets recent SKU updates for the audit trail display.
  * @returns {Array<Object>} Array of { date, type, oldSku, newSku, updatedBy }
  */

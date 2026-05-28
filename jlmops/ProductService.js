@@ -2202,6 +2202,147 @@ const ProductService = (function() {
   }
 
   /**
+   * Fix Orphan SKU — rewrites a SKU across web-side sheets WITHOUT touching Comax.
+   * Use this when Comax has already updated to a new SKU but web data still
+   * references the old one (validation orphan). Different from vendorSkuUpdate
+   * (which coordinates both sides) and webProductReassign (which swaps to a
+   * different Comax product). Manager runs this when a validation task flags
+   * an orphan.
+   * @param {string} oldSku The orphaned SKU sitting in web sheets (no longer in Comax).
+   * @param {string} newSku The current Comax SKU that web should reference.
+   * @param {string} sessionId Optional session ID for logging.
+   * @returns {Object} { success: boolean, message: string }
+   */
+  function fixOrphanSku(oldSku, newSku, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = 'fixOrphanSku';
+    logger.info(serviceName, functionName, `Starting orphan SKU fix: ${oldSku} -> ${newSku} (web side only)`, { sessionId, oldSku, newSku });
+
+    if (!oldSku || !newSku) {
+      return { success: false, message: 'Both old SKU and new SKU are required.' };
+    }
+    if (oldSku === newSku) {
+      return { success: false, message: 'Old SKU and new SKU cannot be the same.' };
+    }
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+      const userEmail = Session.getActiveUser().getEmail();
+
+      let updatedSheets = [];
+
+      // CmxProdM intentionally NOT updated — orphan fix is web-side only.
+
+      // 1. WebProdM
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      if (webProdSheet) {
+        const headers = allConfig['schema.data.WebProdM'].headers.split(',');
+        const skuIdx = headers.indexOf('wpm_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(webProdSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebProdM');
+        }
+      }
+
+      // 2. WebProdS_EN (staging)
+      const webProdSSheet = spreadsheet.getSheetByName('WebProdS_EN');
+      if (webProdSSheet && allConfig['schema.data.WebProdS_EN']) {
+        const headers = allConfig['schema.data.WebProdS_EN'].headers.split(',');
+        const skuIdx = headers.indexOf('wps_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(webProdSSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebProdS_EN');
+        }
+      }
+
+      // 3. WebDetM
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      if (webDetSheet) {
+        const headers = allConfig['schema.data.WebDetM'].headers.split(',');
+        const skuIdx = headers.indexOf('wdm_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(webDetSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebDetM');
+        }
+      }
+
+      // 4. WebDetS (staging)
+      const webDetSSheet = spreadsheet.getSheetByName('WebDetS');
+      if (webDetSSheet && allConfig['schema.data.WebDetS']) {
+        const headers = allConfig['schema.data.WebDetS'].headers.split(',');
+        const skuIdx = headers.indexOf('wds_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(webDetSSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebDetS');
+        }
+      }
+
+      // 5. WebXltM
+      const webXltSheet = spreadsheet.getSheetByName('WebXltM');
+      if (webXltSheet && allConfig['schema.data.WebXltM']) {
+        const headers = allConfig['schema.data.WebXltM'].headers.split(',');
+        const skuIdx = headers.indexOf('wxl_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(webXltSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('WebXltM');
+        }
+      }
+
+      // 6. SysProductAudit
+      const auditSheet = spreadsheet.getSheetByName('SysProductAudit');
+      if (auditSheet && allConfig['schema.data.SysProductAudit']) {
+        const headers = allConfig['schema.data.SysProductAudit'].headers.split(',');
+        const skuIdx = headers.indexOf('pa_SKU');
+        if (skuIdx >= 0) {
+          const updated = _updateSkuInSheet(auditSheet, skuIdx, oldSku, newSku);
+          if (updated) updatedSheets.push('SysProductAudit');
+        }
+      }
+
+      // 7. SysTasks — open tasks referencing the orphaned SKU in st_LinkedEntityId.
+      const taskSchema = allConfig['schema.data.SysTasks'];
+      const taskHeaders = taskSchema.headers.split(',');
+      const taskSheet = spreadsheet.getSheetByName('SysTasks');
+      if (taskSheet) {
+        const taskEntityIdIdx = taskHeaders.indexOf('st_LinkedEntityId');
+        const taskStatusIdx = taskHeaders.indexOf('st_Status');
+        if (taskEntityIdIdx >= 0 && taskStatusIdx >= 0) {
+          const taskData = taskSheet.getDataRange().getValues();
+          let taskUpdated = false;
+          for (let i = 1; i < taskData.length; i++) {
+            const status = String(taskData[i][taskStatusIdx]).trim();
+            if (status !== 'Completed' && status !== 'Cancelled' && status !== 'Done') {
+              if (String(taskData[i][taskEntityIdIdx]).trim() === String(oldSku).trim()) {
+                taskSheet.getRange(i + 1, taskEntityIdIdx + 1).setValue(newSku);
+                taskUpdated = true;
+              }
+            }
+          }
+          if (taskUpdated) updatedSheets.push('SysTasks');
+        }
+      }
+
+      // 8. Log
+      _logSkuUpdate('FixOrphanSku', oldSku, newSku, userEmail, updatedSheets.join(', '));
+
+      // Invalidate caches
+      _invalidateProductCache();
+
+      const message = updatedSheets.length > 0
+        ? `Orphan SKU rewritten from ${oldSku} to ${newSku} (web side only) in: ${updatedSheets.join(', ')}`
+        : `No records found with SKU ${oldSku}`;
+
+      logger.info(serviceName, functionName, message, { sessionId, oldSku, newSku, updatedSheets });
+      return { success: true, message };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error fixing orphan SKU: ${e.message}`, e, { sessionId, oldSku, newSku });
+      return { success: false, message: `Error: ${e.message}` };
+    }
+  }
+
+  /**
    * Web Product Reassign - Updates SKU in web product sheets and optionally updates IsWeb flags in CmxProdM.
    * Used when replacing an old product with a new one on the website.
    * @param {string} webProductId The WooCommerce Product ID (EN or HE).
@@ -2897,6 +3038,7 @@ const ProductService = (function() {
     acceptProductSuggestion: acceptProductSuggestion,
     linkAndFinalizeNewProduct: linkAndFinalizeNewProduct,
     vendorSkuUpdate: vendorSkuUpdate,
+    fixOrphanSku: fixOrphanSku,
     webProductReassign: webProductReassign,
     getRecentSkuUpdates: getRecentSkuUpdates,
     lookupProductBySku: lookupProductBySku,

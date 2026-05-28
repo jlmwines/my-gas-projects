@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 10:45',
-  commit: '@147 Content Library phase 11 social v1 + library.enabled flag RETIRED + crm.template.* SysConfig retirement. Phase 11 social: Type dropdown gains Social option (existing social stage + Content publish pack routing reused). library.enabled retirement: flag deleted from system.json source, all if (libraryEnabled) short-circuits removed from WebApp.js + AppView.html + WebAppLibrary.js + HousekeepingService.js, _libraryEnabledOrError helper deleted, AppView nav entries unconditional. crm.template.* SysConfig retirement: 12 legacy rows removed from otherSettings.json (6 welcome + 6 pending_payment) — both families now read from SysLibrary via LibraryService.getEntityBySlug. SetupConfig.js regenerated. rebuildSysConfigFromSource() purges the retired rows from the live SysConfig sheet.'
+  built: '2026-05-28 11:18',
+  commit: '@148 Session B — Fix Orphan SKU action. New ProductService.fixOrphanSku rewrites an orphaned web-side SKU across WebProdM + WebProdS_EN + WebDetM + WebDetS + WebXltM + SysProductAudit + open SysTasks st_LinkedEntityId. CmxProdM intentionally untouched (Comax already moved on; web side is the catch-up). New AdminProductsView card 3 button "Fix Orphan SKU" + minimal 2-input modal. Use when validation task flags an orphan after Comax updated before the manager could run Product Replacement. Distinct from vendorSkuUpdate (coordinated rewrite) and webProductReassign (swap to different Comax product).'
 };
 
 function getVersion() {
