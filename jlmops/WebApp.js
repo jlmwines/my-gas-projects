@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 10:13',
-  commit: '@146 Content Library phase 11 news v1. CONTENT_STAGES gains newsletter stage (typeId task.newsletter.distribute — reuses one of the 16 dormant 2026-05-11 distribution templates). LibraryView Create Content Tasks modal Type dropdown gains News (newsletter) option. task.newsletter.distribute routes through Content publish pack so manager closes with Mark Published + optional External URL (newsletter PDF link). Newsletter creation is manual outside the system; library tracks the task + the references to source blog/year-in-vineyard entities.'
+  built: '2026-05-28 10:45',
+  commit: '@147 Content Library phase 11 social v1 + library.enabled flag RETIRED + crm.template.* SysConfig retirement. Phase 11 social: Type dropdown gains Social option (existing social stage + Content publish pack routing reused). library.enabled retirement: flag deleted from system.json source, all if (libraryEnabled) short-circuits removed from WebApp.js + AppView.html + WebAppLibrary.js + HousekeepingService.js, _libraryEnabledOrError helper deleted, AppView nav entries unconditional. crm.template.* SysConfig retirement: 12 legacy rows removed from otherSettings.json (6 welcome + 6 pending_payment) — both families now read from SysLibrary via LibraryService.getEntityBySlug. SetupConfig.js regenerated. rebuildSysConfigFromSource() purges the retired rows from the live SysConfig sheet.'
 };
 
 function getVersion() {
@@ -45,18 +45,6 @@ function doGet(e) {
   template.initialRole = effectiveRole;
   template.availableRoles = AuthService.getAvailableRoles();
 
-  // Library subsystem gate. When true, manager's Dashboard link routes to
-  // LibraryView (replacing ManagerDashboardView_v2) and admin gets a new
-  // Library nav entry. When false, current routing applies. Verified
-  // 2026-05-25: doGet does not parse URL params, so the flag is the only
-  // fallback mechanism (no ?v= URL hack).
-  try {
-    const libraryFlag = ConfigService.getConfig('library.enabled');
-    template.libraryEnabled = !!(libraryFlag && (libraryFlag.value === true || libraryFlag.value === 'true' || libraryFlag.value === 'TRUE'));
-  } catch (e) {
-    template.libraryEnabled = false;
-  }
-  
   return template.evaluate()
     .setTitle('JLMops Dashboard')
     .setSandboxMode(HtmlService.SandboxMode.IFRAME)

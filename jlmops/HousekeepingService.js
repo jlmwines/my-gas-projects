@@ -1321,19 +1321,11 @@ function HousekeepingService() {
    *     whose base name (extension-stripped) doesn't match any `slb_Slug`.
    *
    * No email, no task spawn, no remediation — admin reads SysLog on demand.
-   * Short-circuits when `library.enabled = false`.
    */
   this.runLibraryIntegrityReport = function() {
     const functionName = 'runLibraryIntegrityReport';
 
     try {
-      const libraryFlag = ConfigService.getConfig('library.enabled');
-      const enabled = libraryFlag && (libraryFlag.value === true || libraryFlag.value === 'true' || libraryFlag.value === 'TRUE');
-      if (!enabled) {
-        logger.info('HousekeepingService', functionName, 'library.enabled is off; skipping.');
-        return true;
-      }
-
       const folderCfg = ConfigService.getConfig('system.folder.library');
       const libraryFolderId = folderCfg && folderCfg.id ? String(folderCfg.id).trim() : '';
       if (!libraryFolderId) {

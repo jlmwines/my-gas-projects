@@ -204,9 +204,7 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminCampaigns')">Campaigns</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminContacts')">CRM Tools</a></li>
-          <? if (libraryEnabled) { ?>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Library')">Library</a></li>
-          <? } ?>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
         </ul>
         <!-- Manager Navigation -->
@@ -216,9 +214,7 @@
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerInventory')">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerProducts')">Products</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
-          <? if (libraryEnabled) { ?>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Library')">Library</a></li>
-          <? } ?>
         </ul>
         <div id="version-footer" class="text-muted small mt-auto" style="padding: 10px 20px; font-size: 0.7rem;"></div>
       </div>
@@ -232,11 +228,6 @@
     <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
     <script>
-      // Library subsystem flag — set by doGet via template.libraryEnabled.
-      // When true: both admin and manager get an additional "Library" nav entry
-      // alongside their existing Dashboard (no route flip on Dashboard).
-      window.libraryEnabled = <?= libraryEnabled ? 'true' : 'false' ?>;
-
       /**
        * Displays an error message.
        */

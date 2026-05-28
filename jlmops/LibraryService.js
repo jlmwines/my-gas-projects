@@ -12,7 +12,6 @@
  * SheetAccessor.getLibrarySheet, NOT the DriveApp.getFilesByName pattern that
  * LookupService uses for JLMops_Data tabs (see plan §4 + §17 phase 7).
  *
- * Behind the `library.enabled` flag at the controller layer (WebAppLibrary).
  */
 
 const LibraryService = (function() {

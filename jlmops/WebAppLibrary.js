@@ -13,8 +13,6 @@
  *   - _rowsToObjects
  *   - _safeDate
  *   - _formatTaskTypeName
- *
- * Behind the `library.enabled` flag — short-circuits when off.
  */
 
 const SYS_LIBRARY_SHEET = 'SysLibrary';
@@ -33,14 +31,6 @@ function WebAppLibrary_getData() {
 
   try {
     const allConfig = ConfigService.getAllConfig();
-
-    // Flag guard — library.enabled gates the whole subsystem.
-    const flag = allConfig['library.enabled'];
-    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
-    if (!enabled) {
-      return { success: false, error: 'library.enabled flag is off' };
-    }
-
     const sheetNames = allConfig['system.sheet_names'];
 
     // ========== READ SHEETS ==========
@@ -196,13 +186,6 @@ function WebAppLibrary_addEntity(params) {
   const functionName = 'addEntity';
 
   try {
-    const allConfig = ConfigService.getAllConfig();
-    const flag = allConfig['library.enabled'];
-    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
-    if (!enabled) {
-      return { ok: false, error: 'library.enabled flag is off' };
-    }
-
     const result = LibraryService.addEntity(params || {});
     const shaped = _getLibraryEntities([result.entity])[0];
     return {
@@ -228,13 +211,6 @@ function WebAppLibrary_spawnContentChain(params) {
   const functionName = 'spawnContentChain';
 
   try {
-    const allConfig = ConfigService.getAllConfig();
-    const flag = allConfig['library.enabled'];
-    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
-    if (!enabled) {
-      return { ok: false, error: 'library.enabled flag is off' };
-    }
-
     const result = LibraryService.spawnContentChain(params || {});
     const shapedEntities = _getLibraryEntities(result.entities);
     // Tasks come back from TaskService.createTask as {id}; UI re-fetches via
@@ -255,20 +231,6 @@ function WebAppLibrary_spawnContentChain(params) {
 }
 
 /**
- * Library-enabled flag guard. Returns null when enabled; returns error envelope when off.
- * @private
- */
-function _libraryEnabledOrError() {
-  const allConfig = ConfigService.getAllConfig();
-  const flag = allConfig['library.enabled'];
-  const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
-  if (!enabled) {
-    return { ok: false, error: 'library.enabled flag is off' };
-  }
-  return null;
-}
-
-/**
  * Creates a blank Google Doc at the canonical Drive path for this entity.
  * @param {Object} params - { entityId }
  * @returns {Object} { ok, updated: { entity }, docUrl, error? }
@@ -278,9 +240,6 @@ function WebAppLibrary_createBlankDoc(params) {
   const functionName = 'createBlankDoc';
 
   try {
-    const guard = _libraryEnabledOrError();
-    if (guard) return guard;
-
     const result = LibraryService.createBlankDoc(params || {});
     const shaped = _getLibraryEntities([result.entity])[0];
     return {
@@ -304,9 +263,6 @@ function WebAppLibrary_attachExistingDoc(params) {
   const functionName = 'attachExistingDoc';
 
   try {
-    const guard = _libraryEnabledOrError();
-    if (guard) return guard;
-
     const result = LibraryService.attachExistingDoc(params || {});
     const shaped = _getLibraryEntities([result.entity])[0];
     return {
@@ -331,9 +287,6 @@ function WebAppLibrary_lockVersion(params) {
   const functionName = 'lockVersion';
 
   try {
-    const guard = _libraryEnabledOrError();
-    if (guard) return guard;
-
     const result = LibraryService.lockVersion(params || {});
     const shapedEntity = _getLibraryEntities([result.entity])[0];
     return {
@@ -363,12 +316,6 @@ function WebAppLibrary_getEntityDetail(params) {
 
   try {
     const allConfig = ConfigService.getAllConfig();
-    const flag = allConfig['library.enabled'];
-    const enabled = flag && (flag.value === true || flag.value === 'true' || flag.value === 'TRUE');
-    if (!enabled) {
-      return { success: false, error: 'library.enabled flag is off' };
-    }
-
     const raw = LibraryService.getEntityDetail(params || {});
 
     const entity = _getLibraryEntities([raw.entity])[0];
@@ -411,9 +358,6 @@ function WebAppLibrary_logEntityActivity(params) {
   const functionName = 'logEntityActivity';
 
   try {
-    const guard = _libraryEnabledOrError();
-    if (guard) return guard;
-
     const result = LibraryService.logEntityActivity(params || {});
     return {
       ok: true,
