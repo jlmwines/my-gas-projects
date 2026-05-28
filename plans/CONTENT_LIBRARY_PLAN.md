@@ -1007,7 +1007,33 @@ Rule: before adding any new sheet/file/folder for this plan, answer **"does Clau
    Order:
    1. `email` first — most concrete, existing Mailchimp integration. Register one issue as library entity pair (en + he); wire Mailchimp KPI pull.
 
-      **June 2026 issue registration path (concrete).** After Mailchimp send, run `content/register-library.js` twice (once per language) with `type=email`, `slug=email-2606-context-en` / `-he`, `file_path_or_url=` the Mailchimp campaign URL, `references=[blog-context-en]` / `[blog-context-he]`. Each row gets `mailchimp_campaign_id` from Mailchimp + `subject_line` + `send_date` populated by the session at registration time. KPI columns (`open_rate`, `click_rate`, etc.) populate later via the cadence refresh job (KPI ingest plan, downstream). Newsletter Issue #2 (June 2026) is the first instance through this path; Issue #1 (May 2026) stays pre-library and is not back-registered.
+      **Chain shape (settled 2026-05-28).** Email distribution carries content drawn from a source entity (blog / news), but the email itself may still need content work — write, edit, translate, image generation, scheduling. The email entity's chain reuses blog's `CONTENT_STAGES` (`WebAppProjects.js:168-182`) — same stage IDs, same task templates, no duplication — with this selection:
+
+      | Stage ID | Maps to | Notes |
+      |---|---|---|
+      | `draft` | content created | reused |
+      | `edit` | edited | reused |
+      | `translate` | translated | reused |
+      | `images` | image generation | reused |
+      | `email` | scheduling | reused — repurposed as the FINAL "schedule send in Mailchimp" step for type=`email` |
+
+      Dropped for v1 email: `create_wp_stubs`, `blog_publish`, `video_*`, `social`, `whatsapp`, `admin_review`, `translate_edit`. Add back per-stage only if a real workflow need surfaces.
+
+      No new task templates are introduced in phase 11 email — `task.content.email` exists already (schema-only today; phase 11 makes it spawnable as the chain's final stage). The 16 dormant distribution templates (`task.newsletter.*`, `task.flyer.*`, `task.campaign.*`) are NOT used for the email type; their fate is decided when news / social phases land.
+
+      **`task.content.email` task pack** — skeleton (`pack_form='skeleton'`). No launch button, no paste-back fields. Operator workflow: create campaign in Mailchimp, paste in the HTML body (session converts the Drive Docs from the earlier chain stages to Mailchimp-ready HTML, same pattern as Issue #1 deliverable — `marketing/newsletter/issues/2026-05-context-{en,he}.html`), schedule the send in Mailchimp UI, return and mark task done. Mailchimp campaign metadata is captured at registration time (item 4 below), not on task close.
+
+      **Content artifact format.** `draft` / `edit` / `translate` / `images` stages reuse blog's existing Drive Doc workflow + Content edit pack — no new pack form for email content stages. At the `email` (schedule) stage, the session-side step converts the en + he Drive Docs to HTML for Mailchimp paste.
+
+      **`register-library.js` update mode.** Chain spawn creates the email entity row at draft/v=0 (per phase 7a pattern). Post-send registration is therefore an UPDATE to the existing row, not a create. The script will be extended to detect existing rows by slug and patch the email-specific fields (`mailchimp_campaign_id`, `subject_line`, `send_date`, state flip to `published`) rather than skip. The current SKIP behavior at `register-library.js:341-342` remains the default; update path activates via an explicit flag (e.g., `--update` CLI arg or `mode: 'update'` in manifest entry).
+
+      **Spawn surface.** Same flow as blog phase 7a: admin opens "Create Content Tasks" modal in LibraryView (no need to pre-create the email entity), picks email type + stages, modal calls `LibraryService.spawnContentChain` which creates the en+he entity pair AND spawns the tasks in one call. `spawnContentChain` already accepts the `entityType` parameter — phase 11 just exercises it with `entityType='email'`.
+
+      **Email purpose drives stage selection.** An email may exist to (a) promote an existing blog/news entity — reference the source, spawn `email` stage only (scheduling), no content production; (b) distribute original AYIW content — no source reference, spawn `draft` + `translate` + `images` + `email`; (c) promote a coupon or other non-library asset — reference field carries the coupon code as free-text, stage selection reflects whether new content is needed. The admin picks stages per case in the modal.
+
+      **References field on modal.** Optional free-text field, comma-separated. Accepts library entity slugs (`blog-context-en`) and ad-hoc references (coupon codes, campaign ids, free-text notes). Populates `slb_References` on both en + he entities at spawn. Editable later via the entity drawer or post-send `register-library.js` call.
+
+      **June 2026 issue registration path (concrete).** After Mailchimp send, run `content/register-library.js` twice (once per language) with `type=email`, `slug=email-2606-context-en` / `-he`, `file_path_or_url=` the Mailchimp campaign URL, `references=[blog-context-en]` / `[blog-context-he]`. Each row gets `mailchimp_campaign_id` from Mailchimp + `subject_line` + `send_date` populated by the session at registration time. **Final state on write: `published`** (settled 2026-05-28) — an email send is a publish event to the subscriber audience, analogous to a blog going live; the row flips draft → published when the script updates it with the Mailchimp metadata. KPI columns (`open_rate`, `click_rate`, etc.) populate later via the cadence refresh job (KPI ingest plan, downstream). Newsletter Issue #2 (June 2026) is the first instance through this path; Issue #1 (May 2026) stays pre-library and is not back-registered.
    2. `news` + `mention` together — newsletter dependency. News is the print issue; mention rows reference posts.
    3. `social` last — platform API variety; manual entry where APIs not available.
 
