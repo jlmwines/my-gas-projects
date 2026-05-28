@@ -4,6 +4,19 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-28 (afternoon — planning push: reliability audit v2.1 + UI audit v2 + 18 deep-dives committed)
+
+- **Inbox Targets 1 + 2 delivered as planning artifacts.** Reliability audit went v1 → v1.1 → v1.2 → v1.3 → v2 → v2.1 via three-agent review + self-critique pass; UI audit went v1 → v2 via six-agent review across two rounds (initial code/risk/best-practices + UX/anchor/coherence).
+- **Discipline:** "no open-question punts" — every session deep-dive resolves its gaps at plan time via code reading, never via `[start]/[spike]/[defer]` tags. Library-plan failure mode (plans graded complete while incomplete; mid-implementation decisions) explicitly avoided.
+- **Reliability audit final:** 16 sessions / 6 tiers / 6 CCPs. Off-account snapshots to `kosbracha@gmail.com` Drive; Bitwarden Emergency Access for credential escrow; bus-factor reframed as successor/contractor handoff (Evyatar not a hands-on operator).
+- **UI audit final:** 17 active sessions + 1 prerequisite (CCP-UI-8 helper) + 2 deferred (T2.4 modal merge; T5.3 shared list with 3-criterion trigger). 9 CCP-UI patterns including v2 additions for accessibility (CCP-UI-8 focus trap/Esc/scroll-lock/ARIA) and observability (CCP-UI-9 stopwatch baselines/window.onerror/perf budgets).
+- **T4.3 re-planned in UI v2** from `.responsive-stack` to modal-per-product entry after UX agent flagged warehouse-floor workflow mismatch (card-stack adds scrolling, doesn't remove it).
+- **Single commit `a02e05d`** with 20 plan files, 5850 insertions. Branch 13 commits ahead of `origin/main`; not pushed (per JLM kernel — sessions don't push without explicit request).
+- **Resume:** next working session picks up at **Reliability Tier 1.1 (SysContacts aggregate fix)** OR **UI Tier 1.0 (quick wins batch)** — both anchored, low-risk, no dependencies. User picks first.
+- **Memory:** no new memories banked this session; established discipline ("answer gaps in plan; don't punt") aligns with `feedback_pick_plan_options_not_pass_back` and the existing `feedback_read_plans_before_planning`.
+
+---
+
 ## 2026-05-28 (long session continued — phase 11 complete + flag retirements + bug-fix Sessions B/C/D — 5 more deploys)
 
 - **jlmops @146 deploy @150** — Phase 11 news v1. New `newsletter` stage in CONTENT_STAGES (typeId `task.newsletter.distribute`, reuses one of the 16 dormant 2026-05-11 templates). Type dropdown gains "News (newsletter)" option. `task.newsletter.distribute` routes through Content publish pack. Manual newsletter creation tracked as library entity + single task.

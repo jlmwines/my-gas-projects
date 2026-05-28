@@ -1,20 +1,24 @@
-2026-05-28 — session-end wrap of a long working session (7 deploys, phase 11 complete, Sessions A–D done)
+2026-05-28 (afternoon) — kernel cleanup pass after the planning push for reliability audit + UI audit. Earlier same-day cleanup (morning) covered the post-deploy wrap for Sessions A-D; this pass updates docs to reflect the afternoon's plan-banking work.
 
-Touched:
-- `plans/STATUS.md` — Updated line, Metrics rows (Phase / Deploy Version / Deploy Date / Open Bugs / Next Milestone) rewritten to reflect 2026-05-28 work. Old narrative pushed into "earlier note:" trail per JLM kernel pattern.
-- `.claude/session-log.md` — appended entry for the post-break portion of 2026-05-28 (phase 11 news + social, flag retirements, Sessions B/C/D, stale-tracking pattern noted).
-- `.claude/bugs.md` — entries marked resolved through the session (decant 0, backfillOrderTotals, archive coupon mapping, bundle parent SKU, failed Comax recovery, SKU Replacement orphans, Admin Projects task delete, CRM cleanup full bullet).
-- `jlmops/plans/BUG_FIX_SEQUENCE.md` — Sessions A/B/C/D marked SHIPPED with their deploy refs.
-- `jlmops/plans/LIBRARY_VIEW_PLAN.md` — Status line notes `library.enabled` flag retirement.
-- `plans/CONTENT_LIBRARY_PLAN.md` §17 phase 11.1 — fleshed out earlier in session with email chain shape, spawn surface, references handling, registration path, --update mode, final state `published`.
+Touched this pass:
+- `plans/STATUS.md` — `Updated:` line prepended with afternoon's planning-push summary; morning narrative pushed back as `earlier note:`. `Next Milestone` row rewritten to point at the now-committed reliability + UI audit plans with first-session recommendations. Inbox Active section: Target 1 (reliability audit) + Target 2 (UI review) marked SHIPPED-AS-PLANS; transition from "plan it" to "execute the queue."
+- `.claude/session-log.md` — appended afternoon entry covering: discipline ("no open-question punts"), final scope (reliability v2.1 / 16 sessions; UI v2 / 17 active + 1 prerequisite + 2 deferred); T4.3 v2 re-plan after UX agent feedback; commit `a02e05d` with 20 plan files / 5850 insertions; branch 13 commits ahead of origin/main, not pushed.
+- `CALENDAR.md` — `Updated:` refreshed (was 2026-02-18, months stale). New "Plan-driven queues" section explicitly delegates the bulk of forward work to plan docs (RELIABILITY_AUDIT, UI_AUDIT, BUG_FIX_SEQUENCE). Campaign-recipient activity rows item removed from Upcoming (absorbed into reliability audit Tier 6.3). Remaining Upcoming items are real backlog not in plan queues.
 
-Memory banked this session:
-- `feedback_jlm_no_dev_url_testing` — jlmops push+deploy is one motion; never frame `/dev` URL as a testable state.
+Not touched (intentional, scope decisions):
+- `.claude/bugs.md` — triaged this morning per prior last-cleanup; nothing new to add this pass (afternoon session was planning-only).
+- `.claude/wishlist.md` — not surveyed.
+- Memory audit — not run; user-global memory is current.
+- Older session-log entries pruning — deferred (file remains substantial but not yet at a size where pruning is forced).
 
-Surfaced but NOT touched (intentional, scope decisions):
-- `.claude/session-log.md` older entries — pruning deferred.
-- `.claude/wishlist.md` — not surveyed this pass.
-- Memory audit — not run.
-- `webProductReassign` missing _Staging + SysTasks updates — noted as latent issue, deferred (no real symptom; Fix Orphan SKU covers the typical bug case).
+Outside-cleanup observations worth flagging:
+- Working tree has ~90 untracked items in `content/`, `exchange/`, `marketing/newsletter/images/`, and several stale theme audit `.md`s in `plans/`. Root `exchange/` is NOT gitignored (only `jlmops/exchange/` is). User declined to address this pass; suggestion stands for a future session: extend `.gitignore` to cover root `exchange/` + `temp/`.
 
-Triggered when: user said "break here" after Sessions A–D + phase 11 complete; before starting Session E.
+Per-pass counts:
+- Items resolved (moved out of Inbox / Calendar): 1 (Campaign-recipient activity → reliability audit Tier 6.3).
+- Items struck: 0.
+- Items moved (Inbox → plans/): 2 (Targets 1 and 2 transitioned from "plan it" framing to "execute the queue").
+- Items deferred: 0 new defers.
+- Files touched: 4 (STATUS.md, session-log.md, CALENDAR.md, last-cleanup.md).
+
+Triggered when: user said "cleanup session notes docs calendar" after the planning-push commit landed.
