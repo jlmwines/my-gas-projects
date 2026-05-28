@@ -46,127 +46,6 @@ function runFormatDataSheets() {
 }
 
 /**
- * Backfill order totals by calculating from order items.
- * This ensures wom_OrderTotal and woma_OrderTotal are always accurate.
- * Run after initial setup or if totals are missing/incorrect.
- */
-function backfillOrderTotals() {
-  const fnName = 'backfillOrderTotals';
-  const allConfig = ConfigService.getAllConfig();
-  const ss = SheetAccessor.getDataSpreadsheet();
-
-  // Build order totals from order items (authoritative source)
-  const totalsByOrderId = {};
-
-  // Sum from WebOrdItemsM
-  const itemsSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdItemsM);
-  if (itemsSheet && itemsSheet.getLastRow() > 1) {
-    const itemsData = itemsSheet.getDataRange().getValues();
-    const itemHeaders = itemsData[0];
-    const orderIdIdx = itemHeaders.indexOf('woi_OrderId');
-    const itemTotalIdx = itemHeaders.indexOf('woi_ItemTotal');
-
-    for (let i = 1; i < itemsData.length; i++) {
-      const orderId = String(itemsData[i][orderIdIdx] || '').trim();
-      const itemTotal = parseFloat(itemsData[i][itemTotalIdx]) || 0;
-      if (orderId) {
-        totalsByOrderId[orderId] = (totalsByOrderId[orderId] || 0) + itemTotal;
-      }
-    }
-    console.log(`Summed items from WebOrdItemsM: ${Object.keys(totalsByOrderId).length} orders`);
-  }
-
-  // Sum from WebOrdItemsM_Archive (only for orders NOT already in master)
-  const itemsArchiveSheet = ss.getSheetByName('WebOrdItemsM_Archive');
-  if (itemsArchiveSheet && itemsArchiveSheet.getLastRow() > 1) {
-    const archiveData = itemsArchiveSheet.getDataRange().getValues();
-    const archiveHeaders = archiveData[0];
-    const orderIdIdx = archiveHeaders.indexOf('woia_OrderId');
-    const itemTotalIdx = archiveHeaders.indexOf('woia_ItemTotal');
-
-    // Track which orders are archive-only
-    const archiveOnlyOrders = new Set();
-    for (let i = 1; i < archiveData.length; i++) {
-      const orderId = String(archiveData[i][orderIdIdx] || '').trim();
-      if (orderId && !totalsByOrderId[orderId]) {
-        archiveOnlyOrders.add(orderId);
-      }
-    }
-
-    // Only sum items for archive-only orders
-    for (let i = 1; i < archiveData.length; i++) {
-      const orderId = String(archiveData[i][orderIdIdx] || '').trim();
-      const itemTotal = parseFloat(archiveData[i][itemTotalIdx]) || 0;
-      if (orderId && archiveOnlyOrders.has(orderId)) {
-        totalsByOrderId[orderId] = (totalsByOrderId[orderId] || 0) + itemTotal;
-      }
-    }
-    console.log(`Added ${archiveOnlyOrders.size} orders from WebOrdItemsM_Archive`);
-  }
-
-  console.log(`Total orders with calculated totals: ${Object.keys(totalsByOrderId).length}`);
-
-  // Round all totals to whole numbers
-  Object.keys(totalsByOrderId).forEach(orderId => {
-    totalsByOrderId[orderId] = Math.round(totalsByOrderId[orderId]);
-  });
-
-  // Update WebOrdM
-  const masterSheet = ss.getSheetByName(allConfig['system.sheet_names'].WebOrdM);
-  if (masterSheet && masterSheet.getLastRow() > 1) {
-    const masterData = masterSheet.getDataRange().getValues();
-    const masterHeaders = masterData[0];
-    const momOrderIdIdx = masterHeaders.indexOf('wom_OrderId');
-    const momTotalIdx = masterHeaders.indexOf('wom_OrderTotal');
-
-    if (momTotalIdx === -1) {
-      console.log('wom_OrderTotal column not found in WebOrdM');
-    } else {
-      let updated = 0;
-      for (let i = 1; i < masterData.length; i++) {
-        const orderId = String(masterData[i][momOrderIdIdx] || '').trim();
-        const existingTotal = Math.round(parseFloat(masterData[i][momTotalIdx]) || 0);
-        const calculatedTotal = totalsByOrderId[orderId] || 0;
-
-        // Update if different (fixes empty AND incorrect values)
-        if (orderId && calculatedTotal !== existingTotal) {
-          masterSheet.getRange(i + 1, momTotalIdx + 1).setValue(calculatedTotal);
-          updated++;
-        }
-      }
-      console.log(`Updated ${updated} order totals in WebOrdM`);
-    }
-  }
-
-  // Also update Archive
-  const archiveSheet = ss.getSheetByName('WebOrdM_Archive');
-  if (archiveSheet && archiveSheet.getLastRow() > 1) {
-    const archiveData = archiveSheet.getDataRange().getValues();
-    const archiveHeaders = archiveData[0];
-    const archiveOrderIdIdx = archiveHeaders.indexOf('woma_OrderId');
-    const archiveTotalIdx = archiveHeaders.indexOf('woma_OrderTotal');
-
-    if (archiveTotalIdx === -1) {
-      console.log('woma_OrderTotal column not found in WebOrdM_Archive');
-    } else {
-      let archiveUpdated = 0;
-      for (let i = 1; i < archiveData.length; i++) {
-        const orderId = String(archiveData[i][archiveOrderIdIdx] || '').trim();
-        const existingTotal = Math.round(parseFloat(archiveData[i][archiveTotalIdx]) || 0);
-        const calculatedTotal = totalsByOrderId[orderId] || 0;
-
-        // Update if different (fixes empty AND incorrect values)
-        if (orderId && calculatedTotal !== existingTotal) {
-          archiveSheet.getRange(i + 1, archiveTotalIdx + 1).setValue(calculatedTotal);
-          archiveUpdated++;
-        }
-      }
-      console.log(`Updated ${archiveUpdated} order totals in WebOrdM_Archive`);
-    }
-  }
-}
-
-/**
  * Backfills order totals in WebOrdM_Archive from CSV file.
  * @param {string} fileName - CSV filename (default: order_history_2025-12-16.csv)
  */
@@ -787,6 +666,7 @@ function HousekeepingService() {
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'validateDeployment', fn: () => this.validateDeployment() },
+      { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() }
@@ -1146,6 +1026,44 @@ function HousekeepingService() {
       }
 
       const sheetNames = allConfig['system.sheet_names'];
+
+      // Peer-realignment guard per CONTENT_LIBRARY_PLAN §14: if any open
+      // `task.content.realign` task is attached to a pending_payment family
+      // template entity, pause the whole sweep until the realign closes.
+      const familySlugs = [
+        'template-pending-payment-email-en',
+        'template-pending-payment-email-he',
+        'template-pending-payment-addendum-en',
+        'template-pending-payment-addendum-he'
+      ];
+      try {
+        const tasksSheet = SheetAccessor.getDataSpreadsheet().getSheetByName(sheetNames.SysTasks);
+        if (tasksSheet && tasksSheet.getLastRow() > 1) {
+          const tasksValues = tasksSheet.getDataRange().getValues();
+          const tasksHeaders = tasksValues[0] || [];
+          const typeIdIdx = tasksHeaders.indexOf('st_TaskTypeId');
+          const entityIdIdx = tasksHeaders.indexOf('st_EntityId');
+          const statusIdx = tasksHeaders.indexOf('st_Status');
+          if (typeIdIdx > -1 && entityIdIdx > -1 && statusIdx > -1) {
+            for (let i = 1; i < tasksValues.length; i++) {
+              const tType = String(tasksValues[i][typeIdIdx] || '');
+              const tEntity = String(tasksValues[i][entityIdIdx] || '');
+              const tStatus = String(tasksValues[i][statusIdx] || '');
+              if (tType === 'task.content.realign' &&
+                  familySlugs.indexOf(tEntity) > -1 &&
+                  tStatus !== 'Done') {
+                logger.info('HousekeepingService', functionName,
+                  `Open peer-realignment task on pending_payment family (entity=${tEntity}); skipping sweep.`);
+                return true;
+              }
+            }
+          }
+        }
+      } catch (guardErr) {
+        logger.warn('HousekeepingService', functionName,
+          `Peer-realignment guard read failed (proceeding anyway): ${guardErr.message}`);
+      }
+
       const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const orderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
       if (!orderSheet || orderSheet.getLastRow() < 2) {
@@ -1235,17 +1153,20 @@ function HousekeepingService() {
           ).length;
           const isFirstTime = completedCount === 0;
 
-          // Compose
+          // Compose — templates read from SysLibrary (phase 10 migration 2026-05-28).
+          // Previous SysConfig source `crm.template.pending_payment.*` rows retire alongside welcome family.
           const lang = (o.language === 'he') ? 'he' : 'en';
-          const subjectCfg = allConfig[`crm.template.pending_payment.email.subject.${lang}`];
-          const bodyCfg = allConfig[`crm.template.pending_payment.email.body.${lang}`];
-          const addendumCfg = allConfig[`crm.template.pending_payment.first_time_addendum.${lang}`];
-          if (!subjectCfg || !bodyCfg) {
-            logger.warn('HousekeepingService', functionName, `Missing email template for lang=${lang}. Skipping ${o.orderId}.`);
+          const emailSlug = `template-pending-payment-email-${lang}`;
+          const addendumSlug = `template-pending-payment-addendum-${lang}`;
+          const emailEntity = LibraryService.getEntityBySlug(emailSlug);
+          const addendumEntity = LibraryService.getEntityBySlug(addendumSlug);
+          if (!emailEntity) {
+            logger.warn('HousekeepingService', functionName, `Missing library template ${emailSlug}. Skipping ${o.orderId}.`);
             return;
           }
-          const subject = subjectCfg.value || '';
-          const firstTimeBlock = isFirstTime && addendumCfg && addendumCfg.value ? addendumCfg.value : '';
+          const subject = emailEntity.slb_Subject || '';
+          const addendumText = (addendumEntity && addendumEntity.slb_Body) || '';
+          const firstTimeBlock = isFirstTime ? addendumText : '';
           const name = String(o.firstName || '').trim() || 'there';
 
           // Order-pay URL: prefer the guest-pay link with the captured key
@@ -1255,7 +1176,7 @@ function HousekeepingService() {
             ? `https://www.jlmwines.com/checkout/order-pay/${o.orderId}/?pay_for_order=true&key=${o.orderKey}`
             : `https://www.jlmwines.com/my-account/view-order/${o.orderId}/`;
 
-          const body = String(bodyCfg.value || '')
+          const body = String(emailEntity.slb_Body || '')
             .replace(/\{name\}/g, name)
             .replace(/\{first_time_block\}/g, firstTimeBlock)
             .replace(/\{order_pay_url\}/g, orderPayUrl);
@@ -1263,7 +1184,7 @@ function HousekeepingService() {
           // Send
           GmailApp.sendEmail(o.email, subject, body);
 
-          // Log activity
+          // Log activity — both contact-side (existing) and library-side (phase 10).
           if (typeof ContactService !== 'undefined' && ContactService.createActivity) {
             ContactService.createActivity({
               sca_Email: o.email,
@@ -1279,6 +1200,22 @@ function HousekeepingService() {
               },
               sca_CreatedBy: 'system'
             });
+          }
+          try {
+            LibraryService.logEntityActivity({
+              entityId: emailSlug,
+              actionType: 'template_send',
+              summary: `Sent to ${o.email} (order ${o.orderId})${isFirstTime ? ' — first-time' : ''}`,
+              details: {
+                contactEmail: o.email,
+                orderId: o.orderId,
+                language: lang,
+                isFirstTime: isFirstTime
+              },
+              referencedEntities: [o.email]
+            });
+          } catch (logErr) {
+            logger.warn('HousekeepingService', functionName, `Library activity log failed: ${logErr.message}`);
           }
 
           sentSet.add(o.orderId);
@@ -1370,6 +1307,112 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Validation failed: ${e.message}`);
+      return false;
+    }
+  };
+
+  /**
+   * Orphan-content integrity report for the content library
+   * (CONTENT_LIBRARY_PLAN §17 phase 6). Reads SysLibrary + walks the canonical
+   * Drive folder tree under `system.folder.library`. Writes two SysLog rows:
+   *   - `library_integrity.orphan_entities`: SysLibrary rows whose `slb_DocUrl`
+   *     points at a Drive file ID that no longer resolves.
+   *   - `library_integrity.orphan_files`: Drive files under the library root
+   *     whose base name (extension-stripped) doesn't match any `slb_Slug`.
+   *
+   * No email, no task spawn, no remediation — admin reads SysLog on demand.
+   * Short-circuits when `library.enabled = false`.
+   */
+  this.runLibraryIntegrityReport = function() {
+    const functionName = 'runLibraryIntegrityReport';
+
+    try {
+      const libraryFlag = ConfigService.getConfig('library.enabled');
+      const enabled = libraryFlag && (libraryFlag.value === true || libraryFlag.value === 'true' || libraryFlag.value === 'TRUE');
+      if (!enabled) {
+        logger.info('HousekeepingService', functionName, 'library.enabled is off; skipping.');
+        return true;
+      }
+
+      const folderCfg = ConfigService.getConfig('system.folder.library');
+      const libraryFolderId = folderCfg && folderCfg.id ? String(folderCfg.id).trim() : '';
+      if (!libraryFolderId) {
+        logger.warn('HousekeepingService', functionName, 'system.folder.library not configured; skipping.');
+        return true;
+      }
+
+      // Read SysLibrary entries.
+      const librarySheet = SheetAccessor.getLibrarySheet('SysLibrary');
+      const libraryValues = librarySheet.getDataRange().getValues();
+      const headers = libraryValues[0] || [];
+      const slugColIdx = headers.indexOf('slb_Slug');
+      const docUrlColIdx = headers.indexOf('slb_DocUrl');
+      if (slugColIdx === -1 || docUrlColIdx === -1) {
+        logger.warn('HousekeepingService', functionName, 'SysLibrary missing slb_Slug or slb_DocUrl; skipping.');
+        return true;
+      }
+
+      const slugSet = new Set();
+      const entitiesWithDoc = [];
+      for (let i = 1; i < libraryValues.length; i++) {
+        const slug = libraryValues[i][slugColIdx];
+        const docUrl = libraryValues[i][docUrlColIdx];
+        if (!slug) continue;
+        slugSet.add(String(slug).trim());
+        if (docUrl) {
+          const match = String(docUrl).match(/[-\w]{25,}/);
+          if (match) {
+            entitiesWithDoc.push({ slug: String(slug).trim(), fileId: match[0] });
+          }
+        }
+      }
+
+      // Orphan entities — slb_DocUrl set but Drive file ID doesn't resolve.
+      const orphanEntities = [];
+      entitiesWithDoc.forEach(e => {
+        try {
+          DriveApp.getFileById(e.fileId);
+        } catch (err) {
+          orphanEntities.push({ slug: e.slug, fileId: e.fileId });
+        }
+      });
+
+      // Walk Drive folder tree, collect every file under library root.
+      function walkFolder(folder, pathPrefix, out) {
+        const files = folder.getFiles();
+        while (files.hasNext()) {
+          const file = files.next();
+          out.push({ name: file.getName(), fileId: file.getId(), path: pathPrefix });
+        }
+        const subfolders = folder.getFolders();
+        while (subfolders.hasNext()) {
+          const sub = subfolders.next();
+          walkFolder(sub, pathPrefix + '/' + sub.getName(), out);
+        }
+      }
+      const libraryFolder = DriveApp.getFolderById(libraryFolderId);
+      const driveFiles = [];
+      walkFolder(libraryFolder, '', driveFiles);
+
+      // Orphan files — Drive files whose extension-stripped name doesn't match a slug.
+      const orphanFiles = [];
+      driveFiles.forEach(f => {
+        const baseName = String(f.name).replace(/\.[^.]+$/, '');
+        if (!slugSet.has(baseName)) {
+          orphanFiles.push({ name: f.name, fileId: f.fileId, path: f.path });
+        }
+      });
+
+      logger.info('HousekeepingService', 'library_integrity.orphan_entities',
+        `Orphan entities: ${orphanEntities.length}`,
+        { count: orphanEntities.length, entries: orphanEntities });
+      logger.info('HousekeepingService', 'library_integrity.orphan_files',
+        `Orphan files: ${orphanFiles.length}`,
+        { count: orphanFiles.length, entries: orphanFiles });
+
+      return true;
+    } catch (e) {
+      logger.warn('HousekeepingService', functionName, `Report failed: ${e.message}`);
       return false;
     }
   };

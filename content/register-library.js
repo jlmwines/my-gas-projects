@@ -12,9 +12,18 @@
 // spreadsheet. Sibling pattern to .wp-credentials used by push-posts.js.
 //
 // Usage:
-//   node content/register-library.js              # list manifest + registration status
-//   node content/register-library.js <slug>       # register one entry
-//   node content/register-library.js --all        # register all unregistered
+//   node content/register-library.js                          # list manifest + registration status
+//   node content/register-library.js <slug>                   # register one entry
+//   node content/register-library.js --all                    # register all unregistered
+//   node content/register-library.js --update <slug>          # patch existing row's email metadata
+//   node content/register-library.js --update --all           # patch all manifest entries that already exist
+//
+// --update mode (phase 11 email): for entries whose slug is already in
+// SysLibrary, the script patches a narrow set of fields rather than
+// SKIPping. Patched fields are listed in UPDATE_FIELDS below — currently
+// limited to email-specific metadata + slb_LastTouched. State transitions
+// (e.g., draft → published) flow through the task-close UI path
+// (LibraryView.markPublished), not through this script.
 // ═══════════════════════════════════════════════════════════════════
 
 const fs = require('fs');
@@ -176,6 +185,58 @@ JLM Wines`,
     body: 'שלום! המון תודה על ההזמנה הראשונה שלך מיין ירושלים — מקווה שנהנית מהיין. רציתי לבדוק שהכל בסדר ואשמח להמליץ לך משהו לפעם הבאה.',
     references: ['template-welcome-whatsapp-en'],
   },
+  // ─── Pending-payment family templates (phase 10 migration 2026-05-28) ──
+  // First consumer-bearing migration. HousekeepingService.createPendingPaymentFollowups
+  // composes email body + optional first-time addendum and sends via GmailApp.
+  // Body uses {name}, {order_pay_url}, {first_time_block} placeholders; consumer
+  // interpolates at send time. Addendum substitutes into {first_time_block} for
+  // first-time customers (zero completed orders).
+  // SysConfig source: jlmops/config/otherSettings.json crm.template.pending_payment.*
+  // SysConfig rows retire alongside welcome family rows in one pass after this lands.
+  {
+    slug: 'template-pending-payment-email-en',
+    content_type: 'template',
+    language: 'en',
+    state: 'locked',
+    title: 'Pending-payment follow-up email (EN)',
+    channel: 'email',
+    subject: 'Your order at JLM Wines — can we help?',
+    body: "Hi {name},\n\nI noticed your recent order with JLM Wines is still pending payment. Just checking in — is there anything I can help with?\n\nYou can complete payment in one tap here:\n{order_pay_url}\n\nOr just reply to this email and I'll help directly.{first_time_block}\n\nHappy to chat on WhatsApp too if that's easier — feel free to message us anytime.\n\nEvyatar\nJLM Wines",
+    references: ['template-pending-payment-email-he'],
+  },
+  {
+    slug: 'template-pending-payment-email-he',
+    content_type: 'template',
+    language: 'he',
+    state: 'locked',
+    title: 'Pending-payment follow-up email (HE)',
+    channel: 'email',
+    subject: 'ההזמנה שלך ביין ירושלים — אפשר לעזור?',
+    body: 'שלום {name},\n\nראיתי שההזמנה האחרונה שלך ביין ירושלים עדיין ממתינה לתשלום. רציתי לבדוק שהכל בסדר ולשאול אם אפשר לעזור.\n\nאפשר להשלים את התשלום בלחיצה אחת כאן:\n{order_pay_url}\n\nאו פשוט להגיב למייל הזה ואסדר את זה ישירות.{first_time_block}\n\nאשמח גם לדבר בוואטסאפ אם זה נוח יותר.\n\nאביתר\nיין ירושלים',
+    references: ['template-pending-payment-email-en'],
+  },
+  {
+    slug: 'template-pending-payment-addendum-en',
+    content_type: 'template',
+    language: 'en',
+    state: 'locked',
+    title: 'Pending-payment first-time addendum (EN)',
+    channel: 'email',
+    subject: '',
+    body: '\n\nAlso — as a first-time customer, you can use code NEW50 for ₪50 off any order of ₪399 or more, with free delivery.',
+    references: ['template-pending-payment-addendum-he'],
+  },
+  {
+    slug: 'template-pending-payment-addendum-he',
+    content_type: 'template',
+    language: 'he',
+    state: 'locked',
+    title: 'Pending-payment first-time addendum (HE)',
+    channel: 'email',
+    subject: '',
+    body: '\n\nונקודה נוספת — כלקוח חדש, ניתן להשתמש בקוד NEW50 ל-₪50 הנחה על כל הזמנה מעל ₪399, כולל משלוח חינם.',
+    references: ['template-pending-payment-addendum-en'],
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────
@@ -249,6 +310,11 @@ function buildRow(headers, entry, derived) {
     slb_Subject: entry.subject || '',
     slb_Body: entry.body || '',
     slb_Channel: entry.channel || '',
+    // Phase 11 email fields (sparse — only populated for content_type='email')
+    slb_MailchimpCampaignId: entry.mailchimp_campaign_id || '',
+    slb_SubjectLine: entry.subject_line || '',
+    slb_SendDate: entry.send_date || '',
+    slb_ExternalUrl: entry.external_url || '',
   };
   return headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
 }
@@ -292,18 +358,39 @@ async function readHeaders(sheets) {
 }
 
 async function readExistingSlugs(sheets, slugColIdx) {
+  // Returns a Map: slug → 1-indexed sheet row number (>= 2; header is row 1).
+  // Callers needing only membership can `.has(slug)` or pass `.keys()` to a Set.
   const col = colLetter(slugColIdx);
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: LIBRARY_SPREADSHEET_ID,
     range: `${SHEET_NAME}!${col}2:${col}`,
   });
-  return new Set(((res.data.values || []).flat()).filter(Boolean));
+  const values = res.data.values || [];
+  const map = new Map();
+  values.forEach((row, idx) => {
+    const slug = row && row[0];
+    if (slug) map.set(slug, idx + 2);
+  });
+  return map;
 }
+
+// Fields the --update path patches on existing rows. Narrow on purpose
+// (phase 11 email post-send metadata fill). Add to this list as later
+// phases need to patch additional columns; do not generalize to "all fields"
+// without a deliberate decision.
+const UPDATE_FIELDS = [
+  'slb_LastTouched',
+  'slb_MailchimpCampaignId',
+  'slb_SubjectLine',
+  'slb_SendDate',
+  'slb_ExternalUrl',
+];
 
 // ─── Main ──────────────────────────────────────────────────────────
 async function main() {
   const args = process.argv.slice(2);
   const doAll = args.includes('--all');
+  const doUpdate = args.includes('--update');
   const targetSlug = args.find(a => !a.startsWith('--'));
 
   const manifestSlugs = new Set(MANIFEST.map(e => e.slug));
@@ -314,16 +401,16 @@ async function main() {
   const slugColIdx = headers.indexOf('slb_Slug');
   if (slugColIdx < 0) throw new Error('slb_Slug column not found in SysLibrary');
 
-  const existingSlugs = await readExistingSlugs(sheets, slugColIdx);
-  const knownSlugs = new Set([...existingSlugs, ...manifestSlugs]);
+  const existingRows = await readExistingSlugs(sheets, slugColIdx);
+  const knownSlugs = new Set([...existingRows.keys(), ...manifestSlugs]);
 
   // No-arg → list
   if (!doAll && !targetSlug) {
     console.log(`SysLibrary headers (${headers.length}): ${headers.slice(0, 5).join(', ')}, …`);
-    console.log(`Existing rows: ${existingSlugs.size}\n`);
+    console.log(`Existing rows: ${existingRows.size}\n`);
     console.log('Manifest:');
     MANIFEST.forEach(e => {
-      const status = existingSlugs.has(e.slug) ? '[registered]' : '[new]      ';
+      const status = existingRows.has(e.slug) ? '[registered]' : '[new]      ';
       console.log(`  ${status} ${e.slug}`);
     });
     return;
@@ -337,9 +424,47 @@ async function main() {
   }
 
   const rowsToAppend = [];
+  const updates = [];  // { range, values } for batchUpdate
   for (const entry of targets) {
-    if (existingSlugs.has(entry.slug)) {
-      console.log(`  SKIP: ${entry.slug} already registered`);
+    const existingRow = existingRows.get(entry.slug);
+    if (existingRow) {
+      if (!doUpdate) {
+        console.log(`  SKIP: ${entry.slug} already registered`);
+        continue;
+      }
+      // Build patch: read each UPDATE_FIELDS column position, write a single-cell range.
+      // One range per field keeps the writes minimal + traceable.
+      const now = new Date().toISOString();
+      const patch = {
+        slb_LastTouched: now,
+        slb_MailchimpCampaignId: entry.mailchimp_campaign_id || '',
+        slb_SubjectLine: entry.subject_line || '',
+        slb_SendDate: entry.send_date || '',
+        slb_ExternalUrl: entry.external_url || '',
+      };
+      let patchedFields = 0;
+      for (const field of UPDATE_FIELDS) {
+        const colIdx = headers.indexOf(field);
+        if (colIdx < 0) {
+          console.warn(`  WARN: column "${field}" not found in SysLibrary headers — skipped`);
+          continue;
+        }
+        const value = patch[field];
+        if (value === '' || value === undefined) continue;  // don't overwrite with blanks
+        const col = colLetter(colIdx);
+        updates.push({
+          range: `${SHEET_NAME}!${col}${existingRow}`,
+          values: [[value]],
+        });
+        patchedFields++;
+      }
+      console.log(`  UPDATE: ${entry.slug} (${patchedFields} field(s))`);
+      continue;
+    }
+
+    // CREATE path — never enters under --update mode.
+    if (doUpdate) {
+      console.log(`  SKIP: ${entry.slug} not registered yet (run without --update to create)`);
       continue;
     }
     for (const ref of entry.references || []) {
@@ -359,20 +484,32 @@ async function main() {
     console.log(`  REGISTER: ${entry.slug} (${derived.title || '<no title>'})`);
   }
 
-  if (rowsToAppend.length === 0) {
-    console.log('\nNothing to register.');
+  if (rowsToAppend.length === 0 && updates.length === 0) {
+    console.log('\nNothing to register or update.');
     return;
   }
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: LIBRARY_SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:A`,
-    valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: { values: rowsToAppend },
-  });
+  if (rowsToAppend.length > 0) {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: LIBRARY_SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A:A`,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: rowsToAppend },
+    });
+    console.log(`\nAppended: ${rowsToAppend.length} row(s) to ${SHEET_NAME}.`);
+  }
 
-  console.log(`\nDone: ${rowsToAppend.length} row(s) appended to ${SHEET_NAME}.`);
+  if (updates.length > 0) {
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: LIBRARY_SPREADSHEET_ID,
+      requestBody: {
+        valueInputOption: 'USER_ENTERED',
+        data: updates,
+      },
+    });
+    console.log(`Patched: ${updates.length} cell(s) across existing rows.`);
+  }
 }
 
 main().catch(err => {

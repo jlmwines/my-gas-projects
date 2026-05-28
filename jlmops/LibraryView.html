@@ -318,6 +318,13 @@
     </div>
     <div style="padding:15px;">
       <div class="form-group">
+        <label class="small font-weight-bold">Type</label>
+        <select class="form-control form-control-sm" id="lv-content-type">
+          <option value="blog">Blog</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label class="small font-weight-bold">Content Name</label>
         <input type="text" class="form-control form-control-sm" id="lv-content-name" placeholder="e.g., Intensity, About Page">
       </div>
@@ -326,13 +333,18 @@
         <input type="text" class="form-control form-control-sm" id="lv-content-stream-id" placeholder="e.g., INT, ABOUT">
         <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
       </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="lv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
+        <small class="text-muted">Comma-separated source slugs. Mainly used by email/news/social linking back to source content.</small>
+      </div>
       <div class="form-group mb-0">
         <label class="small font-weight-bold">Stages</label>
         <div id="lv-content-stages-checkboxes" class="d-flex flex-wrap">
           <!-- Populated by JS -->
         </div>
       </div>
-      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog) + tasks created together.</p>
+      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
       <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('lvContentStreamModal').style.display='none'">Cancel</button>
@@ -862,8 +874,12 @@
     // ===== CONTENT STREAM MODAL (CONTENT_LIBRARY_PLAN §17 phase 7a) =====
 
     function openContentStreamModal(preFilledName) {
+      var typeEl = document.getElementById('lv-content-type');
+      if (typeEl) typeEl.value = 'blog';
       document.getElementById('lv-content-name').value = preFilledName || '';
       document.getElementById('lv-content-stream-id').value = '';
+      var refsEl = document.getElementById('lv-content-references');
+      if (refsEl) refsEl.value = '';
       if (state.contentStages.length) {
         populateContentStagesCheckboxes();
       } else {
@@ -891,8 +907,14 @@
     }
 
     function submitContentStream() {
+      var typeEl = document.getElementById('lv-content-type');
+      var entityType = typeEl ? typeEl.value : 'blog';
       var name = document.getElementById('lv-content-name').value.trim();
       var customStreamId = document.getElementById('lv-content-stream-id').value.trim().toUpperCase();
+      var refsRaw = (document.getElementById('lv-content-references').value || '').trim();
+      var references = refsRaw
+        ? refsRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean)
+        : [];
       if (!name) {
         alert('Please enter content name');
         return;
@@ -934,10 +956,11 @@
           alert('Error: ' + (err && err.message ? err.message : 'Failed'));
         })
         .WebAppLibrary_spawnContentChain({
-          entityType: 'blog',
+          entityType: entityType,
           contentName: name,
           stages: stages,
-          streamId: customStreamId || null
+          streamId: customStreamId || null,
+          references: references
         });
     }
 

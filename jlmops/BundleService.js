@@ -1121,6 +1121,158 @@ const BundleService = (function () {
   }
 
   /**
+   * Batch reimport — rebuilds SysBundles + SysBundleSlots in 4-6 sheet ops
+   * total (vs ~250 per-row ops in the per-bundle importBundleFromWooCommerce
+   * path). Used by WebAppBundles_reimportAllBundles when refreshing all
+   * bundles after a sync. Preserves per-slot manager-edited criteria
+   * (category / priceMin / intensity / etc.) keyed by (bundleId, sku).
+   *
+   * @param {Array<Object>} bundlesInput — pre-collected bundle metadata,
+   *   each { bundleId, nameEn, nameHe, type, status, woosbIds, woosbIdsHe }.
+   *   Caller (WebAppBundles_reimportAllBundles) extracts from WebProdM/WebXltM.
+   * @returns {Object} { imported, failed, slotCount }
+   */
+  function reimportAllBundlesBatch(bundlesInput) {
+    const functionName = 'reimportAllBundlesBatch';
+
+    const bundlesSheet = _getBundlesSheet();
+    const slotsSheet = _getSlotsSheet();
+    if (!bundlesSheet || !slotsSheet) {
+      throw new Error('SysBundles or SysBundleSlots sheet not found');
+    }
+
+    const bundleCols = _getBundleColumnIndices();
+    const slotCols = _getSlotColumnIndices();
+    const bundleColCount = Object.keys(bundleCols).length;
+    const slotColCount = Object.keys(slotCols).length;
+
+    // 1. Read existing slots once → preservedCriteria by (bundleId, sku).
+    const existingSlotsData = slotsSheet.getDataRange().getValues();
+    const preservedByBundleSku = {};
+    for (let i = 1; i < existingSlotsData.length; i++) {
+      const row = existingSlotsData[i];
+      if (row[slotCols.sbs_SlotType] !== 'Product') continue;
+      const bundleId = row[slotCols.sbs_BundleId];
+      const sku = row[slotCols.sbs_ActiveSKU];
+      if (!bundleId || !sku) continue;
+      if (!preservedByBundleSku[bundleId]) preservedByBundleSku[bundleId] = {};
+      preservedByBundleSku[bundleId][sku] = {
+        category: row[slotCols.sbs_Category],
+        category2: row[slotCols.sbs_Category2],
+        priceMin: row[slotCols.sbs_PriceMin],
+        priceMax: row[slotCols.sbs_PriceMax],
+        intensity: row[slotCols.sbs_Intensity],
+        complexity: row[slotCols.sbs_Complexity],
+        acidity: row[slotCols.sbs_Acidity],
+        nameContains: row[slotCols.sbs_NameContains],
+        exclusive: row[slotCols.sbs_Exclusive] === 'TRUE',
+        qtyVariable: row[slotCols.sbs_QtyVariable] === 'TRUE'
+      };
+    }
+
+    // 2. Build new rows entirely in memory.
+    const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
+    const newBundleRows = [];
+    const newSlotRows = [];
+    let imported = 0;
+    let failed = 0;
+
+    for (const b of bundlesInput) {
+      try {
+        const woosbData = _parseWoosbJson(b.woosbIds, b.bundleId, 'en');
+        const woosbDataHe = _parseWoosbJson(b.woosbIdsHe, b.bundleId, 'he');
+
+        const bundleRow = new Array(bundleColCount).fill('');
+        bundleRow[bundleCols.sb_BundleId] = b.bundleId;
+        bundleRow[bundleCols.sb_NameEn] = b.nameEn || '';
+        bundleRow[bundleCols.sb_NameHe] = b.nameHe || '';
+        bundleRow[bundleCols.sb_Type] = b.type || 'Bundle';
+        bundleRow[bundleCols.sb_Status] = b.status || 'Draft';
+        bundleRow[bundleCols.sb_DiscountPrice] = '';
+        newBundleRows.push(bundleRow);
+
+        const preserved = preservedByBundleSku[b.bundleId] || {};
+        const entries = Object.entries(woosbData);
+        let order = 1;
+
+        for (const [key, value] of entries) {
+          const slotRow = new Array(slotColCount).fill('');
+          slotRow[slotCols.sbs_SlotId] = `${b.bundleId}-${key}`;
+          slotRow[slotCols.sbs_BundleId] = b.bundleId;
+          slotRow[slotCols.sbs_Order] = order;
+          slotRow[slotCols.sbs_HistoryJson] = '[]';
+
+          if (value.type && textSlotTypes.includes(value.type.toLowerCase())) {
+            const hebrewEntry = woosbDataHe[key] || {};
+            slotRow[slotCols.sbs_SlotType] = 'Text';
+            slotRow[slotCols.sbs_TextStyle] = value.type;
+            slotRow[slotCols.sbs_TextEn] = value.text || '';
+            slotRow[slotCols.sbs_TextHe] = (hebrewEntry.text || '').trim();
+            slotRow[slotCols.sbs_DefaultQty] = 1;
+            newSlotRows.push(slotRow);
+          } else if (value.id || value.sku) {
+            const sku = value.sku || '';
+            const pcrit = preserved[sku] || {};
+            slotRow[slotCols.sbs_SlotType] = 'Product';
+            slotRow[slotCols.sbs_ActiveSKU] = sku;
+            slotRow[slotCols.sbs_DefaultQty] = Number(value.qty) || 1;
+            const qtyVarPreserved = (pcrit.qtyVariable !== undefined) ? pcrit.qtyVariable : (value.optional === '1');
+            slotRow[slotCols.sbs_QtyVariable] = qtyVarPreserved ? 'TRUE' : '';
+            slotRow[slotCols.sbs_Exclusive] = pcrit.exclusive ? 'TRUE' : '';
+            slotRow[slotCols.sbs_Category] = pcrit.category || '';
+            slotRow[slotCols.sbs_Category2] = pcrit.category2 || '';
+            slotRow[slotCols.sbs_PriceMin] = (pcrit.priceMin !== null && pcrit.priceMin !== undefined && pcrit.priceMin !== '') ? pcrit.priceMin : '';
+            slotRow[slotCols.sbs_PriceMax] = (pcrit.priceMax !== null && pcrit.priceMax !== undefined && pcrit.priceMax !== '') ? pcrit.priceMax : '';
+            slotRow[slotCols.sbs_Intensity] = (pcrit.intensity !== null && pcrit.intensity !== undefined && pcrit.intensity !== '') ? pcrit.intensity : '';
+            slotRow[slotCols.sbs_Complexity] = (pcrit.complexity !== null && pcrit.complexity !== undefined && pcrit.complexity !== '') ? pcrit.complexity : '';
+            slotRow[slotCols.sbs_Acidity] = (pcrit.acidity !== null && pcrit.acidity !== undefined && pcrit.acidity !== '') ? pcrit.acidity : '';
+            slotRow[slotCols.sbs_NameContains] = pcrit.nameContains || '';
+            newSlotRows.push(slotRow);
+          }
+          // else: empty / unknown entry — skip but advance order.
+          order++;
+        }
+        imported++;
+      } catch (e) {
+        LoggerService.warn(SERVICE_NAME, functionName, `Failed bundle ${b.bundleId}: ${e.message}`);
+        failed++;
+      }
+    }
+
+    // 3. Clear existing data rows + batch write the new ones.
+    const oldBundlesLast = bundlesSheet.getLastRow();
+    const oldSlotsLast = slotsSheet.getLastRow();
+    if (oldBundlesLast > 1) {
+      bundlesSheet.getRange(2, 1, oldBundlesLast - 1, bundlesSheet.getLastColumn()).clearContent();
+    }
+    if (oldSlotsLast > 1) {
+      slotsSheet.getRange(2, 1, oldSlotsLast - 1, slotsSheet.getLastColumn()).clearContent();
+    }
+    if (newBundleRows.length > 0) {
+      bundlesSheet.getRange(2, 1, newBundleRows.length, bundleColCount).setValues(newBundleRows);
+    }
+    if (newSlotRows.length > 0) {
+      slotsSheet.getRange(2, 1, newSlotRows.length, slotColCount).setValues(newSlotRows);
+    }
+    // Trim trailing rows so the sheet doesn't grow over time.
+    const newBundlesLast = 1 + newBundleRows.length;
+    const newSlotsLast = 1 + newSlotRows.length;
+    if (oldBundlesLast > newBundlesLast) {
+      bundlesSheet.deleteRows(newBundlesLast + 1, oldBundlesLast - newBundlesLast);
+    }
+    if (oldSlotsLast > newSlotsLast) {
+      slotsSheet.deleteRows(newSlotsLast + 1, oldSlotsLast - newSlotsLast);
+    }
+    SpreadsheetApp.flush();
+    clearCache();
+
+    LoggerService.info(SERVICE_NAME, functionName,
+      `Batch reimport complete. Bundles: ${imported}, slots: ${newSlotRows.length}, failed: ${failed}`);
+
+    return { imported: imported, failed: failed, slotCount: newSlotRows.length };
+  }
+
+  /**
    * Duplicates a bundle for creating variations.
    * @param {string} sourceBundleId - Bundle to duplicate
    * @param {string} newBundleId - ID for the new bundle
@@ -1438,6 +1590,7 @@ const BundleService = (function () {
 
     // Import / Duplicate
     importBundleFromWooCommerce: importBundleFromWooCommerce,
+    reimportAllBundlesBatch: reimportAllBundlesBatch,
     duplicateBundle: duplicateBundle,
 
     // EN/HE composition parity validation

@@ -88,10 +88,12 @@ const LibraryService = (function() {
      * Validates that every reference slug exists in the provided slug set.
      * @private
      */
-    function _validateReferences(references, knownSlugs) {
+    function _validateReferences(references, knownSlugs, opts) {
+        const soft = !!(opts && opts.soft);
         for (let i = 0; i < references.length; i++) {
             const ref = references[i];
             if (!knownSlugs.has(ref)) {
+                if (soft) continue;  // ad-hoc refs (coupon codes, free-text) per phase 11 email
                 throw new Error(`reference "${ref}" does not resolve to a SysLibrary row`);
             }
         }
@@ -118,6 +120,7 @@ const LibraryService = (function() {
         const title = params.title || '';
         const references = Array.isArray(params.references) ? params.references : [];
         const typeFields = params.typeFields || {};
+        const softReferences = !!params.softReferences;
 
         _validateEntity({ slug: slug, type: type, language: language });
 
@@ -136,8 +139,10 @@ const LibraryService = (function() {
         // Reference resolution — must exist in current SysLibrary read.
         // Note: spawnContentChain handles intra-call references (EN sibling
         // added first, then HE references it) by flushing between calls.
+        // softReferences=true allows ad-hoc tokens (coupon codes, free-text)
+        // through unvalidated per CONTENT_LIBRARY_PLAN §17 phase 11 email.
         const knownSlugs = new Set(rows.map(r => r.slb_Slug));
-        _validateReferences(references, knownSlugs);
+        _validateReferences(references, knownSlugs, { soft: softReferences });
 
         const now = new Date().toISOString();
         let createdBy = 'session';
@@ -203,6 +208,9 @@ const LibraryService = (function() {
         const contentName = params.contentName;
         const stages = params.stages || [];
         const streamId = params.streamId;
+        const userRefs = Array.isArray(params.references)
+            ? params.references.map(r => String(r).trim()).filter(Boolean)
+            : [];
 
         if (!entityType) throw new Error('entityType is required');
         if (!contentName || !contentName.trim()) throw new Error('contentName is required');
@@ -237,21 +245,24 @@ const LibraryService = (function() {
 
             const enResult = addEntity({
                 slug: enSlug, type: entityType, language: 'en',
-                title: contentName, references: []
+                title: contentName, references: userRefs.slice(),
+                softReferences: true
             });
             entities.push(enResult.entity);
             if (enResult.deduplicated) deduplicated_entities.push(enSlug);
 
             const heResult = addEntity({
                 slug: heSlug, type: entityType, language: 'he',
-                title: contentName, references: [enSlug]
+                title: contentName, references: [enSlug].concat(userRefs),
+                softReferences: true
             });
             entities.push(heResult.entity);
             if (heResult.deduplicated) deduplicated_entities.push(heSlug);
         } else {
             const result = addEntity({
                 slug: baseSlug, type: entityType, language: null,
-                title: contentName, references: []
+                title: contentName, references: userRefs.slice(),
+                softReferences: true
             });
             entities.push(result.entity);
             if (result.deduplicated) deduplicated_entities.push(baseSlug);
@@ -737,6 +748,7 @@ const LibraryService = (function() {
         attachExistingDoc: attachExistingDoc,
         lockVersion: lockVersion,
         logEntityActivity: logEntityActivity,
-        getEntityDetail: getEntityDetail
+        getEntityDetail: getEntityDetail,
+        getEntityBySlug: _getEntityRow
     };
 })();

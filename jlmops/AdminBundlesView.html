@@ -1094,7 +1094,7 @@
   }
 
   function updateComposition() {
-    if (!confirm('This will run a full WooCommerce product pull (a couple of minutes) then re-derive bundle composition. Continue?')) {
+    if (!confirm('Re-derive bundle composition from current WebProdM data. (If WebProdM is stale, run the daily sync first.) Continue?')) {
       return;
     }
     var btn = document.getElementById('btn-update-composition');
@@ -1106,11 +1106,12 @@
         if (result.error) { alert('Error: ' + result.error); return; }
         var d = result.data || {};
         var r = d.reimport || {};
-        var msg = 'Update Composition complete. WC pulled ' + (d.pullCount || 0) + ' products. Reimport: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
+        var msg = 'Update Composition complete. Re-derived from WebProdM: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
         showResults('Update Composition', '<p>' + escapeHtml(msg) + '</p>');
         loadStats();
         loadBundleList();
-        loadHealthAlerts();
+        // Inventory health panel intentionally NOT refreshed here — Composition
+        // and Inventory are separate buttons; click Review Stock for inventory.
       })
       .withFailureHandler(function(err) {
         restore();

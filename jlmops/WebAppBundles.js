@@ -549,56 +549,55 @@ function WebAppBundles_reimportAllBundles() {
       LoggerService.info(serviceName, functionName, `Loaded ${Object.keys(hebrewNameMap).length} Hebrew translations, ${Object.keys(hebrewWoosbIdsMap).length} Hebrew woosb_ids`);
     }
 
-    let imported = 0;
-    let failed = 0;
+    // Collect bundle metadata for batch reimport (one sheet-write pass instead
+    // of per-bundle row ops). Pre-batch implementation called
+    // BundleService.importBundleFromWooCommerce per bundle which did its own
+    // deleteRow + appendRow per slot — 14 bundles × ~12 slot ops × ~150ms each
+    // ≈ 25-40s of sheet overhead. Batch path completes in ~2-3s.
     let skipped = 0;
+    const bundlesToImport = [];
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       const productType = String(row[typeIdx] || '').toLowerCase().trim();
+      if (productType !== 'woosb' && productType !== 'bundle') continue;
 
-      if (productType === 'woosb' || productType === 'bundle') {
-        const bundleId = String(row[idIdx] || '').trim();
-        const woosbIds = String(row[woosbIdsIdx] || '').trim();
-        const nameEn = String(row[titleIdx] || '').trim();
-        const postStatus = String(row[statusIdx] || '').toLowerCase().trim();
-
-        // Look up Hebrew name and woosb_ids using bundle ID as original ID
-        const nameHe = hebrewNameMap[bundleId] || '';
-        const woosbIdsHe = hebrewWoosbIdsMap[bundleId] || '';
-
-        // Map PostStatus to bundle status: publish/1 = Active, anything else = Draft
-        const bundleStatus = (postStatus === 'publish' || postStatus === '1') ? 'Active' : 'Draft';
-
-        if (!bundleId) {
-          skipped++;
-          continue;
-        }
-
-        try {
-          BundleService.importBundleFromWooCommerce(bundleId, woosbIds, {
-            nameEn: nameEn,
-            nameHe: nameHe,
-            type: 'Bundle',
-            status: bundleStatus,
-            woosbIdsJsonHe: woosbIdsHe
-          });
-          imported++;
-        } catch (e) {
-          LoggerService.warn(serviceName, functionName, `Failed to import bundle ${bundleId}: ${e.message}`);
-          failed++;
-        }
+      const bundleId = String(row[idIdx] || '').trim();
+      if (!bundleId) {
+        skipped++;
+        continue;
       }
+
+      const woosbIds = String(row[woosbIdsIdx] || '').trim();
+      const nameEn = String(row[titleIdx] || '').trim();
+      const postStatus = String(row[statusIdx] || '').toLowerCase().trim();
+      const nameHe = hebrewNameMap[bundleId] || '';
+      const woosbIdsHe = hebrewWoosbIdsMap[bundleId] || '';
+      const bundleStatus = (postStatus === 'publish' || postStatus === '1') ? 'Active' : 'Draft';
+
+      bundlesToImport.push({
+        bundleId: bundleId,
+        nameEn: nameEn,
+        nameHe: nameHe,
+        type: 'Bundle',
+        status: bundleStatus,
+        woosbIds: woosbIds,
+        woosbIdsHe: woosbIdsHe
+      });
     }
 
-    LoggerService.info(serviceName, functionName, `Bundle reimport complete. Imported: ${imported}, Failed: ${failed}, Skipped: ${skipped}`);
+    const batchResult = BundleService.reimportAllBundlesBatch(bundlesToImport);
+
+    LoggerService.info(serviceName, functionName,
+      `Bundle reimport complete. Imported: ${batchResult.imported}, Failed: ${batchResult.failed}, Skipped: ${skipped}, Slots: ${batchResult.slotCount}`);
 
     return {
       error: null,
       data: {
-        imported: imported,
-        failed: failed,
-        skipped: skipped
+        imported: batchResult.imported,
+        failed: batchResult.failed,
+        skipped: skipped,
+        slotCount: batchResult.slotCount
       }
     };
   } catch (e) {
@@ -732,26 +731,22 @@ function WebAppBundles_getProductName(sku) {
 // =================================================================================
 
 /**
- * Update Composition button: runs a full WC product pull, then re-derives
- * SysBundles + SysBundleSlots from the fresh WebProdM data.
- * @returns {Object} { error, data: { pullCount, reimport } }
+ * Update Composition button: re-derives SysBundles + SysBundleSlots from
+ * current WebProdM + WebXltM data. Does NOT pull from WooCommerce — premise
+ * is "sync just ran, WebProdM is fresh, but housekeeping bundle refresh
+ * didn't run". If WebProdM is stale, run the daily sync first.
+ * @returns {Object} { error, data: { reimport } }
  */
 function WebAppBundles_updateComposition() {
   const serviceName = 'WebAppBundles';
   const functionName = 'updateComposition';
   try {
-    LoggerService.info(serviceName, functionName, 'Update Composition: full WC pull + bundle re-derive');
-
-    const pullResult = WooProductPullService.pullProducts();
-    if (!pullResult.success) {
-      return { error: 'WC product pull failed: ' + pullResult.message, data: null };
-    }
+    LoggerService.info(serviceName, functionName, 'Update Composition: re-derive bundles from WebProdM (no WC pull)');
 
     const reimportResult = WebAppBundles_reimportAllBundles();
     return {
       error: null,
       data: {
-        pullCount: pullResult.enCount,
         reimport: reimportResult
       }
     };

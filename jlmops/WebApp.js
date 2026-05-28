@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-27 14:02',
-  commit: '@139 phase 9d-partial: 3 drawer action buttons. (1) Open in Drive — shown when slb_DocUrl set, opens in new tab. (2) Create Content Tasks (pre-filled) — opens lvContentStreamModal with entity name pre-filled; admin-gated via data-roles. (3) Create HE sibling stub — shown only when current entity is -en + HE peer not in cached library; on click confirms + spawns peer via LibraryService.addEntity (dedups server-side if peer was created elsewhere). Lock + Version button deferred until we agree on drawer-Lock semantics (no task context). state.currentEntity stash powers handlers; load() + _loadEntityDrawer() refresh after HE sibling creation without back-stack push.'
+  built: '2026-05-28 09:07',
+  commit: '@145 Content Library phase 10 pending_payment template migration. First consumer-bearing migration. createPendingPaymentFollowups now reads subject/body/addendum from SysLibrary (template-pending-payment-email-{en,he} + template-pending-payment-addendum-{en,he}) via new LibraryService.getEntityBySlug; writes per-send activity log via LibraryService.logEntityActivity (actionType=template_send); peer-realignment guard skips sweep if open task.content.realign on any family slug. Welcome family templates also seeded (originally claimed registered 2026-05-27 but SysLibrary did not contain them). SysConfig crm.template.* rows untouched — retire in a future housekeeping pass.'
 };
 
 function getVersion() {
