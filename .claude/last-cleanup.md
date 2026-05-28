@@ -1,14 +1,20 @@
-2026-05-27 — project-scoped cleanup pass (JLM Wines, end of long session)
+2026-05-28 — session-end wrap of a long working session (7 deploys, phase 11 complete, Sessions A–D done)
 
 Touched:
-- `plans/STATUS.md` Inbox — struck-through resolved MCP-integrations item removed entirely (commit history preserves the record); "Drive setup review" promoted from Deferred → Active because phase 7 (7a + 7b) landed today, satisfying its `defer:after-content-library-phase-7` condition. Two remaining Deferred items (Drive folder structure, Offline-channel attribution) intact with their future dates.
-- `jlmops/plans/LIBRARY_VIEW_PLAN.md` Status line — flipped from PARTIAL IMPLEMENTATION to SHIPPED. All phase 5 steps complete; step 4 + 5 shipped with CONTENT_LIBRARY_PLAN phase 7b; phase 9 entity drawer shipped end-to-end. LibraryView surface is now feature-complete for the planned workflows. Future work points to CONTENT_LIBRARY_PLAN §17 phases 10 / 11 / 12.
+- `plans/STATUS.md` — Updated line, Metrics rows (Phase / Deploy Version / Deploy Date / Open Bugs / Next Milestone) rewritten to reflect 2026-05-28 work. Old narrative pushed into "earlier note:" trail per JLM kernel pattern.
+- `.claude/session-log.md` — appended entry for the post-break portion of 2026-05-28 (phase 11 news + social, flag retirements, Sessions B/C/D, stale-tracking pattern noted).
+- `.claude/bugs.md` — entries marked resolved through the session (decant 0, backfillOrderTotals, archive coupon mapping, bundle parent SKU, failed Comax recovery, SKU Replacement orphans, Admin Projects task delete, CRM cleanup full bullet).
+- `jlmops/plans/BUG_FIX_SEQUENCE.md` — Sessions A/B/C/D marked SHIPPED with their deploy refs.
+- `jlmops/plans/LIBRARY_VIEW_PLAN.md` — Status line notes `library.enabled` flag retirement.
+- `plans/CONTENT_LIBRARY_PLAN.md` §17 phase 11.1 — fleshed out earlier in session with email chain shape, spawn surface, references handling, registration path, --update mode, final state `published`.
+
+Memory banked this session:
+- `feedback_jlm_no_dev_url_testing` — jlmops push+deploy is one motion; never frame `/dev` URL as a testable state.
 
 Surfaced but NOT touched (intentional, scope decisions):
-- `.claude/session-log.md` (821 lines) — older entries are condensable per the file's own header. Bigger pruning pass deferred; needs more care than an end-of-session sweep.
-- `.claude/wishlist.md` (96 lines) — not surveyed this pass.
-- Memory audit — not run this pass.
+- `.claude/session-log.md` older entries — pruning deferred.
+- `.claude/wishlist.md` — not surveyed this pass.
+- Memory audit — not run.
+- `webProductReassign` missing _Staging + SysTasks updates — noted as latent issue, deferred (no real symptom; Fix Orphan SKU covers the typical bug case).
 
-Earlier today's plan-doc reconciliation (the bigger drift cleanup yesterday + today) is covered in the prior commits — phase 9 + phase 10 + phase 11 architecture banked into CONTENT_LIBRARY_PLAN.md §11 + §17 inline.
-
-Triggered when: user requested at end of session after consolidation commit 48503e5.
+Triggered when: user said "break here" after Sessions A–D + phase 11 complete; before starting Session E.

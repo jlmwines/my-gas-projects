@@ -4,9 +4,11 @@
 
 Sequenced by readiness (concrete fix shape → diagnosis needed → larger scope → audits). Each session is one focused unit of work. Sessions A–E each end with: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
+**Progress 2026-05-28:** Sessions A, B, C, D SHIPPED. Sessions E–I remain.
+
 ---
 
-## Session A — Quick wins batch (5 bugs, 1 session)
+## ✅ Session A — Quick wins batch (5 bugs, 1 session) — SHIPPED 2026-05-28 @144 deploy @148
 
 Five bugs with concrete fix shape, each surgical. Bundled into one session.
 
@@ -27,7 +29,9 @@ Five bugs with concrete fix shape, each surgical. Bundled into one session.
 
 ---
 
-## Session B — SKU Replacement orphans (1 bug, diagnosis-first)
+## ✅ Session B — SKU Replacement orphans (1 bug, diagnosis-first) — SHIPPED 2026-05-28 @148 deploy @152
+
+Diagnosis flipped the framing: Product Replacement modal's Step 1 `lookupProductBySku` requires Comax presence; orphan scenario fails before action runs. Resolved as a NEW action (Fix Orphan SKU) rather than relaxing Product Replacement. `webProductReassign`'s missing WebProdS_EN + WebDetS + SysTasks updates in proactive-replace path noted but deferred (no real symptom).
 
 **Bug:** 2026-05-27. SKU Replacement leaves orphans on web side: `WebProdM`, `WebProdM_Staging`, `WebDetM`, `WebDetM_Staging`, and `SysTasks.st_LinkedEntityId` on any open row referencing the old SKU.
 
@@ -39,7 +43,9 @@ Five bugs with concrete fix shape, each surgical. Bundled into one session.
 
 ---
 
-## Session C — Admin Projects task delete partial-success (1 bug, diagnosis-first)
+## ✅ Session C — Admin Projects task delete partial-success (1 bug, diagnosis-first) — SHIPPED 2026-05-28 @149 deploy @153
+
+Diagnosis: row-index race between parallel `WebAppTasks_deleteTask` calls. Fix: new `WebAppTasks_deleteTasks(taskIds)` (plural) atomic endpoint reads sheet once, sorts descending, deletes in one server execution. Returns per-task failure detail.
 
 **Bug:** 2026-05-15 (re-confirmed 2026-05-27). Delete claims partial-success, leaves rows in list, display lags.
 
@@ -50,7 +56,9 @@ Five bugs with concrete fix shape, each surgical. Bundled into one session.
 
 ---
 
-## Session D — CRM cleanup gift rule + correction script
+## ✅ Session D — CRM cleanup gift rule + correction script — SHIPPED 2026-05-28 @150 deploy @154
+
+All 3 plan pieces (gift rule, import wire-up, correction script) discovered to be already implemented — another stale-tracking case. Manager executed `runContactDataCorrection()` against live data before deploy. Code removal landed in @150: war-support detection helpers + `_warSupportOrders` counters + `noncore.support` classification branches dropped. `noncore.support` enum value + UI mappings kept per plan §269 ("ages out naturally").
 
 Per `jlmops/plans/CRM_PLAN.md` simplified rule (2026-04-30 revision).
 
