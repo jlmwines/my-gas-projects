@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 11:30',
-  commit: '@149 Session C — Admin Projects bulk task delete race fix. Diagnosis: frontend cancelSelectedTasks fired N parallel google.script.run.WebAppTasks_deleteTask calls; backend deleted by row index per call; parallel readers computed stale indices against each other deletes → "Task not found" false positives + wrong-row deletes + display lag. Fix: new WebAppTasks_deleteTasks(taskIds) (plural) endpoint reads sheet once, builds taskId-to-row map, sorts targets descending, deletes atomically in one server execution; returns {deleted, failed: [{taskId, reason}]} for per-task reporting. Frontend cancelSelectedTasks rewritten to single call with detailed failure list in the alert.'
+  built: '2026-05-28 11:45',
+  commit: '@150 Session D — CRM gift rule + correction script were already in place (stale tracking); war-support detection code removed per plan §269. Correction script runContactDataCorrection() was executed against live data 2026-05-28 by user before this deploy. Code removal: ContactService._extractCoupons + _hasWarSupportCoupon helpers + warSupportCoupons config read; ContactImportService _warSupportOrders counters in main + partial-refresh paths and noncore.support classification branches; crm.war_support_coupons SysConfig row. Kept noncore.support in crm.customer_types and WebAppContacts dropdown/label map so existing tagged rows still display correctly per plan §269 "existing classification stays as-is, allowed to be slightly wrong, ages into Lapsed/Dormant naturally."'
 };
 
 function getVersion() {

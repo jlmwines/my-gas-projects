@@ -107,17 +107,6 @@
     ],
 
     [
-        "_section.08_WarSupport",
-        "War support coupon detection"
-    ],
-    [
-        "crm.war_support_coupons",
-        "Coupon codes that indicate war-support orders",
-        "stable",
-        "codes", "efrat,roshtzurim,gushwarriors,gush,tekoa"
-    ],
-
-    [
         "_section.09_Intelligence",
         "CRM intelligence suggestion thresholds"
     ],

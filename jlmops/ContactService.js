@@ -43,7 +43,6 @@ const ContactService = (function () {
       orderInterval: {
         defaultDays: parseInt(allConfig['crm.order_interval']?.default_days, 10) || 48
       },
-      warSupportCoupons: (allConfig['crm.war_support_coupons']?.codes || 'efrat,roshtzurim,gushwarriors,gush,tekoa').split(',').map(c => c.trim().toLowerCase()),
       customerTypes: allConfig['crm.customer_types'] || {}
     };
     return _crmConfig;
@@ -155,39 +154,6 @@ const ContactService = (function () {
     const billName = (order.billingLastName || '').toLowerCase().trim();
     const shipName = (order.shippingLastName || '').toLowerCase().trim();
     return Boolean(billName && shipName && billName !== shipName);
-  }
-
-  /**
-   * Extracts coupon codes from coupon_items string.
-   * Format: "code:SHIPFREE|amount:0.00;code:WELCOME10|amount:44.03"
-   * @param {string} couponItems - The coupon items string
-   * @returns {Array<{code: string, amount: number}>}
-   */
-  function _extractCoupons(couponItems) {
-    if (!couponItems) return [];
-    return String(couponItems).split(';').map(item => {
-      const codeMatch = item.match(/code:([^|]+)/);
-      const amountMatch = item.match(/amount:([^|;]+)/);
-      if (codeMatch) {
-        return {
-          code: codeMatch[1].trim(),
-          amount: amountMatch ? parseFloat(amountMatch[1]) : 0
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  }
-
-  /**
-   * Checks if any coupon in the list is a war-support coupon.
-   * @param {Array<{code: string}>} coupons - Array of coupon objects
-   * @returns {boolean}
-   */
-  function _hasWarSupportCoupon(coupons) {
-    const { warSupportCoupons } = _getCrmConfig();
-    return coupons.some(c =>
-      warSupportCoupons.some(w => c.code.toLowerCase().includes(w))
-    );
   }
 
   /**
@@ -953,17 +919,14 @@ const ContactService = (function () {
 
       // Re-analyze with corrected logic
       let giftCount = 0;
-      let warSupportCount = 0;
 
       for (const order of customerOrders) {
         if (_isGiftOrder(order)) giftCount++;
-        const coupons = _extractCoupons(order.couponItems);
-        if (_hasWarSupportCoupon(coupons)) warSupportCount++;
       }
 
       // Determine correct IsCore value (simplified rule, CRM_PLAN.md §275-281):
-      // contact is noncore.gift only when every order is a gift; war-support
-      // category is left alone per §279.
+      // contact is noncore.gift only when every order is a gift. War-support
+      // detection retired 2026-05-28 per §269.
       const allGifts = giftCount === customerOrders.length && giftCount > 0;
       const shouldBeCore = !allGifts;
 
@@ -982,8 +945,7 @@ const ContactService = (function () {
           newIsCore: shouldBeCore,
           newType: contact.sc_CustomerType,
           orders: customerOrders.length,
-          gifts: giftCount,
-          warSupport: warSupportCount
+          gifts: giftCount
         });
 
         LoggerService.info(SERVICE_NAME, fnName,
@@ -1017,8 +979,6 @@ const ContactService = (function () {
     formatPhoneForWhatsApp: formatPhoneForWhatsApp,
     correctContactData: correctContactData,
     // Expose for import services
-    _extractCoupons: _extractCoupons,
-    _hasWarSupportCoupon: _hasWarSupportCoupon,
     _isGiftOrder: _isGiftOrder,
     _classifyCustomerType: _classifyCustomerType,
     _calculateLifecycleStatus: _calculateLifecycleStatus

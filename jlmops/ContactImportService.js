@@ -229,8 +229,7 @@ const ContactImportService = (function () {
           sc_AvgBottlesPerOrder: 0,
           _orders: [],
           _items: [],
-          _giftOrders: 0,
-          _warSupportOrders: 0
+          _giftOrders: 0
         });
       }
 
@@ -262,12 +261,6 @@ const ContactImportService = (function () {
       contact._items = contact._items.concat(items);
 
       if (isGift) contact._giftOrders++;
-
-      // Check for war-support coupon in coupon items (not customer note)
-      const coupons = ContactService._extractCoupons(couponItems);
-      if (ContactService._hasWarSupportCoupon(coupons)) {
-        contact._warSupportOrders++;
-      }
     });
 
     // Calculate final metrics
@@ -289,14 +282,11 @@ const ContactImportService = (function () {
           ? Math.round(totalBottles / contact.sc_OrderCount * 10) / 10
           : 0;
 
-        // Determine if core customer
-        // Non-core if: all orders are gifts OR all orders used war-support coupons
+        // Determine if core customer — non-core only when every order is a gift
+        // (war-support detection retired 2026-05-28 per CRM_PLAN.md §269).
         if (contact._giftOrders === contact.sc_OrderCount) {
           contact.sc_IsCore = false;
           contact.sc_CustomerType = 'noncore.gift';
-        } else if (contact._warSupportOrders === contact.sc_OrderCount) {
-          contact.sc_IsCore = false;
-          contact.sc_CustomerType = 'noncore.support';
         }
 
         // Days since order
@@ -322,7 +312,6 @@ const ContactImportService = (function () {
         delete contact._orders;
         delete contact._items;
         delete contact._giftOrders;
-        delete contact._warSupportOrders;
 
         contactsToSave.push(contact);
       } catch (e) {
@@ -746,8 +735,7 @@ const ContactImportService = (function () {
           firstCompletedDate: null,
           lastOrderDate: orderDateObj,
           orders: [],
-          giftOrders: 0,
-          warSupportOrders: 0
+          giftOrders: 0
         });
       }
 
@@ -774,11 +762,6 @@ const ContactImportService = (function () {
 
       update.orders.push({ total: orderTotal, bottles: bottleCount, isGift: isGift });
       if (isGift) update.giftOrders++;
-
-      const coupons = ContactService._extractCoupons(couponItems);
-      if (ContactService._hasWarSupportCoupon(coupons)) {
-        update.warSupportOrders++;
-      }
     });
 
     LoggerService.info(SERVICE_NAME, fnName, `Found ${contactUpdates.size} unique emails in orders`);
@@ -880,9 +863,6 @@ const ContactImportService = (function () {
         if (update.giftOrders === orderCount) {
           newContact.sc_IsCore = false;
           newContact.sc_CustomerType = 'noncore.gift';
-        } else if (update.warSupportOrders === orderCount) {
-          newContact.sc_IsCore = false;
-          newContact.sc_CustomerType = 'noncore.support';
         } else {
           newContact.sc_CustomerType = ContactService._classifyCustomerType(newContact);
         }
