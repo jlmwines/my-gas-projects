@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 11:18',
-  commit: '@148 Session B — Fix Orphan SKU action. New ProductService.fixOrphanSku rewrites an orphaned web-side SKU across WebProdM + WebProdS_EN + WebDetM + WebDetS + WebXltM + SysProductAudit + open SysTasks st_LinkedEntityId. CmxProdM intentionally untouched (Comax already moved on; web side is the catch-up). New AdminProductsView card 3 button "Fix Orphan SKU" + minimal 2-input modal. Use when validation task flags an orphan after Comax updated before the manager could run Product Replacement. Distinct from vendorSkuUpdate (coordinated rewrite) and webProductReassign (swap to different Comax product).'
+  built: '2026-05-28 11:30',
+  commit: '@149 Session C — Admin Projects bulk task delete race fix. Diagnosis: frontend cancelSelectedTasks fired N parallel google.script.run.WebAppTasks_deleteTask calls; backend deleted by row index per call; parallel readers computed stale indices against each other deletes → "Task not found" false positives + wrong-row deletes + display lag. Fix: new WebAppTasks_deleteTasks(taskIds) (plural) endpoint reads sheet once, builds taskId-to-row map, sorts targets descending, deletes atomically in one server execution; returns {deleted, failed: [{taskId, reason}]} for per-task reporting. Frontend cancelSelectedTasks rewritten to single call with detailed failure list in the alert.'
 };
 
 function getVersion() {

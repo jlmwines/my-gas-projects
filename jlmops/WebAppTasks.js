@@ -458,6 +458,83 @@ function WebAppTasks_getStats() {
 }
 
 /**
+ * Bulk-deletes tasks by removing their rows from the sheet in one server call.
+ * Replaces the prior pattern of firing N parallel WebAppTasks_deleteTask calls,
+ * which suffered a row-index race: parallel readers computed stale indices
+ * against each other's deletes, causing "Task not found" false positives and
+ * wrong-row deletes (CONTENT_LIBRARY_PLAN unrelated — see .claude/bugs.md
+ * 2026-05-15 Admin Projects task delete entry).
+ *
+ * Algorithm: read sheet once → build taskId-to-rowIndex map → sort target
+ * rows descending → delete in that order so earlier deletes don't shift
+ * later targets. Atomic per call.
+ *
+ * @param {Array<string>} taskIds Array of task IDs to delete.
+ * @returns {Object} { deleted: [taskId, ...], failed: [{taskId, reason}, ...] }
+ */
+function WebAppTasks_deleteTasks(taskIds) {
+  try {
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return { deleted: [], failed: [] };
+    }
+
+    // Dedupe + normalize to strings.
+    const wanted = Array.from(new Set(taskIds.map(t => String(t).trim()).filter(Boolean)));
+
+    const dataSpreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+    const taskSchema = ConfigService.getConfig('schema.data.SysTasks');
+    const sheet = dataSpreadsheet.getSheetByName('SysTasks');
+
+    if (!sheet) {
+      return { deleted: [], failed: wanted.map(t => ({ taskId: t, reason: 'SysTasks sheet not found' })) };
+    }
+
+    const headers = taskSchema.headers.split(',');
+    const taskIdCol = headers.indexOf('st_TaskId');
+    if (taskIdCol < 0) {
+      return { deleted: [], failed: wanted.map(t => ({ taskId: t, reason: 'st_TaskId column missing' })) };
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const rowByTask = {};  // taskId → 1-indexed sheet row
+    for (let i = 1; i < data.length; i++) {
+      const rowTaskId = String(data[i][taskIdCol] || '').trim();
+      if (rowTaskId) rowByTask[rowTaskId] = i + 1;
+    }
+
+    const deleted = [];
+    const failed = [];
+    const toDelete = [];  // { taskId, row }
+
+    wanted.forEach(taskId => {
+      const row = rowByTask[taskId];
+      if (row) {
+        toDelete.push({ taskId: taskId, row: row });
+      } else {
+        failed.push({ taskId: taskId, reason: 'Task not found' });
+      }
+    });
+
+    // Delete in descending row order so earlier deletes don't shift later targets.
+    toDelete.sort((a, b) => b.row - a.row);
+    toDelete.forEach(item => {
+      try {
+        sheet.deleteRow(item.row);
+        deleted.push(item.taskId);
+      } catch (e) {
+        failed.push({ taskId: item.taskId, reason: e.message });
+      }
+    });
+
+    WebAppTasks.invalidateCache();
+    return { deleted: deleted, failed: failed };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'deleteTasks', e.message, e);
+    return { deleted: [], failed: (taskIds || []).map(t => ({ taskId: String(t), reason: e.message })) };
+  }
+}
+
+/**
  * Deletes a task by removing its row from the sheet.
  * @param {string} taskId The task ID to delete.
  * @returns {Object} { error: string|null, success: boolean }

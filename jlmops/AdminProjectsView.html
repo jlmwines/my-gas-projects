@@ -2252,25 +2252,12 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
 
-    var completed = 0;
-    var failed = 0;
-
-    taskIds.forEach(function(taskId) {
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.error) failed++;
-          else completed++;
-          checkBulkDeleteComplete();
-        })
-        .withFailureHandler(function() {
-          failed++;
-          checkBulkDeleteComplete();
-        })
-        .WebAppTasks_deleteTask(taskId);
-    });
-
-    function checkBulkDeleteComplete() {
-      if (completed + failed === taskIds.length) {
+    // Single bulk call — backend reads sheet once + deletes in descending
+    // row order so earlier deletes don't shift later targets. Replaces the
+    // prior pattern of N parallel WebAppTasks_deleteTask calls that suffered
+    // a row-index race (see .claude/bugs.md 2026-05-15 entry).
+    google.script.run
+      .withSuccessHandler(function(result) {
         btn.disabled = false;
         btn.textContent = 'Delete Selected';
         state.selectedTaskIds = [];
@@ -2278,11 +2265,20 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         updateBulkActionBar();
         render();
         loadData();
-        if (failed > 0) {
-          alert('Deleted ' + completed + ' task(s). ' + failed + ' failed.');
+
+        var deletedCount = (result.deleted || []).length;
+        var failures = result.failed || [];
+        if (failures.length > 0) {
+          var detail = failures.map(function(f) { return '  ' + f.taskId + ': ' + f.reason; }).join('\n');
+          alert('Deleted ' + deletedCount + ' task(s). ' + failures.length + ' failed:\n' + detail);
         }
-      }
-    }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Delete Selected';
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppTasks_deleteTasks(taskIds);
   }
 
   function showTaskActionSpinner(buttonId) {
