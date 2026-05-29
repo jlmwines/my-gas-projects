@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <div class="container-fluid">
     <h1 class="mt-4">Inventory</h1>
 
@@ -70,6 +71,25 @@
         @media (max-width: 768px) {
             .brurya-qty-input { width: 100%; }
         }
+
+        /* T4.3 Stage B — Product Counts on mobile: collapse to a compact list
+           (Product Name + SKU + status checkbox); tapping a row opens the
+           count-entry modal. Hide the read-only/input/toggle columns + detail row. */
+        @media (max-width: 768px) {
+            .products-count-table th:nth-child(1),  .products-count-table td:nth-child(1),   /* Comax */
+            .products-count-table th:nth-child(2),  .products-count-table td:nth-child(2),   /* Total */
+            .products-count-table th:nth-child(3),  .products-count-table td:nth-child(3),   /* Brurya */
+            .products-count-table th:nth-child(4),  .products-count-table td:nth-child(4),   /* Storage */
+            .products-count-table th:nth-child(5),  .products-count-table td:nth-child(5),   /* Office */
+            .products-count-table th:nth-child(6),  .products-count-table td:nth-child(6),   /* Shop */
+            .products-count-table th:nth-child(7),  .products-count-table td:nth-child(7),   /* Vintage */
+            .products-count-table th:nth-child(8),  .products-count-table td:nth-child(8),   /* Link */
+            .products-count-table th:nth-child(11), .products-count-table td:nth-child(11) { /* details toggle */
+                display: none;
+            }
+            .products-count-table tbody tr[data-task-id] { cursor: pointer; }
+            .products-count-table .product-details-row { display: none !important; }
+        }
     </style>
 
 
@@ -115,6 +135,49 @@
     </div>
 </div>
 
+<!-- T4.3 Stage B — mobile count-entry modal (tap a Product Counts row to open) -->
+<div class="modal-overlay" id="count-entry-modal" style="display:none;">
+  <div class="modal-container" style="max-width: 480px;">
+    <div class="modal-header">
+      <h5 id="count-entry-product-name" class="mb-0">—</h5>
+      <button type="button" class="close" id="btn-close-count-entry" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-body">
+      <div class="text-muted small mb-2"><span id="count-entry-sku">—</span></div>
+      <div class="row text-center mb-3">
+        <div class="col-4"><div class="small text-muted">Comax</div><div class="h5" id="count-entry-comax">—</div></div>
+        <div class="col-4"><div class="small text-muted">Total</div><div class="h5" id="count-entry-total">—</div></div>
+        <div class="col-4"><div class="small text-muted">Brurya</div><div class="h5" id="count-entry-brurya">—</div></div>
+      </div>
+      <div class="form-group">
+        <label for="count-entry-storage">Storage</label>
+        <input type="number" class="form-control" id="count-entry-storage" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label for="count-entry-office">Office</label>
+        <input type="number" class="form-control" id="count-entry-office" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label for="count-entry-shop">Shop</label>
+        <input type="number" class="form-control" id="count-entry-shop" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label for="count-entry-vintage">Vintage (actual, if differs)</label>
+        <input type="text" class="form-control" id="count-entry-vintage">
+      </div>
+      <div class="form-group">
+        <label for="count-entry-comment">Comment</label>
+        <input type="text" class="form-control" id="count-entry-comment" placeholder="Note for admin">
+      </div>
+    </div>
+    <div class="modal-footer bg-light">
+      <button type="button" class="btn" id="btn-count-entry-cancel">Cancel</button>
+      <button type="button" class="btn" id="btn-count-entry-save">Save</button>
+      <button type="button" class="btn" id="btn-count-entry-save-next">Save &amp; next</button>
+    </div>
+  </div>
+</div>
+
     <script>
         (function() {
             const addProductInput = document.getElementById('brurya-add-product-input');
@@ -149,7 +212,7 @@
                 const escapeAttr = (s) => String(s || '').replace(/"/g, '&quot;');
 
                 let tableHtml = `
-                    <table class="table table-hover table-sm">
+                    <table class="table table-hover table-sm products-count-table">
                         <thead>
                             <tr>
                                 <th class="text-center">Comax</th>
@@ -279,7 +342,64 @@
                     checkbox.addEventListener('change', updateSubmitButtonState);
                 });
 
+                // T4.3: on mobile, tapping a product row opens the focused count-entry modal
+                // (the inline input columns are hidden on mobile). Desktop keeps inline editing.
+                productCountsListDiv.querySelectorAll('tr[data-task-id]').forEach(row => {
+                    row.addEventListener('click', (e) => {
+                        if (window.innerWidth > 768) return;
+                        if (e.target.closest('input, button, a')) return; // don't hijack control taps
+                        openCountEntryModal(row);
+                    });
+                });
+
                 updateSubmitButtonState(); // Initial state check
+            }
+
+            // --- T4.3 mobile count-entry modal ---
+            function openCountEntryModal(row) {
+                const sku = row.dataset.sku;
+                const vintageEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
+                const commentEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
+                document.getElementById('count-entry-product-name').textContent = row.dataset.productName || row.cells[9].textContent.trim();
+                document.getElementById('count-entry-sku').textContent = sku;
+                document.getElementById('count-entry-comax').textContent = row.dataset.comaxQty || '—';
+                document.getElementById('count-entry-total').textContent = row.cells[1].textContent.trim();   // Total column
+                document.getElementById('count-entry-brurya').textContent = row.cells[2].textContent.trim();  // Brurya column
+                document.getElementById('count-entry-storage').value = row.querySelector('[data-qty-type="storage"]').value;
+                document.getElementById('count-entry-office').value = row.querySelector('[data-qty-type="office"]').value;
+                document.getElementById('count-entry-shop').value = row.querySelector('[data-qty-type="shop"]').value;
+                document.getElementById('count-entry-vintage').value = vintageEl ? vintageEl.value : '';
+                document.getElementById('count-entry-comment').value = commentEl ? commentEl.value : '';
+                document.getElementById('count-entry-modal').dataset.activeSku = sku;
+                ModalOverlay.open('count-entry-modal');          // CCP-UI-8: focus mgmt + Esc + scroll-lock
+                document.getElementById('count-entry-storage').focus();
+            }
+
+            function saveCountEntry(advanceToNext) {
+                const modal = document.getElementById('count-entry-modal');
+                const sku = modal.dataset.activeSku;
+                const row = productCountsListDiv.querySelector(`tr[data-task-id][data-sku="${sku}"]`);
+                if (row) {
+                    const storageEl = row.querySelector('[data-qty-type="storage"]');
+                    storageEl.value = document.getElementById('count-entry-storage').value;
+                    row.querySelector('[data-qty-type="office"]').value = document.getElementById('count-entry-office').value;
+                    row.querySelector('[data-qty-type="shop"]').value = document.getElementById('count-entry-shop').value;
+                    const vintageEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
+                    if (vintageEl) vintageEl.value = document.getElementById('count-entry-vintage').value;
+                    const commentEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
+                    if (commentEl) commentEl.value = document.getElementById('count-entry-comment').value;
+                    // Fire the existing listeners: storage 'input' recomputes Total + checkbox (from qty
+                    // fields); vintage 'input' recomputes the checkbox including vintage/comment.
+                    storageEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (vintageEl) vintageEl.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (advanceToNext) {
+                    const allRows = Array.from(productCountsListDiv.querySelectorAll('tr[data-task-id]'));
+                    const idx = allRows.findIndex(r => r.dataset.sku === sku);
+                    const nextRow = allRows.slice(idx + 1).find(r => !r.querySelector('.product-count-checkbox').checked);
+                    if (nextRow) { openCountEntryModal(nextRow); return; }
+                }
+                ModalOverlay.close('count-entry-modal');
             }
 
             function updateSubmitButtonState() {
@@ -373,6 +493,12 @@
                 
                 // Import Counts Event Listener
                 document.getElementById('import-counts-btn').addEventListener('click', handleImportCounts);
+
+                // T4.3 count-entry modal buttons
+                document.getElementById('btn-close-count-entry').addEventListener('click', () => ModalOverlay.close('count-entry-modal'));
+                document.getElementById('btn-count-entry-cancel').addEventListener('click', () => ModalOverlay.close('count-entry-modal'));
+                document.getElementById('btn-count-entry-save').addEventListener('click', () => saveCountEntry(false));
+                document.getElementById('btn-count-entry-save-next').addEventListener('click', () => saveCountEntry(true));
             }
 
             function handleImportCounts() {

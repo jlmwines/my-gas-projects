@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 13:19',
-  commit: '@169 fix(LookupService): Brurya product autocomplete crashed with "Argument too large: value" — _getCmxProdMSearchIndex JSON-stringified a full-catalog projection (4 fields/row incl. duplicate lowercase copies) and cache.put exceeded the CacheService 100KB per-value limit, rethrowing to the client. Dropped the duplicate skuLc/nameLc (lowercase at search time) to halve the payload + wrapped cache.put in try/catch so an oversized catalog degrades to uncached (re-reads per call) instead of failing. Latent T1.0 bug surfaced during T4.3 Stage A smoke. Stage A (@168) unaffected. Follows @168.'
+  built: '2026-05-29 13:32',
+  commit: '@170 UI T4.3 Stage B — ManagerInventoryView Product Counts mobile workflow. On mobile (<=768px) the 12-col count table collapses to a compact list (Product Name + SKU + status checkbox); tapping a row opens a focused count-entry modal (Comax/Total/Brurya read-only context + Storage/Office/Shop/Vintage/Comment inputs + Save / Save & next). Modal uses the shared ModalOverlay helper (added TaskWidgets include to this view for it). Save writes back into the hidden row inputs and dispatches input on storage (Total + checkbox recompute) and vintage (checkbox incl. vintage/comment) so existing logic is preserved; Save & next jumps to the next un-counted row. Desktop table/inline-edit unchanged. Follows @169.'
 };
 
 function getVersion() {
