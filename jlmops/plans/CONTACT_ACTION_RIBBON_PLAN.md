@@ -51,12 +51,12 @@ The caller hands the modal a **contact pack** describing what to offer:
 3. **Make-contact visual treatment:** button vs filled-color icon; confirm "first in the row."
 4. **Scope of unification:** do both ManagerContactView and AdminContactsView adopt the one ribbon/modal, or does the manager view stay as-is and only the admin view gain it? (The cleaner end-state is one shared component used by both.)
 
-## Nav context (FINAL — live as of @184)
+## Nav context (FINAL — live as of @185 deploy @189)
 
-- Admin nav: **single "Contacts" link** → `AdminContacts` (the CRM/contacts view). The short-lived second entry ("Contact Lookup" → ManagerContacts) was **removed** per user — admin gets one contacts link, named consistently with the manager nav.
-- Manager nav: **"Contacts"** → `ManagerContacts` (unchanged).
-- `ManagerContactView` is no longer in the admin nav but stays reachable for admins via **dashboard task deep-links** (`loadView('ManagerContacts')` + `sessionStorage.selectContactEmail`) — outreach tasks still open the outreach tool directly. That's fine/desired.
-- Admin keeps the same activity-recording access as the manager **inside AdminContactsView** (its action ribbon), per user — no harm, and otherwise the CRM screen has little to act on.
+- **Both** admin and manager "Contacts" → `ManagerContacts` (`ManagerContactView`, the modern single-contact view). Identical label + target across roles.
+- **`AdminContactsView` is the OLD CRM list/console — out of the nav now**, per user ("the old CRM interface, not the correct endpoint"). It still exists in viewMap (reachable directly / via task deep-links) but is **superseded** by the single-contact view + this ribbon plan. Treat it as legacy; likely retire later.
+- Implication: **this plan targets `ManagerContactView`** as THE contacts surface. The ribbon (record icons + "Make contact") replaces its single "+ New contact attempt" button there. The admin no longer has a separate CRM console in nav — so any genuinely admin-only CRM management (bulk segments, Mailchimp refresh, stats) needs a future home if still wanted (open question — it lived only in the now-delisted AdminContactsView).
+- Note: UI T5.1 cleaned AdminContactsView's modals just before it was delisted — sunk effort, harmless (view not deleted).
 
 ## Relationship to other work
 

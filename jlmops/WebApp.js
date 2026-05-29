@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 16:14',
-  commit: '@184 nav: admin contacts is now a SINGLE "Contacts" link → AdminContacts (removed the short-lived "Contact Lookup" → ManagerContacts entry), named consistently with the manager nav per user. ManagerContactView still reachable for admins via dashboard task deep-links. (Builds on @183 nav routing fix + UI T5.1 modal conversion.) Follows @183.'
+  built: '2026-05-29 16:20',
+  commit: '@185 nav: admin "Contacts" now → ManagerContacts (the modern single-contact view), NOT AdminContacts (the OLD CRM list/console) — per user, the old console was the wrong endpoint. Admin + manager nav now identical (same label + target). AdminContactsView stays in viewMap (reachable via task deep-links / direct) but is out of the admin nav — being superseded by the single-contact view + the planned Contact Action Ribbon. Follows @184.'
 };
 
 function getVersion() {
