@@ -48,6 +48,31 @@ function WebAppBundles_getAllBundles() {
   }
 }
 
+/**
+ * Consolidates the 4 view-mount fetches that AdminBundlesView.init() previously
+ * fired as 4 separate google.script.run calls into one round-trip. Each of the 4
+ * getters returns an {error, data} envelope; this unwraps .data (falling back to
+ * empty array/object). Frontend dispatches the result via applyInitData(). [T3.3]
+ * @param {string} [sessionId] Optional, for traceability.
+ * @returns {{success: boolean, data?: object, error?: string}}
+ */
+function WebAppBundles_getViewData(sessionId) {
+  try {
+    return {
+      success: true,
+      data: {
+        categories:   WebAppBundles_getCategories().data || [],
+        stats:        WebAppBundles_getStats().data || {},
+        bundles:      WebAppBundles_getAllBundles().data || [],
+        healthAlerts: WebAppBundles_getBundlesWithLowInventory().data || []
+      }
+    };
+  } catch (e) {
+    LoggerService.error('WebAppBundles', 'getViewData', e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
 // =================================================================================
 // BUNDLE EDITOR
 // =================================================================================
