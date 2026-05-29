@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <style>
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 80px; overflow-y: auto; }
 .modal-container { background: white; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
@@ -1107,7 +1108,7 @@
         var d = result.data || {};
         var r = d.reimport || {};
         var msg = 'Update Composition complete. Re-derived from WebProdM: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
-        showResults('Update Composition', '<p>' + escapeHtml(msg) + '</p>');
+        showResults('Update Composition', '<p>' + TaskWidgets.escape(msg) + '</p>');
         loadStats();
         loadBundleList();
         // Inventory health panel intentionally NOT refreshed here — Composition
@@ -1130,7 +1131,7 @@
         if (result.error) { alert('Error: ' + result.error); return; }
         var d = result.data || {};
         var msg = 'Bundle stock review complete. Critical: ' + (d.criticalTasksCreated || 0) + ', Low inventory: ' + (d.lowInventoryTasksCreated || 0) + '.';
-        showResults('Review Stock', '<p>' + escapeHtml(msg) + '</p><p class="small text-muted">Tasks created for any issues. Reload the alerts panel to see them.</p>');
+        showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p><p class="small text-muted">Tasks created for any issues. Reload the alerts panel to see them.</p>');
         loadHealthAlerts();
       })
       .withFailureHandler(function(err) {
@@ -1158,9 +1159,9 @@
         var rows = bundles.map(function(b) {
           var issues = b.issues.map(function(iss) {
             var sec = (iss.section != null) ? ' [section ' + iss.section + ']' : '';
-            return '<li><code>' + escapeHtml(iss.code) + '</code>' + sec + ' — ' + escapeHtml(iss.detail) + '</li>';
+            return '<li><code>' + TaskWidgets.escape(iss.code) + '</code>' + sec + ' — ' + TaskWidgets.escape(iss.detail) + '</li>';
           }).join('');
-          return '<tr><td>' + escapeHtml(b.bundleName || b.bundleId) + '</td><td>' + b.issueCount + '</td><td><ul class="mb-0 pl-3">' + issues + '</ul></td></tr>';
+          return '<tr><td>' + TaskWidgets.escape(b.bundleName || b.bundleId) + '</td><td>' + b.issueCount + '</td><td><ul class="mb-0 pl-3">' + issues + '</ul></td></tr>';
         }).join('');
         var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>#</th><th>Issues</th></tr></thead><tbody>' + rows + '</tbody></table>';
         showResults('Validate EN/HE Parity', summary + table);
@@ -1172,15 +1173,6 @@
       .WebAppBundles_validateParity();
   }
 
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   // Initialize on load
   if (document.readyState === 'loading') {
