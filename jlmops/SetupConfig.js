@@ -1547,7 +1547,7 @@ function getMasterConfiguration() {
         "Topic-to-project routing for auto-assignment",
         "stable",
         "Content",
-        "PROJ-SYS_CRM",
+        "PROJ-6878357E",
         "",
         "",
         "",
