@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (continued — UI T2.5/T2.6/T4.2 + display tweaks + config routing fixes; deploys @159→@162)
+
+- **UI T2.5 SHIPPED @155 deploy @159** — extended TaskWidgets kit (formatDateShort/formatDateFull) + migrated ManagerDashboardView_v2 (scriptlet include, 21 call-sites, isOverdue inlined preserving exact semantics, `.task-filters`→`.tw-filter-bar`).
+- **UI T2.6 SHIPPED @156 deploy @160** — TaskWidgets adoption to 6 more views (AdminBundles/AdminInventory/ManagerContact/AdminContacts/AdminCampaigns/AdminProjects); kit now consumed by 7 views. `formatLastCount` + `isDateString` kept local; removed dead locale `formatDate` in AdminProjects.
+- **Display tweaks + T4.2 SHIPPED @157 deploy @161** — dd/mm date order kit-wide (`en-GB`; `formatDate` ISO untouched — used for `<input type=date>`); AppView mobile `.content` padding 12px→12px 6px; T4.2 ManagerDashboard expanded-row inner-flex stacks on mobile + `.task-status` full-width (inline width → CSS class).
+- **ManagerDashboard mobile list declutter SHIPPED @158 deploy @162** — hid Entity/Created/Link task-list columns on mobile (kept Topic/Title/Status/Priority/Due); hidden fields remain in expanded detail. Needed `.task-row .task-col-x` specificity to beat the existing `[class^=task-col-]` rule.
+- **Config fixes (config pipeline, no clasp deploy)** — `task.routing.topic_to_project` Content→`PROJ-6878357E` (was `PROJ-SYS_CRM`; content-chain tasks were auto-filing into the CRM project); `task.data.coupons_update` flow_pattern `manager_direct`→`admin_direct`. Pushed; user runs `rebuildSysConfigFromSource` + repoints the 4 existing content tasks + open coupons task manually. Campaign→PROJ-SYS_CRM left as-is.
+- **Open:** full date (dd/mm/yyyy) slightly clips the year in the expanded detail though the control has space — likely padding; logged in `.claude/bugs.md`, not yet diagnosed. Reconciliation off-by-1 bug (from morning) still deferred.
+- **Next UI:** Tier 3 speed (T3.1 AdminProducts refreshView 12→1; T3.2 ManagerContact load-once). T5.3 shared-list-component decision point now reachable (7 kit consumers). T2.1 bundles deprioritized (desktop-only).
+
+---
+
 ## 2026-05-29 (UI audit execution: T1.0 + T2.2 + T2.3 — 2 deploys)
 
 - **T1.0 quick wins SHIPPED — @153 deploy @157.** 6 fixes, one commit each: retired SystemHealthView stub + 7 orphan widgets (+3 dead refreshSystemHealthWidget blocks in AdminInventory); ManagerOrders gift-doc btn-primary→btn-light; dropped dead SysJobQueue read in WebAppDashboardV2._getSystemHealthData_v2; AdminSyncView runtime getHtmlOutput loader → scriptlet include; Brurya autocomplete → CacheService (sku,nameHe) projection + SheetAccessor. Kept backend *WidgetData fns (one in live use by ManagerProductsView). Caught a push-time syntax error — my version-stamp Edit left the old @152 commit-string tail dangling after the new closing quote; lesson: match the FULL commit string when re-stamping VERSION.

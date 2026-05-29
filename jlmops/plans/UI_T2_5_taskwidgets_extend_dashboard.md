@@ -1,7 +1,7 @@
 # UI Tier 2.5 — Extend TaskWidgets kit + Migrate ManagerDashboardView_v2
 
 **Session ID:** UI_T2_5
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading: formatDate format divergence resolved (kit gets `formatDateShort` + `formatDateFull`; existing `formatDate` ISO stays for LibraryView), escapeHtml is safe to migrate (kit's escape is strict superset), isOverdue is inline-replaceable via existing `dueClass`, status/priority/due-chip atoms are NOT used by this view (no migration needed for them — defer to Tier 2.6 for views that hand-roll them).
+**Status:** SHIPPED 2026-05-29 @155 deploy @159 (all 3 stages). Plan v1 (2026-05-28). All gaps resolved via code reading: formatDate format divergence resolved (kit gets `formatDateShort` + `formatDateFull`; existing `formatDate` ISO stays for LibraryView), escapeHtml is safe to migrate (kit's escape is strict superset), isOverdue is inline-replaceable via existing `dueClass`, status/priority/due-chip atoms are NOT used by this view (no migration needed for them — defer to Tier 2.6 for views that hand-roll them).
 **Parent:** `UI_AUDIT.md` §5 Tier 2.5
 **Estimated effort:** 1 session, 3 staged deploys.
 **Depends on:** Nothing structural. Independent.

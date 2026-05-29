@@ -1,7 +1,7 @@
 # UI Tier 4.2 — ManagerDashboardView_v2 expanded-row mobile fix
 
 **Session ID:** UI_T4_2
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** SHIPPED 2026-05-29 @157 deploy @161. Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **Two-layer flex confirmed:** `:450` outer `.detail-row.justify-content-between` already gets mobile column-flex via `:92` override (T2.5's polish). Inner `.d-flex` at `:451` lacks any mobile rule — stays single-row even at 360px, overflowing.
 - **Inline width on status select:** `:462` has `style="width:100px;"` inline; only used at this single render site (`:462`) and queried for save at `:552`. Safe to move width from inline to CSS.
 - **`task-status` class:** appears at exactly 2 sites in the file (render + save query). No external consumer; CSS change has scope-local impact only.

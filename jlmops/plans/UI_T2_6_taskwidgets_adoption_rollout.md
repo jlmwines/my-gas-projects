@@ -1,7 +1,7 @@
 # UI Tier 2.6 — TaskWidgets adoption rollout (6 consumers)
 
 **Session ID:** UI_T2_6
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** SHIPPED 2026-05-29 @156 deploy @160 (all 6 stages). Plan v1 (2026-05-28). All gaps resolved via code reading:
 - 6 consumer files inventoried with exact call-site counts and helper signatures.
 - All local `escape` variants are forward-compatible with `TaskWidgets.escape` (kit is strict superset — single-quote escapes idempotent when not present).
 - All local date helpers map to kit equivalents from T2.5: `formatDate` (ISO) / `formatDateShort` (M/D) / `formatDateFull` (locale).
