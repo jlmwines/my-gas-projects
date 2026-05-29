@@ -111,8 +111,31 @@
     .lv-task-row { flex-direction: column; align-items: stretch; }
     .lv-task-row [class^="col-"] { flex: none; }
     .lv-task-row .col-name { white-space: normal; }
-    .lv-task-row .col-assignee::before { content: 'Assigned: '; color: #6c757d; }
-    .lv-task-row .col-due::before { content: 'Due: '; color: #6c757d; }
+    /* Label the stacked fields uniformly (status was previously unlabeled) */
+    .lv-task-row .col-status::before { content: 'Status: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
+    .lv-task-row .col-assignee::before { content: 'Assigned: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
+    .lv-task-row .col-due::before { content: 'Due: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
+    /* col-name and col-chips read fine on their own — no label. */
+
+    /* Drawer header: single column on phone so the 8-10 label/value pairs get full width */
+    .lv-drawer-header { grid-template-columns: 1fr; gap: 8px; }
+
+    /* Unify Tasks + Library cards on mobile: compact, flat, with one clear divider.
+       (Tasks rows had a near-invisible #f1f3f5 border; the Library list used the
+       shared responsive-stack boxed style — outline + radius + 12px margins — so
+       the two tabs looked different and wasted space.) Scoped to LibraryView so
+       Orders/Products responsive-stack cards are unaffected. */
+    .lv-task-row { padding: 8px 4px; border-bottom: 1px solid #ced4da; }
+    .lv-task-row [class^="col-"] { padding: 1px 0; }
+    .lv-library-table.responsive-stack tr {
+      border: none;
+      border-bottom: 1px solid #ced4da;
+      border-radius: 0;
+      margin-bottom: 0;
+      padding: 8px 4px;
+      background: transparent;
+    }
+    .lv-library-table.responsive-stack td { padding: 1px 0; }
   }
 
   /* Entity detail drawer (phase 9a) — centered modal-overlay
@@ -856,18 +879,18 @@
       }
 
       // Columns: generic + sparse per-type extension
-      var html = '<table class="lv-library-table"><thead><tr>';
+      var html = '<table class="lv-library-table responsive-stack"><thead><tr>';
       html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Ver</th><th>Last touched</th><th>Refs</th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         html += '<tr>';
-        html += '<td><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
-        html += '<td>' + TaskWidgets.escape(e.contentType || '—') + '</td>';
-        html += '<td>' + TaskWidgets.escape(e.language || '—') + '</td>';
-        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-        html += '<td>' + TaskWidgets.escape(e.version || '—') + '</td>';
-        html += '<td>' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
-        html += '<td>' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
+        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
+        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Ver">' + TaskWidgets.escape(e.version || '—') + '</td>';
+        html += '<td data-label="Last touched">' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
+        html += '<td data-label="Refs">' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';

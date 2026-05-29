@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 14:30',
-  commit: '@179 UI T4.4 fixes (mobile smoke). (1) Shared responsive-stack: cells without a data-label no longer render a bare ": " — `td:not([data-label])::before{content:none}` in AppView (also fixes OrdersView action/gift cells). (2) ManagerProducts modal: edit areas were wider than the card — CSS-grid min-content trap; added `.comparison-grid>*{min-width:0}` + desc box-sizing/overflow-wrap. (3) Fill/Clear were crowding the tabs — tab-group now scrolls on its own row, tab-actions wraps to a row below. Follows @178.'
+  built: '2026-05-29 14:56',
+  commit: '@181 UI T4.5 (refine) — unify LibraryView mobile cards across Tasks + Library tabs: both now compact flat cards with one clear #ced4da divider (was: Tasks rows w/ near-invisible #f1f3f5 border vs Library boxed responsive-stack w/ outline+radius+12px margins — inconsistent + space-wasteful). Scoped to .lv-* so Orders/Products responsive-stack cards are untouched. Tightened internal padding. Follows @180 (T4.5 base).'
 };
 
 function getVersion() {
