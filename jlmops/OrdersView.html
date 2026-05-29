@@ -1,8 +1,8 @@
 <div class="container-fluid">
     <h1 class="mt-4">Orders</h1>
     
-    <!-- Section for Packing Slips -->
-    <div class="card mb-4">
+    <!-- Section for Packing Slips (manager-only; admin sees Open Orders only) -->
+    <div class="card mb-4" data-roles="manager">
         <div class="card-header">
             <i class="fas fa-file-alt mr-1"></i>
             Packing Slips
@@ -170,7 +170,13 @@
   }
 
   // Self-execute to load the data as soon as the view is loaded.
-  loadPackingSlipsData();
+  // Packing Slips is manager-only (data-roles="manager"). Role gating is CSS
+  // display:none (AppView.html:108), so the card stays in the DOM for admin —
+  // gate the fetch on the body role class, not element presence, to actually
+  // skip the round-trip for admin.
+  if (document.body.classList.contains('role-manager')) {
+    loadPackingSlipsData();
+  }
   loadOpenOrdersData();
 
 </script>
