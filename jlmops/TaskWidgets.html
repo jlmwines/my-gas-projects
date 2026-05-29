@@ -184,6 +184,20 @@
     return d.toISOString().slice(0, 10);
   };
 
+  TaskWidgets.formatDateShort = function(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return (d.getMonth() + 1) + '/' + d.getDate();
+  };
+
+  TaskWidgets.formatDateFull = function(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    return d.toLocaleDateString();
+  };
+
   TaskWidgets.escape = function(s) {
     if (s === null || s === undefined) return '';
     return String(s).replace(/[&<>"']/g, function(c) {
