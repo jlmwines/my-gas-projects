@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 12:32',
-  commit: '@165 deploy.ps1 now auto-stamps VERSION.built with real Israel-local time (timezone API, never hand-typed) and owns the clasp push step — the deploy timestamp can no longer be fabricated or drift. Also: removed phone from ManagerContactView search match per user (email + name only; recent-contacts-on-load + crash guards from @164 retained). Follows @164.'
+  built: '2026-05-29 12:43',
+  commit: '@166 UI T3.3 — AdminBundlesView init consolidation: single WebAppBundles_getViewData round-trip replaces the 4-call init fanout (categories/stats/bundles/healthAlerts). Each loader gained an optional preloaded-data arg (skips its fetch); init dispatches via applyInitData; bindEvents() moved ahead of the fetch. Extracted renderStats helper. Built against the actual pre-T2.1 loaders (T2.1 was deprioritized — no filter chips / allBundles state). Explicit-refresh callers (applyReplacements, etc.) preserved via no-arg guard. Backend getters all return {error,data}. Follows @165.'
 };
 
 function getVersion() {

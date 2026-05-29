@@ -185,14 +185,35 @@
   // =================================================================================
 
   function init() {
-    loadCategories();
-    loadStats();
-    loadBundleList();
-    loadHealthAlerts();
-    bindEvents();
+    bindEvents();  // wire handlers before data arrives; clicks on not-yet-rendered rows no-op
+    // Single consolidated round-trip (T3.3): replaces the 4-call init fanout.
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || !res.success) {
+          console.error('init failed:', res && res.error);
+          return;
+        }
+        applyInitData(res.data);
+      })
+      .withFailureHandler(function(err) {
+        console.error('init call failed:', err);
+      })
+      .WebAppBundles_getViewData();
   }
 
-  function loadCategories() {
+  // Dispatch the consolidated init payload to each loader; each skips its own fetch.
+  function applyInitData(data) {
+    loadCategories(data.categories);
+    loadStats(data.stats);
+    loadBundleList(data.bundles);
+    loadHealthAlerts(data.healthAlerts);
+  }
+
+  function loadCategories(preloadedData) {
+    if (preloadedData !== undefined) {
+      categoryOptions = preloadedData || [];
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(result) {
         if (!result.error && result.data) {
@@ -219,24 +240,32 @@
   // DASHBOARD
   // =================================================================================
 
-  function loadStats() {
+  function loadStats(preloadedData) {
+    if (preloadedData !== undefined) {
+      renderStats(preloadedData);
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
           console.error('Error loading stats:', result.error);
           return;
         }
-        var stats = result.data;
-        document.getElementById('stat-total').textContent = stats.total;
-        document.getElementById('stat-active').textContent = stats.active;
-        document.getElementById('stat-draft').textContent = stats.draft;
-        document.getElementById('stat-archived').textContent = stats.archived;
-        document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
+        renderStats(result.data);
       })
       .withFailureHandler(function(err) {
         console.error('Failed to load stats:', err);
       })
       .WebAppBundles_getStats();
+  }
+
+  function renderStats(stats) {
+    if (!stats || typeof stats.total === 'undefined') return;  // skip empty/error payloads
+    document.getElementById('stat-total').textContent = stats.total;
+    document.getElementById('stat-active').textContent = stats.active;
+    document.getElementById('stat-draft').textContent = stats.draft;
+    document.getElementById('stat-archived').textContent = stats.archived;
+    document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
   }
 
   function toggleDescSection(section) {
@@ -251,7 +280,11 @@
     }
   }
 
-  function loadBundleList() {
+  function loadBundleList(preloadedData) {
+    if (preloadedData !== undefined) {
+      renderBundleList(preloadedData);
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
@@ -313,7 +346,12 @@
   // HEALTH MONITOR
   // =================================================================================
 
-  function loadHealthAlerts() {
+  function loadHealthAlerts(preloadedData) {
+    if (preloadedData !== undefined) {
+      healthData = preloadedData;
+      renderHealthAlerts(preloadedData);
+      return;
+    }
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
