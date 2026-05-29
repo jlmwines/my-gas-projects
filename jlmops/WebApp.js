@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 13:40',
-  commit: '@172 UI T4.3 Stage C (refined) — Brurya Stock table uses a custom .brurya-table mobile card layout (per user) instead of generic responsive-stack: row 1 = Quantity input + SKU side by side, row 2 = product name, row number (#) hidden on mobile. data-label attrs are the CSS hooks. Quantity input width via .brurya-qty-input. Save logic untouched. Completes T4.3 (A headers + B count modal + C Brurya cards). Follows @170.'
+  built: '2026-05-29 13:53',
+  commit: '@174 UI T4.1 (refine) — packing-slip card checkbox on mobile: the global input{min-height:40px;font-size:16px} rule was stretching the bare checkbox into a tall distorted box once .responsive-stack made the cell a block; scoped CSS pins #packing-slips-list .order-checkbox to 22x22 natural size. Also relabelled the stacked checkbox cell "Select" -> "Print this order" (clearer than a bare "Select" on a packing card). Per mobile smoke. Follows @173 (T4.1 responsive-stack + Select all).'
 };
 
 function getVersion() {

@@ -1,6 +1,21 @@
 <div class="container-fluid">
     <h1 class="mt-4">Orders</h1>
-    
+
+    <style>
+        /* T4.1 — keep the packing-slip checkbox at a natural size on mobile. The
+           global input { min-height:40px; font-size:16px } rule (AppView) otherwise
+           stretches the bare checkbox into a tall box once .responsive-stack turns
+           the cell into a block. */
+        @media (max-width: 768px) {
+            #packing-slips-list .order-checkbox {
+                min-height: 0;
+                width: 22px;
+                height: 22px;
+                vertical-align: middle;
+            }
+        }
+    </style>
+
     <!-- Section for Packing Slips (manager-only; admin sees Open Orders only) -->
     <div class="card mb-4" data-roles="manager">
         <div class="card-header">
@@ -9,7 +24,10 @@
         </div>
         <div class="card-body">
             <p>Select order documents to print.</p>
-            <button class="btn mb-3" onclick="generateSelectedPackingSlips()">Print Selected</button>
+            <div class="d-flex mb-3" style="gap: 8px;">
+                <button class="btn" onclick="generateSelectedPackingSlips()">Print Selected</button>
+                <button class="btn" id="btn-select-all-packing" onclick="toggleAllPacking()">Select all</button>
+            </div>
             <div id="packing-slips-list"></div>
             <div id="print-result" class="mt-3"></div>
         </div>
@@ -41,19 +59,19 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-hover"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order #</th><th>Status</th><th>Billing Name</th><th>Shipping Name</th><th>Customer Note</th><th></th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-sm table-hover responsive-stack"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th><th>Order #</th><th>Status</th><th>Billing Name</th><th>Shipping Name</th><th>Customer Note</th><th></th></tr></thead><tbody>';
           orders.forEach(order => {
             let giftButton = '';
             if (order.customerNote) {
               giftButton = `<button class="btn btn-sm" onclick="createGiftMessage('${order.orderId}', '${order.customerNote}')">Create Gift Doc</button>`;
             }
             tableHtml += `<tr>
-                            <td><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td>
-                            <td>${order.orderNumber || order.orderId}</td>
-                            <td>${order.status}</td>
-                            <td>${order.billingName || ''}</td>
-                            <td>${order.shippingName || ''}</td>
-                            <td>${order.customerNote || ''}</td>
+                            <td data-label="Print this order"><input type="checkbox" class="order-checkbox" value="${order.orderId}"></td>
+                            <td data-label="Order #">${order.orderNumber || order.orderId}</td>
+                            <td data-label="Status">${order.status}</td>
+                            <td data-label="Billing">${order.billingName || ''}</td>
+                            <td data-label="Shipping">${order.shippingName || ''}</td>
+                            <td data-label="Note">${order.customerNote || ''}</td>
                             <td>${giftButton}</td>
                           </tr>`;
           });
@@ -81,15 +99,15 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-hover"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Billing Name</th><th>Shipping Name</th><th>Shipping City</th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-sm table-hover responsive-stack"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Billing Name</th><th>Shipping Name</th><th>Shipping City</th></tr></thead><tbody>';
           orders.forEach(order => {
             tableHtml += `<tr>
-                            <td>${order.orderId}</td>
-                            <td>${order.status}</td>
-                            <td>${order.orderDate}</td>
-                            <td>${order.billingName || ''}</td>
-                            <td>${order.shippingName || ''}</td>
-                            <td>${order.shippingCity}</td>
+                            <td data-label="Order ID">${order.orderId}</td>
+                            <td data-label="Status">${order.status}</td>
+                            <td data-label="Order Date">${order.orderDate}</td>
+                            <td data-label="Billing">${order.billingName || ''}</td>
+                            <td data-label="Shipping">${order.shippingName || ''}</td>
+                            <td data-label="City">${order.shippingCity}</td>
                           </tr>`;
           });
           tableHtml += '</tbody></table>';
@@ -109,6 +127,18 @@
     checkboxes.forEach(checkbox => {
       checkbox.checked = source.checked;
     });
+  }
+
+  // Mobile-safe select-all: the <thead> select-all checkbox is hidden by
+  // .responsive-stack on mobile, so this button (visible at all widths) toggles
+  // every packing-slip checkbox. Toggles to opposite of current (checks all if
+  // any are unchecked, else unchecks all).
+  function toggleAllPacking() {
+    const checkboxes = document.querySelectorAll('#packing-slips-list .order-checkbox');
+    const anyUnchecked = Array.from(checkboxes).some(cb => !cb.checked);
+    checkboxes.forEach(cb => cb.checked = anyUnchecked);
+    const btn = document.getElementById('btn-select-all-packing');
+    if (btn) btn.textContent = anyUnchecked ? 'Deselect all' : 'Select all';
   }
 
   function createGiftMessage(orderId, noteContent) {
