@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 06:42',
-  commit: '@153 UI Tier 1.0 quick wins (6 fixes). (1) Retired SystemHealthView empty stub + viewMap line. (2) Retired 7 orphan v1-era widgets (AdminOrders/ManagerOrders/AdminInventory/ManagerInventory/AdminProducts/ManagerProducts/SystemHealth Widget) + 7 viewMap lines + 3 dead refreshSystemHealthWidget conditional blocks in AdminInventoryView; backend *WidgetData functions left intact (one in live use by ManagerProductsView). (3) ManagerOrders gift-doc link btn-primary -> btn-light (CLAUDE.md). (4) Dropped unused SysJobQueue read in WebAppDashboardV2._getSystemHealthData_v2 (dead I/O every dashboard load). (5) AdminSyncView dynamic getHtmlOutput loader -> scriptlet include (saves a round-trip per Sync nav). (6) LookupService.searchComaxProducts caches a (sku,nameHe) projection in CacheService 5-min TTL + SheetAccessor instead of per-keystroke open-by-name full scan; existing rethrow-to-client error behavior preserved. Per UI_AUDIT.md Tier 1.0.'
+  built: '2026-05-29 07:30',
+  commit: '@154 UI Tier 2.2 + 2.3. T2.2 (CRM nav): relocated the 6 CRM ops (import/validate/correct/refresh/enrich/intelligence) + handlers from DevelopmentView into a collapsed <details> "Admin operations" panel atop AdminContactsView; handlers placed in a separate global <script> since AdminContactsView main script is an IIFE; DevelopmentView keeps only the 5 system-debug tools; both nav entries (Contacts->ManagerContactView, CRM Tools->AdminContactsView) stay — never duplicates. T2.3 (Orders merge): renamed ManagerOrdersView.html -> OrdersView.html, deleted AdminOrdersView.html, both viewMap keys route to OrdersView; Packing Slips card role-gated data-roles="manager"; mount guard uses document.body role class (not querySelector on data-roles, which would never skip since role gating is CSS display:none and the element stays in the DOM for admin) so admin saves the packable-orders round-trip. Per UI_AUDIT.md Tier 2.2 + 2.3.'
 };
 
 function getVersion() {
