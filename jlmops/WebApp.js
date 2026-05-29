@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 07:47',
-  commit: '@155 UI Tier 2.5 — extend TaskWidgets kit + migrate ManagerDashboardView_v2 (TaskWidgets now consumed by 2 views, not 1). Stage A: added TaskWidgets.formatDateShort (M/D) + formatDateFull (locale). Stage B: ManagerDashboardView_v2 gets <?!= include(TaskWidgets) ?> scriptlet; migrated 21 call-sites (2 formatDate->formatDateShort, 5 formatDateFull, 13 escapeHtml->escape) + inlined isOverdue caller preserving EXACT existing semantics (not-Done + past-due -> overdue, incl. Cancelled; no behavior change per v2 scope correction); deleted 4 local helper defs. Stage C: .task-filters -> .tw-filter-bar + dropped duplicate desktop/mobile filter CSS (kit standard adds thin border + 4px radius, desktop gap 10px->8px). Per UI_AUDIT.md Tier 2.5.'
+  built: '2026-05-29 08:32',
+  commit: '@156 UI Tier 2.6 — TaskWidgets adoption rollout to 6 consumers (kit now used by 7 views: + ManagerDashboard from T2.5 + LibraryView). Each: <?!= include(TaskWidgets) ?> scriptlet + local helper calls replaced with kit-prefixed equivalents + local defs deleted. A: AdminBundlesView escapeHtml->escape (5). B: AdminInventoryView escapeHtml->escape (4); formatLastCount kept local (returns "—" on null/invalid, different contract). C: ManagerContactView esc->escape (8). D: AdminContactsView escapeHtml->escape (4); isDateString kept local (validation, not formatting). E: AdminCampaignsView esc+formatDate (ISO, directly compatible). F: AdminProjectsView esc->escape (18 lines) + formatDateShort (5) + formatDateInput->formatDate (7, ISO); dead locale formatDate (0 callers) removed. All verified: no bare helper calls, no double-prefix. Per UI_AUDIT.md Tier 2.6.'
 };
 
 function getVersion() {
