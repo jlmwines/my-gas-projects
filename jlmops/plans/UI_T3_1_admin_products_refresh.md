@@ -1,7 +1,15 @@
 # UI Tier 3.1 — AdminProductsView refreshView consolidation (12 → 1 round-trip)
 
 **Session ID:** UI_T3_1
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** **Stage A SHIPPED 2026-05-29** (commit on `main`; backend `WebAppProducts_getAdminViewData` pushed via `clasp push`, **NOT deployed** — live @162 is unaffected because nothing calls it until Stage B). Editor-tested clean (ran through to `map.text_lookups`). **Stage B (frontend refactor) = next session.** ⚠️ **v1's code assumptions were WRONG — see CORRECTED SHAPES below before doing Stage B.** Plan v1 (2026-05-28).
+
+> **CORRECTED SHAPES (verified against code during Stage A, 2026-05-29):**
+> - The 8 section getters are **global functions** `WebAppProducts_getX()` (NOT methods `WebAppProducts._getX()`), and they return **raw arrays** (e.g. `reviewTasks.map(...)`), **throwing on error** — there is NO `{success,data}` or `.data` envelope on them.
+> - `WebAppLookups_getMap(name)` returns `{ error, data: { headers, rows } }` — so lookups ARE unwrapped via `.data`.
+> - Frontend loaders consume **raw arrays directly**: `withSuccessHandler(tasks => { ... = tasks || []; ... })`. The v1 Stage B "before" snippet showing `res.data` is wrong for these loaders. `loadLookupSection` consumes `{headers,rows}` via `WebAppLookups_getMap(cfg.mapName)` where `cfg.mapName` ∈ {`map.grape_lookups`,`map.kashrut_lookups`,`map.text_lookups`} (from the `LOOKUP_SECTIONS` config at AdminProductsView ~:718-720).
+> - **The shipped Stage A function reflects all of the above** — copy its shape, not v1's snippet, when wiring Stage B's `applyAllSections` (pass raw arrays to each loader's preloaded path; pass `data.lookups.<section>` = `{headers,rows}` to `loadLookupSection`).
+
+Plan v1 gaps (note several were wrong — see correction above):
 - **12 round-trips confirmed:** `AdminProductsView.html:726-746` `refreshView` fires `loadReviewList / loadAcceptedList / loadPendingDetailsList / loadSuggestionList / loadSubmissionsList / loadLinkageList / updateNewExportUI / loadPendingNewList / loadSkuUpdates / loadLookupSection('grapes') / loadLookupSection('kashrut') / loadLookupSection('texts')`. **11 are backend calls; 1 is pure UI** (`updateNewExportUI` — no `google.script.run`).
 - **Backend functions identified per loader:** `WebAppProducts_getAdminReviewTasks` (`:1242`), `_getAcceptedTasks` (`:1274`), `_getPendingDetailTasks` (`:1334`), `_getSuggestionTasks` (`:1367`), `_getSubmissionsTasks` (`:1402`), `_getLinkageTasks` (`:1424`), `_getPendingNewTasks` (`:1476`), `_getRecentSkuUpdates` (`:1212`), and `WebAppLookups_getMap` ×3 for lookups (`:1833`).
 - **Vintage-review splice precedent must not regress:** `:1745-1777` `handleAdminAccept` splices accepted task from `reviewTasks` in-memory + calls `_rerenderReviewTable` for the next-task path; falls back to `refreshView` only on queue-drain or non-queue origin. Preserved as-is.
@@ -35,31 +43,22 @@ Replace the 12-call fanout in `AdminProductsView.refreshView()` with a single ba
 
 Add the following function inside the `WebAppProducts` module (alongside the existing 11 individual-section getters):
 
+**SHIPPED CODE (added after `WebAppProducts_getRecentSkuUpdates`, ~:1051):**
+
 ```javascript
-/**
- * Consolidates the 11 data sections that AdminProductsView.refreshView() previously
- * fetched in parallel via 11 separate google.script.run calls. Returns one response
- * suitable for AdminProductsView.applyAllSections(data) to dispatch.
- *
- * Reads SysTasks once via _getAllTasks() (existing internal helper used by the
- * per-section getters) and buckets in memory. Then reads the 3 lookup maps.
- *
- * @param {string} [sessionId] Optional sessionId from caller for traceability.
- * @returns {{success: boolean, data?: object, error?: string}}
- */
 function WebAppProducts_getAdminViewData(sessionId) {
   try {
     return {
       success: true,
       data: {
-        reviewTasks:        WebAppProducts._getAdminReviewTasks().data,
-        acceptedTasks:      WebAppProducts._getAcceptedTasks().data,
-        pendingDetailTasks: WebAppProducts._getPendingDetailTasks().data,
-        suggestionTasks:    WebAppProducts._getSuggestionTasks().data,
-        submissionsTasks:   WebAppProducts._getSubmissionsTasks().data,
-        linkageTasks:       WebAppProducts._getLinkageTasks().data,
-        pendingNewTasks:    WebAppProducts._getPendingNewTasks().data,
-        recentSkuUpdates:   WebAppProducts._getRecentSkuUpdates().data,
+        reviewTasks:        WebAppProducts_getAdminReviewTasks(),
+        acceptedTasks:      WebAppProducts_getAcceptedTasks(),
+        pendingDetailTasks: WebAppProducts_getPendingDetailTasks(),
+        suggestionTasks:    WebAppProducts_getSuggestionTasks(),
+        submissionsTasks:   WebAppProducts_getSubmissionsTasks(),
+        linkageTasks:       WebAppProducts_getLinkageTasks(),
+        pendingNewTasks:    WebAppProducts_getPendingNewTasks(),
+        recentSkuUpdates:   WebAppProducts_getRecentSkuUpdates(),
         lookups: {
           grapes:  WebAppLookups_getMap('map.grape_lookups').data,
           kashrut: WebAppLookups_getMap('map.kashrut_lookups').data,
@@ -74,7 +73,7 @@ function WebAppProducts_getAdminViewData(sessionId) {
 }
 ```
 
-**Implementation note on `._getX()` helpers.** The above assumes underscore-prefixed internal versions of each section getter that return raw data without the response envelope. If those internals don't exist, the simplest path is to call the existing public `WebAppProducts_getAdminReviewTasks()` etc. and unwrap each `.data` field. The actual call shape is per-getter; resolve by reading each function's return type at session start (5-minute task; each function is ~30-50 lines).
+**Implementation note (RESOLVED).** v1 assumed `WebAppProducts._getX().data` internals — wrong. The getters are global `WebAppProducts_getX()` returning raw arrays (throw on error); lookups return `{error,data}`. The shipped code above reflects the verified shapes. Per-section SysTasks-read consolidation still deferred (see Notes).
 
 **Per-section optimization deferred.** Each per-section getter currently reads SysTasks independently. A future optimization (deferred from this session) is to call SysTasks once at the top of `getAdminViewData` and pass the rows to each bucketer. Worthwhile if SysTasks size grows, not urgent today — the 8 sequential reads are still faster than 8 parallel `google.script.run` round-trips because they share execution context (no IPC overhead). Tracker note in session-end.
 
@@ -100,7 +99,9 @@ function WebAppProducts_getAdminViewData(sessionId) {
 
 ### Part 1: Refactor each `load<X>` function to accept optional preload
 
-For each of the 9 fetch-bearing loaders (`loadReviewList / loadAcceptedList / loadPendingDetailsList / loadSuggestionList / loadSubmissionsList / loadLinkageList / loadPendingNewList / loadSkuUpdates / loadLookupSection`), add an optional preloaded-data parameter. Pattern:
+⚠️ **The snippet below shows `res.data` — that is WRONG for these loaders.** Verified actual shape: e.g. `loadReviewList` does `google.script.run.withSuccessHandler(tasks => { ...; AdminProductsView.reviewTasks = tasks || []; ... }).WebAppProducts_getAdminReviewTasks();` — it consumes a **raw array**, not `res.data`. So the preloaded path sets the array directly (`AdminProductsView.reviewTasks = preloadedData;`). `loadLookupSection(section)` consumes `WebAppLookups_getMap(cfg.mapName)` → `{error,data}` and renders via `renderLookupTable(section)`; its preloaded shape is the `{headers,rows}` object (i.e. `data.lookups.<section>`). Match each loader's REAL current success-handler when adding its preload branch.
+
+For each of the 9 fetch-bearing loaders (`loadReviewList / loadAcceptedList / loadPendingDetailsList / loadSuggestionList / loadSubmissionsList / loadLinkageList / loadPendingNewList / loadSkuUpdates / loadLookupSection`), add an optional preloaded-data parameter. Pattern (adapt to each loader's real shape):
 
 ```javascript
 // before:
