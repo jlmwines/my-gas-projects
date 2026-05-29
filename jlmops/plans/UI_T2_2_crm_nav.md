@@ -1,7 +1,7 @@
 # UI Tier 2.2 — CRM Tools nav misplacement (relocate CRM operations to AdminContactsView)
 
 **Session ID:** UI_T2_2
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** SHIPPED 2026-05-29 @154 deploy @158. Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **Nav structure correction:** the audit doc said "remove the duplicate CRM Tools nav entry." This was wrong — the two nav entries load **different views** (Contacts → ManagerContactView, the mobile-first lookup; CRM Tools → AdminContactsView, the full CRM browse). Neither is a duplicate. **Both nav entries stay.** What changes: the CRM Tools label finally matches its destination after CRM operations move into AdminContactsView.
 - MC freshness chip stays at view-level in AdminContactsView header (`:13-14`); re-surfacing as a panel header is a minor concern, deferred.
 - Panel default state: collapsed (weekly-or-less operations, not daily — per v0 audit decision).

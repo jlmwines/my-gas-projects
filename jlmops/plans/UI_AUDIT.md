@@ -51,9 +51,7 @@ For each routed view: role audience, primary purpose, key gaps. Widgets listed a
 
 ### 3.3 Orders
 
-**`AdminOrdersView.html`** — admin only, 113 lines. One card: "Open Orders" table + Import button. Calls `WebAppOrders_getOpenOrdersForManager` (`:59`) — admin literally invokes the manager function. **Effectively a strict subset of ManagerOrdersView.**
-
-**`ManagerOrdersView.html`** — manager only, 175 lines. Two cards: Packing Slips (checkbox selection + Print Selected + gift-doc creation) + Open Orders (read-only + manual Refresh duplicating Admin's import button at `:151-170`). **Gaps:** invented `btn-primary` at `:120` (CLAUDE.md violation); zero mobile CSS; tables overflow on phone; 2 round-trips on mount (could be 1).
+**`OrdersView.html`** (T2.3 SHIPPED 2026-05-29 — merged `AdminOrdersView` + `ManagerOrdersView` into one role-gated file). Both roles via `WebApp.js` (`AdminOrders` + `ManagerOrders` both route here). Open Orders card visible to both; Packing Slips card `data-roles="manager"` (Print Selected + gift-doc creation). Admin skips the packable-orders fetch on mount via `document.body` role check. `btn-primary` already fixed in T1.0. **Remaining gaps (Tier 4.1):** zero mobile CSS; tables overflow on phone.
 
 ### 3.4 Inventory
 
@@ -104,14 +102,13 @@ Also: `init()` fires **4 parallel round-trips** on view mount (`:186-205`: loadC
 
 ### 3.12 Empty stub
 
-**`SystemHealthView.html`** — both roles via `WebApp.js:76`. 12-line empty stub ("Content to be added"). The dashboard's System Health card (`AdminDashboardView_v2.html:142-207`) covers the actual surface. **Effectively dead.**
+**`SystemHealthView.html`** — RETIRED (T1.0 SHIPPED 2026-05-29). Was a 12-line empty stub; file deleted + viewMap line removed. The dashboard's System Health card (`AdminDashboardView_v2.html:142-207`) is the actual surface.
 
 ### 3.13 Widgets (loaded into views, not routed)
 
 - **`TaskWidgets.html`** — atom kit. Included by LibraryView only (`:1` scriptlet). Atoms: status-pill, priority-badge, due-chip, topic chip, file-link chip, filter-bar, notes textarea, toast. JS helpers: `escape`, `formatDate`, `statusClass`, `priorityClass`, `dueClass`. **Sole consumer = LibraryView. Massive consolidation opportunity.**
 - **`AdminDailySyncWidget_v2.html`** — embedded in AdminSyncView. The actual sync UI.
-- **`SystemHealthWidget.html`** (185 lines) — referenced in viewMap `:77` but no current routed consumer. AdminDashboardView_v2 renders its own inline System Health card.
-- **Six orphan widgets:** `AdminOrdersWidget`, `ManagerOrdersWidget`, `AdminInventoryWidget`, `ManagerInventoryWidget`, `AdminProductsWidget`, `ManagerProductsWidget` — all routed in viewMap `:79-89` but no v2 dashboard embeds them. Pre-v2 architecture residue. (Verified by absence of `getView('*Widget')` / `getHtmlOutput('*Widget')` calls in either v2 dashboard.)
+- **7 orphan widgets RETIRED (T1.0 SHIPPED 2026-05-29):** `SystemHealthWidget`, `AdminOrdersWidget`, `ManagerOrdersWidget`, `AdminInventoryWidget`, `ManagerInventoryWidget`, `AdminProductsWidget`, `ManagerProductsWidget` — all HTML files deleted + 7 viewMap lines removed + 3 dead `refreshSystemHealthWidget` conditional blocks removed from AdminInventoryView. Pre-v2 architecture residue, no consumer. (Backend `*WidgetData` data functions are separate and retained — one in live use by ManagerProductsView.)
 
 ## 4. Capability targets
 
@@ -771,6 +768,16 @@ Three additional agent reviews surfaced 12 findings; all folded in.
 Convergent findings: TaskWidgets adoption is the highest-leverage cross-cutting fix; load-once + client-filter is the most-impactful speed pattern; bundles view IA + the refreshView fanout are the two biggest single-target wins.
 
 ## 10. Status
+
+### Shipped
+
+- **T1.0 quick wins — SHIPPED 2026-05-29 @153 deploy @157.** 6 fixes: retired `SystemHealthView` stub + 7 orphan widgets (+ 3 dead `refreshSystemHealthWidget` blocks in AdminInventory); `ManagerOrders` gift-doc `btn-primary`→`btn-light`; dropped dead SysJobQueue read in `WebAppDashboardV2._getSystemHealthData_v2`; `AdminSyncView` runtime loader → scriptlet include; Brurya autocomplete CacheService projection + SheetAccessor. Backend `*WidgetData` functions left intact (one in live use by ManagerProductsView). Brurya cache rethrow-to-client error behavior preserved (deviated from sketch's `return []`).
+- **T2.2 CRM nav — SHIPPED 2026-05-29 @154 deploy @158.** CRM ops moved to a collapsed `<details>` "Admin operations" panel atop AdminContactsView; handlers in a separate global `<script>` (main script is an IIFE). DevelopmentView keeps the 5 system-debug tools. Both nav entries stay (never duplicates).
+- **T2.3 Orders merge — SHIPPED 2026-05-29 @154 deploy @158.** `ManagerOrdersView.html`→`OrdersView.html`, `AdminOrdersView.html` deleted, both viewMap keys route to it; Packing Slips role-gated `data-roles="manager"`. Mount guard uses `document.body.classList.contains('role-manager')` — NOT the plan's `querySelector('[data-roles="manager"]')`, which would never skip (role gating is CSS `display:none`, element stays in DOM for admin).
+
+§3 surfaces updated for these: §3.3 (orders merged), §3.12 (SystemHealthView retired), §3.13 (orphan widgets retired). Remaining queue next (recommended order): T2.5 → T2.1 (bundles, deprioritized per user — desktop-only) → T2.6 → T3.x.
+
+---
 
 Draft v2 written 2026-05-28. **17 active sessions + 1 prerequisite (CCP-UI-8 helper) + 2 deferred** across 5 tiers, anchored against actual file:line refs (with explicit drift discipline), with **9 CCP-UI patterns** including accessibility (v2 addition) and observability (v2 addition). Six-agent review across two rounds folded in; gaps explicitly resolved or queued.
 

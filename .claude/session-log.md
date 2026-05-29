@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI audit execution: T1.0 + T2.2 + T2.3 — 2 deploys)
+
+- **T1.0 quick wins SHIPPED — @153 deploy @157.** 6 fixes, one commit each: retired SystemHealthView stub + 7 orphan widgets (+3 dead refreshSystemHealthWidget blocks in AdminInventory); ManagerOrders gift-doc btn-primary→btn-light; dropped dead SysJobQueue read in WebAppDashboardV2._getSystemHealthData_v2; AdminSyncView runtime getHtmlOutput loader → scriptlet include; Brurya autocomplete → CacheService (sku,nameHe) projection + SheetAccessor. Kept backend *WidgetData fns (one in live use by ManagerProductsView). Caught a push-time syntax error — my version-stamp Edit left the old @152 commit-string tail dangling after the new closing quote; lesson: match the FULL commit string when re-stamping VERSION.
+- **T2.2 CRM nav SHIPPED + T2.3 Orders merge SHIPPED — @154 deploy @158.** T2.2: CRM ops → collapsed <details> panel on AdminContactsView; handlers in a separate global <script> (main script is an IIFE, inline onclick needs global scope); DevelopmentView keeps 5 debug tools. T2.3: ManagerOrdersView.html→OrdersView.html, AdminOrdersView.html deleted, both viewMap keys route there, Packing Slips role-gated.
+- **Two deep-dive corrections during impl:** (a) T2.3 mount guard — plan's `querySelector('[data-roles="manager"]')` would never skip for admin (role gating is CSS display:none, element stays in DOM); used `document.body.classList.contains('role-manager')` instead. (b) Brurya cache kept rethrow-to-client (plan sketch had return []).
+- **Open bug logged:** reconciliation.sys_contacts.write_verify fires High on off-by-1 (immaterial, <1% / one stranded contact count); diagnosis deferred per user. See bugs.md 2026-05-29.
+- **Next UI:** T2.5 (TaskWidgets kit extend) → T2.6 → T3.x. T2.1 bundles deprioritized (desktop-only). CCP-UI-8 ModalOverlay helper is a prerequisite before T5.1/T4.3.
+
+---
+
 ## 2026-05-29 (reliability execution: Tier 1.1 + durable order-activity sync — 2 deploys)
 
 - **Tier 1.1 SysContacts aggregate fix SHIPPED — @151 deploy @155.** Found the bulk of 1.1 already sitting uncommitted in the working tree (archive merge + CCP-3 verify + typo already correct) — undeployed, no prior log entry (the audit's own real-vs-recorded drift). Reviewed it: caught that the order-archive merge omitted `wom_OrderTotal`, so archived orders fell back to line-item subtotals (no tax/shipping). Same gap existed pre-existing in `importFromOrderHistory` (the new block was copied from it) — fixed both via one `replace_all`. Verify-step false-positive concern dismissed by user (archive holds all orders, refunds not a factor). Smoke: 0 created / 474 updated, no `reconciliation.sys_contacts.write_verify` task, sample contact accurate.

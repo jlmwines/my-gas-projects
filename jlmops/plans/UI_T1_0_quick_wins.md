@@ -1,7 +1,7 @@
 # UI Tier 1.0 — Quick Wins Batch
 
 **Session ID:** UI_T1_0
-**Status:** Plan v1.1 (2026-05-28). Ready to ship. All v0 open questions resolved via code reading (Fix 2 SystemHealthWidget confirmed orphan + 3 dead AdminInventoryView calls flagged; Fix 4 jobQueue confirmed dead-read with no placeholder intent; Fix 5 polling re-test moved into smoke; Fix 6 sized CmxProdM at ~3043 rows + committed to projection-only caching at ~3KB).
+**Status:** SHIPPED 2026-05-29 @153 deploy @157 (all 6 fixes). Plan v1.1 (2026-05-28). All v0 open questions resolved via code reading (Fix 2 SystemHealthWidget confirmed orphan + 3 dead AdminInventoryView calls flagged; Fix 4 jobQueue confirmed dead-read with no placeholder intent; Fix 5 polling re-test moved into smoke; Fix 6 sized CmxProdM at ~3043 rows + committed to projection-only caching at ~3KB).
 **Parent:** `UI_AUDIT.md` §5 Tier 1.0
 **Estimated effort:** 1 session, 6 staged deploys with smoke gate per fix.
 **Depends on:** Nothing. First session to ship.

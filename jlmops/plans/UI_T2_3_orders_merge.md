@@ -1,7 +1,7 @@
 # UI Tier 2.3 — Merge AdminOrdersView into shared OrdersView
 
 **Session ID:** UI_T2_3
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** SHIPPED 2026-05-29 @154 deploy @158. Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **File rename decision committed:** rename `ManagerOrdersView.html` → `OrdersView.html`. "ManagerOrdersView" misleads after merge; long-term clarity beats short-term diff size.
 - **Parent error-handling legacy code** in `AdminOrdersView.html:52-54, :61-65, :82-84, :89-91, :98-100` (`window.parent.showError` / `window.parent.showToast`) is dead in current architecture — ManagerOrdersView uses simple `alert()` and `console.error()`. Adopt the simpler pattern in the merged file.
 - **Admin Import button vs Manager Refresh button:** functionally identical (both call `WebAppOrders_triggerWebOrderImport`). Manager's `refreshOrders()` additionally reloads packing slips after — admin doesn't need packing reload (packing slips card not visible to admin). One button labelled context-appropriately for each role via `data-roles`.
