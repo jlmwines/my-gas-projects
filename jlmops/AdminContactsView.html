@@ -1,4 +1,34 @@
 <?!= include('TaskWidgets') ?>
+<style>
+  /* Project modal-overlay pattern (T5.1 — replaces the former Bootstrap modals).
+     Open/close + focus/Esc/scroll-lock handled by the shared ModalOverlay helper
+     (from TaskWidgets). These rules just provide the frame. */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 80px;
+    overflow-y: auto;
+  }
+  .modal-overlay .modal-container {
+    background: #fff;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-overlay .modal-header { padding: 10px 16px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+  .modal-overlay .modal-header h6 { margin: 0; }
+  .modal-overlay .form-body { padding: 16px; }
+  .modal-overlay .modal-footer { padding: 10px 16px; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 8px; background: #f8f9fa; }
+</style>
 <div class="container-fluid">
   <div class="row mb-3">
     <div class="col-12">
@@ -426,7 +456,7 @@
                   <label class="font-weight-bold">Notes</label>
                   <textarea id="field-notes" class="form-control" rows="4"></textarea>
                 </div>
-                <button id="btn-save-notes" class="btn btn-sm btn-primary">Save</button>
+                <button id="btn-save-notes" class="btn btn-sm">Save</button>
               </div>
             </div>
           </div>
@@ -437,103 +467,97 @@
 </div>
 
 <!-- Log Activity Modal -->
-<div class="modal fade" id="modal-activity" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">Log Activity</h6>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+<div class="modal-overlay" id="modal-activity">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h6>Log Activity</h6>
+      <button type="button" class="close" id="btn-close-activity" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-body">
+      <div class="form-group">
+        <label class="small">Type</label>
+        <select id="activity-type" class="form-control form-control-sm">
+          <option value="contact.call">Phone Call</option>
+          <option value="contact.whatsapp">WhatsApp</option>
+          <option value="contact.email">Email</option>
+          <option value="contact.sms">SMS</option>
+          <option value="contact.meeting">Meeting</option>
+          <option value="note.general">Note</option>
+        </select>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="small">Type</label>
-          <select id="activity-type" class="form-control form-control-sm">
-            <option value="contact.call">Phone Call</option>
-            <option value="contact.whatsapp">WhatsApp</option>
-            <option value="contact.email">Email</option>
-            <option value="contact.sms">SMS</option>
-            <option value="contact.meeting">Meeting</option>
-            <option value="note.general">Note</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="small">Summary</label>
-          <input type="text" id="activity-summary" class="form-control form-control-sm" placeholder="Brief description">
-        </div>
-        <div class="form-group">
-          <label class="small">Details (optional)</label>
-          <textarea id="activity-details" class="form-control form-control-sm" rows="2"></textarea>
-        </div>
+      <div class="form-group">
+        <label class="small">Summary</label>
+        <input type="text" id="activity-summary" class="form-control form-control-sm" placeholder="Brief description">
       </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
-        <button type="button" id="btn-submit-activity" class="btn btn-sm">Save</button>
+      <div class="form-group">
+        <label class="small">Details (optional)</label>
+        <textarea id="activity-details" class="form-control form-control-sm" rows="2"></textarea>
       </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-sm" id="btn-cancel-activity">Cancel</button>
+      <button type="button" id="btn-submit-activity" class="btn btn-sm">Save</button>
     </div>
   </div>
 </div>
 
 <!-- Create Task Modal -->
-<div class="modal fade" id="modal-task" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">Create Task</h6>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+<div class="modal-overlay" id="modal-task">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h6>Create Task</h6>
+      <button type="button" class="close" id="btn-close-task" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-body">
+      <div class="form-group">
+        <label class="small">Task Type</label>
+        <select id="task-type" class="form-control form-control-sm">
+          <option value="task.crm.contact_followup">Follow Up</option>
+          <option value="task.crm.churn_risk">Churn Risk</option>
+          <option value="task.crm.vip_attention">VIP Attention</option>
+        </select>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="small">Task Type</label>
-          <select id="task-type" class="form-control form-control-sm">
-            <option value="task.crm.contact_followup">Follow Up</option>
-            <option value="task.crm.churn_risk">Churn Risk</option>
-            <option value="task.crm.vip_attention">VIP Attention</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="small">Title</label>
-          <input type="text" id="task-title" class="form-control form-control-sm" placeholder="Task title">
-        </div>
-        <div class="form-group">
-          <label class="small">Notes</label>
-          <textarea id="task-notes" class="form-control form-control-sm" rows="2"></textarea>
-        </div>
+      <div class="form-group">
+        <label class="small">Title</label>
+        <input type="text" id="task-title" class="form-control form-control-sm" placeholder="Task title">
       </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
-        <button type="button" id="btn-submit-task" class="btn btn-sm">Create</button>
+      <div class="form-group">
+        <label class="small">Notes</label>
+        <textarea id="task-notes" class="form-control form-control-sm" rows="2"></textarea>
       </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-sm" id="btn-cancel-task">Cancel</button>
+      <button type="button" id="btn-submit-task" class="btn btn-sm">Create</button>
     </div>
   </div>
 </div>
 
 <!-- Compose Email Modal -->
-<div class="modal fade" id="modal-email" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header py-2">
-        <h6 class="modal-title">Compose Email</h6>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+<div class="modal-overlay" id="modal-email">
+  <div class="modal-container">
+    <div class="modal-header">
+      <h6>Compose Email</h6>
+      <button type="button" class="close" id="btn-close-email" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-body">
+      <div class="form-group">
+        <label class="small">To</label>
+        <input type="text" id="email-to" class="form-control form-control-sm" readonly>
       </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="small">To</label>
-          <input type="text" id="email-to" class="form-control form-control-sm" readonly>
-        </div>
-        <div class="form-group">
-          <label class="small">Subject</label>
-          <input type="text" id="email-subject" class="form-control form-control-sm" placeholder="Subject">
-        </div>
-        <div class="form-group">
-          <label class="small">Message</label>
-          <textarea id="email-body" class="form-control form-control-sm" rows="6" placeholder="Write your message..."></textarea>
-        </div>
-        <div id="email-status" class="small"></div>
+      <div class="form-group">
+        <label class="small">Subject</label>
+        <input type="text" id="email-subject" class="form-control form-control-sm" placeholder="Subject">
       </div>
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm" data-dismiss="modal">Cancel</button>
-        <button type="button" id="btn-send-email" class="btn btn-sm btn-primary">Send</button>
+      <div class="form-group">
+        <label class="small">Message</label>
+        <textarea id="email-body" class="form-control form-control-sm" rows="6" placeholder="Write your message..."></textarea>
       </div>
+      <div id="email-status" class="small"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-sm" id="btn-cancel-email">Cancel</button>
+      <button type="button" id="btn-send-email" class="btn btn-sm">Send</button>
     </div>
   </div>
 </div>
@@ -632,13 +656,19 @@
     document.getElementById('btn-save-notes').addEventListener('click', saveNotes);
     document.getElementById('btn-submit-activity').addEventListener('click', submitActivity);
     document.getElementById('btn-submit-task').addEventListener('click', submitTask);
-    document.getElementById('btn-create-task').addEventListener('click', function() { $('#modal-task').modal('show'); });
+    document.getElementById('btn-create-task').addEventListener('click', function() { ModalOverlay.open('modal-task'); });
+
+    // Close/cancel buttons for the (now modal-overlay) modals — close via the shared helper.
+    ['activity', 'task', 'email'].forEach(function(m) {
+      document.getElementById('btn-close-' + m).addEventListener('click', function() { ModalOverlay.close('modal-' + m); });
+      document.getElementById('btn-cancel-' + m).addEventListener('click', function() { ModalOverlay.close('modal-' + m); });
+    });
 
     // Activity ribbon buttons
     document.querySelectorAll('.activity-action').forEach(function(btn) {
       btn.addEventListener('click', function() {
         document.getElementById('activity-type').value = this.dataset.type;
-        $('#modal-activity').modal('show');
+        ModalOverlay.open('modal-activity');
       });
     });
 
@@ -649,7 +679,7 @@
       document.getElementById('email-subject').value = '';
       document.getElementById('email-body').value = '';
       document.getElementById('email-status').innerHTML = '';
-      $('#modal-email').modal('show');
+      ModalOverlay.open('modal-email');
     });
 
     // Send email button
@@ -703,7 +733,7 @@
         } else {
           statusDiv.innerHTML = '<span class="text-success">Email sent!</span>';
           setTimeout(function() {
-            $('#modal-email').modal('hide');
+            ModalOverlay.close('modal-email');
             loadContactDetail(currentContact);
           }, 1500);
         }
@@ -1084,7 +1114,7 @@
     google.script.run
       .withSuccessHandler(function(data) {
         if (data.error) { showError(data.error); return; }
-        $('#modal-activity').modal('hide');
+        ModalOverlay.close('modal-activity');
         document.getElementById('activity-summary').value = '';
         document.getElementById('activity-details').value = '';
         loadContactDetail(currentContact);
@@ -1104,7 +1134,7 @@
     google.script.run
       .withSuccessHandler(function(data) {
         if (data.error) { showError(data.error); return; }
-        $('#modal-task').modal('hide');
+        ModalOverlay.close('modal-task');
         document.getElementById('task-title').value = '';
         document.getElementById('task-notes').value = '';
         showSuccess('Task created');

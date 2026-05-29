@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 14:56',
-  commit: '@181 UI T4.5 (refine) — unify LibraryView mobile cards across Tasks + Library tabs: both now compact flat cards with one clear #ced4da divider (was: Tasks rows w/ near-invisible #f1f3f5 border vs Library boxed responsive-stack w/ outline+radius+12px margins — inconsistent + space-wasteful). Scoped to .lv-* so Orders/Products responsive-stack cards are untouched. Tightened internal padding. Follows @180 (T4.5 base).'
+  built: '2026-05-29 16:14',
+  commit: '@184 nav: admin contacts is now a SINGLE "Contacts" link → AdminContacts (removed the short-lived "Contact Lookup" → ManagerContacts entry), named consistently with the manager nav per user. ManagerContactView still reachable for admins via dashboard task deep-links. (Builds on @183 nav routing fix + UI T5.1 modal conversion.) Follows @183.'
 };
 
 function getVersion() {
