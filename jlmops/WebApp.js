@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 08:32',
-  commit: '@156 UI Tier 2.6 — TaskWidgets adoption rollout to 6 consumers (kit now used by 7 views: + ManagerDashboard from T2.5 + LibraryView). Each: <?!= include(TaskWidgets) ?> scriptlet + local helper calls replaced with kit-prefixed equivalents + local defs deleted. A: AdminBundlesView escapeHtml->escape (5). B: AdminInventoryView escapeHtml->escape (4); formatLastCount kept local (returns "—" on null/invalid, different contract). C: ManagerContactView esc->escape (8). D: AdminContactsView escapeHtml->escape (4); isDateString kept local (validation, not formatting). E: AdminCampaignsView esc+formatDate (ISO, directly compatible). F: AdminProjectsView esc->escape (18 lines) + formatDateShort (5) + formatDateInput->formatDate (7, ISO); dead locale formatDate (0 callers) removed. All verified: no bare helper calls, no double-prefix. Per UI_AUDIT.md Tier 2.6.'
+  built: '2026-05-29 09:35',
+  commit: '@157 UI display tweaks + Tier 4.2. (1) Date order dd/mm kit-wide: TaskWidgets.formatDateShort M/D->D/M, formatDateFull toLocaleDateString()->toLocaleDateString(en-GB) (dd/mm/yyyy) — Israel convention, flips all 7 kit-consuming views; formatDate (ISO yyyy-mm-dd) untouched (used for <input type=date> values). (2) AppView mobile .content padding 12px->12px 6px (more horizontal room on phone). (3) T4.2: ManagerDashboardView_v2 expanded-row inner .d-flex stacks vertically on mobile (was overflowing) + .task-status select full-width on mobile, 100px desktop (moved inline width to CSS class). Desktop unchanged. Per UI_AUDIT.md Tier 4.2.'
 };
 
 function getVersion() {
