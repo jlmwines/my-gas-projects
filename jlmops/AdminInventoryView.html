@@ -403,9 +403,6 @@
           showToast(`${response.completed} counts processed successfully.`);
           loadAdminViewData(); // Reload data to reflect changes
           loadComaxSyncData(); // Reload Comax Sync section to show accepted counts
-          if (window.refreshSystemHealthWidget) {
-            window.refreshSystemHealthWidget();
-          }
         } else {
           showToast(`Error processing counts: ${response.message}`, 'error');
         }
@@ -741,9 +738,6 @@
           }
           loadAdminViewData(); // Reload all data
           loadComaxSyncData(); // Reload Comax Sync data specifically
-          if (window.refreshSystemHealthWidget) {
-            window.refreshSystemHealthWidget();
-          }
         })
         .withFailureHandler(err => {
             handleError(err);
@@ -778,9 +772,6 @@
           }
           loadAdminViewData(); // Reload all data
           loadComaxSyncData(); // Reload Comax Sync data specifically
-          if (window.refreshSystemHealthWidget) {
-            window.refreshSystemHealthWidget();
-          }
         })
         .withFailureHandler(err => {
             handleError(err);
