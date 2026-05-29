@@ -1,6 +1,6 @@
 # Contact Action Ribbon — unified "Make contact" + record model
 
-**Status:** PLAN (not implemented). Designed 2026-05-29 in a chavruta session that surfaced while doing UI T5.1 (AdminContacts Bootstrap-modal cleanup). Capture-before-build so we don't lose the shape.
+**Status:** **PHASE 1 SHIPPED 2026-05-29 (@187 deploy @191).** ManagerContactView: single "+ New contact attempt" button → ribbon = distinct green **✆ Make contact** (outbound-only send via `logContactAttempt`; Direction radios removed) + record icons **📞 💬 📧 📝** → new record modal → `logActivity` (log only, no send; in/out for channels, none for note). SMS skipped per user. User-confirmed. **Phase 2 (task packs) still pending** — see below. Designed 2026-05-29 in a chavruta session that surfaced while doing UI T5.1.
 
 ## Why this exists (the rough spot)
 
@@ -63,11 +63,11 @@ The caller hands the modal a **contact pack** describing what to offer:
 - **Builds on UI T5.1** (AdminContacts Bootstrap modals → modal-overlay via ModalOverlay). T5.1 is the structural prerequisite (no Bootstrap, project modal pattern, shared helper).
 - Touches the same surfaces as `CONTACT_MANAGER_PLAN.md` (CRM action layer) — cross-reference when implementing.
 
-## Rough implementation outline (when greenlit)
+## Rough implementation outline
 
-1. Define the contact-pack shape + where it lives (decision #1).
-2. Build the unified ribbon + single modal (record icons pre-select type; "Make contact" distinct, first) — start in one view.
-3. Wire "Make contact" to `logContactAttempt` + `getOutreachTemplate` with the pack; mark-task-done.
-4. Task mode: pass the task's pack; disable record icons.
-5. Adopt in both views (or per decision #4); retire AdminContacts' separate Compose Email / Log Activity modals.
-6. Smoke: welcome-task send (email/WhatsApp/voice), standalone record (each type, both directions), task-done closure, mobile + desktop.
+1. ~~Build the ribbon + record modal in ManagerContactView~~ — **DONE Phase 1 (@187 deploy @191):** ribbon (Make contact + 📞/💬/📧/📝), record icons → `logActivity`, Make contact outbound-only via `logContactAttempt` (+ existing `getOutreachTemplate` topic preload, mark-task-done). `.mc-rec-disabled` CSS hook in place.
+2. **Phase 2 — task packs (NEXT):** define the pack shape + where it lives (decision #1 below — lean task definitions). When opened from an outreach task: restrict Make contact's channels to the pack, preload the template, **disable the record icons** (apply `.mc-rec-disabled`), mark-done on send.
+3. Decide #4 (does AdminContactsView adopt the ribbon, or stay legacy/out-of-nav — currently delisted). If kept, retire its separate Compose Email / Log Activity modals.
+4. Smoke Phase 2: welcome-task send (email/WhatsApp/voice), record disabled in task mode, standalone record still full.
+
+(Phase 2 open decisions: see the "Open decisions" section above — pack location, Make-contact presence, visual treatment, AdminContactsView adoption.)

@@ -12,6 +12,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - **Lesson reinforced:** trust the user's screenshot/observation; check nav routing before insisting. Good process moment — deep implementation run, found a rough spot, planned it cleanly to continue with a better product.
 - **Open:** T5.1 3-modal smoke pending user confirm. Next: T5.2 (AdminProducts modals) → T5.3.
 
+## 2026-05-29 (Contact Action Ribbon Phase 1 + final contacts nav; @185→@187 deploy @189→@191)
+
+- **Nav (final):** after a few iterations (and a user correction for relabeling without asking), settled on **both** admin + manager "Contacts" → ManagerContacts (the modern single-contact view). AdminContactsView (old CRM console) delisted from nav = legacy, still in viewMap.
+- **Contact Action Ribbon Phase 1 SHIPPED (@186/@187 deploy @190/@191), user-confirmed.** ManagerContactView: single button → ribbon. **Make contact** (green, distinct, first) = outbound-only send via `logContactAttempt` (Direction radios removed — inbound is a recording concept). Record icons **📞💬📧📝** → new lightweight record modal → `logActivity` (log only, no send; in/out for channels). SMS skipped. Record types comm.phone/comm.whatsapp/comm.email/note.general so timeline icons match. `.mc-rec-disabled` hook in place for Phase 2.
+- **Phase 2 (task packs)** still to build: outreach-task mode restricts channels + disables record icons + preloads template + mark-done. Decisions in CONTACT_ACTION_RIBBON_PLAN.md.
+- **Process:** great example of deep-implementation → hit rough spot → step back, design (chavruta), plan-to-file, then build Phase 1. User: "perfect. book it."
+
 ---
 
 ## 2026-05-29 (UI T4.5 — LibraryView mobile; @180 deploy @184 + @181 deploy @185)

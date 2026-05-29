@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 16:20',
-  commit: '@185 nav: admin "Contacts" now → ManagerContacts (the modern single-contact view), NOT AdminContacts (the OLD CRM list/console) — per user, the old console was the wrong endpoint. Admin + manager nav now identical (same label + target). AdminContactsView stays in viewMap (reachable via task deep-links / direct) but is out of the admin nav — being superseded by the single-contact view + the planned Contact Action Ribbon. Follows @184.'
+  built: '2026-05-29 16:48',
+  commit: '@187 Contact Action Ribbon Phase 1 (ManagerContactView). Replaced the single "+ New contact attempt" button with a ribbon: a distinct "Make contact" action (existing send modal → logContactAttempt: template + transmit/dial) + record icons 📞/💬/📧/📝 that open a new lightweight record modal → logActivity (log only, no send; direction in/out; note has no direction). SMS skipped per user. Record types written as comm.phone/comm.whatsapp/comm.email/note.general so timeline icons match. Make contact is outbound-only — removed the Direction radios from the send modal (inbound is a recording concept, handled by the record icons). Phase 2 (task packs: restrict channels + disable record icons + preload template in outreach-task mode) still to come — .mc-rec-disabled hook in place. Per CONTACT_ACTION_RIBBON_PLAN.md. Follows @185.'
 };
 
 function getVersion() {
