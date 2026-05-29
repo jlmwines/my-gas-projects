@@ -82,33 +82,15 @@ const LookupService = (function() {
                 throw new Error("Sheet name for 'CmxProdM' not found in configuration.");
             }
 
-            const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
-            const sheet = spreadsheet.getSheetByName(sheetName);
-            if (!sheet) {
-                Logger.log(`Sheet '${sheetName}' not found.`);
-                return [];
-            }
-
-            const data = sheet.getDataRange().getValues();
-            const headers = data.shift();
-            const skuIndex = headers.indexOf('cpm_SKU');
-            const nameHeIndex = headers.indexOf('cpm_NameHe');
-
-            if (skuIndex === -1 || nameHeIndex === -1) {
-                Logger.log(`Required columns 'cpm_SKU' or 'cpm_NameHe' not found in sheet '${sheetName}'.`);
+            const projection = _getCmxProdMSearchIndex(sheetName);
+            if (!projection.length) {
                 return [];
             }
 
             const results = [];
-            for (const row of data) {
-                const sku = row[skuIndex] ? String(row[skuIndex]).toLowerCase() : '';
-                const nameHe = row[nameHeIndex] ? String(row[nameHeIndex]).toLowerCase() : '';
-
-                if (sku.includes(lowerCaseSearchTerm) || nameHe.includes(lowerCaseSearchTerm)) {
-                    results.push({
-                        sku: row[skuIndex],
-                        name: row[nameHeIndex]
-                    });
+            for (const item of projection) {
+                if (item.skuLc.includes(lowerCaseSearchTerm) || item.nameLc.includes(lowerCaseSearchTerm)) {
+                    results.push({ sku: item.sku, name: item.name });
                     if (results.length >= 15) {
                         break;
                     }
@@ -120,6 +102,54 @@ const LookupService = (function() {
             // Let's rethrow to be caught by the client's failure handler
             throw new Error(`Error searching products: ${e.message}`);
         }
+    }
+
+    const CMX_SEARCH_CACHE_KEY = 'lookup.cmxprodm.search_index';
+    const CMX_SEARCH_CACHE_TTL_SEC = 300; // 5 minutes
+
+    /**
+     * Returns a small projection of CmxProdM (sku + nameHe + lowercased variants
+     * for case-insensitive search) for the Brurya autocomplete. Cached for 5 min
+     * to amortize the sheet-read across keystrokes. Replaces the former per-call
+     * SpreadsheetApp.open(DriveApp.getFilesByName(...)) + full-sheet scan.
+     *
+     * @param {string} sheetName CmxProdM sheet name from config.
+     * @returns {Array<{sku: string, name: string, skuLc: string, nameLc: string}>}
+     */
+    function _getCmxProdMSearchIndex(sheetName) {
+        const cache = CacheService.getScriptCache();
+        const cached = cache.get(CMX_SEARCH_CACHE_KEY);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
+        const sheet = spreadsheet.getSheetByName(sheetName);
+        if (!sheet) {
+            Logger.log(`Sheet '${sheetName}' not found.`);
+            return [];
+        }
+        const data = sheet.getDataRange().getValues();
+        const headers = data.shift();
+        const skuIndex = headers.indexOf('cpm_SKU');
+        const nameHeIndex = headers.indexOf('cpm_NameHe');
+        if (skuIndex === -1 || nameHeIndex === -1) {
+            Logger.log(`Required columns 'cpm_SKU' or 'cpm_NameHe' not found in sheet '${sheetName}'.`);
+            return [];
+        }
+        const projection = [];
+        for (const row of data) {
+            const sku = row[skuIndex] ? String(row[skuIndex]) : '';
+            const name = row[nameHeIndex] ? String(row[nameHeIndex]) : '';
+            if (!sku && !name) continue;
+            projection.push({
+                sku: sku,
+                name: name,
+                skuLc: sku.toLowerCase(),
+                nameLc: name.toLowerCase()
+            });
+        }
+        cache.put(CMX_SEARCH_CACHE_KEY, JSON.stringify(projection), CMX_SEARCH_CACHE_TTL_SEC);
+        return projection;
     }
 
     /**
