@@ -3,35 +3,7 @@
 
     <div class="row">
         <div class="col-12">
-            <div id="admin-daily-sync-widget-container">
-                <!-- AdminDailySyncWidget_v2.html will be loaded here -->
-            </div>
+            <?!= include('AdminDailySyncWidget_v2') ?>
         </div>
     </div>
-
-    <script>
-        function executeScriptsInElement(element) {
-            const scripts = Array.from(element.getElementsByTagName('script'));
-            scripts.forEach(s => {
-                const newScript = document.createElement('script');
-                newScript.textContent = s.textContent;
-                s.parentNode.replaceChild(newScript, s);
-            });
-        }
-
-        function loadAdminDailySyncWidget() {
-            google.script.run
-                .withSuccessHandler(html => {
-                    const container = document.getElementById('admin-daily-sync-widget-container');
-                    container.innerHTML = html;
-                    executeScriptsInElement(container);
-                })
-                .withFailureHandler(err => {
-                    document.getElementById('admin-daily-sync-widget-container').innerHTML = '<p class="text-danger">Failed to load sync widget.</p>';
-                })
-                .getHtmlOutput('AdminDailySyncWidget_v2');
-        }
-
-        loadAdminDailySyncWidget();
-    </script>
 </div>
