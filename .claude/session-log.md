@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T3.1 Stage B — AdminProducts refreshView consolidation; @159 deploy @163)
+
+- **T3.1 SHIPPED end-to-end (@159 deploy @163).** Stage B refactored `AdminProductsView.refreshView` from a 12-call fanout to one `WebAppProducts_getAdminViewData` round-trip → `applyAllSections` dispatch. Stage A backend (`b1f96c5`, pushed-not-deployed) rode this same deploy. Code commit `02351c4`; docs separate.
+- **9 loaders + `updateNewExportUI`** each got an optional `preloadedData` arg. Chose **extracted inner `render()`** per loader (preload path calls render + returns; fetch path keeps loading-placeholder + error/failure handlers) over the plan's duplicate-the-block sketch — avoids logic duplication, no loading flash on preload.
+- **Plan correction:** `updateNewExportUI` was NOT pure UI — it made a *second* `getLinkageTasks` call, so old refreshView = **12** backend round-trips (getLinkageTasks twice). Consolidation removes the dup (`applyAllSections` feeds `data.linkageTasks` to both loadLinkageList + updateNewExportUI).
+- **Untouched (verified):** vintage-accept splice path (`:1758-1791`); no-arg fetch callers (`loadSkuUpdates` ×3, `loadSuggestionList` ×1) preserved by the `!== undefined` guard.
+- **Smoke (live @163):** all 4 cards render. User noted SKU-mgmt buttons overlap on mobile = pre-existing, desktop-only activity, my change is JS-only (no button CSS/HTML touched) — not logged.
+- **Next:** T3.2 (ManagerContact load-once) → T3.3 (AdminBundles, same recipe). T5.3 shared-list decision reachable. CCP-UI-8 ModalOverlay helper prerequisite before T5.1/T4.3. Not pushed to origin (local commits only).
+
+---
+
 ## 2026-05-29 (continued — UI T2.5/T2.6/T4.2 + display tweaks + config routing fixes; deploys @159→@162)
 
 - **UI T2.5 SHIPPED @155 deploy @159** — extended TaskWidgets kit (formatDateShort/formatDateFull) + migrated ManagerDashboardView_v2 (scriptlet include, 21 call-sites, isOverdue inlined preserving exact semantics, `.task-filters`→`.tw-filter-bar`).
