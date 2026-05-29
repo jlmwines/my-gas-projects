@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <style>
   /* Task row and header use flexbox to fill 100% width */
   .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
@@ -1055,7 +1056,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         btn.textContent = 'Import';
         var resultDiv = document.getElementById('import-result');
         if (result.error) {
-          resultDiv.innerHTML = '<span class="text-danger">Error: ' + esc(result.error) + '</span>';
+          resultDiv.innerHTML = '<span class="text-danger">Error: ' + TaskWidgets.escape(result.error) + '</span>';
           resultDiv.style.display = '';
         } else {
           var msg = 'Imported: ' + result.data.imported + ', Failed: ' + result.data.failed;
@@ -1072,7 +1073,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Import';
-        document.getElementById('import-result').innerHTML = '<span class="text-danger">Error: ' + esc(err.message || 'Failed') + '</span>';
+        document.getElementById('import-result').innerHTML = '<span class="text-danger">Error: ' + TaskWidgets.escape(err.message || 'Failed') + '</span>';
         document.getElementById('import-result').style.display = '';
       })
       .WebAppProjects_importContentStreams(csvData, state.selectedProjectId);
@@ -1106,7 +1107,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       })
       .withFailureHandler(function(err) {
         document.getElementById('product-info-content').innerHTML =
-          '<span class="text-danger">Error: ' + esc(err.message || 'Failed to load') + '</span>';
+          '<span class="text-danger">Error: ' + TaskWidgets.escape(err.message || 'Failed to load') + '</span>';
       })
       .WebAppProducts_lookupProductBySku(entityId);
   }
@@ -1115,7 +1116,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var content = document.getElementById('product-info-content');
 
     if (!data || !data.comax) {
-      content.innerHTML = '<span class="text-warning">SKU not found: ' + esc(sku) + '</span>';
+      content.innerHTML = '<span class="text-warning">SKU not found: ' + TaskWidgets.escape(sku) + '</span>';
       return;
     }
 
@@ -1133,7 +1134,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     html += ' &nbsp;|&nbsp; Stock: ' + (comax.stock || 0);
     html += ' &nbsp;|&nbsp; ₪' + (comax.price || 0);
     // Row 2: Name
-    html += '<br>' + esc(comax.nameHe || '-');
+    html += '<br>' + TaskWidgets.escape(comax.nameHe || '-');
     // Row 3: Web status (if relevant)
     if (web) {
       html += '<br><span class="text-muted">Web: EN#' + (web.webIdEn || '-') + ' HE#' + (web.webIdHe || '-') + '</span>';
@@ -1251,7 +1252,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var id = p.projectid || p.spro_ProjectId || '';
       var name = p.name || p.spro_Name || id;
       var sel = (String(id) === String(current)) ? ' selected' : '';
-      html += '<option value="' + esc(id) + '"' + sel + '>' + esc(name) + '</option>';
+      html += '<option value="' + TaskWidgets.escape(id) + '"' + sel + '>' + TaskWidgets.escape(name) + '</option>';
     });
     select.innerHTML = html || '<option value="">— No projects —</option>';
   }
@@ -1263,7 +1264,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .withSuccessHandler(function(roles) {
         var html = '<option value="">— Unassigned —</option>';
         (roles || []).forEach(function(r) {
-          html += '<option value="' + esc(r) + '">' + esc(r) + '</option>';
+          html += '<option value="' + TaskWidgets.escape(r) + '">' + TaskWidgets.escape(r) + '</option>';
         });
         select.innerHTML = html;
       })
@@ -1281,7 +1282,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         var html = '<option value="">— No campaign —</option>';
         if (result && !result.error && Array.isArray(result.data)) {
           result.data.forEach(function(c) {
-            html += '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>';
+            html += '<option value="' + TaskWidgets.escape(c.id) + '">' + TaskWidgets.escape(c.name) + '</option>';
           });
         }
         select.innerHTML = html;
@@ -1315,7 +1316,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       backBtn.style.display = '';
       var project = getSelectedProject();
       var projectName = project ? (project.name || project.spro_Name) : 'Project';
-      breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + esc(projectName);
+      breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + TaskWidgets.escape(projectName);
       newBtn.textContent = '+ Task';
       // Show content buttons when in tasks mode
       contentStreamBtn.style.display = '';
@@ -1406,7 +1407,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var statusClass = isSelected ? '' : (status === 'ACTIVE' ? 'text-success' : status === 'PLANNING' ? 'text-warning' : 'text-muted');
 
       return '<div class="row border-bottom py-2 px-2 project-row' + (isSelected ? ' bg-info text-white' : '') + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
-        '<div class="col-5 text-truncate">' + esc(name) + '</div>' +
+        '<div class="col-5 text-truncate">' + TaskWidgets.escape(name) + '</div>' +
         '<div class="col-3"><small class="' + statusClass + '">' + status.toLowerCase() + '</small></div>' +
         '<div class="col-2 text-center"><span class="badge badge-secondary">' + taskCount + '</span></div>' +
         '<div class="col-2 text-right text-muted">›</div>' +
@@ -1459,13 +1460,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var assigneeShort = assignee ? assignee.split('@')[0] : '-';
       var status = t.st_Status || 'New';
       var priority = t.st_Priority || 'Normal';
-      var startDateVal = t.st_StartDate ? formatDateInput(t.st_StartDate) : '';
-      var dueDateVal = t.st_DueDate ? formatDateInput(t.st_DueDate) : '';
-      var doneDateVal = t.st_DoneDate ? formatDateInput(t.st_DoneDate) : '';
-      var startDateDisp = t.st_StartDate ? formatDateShort(t.st_StartDate) : '-';
-      var dueDateDisp = t.st_DueDate ? formatDateShort(t.st_DueDate) : '-';
-      var doneDateDisp = t.st_DoneDate ? formatDateShort(t.st_DoneDate) : '-';
-      var createdDateDisp = t.st_CreatedDate ? formatDateShort(t.st_CreatedDate) : '-';
+      var startDateVal = t.st_StartDate ? TaskWidgets.formatDate(t.st_StartDate) : '';
+      var dueDateVal = t.st_DueDate ? TaskWidgets.formatDate(t.st_DueDate) : '';
+      var doneDateVal = t.st_DoneDate ? TaskWidgets.formatDate(t.st_DoneDate) : '';
+      var startDateDisp = t.st_StartDate ? TaskWidgets.formatDateShort(t.st_StartDate) : '-';
+      var dueDateDisp = t.st_DueDate ? TaskWidgets.formatDateShort(t.st_DueDate) : '-';
+      var doneDateDisp = t.st_DoneDate ? TaskWidgets.formatDateShort(t.st_DoneDate) : '-';
+      var createdDateDisp = t.st_CreatedDate ? TaskWidgets.formatDateShort(t.st_CreatedDate) : '-';
       var isOverdue = t.st_DueDate && new Date(t.st_DueDate) < new Date() && status !== 'Done' && status !== 'Closed';
       var isSelected = id === state.selectedTaskId;
 
@@ -1487,8 +1488,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
       // Show full entity ID (not truncated) - user needs to see/copy UPC codes
       var entityHtml = isUrl
-        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityName || entityId) + '">' + esc(entityName || 'Link') + '</a>'
-        : '<span class="user-select-all" title="' + esc(entityName) + '">' + esc(entityId || '-') + '</span>';
+        ? '<a href="' + TaskWidgets.escape(entityId) + '" target="_blank" class="entity-link" title="' + TaskWidgets.escape(entityName || entityId) + '">' + TaskWidgets.escape(entityName || 'Link') + '</a>'
+        : '<span class="user-select-all" title="' + TaskWidgets.escape(entityName) + '">' + TaskWidgets.escape(entityId || '-') + '</span>';
 
       var isChecked = state.selectedTaskIds.indexOf(id) !== -1;
 
@@ -1503,13 +1504,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       // Entity ID link for wide view
       var entityIdShort = entityId.length > 6 ? entityId.substring(0, 5) + '..' : entityId;
       var entityIdHtml = isUrl
-        ? '<a href="' + esc(entityId) + '" target="_blank" class="entity-link" title="' + esc(entityId) + '">Open</a>'
-        : '<span class="text-truncate" title="' + esc(entityId) + '">' + esc(entityIdShort) + '</span>';
+        ? '<a href="' + TaskWidgets.escape(entityId) + '" target="_blank" class="entity-link" title="' + TaskWidgets.escape(entityId) + '">Open</a>'
+        : '<span class="text-truncate" title="' + TaskWidgets.escape(entityId) + '">' + TaskWidgets.escape(entityIdShort) + '</span>';
 
       return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
         '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
-        '<div class="task-col-wide-only task-col-session text-truncate" title="' + esc(sessionId) + '">' + esc(sessionId) + '</div>' +
-        '<div class="task-col-title text-truncate" style="cursor:pointer;">' + esc(title) + '</div>' +
+        '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(sessionId) + '">' + TaskWidgets.escape(sessionId) + '</div>' +
+        '<div class="task-col-title text-truncate" style="cursor:pointer;">' + TaskWidgets.escape(title) + '</div>' +
         '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
         '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
         '<div class="task-col-hideable task-col-assignee">' + assigneeSelect + '</div>' +
@@ -1679,7 +1680,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var id = p.projectid || p.spro_ProjectId;
       var name = p.name || p.spro_Name || id;
       var selected = id === state.selectedProjectId ? ' selected' : '';
-      html += '<option value="' + id + '"' + selected + '>' + esc(name) + '</option>';
+      html += '<option value="' + id + '"' + selected + '>' + TaskWidgets.escape(name) + '</option>';
     });
     switcher.innerHTML = html;
   }
@@ -1688,8 +1689,8 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('field-name').value = project.name || project.spro_Name || '';
     document.getElementById('field-type').value = project.type || project.spro_Type || 'ONE_OFF';
     document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
-    document.getElementById('field-start-date').value = formatDateInput(project.startdate || project.spro_StartDate);
-    document.getElementById('field-end-date').value = formatDateInput(project.enddate || project.spro_EndDate);
+    document.getElementById('field-start-date').value = TaskWidgets.formatDate(project.startdate || project.spro_StartDate);
+    document.getElementById('field-end-date').value = TaskWidgets.formatDate(project.enddate || project.spro_EndDate);
     populateCampaignField(project.campaignid || project.spro_CampaignId || '');
 
     // System projects (PROJ-SYS_*) are read-only
@@ -1728,7 +1729,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var html = '<option value="">— None —</option>';
     options.forEach(function(c) {
       var sel = (c.id === selectedId) ? ' selected' : '';
-      html += '<option value="' + esc(c.id) + '"' + sel + '>' + esc(c.name) + '</option>';
+      html += '<option value="' + TaskWidgets.escape(c.id) + '"' + sel + '>' + TaskWidgets.escape(c.name) + '</option>';
     });
     select.innerHTML = html;
   }
@@ -1750,9 +1751,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     });
     assigneeSelect.innerHTML = assigneeHtml;
 
-    document.getElementById('task-field-start').value = task.st_StartDate ? formatDateInput(task.st_StartDate) : '';
-    document.getElementById('task-field-due').value = task.st_DueDate ? formatDateInput(task.st_DueDate) : '';
-    var createdDisp = task.st_CreatedDate ? formatDateShort(task.st_CreatedDate) : '';
+    document.getElementById('task-field-start').value = task.st_StartDate ? TaskWidgets.formatDate(task.st_StartDate) : '';
+    document.getElementById('task-field-due').value = task.st_DueDate ? TaskWidgets.formatDate(task.st_DueDate) : '';
+    var createdDisp = task.st_CreatedDate ? TaskWidgets.formatDateShort(task.st_CreatedDate) : '';
     document.getElementById('task-field-created-display').textContent = createdDisp ? 'Created: ' + createdDisp : '';
 
     document.getElementById('task-field-entity').value = task.st_LinkedEntityName || '';
@@ -1946,38 +1947,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       if (aVal > bVal) return state.sortDir === 'asc' ? 1 : -1;
       return 0;
     });
-  }
-
-  function formatDate(v) {
-    if (!v) return '';
-    try {
-      var d = new Date(v);
-      return isNaN(d) ? '' : d.toLocaleDateString();
-    } catch(e) { return ''; }
-  }
-
-  function formatDateShort(v) {
-    if (!v) return '';
-    try {
-      var d = new Date(v);
-      if (isNaN(d)) return '';
-      var m = d.getMonth() + 1;
-      var day = d.getDate();
-      return m + '/' + day;
-    } catch(e) { return ''; }
-  }
-
-  function formatDateInput(v) {
-    if (!v) return '';
-    try {
-      var d = new Date(v);
-      return isNaN(d) ? '' : d.toISOString().split('T')[0];
-    } catch(e) { return ''; }
-  }
-
-  function esc(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function showConfirm(message, callback) {
