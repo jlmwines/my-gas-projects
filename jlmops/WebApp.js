@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-28 11:45',
-  commit: '@150 Session D — CRM gift rule + correction script were already in place (stale tracking); war-support detection code removed per plan §269. Correction script runContactDataCorrection() was executed against live data 2026-05-28 by user before this deploy. Code removal: ContactService._extractCoupons + _hasWarSupportCoupon helpers + warSupportCoupons config read; ContactImportService _warSupportOrders counters in main + partial-refresh paths and noncore.support classification branches; crm.war_support_coupons SysConfig row. Kept noncore.support in crm.customer_types and WebAppContacts dropdown/label map so existing tagged rows still display correctly per plan §269 "existing classification stays as-is, allowed to be slightly wrong, ages into Lapsed/Dormant naturally."'
+  built: '2026-05-29 05:46',
+  commit: '@151 Reliability Tier 1.1 — SysContacts aggregate-consistency fix. updateContactsFromOrders now merges WebOrdM_Archive (orders) + WebOrdItemsM_Archive (items) so sc_OrderCount/sc_TotalSpend no longer decrement as orders age into archive (mirrors importFromOrderHistory). Both archive-merge blocks fixed to map wom_OrderTotal (was unmapped, causing archived orders to fall back to line-item subtotals without tax/shipping — pre-existing bug in importFromOrderHistory, faithfully copied into the new path). CCP-3 verify step added: post-write, sum of sc_OrderCount across all contacts must equal union order count (post status-exclusion); mismatch fires reportFailure(reconciliation.sys_contacts.write_verify, High) with sessionId. Pre-existing \\ typo at avg-order-value calc was already correct.'
 };
 
 function getVersion() {

@@ -97,6 +97,7 @@ const ContactImportService = (function () {
         mappedRow[womIdx['wom_ShippingPhone']] = row[womaIdx['woma_ShippingPhone']];
         mappedRow[womIdx['wom_CustomerNote']] = row[womaIdx['woma_CustomerNote']];
         mappedRow[womIdx['wom_CouponItems']] = row[womaIdx['woma_CouponItems']];
+        mappedRow[womIdx['wom_OrderTotal']] = row[womaIdx['woma_OrderTotal']];
         mappedRow[womIdx['wom_CustomerUser']] = row[womaIdx['woma_CustomerUser']];
         mappedRow[womIdx['wom_MetaWpmlLanguage']] = row[womaIdx['woma_MetaWpmlLanguage']];
         orderData.push(mappedRow);
@@ -625,6 +626,7 @@ const ContactImportService = (function () {
    */
   function updateContactsFromOrders() {
     const fnName = 'updateContactsFromOrders';
+    const sessionId = Utilities.getUuid();
     LoggerService.info(SERVICE_NAME, fnName, 'Starting contact update from orders');
 
     const allConfig = ConfigService.getAllConfig();
@@ -639,7 +641,7 @@ const ContactImportService = (function () {
     });
     LoggerService.info(SERVICE_NAME, fnName, `Loaded ${contactsByEmail.size} existing contacts`);
 
-    // Load WebOrdM (current orders only - archive is historical)
+    // Load WebOrdM current orders
     const orderMasterSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
     if (!orderMasterSheet || orderMasterSheet.getLastRow() <= 1) {
       LoggerService.info(SERVICE_NAME, fnName, 'No orders in WebOrdM');
@@ -651,12 +653,66 @@ const ContactImportService = (function () {
     const womIdx = {};
     orderHeaders.forEach((h, i) => womIdx[h] = i);
 
+    // Also merge WebOrdM_Archive — archived orders must still count toward
+    // contact aggregates, otherwise sc_OrderCount decrements as orders age out.
+    // Mirrors the archive-merge block in importFromOrderHistory (:78-105).
+    const orderArchiveSheet = spreadsheet.getSheetByName('WebOrdM_Archive');
+    if (orderArchiveSheet && orderArchiveSheet.getLastRow() > 1) {
+      const archiveData = orderArchiveSheet.getDataRange().getValues();
+      const archiveHeaders = archiveData.shift();
+      const womaIdx = {};
+      archiveHeaders.forEach((h, i) => womaIdx[h] = i);
+
+      archiveData.forEach(row => {
+        const mappedRow = [];
+        mappedRow[womIdx['wom_OrderId']] = row[womaIdx['woma_OrderId']];
+        mappedRow[womIdx['wom_OrderDate']] = row[womaIdx['woma_OrderDate']];
+        mappedRow[womIdx['wom_Status']] = row[womaIdx['woma_Status']];
+        mappedRow[womIdx['wom_BillingEmail']] = row[womaIdx['woma_BillingEmail']];
+        mappedRow[womIdx['wom_BillingFirstName']] = row[womaIdx['woma_BillingFirstName']];
+        mappedRow[womIdx['wom_BillingLastName']] = row[womaIdx['woma_BillingLastName']];
+        mappedRow[womIdx['wom_BillingPhone']] = row[womaIdx['woma_BillingPhone']];
+        mappedRow[womIdx['wom_ShippingFirstName']] = row[womaIdx['woma_ShippingFirstName']];
+        mappedRow[womIdx['wom_ShippingLastName']] = row[womaIdx['woma_ShippingLastName']];
+        mappedRow[womIdx['wom_ShippingCity']] = row[womaIdx['woma_ShippingCity']];
+        mappedRow[womIdx['wom_ShippingPhone']] = row[womaIdx['woma_ShippingPhone']];
+        mappedRow[womIdx['wom_CustomerNote']] = row[womaIdx['woma_CustomerNote']];
+        mappedRow[womIdx['wom_CouponItems']] = row[womaIdx['woma_CouponItems']];
+        mappedRow[womIdx['wom_OrderTotal']] = row[womaIdx['woma_OrderTotal']];
+        mappedRow[womIdx['wom_CustomerUser']] = row[womaIdx['woma_CustomerUser']];
+        mappedRow[womIdx['wom_MetaWpmlLanguage']] = row[womaIdx['woma_MetaWpmlLanguage']];
+        orderData.push(mappedRow);
+      });
+      LoggerService.info(SERVICE_NAME, fnName, `Added ${archiveData.length} orders from archive`);
+    }
+
     // Load order items for totals
     const orderItemsSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
     const itemsData = orderItemsSheet ? orderItemsSheet.getDataRange().getValues() : [];
     const itemHeaders = itemsData.length > 0 ? itemsData.shift() : [];
     const woiIdx = {};
     itemHeaders.forEach((h, i) => woiIdx[h] = i);
+
+    // Also merge WebOrdItemsM_Archive so archived orders' totals/bottle counts
+    // resolve (mirrors importFromOrderHistory :113-131).
+    const itemsArchiveSheet = spreadsheet.getSheetByName('WebOrdItemsM_Archive');
+    if (itemsArchiveSheet && itemsArchiveSheet.getLastRow() > 1) {
+      const archiveItemsData = itemsArchiveSheet.getDataRange().getValues();
+      const archiveItemHeaders = archiveItemsData.shift();
+      const woiaIdx = {};
+      archiveItemHeaders.forEach((h, i) => woiaIdx[h] = i);
+
+      archiveItemsData.forEach(row => {
+        const mappedRow = [];
+        mappedRow[woiIdx['woi_OrderId']] = row[woiaIdx['woia_OrderId']];
+        mappedRow[woiIdx['woi_SKU']] = row[woiaIdx['woia_SKU']];
+        mappedRow[woiIdx['woi_Name']] = row[woiaIdx['woia_Name']];
+        mappedRow[woiIdx['woi_Quantity']] = row[woiaIdx['woia_Quantity']];
+        mappedRow[woiIdx['woi_ItemTotal']] = row[woiaIdx['woia_ItemTotal']];
+        itemsData.push(mappedRow);
+      });
+      LoggerService.info(SERVICE_NAME, fnName, `Added ${archiveItemsData.length} items from archive`);
+    }
 
     // Build items by order for totals
     const itemsByOrder = new Map();
@@ -878,6 +934,26 @@ const ContactImportService = (function () {
     if (contactsToSave.length > 0) {
       LoggerService.info(SERVICE_NAME, fnName, `Saving ${contactsToSave.length} contacts (${created} new, ${updated} updated)`);
       ContactService.batchUpsertContacts(contactsToSave);
+    }
+
+    // CCP-3 verify: the sum of sc_OrderCount across all contacts must equal the
+    // union order count (post status-exclusion). A mismatch signals the aggregate
+    // write diverged from source; surface it rather than letting it rot silently.
+    let expectedOrderCount = 0;
+    contactUpdates.forEach(u => { expectedOrderCount += u.orders.length; });
+    SpreadsheetApp.flush();
+    let actualOrderCount = 0;
+    ContactService.getContacts().forEach(c => {
+      actualOrderCount += (parseInt(c.sc_OrderCount, 10) || 0);
+    });
+    if (actualOrderCount !== expectedOrderCount) {
+      NotificationService.reportFailure(
+        'reconciliation.sys_contacts.write_verify',
+        `SysContacts sc_OrderCount sum (${actualOrderCount}) does not match union order count (${expectedOrderCount}) after update`,
+        'High',
+        { expectedOrderCount: expectedOrderCount, actualOrderCount: actualOrderCount },
+        sessionId
+      );
     }
 
     LoggerService.info(SERVICE_NAME, fnName, `Complete: ${created} created, ${updated} updated`);
