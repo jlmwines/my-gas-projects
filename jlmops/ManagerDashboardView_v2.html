@@ -77,6 +77,13 @@
     .task-col-created::before { content: 'Created: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-link { padding-top: 8px !important; }
 
+    /* Mobile: hide secondary columns so the task list stays scannable.
+       Entity / Created / Link remain available in the expanded detail.
+       Selector matches .task-row [class^=...] specificity so display:none wins. */
+    .task-row .task-col-entity,
+    .task-row .task-col-created,
+    .task-row .task-col-link { display: none; }
+
     /* Calendar view doesn't fit on phone — hide its toggle + the grid itself */
     #btn-calendar-view { display: none; }
     .calendar-container { display: none !important; }
