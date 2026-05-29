@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 14:12',
-  commit: '@177 ui(ManagerDashboard): compact mobile task cards — task-row is now flex-wrap, Title takes its own full-width line (order:-1, wraps) and Topic/Status/Priority/Due flow together on a meta line below instead of each on its own row. Roughly halves card height so more tasks fit on screen. Desktop table layout unchanged. Follows @176 (calendar-nav hide). [+@175 toggle hide, @176 nav hide all in ManagerDashboardView_v2 this session]'
+  built: '2026-05-29 14:30',
+  commit: '@179 UI T4.4 fixes (mobile smoke). (1) Shared responsive-stack: cells without a data-label no longer render a bare ": " — `td:not([data-label])::before{content:none}` in AppView (also fixes OrdersView action/gift cells). (2) ManagerProducts modal: edit areas were wider than the card — CSS-grid min-content trap; added `.comparison-grid>*{min-width:0}` + desc box-sizing/overflow-wrap. (3) Fill/Clear were crowding the tabs — tab-group now scrolls on its own row, tab-actions wraps to a row below. Follows @178.'
 };
 
 function getVersion() {

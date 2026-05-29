@@ -125,12 +125,15 @@
                 padding: 4px 0;
                 border: none;
             }
-            table.responsive-stack td::before {
+            table.responsive-stack td[data-label]::before {
                 content: attr(data-label) ": ";
                 font-weight: 600;
                 color: #6c757d;
                 margin-right: 6px;
             }
+            /* Cells without a data-label (e.g. an action-button cell) get no
+               prefix — previously they rendered a bare ": ". */
+            table.responsive-stack td:not([data-label])::before { content: none; }
             table.responsive-stack td:empty::before { content: none; }
         }
 
