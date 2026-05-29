@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T5.1 AdminContacts modals + nav fix + Contact Action Ribbon plan; @182→@184 deploy @186→@188)
+
+- **T5.1 SHIPPED (@182 deploy @186).** 3 Bootstrap modals (Log Activity/Create Task/Compose Email) → modal-overlay via the shared **ModalOverlay** helper (deviation/improvement over plan's raw display toggle — AdminContacts includes TaskWidgets so the helper was available). 2 btn-primary → btn. Verified 0 modal-fade/$().modal()/btn-primary.
+- **Nav fix (@183 → @184, deploy @187→@188).** User screenshot revealed admin "Contacts" was routing to ManagerContacts (manager view) while AdminContacts hid under "CRM Tools". Fixed to admin "Contacts" → AdminContacts, then per user reduced to a **single** admin contacts link named consistently with manager nav. (I overstepped by relabeling "CRM Tools"→"Contact Lookup" without asking — user called it out; corrected.) ManagerContactView still reachable for admins via dashboard task deep-links.
+- **Design rough-spot → new plan.** The T5.1 work surfaced that the two contact surfaces overlap and admins don't do outreach. Chavruta session produced `jlmops/plans/CONTACT_ACTION_RIBBON_PLAN.md`: unified packaged single modal — ribbon = record icons (per-type, pre-selected activity, either direction) + one distinct "Make contact" action (sends, task-pack-driven, template + mark-done); record icons disabled in outreach-task mode. Reuses logContactAttempt / getOutreachTemplate / ModalOverlay — composition not invention. NOT built.
+- **Lesson reinforced:** trust the user's screenshot/observation; check nav routing before insisting. Good process moment — deep implementation run, found a rough spot, planned it cleanly to continue with a better product.
+- **Open:** T5.1 3-modal smoke pending user confirm. Next: T5.2 (AdminProducts modals) → T5.3.
+
+---
+
 ## 2026-05-29 (UI T4.5 — LibraryView mobile; @180 deploy @184 + @181 deploy @185)
 
 - **T4.5 SHIPPED (commit `18a2cd7`).** Drawer header single-col on mobile; stacked task rows now label Status; library list table (7 cols) → responsive-stack + data-label. Verified classes vs plan first (matched). One deploy for both stages.
