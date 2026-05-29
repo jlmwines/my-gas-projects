@@ -391,7 +391,7 @@
         "topic", "Data",
         "default_priority", "Normal",
         "initial_status", "New",
-        "flow_pattern", "manager_direct",
+        "flow_pattern", "admin_direct",
         "due_pattern", "one_week",
         "pack_form", "skeleton"
     ],

@@ -27797,7 +27797,7 @@ function getMasterConfiguration() {
         "Reminder to update WooCommerce coupons list.",
         "stable",
         "flow_pattern",
-        "manager_direct",
+        "admin_direct",
         "",
         "",
         "",
