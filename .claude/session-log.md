@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T4.3 — ManagerInventory mobile pass; @168→@172 deploy @172→@176)
+
+- **T4.3 SHIPPED, 3 stages.** A (@168/172): card-headers flex-wrap + Brurya add-group full-width on mobile. B (@170/174): Product Counts → compact list on mobile, tap-row → count-entry modal (Storage/Office/Shop/Vintage/Comment + Save / Save & next) via shared ModalOverlay — added TaskWidgets include to ManagerInventoryView (it wasn't a kit consumer; plan assumed ModalOverlay was reachable). C (@172/176): Brurya → custom `.brurya-table` 2-row mobile card (Quantity+SKU / Name; # hidden) per user, not generic responsive-stack.
+- **Stage B shipped-but-UNSMOKED:** no count tasks scheduled at ship time → Product Counts list empty. Must verify the modal flow (tap-row, Save & next walking the list, checkbox tick, Total recompute) when count tasks next appear. Added to STATUS pending. A + C user-confirmed on mobile.
+- **saveCountEntry detail:** dispatches `input` on BOTH storage (Total+checkbox from qty) AND vintage (checkbox incl. vintage/comment) — plan only dispatched storage, missing the vintage-only case.
+- **Latent T1.0 bug fixed mid-session (@169/173):** Brurya autocomplete "Argument too large: value" — CacheService 100KB overflow in `_getCmxProdMSearchIndex` (full-catalog projection w/ duplicate lowercase fields). Halved payload + try/catch graceful no-cache. User's instinct (search via autocomplete) surfaced it. bugs.md updated.
+- **Tier 4 progress:** T4.2 (earlier) + T4.3 done. Remaining T4.x: T4.1 (Orders mobile), T4.4, T4.5. Then T5.x. Commits `326f5fa`/`069fc4d`/`260c115` (+ Stage A). Not pushed to origin.
+
+---
+
 ## 2026-05-29 (UI CCP-UI-8 — shared ModalOverlay helper; @167 deploy @171)
 
 - **CCP-UI-8 SHIPPED (@167 deploy @171, `e368125`).** Added `window.ModalOverlay.open(id)/close(id)` to TaskWidgets (reaches all 8 kit views): focus-first + restore-to-trigger, Esc-to-close, Tab/Shift+Tab focus-trap, body scroll-lock, z-index stacking. The focus-trap is what bare modal-overlay lost vs Bootstrap modals.

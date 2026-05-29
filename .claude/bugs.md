@@ -7,6 +7,10 @@ Projects: jlmops, web, marketing, content
 
 ## jlmops
 
+### Resolved (recent)
+
+- [x] 2026-05-29: **Brurya product autocomplete crashed: "Argument too large: value".** RESOLVED @169 deploy @173. `LookupService._getCmxProdMSearchIndex` (added in T1.0, @153) JSON-stringified a full-CmxProdM-catalog projection with 4 fields/row (sku, name, + duplicate lowercase copies) and `cache.put` exceeded the CacheService 100KB per-value limit, rethrowing to the client so the autocomplete failed entirely. Fixed: dropped the duplicate `skuLc`/`nameLc` (lowercase at search time → ~half the payload) + wrapped `cache.put` in try/catch so an oversized catalog degrades to uncached (re-reads per call, same as pre-cache) instead of crashing. Surfaced during T4.3 Stage A smoke.
+
 ### Open
 
 - [ ] 2026-05-29: **Full date (dd/mm/yyyy) slightly clips the year in the expanded task detail.** After the dd/mm date-order change (@157 deploy @161, `TaskWidgets.formatDateFull` → `toLocaleDateString('en-GB')`), the year appears slightly truncated in the ManagerDashboard expanded-row detail even though there's visible space within the control — points to padding/overflow on the value cell, not insufficient width. Minor cosmetic. Likely fix: check the `.task-detail .detail-row` inner `<div>` value cells for `overflow:hidden`/`text-overflow` or tight padding; widen/relax. User observed on smoke 2026-05-29; not yet diagnosed against the exact element.
