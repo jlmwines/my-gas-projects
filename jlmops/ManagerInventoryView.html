@@ -70,6 +70,23 @@
         .brurya-qty-input { width: 80px; }
         @media (max-width: 768px) {
             .brurya-qty-input { width: 100%; }
+
+            /* Brurya cards on mobile: row 1 = Quantity + SKU; row 2 = Name; # hidden */
+            .brurya-table thead { display: none; }
+            .brurya-table tbody, .brurya-table tr, .brurya-table td { display: block; }
+            .brurya-table tr {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 4px;
+                border-bottom: 1px solid #eee;
+            }
+            .brurya-table td { border: none; padding: 0; }
+            .brurya-table td[data-label="Quantity"] { flex: 0 0 5.5rem; }      /* qty input */
+            .brurya-table td[data-label="SKU"] { flex: 1 1 auto; color: #6c757d; }
+            .brurya-table td[data-label="Name"] { flex: 0 0 100%; font-weight: 500; }
+            .brurya-table td[data-label="#"] { display: none; }                /* row number not useful on mobile */
         }
 
         /* T4.3 Stage B — Product Counts on mobile: collapse to a compact list
@@ -756,15 +773,15 @@
                     return;
                 }
 
-                let tableHtml = '<table class="table table-hover"><thead><tr><th>Quantity</th><th>SKU</th><th>Name</th><th>#</th></tr></thead><tbody>';
+                let tableHtml = '<table class="table table-sm table-hover brurya-table"><thead><tr><th>Quantity</th><th>SKU</th><th>Name</th><th>#</th></tr></thead><tbody>';
                 if (inventoryData.length > 0) {
                     inventoryData.forEach((item, index) => {
                         tableHtml += `
                             <tr data-sku="${item.sku}">
-                                <td style="width: 15%;"><input type="number" class="form-control form-control-sm" value="${item.bruryaQty}" min="0"></td>
-                                <td>${item.sku}</td>
-                                <td class="product-name-col">${item.Name}</td>
-                                <td>${index + 1}</td>
+                                <td data-label="Quantity"><input type="number" class="form-control form-control-sm brurya-qty-input" value="${item.bruryaQty}" min="0"></td>
+                                <td data-label="SKU">${item.sku}</td>
+                                <td data-label="Name" class="product-name-col">${item.Name}</td>
+                                <td data-label="#">${index + 1}</td>
                             </tr>`;
                     });
                 }

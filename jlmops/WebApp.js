@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 13:32',
-  commit: '@170 UI T4.3 Stage B — ManagerInventoryView Product Counts mobile workflow. On mobile (<=768px) the 12-col count table collapses to a compact list (Product Name + SKU + status checkbox); tapping a row opens a focused count-entry modal (Comax/Total/Brurya read-only context + Storage/Office/Shop/Vintage/Comment inputs + Save / Save & next). Modal uses the shared ModalOverlay helper (added TaskWidgets include to this view for it). Save writes back into the hidden row inputs and dispatches input on storage (Total + checkbox recompute) and vintage (checkbox incl. vintage/comment) so existing logic is preserved; Save & next jumps to the next un-counted row. Desktop table/inline-edit unchanged. Follows @169.'
+  built: '2026-05-29 13:40',
+  commit: '@172 UI T4.3 Stage C (refined) — Brurya Stock table uses a custom .brurya-table mobile card layout (per user) instead of generic responsive-stack: row 1 = Quantity input + SKU side by side, row 2 = product name, row number (#) hidden on mobile. data-label attrs are the CSS hooks. Quantity input width via .brurya-qty-input. Save logic untouched. Completes T4.3 (A headers + B count modal + C Brurya cards). Follows @170.'
 };
 
 function getVersion() {
