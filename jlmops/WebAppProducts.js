@@ -1050,6 +1050,45 @@ function WebAppProducts_getRecentSkuUpdates() {
 }
 
 /**
+ * Consolidates the data sections that AdminProductsView.refreshView() previously
+ * fetched via separate google.script.run calls (UI Tier 3.1). One round-trip.
+ *
+ * NOTE on shapes (verified against the section getters): the 8 product getters are
+ * global functions returning RAW ARRAYS (they throw on error); WebAppLookups_getMap
+ * returns { error, data: { headers, rows } } — so lookups are unwrapped via .data.
+ * Frontend AdminProductsView.applyAllSections(data) dispatches each section to its
+ * loader's preloaded path.
+ *
+ * @param {string} [sessionId] Optional caller sessionId for traceability.
+ * @returns {{success: boolean, data?: object, error?: string}}
+ */
+function WebAppProducts_getAdminViewData(sessionId) {
+  try {
+    return {
+      success: true,
+      data: {
+        reviewTasks:        WebAppProducts_getAdminReviewTasks(),
+        acceptedTasks:      WebAppProducts_getAcceptedTasks(),
+        pendingDetailTasks: WebAppProducts_getPendingDetailTasks(),
+        suggestionTasks:    WebAppProducts_getSuggestionTasks(),
+        submissionsTasks:   WebAppProducts_getSubmissionsTasks(),
+        linkageTasks:       WebAppProducts_getLinkageTasks(),
+        pendingNewTasks:    WebAppProducts_getPendingNewTasks(),
+        recentSkuUpdates:   WebAppProducts_getRecentSkuUpdates(),
+        lookups: {
+          grapes:  WebAppLookups_getMap('map.grape_lookups').data,
+          kashrut: WebAppLookups_getMap('map.kashrut_lookups').data,
+          texts:   WebAppLookups_getMap('map.text_lookups').data
+        }
+      }
+    };
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getAdminViewData', e.message, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Looks up a product by SKU and returns comprehensive data from both Comax and Web.
  * @param {string} sku The product SKU to lookup.
  * @returns {Object} { comax: {...}, web: {...} | null }
