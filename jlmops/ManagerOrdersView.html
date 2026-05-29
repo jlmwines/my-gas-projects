@@ -117,7 +117,7 @@
 
     google.script.run
       .withSuccessHandler(docUrl => {
-        giftResultDiv.innerHTML = `<div class="alert alert-success">Gift message created for order ${orderId}. <a href="${docUrl}" target="_blank" class="btn btn-sm btn-primary ml-2">Open Document</a></div>`;
+        giftResultDiv.innerHTML = `<div class="alert alert-success">Gift message created for order ${orderId}. <a href="${docUrl}" target="_blank" class="btn btn-sm btn-light ml-2">Open Document</a></div>`;
       })
       .withFailureHandler(err => {
         giftResultDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
