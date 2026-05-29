@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T4.1 — OrdersView mobile; @173 deploy @177 + @174 deploy @178)
+
+- **T4.1 SHIPPED (commit `7e1f643`).** Both OrdersView tables → `.responsive-stack` + `table-sm` + `data-label` (labelled cards on mobile). Added mobile-safe "Select all" button (`toggleAllPacking`) above Packing Slips — the thead select-all is hidden by responsive-stack on mobile (kept thead checkbox for desktop). First production adopter of `.responsive-stack` (defined long ago in AppView, used by zero views until now).
+- **Refine after smoke (@174):** bare packing-slip checkbox was distorted (global `input{min-height:40px;font-size:16px}` stretched it once stacked) — scoped `#packing-slips-list .order-checkbox` to 22×22; relabelled "Select" → "Print this order". User-confirmed on mobile.
+- **New item user-flagged:** ManagerDashboard task view has a calendar/list toggle → should be list-only (calendar not wanted), and the control overflows off-screen on mobile. Taking it next. Logged in UI_AUDIT §10 + STATUS.
+- **Tier 4 mobile largely done** (T4.1 + T4.2 + T4.3). Remaining: T4.4, T4.5 → T5.x. Not pushed to origin yet.
+
+---
+
 ## 2026-05-29 (UI T4.3 — ManagerInventory mobile pass; @168→@172 deploy @172→@176)
 
 - **T4.3 SHIPPED, 3 stages.** A (@168/172): card-headers flex-wrap + Brurya add-group full-width on mobile. B (@170/174): Product Counts → compact list on mobile, tap-row → count-entry modal (Storage/Office/Shop/Vintage/Comment + Save / Save & next) via shared ModalOverlay — added TaskWidgets include to ManagerInventoryView (it wasn't a kit consumer; plan assumed ModalOverlay was reachable). C (@172/176): Brurya → custom `.brurya-table` 2-row mobile card (Quantity+SKU / Name; # hidden) per user, not generic responsive-stack.

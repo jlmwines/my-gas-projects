@@ -1,7 +1,7 @@
 # UI Tier 4.1 — OrdersView mobile pass (responsive-stack adoption)
 
 **Session ID:** UI_T4_1
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** **SHIPPED 2026-05-29 (@173 deploy @177 + @174 deploy @178 refine; commit `7e1f643`).** Both tables adopt `.responsive-stack` + `table-sm` with `data-label` per cell; mobile-safe "Select all" button (`toggleAllPacking`) added above Packing Slips (thead select-all stays for desktop). **Refinement after mobile smoke:** the bare packing-slip checkbox was distorted by the global `input{min-height:40px}` rule once stacked — scoped CSS pins `#packing-slips-list .order-checkbox` to 22×22; relabelled its cell "Select" → "Print this order". User-confirmed on mobile (Open Orders cards, packing cards, individual/all/deselect, checkbox). First production adopter of `.responsive-stack`. — Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **`.responsive-stack` utility verified.** Defined at `AppView.html:111-135`. Behavior matches its label: `thead` hides on mobile, each `<tr>` becomes a bordered card, each `<td>` becomes a block with `::before` content from `data-label` attribute. Empty `<td>::empty::before { content: none }` (`:134`) handles missing labels cleanly. Adopt as-is.
 - **Mobile primitives in AppView are sufficient:** `:151-156` already enforces `.btn { min-height: 44px }`, `.btn-sm { min-height: 38px }`, inputs `font-size: 16px !important; min-height: 40px`. No extra touch-target work needed on this session beyond proper markup.
 - **Both ManagerOrdersView tables use template literals to build HTML** (`:44, :84` per pre-T2.3 file). Adoption requires modifying the template strings, not just CSS.
