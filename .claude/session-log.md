@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T4.5 — LibraryView mobile; @180 deploy @184 + @181 deploy @185)
+
+- **T4.5 SHIPPED (commit `18a2cd7`).** Drawer header single-col on mobile; stacked task rows now label Status; library list table (7 cols) → responsive-stack + data-label. Verified classes vs plan first (matched). One deploy for both stages.
+- **Refine (@181):** unified the two tabs' mobile cards — Tasks had a near-invisible `#f1f3f5` divider, Library used the boxed responsive-stack (outline+radius+12px margins). Both now compact flat cards + clear `#ced4da` divider, scoped `.lv-*` so Orders/Products untouched. User: "good look."
+- **Tier 4 mobile COMPLETE (T4.1–T4.5).** Next: Tier 5 — T5.1 (AdminContacts modals → ModalOverlay), T5.2 (AdminProducts modals → ModalOverlay), T5.3 (shared-list decision). Not pushed to origin yet.
+
+---
+
 ## 2026-05-29 (UI T4.4 — ManagerProducts mobile; @178 deploy @182 + @179 deploy @183)
 
 - **T4.4 SHIPPED (commit `e97df74`).** Modal mobile @media: comparison-grid single-col, tab bar scroll + Fill/Clear on own row, header stacks (RTL Hebrew name no longer truncated-from-start). Both outer tables → responsive-stack + data-label. Verified class names vs plan first (all matched). One deploy for both stages (low risk, CSS+markup).

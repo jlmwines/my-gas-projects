@@ -1,7 +1,7 @@
 # UI Tier 4.5 — LibraryView mobile gaps
 
 **Session ID:** UI_T4_5
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** **SHIPPED 2026-05-29 (@180 deploy @184 + @181 deploy @185 refine; commit `18a2cd7`).** Stage A (drawer header single-col + task-row Status label) + Stage B (library list table → responsive-stack + data-label) shipped in one deploy. **Post-smoke refine (@181):** unified the two tabs' mobile cards — Tasks rows had a near-invisible `#f1f3f5` border while the Library list used the boxed responsive-stack (outline + radius + 12px margins), so they looked different and wasted space. Both now render as compact flat cards with one clear `#ced4da` divider, scoped to `.lv-*` so Orders/Products responsive-stack cards are untouched. All user-confirmed on mobile. **Completes Tier 4 mobile (T4.1–T4.5).** — Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **Drawer panel `.lv-drawer-panel` already mobile-safe** (`width: 560px; max-width: 95vw; max-height: 88vh` at `:121-130`). Frame adapts; only the internal `.lv-drawer-header` (`grid-template-columns: 1fr 1fr` at `:154-156`) is fixed two-column.
 - **Task row mobile rule exists but partial** (`:110-116`): collapses to column on mobile + adds `::before` labels for `col-assignee` and `col-due` only. **Missing labels** for `col-status` (column-stacked but unlabeled), `col-name` (acceptable — main content), `col-chips` (acceptable — visual badges).
 - **Library list table** (`:859-873`) is 7 columns (Title / Type / Lang / State / Ver / Last touched / Refs). No `.responsive-stack` today; needs adoption like the other Tier 4 sessions.
