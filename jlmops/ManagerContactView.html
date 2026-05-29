@@ -432,11 +432,12 @@
     updateChannelUi();
     loadTemplate();
 
-    actionModal.style.display = 'flex';
+    // CCP-UI-8: open via the shared helper (focus mgmt, Esc-to-close, scroll-lock).
+    ModalOverlay.open('mc-action-modal');
   }
 
   function closeActionModal() {
-    actionModal.style.display = 'none';
+    ModalOverlay.close('mc-action-modal');
   }
 
   function currentChannel() {

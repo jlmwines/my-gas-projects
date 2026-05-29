@@ -204,4 +204,91 @@
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   };
+
+  // ========================================================== //
+  // ModalOverlay (CCP-UI-8) — shared controller for the project's //
+  // modal-overlay pattern. Adds the focus management Bootstrap     //
+  // modals gave for free but plain modal-overlays lack:            //
+  //   - focus first interactive element on open, restore to the    //
+  //     trigger element on close                                   //
+  //   - Esc closes the topmost modal                               //
+  //   - Tab/Shift+Tab trapped within the topmost modal             //
+  //   - body scroll-lock while any modal is open                   //
+  //   - z-index stacking for nested modals                         //
+  // Usage: ModalOverlay.open('my-modal') / ModalOverlay.close('my-modal'). //
+  // The element keeps the existing markup (.modal-overlay with     //
+  // display:none); this just toggles display + manages focus.      //
+  // ========================================================== //
+  window.ModalOverlay = (function() {
+    var stack = [];            // ids of open modals, bottom -> top
+    var BASE_Z = 1050;
+    var keydownBound = false;
+    var FOCUSABLE = 'button, [href], input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    function visibleFocusables(el) {
+      return Array.prototype.filter.call(el.querySelectorAll(FOCUSABLE), function(n) {
+        return n.offsetParent !== null;  // skip hidden elements
+      });
+    }
+
+    function onKeydown(e) {
+      if (!stack.length) return;
+      var el = document.getElementById(stack[stack.length - 1]);
+      if (!el) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        ModalOverlay.close(el.id);
+        return;
+      }
+      if (e.key === 'Tab') {
+        var list = visibleFocusables(el);
+        if (!list.length) return;
+        var first = list[0], last = list[list.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
+
+    return {
+      open: function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (stack.indexOf(id) === -1) {
+          el._twTrigger = document.activeElement;  // remember trigger to restore on close
+          stack.push(id);
+        }
+        el.style.zIndex = BASE_Z + (stack.indexOf(id) * 10);
+        el.style.display = 'flex';
+        el.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';   // scroll-lock
+        if (!keydownBound) {
+          document.addEventListener('keydown', onKeydown);
+          keydownBound = true;
+        }
+        var f = visibleFocusables(el)[0];
+        if (f) f.focus();
+      },
+      close: function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = 'none';
+        el.setAttribute('aria-hidden', 'true');
+        var i = stack.indexOf(id);
+        if (i !== -1) stack.splice(i, 1);
+        if (!stack.length) {
+          document.body.style.overflow = '';        // release scroll-lock
+          if (keydownBound) {
+            document.removeEventListener('keydown', onKeydown);
+            keydownBound = false;
+          }
+        }
+        var t = el._twTrigger;                        // restore focus to trigger
+        if (t && typeof t.focus === 'function') t.focus();
+        el._twTrigger = null;
+      }
+    };
+  })();
 </script>

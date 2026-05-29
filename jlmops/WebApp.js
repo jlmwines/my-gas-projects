@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 12:43',
-  commit: '@166 UI T3.3 — AdminBundlesView init consolidation: single WebAppBundles_getViewData round-trip replaces the 4-call init fanout (categories/stats/bundles/healthAlerts). Each loader gained an optional preloaded-data arg (skips its fetch); init dispatches via applyInitData; bindEvents() moved ahead of the fetch. Extracted renderStats helper. Built against the actual pre-T2.1 loaders (T2.1 was deprioritized — no filter chips / allBundles state). Explicit-refresh callers (applyReplacements, etc.) preserved via no-arg guard. Backend getters all return {error,data}. Follows @165.'
+  built: '2026-05-29 12:58',
+  commit: '@167 UI CCP-UI-8 — shared window.ModalOverlay helper added to TaskWidgets (reaches all 8 kit views): open(id)/close(id) with focus-first-element + restore-to-trigger, Esc-to-close, Tab/Shift+Tab focus-trap, body scroll-lock, z-index stacking. Replaces the bare display=flex/none toggle that lost the focus-trap Bootstrap modals gave for free. Wired into ManagerContactView action modal (openActionModal/closeActionModal) as the first live consumer; remaining modals adopt as their sessions land (T4.3, T5.1). Follows @166.'
 };
 
 function getVersion() {
