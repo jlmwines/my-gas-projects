@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <div class="container-fluid">
   <div class="row mb-3">
     <div class="col-12">
@@ -893,8 +894,8 @@
 
       html += '<div class="contact-row px-2 py-1 border-bottom" data-email="' + c.email + '" style="cursor:pointer;">' +
         '<div class="row align-items-center" style="font-size:12px;">' +
-        '<div class="col-2 text-truncate font-weight-bold">' + escapeHtml(displayName) + '</div>' +
-        '<div class="col-3 text-truncate text-muted">' + escapeHtml(c.email) + '</div>' +
+        '<div class="col-2 text-truncate font-weight-bold">' + TaskWidgets.escape(displayName) + '</div>' +
+        '<div class="col-3 text-truncate text-muted">' + TaskWidgets.escape(c.email) + '</div>' +
         '<div class="col-1">' + typeBadge + '</div>' +
         '<div class="col-1 text-center">' + c.orderCount + '</div>' +
         '<div class="col-1 text-right">' + spendRounded + '</div>' +
@@ -1012,7 +1013,7 @@
         if (c.whiteComplexityRange && !isDateString(c.whiteComplexityRange)) attrs += ' C:' + c.whiteComplexityRange;
         if (c.whiteAcidityRange && !isDateString(c.whiteAcidityRange)) attrs += ' A:' + c.whiteAcidityRange;
       }
-      catHtml += '<div>' + escapeHtml(cat) + attrs + '</div>';
+      catHtml += '<div>' + TaskWidgets.escape(cat) + attrs + '</div>';
     });
     document.getElementById('info-categories-list').innerHTML = catHtml || '<div class="text-muted">-</div>';
 
@@ -1035,7 +1036,7 @@
       var dateOnly = a.timestamp ? a.timestamp.split(' ')[0] : '';
       actHtml += '<div class="d-flex align-items-center py-1 border-bottom" style="line-height:1.4;font-size:13px;">' +
         '<span class="mr-2" style="font-size:16px;">' + icon + '</span>' +
-        '<span class="flex-grow-1 text-truncate">' + escapeHtml(displayText) + '</span>' +
+        '<span class="flex-grow-1 text-truncate">' + TaskWidgets.escape(displayText) + '</span>' +
         '<span class="text-muted ml-2" style="font-size:11px;white-space:nowrap;">' + dateOnly + '</span>' +
         '</div>';
     });
@@ -1176,11 +1177,6 @@
       case 'high': return 'badge-danger';
       default: return 'badge-secondary';
     }
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function isDateString(str) {
