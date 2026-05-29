@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 10:42',
-  commit: '@159 UI T3.1 Stage B — AdminProductsView.refreshView consolidation: single WebAppProducts_getAdminViewData round-trip replaces the 12-call fanout. Each of the 9 loaders + updateNewExportUI gained an optional preloaded-data arg (renders directly, skips fetch); refreshView dispatches via applyAllSections. Also removed a duplicate getLinkageTasks call (updateNewExportUI now reuses data.linkageTasks). Vintage-accept splice path untouched; no-arg fetch callers preserved. Stage A backend (@b1f96c5, pushed-not-deployed) ships in this deploy.'
+  built: '2026-05-29 12:32',
+  commit: '@165 deploy.ps1 now auto-stamps VERSION.built with real Israel-local time (timezone API, never hand-typed) and owns the clasp push step — the deploy timestamp can no longer be fabricated or drift. Also: removed phone from ManagerContactView search match per user (email + name only; recent-contacts-on-load + crash guards from @164 retained). Follows @164.'
 };
 
 function getVersion() {

@@ -178,7 +178,9 @@
     currentContact: null,
     currentLanguage: 'en',
     openTask: null,
-    searchDebounce: null
+    searchDebounce: null,
+    contacts: null,       // cached full list; null until loadAllContacts resolves
+    loadError: null       // error message if initial load failed
   };
 
   var listContainer = document.getElementById('mc-list-container');
@@ -210,46 +212,116 @@
 
   // --- Search ---
 
-  function runSearch(query) {
-    if (!query || query.length < 2) {
-      listContainer.innerHTML = '<div class="mc-empty">Type at least 2 characters to search</div>';
-      return;
+  // Load the full contact list once on mount and cache it; search then filters
+  // client-side (was a per-keystroke server round-trip). Staleness on a long-
+  // running view is accepted — view mount is the refresh.
+  function loadAllContacts() {
+    if (!state.contacts && listContainer.querySelector('.mc-empty')) {
+      listContainer.innerHTML = '<div class="mc-empty">Loading contacts…</div>';
     }
-    listContainer.innerHTML = '<div class="mc-empty">Searching…</div>';
     google.script.run
       .withSuccessHandler(function(data) {
         if (!data || data.error) {
-          listContainer.innerHTML = '<div class="mc-empty">' + TaskWidgets.escape(data && data.error || 'Error loading contacts') + '</div>';
+          state.loadError = (data && data.error) || 'Failed to load contacts';
+          state.contacts = [];
+          listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(state.loadError) + '</div>';
           return;
         }
-        var contacts = (data.contacts || []).slice(0, 50);
-        if (contacts.length === 0) {
-          listContainer.innerHTML = '<div class="mc-empty">No matches</div>';
-          return;
+        state.contacts = data.contacts || [];
+        state.loadError = null;
+        // If the user already typed a query while the cache was loading, run it
+        // now (it was parked on the "still loading" branch); otherwise restore
+        // the initial "type to search" empty state.
+        var pending = searchInput.value.trim();
+        if (pending.length >= 2) {
+          runSearch(pending);
+        } else {
+          showDefaultList();
         }
-        var html = '<div class="mc-list">';
-        contacts.forEach(function(c) {
-          var meta = [];
-          if (c.phone) meta.push(c.phone);
-          if (c.city) meta.push(c.city);
-          if (c.orderCount) meta.push(c.orderCount + ' order' + (c.orderCount === 1 ? '' : 's'));
-          html += '<div class="mc-list-item" data-email="' + TaskWidgets.escape(c.email) + '">' +
-            '<div class="mc-list-name">' + TaskWidgets.escape(c.name || c.email) + '</div>' +
-            '<div class="mc-list-meta">' + TaskWidgets.escape(c.email) + (meta.length ? ' · ' + TaskWidgets.escape(meta.join(' · ')) : '') + '</div>' +
-          '</div>';
-        });
-        html += '</div>';
-        listContainer.innerHTML = html;
-        Array.prototype.forEach.call(listContainer.querySelectorAll('.mc-list-item'), function(el) {
-          el.addEventListener('click', function() {
-            openDetail(el.getAttribute('data-email'));
-          });
-        });
       })
       .withFailureHandler(function(err) {
-        listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(err && err.message || err) + '</div>';
+        state.loadError = (err && err.message) || String(err);
+        state.contacts = [];
+        listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(state.loadError) + '</div>';
       })
-      .WebAppContacts_getContactList({ search: query });
+      .WebAppContacts_getContactList({});  // no filter — returns all contacts
+  }
+
+  // Render a contact list into the container. Shared by search + default view.
+  // opts.emptyMsg: shown when contacts is empty. opts.note: muted line appended
+  // below the list (used for the "showing first N" cap notice).
+  function renderContactList(contacts, opts) {
+    opts = opts || {};
+    if (!contacts.length) {
+      listContainer.innerHTML = '<div class="mc-empty">' + TaskWidgets.escape(opts.emptyMsg || 'No matches') + '</div>';
+      return;
+    }
+    var html = '<div class="mc-list">';
+    contacts.forEach(function(c) {
+      var meta = [];
+      if (c.phone) meta.push(c.phone);
+      if (c.city) meta.push(c.city);
+      if (c.orderCount) meta.push(c.orderCount + ' order' + (c.orderCount === 1 ? '' : 's'));
+      html += '<div class="mc-list-item" data-email="' + TaskWidgets.escape(c.email) + '">' +
+        '<div class="mc-list-name">' + TaskWidgets.escape(c.name || c.email) + '</div>' +
+        '<div class="mc-list-meta">' + TaskWidgets.escape(c.email) + (meta.length ? ' · ' + TaskWidgets.escape(meta.join(' · ')) : '') + '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    if (opts.note) html += '<div class="mc-empty" style="padding-top:8px;">' + TaskWidgets.escape(opts.note) + '</div>';
+    listContainer.innerHTML = html;
+    Array.prototype.forEach.call(listContainer.querySelectorAll('.mc-list-item'), function(el) {
+      el.addEventListener('click', function() {
+        openDetail(el.getAttribute('data-email'));
+      });
+    });
+  }
+
+  // No active query: show recent contacts (backend sorts by last order desc),
+  // or the loading / error state if the cache isn't ready.
+  function showDefaultList() {
+    if (state.contacts === null) {
+      listContainer.innerHTML = '<div class="mc-empty">Loading contacts…</div>';
+      return;
+    }
+    if (state.loadError) {
+      listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(state.loadError) + '</div>';
+      return;
+    }
+    var total = state.contacts.length;
+    renderContactList(state.contacts.slice(0, 50), {
+      emptyMsg: 'No contacts',
+      note: total > 50 ? ('Showing 50 most recent of ' + total + ' — type to search') : ''
+    });
+  }
+
+  function runSearch(query) {
+    if (!query || query.length < 2) {
+      // Cleared / too-short query: fall back to the default recent list.
+      showDefaultList();
+      return;
+    }
+    if (state.contacts === null) {
+      listContainer.innerHTML = '<div class="mc-empty">Still loading contacts… try again in a moment</div>';
+      return;
+    }
+    if (state.loadError) {
+      listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(state.loadError) + '</div>';
+      return;
+    }
+
+    // Match email + name (both text). String() guards against any numeric cell —
+    // matching c.phone (stored numeric) previously threw inside .filter() because
+    // numbers have no .toLowerCase(), which killed the whole search. Phone left out.
+    var q = query.toLowerCase();
+    var matches = state.contacts.filter(function(c) {
+      return String(c.email || '').toLowerCase().indexOf(q) >= 0
+          || String(c.name  || '').toLowerCase().indexOf(q) >= 0;
+    });
+    renderContactList(matches.slice(0, 50), {
+      emptyMsg: 'No matches',
+      note: matches.length > 50 ? ('Showing first 50 of ' + matches.length + ' — refine your search') : ''
+    });
   }
 
   searchInput.addEventListener('input', function() {
@@ -471,6 +543,10 @@
         markTaskDone: markDone
       });
   });
+
+  // Fill the contact cache on mount (async; the rest of mount continues). If the
+  // user types a 2+ char query before it resolves, runSearch shows a loading note.
+  loadAllContacts();
 
   // Deep-link support: if another view (e.g., the manager dashboard's
   // "Open contact" button on a task.contact.outreach row) stashed an email in
