@@ -27,14 +27,10 @@ function WebAppDashboardV2_getData() {
     const webOrdMSheet = SheetAccessor.getDataSheet(sheetNames.WebOrdM, false);
     const webOrdMRaw = webOrdMSheet ? webOrdMSheet.getDataRange().getValues() : [];
 
-    const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue, false);
-    const jobQueueRaw = jobQueueSheet ? jobQueueSheet.getDataRange().getValues() : [];
-
     // ========== CONVERT TO OBJECTS ==========
     const allTasks = _rowsToObjects(tasksRaw);
     const ordLog = _rowsToObjects(ordLogRaw);
     const webOrdM = _rowsToObjects(webOrdMRaw);
-    const jobQueue = _rowsToObjects(jobQueueRaw);
 
     // ========== DERIVE COMMON FILTERS ==========
     const openTasks = allTasks.filter(t =>
@@ -44,7 +40,7 @@ function WebAppDashboardV2_getData() {
     // ========== BUILD WIDGETS FROM MEMORY ==========
     const result = {
       timestamp: new Date().toISOString(),
-      systemHealth: _getSystemHealthData_v2(allTasks, jobQueue, allConfig),
+      systemHealth: _getSystemHealthData_v2(allTasks, allConfig),
       orders: _getOrdersData_v2(ordLog, webOrdM),
       inventory: _getInventoryData(openTasks),
       products: _getProductsData(openTasks),
@@ -98,7 +94,7 @@ function _safeDate(val) {
  * OPTIMIZED: No sheet reads - works with data passed in.
  * @private
  */
-function _getSystemHealthData_v2(allTasks, jobQueue, allConfig) {
+function _getSystemHealthData_v2(allTasks, allConfig) {
   try {
     // Find health status task from pre-loaded tasks
     const healthTask = allTasks.find(t =>
