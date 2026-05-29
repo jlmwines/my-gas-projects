@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 06:14',
-  commit: '@152 Durable order-activity sync — recent orders were missing from the contact Activity Timeline because order.placed activity rows were only ever created by the run-once ActivityBackfillService.backfillOrderActivity(); no ongoing path created them (createActivity does not dedup, so it could not be called blindly per pull). New ActivityBackfillService.syncRecentOrderActivity() scans current WebOrdM only (new orders land there before archiving), dedups via the shared order.placed.{orderId} set, creates rows for completed/processing orders, reusing the backfill helpers so semantics match. Wired into the CRM contact refresh in HousekeepingService right after updateContactsFromOrders, behind the sync-since-last-refresh gate. Editor wrapper runSyncRecentOrderActivity() added. Append-only, idempotent, no schema change. Running once also fills the current gap for orders still in WebOrdM.'
+  built: '2026-05-29 06:42',
+  commit: '@153 UI Tier 1.0 quick wins (6 fixes). (1) Retired SystemHealthView empty stub + viewMap line. (2) Retired 7 orphan v1-era widgets (AdminOrders/ManagerOrders/AdminInventory/ManagerInventory/AdminProducts/ManagerProducts/SystemHealth Widget) + 7 viewMap lines + 3 dead refreshSystemHealthWidget conditional blocks in AdminInventoryView; backend *WidgetData functions left intact (one in live use by ManagerProductsView). (3) ManagerOrders gift-doc link btn-primary -> btn-light (CLAUDE.md). (4) Dropped unused SysJobQueue read in WebAppDashboardV2._getSystemHealthData_v2 (dead I/O every dashboard load). (5) AdminSyncView dynamic getHtmlOutput loader -> scriptlet include (saves a round-trip per Sync nav). (6) LookupService.searchComaxProducts caches a (sku,nameHe) projection in CacheService 5-min TTL + SheetAccessor instead of per-keystroke open-by-name full scan; existing rethrow-to-client error behavior preserved. Per UI_AUDIT.md Tier 1.0.'
 };
 
 function getVersion() {
