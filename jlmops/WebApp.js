@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 07:30',
-  commit: '@154 UI Tier 2.2 + 2.3. T2.2 (CRM nav): relocated the 6 CRM ops (import/validate/correct/refresh/enrich/intelligence) + handlers from DevelopmentView into a collapsed <details> "Admin operations" panel atop AdminContactsView; handlers placed in a separate global <script> since AdminContactsView main script is an IIFE; DevelopmentView keeps only the 5 system-debug tools; both nav entries (Contacts->ManagerContactView, CRM Tools->AdminContactsView) stay — never duplicates. T2.3 (Orders merge): renamed ManagerOrdersView.html -> OrdersView.html, deleted AdminOrdersView.html, both viewMap keys route to OrdersView; Packing Slips card role-gated data-roles="manager"; mount guard uses document.body role class (not querySelector on data-roles, which would never skip since role gating is CSS display:none and the element stays in the DOM for admin) so admin saves the packable-orders round-trip. Per UI_AUDIT.md Tier 2.2 + 2.3.'
+  built: '2026-05-29 07:47',
+  commit: '@155 UI Tier 2.5 — extend TaskWidgets kit + migrate ManagerDashboardView_v2 (TaskWidgets now consumed by 2 views, not 1). Stage A: added TaskWidgets.formatDateShort (M/D) + formatDateFull (locale). Stage B: ManagerDashboardView_v2 gets <?!= include(TaskWidgets) ?> scriptlet; migrated 21 call-sites (2 formatDate->formatDateShort, 5 formatDateFull, 13 escapeHtml->escape) + inlined isOverdue caller preserving EXACT existing semantics (not-Done + past-due -> overdue, incl. Cancelled; no behavior change per v2 scope correction); deleted 4 local helper defs. Stage C: .task-filters -> .tw-filter-bar + dropped duplicate desktop/mobile filter CSS (kit standard adds thin border + 4px radius, desktop gap 10px->8px). Per UI_AUDIT.md Tier 2.5.'
 };
 
 function getVersion() {
