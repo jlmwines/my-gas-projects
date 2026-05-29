@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T3.3 — AdminBundles init consolidation; @166 deploy @170)
+
+- **T3.3 SHIPPED (@166 deploy @170; Stage A backend + Stage B `12eaf2f`).** AdminBundlesView `init()` 4-call fanout → one `WebAppBundles_getViewData` round-trip → `applyInitData` dispatch; 4 loaders gained optional preload; `renderStats` extracted; `bindEvents()` moved first. Smoke (user, mobile): one `getViewData` on mount, all sections load with data.
+- **Plan-vs-reality:** the deep-dive's Stage-B snippets assumed T2.1 had shipped (`allBundles`/`lowStockBundleIds`/`applyFilterAndRender`/filter chips). T2.1 was deprioritized, so I built against the ACTUAL pre-T2.1 loaders. Verified all 4 backend getters return `{error,data}` (so `.data` unwrap correct — unlike T3.1). This is the 3rd consecutive deep-dive whose code snippets didn't match live code (T3.1 raw arrays, T3.2 numeric phone, T3.3 phantom T2.1 state) — verify-against-code-first is paying off.
+- **Caveat:** load still slow on mobile — consolidation cut round-trip overhead, not the server-side low-inventory compute; genuine speed-up = separate backend-perf task. Bundles cards non-mobile-friendly = accepted (desktop tool).
+- **Tier 3 (consolidation) complete:** T3.1 + T3.2 + T3.3 all shipped. **Next:** CCP-UI-8 ModalOverlay helper (prerequisite) → T4.x. Not pushed to origin.
+
+---
+
 ## 2026-05-29 (UI T3.2 — ManagerContact load-once + deploy.ps1 auto-stamp; @165 deploy @169)
 
 - **T3.2 SHIPPED (@165 deploy @169, commit `fd8441e`).** ManagerContactView: per-keystroke `getContactList({search})` → one `getContactList({})` on mount, cached + filtered client-side. Recent 50 render on load (`showDefaultList`); shared `renderContactList` helper. Match = email + name (phone dropped per user; city excluded).
