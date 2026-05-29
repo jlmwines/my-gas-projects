@@ -51,17 +51,36 @@
             opacity: 1;
             top: 30px;
         }
+
+        /* T4.3 Stage A — card-header button rows wrap instead of overflowing at narrow widths */
+        .card-header .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        /* Brurya add-product group: drop the 300px cap on mobile so it (and its dropdown) fit */
+        @media (max-width: 768px) {
+            .brurya-add-group {
+                max-width: 100% !important;
+                width: 100%;
+            }
+        }
+        /* Brurya quantity input: fixed on desktop, full-width on mobile */
+        .brurya-qty-input { width: 80px; }
+        @media (max-width: 768px) {
+            .brurya-qty-input { width: 100%; }
+        }
     </style>
 
 
 
     <!-- New Product Counts Section -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125);">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
             <h5 class="mb-0">Product Counts</h5>
-            <div>
-              <button id="export-counts-btn" class="btn btn-light btn-sm mr-2" type="button">Export to Sheet</button>
-              <button id="import-counts-btn" class="btn btn-light btn-sm mr-2" type="button">Import from Sheet</button>
+            <div class="header-actions">
+              <button id="export-counts-btn" class="btn btn-light btn-sm" type="button">Export to Sheet</button>
+              <button id="import-counts-btn" class="btn btn-light btn-sm" type="button">Import from Sheet</button>
               <button id="submit-selected-counts-btn" class="btn btn-light btn-sm" type="button" disabled>Submit Counts</button>
             </div>
         </div>
@@ -77,19 +96,19 @@
 
     <!-- Section for Brurya Inventory Management -->
 <div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125);">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
         <h5 class="mb-0"><i class="fas fa-warehouse mr-1"></i> Brurya Stock Management</h5>
-        <div style="position: relative;">
-            <div class="input-group input-group-sm" style="max-width: 300px;">
-                <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Product Name">
-                <div class="input-group-append">
-                    <button id="brurya-add-product-button" class="btn btn-light" type="button">Add</button>
-                </div>
+        <div class="brurya-add-group input-group input-group-sm" style="position: relative; max-width: 300px;">
+            <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Product Name">
+            <div class="input-group-append">
+                <button id="brurya-add-product-button" class="btn btn-light" type="button">Add</button>
             </div>
         </div>
-        <button id="brurya-export-button" class="btn btn-light btn-sm mr-2" type="button">Export to Sheet</button>
-        <button id="brurya-import-button" class="btn btn-light btn-sm mr-2" type="button">Import from Sheet</button>
-        <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
+        <div class="header-actions">
+            <button id="brurya-export-button" class="btn btn-light btn-sm" type="button">Export to Sheet</button>
+            <button id="brurya-import-button" class="btn btn-light btn-sm" type="button">Import from Sheet</button>
+            <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
+        </div>
     </div>
     <div class="card-body">
         <div id="brurya-inventory-list">Loading...</div>
