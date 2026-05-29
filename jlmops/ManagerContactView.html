@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <!--
   ManagerContactView — lean mobile-first CRM surface for the manager.
   Scope: search contacts, view detail + activity timeline, log a contact attempt.
@@ -186,13 +187,6 @@
   var detailView = document.getElementById('mc-detail-view');
   var actionModal = document.getElementById('mc-action-modal');
 
-  function esc(s) {
-    if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"']/g, function(c) {
-      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-    });
-  }
-
   function showError(msg) {
     if (typeof window.showError === 'function') window.showError({ message: msg });
     else alert(msg);
@@ -225,7 +219,7 @@
     google.script.run
       .withSuccessHandler(function(data) {
         if (!data || data.error) {
-          listContainer.innerHTML = '<div class="mc-empty">' + esc(data && data.error || 'Error loading contacts') + '</div>';
+          listContainer.innerHTML = '<div class="mc-empty">' + TaskWidgets.escape(data && data.error || 'Error loading contacts') + '</div>';
           return;
         }
         var contacts = (data.contacts || []).slice(0, 50);
@@ -239,9 +233,9 @@
           if (c.phone) meta.push(c.phone);
           if (c.city) meta.push(c.city);
           if (c.orderCount) meta.push(c.orderCount + ' order' + (c.orderCount === 1 ? '' : 's'));
-          html += '<div class="mc-list-item" data-email="' + esc(c.email) + '">' +
-            '<div class="mc-list-name">' + esc(c.name || c.email) + '</div>' +
-            '<div class="mc-list-meta">' + esc(c.email) + (meta.length ? ' · ' + esc(meta.join(' · ')) : '') + '</div>' +
+          html += '<div class="mc-list-item" data-email="' + TaskWidgets.escape(c.email) + '">' +
+            '<div class="mc-list-name">' + TaskWidgets.escape(c.name || c.email) + '</div>' +
+            '<div class="mc-list-meta">' + TaskWidgets.escape(c.email) + (meta.length ? ' · ' + TaskWidgets.escape(meta.join(' · ')) : '') + '</div>' +
           '</div>';
         });
         html += '</div>';
@@ -253,7 +247,7 @@
         });
       })
       .withFailureHandler(function(err) {
-        listContainer.innerHTML = '<div class="mc-empty">Error: ' + esc(err && err.message || err) + '</div>';
+        listContainer.innerHTML = '<div class="mc-empty">Error: ' + TaskWidgets.escape(err && err.message || err) + '</div>';
       })
       .WebAppContacts_getContactList({ search: query });
   }
@@ -326,8 +320,8 @@
       var dateOnly = a.timestamp ? a.timestamp.split(' ')[0] : '';
       html += '<div class="mc-timeline-row">' +
         '<span class="mc-timeline-icon">' + activityIcon(a.type) + '</span>' +
-        '<span class="mc-timeline-text">' + esc(a.summary || a.type) + '</span>' +
-        '<span class="mc-timeline-date">' + esc(dateOnly) + '</span>' +
+        '<span class="mc-timeline-text">' + TaskWidgets.escape(a.summary || a.type) + '</span>' +
+        '<span class="mc-timeline-date">' + TaskWidgets.escape(dateOnly) + '</span>' +
       '</div>';
     });
     document.getElementById('mc-timeline').innerHTML = html ||
