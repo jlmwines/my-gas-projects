@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <div class="container-fluid">
   <!-- Section 1: Inventory Review Table -->
   <div class="row mb-4">
@@ -572,12 +573,8 @@
     renderPreview(sliced);
   }
 
-  function escapeHtml(s) {
-    return String(s || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
+  // formatLastCount stays local: returns '—' on null/invalid where
+  // TaskWidgets.formatDate returns '' / String(iso). Different display contract.
   function formatLastCount(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -596,12 +593,12 @@
       '<th>Brand</th></tr></thead><tbody>';
     rows.forEach(p => {
       html += '<tr>' +
-        `<td>${escapeHtml(p.sku)}</td>` +
-        `<td>${escapeHtml(p.nameHe)}</td>` +
-        `<td class="text-center">${escapeHtml(p.vintage)}</td>` +
+        `<td>${TaskWidgets.escape(p.sku)}</td>` +
+        `<td>${TaskWidgets.escape(p.nameHe)}</td>` +
+        `<td class="text-center">${TaskWidgets.escape(p.vintage)}</td>` +
         `<td class="text-center">${p.stock === null ? '' : p.stock}</td>` +
         `<td class="text-center">${formatLastCount(p.lastCount)}</td>` +
-        `<td>${escapeHtml(p.brand || p.vendor || '')}</td>` +
+        `<td>${TaskWidgets.escape(p.brand || p.vendor || '')}</td>` +
         '</tr>';
     });
     html += '</tbody></table>';
