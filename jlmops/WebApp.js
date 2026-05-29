@@ -73,7 +73,6 @@ function getView(viewName) {
     'AdminDashboard': 'AdminDashboardView_v2',
     'AdminDashboardV2': 'AdminDashboardView_v2',
     'ManagerDashboard': 'ManagerDashboardView_v2',
-    'SystemHealth': 'SystemHealthView',
     'SystemHealthWidget': 'SystemHealthWidget',
     'AdminOrders': 'AdminOrdersView',
     'AdminOrdersWidget': 'AdminOrdersWidget',
