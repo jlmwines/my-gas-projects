@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI CCP-UI-8 — shared ModalOverlay helper; @167 deploy @171)
+
+- **CCP-UI-8 SHIPPED (@167 deploy @171, `e368125`).** Added `window.ModalOverlay.open(id)/close(id)` to TaskWidgets (reaches all 8 kit views): focus-first + restore-to-trigger, Esc-to-close, Tab/Shift+Tab focus-trap, body scroll-lock, z-index stacking. The focus-trap is what bare modal-overlay lost vs Bootstrap modals.
+- **Validated live:** wired ManagerContactView action modal (openActionModal/closeActionModal) as first consumer; user confirmed all 5 behaviors (open, Esc-close, scroll-lock, focus-trap, focus-restore). User explicitly wanted it wired to a real modal so it was testable, not shipped unused.
+- **Placement decision:** helper lives in TaskWidgets per CCP-UI-6 precedent (the shared kit), not a new include — both first consumers (AdminContacts/T5.1, AdminInventory/T4.3) already include TaskWidgets.
+- **Unblocks T4.3** (modal-per-product count entry) **and T5.1** (contact modals) — they call ModalOverlay instead of display toggles. Other modal consumers adopt incrementally.
+- **Next:** T4.x (T4.3 v2 now unblocked). Not pushed to origin (commit `e368125`).
+
+---
+
 ## 2026-05-29 (UI T3.3 — AdminBundles init consolidation; @166 deploy @170)
 
 - **T3.3 SHIPPED (@166 deploy @170; Stage A backend + Stage B `12eaf2f`).** AdminBundlesView `init()` 4-call fanout → one `WebAppBundles_getViewData` round-trip → `applyInitData` dispatch; 4 loaders gained optional preload; `renderStats` extracted; `bindEvents()` moved first. Smoke (user, mobile): one `getViewData` on mount, all sections load with data.
