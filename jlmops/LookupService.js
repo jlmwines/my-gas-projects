@@ -89,7 +89,8 @@ const LookupService = (function() {
 
             const results = [];
             for (const item of projection) {
-                if (item.skuLc.includes(lowerCaseSearchTerm) || item.nameLc.includes(lowerCaseSearchTerm)) {
+                if (String(item.sku).toLowerCase().includes(lowerCaseSearchTerm) ||
+                    String(item.name).toLowerCase().includes(lowerCaseSearchTerm)) {
                     results.push({ sku: item.sku, name: item.name });
                     if (results.length >= 15) {
                         break;
@@ -114,7 +115,7 @@ const LookupService = (function() {
      * SpreadsheetApp.open(DriveApp.getFilesByName(...)) + full-sheet scan.
      *
      * @param {string} sheetName CmxProdM sheet name from config.
-     * @returns {Array<{sku: string, name: string, skuLc: string, nameLc: string}>}
+     * @returns {Array<{sku: string, name: string}>}
      */
     function _getCmxProdMSearchIndex(sheetName) {
         const cache = CacheService.getScriptCache();
@@ -141,14 +142,18 @@ const LookupService = (function() {
             const sku = row[skuIndex] ? String(row[skuIndex]) : '';
             const name = row[nameHeIndex] ? String(row[nameHeIndex]) : '';
             if (!sku && !name) continue;
-            projection.push({
-                sku: sku,
-                name: name,
-                skuLc: sku.toLowerCase(),
-                nameLc: name.toLowerCase()
-            });
+            projection.push({ sku: sku, name: name });
         }
-        cache.put(CMX_SEARCH_CACHE_KEY, JSON.stringify(projection), CMX_SEARCH_CACHE_TTL_SEC);
+        // Cache to amortize the sheet read across keystrokes. A full catalog can
+        // exceed the CacheService 100KB per-value limit — that put() throwing
+        // "Argument too large: value" was breaking the search entirely. Degrade
+        // gracefully: if the payload won't fit, serve uncached (re-reads per call,
+        // slower but correct — same as the pre-cache behavior).
+        try {
+            cache.put(CMX_SEARCH_CACHE_KEY, JSON.stringify(projection), CMX_SEARCH_CACHE_TTL_SEC);
+        } catch (cacheErr) {
+            Logger.log(`CmxProdM search index too large to cache (${projection.length} rows): ${cacheErr.message}. Serving uncached.`);
+        }
         return projection;
     }
 

@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 12:58',
-  commit: '@167 UI CCP-UI-8 — shared window.ModalOverlay helper added to TaskWidgets (reaches all 8 kit views): open(id)/close(id) with focus-first-element + restore-to-trigger, Esc-to-close, Tab/Shift+Tab focus-trap, body scroll-lock, z-index stacking. Replaces the bare display=flex/none toggle that lost the focus-trap Bootstrap modals gave for free. Wired into ManagerContactView action modal (openActionModal/closeActionModal) as the first live consumer; remaining modals adopt as their sessions land (T4.3, T5.1). Follows @166.'
+  built: '2026-05-29 13:19',
+  commit: '@169 fix(LookupService): Brurya product autocomplete crashed with "Argument too large: value" — _getCmxProdMSearchIndex JSON-stringified a full-catalog projection (4 fields/row incl. duplicate lowercase copies) and cache.put exceeded the CacheService 100KB per-value limit, rethrowing to the client. Dropped the duplicate skuLc/nameLc (lowercase at search time) to halve the payload + wrapped cache.put in try/catch so an oversized catalog degrades to uncached (re-reads per call) instead of failing. Latent T1.0 bug surfaced during T4.3 Stage A smoke. Stage A (@168) unaffected. Follows @168.'
 };
 
 function getVersion() {
