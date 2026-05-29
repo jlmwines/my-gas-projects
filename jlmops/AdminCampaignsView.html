@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <div class="container-fluid">
   <div class="card" style="min-height: calc(100vh - 120px);">
 
@@ -43,19 +44,6 @@
 (function () {
   var state = { campaigns: [], expandedId: null, details: {} };
 
-  function esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  function formatDate(v) {
-    if (!v) return '';
-    if (typeof v === 'string' && v.length >= 10) return v.substring(0, 10);
-    var d = new Date(v);
-    if (isNaN(d.getTime())) return '';
-    return d.toISOString().substring(0, 10);
-  }
 
   function loadData() {
     document.getElementById('campaign-list').innerHTML = '<p class="text-muted">Loading…</p>';
@@ -63,7 +51,7 @@
       .withSuccessHandler(function (result) {
         if (result.error) {
           document.getElementById('campaign-list').innerHTML =
-            '<p class="text-danger">Error: ' + esc(result.error) + '</p>';
+            '<p class="text-danger">Error: ' + TaskWidgets.escape(result.error) + '</p>';
           return;
         }
         state.campaigns = result.data || [];
@@ -84,23 +72,23 @@
     state.campaigns.forEach(function (c) {
       var id = c.sm_CampaignId;
       var statusClass = 'cmp-status-' + String(c.sm_Status || '').toLowerCase();
-      html += '<div class="cmp-row" data-id="' + esc(id) + '">';
+      html += '<div class="cmp-row" data-id="' + TaskWidgets.escape(id) + '">';
       html +=   '<div class="d-flex justify-content-between align-items-start">';
       html +=     '<div>';
-      html +=       '<div class="cmp-name">' + esc(c.sm_Name || id) + '</div>';
-      html +=       '<div class="cmp-id">' + esc(id) + '</div>';
+      html +=       '<div class="cmp-name">' + TaskWidgets.escape(c.sm_Name || id) + '</div>';
+      html +=       '<div class="cmp-id">' + TaskWidgets.escape(id) + '</div>';
       html +=     '</div>';
       html +=     '<div class="text-right small">';
-      html +=       '<span class="' + statusClass + '">' + esc(c.sm_Status || '') + '</span>';
+      html +=       '<span class="' + statusClass + '">' + TaskWidgets.escape(c.sm_Status || '') + '</span>';
       var range = '';
       if (c.sm_StartDate || c.sm_EndDate) {
-        range = ' &middot; ' + esc(formatDate(c.sm_StartDate)) + ' → ' + esc(c.sm_EndDate ? formatDate(c.sm_EndDate) : 'ongoing');
+        range = ' &middot; ' + TaskWidgets.escape(TaskWidgets.formatDate(c.sm_StartDate)) + ' → ' + TaskWidgets.escape(c.sm_EndDate ? TaskWidgets.formatDate(c.sm_EndDate) : 'ongoing');
       }
       html +=       '<span class="text-muted">' + range + '</span>';
       html +=     '</div>';
       html +=   '</div>';
       if (c.sm_PrimaryGoal) {
-        html += '<div class="text-muted small mt-1">' + esc(c.sm_PrimaryGoal) + '</div>';
+        html += '<div class="text-muted small mt-1">' + TaskWidgets.escape(c.sm_PrimaryGoal) + '</div>';
       }
       html += '</div>';
       if (state.expandedId === id) {
@@ -150,12 +138,12 @@
       html += '</tr></thead><tbody>';
       detail.projects.forEach(function (p) {
         html += '<tr>';
-        html += '<td><code>' + esc(p.spro_ProjectId) + '</code></td>';
-        html += '<td>' + esc(p.spro_Name || '') + '</td>';
-        html += '<td>' + esc(p.spro_Type || '') + '</td>';
-        html += '<td>' + esc(p.spro_Status || '') + '</td>';
-        html += '<td>' + esc(formatDate(p.spro_StartDate)) + '</td>';
-        html += '<td>' + esc(formatDate(p.spro_EndDate)) + '</td>';
+        html += '<td><code>' + TaskWidgets.escape(p.spro_ProjectId) + '</code></td>';
+        html += '<td>' + TaskWidgets.escape(p.spro_Name || '') + '</td>';
+        html += '<td>' + TaskWidgets.escape(p.spro_Type || '') + '</td>';
+        html += '<td>' + TaskWidgets.escape(p.spro_Status || '') + '</td>';
+        html += '<td>' + TaskWidgets.escape(TaskWidgets.formatDate(p.spro_StartDate)) + '</td>';
+        html += '<td>' + TaskWidgets.escape(TaskWidgets.formatDate(p.spro_EndDate)) + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -171,11 +159,11 @@
       html += '</tr></thead><tbody>';
       detail.shortUrls.forEach(function (s) {
         html += '<tr>';
-        html += '<td><code>' + esc(s.ssu_ShortCode) + '</code></td>';
-        html += '<td>' + esc(s.ssu_Language || '') + '</td>';
-        html += '<td><code>' + esc(s.ssu_ProjectId || '') + '</code></td>';
-        html += '<td style="max-width:380px;word-break:break-all;font-size:11px;">' + esc(s.ssu_TargetUrl || '') + '</td>';
-        html += '<td>' + esc(formatDate(s.ssu_CreatedDate)) + '</td>';
+        html += '<td><code>' + TaskWidgets.escape(s.ssu_ShortCode) + '</code></td>';
+        html += '<td>' + TaskWidgets.escape(s.ssu_Language || '') + '</td>';
+        html += '<td><code>' + TaskWidgets.escape(s.ssu_ProjectId || '') + '</code></td>';
+        html += '<td style="max-width:380px;word-break:break-all;font-size:11px;">' + TaskWidgets.escape(s.ssu_TargetUrl || '') + '</td>';
+        html += '<td>' + TaskWidgets.escape(TaskWidgets.formatDate(s.ssu_CreatedDate)) + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
