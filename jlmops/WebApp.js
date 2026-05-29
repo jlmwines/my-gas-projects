@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 13:53',
-  commit: '@174 UI T4.1 (refine) — packing-slip card checkbox on mobile: the global input{min-height:40px;font-size:16px} rule was stretching the bare checkbox into a tall distorted box once .responsive-stack made the cell a block; scoped CSS pins #packing-slips-list .order-checkbox to 22x22 natural size. Also relabelled the stacked checkbox cell "Select" -> "Print this order" (clearer than a bare "Select" on a packing card). Per mobile smoke. Follows @173 (T4.1 responsive-stack + Select all).'
+  built: '2026-05-29 14:12',
+  commit: '@177 ui(ManagerDashboard): compact mobile task cards — task-row is now flex-wrap, Title takes its own full-width line (order:-1, wraps) and Topic/Status/Priority/Due flow together on a meta line below instead of each on its own row. Roughly halves card height so more tasks fit on screen. Desktop table layout unchanged. Follows @176 (calendar-nav hide). [+@175 toggle hide, @176 nav hide all in ManagerDashboardView_v2 this session]'
 };
 
 function getVersion() {

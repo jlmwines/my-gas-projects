@@ -44,33 +44,56 @@
   .calendar-cell .task-dot.topic-inventory { background-color: #28a745; }
   .calendar-cell .task-dot.topic-products { background-color: #ffc107; }
 
-  /* View toggle */
-  .view-toggle { display: flex; gap: 5px; }
+  /* View toggle — hidden: Tasks is list-only now (calendar not offered). The
+     buttons stay in the DOM so their JS bindings don't null-crash; the list is
+     the default view so it shows unchanged. (Calendar markup/JS now dead — safe
+     to fully remove in a later cleanup.) */
+  .view-toggle { display: none; }
   .view-toggle button { font-size: 12px; padding: 4px 12px; }
   .view-toggle button.active { font-weight: 600; background-color: #e9ecef; }
+  /* Calendar retired → its week-nav (prev/next + date-range label) is dead too.
+     Force-hide so no JS path can reveal it (the 180px label was pushing the
+     header off the right edge on mobile). */
+  #calendar-nav { display: none !important; }
 
   /* === Mobile overrides (≤768px) === */
   @media (max-width: 768px) {
     /* Task row: collapse the flex grid to a stacked card */
     .task-list { max-height: none; min-height: 200px; }
     .task-row {
-      display: block;
-      padding: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 2px;
+      padding: 10px 12px;
       font-size: 14px;
       border-bottom: 1px solid #dee2e6;
     }
     .task-row [class^="task-col-"] {
-      display: block;
-      padding: 2px 0;
+      display: inline-block;
+      width: auto;
+      padding: 0;
       text-align: left;
-      flex: none;
+      flex: 0 0 auto;
     }
     /* Hide the list-header row entirely on mobile (labels appear inline) */
     .list-container > .task-row:first-child { display: none; }
     /* Inline labels per column */
     .task-col-topic::before { content: 'Topic: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-entity::before { content: 'Entity: '; color: #6c757d; font-size: 12px; font-weight: 600; }
-    .task-col-title { font-weight: 500; font-size: 15px; padding-top: 6px !important; }
+    /* Title gets its own full-width line, first; topic/status/priority/due then
+       flow together on a compact meta line below (fewer rows → more tasks fit). */
+    .task-col-title {
+      flex: 0 0 100%;
+      order: -1;
+      font-weight: 500;
+      font-size: 15px;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      padding: 0 0 2px 0 !important;
+    }
     .task-col-status::before { content: 'Status: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-priority::before { content: 'Priority: '; color: #6c757d; font-size: 12px; font-weight: 600; }
     .task-col-due::before { content: 'Due: '; color: #6c757d; font-size: 12px; font-weight: 600; }
