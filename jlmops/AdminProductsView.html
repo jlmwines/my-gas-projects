@@ -723,26 +723,46 @@
     AdminProductsView.reviewTasks = [];
     AdminProductsView.currentIndex = -1;
 
+    // Single consolidated round-trip: fetch all sections at once, then dispatch
+    // to each loader with preloaded data (each loader skips its own fetch).
+    // Replaces the previous 12-call fanout (T3.1 Stage B).
     AdminProductsView.refreshView = function() {
-      // Card 1 Refresh
-      AdminProductsView.loadReviewList();
-      AdminProductsView.loadAcceptedList();
-      AdminProductsView.loadPendingDetailsList();
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) {
+            console.error('refreshView failed:', res && res.error);
+            return;
+          }
+          AdminProductsView.applyAllSections(res.data);
+        })
+        .withFailureHandler(err => {
+          console.error('refreshView call failed:', err);
+        })
+        .WebAppProducts_getAdminViewData();
+    };
 
-      // Card 2 Refresh
-      AdminProductsView.loadSuggestionList();
-      AdminProductsView.loadSubmissionsList();
-      AdminProductsView.loadLinkageList();
-      AdminProductsView.updateNewExportUI();
-      AdminProductsView.loadPendingNewList();
+    // Dispatch each preloaded section to its loader. Loaders called with an
+    // argument skip their fetch and render the supplied data directly.
+    AdminProductsView.applyAllSections = function(data) {
+      // Card 1
+      AdminProductsView.loadReviewList(data.reviewTasks);
+      AdminProductsView.loadAcceptedList(data.acceptedTasks);
+      AdminProductsView.loadPendingDetailsList(data.pendingDetailTasks);
 
-      // Card 3 Refresh
-      AdminProductsView.loadSkuUpdates();
+      // Card 2 — linkageTasks feeds both the list and the export-UI counts
+      AdminProductsView.loadSuggestionList(data.suggestionTasks);
+      AdminProductsView.loadSubmissionsList(data.submissionsTasks);
+      AdminProductsView.loadLinkageList(data.linkageTasks);
+      AdminProductsView.updateNewExportUI(data.linkageTasks);
+      AdminProductsView.loadPendingNewList(data.pendingNewTasks);
 
-      // Card 4 Refresh
-      AdminProductsView.loadLookupSection('grapes');
-      AdminProductsView.loadLookupSection('kashrut');
-      AdminProductsView.loadLookupSection('texts');
+      // Card 3
+      AdminProductsView.loadSkuUpdates(data.recentSkuUpdates);
+
+      // Card 4 — lookups arrive as { headers, rows } per section
+      AdminProductsView.loadLookupSection('grapes', data.lookups.grapes);
+      AdminProductsView.loadLookupSection('kashrut', data.lookups.kashrut);
+      AdminProductsView.loadLookupSection('texts', data.lookups.texts);
     };
 
     // --- Card 3: SKU Management ---
@@ -1186,11 +1206,9 @@
         }).WebAppProducts_fixOrphanSku(oldSku, newSku);
     };
 
-    AdminProductsView.loadSkuUpdates = function() {
+    AdminProductsView.loadSkuUpdates = function(preloadedData) {
         const tbody = document.getElementById('sku-updates-body');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Loading...</td></tr>';
-
-        google.script.run.withSuccessHandler(updates => {
+        const render = updates => {
             tbody.innerHTML = '';
             if (!updates || updates.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">No recent SKU updates.</td></tr>';
@@ -1207,18 +1225,19 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }).withFailureHandler(err => {
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(render).withFailureHandler(err => {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Failed to load updates.</td></tr>';
         }).WebAppProducts_getRecentSkuUpdates();
     }
 
     // --- Card 1: Detail Updates ---
     
-    AdminProductsView.loadReviewList = function() {
+    AdminProductsView.loadReviewList = function(preloadedData) {
       const tbody = document.getElementById('review-list-body');
-      tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-
-      google.script.run.withSuccessHandler(tasks => {
+      const render = tasks => {
         tbody.innerHTML = '';
         AdminProductsView.reviewTasks = tasks || [];
         document.getElementById('stat-review').textContent = AdminProductsView.reviewTasks.length;
@@ -1239,14 +1258,15 @@
           `;
           tbody.appendChild(tr);
         });
-      }).WebAppProducts_getAdminReviewTasks();
+      };
+      if (preloadedData !== undefined) { render(preloadedData); return; }
+      tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      google.script.run.withSuccessHandler(render).WebAppProducts_getAdminReviewTasks();
     };
 
-    AdminProductsView.loadAcceptedList = function() {
+    AdminProductsView.loadAcceptedList = function(preloadedData) {
         const tbody = document.getElementById('accepted-list-body');
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-
-        google.script.run.withSuccessHandler(tasks => {
+        const render = tasks => {
             tbody.innerHTML = '';
             const count = tasks ? tasks.length : 0;
             document.getElementById('stat-accepted').textContent = count;
@@ -1271,7 +1291,10 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }).WebAppProducts_getAcceptedTasks();
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(render).WebAppProducts_getAcceptedTasks();
     };
 
     AdminProductsView.exportUpdates = function() {
@@ -1312,9 +1335,9 @@
         }).WebAppProducts_confirmWebUpdates();
     };
 
-    AdminProductsView.loadPendingDetailsList = function() {
+    AdminProductsView.loadPendingDetailsList = function(preloadedData) {
       const tbody = document.getElementById('pending-details-list-body');
-      google.script.run.withSuccessHandler(tasks => {
+      const render = tasks => {
         tbody.innerHTML = '';
         document.getElementById('stat-pending-details').textContent = tasks ? tasks.length : 0;
         if (!tasks || tasks.length === 0) {
@@ -1331,15 +1354,16 @@
           `;
           tbody.appendChild(tr);
         });
-      }).WebAppProducts_getPendingDetailTasks();
+      };
+      if (preloadedData !== undefined) { render(preloadedData); return; }
+      google.script.run.withSuccessHandler(render).WebAppProducts_getPendingDetailTasks();
     };
 
     // --- Card 2: New Products ---
 
-    AdminProductsView.loadSuggestionList = function() {
+    AdminProductsView.loadSuggestionList = function(preloadedData) {
         const tbody = document.getElementById('suggestions-list-body');
-        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
-        google.script.run.withSuccessHandler(tasks => {
+        const render = tasks => {
             document.getElementById('stat-suggestions').textContent = tasks ? tasks.length : 0;
             tbody.innerHTML = '';
             if (!tasks || tasks.length === 0) {
@@ -1364,7 +1388,10 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }).WebAppProducts_getSuggestionTasks();
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(render).WebAppProducts_getSuggestionTasks();
     };
 
     AdminProductsView.cancelSuggestion = function(taskId) {
@@ -1378,10 +1405,9 @@
         }).WebAppTasks_updateTaskStatus(taskId, 'Cancelled');
     };
 
-    AdminProductsView.loadSubmissionsList = function() {
+    AdminProductsView.loadSubmissionsList = function(preloadedData) {
         const tbody = document.getElementById('submissions-list-body');
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-        google.script.run.withSuccessHandler(tasks => {
+        const render = tasks => {
             document.getElementById('stat-submissions').textContent = tasks ? tasks.length : 0;
             tbody.innerHTML = '';
             if (!tasks || tasks.length === 0) {
@@ -1399,13 +1425,15 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }).WebAppProducts_getSubmissionsTasks();
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(render).WebAppProducts_getSubmissionsTasks();
     };
 
-    AdminProductsView.loadLinkageList = function() {
+    AdminProductsView.loadLinkageList = function(preloadedData) {
         const tbody = document.getElementById('linkage-list-body');
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-        google.script.run.withSuccessHandler(tasks => {
+        const render = tasks => {
             tbody.innerHTML = '';
             if (!tasks || tasks.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No finalized products waiting for link.</td></tr>';
@@ -1421,21 +1449,26 @@
                 `;
                 tbody.appendChild(tr);
             });
-        }).WebAppProducts_getLinkageTasks();
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        google.script.run.withSuccessHandler(render).WebAppProducts_getLinkageTasks();
     };
 
-    AdminProductsView.updateNewExportUI = function() {
-        google.script.run.withSuccessHandler(tasks => {
+    AdminProductsView.updateNewExportUI = function(preloadedData) {
+        const render = tasks => {
             const count = tasks ? tasks.length : 0;
             const el = document.getElementById('stat-linkage');
             if(el) el.textContent = count; // Header count
-            
+
             const exportEl = document.getElementById('stat-onboarding-export');
             if(exportEl) exportEl.textContent = count; // Footer count
-            
+
             const btnExport = document.getElementById('btn-export-new');
             if(btnExport) btnExport.disabled = (count === 0);
-        }).WebAppProducts_getLinkageTasks();
+        };
+        if (preloadedData !== undefined) { render(preloadedData); return; }
+        google.script.run.withSuccessHandler(render).WebAppProducts_getLinkageTasks();
     };
 
     AdminProductsView.exportNewProducts = function() {
@@ -1454,9 +1487,9 @@
         }).WebAppProducts_exportNewProducts();
     };
     
-    AdminProductsView.loadPendingNewList = function() {
+    AdminProductsView.loadPendingNewList = function(preloadedData) {
       const tbody = document.getElementById('pending-new-list-body');
-      google.script.run.withSuccessHandler(tasks => {
+      const render = tasks => {
         tbody.innerHTML = '';
         document.getElementById('stat-pending-new').textContent = tasks ? tasks.length : 0;
         if (!tasks || tasks.length === 0) {
@@ -1473,7 +1506,9 @@
           `;
           tbody.appendChild(tr);
         });
-      }).WebAppProducts_getPendingNewTasks();
+      };
+      if (preloadedData !== undefined) { render(preloadedData); return; }
+      google.script.run.withSuccessHandler(render).WebAppProducts_getPendingNewTasks();
     };
 
     // --- Modal Logic ---
@@ -1812,22 +1847,27 @@
       return 'lookup' + section.charAt(0).toUpperCase() + section.slice(1);
     };
 
-    AdminProductsView.loadLookupSection = function(section) {
+    AdminProductsView.loadLookupSection = function(section, preloadedData) {
       const cfg = AdminProductsView.lookupSectionConfig[section];
       if (!cfg) return;
-      google.script.run.withSuccessHandler(function(res) {
-        if (!res || res.error) {
-          console.error('loadLookupSection error', section, res && res.error);
-          return;
-        }
-        const rows = (res.data && res.data.rows) || [];
-        const headers = (res.data && res.data.headers) || [];
+      // payload shape: { headers, rows } (matches WebAppLookups_getMap().data and getAdminViewData's data.lookups.<section>)
+      const render = function(payload) {
+        const rows = (payload && payload.rows) || [];
+        const headers = (payload && payload.headers) || [];
         AdminProductsView.lookupHeaders[section] = headers;
         AdminProductsView[AdminProductsView._stateArrayName(section)] = rows;
         if (section === 'texts') {
           AdminProductsView._populateTextsFilter(rows);
         }
         AdminProductsView.renderLookupTable(section);
+      };
+      if (preloadedData !== undefined) { render(preloadedData); return; }
+      google.script.run.withSuccessHandler(function(res) {
+        if (!res || res.error) {
+          console.error('loadLookupSection error', section, res && res.error);
+          return;
+        }
+        render(res.data);
       }).withFailureHandler(function(err) {
         console.error('loadLookupSection failure', section, err);
       }).WebAppLookups_getMap(cfg.mapName);

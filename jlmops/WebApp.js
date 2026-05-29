@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 09:44',
-  commit: '@158 ManagerDashboard mobile task-list declutter — hide Entity/Created/Link columns on mobile (keep Topic/Title/Status/Priority/Due); the 3 hidden fields remain in the expanded detail. Stacked mobile cards were showing all 8 fields = unscannable. Selector .task-row .task-col-x matches [class^=task-col-] specificity so display:none wins. Desktop list unchanged. Follows @157 (dd/mm dates + mobile padding + T4.2 expanded-row stacking).'
+  built: '2026-05-29 10:42',
+  commit: '@159 UI T3.1 Stage B — AdminProductsView.refreshView consolidation: single WebAppProducts_getAdminViewData round-trip replaces the 12-call fanout. Each of the 9 loaders + updateNewExportUI gained an optional preloaded-data arg (renders directly, skips fetch); refreshView dispatches via applyAllSections. Also removed a duplicate getLinkageTasks call (updateNewExportUI now reuses data.linkageTasks). Vintage-accept splice path untouched; no-arg fetch callers preserved. Stage A backend (@b1f96c5, pushed-not-deployed) ships in this deploy.'
 };
 
 function getVersion() {
