@@ -100,7 +100,9 @@ Items:
 
 ---
 
-## Session G — ManagerContactView search latency
+## Session G — ManagerContactView search latency — RESOLVED 2026-05-29 (UI T3.2, @165 deploy @169)
+
+Shipped via the UI audit's Tier 3.2 session (`jlmops/plans/UI_T3_2_manager_contact_load_once.md`), not this sequence. Load-once on mount + client-side filter (email + name); recent 50 render on load. Impl caught a latent crash: filtering `c.phone.toLowerCase()` threw because phone is stored numeric — fixed with `String()` guards. See `.claude/bugs.md` 2026-05-15.
 
 **Bug:** 2026-05-15. Each keystroke (debounced 250ms) round-trips to GAS, loading all ~548 contacts server-side.
 

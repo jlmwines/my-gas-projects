@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T3.2 — ManagerContact load-once + deploy.ps1 auto-stamp; @165 deploy @169)
+
+- **T3.2 SHIPPED (@165 deploy @169, commit `fd8441e`).** ManagerContactView: per-keystroke `getContactList({search})` → one `getContactList({})` on mount, cached + filtered client-side. Recent 50 render on load (`showDefaultList`); shared `renderContactList` helper. Match = email + name (phone dropped per user; city excluded).
+- **The painful bit (root cause, code-read not guessed):** search rendered nothing because the client filter called `c.phone.toLowerCase()` — phone is stored **numeric**, numbers have no `.toLowerCase()`, so the `.filter()` callback threw and killed the whole search. User's instinct ("phone might be the problem") was right. Fixed with `String()` guards on every field. Also fixed a load-race (success handler reset to empty state, clobbering a query typed during load). Burned several deploys (@160–@164) debugging — should have verified the data types (numeric phone) before shipping the filter.
+- **Process failure + durable fix:** on @162/@163 I **hand-incremented `VERSION.built` instead of fetching real time** → it read ~30 min behind, user (rightly) angry. Fixed for good: `deploy.ps1` now auto-stamps `built` with real Israel time (timezone API) and owns `clasp push`; no human types the timestamp anymore. Kernel CLAUDE.md Deployment note + memory updated. Recurrence of `feedback_no_guessing_timestamps`.
+- **Closed:** bugs.md 2026-05-15 (search latency) + BUG_FIX_SEQUENCE Session G.
+- **Next:** T3.3 (AdminBundles consolidation, same recipe as T3.1). Not pushed to origin (local commits `fd8441e` + docs).
+
+---
+
 ## 2026-05-29 (UI T3.1 Stage B — AdminProducts refreshView consolidation; @159 deploy @163)
 
 - **T3.1 SHIPPED end-to-end (@159 deploy @163).** Stage B refactored `AdminProductsView.refreshView` from a 12-call fanout to one `WebAppProducts_getAdminViewData` round-trip → `applyAllSections` dispatch. Stage A backend (`b1f96c5`, pushed-not-deployed) rode this same deploy. Code commit `02351c4`; docs separate.
