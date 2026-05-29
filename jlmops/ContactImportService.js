@@ -1333,6 +1333,17 @@ function runCrmImport() {
 }
 
 /**
+ * Editor-pickable wrapper for the SysContacts aggregate rebuild from orders.
+ * Smoke for RELIABILITY_AUDIT Tier 1.1 (WebOrdM + archive merge): run from the
+ * editor, then verify sc_OrderCount/sc_TotalSpend against COUNTIFS on the union.
+ */
+function runUpdateContactsFromOrders() {
+  const result = ContactImportService.updateContactsFromOrders();
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
+
+/**
  * Editor-pickable wrapper for the Mailchimp API import.
  * Use for smoke-testing before the housekeeping wiring lands.
  */
