@@ -7,9 +7,7 @@
   .admin-row { color: #aaa; }
   .admin-row strong { font-weight: normal; }
 
-  /* Task widget styles */
-  .task-filters { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-  .task-filters select, .task-filters input { font-size: 12px; height: 28px; }
+  /* Task widget styles (filter-bar styles now come from TaskWidgets .tw-filter-bar) */
   .task-list { max-height: calc(100vh - 320px); min-height: 300px; overflow-y: auto; }
   .task-row { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
   .task-row:hover { background-color: #f8f9fa; }
@@ -52,13 +50,6 @@
 
   /* === Mobile overrides (≤768px) === */
   @media (max-width: 768px) {
-    /* Filters: wrap freely, grow tap targets */
-    .task-filters { gap: 8px; }
-    .task-filters select, .task-filters input {
-      font-size: 16px !important; height: 40px !important;
-      flex: 1 1 100%; width: auto !important; min-width: 0;
-    }
-
     /* Task row: collapse the flex grid to a stacked card */
     .task-list { max-height: none; min-height: 200px; }
     .task-row {
@@ -144,7 +135,7 @@
         </div>
         <div class="card-body">
           <!-- Filters -->
-          <div class="task-filters">
+          <div class="tw-filter-bar">
             <select id="filter-topic" class="form-control form-control-sm" style="width: 110px;">
               <option value="all">All Topics</option>
               <option value="Content">Content</option>
