@@ -188,14 +188,14 @@
     if (!iso) return '-';
     var d = new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
-    return (d.getMonth() + 1) + '/' + d.getDate();
+    return d.getDate() + '/' + (d.getMonth() + 1);
   };
 
   TaskWidgets.formatDateFull = function(iso) {
     if (!iso) return '-';
     var d = new Date(iso);
     if (isNaN(d.getTime())) return String(iso);
-    return d.toLocaleDateString();
+    return d.toLocaleDateString('en-GB');
   };
 
   TaskWidgets.escape = function(s) {
