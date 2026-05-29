@@ -69,6 +69,45 @@ const ActivityBackfillService = (function () {
   }
 
   /**
+   * Ongoing sync of order.placed activity for current orders.
+   *
+   * backfillOrderActivity() is run-once over full history (current + archive);
+   * this is its ongoing counterpart, wired into the CRM contact refresh so new
+   * orders log an activity row on the same cadence as the aggregate update.
+   * Scans current WebOrdM only — new orders always land there before archiving,
+   * and orders already in the archive were recorded while they were current.
+   * Idempotent via the shared order.placed.{orderId} dedup, and matches the
+   * backfill's completed/processing status filter so the two paths agree.
+   *
+   * @returns {Object} { created, skipped, errors }
+   */
+  function syncRecentOrderActivity() {
+    const fnName = 'syncRecentOrderActivity';
+    const allConfig = ConfigService.getAllConfig();
+    const sheetNames = allConfig['system.sheet_names'];
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
+
+    const existingIds = _getExistingActivityIds('order.placed');
+
+    // Totals from current items only (matches the current-only order scan).
+    const orderTotals = new Map();
+    const itemsSheet = spreadsheet.getSheetByName(sheetNames.WebOrdItemsM);
+    if (itemsSheet) {
+      _processItemsSheet(itemsSheet, 'woi_', orderTotals);
+    }
+
+    const currentSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);
+    if (!currentSheet) {
+      return { created: 0, skipped: 0, errors: 0 };
+    }
+
+    const result = _processOrderSheet(currentSheet, 'wom_', existingIds, orderTotals);
+    LoggerService.info(SERVICE_NAME, fnName,
+      `Recent order activity sync: created=${result.created}, skipped=${result.skipped}, errors=${result.errors}`);
+    return result;
+  }
+
+  /**
    * Builds order totals from order items sheets.
    * @param {Spreadsheet} spreadsheet
    * @param {Object} sheetNames
@@ -638,6 +677,7 @@ const ActivityBackfillService = (function () {
 
   return {
     backfillOrderActivity: backfillOrderActivity,
+    syncRecentOrderActivity: syncRecentOrderActivity,
     backfillCouponActivity: backfillCouponActivity,
     backfillSubscriptionActivity: backfillSubscriptionActivity,
     backfillCampaignActivity: backfillCampaignActivity,
@@ -646,6 +686,17 @@ const ActivityBackfillService = (function () {
     CATEGORY_TRANSLATIONS: CATEGORY_TRANSLATIONS
   };
 })();
+
+/**
+ * Editor-pickable wrapper for the ongoing order-activity sync.
+ * Smoke for the durable order.placed fix: run from the editor after orders are
+ * pulled, then confirm recent orders appear in the contact Activity Timeline.
+ */
+function runSyncRecentOrderActivity() {
+  const result = ActivityBackfillService.syncRecentOrderActivity();
+  Logger.log(JSON.stringify(result, null, 2));
+  return result;
+}
 
 /**
  * Global function to run activity backfill.

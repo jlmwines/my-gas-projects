@@ -856,6 +856,15 @@ function HousekeepingService() {
           `Contact import: ${importResult.created} created, ${importResult.updated} updated`);
       }
 
+      // Keep order.placed activity current — new orders log an activity row on
+      // the same cadence as the aggregate update above (ongoing counterpart to
+      // the run-once backfillOrderActivity). Idempotent.
+      if (typeof ActivityBackfillService !== 'undefined' && ActivityBackfillService.syncRecentOrderActivity) {
+        const activityResult = ActivityBackfillService.syncRecentOrderActivity();
+        logger.info('HousekeepingService', functionName,
+          `Order activity sync: ${activityResult.created} created, ${activityResult.skipped} skipped`);
+      }
+
       ContactService.refreshAllContacts();
       logger.info('HousekeepingService', functionName, "CRM contact refresh completed.");
 

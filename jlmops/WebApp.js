@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 05:46',
-  commit: '@151 Reliability Tier 1.1 — SysContacts aggregate-consistency fix. updateContactsFromOrders now merges WebOrdM_Archive (orders) + WebOrdItemsM_Archive (items) so sc_OrderCount/sc_TotalSpend no longer decrement as orders age into archive (mirrors importFromOrderHistory). Both archive-merge blocks fixed to map wom_OrderTotal (was unmapped, causing archived orders to fall back to line-item subtotals without tax/shipping — pre-existing bug in importFromOrderHistory, faithfully copied into the new path). CCP-3 verify step added: post-write, sum of sc_OrderCount across all contacts must equal union order count (post status-exclusion); mismatch fires reportFailure(reconciliation.sys_contacts.write_verify, High) with sessionId. Pre-existing \\ typo at avg-order-value calc was already correct.'
+  built: '2026-05-29 06:14',
+  commit: '@152 Durable order-activity sync — recent orders were missing from the contact Activity Timeline because order.placed activity rows were only ever created by the run-once ActivityBackfillService.backfillOrderActivity(); no ongoing path created them (createActivity does not dedup, so it could not be called blindly per pull). New ActivityBackfillService.syncRecentOrderActivity() scans current WebOrdM only (new orders land there before archiving), dedups via the shared order.placed.{orderId} set, creates rows for completed/processing orders, reusing the backfill helpers so semantics match. Wired into the CRM contact refresh in HousekeepingService right after updateContactsFromOrders, behind the sync-since-last-refresh gate. Editor wrapper runSyncRecentOrderActivity() added. Append-only, idempotent, no schema change. Running once also fills the current gap for orders still in WebOrdM.'
 };
 
 function getVersion() {
