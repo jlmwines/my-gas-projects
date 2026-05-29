@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (reliability execution: Tier 1.1 + durable order-activity sync — 2 deploys)
+
+- **Tier 1.1 SysContacts aggregate fix SHIPPED — @151 deploy @155.** Found the bulk of 1.1 already sitting uncommitted in the working tree (archive merge + CCP-3 verify + typo already correct) — undeployed, no prior log entry (the audit's own real-vs-recorded drift). Reviewed it: caught that the order-archive merge omitted `wom_OrderTotal`, so archived orders fell back to line-item subtotals (no tax/shipping). Same gap existed pre-existing in `importFromOrderHistory` (the new block was copied from it) — fixed both via one `replace_all`. Verify-step false-positive concern dismissed by user (archive holds all orders, refunds not a factor). Smoke: 0 created / 474 updated, no `reconciliation.sys_contacts.write_verify` task, sample contact accurate.
+- **Durable order-activity sync SHIPPED — @152 deploy @156.** User noticed recent orders missing from the contact Activity Timeline though aggregates were current. Root cause (code-read, not assumed): `order.placed` rows are only ever written by run-once `backfillOrderActivity()`; the "ongoing via normal flows" comment is false for orders, and `createActivity` doesn't dedup so it can't be called blindly per pull. Fix: new `ActivityBackfillService.syncRecentOrderActivity()` (current-WebOrdM-only scan, reuses backfill helpers, dedups via `order.placed.{orderId}`), wired into the CRM contact refresh in `HousekeepingService` after `updateContactsFromOrders`, behind the existing sync-since-last-refresh gate. Editor wrapper `runSyncRecentOrderActivity`. Running once also backfilled the current gap; verified orders now appear.
+- **Editor wrappers added** for both module methods (`runUpdateContactsFromOrders`, `runSyncRecentOrderActivity`) — module methods don't show in the GAS Run dropdown. Memory `feedback_name_script_when_naming_function` banked (name the .gs file when telling user to run a function).
+- **Next:** reliability queue continues — Tier 1.2 (input-safety, staged) or 1.3 (LockService, highest-risk staged), or 2.x. The order-activity ongoing-writer pattern is the kind of gap Tier 3 visibility sessions will surface more of.
+
+---
+
 ## 2026-05-28 (afternoon — planning push: reliability audit v2.1 + UI audit v2 + 18 deep-dives committed)
 
 - **Inbox Targets 1 + 2 delivered as planning artifacts.** Reliability audit went v1 → v1.1 → v1.2 → v1.3 → v2 → v2.1 via three-agent review + self-critique pass; UI audit went v1 → v2 via six-agent review across two rounds (initial code/risk/best-practices + UX/anchor/coherence).
