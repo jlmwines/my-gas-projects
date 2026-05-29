@@ -1,7 +1,7 @@
 # UI Tier 4.4 — ManagerProductsView mobile pass
 
 **Session ID:** UI_T4_4
-**Status:** Plan v1 (2026-05-28). Ready to ship. All gaps resolved via code reading:
+**Status:** **SHIPPED 2026-05-29 (@178 deploy @182 + @179 deploy @183 fixes; commit `e97df74`).** Stage A (modal mobile CSS) + Stage B (both outer tables → responsive-stack + data-label) shipped in one deploy. **Post-smoke fixes (@179):** (1) edit areas were wider than the modal card — CSS-grid `min-width:auto` trap; added `.comparison-grid>*{min-width:0}` + desc box-sizing/overflow-wrap; (2) Fill/Clear crowded the tabs — tab-group now scrolls on its own row, tab-actions wraps below; (3) **shared `.responsive-stack` fix in AppView** — cells without a `data-label` were rendering a bare ": " (`td:not([data-label])::before{content:none}`), which also fixed the OrdersView action/gift-button cells. RTL Hebrew header-stack + tab scroll + comparison single-column all user-confirmed on mobile. — Plan v1 (2026-05-28). All gaps resolved via code reading:
 - **`.comparison-grid` (`:34`)** is `grid-template-columns: 1fr 1fr` at every viewport — fixed two-column at 360px gives ~150px per column, unusable for Hebrew long-description textareas (which have `min-height: 120px` per `:65`).
 - **`.tab-bar` (`:23-29`)** is `display: flex; justify-content: space-between` with 7 tab buttons + a right-aligned actions slot. No `overflow-x` handling. Overflows phone width without scroll.
 - **`.header-right` (`:16`)** is `direction: rtl` + ellipsis truncation. This causes Hebrew names like "יין אדום מהכרם הראשון" to truncate from the LEFT (showing only the end), losing the start of the name.

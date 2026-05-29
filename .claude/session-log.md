@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-29 (UI T4.4 — ManagerProducts mobile; @178 deploy @182 + @179 deploy @183)
+
+- **T4.4 SHIPPED (commit `e97df74`).** Modal mobile @media: comparison-grid single-col, tab bar scroll + Fill/Clear on own row, header stacks (RTL Hebrew name no longer truncated-from-start). Both outer tables → responsive-stack + data-label. Verified class names vs plan first (all matched). One deploy for both stages (low risk, CSS+markup).
+- **Post-smoke fixes (@179):** (1) edit areas wider than card = CSS-grid min-content trap → `.comparison-grid>*{min-width:0}`; (2) Fill/Clear crowding tabs → tab-group scrolls own row, actions wrap below; (3) **shared AppView responsive-stack** rendered a bare ": " on no-data-label cells → `td:not([data-label])::before{content:none}` (also fixed Orders action/gift cells, which had the latent bug). User: "perfect."
+- **Tier 4 mobile complete except T4.5** (Library). Then T5.x (T5.1/T5.2 can use ModalOverlay; T5.3 shared-list decision). Not pushed to origin yet.
+
+---
+
 ## 2026-05-29 (UI T4.1 — OrdersView mobile; @173 deploy @177 + @174 deploy @178)
 
 - **T4.1 SHIPPED (commit `7e1f643`).** Both OrdersView tables → `.responsive-stack` + `table-sm` + `data-label` (labelled cards on mobile). Added mobile-safe "Select all" button (`toggleAllPacking`) above Packing Slips — the thead select-all is hidden by responsive-stack on mobile (kept thead checkbox for desktop). First production adopter of `.responsive-stack` (defined long ago in AppView, used by zero views until now).
