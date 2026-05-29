@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 09:35',
-  commit: '@157 UI display tweaks + Tier 4.2. (1) Date order dd/mm kit-wide: TaskWidgets.formatDateShort M/D->D/M, formatDateFull toLocaleDateString()->toLocaleDateString(en-GB) (dd/mm/yyyy) — Israel convention, flips all 7 kit-consuming views; formatDate (ISO yyyy-mm-dd) untouched (used for <input type=date> values). (2) AppView mobile .content padding 12px->12px 6px (more horizontal room on phone). (3) T4.2: ManagerDashboardView_v2 expanded-row inner .d-flex stacks vertically on mobile (was overflowing) + .task-status select full-width on mobile, 100px desktop (moved inline width to CSS class). Desktop unchanged. Per UI_AUDIT.md Tier 4.2.'
+  built: '2026-05-29 09:44',
+  commit: '@158 ManagerDashboard mobile task-list declutter — hide Entity/Created/Link columns on mobile (keep Topic/Title/Status/Priority/Due); the 3 hidden fields remain in the expanded detail. Stacked mobile cards were showing all 8 fields = unscannable. Selector .task-row .task-col-x matches [class^=task-col-] specificity so display:none wins. Desktop list unchanged. Follows @157 (dd/mm dates + mobile padding + T4.2 expanded-row stacking).'
 };
 
 function getVersion() {
