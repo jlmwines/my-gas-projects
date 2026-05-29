@@ -8,8 +8,8 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 - **T4.1 SHIPPED (commit `7e1f643`).** Both OrdersView tables → `.responsive-stack` + `table-sm` + `data-label` (labelled cards on mobile). Added mobile-safe "Select all" button (`toggleAllPacking`) above Packing Slips — the thead select-all is hidden by responsive-stack on mobile (kept thead checkbox for desktop). First production adopter of `.responsive-stack` (defined long ago in AppView, used by zero views until now).
 - **Refine after smoke (@174):** bare packing-slip checkbox was distorted (global `input{min-height:40px;font-size:16px}` stretched it once stacked) — scoped `#packing-slips-list .order-checkbox` to 22×22; relabelled "Select" → "Print this order". User-confirmed on mobile.
-- **New item user-flagged:** ManagerDashboard task view has a calendar/list toggle → should be list-only (calendar not wanted), and the control overflows off-screen on mobile. Taking it next. Logged in UI_AUDIT §10 + STATUS.
-- **Tier 4 mobile largely done** (T4.1 + T4.2 + T4.3). Remaining: T4.4, T4.5 → T5.x. Not pushed to origin yet.
+- **ManagerDashboard simplification SHIPPED (@175→@177 deploy @179→@181, `ff32942`)** — user-flagged, done same session: (1) hide calendar/list view-toggle (Tasks list-only); (2) force-hide `#calendar-nav` (week-label + arrows) — it was rendering in list mode and its 180px label pushed the header off the right edge on mobile (toggleView should hide it; `display:none !important` is bulletproof now calendar's retired); (3) compact mobile task cards — flex-wrap, Title own line + Topic/Status/Priority/Due on a meta line (~half height, more tasks/screen). Calendar markup/JS now dead — safe to fully remove later.
+- **Tier 4 mobile largely done** (T4.1 + T4.2 + T4.3). Remaining: T4.4, T4.5 → T5.x. Big session: @159→@177 deploy @163→@181 (T3.1/3.2/3.3, CCP-UI-8, T4.3, T4.1, autocomplete fix, deploy.ps1 auto-stamp, dashboard simplification).
 
 ---
 
