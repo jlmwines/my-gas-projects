@@ -5,6 +5,7 @@
 .wp-credentials
 .sftp-credentials
 .mc-credentials
+*.credentials.csv
 
 # Google Cloud service-account credentials (used by content/register-library.js)
 .gcp-credentials.json
@@ -21,9 +22,17 @@ content/history/
 content/*.zip
 content/existing-layouts/*.jpg
 
+# Content image assets — live copies live in the WP media library + Drive
+# (Content Library canonical archive), git is not a third copy.
+content/**/*.jpg
+content/**/*.png
+marketing/newsletter/images/
+
 # Windows artifacts
 nul
 jlmops/nul
 
-# Exchange folder
+# Scratch / temp folders (file exchange, screenshots, dumps, node_modules)
+exchange/
+temp/
 jlmops/exchange/

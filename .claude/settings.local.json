@@ -68,7 +68,10 @@
       "Bash(awk '/^    \\\\}\\\\\\)\\\\\\(\\\\\\);/{print NR\": \"$0}' \"C:/Users/B/projects/jlmwines/jlmops/AdminProductsView.html\")",
       "Bash(git tag *)",
       "Bash(pushd jlmops *)",
-      "Bash(popd)"
+      "Bash(popd)",
+      "WebFetch(domain:rankmath.com)",
+      "WebFetch(domain:easymcpai.com)",
+      "WebFetch(domain:www.jlmwines.com)"
     ],
     "deny": [
       "Bash(git -C:*)",
