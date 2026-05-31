@@ -4,7 +4,7 @@
 
 **Run from:** wp-admin on live (or staging — same WPML config). All steps read-only except where flagged "**FIX**".
 
-**Updated:** 2026-05-03
+**Updated:** 2026-05-31 (Rank Math MCP tooling + usage decision added — see bottom)
 
 ---
 
@@ -142,3 +142,30 @@ If any of these fail, drop back to Section A — most issues trace to Custom Fie
 - `plans/STATUS.md` — current project state
 - WPML's own checklist: https://wpml.org/documentation/getting-started-guide/seo-multilingual-content/
 - RankMath × WPML guide: https://rankmath.com/kb/wpml-compatibility/
+
+---
+
+## Rank Math MCP — tooling + usage decision (2026-05-31)
+
+Rank Math ships a built-in MCP server (no plugin install needed). It was found already live on jlmwines.com and registered in Claude Code this session.
+
+**Endpoint / connection (already configured):**
+- Endpoint: `https://jlmwines.com/wp-json/mcp/mcp-adapter-default-server` (streamable HTTP)
+- Auth: WordPress Application Password (Basic auth), user `gamboruch` (administrator). Credentials live in `exchange/rankmath-mcp.credentials.csv` (gitignored via `*.credentials.csv`).
+- Registered as Claude Code MCP server `rankmath` (local scope). Verify with `claude mcp list`.
+- The MCP requires the proper session lifecycle: `initialize` → capture `Mcp-Session-Id` header → `notifications/initialized` → then `tools/call`. WPML-aware (`wpml_language` param accepts `en`/`he`).
+
+**What it exposes — only two tools (the official Rank Math set, NOT the 23-ability open stack):**
+- `rank-math/audit-site-seo` — **read-only.** Runs Rank Math's site-wide test suite, returns score + categorized findings. Can also audit a specified URL / competitor URL (competitor audits are PRO).
+- `rank-math/fix-site-seo` — **writes.** Auto-toggles a fixed checklist (blog visibility, permalink structure, tagline, sitemap/schema modules, robots.txt, missing focus keywords). Global and WPML-blind.
+
+**Usage decision for JLM:**
+- **`audit-site-seo` — use freely as an on-demand read-only SEO pulse.** Fold a periodic run into the **monthly review** "SEO & Content" check (STATUS.md Review Cadence) as a cheap input alongside the GSC/GA4 glance. Matches the user's stated preference for periodic manual review over a built dashboard.
+- **`fix-site-seo` — DO NOT auto-run on this site.** Its fixes are global and WPML-blind; auto-toggling sitemap/schema/robots on a bilingual live store is exactly the blast radius the house rules guard against. If it flags something real, apply the fix by hand, per-language-aware, with explicit OK — never via the auto-fixer.
+
+**Fit with existing plans:**
+- **Hardening plan (`jlmops/plans/RELIABILITY_AUDIT.md`): no fit, by design.** That plan is entirely jlmops (GAS middleware) data-integrity/ops; it has zero SEO surface. The Rank Math MCP touches WordPress, a separate system. Do not add it there.
+- **KPI plan: light fit only.** Tier 3.2's status-file KPI block is orders/revenue/customers (WebOrdM), not SEO; `KPI_SUMMARY_TAB` is deferred. The only real touchpoint is the monthly-review SEO check above.
+- **Open SEO backlog overlap: essentially none.** JLM's open items (homepage hreflang `http` #1, gtin13 #9, EN-only post #8, WPML Custom Fields Translation §A, HE front-page mapping #3) are all architecture/theme-code/WPML-settings work that `fix-site-seo` cannot touch. The generic auto-fixer and the real backlog do not overlap.
+
+**Net:** keep the MCP as a read-only SEO monitoring pulse on the monthly cadence; never wire the auto-fixer; it stays out of the hardening plan.
