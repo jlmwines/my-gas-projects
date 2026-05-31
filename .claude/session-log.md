@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-05-31 (git working-tree hygiene; pushed origin `3a5ab8d`)
+
+- **Diagnosed the untracked pile.** Feature-scoped sessions only `git add` what they ship and never sweep the tree, so generated images, `exchange/` scratch (31 MB incl. node_modules), and plan docs piled up untracked for weeks. 2026-05-28 cleanup flagged it; deferred then.
+- **3 commits, no push-then-rework.** (1) `ab7650e` gitignore `exchange/`, `temp/`, `content/**/*.{jpg,png}`, `marketing/newsletter/images/` — confirmed `push-posts.js` reads only `.md`, never local images (live copies = WP media + Drive canonical archive); gitignore spares the 64 already-tracked legacy images. (2) `c7e1fbc` committed real docs left behind — PRODUCT_VERIFICATION + INVENTORY_TASK_CONSOLIDATION (live), FLYER_PLAN, content/selection, RANKMATH_WPML + tasks.md. (3) `3a5ab8d` finished the pre-staged UI-plan→`jlmops/plans/_archive/` move (+README +UI_AUDIT index) and retired 4 obsolete theme-cutover audits → new `plans/_archive/`.
+- **Quirk:** the 12 UI-plan renames were pre-staged at session start, so they rode into commit 1 instead of commit 3 (git commits all staged). End state identical; not worth amending an unpushed→now-pushed history. Multi-line archive Bash block hit a harness internal error twice — splitting into single-purpose steps cleared it.
+- **State:** `git status` clean, origin/main in sync. `exchange/` (31 MB) still on disk untracked — user deletes manually to reclaim. Next work thread unchanged: Contact Action Ribbon Phase 2.
+
+---
+
 ## 2026-05-29 (UI T5.1 AdminContacts modals + nav fix + Contact Action Ribbon plan; @182→@184 deploy @186→@188)
 
 - **T5.1 SHIPPED (@182 deploy @186).** 3 Bootstrap modals (Log Activity/Create Task/Compose Email) → modal-overlay via the shared **ModalOverlay** helper (deviation/improvement over plan's raw display toggle — AdminContacts includes TaskWidgets so the helper was available). 2 btn-primary → btn. Verified 0 modal-fade/$().modal()/btn-primary.
