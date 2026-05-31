@@ -191,7 +191,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing. First session to ship.
 
-**Deep-dive:** `jlmops/plans/UI_T1_0_quick_wins.md` (v1 written 2026-05-28; all gaps resolved; SystemHealthWidget confirmed orphan, scope expanded to 7 widgets + 3 dead conditional blocks).
+**Deep-dive:** `_archive/UI_T1_0_quick_wins.md` (v1 written 2026-05-28; all gaps resolved; SystemHealthWidget confirmed orphan, scope expanded to 7 widgets + 3 dead conditional blocks).
 
 **CCP audit.** Per fix: confirm pattern applied or refactor goal met; no new btn classes invented; no Bootstrap modal introduced.
 
@@ -255,7 +255,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing.
 
-**Deep-dive:** `UI_T2_2_crm_nav.md` (v1 written 2026-05-28; 1 atomic stage — file-to-file move).
+**Deep-dive:** `_archive/UI_T2_2_crm_nav.md` (v1 written 2026-05-28; 1 atomic stage — file-to-file move).
 
 **CCP audit.** CCP-UI-4 (role gating on admin-only panel); CCP-UI-2 (no invented btn classes).
 
@@ -283,7 +283,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing.
 
-**Deep-dive:** `UI_T2_3_orders_merge.md` (v1 written 2026-05-28; 1 atomic stage — rename ManagerOrdersView.html → OrdersView.html, role-gate Packing Slips, retire AdminOrdersView.html; depends on T1.0 shipping first).
+**Deep-dive:** `_archive/UI_T2_3_orders_merge.md` (v1 written 2026-05-28; 1 atomic stage — rename ManagerOrdersView.html → OrdersView.html, role-gate Packing Slips, retire AdminOrdersView.html; depends on T1.0 shipping first).
 
 **CCP audit.** CCP-UI-4 (data-roles applied to differentiate cards).
 
@@ -319,7 +319,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing structural.
 
-**Deep-dive:** `UI_T2_5_taskwidgets_extend_dashboard.md` (v1 written 2026-05-28; 3 stages — kit extension → helper migration → CSS class rename; all helper divergences resolved up front).
+**Deep-dive:** `_archive/UI_T2_5_taskwidgets_extend_dashboard.md` (v1 written 2026-05-28; 3 stages — kit extension → helper migration → CSS class rename; all helper divergences resolved up front).
 
 **CCP audit.** CCP-UI-6 (kit included, atoms come from kit, no local duplicates).
 
@@ -347,7 +347,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** 2.5 (kit extension shipped first so all needed helpers exist).
 
-**Deep-dive:** `UI_T2_6_taskwidgets_adoption_rollout.md` (v1 written 2026-05-28; 6 stages — one consumer per stage, smallest-to-largest scope; 84 total call sites; no new kit additions needed beyond T2.5).
+**Deep-dive:** `_archive/UI_T2_6_taskwidgets_adoption_rollout.md` (v1 written 2026-05-28; 6 stages — one consumer per stage, smallest-to-largest scope; 84 total call sites; no new kit additions needed beyond T2.5).
 
 **CCP audit.** CCP-UI-6 per file.
 
@@ -378,7 +378,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing structural. Ideally after 2.5 (TaskWidgets) if any new rendering pulls atoms from the kit.
 
-**Deep-dive:** `UI_T3_1_admin_products_refresh.md` (v1 written 2026-05-28; 2 stages — backend `WebAppProducts_getAdminViewData` added then frontend refreshView refactor; vintage splice path preserved; per-section getter consolidation deferred).
+**Deep-dive:** `_archive/UI_T3_1_admin_products_refresh.md` (v1 written 2026-05-28; 2 stages — backend `WebAppProducts_getAdminViewData` added then frontend refreshView refactor; vintage splice path preserved; per-section getter consolidation deferred).
 
 **CCP audit.** CCP-UI-5 (single getViewData call); no regression to single-action splicing.
 
@@ -406,7 +406,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing structural. Soft after 2.5 (TaskWidgets includes the search-input atoms).
 
-**Deep-dive:** `UI_T3_2_manager_contact_load_once.md` (v1 written 2026-05-28; 1 stage — load-once on mount + client-side filter on email/name/phone/city; no Refresh button (mount = refresh); closes BUG_FIX_SEQUENCE Session G).
+**Deep-dive:** `_archive/UI_T3_2_manager_contact_load_once.md` (v1 written 2026-05-28; 1 stage — load-once on mount + client-side filter on email/name/phone/city; no Refresh button (mount = refresh); closes BUG_FIX_SEQUENCE Session G).
 
 **CCP audit.** CCP-UI-5 (single fetch on mount, all input drives local filter); CCP-UI-6 (atoms from kit).
 
@@ -431,7 +431,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Soft after 2.1 (Bundles restructure) so the new IA is in place before consolidating the data load.
 
-**Deep-dive:** `UI_T3_3_admin_bundles_consolidate.md` (v1 written 2026-05-28; 2 stages — backend `WebAppBundles_getViewData` + frontend init refactor; T2.1 outcomes preserved; same T3.1 recipe).
+**Deep-dive:** `_archive/UI_T3_3_admin_bundles_consolidate.md` (v1 written 2026-05-28; 2 stages — backend `WebAppBundles_getViewData` + frontend init refactor; T2.1 outcomes preserved; same T3.1 recipe).
 
 **CCP audit.** CCP-UI-5.
 
@@ -464,7 +464,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Soft after 1.0 (the `btn-primary` fix at `:120` lands in quick wins).
 
-**Deep-dive:** `UI_T4_1_orders_mobile.md` (v1 written 2026-05-28; 1 stage — both tables adopt `.responsive-stack` + explicit "Select all" button replaces thead-hidden-on-mobile select-all; `.responsive-stack` utility verified working).
+**Deep-dive:** `_archive/UI_T4_1_orders_mobile.md` (v1 written 2026-05-28; 1 stage — both tables adopt `.responsive-stack` + explicit "Select all" button replaces thead-hidden-on-mobile select-all; `.responsive-stack` utility verified working).
 
 **CCP audit.** CCP-UI-3 (table-sm + responsive treatment), CCP-UI-7 (touch targets verified on real device).
 
@@ -490,7 +490,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Soft after 2.5 (TaskWidgets adoption may consolidate some of the inline CSS).
 
-**Deep-dive:** `UI_T4_2_dashboard_expanded_row.md` (v1 written 2026-05-28; 1 stage — CSS-only + 1 JS markup tweak; inner-flex stacks vertically on mobile; status select inline width moved to CSS so it can override per-breakpoint).
+**Deep-dive:** `_archive/UI_T4_2_dashboard_expanded_row.md` (v1 written 2026-05-28; 1 stage — CSS-only + 1 JS markup tweak; inner-flex stacks vertically on mobile; status select inline width moved to CSS so it can override per-breakpoint).
 
 **CCP audit.** CCP-UI-7.
 
@@ -550,7 +550,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Nothing structural.
 
-**Deep-dive:** `UI_T4_4_products_mobile.md` (v1 written 2026-05-28; 2 stages — modal mobile fixes (comparison-grid single-column, tab-bar scroll, RTL Hebrew header truncation fix) → outer tables responsive-stack).
+**Deep-dive:** `_archive/UI_T4_4_products_mobile.md` (v1 written 2026-05-28; 2 stages — modal mobile fixes (comparison-grid single-column, tab-bar scroll, RTL Hebrew header truncation fix) → outer tables responsive-stack).
 
 **CCP audit.** CCP-UI-3, CCP-UI-7.
 
@@ -578,7 +578,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Depends on.** Soft after 4.1 if `.responsive-stack` adoption pattern emerges from there.
 
-**Deep-dive:** `UI_T4_5_library_mobile.md` (v1 written 2026-05-28; 2 stages — CSS additions (drawer single-col + task-row status label) → library list table responsive-stack).
+**Deep-dive:** `_archive/UI_T4_5_library_mobile.md` (v1 written 2026-05-28; 2 stages — CSS additions (drawer single-col + task-row status label) → library list table responsive-stack).
 
 **CCP audit.** CCP-UI-3, CCP-UI-7.
 
