@@ -2,28 +2,33 @@
 
 **Purpose.** Two-sided printed flyer (EN / HE) distributed via mailbox insertion in selected Jerusalem neighborhoods. Acquisition channel: drive new (first-order) customers to jlmwines.com using the existing ₪50-off-first-order coupon as the incentive.
 
-**Status.** Scoping in progress (drafted 2026-05-08). Pre-test phase. No print run scheduled.
+**Status.** ACTIVATED 2026-05-31 — moving from scoping to execution (user: "the time for fliers has arrived"). Still pre-test phase: round-1 design, vendor outreach (yoterplus / dilen), and photo assets are the immediate unblockers before a print run can be scheduled. Drafted 2026-05-08.
 
-**Strategic frame.** Acquisition test, not a proven channel. ₪2,000/round is right-scaled as a test, not a campaign. Round 1 produces the data that decides whether the channel scales. Going in with that expectation makes a "this didn't work" outcome a useful result, not a sunk cost.
+**Strategic frame.** Acquisition test, not a proven channel. ₪2,000/round is right-scaled as a test, not a campaign. Round 1 produces the data that decides whether the channel scales. Round 1 targets the local area first: new-customer acquisition is the goal, in a warm, well-matched, Evyatar-aware audience, with some offline-only regulars converting online as a secondary benefit; colder, further-out neighborhoods come in Round 2+. Going in with that expectation makes a "this didn't work" outcome a useful result, not a sunk cost.
 
 ---
 
 ## Targeting
 
-**Principle.** Beyond walking distance from the Katamon shop. People near the shop already know it (or can pop in). Flyers are for acquiring people who can't easily walk in but can get delivery.
+**Principle (revised 2026-05-31, local-first; supersedes the original "beyond walking distance" frame).** Start with the roughly 2km radius around the Katamon shop, then expand outward in later rounds.
 
-**One EN-demographic neighborhood + one HE-demographic neighborhood per round.** The two-sided flyer reads to both, but neighborhood demographic determines which side does the acquisition work.
+**Why local-first.** The original plan assumed nearby people already know the shop and can just walk in, so flyers should chase colder prospects further out. That undervalued the local area. It is a strong acquisition target in its own right (high-income, high-English, right age bracket, already aware of Evyatar and the shop), and that awareness helps rather than hurts conversion. So the goal stays acquisition, just local-first: the primary target is NEW customers nearby, where a warm, well-matched audience should convert better than a cold drop further out. A secondary benefit comes along for free, since some loyal customers who only ever buy offline (shop delivery, by age or order size) get nudged into their first online order off the same flyer. Local-first also validates the online funnel on a warm audience before money goes to colder, further-out drops.
 
-**Existing customer distribution is NOT used for targeting.** Existing customers reflect store proximity, word-of-mouth history, and random clustering — none of which predict where new flyer-driven customers will come from. Selection is on demographic hypothesis (public profile of each neighborhood), not data.
+**One EN + one HE demographic neighborhood per round** still applies to the outward rounds. Round 1's local radius is English-leaning, so the English side does most of the work; the Hebrew side covers the mixed local population.
 
-### Round 1 (hypothesis-driven)
+### Round 1 (local acquisition, roughly 2km around the shop)
 
-- **English side:** French Hill — established Modern Orthodox Anglo families, kosher wine culture, professional incomes.
-- **Hebrew side:** Beit HaKerem — secular-traditional Hebrew demographic, professional, university-adjacent, wine-comfortable.
+Target the mailboxes within about 2km of the Katamon store: Katamon / Old Katamon and the close-in surrounds the radius reaches (Gonen / San Simon, Baka, German Colony, the Talbiyeh / Rehavia edge). High-income, high-English, right age bracket, already aware of Evyatar and the shop. The distribution vendor can map mailbox routes to the radius.
 
-Confidence: ~60% these are the right pair. Holding loosely — round 1 results may suggest swapping one for round 2.
+- **Primary target: new customers in the local area.** The warm, well-matched, Evyatar-aware audience should convert better than a cold drop further out.
+- **Secondary benefit: nudging offline-only locals online.** Some loyal customers who only buy via shop delivery (by age or order size) place their first online order off the same flyer.
+- **English side does the primary work** (the radius skews Anglo and the audience is English-leaning); the **Hebrew side** stays present for the mixed local population.
+
+The existing ₪50-off-first-order coupon fits both: a genuinely new customer and an offline-only regular placing a first Woo order both count as a first order.
 
 ### Round 2+ strategy
+
+**Round 2+ expands outward to the beyond-walking-distance, cold-acquisition neighborhoods the original plan favored** (French Hill EN, Beit HaKerem HE, and the wider pool below). That logic was sound for cold acquisition; it just belongs after the warm local round, not before it.
 
 **Rotate to fresh neighborhoods, do not re-drop round 1.** Reasons:
 - Single-neighborhood saturation is real; same flyer twice = diminishing returns.
@@ -31,7 +36,7 @@ Confidence: ~60% these are the right pair. Holding loosely — round 1 results m
 - Sampling more areas builds a coarse map of *where this channel works at all*, which is more useful than re-confirming one point.
 - A round-1 winner can return *later* with a different angle (seasonal, holiday tie-in) — but not as round 2.
 
-Candidate alternates: Arnona (EN-rising), Kiryat HaYovel (HE, younger demo), Ein Kerem, Nayot, Talbiyeh — the existing 8-neighborhood list from `.claude/wishlist.md` (2026-02-09) is the candidate pool.
+Candidate alternates (outward / cold): French Hill (EN), Beit HaKerem (HE), Arnona (EN-rising), Kiryat HaYovel (HE, younger demo), Ein Kerem, Nayot. The existing 8-neighborhood list from `.claude/wishlist.md` (2026-02-09) is the candidate pool. (Talbiyeh now falls partly inside the Round 1 radius, so it drops from the outward list.)
 
 ---
 
@@ -103,6 +108,8 @@ Candidate alternates: Arnona (EN-rising), Kiryat HaYovel (HE, younger demo), Ein
 
 Industry-typical benchmarks (no JLM- or Israel-specific data; hold loosely):
 
+**Round 1 is warm, not cold.** The benchmarks below describe cold drops, so treat them as a floor and as the expectation for the outward Round 2+ neighborhoods. A warm, Evyatar-aware local audience should redeem above the cold rate, so raise the Round 1 decision-trigger bar once vendor volumes are known.
+
 - **Cold mailbox flyer redemption:** ~0.3–1% for lifestyle/F&B with a strong offer. Lower in saturated markets (Jerusalem mailboxes are busy).
 - **At ~2,500 flyers per neighborhood (≈ half a ₪2,000 round split):** expect 7–25 first-time customers per neighborhood per round. So 14–50 across both.
 - **First-to-repeat conversion in wine/beverage:** ~25–35% rough estimate. → 4–17 actual repeat customers per round.
@@ -127,7 +134,7 @@ LTV math: if a repeat customer's first-year revenue lands at ₪1,500–₪3,000
 4. **Coupon code creation** — issue `JLMFLYER50` (or chosen name) in WooCommerce, first-order-restricted, expiry-bounded for the test window.
 5. **Bundles category description copy** — write 1–2 sentences in EN + HE, install via WC category description.
 6. **Round 1 timing** — pick a drop date that makes sense relative to current inventory state (avoid the magnums-phase-out window; align with category fill-in completion).
-7. **Round 2 neighborhood pre-selection** — defer until round 1 redemption data is in.
+7. **Round 2 neighborhood pre-selection** — defer until round 1 redemption data is in. Round 2 is the first outward / cold drop (French Hill, Beit HaKerem, wider pool).
 
 ---
 
