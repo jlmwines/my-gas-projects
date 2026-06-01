@@ -869,7 +869,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       el.addEventListener('click', function(e) {
         e.preventDefault();
         state.taskScopeFilter = this.dataset.scope;
-        loadTasks();
+        render();  // client-side re-filter (feed already holds open + recent-done); no refetch
       });
     });
 
@@ -1911,8 +1911,12 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         if (entityName.indexOf(state.taskEntityFilter) === -1 && entityId.indexOf(state.taskEntityFilter) === -1) return false;
       }
 
-      // Scope filter: open, started, future, all
-      // Note: 'open' shows all non-Done tasks (no date filtering)
+      // Scope filter: open, started, future, all.
+      // The feed (WebAppLibrary_getData) returns open + recently-completed tasks,
+      // so the Open/Started/Future scopes must exclude done tasks client-side
+      // (the old server split getAllOpenTasks/getAllTasks used to do this). 'all' shows everything.
+      var isClosed = (t.status === 'Done' || t.status === 'Closed' || t.status === 'Cancelled');
+      if (state.taskScopeFilter !== 'all' && isClosed) return false;
       if (state.taskScopeFilter === 'started' || state.taskScopeFilter === 'future') {
         var startDate = null;
         try {
