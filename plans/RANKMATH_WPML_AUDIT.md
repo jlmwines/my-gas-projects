@@ -153,7 +153,12 @@ Rank Math ships a built-in MCP server (no plugin install needed). It was found a
 - Endpoint: `https://jlmwines.com/wp-json/mcp/mcp-adapter-default-server` (streamable HTTP)
 - Auth: WordPress Application Password (Basic auth), user `gamboruch` (administrator). Credentials live in `exchange/rankmath-mcp.credentials.csv` (gitignored via `*.credentials.csv`).
 - Registered as Claude Code MCP server `rankmath` (local scope). Verify with `claude mcp list`.
-- The MCP requires the proper session lifecycle: `initialize` → capture `Mcp-Session-Id` header → `notifications/initialized` → then `tools/call`. WPML-aware (`wpml_language` param accepts `en`/`he`).
+- **The in-Claude MCP client HANGS on every `rankmath` tool call (confirmed 2026-05-31) — do NOT call `mcp__rankmath__*` tools, the session stalls.** The endpoint itself is healthy; drive it directly with `curl` instead. Working lifecycle (all read-only steps):
+  1. `initialize` → POST the endpoint, capture the `Mcp-Session-Id` response header.
+  2. `notifications/initialized` → POST with that header (no body response).
+  3. `tools/call` → POST with the header. Audit call: `{"method":"tools/call","params":{"name":"mcp-adapter-execute-ability","arguments":{"ability_name":"rank-math/audit-site-seo","parameters":{"refresh":true}}}}`.
+  - Headers: `Content-Type: application/json`, `Accept: application/json, text/event-stream`, Basic auth `gamboruch:<app-password>`. Use a generous `-m` timeout (audit takes ~30–60s; it hits the remote rankmath.com API).
+  - Abilities (from `discover-abilities`): `rank-math/audit-site-seo` (read-only) + `rank-math/fix-site-seo` (writes — never auto-run). `audit-site-seo` params: `refresh` (bool) + optional `url` (per-URL audit; remote tests only). **No `wpml_language` param — the audit is WPML-blind / global; the §A–F walk below is the only way to check per-language meta.**
 
 **What it exposes — only two tools (the official Rank Math set, NOT the 23-ability open stack):**
 - `rank-math/audit-site-seo` — **read-only.** Runs Rank Math's site-wide test suite, returns score + categorized findings. Can also audit a specified URL / competitor URL (competitor audits are PRO).

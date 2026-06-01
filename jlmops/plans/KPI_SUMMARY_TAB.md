@@ -2,6 +2,7 @@
 
 **Created:** 2026-05-06
 **Status:** DEFERRED / parked (2026-05-07). This spec was Claude's pitch, not the user's. User prefers periodic manual review of GA4 + GSC + JLMops_Data on cadence over a built dashboard tab. Do not re-surface as "ready to build" in session pickups.
+**Reframed (2026-05-31):** Superseded in direction by `OPS_DATA_TRIGGERS.md`, which captures a broader two-trigger concept (on-demand KPI export + ad-hoc diagnostics export, both phone-triggerable). This narrow pre-computed cache stays DEFERRED and becomes, at most, one downstream *consumer* of that KPI trigger's export — not its own pipeline. Captured as concept only; not approved for build.
 **Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so weekly review sessions can read 13 cells instead of parsing 3 MB of raw sheets.
 
 ---

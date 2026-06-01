@@ -71,7 +71,8 @@
       "Bash(popd)",
       "WebFetch(domain:rankmath.com)",
       "WebFetch(domain:easymcpai.com)",
-      "WebFetch(domain:www.jlmwines.com)"
+      "WebFetch(domain:www.jlmwines.com)",
+      "Bash(echo \"exit=$? bytes=$\\(wc -c </tmp/rm_audit.json\\)\")"
     ],
     "deny": [
       "Bash(git -C:*)",
