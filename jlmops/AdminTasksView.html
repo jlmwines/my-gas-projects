@@ -125,6 +125,9 @@
               <a href="#" class="scope-link" data-scope="future">Future</a> |
               <a href="#" class="scope-link" data-scope="all">All</a>
             </span>
+            <select id="filter-task-project" class="form-control form-control-sm py-0" style="height:22px;font-size:11px;width:auto;max-width:220px;" title="Filter by project">
+              <option value="all">All projects</option>
+            </select>
           </div>
           <!-- Column headers row -->
           <div class="row small font-weight-bold text-muted align-items-center">
@@ -643,6 +646,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     taskAssigneeFilter: 'all',
     taskEntityFilter: '',
     taskSessionFilter: '',
+    taskProjectFilter: 'all',
     selectedTaskIds: [],  // For bulk operations
     taskScopeFilter: 'open',  // 'open', 'started', 'future', 'all'
     sortField: 'due',
@@ -754,6 +758,19 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       }).join('');
   }
 
+  function populateProjectFilter() {
+    // Distinct project IDs across the loaded tasks (project = a filter, not a mode).
+    var seen = {};
+    state.tasks.forEach(function(t) { if (t.projectId) seen[String(t.projectId)] = true; });
+    var ids = Object.keys(seen).sort();
+    var sel = document.getElementById('filter-task-project');
+    if (!sel) return;
+    var current = state.taskProjectFilter;
+    sel.innerHTML = '<option value="all">All projects</option>' +
+      ids.map(function(id) { return '<option value="' + TaskWidgets.escape(id) + '">' + TaskWidgets.escape(id) + '</option>'; }).join('');
+    sel.value = current;
+  }
+
   function loadData() {
     google.script.run
       .withSuccessHandler(function(result) {
@@ -762,6 +779,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
           state.allTasks = state.tasks;
           state.library = result.data.library || [];
           populateAssigneeFilter();
+          populateProjectFilter();
           render();
           updateStats();
           if (state.pendingSelectTaskId) {
@@ -839,6 +857,11 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     document.getElementById('filter-task-assignee').addEventListener('change', function() {
       state.taskAssigneeFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-project').addEventListener('change', function() {
+      state.taskProjectFilter = this.value;
       render();
     });
 
@@ -1293,28 +1316,20 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function renderHeader() {
+    // Task-only workbench (ADMIN_TASK_UI Deploy B): no project nav, breadcrumb,
+    // back/home, or content-stream/import chrome. Just "Tasks" + "+ Task".
+    var homeBtn = document.getElementById('btn-home');
     var backBtn = document.getElementById('btn-back');
     var breadcrumb = document.getElementById('breadcrumb');
     var newBtn = document.getElementById('btn-new');
     var contentStreamBtn = document.getElementById('btn-content-stream');
     var contentImportBtn = document.getElementById('btn-content-import');
-
-    if (state.mode === 'projects') {
-      backBtn.style.display = 'none';
-      breadcrumb.textContent = 'Projects';
-      newBtn.textContent = '+ Project';
-      contentStreamBtn.style.display = 'none';
-      contentImportBtn.style.display = 'none';
-    } else {
-      backBtn.style.display = '';
-      var project = getSelectedProject();
-      var projectName = project ? (project.name || project.spro_Name) : 'Project';
-      breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + TaskWidgets.escape(projectName);
-      newBtn.textContent = '+ Task';
-      // Show content buttons when in tasks mode
-      contentStreamBtn.style.display = '';
-      contentImportBtn.style.display = '';
-    }
+    if (homeBtn) homeBtn.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'none';
+    if (contentStreamBtn) contentStreamBtn.style.display = 'none';
+    if (contentImportBtn) contentImportBtn.style.display = 'none';
+    if (breadcrumb) breadcrumb.textContent = 'Tasks';
+    if (newBtn) newBtn.textContent = '+ Task';
   }
 
   function renderSubheader() {
@@ -1897,6 +1912,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       if (selectedProjId) {
         var taskProjId = t.projectId ? String(t.projectId).trim() : '';
         if (taskProjId !== selectedProjId) return false;
+      }
+      if (state.taskProjectFilter !== 'all') {
+        var tpid = t.projectId ? String(t.projectId) : '';
+        if (tpid !== state.taskProjectFilter) return false;
       }
       if (state.taskStatusFilter !== 'all' && t.status !== state.taskStatusFilter) return false;
       if (state.taskPriorityFilter !== 'all' && t.priority !== state.taskPriorityFilter) return false;
