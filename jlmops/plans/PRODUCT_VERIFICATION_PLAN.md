@@ -1,7 +1,7 @@
 # Product Verification — Plan
 
 **Created:** 2026-05-14
-**Status:** Plan written, not implemented. Awaiting OK before code.
+**Status:** Plan written, not implemented. Awaiting OK before code. Reconciled 2026-06-01 — verification is a **read-only** review surface (look-and-note; two actions: Confirm & close / Revert to admin). All editing lives in the separate update-details task. Category check is show-don't-compare (no `SysLkp_Texts` join).
 
 ## Problem
 
@@ -25,10 +25,10 @@ Settled in planning (2026-05-14). Not up for re-litigation during implementation
 | Task creation model | **Manual** — parallel "Create Verification Tasks" card mirroring the existing count card. No automated sweep. Manager runs ~20/week, gaps for busy seasons = twice annually |
 | Count creation model | Stays manual; same card pattern (no separate cadence rewrite — existing card already accepts "days since last count") |
 | Idempotency | One open task per SKU per type at a time. Server-side dedup on create, same as count card |
-| Verification surface | Existing `ManagerProductsView.html` `editor-modal`. Image as its own tile; Comax fields rendered side-by-side with Specs for one-glance comparison |
+| Verification surface | **Read-only** variant of the product detail modal — reuse `ManagerProductsView` with a `verifyMode` flag (decided 2026-06-01). Edit inputs disabled, no save button; footer has exactly two actions — **Confirm & close** and **Revert to admin**. Revert exposes a findings notes field; its text is saved to the task's `st_Notes` before reassigning to admin. Image as its own tile; Comax facts shown side-by-side with the web/derived values for one-glance human comparison (no automated category match) |
 | Failed verification routing | Revert-to-admin (existing `WebAppDashboardV2_revertTaskToAdmin` pattern). Task notes carry findings. **No spawn** — confirmed 2026-05-31, see Resolution below |
-| Vintage-update completion | Editing vintage (or any modal save) on a SKU with an open verify task auto-completes that task and stamps `pa_LastDetailAudit` |
-| Edits in the wild | Any vintage/image/description edit through the modal stamps `pa_LastDetailAudit`. Selection card then naturally skips that SKU |
+| Editing during verification | **None.** Verification is look-and-note only. All product-data editing (vintage, description, attributes, image) happens in the separate update-details task or by the admin on a reverted task — never on the verification surface |
+| Stamp trigger | `pa_LastDetailAudit` is stamped only on **verify-task completion** (Confirm & close, or admin completing a reverted task) — never off a stray modal save |
 | Product-overview view (Inbox 2026-05-14) | Separate scope. Not part of this plan. Verification reuses the existing detail modal |
 | Sheet-import vintage tasks | Existing `task.validation.vintage_mismatch` path stays (it's an admin-facing fix queue, separate concern) |
 
@@ -49,7 +49,7 @@ A media library would only earn its keep given asset reuse across channels, vers
 **Workflow (admin↔manager bounce).** Product-detail validation is a task that bounces between admin and manager:
 
 - Manager reviews image + details in the modal.
-- If correct → close the task (Mark verified / edit-and-save path above).
+- If correct → close the task (Confirm & close).
 - If something's wrong → note the finding and pass the task back to the admin (revert-to-admin).
 - The admin attaches the corrected image to the task as the working artifact and uploads it to the website. No library association is created or needed.
 
@@ -99,60 +99,61 @@ Edit `jlmops/config/taskDefinitions.json` → `node jlmops/generate-config.js` �
 
 `due_pattern` two_weeks reflects "best done slowly" — no rush.
 
-## Modal additions (ManagerProductsView)
+## The verification surface (read-only review modal)
 
-Extend the existing `editor-modal`. Two additions:
+A **read-only** variant of the product detail modal — the same display layout the manager already knows, but every edit input is disabled and there is no save button. The footer carries exactly two actions: **Confirm & close** and **Revert to admin** (see Completion paths). No editing happens here.
 
-1. **Live site image tile.** Separate area near the modal header (or top of the Specs tab if header is tight). `<img src="{wpm_Images first src}">` lazy-loaded, max 300px wide. Never block modal open on image fetch — browser handles async.
-2. **Comax facts column on the Specs tab.** The Specs tab today has Current | Edit columns. The Current column already shows `cur-CmxVintage`, `cur-CmxDivision`, `cur-CmxGroup`. Add alongside each Comax field the corresponding web/derived value so the manager sees them side-by-side in one glance.
+**Build approach — DECIDED 2026-06-01:** reuse `ManagerProductsView`'s modal with a `verifyMode` flag that disables inputs and swaps the footer. Rationale: shared field definitions (future field adds/changes show up in both surfaces for free), one place to improve perf later, and the read-only render is *lighter* than the edit modal — `verifyMode` skips populating all the edit controls/dropdowns that make the full modal slow, so review renders faster, not slower. (A separate read-only modal was the alternative; rejected to keep the field source shared.)
 
-### Mismatch rules
+Two display additions over a plain read-only view:
 
-Three flags on the Comax facts column:
+1. **Live site image tile.** Separate area near the modal header (or top of the Specs tab if the header is tight). `<img src="{wpm_Images first src}">` lazy-loaded, max 300px wide. Never block modal open on image fetch — the browser handles it async. The manager judges image accuracy + quality by eye.
+2. **Comax facts shown beside the web/derived values.** The Specs tab already shows `cur-CmxVintage`, `cur-CmxDivision`, `cur-CmxGroup`. Alongside each, show the corresponding web/derived value so the manager sees them side-by-side in one glance and judges any disparity himself.
+
+### Flags — show the data, don't auto-compare categories
+
+Two unambiguous empty-value flags only (no name-matching, no `SysLkp_Texts` join, so neither can false-positive):
 
 1. **`cpm_Division` missing** — empty value → red asterisk + "missing" label. Every Comax product should have one.
-2. **`cpm_Group` missing on Wine-Division product** — `cpm_Division` resolves to wine but `cpm_Group` is blank → red asterisk + "missing" label.
-3. **(Division, Group) ↔ web category disagreement.** Lookup logic:
-   - Read `SysLkp_Texts` (`slt_Code`, `slt_TextEN`, `slt_TextHE`).
-   - Expected EN division label = `slt_TextEN` where `slt_Code = cpm_Division`.
-   - Expected EN group label = `slt_TextEN` where `slt_Code = cpm_Group`.
-   - Compare against the EN web category names on the product (primary category + parent — exact strings TBD at implementation time once we look at how WC categories are stored on the product join).
-   - Disagreement → red flag + diff summary ("Comax says Dry Red, web says Dessert").
+2. **`cpm_Group` missing on a Wine-Division product** — `cpm_Division` resolves to wine but `cpm_Group` is blank → red asterisk + "missing" label.
 
-If the lookup row is missing in `SysLkp_Texts` (`cpm_Division` value not found in `slt_Code`), that's its own flag: "Comax Division value not in lookup."
+**No automated Division/Group ↔ web-category comparison.** Resolved 2026-06-01: the comparison is dropped. Rationale — `wpm_TaxProductCat` stores **all** of a product's categories comma-joined (e.g. "Red Wine, Kosher, Dry") with no primary marker (`WooProductPullService.js:139` → `_extractNames`), and matching a Comax Division/Group **code** against those category **names** would require the fragile `SysLkp_Texts` code→label join — which can false-flag on label-shape variance ("Dry Red" vs "Red Wine") or a missing lookup row. On a look-and-note surface that noise is pure cost. Instead, **show** Comax Division/Group next to the web category list and let the manager judge. The Comax side may optionally be run through the lookup *for display readability only*; if the lookup misses, it simply shows the raw code — it never produces a flag.
 
-**No new editing capability beyond what the modal already does.** Manager already edits Region, ABV, attributes, descriptions in this modal — that's how verification edits flow. Comax field corrections still go through the Comax CSV path (Comax is not directly writable from jlmops).
+**No editing capability.** Comax-field corrections go through the Comax CSV path (Comax is not directly writable from jlmops). Web-side corrections go through the separate update-details task or the admin's edit modal on a reverted task — never here.
 
 ## Verification completion paths
 
-Three paths, all triggered from the modal when a verify task is open:
+**Two** paths, both triggered from the read-only modal footer when a verify task is open:
 
-1. **Mark verified** — new button in modal footer. Stamps `pa_LastDetailAudit = today`, completes the task, no other changes. Used when image + data look correct and no edits are needed.
-2. **Edit-and-save** — existing modal save path. Wraps the save: in addition to current behavior, stamps `pa_LastDetailAudit` and completes any open `task.product.verify` for the SKU. This is the auto-complete path for vintage updates, description fixes, attribute corrections.
-3. **Revert to admin** — existing dashboard button (`WebAppDashboardV2_revertTaskToAdmin`). Manager writes findings into task notes (e.g. "Image is blurry; needs reshoot. Comax year shows 2020 but bottle is 2021"), clicks Revert. Task stays open with admin assignee. Audit date NOT stamped — verification isn't done until admin resolves and re-completes (admin completion also stamps the audit date).
+1. **Confirm & close** — footer button. Stamps `pa_LastDetailAudit = today`, completes the task, no other changes. Used when image + data look correct. Then **advances to the next open verification task** (see Batch flow).
+2. **Revert to admin** — the modal's Revert action exposes a findings notes field. Manager writes findings (e.g. "Image is blurry; needs reshoot. Comax year shows 2020 but bottle is 2021"), clicks Revert. The modal **carries the notes back to the task** — saves them to `st_Notes` via the existing manager notes-save path (`WebAppDashboardV2_updateManagerTask`), then reassigns the task to admin via the existing `WebAppDashboardV2_revertTaskToAdmin`. **Both backend functions already exist — no new backend.** The notes ride with the task row, so the admin sees the findings. Task stays open with admin assignee. Audit date NOT stamped — verification isn't done until the admin fixes the detail/image and re-completes the task (admin completion also stamps `pa_LastDetailAudit`). Then **advances to the next open verification task** (see Batch flow).
+
+There is no edit-and-save path on this surface. Editing belongs to the separate update-details task.
+
+### Batch flow — walk the queue, don't bounce out
+
+A manager verifies many products in one sitting. After **either** action (Confirm & close or Revert to admin), the surface advances to the **next open `task.product.verify` assigned to this manager** and re-renders the modal with that product — it does **not** return to the task screen. The task screen is reached only when the queue is exhausted, or on an explicit Close.
+
+Implementation: on entering verification (from any open verify task), load the manager's list of open verify tasks (task id + SKU) once; walk it client-side, loading each product's detail as it comes up (prefetch optional). Each Confirm/Revert removes the current task from the local queue and loads the next; when the queue is empty, show a brief "no more verifications" state and close back to the task list.
 
 ## Stamp ownership (corrected 2026-06-01)
 
 Each task type stamps **only its own column** in `SysProductAudit`, on task completion. Same table, separate columns, separate triggers — neither touches the other's stamp:
 
 - **Count task closes → `pa_LastCount`** only. The count flow MUST NOT stamp `pa_LastDetailAudit`. (Once verification is stripped from counting, counting does no validation — re-stamping the audit date here would silently re-couple the two concerns this plan exists to separate.)
-- **Product-detail review (verify) task closes → `pa_LastDetailAudit`** only, through whatever path is appropriate (Mark verified, edit-and-save auto-complete, or admin completing a reverted task).
+- **Product-detail review (verify) task closes → `pa_LastDetailAudit`** only, through either close path (manager Confirm & close, or admin completing a reverted task).
 
 ~~Vintage update via the inventory count flow → stamps audit date~~ — **REMOVED 2026-06-01.** This was the exact count↔verification coupling the plan exists to undo.
 
-**Sub-question RESOLVED 2026-06-01 — validation and editing are SEPARATE tasks:**
+**RESOLVED 2026-06-01 — validation and editing are SEPARATE tasks:**
 
-- **Validation (product-detail review) task:** manager reviews; the only action is a **note** in the task. Outcomes = Mark verified, or revert-to-admin with findings. **No modal editing happens during validation.** Closing this task stamps `pa_LastDetailAudit`.
+- **Validation (product-detail review) task:** manager reviews on the read-only surface; the only outcomes are **Confirm & close** or **Revert to admin with findings**. **No editing happens during validation.** Completing this task stamps `pa_LastDetailAudit`.
 - **Update-product-details task:** the distinct task type where actual modal editing occurs. Separate trigger, separate task.
 
-Therefore stamping is strictly **task-completion-driven**, never off a stray edit — validation doesn't edit, so there is no "in-the-wild" edit-stamp case to worry about.
-
-⚠️ **Correction required:** the "edit-and-save auto-completes the verify task and stamps `pa_LastDetailAudit`" path (see Completion paths §2 and the "Vintage-update completion" / "Edits in the wild" architecture-table rows) **conflates validation with editing again** and must be reconciled — validation = look-and-note only; editing belongs to the separate update-details task.
+Therefore stamping is strictly **task-completion-driven**, never off a stray edit — validation doesn't edit, so there is no "in-the-wild" edit-stamp case at all. (The earlier "edit-and-save auto-completes the verify task and stamps `pa_LastDetailAudit`" design has been removed throughout this plan — reconciled 2026-06-01.)
 
 - Image upload through whatever channel → not part of the validation task; remediation rides the update-details/admin path
 - Manual sheet edits to `SysProductAudit` → user responsibility; not automated
-
-If an in-the-wild edit happens for a SKU that has an open verify task, the save completes it.
 
 ## Files to modify
 
@@ -162,8 +163,8 @@ If an in-the-wild edit happens for a SKU that has an open verify task, the save 
 | `jlmops/AdminInventoryView.html` | Add "Create Verification Tasks" card (parallel to count card, or shared card with type toggle) |
 | `jlmops/WebAppInventory.js` | Extend planning-data response with `pa_LastDetailAudit`; add `createVerifyTasksBulk` wrapper |
 | `jlmops/InventoryManagementService.js` | Add `createVerifyTasksBulk(skus, note)` mirror of `createCountTasksBulk`; helper to stamp `pa_LastDetailAudit` for a SKU |
-| `jlmops/ManagerProductsView.html` | Add live image tile + Comax-vs-web side-by-side display on Specs tab + mismatch flags using `SysLkp_Texts`; add "Mark verified" button (gated on verify task context); save handler stamps `pa_LastDetailAudit` and completes open verify tasks |
-| `jlmops/WebAppProducts.js` (or wherever Manager save handler lives) | Add stamp-and-complete logic to the save path |
+| `jlmops/ManagerProductsView.html` | Add the read-only `verifyMode` surface: live image tile + Comax-vs-web side-by-side display on the Specs tab + the two empty-value flags (no `SysLkp_Texts`, no category comparison); disable edit inputs / hide save in verify mode; footer "Confirm & close" + "Revert to admin" buttons (gated on verify-task context); Revert exposes a findings notes field and saves it to `st_Notes` (via existing `WebAppDashboardV2_updateManagerTask`) before calling existing `WebAppDashboardV2_revertTaskToAdmin` — no new backend for the revert path |
+| `jlmops/WebAppProducts.js` (or wherever the product-side handler lives) | Add the verify-task completion handler (stamps `pa_LastDetailAudit` + completes the task) for Confirm & close. NOT wired into the edit-save path — verification doesn't edit. Also provide the manager's open-verify-task queue (task id + SKU) for the batch walk — reuse the existing task feed if it already returns this, otherwise a thin `getOpenVerifyTasks()` |
 | `jlmops/WebAppDashboardV2.js` | Whitelist `task.product.verify` in manager dashboard (type uses manager_direct flow, so it should surface via assignment-based gating already; verify) |
 
 No schema additions — `pa_LastDetailAudit` already exists.
@@ -203,9 +204,9 @@ No automated due-reminder / cadence surfacing for verification. Unlike counts (w
 
 One thing to watch:
 
-- **`SysLkp_Texts` join correctness.** The lookup is keyed by `slt_Code` matching `cpm_Division` and `cpm_Group` values. If those code values aren't always strings of the same shape (e.g. `"1"` vs `1`, leading zeros), the join silently fails and everything looks like a mismatch. Test with a known wine product before turning the flags on for the whole catalog.
+- **No fragile join remains.** The risky `SysLkp_Texts` code→label join was eliminated by dropping the automated category comparison (2026-06-01). If the lookup is used at all, it's display-only and degrades to showing the raw code — it can't produce a false flag. The two remaining flags are pure empty-value checks on `cpm_Division` / `cpm_Group`.
 
 ## Open questions for user
 
-1. **Web category source for the mismatch comparison.** ✅ RESOLVED 2026-06-01 (confirmed against `jlmops/config/schemas.json`): both fields live on **WebProdM** (Web Products Master) — web category = `wpm_TaxProductCat`, web image = `wpm_Images` — joined to the product on `wpm_SKU`. The comparison is EN-side on WebProdM; Hebrew products (WebXltM) carry no own category/image (inherited via WPML), so no HE-side join needed. The risky `SysLkp_Texts` join is NOT required for the category/image mismatch. (Original question text: where does the EN web category live on the product join — `wpm_Categories`? an attribute? the `cpm_*` master? — answer: `wpm_TaxProductCat` on WebProdM.)
+1. **Web category source for the comparison.** ✅ RESOLVED 2026-06-01. Web category = `wpm_TaxProductCat`, web image = `wpm_Images`, both on **WebProdM**, joined on `wpm_SKU`. Further resolved: `wpm_TaxProductCat` holds **all** of a product's categories comma-joined with no primary marker (`WooProductPullService.js:139` `_extractNames`), so a single-category "primary + parent" comparison isn't supported by the data. **Decision: drop the automated category comparison entirely** — show Comax Division/Group beside the web category list and let the manager judge (see "Flags — show the data" above). No `SysLkp_Texts` join needed for flagging.
 2. **Card layout** — ✅ RESOLVED 2026-06-01. Decision supersedes the original AdminInventoryView one-card-vs-two question. Verification is *product validation, not inventory*, so the verification-task-creation card lives on **AdminProductsView**, not AdminInventoryView. It reuses the existing count-task-creation card's pattern (admin generates verification tasks the same way count tasks are created). Counts stay on the inventory screen; verification creation + the manager's verification modal both live on the product surface — fully decoupled from inventory. Reinforces the count/verification separation (the core fix this plan exists for). **Perf:** both cards (existing count-creation card + new verification card) are infrequent-use and pay a populate cost, so default them **collapsed, populate-on-expand** (lazy-load); retrofit the existing count card to the same behavior. (Original text: one shared "Counts | Verifications" toggle card vs two sibling cards on AdminInventoryView; mild preference for shared — now obsolete.)
