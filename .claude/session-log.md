@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-01 (later — ADMIN_TASK_UI Deploy A + B GO-LIVE; pushed)
+
+- **Deploy A (@189 deploy @193):** extracted LibraryView's pack code into a shared `TaskPacks` include (packBody + 8 handlers + Lock/Attach modals), behavior-preserving via a `configure({getTask,getEntity,refresh,reload})` contract. LibraryView smoke-confirmed unchanged.
+- **Deploy B (@190→@191, deploy @194→@198):** built `AdminTasksView` by **copy-reduce** from AdminProjectsView (left untouched as fallback): normalized `WebAppLibrary_getData` feed, `st_*`→normalized rename, tasks-only mode, TaskPacks DO region below the MANAGE form. Iterated live behind a temp nav link — Open-scope exclude-done fix, header declutter (scope+project moved into the top bar), back-button-to-empty fix, Project filter added, unusable 1/3 density removed. **GO-LIVE:** Tasks nav entry after Dashboard; AdminProjects demoted to soak fallback; dashboard task-card repointed to AdminTasks.
+- **Vintage task-close bug fixed (same deploy):** `ProductService.confirmWebUpdates:1783` called `updateTaskStatus` with no status → blanked `st_Status` → rendered as 'New' (closed vintage tasks reappeared). Now passes `'Done'`. User is closing the 4 already-broken ones manually.
+- **Method note for future sessions:** copy-reduce beat fresh-lift for the 2270-line source (preserves proven table/lock-matrix/CSS verbatim); the view is a bare IIFE so no namespace collision; unlinked-then-flip = zero production risk during the build. AdminProjectsView/LibraryView untouched except the pack extraction.
+- **Next:** real use of AdminTasksView is the signal for the deferred follow-ups (column redesign DEFERRED per user; Notes de-dup, project-filter labels, entity→task leg, dead-code excision, post-soak Projects removal — all in `ADMIN_TASK_UI_PLAN.md`). Standing jlmops thread still Contact Action Ribbon Phase 2; WebAppBundles N+1 perf fix still queued. Also committed a mobile Dispatch session's 2 pending plan docs.
+
+---
+
 ## 2026-06-01 (RankMath audit + Session E removal + admin-task-UI plan; pushed)
 
 - **RankMath audit.** In-Claude `rankmath` MCP client hangs every call — endpoint is fine. Drove it via direct `curl` (initialize → capture `Mcp-Session-Id` → notifications/initialized → tools/call). Read-only `audit-site-seo` = 87/100. Filed actionable items into STATUS SEO row; banked the curl recipe in `RANKMATH_WPML_AUDIT.md` + memory `reference_rankmath_mcp_curl`. Never touched `fix-site-seo`.

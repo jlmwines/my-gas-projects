@@ -9,6 +9,8 @@ Projects: jlmops, web, marketing, content
 
 ### Resolved (recent)
 
+- [x] 2026-06-01: **Accepted vintage / product-detail tasks reappeared as "New" after the admin close.** RESOLVED @191 deploy @198. `ProductService.confirmWebUpdates` (the export-close step) called `TaskService.updateTaskStatus(t.st_TaskId)` with NO status arg (`ProductService.js:1783`) → wrote a blank `st_Status` (and cleared DoneDate at `TaskService.js:465`), which renders as "New" (UI falls back `status || 'New'`) and leaves the task in the open queue. Fixed to `updateTaskStatus(t.st_TaskId, 'Done')`. **Caveat:** the ~4 tasks already blanked before the fix have an empty stored status and won't be retro-closed by `confirmWebUpdates` (it only re-picks `'Accepted'`) — user is closing them manually.
+
 - [x] 2026-05-29: **Brurya product autocomplete crashed: "Argument too large: value".** RESOLVED @169 deploy @173. `LookupService._getCmxProdMSearchIndex` (added in T1.0, @153) JSON-stringified a full-CmxProdM-catalog projection with 4 fields/row (sku, name, + duplicate lowercase copies) and `cache.put` exceeded the CacheService 100KB per-value limit, rethrowing to the client so the autocomplete failed entirely. Fixed: dropped the duplicate `skuLc`/`nameLc` (lowercase at search time → ~half the payload) + wrapped `cache.put` in try/catch so an oversized catalog degrades to uncached (re-reads per call, same as pre-cache) instead of crashing. Surfaced during T4.3 Stage A smoke.
 
 ### Open
