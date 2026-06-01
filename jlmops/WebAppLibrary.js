@@ -18,7 +18,7 @@
 const SYS_LIBRARY_SHEET = 'SysLibrary';
 
 // Task types that don't appear in the queue (singletons / dashboard-backing).
-const NOT_IN_QUEUE = ['task.system.health_status', 'task.system.deployment_drift'];
+const NOT_IN_QUEUE = ['task.system.health_status'];
 
 /**
  * Gets consolidated LibraryView data in a single call: open + recent tasks

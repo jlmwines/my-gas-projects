@@ -665,7 +665,6 @@ function HousekeepingService() {
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
-      { name: 'validateDeployment', fn: () => this.validateDeployment() },
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
@@ -1246,76 +1245,6 @@ function HousekeepingService() {
       return true;
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Sweep failed: ${e.message}`);
-      return false;
-    }
-  };
-
-  /**
-   * Validates that the running deployment matches the pinned ID in config.
-   * Catches drift when scheduled triggers or web requests are being served from
-   * an orphan deployment (the recurring failure mode addressed by the
-   * .deployment-id wrapper + jlm_stable_deploy_id memory).
-   *
-   * Editor/dev contexts return URLs without a stable deployment ID; the check
-   * skips silently in that case.
-   */
-  this.validateDeployment = function() {
-    const functionName = 'validateDeployment';
-
-    try {
-      const pinnedCfg = ConfigService.getConfig('system.deployment.pinned_id');
-      const pinnedId = pinnedCfg && pinnedCfg.value ? String(pinnedCfg.value).trim() : '';
-      if (!pinnedId) {
-        logger.info('HousekeepingService', functionName, 'No pinned deployment ID configured. Skipping.');
-        return true;
-      }
-
-      let runningUrl = '';
-      try {
-        runningUrl = ScriptApp.getService().getUrl() || '';
-      } catch (urlErr) {
-        logger.info('HousekeepingService', functionName, `Cannot read running URL (${urlErr.message}). Skipping.`);
-        return true;
-      }
-
-      // Extract the deployment ID segment from a URL like:
-      //   https://script.google.com/.../s/<id>/exec
-      //   https://script.google.com/.../s/<id>/dev
-      const match = runningUrl.match(/\/s\/([^\/]+)\//);
-      if (!match) {
-        logger.info('HousekeepingService', functionName,
-          `Running URL has no deployment ID segment (${runningUrl}). Likely editor context. Skipping.`);
-        return true;
-      }
-      const runningId = match[1];
-
-      if (runningId === pinnedId) {
-        logger.info('HousekeepingService', functionName, `Deployment matches pinned ID (${pinnedId.substring(0, 12)}…).`);
-        return true;
-      }
-
-      // Drift detected — open a high-priority admin task. createTask dedup means
-      // re-runs are idempotent; the existing open drift task just sits there
-      // until an admin closes it.
-      const notes = JSON.stringify({
-        runningId: runningId,
-        pinnedId: pinnedId,
-        runningUrl: runningUrl,
-        detectedAt: new Date().toISOString()
-      });
-      TaskService.createTask(
-        'task.system.deployment_drift',
-        '_SYSTEM',
-        'System',
-        'Deployment drift — running ID does not match pinned',
-        notes,
-        null
-      );
-      logger.warn('HousekeepingService', functionName,
-        `Deployment drift: running=${runningId.substring(0, 12)}… pinned=${pinnedId.substring(0, 12)}…`);
-      return true;
-    } catch (e) {
-      logger.warn('HousekeepingService', functionName, `Validation failed: ${e.message}`);
       return false;
     }
   };

@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-05-29 16:48',
-  commit: '@187 Contact Action Ribbon Phase 1 (ManagerContactView). Replaced the single "+ New contact attempt" button with a ribbon: a distinct "Make contact" action (existing send modal → logContactAttempt: template + transmit/dial) + record icons 📞/💬/📧/📝 that open a new lightweight record modal → logActivity (log only, no send; direction in/out; note has no direction). SMS skipped per user. Record types written as comm.phone/comm.whatsapp/comm.email/note.general so timeline icons match. Make contact is outbound-only — removed the Direction radios from the send modal (inbound is a recording concept, handled by the record icons). Phase 2 (task packs: restrict channels + disable record icons + preload template in outreach-task mode) still to come — .mc-rec-disabled hook in place. Per CONTACT_ACTION_RIBBON_PLAN.md. Follows @185.'
+  commit: '@188 Removed validateDeployment deployment-drift detector + task.system.deployment_drift template (and the dead NOT_IN_QUEUE ref in WebAppLibrary). The in-script daily detector compared the running deployment ID against system.deployment.pinned_id and false-positived on every daily-maintenance run (trigger context getUrl() returns a non-pinned ID; logged Session E bug, uncloseable from the UI). Now redundant: deploy.ps1 pins --deploymentId + verifies the pinned ID survived (prevents orphan deployments at the source), and the visible VERSION stamp confirms which build is live. Kept system.deployment.pinned_id as the canonical pinned-ID record. Follows @187.'
 };
 
 function getVersion() {
