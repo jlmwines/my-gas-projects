@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-01
 **Origin:** chavruta + a 4-lens design workflow (2026-06-01). Realizes the convergence in `plans/CONTENT_LIBRARY_PLAN.md` §18 "Task UI shape" and its 2026-06-01 "task administration + creation locus" refinement.
-**Status:** PLANNED — not implemented. Decisions locked (see below); sequenced steps ready to drive sessions.
+**Status:** **Deploy A SHIPPED** 2026-06-01 (@189 deploy @193 — TaskPacks shared include). **Deploy B GO-LIVE** 2026-06-01 (@191 deploy @198 — `AdminTasksView` live in the admin nav after Dashboard; `AdminProjects` demoted to the bottom as the soak fallback). Polish follow-ups still open (see "Post-go-live follow-ups" at the bottom).
 
 ---
 
@@ -114,6 +114,22 @@ Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the 
 - ~~Does `WebAppLibrary_getEntityDetail.attached_tasks` include a stable task id?~~ **RESOLVED 2026-06-01: yes** — `_getQueueTasks` maps `id: st_TaskId` (`WebAppLibrary.js:72`). No server change; only the client `onclick` is needed.
 - ~~Free-form New Task — allow *no* entity/scope?~~ **DECIDED 2026-06-01: NO.** Tasks always require a project/scope; `WebAppTasks_createTask`'s mandatory `projectId` stays. No code change.
 - Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (the "Later (after soak)" step).
+
+---
+
+## What shipped (2026-06-01)
+
+- **Deploy A (@189 deploy @193):** `TaskPacks` shared include extracted from LibraryView (packBody + handlers + Lock/Attach modals), behavior-preserving.
+- **Deploy B (@190→@191, deploy @194→@198):** `AdminTasksView` built (copy-reduce from AdminProjectsView; normalized `WebAppLibrary_getData` feed; `st_*`→normalized; tasks-only; TaskPacks DO region below the MANAGE form). Iterated live via a temp link: fixed Open-scope (exclude done client-side), decluttered the header (scope + project filter moved into the top bar, project-nav chrome hidden), killed the back-button-to-empty bug, added the Project filter, removed the unusable 1/3 density. **GO-LIVE @191/@198:** Tasks nav entry after Dashboard; Projects demoted to the bottom (soak fallback); dashboard task-card repointed to AdminTasks. AdminProjectsView untouched throughout.
+
+## Post-go-live follow-ups (open)
+
+1. **Full-width column redesign** (confirmed direction, not yet built): Title-first + wide; cluster the filterable group (Status · Priority · Assignee) together in hierarchy; dates together; demote Stream/Link/Done/Created to Full density. Needs a visual see-and-adjust pass.
+2. **De-dup Notes** — the MANAGE form and the DO pack both render a Notes field; reconcile to one.
+3. **Project filter labels** — dropdown shows raw `projectId`s (e.g. `PROJ-SYS_PRODUCT`); add a friendly-name map if wanted.
+4. **Entity→task return leg** — wire LibraryView drawer attached-task rows' `onclick` → `loadView('AdminTasks')` + `selectTaskId` (payload already carries `id`; AdminTasksView honors it). Planned in Deploy B, not yet done.
+5. **Excise inert project/campaign dead code** from AdminTasksView (present but unreachable with `mode='tasks'`).
+6. **After soak:** remove Projects from the nav; retire the in-LibraryView Tasks tab. Gate: confirm `st_ProjectId` filtering fully covers current project flows.
 
 ---
 
