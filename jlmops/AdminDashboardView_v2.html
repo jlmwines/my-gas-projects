@@ -331,16 +331,15 @@
     html += '</tbody></table>';
     el.innerHTML = html;
 
-    // Add click handlers to navigate to task in Projects view
+    // Add click handlers to open the task in the Tasks view (ADMIN_TASK_UI go-live).
     el.querySelectorAll('.task-row').forEach(function(row) {
       row.addEventListener('click', function() {
         var taskId = this.dataset.taskId;
         var projectId = this.dataset.projectId;
-        // Store selection for Projects view to pick up
+        // Store selection for the Tasks view to pick up (checkDashboardNavigation).
         sessionStorage.setItem('selectTaskId', taskId);
         sessionStorage.setItem('selectProjectId', projectId);
-        // Navigate to Projects view
-        loadView('AdminProjects');
+        loadView('AdminTasks');
       });
     });
   }

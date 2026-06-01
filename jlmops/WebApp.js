@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-01 20:08',
-  commit: '@190 ADMIN_TASK_UI Deploy B (test build) — new AdminTasksView: a task-only workbench copied from AdminProjectsView (which stays untouched as the fallback), bound to the normalized WebAppLibrary_getData feed, with the TaskPacks DO region rendered below the MANAGE form (manage + do in one pane). Registered as getView AdminTasks; reachable via a TEMPORARY amber "Tasks (test)" link at the bottom of the admin nav (remove at go-live). Project/campaign machinery still present but inert (mode=tasks) — excision is the next cleanup pass. Follows @189.'
+  commit: '@191 ADMIN_TASK_UI Deploy B GO-LIVE — Tasks nav entry added after Dashboard; AdminProjects demoted to the bottom as a soak fallback; temporary test link removed. AdminTasksView density reduced to Standard + Full (the unusable 1/3 view that hid its own width control is gone). Dashboard task-card now opens the Tasks view (was AdminProjects). Also fixed ProductService.confirmWebUpdates: the export close now sets status Done (was a no-arg updateTaskStatus that blanked the status, so closed vintage tasks reappeared as New). Follows @190.'
 };
 
 function getVersion() {

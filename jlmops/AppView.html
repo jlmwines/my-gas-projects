@@ -198,17 +198,17 @@
         <!-- Admin Navigation -->
         <ul id="admin-nav" class="nav flex-column" style="display: none;">
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="switchRole()">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminTasks')">Tasks</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminSyncView')">Sync</a></li> <!-- NEW SYNC LINK -->
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminOrders')">Orders</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminInventory')">Inventory</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminProducts')">Products</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminBundles')">Bundles</a></li>
-          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminProjects')">Projects</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminCampaigns')">Campaigns</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('ManagerContacts')">Contacts</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Library')">Library</a></li>
           <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('Development')">Development</a></li>
-          <li class="nav-item"><a class="nav-link" href="javascript:void(0);" onclick="loadView('AdminTasks')" style="color:#e0a800;" title="TEMPORARY test link — ADMIN_TASK_UI Deploy B; remove at go-live">Tasks (test)</a></li>
+          <li class="nav-item"><a class="nav-link text-muted" href="javascript:void(0);" onclick="loadView('AdminProjects')" title="Legacy project-centric task surface — kept as a fallback during soak">Projects</a></li>
         </ul>
         <!-- Manager Navigation -->
         <ul id="manager-nav" class="nav flex-column" style="display: none;">

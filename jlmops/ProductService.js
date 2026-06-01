@@ -1780,7 +1780,7 @@ const ProductService = (function() {
         let count = 0;
         let deletedCount = 0;
         acceptedTasks.forEach(t => {
-            TaskService.updateTaskStatus(t.st_TaskId);
+            TaskService.updateTaskStatus(t.st_TaskId, 'Done');  // was no-arg → blanked status (rendered as New); export closes Accepted → Done
             count++;
 
             // Delete corresponding WebDetS row
