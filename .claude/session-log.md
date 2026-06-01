@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-01 (RankMath audit + Session E removal + admin-task-UI plan; pushed)
+
+- **RankMath audit.** In-Claude `rankmath` MCP client hangs every call — endpoint is fine. Drove it via direct `curl` (initialize → capture `Mcp-Session-Id` → notifications/initialized → tools/call). Read-only `audit-site-seo` = 87/100. Filed actionable items into STATUS SEO row; banked the curl recipe in `RANKMATH_WPML_AUDIT.md` + memory `reference_rankmath_mcp_curl`. Never touched `fix-site-seo`.
+- **Deleted spurious `jlmops/plans/STATUS.md`** — an earlier session fabricated it (untracked, no git history). Couldn't `git checkout` (untracked) → removal is the revert. Kept the two real concept docs that session left (OPS_DATA_TRIGGERS + KPI reframe) per user.
+- **Bug-fix Session E SHIPPED (@188 deploy @192).** Chose removal over the baseline-rewrite: deleted `validateDeployment` + `task.system.deployment_drift` template + dead `NOT_IN_QUEUE` ref (regenerated SetupConfig). Redundant with deploy.ps1 pin+verify + visible VERSION stamp. Undeployed 4 orphans @66/@67/@73/@96 → deployments = pinned @192 + @HEAD only. User ran `rebuildSysConfigFromSource`. (clasp needed a reauth mid-session.)
+- **`WebAppBundles_getViewData` 100s+** logged as bug + fix plan: `getBundlesWithLowInventory` calls `getEligibleProducts` per low-stock slot, each re-reading WebProdM/WebDetM/slots (N+1). Fix = hoist invariant loads into an additive ctx param. In `PERFORMANCE_OPTIMIZATION_PLAN.md`.
+- **Admin task UI (planning, long chavruta).** Found task administration (edit due/priority/assignee) never ported to LibraryView (only notes editable; `WebAppTasks_updateTask` full-field path actually already exists) and creation isn't library-rooted. Banked into `CONTENT_LIBRARY_PLAN` §18, ran a 4-lens design workflow, wrote `jlmops/plans/ADMIN_TASK_UI_PLAN.md`. Locked: Master-Detail workbench on AdminProjectsView's shell; server-side single task-row shape; nav additive (Library kept, Tasks new, Projects demoted to bottom as soak fallback); project = entity + filter chip; drop project-CRUD/campaign/generateOutputs from the task surface.
+- **Next:** standing jlmops thread = Contact Action Ribbon Phase 2; new queued build = ADMIN_TASK_UI_PLAN Step 1 (extract `packBody()` → shared `TaskPacks`, behavior-preserving). Bundles perf fix also queued.
+
+---
+
 ## 2026-05-31 (git working-tree hygiene; pushed origin `3a5ab8d`)
 
 - **Diagnosed the untracked pile.** Feature-scoped sessions only `git add` what they ship and never sweep the tree, so generated images, `exchange/` scratch (31 MB incl. node_modules), and plan docs piled up untracked for weeks. 2026-05-28 cleanup flagged it; deferred then.
