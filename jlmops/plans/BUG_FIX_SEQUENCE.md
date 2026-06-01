@@ -72,11 +72,13 @@ Prerequisite: Session A item 3 (archive `wom_CouponItems` mapping) should land f
 
 ---
 
-## Session E — `validateDeployment` detector
+## Session E — `validateDeployment` detector — RESOLVED 2026-06-01 (@188 deploy @192)
 
 **Bug:** 2026-05-27. Detector fires false positives daily; cannot UI-close.
 
-**Plan:**
+**Resolution: removed, not fixed.** The detector's purpose (catch orphan deployments serving requests) is now covered at the source by `deploy.ps1` (`clasp deploy --deploymentId <pinned>` + post-deploy survival verify), and the visible `VERSION.built` stamp confirms which build is live. Rather than build the baseline-tracking rewrite below, deleted `HousekeepingService.validateDeployment` + its `performDailyMaintenance` registration, the `task.system.deployment_drift` template (taskDefinitions.json → SetupConfig.js regenerated → `rebuildSysConfigFromSource`), and the dead `NOT_IN_QUEUE` ref in WebAppLibrary. Kept `system.deployment.pinned_id` as the canonical pinned-ID record. The 4 orphan deployments (@66/@67/@73/@96) were undeployed the same session; deployments now = pinned @192 + @HEAD only. The external-check idea (item 2 below) remains available if a bypass-the-wrapper backstop is ever wanted, but is not built.
+
+**Original plan (superseded by removal):**
 1. **In-script baseline tracking** (soft warning). New SysConfig key `system.deployment.runtime_url_baseline`; detector compares against baseline rather than pinned ID; bootstraps baseline on first run.
 2. **External check** (hard catch). New local script `jlmops/scripts/check-deployments.js` (or `package.json` npm script) that runs `clasp deployments` + diffs against a checked-in `jlmops/.expected-deployments.txt`; fails loudly on new IDs.
 3. **UI close path** for system tasks — add a dashboard "Close drift task" admin action OR allow system tasks to be marked done from the manager view.
