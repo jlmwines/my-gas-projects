@@ -618,7 +618,7 @@ Admin collapses to the same task-as-unit-of-work model (§18: "Projects survive 
 
 2. **Creation is not library-rooted.** Spawning a content chain creates an entity *and* its tasks; the entity is an input you pick (existing or new) and an output of the action — neither makes the library the necessary home of "create." The current `LibraryView` toolbar "Create Content Tasks" sits there by inheritance (forked from AdminProjectsView's `contentStreamModal`) and co-location convenience, not necessity. Canonical model: **creation is a task-surface operation; the entity is a field on it; the library is the entity catalog.** The drawer keeps an "add tasks to this entity" shortcut as a contextual convenience (you're standing on the entity), but nothing has to *start* in the library.
 
-Net: one Tasks surface owns create + do + manage; library = entity catalog (browse / inspect / reconcile). Full admin task-UI design options being explored 2026-06-01 (library and Tasks may stay separate views, re-using AdminProjectsView for the task surface) — recommendation to be folded back here once chosen.
+Net: one Tasks surface owns create + do + manage; library = entity catalog (browse / inspect / reconcile). **Chosen design (2026-06-01): a Master-Detail Task Workbench built on AdminProjectsView's shell, with LibraryView's pack dispatcher folded into the detail pane — full spec, locked decisions, and sequenced steps in `jlmops/plans/ADMIN_TASK_UI_PLAN.md`.** Nav stays additive: Library kept, Tasks = the new workbench, Projects (AdminProjectsView) demoted to the bottom as a soak-period fallback (retired once proven). Project is a library entity + a filter chip, not a container view.
 
 ### Mobile
 
