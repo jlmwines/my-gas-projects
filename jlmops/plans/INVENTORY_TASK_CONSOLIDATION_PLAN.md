@@ -53,17 +53,21 @@ Add a third line to the Pre-Sync card (card zero) in `AdminDailySyncWidget_v2.ht
 
 No schema changes needed. The existing columns continue to track different activities regardless of task type consolidation.
 
-## Phase 2: Image Review Tasks (Future)
+## Phase 2: Image Review Tasks (Future) — DROPPED / SUPERSEDED (2026-05-31)
 
-When a reviewer finds an image that is inaccurate (label changed) or poor quality during detail review:
+> **Superseded by the 2026-05-31 decision in `PRODUCT_VERIFICATION_PLAN.md` (Resolution — failed-verification handling).** This phase is **not** being built. The `pa_ImageFlag` column, the `task.product.image_update` task type, and the system-creates-task trigger described below are exactly the media/image-task machinery that decision rules out. There is no separate image-review task type and no ops-side media library.
+>
+> Instead, image problems are handled inline by the product-detail validation task: the manager reverts the task to the admin with notes, and the admin attaches the corrected image to that task and uploads it to the website. The WordPress media library remains the system of record for the live image; provenance lives on the task (notes + `pa_LastDetailAudit`). See `PRODUCT_VERIFICATION_PLAN.md` for the full rationale and the admin↔manager bounce workflow.
 
-- **Flag:** `pa_ImageFlag` column on `SysProductAudit` — set manually by reviewer
-- **Task type:** `task.product.image_update`
-- **Flow:** `admin_direct` — admin is responsible for sourcing and updating images
-- **Trigger:** flag is set during review; system creates task
-- **Searchable:** separate task type allows filtering image tasks in task list
+~~When a reviewer finds an image that is inaccurate (label changed) or poor quality during detail review:~~
 
-This is rare but needs to be trackable independently.
+- ~~**Flag:** `pa_ImageFlag` column on `SysProductAudit` — set manually by reviewer~~
+- ~~**Task type:** `task.product.image_update`~~
+- ~~**Flow:** `admin_direct` — admin is responsible for sourcing and updating images~~
+- ~~**Trigger:** flag is set during review; system creates task~~
+- ~~**Searchable:** separate task type allows filtering image tasks in task list~~
+
+~~This is rare but needs to be trackable independently.~~ (Retained struck-through for history; do not implement.)
 
 ## Phase 3: Detail and Vintage Task Clarity (Future)
 
