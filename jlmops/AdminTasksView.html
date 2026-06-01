@@ -82,7 +82,16 @@
           <div class="d-flex align-items-center">
             <button id="btn-home" class="btn btn-sm btn-light mr-1" title="Home">⌂</button>
             <button id="btn-back" class="btn btn-sm btn-light mr-2" title="Back" style="display:none;">←</button>
-            <span id="breadcrumb">Projects</span>
+            <span id="breadcrumb" class="font-weight-bold mr-3">Tasks</span>
+            <span class="scope-links small mr-2" style="white-space:nowrap;">
+              <a href="#" class="scope-link" data-scope="open">Open</a> |
+              <a href="#" class="scope-link" data-scope="started">Started</a> |
+              <a href="#" class="scope-link" data-scope="future">Future</a> |
+              <a href="#" class="scope-link" data-scope="all">All</a>
+            </span>
+            <select id="filter-task-project" class="form-control form-control-sm py-0" style="height:24px;font-size:11px;width:auto;max-width:200px;" title="Filter by project">
+              <option value="all">All projects</option>
+            </select>
           </div>
           <div>
             <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Create content task stream">+ Content</button>
@@ -117,19 +126,7 @@
 
         <!-- Subheader: Column headers + filters (Tasks mode) -->
         <div id="subheader-tasks" class="border-bottom bg-light px-2 py-1" style="display:none;">
-          <!-- Scope filter row -->
-          <div class="d-flex justify-content-between align-items-center mb-1 hide-compact">
-            <span class="scope-links small">
-              <a href="#" class="scope-link" data-scope="open">Open</a> |
-              <a href="#" class="scope-link" data-scope="started">Started</a> |
-              <a href="#" class="scope-link" data-scope="future">Future</a> |
-              <a href="#" class="scope-link" data-scope="all">All</a>
-            </span>
-            <select id="filter-task-project" class="form-control form-control-sm py-0" style="height:22px;font-size:11px;width:auto;max-width:220px;" title="Filter by project">
-              <option value="all">All projects</option>
-            </select>
-          </div>
-          <!-- Column headers row -->
+          <!-- Column headers row (scope + project moved to the header bar) -->
           <div class="row small font-weight-bold text-muted align-items-center">
             <div class="task-col-check">
               <input type="checkbox" id="select-all-tasks" title="Select all">
