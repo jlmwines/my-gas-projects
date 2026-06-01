@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-01 07:11',
-  commit: '@188 Removed validateDeployment deployment-drift detector + task.system.deployment_drift template (and the dead NOT_IN_QUEUE ref in WebAppLibrary). The in-script daily detector compared the running deployment ID against system.deployment.pinned_id and false-positived on every daily-maintenance run (trigger context getUrl() returns a non-pinned ID; logged Session E bug, uncloseable from the UI). Now redundant: deploy.ps1 pins --deploymentId + verifies the pinned ID survived (prevents orphan deployments at the source), and the visible VERSION stamp confirms which build is live. Kept system.deployment.pinned_id as the canonical pinned-ID record. Follows @187.'
+  commit: '@189 ADMIN_TASK_UI Deploy A — extracted LibraryView pack code into a shared TaskPacks include (packBody dispatcher + 8 action handlers + Lock/Attach modals), behavior-preserving. LibraryView now includes TaskPacks, calls TaskPacks.configure({getTask,getEntity,refresh,reload}) and renders via TaskPacks.packBody; ~382 lines moved out. No backend or behavior change — the shared kit is the prerequisite for the new AdminTasksView (Deploy B). Follows @188.'
 };
 
 function getVersion() {

@@ -1,4 +1,5 @@
 <?!= include('TaskWidgets') ?>
+<?!= include('TaskPacks') ?>
 
 <style>
   /* LibraryView — layout */
@@ -378,44 +379,6 @@
   </div>
 </div>
 
-<!-- Lock + Version modal — fires from Content edit pack Lock button.
-     Yes/No required choice on peer realignment per CONTENT_LIBRARY_PLAN §14. -->
-<div class="modal-overlay" id="lvLockModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Lock + Version</h6>
-    </div>
-    <div style="padding:15px;">
-      <p class="mb-2 small">Locking <strong id="lv-lock-slug"></strong> at the next version.</p>
-      <div id="lv-lock-peer-row">
-        <p class="mb-1">Does the peer-language sibling (<strong id="lv-lock-peer"></strong>) need editing for this change?</p>
-        <p class="small text-muted mb-0">Yes → spawns a realign task on the peer. No → records "no realignment needed" in the activity log. Required choice at lock per §14.</p>
-      </div>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:flex-end;gap:8px;">
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-no">No, just lock</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-yes">Yes, spawn realign</button>
-    </div>
-  </div>
-</div>
-
-<!-- Attach existing Doc modal — paste Drive URL to link an existing file to entity. -->
-<div class="modal-overlay" id="lvAttachModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Attach existing Doc</h6>
-    </div>
-    <div style="padding:15px;">
-      <p class="mb-2 small">Paste the Drive URL of the existing Doc to attach to <strong id="lv-attach-slug"></strong>. The file will be moved to the canonical library folder and renamed; the Drive URL stays stable.</p>
-      <input type="url" class="form-control form-control-sm" id="lv-attach-url" placeholder="https://docs.google.com/document/d/..." />
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('lvAttachModal').style.display='none'">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-attach-submit">Attach</button>
-    </div>
-  </div>
-</div>
-
 <!-- Entity detail drawer (phase 9a) — right-side slide-in panel. Inspection only;
      action buttons (Lock, Open in Drive, etc.) land in phase 9d. Sections
      (Files & URLs, Attached tasks, Refs out/in, State history, Activity log)
@@ -483,12 +446,13 @@
       if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
       var submitBtn = document.getElementById('lv-btn-create-content-stream');
       if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
-      var lockNoBtn = document.getElementById('lv-btn-lock-no');
-      if (lockNoBtn) lockNoBtn.addEventListener('click', function() { submitLock(false); });
-      var lockYesBtn = document.getElementById('lv-btn-lock-yes');
-      if (lockYesBtn) lockYesBtn.addEventListener('click', function() { submitLock(true); });
-      var attachSubmitBtn = document.getElementById('lv-btn-attach-submit');
-      if (attachSubmitBtn) attachSubmitBtn.addEventListener('click', submitAttachDoc);
+      // Wire the shared TaskPacks kit to this view's state + refresh callbacks.
+      TaskPacks.configure({
+        getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
+        getEntity: function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
+        refresh: renderTasks,
+        reload: load
+      });
 
       // Escape closes the entity drawer when open (phase 9a).
       document.addEventListener('keydown', function(e) {
@@ -650,7 +614,7 @@
         html += '  <div class="col-due"><span class="tw-due-chip ' + dueClass + '">' + dueText + '</span></div>';
         html += '</div>';
 
-        // Expanded body — pack-specific. packBody() dispatches per task type.
+        // Expanded body — pack-specific. TaskPacks.packBody() dispatches per task type.
         html += '<div class="lv-task-detail' + (expanded ? ' show' : '') + '" data-detail-id="' + TaskWidgets.escape(t.id) + '">';
         html += '  <div class="detail-row">';
         html += '    <div><label>Type</label><div class="detail-meta">' + TaskWidgets.escape(t.typeId) + '</div></div>';
@@ -658,177 +622,11 @@
         html += '    <div><label>Due</label><div class="detail-meta">' + dueText + '</div></div>';
         html += '    <div><label>Priority</label><div class="detail-meta">' + TaskWidgets.escape(t.priority || '—') + '</div></div>';
         html += '  </div>';
-        html += packBody(t);
+        html += TaskPacks.packBody(t);
         html += '</div>';
       });
 
       container.innerHTML = html;
-    }
-
-    // Pack body dispatcher — returns HTML for the expanded inline body per
-    // task type. Source of truth: jlmops/plans/LIBRARY_VIEW_PLAN.md pack table.
-    function packBody(t) {
-      var typeId = t.typeId || '';
-      var stopProp = ' onclick="event.stopPropagation()"';
-      var notesEscaped = TaskWidgets.escape(t.notes);
-
-      // Confirmation pack: notes + "Mark Confirmed" button → closes task.
-      if (typeId.indexOf('task.confirmation.') === 0 || typeId === 'task.sync.daily_session') {
-        var notesId = 'lv-notes-' + TaskWidgets.escape(t.id);
-        var btnDisabled = (t.status === 'Done') ? ' disabled' : '';
-        var btnLabel = (t.status === 'Done') ? 'Confirmed' : 'Mark Confirmed';
-        var h = '';
-        h += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        h += '    <textarea class="tw-notes" id="' + notesId + '">' + notesEscaped + '</textarea>';
-        h += '  </div></div>';
-        h += '  <div class="detail-row"' + stopProp + '>';
-        h += '    <button class="btn btn-sm" onclick="LibraryView.confirmTask(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabled + '>' + btnLabel + '</button>';
-        h += '  </div>';
-        return h;
-      }
-
-      // Deep-link packs: button to target view.
-      if (typeId === 'task.order.packing_available') {
-        return '<div class="detail-row"' + stopProp + '>' +
-               '<button class="btn btn-sm" onclick="LibraryView.openView(\'ManagerOrders\')">Open Orders</button>' +
-               '<span class="detail-meta" style="margin-left:12px">Task closes via the packing-slips workflow.</span>' +
-               '</div>';
-      }
-      if (typeId === 'task.inventory.count' || typeId === 'task.inventory.brurya_update') {
-        var label = typeId === 'task.inventory.brurya_update' ? 'Open Inventory (Brurya)' : 'Open Inventory';
-        return '<div class="detail-row"' + stopProp + '>' +
-               '<button class="btn btn-sm" onclick="LibraryView.openView(\'ManagerInventory\')">' + label + '</button>' +
-               '<span class="detail-meta" style="margin-left:12px">Task closes via the inventory workflow.</span>' +
-               '</div>';
-      }
-
-      // Content edit pack — file link + lock; covers 7 content task types per
-      // LIBRARY_VIEW_PLAN Type packs table (edit/translate/translate_edit/images/
-      // print_newsletter_body/draft/video_create). Translate variants add an
-      // "Open EN source" link via slug-pair flip.
-      var isContentEditType = (
-        typeId === 'task.content.edit' ||
-        typeId === 'task.content.translate' ||
-        typeId === 'task.content.translate_edit' ||
-        typeId === 'task.content.images' ||
-        typeId === 'task.content.print_newsletter_body' ||
-        typeId === 'task.content.draft' ||
-        typeId === 'task.content.video_create' ||
-        typeId === 'task.content.realign'
-      );
-      if (isContentEditType) {
-        var entity = (state.library || []).find(function(e) { return e.slug === t.entityId; });
-        var notesIdE = 'lv-notes-' + TaskWidgets.escape(t.id);
-        var btnDisabledE = (t.status === 'Done') ? ' disabled' : '';
-        var hE = '';
-        hE += '  <div class="detail-row"' + stopProp + '>';
-        if (entity && entity.docUrl) {
-          hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
-        } else {
-          hE += '    <span class="tw-file-link empty" style="margin-right:8px">No Doc yet</span>';
-          hE += '    <button class="btn btn-sm" onclick="LibraryView.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create blank Doc</button>';
-          hE += '    <button class="btn btn-sm" style="margin-left:6px" onclick="LibraryView.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
-        }
-        // Translate variant — link to EN source (the peer entity).
-        if (typeId === 'task.content.translate' || typeId === 'task.content.translate_edit') {
-          var slugStr = String(t.entityId || '');
-          var enPeerSlug = null;
-          if (slugStr.length > 3 && slugStr.slice(-3) === '-he') enPeerSlug = slugStr.slice(0, -3) + '-en';
-          if (enPeerSlug) {
-            var enPeer = (state.library || []).find(function(e) { return e.slug === enPeerSlug; });
-            if (enPeer && enPeer.docUrl) {
-              hE += '    <a class="tw-file-link" style="margin-left:8px" href="' + TaskWidgets.escape(enPeer.docUrl) + '" target="_blank" rel="noopener">Open EN source</a>';
-            } else {
-              hE += '    <span class="tw-file-link empty" style="margin-left:8px">EN source not attached yet</span>';
-            }
-          }
-        }
-        hE += '  </div>';
-        hE += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        hE += '    <textarea class="tw-notes" id="' + notesIdE + '">' + notesEscaped + '</textarea>';
-        hE += '  </div></div>';
-        hE += '  <div class="detail-row"' + stopProp + '>';
-        hE += '    <button class="btn btn-sm" onclick="LibraryView.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Lock + Version</button>';
-        if (entity) {
-          hE += '    <span class="detail-meta" style="margin-left:12px">Current: v' + TaskWidgets.escape(entity.version || 0) + ' · ' + TaskWidgets.escape(entity.state || '—') + '</span>';
-        }
-        hE += '  </div>';
-        return hE;
-      }
-
-      // Content publish pack — Confirmation-pack variant with optional external URL.
-      // Covers blog_publish, video_publish, email, social, whatsapp, newsletter.distribute.
-      var isContentPublishType = (
-        typeId === 'task.content.blog_publish' ||
-        typeId === 'task.content.video_publish' ||
-        typeId === 'task.content.email' ||
-        typeId === 'task.content.social' ||
-        typeId === 'task.content.whatsapp' ||
-        typeId === 'task.newsletter.distribute'
-      );
-      if (isContentPublishType) {
-        var notesIdP = 'lv-notes-' + TaskWidgets.escape(t.id);
-        var urlIdP = 'lv-ext-url-' + TaskWidgets.escape(t.id);
-        var btnDisabledP = (t.status === 'Done') ? ' disabled' : '';
-        var btnLabelP = (t.status === 'Done') ? 'Published' : 'Mark Published';
-        var hP = '';
-        hP += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>External URL <small class="text-muted">(optional — logged to entity activity)</small></label>';
-        hP += '    <input type="url" class="form-control form-control-sm" id="' + urlIdP + '" placeholder="https://..." />';
-        hP += '  </div></div>';
-        hP += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        hP += '    <textarea class="tw-notes" id="' + notesIdP + '">' + notesEscaped + '</textarea>';
-        hP += '  </div></div>';
-        hP += '  <div class="detail-row"' + stopProp + '>';
-        hP += '    <button class="btn btn-sm" onclick="LibraryView.markPublished(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledP + '>' + btnLabelP + '</button>';
-        hP += '  </div>';
-        return hP;
-      }
-
-      // Skeleton fallback — read-only notes; no action.
-      var h2 = '';
-      h2 += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-      h2 += '    <textarea class="tw-notes" readonly>' + notesEscaped + '</textarea>';
-      h2 += '  </div></div>';
-      h2 += '  <div class="detail-row detail-meta">No pack yet — actions land in subsequent build steps.</div>';
-      return h2;
-    }
-
-    function confirmTask(taskId) {
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (task.status === 'Done') { TaskWidgets.toast('Already confirmed'); return; }
-      var notesEl = document.getElementById('lv-notes-' + taskId);
-      var newNotes = notesEl ? notesEl.value : task.notes;
-
-      var afterUpdate = function() {
-        google.script.run
-          .withSuccessHandler(function() {
-            task.status = 'Done';
-            task.doneDate = new Date().toISOString();
-            task.notes = newNotes;
-            TaskWidgets.toast('Confirmed');
-            renderTasks();
-          })
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Confirm failed', true);
-          })
-          .WebAppTasks_completeTaskById(taskId);
-      };
-
-      if (notesEl && newNotes !== task.notes) {
-        google.script.run
-          .withSuccessHandler(afterUpdate)
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Notes update failed', true);
-          })
-          .WebAppTasks_updateTask(taskId, { notes: newNotes });
-      } else {
-        afterUpdate();
-      }
-    }
-
-    function openView(viewName) {
-      if (typeof loadView === 'function') loadView(viewName);
     }
 
     function toggleTask(id) {
@@ -988,179 +786,6 @@
           streamId: customStreamId || null,
           references: references
         });
-    }
-
-    // ===== CONTENT EDIT + PUBLISH PACK HANDLERS (phase 7b) =====
-
-    function createBlankDoc(taskId) {
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      if (!confirm('Create a new blank Doc for "' + task.entityId + '"?')) return;
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (!result || !result.ok) {
-            TaskWidgets.toast((result && result.error) || 'Create failed', true);
-            return;
-          }
-          TaskWidgets.toast('Doc created');
-          load();
-        })
-        .withFailureHandler(function(err) {
-          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
-        })
-        .WebAppLibrary_createBlankDoc({ entityId: task.entityId });
-    }
-
-    function attachExistingDoc(taskId) {
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      document.getElementById('lv-attach-slug').textContent = task.entityId;
-      document.getElementById('lv-attach-url').value = '';
-      var modal = document.getElementById('lvAttachModal');
-      modal.setAttribute('data-task-id', task.id);
-      modal.style.display = 'flex';
-    }
-
-    function submitAttachDoc() {
-      var modal = document.getElementById('lvAttachModal');
-      var taskId = modal.getAttribute('data-task-id');
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) return;
-      var url = document.getElementById('lv-attach-url').value.trim();
-      if (!url) { TaskWidgets.toast('Drive URL required', true); return; }
-      var btn = document.getElementById('lv-btn-attach-submit');
-      btn.disabled = true; btn.textContent = 'Attaching...';
-      google.script.run
-        .withSuccessHandler(function(result) {
-          btn.disabled = false; btn.textContent = 'Attach';
-          if (!result || !result.ok) {
-            TaskWidgets.toast((result && result.error) || 'Attach failed', true);
-            return;
-          }
-          modal.style.display = 'none';
-          TaskWidgets.toast('Doc attached');
-          load();
-        })
-        .withFailureHandler(function(err) {
-          btn.disabled = false; btn.textContent = 'Attach';
-          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
-        })
-        .WebAppLibrary_attachExistingDoc({ entityId: task.entityId, driveUrl: url });
-    }
-
-    function openLockModal(taskId) {
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      var slug = String(task.entityId);
-      var peerSlug = null;
-      if (slug.length > 3 && slug.slice(-3) === '-en') peerSlug = slug.slice(0, -3) + '-he';
-      else if (slug.length > 3 && slug.slice(-3) === '-he') peerSlug = slug.slice(0, -3) + '-en';
-      document.getElementById('lv-lock-slug').textContent = slug;
-      document.getElementById('lv-lock-peer').textContent = peerSlug || '(no language peer)';
-      var peerRow = document.getElementById('lv-lock-peer-row');
-      var yesBtn = document.getElementById('lv-btn-lock-yes');
-      if (peerSlug) {
-        peerRow.style.display = '';
-        yesBtn.style.display = '';
-      } else {
-        peerRow.style.display = 'none';
-        yesBtn.style.display = 'none';
-      }
-      var modal = document.getElementById('lvLockModal');
-      modal.setAttribute('data-task-id', taskId);
-      modal.style.display = 'flex';
-    }
-
-    function submitLock(peerNeedsRealignment) {
-      var modal = document.getElementById('lvLockModal');
-      var taskId = modal.getAttribute('data-task-id');
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) return;
-      var noBtn = document.getElementById('lv-btn-lock-no');
-      var yesBtn = document.getElementById('lv-btn-lock-yes');
-      noBtn.disabled = true; yesBtn.disabled = true;
-      google.script.run
-        .withSuccessHandler(function(result) {
-          noBtn.disabled = false; yesBtn.disabled = false;
-          if (!result || !result.ok) {
-            TaskWidgets.toast((result && result.error) || 'Lock failed', true);
-            return;
-          }
-          modal.style.display = 'none';
-          var relCount = (result.updated && result.updated.related_tasks) ? result.updated.related_tasks.length : 0;
-          TaskWidgets.toast('Locked' + (relCount ? ' (+' + relCount + ' realign task)' : ''));
-          load();
-        })
-        .withFailureHandler(function(err) {
-          noBtn.disabled = false; yesBtn.disabled = false;
-          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
-        })
-        .WebAppLibrary_lockVersion({
-          entityId: task.entityId,
-          taskId: task.id,
-          peerNeedsRealignment: !!peerNeedsRealignment
-        });
-    }
-
-    function markPublished(taskId) {
-      var task = state.tasks.find(function(t) { return t.id === taskId; });
-      if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (task.status === 'Done') { TaskWidgets.toast('Already published'); return; }
-
-      var notesEl = document.getElementById('lv-notes-' + taskId);
-      var urlEl = document.getElementById('lv-ext-url-' + taskId);
-      var newNotes = notesEl ? notesEl.value : task.notes;
-      var externalUrl = urlEl ? urlEl.value.trim() : '';
-
-      var doActivityLog = function() {
-        if (externalUrl && task.entityId) {
-          google.script.run
-            .withSuccessHandler(function(result) {
-              if (!result || !result.ok) {
-                TaskWidgets.toast('Task closed; activity log failed: ' + ((result && result.error) || ''), true);
-              } else {
-                TaskWidgets.toast('Published + URL logged');
-              }
-              load();
-            })
-            .withFailureHandler(function(err) {
-              TaskWidgets.toast('Task closed; activity log error: ' + (err && err.message ? err.message : ''), true);
-              load();
-            })
-            .WebAppLibrary_logEntityActivity({
-              entityId: task.entityId,
-              actionType: 'published',
-              details: { externalUrl: externalUrl },
-              referencedEntities: []
-            });
-        } else {
-          TaskWidgets.toast('Published');
-          load();
-        }
-      };
-
-      var doClose = function() {
-        google.script.run
-          .withSuccessHandler(doActivityLog)
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Close failed', true);
-          })
-          .WebAppTasks_completeTaskById(taskId);
-      };
-
-      if (notesEl && newNotes !== task.notes) {
-        google.script.run
-          .withSuccessHandler(doClose)
-          .withFailureHandler(function(err) {
-            TaskWidgets.toast(err && err.message ? err.message : 'Notes update failed', true);
-          })
-          .WebAppTasks_updateTask(taskId, { notes: newNotes });
-      } else {
-        doClose();
-      }
     }
 
     // ===== ENTITY DETAIL DRAWER (phase 9a) =====
@@ -1448,12 +1073,6 @@
       switchTab: switchTab,
       switchPreset: switchPreset,
       toggleTask: toggleTask,
-      confirmTask: confirmTask,
-      openView: openView,
-      createBlankDoc: createBlankDoc,
-      attachExistingDoc: attachExistingDoc,
-      openLockModal: openLockModal,
-      markPublished: markPublished,
       openEntityDrawer: openEntityDrawer,
       navigateToEntity: navigateToEntity,
       backEntityDrawer: backEntityDrawer,
