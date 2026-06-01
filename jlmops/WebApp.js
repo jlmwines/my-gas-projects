@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-01 16:36',
-  commit: '@189 ADMIN_TASK_UI Deploy A — extracted LibraryView pack code into a shared TaskPacks include (packBody dispatcher + 8 action handlers + Lock/Attach modals), behavior-preserving. LibraryView now includes TaskPacks, calls TaskPacks.configure({getTask,getEntity,refresh,reload}) and renders via TaskPacks.packBody; ~382 lines moved out. No backend or behavior change — the shared kit is the prerequisite for the new AdminTasksView (Deploy B). Follows @188.'
+  commit: '@190 ADMIN_TASK_UI Deploy B (test build) — new AdminTasksView: a task-only workbench copied from AdminProjectsView (which stays untouched as the fallback), bound to the normalized WebAppLibrary_getData feed, with the TaskPacks DO region rendered below the MANAGE form (manage + do in one pane). Registered as getView AdminTasks; reachable via a TEMPORARY amber "Tasks (test)" link at the bottom of the admin nav (remove at go-live). Project/campaign machinery still present but inert (mode=tasks) — excision is the next cleanup pass. Follows @189.'
 };
 
 function getVersion() {
