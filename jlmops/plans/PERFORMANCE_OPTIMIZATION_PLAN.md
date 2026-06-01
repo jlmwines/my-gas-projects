@@ -375,3 +375,65 @@ function loadDashboard() {
 1. Dashboard load time under 4 seconds
 2. Single network request visible in browser dev tools
 3. No functional regressions
+
+---
+
+# Bundles Health Check — N+1 Sheet Reads (added 2026-06-01, not implemented)
+
+## Problem
+
+`WebAppBundles_getViewData` (the Bundles view mount endpoint) takes **100s+**. It fans out to four calls — `getCategories`, `getStats`, `getAllBundles`, `getBundlesWithLowInventory` — and the last one is the killer.
+
+This is a **different shape** from the dashboard problem above: not client round-trips, but **N+1 sheet reads inside a single server call**.
+
+**Root cause** — `BundleService.getBundlesWithLowInventory` (`BundleService.js:830`):
+- Does a correct bulk setup (bundles, slots, CmxProdM, SysInventoryOnHold, WebProdM read once).
+- Then a per-bundle → per-slot loop calls `getEligibleProducts(slot.slotId, …)` (`:920`) once per low-stock slot.
+- **Each `getEligibleProducts` call re-reads whole sheets from scratch:** full `WebProdM` (`:683`), full `WebDetM` when the slot has intensity/complexity/acidity criteria (`:696`), and a full `_loadSlots()` reload (`:718`).
+- Cost = (low-stock slots) × (full-sheet reads). GAS sheet reads are the slowest primitive, so it blows up to 100s+.
+
+Everything `getEligibleProducts` re-reads is **invariant** across one `getBundlesWithLowInventory` run — the product dataset, details, and slot list don't change between slots. Only two things vary per slot: the slot's flavor criteria and its excluded-SKU set (both cheap, in-memory).
+
+## Caller set (verified 2026-06-01)
+
+- `BundleService.js:920` — the hot loop (the only N+1 caller).
+- `AdminBundlesView.html:1059` → `WebAppBundles_getEligibleProducts` (`WebAppBundles.js:371`) — interactive, **single-shot** when the user selects a slot in the editor. Must stay unchanged.
+- `BundleService.js:1588` — public API export.
+
+So the refactor's context param must be **purely additive** — absent → behave exactly as today (keeps the interactive path identical), present → skip the internal reads.
+
+## Fix A — hoist invariant loads (primary; behavior-identical)
+
+1. In `getBundlesWithLowInventory`, build a preload context once at the top: `WebProdM` rows+cols, the `WebDetM` details map, `_loadSlots()`, and `getAllConfig()` / minStock.
+2. Refactor `getEligibleProducts(slotId, options)` to accept an optional `options.ctx = { webData, webCols, detailsMap, allSlots, minStock }`. When present, use it and skip the sheet reads; when absent, read sheets as today.
+3. `getBundlesWithLowInventory` builds `ctx` once and passes it to every `getEligibleProducts` call.
+
+Net: N full-sheet reads → 1. Output identical.
+
+Note: today `detailsMap` is only built when a slot specifies intensity/complexity/acidity. Hoisting builds it once unconditionally (one extra `WebDetM` read, amortized) — acceptable.
+
+## Fix B — lazy-load healthAlerts off the mount path (complementary; optional)
+
+- Drop `healthAlerts` from `WebAppBundles_getViewData`; the view renders on categories + stats + bundles alone.
+- Compute low-inventory only when the user opens the health/alerts panel, via a separate `WebAppBundles_getBundlesWithLowInventory()` call with a spinner.
+- Bundles is a desktop admin tool; the health view isn't needed on every mount.
+
+## Sequencing
+
+Do **Fix A first** — it's the root cause, behavior-identical, low risk. Add **Fix B** only if mount latency still matters after A (with A, the health compute is already a few seconds; B moves it off the critical path entirely).
+
+## Expected impact
+
+| Metric | Before | After (A) | After (A+B) |
+|--------|--------|-----------|-------------|
+| `WebAppBundles_getViewData` | 100s+ | a few seconds | sub-second mount |
+| Full `WebProdM` reads in health check | N (per low-stock slot) | 1 | 1, on demand |
+
+## Files
+
+**Modify:** `BundleService.js` (`getBundlesWithLowInventory` + `getEligibleProducts` signature). For Fix B also `WebAppBundles.js` + `AdminBundlesView.html`.
+**No changes to:** the interactive eligible-products path's behavior (additive param), SheetAccessor, schema/config.
+
+## Status
+
+Planned 2026-06-01, not implemented. Bug logged in `.claude/bugs.md` (2026-06-01).
