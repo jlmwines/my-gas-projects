@@ -348,6 +348,8 @@
                   <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Delete</button>
                 </div>
               </div>
+              <!-- DO region: the task's pack (shared TaskPacks kit) renders here, below the MANAGE form. -->
+              <div id="task-pack-do" class="mt-2 pt-2 border-top"></div>
               <!-- Product Info Panel -->
               <div id="product-info-panel" style="display:none;" class="small mt-2 p-2 border rounded bg-light">
                 <div id="product-info-content"></div>
@@ -632,7 +634,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     priorityOptions: ['Critical', 'High', 'Normal', 'Low'],
     assignees: [],
     contentStages: [],  // For content task creation
-    mode: 'projects',
+    mode: 'tasks',  // AdminTasksView is task-only; projects are a filter, not a mode (ADMIN_TASK_UI Deploy B)
     selectedProjectId: null,
     selectedTaskId: null,
     projectStatusFilter: 'all',
@@ -643,7 +645,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     taskSessionFilter: '',
     selectedTaskIds: [],  // For bulk operations
     taskScopeFilter: 'open',  // 'open', 'started', 'future', 'all'
-    sortField: 'name',
+    sortField: 'due',
     sortDir: 'asc',
     pendingSelectTaskId: null,
     pendingSelectProjectId: null,
@@ -664,6 +666,14 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     loadData();
     loadContentStages();
     bindEventHandlers();
+
+    // Wire the shared TaskPacks "DO" kit (packs render below the MANAGE form).
+    TaskPacks.configure({
+      getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
+      getEntity: function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
+      refresh: render,
+      reload: loadData
+    });
 
     // Set initial panel state
     setPanelState(state.panelState);
@@ -1813,6 +1823,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('btn-cancel-task').style.display = isDataTask ? 'none' : '';
     document.getElementById('btn-complete-task').disabled = isDone || isDataTask;
     document.getElementById('btn-cancel-task').disabled = isDone || isDataTask;
+
+    // DO region: render the task's pack (shared TaskPacks kit) below the MANAGE form.
+    var doRegion = document.getElementById('task-pack-do');
+    if (doRegion) doRegion.innerHTML = TaskPacks.packBody(task);
   }
 
   function lookupSoldOnlineStatus(entityId, entityName) {

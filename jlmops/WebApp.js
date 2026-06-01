@@ -83,6 +83,7 @@ function getView(viewName) {
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'AdminBundles': 'AdminBundlesView',
     'AdminProjects': 'AdminProjectsView',
+    'AdminTasks': 'AdminTasksView', // ADMIN_TASK_UI Deploy B — reachable for testing; NO nav entry yet (unlinked until proven)
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
     'ManagerContacts': 'ManagerContactView',
