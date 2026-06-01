@@ -612,6 +612,14 @@ Manager dashboard is already halfway there — two inline `if` branches (`isCont
 
 Admin collapses to the same task-as-unit-of-work model (§18: "Projects survive only for cross-entity work"). Project becomes a filter/view over the unified task queue, not the entry point. Both dashboards converge on one task UI component.
 
+**Refinement — task administration + creation locus (2026-06-01, chavruta).** Two corrections to the convergence above, after auditing what actually shipped:
+
+1. **Task administration didn't port to the library era.** `AdminProjectsView` is a real task-admin surface — editable Due / Priority / Assignee / Status, a sortable/filterable multi-state table, and a new-task form. `LibraryView`'s Tasks tab can only edit **notes** (`WebAppTasks_updateTask` is called solely with `{notes}`); its packs are *do-the-work* surfaces, not *manage-the-record* surfaces. The unified Tasks surface must absorb AdminProjectsView's administration affordances (editable fields + the table), not just its action packs — this is the missing half of the convergence, and the reason the admin still reaches for the old view.
+
+2. **Creation is not library-rooted.** Spawning a content chain creates an entity *and* its tasks; the entity is an input you pick (existing or new) and an output of the action — neither makes the library the necessary home of "create." The current `LibraryView` toolbar "Create Content Tasks" sits there by inheritance (forked from AdminProjectsView's `contentStreamModal`) and co-location convenience, not necessity. Canonical model: **creation is a task-surface operation; the entity is a field on it; the library is the entity catalog.** The drawer keeps an "add tasks to this entity" shortcut as a contextual convenience (you're standing on the entity), but nothing has to *start* in the library.
+
+Net: one Tasks surface owns create + do + manage; library = entity catalog (browse / inspect / reconcile). Full admin task-UI design options being explored 2026-06-01 (library and Tasks may stay separate views, re-using AdminProjectsView for the task surface) — recommendation to be folded back here once chosen.
+
 ### Mobile
 
 - **Queue is responsive** — list view (skeleton row) works on phone. List → tap → focused action view, not list → expand-in-place (which doesn't scale to mobile).
