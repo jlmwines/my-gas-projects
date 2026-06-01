@@ -85,16 +85,27 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 
 ---
 
-## Sequenced implementation
+## Sequenced implementation — two deploys
 
-0. **(Decided)** Data feed = single shape, normalized server-side.
-1. **Extract packs (behavior-preserving):** move `packBody()` + handlers + lock/attach modals into a shared `TaskPacks` include. Verify LibraryView is unchanged after extraction. No data-shape work yet.
-2. **Build a NEW `AdminTasksView`** by lifting AdminProjectsView's proven components verbatim (multi-state table render + sort/filter/inline-edit/bulk-delete handlers; `#detail-task` MANAGE form + per-type lock matrix) into a fresh file, bound to the normalized `_getQueueTasks` feed from the start. **Omit** (never import) the project-form/campaign/`generateOutputs`/mode-split machinery. Add the entity-type/topic/language filters + project filter chip. **AdminProjectsView is copied from, never modified** — it stays intact as the fallback (Decision 3). Verify table + MANAGE form + inline edits + bulk delete work against the normalized feed.
-3. **Normalize the row shape** server-side; render the shared packs into the detail-pane DO region keyed on `pack_form`. Verify each pack archetype (confirmation, content-edit, content-publish, deep-link) renders and acts.
-4. **Wire the entity→task return leg** (clickable drawer attached-task rows). Confirm `WebAppLibrary_getEntityDetail`'s `attached_tasks` payload carries a stable task id to target (append the field if missing — append-only).
-5. **Repoint** `AdminDashboardView_v2`'s summary-card jump from AdminProjectsView to the Tasks view (honor the `selectTaskId`/`selectProjectId` sessionStorage contract).
-6. **Nav:** add the **Tasks** entry; keep **Library**; move **Projects** to the bottom of the admin menu. Retire the in-LibraryView Tasks tab after soak.
-7. **(After soak / once proven)** remove **Projects** from the nav (keep the file in-repo).
+**Risk profile:** only Deploy A touches a live surface (LibraryView). The new view in Deploy B is unreachable until the nav flip, so it can be built in full and tested *unlinked* before exposure. GAS has no local test loop (push+deploy is the test, no `/dev`) — so build the bulk in one pass but exercise each pack archetype on the deployed-but-unlinked view to keep debugging tractable. The data feed is already a single normalized shape (`_getQueueTasks`); no shape build.
+
+### Deploy A — extract packs (the only live-touching change)
+
+- Move LibraryView's `packBody()` + pack handlers (`confirmTask`, `createBlankDoc`, `attachExistingDoc`, `openLockModal`, `markPublished`, `openView`) + lock/attach modals into a shared `TaskPacks` include. Behavior-preserving.
+- **Verify LibraryView is unchanged** — every pack still renders and acts as before.
+- This is the single step with real blast radius; ship and confirm it on its own before Deploy B.
+
+### Deploy B — build the whole new surface, unlinked, then go live
+
+- **Build the new `AdminTasksView`** in one pass: lift AdminProjectsView's proven components verbatim (multi-state table + sort/filter/inline-edit/bulk-delete handlers; `#detail-task` MANAGE form + per-type lock matrix); **omit** (never import) the project-form/campaign/`generateOutputs`/mode-split machinery; bind to the existing normalized `_getQueueTasks` feed; add the entity-type/topic/language filters + project filter chip. New Task requires a project/scope (no free-form). **AdminProjectsView is copied from, never modified.**
+- **Render the shared `TaskPacks`** into the detail-pane DO region keyed on `packForm`; test each archetype (confirmation, content-edit, content-publish, deep-link).
+- **Wire the drawer attached-task row `onclick`** → `loadView('Tasks')` with the task selected (payload already carries `id`).
+- **Deploy unlinked** (no nav entry) and exercise the view directly until satisfied — users never see it.
+- **Go live (one reversible push):** add the **Tasks** nav entry; keep **Library**; move **Projects** to the bottom as the fallback; repoint `AdminDashboardView_v2`'s summary-card jump from AdminProjectsView to the Tasks view (`selectTaskId`/`selectProjectId` contract).
+
+### Later (after soak)
+
+Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the file in-repo). Gate: confirm `st_ProjectId` filtering fully replaces the project-container for every current admin flow first.
 
 ---
 
@@ -102,7 +113,7 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 
 - ~~Does `WebAppLibrary_getEntityDetail.attached_tasks` include a stable task id?~~ **RESOLVED 2026-06-01: yes** — `_getQueueTasks` maps `id: st_TaskId` (`WebAppLibrary.js:72`). No server change; only the client `onclick` is needed.
 - ~~Free-form New Task — allow *no* entity/scope?~~ **DECIDED 2026-06-01: NO.** Tasks always require a project/scope; `WebAppTasks_createTask`'s mandatory `projectId` stays. No code change.
-- Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (Step 7).
+- Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (the "Later (after soak)" step).
 
 ---
 
