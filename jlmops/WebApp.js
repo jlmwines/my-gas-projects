@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-01 20:08',
+  built: '2026-06-01 20:31',
   commit: '@191 ADMIN_TASK_UI Deploy B GO-LIVE — Tasks nav entry added after Dashboard; AdminProjects demoted to the bottom as a soak fallback; temporary test link removed. AdminTasksView density reduced to Standard + Full (the unusable 1/3 view that hid its own width control is gone). Dashboard task-card now opens the Tasks view (was AdminProjects). Also fixed ProductService.confirmWebUpdates: the export close now sets status Done (was a no-arg updateTaskStatus that blanked the status, so closed vintage tasks reappeared as New). Follows @190.'
 };
 
@@ -83,7 +83,7 @@ function getView(viewName) {
     'AdminSyncView': 'AdminSyncView', // NEW SYNC VIEW
     'AdminBundles': 'AdminBundlesView',
     'AdminProjects': 'AdminProjectsView',
-    'AdminTasks': 'AdminTasksView', // ADMIN_TASK_UI Deploy B — reachable for testing; NO nav entry yet (unlinked until proven)
+    'AdminTasks': 'AdminTasksView', // ADMIN_TASK_UI Deploy B — live (nav entry after Dashboard); AdminProjects kept as soak fallback
     'AdminCampaigns': 'AdminCampaignsView',
     'AdminContacts': 'AdminContactsView',
     'ManagerContacts': 'ManagerContactView',
