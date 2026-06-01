@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-05-29 16:48',
+  built: '2026-06-01 07:11',
   commit: '@188 Removed validateDeployment deployment-drift detector + task.system.deployment_drift template (and the dead NOT_IN_QUEUE ref in WebAppLibrary). The in-script daily detector compared the running deployment ID against system.deployment.pinned_id and false-positived on every daily-maintenance run (trigger context getUrl() returns a non-pinned ID; logged Session E bug, uncloseable from the UI). Now redundant: deploy.ps1 pins --deploymentId + verifies the pinned ID survived (prevents orphan deployments at the source), and the visible VERSION stamp confirms which build is live. Kept system.deployment.pinned_id as the canonical pinned-ID record. Follows @187.'
 };
 
