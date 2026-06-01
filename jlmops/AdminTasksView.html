@@ -1,0 +1,2253 @@
+<?!= include('TaskWidgets') ?>
+<?!= include('TaskPacks') ?>
+<style>
+  /* Task row and header use flexbox to fill 100% width */
+  .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
+  .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }
+  .task-col-priority { text-align: center; justify-content: center; }
+  .task-col-entity { display: flex; align-items: center; gap: 4px; }
+  .task-col-toggle { text-align: right; }
+  .panel-btn.active { background-color: #d6d6d6; font-weight: bold; }
+
+  /* Task row text size - slightly larger than small */
+  .task-row { font-size: 12px; }
+
+  /* State 1: compact (5 cols = 100%) - check, title, start, due, toggle */
+  .panel-state-1 .task-col-hideable { display: none !important; }
+  .panel-state-1 .task-col-wide-only { display: none !important; }
+  .panel-state-1 .hide-compact { display: none !important; }
+  .panel-state-1 .scope-links { display: none !important; }
+  .panel-state-1 .task-col-check { width: 5%; }
+  .panel-state-1 .task-col-title { width: 55%; }
+  .panel-state-1 .task-col-start { width: 18%; }
+  .panel-state-1 .task-col-due { width: 18%; }
+  .panel-state-1 .task-col-toggle { width: 4%; }
+  .panel-state-1 #panel-toggle-group { display: none; }
+  .panel-state-1 .expand-compact { display: inline-block !important; }
+
+  /* State 2: standard (8 cols = 100%) - check, title, entity, assignee, status, priority, start, due */
+  .panel-state-2 .task-col-hideable { display: flex !important; align-items: center; }
+  .panel-state-2 .task-col-wide-only { display: none !important; }
+  .panel-state-2 .task-col-check { width: 3%; }
+  .panel-state-2 .task-col-title { width: 22%; }
+  .panel-state-2 .task-col-entity { width: 30%; }
+  .panel-state-2 .task-col-assignee { width: 7%; }
+  .panel-state-2 .task-col-status { width: 7%; }
+  .panel-state-2 .task-col-priority { width: 5%; }
+  .panel-state-2 .task-col-start { width: 13%; }
+  .panel-state-2 .task-col-due { width: 13%; }
+  .panel-state-2 .task-col-toggle { display: none !important; }
+  .panel-state-2 .scope-links { display: inline; }
+  .panel-state-2 .expand-compact { display: none !important; }
+
+  /* State 3: full (11 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done */
+  .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
+  .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
+  .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
+  .panel-state-3 .task-col-session { width: 7%; max-width: 100px; overflow: hidden; }
+  .panel-state-3 .task-col-title { width: 17%; }
+  .panel-state-3 .task-col-entity { width: 12%; }
+  .panel-state-3 .task-col-entity-id { width: 4%; }
+  .panel-state-3 .task-col-assignee { width: 8%; }
+  .panel-state-3 .task-col-status { width: 8%; }
+  .panel-state-3 .task-col-priority { width: 5%; }
+  .panel-state-3 .task-col-start { width: 8%; }
+  .panel-state-3 .task-col-due { width: 8%; }
+  .panel-state-3 .task-col-done { width: 8%; }
+  .panel-state-3 .task-col-created { width: 8%; }
+  .panel-state-3 .task-col-toggle { display: none !important; }
+
+  .panel-state-3 .scope-links { display: inline; }
+  .panel-state-3 .expand-compact { display: none !important; }
+
+  /* Ensure session ID truncates properly */
+  .task-col-session { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Inline edits fill their container */
+  .task-row .inline-edit { height: 24px; font-size: 10px; padding: 0 2px; width: 100%; box-sizing: border-box; }
+  .task-row select.inline-edit { font-size: 10px; }
+
+  /* Entity ID - click to select all for easy copying */
+  .user-select-all { cursor: pointer; }
+  .user-select-all:hover { background: #e9ecef; }
+  .task-col-entity { white-space: nowrap; }
+</style>
+<div class="container-fluid panel-state-2">
+  <div class="row">
+    <!-- LEFT COLUMN: Navigation -->
+    <div id="list-column" class="col-md-8">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <!-- Header: Nav + Breadcrumb + New button -->
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <button id="btn-home" class="btn btn-sm btn-light mr-1" title="Home">⌂</button>
+            <button id="btn-back" class="btn btn-sm btn-light mr-2" title="Back" style="display:none;">←</button>
+            <span id="breadcrumb">Projects</span>
+          </div>
+          <div>
+            <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Create content task stream">+ Content</button>
+            <button id="btn-content-import" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Import content tasks">Import</button>
+            <button id="btn-new" class="btn btn-sm btn-light mr-1">+ Project</button>
+            <span class="btn-group btn-group-sm" id="panel-toggle-group">
+              <button type="button" class="btn btn-light panel-btn" data-panel="1" title="List 1/3">◧</button>
+              <button type="button" class="btn btn-light panel-btn" data-panel="2" title="List 2/3">◨</button>
+              <button type="button" class="btn btn-light panel-btn" data-panel="3" title="Full list">▣</button>
+            </span>
+          </div>
+        </div>
+
+        <!-- Subheader: Column headers + filters (Projects mode) -->
+        <div id="subheader-projects" class="border-bottom bg-light px-2 py-1">
+          <div class="row small font-weight-bold text-muted">
+            <div class="col-5">
+              <a href="#" class="text-muted sort-col" data-field="name">Name <span id="sort-icon-name">▾</span></a>
+            </div>
+            <div class="col-3">
+              <select id="filter-project-status" class="form-control form-control-sm py-0" style="height:22px;font-size:11px;">
+                <option value="all">Status</option>
+                <option value="PLANNING">Planning</option>
+                <option value="ACTIVE">Active</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
+            <div class="col-2 text-center">Tasks</div>
+            <div class="col-2"></div>
+          </div>
+        </div>
+
+        <!-- Subheader: Column headers + filters (Tasks mode) -->
+        <div id="subheader-tasks" class="border-bottom bg-light px-2 py-1" style="display:none;">
+          <!-- Scope filter row -->
+          <div class="d-flex justify-content-between align-items-center mb-1 hide-compact">
+            <span class="scope-links small">
+              <a href="#" class="scope-link" data-scope="open">Open</a> |
+              <a href="#" class="scope-link" data-scope="started">Started</a> |
+              <a href="#" class="scope-link" data-scope="future">Future</a> |
+              <a href="#" class="scope-link" data-scope="all">All</a>
+            </span>
+          </div>
+          <!-- Column headers row -->
+          <div class="row small font-weight-bold text-muted align-items-center">
+            <div class="task-col-check">
+              <input type="checkbox" id="select-all-tasks" title="Select all">
+            </div>
+            <div class="task-col-wide-only task-col-session">
+              <input type="text" id="filter-task-session" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;" placeholder="Stream">
+            </div>
+            <div class="task-col-title"><a href="#" class="text-muted sort-col" data-field="title">Title <span id="sort-icon-title"></span></a></div>
+            <div class="task-col-hideable task-col-entity">
+              <a href="#" class="text-muted sort-col" data-field="entity">Entity <span id="sort-icon-entity"></span></a>
+              <input type="text" id="filter-task-entity" class="form-control form-control-sm py-0 ml-1" style="height:22px;font-size:10px;flex:1;" placeholder="filter">
+            </div>
+            <div class="task-col-wide-only task-col-entity-id text-truncate">Link</div>
+            <div class="task-col-hideable task-col-assignee">
+              <select id="filter-task-assignee" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
+                <option value="all">Assignee</option>
+              </select>
+            </div>
+            <div class="task-col-hideable task-col-status">
+              <select id="filter-task-status" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
+                <option value="all">Status</option>
+              </select>
+            </div>
+            <div class="task-col-hideable task-col-priority text-center">
+              <select id="filter-task-priority" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;">
+                <option value="all">Priority</option>
+              </select>
+            </div>
+            <div class="task-col-start">
+              <a href="#" class="text-muted sort-col" data-field="start">Start <span id="sort-icon-start"></span></a>
+            </div>
+            <div class="task-col-due">
+              <a href="#" class="text-muted sort-col" data-field="due">Due <span id="sort-icon-due"></span></a>
+            </div>
+            <div class="task-col-wide-only task-col-done">
+              <a href="#" class="text-muted sort-col" data-field="done">Done <span id="sort-icon-done"></span></a>
+            </div>
+            <div class="task-col-wide-only task-col-created">
+              <a href="#" class="text-muted sort-col" data-field="created">Created <span id="sort-icon-created"></span></a>
+            </div>
+            <div class="task-col-toggle text-right small">
+              <a href="#" class="expand-compact" style="display:none;" title="Expand view">⊕</a>
+            </div>
+          </div>
+          <!-- Bulk action bar -->
+          <div id="bulk-action-bar" class="mt-1" style="display:none;">
+            <span id="selected-count" class="small text-muted mr-2">0 selected</span>
+            <button type="button" id="btn-cancel-selected" class="btn btn-sm btn-light">Delete Selected</button>
+          </div>
+        </div>
+
+        <!-- List Area -->
+        <div class="card-body p-0" style="overflow-y: auto;">
+          <div id="list-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Detail Panel -->
+    <div id="detail-column" class="col-md-4">
+      <div class="card" style="height: calc(100vh - 120px);">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <strong id="detail-title">Overview</strong>
+          <select id="project-switcher" class="form-control form-control-sm" style="width:auto;max-width:150px;display:none;font-size:11px;"></select>
+        </div>
+        <div class="card-body" style="overflow-y: auto;">
+          <!-- Default: Stats summary -->
+          <div id="detail-summary">
+            <div class="row text-center mb-4">
+              <div class="col">
+                <div class="h3 mb-0" id="stat-total">-</div>
+                <div class="small text-muted">Projects</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0 text-success" id="stat-active">-</div>
+                <div class="small text-muted">Active</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0" id="stat-tasks">-</div>
+                <div class="small text-muted">Open Tasks</div>
+              </div>
+              <div class="col">
+                <div class="h3 mb-0 text-danger" id="stat-critical">-</div>
+                <div class="small text-muted">Critical</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project detail form -->
+          <div id="detail-project" style="display:none;">
+            <form id="project-form">
+              <div class="form-group">
+                <label class="small font-weight-bold">Project Name</label>
+                <input type="text" class="form-control" id="field-name">
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Type</label>
+                    <select class="form-control" id="field-type">
+                      <option value="ONE_OFF">One-Off</option>
+                      <option value="CAMPAIGN">Campaign</option>
+                      <option value="OPERATIONAL">Operational</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Status</label>
+                    <select class="form-control" id="field-status">
+                      <option value="PLANNING">Planning</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="COMPLETED">Completed</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Start Date</label>
+                    <input type="date" class="form-control" id="field-start-date">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">End Date</label>
+                    <input type="date" class="form-control" id="field-end-date">
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label class="small font-weight-bold">Marketing Campaign</label>
+                    <select class="form-control" id="field-campaign">
+                      <option value="">— None —</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <hr>
+              <button type="button" id="btn-save-project" class="btn btn-light">Save Changes</button>
+              <button type="button" id="btn-generate-outputs" class="btn btn-light ml-2">Generate Outputs</button>
+            </form>
+          </div>
+
+          <!-- Task detail form -->
+          <div id="detail-task" style="display:none;">
+            <form id="task-form">
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Title</label>
+                <input type="text" class="form-control form-control-sm" id="task-field-title" readonly>
+              </div>
+              <div class="form-row">
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Status</label>
+                    <select class="form-control form-control-sm" id="task-field-status"></select>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Priority</label>
+                    <select class="form-control form-control-sm" id="task-field-priority">
+                      <option value="Critical">Critical</option>
+                      <option value="High">High</option>
+                      <option value="Normal">Normal</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="col-4">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Assigned To</label>
+                    <select class="form-control form-control-sm" id="task-field-assignee"></select>
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Start</label>
+                    <input type="date" class="form-control form-control-sm" id="task-field-start">
+                  </div>
+                </div>
+                <div class="col-4">
+                  <div class="form-group mb-2">
+                    <label class="small font-weight-bold mb-0">Due</label>
+                    <input type="date" class="form-control form-control-sm" id="task-field-due">
+                  </div>
+                </div>
+              </div>
+              <div class="text-muted small mb-2" id="task-field-created-display" style="font-size:11px;"></div>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Linked Entity</label>
+                <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
+              </div>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Entity URL/ID <small class="text-muted">(Drive link for content tasks)</small></label>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control form-control-sm" id="task-field-entity-id" placeholder="https://drive.google.com/...">
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-light" id="btn-open-entity" title="Open in new tab">↗</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group mb-2">
+                <label class="small font-weight-bold mb-0">Notes</label>
+                <textarea class="form-control form-control-sm" id="task-field-notes" rows="3" style="font-size:12px;"></textarea>
+              </div>
+              <hr class="my-2">
+              <div class="d-flex justify-content-between">
+                <button type="button" id="btn-save-task" class="btn btn-sm btn-light">Save</button>
+                <div>
+                  <button type="button" id="btn-view-product" class="btn btn-sm btn-light mr-1" title="View product details">View</button>
+                  <button type="button" id="btn-complete-task" class="btn btn-sm btn-light mr-1">Done</button>
+                  <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Delete</button>
+                </div>
+              </div>
+              <!-- Product Info Panel -->
+              <div id="product-info-panel" style="display:none;" class="small mt-2 p-2 border rounded bg-light">
+                <div id="product-info-content"></div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirmModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:300px;width:90%;">
+    <div style="padding:20px;text-align:center;">
+      <p id="confirm-message" class="mb-0">Are you sure?</p>
+    </div>
+    <div style="padding:10px;border-top:1px solid #dee2e6;display:flex;justify-content:center;gap:10px;">
+      <button type="button" class="btn btn-sm btn-light" id="confirm-no">No</button>
+      <button type="button" class="btn btn-sm btn-light" id="confirm-yes" style="background:#dc3545;color:white;">Yes</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal-overlay" id="newProjectModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:400px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">New Project</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <input type="text" class="form-control form-control-sm" id="new-project-name" placeholder="Project name">
+      </div>
+      <div class="form-row">
+        <div class="col">
+          <select class="form-control form-control-sm" id="new-project-type">
+            <option value="ONE_OFF">One-Off</option>
+            <option value="CAMPAIGN">Campaign</option>
+            <option value="OPERATIONAL">Operational</option>
+          </select>
+        </div>
+        <div class="col">
+          <select class="form-control form-control-sm" id="new-project-status">
+            <option value="PLANNING">Planning</option>
+            <option value="ACTIVE">Active</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:10px;">
+        <label for="new-project-campaign" style="font-size:12px;color:#6c757d;margin-bottom:4px;">Marketing Campaign (optional)</label>
+        <select class="form-control form-control-sm" id="new-project-campaign">
+          <option value="">— No campaign —</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newProjectModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-project">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Outputs Modal -->
+<div class="modal-overlay" id="generateOutputsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Generate Campaign Outputs</h6>
+      <small class="text-muted" id="gen-out-context">— project context —</small>
+    </div>
+    <div style="padding:15px;" id="gen-out-inputs">
+      <div class="form-group">
+        <label class="small font-weight-bold">Target URL</label>
+        <input type="url" class="form-control form-control-sm" id="gen-out-target" placeholder="https://jlmwines.com/blog/context">
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Language</label>
+            <select class="form-control form-control-sm" id="gen-out-language">
+              <option value="en">English</option>
+              <option value="he">Hebrew</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Slug</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-slug" placeholder="context-202605">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Medium</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-medium" placeholder="print / email / social">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Source</label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-source" placeholder="wine-talk / mailchimp">
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Content marker <small class="text-muted font-weight-normal">(optional)</small></label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-content" placeholder="issue date or variant">
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label class="small font-weight-bold">Notes <small class="text-muted font-weight-normal">(optional)</small></label>
+            <input type="text" class="form-control form-control-sm" id="gen-out-notes">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="gen-out-results" style="display:none;padding:15px;border-top:1px solid #dee2e6;background:#f8f9fa;">
+      <h6 class="mb-2">Outputs</h6>
+      <div class="form-group">
+        <label class="small font-weight-bold mb-1">UTM-Tagged URL</label>
+        <input type="text" class="form-control form-control-sm" id="gen-out-utm-url" readonly>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold mb-1">Short URL</label>
+        <input type="text" class="form-control form-control-sm" id="gen-out-short-url" readonly>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold mb-1">QR Image (SVG)</label>
+        <div style="display:flex;align-items:flex-start;gap:15px;">
+          <img id="gen-out-qr-preview" src="" alt="QR" style="width:140px;height:140px;border:1px solid #dee2e6;background:white;">
+          <div style="flex:1;">
+            <input type="text" class="form-control form-control-sm" id="gen-out-qr-url" readonly>
+            <small class="text-muted">Right-click image → Save As, or download from the URL above.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('generateOutputsModal').style.display='none'">Close</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-generate-outputs-submit">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Task Modal -->
+<div class="modal-overlay" id="newTaskModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:440px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">New Task</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small mb-1">Project</label>
+        <select class="form-control form-control-sm" id="new-task-project"></select>
+      </div>
+      <div class="form-group">
+        <input type="text" class="form-control form-control-sm" id="new-task-title" placeholder="Task title">
+      </div>
+      <div class="form-group">
+        <label class="small mb-1">Topic</label>
+        <select class="form-control form-control-sm" id="new-task-topic">
+          <option value="">— Pick topic —</option>
+          <option>CRM</option>
+          <option>Campaign</option>
+          <option>Content</option>
+          <option>Data</option>
+          <option>Inventory</option>
+          <option>Marketing</option>
+          <option>Orders</option>
+          <option>Products</option>
+          <option>System</option>
+          <option>WebXlt</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <select class="form-control form-control-sm" id="new-task-priority">
+          <option value="Normal">Normal Priority</option>
+          <option value="High">High Priority</option>
+          <option value="Critical">Critical</option>
+          <option value="Low">Low Priority</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small mb-1">Assign to</label>
+        <select class="form-control form-control-sm" id="new-task-assignee">
+          <option value="">— Unassigned —</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label class="small mb-1">Start date</label>
+          <input type="date" class="form-control form-control-sm" id="new-task-start-date">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="small mb-1">Due date</label>
+          <input type="date" class="form-control form-control-sm" id="new-task-due-date">
+        </div>
+      </div>
+      <div class="form-group mb-0">
+        <textarea class="form-control form-control-sm" id="new-task-notes" placeholder="Notes (optional)" rows="2"></textarea>
+      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('newTaskModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-task">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Content Stream Modal -->
+<div class="modal-overlay" id="contentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Create Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Content Name</label>
+        <input type="text" class="form-control form-control-sm" id="content-name" placeholder="e.g., Intensity, About Page">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="content-stream-id" placeholder="e.g., INT, ABOUT">
+        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Stages</label>
+        <div id="content-stages-checkboxes" class="d-flex flex-wrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Drive URL added to each task when working on it.</p>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentStreamModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-create-content-stream">Create Tasks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Content Import Modal -->
+<div class="modal-overlay" id="contentImportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:600px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Import Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <p class="small text-muted">CSV format: <code>contentName,stages</code></p>
+      <p class="small text-muted">Stages separated by semicolon: <code>draft;edit;translate;images;blog_publish</code></p>
+      <div class="form-group">
+        <label class="small font-weight-bold">CSV Data</label>
+        <textarea class="form-control form-control-sm" id="content-import-csv" rows="8" placeholder="contentName,stages
+Intensity,draft;edit;translate;translate_edit;images;blog_publish
+About Page,edit;translate;translate_edit;blog_publish
+Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
+      </div>
+      <div id="import-result" class="small" style="display:none;"></div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentImportModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="btn-import-content">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // State
+  var state = {
+    projects: [],
+    tasks: [],
+    allTasks: [],  // includes done/closed
+    statusOptions: ['New', 'Assigned', 'Review', 'Done', 'Closed'],
+    priorityOptions: ['Critical', 'High', 'Normal', 'Low'],
+    assignees: [],
+    contentStages: [],  // For content task creation
+    mode: 'projects',
+    selectedProjectId: null,
+    selectedTaskId: null,
+    projectStatusFilter: 'all',
+    taskStatusFilter: 'all',
+    taskPriorityFilter: 'all',
+    taskAssigneeFilter: 'all',
+    taskEntityFilter: '',
+    taskSessionFilter: '',
+    selectedTaskIds: [],  // For bulk operations
+    taskScopeFilter: 'open',  // 'open', 'started', 'future', 'all'
+    sortField: 'name',
+    sortDir: 'asc',
+    pendingSelectTaskId: null,
+    pendingSelectProjectId: null,
+    panelState: 2  // 1=list 1/3, 2=list 2/3 (default), 3=list full
+  };
+
+  var confirmCallback = null;
+
+  // Init
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  function init() {
+    populateFilterDropdowns();
+    loadData();
+    loadContentStages();
+    bindEventHandlers();
+
+    // Set initial panel state
+    setPanelState(state.panelState);
+
+    // Check for navigation from dashboard
+    checkDashboardNavigation();
+  }
+
+  function loadContentStages() {
+    google.script.run
+      .withSuccessHandler(function(stages) {
+        state.contentStages = stages || [];
+        populateContentStagesCheckboxes();
+      })
+      .WebAppProjects_getContentStages();
+  }
+
+  function populateContentStagesCheckboxes() {
+    var container = document.getElementById('content-stages-checkboxes');
+    container.innerHTML = state.contentStages.map(function(s) {
+      return '<label class="mr-3 mb-1 small"><input type="checkbox" class="content-stage-cb mr-1" value="' + s.id + '">' + s.label + '</label>';
+    }).join('');
+  }
+
+  function checkDashboardNavigation() {
+    var selectTaskId = sessionStorage.getItem('selectTaskId');
+    var selectProjectId = sessionStorage.getItem('selectProjectId');
+
+    // Clear immediately to prevent re-triggering
+    sessionStorage.removeItem('selectTaskId');
+    sessionStorage.removeItem('selectProjectId');
+
+    if (selectTaskId) {
+      // Store for use after data loads - will navigate to task
+      state.pendingSelectTaskId = selectTaskId;
+      state.pendingSelectProjectId = selectProjectId;
+    } else if (selectProjectId) {
+      // No task, just project - will navigate into project
+      state.pendingSelectProjectId = selectProjectId;
+    }
+  }
+
+  function populateFilterDropdowns() {
+    // Status filter
+    var filterStatus = document.getElementById('filter-task-status');
+    filterStatus.innerHTML = '<option value="all">Status</option>' +
+      state.statusOptions.map(function(s) {
+        return '<option value="' + s + '">' + s + '</option>';
+      }).join('');
+
+    // Priority filter
+    var filterPriority = document.getElementById('filter-task-priority');
+    filterPriority.innerHTML = '<option value="all">Priority</option>' +
+      state.priorityOptions.map(function(p) {
+        return '<option value="' + p + '">' + p + '</option>';
+      }).join('');
+
+    // Task detail status dropdown
+    var taskFieldSelect = document.getElementById('task-field-status');
+    taskFieldSelect.innerHTML = state.statusOptions.map(function(s) {
+      return '<option value="' + s + '">' + s + '</option>';
+    }).join('');
+  }
+
+  function populateAssigneeFilter() {
+    // Extract unique assignees from tasks
+    var assigneeSet = {};
+    state.tasks.forEach(function(t) {
+      if (t.assignedTo) assigneeSet[t.assignedTo] = true;
+    });
+    state.assignees = Object.keys(assigneeSet).sort();
+
+    var filterAssignee = document.getElementById('filter-task-assignee');
+    filterAssignee.innerHTML = '<option value="all">Assignee</option>' +
+      state.assignees.map(function(a) {
+        var short = a.split('@')[0];
+        return '<option value="' + a + '">' + short + '</option>';
+      }).join('');
+  }
+
+  function loadData() {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success && result.data) {
+          state.tasks = result.data.tasks || [];
+          state.allTasks = state.tasks;
+          state.library = result.data.library || [];
+          populateAssigneeFilter();
+          render();
+          updateStats();
+          if (state.pendingSelectTaskId) {
+            navigateToTask(state.pendingSelectTaskId, state.pendingSelectProjectId);
+            state.pendingSelectTaskId = null;
+            state.pendingSelectProjectId = null;
+          }
+        }
+      })
+      .WebAppLibrary_getData();
+  }
+
+  // Single normalized feed (WebAppLibrary_getData) backs the task queue; loadTasks is an alias.
+  function loadTasks() { loadData(); }
+
+  function navigateToTask(taskId, projectId) {
+    // Find the task
+    var task = state.tasks.find(function(t) {
+      return t.id === taskId;
+    });
+
+    if (!task) {
+      // Task not in open tasks - try loading all tasks
+      if (state.taskScopeFilter !== 'all') {
+        state.taskScopeFilter = 'all';
+        state.pendingSelectTaskId = taskId;
+        state.pendingSelectProjectId = projectId;
+        loadTasks();
+        return;
+      }
+      console.warn('Task not found:', taskId);
+      return;
+    }
+
+    // Navigate to project first, then select task
+    var taskProjectId = task.projectId || projectId;
+    if (taskProjectId) {
+      state.selectedProjectId = taskProjectId;
+      state.mode = 'tasks';
+    }
+    state.selectedTaskId = taskId;
+    render();
+  }
+
+  function bindEventHandlers() {
+    document.getElementById('btn-home').addEventListener('click', goHome);
+    document.getElementById('btn-back').addEventListener('click', goBack);
+    document.getElementById('btn-new').addEventListener('click', handleNew);
+    document.querySelectorAll('.panel-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        setPanelState(parseInt(this.dataset.panel));
+      });
+    });
+
+    // Expand button for compact view
+    document.querySelector('.expand-compact').addEventListener('click', function(e) {
+      e.preventDefault();
+      setPanelState(2);
+    });
+
+    document.getElementById('filter-project-status').addEventListener('change', function() {
+      state.projectStatusFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-status').addEventListener('change', function() {
+      state.taskStatusFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-priority').addEventListener('change', function() {
+      state.taskPriorityFilter = this.value;
+      render();
+    });
+
+    document.getElementById('filter-task-assignee').addEventListener('change', function() {
+      state.taskAssigneeFilter = this.value;
+      render();
+    });
+
+    // Session filter with debounce
+    var sessionFilterTimeout = null;
+    document.getElementById('filter-task-session').addEventListener('input', function() {
+      var val = this.value;
+      clearTimeout(sessionFilterTimeout);
+      sessionFilterTimeout = setTimeout(function() {
+        state.taskSessionFilter = val.trim().toLowerCase();
+        render();
+      }, 300);
+    });
+
+    // Entity filter with debounce
+    var entityFilterTimeout = null;
+    document.getElementById('filter-task-entity').addEventListener('input', function() {
+      var val = this.value;
+      clearTimeout(entityFilterTimeout);
+      entityFilterTimeout = setTimeout(function() {
+        state.taskEntityFilter = val.trim().toLowerCase();
+        render();
+      }, 300);
+    });
+
+    // Scope filter links (Open, Started, Future, All)
+    document.querySelectorAll('.scope-link').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        state.taskScopeFilter = this.dataset.scope;
+        loadTasks();
+      });
+    });
+
+    document.querySelectorAll('.sort-col').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        var field = this.dataset.field;
+        if (state.sortField === field) {
+          state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sortField = field;
+          state.sortDir = 'asc';
+        }
+        render();
+      });
+    });
+
+    document.getElementById('btn-save-project').addEventListener('click', saveProject);
+    document.getElementById('btn-save-task').addEventListener('click', saveTaskStatus);
+
+    document.getElementById('btn-complete-task').addEventListener('click', function() {
+      showConfirm('Mark this task as complete?', function() {
+        completeTask(state.selectedTaskId);
+      });
+    });
+
+    document.getElementById('btn-cancel-task').addEventListener('click', function() {
+      showConfirm('Delete this task? This cannot be undone.', function() {
+        cancelTask(state.selectedTaskId);
+      });
+    });
+
+    document.getElementById('confirm-yes').addEventListener('click', function() {
+      var callback = confirmCallback;
+      hideConfirm();
+      if (callback) callback();
+    });
+
+    document.getElementById('confirm-no').addEventListener('click', function() {
+      hideConfirm();
+    });
+
+    document.getElementById('project-switcher').addEventListener('change', function() {
+      var newProjectId = this.value;
+      if (newProjectId && newProjectId !== state.selectedProjectId) {
+        selectProject(newProjectId);
+      }
+    });
+
+    document.getElementById('btn-create-project').addEventListener('click', createProject);
+    document.getElementById('btn-generate-outputs').addEventListener('click', openGenerateOutputsModal);
+    document.getElementById('btn-generate-outputs-submit').addEventListener('click', submitGenerateOutputs);
+    document.getElementById('btn-create-task').addEventListener('click', createTask);
+
+    document.getElementById('btn-view-product').addEventListener('click', viewProductDetails);
+
+    document.getElementById('btn-open-entity').addEventListener('click', function() {
+      var entityId = document.getElementById('task-field-entity-id').value.trim();
+      if (entityId && entityId.indexOf('http') === 0) {
+        window.open(entityId, '_blank');
+      }
+    });
+
+    // Bulk selection handlers
+    document.getElementById('select-all-tasks').addEventListener('change', function() {
+      var visibleTasks = getFilteredTasks();
+      if (this.checked) {
+        // Add all visible task IDs
+        visibleTasks.forEach(function(t) {
+          if (state.selectedTaskIds.indexOf(t.id) === -1) {
+            state.selectedTaskIds.push(t.id);
+          }
+        });
+      } else {
+        // Remove all visible task IDs
+        var visibleIds = visibleTasks.map(function(t) { return t.id; });
+        state.selectedTaskIds = state.selectedTaskIds.filter(function(id) {
+          return visibleIds.indexOf(id) === -1;
+        });
+      }
+      renderList();
+      updateBulkActionBar();
+    });
+
+    document.getElementById('btn-cancel-selected').addEventListener('click', function() {
+      var count = state.selectedTaskIds.length;
+      if (count === 0) return;
+      showConfirm('Delete ' + count + ' selected task(s)? This cannot be undone.', function() {
+        cancelSelectedTasks();
+      });
+    });
+
+    // Content stream buttons
+    document.getElementById('btn-content-stream').addEventListener('click', function() {
+      document.getElementById('content-name').value = '';
+      document.getElementById('content-stream-id').value = '';
+      // Uncheck all stage checkboxes
+      document.querySelectorAll('.content-stage-cb').forEach(function(cb) { cb.checked = false; });
+      document.getElementById('contentStreamModal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-content-import').addEventListener('click', function() {
+      document.getElementById('content-import-csv').value = '';
+      document.getElementById('import-result').style.display = 'none';
+      document.getElementById('contentImportModal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-create-content-stream').addEventListener('click', createContentStream);
+    document.getElementById('btn-import-content').addEventListener('click', importContentTasks);
+  }
+
+  // === CONTENT STREAM FUNCTIONS ===
+
+  function createContentStream() {
+    var name = document.getElementById('content-name').value.trim();
+    var customStreamId = document.getElementById('content-stream-id').value.trim().toUpperCase();
+
+    if (!name) {
+      alert('Please enter content name');
+      return;
+    }
+
+    // Get selected stages
+    var stages = [];
+    document.querySelectorAll('.content-stage-cb:checked').forEach(function(cb) {
+      stages.push(cb.value);
+    });
+
+    if (stages.length === 0) {
+      alert('Please select at least one stage');
+      return;
+    }
+
+    var btn = document.getElementById('btn-create-content-stream');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Create Tasks';
+        if (result.error) {
+          alert('Error: ' + result.error);
+        } else {
+          document.getElementById('contentStreamModal').style.display = 'none';
+          alert('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode);
+          loadData();
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Create Tasks';
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppProjects_createContentStream({
+        projectId: state.selectedProjectId,
+        contentName: name,
+        stages: stages,
+        streamId: customStreamId || null
+      });
+  }
+
+  function importContentTasks() {
+    var csvData = document.getElementById('content-import-csv').value.trim();
+    if (!csvData) {
+      alert('Please enter CSV data');
+      return;
+    }
+
+    var btn = document.getElementById('btn-import-content');
+    btn.disabled = true;
+    btn.textContent = 'Importing...';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+        var resultDiv = document.getElementById('import-result');
+        if (result.error) {
+          resultDiv.innerHTML = '<span class="text-danger">Error: ' + TaskWidgets.escape(result.error) + '</span>';
+          resultDiv.style.display = '';
+        } else {
+          var msg = 'Imported: ' + result.data.imported + ', Failed: ' + result.data.failed;
+          if (result.data.errors && result.data.errors.length > 0) {
+            msg += '<br>' + result.data.errors.map(esc).join('<br>');
+          }
+          resultDiv.innerHTML = '<span class="' + (result.data.failed > 0 ? 'text-warning' : 'text-success') + '">' + msg + '</span>';
+          resultDiv.style.display = '';
+          if (result.data.imported > 0) {
+            loadData();
+          }
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Import';
+        document.getElementById('import-result').innerHTML = '<span class="text-danger">Error: ' + TaskWidgets.escape(err.message || 'Failed') + '</span>';
+        document.getElementById('import-result').style.display = '';
+      })
+      .WebAppProjects_importContentStreams(csvData, state.selectedProjectId);
+  }
+
+  // === PRODUCT LOOKUP ===
+
+  function viewProductDetails() {
+    var panel = document.getElementById('product-info-panel');
+
+    // Toggle - if visible, hide it
+    if (panel.style.display !== 'none') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    var entityId = document.getElementById('task-field-entity-id').value;
+    if (!entityId) {
+      document.getElementById('product-info-content').innerHTML = '<span class="text-muted">No entity ID</span>';
+      panel.style.display = '';
+      return;
+    }
+
+    // Show loading
+    document.getElementById('product-info-content').innerHTML = '<span class="text-muted">Loading...</span>';
+    panel.style.display = '';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        renderProductInfo(result, entityId);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('product-info-content').innerHTML =
+          '<span class="text-danger">Error: ' + TaskWidgets.escape(err.message || 'Failed to load') + '</span>';
+      })
+      .WebAppProducts_lookupProductBySku(entityId);
+  }
+
+  function renderProductInfo(data, sku) {
+    var content = document.getElementById('product-info-content');
+
+    if (!data || !data.comax) {
+      content.innerHTML = '<span class="text-warning">SKU not found: ' + TaskWidgets.escape(sku) + '</span>';
+      return;
+    }
+
+    var comax = data.comax;
+    var web = data.web;
+
+    // Compact 2-3 row display
+    var soldOnlineClass = comax.isWeb ? 'text-success' : 'text-danger';
+    var soldOnlineText = comax.isWeb ? 'YES' : 'NO';
+
+    var html = '<div style="line-height:1.4;">';
+    // Row 1: Sold Online (most important) + Active + Stock
+    html += '<strong class="' + soldOnlineClass + '">Sold Online: ' + soldOnlineText + '</strong>';
+    html += ' &nbsp;|&nbsp; Active: ' + (comax.isActive ? 'Yes' : 'No');
+    html += ' &nbsp;|&nbsp; Stock: ' + (comax.stock || 0);
+    html += ' &nbsp;|&nbsp; ₪' + (comax.price || 0);
+    // Row 2: Name
+    html += '<br>' + TaskWidgets.escape(comax.nameHe || '-');
+    // Row 3: Web status (if relevant)
+    if (web) {
+      html += '<br><span class="text-muted">Web: EN#' + (web.webIdEn || '-') + ' HE#' + (web.webIdHe || '-') + '</span>';
+    } else {
+      html += '<br><span class="text-muted">Not on web store</span>';
+    }
+    html += '</div>';
+
+    content.innerHTML = html;
+  }
+
+  // === NAVIGATION ===
+
+  function goHome() {
+    state.mode = 'projects';
+    state.selectedProjectId = null;
+    state.selectedTaskId = null;
+    state.taskStatusFilter = 'all';
+    state.taskPriorityFilter = 'all';
+    state.taskAssigneeFilter = 'all';
+    document.getElementById('filter-task-status').value = 'all';
+    document.getElementById('filter-task-priority').value = 'all';
+    document.getElementById('filter-task-assignee').value = 'all';
+    render();
+  }
+
+  function goBack() {
+    if (state.mode === 'tasks') {
+      goHome();
+    }
+  }
+
+  function setPanelState(newState) {
+    state.panelState = newState;
+    var listCol = document.getElementById('list-column');
+    var detailCol = document.getElementById('detail-column');
+    var container = document.querySelector('.container-fluid');
+
+    // Remove all panel state classes
+    container.classList.remove('panel-state-1', 'panel-state-2', 'panel-state-3');
+
+    // Update active button
+    document.querySelectorAll('.panel-btn').forEach(function(btn) {
+      btn.classList.toggle('active', parseInt(btn.dataset.panel) === newState);
+    });
+
+    if (state.panelState === 1) {
+      // List 1/3, detail 2/3 (compact list)
+      listCol.className = 'col-md-4';
+      listCol.style.display = '';
+      detailCol.className = 'col-md-8';
+      detailCol.style.display = '';
+      container.classList.add('panel-state-1');
+    } else if (state.panelState === 2) {
+      // List 2/3, detail 1/3 (expanded list)
+      listCol.className = 'col-md-8';
+      listCol.style.display = '';
+      detailCol.className = 'col-md-4';
+      detailCol.style.display = '';
+      container.classList.add('panel-state-2');
+    } else {
+      // List full, detail hidden
+      listCol.className = 'col-md-12';
+      listCol.style.display = '';
+      detailCol.style.display = 'none';
+      container.classList.add('panel-state-3');
+    }
+  }
+
+  function selectProject(projectId) {
+    state.selectedProjectId = projectId;
+    state.selectedTaskId = null;
+    state.mode = 'tasks';
+    state.taskStatusFilter = 'all';
+    document.getElementById('filter-task-status').value = 'all';
+    render();
+  }
+
+  function selectTask(taskId) {
+    // Toggle selection: clicking same row deselects it
+    if (state.selectedTaskId === taskId) {
+      state.selectedTaskId = null;
+    } else {
+      state.selectedTaskId = taskId;
+    }
+    renderList();  // Re-render to update highlighting
+    renderDetailPanel();
+  }
+
+  function handleNew() {
+    if (state.mode === 'projects') {
+      document.getElementById('new-project-name').value = '';
+      loadCampaignOptions();
+      document.getElementById('newProjectModal').style.display = 'flex';
+    } else {
+      document.getElementById('new-task-title').value = '';
+      document.getElementById('new-task-notes').value = '';
+      document.getElementById('new-task-start-date').value = '';
+      document.getElementById('new-task-due-date').value = '';
+      document.getElementById('new-task-topic').value = '';
+      document.getElementById('new-task-priority').value = 'Normal';
+      document.getElementById('new-task-assignee').value = '';
+      populateTaskProjectOptions();
+      populateTaskAssigneeOptions();
+      document.getElementById('newTaskModal').style.display = 'flex';
+    }
+  }
+
+  function populateTaskProjectOptions() {
+    var select = document.getElementById('new-task-project');
+    if (!select) return;
+    var current = state.selectedProjectId || '';
+    var html = '';
+    (state.projects || []).forEach(function(p) {
+      var id = p.projectid || p.spro_ProjectId || '';
+      var name = p.name || p.spro_Name || id;
+      var sel = (String(id) === String(current)) ? ' selected' : '';
+      html += '<option value="' + TaskWidgets.escape(id) + '"' + sel + '>' + TaskWidgets.escape(name) + '</option>';
+    });
+    select.innerHTML = html || '<option value="">— No projects —</option>';
+  }
+
+  function populateTaskAssigneeOptions() {
+    var select = document.getElementById('new-task-assignee');
+    if (!select) return;
+    google.script.run
+      .withSuccessHandler(function(roles) {
+        var html = '<option value="">— Unassigned —</option>';
+        (roles || []).forEach(function(r) {
+          html += '<option value="' + TaskWidgets.escape(r) + '">' + TaskWidgets.escape(r) + '</option>';
+        });
+        select.innerHTML = html;
+      })
+      .withFailureHandler(function() {
+        // keep just the unassigned option
+      })
+      .WebAppTasks_getAssignableUsers();
+  }
+
+  function loadCampaignOptions() {
+    var select = document.getElementById('new-project-campaign');
+    if (!select) return;
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var html = '<option value="">— No campaign —</option>';
+        if (result && !result.error && Array.isArray(result.data)) {
+          result.data.forEach(function(c) {
+            html += '<option value="' + TaskWidgets.escape(c.id) + '">' + TaskWidgets.escape(c.name) + '</option>';
+          });
+        }
+        select.innerHTML = html;
+      })
+      .WebAppCampaigns_getCampaignOptions();
+  }
+
+  // === RENDERING ===
+
+  function render() {
+    renderHeader();
+    renderSubheader();
+    renderList();
+    renderDetailPanel();
+  }
+
+  function renderHeader() {
+    var backBtn = document.getElementById('btn-back');
+    var breadcrumb = document.getElementById('breadcrumb');
+    var newBtn = document.getElementById('btn-new');
+    var contentStreamBtn = document.getElementById('btn-content-stream');
+    var contentImportBtn = document.getElementById('btn-content-import');
+
+    if (state.mode === 'projects') {
+      backBtn.style.display = 'none';
+      breadcrumb.textContent = 'Projects';
+      newBtn.textContent = '+ Project';
+      contentStreamBtn.style.display = 'none';
+      contentImportBtn.style.display = 'none';
+    } else {
+      backBtn.style.display = '';
+      var project = getSelectedProject();
+      var projectName = project ? (project.name || project.spro_Name) : 'Project';
+      breadcrumb.innerHTML = '<span class="text-muted">Projects ›</span> ' + TaskWidgets.escape(projectName);
+      newBtn.textContent = '+ Task';
+      // Show content buttons when in tasks mode
+      contentStreamBtn.style.display = '';
+      contentImportBtn.style.display = '';
+    }
+  }
+
+  function renderSubheader() {
+    var projectsHeader = document.getElementById('subheader-projects');
+    var tasksHeader = document.getElementById('subheader-tasks');
+
+    if (state.mode === 'projects') {
+      projectsHeader.style.display = '';
+      tasksHeader.style.display = 'none';
+      updateSortIcons('name');
+    } else {
+      projectsHeader.style.display = 'none';
+      tasksHeader.style.display = '';
+      updateSortIcons('title');
+      updateScopeLinks();
+    }
+  }
+
+  function updateScopeLinks() {
+    document.querySelectorAll('.scope-link').forEach(function(el) {
+      if (el.dataset.scope === state.taskScopeFilter) {
+        el.style.fontWeight = 'bold';
+        el.style.color = '#212529';
+      } else {
+        el.style.fontWeight = 'normal';
+        el.style.color = '';
+      }
+    });
+  }
+
+  function updateSortIcons(defaultField) {
+    document.querySelectorAll('.sort-col span').forEach(function(el) {
+      el.textContent = '';
+    });
+    // Entity and session columns show ↕ when not active
+    var entityIcon = document.getElementById('sort-icon-entity');
+    if (entityIcon && state.sortField !== 'entity') {
+      entityIcon.textContent = '↕';
+    }
+    var sessionIcon = document.getElementById('sort-icon-session');
+    if (sessionIcon && state.sortField !== 'session') {
+      sessionIcon.textContent = '↕';
+    }
+    var iconId = 'sort-icon-' + state.sortField;
+    var icon = document.getElementById(iconId);
+    if (icon) {
+      icon.textContent = state.sortDir === 'asc' ? '▾' : '▴';
+    }
+  }
+
+  function renderList() {
+    var container = document.getElementById('list-container');
+
+    if (state.mode === 'projects') {
+      renderProjectsList(container);
+    } else {
+      renderTasksList(container);
+    }
+  }
+
+  function renderProjectsList(container) {
+    var projects = getFilteredProjects();
+
+    // Sort
+    projects = sortItems(projects, function(p) {
+      if (state.sortField === 'name') return (p.name || p.spro_Name || '').toLowerCase();
+      return '';
+    });
+
+    if (projects.length === 0) {
+      container.innerHTML = '<div class="text-muted p-3">No projects</div>';
+      return;
+    }
+
+    container.innerHTML = projects.map(function(p) {
+      var id = p.projectid || p.spro_ProjectId;
+      var name = p.name || p.spro_Name || '-';
+      var status = p.status || p.spro_Status || '';
+      var type = p.type || p.spro_Type || '';
+      var taskCount = getProjectTaskCount(id);
+      var isSelected = id === state.selectedProjectId;
+
+      var statusClass = isSelected ? '' : (status === 'ACTIVE' ? 'text-success' : status === 'PLANNING' ? 'text-warning' : 'text-muted');
+
+      return '<div class="row border-bottom py-2 px-2 project-row' + (isSelected ? ' bg-info text-white' : '') + '" data-id="' + id + '" style="cursor:pointer;margin:0;">' +
+        '<div class="col-5 text-truncate">' + TaskWidgets.escape(name) + '</div>' +
+        '<div class="col-3"><small class="' + statusClass + '">' + status.toLowerCase() + '</small></div>' +
+        '<div class="col-2 text-center"><span class="badge badge-secondary">' + taskCount + '</span></div>' +
+        '<div class="col-2 text-right text-muted">›</div>' +
+      '</div>';
+    }).join('');
+
+    container.querySelectorAll('.project-row').forEach(function(el) {
+      el.addEventListener('click', function() {
+        selectProject(this.dataset.id);
+      });
+    });
+  }
+
+  function renderTasksList(container) {
+    var tasks = getFilteredTasks();
+
+    // Sort
+    tasks = sortItems(tasks, function(t) {
+      if (state.sortField === 'title') return (t.name || '').toLowerCase();
+      if (state.sortField === 'created') return t.createdDate || '9999';
+      if (state.sortField === 'start') return t.startDate || '9999';
+      if (state.sortField === 'due') return t.dueDate || '9999';
+      if (state.sortField === 'done') return t.doneDate || '9999';
+      if (state.sortField === 'entity') return String(t.entityName || '').toLowerCase();
+      if (state.sortField === 'session') return String(t.sessionId || '').toLowerCase();
+      return '';
+    });
+
+    if (tasks.length === 0) {
+      container.innerHTML = '<div class="text-muted p-3">No tasks</div>';
+      return;
+    }
+
+    // Build assignee options for inline edit
+    var assigneeOpts = '<option value="">-</option>';
+    state.assignees.forEach(function(a) {
+      var short = a.split('@')[0];
+      assigneeOpts += '<option value="' + a + '">' + short + '</option>';
+    });
+
+    // Build status options
+    var statusOpts = state.statusOptions.map(function(s) {
+      return '<option value="' + s + '">' + s + '</option>';
+    }).join('');
+
+    container.innerHTML = tasks.map(function(t) {
+      var id = t.id;
+      var title = t.name || '-';
+      var assignee = t.assignedTo || '';
+      var assigneeShort = assignee ? assignee.split('@')[0] : '-';
+      var status = t.status || 'New';
+      var priority = t.priority || 'Normal';
+      var startDateVal = t.startDate ? TaskWidgets.formatDate(t.startDate) : '';
+      var dueDateVal = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '';
+      var doneDateVal = t.doneDate ? TaskWidgets.formatDate(t.doneDate) : '';
+      var startDateDisp = t.startDate ? TaskWidgets.formatDateShort(t.startDate) : '-';
+      var dueDateDisp = t.dueDate ? TaskWidgets.formatDateShort(t.dueDate) : '-';
+      var doneDateDisp = t.doneDate ? TaskWidgets.formatDateShort(t.doneDate) : '-';
+      var createdDateDisp = t.createdDate ? TaskWidgets.formatDateShort(t.createdDate) : '-';
+      var isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && status !== 'Done' && status !== 'Closed';
+      var isSelected = id === state.selectedTaskId;
+
+      var priBadge = '';
+      if (priority === 'Critical') priBadge = '<span class="badge badge-danger">C</span>';
+      else if (priority === 'High') priBadge = '<span class="badge badge-warning">H</span>';
+      else if (priority === 'Normal') priBadge = '<span class="badge badge-secondary">N</span>';
+      else priBadge = '<span class="badge badge-light">L</span>';
+
+      var dueClass = isOverdue ? 'text-danger font-weight-bold' : '';
+
+      var isDone = status === 'Done' || status === 'Closed';
+      var rowClass = isDone ? ' text-muted' : '';
+
+      var sessionId = t.sessionId || '';
+      var entityId = t.entityId != null ? String(t.entityId) : '';
+      var entityName = t.entityName || '';
+      var isUrl = entityId.indexOf('http') === 0;
+
+      // Show full entity ID (not truncated) - user needs to see/copy UPC codes
+      var entityHtml = isUrl
+        ? '<a href="' + TaskWidgets.escape(entityId) + '" target="_blank" class="entity-link" title="' + TaskWidgets.escape(entityName || entityId) + '">' + TaskWidgets.escape(entityName || 'Link') + '</a>'
+        : '<span class="user-select-all" title="' + TaskWidgets.escape(entityName) + '">' + TaskWidgets.escape(entityId || '-') + '</span>';
+
+      var isChecked = state.selectedTaskIds.indexOf(id) !== -1;
+
+      // Build inline assignee select with current value selected
+      var assigneeSelect = '<select class="form-control inline-edit inline-assignee" data-id="' + id + '" data-field="assignee">' +
+        assigneeOpts.replace('value="' + assignee + '"', 'value="' + assignee + '" selected') + '</select>';
+
+      // Build inline status select
+      var statusSelect = '<select class="form-control inline-edit inline-status" data-id="' + id + '" data-field="status">' +
+        statusOpts.replace('value="' + status + '"', 'value="' + status + '" selected') + '</select>';
+
+      // Entity ID link for wide view
+      var entityIdShort = entityId.length > 6 ? entityId.substring(0, 5) + '..' : entityId;
+      var entityIdHtml = isUrl
+        ? '<a href="' + TaskWidgets.escape(entityId) + '" target="_blank" class="entity-link" title="' + TaskWidgets.escape(entityId) + '">Open</a>'
+        : '<span class="text-truncate" title="' + TaskWidgets.escape(entityId) + '">' + TaskWidgets.escape(entityIdShort) + '</span>';
+
+      return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
+        '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
+        '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(sessionId) + '">' + TaskWidgets.escape(sessionId) + '</div>' +
+        '<div class="task-col-title text-truncate" style="cursor:pointer;">' + TaskWidgets.escape(title) + '</div>' +
+        '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
+        '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
+        '<div class="task-col-hideable task-col-assignee">' + assigneeSelect + '</div>' +
+        '<div class="task-col-hideable task-col-status">' + statusSelect + '</div>' +
+        '<div class="task-col-hideable task-col-priority text-center">' + priBadge + '</div>' +
+        '<div class="task-col-start"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="start" value="' + startDateVal + '" title="' + startDateDisp + '"></div>' +
+        '<div class="task-col-due ' + dueClass + '"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="due" value="' + dueDateVal + '" title="' + dueDateDisp + '"></div>' +
+        '<div class="task-col-wide-only task-col-done"><input type="date" class="form-control inline-edit" data-id="' + id + '" data-field="done" value="' + doneDateVal + '" title="' + doneDateDisp + '"></div>' +
+        '<div class="task-col-wide-only task-col-created">' + createdDateDisp + '</div>' +
+        '<div class="task-col-toggle"></div>' +
+      '</div>';
+    }).join('');
+
+    // Click on row (but not on controls) to select task
+    container.querySelectorAll('.task-row').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        // Don't select when clicking on checkbox, select, input, or link
+        if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
+        selectTask(this.dataset.id);
+      });
+    });
+
+    // Checkbox change handlers
+    container.querySelectorAll('.task-checkbox').forEach(function(cb) {
+      cb.addEventListener('change', function(e) {
+        e.stopPropagation();
+        var taskId = this.dataset.id;
+        if (this.checked) {
+          if (state.selectedTaskIds.indexOf(taskId) === -1) {
+            state.selectedTaskIds.push(taskId);
+          }
+        } else {
+          state.selectedTaskIds = state.selectedTaskIds.filter(function(id) { return id !== taskId; });
+        }
+        updateBulkActionBar();
+      });
+    });
+
+    // Inline edit handlers
+    container.querySelectorAll('.inline-edit').forEach(function(el) {
+      el.addEventListener('change', function(e) {
+        e.stopPropagation();
+        var taskId = this.dataset.id;
+        var field = this.dataset.field;
+        var value = this.value;
+        saveInlineEdit(taskId, field, value);
+      });
+    });
+
+    // Click entity ID to select text for copying
+    container.querySelectorAll('.user-select-all').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var range = document.createRange();
+        range.selectNodeContents(this);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+    });
+  }
+
+  function saveInlineEdit(taskId, field, value) {
+    var updates = {};
+    if (field === 'assignee') updates.assignedTo = value;
+    else if (field === 'status') updates.status = value;
+    else if (field === 'start') updates.startDate = value;
+    else if (field === 'due') updates.dueDate = value;
+    else if (field === 'done') updates.doneDate = value;
+
+    // Optimistic update: update local state immediately so UI stays in sync
+    function applyLocalUpdate(t) {
+      if (!t) return;
+      if (field === 'assignee') t.assignedTo = value;
+      else if (field === 'status') t.status = value;
+      else if (field === 'start') t.startDate = value;
+      else if (field === 'due') t.dueDate = value;
+      else if (field === 'done') t.doneDate = value;
+    }
+    var task = state.tasks.find(function(t) { return t.id === taskId; });
+    var allTask = state.allTasks.find(function(t) { return t.id === taskId; });
+    applyLocalUpdate(task);
+    applyLocalUpdate(allTask);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          alert('Error: ' + result.error);
+          // Reload tasks to restore correct state after error
+          loadTasks(state.selectedProjectId);
+          return;
+        }
+        // Re-render if selected task was updated
+        if (state.selectedTaskId === taskId) {
+          renderDetailPanel();
+        }
+      })
+      .withFailureHandler(function(err) {
+        alert('Error: ' + (err.message || 'Failed to save'));
+        // Reload tasks to restore correct state after error
+        loadTasks(state.selectedProjectId);
+      })
+      .WebAppTasks_updateTask(taskId, updates);
+  }
+
+  function updateBulkActionBar() {
+    var bar = document.getElementById('bulk-action-bar');
+    var count = state.selectedTaskIds.length;
+    if (count > 0) {
+      bar.style.display = '';
+      document.getElementById('selected-count').textContent = count + ' selected';
+    } else {
+      bar.style.display = 'none';
+    }
+    // Update select-all checkbox state
+    var selectAll = document.getElementById('select-all-tasks');
+    var visibleTasks = getFilteredTasks();
+    var allChecked = visibleTasks.length > 0 && visibleTasks.every(function(t) {
+      return state.selectedTaskIds.indexOf(t.id) !== -1;
+    });
+    selectAll.checked = allChecked;
+  }
+
+  function renderDetailPanel() {
+    var summary = document.getElementById('detail-summary');
+    var projectDetail = document.getElementById('detail-project');
+    var taskDetail = document.getElementById('detail-task');
+    var title = document.getElementById('detail-title');
+    var switcher = document.getElementById('project-switcher');
+
+    summary.style.display = 'none';
+    projectDetail.style.display = 'none';
+    taskDetail.style.display = 'none';
+
+    // Show project switcher when in tasks mode
+    if (state.mode === 'tasks') {
+      switcher.style.display = '';
+      populateProjectSwitcher();
+    } else {
+      switcher.style.display = 'none';
+    }
+
+    if (state.selectedTaskId) {
+      var task = getSelectedTask();
+      if (task) {
+        title.textContent = 'Task Details';
+        taskDetail.style.display = '';
+        populateTaskForm(task);
+      }
+    } else if (state.selectedProjectId && state.mode === 'tasks') {
+      var project = getSelectedProject();
+      if (project) {
+        title.textContent = 'Project Details';
+        projectDetail.style.display = '';
+        populateProjectForm(project);
+      }
+    } else {
+      title.textContent = 'Overview';
+      summary.style.display = '';
+    }
+  }
+
+  function populateProjectSwitcher() {
+    var switcher = document.getElementById('project-switcher');
+    var html = '';
+    state.projects.forEach(function(p) {
+      var id = p.projectid || p.spro_ProjectId;
+      var name = p.name || p.spro_Name || id;
+      var selected = id === state.selectedProjectId ? ' selected' : '';
+      html += '<option value="' + id + '"' + selected + '>' + TaskWidgets.escape(name) + '</option>';
+    });
+    switcher.innerHTML = html;
+  }
+
+  function populateProjectForm(project) {
+    document.getElementById('field-name').value = project.name || project.spro_Name || '';
+    document.getElementById('field-type').value = project.type || project.spro_Type || 'ONE_OFF';
+    document.getElementById('field-status').value = project.status || project.spro_Status || 'PLANNING';
+    document.getElementById('field-start-date').value = TaskWidgets.formatDate(project.startdate || project.spro_StartDate);
+    document.getElementById('field-end-date').value = TaskWidgets.formatDate(project.enddate || project.spro_EndDate);
+    populateCampaignField(project.campaignid || project.spro_CampaignId || '');
+
+    // System projects (PROJ-SYS_*) are read-only
+    var projectId = project.projectid || project.spro_ProjectId || '';
+    var isSystemProject = projectId.indexOf('PROJ-SYS_') === 0;
+
+    document.getElementById('field-name').readOnly = isSystemProject;
+    document.getElementById('field-type').disabled = isSystemProject;
+    document.getElementById('field-status').disabled = isSystemProject;
+    document.getElementById('field-start-date').readOnly = isSystemProject;
+    document.getElementById('field-end-date').readOnly = isSystemProject;
+    document.getElementById('field-campaign').disabled = isSystemProject;
+    document.getElementById('btn-save-project').style.display = isSystemProject ? 'none' : '';
+    document.getElementById('btn-generate-outputs').style.display = isSystemProject ? 'none' : '';
+  }
+
+  // Cache campaign options after first load. Empties on each loadData call.
+  var _campaignOptionsCache = null;
+
+  function populateCampaignField(selectedId) {
+    var select = document.getElementById('field-campaign');
+    if (!select) return;
+    if (_campaignOptionsCache) {
+      renderCampaignOptions(select, _campaignOptionsCache, selectedId);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(result) {
+        _campaignOptionsCache = (result && !result.error && Array.isArray(result.data)) ? result.data : [];
+        renderCampaignOptions(select, _campaignOptionsCache, selectedId);
+      })
+      .WebAppCampaigns_getCampaignOptions();
+  }
+
+  function renderCampaignOptions(select, options, selectedId) {
+    var html = '<option value="">— None —</option>';
+    options.forEach(function(c) {
+      var sel = (c.id === selectedId) ? ' selected' : '';
+      html += '<option value="' + TaskWidgets.escape(c.id) + '"' + sel + '>' + TaskWidgets.escape(c.name) + '</option>';
+    });
+    select.innerHTML = html;
+  }
+
+  function populateTaskForm(task) {
+    // Hide product info panel when switching tasks
+    document.getElementById('product-info-panel').style.display = 'none';
+
+    document.getElementById('task-field-title').value = task.name || '';
+    document.getElementById('task-field-status').value = task.status || 'New';
+    document.getElementById('task-field-priority').value = task.priority || 'Normal';
+
+    // Populate assignee dropdown
+    var assigneeSelect = document.getElementById('task-field-assignee');
+    var assigneeHtml = '<option value="">- Unassigned -</option>';
+    state.assignees.forEach(function(a) {
+      var selected = a === task.assignedTo ? ' selected' : '';
+      assigneeHtml += '<option value="' + a + '"' + selected + '>' + a.split('@')[0] + '</option>';
+    });
+    assigneeSelect.innerHTML = assigneeHtml;
+
+    document.getElementById('task-field-start').value = task.startDate ? TaskWidgets.formatDate(task.startDate) : '';
+    document.getElementById('task-field-due').value = task.dueDate ? TaskWidgets.formatDate(task.dueDate) : '';
+    var createdDisp = task.createdDate ? TaskWidgets.formatDateShort(task.createdDate) : '';
+    document.getElementById('task-field-created-display').textContent = createdDisp ? 'Created: ' + createdDisp : '';
+
+    document.getElementById('task-field-entity').value = task.entityName || '';
+    document.getElementById('task-field-entity-id').value = task.entityId || '';
+    document.getElementById('task-field-notes').value = task.notes || '';
+
+    // Show/hide View button based on whether there's an entity ID
+    var hasEntityId = !!(task.entityId);
+    document.getElementById('btn-view-product').style.display = hasEntityId ? '' : 'none';
+
+    // Auto-lookup product for sold online status in entity name
+    if (hasEntityId) {
+      lookupSoldOnlineStatus(task.entityId, task.entityName);
+    }
+
+    var isDone = task.status === 'Done' || task.status === 'Cancelled';
+
+    // Check if this is a system-created task (not user-created)
+    // Note: task.content tasks ARE editable by admin
+    var taskType = task.typeId || '';
+    var isSystemTask = taskType.indexOf('task.system') === 0 ||
+                       taskType.indexOf('task.validation') === 0 ||
+                       taskType.indexOf('task.sync') === 0 ||
+                       taskType.indexOf('task.bundle') === 0 ||
+                       taskType.indexOf('task.deficiency') === 0 ||
+                       taskType.indexOf('task.inventory') === 0 ||
+                       taskType.indexOf('task.onboarding') === 0 ||
+                       taskType.indexOf('task.order') === 0 ||
+                       taskType.indexOf('task.confirmation') === 0 ||
+                       taskType.indexOf('task.data') === 0 ||
+                       taskType.indexOf('task.crm') === 0 ||
+                       taskType.indexOf('task.export') === 0;
+
+    // Content tasks are fully editable
+    var isContentTask = taskType.indexOf('task.content') === 0;
+
+    // Data-carrying tasks that should be completely protected (read-only, no actions)
+    var isDataTask = taskType.indexOf('task.system') === 0 ||
+                     taskType.indexOf('task.sync') === 0;
+
+    // Tasks that allow date editing (even if system-created)
+    var allowsDateEdit = isContentTask ||
+                         taskType === 'task.deficiency.category_stock' ||
+                         taskType === 'task.deficiency.bundle_stock';
+
+    // System tasks: disable field editing (except content tasks)
+    // Done tasks remain editable so admin can adjust dates
+    document.getElementById('task-field-status').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-priority').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-assignee').disabled = isSystemTask && !isContentTask;
+    document.getElementById('task-field-notes').readOnly = isDataTask;
+
+    // Date fields: editable for content tasks and specific system task types
+    document.getElementById('task-field-start').readOnly = !allowsDateEdit;
+    document.getElementById('task-field-due').readOnly = !allowsDateEdit;
+
+    // Entity ID: editable for content tasks (so admin can add Drive URL)
+    document.getElementById('task-field-entity-id').readOnly = !isContentTask;
+
+    // Title: editable for content tasks (code prefix links them, rest is editable)
+    document.getElementById('task-field-title').readOnly = !isContentTask;
+
+    // Open entity button: show only if entity ID looks like a URL
+    var entityId = task.entityId != null ? String(task.entityId) : '';
+    var openBtn = document.getElementById('btn-open-entity');
+    openBtn.style.display = entityId.indexOf('http') === 0 ? '' : 'none';
+
+    // Data tasks: hide all action buttons (system manages these)
+    // Content tasks: allow all actions
+    // Regular system tasks: allow Done/Cancel but not Save
+    var showSave = !isSystemTask || allowsDateEdit || isContentTask;
+    document.getElementById('btn-save-task').style.display = showSave ? '' : 'none';
+    document.getElementById('btn-complete-task').style.display = isDataTask ? 'none' : '';
+    document.getElementById('btn-cancel-task').style.display = isDataTask ? 'none' : '';
+    document.getElementById('btn-complete-task').disabled = isDone || isDataTask;
+    document.getElementById('btn-cancel-task').disabled = isDone || isDataTask;
+  }
+
+  function lookupSoldOnlineStatus(entityId, entityName) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.comax) {
+          var indicator = result.comax.isWeb ? ' [WEB]' : ' [NOT WEB]';
+          var indicatorClass = result.comax.isWeb ? 'text-success' : 'text-danger';
+          var field = document.getElementById('task-field-entity');
+          field.value = (entityName || '') + indicator;
+        }
+      })
+      .WebAppProducts_lookupProductBySku(entityId);
+  }
+
+  function updateStats() {
+    document.getElementById('stat-total').textContent = state.projects.length;
+    document.getElementById('stat-active').textContent = state.projects.filter(function(p) {
+      return (p.status || p.spro_Status) === 'ACTIVE';
+    }).length;
+    document.getElementById('stat-tasks').textContent = state.tasks.length;
+    document.getElementById('stat-critical').textContent = state.tasks.filter(function(t) {
+      return t.priority === 'Critical';
+    }).length;
+  }
+
+  // === HELPERS ===
+
+  function getSelectedProject() {
+    if (!state.selectedProjectId) return null;
+    return state.projects.find(function(p) {
+      return (p.projectid || p.spro_ProjectId) === state.selectedProjectId;
+    });
+  }
+
+  function getSelectedTask() {
+    if (!state.selectedTaskId) return null;
+    return state.tasks.find(function(t) {
+      return t.id === state.selectedTaskId;
+    });
+  }
+
+  function getProjectTaskCount(projectId) {
+    if (!projectId) return 0;
+    var targetId = String(projectId).trim();
+    return state.tasks.filter(function(t) {
+      var taskProjId = t.projectId ? String(t.projectId).trim() : '';
+      return taskProjId === targetId;
+    }).length;
+  }
+
+  function getFilteredProjects() {
+    return state.projects.filter(function(p) {
+      if (state.projectStatusFilter !== 'all') {
+        var status = p.status || p.spro_Status;
+        if (status !== state.projectStatusFilter) return false;
+      }
+      return true;
+    });
+  }
+
+  function getFilteredTasks() {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var selectedProjId = state.selectedProjectId ? String(state.selectedProjectId).trim() : null;
+
+    return state.tasks.filter(function(t) {
+      if (selectedProjId) {
+        var taskProjId = t.projectId ? String(t.projectId).trim() : '';
+        if (taskProjId !== selectedProjId) return false;
+      }
+      if (state.taskStatusFilter !== 'all' && t.status !== state.taskStatusFilter) return false;
+      if (state.taskPriorityFilter !== 'all' && t.priority !== state.taskPriorityFilter) return false;
+      if (state.taskAssigneeFilter !== 'all' && t.assignedTo !== state.taskAssigneeFilter) return false;
+      if (state.taskSessionFilter) {
+        var sessionId = String(t.sessionId || '').toLowerCase();
+        if (sessionId.indexOf(state.taskSessionFilter) === -1) return false;
+      }
+      if (state.taskEntityFilter) {
+        var entityName = String(t.entityName || '').toLowerCase();
+        var entityId = String(t.entityId || '').toLowerCase();
+        if (entityName.indexOf(state.taskEntityFilter) === -1 && entityId.indexOf(state.taskEntityFilter) === -1) return false;
+      }
+
+      // Scope filter: open, started, future, all
+      // Note: 'open' shows all non-Done tasks (no date filtering)
+      if (state.taskScopeFilter === 'started' || state.taskScopeFilter === 'future') {
+        var startDate = null;
+        try {
+          if (t.startDate) {
+            startDate = new Date(t.startDate);
+            if (isNaN(startDate.getTime())) startDate = null;
+            else startDate.setHours(0, 0, 0, 0);
+          }
+        } catch (e) {
+          startDate = null;
+        }
+        var isStarted = startDate && startDate <= today;
+        var isFuture = !startDate || startDate > today;
+
+        if (state.taskScopeFilter === 'started' && !isStarted) return false;
+        if (state.taskScopeFilter === 'future' && !isFuture) return false;
+      }
+      // 'open' and 'all' pass all tasks through (no date filtering)
+
+      return true;
+    });
+  }
+
+  function sortItems(items, keyFn) {
+    return items.slice().sort(function(a, b) {
+      var aVal = keyFn(a);
+      var bVal = keyFn(b);
+      if (aVal < bVal) return state.sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return state.sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function showConfirm(message, callback) {
+    document.getElementById('confirm-message').textContent = message;
+    confirmCallback = callback;
+    document.getElementById('confirmModal').style.display = 'flex';
+  }
+
+  function hideConfirm() {
+    document.getElementById('confirmModal').style.display = 'none';
+    confirmCallback = null;
+  }
+
+  // === API ACTIONS ===
+
+  function createProject() {
+    var name = document.getElementById('new-project-name').value.trim();
+    if (!name) { alert('Enter project name'); return; }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        document.getElementById('newProjectModal').style.display = 'none';
+        loadData();
+      })
+      .WebAppProjects_createProject({
+        name: name,
+        type: document.getElementById('new-project-type').value,
+        status: document.getElementById('new-project-status').value,
+        campaignId: document.getElementById('new-project-campaign').value || ''
+      });
+  }
+
+  // ===================================================================
+  // Generate Outputs — calls Campaign Service to emit utm URL + short URL + QR
+  // ===================================================================
+
+  function openGenerateOutputsModal() {
+    if (!state.selectedProjectId) { alert('No project selected'); return; }
+    var project = getSelectedProject();
+    if (!project) { alert('Project not loaded'); return; }
+
+    var campaignId = project.campaignid || project.spro_CampaignId || '';
+    if (!campaignId) {
+      alert('This project is not linked to a Marketing Campaign. Assign one via the Campaign field, save, and try again.');
+      return;
+    }
+
+    // Reset form
+    document.getElementById('gen-out-target').value = '';
+    document.getElementById('gen-out-language').value = 'en';
+    document.getElementById('gen-out-slug').value = '';
+    document.getElementById('gen-out-medium').value = '';
+    document.getElementById('gen-out-source').value = '';
+    document.getElementById('gen-out-content').value = '';
+    document.getElementById('gen-out-notes').value = '';
+    document.getElementById('gen-out-results').style.display = 'none';
+    document.getElementById('gen-out-context').textContent =
+      (project.name || project.spro_Name || state.selectedProjectId) + ' → ' + campaignId;
+
+    // Pre-fill medium/source defaults based on campaign
+    var defaults = _defaultsForCampaign(campaignId);
+    if (defaults) {
+      document.getElementById('gen-out-medium').value = defaults.medium || '';
+      document.getElementById('gen-out-source').value = defaults.source || '';
+    }
+
+    document.getElementById('generateOutputsModal').style.display = 'flex';
+  }
+
+  function _defaultsForCampaign(campaignId) {
+    // Convenience defaults — partner can override in the modal.
+    switch (campaignId) {
+      case 'newsletter-print':  return { medium: 'print',  source: 'wine-talk'  };
+      case 'email-broadcast':   return { medium: 'email',  source: 'mailchimp'  };
+      case 'flyer-acquisition': return { medium: 'flyer',  source: ''           };
+      case 'social-organic':    return { medium: 'social', source: ''           };
+      default:                  return null;
+    }
+  }
+
+  function getSelectedProject() {
+    return state.projects.find(function(p) {
+      return (p.projectid || p.spro_ProjectId) === state.selectedProjectId;
+    });
+  }
+
+  function submitGenerateOutputs() {
+    if (!state.selectedProjectId) return;
+    var project = getSelectedProject();
+    if (!project) return;
+    var campaignId = project.campaignid || project.spro_CampaignId || '';
+    if (!campaignId) return;
+
+    var targetUrl = document.getElementById('gen-out-target').value.trim();
+    var slug      = document.getElementById('gen-out-slug').value.trim();
+    var medium    = document.getElementById('gen-out-medium').value.trim();
+    var source    = document.getElementById('gen-out-source').value.trim();
+
+    if (!targetUrl) { alert('Target URL is required'); return; }
+    if (!medium)    { alert('Medium is required');     return; }
+    if (!source)    { alert('Source is required');     return; }
+
+    var btn = document.getElementById('btn-generate-outputs-submit');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        if (result.error) { alert('Error: ' + result.error); return; }
+        var data = result.data || {};
+        document.getElementById('gen-out-utm-url').value   = data.utmUrl   || '';
+        document.getElementById('gen-out-short-url').value = data.shortUrl || '';
+        document.getElementById('gen-out-qr-url').value    = data.qrImageUrl || '';
+        document.getElementById('gen-out-qr-preview').src  = data.qrImageUrl || '';
+        document.getElementById('gen-out-results').style.display = '';
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+        alert('Error: ' + (err && err.message ? err.message : err));
+      })
+      .WebAppCampaigns_generateOutputs({
+        campaignId: campaignId,
+        projectId:  state.selectedProjectId,
+        language:   document.getElementById('gen-out-language').value,
+        slug:       slug,
+        targetUrl:  targetUrl,
+        medium:     medium,
+        source:     source,
+        content:    document.getElementById('gen-out-content').value.trim(),
+        notes:      document.getElementById('gen-out-notes').value.trim()
+      });
+  }
+
+  function createTask() {
+    var title = document.getElementById('new-task-title').value.trim();
+    if (!title) { alert('Enter task title'); return; }
+    var projectId = document.getElementById('new-task-project').value;
+    if (!projectId) { alert('Pick a project'); return; }
+    var topic = document.getElementById('new-task-topic').value;
+    if (!topic) { alert('Pick a topic'); return; }
+    var startDate = document.getElementById('new-task-start-date').value;
+    var dueDate = document.getElementById('new-task-due-date').value;
+    if ((startDate && !dueDate) || (dueDate && !startDate)) {
+      alert('Provide both start date and due date, or neither.');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        document.getElementById('newTaskModal').style.display = 'none';
+        loadData();
+      })
+      .WebAppTasks_createTask({
+        projectId: projectId,
+        title: title,
+        topic: topic,
+        priority: document.getElementById('new-task-priority').value,
+        assignedTo: document.getElementById('new-task-assignee').value,
+        startDate: startDate,
+        dueDate: dueDate,
+        notes: document.getElementById('new-task-notes').value
+      });
+  }
+
+  function saveProject() {
+    if (!state.selectedProjectId) return;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { alert('Error: ' + result.error); return; }
+        loadData();
+      })
+      .WebAppProjects_updateProject(state.selectedProjectId, {
+        name: document.getElementById('field-name').value.trim(),
+        type: document.getElementById('field-type').value,
+        status: document.getElementById('field-status').value,
+        startDate: document.getElementById('field-start-date').value || null,
+        endDate: document.getElementById('field-end-date').value || null,
+        campaignId: document.getElementById('field-campaign').value || ''
+      });
+  }
+
+  function saveTaskStatus() {
+    if (!state.selectedTaskId) return;
+
+    var task = getSelectedTask();
+    var taskType = task ? task.typeId : '';
+    var isContentTask = taskType.indexOf('task.content') === 0;
+
+    // Check if this task allows full editing
+    var allowsDateEdit = isContentTask ||
+                         taskType === 'task.deficiency.category_stock' ||
+                         taskType === 'task.deficiency.bundle_stock';
+
+    if (allowsDateEdit || isContentTask) {
+      // Save all editable fields
+      var updates = {
+        status: document.getElementById('task-field-status').value,
+        priority: document.getElementById('task-field-priority').value,
+        assignedTo: document.getElementById('task-field-assignee').value || null,
+        startDate: document.getElementById('task-field-start').value || null,
+        dueDate: document.getElementById('task-field-due').value || null,
+        notes: document.getElementById('task-field-notes').value
+      };
+      // For content tasks, also save entity ID (Drive URL) and title
+      if (isContentTask) {
+        updates.linkedEntityId = document.getElementById('task-field-entity-id').value.trim();
+        updates.title = document.getElementById('task-field-title').value.trim();
+      }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) { alert('Error: ' + result.error); return; }
+          loadData();
+        })
+        .WebAppTasks_updateTask(state.selectedTaskId, updates);
+    } else {
+      // Save status only (original behavior for system tasks)
+      var newStatus = document.getElementById('task-field-status').value;
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.error) { alert('Error: ' + result.error); return; }
+          loadData();
+        })
+        .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
+    }
+  }
+
+  function completeTask(taskId) {
+    showTaskActionSpinner('btn-complete-task');
+    google.script.run
+      .withSuccessHandler(function(success) {
+        hideTaskActionSpinner('btn-complete-task', 'Done');
+        if (!success) { alert('Could not complete task'); return; }
+        state.selectedTaskId = null;
+        render();  // Clear detail panel immediately
+        loadData();
+      })
+      .withFailureHandler(function(err) {
+        hideTaskActionSpinner('btn-complete-task', 'Done');
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppTasks_completeTaskById(taskId);
+  }
+
+  function cancelTask(taskId) {
+    showTaskActionSpinner('btn-cancel-task');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        hideTaskActionSpinner('btn-cancel-task', 'Delete');
+        if (result.error) { alert('Error: ' + result.error); return; }
+        state.selectedTaskId = null;
+        render();
+        loadData();
+      })
+      .withFailureHandler(function(err) {
+        hideTaskActionSpinner('btn-cancel-task', 'Delete');
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppTasks_deleteTask(taskId);
+  }
+
+  function cancelSelectedTasks() {
+    var taskIds = state.selectedTaskIds.slice();  // Copy array
+    if (taskIds.length === 0) return;
+
+    var btn = document.getElementById('btn-cancel-selected');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
+
+    // Single bulk call — backend reads sheet once + deletes in descending
+    // row order so earlier deletes don't shift later targets. Replaces the
+    // prior pattern of N parallel WebAppTasks_deleteTask calls that suffered
+    // a row-index race (see .claude/bugs.md 2026-05-15 entry).
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Delete Selected';
+        state.selectedTaskIds = [];
+        state.selectedTaskId = null;
+        updateBulkActionBar();
+        render();
+        loadData();
+
+        var deletedCount = (result.deleted || []).length;
+        var failures = result.failed || [];
+        if (failures.length > 0) {
+          var detail = failures.map(function(f) { return '  ' + f.taskId + ': ' + f.reason; }).join('\n');
+          alert('Deleted ' + deletedCount + ' task(s). ' + failures.length + ' failed:\n' + detail);
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Delete Selected';
+        alert('Error: ' + (err.message || 'Failed'));
+      })
+      .WebAppTasks_deleteTasks(taskIds);
+  }
+
+  function showTaskActionSpinner(buttonId) {
+    var btn = document.getElementById(buttonId);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    document.getElementById('btn-complete-task').disabled = true;
+    document.getElementById('btn-cancel-task').disabled = true;
+  }
+
+  function hideTaskActionSpinner(buttonId, label) {
+    var btn = document.getElementById(buttonId);
+    btn.innerHTML = label;
+    btn.disabled = false;
+    document.getElementById('btn-complete-task').disabled = false;
+    document.getElementById('btn-cancel-task').disabled = false;
+  }
+
+})();
+</script>
