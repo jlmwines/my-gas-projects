@@ -124,7 +124,7 @@ Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the 
 
 ## Post-go-live follow-ups (open)
 
-1. **Full-width column redesign** (confirmed direction, not yet built): Title-first + wide; cluster the filterable group (Status · Priority · Assignee) together in hierarchy; dates together; demote Stream/Link/Done/Created to Full density. Needs a visual see-and-adjust pass.
+1. **Full-width column redesign — DEFERRED (revisit only if needed).** Per user 2026-06-01: the table works as-is; hold this until real use shows the column order/width is actually a problem. If revived: Title-first + wide; cluster the filterable group (Status · Priority · Assignee) in hierarchy; dates together; demote Stream/Link/Done/Created to Full density (needs a visual see-and-adjust pass).
 2. **De-dup Notes** — the MANAGE form and the DO pack both render a Notes field; reconcile to one.
 3. **Project filter labels** — dropdown shows raw `projectId`s (e.g. `PROJ-SYS_PRODUCT`); add a friendly-name map if wanted.
 4. **Entity→task return leg** — wire LibraryView drawer attached-task rows' `onclick` → `loadView('AdminTasks')` + `selectTaskId` (payload already carries `id`; AdminTasksView honors it). Planned in Deploy B, not yet done.
