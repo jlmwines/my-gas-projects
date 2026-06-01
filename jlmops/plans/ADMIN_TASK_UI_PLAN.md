@@ -25,6 +25,21 @@ Task work is split across two mental models. `AdminProjectsView` is a real task-
 
 ---
 
+## Verified against code (2026-06-01) — most "build" items already exist
+
+A code audit before implementation (the project's stale-tracking guard) found the integration cost is **much lower** than the design workflow estimated. Confirmed in code:
+
+- **No SysConfig JSON edits anywhere in this plan.** `pack_form` is already on every task template (it is what routes the DO region); `st_ProjectId` / `st_EntityType` / `st_EntityId` are already SysTasks columns; `task.project.custom` already exists. Dropping the project-CRUD/campaign/`generateOutputs` is code-only (the `task.campaign.*` templates stay for phase 11). **Every step is a plain code deploy via `deploy.ps1` — no `generate-config.js` / `rebuildSysConfigFromSource`.**
+- **The "central build" (single normalized task-row shape) already exists.** `WebAppLibrary._getQueueTasks` already maps SysTasks → a complete shape: `id`(=st_TaskId), `typeId`, `topic`, `name`, `entityType/Id`, `entityName`, `assignedTo`, `projectId`, `sessionId`, `createdDate`, `startDate`, `dueDate`, `doneDate`, `status`, `priority`, `notes`, `packForm`. Decision 2 is therefore **adopt `_getQueueTasks` / `WebAppLibrary_getData` as the single feed and point the revived table + MANAGE form at it** (field rename `st_*` → normalized), not build a new shape.
+- **`WebAppTasks_updateTask` already writes the full field set** (status/priority/assignedTo/start/due/done/notes/linkedEntityId) — confirmed at `WebAppTasks.js:352`. LibraryView's `{notes}`-only call was self-imposed.
+- **Project-as-filter logic already exists** — `getFilteredTasks` (`AdminProjectsView.html:1894`) filters `st_ProjectId`; the normalized shape carries `projectId`. Work = remove the `mode='projects'/'tasks'` split, not build filtering.
+- **Entity→task return leg — open question RESOLVED.** The `attached_tasks` payload already carries `id` (`_getQueueTasks`, `WebAppLibrary.js:72`), and the `loadView` deep-link handoff (`checkDashboardNavigation`/`navigateToTask`) already exists. Only the drawer-row `onclick` is missing.
+- **`createProject` backend exists** (`ProjectService.createProject`); only a lightweight create UI is new.
+
+**Genuinely new work (the actual gaps):** (1) extract `packBody()` into a shared `TaskPacks` include; (2) assemble the Tasks view (strip project machinery, point table/MANAGE/packs at the normalized feed); (3) wire the drawer-row `onclick` for the return leg; (4) **relax `WebAppTasks_createTask`'s mandatory `projectId`** (`WebAppTasks.js:641` returns "Project is required") IF truly free-form one-off tasks are wanted — else keep requiring a project/scope.
+
+---
+
 ## The surface
 
 ### Tasks view (revived from AdminProjectsView shell — standalone nav entry)
@@ -85,8 +100,8 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 
 ## Open / to verify during build
 
-- Does `WebAppLibrary_getEntityDetail.attached_tasks` already include a stable task id for the deep-link, or does the field need adding (append-only)?
-- Free-form New Task: should the entity/scope picker allow *no* entity/scope (truly free-form)? Reconcile with the currently-mandatory Project selection in `WebAppTasks_createTask`.
+- ~~Does `WebAppLibrary_getEntityDetail.attached_tasks` include a stable task id?~~ **RESOLVED 2026-06-01: yes** — `_getQueueTasks` maps `id: st_TaskId` (`WebAppLibrary.js:72`). No server change; only the client `onclick` is needed.
+- Free-form New Task: should it allow *no* entity/scope (truly free-form)? `WebAppTasks_createTask` currently **hard-requires `projectId`** (`WebAppTasks.js:641`). Truly free-form needs that check relaxed (or a default "general" project/scope auto-assigned). User decision.
 - Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (Step 7).
 
 ---
