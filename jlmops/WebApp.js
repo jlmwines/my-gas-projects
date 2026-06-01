@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-01 07:11',
+  built: '2026-06-01 16:36',
   commit: '@189 ADMIN_TASK_UI Deploy A — extracted LibraryView pack code into a shared TaskPacks include (packBody dispatcher + 8 action handlers + Lock/Attach modals), behavior-preserving. LibraryView now includes TaskPacks, calls TaskPacks.configure({getTask,getEntity,refresh,reload}) and renders via TaskPacks.packBody; ~382 lines moved out. No backend or behavior change — the shared kit is the prerequisite for the new AdminTasksView (Deploy B). Follows @188.'
 };
 
