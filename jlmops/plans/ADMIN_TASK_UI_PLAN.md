@@ -36,7 +36,7 @@ A code audit before implementation (the project's stale-tracking guard) found th
 - **Entity→task return leg — open question RESOLVED.** The `attached_tasks` payload already carries `id` (`_getQueueTasks`, `WebAppLibrary.js:72`), and the `loadView` deep-link handoff (`checkDashboardNavigation`/`navigateToTask`) already exists. Only the drawer-row `onclick` is missing.
 - **`createProject` backend exists** (`ProjectService.createProject`); only a lightweight create UI is new.
 
-**Genuinely new work (the actual gaps):** (1) extract `packBody()` into a shared `TaskPacks` include; (2) assemble the Tasks view (strip project machinery, point table/MANAGE/packs at the normalized feed); (3) wire the drawer-row `onclick` for the return leg; (4) **relax `WebAppTasks_createTask`'s mandatory `projectId`** (`WebAppTasks.js:641` returns "Project is required") IF truly free-form one-off tasks are wanted — else keep requiring a project/scope.
+**Genuinely new work (the actual gaps):** (1) extract `packBody()` into a shared `TaskPacks` include; (2) assemble the new `AdminTasksView` (lift proven components, omit project machinery, bind to the normalized feed); (3) wire the drawer-row `onclick` for the return leg. **No `createTask` change** — free-form/projectless tasks were considered and **declined (2026-06-01)**; `WebAppTasks_createTask`'s mandatory `projectId` (`WebAppTasks.js:641`) stays as-is.
 
 ---
 
@@ -48,7 +48,7 @@ A code audit before implementation (the project's stale-tracking guard) found th
 - **Right — detail pane, two stacked regions:**
   - **MANAGE** — the existing `#detail-task` form (Title / Status / Priority / Assignee / Start / Due / Entity / Entity-URL / Notes), with `populateTaskForm`'s per-type lock matrix lifted **verbatim** (system/sync/order tasks stay locked; content tasks fully editable; data tasks read-only).
   - **DO** — the task's pack rendered in its declared `pack_form` (inline-expand / modal-overlay / dedicated-view).
-- **Creation — top bar, admin-only:** **New Task** (free-form one-off → `WebAppTasks_createTask`, Project select generalized to an optional entity/scope picker) and **Create Content Tasks** (content-chain spawner → `WebAppLibrary_spawnContentChain`, entity as an input: pick existing or spin up new). Creation never starts in Library.
+- **Creation — top bar, admin-only:** **New Task** (single task → `WebAppTasks_createTask`, which keeps **requiring a project/scope** — no free-form/projectless tasks, locked 2026-06-01) and **Create Content Tasks** (content-chain spawner → `WebAppLibrary_spawnContentChain`, entity as an input: pick existing or spin up new). Creation never starts in Library.
 
 ### Library view (kept, near-frozen)
 
@@ -71,7 +71,7 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 - Role split — existing `data-roles="admin"` CSS gate.
 
 **Adapt:**
-- New-task modal — generalize the mandatory Project select into an optional entity/scope picker.
+- New-task modal — reuse the existing form; the Project select stays **required** (no free-form, locked 2026-06-01). May be relabeled a project/scope picker, but never optional.
 - Content-chain modal/spawner — point the Tasks-view "+ Content" button at `WebAppLibrary_spawnContentChain` (library-era fork that writes the entity + chain), **not** legacy `WebAppProjects_createContentStream`.
 - `packBody()` dispatcher + handlers (`confirmTask`, `createBlankDoc`, `attachExistingDoc`, `openLockModal`, `markPublished`, `openView`) + lock/attach modals — extract into a shared include (`TaskPacks`) first, then render into the DO region.
 - Project demoted to a filter chip — `getFilteredTasks` already filters `st_ProjectId`; remove the `mode='projects'/'tasks'` entry split, project switcher, and project home/back flow.
@@ -101,7 +101,7 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 ## Open / to verify during build
 
 - ~~Does `WebAppLibrary_getEntityDetail.attached_tasks` include a stable task id?~~ **RESOLVED 2026-06-01: yes** — `_getQueueTasks` maps `id: st_TaskId` (`WebAppLibrary.js:72`). No server change; only the client `onclick` is needed.
-- Free-form New Task: should it allow *no* entity/scope (truly free-form)? `WebAppTasks_createTask` currently **hard-requires `projectId`** (`WebAppTasks.js:641`). Truly free-form needs that check relaxed (or a default "general" project/scope auto-assigned). User decision.
+- ~~Free-form New Task — allow *no* entity/scope?~~ **DECIDED 2026-06-01: NO.** Tasks always require a project/scope; `WebAppTasks_createTask`'s mandatory `projectId` stays. No code change.
 - Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (Step 7).
 
 ---
