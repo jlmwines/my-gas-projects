@@ -16,6 +16,29 @@ JLMops is business-critical (product sync, order flow, packing, CRM, content lib
 
 This plan defines the path from ad-hoc resilience to a documented, measured posture that survives single-person bandwidth.
 
+## 1A. Detection coverage — cross-cutting requirement (added 2026-06-02, from user)
+
+The export / alerting work (`OPS_SESSION_BRIDGE_PLAN.md`, the dashboard, `resolveFailure`) is the **Record → Communicate** leg. It is worthless without the **Detect** leg: the system can only report failures it actually checks for. Today detection is *ad hoc* — checks exist where someone thought to add one, with no master list of what *should* be checked. Closing that is a first-class goal of this plan, not an afterthought. Concern raised by the user: "make sure everything the system should be detecting is detected, and that I or the session is made aware — no gaps between detection and communication."
+
+Two artifacts to build and maintain:
+
+**(1) Detection register.** One catalog of every system invariant: the invariant, its check function (or "NONE — gap"), severity, whether it's wired to `NotificationService.reportFailure`, and whether it reaches the status export / dashboard. A gap = any invariant with no check, or a check not wired to communication. Recurring invariant *classes* to seed it:
+- **Archiving actually happens** — every high-volume master that should archive is archiving (not silently stalled); newly-added high-volume data gets archive handling.
+- **Master ∪ archive in analysis** — every analytical/aggregate read over a master also reads its archive. This is the exact root cause of the write-verify bug (contact aggregates read `WebOrdM` but not `WebOrdM_Archive`, `.claude/bugs.md` 2026-05-28). Treat as a class — audit every aggregator, not one site.
+- **Referential integrity / orphans** — every FK edge has no danglers: SKU across `WebProdM`/`WebProdS_EN`/`WebDetM`/`WebDetS`/`WebXltM`/`SysProductAudit`/`SysTasks`/`CmxProdM` (Fix Orphan SKU territory; `webProductReassign` latent gap); `SysTasks.st_ProjectId → SysProjects` (the PROJ-CONTENT rename can orphan tasks); `task.st_LinkedEntityId → entity`; contact↔order (email); bundle slot→product; campaign links (`spro_CampaignId`, `scm_MarketingCampaignId`).
+- **Aggregate reconciliation** — stored aggregates match their source within tolerance (generalize the CCP-3 write-verify pattern; identify which other aggregates need a reconciliation twin).
+- **Liveness** — every scheduled check/trigger is actually running; a detector that silently stopped is itself an undetected gap (ties to Tier 3.1 heartbeats).
+- (Already partly covered: schema validation — daily Phase 2; sync-state stage guards.)
+
+**(2) New-feature reliability gate.** A short checklist applied whenever anything new is added, so coverage grows with the system instead of drifting behind it:
+- Does this produce data that needs **archiving**?
+- Does any **analysis** of it read **master ∪ archive**?
+- Does it add an **FK edge** that needs **orphan detection**?
+- Does it need an **aggregate reconciliation** twin?
+- Is its detector **wired to `reportFailure`** and surfaced (dashboard + export)?
+
+**Concrete next step (user-requested):** audit current detection coverage against these classes and produce the actual gap list (which aggregators don't union archive; which FK edges have no orphan check; what isn't archiving). That gap list feeds the tiers below and seeds the register. Every detected violation must terminate in `reportFailure` (→ self-healing task via `resolveFailure`, see `SYSTEM_TASK_LIFECYCLE_PLAN.md`) AND the status export, so neither the user nor a CLI session has a blind spot.
+
 ## 2. Scope
 
 **In scope**
