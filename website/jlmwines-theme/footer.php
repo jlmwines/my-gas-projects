@@ -50,7 +50,7 @@
         <div class="footer-newsletter">
             <?php if ($newsletter_image) : ?>
                 <div class="footer-newsletter-image">
-                    <img src="<?php echo esc_url($newsletter_image); ?>" alt="" loading="lazy">
+                    <img src="<?php echo esc_url($newsletter_image); ?>" alt="<?php echo esc_attr( is_rtl() ? 'אביתר בכרם' : 'Evyatar at the vineyard' ); ?>" loading="lazy">
                 </div>
             <?php endif; ?>
             <div class="footer-newsletter-content">

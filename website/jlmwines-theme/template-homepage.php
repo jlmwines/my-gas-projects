@@ -172,7 +172,7 @@ get_header();
             </div>
             <?php if ($wtm_image) : ?>
                 <div class="banner-image">
-                    <img src="<?php echo esc_url($wtm_image); ?>" alt="" loading="lazy">
+                    <img src="<?php echo esc_url($wtm_image); ?>" alt="<?php echo esc_attr( is_rtl() ? 'אביתר כהן, JLM Wines' : 'Evyatar Cohen, JLM Wines' ); ?>" loading="lazy">
                 </div>
             <?php endif; ?>
         </div>
