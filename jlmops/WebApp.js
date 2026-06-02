@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 09:00',
-  commit: 'Verification UI refinements (no backend change). AdminProducts: drop the Web-only filter (verification is web-only by definition), move the Create Verification Tasks card above New Products, relabel Lookups sections (Grape Varieties / Kashrut Certifications / Marketing Texts) and make them collapsible via a triangle toggle (default collapsed), and fix a stray </div> that closed container-fluid early (cards 3-5 rendered wider than 1-2). ManagerProducts: new Verification Tasks card listing open task.product.verify via getOpenVerifyTasks; each row Verify button starts the read-only walk at that row (startVerifyAt seeds the queue from the rendered list), alongside the unchanged dashboard deep-link.'
+  built: '2026-06-02 09:41',
+  commit: 'Three changes. (1) CRM fix: ContactImportService.updateContactsFromOrders resets order-derived metrics (sc_OrderCount / sc_TotalSpend / sc_AvgOrderValue / sc_AvgBottlesPerOrder) to 0 for contacts that drop out of the order union (e.g. a customer whose only order was cancelled/refunded) — fixes the stale counts that tripped reconciliation.sys_contacts.write_verify; metrics-only, customer flags/type unchanged. (2) AdminTasksView: the toolbar button no longer flashes "+ Project" before tasks load (static label matched to the default tasks mode -> "+ Task"). (3) Config: task.routing.topic_to_project Content now routes to PROJ-CONTENT (renamed from PROJ-6878357E for readability) — run rebuildSysConfigFromSource after deploy; existing SysProjects row + content task st_ProjectId values repointed manually.'
 };
 
 function getVersion() {

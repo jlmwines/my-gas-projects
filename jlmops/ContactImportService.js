@@ -930,6 +930,24 @@ const ContactImportService = (function () {
       }
     });
 
+    // CCP-3: contacts whose orders all became excluded (e.g. a cancellation) drop
+    // out of contactUpdates, so the loop above never rewrites them and their
+    // sc_OrderCount goes stale. Reset their order-derived metrics to 0 so the
+    // aggregates stay truthful and the write-verify reconciliation below holds.
+    // (Customer flags/type left as-is by design — metrics-only reset.)
+    contactsByEmail.forEach((existing, email) => {
+      if (contactUpdates.has(email)) return;
+      const staleCount = parseInt(existing.sc_OrderCount, 10) || 0;
+      const staleSpend = parseFloat(existing.sc_TotalSpend) || 0;
+      if (staleCount === 0 && staleSpend === 0) return;
+      existing.sc_OrderCount = 0;
+      existing.sc_TotalSpend = 0;
+      existing.sc_AvgOrderValue = 0;
+      existing.sc_AvgBottlesPerOrder = 0;
+      contactsToSave.push(existing);
+      updated++;
+    });
+
     // Batch save
     if (contactsToSave.length > 0) {
       LoggerService.info(SERVICE_NAME, fnName, `Saving ${contactsToSave.length} contacts (${created} new, ${updated} updated)`);
