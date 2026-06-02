@@ -31,6 +31,12 @@
   .task-detail label { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
   .task-status { width: 100px; }
 
+  /* Expanded-detail actions: separated from the metadata above, wrap to share
+     rows; the open-resource + complete (Save) actions are emphasized. */
+  .task-detail .task-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e3e3e3; }
+  .task-detail .task-actions .btn { border: 1px solid #ced4da; }
+  .task-detail .task-actions .tw-action-primary { font-weight: 600; border-color: #6c757d; }
+
   /* Calendar view */
   .calendar-container { display: none; }
   .calendar-container.show { display: block; }
@@ -106,6 +112,12 @@
     .task-row .task-col-entity,
     .task-row .task-col-created,
     .task-row .task-col-link { display: none; }
+
+    /* Expanded task detail: bigger tap targets; actions wrap + share rows. */
+    .task-detail { padding: 12px; }
+    .task-detail .task-actions { gap: 10px; }
+    .task-detail .task-actions .btn { min-height: 44px; padding-left: 16px; padding-right: 16px; }
+    .task-detail .task-actions .task-status { min-height: 44px; }
 
     /* Calendar view doesn't fit on phone — hide its toggle + the grid itself */
     #btn-calendar-view { display: none; }
@@ -473,25 +485,30 @@
         task.typeId === 'task.order.packing_available'
       );
 
-      html += '<div class="detail-row justify-content-between">';
-      html += '<div class="d-flex align-items-center" style="gap:15px;">';
+      html += '<div class="detail-row">';
       html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
       html += '<div><label>Start</label><div>' + TaskWidgets.formatDateFull(task.startDate) + '</div></div>';
       html += '<div><label>Due</label><div>' + TaskWidgets.formatDateFull(task.dueDate) + '</div></div>';
       html += '<div><label>Done</label><div>' + TaskWidgets.formatDateFull(task.doneDate) + '</div></div>';
       html += '<div><label>Created</label><div>' + TaskWidgets.formatDateFull(task.createdDate) + '</div></div>';
       html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
+      html += '</div>';
+
+      // Actions, separated from the metadata above: each is a real tappable button
+      // that wraps to share rows on mobile. The "open the resource" + complete
+      // (Save) actions are emphasized; Revert stays secondary.
+      html += '<div class="task-actions">';
       if (isUrl2 && !(task.typeId && task.typeId.indexOf('task.content.') === 0)) {
-        html += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">&#8599; Document</a>';
+        html += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light tw-action tw-action-primary">&#8599; Document</a>';
       }
       var openTarget = taskOpenTarget(task);
       if (openTarget && openTarget.url) {
-        html += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
+        html += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
       } else if (openTarget) {
         var setAttr = openTarget.set
           ? ' data-set-key="' + openTarget.set[0] + '" data-set-val="' + TaskWidgets.escape(openTarget.set[1]) + '"'
           : '';
-        html += '<button type="button" class="btn btn-sm btn-light btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
+        html += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
       }
       if (!isSystemTask) {
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
@@ -500,11 +517,8 @@
           html += '<option value="' + s + '"' + sel + '>' + s + '</option>';
         });
         html += '</select>';
-        html += '<button type="button" class="btn btn-sm btn-light btn-revert-task" data-id="' + task.id + '" data-name="' + TaskWidgets.escape(task.name) + '">Revert</button>';
-      }
-      html += '</div>';
-      if (!isSystemTask) {
-        html += '<button type="button" class="btn btn-sm btn-light btn-save-task" data-id="' + task.id + '">Save</button>';
+        html += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-save-task" data-id="' + task.id + '">Save</button>';
+        html += '<button type="button" class="btn btn-sm btn-light tw-action btn-revert-task" data-id="' + task.id + '" data-name="' + TaskWidgets.escape(task.name) + '">Revert</button>';
       }
       html += '</div>';
 

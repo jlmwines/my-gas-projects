@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 15:44',
-  commit: 'Manager task navigation + content-file fixes (from screenshot review). (1) Library entity drawer attached-task rows now navigate to the task: manager -> ManagerDashboard with the task auto-expanded + scrolled into view (new selectDashboardTaskId deep-link consumed on mount), admin -> AdminTasks (existing selectTaskId contract). Previously the rows were dead. (2) Dashboard content tasks resolve the related file correctly: the real join is task.st_EntityId === SysLibrary slb_Slug (not st_LinkedEntityId, which is a concept code), and when the linked entity has no Doc yet (e.g. a translation entity) it falls back to a referenced source entity_s Doc via slb_References. Fixes the translate task that showed no Open file link.'
+  built: '2026-06-02 16:17',
+  commit: 'Manager dashboard task detail — mobile-friendly. The expanded task now separates the metadata (Stream/dates/priority) from a dedicated actions row that wraps to share rows instead of cramming everything into one line; on mobile (<=768px) the action buttons get 44px tap targets + spacing so they no longer touch. The open-the-resource (Open / Open file / Document) and complete (Save) actions are emphasized (bordered + bold) within the existing btn-light palette — no new Bootstrap color classes. Button handlers/classes unchanged. (Admin task surfaces can get the same treatment as a follow-up.)'
 };
 
 function getVersion() {
