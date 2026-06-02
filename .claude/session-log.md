@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-02 — product verification SHIPPED, CRM write-verify fix, content project rename (@199→@201)
+
+- Opened recovering from a mid-session computer restart: confirmed @199 (read-only product verification surface) had committed + deployed cleanly *before* the restart; only 3 uncommitted plan-doc edits remained → committed (`1c546ca`).
+- **@200:** ManagerProducts open-verify-tasks list (reuses existing `getOpenVerifyTasks` + `startVerifyWalk`; new `startVerifyAt` seeds the queue from the rendered list, alongside the dashboard deep-link) + AdminProducts refinements (drop web-only filter, move verify card above New Products, collapsible relabeled Lookups, and fix a stray `</div>` that closed `container-fluid` early → the card-width bug).
+- **@201:** CRM fix for `reconciliation.sys_contacts.write_verify` — `ContactImportService.updateContactsFromOrders` now self-heals stranded counts (zeroes order metrics for contacts dropped from the qualifying order union; root cause was a real cancelled order). Plus AdminTasks `+ Project`→`+ Task` static-label flash fix, and content project routing `PROJ-6878357E`→`PROJ-CONTENT` (config pushed).
+- **200-version cap incident:** @201's first deploy failed — script hit the 200-version limit. clasp has no version-delete (only `undeploy` removes deployments). User cleared versions via the Apps Script editor; redeploy succeeded as @201. Banked as memory `jlm_clasp_version_cap`.
+- **Pending (user):** run `rebuildSysConfigFromSource` (`SetupConfig.js`) to activate PROJ-CONTENT routing; manual `SysProjects` row + 5 content-task `st_ProjectId` repoints; validate the CRM fix via `runUpdateContactsFromOrders` (`ContactImportService.js`) — pass = no write_verify task + the cancelled-order contact shows `sc_OrderCount 0`.
+
+---
+
 ## 2026-06-01 (later×2) — PRODUCT_VERIFICATION plan reconciled (planning only, no code)
 
 - Reviewed the product-count vs detail-review split: PRODUCT_VERIFICATION_PLAN + INVENTORY_TASK_CONSOLIDATION + PRODUCT_DETAIL_VALIDATION. Found PRODUCT_VERIFICATION internally contradictory - the 2026-06-01 half-rewrite split validation from editing but left edit-during-verification language in the architecture table, completion paths, and files list (the plan even flagged it with a self-correction note).

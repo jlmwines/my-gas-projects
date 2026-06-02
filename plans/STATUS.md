@@ -1,21 +1,21 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-06-01 — ADMIN_TASK_UI task workbench live (@191 deploy @198); Content Library subsystem complete and permanent; next jlmops builds = read-only product-verification surface (implementation-ready) and Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
+**Updated:** 2026-06-02 — product verification surface SHIPPED (read-only batch review @199; manager open-verify-tasks list @200); CRM contacts write-verify reconciliation fixed + content project renamed to PROJ-CONTENT (@201); next jlmops build = Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Theme cutover, Manager CRM, Lookup admin UI, Content Library subsystem, and the Admin task workbench (`AdminTasksView`) are all SHIPPED and live. Content Library is permanent (`library.enabled` flag and `crm.template.*` SysConfig retired; SysLibrary is the sole template source). Phase 12 cross-link renderer remains blocked on the §16 regions overhaul. |
-| Last Active | 2026-06-01 |
+| Last Active | 2026-06-02 |
 | Revenue | Steady |
-| Deploy Version | jlmops @191 deploy @198 · theme v1.2.28 LIVE |
-| Deploy Date | jlmops 2026-06-01 (@191 deploy @198) · theme 2026-05-18 (v1.2.28) |
+| Deploy Version | jlmops deploy @201 · theme v1.2.28 LIVE |
+| Deploy Date | jlmops 2026-06-02 (deploy @201) · theme 2026-05-18 (v1.2.28) |
 | Content | 10 editorial posts live on production (EN+HE) — Context published 2026-05-19; 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation). "A Year in the Vineyard" moved OUT of blog pipeline 2026-05-19 — repositioned as recurring subscriber-exclusive "Making Wine — [topic]" series for newsletter + email per `marketing/NEWSLETTER_PLAN.md` |
 | CRM Contacts | 548 enriched |
 | SEO Status | Latest audit: RankMath 2026-05-31 (read-only `audit-site-seo` via curl; global/EN scan, WPML-blind) — 87/100. Open actionable: (RM-1) homepage images missing `alt` plus a `staging6.jlmwines.com` URL leaking onto live content (find source + fix); (RM-2) focus keyword not in title on 41 products / 13 posts / 2 pages (bulk content polish); WPML per-language meta gap (`RANKMATH_WPML_AUDIT.md` §A–F — needs a wp-admin walk, not covered by the scan). Still open from the 2026-05-06 audit (`plans/SEO_AUDIT_2026-05-06.md`): gtin13 emission (#9), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
 | Open Bugs | Per `.claude/bugs.md` and `jlmops/plans/BUG_FIX_SEQUENCE.md` (9 sessions). Sessions A–E and G SHIPPED. Still open: **Session F** (3 sync-hardening items, pending staging repro — user-driven); **Session H** (timestamps + date-formats audit — produces a change list); **Session I** (count-task creation audit). Deferred: GTIN structured-data enrichment; auto-push to RankMath for short-URL redirects. Latent (deferred): `webProductReassign` misses `WebProdS_EN` + `WebDetS` + `SysTasks` in the proactive-replace path — covered in practice by Fix Orphan SKU. |
-| Next Milestone | Content Library implementation complete; phase 12 cross-link renderer blocked on the §16 regions overhaul. Next jlmops builds: read-only product-verification surface (implementation-ready, `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`) and Contact Action Ribbon Phase 2 (`jlmops/plans/CONTACT_ACTION_RIBBON_PLAN.md`). Reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, 16 sessions; Tier 1.1 shipped) and UI audit (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial) remain. Mobile LCP tuning (~4.0s) queued. |
+| Next Milestone | Content Library implementation complete; phase 12 cross-link renderer blocked on the §16 regions overhaul. Product verification surface SHIPPED (@199–@201, `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`). Next jlmops build: Contact Action Ribbon Phase 2 (`jlmops/plans/CONTACT_ACTION_RIBBON_PLAN.md`). Reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, 16 sessions; Tier 1.1 shipped) and UI audit (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial) remain. Mobile LCP tuning (~4.0s) queued. |
 | Blockers | 0 |
 | Mobile PageSpeed (post-cutover) | Baseline 2026-05-05: EN FCP 3.2 / LCP 4.1 · HE FCP 3.5 / LCP 4.0 · TBT 210ms. Current (theme v1.2.28): FCP 3.5 / LCP 4.0 — LCP at/below baseline. |
 | Desktop PageSpeed (post-cutover) | EN: FCP 0.7 / LCP 0.8 · HE: FCP 0.7 / LCP 1.2 |
@@ -28,7 +28,7 @@
 2. **Branded shipping cartons — OVERDUE.** Partner-owned task (not Claude's to scope or do). Track only: surface as a nudge in daily review while it stays overdue. No Claude action.
 3. **Flyer advertising — ACTIVATED 2026-05-31** (was "not scheduled"). Plan `marketing/FLYER_PLAN.md`. **Round 1 = local acquisition** within ~2km of the Katamon shop: primary target is new customers in this warm, high-English, Evyatar-aware area, with offline-only regulars moving online as a secondary benefit; ~₪2,000 test. Outward cold-acquisition neighborhoods (French Hill / Beit HaKerem) move to Round 2+. Immediate unblockers: vendor outreach (yoterplus / dilen), designer, photo assets; coupon code rides the offline-attribution scheme (`defer:2026-07-01`, Inbox).
 4. **Put recent jlmops upgrades into real-world use.** Contact Action Ribbon **Phase 2** (task packs: restrict channels, preload template, disable record icons, mark-done) is the standing next jlmops session — `jlmops/plans/CONTACT_ACTION_RIBBON_PLAN.md`. Intent: drive the shipped CRM / contact / UI work through actual daily operation, not just ship more. **Unified admin task workbench GO-LIVE 2026-06-01 (@191 deploy @198) — `AdminTasksView` is in the admin nav (after Dashboard); AdminProjects demoted to the soak fallback. Now driven by real use; polish follow-ups (column redesign DEFERRED) tracked in `jlmops/plans/ADMIN_TASK_UI_PLAN.md`.**
-5. **Ongoing operational efforts** (continuous, not one-session): update products; validate web product data + image accuracy / quality (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md` — **reconciled + implementation-ready 2026-06-01; the read-only batch verification surface is the recommended next jlmops build session, order: config → server → creation card → verifyMode modal → batch walk**); add products to fill category gaps (inventory fill-in, line below); publish regularly (blog pipeline + monthly newsletter cadence).
+5. **Ongoing operational efforts** (continuous, not one-session): update products; validate web product data + image accuracy / quality (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md` — **SHIPPED 2026-06-02: read-only batch verification surface live @199; manager open-verify-tasks list @200; admin-card refinements + CRM/routing fixes @201**); add products to fill category gaps (inventory fill-in, line below); publish regularly (blog pipeline + monthly newsletter cadence).
 
 ---
 

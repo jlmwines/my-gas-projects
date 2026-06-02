@@ -1,24 +1,18 @@
-2026-05-28 (afternoon) — kernel cleanup pass after the planning push for reliability audit + UI audit. Earlier same-day cleanup (morning) covered the post-deploy wrap for Sessions A-D; this pass updates docs to reflect the afternoon's plan-banking work.
+2026-06-02 — project-scoped cleanup pass (jlmwines), run after the @199→@201 ship sessions.
 
 Touched this pass:
-- `plans/STATUS.md` — `Updated:` line prepended with afternoon's planning-push summary; morning narrative pushed back as `earlier note:`. `Next Milestone` row rewritten to point at the now-committed reliability + UI audit plans with first-session recommendations. Inbox Active section: Target 1 (reliability audit) + Target 2 (UI review) marked SHIPPED-AS-PLANS; transition from "plan it" to "execute the queue."
-- `.claude/session-log.md` — appended afternoon entry covering: discipline ("no open-question punts"), final scope (reliability v2.1 / 16 sessions; UI v2 / 17 active + 1 prerequisite + 2 deferred); T4.3 v2 re-plan after UX agent feedback; commit `a02e05d` with 20 plan files / 5850 insertions; branch 13 commits ahead of origin/main, not pushed.
-- `CALENDAR.md` — `Updated:` refreshed (was 2026-02-18, months stale). New "Plan-driven queues" section explicitly delegates the bulk of forward work to plan docs (RELIABILITY_AUDIT, UI_AUDIT, BUG_FIX_SEQUENCE). Campaign-recipient activity rows item removed from Upcoming (absorbed into reliability audit Tier 6.3). Remaining Upcoming items are real backlog not in plan queues.
+- `plans/STATUS.md` — `Updated:` rewritten to current state (product verification shipped @199–@201; CRM write-verify fix + PROJ-CONTENT rename @201). Refreshed Last Active (→2026-06-02), Deploy Version/Date (→deploy @201), Next Milestone + Next Action thread 5 (product verification "implementation-ready" → SHIPPED).
+- `.claude/bugs.md` — marked the `reconciliation.sys_contacts.write_verify` bug (open since 2026-05-29) RESOLVED 2026-06-02 @201 via self-heal option (b); original diagnosis retained inline.
+- `.claude/session-log.md` — prepended the 2026-06-02 entry (restart recovery, @200 manager verify list + admin refinements, @201 CRM fix + label flash + content rename, the 200-version-cap incident, pending user steps).
+- Memory — added `jlm_clasp_version_cap` (200-version cap + no clasp version-delete) + MEMORY.md pointer.
 
-Not touched (intentional, scope decisions):
-- `.claude/bugs.md` — triaged this morning per prior last-cleanup; nothing new to add this pass (afternoon session was planning-only).
-- `.claude/wishlist.md` — not surveyed.
-- Memory audit — not run; user-global memory is current.
-- Older session-log entries pruning — deferred (file remains substantial but not yet at a size where pruning is forced).
-
-Outside-cleanup observations worth flagging:
-- Working tree has ~90 untracked items in `content/`, `exchange/`, `marketing/newsletter/images/`, and several stale theme audit `.md`s in `plans/`. Root `exchange/` is NOT gitignored (only `jlmops/exchange/` is). User declined to address this pass; suggestion stands for a future session: extend `.gitignore` to cover root `exchange/` + `temp/`.
+Audited, no change needed:
+- `CALENDAR.md` — no overdue date-bound items; all "Upcoming" rows are undated backlog (segment export, comeback test, YIW PDF, bundle split, housekeeping last-run markers). Left as-is.
+- STATUS Inbox — Active empty (triaged 2026-06-01); Deferred holds 2 not-yet-due items (trajectory monitoring `defer:2026-06-15`, offline attribution `defer:2026-07-01`).
 
 Per-pass counts:
-- Items resolved (moved out of Inbox / Calendar): 1 (Campaign-recipient activity → reliability audit Tier 6.3).
-- Items struck: 0.
-- Items moved (Inbox → plans/): 2 (Targets 1 and 2 transitioned from "plan it" framing to "execute the queue").
-- Items deferred: 0 new defers.
-- Files touched: 4 (STATUS.md, session-log.md, CALENDAR.md, last-cleanup.md).
+- Bugs resolved: 1 (write_verify reconciliation).
+- Inbox items resolved/moved/struck/deferred: 0 (already clean).
+- Files touched: 4 (STATUS.md, bugs.md, session-log.md, last-cleanup.md) + 2 memory files.
 
-Triggered when: user said "cleanup session notes docs calendar" after the planning-push commit landed.
+Triggered when: user said "run cleanup and make sure git is committed local and remote."
