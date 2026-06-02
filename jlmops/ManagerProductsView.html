@@ -1219,7 +1219,10 @@
       google.script.run
         .withSuccessHandler(res => {
           if (res && res.success) {
-            ManagerProductsView.advanceVerify();
+            // Confirm & close: close the editor and return to the refreshed list
+            // (matches the button label; no longer auto-walks to the next task).
+            ManagerProductsView.closeModal();
+            ManagerProductsView.refreshView();
           } else if (status) {
             status.textContent = (res && res.message) || 'Failed to confirm.';
           }
@@ -1250,7 +1253,8 @@
           google.script.run
             .withSuccessHandler(() => {
               ManagerProductsView.closeRevertPrompt();
-              ManagerProductsView.advanceVerify();
+              ManagerProductsView.closeModal();
+              ManagerProductsView.refreshView();
             })
             .withFailureHandler(err => { st.textContent = 'Revert failed: ' + (err && err.message); })
             .WebAppDashboardV2_revertTaskToAdmin(taskId);

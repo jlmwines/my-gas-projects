@@ -106,6 +106,16 @@
             }
             .products-count-table tbody tr[data-task-id] { cursor: pointer; }
             .products-count-table .product-details-row { display: none !important; }
+
+            /* Count-entry modal: give the footer breathing room on mobile so the
+               Save / Save & next buttons aren't flush against the bottom edge and
+               stay easy to tap after entering a count. */
+            #count-entry-modal .modal-footer {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding-bottom: 28px;
+            }
+            #count-entry-modal .modal-footer .btn { min-height: 44px; }
         }
     </style>
 

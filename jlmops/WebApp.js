@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 16:17',
-  commit: 'Manager dashboard task detail — mobile-friendly. The expanded task now separates the metadata (Stream/dates/priority) from a dedicated actions row that wraps to share rows instead of cramming everything into one line; on mobile (<=768px) the action buttons get 44px tap targets + spacing so they no longer touch. The open-the-resource (Open / Open file / Document) and complete (Save) actions are emphasized (bordered + bold) within the existing btn-light palette — no new Bootstrap color classes. Button handlers/classes unchanged. (Admin task surfaces can get the same treatment as a follow-up.)'
+  built: '2026-06-02 16:49',
+  commit: 'Two test fixes. (1) Product verification: "Confirm & close" (and Revert) now actually close the read-only editor and refresh the list, instead of auto-walking to the next queue task — the label said close but the code advanced. Entry points (startVerifyWalk / startVerifyAt) still open the first/chosen task; the per-action walk is removed (a separate "Confirm & next" can be added if chaining is wanted). (2) Count-entry modal (ManagerInventory) on mobile: the footer now wraps with 44px tap targets + bottom padding so Save / Save & next are not flush against the bottom edge and stay easy to tap after entering a count.'
 };
 
 function getVersion() {
