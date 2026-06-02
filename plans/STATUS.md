@@ -1,6 +1,6 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-06-02 — jlmops @203. Product verification surface SHIPPED (@199–@201); CRM write-verify reconciliation now self-heals via `NotificationService.resolveFailure` (@202); destructive DevelopmentView actions are confirm-gated (@203). Content project renamed to PROJ-CONTENT (routing pushed @201 — user still to run `rebuildSysConfigFromSource` + repoint `SysProjects`/task data). Next jlmops build = Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
+**Updated:** 2026-06-02 — jlmops @204. Manager Library now catalog-only + dashboard tasks carry per-type "Open in <view>" buttons (@204); manager↔admin task-surface convergence on shared TaskPacks planned (`jlmops/plans/ADMIN_TASK_UI_PLAN.md`). Product verification surface SHIPPED (@199–@201); CRM write-verify reconciliation now self-heals via `NotificationService.resolveFailure` (@202); destructive DevelopmentView actions are confirm-gated (@203). Content project renamed to PROJ-CONTENT (routing pushed @201 — user still to run `rebuildSysConfigFromSource` + repoint `SysProjects`/task data). Next jlmops build = Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
 
 ## Metrics
 
@@ -9,8 +9,8 @@
 | Phase | Theme cutover, Manager CRM, Lookup admin UI, Content Library subsystem, and the Admin task workbench (`AdminTasksView`) are all SHIPPED and live. Content Library is permanent (`library.enabled` flag and `crm.template.*` SysConfig retired; SysLibrary is the sole template source). Phase 12 cross-link renderer remains blocked on the §16 regions overhaul. |
 | Last Active | 2026-06-02 |
 | Revenue | Steady |
-| Deploy Version | jlmops deploy @203 · theme v1.2.28 LIVE |
-| Deploy Date | jlmops 2026-06-02 (deploy @203) · theme 2026-05-18 (v1.2.28) |
+| Deploy Version | jlmops deploy @204 · theme v1.2.28 LIVE |
+| Deploy Date | jlmops 2026-06-02 (deploy @204) · theme 2026-05-18 (v1.2.28) |
 | Content | 10 editorial posts live on production (EN+HE) — Context published 2026-05-19; 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation). "A Year in the Vineyard" moved OUT of blog pipeline 2026-05-19 — repositioned as recurring subscriber-exclusive "Making Wine — [topic]" series for newsletter + email per `marketing/NEWSLETTER_PLAN.md` |
 | CRM Contacts | 548 enriched |
 | SEO Status | Latest audit: RankMath 2026-05-31 (read-only `audit-site-seo` via curl; global/EN scan, WPML-blind) — 87/100. Open actionable: (RM-1) homepage images missing `alt` plus a `staging6.jlmwines.com` URL leaking onto live content (find source + fix); (RM-2) focus keyword not in title on 41 products / 13 posts / 2 pages (bulk content polish); WPML per-language meta gap (`RANKMATH_WPML_AUDIT.md` §A–F — needs a wp-admin walk, not covered by the scan). Still open from the 2026-05-06 audit (`plans/SEO_AUDIT_2026-05-06.md`): gtin13 emission (#9), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |

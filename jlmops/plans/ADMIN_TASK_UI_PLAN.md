@@ -133,6 +133,25 @@ Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the 
 
 ---
 
+## Manager ↔ Admin task-surface convergence (planned 2026-06-02; revives item 5)
+
+**Observation (user 2026-06-02):** the manager dashboard task queue and AdminTasksView do very similar things but diverge in implementation. The dashboard rolls its **own** task-working code (inline expand via `toggleTaskExpand`; `saveTask`/`revertTask` against `WebAppDashboardV2_updateManagerTask`; per-type deep-link buttons), while AdminTasksView works tasks through the shared **`TaskPacks`** kit opened to the side. Two parallel implementations of "examine + act on a task." This is item 5 ("Manager = queue density, packs only, via the `data-roles` gate"), deferred and never built.
+
+**Target:** one mobile-first task-working component reused by both surfaces.
+- The dashboard queue keeps its role (the manager's at-a-glance list) but **repoints its task interaction onto `TaskPacks`** (`configure({getTask, getEntity, refresh, reload})`) instead of the bespoke inline editor.
+- **Uniform interaction (agreed 2026-06-02):** a task **opens in place** (expand → examine in the dashboard) and offers a **click to its execution location** (the type's view). Examination is local; the button reaches the location — does NOT require auto-opening the exact record in the target view.
+- **Both phone-eligible:** the dashboard queue is already responsive; verify `TaskPacks` renders + acts on mobile when driven from the dashboard.
+
+**Why feasible (groundwork laid):** `TaskPacks` is already a reusable include (built for `configure()`); AdminTasksView + LibraryView already drive it. The server already normalized tasks to ONE shape (the ADMIN_TASK_UI integration); the dashboard's `WebAppDashboardV2` task objects need reconciling to that shape (or a per-surface adapter in `getTask`).
+
+**Scope / cost:** a refactor, not a quick edit. Repoint the dashboard task interaction onto `TaskPacks`, reconcile the task shape, verify mobile, then retire the bespoke `saveTask`/`revertTask`/inline-edit once packs cover them. **Explicitly supersedes the "Light" call** (2026-06-02 Library question, which avoided a manager tasks workbench) — convergence brings the shared *working surface* to the dashboard rather than adding a separate view.
+
+**Shipped separately first (2026-06-02, deploy @204):** Library catalog-only for managers (Tasks tab admin-gated) + per-type "Open in <view>" buttons on dashboard tasks. These survive the convergence — the deep-links to execution locations are independent of inline-vs-pack.
+
+**Open questions:** (a) does `TaskPacks` need changes to render in the compact dashboard-queue context vs the admin side region? (b) reconcile shape in `WebAppDashboardV2` or in `getTask`? (c) confirm every manager-facing task type has a pack archetype.
+
+---
+
 ## Source
 
 Design workflow run 2026-06-01 (`admin-task-ui-design`, 5 agents): 4 lens designs (minimal-reuse, ideal-workbench, role-convergence, IA-first) + synthesis. Recommendation = the hybrid above. Full option detail in the workflow transcript.

@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 11:03',
-  commit: 'DevelopmentView safety + UX (from DEVELOPER_VIEW_AUDIT). The two destructive dev actions — Daily Housekeeping and Rebuild SysConfig — are now gated behind a confirm. The confirm is a centered overlay placed deliberately AWAY from the top trigger-button row, with Cancel default-focused and the destructive Confirm offset to the far side, so a stray second tap/click cannot blow straight through the way a native or co-located confirm would. Reusable devConfirm(message, onConfirm) helper (Esc + backdrop = cancel). Also fixed the mobile button row (d-flex flex-wrap + mb-2) so wrapped buttons no longer touch. Non-destructive actions (Protect Headers, Validate Schema, Run Unit Tests) left unguarded per the audit.'
+  built: '2026-06-02 14:38',
+  commit: 'Manager task UX. (1) Library is catalog-only for managers — the Tasks tab + panel are admin-gated (data-roles) and managers default to the Library tab; admin Library unchanged. (2) ManagerDashboard task queue: product tasks get an "Open in Products" button and inventory tasks an "Open in Inventory" button (contact + verify already deep-linked), so task types that cannot complete inline have a path to their execution surface; tasks still expand in place to examine + complete (status/Save) where inline-eligible. Convergence of the dashboard queue and AdminTasksView onto the shared TaskPacks kit (mobile-first, revives ADMIN_TASK_UI item 5) is planned, not in this deploy.'
 };
 
 function getVersion() {

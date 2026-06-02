@@ -474,6 +474,10 @@
       }
       if (task.typeId === 'task.product.verify') {
         html += '<button type="button" class="btn btn-sm btn-light btn-open-verify">Verify</button>';
+      } else if (task.typeId && (task.typeId.indexOf('task.product.') === 0 || task.typeId.indexOf('task.validation.vintage') === 0)) {
+        html += '<button type="button" class="btn btn-sm btn-light btn-open-products">Open in Products</button>';
+      } else if (task.typeId && task.typeId.indexOf('task.inventory.') === 0) {
+        html += '<button type="button" class="btn btn-sm btn-light btn-open-inventory">Open in Inventory</button>';
       }
       if (!isSystemTask) {
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
@@ -551,6 +555,22 @@
         if (typeof loadView === 'function') {
           loadView('ManagerProducts');
         }
+      });
+    });
+
+    // Open-in-surface deep-links: navigate to the view where the task is actually
+    // completed (its task list / editor). Lets the manager act on types that can't
+    // be completed inline (auto-opening the exact task is a follow-up).
+    container.querySelectorAll('.btn-open-products').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (typeof loadView === 'function') loadView('ManagerProducts');
+      });
+    });
+    container.querySelectorAll('.btn-open-inventory').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (typeof loadView === 'function') loadView('ManagerInventory');
       });
     });
   }

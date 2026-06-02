@@ -269,12 +269,12 @@
 
   <!-- Tab switcher: Tasks / Library -->
   <div class="lv-tabs">
-    <button class="lv-tab active" data-tab="tasks" onclick="LibraryView.switchTab('tasks')">Tasks</button>
+    <button class="lv-tab active" data-tab="tasks" data-roles="admin" onclick="LibraryView.switchTab('tasks')">Tasks</button>
     <button class="lv-tab" data-tab="library" onclick="LibraryView.switchTab('library')">Library</button>
   </div>
 
   <!-- TASKS PANEL -->
-  <div class="lv-panel active" id="lv-panel-tasks">
+  <div class="lv-panel active" id="lv-panel-tasks" data-roles="admin">
     <div class="tw-filter-bar">
       <select id="lv-filter-status">
         <option value="open">Open</option>
@@ -432,6 +432,12 @@
 
     function init() {
       load();
+      // Managers get the Library as a catalog only — the Tasks tab + panel are
+      // admin-gated (data-roles="admin"), so land managers on the Library tab
+      // instead of the now-hidden Tasks tab.
+      if (document.body.classList.contains('role-manager')) {
+        switchTab('library');
+      }
       ['lv-filter-status', 'lv-filter-entity-type', 'lv-filter-topic',
        'lv-filter-assignee', 'lv-filter-language', 'lv-search-tasks',
        'lv-sort-tasks'].forEach(function(id) {
