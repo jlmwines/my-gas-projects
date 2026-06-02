@@ -42,8 +42,8 @@
         $is_he_newsletter = function_exists('icl_get_current_language') && icl_get_current_language() === 'he';
         $mc_lang_interest = $is_he_newsletter ? '8' : '4';
 
-        $newsletter_image_en = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828.jpg';
-        $newsletter_image_he = 'https://staging6.jlmwines.com/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828-h.jpg';
+        $newsletter_image_en = '/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828.jpg';
+        $newsletter_image_he = '/wp-content/uploads/2026/02/evyatar-at-the-vineyard-1200.828-h.jpg';
         $newsletter_image    = is_rtl() ? $newsletter_image_he : $newsletter_image_en;
         $newsletter_image    = get_theme_mod('jlmwines_newsletter_image', $newsletter_image);
         ?>

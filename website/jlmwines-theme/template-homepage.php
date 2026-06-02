@@ -20,7 +20,7 @@ get_header();
     // ─── 1. Hero — Evyatar header ──────────────────────────────────
     $hero_image = get_theme_mod(
         'jlmwines_hero_image',
-        'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-09.png'
+        '/wp-content/uploads/2026/01/evyatar-cohen-09.png'
     );
     $hero_eyebrow  = get_theme_mod('jlmwines_hero_eyebrow',  is_rtl() ? 'לא מומחה יין?' : 'Wine, made easy');
     $hero_headline = get_theme_mod('jlmwines_hero_headline', is_rtl() ? 'אתם לא צריכים להבין ביין. זאת העבודה שלי.' : "You don't need to be an expert.");
@@ -141,7 +141,7 @@ get_header();
     // ─── 4. Why trust me banner ───────────────────────────────────
     $wtm_image = get_theme_mod(
         'jlmwines_wtm_image',
-        'https://staging6.jlmwines.com/wp-content/uploads/2026/01/evyatar-cohen-10.png'
+        '/wp-content/uploads/2026/01/evyatar-cohen-10.png'
     );
     $wtm_eyebrow  = get_theme_mod('jlmwines_wtm_eyebrow',  '');
     $wtm_headline = get_theme_mod('jlmwines_wtm_headline', is_rtl() ? 'למה לסמוך עליי?' : 'Why trust me?');
