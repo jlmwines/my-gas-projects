@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 10:07',
-  commit: 'System failure-task lifecycle (targeted slice). NotificationService.resolveFailure(context) is the symmetric counterpart to reportFailure: it auto-closes the open task.system.failure for a context once its condition clears (stamps resolvedAt/resolvedBy=auto, completes the task, clears the matching health alert; no-op if none open). Shared _entityIdFromContext keeps the raise/clear sides in sync. ContactImportService.updateContactsFromOrders now calls resolveFailure on the write-verify success branch, so reconciliation.sys_contacts.write_verify self-heals on the next clean rebuild. Phase 1 (auto-resolve rollout across all scheduled reporters) + Phase 2 (manual-dismiss UI for one-shot failures, e.g. deployment_drift) planned in SYSTEM_TASK_LIFECYCLE_PLAN.md.'
+  built: '2026-06-02 11:03',
+  commit: 'DevelopmentView safety + UX (from DEVELOPER_VIEW_AUDIT). The two destructive dev actions — Daily Housekeeping and Rebuild SysConfig — are now gated behind a confirm. The confirm is a centered overlay placed deliberately AWAY from the top trigger-button row, with Cancel default-focused and the destructive Confirm offset to the far side, so a stray second tap/click cannot blow straight through the way a native or co-located confirm would. Reusable devConfirm(message, onConfirm) helper (Esc + backdrop = cancel). Also fixed the mobile button row (d-flex flex-wrap + mb-2) so wrapped buttons no longer touch. Non-destructive actions (Protect Headers, Validate Schema, Run Unit Tests) left unguarded per the audit.'
 };
 
 function getVersion() {

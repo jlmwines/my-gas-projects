@@ -60,6 +60,8 @@ Minimal change: add `mb-2` to each button (the `d-flex flex-wrap` wrapper is the
 
 ## Prioritized action list (build session can execute from this)
 
+**Status 2026-06-02 (deploy @203):** items 1–3 SHIPPED. Per user decision, the confirms are *standard* (not typed-phrase), but the confirm dialog is a centered overlay positioned deliberately **away from the trigger button** (Cancel default-focused, destructive Confirm offset to the far side, Esc + backdrop = cancel) so a stray second tap/click can't blow straight through — addressing the "action and confirm in the same spot" risk. Reusable `devConfirm()` helper in `DevelopmentView.html` (self-contained; promote to a shared `TaskWidgets` helper if another view needs a destructive confirm). Items 4 (optional Protect-Headers confirm) and 5 (trace Run-Unit-Tests internals) remain open.
+
 1. **Add a hard confirm to Daily Housekeeping.** Block the call until the user confirms (ideally a typed phrase, since it's destructive + fires external writes). Highest priority.
 2. **Add a confirm to Rebuild SysConfig.** Standard confirm ("This rewrites the live SysConfig sheet. Continue?") before `google.script.run`.
 3. **Fix the mobile button row** — wrap in `<div class="d-flex flex-wrap">` and add `mb-2` to each button (see above).
