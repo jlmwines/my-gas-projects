@@ -79,6 +79,19 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 3. **Auto-fix boundary** — confirm read-only diagnosis only (recommended), vs allowing the routine to open a branch/PR with a proposed fix for human review (more automation, still no live deploy).
 4. **Endpoint security** — acceptable to expose an `ANYONE`-access token-gated read endpoint returning ops health (no PII)? If not, the consumer is interactive-only.
 
+## Inbound: session → ops change requests (idea, 2026-06-02, from user)
+
+The producer/consumer above is **ops → session** (read). The natural counterpart is **session → ops writes**: tell a Claude session a real-world fact and have it enacted in ops, instead of hand-editing jlmops. Motivating example (user): "the carton manufacturers are both unavailable (war + relocation) — delay that task a week." Today the user must *also* open ops and change the task's due date by hand. The interface would let them say it once to a session and have the change applied.
+
+**Shape:**
+- The session emits a **structured change request** against a task (or other ops entity): e.g. `{action: 'reschedule', taskRef, newDueDate, reason}`. Other actions: `reassign`, `add_note`, `close`, `create_task`.
+- It lands in an **ops inbox the backend picks up** — e.g. a `SysChangeRequests` tab (single-tab, Drive-MCP-writable so even a session can append) *or* a token-gated write endpoint — and jlmops applies it on its next maintenance tick (or on demand), with validation + a `SysLibraryActivity`/task-notes audit entry.
+- **Target resolution:** identify the task by stable `st_TaskId` where the session has it (e.g. straight off the dashboard/export); otherwise surface candidates by description and have the user pick — never guess a destructive target.
+
+**Guardrails (consistent with project discipline):** every applied change is logged (who / what / why); destructive or ambiguous changes require explicit in-session confirmation before they're written; ops stays the system of record and the validator (it can reject an illegal change). Both bridge directions stay human-confirmed.
+
+**Status:** idea captured, not designed in depth. Pairs with the read bridge — a session could read ops state (status export) *and* request well-scoped changes back, closing the loop the user described.
+
 ## Relationships
 
 - `RELIABILITY_AUDIT.md` Tier 3.2 (producer), Tier 4.1 (DR mirror), Tier 3.1 (heartbeats feeding the export).

@@ -4,6 +4,12 @@
 
 When an order is edited after its packing slip is printed (while still on-hold), the printed slip becomes stale. The manager needs a way to reprint with updated data, but reprints should be rare and intentional - not offered for every printed order.
 
+## Known weakness driving this (noted 2026-06-02)
+
+**Not implemented** (status checklist below is all unchecked; code runs only the simple `sol_PackingStatus` Ready→Printed model — none of the planned fields/states exist). The gap surfaced in production: the `task.order.packing_available` singleton (de-duped, entityId `PACKING`, `due_pattern: immediate`) is the *only* signal of "orders available to print," and it closes only when `PrintService` prints everything down to 0 `Ready`. That worked until recently — slips got printed to zero and the task closed. When a `Ready` order lingers unprinted, the task stays open and its frozen creation-day due date ages into dashboard "overdue" — misleading, since it's a standing indicator, not a deadline.
+
+**Correction direction (agreed 2026-06-02):** combine **(1)** this reprint/mutability lifecycle with **(2)** a **task-independent** way to determine "how many orders are really available for print" — availability derived from order/packing state (Ready / reprint-eligible per the state machine), *not* inferred from the presence of a singleton task. The task, if kept at all, becomes a thin notification over that state rather than the source of truth; that also removes the misleading-overdue symptom. (Related: do NOT blanket-suppress "overdue" styling on all system tasks — inventory counts / comax validations may have real deadlines; only this packing indicator is the clear non-deadline case.)
+
 ## Key Insight
 
 - **Mutable orders (on-hold):** Can be edited, packing slip might become stale after print
