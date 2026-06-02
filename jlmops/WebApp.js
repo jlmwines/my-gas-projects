@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 16:49',
-  commit: 'Two test fixes. (1) Product verification: "Confirm & close" (and Revert) now actually close the read-only editor and refresh the list, instead of auto-walking to the next queue task — the label said close but the code advanced. Entry points (startVerifyWalk / startVerifyAt) still open the first/chosen task; the per-action walk is removed (a separate "Confirm & next" can be added if chaining is wanted). (2) Count-entry modal (ManagerInventory) on mobile: the footer now wraps with 44px tap targets + bottom padding so Save / Save & next are not flush against the bottom edge and stay easy to tap after entering a count.'
+  built: '2026-06-02 16:57',
+  commit: 'Library entity drawer: removed the duplicate "Open in Drive" action-bar button — it opened the same entity.docUrl as "Open Doc" in the Files & URLs section. The document is now opened one way (Open Doc, in its proper Files & URLs home); the action bar keeps Create Content Tasks etc. drawerOpenInDrive() left defined for any direct callers.'
 };
 
 function getVersion() {
