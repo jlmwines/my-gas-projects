@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 14:59',
-  commit: 'Manager dashboard task behavior. A task opens in place (expand to examine) and links to its execution location via one unified Open affordance (taskOpenTarget): contact->Contacts, verify->walk, product/vintage->Products, inventory->Inventory, packing->Orders (closes the prior dead-end), content->Open file. The content file link reuses the existing task->entity linkage: WebAppDashboardV2_getManagerData resolves the linked library entity (st_EntityId -> SysLibrary slb_Slug -> slb_DocUrl, read once) and attaches fileUrl, so EVERY content task links straight to its Doc, not just those whose entityId is already a URL. Scattered per-type buttons consolidated into one mechanism (behavior-preserving); inline status/Save unchanged where inline-eligible.'
+  built: '2026-06-02 15:44',
+  commit: 'Manager task navigation + content-file fixes (from screenshot review). (1) Library entity drawer attached-task rows now navigate to the task: manager -> ManagerDashboard with the task auto-expanded + scrolled into view (new selectDashboardTaskId deep-link consumed on mount), admin -> AdminTasks (existing selectTaskId contract). Previously the rows were dead. (2) Dashboard content tasks resolve the related file correctly: the real join is task.st_EntityId === SysLibrary slb_Slug (not st_LinkedEntityId, which is a concept code), and when the linked entity has no Doc yet (e.g. a translation entity) it falls back to a referenced source entity_s Doc via slb_References. Fixes the translate task that showed no Open file link.'
 };
 
 function getVersion() {

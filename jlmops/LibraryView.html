@@ -879,6 +879,21 @@
       renderDrawerStateHistory((data && data.activity_log) || []);
     }
 
+    // Navigate from the entity drawer to a task. Manager task home is the
+    // dashboard queue (deep-link + auto-expand on mount); admin uses AdminTasks
+    // (existing selectTaskId contract). Reset any modal scroll-lock first.
+    function openAttachedTask(id) {
+      if (!id) return;
+      document.body.style.overflow = '';
+      if (document.body.classList.contains('role-manager')) {
+        sessionStorage.setItem('selectDashboardTaskId', id);
+        if (typeof loadView === 'function') loadView('ManagerDashboard');
+      } else {
+        sessionStorage.setItem('selectTaskId', id);
+        if (typeof loadView === 'function') loadView('AdminTasks');
+      }
+    }
+
     function renderDrawerAttachedTasks(tasks) {
       var el = document.getElementById('lv-drawer-attached-tasks');
       if (!el) return;
@@ -900,7 +915,7 @@
         var dueChip = t.dueDate
           ? '<span class="tw-due-chip ' + TaskWidgets.dueClass(t.dueDate, t.status) + '">' + TaskWidgets.formatDate(t.dueDate) + '</span>'
           : '';
-        return '<div class="lv-drawer-task-row">' +
+        return '<div class="lv-drawer-task-row" style="cursor:pointer;" title="Open this task" onclick="LibraryView.openAttachedTask(\'' + TaskWidgets.escape(t.id) + '\')">' +
           '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
           '<span class="lv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
           dueChip +
@@ -1077,6 +1092,7 @@
     return {
       init: init,
       switchTab: switchTab,
+      openAttachedTask: openAttachedTask,
       switchPreset: switchPreset,
       toggleTask: toggleTask,
       openEntityDrawer: openEntityDrawer,

@@ -275,6 +275,19 @@
       renderInventoryCard(data.inventory);
       renderProductsCard(data.products);
       applyFilters();
+
+      // Deep-link from the Library entity drawer (the manager's task home is here):
+      // expand + scroll to the requested task once the queue has rendered.
+      var selectId = sessionStorage.getItem('selectDashboardTaskId');
+      if (selectId) {
+        sessionStorage.removeItem('selectDashboardTaskId');
+        state.expandedTaskId = selectId;
+        renderTaskList();
+        setTimeout(function() {
+          var row = document.querySelector('.task-row[data-id="' + selectId + '"]');
+          if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' });
+        }, 50);
+      }
     } catch (e) {
       console.error('Dashboard render error:', e);
       handleError({ message: e.message });

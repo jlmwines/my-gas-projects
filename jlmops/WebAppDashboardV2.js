@@ -728,7 +728,7 @@ function WebAppDashboardV2_getManagerData() {
     // Resolve content tasks' related file via the existing task->entity linkage
     // (st_EntityId -> SysLibrary slb_Slug -> slb_DocUrl). Read SysLibrary once,
     // and only when a manager content task is actually present.
-    let docUrlBySlug = {};
+    let libBySlug = {};
     const hasContentTasks = allTasksIncludingDone.some(t =>
       t.st_AssignedTo === 'Manager' &&
       t.st_Status !== 'Cancelled' &&
@@ -739,13 +739,30 @@ function WebAppDashboardV2_getManagerData() {
         const librarySheet = SheetAccessor.getLibrarySheet('SysLibrary', false);
         if (librarySheet) {
           _rowsToObjects(librarySheet.getDataRange().getValues()).forEach(r => {
-            if (r.slb_Slug) docUrlBySlug[r.slb_Slug] = r.slb_DocUrl || '';
+            if (r.slb_Slug) {
+              libBySlug[r.slb_Slug] = {
+                doc: r.slb_DocUrl || '',
+                refs: String(r.slb_References || '').split(',').map(s => s.trim()).filter(Boolean)
+              };
+            }
           });
         }
       } catch (libErr) {
         // Non-fatal — content tasks just won't carry a file link this load.
       }
     }
+    // Resolve a content entity's related file: its own Doc, else a referenced
+    // source's Doc (a translation has no Doc yet -> open the source it references).
+    const resolveContentFileUrl = (slug) => {
+      const e = libBySlug[slug];
+      if (!e) return '';
+      if (e.doc) return e.doc;
+      for (let i = 0; i < e.refs.length; i++) {
+        const ref = libBySlug[e.refs[i]];
+        if (ref && ref.doc) return ref.doc;
+      }
+      return '';
+    };
 
     const managerTasks = allTasksIncludingDone
       .filter(task => task.st_AssignedTo === 'Manager')
@@ -804,8 +821,7 @@ function WebAppDashboardV2_getManagerData() {
           if (base.entityId && String(base.entityId).indexOf('http') === 0) {
             base.fileUrl = base.entityId;
           } else {
-            const slug = task.st_EntityId || task.st_LinkedEntityId || '';
-            base.fileUrl = docUrlBySlug[slug] || '';
+            base.fileUrl = resolveContentFileUrl(task.st_EntityId || base.entityId || '');
           }
         }
 
