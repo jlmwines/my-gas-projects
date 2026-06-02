@@ -72,7 +72,8 @@
       "WebFetch(domain:rankmath.com)",
       "WebFetch(domain:easymcpai.com)",
       "WebFetch(domain:www.jlmwines.com)",
-      "Bash(echo \"exit=$? bytes=$\\(wc -c </tmp/rm_audit.json\\)\")"
+      "Bash(echo \"exit=$? bytes=$\\(wc -c </tmp/rm_audit.json\\)\")",
+      "Bash(git rev-list *)"
     ],
     "deny": [
       "Bash(git -C:*)",

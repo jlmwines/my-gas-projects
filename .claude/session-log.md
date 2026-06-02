@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-02 (continued ×2) — manager task UX @204→@209 (live-tested) + plan simplifications
+
+- **Shipped @204→@209 (manager task surfaces; user live-tested OK on desktop + mobile):** @204 Library catalog-only for managers (Tasks tab admin-gated) + dashboard per-type Open buttons; @205 unified Open affordance + content-file link (first cut used the wrong key); @206 Library entity-drawer attached-task rows navigate to the task (manager → ManagerDashboard auto-expand; admin → AdminTasks) + content-file fix using the real join `task.st_EntityId === slb_Slug` with a referenced-source-Doc fallback; @207 mobile-friendly dashboard task detail (metadata vs wrapping actions row, 44px taps, emphasized open-resource + Save); @208 verify "Confirm & close"/Revert now actually close + refresh (were auto-walking) + count-entry modal mobile footer padding/tap-targets; @209 Library drawer de-dup (removed redundant "Open in Drive").
+- **User confirmed:** create/open/count/verify all look good desktop + mobile; verify modal closes correctly. No open testing items — bugs reported ad hoc from here.
+- **Plans/notes banked (not built):** `OPS_SESSION_BRIDGE_PLAN` gained the inbound **session→ops change-request** idea ("delay that task a week"); `PACKING_SLIP_REPRINT_PLAN` **simplified** — dropped the 6-state machine for regenerate-on-reprint + reprint-any-unarchived-order + retire the `packing_available` singleton (fixes its overdue-aging); `RELIABILITY_AUDIT` §1A detection-coverage requirement; `ADMIN_TASK_UI` convergence section; `bugs.md` logs the packing_available overdue weakness. Decision: do NOT blanket-suppress overdue on all system tasks.
+- **Memory added:** `jlm_clasp_version_cap` (200-version cap → clear versions in the editor), `feedback_mobile_minimal_side_padding`.
+- **Pending (user / future):** run `rebuildSysConfigFromSource` (`SetupConfig.js`) + repoint the `SysProjects` row & content-task `st_ProjectId` for the PROJ-CONTENT rename; apply the queued global mobile side-padding trim (`container-fluid p-4`); admin task-surface mobile pass; implement packing-slip reprint (simplified plan) + manager↔admin TaskPacks convergence when wanted.
+
+---
+
 ## 2026-06-02 (continued) — resolveFailure @202, DevelopmentView confirm gates @203, planning banked
 
 - **@202:** `NotificationService.resolveFailure(context)` auto-closes the open `task.system.failure` once its condition clears (wired to the write-verify success branch; shared `_entityIdFromContext` keeps raise/clear in sync). Validated live: the full daily cycle reconciled cleanly (new order folded in) and the open `write_verify` task auto-cleared — end-to-end proof of the lifecycle.
