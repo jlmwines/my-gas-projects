@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-01 20:31',
-  commit: '@191 ADMIN_TASK_UI Deploy B GO-LIVE — Tasks nav entry added after Dashboard; AdminProjects demoted to the bottom as a soak fallback; temporary test link removed. AdminTasksView density reduced to Standard + Full (the unusable 1/3 view that hid its own width control is gone). Dashboard task-card now opens the Tasks view (was AdminProjects). Also fixed ProductService.confirmWebUpdates: the export close now sets status Done (was a no-arg updateTaskStatus that blanked the status, so closed vintage tasks reappeared as New). Follows @190.'
+  built: '2026-06-02 07:16',
+  commit: 'Product verification surface (read-only batch review). New task.product.verify (manager_direct). ProductService gains getVerifyPlanningData / getVerifyDetail / createVerifyTasksBulk / getOpenVerifyTasks / completeVerifyTask / updateLastDetailAudit (stamps pa_LastDetailAudit only, never pa_LastCount). AdminProducts adds a Create Verification Tasks card (collapsed, populate-on-expand). ManagerProducts verifyMode modal: read-only render, live-image tile, Comax-vs-web on Specs, Division/Group empty-value flags, footer Confirm and close / Revert to admin (findings to task notes then reassign), batch-walks the open queue advancing after each action. Manager dashboard Verify button deep-links into the walk via sessionStorage. Count flow untouched (strip deferred per plan). After deploy, run rebuildSysConfigFromSource to load the new task template.'
 };
 
 function getVersion() {

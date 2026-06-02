@@ -472,6 +472,9 @@
       if (isUrl2) {
         html += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">&#8599; Document</a>';
       }
+      if (task.typeId === 'task.product.verify') {
+        html += '<button type="button" class="btn btn-sm btn-light btn-open-verify">Verify</button>';
+      }
       if (!isSystemTask) {
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
         ['New', 'In Progress', 'Done'].forEach(function(s) {
@@ -535,6 +538,18 @@
           if (typeof loadView === 'function') {
             loadView('ManagerContacts');
           }
+        }
+      });
+    });
+
+    // Verify deep-link: start the read-only verification batch walk in ManagerProducts.
+    // Any verify task's button starts the walk; ManagerProducts loads the full open queue.
+    container.querySelectorAll('.btn-open-verify').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        sessionStorage.setItem('startVerifyWalk', '1');
+        if (typeof loadView === 'function') {
+          loadView('ManagerProducts');
         }
       });
     });

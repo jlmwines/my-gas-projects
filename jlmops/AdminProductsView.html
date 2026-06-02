@@ -327,6 +327,70 @@
       </div>
     </div>
 
+    <!-- CARD 5: VERIFICATION TASK CREATION -->
+    <div class="card mb-4">
+      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span>Create Verification Tasks</span>
+        <div>
+          <span id="verify-planning-loaded" class="text-muted small mr-2"></span>
+          <button id="btn-verify-toggle" class="btn btn-sm" onclick="AdminProductsView.toggleVerifyCard()">Show</button>
+        </div>
+      </div>
+      <div class="card-body" id="verify-card-body" style="display:none;">
+        <div class="form-row align-items-end mb-2">
+          <div class="col-auto">
+            <label for="verify-name-mode" class="small mb-1 d-block">Name filter</label>
+            <select id="verify-name-mode" class="form-control form-control-sm" style="width: 120px;">
+              <option value="startsWith" selected>starts with</option>
+              <option value="contains">contains</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="verify-name-text" class="small mb-1 d-block">&nbsp;</label>
+            <input type="text" id="verify-name-text" class="form-control form-control-sm" placeholder="e.g. Yatir">
+          </div>
+          <div class="col-auto">
+            <label for="verify-start-at" class="small mb-1 d-block">Start at (name)</label>
+            <input type="text" id="verify-start-at" class="form-control form-control-sm" placeholder="empty = A">
+          </div>
+          <div class="col-auto">
+            <label for="verify-limit" class="small mb-1 d-block">Count</label>
+            <input type="number" id="verify-limit" class="form-control form-control-sm" value="20" style="width: 80px;">
+          </div>
+          <div class="col-auto">
+            <label for="verify-days-threshold" class="small mb-1 d-block">Skip if verified within</label>
+            <input type="number" id="verify-days-threshold" class="form-control form-control-sm" value="180" placeholder="days" style="width: 100px;">
+          </div>
+        </div>
+        <div class="form-row align-items-center mb-2">
+          <div class="col-auto">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="verify-chk-web-only" checked>
+              <label class="form-check-label" for="verify-chk-web-only">Web only</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="verify-chk-wine-only" checked>
+              <label class="form-check-label" for="verify-chk-wine-only">Wine only (Div 1)</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="verify-chk-zero-stock">
+              <label class="form-check-label" for="verify-chk-zero-stock">Include 0 stock</label>
+            </div>
+          </div>
+          <div class="col text-right">
+            <span id="verify-candidate-summary" class="text-muted"></span>
+          </div>
+          <div class="col-auto">
+            <button id="btn-create-verify-tasks" class="btn btn-sm" disabled onclick="AdminProductsView.handleCreateVerifyTasks()">Create tasks</button>
+          </div>
+        </div>
+        <div id="verify-status" class="small mb-2"></div>
+        <div id="verify-preview-container" class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+          <p class="text-muted small mb-0">Click Show to load product data…</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Vendor SKU Update Modal -->
@@ -2086,6 +2150,195 @@
           .WebAppLookups_updateRow(cfg.mapName, editKey, row);
       }
     };
+
+    // --- Card 5: Verification Task Creation (product-side mirror of the count card) ---
+    AdminProductsView.verifyState = { products: [], loadedAt: null, loaded: false };
+
+    AdminProductsView.toggleVerifyCard = function() {
+      const body = document.getElementById('verify-card-body');
+      const btn = document.getElementById('btn-verify-toggle');
+      if (!body) return;
+      const showing = body.style.display !== 'none';
+      if (showing) {
+        body.style.display = 'none';
+        if (btn) btn.textContent = 'Show';
+        return;
+      }
+      body.style.display = 'block';
+      if (btn) btn.textContent = 'Hide';
+      if (!AdminProductsView.verifyState.loaded) {
+        AdminProductsView.loadVerifyPlanning();
+      }
+    };
+
+    AdminProductsView.loadVerifyPlanning = function() {
+      const preview = document.getElementById('verify-preview-container');
+      const summary = document.getElementById('verify-candidate-summary');
+      const createBtn = document.getElementById('btn-create-verify-tasks');
+      const loadedLabel = document.getElementById('verify-planning-loaded');
+      if (preview) preview.innerHTML = '<p class="text-muted small mb-0">Loading product data…</p>';
+      if (summary) summary.textContent = '';
+      if (createBtn) createBtn.disabled = true;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.error) {
+            if (preview) preview.innerHTML = '<p class="text-danger small mb-0">' + AdminProductsView._escapeHtml(res.error) + '</p>';
+            return;
+          }
+          AdminProductsView.verifyState.products = (res && res.products) || [];
+          AdminProductsView.verifyState.loadedAt = res && res.loadedAt;
+          AdminProductsView.verifyState.loaded = true;
+          if (loadedLabel) {
+            const ts = AdminProductsView.verifyState.loadedAt ? new Date(AdminProductsView.verifyState.loadedAt).toLocaleTimeString() : '';
+            loadedLabel.textContent = ts ? 'loaded ' + ts : '';
+          }
+          AdminProductsView.applyVerifyFilters();
+        })
+        .withFailureHandler(err => {
+          if (preview) preview.innerHTML = '<p class="text-danger small mb-0">Failed to load: ' + AdminProductsView._escapeHtml(err.message) + '</p>';
+        })
+        .WebAppProducts_getVerifyPlanningData();
+    };
+
+    AdminProductsView.filterVerifyCandidates = function() {
+      const nameText = (document.getElementById('verify-name-text').value || '').trim().toLowerCase();
+      const mode = document.getElementById('verify-name-mode').value;
+      const startAt = (document.getElementById('verify-start-at').value || '').trim().toLowerCase();
+      const dt = document.getElementById('verify-days-threshold').value;
+      const daysThreshold = dt ? parseInt(dt, 10) : null;
+      const webOnly = document.getElementById('verify-chk-web-only').checked;
+      const wineOnly = document.getElementById('verify-chk-wine-only').checked;
+      const includeZero = document.getElementById('verify-chk-zero-stock').checked;
+      const nowMs = Date.now();
+
+      const results = [];
+      for (const p of AdminProductsView.verifyState.products) {
+        if (p.hasOpenTask) continue;
+        if (webOnly && !p.isWeb) continue;
+        if (wineOnly && !p.isWine) continue;
+        if (!includeZero) {
+          if (p.stock === null || isNaN(p.stock) || p.stock <= 0) continue;
+        }
+        if (nameText) {
+          const n = (p.nameHe || '').toLowerCase();
+          if (mode === 'startsWith') { if (!n.startsWith(nameText)) continue; }
+          else { if (n.indexOf(nameText) === -1) continue; }
+        }
+        if (daysThreshold !== null && !isNaN(daysThreshold)) {
+          if (p.lastDetailAudit) {
+            const last = new Date(p.lastDetailAudit).getTime();
+            if (!isNaN(last)) {
+              const diffDays = Math.ceil((nowMs - last) / (1000 * 60 * 60 * 24));
+              if (diffDays <= daysThreshold) continue;
+            }
+          }
+        }
+        if (startAt) {
+          const n = (p.nameHe || '').toLowerCase();
+          if (n < startAt) continue;
+        }
+        results.push(p);
+      }
+
+      const rawLimit = document.getElementById('verify-limit').value;
+      const limit = rawLimit ? parseInt(rawLimit, 10) : null;
+      if (limit && !isNaN(limit) && limit > 0) {
+        return { matched: results.length, sliced: results.slice(0, limit) };
+      }
+      return { matched: results.length, sliced: results };
+    };
+
+    AdminProductsView.applyVerifyFilters = function() {
+      const summary = document.getElementById('verify-candidate-summary');
+      const preview = document.getElementById('verify-preview-container');
+      const createBtn = document.getElementById('btn-create-verify-tasks');
+      if (!AdminProductsView.verifyState.products.length) {
+        if (summary) summary.textContent = 'No products loaded.';
+        if (preview) preview.innerHTML = '<p class="text-muted small mb-0">No data.</p>';
+        if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Create tasks'; }
+        return;
+      }
+      const r = AdminProductsView.filterVerifyCandidates();
+      if (summary) summary.textContent = r.matched + ' match — will create ' + r.sliced.length;
+      if (createBtn) {
+        createBtn.disabled = r.sliced.length === 0;
+        createBtn.textContent = r.sliced.length ? 'Create ' + r.sliced.length + ' tasks' : 'Create tasks';
+      }
+      AdminProductsView.renderVerifyPreview(r.sliced);
+    };
+
+    AdminProductsView._formatAuditDate = function(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '—';
+      return d.toISOString().slice(0, 10);
+    };
+
+    AdminProductsView.renderVerifyPreview = function(rows) {
+      const preview = document.getElementById('verify-preview-container');
+      if (!preview) return;
+      if (!rows.length) {
+        preview.innerHTML = '<p class="text-muted small mb-0">No candidates for current filters.</p>';
+        return;
+      }
+      const esc = AdminProductsView._escapeHtml;
+      let html = '<table class="table table-sm table-hover"><thead><tr>' +
+        '<th>SKU</th><th>Name</th><th class="text-center">Vintage</th>' +
+        '<th class="text-center">Stock</th><th class="text-center">Last Verified</th>' +
+        '<th>Brand</th></tr></thead><tbody>';
+      rows.forEach(p => {
+        html += '<tr>' +
+          '<td>' + esc(p.sku) + '</td>' +
+          '<td>' + esc(p.nameHe) + '</td>' +
+          '<td class="text-center">' + esc(p.vintage) + '</td>' +
+          '<td class="text-center">' + (p.stock === null ? '' : p.stock) + '</td>' +
+          '<td class="text-center">' + AdminProductsView._formatAuditDate(p.lastDetailAudit) + '</td>' +
+          '<td>' + esc(p.brand || p.vendor || '') + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      preview.innerHTML = html;
+    };
+
+    AdminProductsView.handleCreateVerifyTasks = function() {
+      const r = AdminProductsView.filterVerifyCandidates();
+      if (!r.sliced.length) return;
+      const skus = r.sliced.map(p => p.sku);
+      const createBtn = document.getElementById('btn-create-verify-tasks');
+      const status = document.getElementById('verify-status');
+      const originalText = createBtn ? createBtn.textContent : '';
+      if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Creating…'; }
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.success) {
+            const parts = ['Created ' + (res.created || 0)];
+            if (res.skippedDedup) parts.push(res.skippedDedup + ' duplicates skipped');
+            if (res.errors && res.errors.length) parts.push(res.errors.length + ' errors');
+            if (status) {
+              status.className = 'small mb-2 ' + (res.errors && res.errors.length ? 'text-warning' : 'text-success');
+              status.textContent = parts.join(', ') + '.';
+            }
+            AdminProductsView.loadVerifyPlanning();
+          } else {
+            if (status) { status.className = 'small mb-2 text-danger'; status.textContent = (res && res.message) || 'Create failed'; }
+            if (createBtn) { createBtn.disabled = false; createBtn.textContent = originalText; }
+          }
+        })
+        .withFailureHandler(err => {
+          if (status) { status.className = 'small mb-2 text-danger'; status.textContent = 'Error: ' + (err && err.message); }
+          if (createBtn) { createBtn.disabled = false; createBtn.textContent = originalText; }
+        })
+        .WebAppProducts_createVerifyTasksBulk(skus, '');
+    };
+
+    // Wire verify-card filter controls (they exist in the DOM even while the card is collapsed).
+    ['verify-name-mode','verify-name-text','verify-start-at','verify-limit','verify-days-threshold',
+     'verify-chk-web-only','verify-chk-wine-only','verify-chk-zero-stock'].forEach(id => {
+      const ctl = document.getElementById(id);
+      if (!ctl) return;
+      const evt = (ctl.tagName === 'SELECT' || ctl.type === 'checkbox') ? 'change' : 'input';
+      ctl.addEventListener(evt, AdminProductsView.applyVerifyFilters);
+    });
 
     AdminProductsView.refreshView();
     })();

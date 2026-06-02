@@ -32,6 +32,17 @@
     .tab-content.active { display: block; }
     
     .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    /* Verification (read-only) mode — toggled by #editor-modal.verify-mode */
+    .verify-show { display: none; }
+    #editor-modal.verify-mode .verify-show { display: block; }
+    .verify-action { display: none; }
+    #editor-modal.verify-mode .verify-action { display: inline-block; }
+    #editor-modal.verify-mode .edit-only { display: none; }
+    #editor-modal.verify-mode #global-actions { display: none; }
+    #editor-modal.verify-mode .comparison-grid { grid-template-columns: 1fr; }
+    #editor-modal.verify-mode .comparison-grid > div:nth-child(2) { display: none; }
+    .verify-flag { color: #dc3545; font-weight: 600; }
+    #verify-image { max-width: 300px; max-height: 300px; border: 1px solid #ced4da; border-radius: 4px; background: #f8f9fa; display: block; }
     .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .hebrew-text { direction: rtl; text-align: right; }
@@ -217,6 +228,12 @@
       </div>
       
       <div class="form-body">
+        <!-- Verify-mode only: live site image for read-only review -->
+        <div class="verify-show" id="verify-image-tile" style="margin-bottom: 14px;">
+          <div class="col-header">Live site image</div>
+          <img id="verify-image" src="" alt="">
+          <div id="verify-image-none" class="text-muted small" style="display:none;">No web image on file.</div>
+        </div>
         <!-- Tabs with Right-Aligned Actions -->
         <div class="tab-bar">
           <div class="tab-group">
@@ -290,6 +307,8 @@
                <div class="form-group"><label>Comax Size</label><div class="p-2 bg-light border rounded" id="cur-CmxSize"></div></div>
                <div class="form-group"><label>Comax Division</label><div class="p-2 bg-light border rounded" id="cur-CmxDivision"></div></div>
                <div class="form-group"><label>Comax Group</label><div class="p-2 bg-light border rounded" id="cur-CmxGroup"></div></div>
+               <div class="form-group verify-show"><label>Web Categories</label><div class="p-2 bg-light border rounded" id="verify-web-category"></div></div>
+               <div class="verify-show" id="verify-flags"></div>
             </div>
             <div>
               <div class="col-header">Edit</div>
@@ -445,8 +464,30 @@
       <datalist id="abv-options"></datalist>
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
-        <button class="btn border" onclick="ManagerProductsView.closeModal()">Cancel</button>
-        <button class="btn" onclick="ManagerProductsView.submitChanges()">Submit</button>
+        <button class="btn border edit-only" onclick="ManagerProductsView.closeModal()">Cancel</button>
+        <button class="btn edit-only" onclick="ManagerProductsView.submitChanges()">Submit</button>
+        <button class="btn border verify-action" onclick="ManagerProductsView.closeModal()">Close</button>
+        <button class="btn verify-action" onclick="ManagerProductsView.openRevertPrompt()">Revert to admin</button>
+        <button class="btn verify-action" onclick="ManagerProductsView.confirmVerify()">Confirm &amp; close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verify-mode: Revert-to-admin findings modal -->
+  <div class="modal-overlay" id="verify-revert-modal">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h5 class="mb-0">Revert to admin</h5>
+        <button class="modal-close" onclick="ManagerProductsView.closeRevertPrompt()">&times;</button>
+      </div>
+      <div class="form-body">
+        <label class="small text-muted mb-1">Findings (saved to the task notes for the admin)</label>
+        <textarea id="verify-revert-notes" class="form-control" rows="4" placeholder="e.g. Image is blurry; Comax year shows 2020 but bottle is 2021."></textarea>
+        <div id="verify-revert-status" class="small mt-2"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button class="btn border" onclick="ManagerProductsView.closeRevertPrompt()">Cancel</button>
+        <button class="btn" onclick="ManagerProductsView.doRevert()">Save &amp; revert</button>
       </div>
     </div>
   </div>
@@ -462,12 +503,24 @@
     ManagerProductsView.currentActiveTab = 'desc';
     ManagerProductsView.suggestionsList = [];
 
+    // Verification (read-only review) batch-walk state
+    ManagerProductsView.verifyMode = false;
+    ManagerProductsView.verifyQueue = [];
+    ManagerProductsView.verifyIndex = -1;
+
     // --- Initialization ---
     ManagerProductsView.refreshView = function() {
       ManagerProductsView.loadWidgetData();
       ManagerProductsView.loadTaskList();
       ManagerProductsView.loadCategoryStatus(); // Load section 3 contents immediately
       ManagerProductsView.initializeSearch(); // Attach search listener
+
+      // Deep-link entry: a dashboard verify task requests the read-only batch walk.
+      // One-shot flag so the post-walk refreshView() does not retrigger.
+      if (sessionStorage.getItem('startVerifyWalk') === '1') {
+        sessionStorage.removeItem('startVerifyWalk');
+        ManagerProductsView.startVerifyWalk();
+      }
     };
 
     // --- Widget Data & Category Status (Updated) ---
@@ -757,9 +810,18 @@
         return item.textEN;
     };
 
-    ManagerProductsView.openEditor = function(taskId) {
+    ManagerProductsView.openEditor = function(taskId, verifyCtx) {
+      ManagerProductsView.verifyMode = !!verifyCtx;
+      const editorModal = document.getElementById('editor-modal');
+      if (ManagerProductsView.verifyMode) {
+        editorModal.classList.add('verify-mode');
+      } else {
+        editorModal.classList.remove('verify-mode');
+        // Re-enable edit inputs in case a prior verify session disabled them.
+        editorModal.querySelectorAll('[id^="edit-"]').forEach(el => { el.disabled = false; });
+      }
       ManagerProductsView.currentTaskId = taskId;
-      document.getElementById('editor-modal').style.display = 'flex';
+      editorModal.style.display = 'flex';
       document.getElementById('modal-status').textContent = 'Loading data...';
       
       // Clear all editable and display elements
@@ -836,6 +898,10 @@
                       try {
                           ManagerProductsView.populateEditor(data.masterData, data.stagingData, data.comaxData);
                           document.getElementById('modal-status').textContent = '';
+                          if (ManagerProductsView.verifyMode) {
+                              document.querySelectorAll('#editor-modal [id^="edit-"]').forEach(el => { el.disabled = true; });
+                              ManagerProductsView.loadVerifyDetail(data.sku);
+                          }
                       } catch (e) {
                           console.error('Error populating editor:', e);
                           document.getElementById('modal-status').textContent = 'Error displaying data.';
@@ -1012,7 +1078,120 @@
     ManagerProductsView.setInp = function(id, val) { document.getElementById(id).value = val || ''; };
 
     ManagerProductsView.closeModal = function() {
-      document.getElementById('editor-modal').style.display = 'none';
+      const m = document.getElementById('editor-modal');
+      m.style.display = 'none';
+      m.classList.remove('verify-mode');
+      ManagerProductsView.verifyMode = false;
+    };
+
+    // --- Verification (read-only review) batch walk ---
+
+    // Entry point: load the manager's open verify queue and walk it.
+    ManagerProductsView.startVerifyWalk = function() {
+      google.script.run
+        .withSuccessHandler(tasks => {
+          ManagerProductsView.verifyQueue = tasks || [];
+          ManagerProductsView.verifyIndex = -1;
+          if (!ManagerProductsView.verifyQueue.length) {
+            alert('No open verification tasks.');
+            return;
+          }
+          ManagerProductsView.advanceVerify();
+        })
+        .withFailureHandler(err => alert('Could not load verification queue: ' + (err && err.message)))
+        .WebAppProducts_getOpenVerifyTasks();
+    };
+
+    // Advance to the next task in the queue; close out when exhausted.
+    ManagerProductsView.advanceVerify = function() {
+      ManagerProductsView.verifyIndex++;
+      if (ManagerProductsView.verifyIndex >= ManagerProductsView.verifyQueue.length) {
+        ManagerProductsView.closeModal();
+        alert('No more verifications. Done.');
+        ManagerProductsView.refreshView();
+        return;
+      }
+      const next = ManagerProductsView.verifyQueue[ManagerProductsView.verifyIndex];
+      ManagerProductsView.openEditor(next.taskId, { sku: next.sku });
+    };
+
+    // Fetch + render the verify-only panel (image, web category, empty-value flags).
+    ManagerProductsView.loadVerifyDetail = function(sku) {
+      const img = document.getElementById('verify-image');
+      const none = document.getElementById('verify-image-none');
+      const cat = document.getElementById('verify-web-category');
+      const flags = document.getElementById('verify-flags');
+      if (img) { img.removeAttribute('src'); img.style.display = 'none'; }
+      if (none) none.style.display = 'none';
+      if (cat) cat.textContent = '…';
+      if (flags) flags.innerHTML = '';
+      google.script.run
+        .withSuccessHandler(d => {
+          if (!d || d.error) { if (cat) cat.textContent = (d && d.error) || 'Error'; return; }
+          if (d.imageUrl && img) {
+            img.src = d.imageUrl;
+            img.style.display = 'block';
+            if (none) none.style.display = 'none';
+          } else if (none) {
+            none.style.display = 'block';
+          }
+          if (cat) cat.textContent = d.webCategory || '(none)';
+          let f = '';
+          if (!d.cmxDivision) f += '<div class="verify-flag">* Comax Division missing</div>';
+          if (d.isWine && !d.cmxGroup) f += '<div class="verify-flag">* Comax Group missing on wine</div>';
+          if (flags) flags.innerHTML = f;
+        })
+        .withFailureHandler(err => { if (cat) cat.textContent = 'Error: ' + (err && err.message); })
+        .WebAppProducts_getVerifyDetail(sku);
+    };
+
+    // Confirm & close: stamp pa_LastDetailAudit + mark Done, then advance.
+    ManagerProductsView.confirmVerify = function() {
+      const taskId = ManagerProductsView.currentTaskId;
+      const sku = ManagerProductsView.currentSku;
+      const status = document.getElementById('modal-status');
+      if (status) status.textContent = 'Saving…';
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.success) {
+            ManagerProductsView.advanceVerify();
+          } else if (status) {
+            status.textContent = (res && res.message) || 'Failed to confirm.';
+          }
+        })
+        .withFailureHandler(err => { if (status) status.textContent = 'Error: ' + (err && err.message); })
+        .WebAppProducts_completeVerifyTask(taskId, sku);
+    };
+
+    // Revert to admin: capture findings, save to task notes, reassign to admin, then advance.
+    ManagerProductsView.openRevertPrompt = function() {
+      document.getElementById('verify-revert-notes').value = '';
+      document.getElementById('verify-revert-status').textContent = '';
+      document.getElementById('verify-revert-modal').style.display = 'flex';
+    };
+
+    ManagerProductsView.closeRevertPrompt = function() {
+      document.getElementById('verify-revert-modal').style.display = 'none';
+    };
+
+    ManagerProductsView.doRevert = function() {
+      const taskId = ManagerProductsView.currentTaskId;
+      const notes = document.getElementById('verify-revert-notes').value || '';
+      const st = document.getElementById('verify-revert-status');
+      st.textContent = 'Saving…';
+      // 1) save findings to task notes, then 2) reassign to admin (both existing backends).
+      google.script.run
+        .withSuccessHandler(() => {
+          google.script.run
+            .withSuccessHandler(() => {
+              ManagerProductsView.closeRevertPrompt();
+              ManagerProductsView.advanceVerify();
+            })
+            .withFailureHandler(err => { st.textContent = 'Revert failed: ' + (err && err.message); })
+            .WebAppDashboardV2_revertTaskToAdmin(taskId);
+        })
+        .withFailureHandler(err => { st.textContent = 'Saving notes failed: ' + (err && err.message); })
+        .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes });
     };
 
     ManagerProductsView.switchTab = function(tabName) {

@@ -1146,6 +1146,73 @@ function WebAppProducts_searchAllProducts(searchTerm) {
 }
 
 /**
+ * Planning payload for the AdminProducts "Create Verification Tasks" card.
+ * @returns {Object} { products: [...], loadedAt } or { error }
+ */
+function WebAppProducts_getVerifyPlanningData() {
+  try {
+    return ProductService.getVerifyPlanningData();
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getVerifyPlanningData', `Error: ${e.message}`, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Per-SKU web image + category + Comax Division/Group for the read-only verify modal.
+ * @param {string} sku
+ */
+function WebAppProducts_getVerifyDetail(sku) {
+  try {
+    return ProductService.getVerifyDetail(sku);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getVerifyDetail', `Error: ${e.message}`, e);
+    return { error: e.message };
+  }
+}
+
+/**
+ * Creates task.product.verify tasks in bulk for a pre-filtered list of SKUs.
+ * @param {Array<string>} skus
+ * @param {string} [note]
+ */
+function WebAppProducts_createVerifyTasksBulk(skus, note) {
+  try {
+    return ProductService.createVerifyTasksBulk(skus, note);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'createVerifyTasksBulk', `Error: ${e.message}`, e);
+    throw e;
+  }
+}
+
+/**
+ * The manager's open verification queue (task id + SKU + title) for the batch walk.
+ * @returns {Array<Object>}
+ */
+function WebAppProducts_getOpenVerifyTasks() {
+  try {
+    return ProductService.getOpenVerifyTasks();
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getOpenVerifyTasks', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
+ * Confirm & close path: stamps pa_LastDetailAudit and marks the verify task Done.
+ * @param {string} taskId
+ * @param {string} sku
+ */
+function WebAppProducts_completeVerifyTask(taskId, sku) {
+  try {
+    return ProductService.completeVerifyTask(taskId, sku);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'completeVerifyTask', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+/**
  * Test description backfill with a single SKU.
  * Edit the SKU below before running.
  */

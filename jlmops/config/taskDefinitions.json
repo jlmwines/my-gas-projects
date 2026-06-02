@@ -385,6 +385,18 @@
     ],
     [
         "task.template",
+        "task.product.verify",
+        "Verify product details against the live site and Comax.",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "two_weeks",
+        "pack_form", "dedicated_view"
+    ],
+    [
+        "task.template",
         "task.data.coupons_update",
         "Reminder to update WooCommerce coupons list.",
         "stable",

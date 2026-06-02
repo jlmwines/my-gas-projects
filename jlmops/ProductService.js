@@ -3024,8 +3024,285 @@ const ProductService = (function() {
     }
   }
 
+  /**
+   * Returns the planning payload for the AdminProducts "Create Verification Tasks"
+   * card. Product-side mirror of WebAppInventory_getCountPlanningData, joined with
+   * pa_LastDetailAudit and deduped against open task.product.verify. All filtering,
+   * sorting, and preview limiting happen client-side on this array.
+   */
+  function getVerifyPlanningData() {
+    const serviceName = 'ProductService';
+    const functionName = 'getVerifyPlanningData';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const auditHeaders = allConfig['schema.data.SysProductAudit'].headers.split(',');
+      const webHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+
+      const cmxObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxHeaders, 'cpm_SKU');
+      const auditObj = ConfigService._getSheetDataAsMap('SysProductAudit', auditHeaders, 'pa_SKU');
+      const webObj = ConfigService._getSheetDataAsMap('WebProdM', webHeaders, 'wpm_SKU');
+
+      const openVerifySkus = new Set(
+        WebAppTasks.getOpenTasksByTypeId('task.product.verify')
+          .map(t => String(t.st_LinkedEntityId || '').trim())
+      );
+
+      const products = [];
+      for (const row of cmxObj.map.values()) {
+        if (String(row.cpm_IsArchived || '').trim() === 'כן') continue;
+
+        const sku = String(row.cpm_SKU || '').trim();
+        if (!sku) continue;
+
+        const audit = auditObj.map.get(sku);
+        const web = webObj.map.get(sku);
+
+        let lastAuditIso = null;
+        if (audit && audit.pa_LastDetailAudit) {
+          const la = new Date(audit.pa_LastDetailAudit);
+          if (!isNaN(la.getTime())) lastAuditIso = la.toISOString();
+        }
+
+        products.push({
+          sku: sku,
+          nameHe: row.cpm_NameHe || '',
+          stock: (row.cpm_Stock === '' || row.cpm_Stock === null || row.cpm_Stock === undefined)
+            ? null
+            : parseFloat(row.cpm_Stock),
+          isWeb: String(row.cpm_IsWeb || '').trim() === 'כן',
+          isWine: String(row.cpm_Division || '').trim() === '1',
+          vintage: row.cpm_Vintage || '',
+          vendor: row.cpm_Vendor || '',
+          brand: row.cpm_Brand || '',
+          lastDetailAudit: lastAuditIso,
+          pageUrl: web ? (web.wpm_ProductPageUrl || '') : '',
+          imageUrl: web ? (web.wpm_Images || '') : '',
+          hasOpenTask: openVerifySkus.has(sku)
+        });
+      }
+
+      products.sort((a, b) => (a.nameHe || '').localeCompare(b.nameHe || ''));
+      return { products: products, loadedAt: new Date().toISOString() };
+    } catch (e) {
+      LoggerService.error(serviceName, functionName, `Could not load verify planning data: ${e.message}`, e);
+      return { error: `Could not load verify planning data: ${e.message}` };
+    }
+  }
+
+  /**
+   * Per-SKU web/Comax facts for the read-only verification modal: the live web
+   * image (first src of wpm_Images) + the comma-joined web category list, shown
+   * beside the Comax Division/Group for one-glance human comparison. The two
+   * empty-value flags (Division missing; Group missing on wine) are derived
+   * client-side from cmxDivision/cmxGroup/isWine. No automated category compare.
+   * @param {string} sku
+   * @returns {Object} { sku, imageUrl, webCategory, cmxDivision, cmxGroup, isWine } or { error }
+   */
+  function getVerifyDetail(sku) {
+    const serviceName = 'ProductService';
+    const functionName = 'getVerifyDetail';
+    try {
+      const cleanSku = String(sku || '').trim();
+      if (!cleanSku) return { error: 'SKU is required.' };
+
+      const allConfig = ConfigService.getAllConfig();
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const webHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+
+      const cmxObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxHeaders, 'cpm_SKU');
+      const webObj = ConfigService._getSheetDataAsMap('WebProdM', webHeaders, 'wpm_SKU');
+
+      const cmx = cmxObj.map.get(cleanSku) || {};
+      const web = webObj.map.get(cleanSku) || {};
+
+      const rawImages = web.wpm_Images || '';
+      const imageUrl = rawImages ? String(rawImages).split(',')[0].trim() : '';
+
+      return {
+        sku: cleanSku,
+        imageUrl: imageUrl,
+        webCategory: web.wpm_TaxProductCat || '',
+        cmxDivision: (cmx.cpm_Division !== undefined && cmx.cpm_Division !== null) ? String(cmx.cpm_Division) : '',
+        cmxGroup: (cmx.cpm_Group !== undefined && cmx.cpm_Group !== null) ? String(cmx.cpm_Group) : '',
+        isWine: String(cmx.cpm_Division || '').trim() === '1'
+      };
+    } catch (e) {
+      LoggerService.error(serviceName, functionName, `Could not load verify detail for SKU '${sku}': ${e.message}`, e);
+      return { error: e.message };
+    }
+  }
+
+  /**
+   * Creates verification tasks (task.product.verify) in bulk for a client-supplied
+   * list of SKUs. Product-side mirror of InventoryManagementService.createCountTasksBulk.
+   * Client has already applied filters/sort/limit; server re-verifies dedup against
+   * open verify tasks to handle race conditions across users.
+   * @param {Array<string>} skus
+   * @param {string} [note]
+   * @returns {Object} { success, created, skippedDedup, errors: [{sku, reason}] }
+   */
+  function createVerifyTasksBulk(skus, note) {
+    const serviceName = 'ProductService';
+    const functionName = 'createVerifyTasksBulk';
+    LoggerService.info(serviceName, functionName, `Creating verify tasks for ${skus ? skus.length : 0} SKUs.`);
+
+    if (!Array.isArray(skus) || skus.length === 0) {
+      return { success: true, created: 0, skippedDedup: 0, errors: [] };
+    }
+
+    const allConfig = ConfigService.getAllConfig();
+    const cmxProdMHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+    const cmxDataObj = ConfigService._getSheetDataAsMap('CmxProdM', cmxProdMHeaders, 'cpm_SKU');
+    const cmxMap = cmxDataObj.map;
+
+    const taskTypeId = 'task.product.verify';
+    const openTasks = WebAppTasks.getOpenTasksByTypeId(taskTypeId);
+    const openTaskSkus = new Set(openTasks.map(t => String(t.st_LinkedEntityId).trim()));
+
+    let created = 0;
+    let skippedDedup = 0;
+    const errors = [];
+
+    for (const rawSku of skus) {
+      const sku = String(rawSku).trim();
+      if (!sku) continue;
+
+      if (openTaskSkus.has(sku)) {
+        skippedDedup++;
+        continue;
+      }
+
+      const product = cmxMap.get(sku);
+      if (!product) {
+        errors.push({ sku: sku, reason: 'Not found in CmxProdM' });
+        continue;
+      }
+
+      const name = product.cpm_NameHe || '';
+      const title = `Verify Details: ${name}`;
+      const taskNote = note ? String(note) : 'Manual bulk verification creation.';
+
+      try {
+        const newTask = TaskService.createTask(taskTypeId, sku, name, title, taskNote);
+        if (newTask) {
+          created++;
+          openTaskSkus.add(sku);
+        } else {
+          skippedDedup++;
+        }
+      } catch (err) {
+        LoggerService.error(serviceName, functionName, `Failed for ${sku}: ${err.message}`);
+        errors.push({ sku: sku, reason: err.message });
+      }
+    }
+
+    return { success: true, created: created, skippedDedup: skippedDedup, errors: errors };
+  }
+
+  /**
+   * The manager's open verification queue for the batch walk: task id + SKU + title
+   * for every open task.product.verify. The surface walks this list client-side.
+   */
+  function getOpenVerifyTasks() {
+    const serviceName = 'ProductService';
+    const functionName = 'getOpenVerifyTasks';
+    try {
+      return WebAppTasks.getOpenTasksByTypeId('task.product.verify').map(t => ({
+        taskId: t.st_TaskId,
+        sku: String(t.st_LinkedEntityId || '').trim(),
+        title: t.st_Title || ''
+      }));
+    } catch (e) {
+      LoggerService.error(serviceName, functionName, `Could not load open verify tasks: ${e.message}`, e);
+      return [];
+    }
+  }
+
+  /**
+   * Completes a verification task: stamps pa_LastDetailAudit = now and marks the
+   * task Done. Owns BOTH close paths — the manager's Confirm & close, and the admin
+   * completing a reverted task. (Revert-to-admin itself does NOT call this; it
+   * reassigns and leaves the task open until the admin re-completes here.)
+   * @returns {Object} { success, message? }
+   */
+  function completeVerifyTask(taskId, sku) {
+    const serviceName = 'ProductService';
+    const functionName = 'completeVerifyTask';
+    try {
+      if (!sku) {
+        return { success: false, message: 'SKU is required to stamp the audit date.' };
+      }
+      updateLastDetailAudit(sku, new Date());
+      TaskService.completeTask(taskId);
+      LoggerService.info(serviceName, functionName, `Verify task '${taskId}' completed; pa_LastDetailAudit stamped for SKU '${sku}'.`);
+      return { success: true };
+    } catch (e) {
+      LoggerService.error(serviceName, functionName, `Error completing verify task '${taskId}' for SKU '${sku}': ${e.message}`, e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  /**
+   * Updates pa_LastDetailAudit for a SKU in SysProductAudit. Product-side mirror of
+   * InventoryManagementService.updateLastCount, stamping the detail-audit column only.
+   * Each task type stamps only its own column; this NEVER touches pa_LastCount.
+   * @param {string} sku
+   * @param {Date} timestamp
+   * @returns {Object} { success, sku, message? }
+   */
+  function updateLastDetailAudit(sku, timestamp) {
+    const serviceName = 'ProductService';
+    const functionName = 'updateLastDetailAudit';
+    LoggerService.info(serviceName, functionName, `Updating pa_LastDetailAudit for SKU '${sku}' to ${timestamp}.`);
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetNames = allConfig['system.sheet_names'];
+      const auditSheetName = sheetNames.SysProductAudit;
+
+      const ss = SheetAccessor.getDataSpreadsheet();
+      const auditSheet = ss.getSheetByName(auditSheetName);
+      if (!auditSheet) {
+        throw new Error(`Sheet not found: '${auditSheetName}'.`);
+      }
+
+      const auditData = auditSheet.getDataRange().getValues();
+      const auditHeaders = auditData[0];
+      const skuColIdx = auditHeaders.indexOf('pa_SKU');
+      const lastAuditColIdx = auditHeaders.indexOf('pa_LastDetailAudit');
+
+      if (skuColIdx === -1 || lastAuditColIdx === -1) {
+        throw new Error(`Required columns 'pa_SKU' or 'pa_LastDetailAudit' not found in '${auditSheetName}'.`);
+      }
+
+      const rowIndex = auditData.findIndex((row, index) => {
+        if (index === 0) return false;
+        return String(row[skuColIdx]).trim().toLowerCase() === String(sku).trim().toLowerCase();
+      });
+
+      if (rowIndex !== -1) {
+        auditSheet.getRange(rowIndex + 1, lastAuditColIdx + 1).setValue(timestamp);
+        LoggerService.info(serviceName, functionName, `Successfully updated pa_LastDetailAudit for SKU '${sku}'.`);
+        return { success: true, sku: sku };
+      } else {
+        LoggerService.warn(serviceName, functionName, `SKU '${sku}' not found in '${auditSheetName}'. Cannot update pa_LastDetailAudit.`);
+        return { success: false, sku: sku, message: `SKU '${sku}' not found.` };
+      }
+    } catch (e) {
+      LoggerService.error(serviceName, functionName, `Error updating pa_LastDetailAudit for SKU '${sku}': ${e.message}`, e);
+      throw e;
+    }
+  }
+
   return {
     exportWebInventory: exportWebInventory,
+    getVerifyPlanningData: getVerifyPlanningData,
+    getVerifyDetail: getVerifyDetail,
+    createVerifyTasksBulk: createVerifyTasksBulk,
+    getOpenVerifyTasks: getOpenVerifyTasks,
+    completeVerifyTask: completeVerifyTask,
+    updateLastDetailAudit: updateLastDetailAudit,
     getProductWebIdBySku: getProductWebIdBySku,
     getProductDetails: getProductDetails,
     submitProductDetails: submitProductDetails,
