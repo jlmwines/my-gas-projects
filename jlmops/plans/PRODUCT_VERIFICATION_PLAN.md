@@ -1,7 +1,15 @@
 # Product Verification — Plan
 
 **Created:** 2026-05-14
-**Status:** Plan written, not implemented. Awaiting OK before code. Reconciled 2026-06-01 — verification is a **read-only** review surface (look-and-note; two actions: Confirm & close / Revert to admin). All editing lives in the separate update-details task. Category check is show-don't-compare (no `SysLkp_Texts` join).
+**Status:** **SHIPPED 2026-06-02 (jlmops deploy @199).** Read-only review surface (look-and-note; two actions: Confirm & close / Revert to admin). All editing lives in the separate update-details task. Category check is show-don't-compare (no `SysLkp_Texts` join). Count-flow strip (below) intentionally NOT shipped — deferred until verification proves out ~1 cycle in production.
+
+**As-built deltas (vs this plan's pre-build text):**
+- **Everything product-side** (resolved during build): the creation card lives on `AdminProductsView`; planning/create/complete/stamp + a new `getVerifyDetail` all live in `ProductService` + `WebAppProducts` — `WebAppInventory`/`InventoryManagementService` untouched (the Files-table inventory-side entries were superseded).
+- **New `getVerifyDetail(sku)`** added: the existing `loadProductEditorData` returns WebDetM+Comax but not `wpm_Images`/`wpm_TaxProductCat`, so the modal's image tile + web-category panel needed a dedicated fetch.
+- **Revert path uses `WebAppDashboardV2_updateManagerTask(taskId, { notes })`** — the real API key is `notes`, not `st_Notes` as written below.
+- **No dashboard whitelist needed:** the manager dashboard gates by `st_AssignedTo === 'Manager'`, and `manager_direct` assigns to Manager, so `task.product.verify` surfaces automatically. A **Verify** deep-link button (sessionStorage → `loadView('ManagerProducts')`, Outreach precedent) enters the batch walk.
+- **`pack_form: dedicated_view`** on the template (the field postdates this plan's template snippet).
+- **Read-only render:** `verifyMode` adds `#editor-modal.verify-mode` (CSS hides the Edit columns + Fill/Clear, single-column grid) and disables all `[id^="edit-"]` inputs; image tile at top of the modal, Web-categories + flags on the Specs Current column.
 
 ## Problem
 

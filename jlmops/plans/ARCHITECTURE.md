@@ -187,6 +187,8 @@ The system relies on a clear folder structure for managing files, with all folde
 *   **`Source Folder`**: The inbox for new files. The system treats this as **read-only**.
 *   **`Archive Folder`**: The system's permanent record for all ingested files.
 
+**Open task — relocate the legacy Comax import folder (promoted from STATUS Inbox 2026-06-01; was `defer:2026-06-01`, now due).** The folder jlmops reads for Comax product CSV import still sits in the *legacy app's* Drive location, not under the jlmops Drive parent (which has its own `export` and sibling subfolders). Action: (1) move the import folder under the jlmops Drive parent; (2) update the corresponding `system.folder.*` SysConfig key (likely `system.folder.imports`) so sync still resolves it; (3) run one sync cycle and verify the new location is picked up. Originated 2026-05-05.
+
 #### 2.5.4. System-State-Aware Workflow Orchestration
 
 To ensure data integrity and provide robust control over all system processes, the engine has evolved from a simple file-import utility to a **System-State-Aware Orchestrator**. It manages a queue of "Jobs" which can be triggered by various system events.
