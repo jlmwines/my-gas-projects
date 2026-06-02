@@ -972,6 +972,10 @@ const ContactImportService = (function () {
         { expectedOrderCount: expectedOrderCount, actualOrderCount: actualOrderCount },
         sessionId
       );
+    } else {
+      // Condition cleared — auto-close any open write-verify failure task so it
+      // doesn't persist after a successful reconciliation.
+      NotificationService.resolveFailure('reconciliation.sys_contacts.write_verify', sessionId);
     }
 
     LoggerService.info(SERVICE_NAME, fnName, `Complete: ${created} created, ${updated} updated`);

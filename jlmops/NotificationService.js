@@ -59,9 +59,9 @@ const NotificationService = (function() {
   function _createFailureTask(context, message, severity, details, sessionId) {
     const fnName = '_createFailureTask';
 
-    // Build entity ID from context for de-duplication
-    // e.g., 'job.web_products' -> 'web_products', 'validation.master_master' -> 'master_master'
-    const entityId = context.includes('.') ? context.split('.').slice(1).join('.') : context;
+    // Build entity ID from context for de-duplication (shared with resolveFailure
+    // so the raise/clear sides cannot drift).
+    const entityId = _entityIdFromContext(context);
 
     // Check for existing open task (de-duplication)
     const existingTask = TaskService.findOpenTaskByType('task.system.failure', entityId);
@@ -228,6 +228,41 @@ const NotificationService = (function() {
   }
 
   /**
+   * Resolves (auto-closes) an open system-failure task once its underlying
+   * condition has cleared. Symmetric counterpart to reportFailure: a scheduled
+   * check that calls reportFailure(context) on failure should call
+   * resolveFailure(context) on success, so the task self-heals instead of
+   * persisting after the problem is gone. Also clears the matching health alert.
+   * No-op (returns false) if no open failure task exists for the context.
+   * @param {string} context - The same context string passed to reportFailure.
+   * @param {string} sessionId - Optional session ID for correlation.
+   * @returns {boolean} True if an open failure task was found and resolved.
+   */
+  function resolveFailure(context, sessionId) {
+    const fnName = 'resolveFailure';
+    let resolved = false;
+    try {
+      const entityId = _entityIdFromContext(context);
+      const existingTask = TaskService.findOpenTaskByType('task.system.failure', entityId);
+      if (existingTask) {
+        const notes = _parseNotes(existingTask.notes);
+        notes.resolvedAt = new Date().toISOString();
+        notes.resolvedBy = 'auto';
+        notes.resolutionSessionId = sessionId || null;
+        TaskService.updateTaskNotes(existingTask.id, JSON.stringify(notes));
+        TaskService.completeTask(existingTask.id);
+        resolved = true;
+        logger.info(SERVICE_NAME, fnName, `Auto-resolved failure task ${existingTask.id} for context '${context}' (condition cleared)`);
+      }
+      // Clear any matching health-status alert regardless of task presence.
+      clearAlerts(context);
+    } catch (e) {
+      logger.warn(SERVICE_NAME, fnName, `Could not resolve failure for '${context}': ${e.message}`);
+    }
+    return resolved;
+  }
+
+  /**
    * Helper to get step name from context.
    * @private
    */
@@ -251,6 +286,18 @@ const NotificationService = (function() {
   }
 
   /**
+   * Derives the de-dup entity ID from a failure context.
+   * e.g. 'job.web_products' -> 'web_products',
+   * 'reconciliation.sys_contacts.write_verify' -> 'sys_contacts.write_verify'.
+   * Used by both reportFailure (raise) and resolveFailure (clear) so the two
+   * sides can never drift.
+   * @private
+   */
+  function _entityIdFromContext(context) {
+    return context.includes('.') ? context.split('.').slice(1).join('.') : context;
+  }
+
+  /**
    * Helper to safely parse JSON notes.
    * @private
    */
@@ -266,6 +313,7 @@ const NotificationService = (function() {
 
   return {
     reportFailure: reportFailure,
+    resolveFailure: resolveFailure,
     clearAlerts: clearAlerts,
     reportStepSuccess: reportStepSuccess
   };

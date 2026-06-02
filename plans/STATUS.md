@@ -9,8 +9,8 @@
 | Phase | Theme cutover, Manager CRM, Lookup admin UI, Content Library subsystem, and the Admin task workbench (`AdminTasksView`) are all SHIPPED and live. Content Library is permanent (`library.enabled` flag and `crm.template.*` SysConfig retired; SysLibrary is the sole template source). Phase 12 cross-link renderer remains blocked on the §16 regions overhaul. |
 | Last Active | 2026-06-02 |
 | Revenue | Steady |
-| Deploy Version | jlmops deploy @201 · theme v1.2.28 LIVE |
-| Deploy Date | jlmops 2026-06-02 (deploy @201) · theme 2026-05-18 (v1.2.28) |
+| Deploy Version | jlmops deploy @202 · theme v1.2.28 LIVE |
+| Deploy Date | jlmops 2026-06-02 (deploy @202) · theme 2026-05-18 (v1.2.28) |
 | Content | 10 editorial posts live on production (EN+HE) — Context published 2026-05-19; 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation). "A Year in the Vineyard" moved OUT of blog pipeline 2026-05-19 — repositioned as recurring subscriber-exclusive "Making Wine — [topic]" series for newsletter + email per `marketing/NEWSLETTER_PLAN.md` |
 | CRM Contacts | 548 enriched |
 | SEO Status | Latest audit: RankMath 2026-05-31 (read-only `audit-site-seo` via curl; global/EN scan, WPML-blind) — 87/100. Open actionable: (RM-1) homepage images missing `alt` plus a `staging6.jlmwines.com` URL leaking onto live content (find source + fix); (RM-2) focus keyword not in title on 41 products / 13 posts / 2 pages (bulk content polish); WPML per-language meta gap (`RANKMATH_WPML_AUDIT.md` §A–F — needs a wp-admin walk, not covered by the scan). Still open from the 2026-05-06 audit (`plans/SEO_AUDIT_2026-05-06.md`): gtin13 emission (#9), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |

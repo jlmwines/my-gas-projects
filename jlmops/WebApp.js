@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 09:41',
-  commit: 'Three changes. (1) CRM fix: ContactImportService.updateContactsFromOrders resets order-derived metrics (sc_OrderCount / sc_TotalSpend / sc_AvgOrderValue / sc_AvgBottlesPerOrder) to 0 for contacts that drop out of the order union (e.g. a customer whose only order was cancelled/refunded) — fixes the stale counts that tripped reconciliation.sys_contacts.write_verify; metrics-only, customer flags/type unchanged. (2) AdminTasksView: the toolbar button no longer flashes "+ Project" before tasks load (static label matched to the default tasks mode -> "+ Task"). (3) Config: task.routing.topic_to_project Content now routes to PROJ-CONTENT (renamed from PROJ-6878357E for readability) — run rebuildSysConfigFromSource after deploy; existing SysProjects row + content task st_ProjectId values repointed manually.'
+  built: '2026-06-02 10:07',
+  commit: 'System failure-task lifecycle (targeted slice). NotificationService.resolveFailure(context) is the symmetric counterpart to reportFailure: it auto-closes the open task.system.failure for a context once its condition clears (stamps resolvedAt/resolvedBy=auto, completes the task, clears the matching health alert; no-op if none open). Shared _entityIdFromContext keeps the raise/clear sides in sync. ContactImportService.updateContactsFromOrders now calls resolveFailure on the write-verify success branch, so reconciliation.sys_contacts.write_verify self-heals on the next clean rebuild. Phase 1 (auto-resolve rollout across all scheduled reporters) + Phase 2 (manual-dismiss UI for one-shot failures, e.g. deployment_drift) planned in SYSTEM_TASK_LIFECYCLE_PLAN.md.'
 };
 
 function getVersion() {
