@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 14:38',
-  commit: 'Manager task UX. (1) Library is catalog-only for managers — the Tasks tab + panel are admin-gated (data-roles) and managers default to the Library tab; admin Library unchanged. (2) ManagerDashboard task queue: product tasks get an "Open in Products" button and inventory tasks an "Open in Inventory" button (contact + verify already deep-linked), so task types that cannot complete inline have a path to their execution surface; tasks still expand in place to examine + complete (status/Save) where inline-eligible. Convergence of the dashboard queue and AdminTasksView onto the shared TaskPacks kit (mobile-first, revives ADMIN_TASK_UI item 5) is planned, not in this deploy.'
+  built: '2026-06-02 14:59',
+  commit: 'Manager dashboard task behavior. A task opens in place (expand to examine) and links to its execution location via one unified Open affordance (taskOpenTarget): contact->Contacts, verify->walk, product/vintage->Products, inventory->Inventory, packing->Orders (closes the prior dead-end), content->Open file. The content file link reuses the existing task->entity linkage: WebAppDashboardV2_getManagerData resolves the linked library entity (st_EntityId -> SysLibrary slb_Slug -> slb_DocUrl, read once) and attaches fileUrl, so EVERY content task links straight to its Doc, not just those whose entityId is already a URL. Scattered per-type buttons consolidated into one mechanism (behavior-preserving); inline status/Save unchanged where inline-eligible.'
 };
 
 function getVersion() {

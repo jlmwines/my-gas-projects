@@ -449,7 +449,6 @@
         html += '<div><label>Email</label><div>' + TaskWidgets.escape(task.entityId || '-') + '</div></div>';
         html += '<div><label>Phone</label><div>' + TaskWidgets.escape(task.entityPhone || '-') + '</div></div>';
         html += '<div><label>Lang</label><div>' + TaskWidgets.escape((task.entityLanguage || 'en').toUpperCase()) + '</div></div>';
-        html += '<button type="button" class="btn btn-sm btn-light btn-open-contact" data-email="' + TaskWidgets.escape(task.entityId) + '">Open contact</button>';
         html += '</div>';
       }
 
@@ -469,15 +468,17 @@
       html += '<div><label>Done</label><div>' + TaskWidgets.formatDateFull(task.doneDate) + '</div></div>';
       html += '<div><label>Created</label><div>' + TaskWidgets.formatDateFull(task.createdDate) + '</div></div>';
       html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
-      if (isUrl2) {
+      if (isUrl2 && !(task.typeId && task.typeId.indexOf('task.content.') === 0)) {
         html += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light">&#8599; Document</a>';
       }
-      if (task.typeId === 'task.product.verify') {
-        html += '<button type="button" class="btn btn-sm btn-light btn-open-verify">Verify</button>';
-      } else if (task.typeId && (task.typeId.indexOf('task.product.') === 0 || task.typeId.indexOf('task.validation.vintage') === 0)) {
-        html += '<button type="button" class="btn btn-sm btn-light btn-open-products">Open in Products</button>';
-      } else if (task.typeId && task.typeId.indexOf('task.inventory.') === 0) {
-        html += '<button type="button" class="btn btn-sm btn-light btn-open-inventory">Open in Inventory</button>';
+      var openTarget = taskOpenTarget(task);
+      if (openTarget && openTarget.url) {
+        html += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
+      } else if (openTarget) {
+        var setAttr = openTarget.set
+          ? ' data-set-key="' + openTarget.set[0] + '" data-set-val="' + TaskWidgets.escape(openTarget.set[1]) + '"'
+          : '';
+        html += '<button type="button" class="btn btn-sm btn-light btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
       }
       if (!isSystemTask) {
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
@@ -531,48 +532,42 @@
       });
     });
 
-    // Open-contact deep-link: stashes the email in sessionStorage for
-    // ManagerContactView to consume on mount, then navigates.
-    container.querySelectorAll('.btn-open-contact').forEach(function(btn) {
+    // Unified "Open" deep-link: examine in place (expand), then click through to the
+    // task's execution location. Destination + any sessionStorage handoff come from
+    // taskOpenTarget(); the target view consumes the key on mount (contact email,
+    // verify walk). Types with no target complete inline (status + Save).
+    container.querySelectorAll('.btn-open-task').forEach(function(btn) {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
-        var email = this.dataset.email;
-        if (email) {
-          sessionStorage.setItem('selectContactEmail', email);
-          if (typeof loadView === 'function') {
-            loadView('ManagerContacts');
-          }
-        }
+        if (btn.dataset.setKey) sessionStorage.setItem(btn.dataset.setKey, btn.dataset.setVal);
+        if (typeof loadView === 'function') loadView(btn.dataset.view);
       });
     });
+  }
 
-    // Verify deep-link: start the read-only verification batch walk in ManagerProducts.
-    // Any verify task's button starts the walk; ManagerProducts loads the full open queue.
-    container.querySelectorAll('.btn-open-verify').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        sessionStorage.setItem('startVerifyWalk', '1');
-        if (typeof loadView === 'function') {
-          loadView('ManagerProducts');
-        }
-      });
-    });
-
-    // Open-in-surface deep-links: navigate to the view where the task is actually
-    // completed (its task list / editor). Lets the manager act on types that can't
-    // be completed inline (auto-opening the exact task is a follow-up).
-    container.querySelectorAll('.btn-open-products').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (typeof loadView === 'function') loadView('ManagerProducts');
-      });
-    });
-    container.querySelectorAll('.btn-open-inventory').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (typeof loadView === 'function') loadView('ManagerInventory');
-      });
-    });
+  // Where a manager task is executed. Returns {label, view, set?} or null when the
+  // task completes inline (status + Save) with no separate execution surface.
+  function taskOpenTarget(task) {
+    var t = task.typeId || '';
+    if (t.indexOf('task.contact.') === 0 && task.entityId) {
+      return { label: 'Open contact', view: 'ManagerContacts', set: ['selectContactEmail', task.entityId] };
+    }
+    if (t.indexOf('task.content.') === 0 && task.fileUrl) {
+      return { label: 'Open file', url: task.fileUrl };
+    }
+    if (t === 'task.product.verify') {
+      return { label: 'Verify', view: 'ManagerProducts', set: ['startVerifyWalk', '1'] };
+    }
+    if (t.indexOf('task.product.') === 0 || t.indexOf('task.validation.vintage') === 0) {
+      return { label: 'Open in Products', view: 'ManagerProducts' };
+    }
+    if (t.indexOf('task.inventory.') === 0) {
+      return { label: 'Open in Inventory', view: 'ManagerInventory' };
+    }
+    if (t === 'task.order.packing_available') {
+      return { label: 'Open in Orders', view: 'ManagerOrders' };
+    }
+    return null;
   }
 
   function toggleTaskExpand(taskId) {

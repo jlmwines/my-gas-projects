@@ -725,6 +725,28 @@ function WebAppDashboardV2_getManagerData() {
     // manager dashboard. System-managed types (e.g. task.order.packing_available)
     // surface as read-only — the frontend's isSystemTask check hides interactive
     // controls so the workflow remains the single source of truth.
+    // Resolve content tasks' related file via the existing task->entity linkage
+    // (st_EntityId -> SysLibrary slb_Slug -> slb_DocUrl). Read SysLibrary once,
+    // and only when a manager content task is actually present.
+    let docUrlBySlug = {};
+    const hasContentTasks = allTasksIncludingDone.some(t =>
+      t.st_AssignedTo === 'Manager' &&
+      t.st_Status !== 'Cancelled' &&
+      String(t.st_TaskTypeId || '').indexOf('.content.') !== -1
+    );
+    if (hasContentTasks) {
+      try {
+        const librarySheet = SheetAccessor.getLibrarySheet('SysLibrary', false);
+        if (librarySheet) {
+          _rowsToObjects(librarySheet.getDataRange().getValues()).forEach(r => {
+            if (r.slb_Slug) docUrlBySlug[r.slb_Slug] = r.slb_DocUrl || '';
+          });
+        }
+      } catch (libErr) {
+        // Non-fatal — content tasks just won't carry a file link this load.
+      }
+    }
+
     const managerTasks = allTasksIncludingDone
       .filter(task => task.st_AssignedTo === 'Manager')
       .filter(task => task.st_Status !== 'Cancelled')
@@ -772,6 +794,18 @@ function WebAppDashboardV2_getManagerData() {
             }
           } catch (contactErr) {
             // Non-fatal — task still shows, just without phone enrichment
+          }
+        }
+
+        // For content tasks, attach the related file's URL so the dashboard can
+        // link straight to it. If the entity ref is already a URL use it; else
+        // resolve via the linked library entity (st_EntityId -> slug -> Doc URL).
+        if (typeof base.typeId === 'string' && base.typeId.indexOf('.content.') !== -1) {
+          if (base.entityId && String(base.entityId).indexOf('http') === 0) {
+            base.fileUrl = base.entityId;
+          } else {
+            const slug = task.st_EntityId || task.st_LinkedEntityId || '';
+            base.fileUrl = docUrlBySlug[slug] || '';
           }
         }
 
