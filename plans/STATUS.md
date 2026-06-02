@@ -1,6 +1,6 @@
 ﻿# JLM Wines — Current Status
 
-**Updated:** 2026-06-02 — product verification surface SHIPPED (read-only batch review @199; manager open-verify-tasks list @200); CRM contacts write-verify reconciliation fixed + content project renamed to PROJ-CONTENT (@201); next jlmops build = Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
+**Updated:** 2026-06-02 — jlmops @203. Product verification surface SHIPPED (@199–@201); CRM write-verify reconciliation now self-heals via `NotificationService.resolveFailure` (@202); destructive DevelopmentView actions are confirm-gated (@203). Content project renamed to PROJ-CONTENT (routing pushed @201 — user still to run `rebuildSysConfigFromSource` + repoint `SysProjects`/task data). Next jlmops build = Contact Action Ribbon Phase 2. (Session narrative lives in `.claude/session-log.md`.)
 
 ## Metrics
 

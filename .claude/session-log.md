@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-02 (continued) — resolveFailure @202, DevelopmentView confirm gates @203, planning banked
+
+- **@202:** `NotificationService.resolveFailure(context)` auto-closes the open `task.system.failure` once its condition clears (wired to the write-verify success branch; shared `_entityIdFromContext` keeps raise/clear in sync). Validated live: the full daily cycle reconciled cleanly (new order folded in) and the open `write_verify` task auto-cleared — end-to-end proof of the lifecycle.
+- **@203:** confirm gates on the two destructive DevelopmentView actions (Daily Housekeeping, Rebuild SysConfig) + mobile button-row fix, from the dispatch-session `DEVELOPER_VIEW_AUDIT.md`. Confirm is a centered overlay placed *away from* the trigger (Cancel default-focused, Confirm offset, Esc/backdrop = cancel) so a stray double-tap can't blow through. Standard confirm per user; self-contained `devConfirm()` (promote to TaskWidgets if another view needs it).
+- **Planning banked (no code):** `OPS_SESSION_BRIDGE_PLAN.md` — pull-mode (JLMops status-export read via `/review-daily`; Claude-side automation deferred; export is load-bearing because a CLI session can't read multi-tab `JLMops_Data` or the domain-auth web app). `RELIABILITY_AUDIT.md` §1A — detection-coverage as first-class (detection register + new-feature reliability gate + invariant classes: archiving-happens, master∪archive in analysis, orphans/referential-integrity, reconciliation, liveness; next step = coverage-gap audit). `SYSTEM_TASK_LIFECYCLE_PLAN.md` — Phase 1 auto-resolve rollout, Phase 2 manual-dismiss UI.
+- **Incidents:** 200-version cap blocked a deploy (clasp has no version-delete; only `undeploy`) — user cleared versions in the Apps Script editor; banked as memory `jlm_clasp_version_cap`. Stale `.git/index.lock` cleared (no git process running).
+- **Cleanup pass** run earlier (STATUS/bugs/session-log/last-cleanup stamped 2026-06-02; `write_verify` bug marked resolved).
+- **Still pending (user):** run `rebuildSysConfigFromSource` (`SetupConfig.js`) to activate PROJ-CONTENT routing + manual `SysProjects` row + 5 content-task `st_ProjectId` repoints (from @201).
+
+---
+
 ## 2026-06-02 — product verification SHIPPED, CRM write-verify fix, content project rename (@199→@201)
 
 - Opened recovering from a mid-session computer restart: confirmed @199 (read-only product verification surface) had committed + deployed cleanly *before* the restart; only 3 uncommitted plan-doc edits remained → committed (`1c546ca`).
