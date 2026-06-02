@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 07:16',
-  commit: 'Product verification surface (read-only batch review). New task.product.verify (manager_direct). ProductService gains getVerifyPlanningData / getVerifyDetail / createVerifyTasksBulk / getOpenVerifyTasks / completeVerifyTask / updateLastDetailAudit (stamps pa_LastDetailAudit only, never pa_LastCount). AdminProducts adds a Create Verification Tasks card (collapsed, populate-on-expand). ManagerProducts verifyMode modal: read-only render, live-image tile, Comax-vs-web on Specs, Division/Group empty-value flags, footer Confirm and close / Revert to admin (findings to task notes then reassign), batch-walks the open queue advancing after each action. Manager dashboard Verify button deep-links into the walk via sessionStorage. Count flow untouched (strip deferred per plan). After deploy, run rebuildSysConfigFromSource to load the new task template.'
+  built: '2026-06-02 09:00',
+  commit: 'Verification UI refinements (no backend change). AdminProducts: drop the Web-only filter (verification is web-only by definition), move the Create Verification Tasks card above New Products, relabel Lookups sections (Grape Varieties / Kashrut Certifications / Marketing Texts) and make them collapsible via a triangle toggle (default collapsed), and fix a stray </div> that closed container-fluid early (cards 3-5 rendered wider than 1-2). ManagerProducts: new Verification Tasks card listing open task.product.verify via getOpenVerifyTasks; each row Verify button starts the read-only walk at that row (startVerifyAt seeds the queue from the rendered list), alongside the unchanged dashboard deep-link.'
 };
 
 function getVersion() {

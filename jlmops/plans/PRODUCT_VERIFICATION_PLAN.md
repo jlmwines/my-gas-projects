@@ -11,6 +11,10 @@
 - **`pack_form: dedicated_view`** on the template (the field postdates this plan's template snippet).
 - **Read-only render:** `verifyMode` adds `#editor-modal.verify-mode` (CSS hides the Edit columns + Fill/Clear, single-column grid) and disables all `[id^="edit-"]` inputs; image tile at top of the modal, Web-categories + flags on the Specs Current column.
 
+**Post-ship UI refinements (2026-06-02, not yet deployed):**
+- **Admin `AdminProductsView`:** "Web only" filter removed from the Create Verification Tasks card (verification is web-only by definition — `webOnly` hardcoded `true`); the Verification card moved above New Products; the Lookups sections relabeled (Grape Varieties / Kashrut Certifications / Marketing Texts) and made collapsible via a ▸/▾ triangle toggle (`toggleLookupSection`, default collapsed). Also fixed a stray `</div>` that closed `container-fluid p-4` early (cards 3-5 were rendering full-bleed/wider than cards 1-2).
+- **Manager `ManagerProductsView` — open-verify-tasks list (the requested workflow surface):** new "Verification Tasks" card listing open `task.product.verify` via the existing `WebAppProducts_getOpenVerifyTasks()` (returns `{taskId, sku, title}`); each row's **Verify** button calls `startVerifyAt(index)`, which seeds `verifyQueue` from the rendered list and enters the existing read-only walk (Confirm & close advances through the rest). **Alongside** the dashboard deep-link, not replacing it (`startVerifyWalk` deep-link path unchanged). `loadVerifyList()` is hooked into `refreshView()`. No backend change — the list reuses functions already shipped @199.
+
 ## Problem
 
 Today's `task.inventory.count` flow has been stretched to serve two unrelated jobs: counting (time-sensitive quantity work) and product-data integrity (vintage drift, image quality, Comax fact-checking). The manager's count view exposes vintage entry and image preview alongside the count, and inline edits create `task.validation.vintage_mismatch` tasks for admin.

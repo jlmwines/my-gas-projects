@@ -141,6 +141,28 @@
       </div>
     </div>
 
+    <!-- SECTION: Verification Tasks -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Verification Tasks</h5>
+            <span id="verify-task-count" class="badge badge-secondary badge-pill">0</span>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover responsive-stack mb-0">
+              <thead>
+                <tr>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="verify-list-body">
+                <!-- Open verify tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- SECTION 2: New Products -->
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -507,11 +529,13 @@
     ManagerProductsView.verifyMode = false;
     ManagerProductsView.verifyQueue = [];
     ManagerProductsView.verifyIndex = -1;
+    ManagerProductsView.verifyListCache = [];
 
     // --- Initialization ---
     ManagerProductsView.refreshView = function() {
       ManagerProductsView.loadWidgetData();
       ManagerProductsView.loadTaskList();
+      ManagerProductsView.loadVerifyList();
       ManagerProductsView.loadCategoryStatus(); // Load section 3 contents immediately
       ManagerProductsView.initializeSearch(); // Attach search listener
 
@@ -1085,6 +1109,47 @@
     };
 
     // --- Verification (read-only review) batch walk ---
+
+    // List card: render the open verify tasks so the manager can start the walk
+    // from this view (alongside the dashboard deep-link). Mirrors loadTaskList.
+    ManagerProductsView.loadVerifyList = function() {
+      const body = document.getElementById('verify-list-body');
+      const countEl = document.getElementById('verify-task-count');
+      if (!body) return;
+      body.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+      google.script.run.withSuccessHandler(tasks => {
+        const list = tasks || [];
+        ManagerProductsView.verifyListCache = list;
+        if (countEl) countEl.textContent = list.length;
+        if (!list.length) {
+          body.innerHTML = '<tr><td colspan="3" class="text-muted">No open verification tasks.</td></tr>';
+          return;
+        }
+        body.innerHTML = '';
+        list.forEach((t, i) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td data-label="Product">${t.title || ''}</td>
+            <td data-label="SKU">${t.sku || ''}</td>
+            <td><button class="btn btn-sm" onclick="ManagerProductsView.startVerifyAt(${i})">Verify</button></td>
+          `;
+          body.appendChild(tr);
+        });
+      }).withFailureHandler(err => {
+        body.innerHTML = `<tr><td colspan="3" class="text-danger">Error: ${(err && err.message) || err}</td></tr>`;
+      }).WebAppProducts_getOpenVerifyTasks();
+    };
+
+    // Start the read-only walk at a chosen list row, using the rendered list as the
+    // queue so the requested index maps to what the manager sees. Confirm & close
+    // then advances through the remainder via advanceVerify().
+    ManagerProductsView.startVerifyAt = function(index) {
+      const list = ManagerProductsView.verifyListCache || [];
+      if (!list.length) { ManagerProductsView.loadVerifyList(); return; }
+      ManagerProductsView.verifyQueue = list;
+      ManagerProductsView.verifyIndex = index - 1; // advanceVerify pre-increments
+      ManagerProductsView.advanceVerify();
+    };
 
     // Entry point: load the manager's open verify queue and walk it.
     ManagerProductsView.startVerifyWalk = function() {

@@ -111,6 +111,66 @@
       </div>
     </div>
 
+    <!-- CARD: VERIFICATION TASK CREATION -->
+    <div class="card mb-4">
+      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span>Create Verification Tasks</span>
+        <div>
+          <span id="verify-planning-loaded" class="text-muted small mr-2"></span>
+          <button id="btn-verify-toggle" class="btn btn-sm" onclick="AdminProductsView.toggleVerifyCard()">Show</button>
+        </div>
+      </div>
+      <div class="card-body" id="verify-card-body" style="display:none;">
+        <div class="form-row align-items-end mb-2">
+          <div class="col-auto">
+            <label for="verify-name-mode" class="small mb-1 d-block">Name filter</label>
+            <select id="verify-name-mode" class="form-control form-control-sm" style="width: 120px;">
+              <option value="startsWith" selected>starts with</option>
+              <option value="contains">contains</option>
+            </select>
+          </div>
+          <div class="col">
+            <label for="verify-name-text" class="small mb-1 d-block">&nbsp;</label>
+            <input type="text" id="verify-name-text" class="form-control form-control-sm" placeholder="e.g. Yatir">
+          </div>
+          <div class="col-auto">
+            <label for="verify-start-at" class="small mb-1 d-block">Start at (name)</label>
+            <input type="text" id="verify-start-at" class="form-control form-control-sm" placeholder="empty = A">
+          </div>
+          <div class="col-auto">
+            <label for="verify-limit" class="small mb-1 d-block">Count</label>
+            <input type="number" id="verify-limit" class="form-control form-control-sm" value="20" style="width: 80px;">
+          </div>
+          <div class="col-auto">
+            <label for="verify-days-threshold" class="small mb-1 d-block">Skip if verified within</label>
+            <input type="number" id="verify-days-threshold" class="form-control form-control-sm" value="180" placeholder="days" style="width: 100px;">
+          </div>
+        </div>
+        <div class="form-row align-items-center mb-2">
+          <div class="col-auto">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="verify-chk-wine-only" checked>
+              <label class="form-check-label" for="verify-chk-wine-only">Wine only (Div 1)</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" id="verify-chk-zero-stock">
+              <label class="form-check-label" for="verify-chk-zero-stock">Include 0 stock</label>
+            </div>
+          </div>
+          <div class="col text-right">
+            <span id="verify-candidate-summary" class="text-muted"></span>
+          </div>
+          <div class="col-auto">
+            <button id="btn-create-verify-tasks" class="btn btn-sm" disabled onclick="AdminProductsView.handleCreateVerifyTasks()">Create tasks</button>
+          </div>
+        </div>
+        <div id="verify-status" class="small mb-2"></div>
+        <div id="verify-preview-container" class="table-responsive" style="max-height: 340px; overflow-y: auto;">
+          <p class="text-muted small mb-0">Click Show to load product data…</p>
+        </div>
+      </div>
+    </div>
+
     <!-- CARD 2: NEW PRODUCTS -->
     <div class="card mb-4">
       <div class="card-header bg-white font-weight-bold">
@@ -209,8 +269,6 @@
       </div>
     </div>
 
-  </div>
-
     <!-- CARD 3: SKU MANAGEMENT -->
     <div class="card mb-4">
       <div class="card-header bg-white font-weight-bold">
@@ -256,10 +314,10 @@
 
         <!-- Section A: Grapes -->
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0">Grapes (<span id="lookup-grapes-count">0</span>)</h6>
+          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('grapes')"><span id="lookup-grapes-caret">&#9656;</span> Grape Varieties (<span id="lookup-grapes-count">0</span>)</h6>
           <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('grapes')">Add Grape</button>
         </div>
-        <div class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto;">
+        <div id="lookup-grapes-section" class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -277,10 +335,10 @@
 
         <!-- Section B: Kashrut -->
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0">Kashrut (<span id="lookup-kashrut-count">0</span>)</h6>
+          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('kashrut')"><span id="lookup-kashrut-caret">&#9656;</span> Kashrut Certifications (<span id="lookup-kashrut-count">0</span>)</h6>
           <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('kashrut')">Add Kashrut</button>
         </div>
-        <div class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto;">
+        <div id="lookup-kashrut-section" class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -299,7 +357,7 @@
 
         <!-- Section C: Texts -->
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0">Texts (<span id="lookup-texts-count">0</span>)</h6>
+          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('texts')"><span id="lookup-texts-caret">&#9656;</span> Marketing Texts (<span id="lookup-texts-count">0</span>)</h6>
           <div>
             <select id="lookup-texts-filter" class="form-control form-control-sm d-inline-block" style="width: auto;" onchange="AdminProductsView.renderLookupTable('texts')">
               <option value="">All categories</option>
@@ -307,7 +365,7 @@
             <button class="btn btn-sm ml-2" onclick="AdminProductsView.openLookupModalAdd('texts')">Add Text</button>
           </div>
         </div>
-        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+        <div id="lookup-texts-section" class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -324,70 +382,6 @@
             </table>
         </div>
 
-      </div>
-    </div>
-
-    <!-- CARD 5: VERIFICATION TASK CREATION -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
-        <span>Create Verification Tasks</span>
-        <div>
-          <span id="verify-planning-loaded" class="text-muted small mr-2"></span>
-          <button id="btn-verify-toggle" class="btn btn-sm" onclick="AdminProductsView.toggleVerifyCard()">Show</button>
-        </div>
-      </div>
-      <div class="card-body" id="verify-card-body" style="display:none;">
-        <div class="form-row align-items-end mb-2">
-          <div class="col-auto">
-            <label for="verify-name-mode" class="small mb-1 d-block">Name filter</label>
-            <select id="verify-name-mode" class="form-control form-control-sm" style="width: 120px;">
-              <option value="startsWith" selected>starts with</option>
-              <option value="contains">contains</option>
-            </select>
-          </div>
-          <div class="col">
-            <label for="verify-name-text" class="small mb-1 d-block">&nbsp;</label>
-            <input type="text" id="verify-name-text" class="form-control form-control-sm" placeholder="e.g. Yatir">
-          </div>
-          <div class="col-auto">
-            <label for="verify-start-at" class="small mb-1 d-block">Start at (name)</label>
-            <input type="text" id="verify-start-at" class="form-control form-control-sm" placeholder="empty = A">
-          </div>
-          <div class="col-auto">
-            <label for="verify-limit" class="small mb-1 d-block">Count</label>
-            <input type="number" id="verify-limit" class="form-control form-control-sm" value="20" style="width: 80px;">
-          </div>
-          <div class="col-auto">
-            <label for="verify-days-threshold" class="small mb-1 d-block">Skip if verified within</label>
-            <input type="number" id="verify-days-threshold" class="form-control form-control-sm" value="180" placeholder="days" style="width: 100px;">
-          </div>
-        </div>
-        <div class="form-row align-items-center mb-2">
-          <div class="col-auto">
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="checkbox" id="verify-chk-web-only" checked>
-              <label class="form-check-label" for="verify-chk-web-only">Web only</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="checkbox" id="verify-chk-wine-only" checked>
-              <label class="form-check-label" for="verify-chk-wine-only">Wine only (Div 1)</label>
-            </div>
-            <div class="form-check form-check-inline">
-              <input class="form-check-input" type="checkbox" id="verify-chk-zero-stock">
-              <label class="form-check-label" for="verify-chk-zero-stock">Include 0 stock</label>
-            </div>
-          </div>
-          <div class="col text-right">
-            <span id="verify-candidate-summary" class="text-muted"></span>
-          </div>
-          <div class="col-auto">
-            <button id="btn-create-verify-tasks" class="btn btn-sm" disabled onclick="AdminProductsView.handleCreateVerifyTasks()">Create tasks</button>
-          </div>
-        </div>
-        <div id="verify-status" class="small mb-2"></div>
-        <div id="verify-preview-container" class="table-responsive" style="max-height: 340px; overflow-y: auto;">
-          <p class="text-muted small mb-0">Click Show to load product data…</p>
-        </div>
       </div>
     </div>
 
@@ -2154,6 +2148,15 @@
     // --- Card 5: Verification Task Creation (product-side mirror of the count card) ---
     AdminProductsView.verifyState = { products: [], loadedAt: null, loaded: false };
 
+    AdminProductsView.toggleLookupSection = function(key) {
+      const section = document.getElementById('lookup-' + key + '-section');
+      const caret = document.getElementById('lookup-' + key + '-caret');
+      if (!section) return;
+      const showing = section.style.display !== 'none';
+      section.style.display = showing ? 'none' : '';
+      if (caret) caret.innerHTML = showing ? '&#9656;' : '&#9662;';
+    };
+
     AdminProductsView.toggleVerifyCard = function() {
       const body = document.getElementById('verify-card-body');
       const btn = document.getElementById('btn-verify-toggle');
@@ -2206,7 +2209,7 @@
       const startAt = (document.getElementById('verify-start-at').value || '').trim().toLowerCase();
       const dt = document.getElementById('verify-days-threshold').value;
       const daysThreshold = dt ? parseInt(dt, 10) : null;
-      const webOnly = document.getElementById('verify-chk-web-only').checked;
+      const webOnly = true; // verification is web-only by definition
       const wineOnly = document.getElementById('verify-chk-wine-only').checked;
       const includeZero = document.getElementById('verify-chk-zero-stock').checked;
       const nowMs = Date.now();
@@ -2333,7 +2336,7 @@
 
     // Wire verify-card filter controls (they exist in the DOM even while the card is collapsed).
     ['verify-name-mode','verify-name-text','verify-start-at','verify-limit','verify-days-threshold',
-     'verify-chk-web-only','verify-chk-wine-only','verify-chk-zero-stock'].forEach(id => {
+     'verify-chk-wine-only','verify-chk-zero-stock'].forEach(id => {
       const ctl = document.getElementById(id);
       if (!ctl) return;
       const evt = (ctl.tagName === 'SELECT' || ctl.type === 'checkbox') ? 'change' : 'input';
