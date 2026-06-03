@@ -49,9 +49,16 @@ Make `saveCountEntry` / "Save & next" actually persist each row to a **server-si
 - **View load** → `getCountDrafts()` returns the operator's drafts; rehydrate **only** rows whose `taskId` is still present + open in the freshly-loaded count list (drop any draft whose task is gone/Done so a stale draft can never resurrect a completed row).
 - **Batch Submit** → clear drafts **per successfully-submitted task only**.
 
-**BLOCKER (§8) — server change required first.** This clear-per-task logic is **not implementable as-is**: `WebAppInventory_submitInventoryCounts` returns only `{ success:true, updated:<count>, vintageTasksCreated }` (`WebAppInventory.js:373`) — a count, no per-task succeeded/failed list. Two server changes are prerequisites:
-1. Have submit **return the succeeded + failed taskId arrays** so the client can clear only committed drafts.
-2. **Surface partial failure** — today a per-item failure just `LoggerService.warn`s and `return`s while the outer call still returns `success:true` and the UI toasts "N submitted" + reloads. The draft feature must show which items failed, not silently keep their drafts.
+**BLOCKER — server change required first (failure model corrected per §10).** The clear-per-task logic is **not implementable as-is**, for two reasons:
+- `WebAppInventory_submitInventoryCounts` returns only `{ success:true, updated:<count>, vintageTasksCreated }` (`WebAppInventory.js:373`) — no per-task succeeded/failed list.
+- **The real failure model is NOT "silent success"** (as §8/§9 wrongly stated). `updatePhysicalCounts` (`InventoryManagementService.js:495–603`) only returns `{success:true}` or **throws** — so the submit `else { warn; return; }` branch is **dead**. A real item failure **throws, escapes the `forEach`, and aborts the whole batch** to the client's `withFailureHandler`. But items processed *before* the throw have already committed (written + flipped to `'Review'`). **True hazard: a partial commit reported to the operator as a total failure.**
+
+Prerequisites for Option A, in order:
+1. **Per-item try/catch** in the submit loop — convert a single item's throw into a captured per-item failure instead of aborting the batch.
+2. **Return succeeded + failed taskId arrays** (possible only after #1) — so the client clears only committed drafts and surfaces which items failed.
+3. **Resubmit idempotency** — re-submitting after a partial commit must not re-process already-committed items or re-`'Review'` their tasks; define the guard (e.g. skip tasks already at `'Review'`/Done).
+
+Until these land, Option A's draft-clear + partial-failure handling can't be built correctly. (A0 has none of this entanglement.)
 
 **Cost:** new endpoint pair (save + get) + the two server changes above + clear-on-submit wiring + rehydrate-on-load; a server round-trip per Save. Heavier than A0 — justified only for the cases A0 misses (tab close / device switch).
 
@@ -118,3 +125,32 @@ Verified all three points against code — **all correct**; the §7 "build-ready
 - **Minor noted:** multi-device same operator on the server path = `CacheService` user cache is shared = last-write-wins, no merge (acceptable; note at build). Vestigial `ts` key dropped (staleness is task-presence-based).
 
 **Status: approach re-ranked; A0 empirical check is the next concrete step before any build.**
+
+## 10. Third (independent red-team) review (2026-06-03)
+
+Round-3 verification after the §9 resolution. Re-read the plan plus `WebAppInventory.js`, `InventoryManagementService.js`, `ManagerInventoryView.html`. **Verdict: needs-revision (narrowly) — but a ready near-term path exists.**
+
+- **§8 #3 storage — genuinely resolved.** Retraction + the sessionStorage-survives-same-tab-refresh evaluation + the A0 5-min-check gating are all sound. (Exact count is 21 sessionStorage uses, not "23×" — immaterial.)
+- **§8 #1/#2 blocker — still only HALF-resolved: the failure model is mischaracterized.** §8/§9 (and §4.A) say submit "silently returns success" on partial failure. It does **not**. `updatePhysicalCounts` (`InventoryManagementService.js:495–603`) returns `{success:true}` or **`throw e`** — it never returns `success:false`. So the submit `else { warn; return; }` branch (`WebAppInventory.js:334`) is effectively **dead**: a real item failure throws, propagates out of the `forEach`, hits the outer `catch → throw e`, and the **whole batch fails to the client's `withFailureHandler`** (no success toast, no reload). The true risk is the inverse — a **partial sheet commit reported as total failure** (items before the throw already wrote + flipped to 'Review'). Therefore the "return succeeded/failed arrays" change is **not buildable as written**: it first requires wrapping each item in its own try/catch to convert the throw into a captured per-item failure. §4.A omits this, so Option A's prerequisite remains underspecified.
+- **New, unflagged:** idempotency on resubmit-after-partial-commit (re-running already-committed items / re-'Review'ing tasks) is not addressed.
+
+**Bottom line:** the **A0 sessionStorage-first path is implementation-ready now** (no server change, ~15 lines + the phone check). Full **Option A is not** — its server-change spec rests on a wrong failure model and omits the per-item try/catch. Since A is deferred behind A0, near-term work isn't blocked. Actions: (1) ship A0 first; (2) correct §4.A from "submit silently returns success" → "submit *throws and aborts mid-batch, leaving partial commits*"; (3) add the per-item try/catch as the real prerequisite for succeeded/failed arrays; (4) address resubmit idempotency.
+
+Sources: this doc; `WebAppInventory.js:322–378`, `InventoryManagementService.js:495–603`, `ManagerInventoryView.html:465–493`. Read-only.
+
+## 11. The flip side — when refresh / going back is INTENTIONAL (added 2026-06-03, user question)
+
+Recovery must not become a trap when the user *deliberately* refreshes or wants to navigate back.
+
+**Intentional refresh to get a new app version — already works; just add escape hatches.** A refresh re-runs `doGet`, which serves the **current deployed version**, so the user *does* get new code. Recovery (A0/A) doesn't block that — it just re-fills in-progress counts on top of the fresh app (you get new code *and* your unsaved work). Two additions so this stays clean:
+- **"Discard / start fresh" control** — clears the saved draft for a genuinely clean slate (some refreshes are "I want to start over," not "restore my work").
+- **Draft schema version tag (`v`)** — new code ignores an incompatible old draft after a deploy that changed the count-form shape, instead of mis-rehydrating. (This is the *useful* replacement for the `ts` key §8 had me drop: the task-presence guard handles stale-task staleness; `v` handles fields-changed-under-me.)
+
+**Deliberate "go back a screen" — browser-back is the wrong tool here, by architecture.** Verified: **no `history.pushState`/`popstate` anywhere** — navigation is in-app `loadView('X')` swapping the content div, so the browser holds **no per-view history**. Browser-back therefore doesn't step back through views; it exits/reloads the iframe (destructive). So "going back" must be an **in-app** action:
+- The **nav sidebar** (`loadView`), or a contextual in-app **Back** button. The Library entity-drawer already has its own back-stack — that's the right pattern to copy where a surface needs "back to where I came from."
+- If a surface lacks an obvious in-app way back and operators reach for browser-back, the fix is to **add an in-app Back affordance there** — not to make browser-back work. (Corollary to §4.D: make in-app nav good enough that nobody *needs* the browser's.)
+- **Optional larger enhancement:** real `pushState` history (push per view, `popstate` → `loadView`) so browser-back navigates views naturally. Legit, but it's its own piece of work and interacts with the recovery design — treat as a separate decision, not a default.
+
+## 12. Resolution of the §10 red-team (2026-06-03)
+
+Verified §10 against code — **correct; my §9 was wrong and is retracted.** `updatePhysicalCounts` (`InventoryManagementService.js:495–603`) returns `{success:true}` or **throws**, never `{success:false}` — so the submit `else` branch is dead, a real failure aborts the whole batch to `withFailureHandler`, and the true hazard is a **partial commit reported as total failure** (not the "silent success" §8/§9 claimed). §4.A's BLOCKER is rewritten accordingly: prerequisites are now (1) per-item try/catch, (2) succeeded/failed taskId arrays, (3) resubmit idempotency. (Minor: exact sessionStorage count is ~21, not 23 — immaterial.) **Bottom line unchanged: A0 sessionStorage-first is implementation-ready; Option A stays deferred until its now-correctly-specified prerequisites are built.**
