@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 07:27',
+  built: '2026-06-03 08:46',
   commit: 'Notification UX standard (NOTIFICATION_UX_PLAN) Phases 0-2: kill native alert()/confirm() (ugly iframe header). TaskWidgets gains typed toast (success/error/warning/info, back-compat) + TaskWidgets.confirm (in-page, Cancel-default). Migrated all 4 manager views (Dashboard/Contact/Inventory/Products — 17 native dialogs → toast/confirm, messages tightened) + shortened the 2 mile-long Developer-screen confirms. Standard documented in TaskWidgets header + jlmops/CLAUDE.md; guard script added. Admin sweep (135 calls) is tracked backlog. Manager views need on-screen verification.'
 };
 
