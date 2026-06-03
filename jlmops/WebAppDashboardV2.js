@@ -41,6 +41,7 @@ function WebAppDashboardV2_getData() {
     const result = {
       timestamp: new Date().toISOString(),
       systemHealth: _getSystemHealthData_v2(allTasks, allConfig),
+      integrationHeartbeats: _getIntegrationHeartbeats_v2(allConfig),
       orders: _getOrdersData_v2(ordLog, webOrdM),
       inventory: _getInventoryData(openTasks),
       products: _getProductsData(openTasks),
@@ -86,6 +87,56 @@ function _safeDate(val) {
     return String(val);
   } catch (e) {
     return String(val);
+  }
+}
+
+/**
+ * Builds per-integration last-successful-pull heartbeats for the dashboard
+ * (reliability audit 3.1). Pure config reads — no sheet hits, stays on the
+ * optimized hot path. Each source: { ts, ageMin, stale, thresholdMin }.
+ * `stale` = missing timestamp, or age beyond the source's SysConfig threshold.
+ * NOTE: Comax last-import is intentionally omitted here — it has no config key
+ * (it lives in SysJobQueue COMPLETED rows, a cross-workbook read we don't want
+ * on this hot path). Tracked as a 3.1 follow-up.
+ * @private
+ */
+function _getIntegrationHeartbeats_v2(allConfig) {
+  try {
+    const woo = allConfig['woo.api'] || {};
+    const hb = allConfig['system.heartbeat'] || {};
+    const mcSubs = allConfig['system.mailchimp.subscribers_last_update'] || {};
+    const mcCamps = allConfig['system.mailchimp.campaigns_last_update'] || {};
+    const now = Date.now();
+
+    const toThreshold = (val, fallback) => {
+      const n = parseInt(val, 10);
+      return isNaN(n) ? fallback : n;
+    };
+
+    const build = (rawTs, thresholdMin) => {
+      const ts = rawTs ? String(rawTs) : null;
+      if (!ts) return { ts: null, ageMin: null, stale: true, thresholdMin: thresholdMin };
+      const parsed = new Date(ts);
+      if (isNaN(parsed)) return { ts: ts, ageMin: null, stale: true, thresholdMin: thresholdMin };
+      const ageMin = Math.floor((now - parsed.getTime()) / 60000);
+      return { ts: parsed.toISOString(), ageMin: ageMin, stale: ageMin > thresholdMin, thresholdMin: thresholdMin };
+    };
+
+    const productsThr = toThreshold(hb.products_threshold_min, 1440);
+    const ordersThr = toThreshold(hb.orders_threshold_min, 60);
+    const mailchimpThr = toThreshold(hb.mailchimp_threshold_min, 1440);
+
+    return {
+      available: true,
+      sources: [
+        { key: 'orders', label: 'Woo Orders', hb: build(woo.orders_last_pull, ordersThr) },
+        { key: 'products', label: 'Woo Products', hb: build(woo.products_last_pull, productsThr) },
+        { key: 'mailchimp_subscribers', label: 'Mailchimp Subscribers', hb: build(mcSubs.value, mailchimpThr) },
+        { key: 'mailchimp_campaigns', label: 'Mailchimp Campaigns', hb: build(mcCamps.value, mailchimpThr) }
+      ]
+    };
+  } catch (e) {
+    return { available: false, error: e.message };
   }
 }
 

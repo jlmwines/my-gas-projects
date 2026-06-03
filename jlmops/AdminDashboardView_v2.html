@@ -70,6 +70,18 @@
       </div>
     </div>
   </div>
+
+  <!-- Row 3: Integration Heartbeats -->
+  <div class="row mt-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">Integrations</div>
+        <div class="card-body" id="card-integrations">
+          <p class="text-muted">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -94,6 +106,7 @@
 
     // Cards
     renderSystemHealthCard(data.systemHealth);
+    renderIntegrationsCard(data.integrationHeartbeats);
     renderOrdersCard(data.orders);
     renderInventoryCard(data.inventory);
     renderProductsCard(data.products);
@@ -137,6 +150,25 @@
     if (diffMins < 60) return diffMins + ' min ago';
     if (diffHours < 24) return diffHours + ' hr ago';
     return Math.floor(diffMs / 86400000) + ' days ago';
+  }
+
+  function renderIntegrationsCard(hb) {
+    var el = document.getElementById('card-integrations');
+    if (!hb || !hb.available) {
+      el.innerHTML = '<p class="text-muted">' + ((hb && hb.error) ? hb.error : 'No heartbeat data') + '</p>';
+      return;
+    }
+    var html = '<table class="table table-sm mb-0"><tbody>';
+    hb.sources.forEach(function(s) {
+      var h = s.hb || {};
+      var icon = h.stale ? '<span class="text-warning">&#9888;</span>' : '<span class="text-success">&#10003;</span>';
+      var when = h.ts ? formatTimeAgo(h.ts) : 'never';
+      var whenClass = h.stale ? 'text-danger' : 'text-muted';
+      html += '<tr><td>' + icon + ' ' + s.label + '</td>';
+      html += '<td class="text-right small ' + whenClass + '">' + when + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
   }
 
   function renderSystemHealthCard(health) {

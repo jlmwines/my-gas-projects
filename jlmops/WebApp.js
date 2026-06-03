@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 07:00',
-  commit: 'Reliability audit 3.1 (dead-key fix): woo.api.orders_last_pull was declared + read (WebAppSync:1058) but never written, so the orders heartbeat was permanently stale. WooOrderPullService.pullOrders now stamps it on both success paths (0-orders and processed); added to RUNTIME_KEYS so rebuilds preserve it like products_last_pull. Heartbeat panel/widget + Chat-webhook verification deferred (UI / from-screen).'
+  commit: 'Reliability audit 3.1 (heartbeat panel): new Integrations card on AdminDashboardView_v2 shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds (system.heartbeat.*_threshold_min, defaults orders 60 / products 1440 / mailchimp 1440). Backend _getIntegrationHeartbeats_v2 is pure config reads (no extra sheet hits). Comax heartbeat omitted (needs cross-workbook SysJobQueue read). Chat-webhook verification still deferred.'
 };
 
 function getVersion() {
