@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 06:36',
+  built: '2026-06-03 06:43',
   commit: 'Reliability audit 2.2: FAILED-job daily sweep. HousekeepingService.checkFailedJobs reads SysJobQueue once before purgeOldJobs, counts FAILED rows, ladders severity (Normal / >7d recent = High / job_type still PROCESSING = Critical zombie), writes failed_job_count + oldest_age_days into the health_status notes, and reportFailure(queue.failed_job_sweep) on High/Critical with stable dedup. Legacy >30d failures counted but not alarmed.'
 };
 
