@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 08:46',
+  built: '2026-06-03 09:40',
   commit: 'Notification UX Phases 3-4 (admin sweep): native alert()/confirm() ELIMINATED across all views — 152 → 0. Alerts converted via reviewed balanced-paren transform to TaskWidgets.toast; all confirms hand-refactored to async TaskWidgets.confirm callbacks (destructive ones {danger:true}). Touched AdminProjects/Tasks/Bundles/Products/Contacts/Inventory/DailySync/Library/Orders/TaskPacks; added TaskWidgets include to the 3 standalone views that lacked it; AdminInventory showToast delegates. Guard passes --strict. Needs on-screen verification of admin views.'
 };
 
