@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 06:43',
-  commit: 'Reliability audit 2.2: FAILED-job daily sweep. HousekeepingService.checkFailedJobs reads SysJobQueue once before purgeOldJobs, counts FAILED rows, ladders severity (Normal / >7d recent = High / job_type still PROCESSING = Critical zombie), writes failed_job_count + oldest_age_days into the health_status notes, and reportFailure(queue.failed_job_sweep) on High/Critical with stable dedup. Legacy >30d failures counted but not alarmed.'
+  commit: 'Reliability audit 2.3 (part 1): pass-by-default guard. HousekeepingService Phase 2 now reportFailure(tests.empty_or_null_result, High) when TestRunner returns null or total===0, so a crashed/empty suite no longer leaves daily housekeeping silently green. Suite rewrites (Comax/WebAdapter real-invocation) deferred to a from-editor session — they need config-matched fixtures and only validate via TestRunner.runAllTests() in the editor.'
 };
 
 function getVersion() {

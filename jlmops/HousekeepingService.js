@@ -656,6 +656,15 @@ function HousekeepingService() {
       logger.error('HousekeepingService', functionName, `Tests failed: ${e.message}`);
     }
 
+    // Guard against pass-by-default (reliability audit 2.3): a null result (suite
+    // threw) or total === 0 (no suites registered / all errored before asserting)
+    // would otherwise leave Phase 2 silently green. Surface it as a real failure.
+    if (!testResult || testResult.total === 0) {
+      NotificationService.reportFailure('tests.empty_or_null_result',
+        'Unit test suite returned no results (null or total=0) — Phase 2 cannot be trusted green.',
+        'High', { passed: testResult ? testResult.passed : null, total: testResult ? testResult.total : null }, sessionId);
+    }
+
     try {
       schemaResult = ValidationLogic.validateDatabaseSchema('housekeeping_' + Date.now());
       const criticalCount = schemaResult.discrepancies.filter(d => d.severity === 'CRITICAL').length;
