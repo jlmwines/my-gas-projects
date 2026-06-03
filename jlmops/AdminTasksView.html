@@ -189,7 +189,6 @@
       <div class="card" style="height: calc(100vh - 120px);">
         <div class="card-header py-2 d-flex justify-content-between align-items-center">
           <strong id="detail-title">Overview</strong>
-          <select id="project-switcher" class="form-control form-control-sm" style="width:auto;max-width:150px;display:none;font-size:11px;"></select>
         </div>
         <div class="card-body" style="overflow-y: auto;">
           <!-- Default: Stats summary -->
@@ -664,6 +663,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function init() {
     populateFilterDropdowns();
     loadData();
+    loadProjects();
     loadContentStages();
     bindEventHandlers();
 
@@ -680,6 +680,21 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     // Check for navigation from dashboard
     checkDashboardNavigation();
+  }
+
+  function loadProjects() {
+    // Near-static parent-project set (ADMIN_TASK_UI Decision 4). Loaded once at
+    // init to back the required Project picker in the New Task modal; the modal
+    // was kept during the copy-reduce but the project-load was dropped with the
+    // rest of the project machinery (plan follow-up #5).
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && !result.error && Array.isArray(result.data)) {
+          state.projects = result.data;
+          populateTaskProjectOptions();
+        }
+      })
+      .WebAppProjects_getAllProjects();
   }
 
   function loadContentStages() {
@@ -929,13 +944,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     document.getElementById('confirm-no').addEventListener('click', function() {
       hideConfirm();
-    });
-
-    document.getElementById('project-switcher').addEventListener('change', function() {
-      var newProjectId = this.value;
-      if (newProjectId && newProjectId !== state.selectedProjectId) {
-        selectProject(newProjectId);
-      }
     });
 
     document.getElementById('btn-create-project').addEventListener('click', createProject);
@@ -1643,19 +1651,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var projectDetail = document.getElementById('detail-project');
     var taskDetail = document.getElementById('detail-task');
     var title = document.getElementById('detail-title');
-    var switcher = document.getElementById('project-switcher');
 
     summary.style.display = 'none';
     projectDetail.style.display = 'none';
     taskDetail.style.display = 'none';
-
-    // Show project switcher when in tasks mode
-    if (state.mode === 'tasks') {
-      switcher.style.display = '';
-      populateProjectSwitcher();
-    } else {
-      switcher.style.display = 'none';
-    }
 
     if (state.selectedTaskId) {
       var task = getSelectedTask();
@@ -1675,18 +1674,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       title.textContent = 'Overview';
       summary.style.display = '';
     }
-  }
-
-  function populateProjectSwitcher() {
-    var switcher = document.getElementById('project-switcher');
-    var html = '';
-    state.projects.forEach(function(p) {
-      var id = p.projectid || p.spro_ProjectId;
-      var name = p.name || p.spro_Name || id;
-      var selected = id === state.selectedProjectId ? ' selected' : '';
-      html += '<option value="' + id + '"' + selected + '>' + TaskWidgets.escape(name) + '</option>';
-    });
-    switcher.innerHTML = html;
   }
 
   function populateProjectForm(project) {
