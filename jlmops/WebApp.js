@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 06:31',
-  commit: 'Reliability audit 1.2 Stage B: Comax adapter outer try. ComaxAdapter.processProductCsv now wraps the Drive.Files.insert conversion (was unguarded) in try/catch; a corrupt/oversized/non-CSV blob throws a typed INVALID FILE error so the orchestrator routes the job to FAILED (OrchestratorService:1218) instead of crashing raw.'
+  commit: 'Reliability audit 1.2 Stage C: packing-slip bidi sanitization. PrintService._sanitizeForDoc strips Unicode bidi override/isolate controls (U+202A-202E, U+2066-2069) from shipping name/address/city/phone before they render on the printed slip, defeating RLO spoofing of the operator view. Formula-prefix guard intentionally omitted (Doc surface, = is inert; belongs on a Sheets-export path).'
 };
 
 function getVersion() {

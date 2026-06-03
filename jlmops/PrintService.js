@@ -5,6 +5,25 @@
 const PrintService = (function() {
 
   /**
+   * Strip Unicode bidirectional override/embedding/isolate controls from text
+   * that gets rendered onto a printed packing slip (reliability audit 1.2 Stage C).
+   * An RLO (U+202E) or LRO in a shipping name can visually reorder the slip's
+   * order#/address/phone on the operator's view (spoofing). Hebrew renders
+   * correctly without these controls, so removing them is safe and unconditional.
+   * Scope: bidi overrides (U+202A-202E) + isolates (U+2066-2069) only. The benign
+   * directional marks U+200E/200F are left alone (handled as noise elsewhere).
+   * Formula-prefix (=/+/-/@) guarding is intentionally NOT done here: this is a
+   * Google Doc, where a leading = is inert text; that guard belongs on any future
+   * Sheets-export path, not on the printed slip.
+   * @param {*} str - raw field value (may be non-string/empty).
+   * @returns {*} the value with bidi controls removed (non-strings returned as-is).
+   */
+  function _sanitizeForDoc(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
+  }
+
+  /**
    * Replicates the logic of the legacy getProductDetails function using jlmops data.
    * @param {Object} item - A row object from SysPackingCache.
    * @param {Object} cacheHeaderMap - A map of header names to column indices.
@@ -177,12 +196,13 @@ const PrintService = (function() {
             }
             firstOrder = false;
 
-            const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']] || '';
-            const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']] || '';
-            const shippingAddress1 = orderInfo[womHeaderMap['wom_ShippingAddress1']] || '';
-            const shippingAddress2 = orderInfo[womHeaderMap['wom_ShippingAddress2']] || '';
-            const shippingCity = orderInfo[womHeaderMap['wom_ShippingCity']] || '';
-            const shippingPhone = orderInfo[womHeaderMap['wom_ShippingPhone']] || '';
+            // Sanitize operator-printed shipping fields against bidi-override spoofing (1.2 Stage C).
+            const shippingFirstName = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingFirstName']] || '');
+            const shippingLastName = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingLastName']] || '');
+            const shippingAddress1 = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingAddress1']] || '');
+            const shippingAddress2 = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingAddress2']] || '');
+            const shippingCity = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingCity']] || '');
+            const shippingPhone = _sanitizeForDoc(orderInfo[womHeaderMap['wom_ShippingPhone']] || '');
             const orderNumber = orderInfo[womHeaderMap['wom_OrderNumber']] || '';
             const orderDate = new Date(orderInfo[womHeaderMap['wom_OrderDate']]);
             const formattedOrderDate = !isNaN(orderDate) ? Utilities.formatDate(orderDate, Session.getScriptTimeZone(), "yyyy-MM-dd") : 'Invalid Date';

@@ -315,7 +315,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Goal.** Adversarial inputs (oversized WC response, Comax adapter pre-parse throw, Doc-bound text with formula/RTL exploits) fail closed without corrupting state or crashing the executor.
 
-**Status (2026-06-03).** Stages A + B SHIPPED (deploy in place). Stage C (Doc-bound text sanitization) still open. Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
+**Status (2026-06-03).** Stages A + B + C all SHIPPED (deploy in place) — session 1.2 complete. Stage C scope narrowed (bidi strip done; formula-prefix guard omitted as wrong-surface for a Doc — see Stage C below). Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
 
 Three distinct work items, three distinct files, three distinct failure modes. Staged as three deploys within the session so each ships with its own smoke gate. If any sub-stage fails or surfaces unknowns, stop the session and re-plan rather than push through.
 
@@ -334,10 +334,11 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 - On catch: logs + throws a typed `INVALID FILE: ...could not be converted by Drive...` error; existing FAILED routing at `OrchestratorService.js:1218` preserved (no reportFailure added here — orchestrator owns that path).
 - Smoke B (pending user run): drop a truncated/non-CSV Comax file, confirm state machine ends at FAILED with `failedAtStage=IMPORTING_COMAX`, retry from sync widget returns to `WAITING_COMAX_IMPORT`.
 
-**Stage C: Doc-bound text sanitization.**
-- New helper `sanitizeForDoc(str)` in `PrintService.js` (or shared `TextSafetyHelpers.js`): strip U+202E; prepend `'` to any string starting with `=`, `+`, `-`, `@`.
-- Call at boundary where shipping fields enter template at `PrintService.js:180-188`.
-- Smoke C: (i) generate packing slip with shipping name `=cmd|'/c calc'!A1` — confirm rendered as literal text. (ii) generate packing slip with `שלום` in name field — confirm Hebrew renders correctly.
+**Stage C: Doc-bound text sanitization. SHIPPED 2026-06-03 (scope narrowed).**
+- Added private `_sanitizeForDoc(str)` in `PrintService.js`: strips bidi override/embedding/isolate controls (`U+202A-202E`, `U+2066-2069`); non-strings returned as-is; benign `U+200E/200F` marks left alone (already treated as noise at `:33`).
+- Applied to the six shipping fields (name/address1/address2/city/phone) at the read site (now `:199-204` after the helper insertion).
+- **Formula-prefix guard (`=/+/-/@`) intentionally OMITTED.** The plan called for it, but this surface is a Google **Doc**, where a leading `=` is inert text — the guard would only stamp a visible literal `'` onto names/addresses for zero in-Doc benefit. Formula-injection defense belongs on an actual **Sheets-export** path (none exists today). Decision flagged to user 2026-06-03; revisit if a slip→Sheets export is ever built.
+- Smoke C (pending user run): (i) packing slip with an RLO/bidi-override-laced shipping name — confirm the slip's order#/address/phone are NOT visually reordered. (ii) packing slip with `שלום` in the name field — confirm Hebrew renders correctly.
 
 **CCPs.** CCP-1 (reportFailure on oversize), CCP-2 (sessionId), CCP-6 (max-bytes in SysConfig).
 
