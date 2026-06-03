@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 09:40',
-  commit: 'Notification UX Phases 3-4 (admin sweep): native alert()/confirm() ELIMINATED across all views — 152 → 0. Alerts converted via reviewed balanced-paren transform to TaskWidgets.toast; all confirms hand-refactored to async TaskWidgets.confirm callbacks (destructive ones {danger:true}). Touched AdminProjects/Tasks/Bundles/Products/Contacts/Inventory/DailySync/Library/Orders/TaskPacks; added TaskWidgets include to the 3 standalone views that lacked it; AdminInventory showToast delegates. Guard passes --strict. Needs on-screen verification of admin views.'
+  commit: 'Reliability audit 2.3: REAL adapter tests. Rewrote ComaxAdapterTest + WebAdapterTest from decorative (re-implemented logic inline, passed by default) to calling the real ComaxAdapter/WebAdapter with in-memory CSV fixtures (4 cases each: happy / structural-reject / empty / bad-data). They now go RED if the import path breaks. Pure transforms = no production sheets touched (Comax spins a self-trashing temp Drive file). Test count ~40→~23 (8 real replace 25 decorative). VALIDATE via the Dev screen Run Unit Tests button. OrderService/ProductService suites left unaudited (Tier 6.7).'
 };
 
 function getVersion() {
