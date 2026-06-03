@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 06:54',
+  built: '2026-06-03 07:00',
   commit: 'Reliability audit 3.1 (dead-key fix): woo.api.orders_last_pull was declared + read (WebAppSync:1058) but never written, so the orders heartbeat was permanently stale. WooOrderPullService.pullOrders now stamps it on both success paths (0-orders and processed); added to RUNTIME_KEYS so rebuilds preserve it like products_last_pull. Heartbeat panel/widget + Chat-webhook verification deferred (UI / from-screen).'
 };
 
