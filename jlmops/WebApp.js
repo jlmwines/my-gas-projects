@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-02 16:57',
+  built: '2026-06-03 06:17',
   commit: 'Reliability audit 1.2 Stage A: WC response size cap. WooApiService._fetch now measures response bytes (Content-Length header, blob-bytes fallback for chunked) before JSON.parse; over woo.api.response_max_bytes (default 10MB) it fails closed via reportFailure(integration.woo.response_oversize, High) + a wooNonRetryable throw that short-circuits the retry loop (deterministic, fires once).'
 };
 
