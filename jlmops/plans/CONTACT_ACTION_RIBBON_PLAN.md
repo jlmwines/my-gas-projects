@@ -1,6 +1,8 @@
 # Contact Action Ribbon — unified "Make contact" + record model
 
-**Status:** **PHASE 1 SHIPPED 2026-05-29 (@187 deploy @191).** ManagerContactView: single "+ New contact attempt" button → ribbon = distinct green **✆ Make contact** (outbound-only send via `logContactAttempt`; Direction radios removed) + record icons **📞 💬 📧 📝** → new record modal → `logActivity` (log only, no send; in/out for channels, none for note). SMS skipped per user. User-confirmed. **Phase 2 (task packs) still pending** — see below. Designed 2026-05-29 in a chavruta session that surfaced while doing UI T5.1.
+**Status:** **PHASE 1 SHIPPED 2026-05-29 (@187 deploy @191). PHASE 2 DROPPED 2026-06-03.** ManagerContactView: single "+ New contact attempt" button → ribbon = distinct green **✆ Make contact** (outbound-only send via `logContactAttempt`; Direction radios removed) + record icons **📞 💬 📧 📝** → new record modal → `logActivity` (log only, no send; in/out for channels, none for note). SMS skipped per user. User-confirmed. Designed 2026-05-29 in a chavruta session that surfaced while doing UI T5.1.
+
+**Phase 2 dropped (2026-06-03 user call):** Phase 1 already ships the load-bearing pieces — "Make contact" from an open task preloads the template (`getOutreachTemplate`) and marks the task done on send. Phase 2's only net-adds were *constraints* (restrict channels to the pack + disable the record icons in task mode), whose payoff is guardrails against operator error. With a single competent operator the full ribbon is not a burden, so those guardrails buy nothing felt. **Revisit only if a second/junior person starts doing outreach** — at that point channel-restrict + record-icon-disable earn their keep. The Phase 2 design below is preserved for that revisit.
 
 ## Why this exists (the rough spot)
 

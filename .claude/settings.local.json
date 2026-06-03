@@ -73,7 +73,10 @@
       "WebFetch(domain:easymcpai.com)",
       "WebFetch(domain:www.jlmwines.com)",
       "Bash(echo \"exit=$? bytes=$\\(wc -c </tmp/rm_audit.json\\)\")",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Skill(update-config)",
+      "Bash(echo '{\"tool_input\":{\"pattern\":\"\\(?<!\\\\\\\\w\\)alert\\\\\\\\\\(\"}}')",
+      "Bash(echo '{\"tool_input\":{\"pattern\":\"alert\\\\\\\\\\(\"}}')"
     ],
     "deny": [
       "Bash(git -C:*)",
