@@ -70,7 +70,8 @@ const WooApiService = (function() {
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,
       retryMax: parseInt(config.retry_max, 10) || 3,
-      retryDelayMs: parseInt(config.retry_delay_ms, 10) || 2000
+      retryDelayMs: parseInt(config.retry_delay_ms, 10) || 2000,
+      responseMaxBytes: parseInt(config.response_max_bytes, 10) || 10485760
     };
   }
 
@@ -129,10 +130,32 @@ const WooApiService = (function() {
 
         // Success
         if (statusCode >= 200 && statusCode < 300) {
+          // Size cap before parse — oversized responses fail closed rather than
+          // blow the executor's memory in JSON.parse (reliability audit 1.2 Stage A).
+          var respHeaders = response.getHeaders();
+          var contentLength = respHeaders['Content-Length'] || respHeaders['content-length'];
+          var sizeBytes = contentLength ? parseInt(contentLength, 10) : -1;
+          if (sizeBytes < 0) {
+            // Header absent (e.g. chunked transfer) — measure bytes pre-parse.
+            sizeBytes = response.getBlob().getBytes().length;
+          }
+          if (config.responseMaxBytes > 0 && sizeBytes > config.responseMaxBytes) {
+            NotificationService.reportFailure(
+              'integration.woo.response_oversize',
+              'WooCommerce response exceeded max bytes on ' + endpoint,
+              'High',
+              { endpoint: endpoint, sizeBytes: sizeBytes, maxBytes: config.responseMaxBytes },
+              null
+            );
+            var oversizeErr = new Error('WooCommerce response too large: ' + sizeBytes + ' bytes (max ' + config.responseMaxBytes + ')');
+            oversizeErr.wooNonRetryable = true; // deterministic — do not retry
+            throw oversizeErr;
+          }
+
           var data = JSON.parse(response.getContentText());
           return {
             data: data,
-            headers: response.getHeaders()
+            headers: respHeaders
           };
         }
 
@@ -147,6 +170,10 @@ const WooApiService = (function() {
         throw new Error('HTTP ' + statusCode + ': ' + response.getContentText().substring(0, 500));
 
       } catch (e) {
+        if (e.wooNonRetryable) {
+          // Deterministic failure (e.g. oversized response) — throw immediately, no retry.
+          throw e;
+        }
         if (e.message && e.message.indexOf('HTTP ') === 0 && e.message.indexOf('HTTP 429') === -1 && e.message.indexOf('HTTP 5') === -1) {
           // Non-retryable HTTP error — throw immediately
           throw e;

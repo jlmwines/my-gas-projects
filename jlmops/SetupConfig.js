@@ -2215,6 +2215,27 @@ function getMasterConfiguration() {
         ""
     ],
     [
+        "woo.api",
+        "Max bytes accepted from a WooCommerce response before parse; oversized responses fail closed (reliability audit 1.2 Stage A)",
+        "stable",
+        "response_max_bytes",
+        "10485760",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.sheet_names",
         "Names of the sheets in the spreadsheets",
         "stable",

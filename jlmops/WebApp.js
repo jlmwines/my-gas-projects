@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-02 16:57',
-  commit: 'Library entity drawer: removed the duplicate "Open in Drive" action-bar button — it opened the same entity.docUrl as "Open Doc" in the Files & URLs section. The document is now opened one way (Open Doc, in its proper Files & URLs home); the action bar keeps Create Content Tasks etc. drawerOpenInDrive() left defined for any direct callers.'
+  commit: 'Reliability audit 1.2 Stage A: WC response size cap. WooApiService._fetch now measures response bytes (Content-Length header, blob-bytes fallback for chunked) before JSON.parse; over woo.api.response_max_bytes (default 10MB) it fails closed via reportFailure(integration.woo.response_oversize, High) + a wooNonRetryable throw that short-circuits the retry loop (deterministic, fires once).'
 };
 
 function getVersion() {

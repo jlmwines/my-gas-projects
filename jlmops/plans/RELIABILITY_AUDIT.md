@@ -315,6 +315,8 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Goal.** Adversarial inputs (oversized WC response, Comax adapter pre-parse throw, Doc-bound text with formula/RTL exploits) fail closed without corrupting state or crashing the executor.
 
+**Status (2026-06-03).** Stage A SHIPPED (deploy in place). Stages B + C still open. Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
+
 Three distinct work items, three distinct files, three distinct failure modes. Staged as three deploys within the session so each ships with its own smoke gate. If any sub-stage fails or surfaces unknowns, stop the session and re-plan rather than push through.
 
 **Anchors.**
@@ -322,10 +324,10 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 - Comax parser top-level miss: `ComaxAdapter.js:31` `Drive.Files.insert` has no try around it. Existing :42, :51-54, :120-126 throws already propagate to FAILED via `OrchestratorService.js:1218` correctly.
 - Doc-bound text sites: `PrintService.js:180-188` (shipping name/address/phone). NOT `customerNote` (never injected; grep confirms zero `replaceText` codebase-wide).
 
-**Stage A: WC response size cap.**
-- In `WooApiService._fetch` after `UrlFetchApp.fetch` returns but before `getContentText()`, read `response.getContentLength()` (if available) or `response.getBlob().getBytes().length` and compare to new config `system.woo.response_max_bytes` (default 10 MB).
-- On exceed: `reportFailure('integration.woo.response_oversize', ..., 'High', {endpoint, sizeBytes}, sessionId)` and throw.
-- Smoke A: mock oversized WC response, confirm short-circuit + reportFailure task.
+**Stage A: WC response size cap. SHIPPED 2026-06-03.**
+- In `WooApiService._fetch` after `UrlFetchApp.fetch` returns but before `getContentText()`, read the `Content-Length` header (blob-bytes fallback when absent, e.g. chunked transfer) and compare to config `woo.api.response_max_bytes` (default 10 MB = 10485760).
+- On exceed: `reportFailure('integration.woo.response_oversize', ..., 'High', {endpoint, sizeBytes, maxBytes}, null)`, then throw a `wooNonRetryable`-tagged error so the retry loop short-circuits.
+- Smoke A (pending user run post-deploy): mock oversized WC response, confirm short-circuit + `integration.woo.response_oversize` failure task.
 
 **Stage B: Comax adapter outer try.**
 - Wrap `ComaxAdapter.js:31` `Drive.Files.insert` in try/catch.
@@ -346,7 +348,7 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 **Open.**
 - `[spike]` U+202E strip unconditional vs preserve with other bidi marks. Test with real Hebrew test names mid-Stage-C before committing.
 
-**CCP audit.** Confirm CCP-1 reportFailure in WC oversize and Comax try blocks; CCP-2 sessionId threaded into reportFailure calls; CCP-6 `system.woo.response_max_bytes` lives in SysConfig (config/system.json regenerated), not as a code constant.
+**CCP audit.** Stage A: CCP-1 reportFailure fires on oversize ✓; CCP-2 sessionId — passed `null` by design (see Status note) rather than threaded; CCP-6 `woo.api.response_max_bytes` lives in SysConfig (config/system.json regenerated → SetupConfig.js), not a code constant ✓. Stages B + C audit pending.
 
 #### 1.3 Concurrency control (LockService — staged: helper + 4 lock applications, 5 deploys)
 
@@ -406,6 +408,8 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 #### 2.1 Drift detection working
 
 **Goal.** `validateDeployment` reliably detects bare-clasp-deploy drift without daily false positives; orphan deployments removed; system tasks become user-closeable.
+
+**Status (2026-06-03).** Orphan deployments (@66/@67/@73/@96) UNDEPLOYED by user — that half of the goal is done. **Open question raised by user: is `validateDeployment` drift detection now obsolete?** With the pinned-ID `deploy.ps1` wrapper enforced (auto-push + `clasp deploy --deploymentId <pinned>` + pinned-ID survival verify) and bare `clasp deploy` retired as the failure mode, the original drift premise (orphan URLs from bare deploys) may no longer apply. RE-EVALUATE before building 2.1: confirm whether any drift vector survives the wrapper; if not, this session narrows to just the closeable-system-task UI affordance (or drops entirely). Do not build the `validateDeployment` baseline-compare detector until this is settled.
 
 **Anchors.**
 - Current detector: `HousekeepingService.js:1253-1312` (NOT `:1316` as v1.3 said — corrected).
