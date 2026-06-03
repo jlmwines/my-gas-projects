@@ -1,5 +1,6 @@
 # Dev/build files
 generate-config.js
+scripts/**
 
 # Plan and config subfolders (not needed in Apps Script)
 plans/**
