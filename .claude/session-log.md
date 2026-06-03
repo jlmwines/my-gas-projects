@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-03 (continued) — notification UX standard: native dialogs eliminated (@218→@219)
+
+- **Origin:** user report — recent dialogs have "long ugly system titles" + "really long confirmation messages" (dev screen named; manager emphasis). Root cause: native `alert()`/`confirm()` inside the Apps Script iframe get an un-styleable browser-origin header; messages were verbose; no shared standard (3 helper names, 5 copies).
+- **Planned first** (`jlmops/plans/NOTIFICATION_UX_PLAN.md`, user said "do it properly"), then implemented Phases 0–4.
+- **@218 (Phases 0–2):** `TaskWidgets.toast` extended to typed (`success/error/warning/info`, boolean back-compat) + new `TaskWidgets.confirm` (in-page, Cancel-default, Esc/backdrop cancel, `{danger}`); standard documented in `TaskWidgets.html` header + `jlmops/CLAUDE.md`; guard `scripts/check-no-native-dialogs.js`. All 4 manager views migrated + 2 dev-screen messages shortened. **First deploy attempt failed** — clasp compiled the node guard as GAS (shebang ParseError); fixed by adding `scripts/**` to `.claspignore`.
+- **@219 (Phases 3–4, admin sweep):** **native alert()/confirm() eliminated app-wide, 152 → 0.** 116 alerts converted via a reviewed balanced-paren transform script (`scripts/migrate-alerts.js`); 19 confirms hand-refactored to async `TaskWidgets.confirm` callbacks (sync→async, can't be scripted). Added include to 3 standalone views; AdminInventory `showToast` delegates. Guard passes `--strict`. **User validated messages on-screen.**
+- **Residual (cosmetic, optional):** `showConfirm` (AdminProjects/Tasks) + `devConfirm` (DevelopmentView) local copies remain — in-page, not native, just not consolidated onto `TaskWidgets.confirm`. A few script-typed toasts may be error-vs-success imperfect. Standard + guard mean future code should conform (CLAUDE.md UI Constraints rule added).
+- **Process:** transform scripts live in `scripts/` (claspignored, local-only). Nothing pushed to git remote.
+
+---
+
 ## 2026-06-03 — reliability audit: cleanly-deployable slice (@210→@217)
 
 - **Shipped (each = commit + deploy via wrapper):** 1.2 Stage A (@210) WC response size cap in `WooApiService._fetch` — `woo.api.response_max_bytes` (10MB), fail-closed + `wooNonRetryable` throw so it fires once; 1.2 Stage B (@211) `ComaxAdapter` outer try around `Drive.Files.insert`; 1.2 Stage C (@212) `PrintService._sanitizeForDoc` strips bidi overrides (U+202A-202E/2066-2069) from packing-slip shipping fields — **formula-prefix guard deliberately omitted** (Doc surface, wrong place); 2.2 (@213) `HousekeepingService.checkFailedJobs` FAILED-job sweep before purge (severity ladder, `failed_job_count`/`oldest_age_days` in health notes, >30d legacy excluded from alarm); 2.3 part 1 (@214) pass-by-default guard (`reportFailure(tests.empty_or_null_result)` on null/total===0); 3.1 dead-key (@215) `WooOrderPullService.pullOrders` now writes `orders_last_pull` on both success paths + added to `RUNTIME_KEYS`; 3.1 heartbeat panel (@216) Integrations card on `AdminDashboardView_v2` (Row 3) + `_getIntegrationHeartbeats_v2` (pure config reads) + `system.heartbeat.*_threshold_min` keys — **user confirmed widgets render**; 3.2 live blocks (@217) new `StatusReportService.refreshLiveBlocks` writes Claude-readable `jlmops-status.md` to exports folder at end of `performFrequentMaintenance` (System/Integrations/Queue/Data-quality/Capacity/Recent-errors) + new `LoggerService.getRecentErrors`.
