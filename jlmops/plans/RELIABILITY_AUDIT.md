@@ -442,6 +442,8 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 
 #### 2.2 FAILED-job daily sweep
 
+**Status (2026-06-03).** SHIPPED (deploy in place). `HousekeepingService.checkFailedJobs(sessionId)` added before `purgeOldJobs`. Notes-field names: `failed_job_count` + `failed_job_oldest_age_days` (additive in `last_housekeeping`). Implementation choices vs plan: (1) sweep is called EXPLICITLY before the phase-1 loop (not as a `phase1Tasks` array entry) so its return value can be threaded into the health-notes upsert — the array loop discards returns; (2) dedup uses the stable reportFailure **context** `'queue.failed_job_sweep'` (entityId is derived from context in `_createFailureTask`), so no separate entityId param is passed; (3) Open question resolved toward the **age-cap**: failures >30d are counted in `failed_job_count` but excluded from High/Critical laddering (legacy orphan-era noise doesn't spike first run); `oldest_age_days` reports the absolute oldest.
+
 **Goal.** Accumulating FAILED rows in SysJobQueue surface in the daily health snapshot with severity laddering, not silent rot.
 
 **Anchors.**

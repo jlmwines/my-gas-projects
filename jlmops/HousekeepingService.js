@@ -603,8 +603,19 @@ function HousekeepingService() {
     const functionName = 'performDailyMaintenance';
     logger.info('HousekeepingService', functionName, "Starting daily maintenance.");
 
-    // Phase 1: Cleanup (wrapped to prevent single failure from stopping all tasks)
+    const sessionId = Utilities.getUuid(); // CCP-2: correlation id for this run
+
+    // Sweep FAILED jobs BEFORE purgeOldJobs removes aged terminal rows (reliability audit 2.2).
     const phase1Failures = [];
+    let failedJobsSummary = null;
+    try {
+      failedJobsSummary = this.checkFailedJobs(sessionId);
+    } catch (e) {
+      phase1Failures.push('checkFailedJobs');
+      logger.error('HousekeepingService', functionName, `checkFailedJobs failed: ${e.message}`);
+    }
+
+    // Phase 1: Cleanup (wrapped to prevent single failure from stopping all tasks)
     const phase1Tasks = [
       { name: 'cleanOldLogs', fn: () => this.cleanOldLogs() },
       { name: 'archiveCompletedTasks', fn: () => this.archiveCompletedTasks() },
@@ -711,7 +722,9 @@ function HousekeepingService() {
             schema_status: schemaResult ? schemaResult.status : 'error',
             schema_critical: criticalSchemaIssues,
             phase1_failures: phase1Failures.length > 0 ? phase1Failures : null,
-            phase3_failures: phase3Failures.length > 0 ? phase3Failures : null
+            phase3_failures: phase3Failures.length > 0 ? phase3Failures : null,
+            failed_job_count: failedJobsSummary ? failedJobsSummary.failedJobCount : null,
+            failed_job_oldest_age_days: failedJobsSummary ? failedJobsSummary.oldestAgeDays : null
           }
         }
       );
@@ -1769,6 +1782,119 @@ function HousekeepingService() {
   };
 
   const JOB_QUEUE_RETENTION_DAYS = 30;
+
+  /**
+   * Sweeps SysJobQueue for accumulating FAILED rows so they surface in the daily
+   * health snapshot instead of rotting silently (reliability audit 2.2).
+   *
+   * Severity laddering (only failures within the recent window drive alerts;
+   * older ones are legacy noise — counted in the notes total but not alarmed):
+   *   - count > 0                                  -> Normal
+   *   - any recent FAILED older than 7 days        -> High
+   *   - any recent FAILED whose job_type is still  -> Critical (zombie killer
+   *     in the PROCESSING set                          never fired)
+   *
+   * MUST run before purgeOldJobs (which deletes aged terminal rows) or aged
+   * FAILEDs vanish before being counted. Read-once (CCP-3). On High/Critical,
+   * reportFailure with the stable context 'queue.failed_job_sweep' so daily runs
+   * update one deduped task (CCP-1). Never throws — daily run must continue.
+   *
+   * @param {string} sessionId - correlation id (CCP-2).
+   * @returns {{failedJobCount:number, oldestAgeDays:?number, severity:?string}|null}
+   */
+  this.checkFailedJobs = function(sessionId) {
+    const functionName = 'checkFailedJobs';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      if (!allConfig) {
+        logger.warn('HousekeepingService', functionName, 'Configuration not available. Skipping failed-job sweep.');
+        return null;
+      }
+      const sheetNames = allConfig['system.sheet_names'];
+      const jobQueueSheet = SheetAccessor.getLogSheet(sheetNames.SysJobQueue, false);
+      if (!jobQueueSheet) {
+        logger.warn('HousekeepingService', functionName, 'SysJobQueue sheet not found. Skipping failed-job sweep.');
+        return null;
+      }
+      const jobSchema = allConfig['schema.log.SysJobQueue'];
+      if (!jobSchema?.headers) {
+        logger.error('HousekeepingService', functionName, 'SysJobQueue schema not found.');
+        return null;
+      }
+
+      const headers = jobSchema.headers.split(',');
+      const statusCol = headers.indexOf('status');
+      const processedCol = headers.indexOf('processed_timestamp');
+      const createdCol = headers.indexOf('created_timestamp');
+      const jobTypeCol = headers.indexOf('job_type');
+      if (statusCol === -1 || jobTypeCol === -1) {
+        logger.error('HousekeepingService', functionName, 'Required columns (status/job_type) not found in SysJobQueue schema.');
+        return null;
+      }
+
+      const jobData = jobQueueSheet.getDataRange().getValues();
+      if (jobData.length <= 1) {
+        return { failedJobCount: 0, oldestAgeDays: 0, severity: null };
+      }
+
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
+      const RECENT_WINDOW_DAYS = 30; // failures older than this are legacy noise: counted, not alarmed
+      const HIGH_AGE_DAYS = 7;
+      const now = new Date();
+
+      const processingJobTypes = new Set();
+      const failed = []; // { ageDays:?number, jobType:string }
+
+      for (let i = 1; i < jobData.length; i++) {
+        const row = jobData[i];
+        const status = String(row[statusCol]).toLowerCase();
+        const jobType = String(row[jobTypeCol] || '');
+        if (status === 'processing') {
+          processingJobTypes.add(jobType);
+          continue;
+        }
+        if (status === 'failed') {
+          const tsRaw = (processedCol !== -1 && row[processedCol]) ? row[processedCol]
+                      : (createdCol !== -1 ? row[createdCol] : null);
+          const ts = tsRaw ? new Date(tsRaw) : null;
+          const ageDays = (ts && !isNaN(ts)) ? (now - ts) / MS_PER_DAY : null;
+          failed.push({ ageDays: ageDays, jobType: jobType });
+        }
+      }
+
+      const failedJobCount = failed.length;
+      if (failedJobCount === 0) {
+        return { failedJobCount: 0, oldestAgeDays: 0, severity: null };
+      }
+
+      const agesKnown = failed.filter(f => f.ageDays !== null).map(f => f.ageDays);
+      const oldestAgeDays = agesKnown.length ? Math.round(Math.max.apply(null, agesKnown)) : null;
+
+      const recent = failed.filter(f => f.ageDays === null || f.ageDays <= RECENT_WINDOW_DAYS);
+      const anyRecentOverHigh = recent.some(f => f.ageDays !== null && f.ageDays > HIGH_AGE_DAYS);
+      const zombieJobTypes = recent.filter(f => processingJobTypes.has(f.jobType)).map(f => f.jobType);
+      const anyZombie = zombieJobTypes.length > 0;
+
+      let severity = 'Normal';
+      if (anyZombie) severity = 'Critical';
+      else if (anyRecentOverHigh) severity = 'High';
+
+      if (severity === 'High' || severity === 'Critical') {
+        const msg = `${failedJobCount} FAILED job(s) in SysJobQueue (oldest ${oldestAgeDays}d)` +
+          (anyZombie ? `; zombie job_type still PROCESSING: ${zombieJobTypes.join(', ')}` : '');
+        NotificationService.reportFailure('queue.failed_job_sweep', msg, severity,
+          { failedJobCount: failedJobCount, oldestAgeDays: oldestAgeDays, zombieJobTypes: zombieJobTypes }, sessionId);
+      }
+
+      logger.info('HousekeepingService', functionName,
+        `Failed-job sweep: ${failedJobCount} FAILED (oldest ${oldestAgeDays}d), severity ${severity}.`);
+      return { failedJobCount: failedJobCount, oldestAgeDays: oldestAgeDays, severity: severity };
+
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Failed-job sweep error: ${e.message}`, e);
+      return null;
+    }
+  };
 
   /**
    * Purges old completed/failed jobs from SysJobQueue.

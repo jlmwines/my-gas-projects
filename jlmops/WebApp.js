@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 06:36',
-  commit: 'Reliability audit 1.2 Stage C: packing-slip bidi sanitization. PrintService._sanitizeForDoc strips Unicode bidi override/isolate controls (U+202A-202E, U+2066-2069) from shipping name/address/city/phone before they render on the printed slip, defeating RLO spoofing of the operator view. Formula-prefix guard intentionally omitted (Doc surface, = is inert; belongs on a Sheets-export path).'
+  commit: 'Reliability audit 2.2: FAILED-job daily sweep. HousekeepingService.checkFailedJobs reads SysJobQueue once before purgeOldJobs, counts FAILED rows, ladders severity (Normal / >7d recent = High / job_type still PROCESSING = Critical zombie), writes failed_job_count + oldest_age_days into the health_status notes, and reportFailure(queue.failed_job_sweep) on High/Critical with stable dedup. Legacy >30d failures counted but not alarmed.'
 };
 
 function getVersion() {
