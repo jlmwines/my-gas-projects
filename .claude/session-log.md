@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-03 (continued ×3) — RELOAD_RESILIENCE_PLAN finalized (planning only, no code)
+
+- Plan went through **3 independent red-team rounds**; each caught a real issue, two were errors that rode forward in my drafts: (a) storage was overstated — app uses `sessionStorage` ~21×/7 views and it survives same-tab pull-to-refresh → added cheap **A0 sessionStorage-first** path, re-ranked; (b) failure model wrong — `updatePhysicalCounts` returns success or **throws** (never success:false), so a real submit failure aborts the whole batch after partial commits (hazard = partial-commit-as-total-failure), not "silent success" → Option A prereqs corrected to per-item try/catch + succeeded/failed arrays + resubmit idempotency.
+- Added §6 (flip side, per user Q): intentional refresh already gets new code (+ add Discard control + draft `v` version tag); deliberate "go back" has no browser history here (no `pushState`) → answer is in-app nav / Back affordance, optional `pushState` as separate work.
+- **Cleaned the doc** for future execution: collapsed the 5 review/resolution sections into one Appendix, fixed stale §2 storage line, settled status. **Plan of record: A0 phone-check + ~15-line build first; server-draft Option A deferred behind it.** Uncommitted→committed.
+- STATUS open-items now point at RELOAD_RESILIENCE + TEST_HARNESS plans for a future session. Nothing pushed to git remote.
+
+---
+
 ## 2026-06-03 (continued ×2) — real tests, drift-record cleanup, two new plans (@220→@221)
 
 - **Drift detection (2.1) reconciled as RESOLVED.** Q&A established the deploy.ps1 pinned-ID wrapper already eliminated the drift *source* (orphan URLs from bare `clasp deploy`); `validateDeployment` is gone from the code (verified absent). Marked `.claude/bugs.md` 2026-05-27 `[x]`, fixed the stale `SetupConfig.js` pinned_id description (regenerated), 2.1 RESOLVED/DROPPED in `RELIABILITY_AUDIT.md` + STATUS. Not rebuilding any drift detector while the wrapper is the only deploy path.
