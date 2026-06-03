@@ -853,7 +853,7 @@
     ],
     [
         "system.deployment.pinned_id",
-        "Pinned Apps Script deployment ID for the live JLM Wines URL. Housekeeping compares against ScriptApp.getService().getUrl() and creates a drift task if they diverge. Source of truth is jlmops/.deployment-id; this config row mirrors it for in-script comparison.",
+        "Pinned Apps Script deployment ID for the live JLM Wines URL. Source of truth is jlmops/.deployment-id; this config row mirrors it. The deploy.ps1 wrapper deploys with --deploymentId <this> and verifies it survived, so bare clasp deploy can't spawn orphan URLs. (No in-script drift check runs: the former validateDeployment detector was removed 2026-06-03 once the wrapper closed the drift source — see .claude/bugs.md 2026-05-27.)",
         "stable",
         "value",
         "AKfycbzxXgezKqE_dhz33Ssh5eRwAv1XsmnlqG0EukzEhySXC0wn49l26x9LK8vuIH8ELHI6yw",

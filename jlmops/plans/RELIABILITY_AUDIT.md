@@ -406,14 +406,14 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 
 ### Tier 2, operational reliability now
 
-#### 2.1 Drift detection working
+#### 2.1 Drift detection — RESOLVED / DROPPED 2026-06-03
 
-**Goal.** `validateDeployment` reliably detects bare-clasp-deploy drift without daily false positives; orphan deployments removed; system tasks become user-closeable.
+**Goal (original).** `validateDeployment` reliably detects bare-clasp-deploy drift without daily false positives; orphan deployments removed; system tasks become user-closeable.
 
-**Status (2026-06-03).** Orphan deployments (@66/@67/@73/@96) UNDEPLOYED by user — that half of the goal is done. **Open question raised by user: is `validateDeployment` drift detection now obsolete?** With the pinned-ID `deploy.ps1` wrapper enforced (auto-push + `clasp deploy --deploymentId <pinned>` + pinned-ID survival verify) and bare `clasp deploy` retired as the failure mode, the original drift premise (orphan URLs from bare deploys) may no longer apply. RE-EVALUATE before building 2.1: confirm whether any drift vector survives the wrapper; if not, this session narrows to just the closeable-system-task UI affordance (or drops entirely). Do not build the `validateDeployment` baseline-compare detector until this is settled.
+**Resolution (2026-06-03). Resolved at the root; this session is NOT built.** The re-eval settled: the drift *source* was bare `clasp deploy` spawning orphan URLs, and the `deploy.ps1` wrapper already eliminates it (deploys with `--deploymentId <pinned>` + verifies the pinned ID survived; bare deploy forbidden per the kernel — confirmed across ~10 deploys this session, same pinned ID every time). With no new orphans possible, in-script drift detection is monitoring for a problem that can't occur. The orphans (@66/@67/@73/@96) were undeployed by the user. The broken `validateDeployment` detector has been **removed from the codebase** (verified absent from all `.js`, not called in any housekeeping phase) — so the false-positive noise is gone too. **Decision: do NOT build the baseline-compare detector or the external `clasp deployments` diff while the pinned-ID wrapper is the only deploy path.** Reopen only if bare `clasp deploy` ever returns as a path. The implementation sketch below is retained only as a record of what was considered. (Stale `SetupConfig.js` pinned_id description corrected same day; `.claude/bugs.md` 2026-05-27 marked resolved.)
 
-**Anchors.**
-- Current detector: `HousekeepingService.js:1253-1312` (NOT `:1316` as v1.3 said — corrected).
+**Anchors (historical — retained for record; detector no longer exists).**
+- Former detector `validateDeployment` (was in `HousekeepingService.js`) — **removed from the codebase as of 2026-06-03; the refs below are historical.**
 - Task close paths exist: `TaskService.completeTask :341-388`, `TaskService.updateTaskStatus :429-497`; UI wrappers `WebAppTasks.js:240 _completeTaskById`, `:313 _updateTaskStatus`. Just needs UI surface in dashboard.
 - Orphan deployments to undeploy: @66, @67, @73, @96 (per `.claude/bugs.md` 2026-05-27).
 - No `package.json` in `jlmops/` — for the local script, either add `package.json` or invoke node directly.
