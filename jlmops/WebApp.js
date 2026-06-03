@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 06:43',
+  built: '2026-06-03 06:54',
   commit: 'Reliability audit 2.3 (part 1): pass-by-default guard. HousekeepingService Phase 2 now reportFailure(tests.empty_or_null_result, High) when TestRunner returns null or total===0, so a crashed/empty suite no longer leaves daily housekeeping silently green. Suite rewrites (Comax/WebAdapter real-invocation) deferred to a from-editor session — they need config-matched fixtures and only validate via TestRunner.runAllTests() in the editor.'
 };
 
