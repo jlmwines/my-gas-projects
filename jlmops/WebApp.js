@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 07:17',
+  built: '2026-06-03 07:27',
   commit: 'Reliability audit 3.2 (live blocks): new StatusReportService writes a Claude-readable jlmops-status.md to the exports folder on the 15-min cadence (refreshLiveBlocks at the end of performFrequentMaintenance). Blocks: System / Integrations / Queue / Data quality / Capacity / Recent errors — reuses _getIntegrationHeartbeats_v2 + health-task notes + new LoggerService.getRecentErrors (bounded tail read). Never throws (reportFailure status_export.refresh, Normal). KPI block deferred. Validate by reading the file via Drive MCP after a frequent-maintenance run.'
 };
 
