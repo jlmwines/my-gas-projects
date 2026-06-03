@@ -28,7 +28,16 @@ const ComaxAdapter = (function() {
     const expectedHeaders = expectedSchema.headers.split(',');
 
     let allData;
-    const tempFile = Drive.Files.insert({ title: `[TEMP] Comax Import - ${new Date().toISOString()}` }, fileBlob, { convert: true });
+    // Guard the Drive conversion: a corrupt/oversized/non-CSV blob can throw here
+    // before any try existed. Fail closed with a typed error so the orchestrator
+    // routes the job to FAILED (OrchestratorService:1218) instead of crashing raw.
+    let tempFile;
+    try {
+        tempFile = Drive.Files.insert({ title: `[TEMP] Comax Import - ${new Date().toISOString()}` }, fileBlob, { convert: true });
+    } catch (e) {
+        logger.error(serviceName, functionName, 'Drive conversion of Comax file failed: ' + e.message);
+        throw new Error('INVALID FILE: Comax file could not be converted by Drive (corrupt or unsupported format): ' + e.message);
+    }
 
     try {
         const tempSpreadsheet = SpreadsheetApp.openById(tempFile.id);

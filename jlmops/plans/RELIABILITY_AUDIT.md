@@ -315,7 +315,7 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 **Goal.** Adversarial inputs (oversized WC response, Comax adapter pre-parse throw, Doc-bound text with formula/RTL exploits) fail closed without corrupting state or crashing the executor.
 
-**Status (2026-06-03).** Stage A SHIPPED (deploy in place). Stages B + C still open. Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
+**Status (2026-06-03).** Stages A + B SHIPPED (deploy in place). Stage C (Doc-bound text sanitization) still open. Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
 
 Three distinct work items, three distinct files, three distinct failure modes. Staged as three deploys within the session so each ships with its own smoke gate. If any sub-stage fails or surfaces unknowns, stop the session and re-plan rather than push through.
 
@@ -329,10 +329,10 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 - On exceed: `reportFailure('integration.woo.response_oversize', ..., 'High', {endpoint, sizeBytes, maxBytes}, null)`, then throw a `wooNonRetryable`-tagged error so the retry loop short-circuits.
 - Smoke A (pending user run post-deploy): mock oversized WC response, confirm short-circuit + `integration.woo.response_oversize` failure task.
 
-**Stage B: Comax adapter outer try.**
-- Wrap `ComaxAdapter.js:31` `Drive.Files.insert` in try/catch.
-- On catch, throw a typed error; existing FAILED routing at `OrchestratorService.js:1218` preserved.
-- Smoke B: drop a truncated Comax CSV, confirm state machine ends at FAILED with `failedAtStage=IMPORTING_COMAX`, retry from sync widget returns to `WAITING_COMAX_IMPORT`.
+**Stage B: Comax adapter outer try. SHIPPED 2026-06-03.**
+- Wrapped `ComaxAdapter.js:31` `Drive.Files.insert` in try/catch.
+- On catch: logs + throws a typed `INVALID FILE: ...could not be converted by Drive...` error; existing FAILED routing at `OrchestratorService.js:1218` preserved (no reportFailure added here — orchestrator owns that path).
+- Smoke B (pending user run): drop a truncated/non-CSV Comax file, confirm state machine ends at FAILED with `failedAtStage=IMPORTING_COMAX`, retry from sync widget returns to `WAITING_COMAX_IMPORT`.
 
 **Stage C: Doc-bound text sanitization.**
 - New helper `sanitizeForDoc(str)` in `PrintService.js` (or shared `TextSafetyHelpers.js`): strip U+202E; prepend `'` to any string starting with `=`, `+`, `-`, `@`.

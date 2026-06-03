@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 06:17',
-  commit: 'Reliability audit 1.2 Stage A: WC response size cap. WooApiService._fetch now measures response bytes (Content-Length header, blob-bytes fallback for chunked) before JSON.parse; over woo.api.response_max_bytes (default 10MB) it fails closed via reportFailure(integration.woo.response_oversize, High) + a wooNonRetryable throw that short-circuits the retry loop (deterministic, fires once).'
+  commit: 'Reliability audit 1.2 Stage B: Comax adapter outer try. ComaxAdapter.processProductCsv now wraps the Drive.Files.insert conversion (was unguarded) in try/catch; a corrupt/oversized/non-CSV blob throws a typed INVALID FILE error so the orchestrator routes the job to FAILED (OrchestratorService:1218) instead of crashing raw.'
 };
 
 function getVersion() {
