@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-03 (continued ×2) — real tests, drift-record cleanup, two new plans (@220→@221)
+
+- **Drift detection (2.1) reconciled as RESOLVED.** Q&A established the deploy.ps1 pinned-ID wrapper already eliminated the drift *source* (orphan URLs from bare `clasp deploy`); `validateDeployment` is gone from the code (verified absent). Marked `.claude/bugs.md` 2026-05-27 `[x]`, fixed the stale `SetupConfig.js` pinned_id description (regenerated), 2.1 RESOLVED/DROPPED in `RELIABILITY_AUDIT.md` + STATUS. Not rebuilding any drift detector while the wrapper is the only deploy path.
+- **2.3 tests made REAL (@220, @221).** Audited all 4 suites. `ComaxAdapterTest`/`WebAdapterTest` rewritten to call the real adapters with in-memory CSV fixtures (4 cases each). `ProductServiceTest` was fully decorative (12 tests/51 assertions, zero real calls) → rewritten to 4 real tests on `vendorSkuUpdate`/`fixOrphanSku` input guards (return before sheet writes; safe). `OrderServiceTest` = partly real (eligibility helpers real; 1 mock-data test left). Net ~40→~15 tests, almost all real. **Key discovery: the Dev screen "Run Unit Tests" button runs `TestRunner.runAllTests()` — so test rewrites are validatable in-app, NOT editor-only** (corrected the 2.3 plan's framing). User confirmed 23 ran after the adapter rewrite.
+- **Two new plan docs written (planning only):** `RELOAD_RESILIENCE_PLAN.md` (accidental mobile back/refresh loses in-progress counts — count entry's "Save & next" is DOM-only, NOT server-persisted; fix = server-side per-row draft autosave; dispatch review folded in, user reviewing) and `TEST_HARNESS_PLAN.md` (schema-mirrored test workbook for REAL service-level tests — the sheet-touching layer; opt-in investment, `SheetAccessor` test-mode is the risky part; NOT built).
+- **Other Q&A findings banked:** count-submit concurrency isn't lock-protected + `allowDuplicate:true` can spawn duplicate vintage tasks (candidate for 1.3 scope); schema validation = pre-existing structural check (sheet-exists + headers), counted by the audit not added by it.
+- **Next:** `RELOAD_RESILIENCE_PLAN` awaiting user read (uncommitted). Remaining audit: 1.3 concurrency (own session), 3.1 Comax heartbeat/webhook, 3.2 KPI block, 3.3/3.4. Nothing pushed to git remote.
+
+---
+
 ## 2026-06-03 (continued) — notification UX standard: native dialogs eliminated (@218→@219)
 
 - **Origin:** user report — recent dialogs have "long ugly system titles" + "really long confirmation messages" (dev screen named; manager emphasis). Root cause: native `alert()`/`confirm()` inside the Apps Script iframe get an un-styleable browser-origin header; messages were verbose; no shared standard (3 helper names, 5 copies).
