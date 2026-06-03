@@ -64,11 +64,11 @@ _Note: the manager views are the **light** end; AdminTasks/AdminProjects/AdminBu
 
 **Phase 2 — Developer screen. PARTIAL (messages) SHIPPED 2026-06-03.** The two mile-long `devConfirm` messages shortened to one line each (the actual complaint). `devConfirm` itself is already in-page (no header), so full `devConfirm`→`TaskWidgets.confirm` consolidation + include + helper removal is a **small residual backlog item** (cosmetic dedup, not user-visible).
 
-**Phase 3 — high-volume admin (BACKLOG).** AdminProjectsView (32), AdminTasksView (32), AdminBundlesView (28), AdminProductsView (18). Retire the `showConfirm` copies. ~110 of the remaining 135 calls. Sub-stage per view; each confirm is an async-callback refactor.
+**Phase 3 — high-volume admin. SHIPPED 2026-06-03.** AdminProjectsView (32 alert), AdminTasksView (32 alert), AdminBundlesView (25 alert + 3 confirm), AdminProductsView (11 alert + 7 confirm; added the missing include). Alerts converted via a reviewed balanced-paren transform (`scripts/migrate-alerts.js`); all 13 confirms hand-refactored to async `TaskWidgets.confirm` callbacks (destructive ones get `{danger:true}`).
 
-**Phase 4 — remainder (BACKLOG).** AdminDailySyncWidget_v2 (6), LibraryView (6), AdminContactsView (5), AdminInventoryView (4), OrdersView (3), TaskPacks (1). Retire the last `showToast` copy (AdminInventory). Then flip the guard to `--strict` at deploy.
+**Phase 4 — remainder. SHIPPED 2026-06-03.** AdminDailySyncWidget_v2 (2 alert + 3 confirm; +include), LibraryView (5 alert + 1 confirm), AdminContactsView (5 alert), AdminInventoryView (1 alert + 3 confirm; local `showToast` now delegates), OrdersView (3 alert; +include), TaskPacks (1 confirm). Guard now passes `--strict` (0 native dialogs) — wire it to deploy if desired.
 
-**Progress: 152 → 135 native dialogs (manager side cleared). Remaining 135 are all admin (Phases 3–4).**
+**DONE: 152 → 0 native dialogs across all 14 views.** Residual (cosmetic, optional): three in-page helper copies remain (`showConfirm` in AdminProjects/AdminTasks, `devConfirm` in DevelopmentView) — they are in-page (no ugly header), just not yet consolidated onto `TaskWidgets.confirm`. A few script-typed toasts may be imperfect (error vs success); cosmetic only.
 
 Each phase: commit + deploy via wrapper, then **user visually verifies** the migrated view (these are not deploy-verifiable by a session). Order is deliberate: prove the pattern on the surface the user cares about most (manager) before the 100+ admin calls.
 

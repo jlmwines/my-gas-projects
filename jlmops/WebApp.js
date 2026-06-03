@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 08:46',
-  commit: 'Notification UX standard (NOTIFICATION_UX_PLAN) Phases 0-2: kill native alert()/confirm() (ugly iframe header). TaskWidgets gains typed toast (success/error/warning/info, back-compat) + TaskWidgets.confirm (in-page, Cancel-default). Migrated all 4 manager views (Dashboard/Contact/Inventory/Products — 17 native dialogs → toast/confirm, messages tightened) + shortened the 2 mile-long Developer-screen confirms. Standard documented in TaskWidgets header + jlmops/CLAUDE.md; guard script added. Admin sweep (135 calls) is tracked backlog. Manager views need on-screen verification.'
+  commit: 'Notification UX Phases 3-4 (admin sweep): native alert()/confirm() ELIMINATED across all views — 152 → 0. Alerts converted via reviewed balanced-paren transform to TaskWidgets.toast; all confirms hand-refactored to async TaskWidgets.confirm callbacks (destructive ones {danger:true}). Touched AdminProjects/Tasks/Bundles/Products/Contacts/Inventory/DailySync/Library/Orders/TaskPacks; added TaskWidgets include to the 3 standalone views that lacked it; AdminInventory showToast delegates. Guard passes --strict. Needs on-screen verification of admin views.'
 };
 
 function getVersion() {

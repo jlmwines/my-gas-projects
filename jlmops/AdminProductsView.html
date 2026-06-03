@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -1239,10 +1240,7 @@
             statusDiv.className = 'mr-auto small text-danger';
             return;
         }
-        if (!confirm(`Rewrite SKU "${oldSku}" → "${newSku}" across web-side sheets? Comax will not be touched.`)) {
-            return;
-        }
-
+        TaskWidgets.confirm(`Rewrite SKU "${oldSku}" → "${newSku}"? Comax untouched.`, function() {
         statusDiv.textContent = 'Rewriting...';
         statusDiv.className = 'mr-auto small text-info';
 
@@ -1262,6 +1260,7 @@
             statusDiv.textContent = 'Error: ' + err.message;
             statusDiv.className = 'mr-auto small text-danger';
         }).WebAppProducts_fixOrphanSku(oldSku, newSku);
+        }, { danger: true });
     };
 
     AdminProductsView.loadSkuUpdates = function(preloadedData) {
@@ -1357,8 +1356,7 @@
 
     AdminProductsView.exportUpdates = function() {
         const count = document.getElementById('stat-accepted').textContent;
-        if (!confirm(`Export ${count} accepted update(s) to spreadsheet?`)) return;
-
+        TaskWidgets.confirm(`Export ${count} accepted update(s) to spreadsheet?`, function() {
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Generating detail export...';
         statusDiv.className = 'text-right text-info mt-2';
@@ -1374,10 +1372,11 @@
                 statusDiv.className = 'text-right text-danger mt-2';
             }
         }).WebAppProducts_exportAcceptedUpdates();
+        });
     };
 
     AdminProductsView.confirmUpdates = function() {
-        if(!confirm('Confirm that you have updated the website with these details? This will close the tasks.')) return;
+        TaskWidgets.confirm('Website updated with these details? This closes the tasks.', function() {
         const statusDiv = document.getElementById('export-status');
         statusDiv.textContent = 'Processing...';
         
@@ -1391,6 +1390,7 @@
                 statusDiv.className = 'mt-2 small text-danger';
             }
         }).WebAppProducts_confirmWebUpdates();
+        });
     };
 
     AdminProductsView.loadPendingDetailsList = function(preloadedData) {
@@ -1453,14 +1453,15 @@
     };
 
     AdminProductsView.cancelSuggestion = function(taskId) {
-        if (!confirm('Cancel this suggestion? The task will be marked as Cancelled.')) return;
+        TaskWidgets.confirm('Cancel this suggestion?', function() {
         google.script.run.withSuccessHandler(result => {
             if (result.error) {
-                alert('Error: ' + result.error);
+                TaskWidgets.toast('Error: ' + result.error, 'error');
             } else {
                 AdminProductsView.loadSuggestionList();
             }
         }).WebAppTasks_updateTaskStatus(taskId, 'Cancelled');
+        });
     };
 
     AdminProductsView.loadSubmissionsList = function(preloadedData) {
@@ -1587,20 +1588,20 @@
         const nameEn = document.getElementById('sugg-name-en').value.trim();
         const nameHe = document.getElementById('sugg-name-he').value.trim();
         if (!nameEn || !nameHe) {
-            alert('Please provide both Product Name EN and Product Name HE.');
+            TaskWidgets.toast('Please provide both Product Name EN and Product Name HE.', 'warning');
             return;
         }
-        if (!confirm(`Approve suggestion for ${nameEn}?`)) return;
-
+        TaskWidgets.confirm(`Approve suggestion for ${nameEn}?`, function() {
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 document.getElementById('suggestion-modal').style.display = 'none';
                 AdminProductsView.refreshView();
             } else {
-                alert('Error: ' + res.message);
+                TaskWidgets.toast('Error: ' + res.message, 'error');
             }
-        }).withFailureHandler(err => alert('Error: ' + err.message))
+        }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
         .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe);
+        });
     };
 
     // Linkage Logic
@@ -1617,26 +1618,26 @@
         const wooEn = document.getElementById('link-woo-en').value.trim();
         const wooHe = document.getElementById('link-woo-he').value.trim();
         if (!wooEn || !wooHe) {
-            alert('Please provide both WooCommerce IDs.');
+            TaskWidgets.toast('Please provide both WooCommerce IDs.', 'warning');
             return;
         }
         if (isNaN(wooEn) || isNaN(wooHe)) {
-             alert('IDs must be numeric.');
+             TaskWidgets.toast('IDs must be numeric.', 'warning');
              return;
         }
 
-        if (!confirm(`Finalize and Hot Insert ${AdminProductsView.currentSku}? This cannot be undone.`)) return;
-
+        TaskWidgets.confirm(`Finalize and Hot Insert ${AdminProductsView.currentSku}? Cannot be undone.`, function() {
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                alert('Success! Product is now live in JLMops.');
+                TaskWidgets.toast('Success! Product is now live in JLMops.', 'success');
                 document.getElementById('linkage-modal').style.display = 'none';
                 AdminProductsView.refreshView();
             } else {
-                alert('Error: ' + res.message);
+                TaskWidgets.toast('Error: ' + res.message, 'error');
             }
-        }).withFailureHandler(err => alert('Error: ' + err.message))
+        }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
         .WebAppProducts_finalizeProduct(AdminProductsView.currentTaskId, AdminProductsView.currentSku, wooEn, wooHe);
+        }, { danger: true });
     };
 
     // --- Editor Logic (Simplified/Shared) ---
@@ -1794,7 +1795,7 @@
                     document.getElementById('modal-status').textContent = 'Preview Refreshed.';
                 }).WebAppProducts_loadProductEditorData(AdminProductsView.currentTaskId);
             } else {
-                alert('Error: ' + res.message);
+                TaskWidgets.toast('Error: ' + res.message, 'error');
                 document.getElementById('modal-status').textContent = '';
             }
         }).WebAppProducts_handleManagerSubmit(AdminProductsView.currentTaskId, AdminProductsView.currentSku, formData);
@@ -1835,8 +1836,7 @@
     };
 
     AdminProductsView.acceptChanges = function() {
-      if (!confirm(`Accept changes for ${AdminProductsView.currentSku}?`)) return;
-
+      TaskWidgets.confirm(`Accept changes for ${AdminProductsView.currentSku}?`, function() {
       const formData = AdminProductsView.getFormData();
       document.getElementById('modal-status').textContent = 'Accepting...';
       google.script.run.withSuccessHandler(res => {
@@ -1864,9 +1864,10 @@
             AdminProductsView.refreshView();
           }
         } else {
-          alert('Error: ' + res.message);
+          TaskWidgets.toast('Error: ' + res.message, 'error');
         }
       }).WebAppProducts_handleAdminAccept(AdminProductsView.currentTaskId, AdminProductsView.currentSku, formData);
+        });
     };
 
     // Re-renders the review table from the current in-memory reviewTasks array,

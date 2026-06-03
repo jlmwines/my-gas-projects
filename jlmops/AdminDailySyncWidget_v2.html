@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <style>
     .sync-card-title {
         height: 3rem;
@@ -491,8 +492,9 @@
     }
 
     function confirmComax() {
-        if (!confirm('Confirm that orders have been uploaded to Comax?')) return;
-        runAction('confirmComaxUpdateBackend', 3, 'Confirming...');
+        TaskWidgets.confirm('Orders uploaded to Comax?', function() {
+            runAction('confirmComaxUpdateBackend', 3, 'Confirming...');
+        });
     }
 
     function startComaxImport() {
@@ -504,8 +506,9 @@
     }
 
     function confirmWeb() {
-        if (!confirm('Confirm that web inventory has been uploaded to the website?')) return;
-        runAction('confirmWebInventoryUpdateBackend', 5, 'Confirming...');
+        TaskWidgets.confirm('Web inventory uploaded to the website?', function() {
+            runAction('confirmWebInventoryUpdateBackend', 5, 'Confirming...');
+        });
     }
 
     function pushWebInventory() {
@@ -518,11 +521,11 @@
                 if (result && result.success && result.url) {
                     window.open(result.url, '_blank');
                 } else {
-                    alert((result && result.message) || 'Could not open file.');
+                    TaskWidgets.toast((result && result.message) || 'Could not open file.', 'error');
                 }
             })
             .withFailureHandler(function(err) {
-                alert('Error opening file: ' + (err.message || err));
+                TaskWidgets.toast('Error opening file: ' + (err.message || err), 'error');
             })
             .getWebExportFileUrlBackend();
     }
@@ -543,8 +546,7 @@
     }
 
     function resetSync() {
-        if (!confirm('Reset the sync workflow? This will clear the current session and all progress.')) return;
-
+      TaskWidgets.confirm('Reset the sync workflow? Clears the current session and progress.', function() {
         document.getElementById('footerStatus').textContent = 'Resetting...';
 
         progressEntries = [];
@@ -563,6 +565,7 @@
                 document.getElementById('footerStatus').textContent = 'Reset failed: ' + (err.message || err);
             })
             .resetSyncStateBackend();
+      }, { danger: true });
     }
 
     // =====================================================================

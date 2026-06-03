@@ -217,7 +217,7 @@
       var task = ctx.getTask(taskId);
       if (!task) { TaskWidgets.toast('Task not found', true); return; }
       if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      if (!confirm('Create a new blank Doc for "' + task.entityId + '"?')) return;
+      TaskWidgets.confirm('Create a new blank Doc for "' + task.entityId + '"?', function() {
       google.script.run
         .withSuccessHandler(function(result) {
           if (!result || !result.ok) {
@@ -231,6 +231,7 @@
           TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
         })
         .WebAppLibrary_createBlankDoc({ entityId: task.entityId });
+      });
     }
 
     function attachExistingDoc(taskId) {

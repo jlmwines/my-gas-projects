@@ -26,7 +26,8 @@ for (const f of files) {
   const lines = fs.readFileSync(path.join(dir, f), 'utf8').split('\n');
   let count = 0;
   lines.forEach((line, i) => {
-    if (NATIVE.test(line) && !/TaskWidgets\.(toast|confirm)/.test(line)) {
+    const code = line.replace(/\/\/.*$/, ''); // strip line comments to avoid false positives
+    if (NATIVE.test(code) && !/TaskWidgets\.(toast|confirm)/.test(code)) {
       count++;
       if (process.env.VERBOSE) console.log(`  ${f}:${i + 1}: ${line.trim().slice(0, 100)}`);
     }

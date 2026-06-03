@@ -1224,7 +1224,7 @@
   }
 
   function showError(msg) {
-    alert('Error: ' + msg);
+    TaskWidgets.toast('Error: ' + msg, 'error');
   }
 
   function showSuccess(msg) {
@@ -1261,14 +1261,14 @@
   function createNewProject() {
     var name = document.getElementById('new-project-name').value.trim();
     if (!name) {
-      alert('Please enter a project name');
+      TaskWidgets.toast('Please enter a project name', 'warning');
       return;
     }
 
     google.script.run
       .withSuccessHandler(function(data) {
         if (data.error) {
-          alert('Error creating project: ' + data.error);
+          TaskWidgets.toast('Error creating project: ' + data.error, 'error');
           return;
         }
         // Add to dropdown and select it
@@ -1284,7 +1284,7 @@
         showSuccess('Project created');
       })
       .withFailureHandler(function(err) {
-        alert('Error creating project: ' + err.message);
+        TaskWidgets.toast('Error creating project: ' + err.message, 'error');
       })
       .WebAppContacts_createProject(name);
   }
@@ -1292,7 +1292,7 @@
   function exportAudience() {
     var campaignCode = document.getElementById('export-campaign-code').value.trim();
     if (!campaignCode) {
-      alert('Please enter a campaign code');
+      TaskWidgets.toast('Please enter a campaign code', 'warning');
       return;
     }
 

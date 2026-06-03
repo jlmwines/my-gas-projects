@@ -458,15 +458,14 @@
   function applyReplacements() {
     if (selectedReplacements.length === 0) return;
 
-    if (!confirm('Apply ' + selectedReplacements.length + ' replacement(s)?')) return;
-
+    TaskWidgets.confirm('Apply ' + selectedReplacements.length + ' replacement(s)?', function() {
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
-        alert('Applied ' + result.data.successCount + ' replacements. ' + result.data.failCount + ' failed.');
+        TaskWidgets.toast('Applied ' + result.data.successCount + ' replacements, ' + result.data.failCount + ' failed.', 'success');
         loadHealthAlerts();
         loadStats(); // Refresh needs attention count
         if (currentBundleId) {
@@ -474,9 +473,10 @@
         }
       })
       .withFailureHandler(function(err) {
-        alert('Failed to apply replacements: ' + err.message);
+        TaskWidgets.toast('Failed to apply replacements: ' + err.message, 'error');
       })
       .WebAppBundles_applyReplacements(selectedReplacements);
+    });
   }
 
   // =================================================================================
@@ -489,14 +489,14 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error loading bundle: ' + result.error);
+          TaskWidgets.toast('Error loading bundle: ' + result.error, 'error');
           return;
         }
         currentBundle = result.data;
         renderBundleEditor(result.data, focusSlotId);
       })
       .withFailureHandler(function(err) {
-        alert('Failed to load bundle: ' + err.message);
+        TaskWidgets.toast('Failed to load bundle: ' + err.message, 'error');
       })
       .WebAppBundles_getBundleWithSlots(bundleId);
   }
@@ -899,37 +899,37 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
-        alert('Slot updated');
+        TaskWidgets.toast('Slot updated', 'success');
         loadBundleForEditing(currentBundleId, selectedSlotId);
         loadStats(); // Refresh stats in case inventory status changed
       })
       .withFailureHandler(function(err) {
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_updateSlot(selectedSlotId, updates);
   }
 
   function deleteCurrentSlot() {
     if (!selectedSlotId) return;
-    if (!confirm('Delete this slot?')) return;
-
+    TaskWidgets.confirm('Delete this slot?', function() {
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
-        alert('Slot deleted');
+        TaskWidgets.toast('Slot deleted', 'success');
         selectedSlotId = null;
         loadBundleForEditing(currentBundleId);
       })
       .withFailureHandler(function(err) {
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_deleteSlot(selectedSlotId);
+    }, { danger: true });
   }
 
   function duplicateCurrentSlot() {
@@ -966,20 +966,20 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
         loadBundleForEditing(currentBundleId, result.data.slotId);
       })
       .withFailureHandler(function(err) {
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_createSlot(slotData);
   }
 
   function addSlot(slotType) {
     if (!currentBundleId) {
-      alert('Select a bundle first');
+      TaskWidgets.toast('Select a bundle first', 'warning');
       return;
     }
 
@@ -1002,13 +1002,13 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
         loadBundleForEditing(currentBundleId, result.data.slotId);
       })
       .withFailureHandler(function(err) {
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_createSlot(slotData);
   }
@@ -1065,14 +1065,14 @@
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           return;
         }
-        alert('Product assigned');
+        TaskWidgets.toast('Product assigned', 'success');
         loadBundleForEditing(currentBundleId, selectedSlotId);
       })
       .withFailureHandler(function(err) {
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_assignProductToSlot(selectedSlotId, sku, 'Manual Assignment');
   }
@@ -1133,16 +1133,14 @@
   }
 
   function updateComposition() {
-    if (!confirm('Re-derive bundle composition from current WebProdM data. (If WebProdM is stale, run the daily sync first.) Continue?')) {
-      return;
-    }
+    TaskWidgets.confirm('Re-derive bundle composition from WebProdM?', function() {
     var btn = document.getElementById('btn-update-composition');
     var restore = withButtonBusy(btn, 'Updating...');
 
     google.script.run
       .withSuccessHandler(function(result) {
         restore();
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         var d = result.data || {};
         var r = d.reimport || {};
         var msg = 'Update Composition complete. Re-derived from WebProdM: ' + (r.imported || 0) + ' bundles imported, ' + (r.failed || 0) + ' failed, ' + (r.skipped || 0) + ' skipped.';
@@ -1154,9 +1152,10 @@
       })
       .withFailureHandler(function(err) {
         restore();
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_updateComposition();
+    });
   }
 
   function reviewStock() {
@@ -1166,7 +1165,7 @@
     google.script.run
       .withSuccessHandler(function(result) {
         restore();
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         var d = result.data || {};
         var msg = 'Bundle stock review complete. Critical: ' + (d.criticalTasksCreated || 0) + ', Low inventory: ' + (d.lowInventoryTasksCreated || 0) + '.';
         showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p><p class="small text-muted">Tasks created for any issues. Reload the alerts panel to see them.</p>');
@@ -1174,7 +1173,7 @@
       })
       .withFailureHandler(function(err) {
         restore();
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_reviewStock();
   }
@@ -1186,7 +1185,7 @@
     google.script.run
       .withSuccessHandler(function(result) {
         restore();
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         var d = result.data || {};
         var bundles = (d.bundles || []).filter(function(b) { return b.issueCount > 0; });
         var summary = '<p>Validated ' + (d.totalBundles || 0) + ' bundles; ' + (d.bundlesWithIssues || 0) + ' have parity issues.</p>';
@@ -1206,7 +1205,7 @@
       })
       .withFailureHandler(function(err) {
         restore();
-        alert('Failed: ' + err.message);
+        TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_validateParity();
   }

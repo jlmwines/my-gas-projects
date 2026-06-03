@@ -377,9 +377,7 @@
    * Handles the click event for the process counts button.
    */
   function handleProcessCounts() {
-    if (!confirm("Are you sure you want to process the selected inventory counts?")) {
-      return;
-    }
+    TaskWidgets.confirm("Process the selected inventory counts?", function() {
     processBtn.disabled = true;
     processBtn.textContent = 'Processing...';
 
@@ -416,6 +414,7 @@
         processBtn.textContent = 'Processing counts disabled';
       })
       .WebAppInventory_acceptInventoryCounts(taskIds);
+    });
   }
 
   processBtn.addEventListener('click', handleProcessCounts);
@@ -435,25 +434,7 @@
    * @param {string} type The type of toast (success, error, warning).
    */
   function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast-notification ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    // Animate in
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
-
-    // Animate out and remove
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                document.body.removeChild(toast);
-            }
-        }, 500);
-    }, 3000);
+    TaskWidgets.toast(message, type);
   }
 
   // --- Count Task Creation (unified card) ---
@@ -724,14 +705,14 @@
     const exportBtn = document.getElementById('btn-comax-export');
     const messageArea = document.getElementById('comax-inventory-message-area');
     
-    if (confirm("Export Comax adjustments?")) {
+    TaskWidgets.confirm("Export Comax adjustments?", function() {
       exportBtn.disabled = true;
       messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
 
       google.script.run
         .withSuccessHandler(response => {
           if (response && response.message) {
-            alert(response.message);
+            TaskWidgets.toast(response.message, 'success');
           }
           loadAdminViewData(); // Reload all data
           loadComaxSyncData(); // Reload Comax Sync data specifically
@@ -742,7 +723,7 @@
             messageArea.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
         })
         .WebAppInventory_generateComaxInventoryExport();
-    }
+    });
   }
 
   /**
@@ -758,7 +739,7 @@
     const confirmBtn = document.getElementById('btn-comax-updated');
     const messageArea = document.getElementById('comax-inventory-message-area');
 
-    if (confirm("Confirm Comax adjustment applied and closed?")) {
+    TaskWidgets.confirm("Confirm Comax adjustment applied and closed?", function() {
       confirmBtn.disabled = true;
       messageArea.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Processing...';
       
@@ -776,7 +757,7 @@
             messageArea.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
         })
         .WebAppTasks_completeTaskById(taskId);
-    }
+    });
   }
 })();
 </script>

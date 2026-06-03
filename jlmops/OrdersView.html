@@ -1,3 +1,4 @@
+<?!= include('TaskWidgets') ?>
 <div class="container-fluid">
     <h1 class="mt-4">Orders</h1>
 
@@ -83,7 +84,7 @@
         })
         .WebAppOrders_getPackableOrders();
     } catch (e) {
-      alert('A client-side error occurred: ' + e.message);
+      TaskWidgets.toast('A client-side error occurred: ' + e.message, 'error');
     }
   }
 
@@ -118,7 +119,7 @@
         })
         .WebAppOrders_getOpenOrdersForManager();
     } catch (e) {
-      alert('A client-side error occurred: ' + e.message);
+      TaskWidgets.toast('A client-side error occurred: ' + e.message, 'error');
     }
   }
 
@@ -194,7 +195,7 @@
       .withFailureHandler(function(err) {
         btn.textContent = originalText;
         btn.disabled = false;
-        alert('Refresh failed: ' + err.message);
+        TaskWidgets.toast('Refresh failed: ' + err.message, 'error');
       })
       .WebAppOrders_triggerWebOrderImport();
   }

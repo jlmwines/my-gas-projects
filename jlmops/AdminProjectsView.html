@@ -995,7 +995,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var customStreamId = document.getElementById('content-stream-id').value.trim().toUpperCase();
 
     if (!name) {
-      alert('Please enter content name');
+      TaskWidgets.toast('Please enter content name', 'warning');
       return;
     }
 
@@ -1006,7 +1006,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     });
 
     if (stages.length === 0) {
-      alert('Please select at least one stage');
+      TaskWidgets.toast('Please select at least one stage', 'warning');
       return;
     }
 
@@ -1019,17 +1019,17 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         btn.disabled = false;
         btn.textContent = 'Create Tasks';
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
         } else {
           document.getElementById('contentStreamModal').style.display = 'none';
-          alert('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode);
+          TaskWidgets.toast('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode, 'success');
           loadData();
         }
       })
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Create Tasks';
-        alert('Error: ' + (err.message || 'Failed'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
       .WebAppProjects_createContentStream({
         projectId: state.selectedProjectId,
@@ -1042,7 +1042,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function importContentTasks() {
     var csvData = document.getElementById('content-import-csv').value.trim();
     if (!csvData) {
-      alert('Please enter CSV data');
+      TaskWidgets.toast('Please enter CSV data', 'warning');
       return;
     }
 
@@ -1598,7 +1598,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
           // Reload tasks to restore correct state after error
           loadTasks(state.selectedProjectId);
           return;
@@ -1609,7 +1609,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         }
       })
       .withFailureHandler(function(err) {
-        alert('Error: ' + (err.message || 'Failed to save'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed to save'), 'error');
         // Reload tasks to restore correct state after error
         loadTasks(state.selectedProjectId);
       })
@@ -1964,11 +1964,11 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
   function createProject() {
     var name = document.getElementById('new-project-name').value.trim();
-    if (!name) { alert('Enter project name'); return; }
+    if (!name) { TaskWidgets.toast('Enter project name', 'warning'); return; }
 
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         document.getElementById('newProjectModal').style.display = 'none';
         loadData();
       })
@@ -1985,13 +1985,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   // ===================================================================
 
   function openGenerateOutputsModal() {
-    if (!state.selectedProjectId) { alert('No project selected'); return; }
+    if (!state.selectedProjectId) { TaskWidgets.toast('No project selected', 'warning'); return; }
     var project = getSelectedProject();
-    if (!project) { alert('Project not loaded'); return; }
+    if (!project) { TaskWidgets.toast('Project not loaded', 'warning'); return; }
 
     var campaignId = project.campaignid || project.spro_CampaignId || '';
     if (!campaignId) {
-      alert('This project is not linked to a Marketing Campaign. Assign one via the Campaign field, save, and try again.');
+      TaskWidgets.toast('This project is not linked to a Marketing Campaign. Assign one via the Campaign field, save, and try again.', 'warning');
       return;
     }
 
@@ -2046,9 +2046,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var medium    = document.getElementById('gen-out-medium').value.trim();
     var source    = document.getElementById('gen-out-source').value.trim();
 
-    if (!targetUrl) { alert('Target URL is required'); return; }
-    if (!medium)    { alert('Medium is required');     return; }
-    if (!source)    { alert('Source is required');     return; }
+    if (!targetUrl) { TaskWidgets.toast('Target URL is required', 'warning'); return; }
+    if (!medium)    { TaskWidgets.toast('Medium is required', 'warning');     return; }
+    if (!source)    { TaskWidgets.toast('Source is required', 'warning');     return; }
 
     var btn = document.getElementById('btn-generate-outputs-submit');
     btn.disabled = true;
@@ -2058,7 +2058,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .withSuccessHandler(function(result) {
         btn.disabled = false;
         btn.textContent = 'Generate';
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         var data = result.data || {};
         document.getElementById('gen-out-utm-url').value   = data.utmUrl   || '';
         document.getElementById('gen-out-short-url').value = data.shortUrl || '';
@@ -2069,7 +2069,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Generate';
-        alert('Error: ' + (err && err.message ? err.message : err));
+        TaskWidgets.toast('Error: ' + (err && err.message ? err.message : err), 'error');
       })
       .WebAppCampaigns_generateOutputs({
         campaignId: campaignId,
@@ -2086,21 +2086,21 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
   function createTask() {
     var title = document.getElementById('new-task-title').value.trim();
-    if (!title) { alert('Enter task title'); return; }
+    if (!title) { TaskWidgets.toast('Enter task title', 'warning'); return; }
     var projectId = document.getElementById('new-task-project').value;
-    if (!projectId) { alert('Pick a project'); return; }
+    if (!projectId) { TaskWidgets.toast('Pick a project', 'warning'); return; }
     var topic = document.getElementById('new-task-topic').value;
-    if (!topic) { alert('Pick a topic'); return; }
+    if (!topic) { TaskWidgets.toast('Pick a topic', 'warning'); return; }
     var startDate = document.getElementById('new-task-start-date').value;
     var dueDate = document.getElementById('new-task-due-date').value;
     if ((startDate && !dueDate) || (dueDate && !startDate)) {
-      alert('Provide both start date and due date, or neither.');
+      TaskWidgets.toast('Provide both start date and due date, or neither.', 'warning');
       return;
     }
 
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         document.getElementById('newTaskModal').style.display = 'none';
         loadData();
       })
@@ -2121,7 +2121,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         loadData();
       })
       .WebAppProjects_updateProject(state.selectedProjectId, {
@@ -2163,7 +2163,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       }
       google.script.run
         .withSuccessHandler(function(result) {
-          if (result.error) { alert('Error: ' + result.error); return; }
+          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
           loadData();
         })
         .WebAppTasks_updateTask(state.selectedTaskId, updates);
@@ -2172,7 +2172,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var newStatus = document.getElementById('task-field-status').value;
       google.script.run
         .withSuccessHandler(function(result) {
-          if (result.error) { alert('Error: ' + result.error); return; }
+          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
           loadData();
         })
         .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
@@ -2184,14 +2184,14 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     google.script.run
       .withSuccessHandler(function(success) {
         hideTaskActionSpinner('btn-complete-task', 'Done');
-        if (!success) { alert('Could not complete task'); return; }
+        if (!success) { TaskWidgets.toast('Could not complete task', 'error'); return; }
         state.selectedTaskId = null;
         render();  // Clear detail panel immediately
         loadData();
       })
       .withFailureHandler(function(err) {
         hideTaskActionSpinner('btn-complete-task', 'Done');
-        alert('Error: ' + (err.message || 'Failed'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
       .WebAppTasks_completeTaskById(taskId);
   }
@@ -2201,14 +2201,14 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     google.script.run
       .withSuccessHandler(function(result) {
         hideTaskActionSpinner('btn-cancel-task', 'Delete');
-        if (result.error) { alert('Error: ' + result.error); return; }
+        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         state.selectedTaskId = null;
         render();
         loadData();
       })
       .withFailureHandler(function(err) {
         hideTaskActionSpinner('btn-cancel-task', 'Delete');
-        alert('Error: ' + (err.message || 'Failed'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
       .WebAppTasks_deleteTask(taskId);
   }
@@ -2239,13 +2239,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         var failures = result.failed || [];
         if (failures.length > 0) {
           var detail = failures.map(function(f) { return '  ' + f.taskId + ': ' + f.reason; }).join('\n');
-          alert('Deleted ' + deletedCount + ' task(s). ' + failures.length + ' failed:\n' + detail);
+          TaskWidgets.toast('Deleted ' + deletedCount + ' task(s). ' + failures.length + ' failed:\n' + detail, 'error');
         }
       })
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Delete Selected';
-        alert('Error: ' + (err.message || 'Failed'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
       .WebAppTasks_deleteTasks(taskIds);
   }

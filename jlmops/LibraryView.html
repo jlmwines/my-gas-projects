@@ -746,7 +746,7 @@
         ? refsRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean)
         : [];
       if (!name) {
-        alert('Please enter content name');
+        TaskWidgets.toast('Please enter content name', 'warning');
         return;
       }
       var stages = [];
@@ -754,7 +754,7 @@
         stages.push(cb.value);
       });
       if (stages.length === 0) {
-        alert('Please select at least one stage');
+        TaskWidgets.toast('Please select at least one stage', 'warning');
         return;
       }
 
@@ -767,7 +767,7 @@
           btn.disabled = false;
           btn.textContent = 'Create Tasks';
           if (!result || !result.ok) {
-            alert('Error: ' + ((result && result.error) || 'Unknown'));
+            TaskWidgets.toast('Error: ' + ((result && result.error) || 'Unknown'), 'error');
             return;
           }
           document.getElementById('lvContentStreamModal').style.display = 'none';
@@ -777,13 +777,13 @@
           if (result.deduplicated_entities && result.deduplicated_entities.length) {
             msg += '\nReused existing: ' + result.deduplicated_entities.join(', ');
           }
-          alert(msg);
+          TaskWidgets.toast(msg, 'success');
           load();
         })
         .withFailureHandler(function(err) {
           btn.disabled = false;
           btn.textContent = 'Create Tasks';
-          alert('Error: ' + (err && err.message ? err.message : 'Failed'));
+          TaskWidgets.toast('Error: ' + (err && err.message ? err.message : 'Failed'), 'error');
         })
         .WebAppLibrary_spawnContentChain({
           entityType: entityType,
@@ -1060,8 +1060,7 @@
         return;
       }
       var heSlug = enSlug.slice(0, -3) + '-he';
-      if (!confirm('Create HE sibling stub "' + heSlug + '"? It will be seeded at draft/v0 referencing ' + enSlug + '.')) return;
-
+      TaskWidgets.confirm('Create HE sibling "' + heSlug + '"?', function() {
       google.script.run
         .withSuccessHandler(function(res) {
           if (!res || !res.ok) {
@@ -1086,6 +1085,7 @@
           title: state.currentEntity.title,
           references: [enSlug]
         });
+      });
     }
 
     return {
