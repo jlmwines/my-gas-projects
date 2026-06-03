@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 06:17',
+  built: '2026-06-03 06:31',
   commit: 'Reliability audit 1.2 Stage B: Comax adapter outer try. ComaxAdapter.processProductCsv now wraps the Drive.Files.insert conversion (was unguarded) in try/catch; a corrupt/oversized/non-CSV blob throws a typed INVALID FILE error so the orchestrator routes the job to FAILED (OrchestratorService:1218) instead of crashing raw.'
 };
 
