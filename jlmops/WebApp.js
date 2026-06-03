@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 06:31',
+  built: '2026-06-03 06:36',
   commit: 'Reliability audit 1.2 Stage C: packing-slip bidi sanitization. PrintService._sanitizeForDoc strips Unicode bidi override/isolate controls (U+202A-202E, U+2066-2069) from shipping name/address/city/phone before they render on the printed slip, defeating RLO spoofing of the operator view. Formula-prefix guard intentionally omitted (Doc surface, = is inert; belongs on a Sheets-export path).'
 };
 
