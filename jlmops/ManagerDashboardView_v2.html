@@ -631,7 +631,7 @@
         btn.disabled = false;
         btn.textContent = 'Save';
         if (result.error) {
-          alert('Error: ' + result.error);
+          TaskWidgets.toast('Error: ' + result.error, 'error');
         } else {
           // Update local state
           var task = state.tasks.find(function(t) { return t.id === taskId; });
@@ -645,40 +645,38 @@
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Save';
-        alert('Error: ' + (err.message || 'Failed to save'));
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed to save'), 'error');
       })
       .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes, status: status });
   }
 
   function revertTask(taskId, taskName) {
-    if (!confirm('Revert "' + taskName + '" to Admin?\n\nThis will reassign the task to Admin for handling.')) {
-      return;
-    }
+    TaskWidgets.confirm('Revert "' + taskName + '" to Admin?', function() {
+      var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
+      var btn = detail.querySelector('.btn-revert-task');
+      btn.disabled = true;
+      btn.textContent = 'Reverting...';
 
-    var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
-    var btn = detail.querySelector('.btn-revert-task');
-    btn.disabled = true;
-    btn.textContent = 'Reverting...';
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        btn.disabled = false;
-        btn.textContent = 'Revert to Admin';
-        if (result.error) {
-          alert('Error: ' + result.error);
-        } else {
-          // Remove task from local state since it's now assigned to Admin
-          state.tasks = state.tasks.filter(function(t) { return t.id !== taskId; });
-          state.expandedTaskId = null;
-          applyFilters();
-        }
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Revert to Admin';
-        alert('Error: ' + (err.message || 'Failed to revert'));
-      })
-      .WebAppDashboardV2_revertTaskToAdmin(taskId);
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          btn.textContent = 'Revert to Admin';
+          if (result.error) {
+            TaskWidgets.toast('Error: ' + result.error, 'error');
+          } else {
+            // Remove task from local state since it's now assigned to Admin
+            state.tasks = state.tasks.filter(function(t) { return t.id !== taskId; });
+            state.expandedTaskId = null;
+            applyFilters();
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Revert to Admin';
+          TaskWidgets.toast('Error: ' + (err.message || 'Failed to revert'), 'error');
+        })
+        .WebAppDashboardV2_revertTaskToAdmin(taskId);
+    });
   }
 
   // === Calendar View ===

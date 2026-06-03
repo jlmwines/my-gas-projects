@@ -435,9 +435,7 @@
             }
 
             function handleSubmitSelectedCounts() {
-                if (!confirm("Are you sure you want to submit these counts?")) {
-                    return;
-                }
+              function proceed() {
                 submitCountsBtn.disabled = true;
                 submitCountsBtn.textContent = 'Submitting...';
 
@@ -493,6 +491,8 @@
                         submitCountsBtn.textContent = 'Submit Selected Counts';
                     })
                     .WebAppInventory_submitInventoryCounts(selectedCounts);
+              }
+              TaskWidgets.confirm("Submit these counts?", proceed);
             }
 
             function init() {
@@ -530,11 +530,7 @@
 
             function handleImportCounts() {
                 const importBtn = document.getElementById('import-counts-btn');
-                
-                if (!confirm("This will import counts from the most recent 'ProductCount_' sheet in the export folder. Continue?")) {
-                    return;
-                }
-
+              TaskWidgets.confirm("Import the latest ProductCount sheet?", function() {
                 importBtn.disabled = true;
                 importBtn.textContent = 'Importing...';
 
@@ -561,6 +557,7 @@
                         importBtn.textContent = 'Import from Sheet';
                     })
                     .WebAppInventory_importCountsFromSheet(); // Call without arguments
+              });
             }
 
             function handleExportCounts() {
@@ -594,26 +591,10 @@
                     .WebAppInventory_exportCountsToSheet();
             }
 
+            // Delegates to the shared standard toast (NOTIFICATION_UX_PLAN).
+            // Kept as a thin wrapper so existing call sites stay unchanged.
             function showToast(message, type = 'success') {
-                const toast = document.createElement('div');
-                toast.className = `toast-notification ${type}`;
-                toast.textContent = message;
-                document.body.appendChild(toast);
-
-                // Animate in
-                setTimeout(() => {
-                    toast.classList.add('show');
-                }, 10);
-
-                // Animate out and remove
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                    setTimeout(() => {
-                        if (toast.parentNode) {
-                            document.body.removeChild(toast);
-                        }
-                    }, 500);
-                }, 3000);
+                TaskWidgets.toast(message, type);
             }
 
             function handleAutocompleteSearch(e) {
@@ -750,10 +731,7 @@
             }
 
             function handleBruryaImport() {
-                if (!confirm("Import Brurya counts from the most recent 'BruryaCount_' sheet?\n\nThis will update existing products and add new ones.")) {
-                    return;
-                }
-
+              TaskWidgets.confirm("Import the latest Brurya counts?", function() {
                 const importBtn = document.getElementById('brurya-import-button');
                 importBtn.disabled = true;
                 importBtn.textContent = 'Importing...';
@@ -775,6 +753,7 @@
                         importBtn.textContent = 'Import from Sheet';
                     })
                     .WebAppInventory_importBruryaFromSheet();
+              });
             }
 
             function renderBruryaInventory(inventoryData) {

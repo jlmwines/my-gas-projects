@@ -56,7 +56,7 @@
   }
 
   function runRebuildSysConfig() {
-    devConfirm('Rebuild SysConfig clears the live SysConfig sheet and repopulates every row from the master source (runtime values are snapshotted and restored). Continue?', function() {
+    devConfirm('Rebuild SysConfig from source? Runtime values are preserved.', function() {
       const resultDiv = document.getElementById('dev-tools-results');
       resultDiv.innerHTML = '<p class="text-info">Rebuilding SysConfig...</p>';
       google.script.run
@@ -112,7 +112,7 @@
   }
 
   function runDailyHousekeeping() {
-    devConfirm('Daily Housekeeping runs the full live batch: it purges and archives data, trashes old Drive files, pulls Mailchimp, refreshes the CRM, and can create customer-outreach tasks. It also duplicates the scheduled run. Continue?', function() {
+    devConfirm('Run full Daily Housekeeping now? (Also runs on schedule.)', function() {
       const resultDiv = document.getElementById('dev-tools-results');
       resultDiv.innerHTML = '<p class="text-info">Running daily housekeeping...</p>';
       google.script.run

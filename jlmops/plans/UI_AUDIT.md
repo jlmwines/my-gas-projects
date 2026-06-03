@@ -106,7 +106,7 @@ Also: `init()` fires **4 parallel round-trips** on view mount (`:186-205`: loadC
 
 ### 3.13 Widgets (loaded into views, not routed)
 
-- **`TaskWidgets.html`** — atom kit. Included by LibraryView only (`:1` scriptlet). Atoms: status-pill, priority-badge, due-chip, topic chip, file-link chip, filter-bar, notes textarea, toast. JS helpers: `escape`, `formatDate`, `statusClass`, `priorityClass`, `dueClass`. **Sole consumer = LibraryView. Massive consolidation opportunity.**
+- **`TaskWidgets.html`** — atom kit. **Now included by 10 views** (`:1` scriptlet): AdminBundles, AdminCampaigns, AdminContacts, AdminInventory, AdminProjects, AdminTasks, Library, ManagerContact, ManagerDashboard, ManagerInventory (corrected 2026-06-03 — was "LibraryView only"). Atoms: status-pill, priority-badge, due-chip, topic chip, file-link chip, filter-bar, notes textarea, toast (`TaskWidgets.toast`). JS helpers: `escape`, `formatDate`, `statusClass`, `priorityClass`, `dueClass`. The notification/confirmation consolidation (kill native `alert()`/`confirm()`, add `TaskWidgets.confirm`) is owned by `NOTIFICATION_UX_PLAN.md`.
 - **`AdminDailySyncWidget_v2.html`** — embedded in AdminSyncView. The actual sync UI.
 - **7 orphan widgets RETIRED (T1.0 SHIPPED 2026-05-29):** `SystemHealthWidget`, `AdminOrdersWidget`, `ManagerOrdersWidget`, `AdminInventoryWidget`, `ManagerInventoryWidget`, `AdminProductsWidget`, `ManagerProductsWidget` — all HTML files deleted + 7 viewMap lines removed + 3 dead `refreshSystemHealthWidget` conditional blocks removed from AdminInventoryView. Pre-v2 architecture residue, no consumer. (Backend `*WidgetData` data functions are separate and retained — one in live use by ManagerProductsView.)
 

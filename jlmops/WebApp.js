@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 07:27',
-  commit: 'Reliability audit 3.2 (live blocks): new StatusReportService writes a Claude-readable jlmops-status.md to the exports folder on the 15-min cadence (refreshLiveBlocks at the end of performFrequentMaintenance). Blocks: System / Integrations / Queue / Data quality / Capacity / Recent errors — reuses _getIntegrationHeartbeats_v2 + health-task notes + new LoggerService.getRecentErrors (bounded tail read). Never throws (reportFailure status_export.refresh, Normal). KPI block deferred. Validate by reading the file via Drive MCP after a frequent-maintenance run.'
+  commit: 'Notification UX standard (NOTIFICATION_UX_PLAN) Phases 0-2: kill native alert()/confirm() (ugly iframe header). TaskWidgets gains typed toast (success/error/warning/info, back-compat) + TaskWidgets.confirm (in-page, Cancel-default). Migrated all 4 manager views (Dashboard/Contact/Inventory/Products — 17 native dialogs → toast/confirm, messages tightened) + shortened the 2 mile-long Developer-screen confirms. Standard documented in TaskWidgets header + jlmops/CLAUDE.md; guard script added. Admin sweep (135 calls) is tracked backlog. Manager views need on-screen verification.'
 };
 
 function getVersion() {

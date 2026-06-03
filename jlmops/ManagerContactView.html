@@ -223,7 +223,7 @@
 
   function showError(msg) {
     if (typeof window.showError === 'function') window.showError({ message: msg });
-    else alert(msg);
+    else TaskWidgets.toast(msg, 'error');
   }
 
   function activityIcon(type) {

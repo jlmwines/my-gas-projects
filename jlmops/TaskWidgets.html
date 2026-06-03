@@ -118,6 +118,30 @@
   }
   .tw-toast.show { opacity: 1; }
   .tw-toast.error { background: #dc3545; }
+  .tw-toast.warning { background: #ffc107; color: #212529; }
+  .tw-toast.info { background: #0d6efd; }
+  /* success keeps the neutral base background */
+
+  /* Confirm dialog (in-page — replaces native confirm(); NOTIFICATION_UX_PLAN) */
+  .tw-confirm-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1100;
+  }
+  .tw-confirm-box {
+    background: #fff; border-radius: 6px; padding: 20px;
+    max-width: 360px; width: calc(100% - 40px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  .tw-confirm-title { font-weight: 600; font-size: 15px; margin-bottom: 8px; }
+  .tw-confirm-msg { font-size: 14px; color: #333; margin-bottom: 16px; line-height: 1.4; }
+  .tw-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .tw-confirm-actions .btn { min-width: 84px; }
+  .tw-confirm-danger { background: #dc3545; color: #fff; }
+  @media (max-width: 768px) {
+    .tw-confirm-actions .btn { min-height: 44px; }
+  }
 
   /* Inline validation message */
   .tw-inline-error {
@@ -138,12 +162,24 @@
 </style>
 
 <script>
-  // ========================================================== //
-  // TaskWidgets — small JS helpers shared by LibraryView + packs //
-  // ========================================================== //
+  // ============================================================== //
+  // TaskWidgets — shared UI helpers (included by most views).       //
+  // NOTIFICATION STANDARD (see plans/NOTIFICATION_UX_PLAN.md):       //
+  //   • Never use native alert()/confirm() — the iframe adds an ugly //
+  //     un-styleable browser header. Use the helpers below.          //
+  //   • Messages: action-first, ONE short line, no long titles,      //
+  //     no "Are you sure you want to…", no \n\n walls.               //
+  //   • TaskWidgets.toast(msg, 'success'|'error'|'warning'|'info')   //
+  //   • TaskWidgets.confirm(msg, onConfirm, {title,okLabel,danger})  //
+  // ============================================================== //
   window.TaskWidgets = window.TaskWidgets || {};
 
-  TaskWidgets.toast = function(message, isError) {
+  // Toast — transient feedback. type: 'success'|'error'|'warning'|'info'
+  // (default 'success'). Back-compat: legacy boolean isError (true) → 'error'.
+  TaskWidgets.toast = function(message, type) {
+    if (type === true) type = 'error';
+    else if (type === false || type == null) type = 'success';
+    if (['success', 'error', 'warning', 'info'].indexOf(type) === -1) type = 'success';
     var t = document.getElementById('tw-toast');
     if (!t) {
       t = document.createElement('div');
@@ -152,8 +188,54 @@
       document.body.appendChild(t);
     }
     t.textContent = message;
-    t.className = 'tw-toast show' + (isError ? ' error' : '');
+    t.className = 'tw-toast show ' + type;
     setTimeout(function() { t.className = 'tw-toast'; }, 3000);
+  };
+
+  // Confirm — in-page replacement for native confirm() (no iframe header).
+  // Cancel is default-focused and Esc/backdrop cancel, so a reflex Enter/tap
+  // can't blow through a destructive action. opts: { title, okLabel, danger }.
+  TaskWidgets.confirm = function(message, onConfirm, opts) {
+    opts = opts || {};
+    var overlay = document.getElementById('tw-confirm-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'tw-confirm-overlay';
+      overlay.className = 'tw-confirm-overlay';
+      overlay.innerHTML =
+        '<div class="tw-confirm-box">' +
+          '<div class="tw-confirm-title" id="tw-confirm-title"></div>' +
+          '<div class="tw-confirm-msg" id="tw-confirm-msg"></div>' +
+          '<div class="tw-confirm-actions">' +
+            '<button type="button" class="btn" id="tw-confirm-cancel">Cancel</button>' +
+            '<button type="button" class="btn" id="tw-confirm-ok">Confirm</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+    }
+    var titleEl = overlay.querySelector('#tw-confirm-title');
+    var msgEl = overlay.querySelector('#tw-confirm-msg');
+    var okBtn = overlay.querySelector('#tw-confirm-ok');
+    var cancelBtn = overlay.querySelector('#tw-confirm-cancel');
+
+    if (opts.title) { titleEl.textContent = opts.title; titleEl.style.display = 'block'; }
+    else { titleEl.style.display = 'none'; }
+    msgEl.textContent = message;
+    okBtn.textContent = opts.okLabel || 'Confirm';
+    okBtn.className = 'btn' + (opts.danger ? ' tw-confirm-danger' : '');
+
+    function close() {
+      overlay.style.display = 'none';
+      okBtn.onclick = null; cancelBtn.onclick = null; overlay.onclick = null;
+      document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    okBtn.onclick = function() { close(); if (typeof onConfirm === 'function') onConfirm(); };
+    cancelBtn.onclick = close;
+    overlay.onclick = function(e) { if (e.target === overlay) close(); };
+    document.addEventListener('keydown', onKey);
+    overlay.style.display = 'flex';
+    cancelBtn.focus();
   };
 
   TaskWidgets.statusClass = function(status) {

@@ -94,6 +94,12 @@ Do not write `btn-primary`, `btn-secondary`, or any color class unless you SEE i
 </div>
 ```
 
+**Notifications & confirms - MANDATORY:**
+- NEVER use native `alert()` or `confirm()` - inside the Apps Script iframe the browser adds an ugly, un-styleable header. Use the shared helpers in `TaskWidgets.html`:
+  - `TaskWidgets.toast(message, 'success'|'error'|'warning'|'info')` instead of `alert()`
+  - `TaskWidgets.confirm(message, onConfirm, {title, okLabel, danger})` instead of `confirm()`
+- Messages: action-first, ONE short line. No "Are you sure you want to...", no long titles, no `\n\n` walls. See `plans/NOTIFICATION_UX_PLAN.md`.
+
 **Tables:** Use `table table-sm table-hover` for data tables.
 
 **Cards:** Use Bootstrap card classes, not custom styling.
