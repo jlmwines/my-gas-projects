@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 09:40',
+  built: '2026-06-03 10:44',
   commit: 'Reliability audit 2.3: REAL adapter tests. Rewrote ComaxAdapterTest + WebAdapterTest from decorative (re-implemented logic inline, passed by default) to calling the real ComaxAdapter/WebAdapter with in-memory CSV fixtures (4 cases each: happy / structural-reject / empty / bad-data). They now go RED if the import path breaks. Pure transforms = no production sheets touched (Comax spins a self-trashing temp Drive file). Test count ~40→~23 (8 real replace 25 decorative). VALIDATE via the Dev screen Run Unit Tests button. OrderService/ProductService suites left unaudited (Tier 6.7).'
 };
 
