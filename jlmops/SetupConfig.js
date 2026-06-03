@@ -31,7 +31,8 @@ function rebuildSysConfigFromSource() {
         { name: 'system.bundle_health.last_check', key: 'value' },
         { name: 'system.crm_intelligence.last_run', key: 'value' },
         { name: 'system.sync.state', key: 'json' },
-        { name: 'woo.api', key: 'products_last_pull' }
+        { name: 'woo.api', key: 'products_last_pull' },
+        { name: 'woo.api', key: 'orders_last_pull' }
     ];
 
     try {

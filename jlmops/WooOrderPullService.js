@@ -36,6 +36,9 @@ const WooOrderPullService = (function() {
       if (apiOrders.length === 0) {
         var noOrdersMsg = 'No new or modified orders found';
         logger.info(SERVICE_NAME, functionName, noOrdersMsg, { sessionId: sessionId });
+        // A successful pull that found 0 orders is still a live integration — stamp
+        // the heartbeat (reliability audit 3.1; was a declared-but-never-written key).
+        ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
         return { success: true, orderCount: 0, message: noOrdersMsg };
       }
 
@@ -65,6 +68,8 @@ const WooOrderPullService = (function() {
       var message = 'Order pull complete: ' + transformedOrders.length + ' orders processed';
       logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
 
+      // Stamp the orders heartbeat on success (reliability audit 3.1).
+      ConfigService.setConfig('woo.api', 'orders_last_pull', new Date().toISOString());
       return { success: true, orderCount: transformedOrders.length, message: message };
 
     } catch (e) {

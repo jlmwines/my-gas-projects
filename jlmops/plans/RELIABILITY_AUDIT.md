@@ -519,6 +519,8 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 
 **Goal.** Dashboard widget shows last-successful-pull per integration with per-source staleness thresholds. Dead `orders_last_pull` key gets written.
 
+**Status (2026-06-03). DEAD-KEY FIX SHIPPED; panel/widget DEFERRED.** Implementation step 1 (the dead `orders_last_pull` key) is live: `WooOrderPullService.pullOrders` now stamps `woo.api.orders_last_pull` on BOTH success returns (0-orders found and orders-processed — a successful empty pull is still a live integration). Also added `{ name: 'woo.api', key: 'orders_last_pull' }` to `RUNTIME_KEYS` in `generate-config.js` (regenerated) so a config rebuild preserves it, matching `products_last_pull` — otherwise every rebuild wiped the orders heartbeat. No immediate rebuild needed (key already exists in SysConfig; write happens at next pull; RUNTIME_KEYS is latent until next rebuild). Steps 2-4 (the `getIntegrationHeartbeats()` aggregator, the dashboard widget, and the §3.5 Chat-webhook verification) DEFERRED — they're new UI + a from-screen visual check, not deploy-verifiable here.
+
 **Anchors.**
 - Already written: `woo.api.products_last_pull` at `WooProductPullService.js:53, :372`; `system.mailchimp.subscribers_last_update.value` at `ContactImportService.js:563`; `system.mailchimp.campaigns_last_update.value` at `CampaignService.js:1130`; `system.brurya.last_update` at `WebAppInventory.js:551, :1159`; `WebAppDashboardV2.js:676`.
 - **Bug: `woo.api.orders_last_pull` declared in `config/system.json` (per `SetupConfig.js:2158`), read at `WebAppSync.js:1058`, but `WooOrderPullService.pullOrders` (`:19-74`) never writes it.** Dead key.

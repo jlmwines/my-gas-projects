@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 06:54',
-  commit: 'Reliability audit 2.3 (part 1): pass-by-default guard. HousekeepingService Phase 2 now reportFailure(tests.empty_or_null_result, High) when TestRunner returns null or total===0, so a crashed/empty suite no longer leaves daily housekeeping silently green. Suite rewrites (Comax/WebAdapter real-invocation) deferred to a from-editor session — they need config-matched fixtures and only validate via TestRunner.runAllTests() in the editor.'
+  commit: 'Reliability audit 3.1 (dead-key fix): woo.api.orders_last_pull was declared + read (WebAppSync:1058) but never written, so the orders heartbeat was permanently stale. WooOrderPullService.pullOrders now stamps it on both success paths (0-orders and processed); added to RUNTIME_KEYS so rebuilds preserve it like products_last_pull. Heartbeat panel/widget + Chat-webhook verification deferred (UI / from-screen).'
 };
 
 function getVersion() {
