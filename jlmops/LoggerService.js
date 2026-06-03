@@ -143,6 +143,56 @@ const LoggerService = (function() {
     },
 
     /**
+     * Returns the most recent ERROR-level log rows, newest first (reliability
+     * audit 3.2 — feeds the flat-file status export). Range-limited tail read,
+     * never a full getDataRange over thousands of rows.
+     * @param {number} [n=10] Max rows to return.
+     * @returns {Array<{timestamp, service, fn, message}>} newest-first; [] on error.
+     */
+    getRecentErrors: function(n) {
+      n = n || 10;
+      try {
+        const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+        const sheetNames = ConfigService.getConfig('system.sheet_names');
+        if (!logSheetConfig || !logSheetConfig.id) return [];
+        const ss = SpreadsheetApp.openById(logSheetConfig.id);
+        const sheet = ss.getSheetByName(sheetNames.SysLog);
+        if (!sheet || sheet.getLastRow() < 2) return [];
+
+        const lastRow = sheet.getLastRow();
+        // Scan a bounded tail; ERROR rows are sparse so look back further than n.
+        const scanRows = Math.min(500, lastRow - 1);
+        const startRow = lastRow - scanRows + 1;
+        const lastCol = sheet.getLastColumn();
+        const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        const tsIdx = headers.indexOf('sl_Timestamp');
+        const levelIdx = headers.indexOf('sl_LogLevel');
+        const svcIdx = headers.indexOf('sl_ServiceName');
+        const fnIdx = headers.indexOf('sl_FunctionName');
+        const msgIdx = headers.indexOf('sl_Message');
+        if (levelIdx === -1 || msgIdx === -1) return [];
+
+        const data = sheet.getRange(startRow, 1, scanRows, lastCol).getValues();
+        const out = [];
+        for (let i = data.length - 1; i >= 0 && out.length < n; i--) {
+          const row = data[i];
+          if (String(row[levelIdx]).toUpperCase() === 'ERROR') {
+            out.push({
+              timestamp: row[tsIdx],
+              service: row[svcIdx],
+              fn: row[fnIdx],
+              message: row[msgIdx]
+            });
+          }
+        }
+        return out;
+      } catch (e) {
+        console.error(`getRecentErrors failed: ${e.message}`);
+        return [];
+      }
+    },
+
+    /**
      * Temporary diagnostic function to test log sheet access.
      * @returns {boolean} True if access is successful, false otherwise.
      */

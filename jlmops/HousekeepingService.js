@@ -596,6 +596,14 @@ function HousekeepingService() {
       }
     }
 
+    // Refresh the flat-file status export (reliability audit 3.2). Never throws —
+    // a reporting-surface failure must not affect frequent maintenance.
+    try {
+      StatusReportService.refreshLiveBlocks(Utilities.getUuid());
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `Status export refresh failed: ${e.message}`);
+    }
+
     logger.info('HousekeepingService', functionName, "Frequent maintenance completed.");
   };
 

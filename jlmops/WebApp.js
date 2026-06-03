@@ -5,7 +5,7 @@
 
 const VERSION = {
   built: '2026-06-03 07:17',
-  commit: 'Reliability audit 3.1 (heartbeat panel): new Integrations card on AdminDashboardView_v2 shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds (system.heartbeat.*_threshold_min, defaults orders 60 / products 1440 / mailchimp 1440). Backend _getIntegrationHeartbeats_v2 is pure config reads (no extra sheet hits). Comax heartbeat omitted (needs cross-workbook SysJobQueue read). Chat-webhook verification still deferred.'
+  commit: 'Reliability audit 3.2 (live blocks): new StatusReportService writes a Claude-readable jlmops-status.md to the exports folder on the 15-min cadence (refreshLiveBlocks at the end of performFrequentMaintenance). Blocks: System / Integrations / Queue / Data quality / Capacity / Recent errors — reuses _getIntegrationHeartbeats_v2 + health-task notes + new LoggerService.getRecentErrors (bounded tail read). Never throws (reportFailure status_export.refresh, Normal). KPI block deferred. Validate by reading the file via Drive MCP after a frequent-maintenance run.'
 };
 
 function getVersion() {
