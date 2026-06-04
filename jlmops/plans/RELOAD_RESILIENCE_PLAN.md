@@ -1,7 +1,7 @@
 # Reload Resilience — surviving accidental back/refresh
 
 **Created:** 2026-06-03
-**Status:** **Approach SETTLED** (3 independent review rounds; user agreed 2026-06-03). **Next session: build A0** — client-side `sessionStorage` autosave for count entry — after a ~5-min on-phone check (§4.A0). Option A (server-side draft) is the durability upgrade for the cases A0 misses; **deferred**, with prerequisites specified in §4.A. Implementation pending user go.
+**Status:** **A0 SHIPPED 2026-06-04 (deploy @224).** `ManagerInventoryView` count entry autosaves to `sessionStorage` on every edit and rehydrates on render — survives same-tab pull-to-refresh / back (the reported mobile case). **Pending the on-phone empirical check (§4.A0)** — verify a real-device round-trip. Option A (server-side draft, durable across tab-close / device-switch) remains **deferred** behind A0, prerequisites in §4.A.
 **Owner:** Session-driven; user reviews / visually verifies.
 **Origin:** User report — an accidental browser **back** gesture or **pull-to-refresh** (easy on mobile) reloads the app and loses in-progress work.
 

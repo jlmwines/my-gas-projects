@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-04 07:50',
-  commit: 'Fix Sync view literal scriptlet: AdminDailySyncWidget_v2 is include()-d raw into AdminSyncView (include() returns un-evaluated getContent), so the widget line-1 <?!= include(TaskWidgets) ?> printed verbatim. Moved the TaskWidgets include up into the template-evaluated AdminSyncView (new line 1) and removed it from the widget; neither AdminSyncView nor AppView included TaskWidgets, so a plain delete would have lost toast/confirm. Regression from UI_AUDIT Fix 5 x NOTIFICATION_UX Phase 4.'
+  built: '2026-06-04 08:32',
+  commit: 'Reload resilience A0 (RELOAD_RESILIENCE_PLAN §4.A0): ManagerInventoryView count entry now autosaves to sessionStorage on every edit (persistCountDrafts via delegated input/change; covers desktop inline + mobile modal) and rehydrates on render (restoreCountDrafts reuses existing input listeners to recompute Total/checkbox; stale-task drafts skipped+pruned; cleared when list empty). Survives same-tab pull-to-refresh/back (reported mobile case); not tab-close/low-memory (deferred server-draft Option A).'
 };
 
 function getVersion() {

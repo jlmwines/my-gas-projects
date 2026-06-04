@@ -233,6 +233,7 @@
                 if (!productsToCount || productsToCount.length === 0) {
                     productCountsListDiv.innerHTML = '<p>No products currently assigned for counting.</p>';
                     submitCountsBtn.disabled = true;
+                    try { sessionStorage.removeItem(COUNT_DRAFT_KEY); } catch (e) {} // nothing to count -> drop stale drafts
                     return;
                 }
 
@@ -380,6 +381,8 @@
                 });
 
                 updateSubmitButtonState(); // Initial state check
+
+                restoreCountDrafts(); // A0: rehydrate any in-progress counts saved before a reload
             }
 
             // --- T4.3 mobile count-entry modal ---
@@ -495,6 +498,56 @@
               TaskWidgets.confirm("Submit these counts?", proceed);
             }
 
+            // --- A0 reload resilience: sessionStorage autosave for count entry ---
+            // In-progress counts live only in the DOM until batch Submit, so an accidental
+            // pull-to-refresh / back gesture (easy on mobile) would lose them. Mirror present
+            // rows to sessionStorage on every edit; rehydrate on render. RELOAD_RESILIENCE_PLAN.md §4.A0.
+            const COUNT_DRAFT_KEY = 'jlmops.invCountDraft.v1';
+
+            function persistCountDrafts() {
+                try {
+                    const drafts = {};
+                    productCountsListDiv.querySelectorAll('tr[data-task-id]').forEach(row => {
+                        const sku = row.dataset.sku;
+                        const s = row.querySelector('[data-qty-type="storage"]').value;
+                        const o = row.querySelector('[data-qty-type="office"]').value;
+                        const sh = row.querySelector('[data-qty-type="shop"]').value;
+                        const vEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
+                        const cEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
+                        const v = vEl ? vEl.value : '';
+                        const c = cEl ? cEl.value : '';
+                        if (s || o || sh || v || c) drafts[sku] = { s, o, sh, v, c };
+                    });
+                    if (Object.keys(drafts).length) sessionStorage.setItem(COUNT_DRAFT_KEY, JSON.stringify(drafts));
+                    else sessionStorage.removeItem(COUNT_DRAFT_KEY);
+                } catch (e) { /* storage blocked: degrade silently, the DOM still holds the counts */ }
+            }
+
+            function restoreCountDrafts() {
+                try {
+                    const raw = sessionStorage.getItem(COUNT_DRAFT_KEY);
+                    if (!raw) return;
+                    const drafts = JSON.parse(raw);
+                    Object.keys(drafts).forEach(sku => {
+                        const row = productCountsListDiv.querySelector(`tr[data-task-id][data-sku="${sku}"]`);
+                        if (!row) return; // task no longer open -> stale draft, skip
+                        const d = drafts[sku];
+                        const storageEl = row.querySelector('[data-qty-type="storage"]');
+                        storageEl.value = d.s || '';
+                        row.querySelector('[data-qty-type="office"]').value = d.o || '';
+                        row.querySelector('[data-qty-type="shop"]').value = d.sh || '';
+                        const vEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
+                        if (vEl) vEl.value = d.v || '';
+                        const cEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
+                        if (cEl) cEl.value = d.c || '';
+                        // reuse the existing input listeners to recompute Total + checkbox state
+                        storageEl.dispatchEvent(new Event('input', { bubbles: true }));
+                        if (vEl) vEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    });
+                    persistCountDrafts(); // prune drafts whose tasks are no longer present
+                } catch (e) { /* corrupt/incompatible draft: ignore */ }
+            }
+
             function init() {
                 loadProductCountsData(); // Load product counts data
                 loadBruryaInventoryData();
@@ -526,6 +579,11 @@
                 document.getElementById('btn-count-entry-cancel').addEventListener('click', () => ModalOverlay.close('count-entry-modal'));
                 document.getElementById('btn-count-entry-save').addEventListener('click', () => saveCountEntry(false));
                 document.getElementById('btn-count-entry-save-next').addEventListener('click', () => saveCountEntry(true));
+
+                // A0 reload resilience: autosave count entry to sessionStorage on any edit
+                // (covers desktop inline edits and the mobile modal, whose save dispatches 'input').
+                productCountsListDiv.addEventListener('input', persistCountDrafts);
+                productCountsListDiv.addEventListener('change', persistCountDrafts);
             }
 
             function handleImportCounts() {
