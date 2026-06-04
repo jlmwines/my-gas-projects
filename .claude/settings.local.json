@@ -76,7 +76,8 @@
       "Bash(git rev-list *)",
       "Skill(update-config)",
       "Bash(echo '{\"tool_input\":{\"pattern\":\"\\(?<!\\\\\\\\w\\)alert\\\\\\\\\\(\"}}')",
-      "Bash(echo '{\"tool_input\":{\"pattern\":\"alert\\\\\\\\\\(\"}}')"
+      "Bash(echo '{\"tool_input\":{\"pattern\":\"alert\\\\\\\\\\(\"}}')",
+      "WebFetch(domain:plugins.svn.wordpress.org)"
     ],
     "deny": [
       "Bash(git -C:*)",

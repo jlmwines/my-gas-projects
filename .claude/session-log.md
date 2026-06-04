@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-04 — theme v1.2.29: SKU search restored in admin bundle builder
+
+- User report: SKU search in the WPClever smart-bundle product edit broke at the theme cutover (acute in Hebrew). Traced: the bundle builder's "add products" field runs a plain `WP_Query` `'s'` search (free plugin `class-backend.php`, action `woosb_get_search_results`) that matches title/excerpt/content, never the `_sku` meta — and doesn't consult `wc_product_sku_enabled()`. So the theme's `wc_product_sku_enabled` filter was a red herring; SKU matching there had been supplied by the **old theme** and lost at the swap.
+- Fix (`inc/woocommerce.php`): `posts_search` filter scoped to `is_admin() + wp_doing_ajax() + product post_type + 's'`, ORs in a `_sku LIKE` subquery. Stays off the WC products list (own SKU path, non-AJAX) and WC select2 (raw SQL, not a `'s'` WP_Query). Existing `wc_product_sku_enabled` filter untouched. Deployed to live; user confirmed Hebrew SKU search in smart-bundle edit now works. Commit `697304d`.
+- Residual risk: premium plugin source not read (user judged premium ≈ free in this respect; confirmed correct by the live test). If a future premium update changes the builder's query shape, revisit.
+- Carried-along in the docs commit (not this session's work): STATUS cartons thread OVERDUE→postponed ~2026-06-11 (user edit); `settings.local.json` gained a `plugins.svn.wordpress.org` WebFetch permission.
+
+---
+
 ## 2026-06-03 (continued ×3) — RELOAD_RESILIENCE_PLAN finalized (planning only, no code)
 
 - Plan went through **3 independent red-team rounds**; each caught a real issue, two were errors that rode forward in my drafts: (a) storage was overstated — app uses `sessionStorage` ~21×/7 views and it survives same-tab pull-to-refresh → added cheap **A0 sessionStorage-first** path, re-ranked; (b) failure model wrong — `updatePhysicalCounts` returns success or **throws** (never success:false), so a real submit failure aborts the whole batch after partial commits (hazard = partial-commit-as-total-failure), not "silent success" → Option A prereqs corrected to per-item try/catch + succeeded/failed arrays + resubmit idempotency.
