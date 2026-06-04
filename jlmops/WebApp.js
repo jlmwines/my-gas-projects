@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-04 08:57',
-  commit: 'Fix count-entry modal on mobile: ManagerInventoryView was missing the .modal-overlay/.modal-container/.form-body CSS every other view defines, so the count panel rendered inline at the page bottom — Save below the fold (scrolling to it triggered pull-to-refresh) and no separation from the content behind. Added the proper floating-overlay CSS (dimmed backdrop, max-height 90vh flex column, internally-scrolling form-body with overscroll-behavior:contain, pinned header+footer so Save is always visible). Unblocks the A0 reload-resilience test.'
+  built: '2026-06-04 10:37',
+  commit: 'Mobile: minimize horizontal page padding to maximize content width (AppView, global <=768px). Bootstrap container-fluid (15px sides) + row (-15px margins) trimmed together to container 0 / row 0 / cols 4px, plus .content sides 6px to 4px, so content reaches near the screen edge without row overflow. Per feedback_mobile_minimal_side_padding.'
 };
 
 function getVersion() {

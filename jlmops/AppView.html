@@ -168,7 +168,15 @@
                 box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
             }
             body.sidebar-open .sidebar { transform: translateX(0); }
-            .content { margin-left: 0; padding: 12px 6px; }
+            /* Mobile: minimize horizontal padding to maximize content width.
+               Bootstrap .container-fluid adds 15px side padding and .row uses -15px
+               margins; trim all three together (container 0, row 0, cols 4px) so content
+               reaches near the screen edge without row overflow. Global, not per-view —
+               feedback_mobile_minimal_side_padding. */
+            .content { margin-left: 0; padding: 12px 4px; }
+            .content .container-fluid { padding-left: 0; padding-right: 0; }
+            .content .row { margin-left: 0; margin-right: 0; }
+            .content [class*="col-"], .content .col { padding-left: 4px; padding-right: 4px; }
 
             /* Hide non-mobile cards */
             [data-viewports]:not([data-viewports~="mobile"]) { display: none !important; }
