@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-04 08:32',
-  commit: 'Reload resilience A0 (RELOAD_RESILIENCE_PLAN §4.A0): ManagerInventoryView count entry now autosaves to sessionStorage on every edit (persistCountDrafts via delegated input/change; covers desktop inline + mobile modal) and rehydrates on render (restoreCountDrafts reuses existing input listeners to recompute Total/checkbox; stale-task drafts skipped+pruned; cleared when list empty). Survives same-tab pull-to-refresh/back (reported mobile case); not tab-close/low-memory (deferred server-draft Option A).'
+  built: '2026-06-04 08:57',
+  commit: 'Fix count-entry modal on mobile: ManagerInventoryView was missing the .modal-overlay/.modal-container/.form-body CSS every other view defines, so the count panel rendered inline at the page bottom — Save below the fold (scrolling to it triggered pull-to-refresh) and no separation from the content behind. Added the proper floating-overlay CSS (dimmed backdrop, max-height 90vh flex column, internally-scrolling form-body with overscroll-behavior:contain, pinned header+footer so Save is always visible). Unblocks the A0 reload-resilience test.'
 };
 
 function getVersion() {

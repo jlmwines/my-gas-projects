@@ -53,6 +53,34 @@
             top: 30px;
         }
 
+        /* Count-entry modal overlay. This was MISSING — without it the panel had no
+           position / backdrop / height cap and rendered inline at the bottom of the page,
+           so Save sat below the fold (scrolling to it triggered pull-to-refresh) and the
+           box never separated from the content behind it. Make it a true floating overlay:
+           dimmed backdrop, height-capped flex column, body scrolls internally (header +
+           footer/Save stay visible), overscroll contained so it can't chain into a page
+           refresh. Mirrors the AdminProducts/ManagerProducts pattern; ModalOverlay.open()
+           sets display:flex. */
+        #count-entry-modal.modal-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            justify-content: center; align-items: flex-start;
+            padding: 24px 12px; overflow-y: auto;
+        }
+        #count-entry-modal .modal-container {
+            background: #fff; width: 100%; max-width: 480px;
+            max-height: 90vh; display: flex; flex-direction: column;
+            border-radius: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+        #count-entry-modal .modal-header,
+        #count-entry-modal .modal-footer { flex: 0 0 auto; }
+        #count-entry-modal .form-body {
+            flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch; padding: 16px;
+        }
+
         /* T4.3 Stage A — card-header button rows wrap instead of overflowing at narrow widths */
         .card-header .header-actions {
             display: flex;
