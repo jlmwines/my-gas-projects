@@ -7,6 +7,8 @@ Projects: jlmops, web, marketing, content
 
 ## jlmops
 
+- [ ] 2026-06-04: **Bundle price calc counts qty=0 slots as qty=1.** `BundleService._calculateBundlePrice` (`BundleService.js:198`) uses `slot.defaultQty || 1`, so a 0-qty placeholder slot (customer-customization slot) is coerced to 1 and adds `price × 1` to the bundle total — inflating the calculated price. `_loadSlots` (:175) loads 0 correctly; the bug is the `|| 1` in the price calc. Fix: `slot.defaultQty === '' || slot.defaultQty == null ? 1 : Number(slot.defaultQty)`. Internal only (jlmops admin price display + the future margin calc) — not the live WC storefront price (WC computes that itself). Found via user check 2026-06-04; captured in `BUNDLE_AUTHORING_EXPORT_PLAN.md` margin notes.
+
 ### Resolved (recent)
 
 - [x] 2026-06-04: **Sync view rendered literal `<?!= include('TaskWidgets') ?>` text.** RESOLVED jlmops deploy @223. Root cause: `include()` (`WebApp.js:20-21`) returns un-evaluated `getContent()`, and `AdminDailySyncWidget_v2` is `include()`-d into the template-evaluated `AdminSyncView`, so the widget's line-1 `<?!= include('TaskWidgets') ?>` scriptlet printed verbatim. Regression from UI_AUDIT Fix 5 (runtime→scriptlet include) × NOTIFICATION_UX Phase 4 (widget line-1 TaskWidgets include), predicted at `plans/_archive/UI_T1_0_quick_wins.md:205`. Fix: moved the `TaskWidgets` include to line 1 of `AdminSyncView.html` (template-evaluated parent) and removed it from the widget. A plain delete was wrong — neither `AdminSyncView` nor `AppView` includes TaskWidgets, so the Sync view would have lost toast/confirm. Diagnosed by the Cowork session (couldn't write this file); fixed + logged by the main CLI session.
