@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-03 14:05',
-  commit: 'Reliability audit 2.3 (cont): ProductServiceTest de-lipsticked. Was fully decorative (12 tests/51 assertions, ZERO real calls). Rewritten to 4 REAL tests calling ProductService.vendorSkuUpdate/fixOrphanSku with invalid inputs, asserting the real input-validation guards (return before any sheet write; safe). ProductService is sheet-coupled so guards are the only harness-free real unit; critical-field validation now covered by ComaxAdapterTest. OrderServiceTest audited = partly real (eligibility helpers real; 1 mock test residual). Net ~15 real tests. Validate via Dev Run Unit Tests.'
+  built: '2026-06-04 07:50',
+  commit: 'Fix Sync view literal scriptlet: AdminDailySyncWidget_v2 is include()-d raw into AdminSyncView (include() returns un-evaluated getContent), so the widget line-1 <?!= include(TaskWidgets) ?> printed verbatim. Moved the TaskWidgets include up into the template-evaluated AdminSyncView (new line 1) and removed it from the widget; neither AdminSyncView nor AppView included TaskWidgets, so a plain delete would have lost toast/confirm. Regression from UI_AUDIT Fix 5 x NOTIFICATION_UX Phase 4.'
 };
 
 function getVersion() {
