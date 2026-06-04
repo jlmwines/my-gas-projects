@@ -22,6 +22,54 @@ if (!defined('ABSPATH')) {
 add_filter('wc_product_sku_enabled', function ($enabled) {
     return is_admin() ? $enabled : false;
 });
+
+/**
+ * Restore SKU matching in admin AJAX product searches.
+ *
+ * The WPClever Product Bundles builder ("add products" field when editing a
+ * bundle) runs a plain WP_Query with 's' => keyword, which WordPress matches
+ * against post title/excerpt/content only — never the _sku meta. The previous
+ * theme extended that search to cover SKU; without it, bundle items can be
+ * found by name but not by SKU. That's especially painful in Hebrew, where the
+ * SKU is often the only Latin/numeric handle on a product.
+ *
+ * Scope: admin AJAX product searches only. The WooCommerce products list table
+ * already searches SKU via its own (non-AJAX) path, so wp_doing_ajax() keeps us
+ * off it; WooCommerce's own select2 product search uses search_products() raw
+ * SQL, not a 's' WP_Query, so posts_search never fires for it either.
+ */
+add_filter('posts_search', function ($search, $wp_query) {
+    global $wpdb;
+
+    if ('' === $search || !is_admin() || !wp_doing_ajax() || !$wp_query->is_search()) {
+        return $search;
+    }
+
+    $post_type = $wp_query->get('post_type');
+    $types     = is_array($post_type) ? $post_type : array($post_type);
+    if (!array_intersect($types, array('product', 'product_variation'))) {
+        return $search;
+    }
+
+    $term = trim((string) $wp_query->get('s'));
+    if ('' === $term) {
+        return $search;
+    }
+
+    $like       = '%' . $wpdb->esc_like(wc_clean($term)) . '%';
+    $sku_clause = $wpdb->prepare(
+        "{$wpdb->posts}.ID IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_sku' AND meta_value LIKE %s )",
+        $like
+    );
+
+    // $search begins with " AND ". OR the SKU match alongside the existing
+    // title/excerpt/content group, keeping parentheses balanced.
+    $inner  = preg_replace('/^\s*AND\s+/', '', $search);
+    $search = " AND ( ({$sku_clause}) OR ({$inner}) )";
+
+    return $search;
+}, 10, 2);
+
 add_filter('woocommerce_product_description_heading', '__return_empty_string');
 add_filter('woocommerce_product_tabs', function ($tabs) {
     unset($tabs['additional_information']);
