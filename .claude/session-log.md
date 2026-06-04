@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-04 (cont) — jlmops @223→@226 + 2 plan docs
+
+- **`BUNDLE_AUTHORING_EXPORT_PLAN.md`** written + committed (4a24da8). jlmops authors bundle composition in the existing editor → serializer emits the two `woosb_ids` blobs → export TABLE of only pending-export bundles (Name|EN|HE) via open-in-new-tab + TSV → paste into WPClever's first-party import. WC stays system of record; `sb_PendingExport` is a "publish now" marker, not a shield — the daily `refreshBundleComposition` re-derives + clears it (website truth wins; un-exported edits volatile by design). Longer-term (fenced): Comax-cost margin-aware inclusion + cross-bundle diversity.
+- **`CODE_AUDIT_PLAN.md`** (Cowork draft) reviewed; §8 added (01b035c): authz gap verified REAL — only 2/15 `WebApp*` controllers reference `AuthService` (13 expose `google.script.run` ungated). Flagged Phase 2/3 as multi-session; recommend decoupling Phase 1 (authz).
+- **@223** Sync-view literal-scriptlet bug FIXED: `AdminDailySyncWidget_v2` `include()`-d raw into template-eval `AdminSyncView` → its line-1 `<?!= include('TaskWidgets') ?>` printed verbatim. Moved the include up to `AdminSyncView` line 1 (Cowork-diagnosed via STATUS inbox).
+- **@224** RELOAD_RESILIENCE **A0 SHIPPED + user-verified**: `ManagerInventoryView` count entry autosaves to `sessionStorage` (persist-on-edit / restore-on-render reusing existing input listeners). Survives same-tab pull-to-refresh. Option A (server draft) still deferred.
+- **@225** count-entry modal: `ManagerInventoryView` was MISSING `.modal-overlay/.modal-container/.form-body` CSS → panel rendered inline at page bottom (Save below fold, scrolling triggered pull-to-refresh, no backdrop). Added proper overlay CSS — this is what unblocked the A0 test.
+- **@226** mobile side-padding minimized (AppView global ≤768px: container-fluid/row/cols trimmed together; `feedback_mobile_minimal_side_padding`).
+- All committed + pushed origin/main. clasp needed a reauth mid-session (invalid_rapt). Next: BUNDLE_AUTHORING_EXPORT build (on go); CODE_AUDIT Phase 1 (authz) is the high-value pick.
+
+---
+
 ## 2026-06-04 — theme v1.2.29: SKU search restored in admin bundle builder
 
 - User report: SKU search in the WPClever smart-bundle product edit broke at the theme cutover (acute in Hebrew). Traced: the bundle builder's "add products" field runs a plain `WP_Query` `'s'` search (free plugin `class-backend.php`, action `woosb_get_search_results`) that matches title/excerpt/content, never the `_sku` meta — and doesn't consult `wc_product_sku_enabled()`. So the theme's `wc_product_sku_enabled` filter was a red herring; SKU matching there had been supplied by the **old theme** and lost at the swap.
