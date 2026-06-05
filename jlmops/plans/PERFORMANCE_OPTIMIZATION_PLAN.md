@@ -378,7 +378,9 @@ function loadDashboard() {
 
 ---
 
-# Bundles Health Check — N+1 Sheet Reads (added 2026-06-01, not implemented)
+# Bundles Health Check — N+1 Sheet Reads (added 2026-06-01; **IMPLEMENTED 2026-06-05, @228→@229**)
+
+**Status: done.** Fix A (ctx hoist) + Fix B (healthAlerts off mount) shipped @228 (commit 4059723). A follow-up shipped @229 (commit 71d982d) for a transitive caller this diagnosis missed — see the ⚠ note in the Caller set below. Mount went 100s+ → ~23s (Fix A+B) → a few seconds (@229). Tracked in `jlmops/plans/BUNDLE_PLAN.md` Stage 1.
 
 ## Problem
 
@@ -399,6 +401,8 @@ Everything `getEligibleProducts` re-reads is **invariant** across one `getBundle
 - `BundleService.js:920` — the hot loop (the only N+1 caller).
 - `AdminBundlesView.html:1059` → `WebAppBundles_getEligibleProducts` (`WebAppBundles.js:371`) — interactive, **single-shot** when the user selects a slot in the editor. Must stay unchanged.
 - `BundleService.js:1588` — public API export.
+
+**⚠ Caller this diagnosis missed (fixed @229).** `getViewData` fans out to four getters; this section assumed dropping the *direct* `getBundlesWithLowInventory` call (Fix B) took it off the mount. But `getStats → getBundleStats` *also* called `getBundlesWithLowInventory()` to fill the stats card's needs-attention counter, so the heavy compute stayed on the mount (~23s after Fix B). Resolved by `getBundleStats(includeInventory)` — the mount passes `false`; the attention counter is filled by the lazy health fetch. Lesson: a "fan-out is cheap" assumption needs each getter's *transitive* calls checked, not just the top-level call list.
 
 So the refactor's context param must be **purely additive** — absent → behave exactly as today (keeps the interactive path identical), present → skip the internal reads.
 

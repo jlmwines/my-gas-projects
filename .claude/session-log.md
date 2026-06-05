@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-05 — BUNDLE_PLAN Stages 0+1 shipped (@227→@230)
+
+- **Stage 0 (qty=0 bundle price) — COMPLETE.** @227 fixed the calc (`BundleService.js:198`); user then reported the total *still* counted qty-0 slots. Traced: the 0 was destroyed at three slot-WRITE sites before the calc (`... || 1`) — `createSlot :489`, `importBundleFromWooCommerce :1147`, `reimportAllBundlesBatch :1263`. **Confirmed against live `wpm_WoosbIds` JSON** (user pasted it — members with `qty:"0","optional":"1"`, the Taste Treats / dessert add-ons). Fixed all three @230 (commit 7b38475); user ran Update Composition to re-derive and **verified totals now reflect qty 0**. The plan's Stage 0 scope had named only `:198` — write paths were the miss.
+- **Stage 1 (Bundles-view perf) — SHIPPED.** Fix A: `getEligibleProducts` optional `options.ctx` → `getBundlesWithLowInventory` builds invariant inputs once (per-slot N+1 → single read; editor path byte-identical). Fix B: `healthAlerts` off the `getViewData` mount (frontend `loadHealthAlerts(undefined)` lazy-fetches). @228 commit 4059723. **Follow-up @229 (commit 71d982d):** mount was still ~23s because `getStats→getBundleStats` *also* called `getBundlesWithLowInventory()` for the attention counter — a transitive caller the perf plan's diagnosis missed. Added `getBundleStats(includeInventory)`; mount passes `false`, housekeeping keeps full counts, attention counter filled by lazy health fetch. Mount → a few seconds.
+- **Process:** clasp reauth needed once mid-session (invalid_rapt). Memory `feedback_follow_compound_instructions_literally` updated — added omitted-step-ambiguity (ask, don't assume exclusion) + corrected the stale "hand-stamp built" guidance (deploy.ps1 owns `built`). Stage 0 docs were briefly orphaned after 747ef30 (only code committed) → rescued as be79045.
+- **Next:** BUNDLE_PLAN Stage 2 (cost/profit data — needs the user to set up the SKU+cost Comax export) when ready. Stages 2–7 remain.
+
+---
+
 ## 2026-06-04 (cont) — jlmops @223→@226 + 2 plan docs
 
 - **`BUNDLE_AUTHORING_EXPORT_PLAN.md`** written + committed (4a24da8). jlmops authors bundle composition in the existing editor → serializer emits the two `woosb_ids` blobs → export TABLE of only pending-export bundles (Name|EN|HE) via open-in-new-tab + TSV → paste into WPClever's first-party import. WC stays system of record; `sb_PendingExport` is a "publish now" marker, not a shield — the daily `refreshBundleComposition` re-derives + clears it (website truth wins; un-exported edits volatile by design). Longer-term (fenced): Comax-cost margin-aware inclusion + cross-bundle diversity.

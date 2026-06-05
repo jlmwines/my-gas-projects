@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-04 (consolidates `BUNDLE_AUTHORING_EXPORT_PLAN.md` + `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` into one staged plan).
 **Expanded:** 2026-06-05 — long planning chavruta added two north stars (ops-owns + suggestion view), the bundle/package domain model, the cost/profit data flow, a re-sequenced build order, and a capstone suggestion-engine stage.
-**Status:** In progress — **Stage 0 shipped @227 (2026-06-05)**; Stages 1–7 planning. Staged — each stage is independently shippable; **decide depth as we refine**. No code until per-stage user go.
+**Status:** In progress — **Stage 0 complete (@227 calc + @230 write paths)** and **Stage 1 shipped (@228→@230)**, both verified live; Stages 2–7 planning. Staged — each stage is independently shippable; **decide depth as we refine**. No code until per-stage user go.
 **Owner:** Session-driven; user reviews / visually verifies.
 **Supersedes:** `BUNDLE_AUTHORING_EXPORT_PLAN.md`, `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` (both stubbed → here). The **REST-push approach is parked** (export via the vendor's own import is safer than a raw REST write) — it was never written up as its own doc, so there is no `BUNDLE_API_PUSH_TEST_PLAN.md` file; the idea lives here in §7.
 
@@ -88,14 +88,16 @@ Each stage produces shippable value on its own. **Re-sequenced 2026-06-05** so t
 
 **Suggested build order:** **Stage 0 → 1 → 2 → 3**, with Stage 4 confirmed/finished alongside, then **5 → 6 → 7**. (Stage 5 member-refresh is independent and can slot anywhere.)
 
-### Stage 0 — Quick fixes — **SHIPPED @227 (2026-06-05)**
-- **qty=0 price bug** (`BundleService.js:198`): `slot.defaultQty || 1` coerced a 0-qty placeholder slot to 1, inflating the calculated total. **Fixed** to `(slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty)` — a stored 0 now contributes 0. Both callers (`:249/:304`) feed slots via `_loadSlots` (`:175`), which normalizes to number-or-1, so the `=== ''` branch is defensive/dead but kept per plan. Internal only (admin display + as-presented margin), not the live WC price. Commit 747ef30. Was the prerequisite for accurate as-presented price/profit (Stage 3).
+### Stage 0 — Quick fixes — **COMPLETE (@227 calc + @230 write paths; verified live)**
+- **qty=0 price bug — calc (`BundleService.js:198`, @227, commit 747ef30):** `slot.defaultQty || 1` coerced a 0-qty placeholder slot to 1, inflating the calculated total. **Fixed** to `(slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty)` — a stored 0 now contributes 0. Internal only (admin display + as-presented margin), not the live WC price.
+- **qty=0 — write/import paths (@230, commit 7b38475) — the calc fix alone was insufficient.** The 0 was destroyed *before* the calc, at the three slot-WRITE sites, all via `... || 1` (`0 || 1 === 1`): `createSlot` (`:489`), `importBundleFromWooCommerce`→createSlot (`:1147`), and `reimportAllBundlesBatch` (`:1263`, the path the daily refresh + Update Composition use). A woosb member's `qty:"0"` (optional slots) was stored as `1`, so the calc faithfully counted it. **Confirmed against live `wpm_WoosbIds` JSON** (members with `qty:"0","optional":"1"` — e.g. the "Taste Treats" / dessert-wine add-ons). All three now use the same `(qty === '' || qty == null) ? 1 : Number(qty)` guard, so `"0"` survives as `0`. Existing rows re-derived via Update Composition; **user verified the editor totals now reflect qty 0**. Prerequisite for accurate as-presented price/profit (Stage 3).
 
-### Stage 1 — View performance (root-cause, not workaround)
-The slow mount is the documented N+1 (§2; `PERFORMANCE_OPTIMIZATION_PLAN.md`). Two fixes that stack:
-- **Fix B — instant mount.** Drop `healthAlerts` from `getViewData`; render on categories + stats + bundles (all fast) → **sub-second mount**. This also **removes a dead feature** — the low-stock alert panel + cumbersome fix flow was never used (it's being superseded by the Stage 7 suggestion view). Compute low-inventory only on demand if ever needed.
-- **Fix A — fast candidate scoring.** In `getBundlesWithLowInventory` build the invariant `ctx` (products, details, slots) **once** and pass it into `getEligibleProducts` so it stops re-reading sheets per slot. Turns the 100s call into a few seconds. **Prerequisite for Stage 3** (joining cost/profit into `getEligibleProducts` without re-worsening the N+1).
-- Skip the old collapse/lazy/gate workarounds — they only mask the symptom.
+### Stage 1 — View performance (root-cause, not workaround) — **SHIPPED (@228 A+B, @229 stats follow-up; verified live)**
+The slow mount was the documented N+1 (§2; `PERFORMANCE_OPTIMIZATION_PLAN.md`). Two fixes that stack, plus one follow-up the plan's diagnosis missed:
+- **Fix A — fast candidate scoring (@228, commit 4059723).** `getEligibleProducts(slotId, options)` now takes an optional `options.ctx = {webData, webCols, detailsMap, allSlots, minStock}`; `getBundlesWithLowInventory` builds it **once** (reusing its WebProdM read + one WebDetM read) and passes it into the per-slot loop, so it stops re-reading sheets per low-stock slot. ctx absent (interactive editor path) = reads sheets exactly as before, **byte-identical**. Turned the 100s call into a few seconds. **Prerequisite for Stage 3** (joining cost/profit into `getEligibleProducts` without re-worsening the N+1).
+- **Fix B — instant mount (@228).** Dropped `healthAlerts` from `getViewData`; the frontend's existing `loadHealthAlerts(undefined)` fallback lazy-fetches it async, so the view opens without waiting on the low-inventory compute. The dead alert panel itself is left in place for the Stage 7 suggestion view to retire.
+- **Follow-up — stats off the mount (@229, commit 71d982d).** Fix B alone left the mount at ~23s: `getStats → getBundleStats` *also* called `getBundlesWithLowInventory()` for the stats card's needs-attention counter — a transitive caller the perf plan's diagnosis missed. `getBundleStats(includeInventory)` added; the mount passes `false` (cheap counts only), housekeeping's monthly review keeps the full counts, and the attention counter is filled by the lazy health fetch (`renderHealthAlerts`). Mount → a few seconds.
+- Skipped the old collapse/lazy/gate workarounds — they only mask the symptom.
 
 ### Stage 2 — Cost & profitability data
 Cost lives in a **separate Comax export** (SKU + cost), **not** the product export the daily sync consumes (`CmxProdM` carries no cost today, confirmed). Standalone, data-only — buildable immediately once the user sets up the export.

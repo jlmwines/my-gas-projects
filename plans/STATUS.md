@@ -1,16 +1,16 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-05 — jlmops @227 · theme v1.2.29 live. **Today:** BUNDLE_PLAN Stage 0 shipped (@227) — qty=0 bundle-price bug fixed (`BundleService.js:198`; internal price/margin only, not the live WC price). **Standing jlmops backlog:** BUNDLE_PLAN Stages 1–7 (`jlmops/plans/BUNDLE_PLAN.md`); reliability-audit (`RELIABILITY_AUDIT.md`, partial) + UI-audit (`UI_AUDIT.md`) queues; `TEST_HARNESS_PLAN.md` (pending); CODE_AUDIT Phase 1 authz (`CODE_AUDIT_PLAN.md`); RELOAD_RESILIENCE Option A / server-draft (deferred behind A0). (Narrative → `.claude/session-log.md`.)
+**Updated:** 2026-06-05 — jlmops @230 · theme v1.2.29 live. **Today:** BUNDLE_PLAN **Stage 0 complete** (qty=0 bundle-price: calc `BundleService.js:198` + the three write/import paths `:489/:1147/:1263` — verified fixed in the live editor totals) and **Stage 1 shipped** (Bundles-view perf: getEligibleProducts ctx hoist kills the per-slot N+1, healthAlerts + stats low-inventory compute moved off the mount → 100s+ to a few seconds). **Standing jlmops backlog:** BUNDLE_PLAN Stages 2–7 (`jlmops/plans/BUNDLE_PLAN.md`); reliability-audit (`RELIABILITY_AUDIT.md`, partial) + UI-audit (`UI_AUDIT.md`) queues; `TEST_HARNESS_PLAN.md` (pending); CODE_AUDIT Phase 1 authz (`CODE_AUDIT_PLAN.md`); RELOAD_RESILIENCE Option A / server-draft (deferred behind A0). (Narrative → `.claude/session-log.md`.)
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
 | Phase | Theme cutover, Manager CRM, Lookup admin UI, Content Library subsystem, and the Admin task workbench (`AdminTasksView`) are all SHIPPED and live. Content Library is permanent (`library.enabled` flag and `crm.template.*` SysConfig retired; SysLibrary is the sole template source). Phase 12 cross-link renderer remains blocked on the §16 regions overhaul. |
-| Last Active | 2026-06-04 |
+| Last Active | 2026-06-05 |
 | Revenue | Steady |
-| Deploy Version | jlmops deploy @227 · theme v1.2.29 LIVE |
-| Deploy Date | jlmops 2026-06-05 (deploy @227) · theme 2026-06-04 (v1.2.29) |
+| Deploy Version | jlmops deploy @230 · theme v1.2.29 LIVE |
+| Deploy Date | jlmops 2026-06-05 (deploy @230) · theme 2026-06-04 (v1.2.29) |
 | Content | 10 editorial posts live on production (EN+HE) — Context published 2026-05-19; 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide awaiting editing + translation). "A Year in the Vineyard" moved OUT of blog pipeline 2026-05-19 — repositioned as recurring subscriber-exclusive "Making Wine — [topic]" series for newsletter + email per `marketing/NEWSLETTER_PLAN.md` |
 | CRM Contacts | 548 enriched |
 | SEO Status | Latest audit: RankMath 2026-05-31 (read-only `audit-site-seo` via curl; global/EN scan, WPML-blind) — 87/100. Open actionable: (RM-1) **FIXED 2026-06-02 (both halves).** staging leak: 6 hardcoded `staging6.jlmwines.com` image-URL defaults in `footer.php`/`template-homepage.php`/`front-page.php` → root-relative `/wp-content/uploads/...`. Missing alt: banner (`Evyatar Cohen, JLM Wines`) + newsletter (`Evyatar at the vineyard`) imgs given `is_rtl()` EN/HE alt. Deployed + verified clean/correct on live EN+HE; (RM-2) focus keyword not in title — NOT actionable (self-resolves): on products it's mostly the Rosé/Rose accent or vintage/wording drift that the next restock detail-update corrects, and packages aren't real search targets (user call 2026-06-02). Don't re-flag each review; WPML per-language meta gap (`RANKMATH_WPML_AUDIT.md` §A–F — needs a wp-admin walk, not covered by the scan). Still open from the 2026-05-06 audit (`plans/SEO_AUDIT_2026-05-06.md`): gtin13 emission (#9), aggregateRating (#10), HE OG image (#11), EN-only post israel-wine-discovery (#8). |
