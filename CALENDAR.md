@@ -1,6 +1,6 @@
 # JLM Wines Calendar
 
-**Updated:** 2026-05-28 (cleanup pass — most "Upcoming" items absorbed into new plan docs; remaining items keep their backlog framing.)
+**Updated:** 2026-06-05 (added bundle/package product-image update item).
 
 ## Plan-driven queues (not date-bound)
 
@@ -20,6 +20,7 @@ This calendar tracks only items that are NOT inside one of those plan queues.
 | — | jlmops | Year in Wine PDF research | PDF generation options. |
 | — | Marketing | Tuesday evening test send | After segments ready. |
 | — | jlmops | Bundle handling (staged) | `jlmops/plans/BUNDLE_PLAN.md` — consolidated master plan (refresh → author/export → integrity → profit → diversity). Also Phase 14 in `IMPLEMENTATION_PLAN.md`. Distinct from reliability/UI audits. |
+| — | Website | Update bundle & package product images | Refresh / replace the product images for the bundle and package (woosb) products on the site. |
 | — | jlmops | Housekeeping last-run markers cleanup | Three SysConfig markers written by `HousekeepingService.js` lines 995, 1127, 1782 with the buggy 2-arg `setConfig` signature AND no row in `config/system.json`. Every housekeeping run appends a junk row to live SysConfig. Sweep: (1) add 3 rows to `config/system.json` with `scf_P01='value'`, empty value, (2) regenerate via `node jlmops/generate-config.js`, (3) fix the 3 caller signatures to 3-arg, (4) run `rebuildSysConfigFromSource()`, (5) manually delete junk rows for those names + the two MC names from live SysConfig. **Not in reliability audit** — concrete operational fix that doesn't fit a tier. Consider folding into a quick-wins session. |
 
 ## Recurring
