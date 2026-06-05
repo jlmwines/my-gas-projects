@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-05 14:08',
-  commit: 'Bundle Stage 1: Bundles-view performance. Fix A — getEligibleProducts takes optional options.ctx so getBundlesWithLowInventory builds the invariant WebProdM/WebDetM/slots inputs once instead of re-reading sheets per low-stock slot (N+1 -> single read; 100s+ -> seconds). Interactive editor path (no ctx) byte-identical. Fix B — healthAlerts dropped from getViewData mount; frontend loadHealthAlerts(undefined) fallback lazy-fetches it async, so the view opens sub-second. Per BUNDLE_PLAN.md Stage 1 + PERFORMANCE_OPTIMIZATION_PLAN N+1 section.'
+  built: '2026-06-05 14:17',
+  commit: 'Bundle Stage 1 follow-up: remove the last heavy compute from the Bundles-view mount. getStats -> getBundleStats still called getBundlesWithLowInventory() for its attention counter (the 23s after Fix B). getBundleStats(includeInventory) added; mount passes false (cheap counts only), housekeeping monthly review keeps the full counts. The needs-attention counter is now filled by the lazy health fetch (renderHealthAlerts). Mount drops to a few seconds.'
 };
 
 function getVersion() {

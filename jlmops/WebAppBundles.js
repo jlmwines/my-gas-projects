@@ -14,7 +14,9 @@
  */
 function WebAppBundles_getStats() {
   try {
-    const stats = BundleService.getBundleStats();
+    // includeInventory=false: skip the heavy low-inventory pass on the view mount.
+    // The attention counter is filled by the lazy health fetch (loadHealthAlerts).
+    const stats = BundleService.getBundleStats(false);
     return {
       error: null,
       data: stats

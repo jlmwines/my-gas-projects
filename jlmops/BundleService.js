@@ -1375,18 +1375,28 @@ const BundleService = (function () {
    * Gets bundle statistics for dashboard.
    * @returns {Object} Stats object
    */
-  function getBundleStats() {
+  function getBundleStats(includeInventory) {
+    if (includeInventory === undefined) includeInventory = true;
     const bundles = _loadBundles();
-    const lowInventory = getBundlesWithLowInventory();
 
-    return {
+    const stats = {
       total: bundles.length,
       active: bundles.filter(b => b.status === 'Active').length,
       draft: bundles.filter(b => b.status === 'Draft').length,
-      archived: bundles.filter(b => b.status === 'Archived').length,
-      needsAttention: lowInventory.length,
-      lowInventoryCount: lowInventory.reduce((sum, b) => sum + b.lowStockSlots.length, 0)
+      archived: bundles.filter(b => b.status === 'Archived').length
     };
+
+    // The low-inventory counters require the heavy getBundlesWithLowInventory() pass.
+    // The Bundles view mount passes includeInventory=false to stay fast (its attention
+    // counter is filled by the lazy health fetch); background callers (housekeeping
+    // monthly review) keep the default true.
+    if (includeInventory) {
+      const lowInventory = getBundlesWithLowInventory();
+      stats.needsAttention = lowInventory.length;
+      stats.lowInventoryCount = lowInventory.reduce((sum, b) => sum + b.lowStockSlots.length, 0);
+    }
+
+    return stats;
   }
 
   // =====================================================

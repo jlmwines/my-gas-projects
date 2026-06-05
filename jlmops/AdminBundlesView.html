@@ -265,7 +265,11 @@
     document.getElementById('stat-active').textContent = stats.active;
     document.getElementById('stat-draft').textContent = stats.draft;
     document.getElementById('stat-archived').textContent = stats.archived;
-    document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
+    // Attention counter is owned by the lazy health path (renderHealthAlerts); the mount's
+    // lightweight stats payload omits it, so only set it when a caller provides the counts.
+    if (typeof stats.needsAttention !== 'undefined') {
+      document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
+    }
   }
 
   function toggleDescSection(section) {
@@ -376,8 +380,16 @@
     if (!data || data.length === 0) {
       container.innerHTML = '<div class="text-success">All bundle slots have adequate inventory</div>';
       document.getElementById('btn-apply-replacements').disabled = true;
+      document.getElementById('stat-attention').textContent = '0 bundles (0 slots)';
       return;
     }
+
+    // Fill the stats-card attention counter from the (lazily fetched) health data — the
+    // mount stats payload omits it so the view can open fast.
+    var totalLowSlots = data.reduce(function(sum, b) {
+      return sum + (b.lowStockSlots ? b.lowStockSlots.length : 0);
+    }, 0);
+    document.getElementById('stat-attention').textContent = data.length + ' bundles (' + totalLowSlots + ' slots)';
 
     var html = data.map(function(bundleData) {
       var bundle = bundleData.bundle;
