@@ -63,8 +63,10 @@ function WebAppBundles_getViewData(sessionId) {
       data: {
         categories:   WebAppBundles_getCategories().data || [],
         stats:        WebAppBundles_getStats().data || {},
-        bundles:      WebAppBundles_getAllBundles().data || [],
-        healthAlerts: WebAppBundles_getBundlesWithLowInventory().data || []
+        bundles:      WebAppBundles_getAllBundles().data || []
+        // healthAlerts intentionally omitted (Stage 1 Fix B): the low-inventory compute is the
+        // slow part of the mount. The frontend's loadHealthAlerts(undefined) fallback lazy-fetches
+        // it async after mount, so the view opens immediately. (Fix A keeps that async call fast.)
       }
     };
   } catch (e) {

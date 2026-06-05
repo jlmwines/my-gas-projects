@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-05 13:47',
-  commit: 'Bundle Stage 0: qty=0 price bug fix. _calculateBundlePrice (BundleService.js:198) no longer coerces a qty-0 placeholder slot to qty 1; a stored 0 now contributes 0 to the calculated total. Internal admin display + as-presented margin only, not the live WC price. Per BUNDLE_PLAN.md Stage 0.'
+  built: '2026-06-05 14:08',
+  commit: 'Bundle Stage 1: Bundles-view performance. Fix A — getEligibleProducts takes optional options.ctx so getBundlesWithLowInventory builds the invariant WebProdM/WebDetM/slots inputs once instead of re-reading sheets per low-stock slot (N+1 -> single read; 100s+ -> seconds). Interactive editor path (no ctx) byte-identical. Fix B — healthAlerts dropped from getViewData mount; frontend loadHealthAlerts(undefined) fallback lazy-fetches it async, so the view opens sub-second. Per BUNDLE_PLAN.md Stage 1 + PERFORMANCE_OPTIMIZATION_PLAN N+1 section.'
 };
 
 function getVersion() {

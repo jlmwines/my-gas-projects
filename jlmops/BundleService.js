@@ -655,7 +655,10 @@ const BundleService = (function () {
    */
   function getEligibleProducts(slotId, options = {}) {
     const functionName = 'getEligibleProducts';
-    const slot = getSlot(slotId);
+    const ctx = options.ctx || null;
+
+    // Resolve the slot from the preloaded ctx when present (avoids a per-call _loadSlots), else read.
+    const slot = ctx ? (ctx.allSlots.find(s => s.slotId === String(slotId)) || null) : getSlot(slotId);
     if (!slot) {
       LoggerService.warn(SERVICE_NAME, functionName, `Slot not found: ${slotId}`);
       return [];
@@ -667,55 +670,67 @@ const BundleService = (function () {
 
     const limit = options.limit || 20;
 
-    // Get all products from WebProdM (published web products)
-    const allConfig = ConfigService.getAllConfig();
+    // Invariant inputs (minStock, WebProdM rows+cols, the WebDetM details map, all slots).
+    // Fix A (PERFORMANCE_OPTIMIZATION_PLAN "Bundles Health Check — N+1 Sheet Reads"): when the
+    // caller supplies options.ctx, reuse the preloaded data and skip the per-call sheet reads —
+    // this collapses getBundlesWithLowInventory's per-slot N+1 to a single set of reads. When ctx
+    // is absent (the interactive editor path) it reads sheets exactly as before — behavior-identical.
+    let minStock, webData, webCols, detailsMap, allSlots;
+    if (ctx) {
+      minStock = ctx.minStock;
+      webData = ctx.webData;
+      webCols = ctx.webCols;
+      detailsMap = ctx.detailsMap;
+      allSlots = ctx.allSlots;
+    } else {
+      const allConfig = ConfigService.getAllConfig();
+      const minStockConfig = allConfig['system.inventory.minimum_stock'];
+      minStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
+      const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
-    // Get minimum stock threshold from config
-    const minStockConfig = allConfig['system.inventory.minimum_stock'];
-    const minStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
-    const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
+      if (!webSheet) {
+        LoggerService.warn(SERVICE_NAME, functionName, 'WebProdM sheet not found');
+        return [];
+      }
 
-    if (!webSheet) {
-      LoggerService.warn(SERVICE_NAME, functionName, 'WebProdM sheet not found');
-      return [];
-    }
+      webData = webSheet.getDataRange().getValues();
+      if (webData.length <= 1) return [];
 
-    const webData = webSheet.getDataRange().getValues();
-    if (webData.length <= 1) return [];
+      const webSchema = allConfig['schema.data.WebProdM'];
+      webCols = {};
+      webSchema.headers.split(',').forEach((h, i) => webCols[h] = i);
 
-    const webSchema = allConfig['schema.data.WebProdM'];
-    const webHeaders = webSchema.headers.split(',');
-    const webCols = {};
-    webHeaders.forEach((h, i) => webCols[h] = i);
+      // Get WebDetM for intensity/complexity/acidity if criteria specified
+      detailsMap = {};
+      if (slot.intensity !== null || slot.complexity !== null || slot.acidity !== null) {
+        const detSheet = SheetAccessor.getDataSheet('WebDetM', false);
+        if (detSheet) {
+          const detData = detSheet.getDataRange().getValues();
+          const detSchema = allConfig['schema.data.WebDetM'];
+          const detCols = {};
+          detSchema.headers.split(',').forEach((h, i) => detCols[h] = i);
 
-    // Get WebDetM for intensity/complexity/acidity if criteria specified
-    let detailsMap = {};
-    if (slot.intensity !== null || slot.complexity !== null || slot.acidity !== null) {
-      const detSheet = SheetAccessor.getDataSheet('WebDetM', false);
-      if (detSheet) {
-        const detData = detSheet.getDataRange().getValues();
-        const detSchema = allConfig['schema.data.WebDetM'];
-        const detHeaders = detSchema.headers.split(',');
-        const detCols = {};
-        detHeaders.forEach((h, i) => detCols[h] = i);
-
-        for (let i = 1; i < detData.length; i++) {
-          const row = detData[i];
-          const sku = String(row[detCols.wdm_SKU] || '');
-          if (sku) {
-            detailsMap[sku] = {
-              intensity: row[detCols.wdm_Intensity] !== '' ? Number(row[detCols.wdm_Intensity]) : null,
-              complexity: row[detCols.wdm_Complexity] !== '' ? Number(row[detCols.wdm_Complexity]) : null,
-              acidity: row[detCols.wdm_Acidity] !== '' ? Number(row[detCols.wdm_Acidity]) : null
-            };
+          for (let i = 1; i < detData.length; i++) {
+            const row = detData[i];
+            const sku = String(row[detCols.wdm_SKU] || '');
+            if (sku) {
+              detailsMap[sku] = {
+                intensity: row[detCols.wdm_Intensity] !== '' ? Number(row[detCols.wdm_Intensity]) : null,
+                complexity: row[detCols.wdm_Complexity] !== '' ? Number(row[detCols.wdm_Complexity]) : null,
+                acidity: row[detCols.wdm_Acidity] !== '' ? Number(row[detCols.wdm_Acidity]) : null
+              };
+            }
           }
         }
       }
+
+      allSlots = _loadSlots();
     }
+
+    if (!webData || webData.length <= 1) return [];
 
     // Get SKUs to exclude
     let excludedSKUs = new Set();
-    const allSlots = _loadSlots();
 
     // Exclude SKUs already used in other slots of the same bundle
     allSlots.forEach(s => {
@@ -882,14 +897,15 @@ const BundleService = (function () {
       }
     }
 
-    // 3. Read WebProdM for English names only
+    // 3. Read WebProdM once — for English names here AND as the invariant context handed to
+    //    getEligibleProducts below (Fix A: build the per-slot inputs once, not per low-stock slot).
+    let webData = [];
+    const webCols = {};
     const webSheet = spreadsheet.getSheetByName('WebProdM');
     if (webSheet) {
-      const webData = webSheet.getDataRange().getValues();
+      webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
-      const webHeaders = webSchema.headers.split(',');
-      const webCols = {};
-      webHeaders.forEach((h, i) => webCols[h] = i);
+      webSchema.headers.split(',').forEach((h, i) => webCols[h] = i);
 
       for (let i = 1; i < webData.length; i++) {
         const row = webData[i];
@@ -899,6 +915,34 @@ const BundleService = (function () {
         }
       }
     }
+
+    // Build the WebDetM details map once (unconditionally — amortized across all slots).
+    const detailsMap = {};
+    const detSheet = SheetAccessor.getDataSheet('WebDetM', false);
+    if (detSheet) {
+      const detData = detSheet.getDataRange().getValues();
+      const detSchema = allConfig['schema.data.WebDetM'];
+      const detCols = {};
+      detSchema.headers.split(',').forEach((h, i) => detCols[h] = i);
+      for (let i = 1; i < detData.length; i++) {
+        const row = detData[i];
+        const sku = String(row[detCols.wdm_SKU] || '');
+        if (sku) {
+          detailsMap[sku] = {
+            intensity: row[detCols.wdm_Intensity] !== '' ? Number(row[detCols.wdm_Intensity]) : null,
+            complexity: row[detCols.wdm_Complexity] !== '' ? Number(row[detCols.wdm_Complexity]) : null,
+            acidity: row[detCols.wdm_Acidity] !== '' ? Number(row[detCols.wdm_Acidity]) : null
+          };
+        }
+      }
+    }
+
+    // getEligibleProducts' own minStock floor is the config minimum_stock (independent of the
+    // low-inventory `threshold` arg) — matches what it reads for itself when ctx is absent.
+    const minStockConfig = allConfig['system.inventory.minimum_stock'];
+    const eligibleMinStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
+
+    const ctx = { webData: webData, webCols: webCols, detailsMap: detailsMap, allSlots: allSlots, minStock: eligibleMinStock };
 
     const results = [];
 
@@ -919,7 +963,8 @@ const BundleService = (function () {
           // Get suggestions
           const suggestions = getEligibleProducts(slot.slotId, {
             limit: 5,
-            excludeExclusiveSKUs: true
+            excludeExclusiveSKUs: true,
+            ctx: ctx
           });
 
           lowStockSlots.push({
