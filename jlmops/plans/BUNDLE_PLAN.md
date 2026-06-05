@@ -1,6 +1,7 @@
 # Bundle Handling — Master Plan
 
 **Created:** 2026-06-04 (consolidates `BUNDLE_AUTHORING_EXPORT_PLAN.md` + `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` into one staged plan).
+**Expanded:** 2026-06-05 — long planning chavruta added two north stars (ops-owns + suggestion view), the bundle/package domain model, the cost/profit data flow, a re-sequenced build order, and a capstone suggestion-engine stage.
 **Status:** Planning. Staged — each stage is independently shippable; **decide depth as we refine**. No code until per-stage user go.
 **Owner:** Session-driven; user reviews / visually verifies.
 **Supersedes:** `BUNDLE_AUTHORING_EXPORT_PLAN.md`, `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` (both stubbed → here). The **REST-push approach is parked** (export via the vendor's own import is safer than a raw REST write) — it was never written up as its own doc, so there is no `BUNDLE_API_PUSH_TEST_PLAN.md` file; the idea lives here in §7.
@@ -9,85 +10,164 @@
 
 ## 1. Vision
 
-Today jlmops is a near read-only **monitor** for bundles: composition is edited row-by-row in WPClever per language, master data refreshes only via the slow full sync, and there's no profit or cross-bundle intelligence. The goal is to make jlmops the **fast authoring + intelligence surface** for bundles:
+Today jlmops surfaces bundle composition (a daily-refreshed projection of WC) and **already has a full bundle+slot CRUD backend** (`createBundle`/`updateBundle`/`deleteBundle`/`duplicateBundle` + slot CRUD) — so the write path is largely built (this shortens the ops-owns north star below). What's missing: composition is still authored row-by-row in WPClever per language, master refreshes only via the slow full sync, there's no profit or cross-bundle intelligence, and the existing CRUD isn't put to work. The old low-stock alert view + cumbersome fix flow **was never actually used**.
 
-- **Refresh** member data quickly (not via the slow full sync).
-- **Author** composition once (EN+HE together) and **publish** to WC by export.
-- **Validate** EN/HE integrity and stock.
-- **Optimize** (forward-looking) for **profit** and **catalog diversity**.
+Two north stars (set 2026-06-05):
 
-WC stays the **system of record**; jlmops is the authoring + analysis layer.
+1. **jlmops becomes the authoring + intelligence surface, and eventually OWNS composition and pushes to WC.** Near-term WC stays system of record and jlmops re-derives + exports (Stage 3). Long-term the record **inverts**: ops authors, `SysBundles`/`SysBundleSlots` become authoritative, and WC becomes a **publish target** — the "analyze what the website is saying" re-derive falls away. Build toward it; don't invert until ops ownership is real.
+2. **The view should SUGGEST, not alert.** End state: open the bundles view and each bundle/package shows a **recommended optimal composition**, scored deterministically (profit, featured stock to move, diversity, fit to the bundle's purpose/target). Stock health becomes one input among several, not the whole point. This is the capstone (Stage 7), built on the profit (Stage 2) and diversity (Stage 6) inputs.
 
-## 2. Current state (verified 2026-06-04)
+Supporting goals along the way: refresh member data quickly (not via the slow full sync); author composition once (EN+HE together) and publish by export; validate EN/HE integrity and stock; surface profit + diversity to drive inclusion.
 
-- Composition is derived into `SysBundles` / `SysBundleSlots` from **master** (`WebProdM.wpm_WoosbIds` EN + `WebXltM.wxm_WoosbIds` HE) by `WebAppBundles_reimportAllBundles` → `BundleService.importBundleFromWooCommerce`.
+### 1.1 Domain model — bundles vs packages
+
+The WPClever plugin treats everything as one woosb type, and so do we — **one composition model fits both** (see §3 / Stage 7). At the business level there are two concepts, separated by the **acceptance model**: a **bundle** can be altered by the customer to any degree (it has qty-0 / variable-qty wine slots); a **package** is taken **as shown** (no flexible slots). That flexible-vs-fixed flag is the **only structural difference** — and it's *derivable from the composition itself* (presence of flexible slots), so `sb_Type` is a cache, not a definer. Everything else (theme, discount, sizing, margin floor) reduces to **parameters on the one model**. Theme and discount are characteristics, not definers — a discount is universal among packages *today* but may not be in future, a bundle may gain one, and **package positioning/purpose is itself unresolved** by the business.
+
+- **Bundles — flexible suggestions.** Some wines are listed at **qty 0** so the customer adjusts the mix to taste. Defined by **choice**, not discount. Themed by **value tier**:
+  - *Special Value* (the original) — broad-appeal, low-priced wines, maximize bottle count. These tend to be **high-profit anyway** (low price sells in volume; volume discounts make them profitable), and the other wines added also skew high-margin.
+  - *Reds Value* and *Whites/Rosés Value* — same low-decent-price tier, color-filtered (added after discovering customers want single-color packs). → three value bundles.
+  - *Premium Value* — a bit more money, a few fewer bottles, quality wines.
+  - *Elite Value* — higher tier still.
+  - *Only-in-Israel* — niche, for visitors who want wines they can't get at home; low popularity.
+- **Packages — fixed (taken as shown), problem-solvers; positioning unresolved.** Themed by the question answered: *Cheese Please*, *Barbecue* (Israelis BBQ constantly), *Red Wine Lover*, *Sure Bets* (a safe gift), plus little-used *gift packages*. Usually include an **optional gift item** slot. Discount is universal today but may not be in future (gift packages). **Historically much less important than the value bundles.**
+
+**Economic consequence (one parameter, not two rules):** profit is a *satisfied floor* for value bundles (already profitable at average prices + the high-profit skew), so **variety wins over profit**. When a **discount** applies, the offset is a **minimum aggregate profit rate** the composition must clear *after* the discount — checked as one tunable parameter (default low for value bundles, high for discounted packages). Because a discount lowers the bundle's profit rate, requiring a post-discount minimum *automatically* forces high-margin wines in exactly when there's a discount to cover — replacing the old "at least one high-margin anchor" special case.
+
+## 2. Current state (verified 2026-06-04 / 2026-06-05)
+
+- Composition is derived into `SysBundles` / `SysBundleSlots` from **master** (`WebProdM.wpm_WoosbIds` EN + `WebXltM.wxm_WoosbIds` HE) by `WebAppBundles_reimportAllBundles` → `BundleService.importBundleFromWooCommerce` / `reimportAllBundlesBatch`. Triggered by the manual **Update Composition** button and a **daily** housekeeping task `refreshBundleComposition` (`HousekeepingService.js:688`). It's a persisted **projection** of WC truth, rebuilt in 4–6 bulk ops — **not** recomputed per view.
+- `SysBundleSlots` holds **one row per member slot** (`activeSKU`, qty, `sbs_Exclusive`, the per-slot criteria, plus text/section slots). So a cross-bundle usage index (Stage 6) is just a **group-by over this sheet** by `activeSKU` — the data already exists.
+- `SysBundles` carries only `sb_BundleId`, `sb_NameEn/He`, **`sb_Type`** (default `'Bundle'`), `sb_Status`, `sb_DiscountPrice` (`_loadBundles`, `BundleService.js:104-112`). **No purpose/target attribute today** — the value-bundle MVP gates on a **title match ("value")** instead; a real `sb_Purpose` is a deferred future refinement (Open).
 - The `woosb_ids` JSON is token-keyed: product slots `{id, sku, qty, optional, min, max}`, text/section slots `{type, text}` (`BundleService.js:1069`). This **is** the WPClever import/export format.
-- **Master refreshes only via the slow full product pull** (pull → staging → validation → copy-to-master, which also drags orders/Comax). The 15-min frequent-maintenance trigger pulls **orders only**. So the bundle screen is slow + usually stale.
+- **Master refreshes only via the slow full product pull** (pull → staging → validation → copy-to-master, which also drags orders/Comax). The 15-min frequent-maintenance trigger pulls **orders only**. So the bundle screen is usually stale.
 - **woosb products have no SKU / no Comax relationship and skip Comax validation** (`DATA_MODEL.md`) — they're exempt from the reason the staging→validate gate exists.
-- The jlmops bundle **editor already exists** (`AdminBundlesView.html`: slot list, Add Text/Product, per-slot SKU+qty, EN/HE text). Controllers `updateComposition` (`WebAppBundles.js:765`), `reviewStock` (`:788`), `validateParity` (`:805`) and `BundleService.validateAllBundleParity` (`:1487`) **confirmed live 2026-06-04** — Stage 3 is mostly already built (see §4 sequencing note). The old `Refresh` button, `Add New Bundle` modal, and an `addBundle` backend (named in the predecessor refinements plan) **no longer exist in code** — verified absent in `WebAppBundles.js` + `AdminBundlesView.html`; that cleanup is already done.
-- A price calc exists — `BundleService._calculateBundlePrice` — using `sb_DiscountPrice` (`displayPrice`/`discount` at `:202-204`). It has the **qty=0 bug** (Stage 0).
+- **The view is slow because of an N+1 on mount, not population.** `WebAppBundles_getViewData` (`:59`) fires four getters in one round-trip: `getCategories`, `getStats`, `getAllBundles` (all cheap sheet reads) and **`getBundlesWithLowInventory`** — the killer. Its per-bundle → per-slot loop calls `getEligibleProducts` (`:920`), and each call re-reads whole sheets (`WebProdM` ~`:678`, `WebDetM` ~`:691`, full `_loadSlots` ~`:720`) → 100s+. The alert panel it feeds (low stock) is the **unused** feature. Full diagnosis + Fix A/B in `PERFORMANCE_OPTIMIZATION_PLAN.md` §"Bundles Health Check — N+1 Sheet Reads".
+- The jlmops bundle **editor already exists** (`AdminBundlesView.html`: slot list, Add Text/Product, per-slot SKU+qty, EN/HE text). Controllers `updateComposition` (`WebAppBundles.js:765`), `reviewStock` (`:788`), `validateParity` (`:805`) and `BundleService.validateAllBundleParity` (`:1487`) **confirmed live** — integrity (Stage 4) is mostly already built. **A full bundle+slot CRUD backend also exists** — `createBundle` (`:320`), `updateBundle` (`:350`), `deleteBundle` (`:388`), `duplicateBundle` (`:1282`), `createSlot`/`updateSlot`/`deleteSlot` (`:448/504/571`). Only the *literal* `addBundle` name + the old `Refresh` / `Add New Bundle` modal UI are absent — `createBundle` already does that job (the earlier "cleanup done" note was too literal about the name).
+- `getEligibleProducts` already returns the **web retail price** (`wpm_RegularPrice` → `price`, `:768/804`) on every candidate — so showing selling price in the selector is a **frontend-only** render. The editor lookup passes `excludeExclusiveSKUs: true` (`AdminBundlesView.html:1059`), so the only cross-bundle signal today is the binary `sbs_Exclusive` flag.
+- **`wpm_Featured` is a real, populated WebProdM column** (`config/schemas.json:52`, mapped from the Woo API `featured` via `wps_Featured`, `mappings.json:723/1938`). Used to flag special buys / private-label wines (very high margin, often huge stock) — but **not surfaced customer-facing**. A ready-made scoring signal (Stage 7).
+- WebProdM also carries food-pairing attributes — `wpm_AttrFoodHarmony`, `wpm_AttrFoodContrast`, plus `wpm_AttrIntensity/Complexity/Acidity` (`config/schemas.json:52`). Possible (unverified) hook for theme-fit on packages (cheese/BBQ).
+- A price calc exists — `BundleService._calculateBundlePrice` — summing `price × qty` then returning `displayPrice = sb_DiscountPrice ?? totalPrice` (`:202-204`). So **the discount is already applied**. It has the **qty=0 bug** (Stage 0).
 
 ## 3. Decisions (settled with user)
 
-- **jlmops = authoring surface; WC = system of record.** Re-derive on every refresh; un-exported edits are **volatile** (publish-or-lost, by design); `sb_PendingExport` is a "publish now" marker, **not a shield**.
+- **Two product concepts** (§1.1), separated by the **acceptance model**: bundle = customer-alterable; package = taken as shown (fixed). That fixed-vs-alterable flag (`sb_Type`) is the **durable** distinction — theme and discount are characteristics, not definers, and package purpose is unresolved.
+- **jlmops = authoring surface; WC = system of record (for now).** Re-derive on every refresh; un-exported edits are **volatile** (publish-or-lost, by design); `sb_PendingExport` is a "publish now" marker, **not a shield**. (North-star: eventually ops owns the record — §1.)
 - **Publish via WPClever's first-party import** (single field per bundle product; trusted, manually reliable per user). REST push parked.
 - **Fast refresh = bundles-only pull straight to master** (safe because woosb is exempt from the Comax-reconciliation gate).
-- **Profit:** margin uses the **discounted** selling price (`displayPrice`), not summed regular prices. **qty=0 contributes 0** to price/value.
+- **Profit signal = stored per-product rate.** Margin % `(wpm_RegularPrice − cost) / wpm_RegularPrice` stored as `cpm_ProfitRate`; **cost itself is transient** (not stored). Selling price for margin is the **web** price, not a Comax price.
+- **Cost cadence = on-demand, monthly baseline.** A manual "import cost / recalculate" run, triggered when a price-bearing delivery lands (cost export = SKU + cost, two columns). Monthly is the fallback rhythm. Refreshing on cost-change events keeps the stored rate aligned to reality.
+- **Missing cost → manual backfill, no default.** A default would poison the ranking signal; missing must read as *unknown*, never as a plausible value. Backfilled rates survive re-import (the import only overwrites products it has cost for).
+- **Profitability is computed as-presented** (default qtys, discount applied via `displayPrice`); customer min/max/optional alterations are out of scope (no single answer). Stage 0 qty fix is a prerequisite for an accurate as-presented number.
+- **One unified generator over the composition — not two models.** Every bundle/package is a **fixed set of slots**; each slot carries category + attribute + price criteria and a **flexibility flag** (qty-0/alternate or fixed). The generator **refreshes the wine in each slot** from one continuous pool — it **never adds/removes slots** (pure wine swap, zero structural change). Bundle vs package is **derived** from whether any flexible slots are present (`sb_Type` = cache, not definer).
+- **Slot count is fixed, read from the existing composition** (manually alterable). Dropping variable slot-count is the move that makes one model fit all *now*: **399 becomes a constraint the fill must satisfy, not a sizing driver**, and the tier comes from the slots' price-band criteria (avg price/bottle = total ÷ fixed count).
+- **Theme control = slot-criteria tightness.** Loose (price band only) → value/auto-fill; tight (category + attributes, reliable per user) → themed/curated. Same machinery, one dial.
+- **Constraints = tunable parameters:** **minimum total** (e.g. 399 free-shipping floor); **minimum aggregate profit rate** checked *after* discount (replaces the high-margin anchor; low for value, high for discounted packages); **discount** (optional, any bundle/package). Color / off-color token count / alternates all read from the existing composition.
+- **Ranking is variety-first.** Maximize unique wines; **profit is a satisfied floor, not maximized**; duplicate only when stock is low. Signals: variety/diversity, featured boost (high-margin overstock to move, lands in higher tiers by price), stock, profit-floor.
+- **MVP = run the one generator configured for value bundles first**, gated by **"value" in the title** (temporary stand-in for a real `sb_Purpose`; no new attribute needed). Packages are the **same engine, a later configuration** once positioning is settled — running it on a package's fixed tight-criteria slots *is* low-inventory replacement. **Only-in-Israel excluded** (brand-restricted; no brand criterion in the slot model). Editorial theme semantics stay human; `sb_Purpose` deferred (Open).
+- **Sequencing:** perf fix pulled to the **front** (user's top pain + prerequisite for joining profit into the selector); cost data comes early ("cost from the start"); profit-in-selector folds into authoring.
 - **Trust basis:** the export text is the `woosb_ids` meta; the premium plugin behaves like the read free version (user's call). No plugin-side verification gate.
+
+### 3.1 Cadence — when each clock runs
+
+Three independent clocks; the slow one is deliberately decoupled from the sync.
+
+- **Morning — sync + membership refresh.** Sync runs in the morning to keep stock/orders current and prevent online sales failures. The cheap bundle **membership refresh** (`refreshBundleComposition`) is the natural next step after it. No heavy work here.
+- **Overnight — the slow analysis (batch, precomputed, cached).** The scoring/suggestion analysis (profit + featured + diversity + stock → recommended composition) runs as an **overnight off-peak batch** and **persists its results**. The suggestion view reads the **cached** results → instant open (dovetails Stage 1 Fix B; the expensive scoring runs *once, off-peak*, never live). It is **stale-tolerant by design** — its output prepares copy-and-paste export meta, not live sales, so yesterday's analysis is fine. A manual **Recompute** stays available as an override. **Never run the full analysis post-sync** (heavy + frequent + low-stock isn't urgent — slow-turn wines with a few pieces are tolerable).
+- **At export — out-of-stock failsafe.** Just before generating the copy-paste meta, run a **lightweight out-of-stock check on the members being exported** (targeted, not the full analysis) so a now-out-of-stock wine isn't published into a bundle. This is the one fresh-stock gate; everything upstream tolerates staleness.
 
 ---
 
 ## 4. Stages
 
-Ordered foundation → forward-looking. Each produces shippable value on its own.
+Each stage produces shippable value on its own. **Re-sequenced 2026-06-05** so the slow view and cost data come first.
 
-**Sequencing note (2026-06-04, post-review).** The stage numbers are a logical grouping, **not** a build order. What's actually shipped vs net-new:
-- **Stage 3 (integrity) is mostly already built** — `updateComposition`/`reviewStock`/`validateParity` + `validateAllBundleParity` are live (verified §2). Treat it as *confirm-live + finish-gaps*, runnable now and in parallel with the rest.
-- **Stages 1–2 are the genuinely net-new work** — no `pullBundleProducts`, `exportBundleWoosb`, or `sb_PendingExport` in code yet. This is where the real build effort sits.
-- Stage 0 is a one-line bug fix; Stages 4–5 are forward-looking.
+**What's built vs net-new:**
+- **Stage 4 (integrity) is mostly already built** — `updateComposition`/`reviewStock`/`validateParity` + `validateAllBundleParity` are live (§2). *Confirm-live + finish-gaps*, runnable in parallel.
+- The **editor** (Stage 3 workspace) exists; the serializer/export/pending-export and profit-in-selector are net-new.
+- **Everything else is net-new** — no perf fix, `pullBundleProducts`, `exportBundleWoosb`, `sb_PendingExport`, cost import, `cpm_ProfitRate`, diversity index, or suggestion engine in code yet.
 
-Suggested build order: **Stage 0 → Stage 1 → Stage 2**, with Stage 3 confirmed/finished alongside, then 4 → 5.
+**Suggested build order:** **Stage 0 → 1 → 2 → 3**, with Stage 4 confirmed/finished alongside, then **5 → 6 → 7**. (Stage 5 member-refresh is independent and can slot anywhere.)
 
 ### Stage 0 — Quick fixes
-- **qty=0 price bug** (`BundleService.js:198`): `slot.defaultQty || 1` coerces a 0-qty placeholder slot to 1, inflating the calculated total. Fix: `slot.defaultQty === '' || slot.defaultQty == null ? 1 : Number(slot.defaultQty)`. Internal only (admin display + future margin), not the live WC price. Tracked in `.claude/bugs.md`.
+- **qty=0 price bug** (`BundleService.js:198`): `slot.defaultQty || 1` coerces a 0-qty placeholder slot to 1, inflating the calculated total. Fix: `slot.defaultQty === '' || slot.defaultQty == null ? 1 : Number(slot.defaultQty)`. Internal only (admin display + as-presented margin), not the live WC price. Prerequisite for accurate as-presented price/profit. Tracked in `.claude/bugs.md`.
 
-### Stage 1 — Fast member refresh + view load control
-- **Bundles-only pull (direct to master).** New `WooProductPullService.pullBundleProducts()` — WC REST `?type=woosb` (EN+HE, tens of products), upsert **only** the bundle fields (`wpm_TaxProductType` + `wpm_WoosbIds`; `wxm_WoosbIds`) **directly into WebProdM/WebXltM, bypassing staging+validation**. Safe: woosb is exempt from Comax validation; the next full sync's copy-to-master writes the same WC data (no divergence). New **"Pull Bundle Data"** button, first in the management-card row. **Update Composition** stays as-is — it already re-derives from master only with **no WC pull** (`WebAppBundles_updateComposition` → `reimportAllBundles`, confirmed 2026-06-04); the predecessor's "pull-inside-Update" role was never built, so there is nothing to drop.
-- **View load control — fix the documented root cause first.** The slow mount is **not** a vague "loads too much" problem: it's a diagnosed N+1 — `WebAppBundles_getViewData` fans out to `getBundlesWithLowInventory`, whose per-bundle→per-slot loop calls `getEligibleProducts` (`BundleService.js:920`), and each call re-reads whole sheets (`WebProdM`/`WebDetM`/`_loadSlots`), blowing up to 100s+. Root cause + two fixes are already written in `PERFORMANCE_OPTIMIZATION_PLAN.md` (§"Bundles Health Check — N+1 Sheet Reads"): **Fix A** = preload an invariant `ctx` once and pass it into `getEligibleProducts`; **Fix B** = drop `healthAlerts` from the mount and compute low-inventory only when the user opens the alerts panel. Prefer that fix over collapse/lazy/gate workarounds (those only mask the symptom). If any UX deferral is still wanted on top, decide at build.
+### Stage 1 — View performance (root-cause, not workaround)
+The slow mount is the documented N+1 (§2; `PERFORMANCE_OPTIMIZATION_PLAN.md`). Two fixes that stack:
+- **Fix B — instant mount.** Drop `healthAlerts` from `getViewData`; render on categories + stats + bundles (all fast) → **sub-second mount**. This also **removes a dead feature** — the low-stock alert panel + cumbersome fix flow was never used (it's being superseded by the Stage 7 suggestion view). Compute low-inventory only on demand if ever needed.
+- **Fix A — fast candidate scoring.** In `getBundlesWithLowInventory` build the invariant `ctx` (products, details, slots) **once** and pass it into `getEligibleProducts` so it stops re-reading sheets per slot. Turns the 100s call into a few seconds. **Prerequisite for Stage 3** (joining cost/profit into `getEligibleProducts` without re-worsening the N+1).
+- Skip the old collapse/lazy/gate workarounds — they only mask the symptom.
 
-### Stage 2 — Authoring + export (the core win)
+### Stage 2 — Cost & profitability data
+Cost lives in a **separate Comax export** (SKU + cost), **not** the product export the daily sync consumes (`CmxProdM` carries no cost today, confirmed). Standalone, data-only — buildable immediately once the user sets up the export.
+- **On-demand cost import.** Manual upload + recompute, triggered by new-cost deliveries (monthly baseline). Matches `CmxProdM` rows by SKU.
+- **Store the profit RATE, not cost.** Compute `(wpm_RegularPrice − cost) / wpm_RegularPrice` and write append-only `cpm_ProfitRate` on `CmxProdM`. Cost transient. Rate is the per-product lever and varies widely across the catalog.
+- **Daily sync preserves it.** `_upsertComaxData` (`ProductImportService.js:378-397`) already carries forward master-only columns with no staging counterpart ("preserve existing value for manual fields"). **REQUIRED (hard build rule, not a caveat):** that preserve branch keys on **truthiness** (`ProductImportService.js:384`), so a literal `0` rate would blank on the next sync. The cost import **must** write a sentinel for a true 0% (or re-stamp the rate every run) so a genuine 0% survives.
+- **Missing cost → manual backfill (no default).** Surface a "products missing cost" list (parity-validator pattern) + an inline **"—/no cost"** marker; never render as `0%`; exclude such products from the profit-sort (or pin to a flagged group). A backfilled rate persists because the import only overwrites products it has cost for.
+
+### Stage 3 — Authoring + export, profit-aware (the core win)
 - **Workspace = the existing editor.** Polish as needed.
-- **Serializer.** `BundleService.exportBundleWoosb(bundleId, lang)` → `{json, warnings}`: slots → token-keyed `woosb_ids` (product `{id,sku,qty,optional,min,max}` / text `{type,text}`), letter-first tokens (preserve order), sku→id per language (EN `wpm_WebIdEn` by `wpm_SKU`; HE via `WebXltM.wxm_WpmlOriginalId`→`wxm_ID`), unresolved SKU → blank that cell + row warning. `optional` from `sbs_QtyVariable`; `min`/`max` blank.
-- **Export table.** `buildExportTable()` over the **pending-export** bundles → rows `{bundleId, name, en, he}`. Delivered as **Open in new tab** (HTML table, click a cell to copy) + **Export to file** (TSV — JSON has no tabs). Button on the management card. Paste each row's EN/HE cell into that bundle's EN/HE product via WPClever Import.
-- **Pending-export tracking.** New `sb_PendingExport` (append-only on `SysBundles`); set on slot-edit save with a "volatile until published" warning; **cleared** when any re-derive (`reimportAllBundles`, incl. the daily `refreshBundleComposition`) rebuilds the bundle from WC — website truth wins, no skip/shield. Optional **Mark published** clears immediately.
+- **Profit in the selector.** Show **retail price** (already in the `getEligibleProducts` payload — frontend-only) + **profit rate** (`cpm_ProfitRate`, joined by SKU). The cost/rate join rides the **Fix A ctx** (Stage 1), since `getEligibleProducts` reads WebProdM only today. Rate shown prominently; profit *amount* stays internal.
+- **As-presented price/profit.** Price = `displayPrice` (discount applied) over presented (`defaultQty`) quantities; profit as-presented = `displayPrice − Σ(cost × presented qty)` = (sum of per-member retail profit) − (the discount given). Customer-altered quantities out of scope.
+- **Serializer.** `BundleService.exportBundleWoosb(bundleId, lang)` → `{json, warnings}`: slots → token-keyed `woosb_ids` (product `{id,sku,qty,optional,min,max}` / text `{type,text}`), letter-first tokens (preserve order), sku→id per language (EN **`wpm_ID`** by `wpm_SKU`; HE via `WebXltM.wxm_WpmlOriginalId`→`wxm_ID`), unresolved SKU → blank that cell + row warning. `optional` from `sbs_QtyVariable`; `min`/`max` blank. **⚠ Field-name corrected 2026-06-05 (was `wpm_WebIdEn`, which is NOT a WebProdM column — it lives only in `ProductService.js`/`TestData.js`; using it would blank every EN id). `wpm_ID` is the canonical WC id; the existing parity validator resolves the same way (`BundleService.js:1504, 1509-1510`).**
+- **Export table.** `buildExportTable()` over the **pending-export** bundles → rows `{bundleId, name, en, he}`. Delivered as **Open in new tab** (HTML table, click a cell to copy) + **Export to file** (TSV — JSON has no tabs). Paste each row's EN/HE cell into that bundle's EN/HE product via WPClever Import.
+- **Out-of-stock failsafe before export** (§3.1). Just before producing the export table, run a **targeted out-of-stock check on the members being exported** (cheap, member-scoped — not the full overnight analysis) and warn/block so a now-out-of-stock wine isn't published into a bundle. This is the single fresh-stock gate; the upstream analysis is allowed to be stale.
+- **Pending-export tracking.** New `sb_PendingExport` (append-only on `SysBundles`); set on slot-edit save with a "volatile until published" warning; **cleared** when any re-derive (`reimportAllBundles`, incl. the daily `refreshBundleComposition`) rebuilds the bundle from WC — website truth wins, no shield. Optional **Mark published** clears immediately.
 - **DATA_MODEL reframing.** Retire the "shadow system" line for composition: jlmops authors, WC is record, non-composition woosb settings stay WC-managed.
 - **Button row consolidated:** Pull Bundle Data → Update Composition → Review Stock → Validate Parity → Export.
 
-### Stage 3 — Integrity (EN/HE parity + stock)
+### Stage 4 — Integrity (EN/HE parity + stock) — *mostly built; confirm + finish*
 - **Parity validator** — `BundleService.validateAllBundleParity()`. Full algorithm in Appendix A. Section-aware, atomic `(product_id, qty)` pair check, EN-as-truth, `qty=0` is a real value (not absence). Failure modes: `HE_MISSING`, `HE_EXTRA`, `QTY_MISMATCH`, `SECTION_COUNT_MISMATCH`, `WRONG_SECTION`. Results cached on `SysBundles` (`sb_ParityIssueCount` + timestamp); **Parity** column on the list; alerts panel tagged Stock/Parity. Post-sync auto-trigger runs it after `checkBundleHealth`.
 - **Stock review** — `checkBundleHealth` on demand (Review Stock button) + the existing post-sync trigger.
-- **Reconcile:** the editor + these three controllers already exist in code — confirm live, finish gaps, retire the old refinements framing.
+- **Reconcile:** the editor + these three controllers already exist in code — confirm live, finish gaps.
 
-### Stage 4 — Profitability (Comax cost → whole-bundle margin)
-- **Cost pull.** Add `sp_Cost` (or `CmxProdM` equivalent, append-only) refreshed by sync — Comax can supply cost; it's **not pulled today** (confirmed). Cost is internal — never customer-side.
-- **Whole-bundle margin** = `displayPrice` (discounted selling price) − Σ(member cost × **actual** qty). Depends on Stage 0 (qty=0→0). Per-member margin alone is misleading; model the bundle.
-- **Surface** margin in the editor's candidate list (sort/filter) and in `WebAppBundles_getEligibleProducts` suggestions, so profitability drives inclusion.
+### Stage 5 — Fast bundles-only member refresh
+- **Bundles-only pull (direct to master).** New `WooProductPullService.pullBundleProducts()` — WC REST `?type=woosb` (EN+HE, tens of products), upsert **only** the bundle fields (`wpm_TaxProductType` + `wpm_WoosbIds`; `wxm_WoosbIds`) **directly into WebProdM/WebXltM, bypassing staging+validation**. Safe: woosb is exempt from Comax validation; the next full sync's copy-to-master writes the same WC data (no divergence). New **"Pull Bundle Data"** button, first in the management-card row. **Update Composition** stays as-is — it already re-derives from master only with **no WC pull** (`WebAppBundles_updateComposition` → `reimportAllBundles`); the predecessor's "pull-inside-Update" design was never built.
 
-### Stage 5 — Cross-bundle diversity / rotation
-- A wine can sit in several bundles; today the only cross-bundle signal is the binary `sbs_Exclusive`. Build a **cross-bundle usage index** (which active bundles each SKU is in); **diversity-score** `getEligibleProducts` to down-rank wines already saturating other bundles; optional **rotation** history so bundles refresh over time. `sbs_Exclusive` becomes a soft usage signal rather than on/off.
+### Stage 6 — Cross-bundle diversity / rotation
+- Today the only cross-bundle signal is the binary `sbs_Exclusive`. Build a **cross-bundle usage index** (group-by over `SysBundleSlots.activeSKU` — data already there); **diversity-score** `getEligibleProducts` to down-rank wines already saturating other bundles; optional **rotation** history so bundles refresh over time. `sbs_Exclusive` becomes a soft usage signal rather than on/off.
+- **Diversity is the primary ranking lever** for value bundles (variety-first; profit is only a floor). Cross-bundle diversity scoring spreads unique wines across bundles and stops the same lineup recurring, relaxing toward duplication only as stock runs low. Where profit *does* rank (a tiebreaker, or future discounted packages via the minimum-profit-rate constraint), diversity keeps high-margin wines from saturating every bundle.
+
+### Stage 7 — Unified composition generator (proactive suggestion view) — *capstone; MVP runs it on value bundles first*
+Replaces the unused alert view (Stage 1 Fix B) with a proactive one: open the view and each bundle shows a **recommended composition**. **Computed by the overnight batch and cached (§3.1)** — the view reads precomputed results, so it opens instantly and the expensive scoring never runs live; a manual **Recompute** is the override.
+
+**One generator, not per-class logic.** Every bundle/package is a **fixed set of slots** read from the existing composition; the generator **refreshes the wine in each slot** from one continuous pool and **never adds or removes slots** (pure wine swap — safe, structure-preserving). Bundle vs package, theme, sizing, and margin floor are all **parameters of this one engine**:
+
+- **Per-slot:** category + attribute + price criteria (the **theme dial** — loose = value/auto-fill, tight = themed/curated; reliable per user) and a **flexibility flag** (qty-0/alternate vs fixed). Type (bundle/package) is **derived** from whether any flexible slots are present.
+- **Per-bundle constraints:** **minimum total** (e.g. 399 free-shipping floor) — a *constraint the fill must satisfy*, not a sizing driver (slot count is fixed); **minimum aggregate profit rate** checked *after* discount (replaces the high-margin anchor — default low for value, high for discounted packages); **discount** (optional).
+- **One continuous pool**, partitioned per-slot by **price / availability / profitability / suitability**. For value bundles the base three (Reds = all qualifying reds; Whites/Rosé = all of them; Special = reds + token whites/rosés) are different extractions of it — heavy overlap is inherent (few qualify) and tolerated.
+
+**Generator loop (variety-first):** for each fixed slot, pick/refresh a wine from the pool matching its criteria → then satisfy the constraints (total ≥ minimum, aggregate profit rate ≥ minimum). **Maximize unique wines** across bundles; **profit is a satisfied floor, not maximized**; duplicate only when stock is low. **Featured wines** (`wpm_Featured` — high margin, often big stock to move) land in higher tiers by price and are favored there, making the engine double as an inventory-movement tool. (Stage 0 ensures qty-0 alternates contribute 0 to the as-presented total.)
+
+**MVP scope + gate.** Run the generator **configured for value bundles first**, identified by the word **"value" in the bundle product title** — a pragmatic, weak/temporary stand-in for a real `sb_Purpose`. Value-bundle config (color, off-color token count, alternates, slot count) is all **read from the existing composition** — *no new attribute needed*. The off-color token count is **segmentation-driven, not a sales ratio** (white/rosé and red buyers are largely separate audiences); the engine preserves it and swaps only the wines. **Packages run on the same engine as a later configuration** (their fixed tight-criteria slots; running it there *is* low-inventory replacement) once positioning is settled. ***Only-in-Israel* excluded** — brand-restricted, and there's no brand criterion in the slot model.
+
+**Deferred to a later cut (Open):** a real `sb_Purpose` attribute (replacing the title match); activating packages (pending business positioning); food-attr theme matching beyond category+attributes; diversity weighting + rotation (Stage 6 feeds this once built).
 
 ---
 
 ## 5. Data-model touches (cumulative)
-`sb_PendingExport` (SysBundles, Stage 2) · `sp_Cost` (Comax product, Stage 4) · cross-bundle usage index (derived/cached, Stage 5) · possibly `sbs_WoosbKey` (Stage 2, only if WPClever import rejects regenerated tokens). All append-only.
+- `cpm_ProfitRate` (CmxProdM, Stage 2) — stored margin %, written only by the on-demand cost import; cost itself not stored.
+- `sb_PendingExport` (SysBundles, Stage 3) — "publish now" marker, cleared on re-derive.
+- possibly `sbs_WoosbKey` (Stage 3, only if WPClever import rejects regenerated tokens).
+- cross-bundle usage index (derived/cached over `SysBundleSlots`, Stage 6).
+- suggestion cache (Stage 7) — persisted output of the overnight analysis batch (per-bundle recommended composition + timestamp), read by the view; on `SysBundles` or a small dedicated cache sheet (decide at build).
+- `sb_Type` — **derived, not authored**: bundle vs package is read from whether the composition has flexible slots; the column is a cache/corroboration, not a definer. No new column.
+- generator config (slot count, criteria, flexibility flags, color, tokens, alternates) — **no new columns**: all read from the bundle's existing composition (Stage 7).
+- constraint params (minimum total, minimum aggregate profit rate, discount) — **MVP needs none new**: minimum total = global 399 default, minimum profit rate effectively off for value bundles, discount = existing `sb_DiscountPrice`. **Per-bundle overrides** (custom minimum, custom min-profit-rate) are a later addition when packages/custom bundles are configured.
+- `sb_Purpose` enum — **deferred future refinement** (the value MVP gates on a title match instead); when built it replaces the title match.
+- `wpm_Featured` — **existing** populated column, read-only scoring signal (no new column).
+
+All new columns append-only.
 
 ## 6. Open questions
-- Margin surfacing: whole-bundle vs per-member emphasis in the editor.
-- Diversity scoring weight + rotation window (Stage 5).
-- View-load approach (collapse vs lazy vs gate).
+- ~~Bundle-vs-package distinction~~ — **settled 2026-06-05:** the **acceptance model** (alterable vs fixed) is the durable distinction, and it's **derivable from flexible-slot presence** — so `sb_Type` is a cache, not a definer.
+- ~~Does one generator fit bundles and packages?~~ — **settled 2026-06-05:** **yes — one unified generator** (§3 / Stage 7). Fixing the slot count (no auto-sizing) plus a minimum-aggregate-profit-rate parameter (replacing the anchor) collapses both into one engine with optional knobs (minimum total, min profit rate, discount). Value bundles and packages are just different settings.
+- **Package positioning + a real `sb_Purpose`** — packages' purpose is **unresolved by the business**; the MVP runs the unified engine on **value bundles only** (title-gated) and defers activating packages + `sb_Purpose` vocabulary + food-attr theme-fit until positioning is settled.
+- Diversity scoring weight + rotation window (Stage 6).
 - Premium WPClever import specifics — trusted per user; one round-trip smoke confirms our serializer, not the plugin.
 
 ## 7. Out of scope
+- **Full record-inversion (ops owns composition)** — the §1 north star; not built until ops ownership is real. Stage 3 export is step one toward it.
+- **Engine "understanding" editorial themes** (NLP/AI cheese-pairing) — beyond the optional food-attr hooks; the human picks from a ranked shortlist.
 - REST push of composition — **parked** (no separate doc; export via vendor import preferred).
 - Non-composition woosb settings (discount/layout/limits) — stay WC-managed (margin *reads* `sb_DiscountPrice`).
 - Customer-facing site / theme.
@@ -113,6 +193,8 @@ Suggested build order: **Stage 0 → Stage 1 → Stage 2**, with Stage 3 confirm
 
 ## Review — RESOLVED (2026-06-04)
 
+*(Stage numbers in this historical section refer to the pre-2026-06-05 sequence, before the §4 re-sequence.)*
+
 **Resolution (folded into the plan body 2026-06-04, all three claims re-verified against code first):**
 1. **Stages reframed, not deleted.** Added the §4 sequencing note: Stage 3 is marked mostly-built and runnable now/in parallel; Stages 1–2 flagged as the net-new work; §2 updated with confirmed-live controller line refs.
 2. **N+1 root cause referenced.** Stage 1's view-load bullet now points at `PERFORMANCE_OPTIMIZATION_PLAN.md` (§N+1 Sheet Reads, Fix A ctx-preload / Fix B drop healthAlerts) and prefers it over the collapse/lazy/gate workarounds.
@@ -127,3 +209,24 @@ Independent review (Dispatch). **Merge quality is good** — reads as one cohere
 3. **Lost predecessor content + a stale claim.** The refinements plan's concrete dead-code cleanup (retire `Refresh`, the `Add New Bundle` modal + `WebAppBundles_addBundle` backend) was dropped — the new button row (§4 Stage 1) lists keepers but never says to retire the dead controls; re-add that. And Stage 1 says Update Composition "drops its WC-fetch role" — but the code already re-derives from master with no WC pull (`BundleService.js:202–204`), so there's no role to drop; the predecessor's pull-inside-Update design was never built. Correct the line. (Minor: `BUNDLE_API_PUSH_TEST_PLAN.md` cited as "parked" was never written.)
 
 Stage 0 qty=0 bug confirmed real (`const qty = slot.defaultQty || 1;`, `BundleService.js:198`). Sources: this doc; predecessors @4a24da8/@41a386e (git, pre-stub); `PERFORMANCE_OPTIMIZATION_PLAN.md`; spot-checks `BundleService.js` (198, 202–204, 920, 1487), `WebAppBundles.js` (765/788/805), `AdminBundlesView.html`.
+
+---
+
+## Review #2 — fresh full review of the revised plan (2026-06-05)
+
+Independent Dispatch review of the substantially-revised plan, every load-bearing claim re-verified against code. **Verdict: needs-revision (light).** The plan is exceptionally well-grounded — nearly all claims check out: qty=0 bug (`BundleService.js:198`), discount already applied (`:202-204`), live controllers `updateComposition`/`reviewStock`/`validateParity` (`WebAppBundles.js:765/788/805`) + `validateAllBundleParity` (`:1487`), the `getBundlesWithLowInventory` N+1 (`BundleService.js:656-720, 920`), CmxProdM has no cost column (`schemas.json:22`), daily `refreshBundleComposition` re-derives via `reimportAllBundles` with no WC pull (`HousekeepingService.js:688`). Net-new items (`exportBundleWoosb`, `pullBundleProducts`, `sb_PendingExport`, `cpm_ProfitRate`) confirmed absent. Prior-review items genuinely resolved.
+
+**Fix before build:**
+
+1. **BUILD-BLOCKER (Stage 3 serializer) — field-name error.** The plan resolves the EN id via `wpm_WebIdEn`, but that column is NOT in the WebProdM schema — canonical id is `wpm_ID`. `wpm_WebIdEn` only exists in `ProductService.js`/`TestData.js` (different context). The existing parity validator already resolves EN via `wpm_ID` and HE via `wxm_WpmlOriginalId→wxm_ID` (`BundleService.js:1504, 1509-1510`). Reconcile the serializer to `wpm_ID` or it blanks every cell.
+2. **§1/§2 understate existing write capability.** Plan correctly notes `addBundle` is absent, but a full CRUD backend DOES exist — `createBundle` (`:221`), `updateBundle` (`:194`), `deleteBundle` (`:242`), `duplicateBundle` (`:265`), plus `create/update/deleteSlot`. The "near read-only monitor" framing and §2's "cleanup already done" note miss these; they're directly relevant to the ops-owns-bundles north star.
+3. **Literal-`0` profit-rate = hard build requirement, not a "Caveat."** `_upsertComaxData`'s preserve branch keys on truthiness (`ProductImportService.js:384`), so a genuine 0% rate blanks. Keep the sentinel/re-stamp mandatory (Stage 4).
+
+**Minor:** §2 line-ref drift (sheet reads cited `:683/696/718`, actually ~678/691/720). Already well-flagged for build: woosb key stability (UUID vs index, Appendix A), suggestion-cache location, `sb_Purpose` deferral. **Live-data risk:** Stage 5's staging-bypass write to master — acceptable given the woosb-exemption argument, provided the pull is hard-scoped to `type=woosb` rows + the two woosb fields (plan says so).
+
+**Bottom line:** substantively implementation-ready and well-grounded; fix #1 before any Stage 3 build, fold in #2/#3, then ready stage-by-stage. Sources: this doc; `BundleService.js` (104-112, 195-210, 656-720, 830, 920, 1487, 1504-1510), `WebAppBundles.js` (59-67, 194-296, 765/788/805), `HousekeepingService.js` (688-689, 1411), `ProductImportService.js` (375-400), `config/schemas.json` (22, 52, 112), `config/mappings.json` (723), `ProductService.js` (2383), `AdminBundlesView.html`.
+
+**RESOLVED — folded into the plan body 2026-06-05 (all three re-verified against code first):**
+1. **Serializer field-name (build-blocker).** Confirmed `wpm_WebIdEn` is absent from the WebProdM schema (only in `ProductService.js`/`TestData.js`); the parity validator uses `wpm_ID` (`:1504`) + `wxm_WpmlOriginalId→wxm_ID` (`:1509-1510`). Stage 3 serializer corrected to `wpm_ID` with a ⚠ note.
+2. **Existing CRUD backend.** Confirmed `createBundle` (`:320`), `updateBundle` (`:350`), `deleteBundle` (`:388`), `duplicateBundle` (`:1282`), `createSlot`/`updateSlot`/`deleteSlot` (`:448/504/571`). §1 reframed (write path largely built — shortens the ops-owns north star); §2's too-literal "cleanup done" note corrected.
+3. **Literal-`0` rate.** Stage 2 caveat elevated to a **hard build requirement** (sentinel/re-stamp). Minor N+1 line refs corrected to ~`678/691/720`.
