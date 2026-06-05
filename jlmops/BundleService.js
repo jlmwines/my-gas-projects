@@ -195,7 +195,7 @@ const BundleService = (function () {
     for (const slot of bundleSlots) {
       if (slot.slotType !== 'Product' || !slot.activeSKU) continue;
       const price = priceMap[slot.activeSKU] || 0;
-      const qty = slot.defaultQty || 1;
+      const qty = (slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty);
       totalPrice += price * qty;
     }
 

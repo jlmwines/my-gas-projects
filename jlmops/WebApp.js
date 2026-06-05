@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-04 10:37',
-  commit: 'Mobile: minimize horizontal page padding to maximize content width (AppView, global <=768px). Bootstrap container-fluid (15px sides) + row (-15px margins) trimmed together to container 0 / row 0 / cols 4px, plus .content sides 6px to 4px, so content reaches near the screen edge without row overflow. Per feedback_mobile_minimal_side_padding.'
+  built: '2026-06-05 13:47',
+  commit: 'Bundle Stage 0: qty=0 price bug fix. _calculateBundlePrice (BundleService.js:198) no longer coerces a qty-0 placeholder slot to qty 1; a stored 0 now contributes 0 to the calculated total. Internal admin display + as-presented margin only, not the live WC price. Per BUNDLE_PLAN.md Stage 0.'
 };
 
 function getVersion() {
