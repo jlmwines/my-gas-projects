@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-04 (consolidates `BUNDLE_AUTHORING_EXPORT_PLAN.md` + `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` into one staged plan).
 **Expanded:** 2026-06-05 — long planning chavruta added two north stars (ops-owns + suggestion view), the bundle/package domain model, the cost/profit data flow, a re-sequenced build order, and a capstone suggestion-engine stage.
-**Status:** Planning. Staged — each stage is independently shippable; **decide depth as we refine**. No code until per-stage user go.
+**Status:** In progress — **Stage 0 shipped @227 (2026-06-05)**; Stages 1–7 planning. Staged — each stage is independently shippable; **decide depth as we refine**. No code until per-stage user go.
 **Owner:** Session-driven; user reviews / visually verifies.
 **Supersedes:** `BUNDLE_AUTHORING_EXPORT_PLAN.md`, `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` (both stubbed → here). The **REST-push approach is parked** (export via the vendor's own import is safer than a raw REST write) — it was never written up as its own doc, so there is no `BUNDLE_API_PUSH_TEST_PLAN.md` file; the idea lives here in §7.
 
@@ -88,8 +88,8 @@ Each stage produces shippable value on its own. **Re-sequenced 2026-06-05** so t
 
 **Suggested build order:** **Stage 0 → 1 → 2 → 3**, with Stage 4 confirmed/finished alongside, then **5 → 6 → 7**. (Stage 5 member-refresh is independent and can slot anywhere.)
 
-### Stage 0 — Quick fixes
-- **qty=0 price bug** (`BundleService.js:198`): `slot.defaultQty || 1` coerces a 0-qty placeholder slot to 1, inflating the calculated total. Fix: `slot.defaultQty === '' || slot.defaultQty == null ? 1 : Number(slot.defaultQty)`. Internal only (admin display + as-presented margin), not the live WC price. Prerequisite for accurate as-presented price/profit. Tracked in `.claude/bugs.md`.
+### Stage 0 — Quick fixes — **SHIPPED @227 (2026-06-05)**
+- **qty=0 price bug** (`BundleService.js:198`): `slot.defaultQty || 1` coerced a 0-qty placeholder slot to 1, inflating the calculated total. **Fixed** to `(slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty)` — a stored 0 now contributes 0. Both callers (`:249/:304`) feed slots via `_loadSlots` (`:175`), which normalizes to number-or-1, so the `=== ''` branch is defensive/dead but kept per plan. Internal only (admin display + as-presented margin), not the live WC price. Commit 747ef30. Was the prerequisite for accurate as-presented price/profit (Stage 3).
 
 ### Stage 1 — View performance (root-cause, not workaround)
 The slow mount is the documented N+1 (§2; `PERFORMANCE_OPTIMIZATION_PLAN.md`). Two fixes that stack:
