@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-05 14:17',
-  commit: 'Bundle Stage 1 follow-up: remove the last heavy compute from the Bundles-view mount. getStats -> getBundleStats still called getBundlesWithLowInventory() for its attention counter (the 23s after Fix B). getBundleStats(includeInventory) added; mount passes false (cheap counts only), housekeeping monthly review keeps the full counts. The needs-attention counter is now filled by the lazy health fetch (renderHealthAlerts). Mount drops to a few seconds.'
+  built: '2026-06-05 14:30',
+  commit: 'Bundle Stage 0 completion: preserve qty=0 at the write/import paths. The :198 price-calc fix was insufficient — qty "0" optional slots were coerced to 1 BEFORE the calc, at three write sites (createSlot :489, importBundleFromWooCommerce :1147, reimportAllBundlesBatch :1263) via `... || 1`. Confirmed against live woosb_ids JSON (qty:"0",optional:"1" members). All three now use (qty===\'\'||qty==null)?1:Number(qty) so "0" survives as 0. Run Update Composition to re-derive existing slots (they hold the old 1 until re-imported).'
 };
 
 function getVersion() {

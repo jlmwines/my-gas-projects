@@ -486,7 +486,7 @@ const BundleService = (function () {
     // Behavior fields
     newRow[cols.sbs_Exclusive] = slotData.exclusive ? 'TRUE' : '';
     newRow[cols.sbs_QtyVariable] = slotData.qtyVariable ? 'TRUE' : '';
-    newRow[cols.sbs_DefaultQty] = slotData.defaultQty || 1;
+    newRow[cols.sbs_DefaultQty] = (slotData.defaultQty === '' || slotData.defaultQty == null) ? 1 : Number(slotData.defaultQty);
 
     sheet.appendRow(newRow);
     clearCache();
@@ -1144,7 +1144,7 @@ const BundleService = (function () {
           order: order,
           slotType: 'Product',
           activeSKU: sku,
-          defaultQty: Number(value.qty) || 1,
+          defaultQty: (value.qty === '' || value.qty == null) ? 1 : Number(value.qty),
           qtyVariable: preserved.qtyVariable !== undefined ? preserved.qtyVariable : (value.optional === '1'),
           exclusive: preserved.exclusive || false,
           // Restore criteria from previous slot (if same SKU was in bundle before)
@@ -1260,7 +1260,7 @@ const BundleService = (function () {
             const pcrit = preserved[sku] || {};
             slotRow[slotCols.sbs_SlotType] = 'Product';
             slotRow[slotCols.sbs_ActiveSKU] = sku;
-            slotRow[slotCols.sbs_DefaultQty] = Number(value.qty) || 1;
+            slotRow[slotCols.sbs_DefaultQty] = (value.qty === '' || value.qty == null) ? 1 : Number(value.qty);
             const qtyVarPreserved = (pcrit.qtyVariable !== undefined) ? pcrit.qtyVariable : (value.optional === '1');
             slotRow[slotCols.sbs_QtyVariable] = qtyVarPreserved ? 'TRUE' : '';
             slotRow[slotCols.sbs_Exclusive] = pcrit.exclusive ? 'TRUE' : '';
