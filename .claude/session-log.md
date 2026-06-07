@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 2) — Stage 3 data/logic finished + UI-plan Phase 1a-i @242→@245
+
+- **@242** disabled the slow low-inventory alerts load in AdminBundles (loadHealthAlerts no-op — panel being retired in UI Phase 1); reconciled BUNDLE_PLAN ↔ ADMIN_BUNDLES_UI_PLAN (export delivery = CSV opened as a sheet in a new tab; documented owed contracts: cached needsPush, task.bundles.push_pending, saveComposition); committed Dispatch's full UI design (`ADMIN_BUNDLES_UI_PLAN.md`, DESIGN DEFINED). **Clarified: Dispatch only planned; the MAIN CLI session implements the UI plan.**
+- **@243** out-of-stock failsafe: `buildExportTable` flags exported bundles whose members have web stock ≤ 0.
+- **@244** `getEligibleProducts` returns `wpm_ProfitRate` (profit-in-selector DATA half; display is UI-plan Phase 3). **Stage 3 data/logic now COMPLETE**; remaining Stage 3 is display only.
+- **@245** UI-plan **Phase 1a-i**: `HousekeepingService.refreshBundlePushStatus()` (after refreshBundleComposition) caches `{count,bundleIds,ts}` in `system.bundles.push_status` via `buildExportTable`; `WebAppBundles_getPushStatus()` reads it; `runRefreshBundlePushStatus()` wrapper. User ran it: **0 of 14 need export** — correct (the earlier "2" were HE text-slot diffs, now excluded from the diff @240).
+- clasp auth lapsed mid-stretch (invalid_rapt) — user reauthed.
+- **Next:** UI-plan Phase 1a-ii (`task.bundles.push_pending` + dashboard surfacing — un-exercisable until a bundle change makes count>0), 1b (status list + chips, remove alerts panel), 1c (row-click editor); then UI Phases 2–4 + BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont) — BUNDLE_PLAN Stage 3 core (authoring + woosb export) shipped @234→@241
 
 - **Serializer** `BundleService.exportBundleWoosb(bundleId, lang)` — slots → WPClever `woosb_ids` JSON, **reusing the original token from `slotId`** (`${bundleId}-${token}`, both import paths) so no key regeneration; EN id = `wpm_ID` by SKU, HE via `WebXltM`. Smoke-validated vs a live bundle (@234).
