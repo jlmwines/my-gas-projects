@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 8) — editor polish @252→@255 + Stage 3 tail (real margin) @256; commits
+
+- **Editor UX iterated live @252→@255** (all on the Phase 3 composition sheet): @252 compact content-sized criteria fields + "Criteria" label on the disclosure; @253 Qty + Flexible as fixed-width aligned columns (qtyVariable out of criteria, relabeled "Flexible", qty-0 pill dropped) + load spinner on row-click + picker spinner; @254 collapsed product row is now **read-only data** (name/SKU/price/%/×qty/Flexible) with ALL editing moved into a per-row **Details** disclosure (Replace + integer Quantity + Flexible + criteria), narrower reorder arrows, profit as % only; @255 Replace shares the Details row, right-aligned (margin-left:auto).
+- **Stage 3 tail (BUNDLE_PLAN) DONE @256 — as-presented margin reads the REAL discount.** `_calculateBundlePrice` now takes the bundle's own WOOSB discount (keyed by `wpm_ID` = bundleId, via new `_buildBundleDiscountMap` + `_bundleDiscountFromWeb`): custom-price > fixed/percent discount off the member sum > none. **User confirmed discounts are FIXED-AMOUNT off** (AskUserQuestion). Wired in both `getBundleWithSlots` (editor) + `getAllBundles` (list); falls back to vestigial `sb_DiscountPrice` only if no web row. Display/math only — never pushed (§7.1c closed). Verify live: editor/list should now show "Discount ₪N · Final" matching the WPClever setting.
+- **Commits:** `4608d50` (Phase 3 @251–@254), `176dd6b` (@255 Replace reposition), `588ba6f` (packing bug record). @256 margin fix uncommitted at write time (next commit). bugs.md got the packing_available close-path-gap entry (2026-06-07, distinct from the 2026-06-02 overdue weakness).
+- **Next per plan:** Stage 4 parity confirm/cleanup (validateParity now vestigial, §7.1a) → 5 (fast member refresh) → 6 (diversity) → 7 (suggestion capstone, lights up UI Phase 4). Editor still wants the user's full smoke-test + a `git push`.
+
+---
+
 ## 2026-06-07 (cont 7) — Phase 3 FRONTEND shipped @251 (composition sheet)
 
 - **@251 — AdminBundlesView editor rewritten** to the §7.4/§7.5 composition sheet, replacing the two-pane slot-list/detail editor (~620 lines removed). Header strip (name EN/HE, status, type badge, read-only price summary) + one ordered composition list (text headers inline EN/HE+style; product rows ↑↓ reorder, qty stepper + qty-0 "Flexible" pill, name/SKU/price/profit, full criteria behind ▸ disclosure incl. qtyVariable "optional" toggle) + **client draft** (edits mutate `draft`, nothing commits till Save) + per-row **Undo** on delete + atomic **Save Composition** (`WebAppBundles_saveComposition`, confirm lists removals) + **product-picker ModalOverlay** (search `getEligibleProducts`, price+profit, client text-filter) + **sessionStorage** mirror (`jlmops.bundleCompDraft.v1.<id>`) + `beforeunload` seatbelt.

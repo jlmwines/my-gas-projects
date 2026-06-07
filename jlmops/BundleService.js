@@ -193,7 +193,63 @@ const BundleService = (function () {
    * @param {Object} priceMap - Map of SKU to price
    * @returns {Object} {totalPrice, displayPrice, discount}
    */
-  function _calculateBundlePrice(bundle, bundleSlots, priceMap) {
+  // WPClever (WOOSB) discount fields live on the BUNDLE's own WebProdM row, keyed by wpm_ID (which
+  // IS bundleId — WebAppBundles.js:613). Imported every sync, never authored/pushed by jlmops
+  // (§7.1c). Built once from a WebProdM read, keyed by wpm_ID, for the as-presented price/margin.
+  function _buildBundleDiscountMap(webData, webHeaders) {
+    const map = {};
+    const idIdx = webHeaders.indexOf('wpm_ID');
+    if (idIdx === -1) return map;
+    const discIdx = webHeaders.indexOf('wpm_WoosbDiscount');
+    const amtIdx = webHeaders.indexOf('wpm_WoosbDiscountAmount');
+    const customIdx = webHeaders.indexOf('wpm_WoosbCustomPrice');
+    const disableIdx = webHeaders.indexOf('wpm_WoosbDisableAutoPrice');
+    for (let i = 1; i < webData.length; i++) {
+      const id = String(webData[i][idIdx] || '').trim();
+      if (!id) continue;
+      map[id] = {
+        discountOn: discIdx !== -1 ? webData[i][discIdx] : '',
+        discountAmount: amtIdx !== -1 ? webData[i][amtIdx] : '',
+        customPrice: customIdx !== -1 ? webData[i][customIdx] : '',
+        disableAuto: disableIdx !== -1 ? webData[i][disableIdx] : ''
+      };
+    }
+    return map;
+  }
+
+  // WPClever checkbox truthiness ('on' from the admin UI; tolerate other exported forms).
+  function _woosbEnabled(v) {
+    const s = String(v == null ? '' : v).toLowerCase().trim();
+    return s === 'on' || s === '1' || s === 'yes' || s === 'true';
+  }
+
+  // Resolve the as-presented discount from the bundle's WOOSB fields, matching WPClever precedence:
+  // (1) auto-price disabled → fixed custom price; (2) discount enabled → amount off the member sum,
+  // a '%'-suffixed amount = percentage, otherwise a fixed amount (this shop uses fixed-amount —
+  // user-confirmed 2026-06-07); (3) otherwise no discount. Returns null only when no web row exists
+  // (caller falls back to the legacy sb_DiscountPrice). Never written back — display/math only.
+  function _bundleDiscountFromWeb(totalPrice, d) {
+    if (!d) return null;
+    if (_woosbEnabled(d.disableAuto) && d.customPrice !== '' && d.customPrice != null) {
+      const cp = parseFloat(d.customPrice);
+      if (!isNaN(cp)) return { displayPrice: cp, discount: totalPrice > cp ? totalPrice - cp : 0 };
+    }
+    if (_woosbEnabled(d.discountOn) && d.discountAmount !== '' && d.discountAmount != null) {
+      const raw = String(d.discountAmount).trim();
+      let discount = 0;
+      if (raw.indexOf('%') !== -1) {
+        const pct = parseFloat(raw.replace('%', ''));
+        if (!isNaN(pct)) discount = totalPrice * (pct / 100);
+      } else {
+        const amt = parseFloat(raw);
+        if (!isNaN(amt)) discount = amt;
+      }
+      if (discount > 0) return { displayPrice: Math.max(0, totalPrice - discount), discount: Math.min(discount, totalPrice) };
+    }
+    return { displayPrice: totalPrice, discount: 0 };
+  }
+
+  function _calculateBundlePrice(bundle, bundleSlots, priceMap, webDiscount) {
     let totalPrice = 0;
 
     for (const slot of bundleSlots) {
@@ -203,9 +259,18 @@ const BundleService = (function () {
       totalPrice += price * qty;
     }
 
-    const discountPrice = bundle.discountPrice ? parseFloat(bundle.discountPrice) : null;
-    const displayPrice = discountPrice !== null ? discountPrice : totalPrice;
-    const discount = discountPrice !== null && totalPrice > 0 ? totalPrice - discountPrice : 0;
+    // As-presented price/margin: prefer the WC-managed WOOSB discount (§7.1c). The legacy
+    // sb_DiscountPrice (blank on import) is only a fallback when no web row was found.
+    let displayPrice, discount;
+    const web = _bundleDiscountFromWeb(totalPrice, webDiscount);
+    if (web) {
+      displayPrice = web.displayPrice;
+      discount = web.discount;
+    } else {
+      const discountPrice = bundle.discountPrice ? parseFloat(bundle.discountPrice) : null;
+      displayPrice = discountPrice !== null ? discountPrice : totalPrice;
+      discount = discountPrice !== null && totalPrice > 0 ? totalPrice - discountPrice : 0;
+    }
 
     return {
       totalPrice: Math.round(totalPrice * 100) / 100,
@@ -232,6 +297,7 @@ const BundleService = (function () {
     const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
     const priceMap = {};
+    let discountMap = {};
     if (webSheet) {
       const webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
@@ -245,12 +311,13 @@ const BundleService = (function () {
           priceMap[sku] = Number(webData[i][priceIdx]) || 0;
         }
       }
+      discountMap = _buildBundleDiscountMap(webData, webHeaders);
     }
 
-    // Add price info to each bundle
+    // Add price info to each bundle (as-presented discount from its own WOOSB row, §7.1c)
     return bundles.map(bundle => {
       const bundleSlots = allSlots.filter(s => s.bundleId === bundle.bundleId);
-      const priceInfo = _calculateBundlePrice(bundle, bundleSlots, priceMap);
+      const priceInfo = _calculateBundlePrice(bundle, bundleSlots, priceMap, discountMap[bundle.bundleId]);
       return {
         ...bundle,
         totalPrice: priceInfo.totalPrice,
@@ -294,6 +361,7 @@ const BundleService = (function () {
     // same single WebProdM read, so no extra sheet round-trip (ADMIN_BUNDLES_UI_PLAN Phase 3).
     const priceMap = {};
     const infoMap = {};
+    let webDiscount = null;
     if (webSheet) {
       const webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
@@ -315,6 +383,8 @@ const BundleService = (function () {
           };
         }
       }
+      // The bundle's own WOOSB discount row (keyed by wpm_ID = bundleId) for the as-presented margin.
+      webDiscount = _buildBundleDiscountMap(webData, webHeaders)[String(bundleId)] || null;
     }
 
     // Enrich product slots with display fields (name/price/profit) for the composition sheet.
@@ -328,7 +398,7 @@ const BundleService = (function () {
       });
     });
 
-    const priceInfo = _calculateBundlePrice(bundle, bundleSlots, priceMap);
+    const priceInfo = _calculateBundlePrice(bundle, bundleSlots, priceMap, webDiscount);
 
     return {
       ...bundle,
