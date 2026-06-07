@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 10:38',
-  commit: 'TEMP DIAGNOSTIC — Export panel now shows, per flagged bundle, what the compare read from web (webEn/webHe) + first-mismatch token/field + ops/web member counts. For phone debugging of the persistent "14/14 differ" where ops now equals web (derive+serializer fixed @235) yet buildExportTable still flags — isolating compare/lookup bug. To be stripped once root cause found.'
+  built: '2026-06-07 10:48',
+  commit: 'Bundle Stage 3 fix — export diff is now TOKEN-AGNOSTIC. Root cause of persistent HE "14/14 differ": WPClever issues independent random woosb keys per language (EN eoxl… vs HE c9su…); the compare checked token keys position-by-position, so HE always differed even when composition was identical (EN already matched once optional was fixed @235). _woosbEqual + _diffDetail now compare MEMBER CONTENT by position and ignore keys (length check kept). Export pasting EN tokens into HE is harmless — WPClever accepts any keys. TEMP panel diagnostic (webEn/webHe + firstMismatch) still present for verification; to be stripped once HE confirmed clean.'
 };
 
 function getVersion() {

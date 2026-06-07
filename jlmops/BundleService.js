@@ -1727,9 +1727,11 @@ const BundleService = (function () {
   }
 
   /**
-   * Order-sensitive structural equality of two woosb_ids JSON strings. Token order = member
-   * order (matters for display), so it compares position-by-position. Robust to whitespace,
-   * key-escaping, min/max, and optional-absent-vs-"0".
+   * Structural equality of two woosb_ids JSON strings, comparing the ordered sequence of
+   * MEMBER CONTENT by position. **Token keys are ignored** — WPClever issues independent
+   * random keys per language (EN `eoxl…` vs HE `c9su…`), so they must not count as a diff;
+   * what matters is the same members in the same order. Robust to whitespace, key-escaping,
+   * min/max, and optional-absent-vs-"0".
    */
   function _woosbEqual(jsonA, jsonB) {
     const a = _parseWoosbJson(jsonA, 'cmp', 'en');
@@ -1737,7 +1739,6 @@ const BundleService = (function () {
     const ka = Object.keys(a), kb = Object.keys(b);
     if (ka.length !== kb.length) return false;
     for (let i = 0; i < ka.length; i++) {
-      if (ka[i] !== kb[i]) return false;
       if (_canonMember(a[ka[i]]) !== _canonMember(b[kb[i]])) return false;
     }
     return true;
@@ -1841,12 +1842,15 @@ const BundleService = (function () {
     const ok = Object.keys(o), wk = Object.keys(w);
     const out = { opsLen: ok.length, webLen: wk.length, equal: true, firstMismatch: null,
                   opsJson: opsJson, webJson: webJson };
-    const n = Math.max(ok.length, wk.length);
-    for (let i = 0; i < n; i++) {
-      const ot = ok[i], wt = wk[i];
-      if (ot !== wt) { out.equal = false; out.firstMismatch = { i: i, reason: 'token', opsToken: ot || null, webToken: wt || null }; return out; }
-      const oc = _canonMember(o[ot]), wc = _canonMember(w[wt]);
-      if (oc !== wc) { out.equal = false; out.firstMismatch = { i: i, reason: 'member', token: ot, opsCanon: oc, webCanon: wc }; return out; }
+    if (ok.length !== wk.length) {
+      out.equal = false;
+      out.firstMismatch = { reason: 'length', opsLen: ok.length, webLen: wk.length };
+      return out;
+    }
+    // Compare member content by POSITION; token keys are ignored (language-specific, arbitrary).
+    for (let i = 0; i < ok.length; i++) {
+      const oc = _canonMember(o[ok[i]]), wc = _canonMember(w[wk[i]]);
+      if (oc !== wc) { out.equal = false; out.firstMismatch = { i: i, reason: 'member', opsToken: ok[i], webToken: wk[i], opsCanon: oc, webCanon: wc }; return out; }
     }
     return out;
   }
