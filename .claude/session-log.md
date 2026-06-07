@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 7) — Phase 3 FRONTEND shipped @251 (composition sheet)
+
+- **@251 — AdminBundlesView editor rewritten** to the §7.4/§7.5 composition sheet, replacing the two-pane slot-list/detail editor (~620 lines removed). Header strip (name EN/HE, status, type badge, read-only price summary) + one ordered composition list (text headers inline EN/HE+style; product rows ↑↓ reorder, qty stepper + qty-0 "Flexible" pill, name/SKU/price/profit, full criteria behind ▸ disclosure incl. qtyVariable "optional" toggle) + **client draft** (edits mutate `draft`, nothing commits till Save) + per-row **Undo** on delete + atomic **Save Composition** (`WebAppBundles_saveComposition`, confirm lists removals) + **product-picker ModalOverlay** (search `getEligibleProducts`, price+profit, client text-filter) + **sessionStorage** mirror (`jlmops.bundleCompDraft.v1.<id>`) + `beforeunload` seatbelt.
+- **Backend enablers (BundleService.js):** `getBundleWithSlots` now enriches product slots with `productName`/`productPrice`/`profitRate` from the same WebProdM read (no extra round-trip); `getEligibleProducts` accepts `options.draftSlot` (criteria for an unsaved/new row, used instead of slotId lookup) + `options.excludeSKUs` (other live draft rows); `createSlot` id gains a per-execution counter suffix (`SLOT-<ts>-<seq>`) so a batch save can't collide on a same-ms id. Save blocks if a live product row has no SKU (would push a blank woosb id). Profit renders as `wpm_ProfitRate` fraction ×100 (blank = "—", never 0%).
+- **Deploy:** wrapper → @251, pinned ID verified, VERSION.built 2026-06-07 16:38. No config touched (no rebuildSysConfigFromSource). Orphaned `toggleDescSection` removed; pre-existing health-panel orphans left as-is. Big editor deletion done via node line-splice (file now LF; git normalizes).
+- **NOT yet committed to git** (user pushes). **Smoke pending** (live, no /dev) — see checklist handed to user: open a bundle, edit name/qty/reorder/criteria, add+pick a product, delete+undo, Save, reopen to confirm persisted; reload mid-edit to confirm sessionStorage rehydrate; Export still works.
+- **Next:** smoke-test @251; then Phase 4 (Stage 7 deficiency strip) + BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont 6) — Phase 3 BACKEND (saveComposition) + scope decisions; checkpoint
 
 - **Phase 3 backend committed `70fd3c0` (NOT deployed — no caller yet; live stays @250).** `BundleService.saveComposition(bundleId, header, slots[])` + `WebAppBundles_saveComposition`: atomic batch commit — header (names/status; **discount never written**, §7.1c) + full ordered slot list; reconciles update (slotId match) / create (no slotId) / delete (stored absent from incoming); order from list position; **reuses createSlot/updateSlot/deleteSlot** (no duplicated logic); returns `getBundleWithSlots`.

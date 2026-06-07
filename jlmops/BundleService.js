@@ -14,6 +14,10 @@ const BundleService = (function () {
   let _cacheTimestamp = null;
   const CACHE_TTL_MS = 60000; // 1 minute cache
 
+  // Per-execution counter so a single saveComposition that creates several new slots in a tight
+  // loop can't collide on a same-millisecond `SLOT-${Date.now()}` id (createSlot).
+  let _slotIdSeq = 0;
+
   /**
    * Clears the internal cache.
    */
@@ -285,27 +289,50 @@ const BundleService = (function () {
     const allConfig = ConfigService.getAllConfig();
     const webSheet = SheetAccessor.getDataSheet('WebProdM', false);
 
+    // priceMap (SKU -> RegularPrice number) feeds _calculateBundlePrice unchanged. infoMap carries
+    // the per-slot display fields (name + profit) the §7.4 composition sheet renders — built from the
+    // same single WebProdM read, so no extra sheet round-trip (ADMIN_BUNDLES_UI_PLAN Phase 3).
     const priceMap = {};
+    const infoMap = {};
     if (webSheet) {
       const webData = webSheet.getDataRange().getValues();
       const webSchema = allConfig['schema.data.WebProdM'];
       const webHeaders = webSchema.headers.split(',');
       const skuIdx = webHeaders.indexOf('wpm_SKU');
       const priceIdx = webHeaders.indexOf('wpm_RegularPrice');
+      const titleIdx = webHeaders.indexOf('wpm_PostTitle');
+      const profitIdx = webHeaders.indexOf('wpm_ProfitRate');
 
       for (let i = 1; i < webData.length; i++) {
         const sku = String(webData[i][skuIdx] || '');
         if (sku) {
           priceMap[sku] = Number(webData[i][priceIdx]) || 0;
+          const rawRate = profitIdx !== -1 ? webData[i][profitIdx] : '';
+          infoMap[sku] = {
+            name: titleIdx !== -1 ? String(webData[i][titleIdx] || '') : '',
+            // wpm_ProfitRate is a stored fraction (0.42 = 42%); blank = missing (never 0%).
+            profitRate: (rawRate !== '' && rawRate !== null && rawRate !== undefined) ? Number(rawRate) : null
+          };
         }
       }
     }
+
+    // Enrich product slots with display fields (name/price/profit) for the composition sheet.
+    const enrichedSlots = bundleSlots.map(s => {
+      if (s.slotType !== 'Product' || !s.activeSKU) return s;
+      const info = infoMap[s.activeSKU] || {};
+      return Object.assign({}, s, {
+        productName: info.name || '',
+        productPrice: priceMap[s.activeSKU] || 0,
+        profitRate: (info.profitRate !== undefined ? info.profitRate : null)
+      });
+    });
 
     const priceInfo = _calculateBundlePrice(bundle, bundleSlots, priceMap);
 
     return {
       ...bundle,
-      slots: bundleSlots,
+      slots: enrichedSlots,
       totalPrice: priceInfo.totalPrice,
       displayPrice: priceInfo.displayPrice,
       discount: priceInfo.discount
@@ -455,8 +482,10 @@ const BundleService = (function () {
     const cols = _getSlotColumnIndices();
     const newRow = new Array(Object.keys(cols).length).fill('');
 
-    // Generate slot ID if not provided
-    const slotId = slotData.slotId || `SLOT-${Date.now()}`;
+    // Generate slot ID if not provided. Counter suffix guarantees uniqueness even when several
+    // slots are created in the same millisecond (saveComposition batch). The serializer treats any
+    // id not prefixed by `${bundleId}-` as a whole-token, so this format stays export-safe.
+    const slotId = slotData.slotId || `SLOT-${Date.now()}-${++_slotIdSeq}`;
 
     newRow[cols.sbs_SlotId] = slotId;
     newRow[cols.sbs_BundleId] = slotData.bundleId;
@@ -711,8 +740,12 @@ const BundleService = (function () {
     const functionName = 'getEligibleProducts';
     const ctx = options.ctx || null;
 
-    // Resolve the slot from the preloaded ctx when present (avoids a per-call _loadSlots), else read.
-    const slot = ctx ? (ctx.allSlots.find(s => s.slotId === String(slotId)) || null) : getSlot(slotId);
+    // Resolve the slot. The §7.4 composition-sheet picker drives off a CLIENT DRAFT row that may not
+    // be persisted yet (newly added, or criteria edited but unsaved), so it passes options.draftSlot —
+    // a slot-like criteria object {slotType,category,...,bundleId,slotId} — used directly. Otherwise
+    // resolve from the preloaded ctx (avoids a per-call _loadSlots) or read by slotId, as before.
+    const slot = options.draftSlot
+      || (ctx ? (ctx.allSlots.find(s => s.slotId === String(slotId)) || null) : getSlot(slotId));
     if (!slot) {
       LoggerService.warn(SERVICE_NAME, functionName, `Slot not found: ${slotId}`);
       return [];
@@ -785,6 +818,12 @@ const BundleService = (function () {
 
     // Get SKUs to exclude
     let excludedSKUs = new Set();
+
+    // Draft-supplied exclusions: the composition-sheet picker passes the SKUs already chosen in OTHER
+    // draft rows (those aren't on the sheet yet, so the allSlots scan below can't see them).
+    if (Array.isArray(options.excludeSKUs)) {
+      options.excludeSKUs.forEach(sku => { if (sku) excludedSKUs.add(String(sku)); });
+    }
 
     // Exclude SKUs already used in other slots of the same bundle
     allSlots.forEach(s => {

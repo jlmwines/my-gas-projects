@@ -6,6 +6,15 @@
 .bundle-chip.active { font-weight: bold; box-shadow: inset 0 0 0 2px #6c757d; }
 .bundle-name-he { font-size: 0.85em; color: #6c757d; }
 .bundle-row-selected { background: #e9f5ff !important; }
+/* Composition sheet (§7.4/§7.5) */
+.comp-row { border: 1px solid #dee2e6; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: #fff; }
+.comp-row.text-row { background: #f1f3f5; }
+.comp-row.deleted { opacity: 0.55; background: #fdf2f2; }
+.comp-row.deleted .comp-main { text-decoration: line-through; }
+.comp-num { display: inline-block; width: 22px; color: #adb5bd; font-size: 0.85em; }
+.comp-cell { font-size: 0.9em; flex: 0 0 auto; }
+.btn-move { padding: 1px 5px; line-height: 1.2; }
+.crit-grid label { font-size: 0.75em; color: #6c757d; margin-bottom: 1px; display: block; }
 </style>
 <div class="container-fluid">
   <!-- Section 1: Bundle Dashboard -->
@@ -55,57 +64,54 @@
        subordinate advisory; the export-time out-of-stock failsafe warns, and per-bundle stock will
        surface in the 1c deficiency strip. Stage 7 suggestion view replaces it later. -->
 
-  <!-- Section 3: Bundle Editor — hidden until a row is clicked (Phase 1c §7.3, UI_T2_1 Stage D) -->
+  <!-- Section 3: Bundle Editor — single composition sheet (ADMIN_BUNDLES_UI_PLAN §7.4/§7.5).
+       Hidden until a row is clicked (Phase 1c §7.3, UI_T2_1 Stage D). -->
   <div class="row" id="bundle-editor-section" style="display: none;">
     <div class="col-12">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h5>Bundle Editor <span id="editor-bundle-name" class="text-muted ml-2"></span> <span id="editor-bundle-price" class="badge badge-info ml-2"></span></h5>
-          <div id="editor-actions" style="display: none;">
-            <button id="btn-add-text-slot" class="btn btn-sm mr-1">Add Text</button>
-            <button id="btn-add-product-slot" class="btn btn-sm mr-1">Add Product</button>
-            <button id="btn-save-bundle" class="btn btn-sm">Save Changes</button>
-            <button id="btn-close-editor" class="btn btn-sm ml-1">Close</button>
+          <h5 class="mb-0">Bundle Editor</h5>
+          <div>
+            <button id="btn-save-composition" class="btn btn-sm mr-1" disabled>Save Composition</button>
+            <button id="btn-discard-draft" class="btn btn-sm mr-1" style="display:none;">Discard</button>
+            <button id="btn-close-editor" class="btn btn-sm">Close</button>
           </div>
         </div>
         <div class="card-body">
           <!-- Deficiency strip (Phase 1c): what changed / status; grows with Stage 7 (Phase 4) -->
           <div id="editor-deficiency-strip" class="mb-2"></div>
-          <div class="row">
-            <!-- Left: Slot List + Preview Controls -->
+
+          <!-- Header strip (§7.4): names / status / type badge / price summary. Discount is
+               WC-managed (§7.1c) — shown only as part of the read-only price summary, never edited. -->
+          <div class="form-row align-items-end mb-3" id="editor-header-strip">
+            <div class="col-md-3">
+              <label class="small text-muted mb-1">Name (English)</label>
+              <input type="text" class="form-control form-control-sm" id="hdr-nameEn">
+            </div>
+            <div class="col-md-3">
+              <label class="small text-muted mb-1">Name (Hebrew)</label>
+              <input type="text" class="form-control form-control-sm" id="hdr-nameHe" dir="rtl">
+            </div>
+            <div class="col-md-2">
+              <label class="small text-muted mb-1">Status</label>
+              <select class="form-control form-control-sm" id="hdr-status">
+                <option value="Active">Active</option>
+                <option value="Draft">Draft</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </div>
             <div class="col-md-4">
-              <div id="slot-list-container">
-                <div class="text-muted">Select a bundle to edit</div>
-              </div>
-              <!-- Preview Controls -->
-              <div id="preview-controls" class="mt-3 d-none">
-                <div class="d-flex align-items-center">
-                  <small class="text-muted font-weight-bold mr-2">Preview:</small>
-                  <a href="#" id="preview-tab-en" class="small mr-2 font-weight-bold">English</a>
-                  <a href="#" id="preview-tab-he" class="small text-muted">עברית</a>
-                </div>
-              </div>
+              <div class="small text-muted mb-1">Type <span class="badge badge-secondary" id="hdr-type">-</span></div>
+              <div id="hdr-price" class="small font-weight-bold"></div>
             </div>
-            <!-- Right: Slot Detail Editor + Preview -->
-            <div class="col-md-8">
-              <div id="slot-detail-container">
-                <div class="text-muted">Select a slot to view details</div>
-              </div>
-              <!-- Bundle Preview Content -->
-              <div id="preview-section" class="mt-3 d-none">
-                <div id="preview-content" class="border rounded p-3 bg-light">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span id="preview-title" class="h5 font-weight-bold mb-0"></span>
-                    <span id="preview-price" class="text-info font-weight-bold"></span>
-                  </div>
-                  <div id="preview-short-desc" class="mb-2"></div>
-                  <div id="preview-long-desc" class="text-muted mb-3" style="white-space: pre-wrap;"></div>
-                  <table class="table table-sm table-bordered mb-0">
-                    <tbody id="preview-slots-body"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+          </div>
+
+          <!-- One ordered composition list (§7.4): text headers + product rows -->
+          <div id="composition-list"></div>
+
+          <div class="mt-2">
+            <button id="btn-add-text" class="btn btn-sm mr-1">+ Add Text</button>
+            <button id="btn-add-product" class="btn btn-sm">+ Add Product</button>
           </div>
         </div>
       </div>
@@ -113,23 +119,21 @@
   </div>
 </div>
 
-<!-- Slot Edit Modal -->
-<div class="modal fade" id="slotEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="slotEditModalTitle">Edit Slot</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+<!-- Product Picker Modal (modal-overlay pattern — NOT bootstrap; §7.4) -->
+<div class="modal-overlay" id="product-picker-modal">
+  <div class="modal-container" style="max-width: 760px;">
+    <div class="modal-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+      <strong class="mb-0">Choose a Product</strong>
+      <button type="button" class="close" id="btn-picker-close" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="form-body">
+      <input type="text" class="form-control form-control-sm mb-2" id="picker-search" placeholder="Filter by name or SKU...">
+      <div id="picker-results" style="max-height: 380px; overflow-y: auto;">
+        <div class="text-muted">Loading...</div>
       </div>
-      <div class="modal-body" id="slotEditModalBody">
-        <!-- Dynamic content -->
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn" id="btn-save-slot">Save Slot</button>
-      </div>
+    </div>
+    <div class="modal-footer bg-light">
+      <button class="btn btn-sm" id="btn-picker-cancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -149,13 +153,22 @@
 
   // State
   var currentBundleId = null;
-  var currentBundle = null;
+  var currentBundle = null;      // last backend-loaded bundle (type/price baseline)
   var selectedSlotId = null;
   var healthData = [];
   var selectedReplacements = [];
   var categoryOptions = [];
   var pushBundleIds = [];        // bundleIds needing export (from cached push_status) — Phase 1b
   var currentFilter = 'all';     // active chip: all | needs-export | ok
+
+  // Composition-sheet draft (§7.5): the working copy. Edits mutate `draft`; nothing commits until
+  // Save Composition. `draft.slots[]` are in display order; deleted rows stay (struck) until save.
+  var draft = null;              // { header:{nameEn,nameHe,status}, type, price:{...}, slots:[...] }
+  var draftDirty = false;
+  var clientIdSeq = 1;           // local row identity (new rows have no slotId yet)
+  var pickerCid = null;          // composition row the picker is currently targeting
+  var pickerProducts = [];       // last eligible-product fetch (for the client-side search filter)
+  var DRAFT_KEY_PREFIX = 'jlmops.bundleCompDraft.v1.';  // sessionStorage key per bundle (A0)
 
   // =================================================================================
   // INITIALIZATION
@@ -212,10 +225,28 @@
     document.querySelectorAll('.bundle-chip').forEach(function(chip) {
       chip.addEventListener('click', function() { setFilter(chip.dataset.filter); });
     });
+    // Editor (composition sheet)
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
-    document.getElementById('btn-add-text-slot').addEventListener('click', function() { addSlot('Text'); });
-    document.getElementById('btn-add-product-slot').addEventListener('click', function() { addSlot('Product'); });
-    document.getElementById('btn-save-slot').addEventListener('click', saveSlot);
+    document.getElementById('btn-save-composition').addEventListener('click', saveComposition);
+    document.getElementById('btn-discard-draft').addEventListener('click', discardDraft);
+    document.getElementById('btn-add-text').addEventListener('click', addTextSlot);
+    document.getElementById('btn-add-product').addEventListener('click', addProductSlot);
+
+    // Header strip → draft
+    ['hdr-nameEn', 'hdr-nameHe', 'hdr-status'].forEach(function(id) {
+      document.getElementById(id).addEventListener('input', onHeaderInput);
+      document.getElementById(id).addEventListener('change', onHeaderInput);
+    });
+
+    // Product picker modal
+    document.getElementById('btn-picker-close').addEventListener('click', closePicker);
+    document.getElementById('btn-picker-cancel').addEventListener('click', closePicker);
+    document.getElementById('picker-search').addEventListener('input', renderPickerResults);
+
+    // Desktop seatbelt (§7.5): warn before leaving with unsaved composition edits.
+    window.addEventListener('beforeunload', function(e) {
+      if (draftDirty) { e.preventDefault(); e.returnValue = ''; return ''; }
+    });
   }
 
   // =================================================================================
@@ -254,18 +285,6 @@
     // lightweight stats payload omits it, so only set it when a caller provides the counts.
     if (typeof stats.needsAttention !== 'undefined') {
       document.getElementById('stat-attention').textContent = stats.needsAttention + ' bundles (' + stats.lowInventoryCount + ' slots)';
-    }
-  }
-
-  function toggleDescSection(section) {
-    var contentEl = document.getElementById(section + '-desc-content');
-    var toggleEl = document.getElementById(section + '-toggle');
-    if (contentEl.style.display === 'none') {
-      contentEl.style.display = 'block';
-      toggleEl.textContent = '▲';
-    } else {
-      contentEl.style.display = 'none';
-      toggleEl.textContent = '▼';
     }
   }
 
@@ -361,11 +380,16 @@
   }
 
   function closeEditor() {
+    if (draftDirty && !window.confirm('Discard unsaved composition changes?')) return;
+    if (currentBundleId) clearDraft(currentBundleId);
     var section = document.getElementById('bundle-editor-section');
     if (section) section.style.display = 'none';
     selectBundleRow(null);
     currentBundleId = null;
     currentBundle = null;
+    draft = null;
+    draftDirty = false;
+    setSaveEnabled(false);
   }
 
   // ---- Filter chips (Phase 1b) -------------------------------------------------
@@ -526,9 +550,40 @@
   // BUNDLE EDITOR
   // =================================================================================
 
-  function loadBundleForEditing(bundleId, focusSlotId) {
-    currentBundleId = bundleId;
+  // -- small escapers (TaskWidgets.escape handles &<>; escAttr also neutralizes quotes) ----------
+  function esc(s) { return TaskWidgets.escape(String(s == null ? '' : s)); }
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
+  function setSaveEnabled(on) {
+    var btn = document.getElementById('btn-save-composition');
+    if (btn) btn.disabled = !on;
+    var discard = document.getElementById('btn-discard-draft');
+    if (discard) discard.style.display = on ? 'inline-block' : 'none';
+  }
+
+  function markDirty() {
+    draftDirty = true;
+    setSaveEnabled(true);
+    persistDraft();
+  }
+
+  // ---- sessionStorage draft mirror (A0, RELOAD_RESILIENCE_PLAN §4.A0) ------------
+  function draftKey(bundleId) { return DRAFT_KEY_PREFIX + bundleId; }
+  function persistDraft() {
+    if (!currentBundleId || !draft) return;
+    try { sessionStorage.setItem(draftKey(currentBundleId), JSON.stringify(draft)); }
+    catch (e) { /* storage blocked: degrade silently, the DOM still holds the draft */ }
+  }
+  function clearDraft(bundleId) { try { sessionStorage.removeItem(draftKey(bundleId)); } catch (e) {} }
+  function restoreDraft(bundleId) {
+    try { var raw = sessionStorage.getItem(draftKey(bundleId)); return raw ? JSON.parse(raw) : null; }
+    catch (e) { return null; }
+  }
+
+  // ---- load + build draft -------------------------------------------------------
+  function loadBundleForEditing(bundleId) {
+    currentBundleId = String(bundleId);
+    showEditorLoading();
     google.script.run
       .withSuccessHandler(function(result) {
         if (result.error) {
@@ -536,7 +591,19 @@
           return;
         }
         currentBundle = result.data;
-        renderBundleEditor(result.data, focusSlotId);
+        // Rehydrate an in-progress draft (same-tab reload / re-open) if one survives in storage.
+        var saved = restoreDraft(currentBundleId);
+        if (saved && saved.slots) {
+          draft = saved;
+          draftDirty = true;
+          var maxCid = saved.slots.reduce(function(m, r) { return Math.max(m, Number(r.cid) || 0); }, 0);
+          clientIdSeq = Math.max(clientIdSeq, maxCid + 1);
+        } else {
+          draft = buildDraftFromBundle(result.data);
+          draftDirty = false;
+        }
+        renderEditor();
+        setSaveEnabled(draftDirty);
       })
       .withFailureHandler(function(err) {
         TaskWidgets.toast('Failed to load bundle: ' + err.message, 'error');
@@ -544,612 +611,485 @@
       .WebAppBundles_getBundleWithSlots(bundleId);
   }
 
-  function renderBundleEditor(bundle, focusSlotId) {
-    // Reveal the editor in place (Phase 1c) and render the deficiency strip.
+  // Immediate feedback on row-click: reveal the editor with a spinner while getBundleWithSlots
+  // round-trips (the clicked row is already highlighted by selectBundleRow).
+  function showEditorLoading() {
     var section = document.getElementById('bundle-editor-section');
     if (section) section.style.display = '';
-    renderDeficiencyStrip(bundle);
+    var strip = document.getElementById('editor-deficiency-strip');
+    if (strip) strip.innerHTML = '';
+    ['hdr-nameEn', 'hdr-nameHe'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('hdr-type').textContent = '-';
+    document.getElementById('hdr-price').textContent = '';
+    setSaveEnabled(false);
+    var list = document.getElementById('composition-list');
+    if (list) list.innerHTML = '<div class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm mr-2"></span>Loading bundle…</div>';
+  }
 
-    document.getElementById('editor-bundle-name').textContent = bundle.nameEn || bundle.bundleId;
-    document.getElementById('editor-actions').style.display = 'block';
-
-    // Use the backend-computed pricing (BundleService._calculateBundlePrice): totalPrice sums
-    // price*qty with qty-0 contributing 0; discount = totalPrice - discountPrice (0 if none);
-    // displayPrice = the post-discount selling price. The old frontend recompute used
-    // (defaultQty || 1), counting qty-0 add-ons as qty-1 and producing phantom savings.
-    var totalPrice = bundle.totalPrice || 0;
-    var discount = bundle.discount || 0;
-    var displayPrice = bundle.displayPrice || 0;
-    bundle.calculatedTotal = totalPrice;  // the preview reads this
-
-    // Title bar: total (price*qty, skips qty 0) · discount · total incl discount.
-    var priceEl = document.getElementById('editor-bundle-price');
-    if (totalPrice > 0 || displayPrice > 0) {
-      var priceText;
-      if (discount > 0) {
-        priceText = 'Total ₪' + totalPrice.toFixed(0) + ' · Discount ₪' + discount.toFixed(0) + ' · Final ₪' + displayPrice.toFixed(0);
-      } else {
-        priceText = 'Total ₪' + (totalPrice > 0 ? totalPrice : displayPrice).toFixed(0);
-      }
-      priceEl.textContent = priceText;
-      priceEl.style.display = 'inline';
-    } else {
-      priceEl.style.display = 'none';
-    }
-
-    // Store bundle descriptions for collapsible sections
-    window._bundleDescriptions = {
-      shortEn: bundle.shortDescEn || '',
-      shortHe: bundle.shortDescHe || '',
-      longEn: bundle.longDescEn || '',
-      longHe: bundle.longDescHe || ''
+  function buildDraftFromBundle(b) {
+    return {
+      header: { nameEn: b.nameEn || '', nameHe: b.nameHe || '', status: b.status || 'Draft' },
+      type: b.type || 'Bundle',
+      price: { totalPrice: b.totalPrice || 0, discount: b.discount || 0, displayPrice: b.displayPrice || 0 },
+      slots: (b.slots || []).map(slotToDraftRow)
     };
+  }
 
-    // Render slot list
-    var slotListHtml = '<div class="list-group">';
-    if (bundle.slots && bundle.slots.length > 0) {
-      slotListHtml += bundle.slots.map(function(slot) {
-        var preview = slot.slotType === 'Text' ?
-          '<small class="text-muted">' + (slot.textEn || '(empty)').substring(0, 30) + '</small>' :
-          '<small>' + (slot.activeSKU || 'No product') + '</small>';
+  function slotToDraftRow(s) {
+    return {
+      cid: clientIdSeq++,
+      slotId: s.slotId || '',
+      slotType: s.slotType || 'Product',
+      textStyle: s.textStyle || 'none',
+      textEn: s.textEn || '',
+      textHe: s.textHe || '',
+      activeSKU: s.activeSKU || '',
+      productName: s.productName || '',
+      productPrice: (s.productPrice != null ? s.productPrice : 0),
+      profitRate: (s.profitRate != null ? s.profitRate : null),
+      category: s.category || '',
+      category2: s.category2 || '',
+      priceMin: (s.priceMin != null ? s.priceMin : null),
+      priceMax: (s.priceMax != null ? s.priceMax : null),
+      intensity: (s.intensity != null ? s.intensity : null),
+      complexity: (s.complexity != null ? s.complexity : null),
+      acidity: (s.acidity != null ? s.acidity : null),
+      nameContains: s.nameContains || '',
+      exclusive: !!s.exclusive,
+      qtyVariable: !!s.qtyVariable,
+      defaultQty: (s.defaultQty != null ? s.defaultQty : 1),
+      _deleted: false,
+      _open: false
+    };
+  }
 
-        var activeClass = slot.slotId === focusSlotId ? ' active' : '';
-        return '<a href="#" class="list-group-item list-group-item-action slot-item' + activeClass + '" data-slot-id="' + slot.slotId + '">' +
-          '<div class="d-flex justify-content-between">' +
-            '<span><strong>' + slot.order + '.</strong> ' + slot.slotType + '</span>' +
-            '<span class="badge badge-light">' + (slot.slotType === 'Product' ? slot.defaultQty + 'x' : slot.textStyle) + '</span>' +
-          '</div>' +
-          preview +
-        '</a>';
-      }).join('');
+  function blankRow(type) {
+    return {
+      cid: clientIdSeq++, slotId: '', slotType: type, textStyle: 'none', textEn: '', textHe: '',
+      activeSKU: '', productName: '', productPrice: 0, profitRate: null, category: '', category2: '',
+      priceMin: null, priceMax: null, intensity: null, complexity: null, acidity: null, nameContains: '',
+      exclusive: false, qtyVariable: false, defaultQty: 1, _deleted: false, _open: false
+    };
+  }
+
+  function findRow(cid) {
+    return draft && draft.slots.find(function(r) { return String(r.cid) === String(cid); });
+  }
+
+  // ---- render -------------------------------------------------------------------
+  function renderEditor() {
+    var section = document.getElementById('bundle-editor-section');
+    if (section) section.style.display = '';
+    renderDeficiencyStrip({ bundleId: currentBundleId });
+    renderHeaderStrip();
+    renderComposition();
+  }
+
+  function renderHeaderStrip() {
+    document.getElementById('hdr-nameEn').value = draft.header.nameEn;
+    document.getElementById('hdr-nameHe').value = draft.header.nameHe;
+    document.getElementById('hdr-status').value = draft.header.status;
+    document.getElementById('hdr-type').textContent = draft.type || '-';
+    renderPriceSummary();
+  }
+
+  // Price = backend figures from the last load/save (BundleService._calculateBundlePrice; qty-0
+  // contributes 0). Discount is WC-managed (§7.1c) — read-only here. Re-derived server-side on save,
+  // so it reflects the saved composition, not live unsaved edits.
+  function renderPriceSummary() {
+    var p = draft.price || {};
+    var el = document.getElementById('hdr-price');
+    var total = p.totalPrice || 0, disc = p.discount || 0, disp = p.displayPrice || 0;
+    if (total > 0 || disp > 0) {
+      el.textContent = (disc > 0)
+        ? 'Total ₪' + total.toFixed(0) + ' · Discount ₪' + disc.toFixed(0) + ' · Final ₪' + disp.toFixed(0)
+        : 'Total ₪' + (total > 0 ? total : disp).toFixed(0);
     } else {
-      slotListHtml += '<div class="text-muted p-3">No slots in this bundle</div>';
+      el.textContent = '';
     }
-    slotListHtml += '</div>';
+  }
 
-    document.getElementById('slot-list-container').innerHTML = slotListHtml;
+  function onHeaderInput() {
+    if (!draft) return;
+    draft.header.nameEn = document.getElementById('hdr-nameEn').value;
+    draft.header.nameHe = document.getElementById('hdr-nameHe').value;
+    draft.header.status = document.getElementById('hdr-status').value;
+    markDirty();
+  }
 
-    // Bind slot click handlers
-    document.querySelectorAll('.slot-item').forEach(function(item) {
-      item.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('.slot-item').forEach(function(i) { i.classList.remove('active'); });
-        this.classList.add('active');
-        selectedSlotId = this.dataset.slotId;
-        renderSlotDetail(selectedSlotId);
+  var TEXT_STYLES = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'none'];
+
+  function renderComposition() {
+    var list = document.getElementById('composition-list');
+    if (!draft.slots.length) {
+      list.innerHTML = '<div class="text-muted p-2">Empty — add a text header or a product below.</div>';
+      return;
+    }
+    var n = 0;
+    list.innerHTML = draft.slots.map(function(r, idx) {
+      if (!r._deleted) n++;
+      var num = r._deleted ? '' : n;
+      return r.slotType === 'Text' ? renderTextRow(r, num, idx) : renderProductRow(r, num, idx);
+    }).join('');
+    bindCompositionEvents();
+  }
+
+  function delOrUndo(r) {
+    return r._deleted
+      ? '<button class="btn btn-sm btn-undo" data-cid="' + r.cid + '">Undo</button>'
+      : '<button class="btn btn-sm btn-del" data-cid="' + r.cid + '">Delete</button>';
+  }
+
+  function moveBtns(r, idx) {
+    return '<button class="btn btn-sm btn-move" data-cid="' + r.cid + '" data-dir="up"' + (idx === 0 ? ' disabled' : '') + '>&uarr;</button>' +
+           '<button class="btn btn-sm btn-move mr-2" data-cid="' + r.cid + '" data-dir="down"' + (idx === draft.slots.length - 1 ? ' disabled' : '') + '>&darr;</button>';
+  }
+
+  function renderTextRow(r, n, idx) {
+    var styleOpts = TEXT_STYLES.map(function(s) {
+      return '<option value="' + s + '"' + (r.textStyle === s ? ' selected' : '') + '>' + s.toUpperCase() + '</option>';
+    }).join('');
+    return '<div class="comp-row text-row' + (r._deleted ? ' deleted' : '') + '" data-cid="' + r.cid + '">' +
+      '<div class="d-flex align-items-center comp-main">' +
+        '<span class="comp-num">' + (n || '') + '</span>' +
+        moveBtns(r, idx) +
+        '<span class="badge badge-light mr-2">Text</span>' +
+        '<select class="form-control form-control-sm fld-textStyle mr-2" data-cid="' + r.cid + '" style="width:72px;">' + styleOpts + '</select>' +
+        '<input class="form-control form-control-sm fld-textEn mr-1" data-cid="' + r.cid + '" placeholder="Header (EN)" value="' + escAttr(r.textEn) + '">' +
+        '<input class="form-control form-control-sm fld-textHe mr-2" data-cid="' + r.cid + '" dir="rtl" placeholder="Header (HE)" value="' + escAttr(r.textHe) + '">' +
+        delOrUndo(r) +
+      '</div>' +
+    '</div>';
+  }
+
+  // Collapsed product row = read-only data only (name · SKU · price · % · qty · flexible), spread
+  // across the row. ALL editing — Replace, quantity, flexibility, criteria — lives in Details.
+  function renderProductRow(r, n, idx) {
+    var priceStr = r.productPrice ? '₪' + Number(r.productPrice).toFixed(0) : '—';
+    var pctStr = (r.profitRate !== null && r.profitRate !== undefined) ? Math.round(r.profitRate * 100) + '%' : '—';
+    var flexStr = r.qtyVariable ? '<span class="badge badge-info">Flexible</span>' : '<span class="text-muted">—</span>';
+    var nameHtml = r.activeSKU
+      ? '<strong>' + esc(r.productName || '(unknown product)') + '</strong>' +
+        ' <span class="text-muted small">' + esc(r.activeSKU) + '</span>'
+      : '<span class="text-warning">No product selected</span>';
+    return '<div class="comp-row' + (r._deleted ? ' deleted' : '') + '" data-cid="' + r.cid + '">' +
+      '<div class="d-flex align-items-center comp-main">' +
+        '<span class="comp-num">' + (n || '') + '</span>' +
+        moveBtns(r, idx) +
+        '<div class="flex-grow-1 mr-2 text-truncate">' + nameHtml + '</div>' +
+        '<div class="comp-cell text-right mr-3" style="width:60px;" title="Retail price">' + priceStr + '</div>' +
+        '<div class="comp-cell text-right mr-3" style="width:42px;" title="Profit rate">' + pctStr + '</div>' +
+        '<div class="comp-cell text-center mr-3" style="width:42px;" title="Quantity">&times;' + Number(r.defaultQty) + '</div>' +
+        '<div class="comp-cell text-center mr-3" style="width:72px;">' + flexStr + '</div>' +
+        '<button class="btn btn-sm mr-1 btn-crit" data-cid="' + r.cid + '" title="Edit: replace product, quantity, flexibility, criteria">Details ' + (r._open ? '&#9662;' : '&#9656;') + '</button>' +
+        delOrUndo(r) +
+      '</div>' +
+      renderDetails(r) +
+    '</div>';
+  }
+
+  function catOptions(sel) {
+    return '<option value="">-- None --</option>' + categoryOptions.map(function(c) {
+      return '<option value="' + escAttr(c) + '"' + (sel === c ? ' selected' : '') + '>' + esc(c) + '</option>';
+    }).join('');
+  }
+
+  // Details = the product slot's edit surface. Replace control + quantity (plain integer) + Flexible
+  // + selection criteria, content-sized (no Bootstrap grid columns — those stretched every input).
+  function renderDetails(r) {
+    if (!r._open) return '';
+    function n(v) { return (v !== null && v !== undefined) ? v : ''; }
+    var cid = r.cid;
+    function fld(label, inner) { return '<div><label>' + label + '</label>' + inner + '</div>'; }
+    function numAttr(cls, val) {
+      return '<input type="number" min="1" max="5" class="form-control form-control-sm ' + cls + '" data-cid="' + cid + '" value="' + val + '" style="width:46px;">';
+    }
+    function chk(cls, idPfx, on, label, title) {
+      return '<div class="form-check"><input type="checkbox" class="form-check-input ' + cls + '" id="' + idPfx + cid + '" data-cid="' + cid + '"' + (on ? ' checked' : '') + '><label class="form-check-label" for="' + idPfx + cid + '"' + (title ? ' title="' + title + '"' : '') + '>' + label + '</label></div>';
+    }
+    return '<div class="crit-grid mt-2 pt-2 border-top d-flex flex-wrap align-items-end" data-cid="' + cid + '" style="gap:6px 12px;">' +
+      '<div class="w-100">' +
+        '<button class="btn btn-sm btn-pick" data-cid="' + cid + '">' + (r.activeSKU ? 'Replace product' : 'Choose product') + '</button>' +
+      '</div>' +
+      fld('Quantity', '<input type="number" min="0" class="form-control form-control-sm fld-qty" data-cid="' + cid + '" value="' + Number(r.defaultQty) + '" style="width:64px;">') +
+      '<div class="align-self-center">' + chk('fld-qtyVariable', 'qv-', r.qtyVariable, 'Flexible', 'Customer can vary the quantity / member is optional (WPClever ‘optional’)') + '</div>' +
+      fld('Category', '<select class="form-control form-control-sm fld-category" data-cid="' + cid + '" style="width:150px;">' + catOptions(r.category) + '</select>') +
+      fld('Category 2', '<select class="form-control form-control-sm fld-category2" data-cid="' + cid + '" style="width:150px;">' + catOptions(r.category2) + '</select>') +
+      fld('Price min', '<input type="number" class="form-control form-control-sm fld-priceMin" data-cid="' + cid + '" value="' + n(r.priceMin) + '" style="width:64px;">') +
+      fld('Price max', '<input type="number" class="form-control form-control-sm fld-priceMax" data-cid="' + cid + '" value="' + n(r.priceMax) + '" style="width:64px;">') +
+      fld('Intensity', numAttr('fld-intensity', n(r.intensity))) +
+      fld('Complexity', numAttr('fld-complexity', n(r.complexity))) +
+      fld('Acidity', numAttr('fld-acidity', n(r.acidity))) +
+      fld('Name contains', '<input type="text" class="form-control form-control-sm fld-nameContains" data-cid="' + cid + '" value="' + escAttr(r.nameContains) + '" style="width:150px;">') +
+      '<div class="align-self-center">' + chk('fld-exclusive', 'ex-', r.exclusive, 'Exclusive') + '</div>' +
+    '</div>';
+  }
+
+  // ---- per-row event wiring -----------------------------------------------------
+  function bindCompositionEvents() {
+    var list = document.getElementById('composition-list');
+
+    // Text/criteria field edits write to the draft WITHOUT re-rendering (keeps input focus).
+    bindField(list, '.fld-textStyle', 'change', 'textStyle', strVal);
+    bindField(list, '.fld-textEn', 'input', 'textEn', strVal);
+    bindField(list, '.fld-textHe', 'input', 'textHe', strVal);
+    bindField(list, '.fld-category', 'change', 'category', strVal);
+    bindField(list, '.fld-category2', 'change', 'category2', strVal);
+    bindField(list, '.fld-priceMin', 'input', 'priceMin', numVal);
+    bindField(list, '.fld-priceMax', 'input', 'priceMax', numVal);
+    bindField(list, '.fld-intensity', 'input', 'intensity', intVal);
+    bindField(list, '.fld-complexity', 'input', 'complexity', intVal);
+    bindField(list, '.fld-acidity', 'input', 'acidity', intVal);
+    bindField(list, '.fld-nameContains', 'input', 'nameContains', strVal);
+    bindField(list, '.fld-exclusive', 'change', 'exclusive', boolVal);
+
+    // Quantity (plain integer in Details) + Flexible both surface in the collapsed read-only row,
+    // so they re-render on change to keep that summary current.
+    list.querySelectorAll('.fld-qty').forEach(function(el) {
+      el.addEventListener('change', function() {
+        var r = findRow(el.dataset.cid); if (!r) return;
+        var v = parseInt(el.value, 10);
+        r.defaultQty = (isNaN(v) || v < 0) ? 0 : v;
+        markDirty(); renderComposition();
+      });
+    });
+    list.querySelectorAll('.fld-qtyVariable').forEach(function(el) {
+      el.addEventListener('change', function() {
+        var r = findRow(el.dataset.cid); if (!r) return;
+        r.qtyVariable = el.checked;
+        markDirty(); renderComposition();
       });
     });
 
-    // Auto-select focused slot or first slot
-    if (focusSlotId) {
-      selectedSlotId = focusSlotId;
-      renderSlotDetail(focusSlotId);
-    } else if (bundle.slots && bundle.slots.length > 0) {
-      selectedSlotId = bundle.slots[0].slotId;
-      renderSlotDetail(selectedSlotId);
-    } else {
-      document.getElementById('slot-detail-container').innerHTML = '<div class="text-muted">No slots to display</div>';
-    }
-
-    // Show preview controls and content, bind click handlers
-    document.getElementById('preview-controls').classList.remove('d-none');
-    document.getElementById('preview-section').classList.remove('d-none');
-
-    // Bind preview tab click handlers
-    document.getElementById('preview-tab-en').onclick = function(e) {
-      e.preventDefault();
-      renderBundlePreview('en');
-    };
-    document.getElementById('preview-tab-he').onclick = function(e) {
-      e.preventDefault();
-      renderBundlePreview('he');
-    };
-
-    renderBundlePreview('en');
+    // Structural buttons → mutate draft + re-render.
+    list.querySelectorAll('.btn-move').forEach(function(b) {
+      b.addEventListener('click', function() { if (!b.disabled) moveRow(b.dataset.cid, b.dataset.dir); });
+    });
+    list.querySelectorAll('.btn-crit').forEach(function(b) {
+      b.addEventListener('click', function() { toggleCriteria(b.dataset.cid); });
+    });
+    list.querySelectorAll('.btn-del').forEach(function(b) {
+      b.addEventListener('click', function() { setDeleted(b.dataset.cid, true); });
+    });
+    list.querySelectorAll('.btn-undo').forEach(function(b) {
+      b.addEventListener('click', function() { setDeleted(b.dataset.cid, false); });
+    });
+    list.querySelectorAll('.btn-pick').forEach(function(b) {
+      b.addEventListener('click', function() { openPicker(b.dataset.cid); });
+    });
   }
 
-  function renderBundlePreview(lang) {
-    if (!currentBundle) return;
-    var isHe = lang === 'he';
-
-    // Update tab active state (bold for selected, muted for other)
-    var tabEn = document.getElementById('preview-tab-en');
-    var tabHe = document.getElementById('preview-tab-he');
-    if (tabEn && tabHe) {
-      tabEn.className = isHe ? 'small mr-2 text-muted' : 'small mr-2 font-weight-bold';
-      tabHe.className = isHe ? 'small font-weight-bold' : 'small text-muted';
-    }
-
-    // Set RTL for Hebrew
-    var content = document.getElementById('preview-content');
-    if (content) content.dir = isHe ? 'rtl' : 'ltr';
-
-    // Populate content based on language
-    var title = isHe ? (currentBundle.nameHe || currentBundle.nameEn) : currentBundle.nameEn;
-    document.getElementById('preview-title').textContent = title || '';
-
-    // Show calculated total with savings if applicable (use ₪ symbol)
-    var priceText = '';
-    if (currentBundle.calculatedTotal > 0) {
-      priceText = '₪' + currentBundle.calculatedTotal.toFixed(0);
-      if (currentBundle.displayPrice > 0 && currentBundle.displayPrice < currentBundle.calculatedTotal) {
-        var savings = currentBundle.calculatedTotal - currentBundle.displayPrice;
-        priceText += ' → ₪' + currentBundle.displayPrice.toFixed(0) + ' (saves ₪' + savings.toFixed(0) + ')';
-      }
-    } else if (currentBundle.displayPrice) {
-      priceText = '₪' + currentBundle.displayPrice;
-    }
-    document.getElementById('preview-price').textContent = priceText;
-
-    var desc = window._bundleDescriptions || {};
-    document.getElementById('preview-short-desc').textContent = isHe ? (desc.shortHe || '') : (desc.shortEn || '');
-    document.getElementById('preview-long-desc').textContent = isHe ? (desc.longHe || '') : (desc.longEn || '');
-
-    // Build slots table (columns: name, qty, price)
-    var tbody = document.getElementById('preview-slots-body');
-    tbody.innerHTML = '';
-    if (currentBundle.slots) {
-      currentBundle.slots.forEach(function(slot) {
-        var tr = document.createElement('tr');
-        if (slot.slotType === 'Text') {
-          var text = isHe ? (slot.textHe || slot.textEn || '') : (slot.textEn || '');
-          tr.innerHTML = '<td colspan="3"><em>' + text + '</em></td>';
-        } else {
-          var qtyDisplay = (slot.defaultQty || 1) + (slot.qtyVariable ? ' ±' : '');
-          var productName = slot.productName || slot.activeSKU || '-';
-          var price = slot.productPrice ? '₪' + slot.productPrice : '-';
-          tr.innerHTML = '<td>' + productName + '</td><td>' + qtyDisplay + '</td><td>' + price + '</td>';
-        }
-        tbody.appendChild(tr);
+  function bindField(list, sel, evt, field, conv) {
+    list.querySelectorAll(sel).forEach(function(el) {
+      el.addEventListener(evt, function() {
+        var r = findRow(el.dataset.cid); if (!r) return;
+        r[field] = conv(el);
+        markDirty();
       });
-    }
+    });
+  }
+  function strVal(el) { return el.value; }
+  function numVal(el) { return el.value === '' ? null : parseFloat(el.value); }
+  function intVal(el) { return el.value === '' ? null : parseInt(el.value, 10); }
+  function boolVal(el) { return el.checked; }
+
+  // ---- structural mutations -----------------------------------------------------
+  function moveRow(cid, dir) {
+    var i = draft.slots.findIndex(function(r) { return String(r.cid) === String(cid); });
+    if (i === -1) return;
+    var j = dir === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= draft.slots.length) return;
+    var tmp = draft.slots[i]; draft.slots[i] = draft.slots[j]; draft.slots[j] = tmp;
+    markDirty(); renderComposition();
+  }
+  function toggleCriteria(cid) {
+    var r = findRow(cid); if (!r) return;
+    r._open = !r._open;
+    renderComposition();  // UI-only; not a draft mutation
+  }
+  function setDeleted(cid, val) {
+    var r = findRow(cid); if (!r) return;
+    r._deleted = val;
+    markDirty(); renderComposition();
+  }
+  function addTextSlot() {
+    if (!draft) return;
+    draft.slots.push(blankRow('Text'));
+    markDirty(); renderComposition();
+  }
+  function addProductSlot() {
+    if (!draft) return;
+    var row = blankRow('Product');
+    draft.slots.push(row);
+    markDirty(); renderComposition();
+    openPicker(row.cid);  // a new product row wants a product immediately
   }
 
-  function renderSlotDetail(slotId) {
-    var slot = currentBundle.slots.find(function(s) { return s.slotId === slotId; });
-    if (!slot) {
-      document.getElementById('slot-detail-container').innerHTML = '<div class="text-danger">Slot not found</div>';
+  // ---- product picker (ModalOverlay over getEligibleProducts; §7.4) -------------
+  function openPicker(cid) {
+    var r = findRow(cid); if (!r || r.slotType !== 'Product') return;
+    pickerCid = cid;
+    document.getElementById('picker-search').value = '';
+    document.getElementById('picker-results').innerHTML = '<div class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm mr-2"></span>Loading products…</div>';
+    document.getElementById('product-picker-modal').style.display = 'flex';
+
+    // The row may be new or have unsaved criteria, so pass a draftSlot (backend uses it directly
+    // instead of resolving by slotId) + the SKUs already chosen in other live draft rows to exclude.
+    var draftSlot = {
+      slotType: 'Product', bundleId: currentBundleId, slotId: r.slotId || ('draft-' + r.cid),
+      category: r.category || '', category2: r.category2 || '',
+      priceMin: r.priceMin, priceMax: r.priceMax,
+      intensity: r.intensity, complexity: r.complexity, acidity: r.acidity,
+      nameContains: '', exclusive: !!r.exclusive
+    };
+    var excludeSKUs = draft.slots.filter(function(o) {
+      return o.cid !== r.cid && !o._deleted && o.slotType === 'Product' && o.activeSKU;
+    }).map(function(o) { return o.activeSKU; });
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.error) { document.getElementById('picker-results').innerHTML = '<div class="text-danger">' + esc(res.error) + '</div>'; return; }
+        pickerProducts = res.data || [];
+        renderPickerResults();
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('picker-results').innerHTML = '<div class="text-danger">Failed: ' + esc(err.message) + '</div>';
+      })
+      .WebAppBundles_getEligibleProducts(r.slotId || '', { limit: 60, excludeExclusiveSKUs: true, draftSlot: draftSlot, excludeSKUs: excludeSKUs });
+  }
+
+  function renderPickerResults() {
+    var q = (document.getElementById('picker-search').value || '').toLowerCase().trim();
+    var rows = pickerProducts.filter(function(p) {
+      if (!q) return true;
+      return (String(p.nameEn || '').toLowerCase().indexOf(q) !== -1) || (String(p.sku || '').toLowerCase().indexOf(q) !== -1);
+    });
+    var box = document.getElementById('picker-results');
+    if (!rows.length) {
+      box.innerHTML = '<div class="text-muted">No eligible products' + (q ? ' match &ldquo;' + esc(q) + '&rdquo;' : ' for this slot\'s criteria') + '.</div>';
+      return;
+    }
+    box.innerHTML = '<table class="table table-sm table-hover mb-0"><thead><tr><th>Name</th><th>SKU</th><th>Stock</th><th>Price</th><th>Profit</th><th></th></tr></thead><tbody>' +
+      rows.map(function(p) {
+        var profit = (p.profitRate !== null && p.profitRate !== undefined) ? Math.round(p.profitRate * 100) + '%' : '—';
+        return '<tr>' +
+          '<td>' + esc(p.nameEn || '-') + '</td>' +
+          '<td class="text-muted small">' + esc(p.sku) + '</td>' +
+          '<td>' + p.stock + '</td>' +
+          '<td>₪' + Number(p.price).toFixed(0) + '</td>' +
+          '<td>' + profit + '</td>' +
+          '<td><button class="btn btn-sm btn-pick-one" data-sku="' + escAttr(p.sku) + '">Select</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+    box.querySelectorAll('.btn-pick-one').forEach(function(b) {
+      b.addEventListener('click', function() { choosePickerProduct(b.dataset.sku); });
+    });
+  }
+
+  function choosePickerProduct(sku) {
+    var p = pickerProducts.find(function(x) { return String(x.sku) === String(sku); });
+    var r = findRow(pickerCid);
+    if (p && r) {
+      r.activeSKU = p.sku;
+      r.productName = p.nameEn || '';
+      r.productPrice = p.price || 0;
+      r.profitRate = (p.profitRate !== null && p.profitRate !== undefined) ? p.profitRate : null;
+      markDirty();
+      renderComposition();
+    }
+    closePicker();
+  }
+
+  function closePicker() {
+    document.getElementById('product-picker-modal').style.display = 'none';
+    pickerCid = null;
+    pickerProducts = [];
+  }
+
+  // ---- atomic save / discard ----------------------------------------------------
+  function saveComposition() {
+    if (!draft || !currentBundleId) return;
+    var live = draft.slots.filter(function(r) { return !r._deleted; });
+    if (!live.length) { TaskWidgets.toast('A bundle needs at least one slot.', 'warning'); return; }
+    // Block save if a product row has no product — it would export a blank woosb id to the live site.
+    if (live.some(function(r) { return r.slotType === 'Product' && !r.activeSKU; })) {
+      TaskWidgets.toast('Every product row needs a product selected (or delete the empty row).', 'warning');
       return;
     }
 
-    // Build collapsible description sections
-    var html = '';
-    var desc = window._bundleDescriptions || {};
-    var hasShort = desc.shortEn || desc.shortHe;
-    var hasLong = desc.longEn || desc.longHe;
-
-    if (hasShort || hasLong) {
-      html += '<div class="mb-3">';
-
-      // Short Description Section
-      if (hasShort) {
-        html += '<div class="border rounded mb-2">' +
-          '<div class="d-flex justify-content-between align-items-center p-2 bg-light" id="short-desc-header" style="cursor:pointer">' +
-            '<strong class="small">Short Description</strong>' +
-            '<span id="short-toggle" class="small text-muted">▼</span>' +
-          '</div>' +
-          '<div id="short-desc-content" class="p-2 small" style="display:none">' +
-            '<div class="row">' +
-              '<div class="col-6"><div class="text-muted mb-1">English</div><div>' + (desc.shortEn || '<em class="text-muted">empty</em>') + '</div></div>' +
-              '<div class="col-6"><div class="text-muted mb-1">Hebrew</div><div dir="rtl" class="text-info">' + (desc.shortHe || '<em class="text-muted">empty</em>') + '</div></div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
+    var slots = live.map(function(r) {
+      var o = { slotType: r.slotType };
+      if (r.slotId) o.slotId = r.slotId;
+      if (r.slotType === 'Text') {
+        o.textStyle = r.textStyle; o.textEn = r.textEn; o.textHe = r.textHe;
+      } else {
+        o.activeSKU = r.activeSKU || '';
+        o.defaultQty = Number(r.defaultQty) || 0;
+        o.qtyVariable = !!r.qtyVariable;
+        o.exclusive = !!r.exclusive;
+        o.category = r.category || '';
+        o.category2 = r.category2 || '';
+        o.priceMin = r.priceMin;
+        o.priceMax = r.priceMax;
+        o.intensity = r.intensity;
+        o.complexity = r.complexity;
+        o.acidity = r.acidity;
+        o.nameContains = r.nameContains || '';
       }
+      return o;
+    });
+    var header = { nameEn: draft.header.nameEn, nameHe: draft.header.nameHe, status: draft.header.status };
 
-      // Long Description Section
-      if (hasLong) {
-        html += '<div class="border rounded">' +
-          '<div class="d-flex justify-content-between align-items-center p-2 bg-light" id="long-desc-header" style="cursor:pointer">' +
-            '<strong class="small">Long Description</strong>' +
-            '<span id="long-toggle" class="small text-muted">▼</span>' +
-          '</div>' +
-          '<div id="long-desc-content" class="p-2 small" style="display:none; max-height:200px; overflow-y:auto">' +
-            '<div class="row">' +
-              '<div class="col-6"><div class="text-muted mb-1">English</div><div style="white-space:pre-wrap">' + (desc.longEn || '<em class="text-muted">empty</em>') + '</div></div>' +
-              '<div class="col-6"><div class="text-muted mb-1">Hebrew</div><div dir="rtl" class="text-info" style="white-space:pre-wrap">' + (desc.longHe || '<em class="text-muted">empty</em>') + '</div></div>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      }
+    // Count named existing slots being removed (for the confirm prompt; blank/new rows are silent).
+    var delCount = draft.slots.filter(function(r) {
+      return r._deleted && r.slotId && (r.slotType === 'Text' ? (r.textEn || r.textHe) : r.activeSKU);
+    }).length;
 
-      html += '</div>';
-    }
-
-    html += '<div class="card"><div class="card-body">';
-
-    if (slot.slotType === 'Text') {
-      // Style options in order: H1-H6, p, span, none
-      var styleOptions = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'p', 'span', 'none'];
-      var styleOptionsHtml = styleOptions.map(function(s) {
-        var val = s.toLowerCase();
-        return '<option value="' + val + '"' + (slot.textStyle === val ? ' selected' : '') + '>' + s + '</option>';
-      }).join('');
-
-      html += '<div class="d-flex align-items-center mb-2">' +
-          '<h6 class="mb-0 mr-2">Text Slot</h6>' +
-          '<select class="form-control form-control-sm" id="slot-textStyle" style="width: 80px;">' +
-            styleOptionsHtml +
-          '</select>' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label>Text (English)</label>' +
-          '<textarea class="form-control" id="slot-textEn" rows="2">' + (slot.textEn || '') + '</textarea>' +
-        '</div>' +
-        '<div class="form-group">' +
-          '<label>Text (Hebrew)</label>' +
-          '<textarea class="form-control" id="slot-textHe" rows="2" dir="rtl">' + (slot.textHe || '') + '</textarea>' +
-        '</div>';
-    } else {
-      // Get product name and price for display
-      var productInfo = slot.activeSKU ? '<span id="slot-product-name" class="text-muted ml-2">Loading...</span>' : '';
-
-      html += '<div class="row">' +
-          '<div class="col-md-6">' +
-            '<div class="form-group">' +
-              '<label>Current SKU' + productInfo + '</label>' +
-              '<input type="text" class="form-control form-control-sm" id="slot-activeSKU" value="' + (slot.activeSKU || '') + '">' +
-              '<div class="small text-muted mt-1"><span id="slot-product-price"></span></div>' +
-            '</div>' +
-            '<div class="form-row">' +
-              '<div class="col-4">' +
-                '<label>Qty</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-defaultQty" value="' + (slot.defaultQty || 1) + '" style="width: 70px;">' +
-              '</div>' +
-              '<div class="col-8 d-flex align-items-end">' +
-                '<div class="form-check mr-3">' +
-                  '<input type="checkbox" class="form-check-input" id="slot-qtyVariable"' + (slot.qtyVariable ? ' checked' : '') + '>' +
-                  '<label class="form-check-label" for="slot-qtyVariable">Variable</label>' +
-                '</div>' +
-                '<div class="form-check">' +
-                  '<input type="checkbox" class="form-check-input" id="slot-exclusive"' + (slot.exclusive ? ' checked' : '') + '>' +
-                  '<label class="form-check-label" for="slot-exclusive">Exclusive</label>' +
-                '</div>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="col-md-6">' +
-            '<div class="form-row">' +
-              '<div class="col-6">' +
-                '<label>Category</label>' +
-                '<select class="form-control form-control-sm" id="slot-category">' +
-                  '<option value="">-- None --</option>' +
-                  categoryOptions.map(function(cat) {
-                    return '<option value="' + cat + '"' + (slot.category === cat ? ' selected' : '') + '>' + cat + '</option>';
-                  }).join('') +
-                '</select>' +
-              '</div>' +
-              '<div class="col-6">' +
-                '<label>Category 2</label>' +
-                '<select class="form-control form-control-sm" id="slot-category2">' +
-                  '<option value="">-- None --</option>' +
-                  categoryOptions.map(function(cat) {
-                    return '<option value="' + cat + '"' + (slot.category2 === cat ? ' selected' : '') + '>' + cat + '</option>';
-                  }).join('') +
-                '</select>' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-row mt-1">' +
-              '<div class="col-6">' +
-                '<label>Price Min</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-priceMin" value="' + (slot.priceMin || '') + '" style="width: 80px;">' +
-              '</div>' +
-              '<div class="col-6">' +
-                '<label>Price Max</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-priceMax" value="' + (slot.priceMax || '') + '" style="width: 80px;">' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-row mt-1">' +
-              '<div class="col-4">' +
-                '<label>Intensity</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-intensity" value="' + (slot.intensity !== null ? slot.intensity : '') + '" min="1" max="5" style="width: 60px;">' +
-              '</div>' +
-              '<div class="col-4">' +
-                '<label>Complexity</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-complexity" value="' + (slot.complexity !== null ? slot.complexity : '') + '" min="1" max="5" style="width: 60px;">' +
-              '</div>' +
-              '<div class="col-4">' +
-                '<label>Acidity</label>' +
-                '<input type="number" class="form-control form-control-sm" id="slot-acidity" value="' + (slot.acidity !== null ? slot.acidity : '') + '" min="1" max="5" style="width: 60px;">' +
-              '</div>' +
-            '</div>' +
-            '<div class="form-group mt-1">' +
-              '<label>Name Contains</label>' +
-              '<input type="text" class="form-control form-control-sm" id="slot-nameContains" value="' + (slot.nameContains || '') + '">' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<hr>' +
-        '<button class="btn btn-sm" id="btn-find-eligible">Find Eligible Products</button>' +
-        '<div id="eligible-products-container" class="mt-2"></div>';
-
-      // Load product name after render
-      if (slot.activeSKU) {
-        loadProductName(slot.activeSKU);
-      }
-    }
-
-    // Common fields
-    html += '<hr><div class="form-row">' +
-      '<div class="col">' +
-        '<label>Order</label>' +
-        '<input type="number" class="form-control form-control-sm" id="slot-order" value="' + (slot.order || 1) + '">' +
-      '</div>' +
-      '<div class="col-auto d-flex align-items-end">' +
-        '<button class="btn btn-sm mr-2" id="btn-update-slot">Update Slot</button>' +
-        '<button class="btn btn-sm mr-2" id="btn-duplicate-slot">Duplicate</button>' +
-        '<button class="btn btn-sm" id="btn-delete-slot">Delete</button>' +
-      '</div>' +
-    '</div>';
-
-    html += '</div></div>';
-
-    document.getElementById('slot-detail-container').innerHTML = html;
-
-    // Bind buttons
-    var updateBtn = document.getElementById('btn-update-slot');
-    if (updateBtn) updateBtn.addEventListener('click', function() { updateCurrentSlot(); });
-
-    var duplicateBtn = document.getElementById('btn-duplicate-slot');
-    if (duplicateBtn) duplicateBtn.addEventListener('click', function() { duplicateCurrentSlot(); });
-
-    var deleteBtn = document.getElementById('btn-delete-slot');
-    if (deleteBtn) deleteBtn.addEventListener('click', function() { deleteCurrentSlot(); });
-
-    var findBtn = document.getElementById('btn-find-eligible');
-    if (findBtn) findBtn.addEventListener('click', function() { findEligibleProducts(); });
-
-    // Bind description toggle handlers
-    var shortHeader = document.getElementById('short-desc-header');
-    if (shortHeader) shortHeader.addEventListener('click', function() { toggleDescSection('short'); });
-
-    var longHeader = document.getElementById('long-desc-header');
-    if (longHeader) longHeader.addEventListener('click', function() { toggleDescSection('long'); });
-  }
-
-  function updateCurrentSlot() {
-    if (!selectedSlotId) return;
-
-    var slot = currentBundle.slots.find(function(s) { return s.slotId === selectedSlotId; });
-    if (!slot) return;
-
-    var updates = {
-      order: parseInt(document.getElementById('slot-order').value) || 1
+    var doSave = function() {
+      var btn = document.getElementById('btn-save-composition');
+      var restore = withButtonBusy(btn, 'Saving...');
+      google.script.run
+        .withSuccessHandler(function(result) {
+          restore();
+          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
+          clearDraft(currentBundleId);
+          draftDirty = false;
+          currentBundle = result.data;
+          draft = buildDraftFromBundle(result.data);
+          renderEditor();
+          setSaveEnabled(false);
+          TaskWidgets.toast('Composition saved.', 'success');
+          afterSaveRefresh();
+        })
+        .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
+        .WebAppBundles_saveComposition(currentBundleId, header, slots);
     };
 
-    if (slot.slotType === 'Text') {
-      updates.textStyle = document.getElementById('slot-textStyle').value;
-      updates.textEn = document.getElementById('slot-textEn').value;
-      updates.textHe = document.getElementById('slot-textHe').value;
+    if (delCount > 0) {
+      TaskWidgets.confirm('Save composition? ' + delCount + ' slot(s) will be removed.', doSave, { okLabel: 'Save', danger: true });
     } else {
-      updates.activeSKU = document.getElementById('slot-activeSKU').value;
-      updates.defaultQty = parseInt(document.getElementById('slot-defaultQty').value) || 1;
-      updates.qtyVariable = document.getElementById('slot-qtyVariable').checked;
-      updates.exclusive = document.getElementById('slot-exclusive').checked;
-      updates.category = document.getElementById('slot-category').value;
-      updates.category2 = document.getElementById('slot-category2').value;
-      updates.priceMin = document.getElementById('slot-priceMin').value ? parseFloat(document.getElementById('slot-priceMin').value) : null;
-      updates.priceMax = document.getElementById('slot-priceMax').value ? parseFloat(document.getElementById('slot-priceMax').value) : null;
-      updates.intensity = document.getElementById('slot-intensity').value ? parseInt(document.getElementById('slot-intensity').value) : null;
-      updates.complexity = document.getElementById('slot-complexity').value ? parseInt(document.getElementById('slot-complexity').value) : null;
-      updates.acidity = document.getElementById('slot-acidity').value ? parseInt(document.getElementById('slot-acidity').value) : null;
-      updates.nameContains = document.getElementById('slot-nameContains').value;
+      doSave();
     }
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-          return;
-        }
-        TaskWidgets.toast('Slot updated', 'success');
-        loadBundleForEditing(currentBundleId, selectedSlotId);
-        loadStats(); // Refresh stats in case inventory status changed
-      })
-      .withFailureHandler(function(err) {
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_updateSlot(selectedSlotId, updates);
   }
 
-  function deleteCurrentSlot() {
-    if (!selectedSlotId) return;
-    TaskWidgets.confirm('Delete this slot?', function() {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-          return;
-        }
-        TaskWidgets.toast('Slot deleted', 'success');
-        selectedSlotId = null;
-        loadBundleForEditing(currentBundleId);
-      })
-      .withFailureHandler(function(err) {
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_deleteSlot(selectedSlotId);
-    }, { danger: true });
+  // A saved composition change makes ops differ from web until exported (§7.5). The authoritative
+  // needsPush diff is recomputed by overnight housekeeping; optimistically flag this bundle now so
+  // the list/strip reflect "export pending" immediately.
+  function afterSaveRefresh() {
+    if (pushBundleIds.indexOf(String(currentBundleId)) === -1) pushBundleIds.push(String(currentBundleId));
+    renderDeficiencyStrip({ bundleId: currentBundleId });
+    loadBundleList();
   }
 
-  function duplicateCurrentSlot() {
-    if (!selectedSlotId || !currentBundle) return;
-
-    var slot = currentBundle.slots.find(function(s) { return s.slotId === selectedSlotId; });
-    if (!slot) return;
-
-    var maxOrder = currentBundle.slots.reduce(function(max, s) {
-      return Math.max(max, s.order || 0);
-    }, 0);
-
-    var slotData = {
-      bundleId: currentBundleId,
-      slotType: slot.slotType,
-      order: maxOrder + 1,
-      textStyle: slot.textStyle,
-      textEn: slot.textEn,
-      textHe: slot.textHe,
-      activeSKU: '', // Don't copy SKU
-      category: slot.category,
-      category2: slot.category2,
-      priceMin: slot.priceMin,
-      priceMax: slot.priceMax,
-      intensity: slot.intensity,
-      complexity: slot.complexity,
-      acidity: slot.acidity,
-      nameContains: slot.nameContains,
-      exclusive: slot.exclusive,
-      qtyVariable: slot.qtyVariable,
-      defaultQty: slot.defaultQty
-    };
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-          return;
-        }
-        loadBundleForEditing(currentBundleId, result.data.slotId);
-      })
-      .withFailureHandler(function(err) {
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_createSlot(slotData);
-  }
-
-  function addSlot(slotType) {
-    if (!currentBundleId) {
-      TaskWidgets.toast('Select a bundle first', 'warning');
-      return;
-    }
-
-    var maxOrder = currentBundle.slots.reduce(function(max, s) {
-      return Math.max(max, s.order || 0);
-    }, 0);
-
-    var slotData = {
-      bundleId: currentBundleId,
-      slotType: slotType,
-      order: maxOrder + 1
-    };
-
-    if (slotType === 'Text') {
-      slotData.textStyle = 'none';
-    } else {
-      slotData.defaultQty = 1;
-    }
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-          return;
-        }
-        loadBundleForEditing(currentBundleId, result.data.slotId);
-      })
-      .withFailureHandler(function(err) {
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_createSlot(slotData);
-  }
-
-  function findEligibleProducts() {
-    if (!selectedSlotId) return;
-
-    var container = document.getElementById('eligible-products-container');
-    container.innerHTML = '<div class="text-muted">Searching...</div>';
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          container.innerHTML = '<div class="text-danger">' + result.error + '</div>';
-          return;
-        }
-        var products = result.data;
-        if (!products || products.length === 0) {
-          container.innerHTML = '<div class="text-muted">No eligible products found</div>';
-          return;
-        }
-
-        var html = '<table class="table table-sm table-bordered">' +
-          '<thead><tr><th>SKU</th><th>Name</th><th>Stock</th><th>Price</th><th></th></tr></thead>' +
-          '<tbody>' +
-          products.map(function(p) {
-            return '<tr>' +
-              '<td>' + p.sku + '</td>' +
-              '<td>' + (p.nameEn || p.nameHe || '-') + '</td>' +
-              '<td>' + p.stock + '</td>' +
-              '<td>' + p.price + '</td>' +
-              '<td><button class="btn btn-sm btn-assign-product" data-sku="' + p.sku + '">Assign</button></td>' +
-              '</tr>';
-          }).join('') +
-          '</tbody></table>';
-
-        container.innerHTML = html;
-
-        container.querySelectorAll('.btn-assign-product').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            assignProduct(this.dataset.sku);
-          });
-        });
-      })
-      .withFailureHandler(function(err) {
-        container.innerHTML = '<div class="text-danger">Failed: ' + err.message + '</div>';
-      })
-      .WebAppBundles_getEligibleProducts(selectedSlotId, { limit: 10, excludeExclusiveSKUs: true });
-  }
-
-  function assignProduct(sku) {
-    if (!selectedSlotId) return;
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-          return;
-        }
-        TaskWidgets.toast('Product assigned', 'success');
-        loadBundleForEditing(currentBundleId, selectedSlotId);
-      })
-      .withFailureHandler(function(err) {
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_assignProductToSlot(selectedSlotId, sku, 'Manual Assignment');
-  }
-
-  function saveSlot() {
-    // Handled in modal - placeholder
-  }
-
-  function loadProductName(sku) {
-    if (!sku) return;
-    google.script.run
-      .withSuccessHandler(function(result) {
-        var nameSpan = document.getElementById('slot-product-name');
-        var priceSpan = document.getElementById('slot-product-price');
-        if (!nameSpan) return;
-        if (result.error || !result.data) {
-          nameSpan.textContent = '(not found)';
-          nameSpan.className = 'text-danger ml-2';
-          if (priceSpan) priceSpan.textContent = '';
-        } else {
-          nameSpan.textContent = '- ' + result.data.name;
-          nameSpan.className = 'text-muted ml-2';
-          if (priceSpan && result.data.price) {
-            priceSpan.textContent = 'Price: ₪' + result.data.price;
-          }
-        }
-      })
-      .withFailureHandler(function() {
-        var nameSpan = document.getElementById('slot-product-name');
-        var priceSpan = document.getElementById('slot-product-price');
-        if (nameSpan) {
-          nameSpan.textContent = '(error)';
-          nameSpan.className = 'text-danger ml-2';
-        }
-        if (priceSpan) priceSpan.textContent = '';
-      })
-      .WebAppBundles_getProductName(sku);
+  function discardDraft() {
+    if (!currentBundleId || !currentBundle) return;
+    TaskWidgets.confirm('Discard unsaved changes and reload the saved composition?', function() {
+      clearDraft(currentBundleId);
+      draftDirty = false;
+      draft = buildDraftFromBundle(currentBundle);
+      renderEditor();
+      setSaveEnabled(false);
+    });
   }
 
   // =================================================================================
