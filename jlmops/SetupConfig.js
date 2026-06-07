@@ -1670,6 +1670,27 @@ function getMasterConfiguration() {
         ""
     ],
     [
+        "system.bundles.push_status",
+        "Cached daily bundle export status (ADMIN_BUNDLES_UI_PLAN Phase 1). JSON {count, bundleIds:[], ts} — recomputed each housekeeping run after refreshBundleComposition via buildExportTable (ops!=web). Recomputed-not-recorded; cached only so the Bundles view + dashboard mount instantly. Runtime-written; empty default.",
+        "stable",
+        "value",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.crm.last_refresh",
         "Tracks last CRM contact refresh timestamp",
         "stable",

@@ -834,3 +834,28 @@ function WebAppBundles_buildExportTable() {
     return { error: `Export build failed: ${e.message}`, data: null };
   }
 }
+
+/**
+ * Reads the cached daily bundle push status (ADMIN_BUNDLES_UI_PLAN Phase 1) — instant, no diff.
+ * @returns {Object} { error, data: { count, bundleIds, ts } }
+ */
+function WebAppBundles_getPushStatus() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'getPushStatus';
+  try {
+    const cfg = ConfigService.getConfig('system.bundles.push_status');
+    const raw = (cfg && cfg.value) ? cfg.value : '';
+    const parsed = raw ? JSON.parse(raw) : { count: 0, bundleIds: [], ts: '' };
+    return { error: null, data: parsed };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `getPushStatus failed: ${e.message}`, e);
+    return { error: `Could not read push status: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Editor wrapper — recompute + cache the bundle push status now (BUNDLE_PLAN Phase 1 smoke).
+ */
+function runRefreshBundlePushStatus() {
+  return housekeepingService.refreshBundlePushStatus();
+}

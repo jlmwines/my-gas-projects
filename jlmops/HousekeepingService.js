@@ -686,6 +686,7 @@ function HousekeepingService() {
     const phase3Failures = [];
     const phase3Tasks = [
       { name: 'refreshBundleComposition', fn: () => WebAppBundles_reimportAllBundles() },
+      { name: 'refreshBundlePushStatus', fn: () => this.refreshBundlePushStatus() },
       { name: 'checkBundleHealth', fn: () => this.checkBundleHealth() },
       { name: 'pullMailchimpSubscribers', fn: () => ContactImportService.importFromMailchimpApi() },
       { name: 'pullMailchimpCampaigns', fn: () => CampaignService.pullRecentCampaigns() },
@@ -1400,6 +1401,31 @@ function HousekeepingService() {
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `City lookup maintenance failed: ${e.message}`);
       return false;
+    }
+  };
+
+  /**
+   * Recompute + cache the bundle export status (ADMIN_BUNDLES_UI_PLAN Phase 1). Runs daily
+   * right after refreshBundleComposition so the ops≠web diff is maximally fresh. Recomputed,
+   * never recorded — cached in system.bundles.push_status only so the Bundles view + dashboard
+   * mount instantly. Stores {count, bundleIds, ts}.
+   */
+  this.refreshBundlePushStatus = function() {
+    const functionName = 'refreshBundlePushStatus';
+    try {
+      const result = BundleService.buildExportTable();
+      const bundleIds = (result.rows || []).map(function (r) { return String(r.bundleId); });
+      const payload = JSON.stringify({
+        count: result.exportCount || 0,
+        bundleIds: bundleIds,
+        ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
+      });
+      ConfigService.setConfig('system.bundles.push_status', 'value', payload);
+      logger.info('HousekeepingService', functionName, `Bundle push status cached: ${result.exportCount || 0} of ${result.total || 0} need export.`);
+      return { count: result.exportCount || 0 };
+    } catch (e) {
+      logger.error('HousekeepingService', functionName, `refreshBundlePushStatus failed: ${e.message}`, e);
+      throw e;
     }
   };
 

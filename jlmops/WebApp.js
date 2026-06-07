@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 13:38',
-  commit: 'Bundle Stage 3 — getEligibleProducts now returns wpm_ProfitRate (profit-in-selector DATA half). The selector payload carries profitRate (fraction or null) alongside price; display is owned by the editor rebuild (ADMIN_BUNDLES_UI_PLAN Phase 3 — product picker shows price + profit). Backend-only. Stage 3 data/logic now complete (serializer, ops!=web diff, out-of-stock failsafe, cost/profit data, selector payload); remaining Stage 3 = DISPLAY (profit-in-selector + as-presented price/profit) owned by the UI overhaul.'
+  built: '2026-06-07 13:52',
+  commit: 'ADMIN_BUNDLES_UI_PLAN Phase 1a-i — cached daily bundle push status. New HousekeepingService.refreshBundlePushStatus() runs right after refreshBundleComposition: calls buildExportTable (ops!=web) and caches {count, bundleIds, ts} in system.bundles.push_status (recomputed-not-recorded; cached only for instant view/dashboard mount). Controller WebAppBundles_getPushStatus() reads it; runRefreshBundlePushStatus() editor wrapper to populate now. Run rebuildSysConfigFromSource to declare the config key, then runRefreshBundlePushStatus(). Next: 1a-ii task.bundles.push_pending + dashboard; 1b view list/chips.'
 };
 
 function getVersion() {
