@@ -584,6 +584,60 @@ const BundleService = (function () {
     return true;
   }
 
+  /**
+   * Phase 3 atomic composition save (ADMIN_BUNDLES_UI_PLAN §7.5). Commits the whole bundle in one
+   * call: header fields (names/status — discount is WC-managed, never written, §7.1c) + the full
+   * ordered slot list. Reuses the slot primitives (createSlot/updateSlot/deleteSlot); slot order
+   * comes from list position. Existing slots carry slotId (→ update); new ones don't (→ create);
+   * stored slots absent from the incoming list are deleted. Returns the re-derived bundle.
+   * @param {string} bundleId
+   * @param {Object} header  {nameEn?, nameHe?, status?}
+   * @param {Array<Object>} slots  ordered composition
+   * @returns {Object} re-derived bundle (getBundleWithSlots)
+   */
+  function saveComposition(bundleId, header, slots) {
+    const fnName = 'saveComposition';
+    bundleId = String(bundleId);
+    const incoming = Array.isArray(slots) ? slots : [];
+
+    // 1. Header (discount intentionally omitted — WC-managed, §7.1c)
+    if (header && typeof header === 'object') {
+      const hu = {};
+      if (header.nameEn !== undefined) hu.nameEn = header.nameEn;
+      if (header.nameHe !== undefined) hu.nameHe = header.nameHe;
+      if (header.status !== undefined) hu.status = header.status;
+      if (Object.keys(hu).length) updateBundle(bundleId, hu);
+    }
+
+    // 2. Reconcile slots: update existing, create new, delete removed.
+    const SLOT_FIELDS = ['slotType', 'textStyle', 'textEn', 'textHe', 'activeSKU', 'category',
+      'category2', 'priceMin', 'priceMax', 'intensity', 'complexity', 'acidity', 'nameContains',
+      'exclusive', 'qtyVariable', 'defaultQty'];
+    const existing = getSlotsForBundle(bundleId);
+    const existingIds = existing.map(s => String(s.slotId));
+    const keptIds = [];
+
+    incoming.forEach(function (slot, idx) {
+      const data = { order: idx + 1 };
+      SLOT_FIELDS.forEach(function (f) { if (slot[f] !== undefined) data[f] = slot[f]; });
+      const sid = slot.slotId ? String(slot.slotId) : '';
+      if (sid && existingIds.indexOf(sid) !== -1) {
+        updateSlot(sid, data);
+        keptIds.push(sid);
+      } else {
+        createSlot(Object.assign({ bundleId: bundleId }, data));
+      }
+    });
+
+    existing.forEach(function (s) {
+      if (keptIds.indexOf(String(s.slotId)) === -1) deleteSlot(String(s.slotId));
+    });
+
+    clearCache();
+    LoggerService.info(SERVICE_NAME, fnName, `Saved composition for ${bundleId}: ${incoming.length} slot(s), deleted ${existing.length - keptIds.length}`);
+    return getBundleWithSlots(bundleId);
+  }
+
   // =====================================================
   // PUBLIC API: Product Assignment
   // =====================================================
@@ -1935,6 +1989,7 @@ const BundleService = (function () {
     createSlot: createSlot,
     updateSlot: updateSlot,
     deleteSlot: deleteSlot,
+    saveComposition: saveComposition,
 
     // Product Assignment
     assignProductToSlot: assignProductToSlot,

@@ -363,6 +363,24 @@ function WebAppBundles_deleteSlot(slotId) {
   }
 }
 
+/**
+ * Phase 3 atomic composition save (ADMIN_BUNDLES_UI_PLAN §7.5). Commits header + full ordered slot
+ * list in one call (draft from the editor). Discount is never written (WC-managed, §7.1c).
+ * @param {string} bundleId
+ * @param {Object} header  {nameEn?, nameHe?, status?}
+ * @param {Array<Object>} slots  ordered composition (existing slots carry slotId, new ones don't)
+ * @returns {Object} { error, data: re-derived bundle }
+ */
+function WebAppBundles_saveComposition(bundleId, header, slots) {
+  try {
+    const bundle = BundleService.saveComposition(bundleId, header, slots);
+    return { error: null, data: bundle };
+  } catch (e) {
+    LoggerService.error('WebAppBundles', 'saveComposition', `Error saving composition for ${bundleId}: ${e.message}`, e);
+    return { error: `Error saving composition: ${e.message}`, data: null };
+  }
+}
+
 // =================================================================================
 // PRODUCT ASSIGNMENT
 // =================================================================================
