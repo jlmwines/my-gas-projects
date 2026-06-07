@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 13:35',
-  commit: 'Bundle Stage 3 — out-of-stock failsafe on the export worklist (§3.1). buildExportTable builds a SKU->web-stock map from WebProdM and flags any exported bundle whose product members have web stock <= 0 ("Out of stock (web): <skus>" warning in the panel) so a now-out-of-stock wine is not published into a bundle. Warning-only (manager decides). Backend-only; survives the AdminBundles UI overhaul. Stage 3 remaining now: profit-in-selector + as-presented price/profit.'
+  built: '2026-06-07 13:38',
+  commit: 'Bundle Stage 3 — getEligibleProducts now returns wpm_ProfitRate (profit-in-selector DATA half). The selector payload carries profitRate (fraction or null) alongside price; display is owned by the editor rebuild (ADMIN_BUNDLES_UI_PLAN Phase 3 — product picker shows price + profit). Backend-only. Stage 3 data/logic now complete (serializer, ops!=web diff, out-of-stock failsafe, cost/profit data, selector payload); remaining Stage 3 = DISPLAY (profit-in-selector + as-presented price/profit) owned by the UI overhaul.'
 };
 
 function getVersion() {

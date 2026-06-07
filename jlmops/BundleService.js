@@ -813,10 +813,17 @@ const BundleService = (function () {
 
       // Product matches criteria
       debugStats.passed++;
+      // Profit rate (wpm_ProfitRate) for the selector — frontend display owned by the editor
+      // (BUNDLE_PLAN Stage 3 "profit in the selector"; ADMIN_BUNDLES_UI_PLAN Phase 3 renders it).
+      const prIdx = webCols.wpm_ProfitRate;
+      const profitRate = (prIdx !== undefined && row[prIdx] !== '' && row[prIdx] !== null && row[prIdx] !== undefined)
+        ? Number(row[prIdx]) : null;
+
       eligible.push({
         sku: sku,
         nameEn: name,
         price: price,
+        profitRate: profitRate,
         stock: stock,
         categories: categories,
         intensity: details.intensity,
