@@ -594,6 +594,10 @@
         // Rehydrate an in-progress draft (same-tab reload / re-open) if one survives in storage.
         var saved = restoreDraft(currentBundleId);
         if (saved && saved.slots) {
+          // Reload-resilience: restore the in-progress edit (intended WIP under ops-as-truth — the
+          // user completes it via Save Composition; not a discard prompt). The Save/Discard buttons
+          // already signal the dirty state. Price stays fresh because renderPriceSummary reads
+          // currentBundle, not the draft's frozen figure.
           draft = saved;
           draftDirty = true;
           var maxCid = saved.slots.reduce(function(m, r) { return Math.max(m, Number(r.cid) || 0); }, 0);
@@ -694,10 +698,11 @@
   }
 
   // Price = backend figures from the last load/save (BundleService._calculateBundlePrice; qty-0
-  // contributes 0). Discount is WC-managed (§7.1c) — read-only here. Re-derived server-side on save,
-  // so it reflects the saved composition, not live unsaved edits.
+  // contributes 0). Discount is WC-managed (§7.1c) — read-only here. Read from currentBundle (the
+  // freshest backend load), NOT draft.price: a draft restored from sessionStorage carries a frozen
+  // price from when it was created, which would show a stale (e.g. pre-discount) figure.
   function renderPriceSummary() {
-    var p = draft.price || {};
+    var p = currentBundle || draft.price || {};
     var el = document.getElementById('hdr-price');
     var total = p.totalPrice || 0, disc = p.discount || 0, disp = p.displayPrice || 0;
     if (total > 0 || disp > 0) {

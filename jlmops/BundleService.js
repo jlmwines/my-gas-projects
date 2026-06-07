@@ -223,29 +223,35 @@ const BundleService = (function () {
     return s === 'on' || s === '1' || s === 'yes' || s === 'true';
   }
 
-  // Resolve the as-presented discount from the bundle's WOOSB fields, matching WPClever precedence:
-  // (1) auto-price disabled → fixed custom price; (2) discount enabled → amount off the member sum,
-  // a '%'-suffixed amount = percentage, otherwise a fixed amount (this shop uses fixed-amount —
-  // user-confirmed 2026-06-07); (3) otherwise no discount. Returns null only when no web row exists
-  // (caller falls back to the legacy sb_DiscountPrice). Never written back — display/math only.
+  // A WOOSB discount value → currency amount off `totalPrice`. '%'-suffixed = percentage of the
+  // member sum, otherwise a fixed amount. Blank / non-numeric / <=0 → 0.
+  function _parseWoosbDiscount(v, totalPrice) {
+    if (v === '' || v == null) return 0;
+    const raw = String(v).trim();
+    if (raw === '') return 0;
+    if (raw.indexOf('%') !== -1) {
+      const pct = parseFloat(raw.replace('%', ''));
+      return (!isNaN(pct) && pct > 0) ? totalPrice * (pct / 100) : 0;
+    }
+    const amt = parseFloat(raw);
+    return (!isNaN(amt) && amt > 0) ? amt : 0;
+  }
+
+  // Resolve the as-presented discount from the bundle's WOOSB fields, matching WPClever:
+  // (1) auto-price disabled → fixed custom price; (2) a discount off the member sum — WPClever stores
+  // the FIXED amount in woosb_discount_amount and a PERCENTAGE in woosb_discount, and a populated
+  // value (NOT an enable flag — wpm_WoosbDiscount is blank for fixed-amount bundles) IS the discount;
+  // this shop uses fixed amount (amount=30, discount blank — user-confirmed 2026-06-07); (3) else
+  // none. Returns null only when no web row exists (caller falls back to sb_DiscountPrice). Math only.
   function _bundleDiscountFromWeb(totalPrice, d) {
     if (!d) return null;
     if (_woosbEnabled(d.disableAuto) && d.customPrice !== '' && d.customPrice != null) {
       const cp = parseFloat(d.customPrice);
       if (!isNaN(cp)) return { displayPrice: cp, discount: totalPrice > cp ? totalPrice - cp : 0 };
     }
-    if (_woosbEnabled(d.discountOn) && d.discountAmount !== '' && d.discountAmount != null) {
-      const raw = String(d.discountAmount).trim();
-      let discount = 0;
-      if (raw.indexOf('%') !== -1) {
-        const pct = parseFloat(raw.replace('%', ''));
-        if (!isNaN(pct)) discount = totalPrice * (pct / 100);
-      } else {
-        const amt = parseFloat(raw);
-        if (!isNaN(amt)) discount = amt;
-      }
-      if (discount > 0) return { displayPrice: Math.max(0, totalPrice - discount), discount: Math.min(discount, totalPrice) };
-    }
+    let discount = _parseWoosbDiscount(d.discountAmount, totalPrice);
+    if (discount <= 0) discount = _parseWoosbDiscount(d.discountOn, totalPrice);
+    if (discount > 0) return { displayPrice: Math.max(0, totalPrice - discount), discount: Math.min(discount, totalPrice) };
     return { displayPrice: totalPrice, discount: 0 };
   }
 
