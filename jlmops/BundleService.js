@@ -1727,16 +1727,21 @@ const BundleService = (function () {
   }
 
   /**
-   * Order-insensitive MULTISET of canonical members for a woosb_ids JSON string (sorted
-   * canon list). Used by the export diff so neither token keys NOR member order count as a
-   * difference — both are language-specific noise: WPClever issues independent random keys
-   * per language (EN `eoxl…` vs HE `c9su…`), and product order is per-language *alphabetic*
-   * (EN in English, HE in Hebrew; see parity validator Appendix A). What matters for "needs
-   * export" is the same members (id/sku/qty/optional/text), not their per-language sequence.
+   * Order-insensitive MULTISET of canonical PRODUCT members for a woosb_ids JSON string
+   * (sorted canon list). Used by the export diff. Deliberately ignores, as language-specific
+   * noise: (1) token keys — WPClever issues independent random keys per language (EN `eoxl…`
+   * vs HE `c9su…`); (2) member order — per-language alphabetic (EN English, HE Hebrew; parity
+   * validator Appendix A); and (3) **TEXT (non-product) slots entirely** — section-header text
+   * is language-specific (and HE text isn't authored ops-side), so it must not drive the
+   * "needs export" decision (user call 2026-06-07). Only the set of PRODUCT members
+   * (id/sku/qty/optional) counts.
    */
   function _canonMultiset(jsonStr) {
     const p = _parseWoosbJson(jsonStr, 'cmp', 'en');
-    return Object.keys(p).map(function (k) { return _canonMember(p[k]); }).sort();
+    return Object.keys(p)
+      .filter(function (k) { const v = p[k] || {}; return (v.id !== undefined || v.sku !== undefined); })  // products only; skip text slots
+      .map(function (k) { return _canonMember(p[k]); })
+      .sort();
   }
 
   /** Structural equality of two woosb_ids JSON strings as member multisets (order/key-agnostic). */

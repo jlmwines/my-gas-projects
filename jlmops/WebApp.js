@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 12:20',
-  commit: 'Bundle Stage 3 CORE COMPLETE — temp diagnostics stripped. Export panel back to clean (name/flags/EN+HE copy cells). buildExportTable uses _woosbEqual (token- and order-agnostic member MULTISET). Removed debugExportDiff/_diffDetail/runExportDiffDebug and the in-panel diagnostic. Export selection = ops≠web by member set; verified live (2 of 14 bundles correctly flagged after the optional + token + order fixes). Stage 3 core = serializer (exportBundleWoosb, token reuse via slotId) + multiset diff + export worklist on AdminBundles.'
+  built: '2026-06-07 12:25',
+  commit: 'Bundle Stage 3 — export diff now ignores TEXT (non-product) slots (user call). Section-header text is language-specific and HE text is not authored ops-side, so it must not drive "needs export". _canonMultiset filters to product members only (id/sku/qty/optional); keeps the token- and order-agnostic multiset. Remaining open: HE text on the EXPORT side (serializer still emits ops textHe which is currently empty — pasting an HE bundle would blank its headers; decide whether ops captures HE text or leaves it to the web).'
 };
 
 function getVersion() {
