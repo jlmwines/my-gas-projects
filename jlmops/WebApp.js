@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 12:38',
-  commit: 'Bundle Stage 3 — capture HE section-header text into ops (so ops can be the source for HE text + HE export is safe). Both derive paths (importBundleFromWooCommerce + reimportAllBundlesBatch) now match HE text to EN text slots by ORDINAL (keys differ per language; text slots are parallel-ordered) instead of by EN key (which never matched → textHe was empty → HE export would blank headers). RUN UPDATE COMPOSITION to re-derive and populate slot textHe. Export diff still products-only (@240); re-including text in the diff is a later refinement once HE-text capture is confirmed.'
+  built: '2026-06-07 12:57',
+  commit: 'AdminBundles — disable the slow low-inventory alerts load (loadHealthAlerts no-op). getBundlesWithLowInventory was lazy-fetched on every Bundles-view open (and post-action reload) and is slow; the panel is being retired (ADMIN_BUNDLES_UI_PLAN §7.3 — content folds into deficiency strip / Stage 7). Speeds the view for export testing. Re-enable only if the panel is intentionally restored.'
 };
 
 function getVersion() {

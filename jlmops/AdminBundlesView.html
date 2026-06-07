@@ -353,26 +353,12 @@
   // =================================================================================
 
   function loadHealthAlerts(preloadedData) {
-    if (preloadedData !== undefined) {
-      healthData = preloadedData;
-      renderHealthAlerts(preloadedData);
-      return;
-    }
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result.error) {
-          console.error('Error loading health data:', result.error);
-          document.getElementById('health-alerts-container').innerHTML = '<div class="text-danger">' + result.error + '</div>';
-          return;
-        }
-        healthData = result.data;
-        renderHealthAlerts(result.data);
-      })
-      .withFailureHandler(function(err) {
-        console.error('Failed to load health data:', err);
-        document.getElementById('health-alerts-container').innerHTML = '<div class="text-danger">Failed to load health data</div>';
-      })
-      .WebAppBundles_getBundlesWithLowInventory();
+    // DISABLED 2026-06-07: getBundlesWithLowInventory is slow and the low-inventory alerts panel
+    // is being retired (ADMIN_BUNDLES_UI_PLAN §7.3 — its content folds into the per-bundle
+    // deficiency strip / Stage 7 suggestion view). No-op to keep the Bundles view fast for
+    // export testing. Re-enable only if the panel is intentionally restored.
+    var el = document.getElementById('health-alerts-container');
+    if (el) el.innerHTML = '<div class="text-muted small mb-0">Low-inventory alerts disabled (panel being retired — see ADMIN_BUNDLES_UI_PLAN.md §7.3).</div>';
   }
 
   function renderHealthAlerts(data) {
