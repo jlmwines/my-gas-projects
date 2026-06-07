@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 6) — Phase 3 BACKEND (saveComposition) + scope decisions; checkpoint
+
+- **Phase 3 backend committed `70fd3c0` (NOT deployed — no caller yet; live stays @250).** `BundleService.saveComposition(bundleId, header, slots[])` + `WebAppBundles_saveComposition`: atomic batch commit — header (names/status; **discount never written**, §7.1c) + full ordered slot list; reconciles update (slotId match) / create (no slotId) / delete (stored absent from incoming); order from list position; **reuses createSlot/updateSlot/deleteSlot** (no duplicated logic); returns `getBundleWithSlots`.
+- **Scope decisions for the frontend (settled w/ user):** (1) **full criteria editable** behind ▸ disclosure (no regression from current). (2) **min-profit-rate deferred** from the header — it's the per-bundle override the plan already parks (`BUNDLE_PLAN` line 175), it's a Stage 7 *generator* constraint (bundle-level, off-for-value/on-for-packages), and the as-presented profit math isn't live (§7.1c). User considered a single general floor for all bundles (discount-driven) but chose to **leave the current model, revisit at Stage 7**.
+- **Checkpoint here (user call).** Frontend = the big editor rewrite (header strip + single ordered composition list + client draft/Undo + atomic Save + product picker modal + sessionStorage/beforeunload), replacing the working two-pane editor (~650 lines). **User: current editor use is near zero → breaking it is low-stakes; next session can move boldly.** No /dev testing (deploy = live test).
+- **Next session:** read the full current editor (renderBundleEditor/renderSlotDetail/addSlot/saveSlot/renderBundlePreview + slot-edit modal), rebuild as the §7.4/§7.5 composition sheet wired to `saveComposition`, deploy once + smoke-test. Then Phase 4 + BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont 5) — UI-plan Phase 2 (Export UX) @250
 
 - **@250 Phase 2:** Export button re-plumbed from the in-page worklist to a **Google Sheet export**. New `BundleService.exportBundlesToSheet()` reuses `buildExportTable` for the diff, writes one row per bundle (Bundle · EN woosb_ids · HE woosb_ids · Warnings), creates a sheet via `SpreadsheetApp.create` → moves to `system.folder.jlmops_exports` → returns `fileUrl`. New controller `WebAppBundles_exportBundlesToSheet` carries the **task auto-close** (moved here from `WebAppBundles_buildExportTable`, which is now a pure read-only diff so housekeeping's status refresh stays side-effect free). Frontend `exportBundles()` now: `TaskWidgets.confirm` → call → `window.open(fileUrl)` + "Open Sheet" link fallback + toast.
