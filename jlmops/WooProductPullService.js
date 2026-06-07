@@ -168,6 +168,14 @@ const WooProductPullService = (function() {
     // WPClever Smart Bundle fields — API may return object instead of JSON string
     var woosbRaw = _getMetaValue(apiProduct.meta_data, 'woosb_ids');
     product.wps_WoosbIds = (woosbRaw && typeof woosbRaw === 'object') ? JSON.stringify(woosbRaw) : (woosbRaw || '');
+    // WPClever discount/price meta (parallel to woosb_ids). Previously captured only on the HE
+    // translation path, so the EN/main wpm_Woosb* columns stayed blank and the as-presented bundle
+    // margin (BundleService) had nothing to read. Flows wps_* -> wpm_* via the existing staging->master
+    // mapping. Takes effect after a full product API Pull repopulates WebProdM.
+    product.wps_WoosbDiscount = _getMetaValue(apiProduct.meta_data, 'woosb_discount') || '';
+    product.wps_WoosbDiscountAmount = _getMetaValue(apiProduct.meta_data, 'woosb_discount_amount') || '';
+    product.wps_WoosbCustomPrice = _getMetaValue(apiProduct.meta_data, 'woosb_custom_price') || '';
+    product.wps_WoosbDisableAutoPrice = _getMetaValue(apiProduct.meta_data, 'woosb_disable_auto_price') || '';
 
     return product;
   }

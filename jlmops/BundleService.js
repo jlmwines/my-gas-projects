@@ -259,17 +259,18 @@ const BundleService = (function () {
       totalPrice += price * qty;
     }
 
-    // As-presented price/margin: prefer the WC-managed WOOSB discount (§7.1c). The legacy
-    // sb_DiscountPrice (blank on import) is only a fallback when no web row was found.
+    // As-presented price/margin. Precedence: a manually-set sb_DiscountPrice (the final price) wins —
+    // a manual override / testing hook — otherwise the WC-managed WOOSB discount off the bundle's own
+    // web row (§7.1c). sb_DiscountPrice is blank on import, so in normal operation the WOOSB path runs.
     let displayPrice, discount;
-    const web = _bundleDiscountFromWeb(totalPrice, webDiscount);
-    if (web) {
+    const manual = (bundle.discountPrice !== '' && bundle.discountPrice != null) ? parseFloat(bundle.discountPrice) : null;
+    if (manual !== null && !isNaN(manual)) {
+      displayPrice = manual;
+      discount = totalPrice > manual ? totalPrice - manual : 0;
+    } else {
+      const web = _bundleDiscountFromWeb(totalPrice, webDiscount) || { displayPrice: totalPrice, discount: 0 };
       displayPrice = web.displayPrice;
       discount = web.discount;
-    } else {
-      const discountPrice = bundle.discountPrice ? parseFloat(bundle.discountPrice) : null;
-      displayPrice = discountPrice !== null ? discountPrice : totalPrice;
-      discount = discountPrice !== null && totalPrice > 0 ? totalPrice - discountPrice : 0;
     }
 
     return {
