@@ -26,8 +26,7 @@
           <div>
             <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
             <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
-            <button id="btn-validate-parity" class="btn btn-sm">Validate EN/HE Parity</button>
-            <button id="btn-export-bundles" class="btn btn-sm ml-2">Export</button>
+            <button id="btn-export-bundles" class="btn btn-sm">Export</button>
           </div>
         </div>
         <div class="card-body">
@@ -138,7 +137,7 @@
   </div>
 </div>
 
-<!-- Parity / Stock results panel -->
+<!-- Action results panel (Update Composition / Review Stock / Export) -->
 <div class="card mb-3" id="action-results-panel" style="display:none;">
   <div class="card-header" style="background: transparent;">
     <span id="action-results-title" class="font-weight-bold"></span>
@@ -220,7 +219,6 @@
   function bindEvents() {
     document.getElementById('btn-update-composition').addEventListener('click', updateComposition);
     document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
-    document.getElementById('btn-validate-parity').addEventListener('click', validateParity);
     document.getElementById('btn-export-bundles').addEventListener('click', exportBundles);
     document.querySelectorAll('.bundle-chip').forEach(function(chip) {
       chip.addEventListener('click', function() { setFilter(chip.dataset.filter); });
@@ -1160,38 +1158,6 @@
         TaskWidgets.toast('Failed: ' + err.message, 'error');
       })
       .WebAppBundles_reviewStock();
-  }
-
-  function validateParity() {
-    var btn = document.getElementById('btn-validate-parity');
-    var restore = withButtonBusy(btn, 'Validating...');
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        restore();
-        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        var d = result.data || {};
-        var bundles = (d.bundles || []).filter(function(b) { return b.issueCount > 0; });
-        var summary = '<p>Validated ' + (d.totalBundles || 0) + ' bundles; ' + (d.bundlesWithIssues || 0) + ' have parity issues.</p>';
-        if (bundles.length === 0) {
-          showResults('Validate EN/HE Parity', summary + '<p class="text-success">No drift detected.</p>');
-          return;
-        }
-        var rows = bundles.map(function(b) {
-          var issues = b.issues.map(function(iss) {
-            var sec = (iss.section != null) ? ' [section ' + iss.section + ']' : '';
-            return '<li><code>' + TaskWidgets.escape(iss.code) + '</code>' + sec + ' — ' + TaskWidgets.escape(iss.detail) + '</li>';
-          }).join('');
-          return '<tr><td>' + TaskWidgets.escape(b.bundleName || b.bundleId) + '</td><td>' + b.issueCount + '</td><td><ul class="mb-0 pl-3">' + issues + '</ul></td></tr>';
-        }).join('');
-        var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>#</th><th>Issues</th></tr></thead><tbody>' + rows + '</tbody></table>';
-        showResults('Validate EN/HE Parity', summary + table);
-      })
-      .withFailureHandler(function(err) {
-        restore();
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_validateParity();
   }
 
   // Export (Phase 2 §7.6): generate the worklist as a new Google Sheet (one row per bundle, EN/HE

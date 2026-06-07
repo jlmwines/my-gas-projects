@@ -822,22 +822,6 @@ function WebAppBundles_reviewStock() {
 }
 
 /**
- * Validate EN/HE Parity button: walks every bundle and reports composition drift.
- * @returns {Object} { error, data: { totalBundles, bundlesWithIssues, bundles } }
- */
-function WebAppBundles_validateParity() {
-  const serviceName = 'WebAppBundles';
-  const functionName = 'validateParity';
-  try {
-    LoggerService.info(serviceName, functionName, 'EN/HE bundle parity validation');
-    return BundleService.validateAllBundleParity();
-  } catch (e) {
-    LoggerService.error(serviceName, functionName, `Validate Parity failed: ${e.message}`, e);
-    return { error: `Validate Parity failed: ${e.message}`, data: null };
-  }
-}
-
-/**
  * Export button: worklist of bundles whose ops composition differs from web (EN or HE),
  * each serialized to woosb_ids JSON for paste into WPClever (BUNDLE_PLAN Stage 3).
  * @returns {Object} { error, data: { rows, total, exportCount } }
