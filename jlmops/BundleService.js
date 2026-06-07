@@ -1727,19 +1727,24 @@ const BundleService = (function () {
   }
 
   /**
-   * Structural equality of two woosb_ids JSON strings, comparing the ordered sequence of
-   * MEMBER CONTENT by position. **Token keys are ignored** — WPClever issues independent
-   * random keys per language (EN `eoxl…` vs HE `c9su…`), so they must not count as a diff;
-   * what matters is the same members in the same order. Robust to whitespace, key-escaping,
-   * min/max, and optional-absent-vs-"0".
+   * Order-insensitive MULTISET of canonical members for a woosb_ids JSON string (sorted
+   * canon list). Used by the export diff so neither token keys NOR member order count as a
+   * difference — both are language-specific noise: WPClever issues independent random keys
+   * per language (EN `eoxl…` vs HE `c9su…`), and product order is per-language *alphabetic*
+   * (EN in English, HE in Hebrew; see parity validator Appendix A). What matters for "needs
+   * export" is the same members (id/sku/qty/optional/text), not their per-language sequence.
    */
+  function _canonMultiset(jsonStr) {
+    const p = _parseWoosbJson(jsonStr, 'cmp', 'en');
+    return Object.keys(p).map(function (k) { return _canonMember(p[k]); }).sort();
+  }
+
+  /** Structural equality of two woosb_ids JSON strings as member multisets (order/key-agnostic). */
   function _woosbEqual(jsonA, jsonB) {
-    const a = _parseWoosbJson(jsonA, 'cmp', 'en');
-    const b = _parseWoosbJson(jsonB, 'cmp', 'en');
-    const ka = Object.keys(a), kb = Object.keys(b);
-    if (ka.length !== kb.length) return false;
-    for (let i = 0; i < ka.length; i++) {
-      if (_canonMember(a[ka[i]]) !== _canonMember(b[kb[i]])) return false;
+    const a = _canonMultiset(jsonA), b = _canonMultiset(jsonB);
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
     }
     return true;
   }
@@ -1840,17 +1845,18 @@ const BundleService = (function () {
     const o = _parseWoosbJson(opsJson, 'dbg', 'en');
     const w = _parseWoosbJson(webJson, 'dbg', 'en');
     const ok = Object.keys(o), wk = Object.keys(w);
-    const out = { opsLen: ok.length, webLen: wk.length, equal: true, firstMismatch: null,
+    // Compare as ORDER-insensitive multisets (token keys + per-language order are noise).
+    const om = ok.map(function (k) { return _canonMember(o[k]); }).sort();
+    const wm = wk.map(function (k) { return _canonMember(w[k]); }).sort();
+    const out = { opsLen: om.length, webLen: wm.length, equal: true, firstMismatch: null,
                   opsJson: opsJson, webJson: webJson };
-    if (ok.length !== wk.length) {
+    if (om.length !== wm.length) {
       out.equal = false;
-      out.firstMismatch = { reason: 'length', opsLen: ok.length, webLen: wk.length };
+      out.firstMismatch = { reason: 'length', opsLen: om.length, webLen: wm.length };
       return out;
     }
-    // Compare member content by POSITION; token keys are ignored (language-specific, arbitrary).
-    for (let i = 0; i < ok.length; i++) {
-      const oc = _canonMember(o[ok[i]]), wc = _canonMember(w[wk[i]]);
-      if (oc !== wc) { out.equal = false; out.firstMismatch = { i: i, reason: 'member', opsToken: ok[i], webToken: wk[i], opsCanon: oc, webCanon: wc }; return out; }
+    for (let i = 0; i < om.length; i++) {
+      if (om[i] !== wm[i]) { out.equal = false; out.firstMismatch = { reason: 'member', i: i, opsCanon: om[i], webCanon: wm[i] }; return out; }
     }
     return out;
   }

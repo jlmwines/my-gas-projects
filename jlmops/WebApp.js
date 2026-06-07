@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 10:48',
-  commit: 'Bundle Stage 3 fix — export diff is now TOKEN-AGNOSTIC. Root cause of persistent HE "14/14 differ": WPClever issues independent random woosb keys per language (EN eoxl… vs HE c9su…); the compare checked token keys position-by-position, so HE always differed even when composition was identical (EN already matched once optional was fixed @235). _woosbEqual + _diffDetail now compare MEMBER CONTENT by position and ignore keys (length check kept). Export pasting EN tokens into HE is harmless — WPClever accepts any keys. TEMP panel diagnostic (webEn/webHe + firstMismatch) still present for verification; to be stripped once HE confirmed clean.'
+  built: '2026-06-07 10:58',
+  commit: 'Bundle Stage 3 fix — export diff is now ORDER-insensitive (multiset). After the token-agnostic fix, HE still flagged because product order is per-language ALPHABETIC (EN English, HE Hebrew; parity validator Appendix A), so ops HE (EN order) never matched web HE (Hebrew order) position-by-position. _woosbEqual + _diffDetail now compare members as a sorted canonical MULTISET — token keys AND order are ignored; only the set of members (id/sku/qty/optional/text) counts. Catches real changes (add/remove/qty/optional/text); pure reorders are not flagged (and don\'t survive export anyway — WC re-alphabetizes). TEMP panel diagnostic still present; strip once 14/14 confirmed collapsed.'
 };
 
 function getVersion() {
