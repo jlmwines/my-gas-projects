@@ -817,3 +817,20 @@ function WebAppBundles_validateParity() {
     return { error: `Validate Parity failed: ${e.message}`, data: null };
   }
 }
+
+/**
+ * Export button: worklist of bundles whose ops composition differs from web (EN or HE),
+ * each serialized to woosb_ids JSON for paste into WPClever (BUNDLE_PLAN Stage 3).
+ * @returns {Object} { error, data: { rows, total, exportCount } }
+ */
+function WebAppBundles_buildExportTable() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'buildExportTable';
+  try {
+    LoggerService.info(serviceName, functionName, 'Building bundle export worklist (ops != web)');
+    return { error: null, data: BundleService.buildExportTable() };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Export build failed: ${e.message}`, e);
+    return { error: `Export build failed: ${e.message}`, data: null };
+  }
+}

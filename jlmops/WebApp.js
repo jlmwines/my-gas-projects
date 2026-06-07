@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 07:52',
-  commit: 'Bundle Stage 2 Step 3 — Product Costs & Margins card on AdminInventoryView. New ProductCostService.getCostStatus() classifies each web product as computed (stored cpm_Cost), assumed (rate present, no cost), or blank; returns counts + the assumed-margin list (web-scoped). Controllers WebAppInventory_recomputeProductCosts() + _getProductCostStatus(). Card shows last-recompute time, summary (computed/assumed/blank/total), a scrollable assumed-margin table (SKU/name/margin%), and a Recompute button (TaskWidgets.confirm gate). List is web-scoped (the assumed set that matters for bundles), not the Comax-wide missing-cost count. Read-only; recompute is the only action.'
+  built: '2026-06-07 08:54',
+  commit: 'Bundle Stage 3 sub-step 2 — Export worklist on AdminBundlesView. BundleService.buildExportTable() serializes each bundle ops EN+HE and compares to web woosb via an order-sensitive structural diff (_woosbEqual); includes any bundle where ops != web (covers changed + drifted). WebAppBundles_buildExportTable() controller. New Export button -> results panel listing bundles to export with EN/HE woosb_ids in readonly textareas + Copy EN/Copy HE (execCommand + manual fallback) + diff/warning flags. Export direction ops->web; ops never conformed to web. Serializer (exportBundleWoosb) shipped earlier this session, smoke-validated.'
 };
 
 function getVersion() {

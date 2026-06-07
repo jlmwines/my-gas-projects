@@ -1712,6 +1712,89 @@ const BundleService = (function () {
     return { json: JSON.stringify(out), warnings: warnings };
   }
 
+  /**
+   * Canonical string for one woosb member — for structural comparison. Ignores formatting,
+   * min/max, and optional-absent vs "0"; keeps type/id/sku/qty/optional/text.
+   */
+  function _canonMember(v) {
+    v = v || {};
+    if (v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined) {
+      return 'T|' + (v.type || '') + '|' + String(v.text || '').trim();
+    }
+    return 'P|' + String(v.id || '').trim() + '|' + String(v.sku || '').trim() + '|' +
+           String(v.qty || '').trim() + '|' + (String(v.optional || '').trim() === '1' ? '1' : '0');
+  }
+
+  /**
+   * Order-sensitive structural equality of two woosb_ids JSON strings. Token order = member
+   * order (matters for display), so it compares position-by-position. Robust to whitespace,
+   * key-escaping, min/max, and optional-absent-vs-"0".
+   */
+  function _woosbEqual(jsonA, jsonB) {
+    const a = _parseWoosbJson(jsonA, 'cmp', 'en');
+    const b = _parseWoosbJson(jsonB, 'cmp', 'en');
+    const ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) return false;
+    for (let i = 0; i < ka.length; i++) {
+      if (ka[i] !== kb[i]) return false;
+      if (_canonMember(a[ka[i]]) !== _canonMember(b[kb[i]])) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Export worklist (BUNDLE_PLAN Stage 3): every bundle whose serialized OPS woosb differs
+   * from the current WEB woosb (EN or HE) — covers both changed-this-round and
+   * unchanged-but-drifted. Export direction is ops→web; this only SELECTS + serializes (the
+   * manager pastes the cells into WPClever). Ops is never conformed to web.
+   * @returns {{rows:Array<Object>, total:number, exportCount:number}}
+   */
+  function buildExportTable() {
+    const allConfig = ConfigService.getAllConfig();
+    const ss = SheetAccessor.getDataSpreadsheet();
+
+    // Web woosb per bundle: EN from WebProdM (by wpm_ID), HE from WebXltM (by wxm_WpmlOriginalId).
+    const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+    const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
+    const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
+    const webEnByBundle = {};
+    const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
+    for (let i = 1; i < wpmData.length; i++) {
+      const id = String(wpmData[i][wpmIdIdx] || '').trim();
+      if (id) webEnByBundle[id] = String(wpmData[i][wpmWoosbIdx] || '');
+    }
+    const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+    const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+    const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
+    const webHeByBundle = {};
+    const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
+    for (let i = 1; i < xltData.length; i++) {
+      const enId = String(xltData[i][xltOrigIdx] || '').trim();
+      if (enId && xltWoosbIdx !== -1) webHeByBundle[enId] = String(xltData[i][xltWoosbIdx] || '');
+    }
+
+    const bundles = getAllBundles();
+    const rows = [];
+    bundles.forEach(b => {
+      const en = exportBundleWoosb(b.bundleId, 'en');
+      const he = exportBundleWoosb(b.bundleId, 'he');
+      const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
+      const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
+      if (enDiff || heDiff) {
+        rows.push({
+          bundleId: b.bundleId,
+          name: b.nameEn || b.bundleId,
+          en: en.json,
+          he: he.json,
+          enDiff: enDiff,
+          heDiff: heDiff,
+          warnings: en.warnings.concat(he.warnings)
+        });
+      }
+    });
+    return { rows: rows, total: bundles.length, exportCount: rows.length };
+  }
+
   // =====================================================
   // PUBLIC API
   // =====================================================
@@ -1752,6 +1835,7 @@ const BundleService = (function () {
 
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,
+    buildExportTable: buildExportTable,
 
     // Stats
     getBundleStats: getBundleStats
