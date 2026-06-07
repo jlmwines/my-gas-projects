@@ -1101,8 +1101,10 @@ const BundleService = (function () {
           complexity: slot.complexity,
           acidity: slot.acidity,
           nameContains: slot.nameContains,
-          exclusive: slot.exclusive,
-          qtyVariable: slot.qtyVariable
+          exclusive: slot.exclusive
+          // qtyVariable intentionally NOT preserved — `optional` is a web-carried field, so
+          // it's re-derived from web each time (Stage 3 fix 2026-06-07). Preserving it froze
+          // ops at the pre-optional state and broke the export diff (all bundles flagged).
         };
       }
     });
@@ -1145,7 +1147,7 @@ const BundleService = (function () {
           slotType: 'Product',
           activeSKU: sku,
           defaultQty: (value.qty === '' || value.qty == null) ? 1 : Number(value.qty),
-          qtyVariable: preserved.qtyVariable !== undefined ? preserved.qtyVariable : (value.optional === '1'),
+          qtyVariable: (value.optional === '1'),  // re-derive from web each time; not preserved
           exclusive: preserved.exclusive || false,
           // Restore criteria from previous slot (if same SKU was in bundle before)
           category: preserved.category || '',
@@ -1210,8 +1212,8 @@ const BundleService = (function () {
         complexity: row[slotCols.sbs_Complexity],
         acidity: row[slotCols.sbs_Acidity],
         nameContains: row[slotCols.sbs_NameContains],
-        exclusive: row[slotCols.sbs_Exclusive] === 'TRUE',
-        qtyVariable: row[slotCols.sbs_QtyVariable] === 'TRUE'
+        exclusive: row[slotCols.sbs_Exclusive] === 'TRUE'
+        // qtyVariable NOT preserved — re-derived from web `optional` each run (Stage 3 fix 2026-06-07)
       };
     }
 
@@ -1261,8 +1263,7 @@ const BundleService = (function () {
             slotRow[slotCols.sbs_SlotType] = 'Product';
             slotRow[slotCols.sbs_ActiveSKU] = sku;
             slotRow[slotCols.sbs_DefaultQty] = (value.qty === '' || value.qty == null) ? 1 : Number(value.qty);
-            const qtyVarPreserved = (pcrit.qtyVariable !== undefined) ? pcrit.qtyVariable : (value.optional === '1');
-            slotRow[slotCols.sbs_QtyVariable] = qtyVarPreserved ? 'TRUE' : '';
+            slotRow[slotCols.sbs_QtyVariable] = (value.optional === '1') ? 'TRUE' : '';
             slotRow[slotCols.sbs_Exclusive] = pcrit.exclusive ? 'TRUE' : '';
             slotRow[slotCols.sbs_Category] = pcrit.category || '';
             slotRow[slotCols.sbs_Category2] = pcrit.category2 || '';
@@ -1795,6 +1796,51 @@ const BundleService = (function () {
     return { rows: rows, total: bundles.length, exportCount: rows.length };
   }
 
+  /** DIAGNOSTIC (Stage 3): why does a bundle's ops woosb differ from web? Returns the
+   *  ops/web JSON, member counts, and the FIRST differing token (token-level or member-level)
+   *  for EN and HE. Read-only. */
+  function debugExportDiff(bundleId) {
+    const allConfig = ConfigService.getAllConfig();
+    const ss = SheetAccessor.getDataSpreadsheet();
+    const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+    const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
+    const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
+    let webEn = '';
+    const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
+    for (let i = 1; i < wpmData.length; i++) {
+      if (String(wpmData[i][wpmIdIdx] || '').trim() === String(bundleId).trim()) { webEn = String(wpmData[i][wpmWoosbIdx] || ''); break; }
+    }
+    const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+    const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+    const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
+    let webHe = '';
+    const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
+    for (let i = 1; i < xltData.length; i++) {
+      if (String(xltData[i][xltOrigIdx] || '').trim() === String(bundleId).trim()) { webHe = String(xltData[i][xltWoosbIdx] || ''); break; }
+    }
+    return {
+      bundleId: bundleId,
+      en: _diffDetail(exportBundleWoosb(bundleId, 'en').json, webEn),
+      he: _diffDetail(exportBundleWoosb(bundleId, 'he').json, webHe)
+    };
+  }
+
+  function _diffDetail(opsJson, webJson) {
+    const o = _parseWoosbJson(opsJson, 'dbg', 'en');
+    const w = _parseWoosbJson(webJson, 'dbg', 'en');
+    const ok = Object.keys(o), wk = Object.keys(w);
+    const out = { opsLen: ok.length, webLen: wk.length, equal: true, firstMismatch: null,
+                  opsJson: opsJson, webJson: webJson };
+    const n = Math.max(ok.length, wk.length);
+    for (let i = 0; i < n; i++) {
+      const ot = ok[i], wt = wk[i];
+      if (ot !== wt) { out.equal = false; out.firstMismatch = { i: i, reason: 'token', opsToken: ot || null, webToken: wt || null }; return out; }
+      const oc = _canonMember(o[ot]), wc = _canonMember(w[wt]);
+      if (oc !== wc) { out.equal = false; out.firstMismatch = { i: i, reason: 'member', token: ot, opsCanon: oc, webCanon: wc }; return out; }
+    }
+    return out;
+  }
+
   // =====================================================
   // PUBLIC API
   // =====================================================
@@ -1836,6 +1882,7 @@ const BundleService = (function () {
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,
     buildExportTable: buildExportTable,
+    debugExportDiff: debugExportDiff,
 
     // Stats
     getBundleStats: getBundleStats
@@ -1858,4 +1905,23 @@ function runExportBundleWoosbSmoke() {
   Logger.log('HE json: %s', he.json);
   Logger.log('HE warnings (%s): %s', he.warnings.length, JSON.stringify(he.warnings));
   return { bundleId: id, en: en, he: he };
+}
+
+/**
+ * DIAGNOSTIC: why is the first bundle's ops != web? Logs EN/HE member counts and the first
+ * differing token. Run from the editor (BUNDLE_PLAN Stage 3 export-diff debug, 2026-06-07).
+ */
+function runExportDiffDebug() {
+  const bundles = BundleService.getAllBundles();
+  if (!bundles || !bundles.length) { Logger.log('No bundles found.'); return 'no bundles'; }
+  const id = bundles[0].bundleId;
+  const d = BundleService.debugExportDiff(id);
+  Logger.log('Bundle %s (%s)', id, bundles[0].nameEn || '');
+  Logger.log('EN opsLen=%s webLen=%s equal=%s firstMismatch=%s', d.en.opsLen, d.en.webLen, d.en.equal, JSON.stringify(d.en.firstMismatch));
+  Logger.log('HE opsLen=%s webLen=%s equal=%s firstMismatch=%s', d.he.opsLen, d.he.webLen, d.he.equal, JSON.stringify(d.he.firstMismatch));
+  Logger.log('EN opsJson: %s', d.en.opsJson);
+  Logger.log('EN webJson: %s', d.en.webJson);
+  Logger.log('HE opsJson: %s', d.he.opsJson);
+  Logger.log('HE webJson: %s', d.he.webJson);
+  return d;
 }
