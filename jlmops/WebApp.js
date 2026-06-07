@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 10:58',
-  commit: 'Bundle Stage 3 fix — export diff is now ORDER-insensitive (multiset). After the token-agnostic fix, HE still flagged because product order is per-language ALPHABETIC (EN English, HE Hebrew; parity validator Appendix A), so ops HE (EN order) never matched web HE (Hebrew order) position-by-position. _woosbEqual + _diffDetail now compare members as a sorted canonical MULTISET — token keys AND order are ignored; only the set of members (id/sku/qty/optional/text) counts. Catches real changes (add/remove/qty/optional/text); pure reorders are not flagged (and don\'t survive export anyway — WC re-alphabetizes). TEMP panel diagnostic still present; strip once 14/14 confirmed collapsed.'
+  built: '2026-06-07 12:20',
+  commit: 'Bundle Stage 3 CORE COMPLETE — temp diagnostics stripped. Export panel back to clean (name/flags/EN+HE copy cells). buildExportTable uses _woosbEqual (token- and order-agnostic member MULTISET). Removed debugExportDiff/_diffDetail/runExportDiffDebug and the in-panel diagnostic. Export selection = ops≠web by member set; verified live (2 of 14 bundles correctly flagged after the optional + token + order fixes). Stage 3 core = serializer (exportBundleWoosb, token reuse via slotId) + multiset diff + export worklist on AdminBundles.'
 };
 
 function getVersion() {

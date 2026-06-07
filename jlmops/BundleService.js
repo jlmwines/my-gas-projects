@@ -1785,80 +1785,21 @@ const BundleService = (function () {
     bundles.forEach(b => {
       const en = exportBundleWoosb(b.bundleId, 'en');
       const he = exportBundleWoosb(b.bundleId, 'he');
-      const webEn = webEnByBundle[b.bundleId] || '';
-      const webHe = webHeByBundle[b.bundleId] || '';
-      const enD = _diffDetail(en.json, webEn);   // same parse+canon as _woosbEqual, with detail
-      const heD = _diffDetail(he.json, webHe);
-      if (!enD.equal || !heD.equal) {
+      const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
+      const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
+      if (enDiff || heDiff) {
         rows.push({
           bundleId: b.bundleId,
           name: b.nameEn || b.bundleId,
           en: en.json,
           he: he.json,
-          // --- TEMP diagnostic (Stage 3 export over-report) — surfaced in the panel for phone debugging ---
-          webEn: webEn,
-          webHe: webHe,
-          enFirst: enD.firstMismatch,
-          heFirst: heD.firstMismatch,
-          enLens: enD.opsLen + '/' + enD.webLen,   // opsLen/webLen
-          heLens: heD.opsLen + '/' + heD.webLen,
-          // --- end TEMP diagnostic ---
-          enDiff: !enD.equal,
-          heDiff: !heD.equal,
+          enDiff: enDiff,
+          heDiff: heDiff,
           warnings: en.warnings.concat(he.warnings)
         });
       }
     });
     return { rows: rows, total: bundles.length, exportCount: rows.length };
-  }
-
-  /** DIAGNOSTIC (Stage 3): why does a bundle's ops woosb differ from web? Returns the
-   *  ops/web JSON, member counts, and the FIRST differing token (token-level or member-level)
-   *  for EN and HE. Read-only. */
-  function debugExportDiff(bundleId) {
-    const allConfig = ConfigService.getAllConfig();
-    const ss = SheetAccessor.getDataSpreadsheet();
-    const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
-    const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
-    const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
-    let webEn = '';
-    const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
-    for (let i = 1; i < wpmData.length; i++) {
-      if (String(wpmData[i][wpmIdIdx] || '').trim() === String(bundleId).trim()) { webEn = String(wpmData[i][wpmWoosbIdx] || ''); break; }
-    }
-    const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
-    const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-    const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
-    let webHe = '';
-    const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
-    for (let i = 1; i < xltData.length; i++) {
-      if (String(xltData[i][xltOrigIdx] || '').trim() === String(bundleId).trim()) { webHe = String(xltData[i][xltWoosbIdx] || ''); break; }
-    }
-    return {
-      bundleId: bundleId,
-      en: _diffDetail(exportBundleWoosb(bundleId, 'en').json, webEn),
-      he: _diffDetail(exportBundleWoosb(bundleId, 'he').json, webHe)
-    };
-  }
-
-  function _diffDetail(opsJson, webJson) {
-    const o = _parseWoosbJson(opsJson, 'dbg', 'en');
-    const w = _parseWoosbJson(webJson, 'dbg', 'en');
-    const ok = Object.keys(o), wk = Object.keys(w);
-    // Compare as ORDER-insensitive multisets (token keys + per-language order are noise).
-    const om = ok.map(function (k) { return _canonMember(o[k]); }).sort();
-    const wm = wk.map(function (k) { return _canonMember(w[k]); }).sort();
-    const out = { opsLen: om.length, webLen: wm.length, equal: true, firstMismatch: null,
-                  opsJson: opsJson, webJson: webJson };
-    if (om.length !== wm.length) {
-      out.equal = false;
-      out.firstMismatch = { reason: 'length', opsLen: om.length, webLen: wm.length };
-      return out;
-    }
-    for (let i = 0; i < om.length; i++) {
-      if (om[i] !== wm[i]) { out.equal = false; out.firstMismatch = { reason: 'member', i: i, opsCanon: om[i], webCanon: wm[i] }; return out; }
-    }
-    return out;
   }
 
   // =====================================================
@@ -1902,7 +1843,6 @@ const BundleService = (function () {
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,
     buildExportTable: buildExportTable,
-    debugExportDiff: debugExportDiff,
 
     // Stats
     getBundleStats: getBundleStats
@@ -1925,23 +1865,4 @@ function runExportBundleWoosbSmoke() {
   Logger.log('HE json: %s', he.json);
   Logger.log('HE warnings (%s): %s', he.warnings.length, JSON.stringify(he.warnings));
   return { bundleId: id, en: en, he: he };
-}
-
-/**
- * DIAGNOSTIC: why is the first bundle's ops != web? Logs EN/HE member counts and the first
- * differing token. Run from the editor (BUNDLE_PLAN Stage 3 export-diff debug, 2026-06-07).
- */
-function runExportDiffDebug() {
-  const bundles = BundleService.getAllBundles();
-  if (!bundles || !bundles.length) { Logger.log('No bundles found.'); return 'no bundles'; }
-  const id = bundles[0].bundleId;
-  const d = BundleService.debugExportDiff(id);
-  Logger.log('Bundle %s (%s)', id, bundles[0].nameEn || '');
-  Logger.log('EN opsLen=%s webLen=%s equal=%s firstMismatch=%s', d.en.opsLen, d.en.webLen, d.en.equal, JSON.stringify(d.en.firstMismatch));
-  Logger.log('HE opsLen=%s webLen=%s equal=%s firstMismatch=%s', d.he.opsLen, d.he.webLen, d.he.equal, JSON.stringify(d.he.firstMismatch));
-  Logger.log('EN opsJson: %s', d.en.opsJson);
-  Logger.log('EN webJson: %s', d.en.webJson);
-  Logger.log('HE opsJson: %s', d.he.opsJson);
-  Logger.log('HE webJson: %s', d.he.webJson);
-  return d;
 }
