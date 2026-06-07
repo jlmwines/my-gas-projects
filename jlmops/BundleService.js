@@ -1779,16 +1779,26 @@ const BundleService = (function () {
     bundles.forEach(b => {
       const en = exportBundleWoosb(b.bundleId, 'en');
       const he = exportBundleWoosb(b.bundleId, 'he');
-      const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
-      const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
-      if (enDiff || heDiff) {
+      const webEn = webEnByBundle[b.bundleId] || '';
+      const webHe = webHeByBundle[b.bundleId] || '';
+      const enD = _diffDetail(en.json, webEn);   // same parse+canon as _woosbEqual, with detail
+      const heD = _diffDetail(he.json, webHe);
+      if (!enD.equal || !heD.equal) {
         rows.push({
           bundleId: b.bundleId,
           name: b.nameEn || b.bundleId,
           en: en.json,
           he: he.json,
-          enDiff: enDiff,
-          heDiff: heDiff,
+          // --- TEMP diagnostic (Stage 3 export over-report) — surfaced in the panel for phone debugging ---
+          webEn: webEn,
+          webHe: webHe,
+          enFirst: enD.firstMismatch,
+          heFirst: heD.firstMismatch,
+          enLens: enD.opsLen + '/' + enD.webLen,   // opsLen/webLen
+          heLens: heD.opsLen + '/' + heD.webLen,
+          // --- end TEMP diagnostic ---
+          enDiff: !enD.equal,
+          heDiff: !heD.equal,
           warnings: en.warnings.concat(he.warnings)
         });
       }

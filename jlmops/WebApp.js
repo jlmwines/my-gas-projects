@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 09:42',
-  commit: 'Bundle Stage 3 fix — derive qtyVariable from web `optional` (stop preserving it). Root cause of export "all 14 bundles differ": the derive PRESERVED qtyVariable, freezing ops at the pre-optional state while web carries optional="1"; serialize(ops) then omitted optional everywhere so every bundle flagged. Confirmed by 3-way compare (live = WebProdM have optional; ops did not). Both derive paths (importBundleFromWooCommerce + reimportAllBundlesBatch) now set qtyVariable = (value.optional===1) each run; ops-only criteria (category/price/attrs/exclusive) still preserved. Run Update Composition to re-derive, then the export diff collapses to real changes. Diagnostic debugExportDiff/runExportDiffDebug retained.'
+  built: '2026-06-07 10:38',
+  commit: 'TEMP DIAGNOSTIC — Export panel now shows, per flagged bundle, what the compare read from web (webEn/webHe) + first-mismatch token/field + ops/web member counts. For phone debugging of the persistent "14/14 differ" where ops now equals web (derive+serializer fixed @235) yet buildExportTable still flags — isolating compare/lookup bug. To be stripped once root cause found.'
 };
 
 function getVersion() {
