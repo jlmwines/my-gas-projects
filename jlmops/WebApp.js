@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 12:57',
-  commit: 'AdminBundles — disable the slow low-inventory alerts load (loadHealthAlerts no-op). getBundlesWithLowInventory was lazy-fetched on every Bundles-view open (and post-action reload) and is slow; the panel is being retired (ADMIN_BUNDLES_UI_PLAN §7.3 — content folds into deficiency strip / Stage 7). Speeds the view for export testing. Re-enable only if the panel is intentionally restored.'
+  built: '2026-06-07 13:35',
+  commit: 'Bundle Stage 3 — out-of-stock failsafe on the export worklist (§3.1). buildExportTable builds a SKU->web-stock map from WebProdM and flags any exported bundle whose product members have web stock <= 0 ("Out of stock (web): <skus>" warning in the panel) so a now-out-of-stock wine is not published into a bundle. Warning-only (manager decides). Backend-only; survives the AdminBundles UI overhaul. Stage 3 remaining now: profit-in-selector + as-presented price/profit.'
 };
 
 function getVersion() {

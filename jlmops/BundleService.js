@@ -1767,6 +1767,21 @@ const BundleService = (function () {
     return true;
   }
 
+  /** Out-of-stock failsafe (§3.1): product-member SKUs in a serialized woosb whose web stock
+   *  is <= 0. Used to warn before export so a now-out-of-stock wine isn't published. */
+  function _outOfStockMembers(jsonStr, skuToStock) {
+    const p = _parseWoosbJson(jsonStr, 'oos', 'en');
+    const out = [];
+    Object.keys(p).forEach(function (k) {
+      const m = p[k] || {};
+      const sku = m.sku ? String(m.sku).trim() : '';
+      if (!sku) return;
+      const st = skuToStock[sku];
+      if (st !== undefined && !isNaN(st) && Number(st) <= 0) out.push(sku);
+    });
+    return out;
+  }
+
   /**
    * Export worklist (BUNDLE_PLAN Stage 3): every bundle whose serialized OPS woosb differs
    * from the current WEB woosb (EN or HE) — covers both changed-this-round and
@@ -1782,11 +1797,16 @@ const BundleService = (function () {
     const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
     const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
     const wpmWoosbIdx = wpmHeaders.indexOf('wpm_WoosbIds');
+    const wpmSkuIdx = wpmHeaders.indexOf('wpm_SKU');
+    const wpmStockIdx = wpmHeaders.indexOf('wpm_Stock');
     const webEnByBundle = {};
+    const skuToStock = {};   // web stock by SKU — for the pre-export out-of-stock failsafe (§3.1)
     const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
     for (let i = 1; i < wpmData.length; i++) {
       const id = String(wpmData[i][wpmIdIdx] || '').trim();
       if (id) webEnByBundle[id] = String(wpmData[i][wpmWoosbIdx] || '');
+      const sku = wpmSkuIdx >= 0 ? String(wpmData[i][wpmSkuIdx] || '').trim() : '';
+      if (sku && wpmStockIdx >= 0) skuToStock[sku] = Number(wpmData[i][wpmStockIdx]);
     }
     const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
     const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
@@ -1806,6 +1826,11 @@ const BundleService = (function () {
       const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
       const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
       if (enDiff || heDiff) {
+        const warnings = en.warnings.concat(he.warnings);
+        // Out-of-stock failsafe (§3.1): flag product members with web stock <= 0 so a now
+        // out-of-stock wine isn't published into a bundle on export. Warning only (manager decides).
+        const oos = _outOfStockMembers(en.json, skuToStock);
+        if (oos.length) warnings.push('Out of stock (web): ' + oos.join(', '));
         rows.push({
           bundleId: b.bundleId,
           name: b.nameEn || b.bundleId,
@@ -1813,7 +1838,7 @@ const BundleService = (function () {
           he: he.json,
           enDiff: enDiff,
           heDiff: heDiff,
-          warnings: en.warnings.concat(he.warnings)
+          warnings: warnings
         });
       }
     });
