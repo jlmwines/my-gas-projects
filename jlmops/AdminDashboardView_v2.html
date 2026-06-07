@@ -305,6 +305,11 @@
       html += '<tr><td>Bundle Critical</td><td class="text-right text-success"><strong>0</strong></td></tr>';
     }
     html += '<tr><td>Bundle Low</td><td class="text-right"><strong>' + prod.bundleLow + '</strong></td></tr>';
+    if (prod.bundlePushPending > 0) {
+      html += '<tr class="table-warning"><td>Bundles: Needs Push</td><td class="text-right"><strong>' + prod.bundlePushPending + '</strong></td></tr>';
+    } else {
+      html += '<tr><td>Bundles: Needs Push</td><td class="text-right text-success"><strong>0</strong></td></tr>';
+    }
     html += '<tr><td>Category Low</td><td class="text-right"><strong>' + prod.categoryLow + '</strong></td></tr>';
     html += '</tbody></table>';
 

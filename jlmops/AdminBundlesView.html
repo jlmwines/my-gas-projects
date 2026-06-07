@@ -1250,6 +1250,7 @@
             '</div></div>';
         });
         showResults('Export Bundles', html);
+        TaskWidgets.toast('Export created for ' + (d.exportCount || 0) + ' bundle(s) — push task cleared.', 'success');
       })
       .withFailureHandler(function(err) {
         restore();

@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 3) — UI-plan Phase 1a-ii (push-pending task + dashboard) @246
+
+- **@246** ADMIN_BUNDLES_UI_PLAN Phase 1a-ii. Five changes: (1) `task.bundles.push_pending` template in `taskDefinitions.json` (topic Products, Normal, admin_direct, next_business_day); (2) `HousekeepingService.refreshBundlePushStatus` now drives a **singleton** batch task — `upsertSingletonTask(... '_SYSTEM' ...)` on count>0, `completeTaskByTypeAndEntity` safety-close on count==0; (3) `WebAppBundles_buildExportTable` **controller** (not the service — housekeeping calls the service read-only) closes the task on a real export (exportCount>0) = the primary action-close; (4) confirmation toast after export in `AdminBundlesView.html`; (5) dashboard "Bundles: Needs Push — N" row in Products widget (`WebAppDashboardV2._getProductsData` + `AdminDashboardView_v2.html`), count from cached `system.bundles.push_status` (not the singleton task, which reads 0/1).
+- **Close model settled with user:** the user's action (Export) closes the task; overnight housekeeping only *opens* / re-opens (partial-paste self-correct per §7.2), never the normal closer. No separate paste-confirm step — the export's own success IS the confirmation.
+- Post-deploy `rebuildSysConfigFromSource()` required to register the template (else createTask can't find it) — instructed user to run it; confirm next session.
+- Un-exercisable live until a bundle change makes count>0 (current 0 of 14) — dashboard shows "Needs Push — 0".
+- **Next:** UI-plan Phase 1b (status-sorted list + count chips, remove the unused low-inventory alerts panel), then 1c (row-click editor), Phases 2–4, BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont 2) — Stage 3 data/logic finished + UI-plan Phase 1a-i @242→@245
 
 - **@242** disabled the slow low-inventory alerts load in AdminBundles (loadHealthAlerts no-op — panel being retired in UI Phase 1); reconciled BUNDLE_PLAN ↔ ADMIN_BUNDLES_UI_PLAN (export delivery = CSV opened as a sheet in a new tab; documented owed contracts: cached needsPush, task.bundles.push_pending, saveComposition); committed Dispatch's full UI design (`ADMIN_BUNDLES_UI_PLAN.md`, DESIGN DEFINED). **Clarified: Dispatch only planned; the MAIN CLI session implements the UI plan.**

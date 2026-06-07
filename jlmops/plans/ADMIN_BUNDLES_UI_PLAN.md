@@ -89,7 +89,7 @@ Export button: run the fresh diff + the targeted out-of-stock failsafe (`BUNDLE_
 - **Superseded:** the low-stock row-badge IA (stock is now a subordinate advisory) and the old editor stages (replaced by the §7.4 composition sheet). Mark `UI_T2_1_admin_bundles.md` superseded-by-this-doc when Phase 1 ships.
 
 ## 9. Phased build (each independently shippable; per-phase user go)
-- **Phase 1 — Queue & status.** Housekeeping `needsPush` cache + count; status-sorted list + chips; remove alerts panel; `task.bundles.push_pending` + dashboard surfacing. Depends on Stage 3 diff being live (it is).
+- **Phase 1 — Queue & status.** Housekeeping `needsPush` cache + count; status-sorted list + chips; remove alerts panel; `task.bundles.push_pending` + dashboard surfacing. Depends on Stage 3 diff being live (it is). **Progress:** 1a-i (cache + count, `WebAppBundles_getPushStatus`) SHIPPED @245; 1a-ii (`task.bundles.push_pending` singleton — housekeeping opens, Export action closes — + dashboard "Bundles: Needs Push — N" row) SHIPPED @246. **Remaining (1b):** status-sorted list + count chips; remove the unused low-inventory alerts panel. Then 1c: row-click editor.
 - **Phase 2 — Export UX.** CSV-sequence auto-open-as-sheet; auto-close-task hook; out-of-stock failsafe wiring. (Export @234 exists; this re-plumbs its output + lifecycle.)
 - **Phase 3 — Composition sheet.** Header strip; draft + atomic `saveComposition`; picker with price/profit; Flexible pill; criteria disclosure incl. optional toggle; sessionStorage draft.
 - **Phase 4 — Stage 7 hook.** Deficiency strip grows the recommended-composition content when `BUNDLE_PLAN.md` Stage 7 lands. This doc owns the surface only.

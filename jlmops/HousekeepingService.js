@@ -1421,8 +1421,29 @@ function HousekeepingService() {
         ts: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss')
       });
       ConfigService.setConfig('system.bundles.push_status', 'value', payload);
-      logger.info('HousekeepingService', functionName, `Bundle push status cached: ${result.exportCount || 0} of ${result.total || 0} need export.`);
-      return { count: result.exportCount || 0 };
+
+      // Surface the batch task (ADMIN_BUNDLES_UI_PLAN Phase 1a-ii): ONE singleton task
+      // when count > 0 (never per-bundle), closed primarily by the Export action; here we
+      // open/update on count > 0 and safety-close if the diff resolved to 0 by other means.
+      const pushCount = result.exportCount || 0;
+      try {
+        if (pushCount > 0) {
+          TaskService.upsertSingletonTask(
+            'task.bundles.push_pending',
+            '_SYSTEM',
+            'Bundle Export Queue',
+            `${pushCount} bundle(s) need export to web`,
+            { count: pushCount, bundleIds: bundleIds, ts: JSON.parse(payload).ts }
+          );
+        } else {
+          TaskService.completeTaskByTypeAndEntity('task.bundles.push_pending', '_SYSTEM');
+        }
+      } catch (taskError) {
+        logger.warn('HousekeepingService', functionName, `Could not sync push-pending task: ${taskError.message}`);
+      }
+
+      logger.info('HousekeepingService', functionName, `Bundle push status cached: ${pushCount} of ${result.total || 0} need export.`);
+      return { count: pushCount };
     } catch (e) {
       logger.error('HousekeepingService', functionName, `refreshBundlePushStatus failed: ${e.message}`, e);
       throw e;

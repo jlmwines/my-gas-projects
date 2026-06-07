@@ -349,6 +349,18 @@
     ],
     [
         "task.template",
+        "task.bundles.push_pending",
+        "Bundles need export to web (ops composition differs).",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day",
+        "pack_form", "skeleton"
+    ],
+    [
+        "task.template",
         "task.order.packing_available",
         "Orders are ready for packing slip generation.",
         "stable",

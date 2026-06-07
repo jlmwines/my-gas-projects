@@ -828,7 +828,18 @@ function WebAppBundles_buildExportTable() {
   const functionName = 'buildExportTable';
   try {
     LoggerService.info(serviceName, functionName, 'Building bundle export worklist (ops != web)');
-    return { error: null, data: BundleService.buildExportTable() };
+    const data = BundleService.buildExportTable();
+    // Primary close (ADMIN_BUNDLES_UI_PLAN Phase 1a-ii): producing the export IS the user
+    // action that clears the push-pending task — no separate paste-confirm step. If a paste
+    // is later partial/skipped, the next daily diff re-opens the task (§7.2 self-correcting).
+    if ((data.exportCount || 0) > 0) {
+      try {
+        TaskService.completeTaskByTypeAndEntity('task.bundles.push_pending', '_SYSTEM');
+      } catch (taskError) {
+        LoggerService.warn(serviceName, functionName, `Could not close push-pending task: ${taskError.message}`);
+      }
+    }
+    return { error: null, data: data };
   } catch (e) {
     LoggerService.error(serviceName, functionName, `Export build failed: ${e.message}`, e);
     return { error: `Export build failed: ${e.message}`, data: null };

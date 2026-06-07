@@ -572,7 +572,19 @@ function _getInventoryData(allTasks) {
  */
 function _getProductsData(allTasks) {
   try {
+    // Bundles needing export to web — from the cached daily diff (ADMIN_BUNDLES_UI_PLAN
+    // Phase 1a-ii). Authoritative count is the cache, not the singleton task (which is 0/1).
+    let bundlePushPending = 0;
+    try {
+      const pushCfg = ConfigService.getConfig('system.bundles.push_status');
+      if (pushCfg && pushCfg.value) {
+        bundlePushPending = JSON.parse(pushCfg.value).count || 0;
+      }
+    } catch (pushErr) {
+      bundlePushPending = 0;
+    }
     return {
+      bundlePushPending: bundlePushPending,
       vintageUpdate: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['New', 'Assigned']),
       detailReview: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['Review']),
       newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New', 'Assigned']),
