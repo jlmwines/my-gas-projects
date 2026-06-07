@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 07:18',
-  commit: 'Bundle Stage 2 (cost/profit data layer). Schema: append cpm_Cost (CmxProdM) + wpm_ProfitRate (WebProdM), both master-only/append-only. Config: system.pricing.vat_divisor=1.18 + system.product_costs (direct DriveApp read of ComaxProductCosts by name, NOT the import pipeline). New ProductCostService.recomputeProductCosts(): reads vendor cost (Windows-1255 CSV by name) -> writes cpm_Cost (overwrites file SKUs only, preserves manual backfills) -> computes ex-VAT profit rate ((price/1.18 - cost)/(price/1.18)) into wpm_ProfitRate as a fraction. Editor wrapper runRecomputeProductCosts() for smoke test. Both columns survive the daily sync (CmxProdM :385 preserve branch; WebProdM update-only-by-mapping). Confirm cost filename + number format on first run.'
+  built: '2026-06-07 07:36',
+  commit: 'Bundle Stage 2 refinement — preserve-only profit rate. wpm_ProfitRate is the DURABLE field: where a stored cpm_Cost exists the computed ex-VAT rate ((price/1.18 - cost)/(price/1.18)) OVERWRITES; where there is no cost the EXISTING rate is PRESERVED, so manual/assumed (e.g. 0.25) backfills survive recompute. Cost is never hand-backfilled — it flows in via the cost file when a product is received in Comax, then overwrites the assumed rate. No auto-default (0.25 is a manual convention for legacy unknowns; the banked no-default stands). recomputeProductCosts() returns computed/preserved/stillBlank. cpm_Cost still written from the file (overwrites file SKUs only); both columns survive the daily sync.'
 };
 
 function getVersion() {

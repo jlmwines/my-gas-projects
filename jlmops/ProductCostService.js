@@ -62,8 +62,9 @@ const ProductCostService = (function() {
       costsInFile: costBySku.size,
       cmxUpdated: cmx.updated,
       cmxMissingCost: cmx.missingCost,   // unarchived CmxProdM rows still without a cost (backfill list size)
-      webRatesComputed: web.computed,
-      webNoCostOrPrice: web.noRate,      // web products left with a blank rate
+      webRatesComputed: web.computed,    // overwritten from a stored cost
+      webRatesPreserved: web.preserved,  // no cost -> kept existing manual/assumed rate
+      webStillBlank: web.stillBlank,     // no cost and no existing rate
       lastRecompute: stamp
     };
     logger.info(SERVICE_NAME, fn, 'Recompute complete: ' + JSON.stringify(summary));
@@ -166,8 +167,14 @@ const ProductCostService = (function() {
   /**
    * Computes and writes wpm_ProfitRate into WebProdM via a targeted single-column update.
    * rate = (exVat - cost) / exVat, exVat = wpm_RegularPrice / vatDivisor. Stored as a
-   * fraction (0.25 = 25%). Blank when the SKU has no stored cost or no positive price.
-   * @returns {{computed:number, noRate:number}}
+   * fraction (0.25 = 25%).
+   *
+   * Rate is the DURABLE field (settled 2026-06-07): where a stored cost exists, the
+   * computed rate OVERWRITES (a real cost flowing in from a Comax stock receipt replaces
+   * any prior assumed value); where there's no cost (or no price), the EXISTING rate is
+   * PRESERVED — manual / assumed backfills survive recompute. Cost is never backfilled
+   * by hand; it flows in via the cost file when a product is received.
+   * @returns {{computed:number, preserved:number, stillBlank:number}}
    */
   function _writeWebProfitRate(costBySkuFull, vatDivisor) {
     const fn = '_writeWebProfitRate';
@@ -180,13 +187,14 @@ const ProductCostService = (function() {
       throw new Error('WebProdM is missing wpm_SKU / wpm_RegularPrice / wpm_ProfitRate — run syncAllHeaders().');
     }
     const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return { computed: 0, noRate: 0 };
+    if (lastRow < 2) return { computed: 0, preserved: 0, stillBlank: 0 };
     const numRows = lastRow - 1;
 
     const skuCol = sheet.getRange(2, skuIdx + 1, numRows, 1).getValues();
     const priceCol = sheet.getRange(2, priceIdx + 1, numRows, 1).getValues();
+    const rateColExisting = sheet.getRange(2, rateIdx + 1, numRows, 1).getValues();
 
-    let computed = 0, noRate = 0;
+    let computed = 0, preserved = 0, stillBlank = 0;
     const rateCol = skuCol.map((r, i) => {
       const sku = String(r[0] || '').trim();
       const price = Number(priceCol[i][0]);
@@ -194,15 +202,21 @@ const ProductCostService = (function() {
         const exVat = price / vatDivisor;
         const rate = (exVat - costBySkuFull.get(sku)) / exVat;
         computed++;
-        return [Math.round(rate * 10000) / 10000];   // 4dp fraction
+        return [Math.round(rate * 10000) / 10000];   // 4dp fraction — overwrites
       }
-      noRate++;
-      return [''];   // missing -> blank, never 0%
+      // no stored cost (or no price): preserve the existing rate (manual / assumed backfill)
+      const existing = rateColExisting[i][0];
+      if (existing !== '' && existing !== null && existing !== undefined) {
+        preserved++;
+        return [existing];
+      }
+      stillBlank++;
+      return [''];
     });
 
     sheet.getRange(2, rateIdx + 1, numRows, 1).setValues(rateCol);
-    logger.info(SERVICE_NAME, fn, `WebProdM wpm_ProfitRate written: ${computed} computed, ${noRate} blank.`);
-    return { computed, noRate };
+    logger.info(SERVICE_NAME, fn, `WebProdM wpm_ProfitRate: ${computed} computed, ${preserved} preserved, ${stillBlank} blank.`);
+    return { computed, preserved, stillBlank };
   }
 
   function _isArchived(v) {
