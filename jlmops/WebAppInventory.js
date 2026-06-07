@@ -154,6 +154,33 @@ function WebAppInventory_generateComaxInventoryExport() {
 }
 
 /**
+ * Recomputes product costs + profit rates from the cost file (BUNDLE_PLAN Stage 2).
+ * Driven by the Product Costs & Margins card on AdminInventoryView.
+ * @returns {Object} ProductCostService summary, or { error }.
+ */
+function WebAppInventory_recomputeProductCosts() {
+  try {
+    return ProductCostService.recomputeProductCosts();
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'recomputeProductCosts', e.message, e);
+    return { error: `Cost recompute failed: ${e.message}` };
+  }
+}
+
+/**
+ * Read-only cost/margin status for the AdminInventory card (no recompute).
+ * @returns {Object} { computed, assumed, blank, total, lastRecompute, assumedList } or { error }.
+ */
+function WebAppInventory_getProductCostStatus() {
+  try {
+    return ProductCostService.getCostStatus();
+  } catch (e) {
+    LoggerService.error('WebAppInventory', 'getProductCostStatus', e.message, e);
+    return { error: `Could not load cost status: ${e.message}` };
+  }
+}
+
+/**
  * Gets data for the manager inventory view.
  * @returns {Object} An object with inventory data for the manager.
  */

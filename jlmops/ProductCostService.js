@@ -224,8 +224,76 @@ const ProductCostService = (function() {
     return s === 'true' || s === '1' || s === 'yes';
   }
 
+  /**
+   * Read-only status for the AdminInventory card (no recompute). Classifies each WEB
+   * product by whether its rate is computed (a stored cpm_Cost exists), assumed (a rate
+   * present but no cost), or blank. The assumed set is the awareness list — web products
+   * running on a manual/assumed margin until a real cost flows in. Comax-only rows are
+   * out of scope (only web products consume the rate).
+   * @returns {{computed:number, assumed:number, blank:number, total:number,
+   *            lastRecompute:string, assumedList:Array<{sku:string,name:string,rate:number}>}}
+   */
+  function getCostStatus() {
+    const ss = SheetAccessor.getDataSpreadsheet();
+
+    // SKUs that carry a stored cost (CmxProdM.cpm_Cost present).
+    const cmxSheet = ss.getSheetByName('CmxProdM');
+    const cmxHeaders = ConfigService.getConfig('schema.data.CmxProdM').headers.split(',');
+    const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+    const cmxCostIdx = cmxHeaders.indexOf('cpm_Cost');
+    const costSkus = new Set();
+    if (cmxSheet && cmxSheet.getLastRow() >= 2 && cmxSkuIdx >= 0 && cmxCostIdx >= 0) {
+      const n = cmxSheet.getLastRow() - 1;
+      const skus = cmxSheet.getRange(2, cmxSkuIdx + 1, n, 1).getValues();
+      const costs = cmxSheet.getRange(2, cmxCostIdx + 1, n, 1).getValues();
+      skus.forEach((r, i) => {
+        const sku = String(r[0] || '').trim();
+        const c = costs[i][0];
+        if (sku && c !== '' && c !== null && c !== undefined && isFinite(Number(c))) costSkus.add(sku);
+      });
+    }
+
+    // Classify web products by rate provenance.
+    const webSheet = ss.getSheetByName('WebProdM');
+    const webHeaders = ConfigService.getConfig('schema.data.WebProdM').headers.split(',');
+    const wSku = webHeaders.indexOf('wpm_SKU');
+    const wName = webHeaders.indexOf('wpm_PostTitle');
+    const wRate = webHeaders.indexOf('wpm_ProfitRate');
+    let computed = 0, assumed = 0, blank = 0;
+    const assumedList = [];
+    if (webSheet && webSheet.getLastRow() >= 2 && wSku >= 0 && wRate >= 0) {
+      const rows = webSheet.getRange(2, 1, webSheet.getLastRow() - 1, webHeaders.length).getValues();
+      rows.forEach(row => {
+        const sku = String(row[wSku] || '').trim();
+        if (!sku) return;
+        const rate = row[wRate];
+        const hasRate = rate !== '' && rate !== null && rate !== undefined;
+        if (costSkus.has(sku)) {
+          computed++;
+        } else if (hasRate) {
+          assumed++;
+          assumedList.push({ sku: sku, name: String(row[wName] || ''), rate: Number(rate) });
+        } else {
+          blank++;
+        }
+      });
+    }
+    assumedList.sort((a, b) => String(a.name).localeCompare(String(b.name), 'he'));
+
+    const last = ConfigService.getConfig('system.product_costs.last_recompute');
+    return {
+      computed: computed,
+      assumed: assumed,
+      blank: blank,
+      total: computed + assumed + blank,
+      lastRecompute: (last && last.value) || '',
+      assumedList: assumedList
+    };
+  }
+
   return {
-    recomputeProductCosts: recomputeProductCosts
+    recomputeProductCosts: recomputeProductCosts,
+    getCostStatus: getCostStatus
   };
 
 })();

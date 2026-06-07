@@ -54,6 +54,25 @@
     </div>
   </div>
 
+  <!-- Section 2b: Product Costs & Margins (BUNDLE_PLAN Stage 2) -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5>Product Costs &amp; Margins</h5>
+          <div>
+            <span id="cost-margin-last" class="text-muted small mr-2"></span>
+            <button id="btn-recompute-costs" class="btn btn-sm btn-light">Recompute</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="cost-margin-summary" class="mb-2 text-muted small">Loading…</div>
+          <div id="cost-margin-list-container" class="table-responsive" style="max-height: 320px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Section 3: Unified Count Task Creation -->
   <div class="row mb-4">
     <div class="col-12">
@@ -625,10 +644,72 @@
   el.createBtn.addEventListener('click', handleCreateCountTasks);
   el.reloadBtn.addEventListener('click', loadPlanningData);
 
+  // --- Product Costs & Margins (BUNDLE_PLAN Stage 2) ---
+  const costMarginSummary = document.getElementById('cost-margin-summary');
+  const costMarginList = document.getElementById('cost-margin-list-container');
+  const costMarginLast = document.getElementById('cost-margin-last');
+  const recomputeCostsBtn = document.getElementById('btn-recompute-costs');
+
+  function loadCostMarginData() {
+    costMarginSummary.textContent = 'Loading…';
+    google.script.run
+      .withSuccessHandler(renderCostMargin)
+      .withFailureHandler(handleError)
+      .WebAppInventory_getProductCostStatus();
+  }
+
+  function renderCostMargin(data) {
+    if (!data || data.error) { handleError({ message: (data && data.error) || 'No cost status' }); return; }
+    if (costMarginLast) {
+      costMarginLast.textContent = data.lastRecompute ? `recomputed ${data.lastRecompute}` : 'never recomputed';
+    }
+    costMarginSummary.innerHTML =
+      `<strong>${data.computed}</strong> computed · <strong>${data.assumed}</strong> assumed (no cost yet) · `
+      + `<strong>${data.blank}</strong> blank · ${data.total} web products`;
+    const list = data.assumedList || [];
+    if (list.length === 0) {
+      costMarginList.innerHTML = '<p class="text-muted small mb-0">No products on assumed margins.</p>';
+      return;
+    }
+    let html = '<table class="table table-sm table-hover"><thead><tr>'
+      + '<th class="text-center">SKU</th><th class="text-right">Product Name</th><th class="text-center">Assumed margin</th>'
+      + '</tr></thead><tbody>';
+    list.forEach(p => {
+      const pct = (p.rate != null && isFinite(p.rate)) ? (Math.round(p.rate * 1000) / 10) + '%' : '—';
+      html += `<tr><td class="text-center">${p.sku}</td><td class="text-right">${p.name || '-'}</td><td class="text-center">${pct}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    costMarginList.innerHTML = html;
+  }
+
+  function handleRecomputeCosts() {
+    TaskWidgets.confirm('Recompute product costs and margins from the cost file?', function() {
+      recomputeCostsBtn.disabled = true;
+      const orig = recomputeCostsBtn.textContent;
+      recomputeCostsBtn.textContent = 'Recomputing…';
+      google.script.run
+        .withSuccessHandler(res => {
+          recomputeCostsBtn.disabled = false;
+          recomputeCostsBtn.textContent = orig;
+          if (res && res.error) { handleError({ message: res.error }); return; }
+          showToast(`Costs recomputed: ${res.webRatesComputed} computed, ${res.webRatesPreserved} preserved, ${res.webStillBlank} blank.`, 'success');
+          loadCostMarginData();
+        })
+        .withFailureHandler(err => {
+          recomputeCostsBtn.disabled = false;
+          recomputeCostsBtn.textContent = orig;
+          handleError(err);
+        })
+        .WebAppInventory_recomputeProductCosts();
+    });
+  }
+  if (recomputeCostsBtn) recomputeCostsBtn.addEventListener('click', handleRecomputeCosts);
+
   // Initial load
   loadAdminViewData();
   loadPlanningData();
   loadComaxSyncData(); // Load data for the new Comax Sync card
+  loadCostMarginData(); // Product Costs & Margins card (Stage 2 Step 3)
 
   /**
    * Loads data specifically for the Comax Sync card.

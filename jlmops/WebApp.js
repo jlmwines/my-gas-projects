@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 07:36',
-  commit: 'Bundle Stage 2 refinement — preserve-only profit rate. wpm_ProfitRate is the DURABLE field: where a stored cpm_Cost exists the computed ex-VAT rate ((price/1.18 - cost)/(price/1.18)) OVERWRITES; where there is no cost the EXISTING rate is PRESERVED, so manual/assumed (e.g. 0.25) backfills survive recompute. Cost is never hand-backfilled — it flows in via the cost file when a product is received in Comax, then overwrites the assumed rate. No auto-default (0.25 is a manual convention for legacy unknowns; the banked no-default stands). recomputeProductCosts() returns computed/preserved/stillBlank. cpm_Cost still written from the file (overwrites file SKUs only); both columns survive the daily sync.'
+  built: '2026-06-07 07:52',
+  commit: 'Bundle Stage 2 Step 3 — Product Costs & Margins card on AdminInventoryView. New ProductCostService.getCostStatus() classifies each web product as computed (stored cpm_Cost), assumed (rate present, no cost), or blank; returns counts + the assumed-margin list (web-scoped). Controllers WebAppInventory_recomputeProductCosts() + _getProductCostStatus(). Card shows last-recompute time, summary (computed/assumed/blank/total), a scrollable assumed-margin table (SKU/name/margin%), and a Recompute button (TaskWidgets.confirm gate). List is web-scoped (the assumed set that matters for bundles), not the Comax-wide missing-cost count. Read-only; recompute is the only action.'
 };
 
 function getVersion() {
