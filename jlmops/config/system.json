@@ -1105,5 +1105,45 @@
         "id",
         "1AiIDEcg4cwBjRsh-bc60oRRl1q2st54L",
         "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.pricing",
+        "VAT divisor for ex-VAT margin math. Web selling prices include VAT; divide by this for the ex-VAT price. VAT moved 17%->18% in 2025, so kept in config not hardcoded (BUNDLE_PLAN Stage 2).",
+        "stable",
+        "vat_divisor",
+        "1.18",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.product_costs",
+        "Comax vendor-cost file: direct DriveApp read by name (NOT the import-job pipeline). Same folder as the Comax product import source. Cols: A internal code, B SKU, C ex-VAT vendor cost. BUNDLE_PLAN Stage 2.",
+        "stable",
+        "source_folder_id",
+        "1bPsgqtH2Wcd_vuLGFQGQiYP85TKHD-3j",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.product_costs",
+        "Comax vendor-cost file name (located by name within the folder). Confirm exact filename/extension against the live Comax export.",
+        "stable",
+        "file_pattern",
+        "ComaxProductCosts.csv",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.product_costs",
+        "Comax vendor-cost file encoding (Hebrew Comax export; matches the product CSV).",
+        "stable",
+        "file_encoding",
+        "Windows-1255",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
+        "system.product_costs.last_recompute",
+        "Tracks last vendor-cost recompute timestamp (on-demand; monthly baseline).",
+        "stable",
+        "value",
+        "",
+        "", "", "", "", "", "", "", ""
     ]
 ]

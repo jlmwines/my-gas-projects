@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-05 14:30',
-  commit: 'Bundle Stage 0 completion: preserve qty=0 at the write/import paths. The :198 price-calc fix was insufficient — qty "0" optional slots were coerced to 1 BEFORE the calc, at three write sites (createSlot :489, importBundleFromWooCommerce :1147, reimportAllBundlesBatch :1263) via `... || 1`. Confirmed against live woosb_ids JSON (qty:"0",optional:"1" members). All three now use (qty===\'\'||qty==null)?1:Number(qty) so "0" survives as 0. Run Update Composition to re-derive existing slots (they hold the old 1 until re-imported).'
+  built: '2026-06-07 07:18',
+  commit: 'Bundle Stage 2 (cost/profit data layer). Schema: append cpm_Cost (CmxProdM) + wpm_ProfitRate (WebProdM), both master-only/append-only. Config: system.pricing.vat_divisor=1.18 + system.product_costs (direct DriveApp read of ComaxProductCosts by name, NOT the import pipeline). New ProductCostService.recomputeProductCosts(): reads vendor cost (Windows-1255 CSV by name) -> writes cpm_Cost (overwrites file SKUs only, preserves manual backfills) -> computes ex-VAT profit rate ((price/1.18 - cost)/(price/1.18)) into wpm_ProfitRate as a fraction. Editor wrapper runRecomputeProductCosts() for smoke test. Both columns survive the daily sync (CmxProdM :385 preserve branch; WebProdM update-only-by-mapping). Confirm cost filename + number format on first run.'
 };
 
 function getVersion() {
