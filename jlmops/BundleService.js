@@ -1613,6 +1613,105 @@ const BundleService = (function () {
     }
   }
 
+  /**
+   * Serializes a bundle's slots back to the WPClever woosb_ids JSON for one language,
+   * reusing each slot's ORIGINAL token (the slotId is `${bundleId}-${token}`, so no token
+   * regeneration — WPClever accepts the keys it issued). BUNDLE_PLAN Stage 3 serializer.
+   *
+   * Product slot -> { id, sku, qty, optional, min, max } (string values; id resolved per
+   *   language: EN = wpm_ID by SKU; HE = WebXltM wxm_WpmlOriginalId(EN id) -> wxm_ID, the
+   *   same resolution validateAllBundleParity uses). Unresolved SKU -> blank id + a warning.
+   * Text slot -> { type, text } (text per language).
+   *
+   * @param {string} bundleId  EN bundle product id.
+   * @param {string} lang      'en' | 'he'.
+   * @returns {{json:string, warnings:Array<string>}}
+   */
+  function exportBundleWoosb(bundleId, lang) {
+    const language = (lang === 'he') ? 'he' : 'en';
+    const warnings = [];
+
+    const slots = getSlotsForBundle(bundleId);
+    if (!slots || slots.length === 0) {
+      return { json: '', warnings: [`Bundle ${bundleId} has no slots.`] };
+    }
+    slots.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // SKU -> EN id, and (for HE) EN id -> HE id — mirrors validateAllBundleParity (:1559-1578).
+    const allConfig = ConfigService.getAllConfig();
+    const ss = SheetAccessor.getDataSpreadsheet();
+    const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+    const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
+    const wpmSkuIdx = wpmHeaders.indexOf('wpm_SKU');
+    const skuToEnId = {};
+    const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
+    for (let i = 1; i < wpmData.length; i++) {
+      const sku = String(wpmData[i][wpmSkuIdx] || '').trim();
+      const id = String(wpmData[i][wpmIdIdx] || '').trim();
+      if (sku && id) skuToEnId[sku] = id;
+    }
+    const enToHeId = {};
+    if (language === 'he') {
+      const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+      const xltIdIdx = xltHeaders.indexOf('wxm_ID');
+      const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+      const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
+      for (let i = 1; i < xltData.length; i++) {
+        const enId = String(xltData[i][xltOrigIdx] || '').trim();
+        const heId = String(xltData[i][xltIdIdx] || '').trim();
+        if (enId && heId) enToHeId[enId] = heId;
+      }
+    }
+
+    const prefix = bundleId + '-';
+    const out = {};
+    slots.forEach(slot => {
+      // Recover the original woosb token from the slotId (`${bundleId}-${token}`).
+      const token = (slot.slotId && slot.slotId.indexOf(prefix) === 0)
+        ? slot.slotId.substring(prefix.length)
+        : slot.slotId;
+
+      if (slot.slotType === 'Text') {
+        out[token] = {
+          type: slot.textStyle || 'p',
+          text: (language === 'he' ? slot.textHe : slot.textEn) || ''
+        };
+        return;
+      }
+
+      // Product slot
+      const sku = slot.activeSKU || '';
+      let id = '';
+      if (!sku) {
+        warnings.push(`Product slot ${token} has no SKU — id left blank.`);
+      } else {
+        const enId = skuToEnId[sku];
+        if (!enId) {
+          warnings.push(`${language.toUpperCase()}: SKU "${sku}" (token ${token}) not in WebProdM — id left blank.`);
+        } else if (language === 'he') {
+          id = enToHeId[enId] || '';
+          if (!id) warnings.push(`HE: SKU "${sku}" (token ${token}) has no Hebrew translation in WebXltM — id left blank.`);
+        } else {
+          id = enId;
+        }
+      }
+
+      // Match WPClever's format: `optional` present only when the member is optional
+      // (WC omits it otherwise). Field order: id, sku, qty, [optional], min, max.
+      const product = {
+        id: id,
+        sku: sku,
+        qty: String((slot.defaultQty === '' || slot.defaultQty == null) ? 1 : slot.defaultQty)
+      };
+      if (slot.qtyVariable) product.optional = '1';
+      product.min = '';
+      product.max = '';
+      out[token] = product;
+    });
+
+    return { json: JSON.stringify(out), warnings: warnings };
+  }
+
   // =====================================================
   // PUBLIC API
   // =====================================================
@@ -1651,7 +1750,28 @@ const BundleService = (function () {
     // EN/HE composition parity validation
     validateAllBundleParity: validateAllBundleParity,
 
+    // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
+    exportBundleWoosb: exportBundleWoosb,
+
     // Stats
     getBundleStats: getBundleStats
   };
 })();
+
+/**
+ * Editor smoke wrapper for the Stage 3 serializer — exports the first bundle EN+HE and
+ * logs the JSON + warnings. Run from the Apps Script editor (BUNDLE_PLAN Stage 3).
+ */
+function runExportBundleWoosbSmoke() {
+  const bundles = BundleService.getAllBundles();
+  if (!bundles || !bundles.length) { Logger.log('No bundles found.'); return 'no bundles'; }
+  const id = bundles[0].bundleId;
+  const en = BundleService.exportBundleWoosb(id, 'en');
+  const he = BundleService.exportBundleWoosb(id, 'he');
+  Logger.log('Bundle %s (%s)', id, bundles[0].nameEn || '');
+  Logger.log('EN json: %s', en.json);
+  Logger.log('EN warnings (%s): %s', en.warnings.length, JSON.stringify(en.warnings));
+  Logger.log('HE json: %s', he.json);
+  Logger.log('HE warnings (%s): %s', he.warnings.length, JSON.stringify(he.warnings));
+  return { bundleId: id, en: en, he: he };
+}
