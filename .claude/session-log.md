@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont) — BUNDLE_PLAN Stage 3 core (authoring + woosb export) shipped @234→@241
+
+- **Serializer** `BundleService.exportBundleWoosb(bundleId, lang)` — slots → WPClever `woosb_ids` JSON, **reusing the original token from `slotId`** (`${bundleId}-${token}`, both import paths) so no key regeneration; EN id = `wpm_ID` by SKU, HE via `WebXltM`. Smoke-validated vs a live bundle (@234).
+- **Export worklist** on AdminBundlesView (`buildExportTable` + `WebAppBundles_buildExportTable`): every bundle where ops≠web (EN or HE) → copy-paste EN/HE cells. Export direction ops→web only.
+- **The "14/14 differ" saga — four layered causes, each found by live 3-way compare (live = WebProdM ≠ ops), all fixed:** (1) ops dropped `optional` because the derive **preserved** `qtyVariable` instead of reading web → moved it to derive-from-web both paths (@235); (2) WPClever uses **independent random woosb keys per language** → diff made token-agnostic (@237); (3) product order is **per-language alphabetic** → diff made order-insensitive multiset (@238); (4) **text (section-header) slots** are language-specific → excluded from the diff entirely, products-only (@240, user call). Result: correctly flags only real product changes.
+- **HE section-header text capture** (@241): the derive matched HE text by EN key (always empty → HE export would blank headers); now matched by **ordinal** (sections parallel). ops owns HE text; editor shows EN+HE (user: assume good, revisit if HE text export ever fails).
+- Built+stripped a temp in-panel diagnostic (@236) to debug from the user's phone (no editor access) — that's how the token/order/text causes were isolated.
+- **Stage 3 remaining:** profit-in-selector, as-presented profit, out-of-stock failsafe. Also created **`ADMIN_BUNDLES_UI_PLAN.md`** (Dispatch-led owner doc for an AdminBundles UI overhaul; Dispatch has since filled in a design). Deep review 2026-06-06 also written earlier today.
+- Next: finish Stage 3 (profit-in-selector etc.) or Stages 4–7; AdminBundles UI overhaul is Dispatch's.
+
+---
+
 ## 2026-06-07 — BUNDLE_PLAN Stage 2 (cost/profit data layer) COMPLETE @231→@233
 
 - **Stage 2 shipped end-to-end in one session.** Schema: appended `cpm_Cost` (CmxProdM) + `wpm_ProfitRate` (WebProdM), both master-only/append-only; activated via `rebuildSysConfigFromSource()` + `syncAllHeaders()` (user ran both, columns verified). Config: `system.pricing.vat_divisor=1.18` + `system.product_costs` (direct `DriveApp` read of `ComaxProductCosts.csv` by name, Windows-1255, NOT the import pipeline) + `last_recompute` tracker.
