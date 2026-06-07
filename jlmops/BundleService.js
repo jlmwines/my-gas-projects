@@ -1120,11 +1120,18 @@ const BundleService = (function () {
     // Valid text slot types (h1-h6, p, none, span, etc.)
     const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
 
+    // HE section-header text, matched by ORDINAL (not key): WPClever uses different woosb keys
+    // per language, but text slots are parallel-ordered EN/HE (Stage 3 fix 2026-06-07).
+    const heTexts = Object.keys(woosbDataHe || {})
+      .filter(function (k) { const v = woosbDataHe[k] || {}; return v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined; })
+      .map(function (k) { return (woosbDataHe[k].text || '').trim(); });
+    let heTextIdx = 0;
+
     for (const [key, value] of entries) {
       if (value.type && textSlotTypes.includes(value.type.toLowerCase())) {
-        // Text slot - get Hebrew text from Hebrew woosb_ids data if available
-        const hebrewEntry = woosbDataHe[key] || {};
-        const textHe = (hebrewEntry.text || '').trim();
+        // Text slot — HE text by ordinal (keys differ per language; sections parallel)
+        const textHe = (heTextIdx < heTexts.length) ? heTexts[heTextIdx] : '';
+        heTextIdx++;
 
         createSlot({
           slotId: `${bundleId}-${key}`,
@@ -1242,6 +1249,12 @@ const BundleService = (function () {
         const entries = Object.entries(woosbData);
         let order = 1;
 
+        // HE section-header text matched by ORDINAL (keys differ per language; sections parallel).
+        const heTexts = Object.keys(woosbDataHe || {})
+          .filter(function (k) { const v = woosbDataHe[k] || {}; return v.type !== undefined && v.text !== undefined && v.id === undefined && v.sku === undefined; })
+          .map(function (k) { return (woosbDataHe[k].text || '').trim(); });
+        let heTextIdx = 0;
+
         for (const [key, value] of entries) {
           const slotRow = new Array(slotColCount).fill('');
           slotRow[slotCols.sbs_SlotId] = `${b.bundleId}-${key}`;
@@ -1250,11 +1263,11 @@ const BundleService = (function () {
           slotRow[slotCols.sbs_HistoryJson] = '[]';
 
           if (value.type && textSlotTypes.includes(value.type.toLowerCase())) {
-            const hebrewEntry = woosbDataHe[key] || {};
             slotRow[slotCols.sbs_SlotType] = 'Text';
             slotRow[slotCols.sbs_TextStyle] = value.type;
             slotRow[slotCols.sbs_TextEn] = value.text || '';
-            slotRow[slotCols.sbs_TextHe] = (hebrewEntry.text || '').trim();
+            slotRow[slotCols.sbs_TextHe] = (heTextIdx < heTexts.length) ? heTexts[heTextIdx] : '';
+            heTextIdx++;
             slotRow[slotCols.sbs_DefaultQty] = 1;
             newSlotRows.push(slotRow);
           } else if (value.id || value.sku) {

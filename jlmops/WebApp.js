@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 12:25',
-  commit: 'Bundle Stage 3 — export diff now ignores TEXT (non-product) slots (user call). Section-header text is language-specific and HE text is not authored ops-side, so it must not drive "needs export". _canonMultiset filters to product members only (id/sku/qty/optional); keeps the token- and order-agnostic multiset. Remaining open: HE text on the EXPORT side (serializer still emits ops textHe which is currently empty — pasting an HE bundle would blank its headers; decide whether ops captures HE text or leaves it to the web).'
+  built: '2026-06-07 12:38',
+  commit: 'Bundle Stage 3 — capture HE section-header text into ops (so ops can be the source for HE text + HE export is safe). Both derive paths (importBundleFromWooCommerce + reimportAllBundlesBatch) now match HE text to EN text slots by ORDINAL (keys differ per language; text slots are parallel-ordered) instead of by EN key (which never matched → textHe was empty → HE export would blank headers). RUN UPDATE COMPOSITION to re-derive and populate slot textHe. Export diff still products-only (@240); re-including text in the diff is a later refinement once HE-text capture is confirmed.'
 };
 
 function getVersion() {
