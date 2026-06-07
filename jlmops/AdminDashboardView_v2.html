@@ -299,12 +299,6 @@
     html += '<tr><td>New Suggestions</td><td class="text-right"><strong>' + prod.newProductSuggestion + '</strong></td></tr>';
     html += '<tr><td>New - Edit</td><td class="text-right"><strong>' + prod.newProductEdit + '</strong></td></tr>';
     html += '<tr><td>New - Review</td><td class="text-right"><strong>' + prod.newProductReview + '</strong></td></tr>';
-    if (prod.bundleCritical > 0) {
-      html += '<tr class="table-danger"><td>Bundle Critical</td><td class="text-right"><strong>' + prod.bundleCritical + '</strong></td></tr>';
-    } else {
-      html += '<tr><td>Bundle Critical</td><td class="text-right text-success"><strong>0</strong></td></tr>';
-    }
-    html += '<tr><td>Bundle Low</td><td class="text-right"><strong>' + prod.bundleLow + '</strong></td></tr>';
     if (prod.bundlePushPending > 0) {
       html += '<tr class="table-warning"><td>Bundles: Needs Push</td><td class="text-right"><strong>' + prod.bundlePushPending + '</strong></td></tr>';
     } else {

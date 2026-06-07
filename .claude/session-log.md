@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 4) — UI-plan Phase 1 COMPLETE (1b+1c) + price-bar fix + decisions @247→@249
+
+- **@247 Phase 1b:** AdminBundles 5-stat row → **filter chips** All/Needs export/OK (counts from cached `push_status`, added to `getViewData` payload); list now **status-sorted** (needs-export pinned top) with EN-bold/HE-muted name cell + "Needs Push" badge; **Low Inventory Alerts panel removed**; `loadStats` guarded (leftover callers no longer hit removed DOM). Editor untouched.
+- **@248 Phase 1c:** editor **hidden until row click** (Stage D); whole row opens editor in place + row highlight + Close button; **deficiency strip** atop editor (v1 = push status; grows w/ Stage 7 in Phase 4). Also removed dashboard **Bundle Critical/Low** rows (Needs Push is the sole bundle signal — user call).
+- **@249 price-bar fix:** editor title bar showed phantom "savings" — root cause: frontend re-summed members with `productPrice * (defaultQty || 1)`, counting qty-0 add-ons as qty-1 and inflating total above selling price. Now uses backend `_calculateBundlePrice` values (`totalPrice`/`discount`/`displayPrice`, qty-0 contributes 0); title = "Total · Discount · Final" (Total-only when no discount). Fixes the customer-facing preview too.
+- **Decisions (folded into ADMIN_BUNDLES_UI_PLAN):** (§7.1a) **parity dropped** — jlmops-as-truth means one composition serializes both EN+HE, so EN/HE can't drift; web drift is overwritten by next export; `validateAllBundleParity` button now vestigial. (§7.1b) dashboard Bundle Critical/Low rows removed. (§7.1c) **discount is WC-managed/manual — jlmops never pushes it.** Corrected mid-session: web discount **IS** imported (`wpm_WoosbDiscount`/`wpm_WoosbDiscountAmount`/`wpm_WoosbCustomPrice` in WebProdM); the real gap is `_calculateBundlePrice` reads blank `sb_DiscountPrice` not the imported `wpm_Woosb*` → as-presented margin ignores discount. That fix belongs to the already-scheduled Stage 3/4 as-presented-profit display (verify WPClever %-vs-amount on live data first).
+- **Phase 1 (Queue & status) COMPLETE.** Un-exercisable live until a bundle change makes count>0 (current 0 of 14). **Next:** Phase 2 (Export UX — CSV-as-new-tab + auto-close), Phase 3 (composition sheet — draft + atomic save), Phase 4 (Stage 7 deficiency), then BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont 3) — UI-plan Phase 1a-ii (push-pending task + dashboard) @246
 
 - **@246** ADMIN_BUNDLES_UI_PLAN Phase 1a-ii. Five changes: (1) `task.bundles.push_pending` template in `taskDefinitions.json` (topic Products, Normal, admin_direct, next_business_day); (2) `HousekeepingService.refreshBundlePushStatus` now drives a **singleton** batch task — `upsertSingletonTask(... '_SYSTEM' ...)` on count>0, `completeTaskByTypeAndEntity` safety-close on count==0; (3) `WebAppBundles_buildExportTable` **controller** (not the service — housekeeping calls the service read-only) closes the task on a real export (exportCount>0) = the primary action-close; (4) confirmation toast after export in `AdminBundlesView.html`; (5) dashboard "Bundles: Needs Push — N" row in Products widget (`WebAppDashboardV2._getProductsData` + `AdminDashboardView_v2.html`), count from cached `system.bundles.push_status` (not the singleton task, which reads 0/1).

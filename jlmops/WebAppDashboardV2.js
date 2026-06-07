@@ -590,8 +590,9 @@ function _getProductsData(allTasks) {
       newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New', 'Assigned']),
       newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
       newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
-      bundleCritical: _countTasksByType(allTasks, 'task.bundle.critical_inventory'),
-      bundleLow: _countTasksByType(allTasks, 'task.bundle.low_inventory'),
+      // Bundle Critical / Bundle Low rows removed (ADMIN_BUNDLES_UI_PLAN Phase 1b, user call):
+      // "Bundles: Needs Push" is the single bundle signal on the dashboard; stock-driven changes
+      // flow into Needs Push (Stage 7 model). checkBundleHealth still creates the underlying tasks.
       categoryLow: _countTasksByType(allTasks, 'task.deficiency.category_stock')
     };
   } catch (e) {

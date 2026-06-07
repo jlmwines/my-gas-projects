@@ -59,6 +59,18 @@ UI work here MUST follow `jlmops/CLAUDE.md`:
 
 ## 7. Target design
 
+### 7.1a Parity dropped (2026-06-07, user call)
+EN/HE **parity is no longer a status**. Under jlmops-as-source-of-truth the composition is authored once and the serializer derives BOTH the EN and HE woosb from it (`exportBundleWoosb`), so EN/HE cannot diverge in ops; any web-side EN/HE drift is overwritten by the next export (which pushes both halves together) — i.e. it is **subsumed by "Needs export" and self-correcting**. So: no Parity chip, no Parity advisory. The standalone `validateAllBundleParity` / "Validate EN/HE Parity" button is now vestigial (left in place for now; removal is a separate call). Wherever §7.1/§7.3 below list "parity" as an advisory or chip, treat it as struck.
+
+### 7.1b Dashboard bundle rows consolidated (2026-06-07, user call)
+On the admin dashboard Products widget, **"Bundle Critical" and "Bundle Low" rows are removed** — **"Bundles: Needs Push"** is the single bundle signal there. Stock-driven composition changes flow into Needs Push under the Stage 7 model (jlmops examines stock and supplies the corrected bundle), so the separate stock rows are redundant on the dashboard. `HousekeepingService.checkBundleHealth` still creates the underlying `task.bundle.critical_inventory` / `task.bundle.low_inventory` tasks (they remain in the task workbench); revisit whether to stop creating them when Stage 7 lands.
+
+### 7.1c Discount is WC-managed (2026-06-07, user call)
+**Discount is set manually on the web (WPClever), not in jlmops.** jlmops does not author, control, or push it — resolving the earlier UI-plan ↔ `BUNDLE_PLAN` (line 192) conflict in favor of WC-managed. Facts (verified against `schema.data.WebProdM`):
+- The web discount **IS imported** every sync, as a *separate* field (not part of `woosb_ids`): `wpm_WoosbDiscount`, `wpm_WoosbDiscountAmount`, `wpm_WoosbCustomPrice`, `wpm_WoosbDisableAutoPrice` (+ `wpm_RegularPrice`/`wpm_SalePrice`) in WebProdM.
+- The §7.4 header-strip "discount" field is **read-only display**, never editable; no export path carries discount (the woosb serializer is composition-only).
+- **Margin caveat (real, but not the reason I first gave):** `BundleService._calculateBundlePrice` reads `sb_DiscountPrice` (a vestigial SysBundles field, blank on import — `reimportAllBundlesBatch` sets `''`, BundleService.js:1252), **not** the imported `wpm_WoosbDiscount`/`wpm_WoosbDiscountAmount`. So as-presented margin currently ignores the real discount because the calc reads the wrong field. **Open (Stage 3/4 fix):** point the as-presented calc at the imported `wpm_Woosb*` discount (read-only, for math); verify WPClever's %-vs-amount / custom-price semantics against live data first. Still never push discount back.
+
 ### 7.1 Status model — one status, computed daily, cached
 "**Needs export**" has a single correct definition: serialized ops woosb ≠ web `wpm_WoosbIds` (the `buildExportTable` diff, `BUNDLE_PLAN.md` Stage 3). No new flags, no `sb_PendingExport`-style recorded state — **status is recomputed, never recorded**, which is what makes the whole flow self-correcting. Compute per-bundle `needsPush` + count in **daily housekeeping immediately after `refreshBundleComposition`** (diff maximally fresh; cheap at n=14); cache it so the view mounts instantly (no N+1 — the root-cause fix stays with `PERFORMANCE_OPTIMIZATION_PLAN.md`). Advisory states, strictly subordinate: **parity** > **low stock** > **suggestion** (Stage 7, cached overnight). **OK = silence** (no badge).
 
@@ -73,7 +85,7 @@ When the daily diff count > 0, housekeeping opens (or updates the count on) **on
 - **Row click reveals the editor in place** (UI_T2_1 Stage D pattern; not a drawer — batch clearing wants the queue visible above). Detail opens with a **deficiency strip** (what changed / parity specifics / stock) above the composition.
 
 ### 7.4 Editor — single composition sheet, authored once for EN+HE
-- **Header strip inline** atop the editor (no modal): name EN / name HE / status / discount / min-profit-rate; **type renders as a derived read-only badge** (§1.1: `sb_Type` is a cache).
+- **Header strip inline** atop the editor (no modal): name EN / name HE / status / discount (**read-only, WC-managed — see §7.1c**) / min-profit-rate; **type renders as a derived read-only badge** (§1.1: `sb_Type` is a cache).
 - **One ordered composition list** replaces the slot-list/detail split: text slots = inline-editable section headers; product rows = ↑↓ reorder (deliberately not drag — no new component at n=14), qty stepper with **qty-0 as a first-class "Flexible" pill** (never an error), name + SKU + price + `wpm_ProfitRate`, per-slot criteria (incl. the Stage 3 **optional toggle**) behind a ▸ disclosure.
 - **Product picker = ModalOverlay** search over `getEligibleProducts`, showing price + profit.
 - **EN+HE authored once:** HE name resolves via the translation pair; per-row parity badges from `validateParity` results.
@@ -89,7 +101,7 @@ Export button: run the fresh diff + the targeted out-of-stock failsafe (`BUNDLE_
 - **Superseded:** the low-stock row-badge IA (stock is now a subordinate advisory) and the old editor stages (replaced by the §7.4 composition sheet). Mark `UI_T2_1_admin_bundles.md` superseded-by-this-doc when Phase 1 ships.
 
 ## 9. Phased build (each independently shippable; per-phase user go)
-- **Phase 1 — Queue & status.** Housekeeping `needsPush` cache + count; status-sorted list + chips; remove alerts panel; `task.bundles.push_pending` + dashboard surfacing. Depends on Stage 3 diff being live (it is). **Progress:** 1a-i (cache + count, `WebAppBundles_getPushStatus`) SHIPPED @245; 1a-ii (`task.bundles.push_pending` singleton — housekeeping opens, Export action closes — + dashboard "Bundles: Needs Push — N" row) SHIPPED @246. **Remaining (1b):** status-sorted list + count chips; remove the unused low-inventory alerts panel. Then 1c: row-click editor.
+- **Phase 1 — Queue & status. ✅ COMPLETE @245→@249.** 1a-i cached push status (`WebAppBundles_getPushStatus`) @245; 1a-ii `task.bundles.push_pending` singleton (housekeeping opens, Export action closes) + dashboard "Bundles: Needs Push — N" @246; 1b needs-export filter chips (All/Needs export/OK) + status-sorted list (needs-export pinned top, EN+HE muted line) + alerts panel removed @247; 1c row-click editor in place + deficiency strip @248. (Also @249: editor price-bar fix — backend `_calculateBundlePrice`, qty-0 skipped, no phantom savings.) Decisions folded in: parity dropped (§7.1a), dashboard Bundle Critical/Low removed (§7.1b), discount WC-managed (§7.1c).
 - **Phase 2 — Export UX.** CSV-sequence auto-open-as-sheet; auto-close-task hook; out-of-stock failsafe wiring. (Export @234 exists; this re-plumbs its output + lifecycle.)
 - **Phase 3 — Composition sheet.** Header strip; draft + atomic `saveComposition`; picker with price/profit; Flexible pill; criteria disclosure incl. optional toggle; sessionStorage draft.
 - **Phase 4 — Stage 7 hook.** Deficiency strip grows the recommended-composition content when `BUNDLE_PLAN.md` Stage 7 lands. This doc owns the surface only.

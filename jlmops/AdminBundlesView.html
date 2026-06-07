@@ -3,6 +3,9 @@
 .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-start; padding-top: 80px; overflow-y: auto; }
 .modal-container { background: white; width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 .form-body { padding: 20px; }
+.bundle-chip.active { font-weight: bold; box-shadow: inset 0 0 0 2px #6c757d; }
+.bundle-name-he { font-size: 0.85em; color: #6c757d; }
+.bundle-row-selected { background: #e9f5ff !important; }
 </style>
 <div class="container-fluid">
   <!-- Section 1: Bundle Dashboard -->
@@ -19,28 +22,11 @@
           </div>
         </div>
         <div class="card-body">
-          <!-- Stats Row -->
-          <div class="row mb-3" id="bundle-stats-row">
-            <div class="col-md-2">
-              <div class="text-muted small">Total Bundles</div>
-              <div class="h4" id="stat-total">-</div>
-            </div>
-            <div class="col-md-2">
-              <div class="text-muted small">Active</div>
-              <div class="h4 text-success" id="stat-active">-</div>
-            </div>
-            <div class="col-md-2">
-              <div class="text-muted small">Draft</div>
-              <div class="h4 text-warning" id="stat-draft">-</div>
-            </div>
-            <div class="col-md-2">
-              <div class="text-muted small">Archived</div>
-              <div class="h4 text-secondary" id="stat-archived">-</div>
-            </div>
-            <div class="col-md-4">
-              <div class="text-muted small">Needs Attention</div>
-              <div class="h4 text-danger" id="stat-attention">-</div>
-            </div>
+          <!-- Filter Chips (replace the old 5-stat row — ADMIN_BUNDLES_UI_PLAN Phase 1b) -->
+          <div class="mb-3" id="bundle-chips-row">
+            <button type="button" class="btn btn-sm mr-1 bundle-chip active" data-filter="all">All <span class="badge badge-secondary" id="chip-count-all">0</span></button>
+            <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="needs-export">Needs export <span class="badge badge-warning" id="chip-count-needs">0</span></button>
+            <button type="button" class="btn btn-sm bundle-chip" data-filter="ok">OK <span class="badge badge-success" id="chip-count-ok">0</span></button>
           </div>
 
           <!-- Bundle List Table -->
@@ -48,9 +34,7 @@
             <table class="table table-sm table-hover" id="bundle-list-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name (EN)</th>
-                  <th>Name (HE)</th>
+                  <th>Name</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Price</th>
@@ -67,25 +51,12 @@
     </div>
   </div>
 
-  <!-- Section 2: Bundle Health Monitor -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5>Low Inventory Alerts</h5>
-          <button id="btn-apply-replacements" class="btn btn-sm" disabled>Apply Selected Replacements</button>
-        </div>
-        <div class="card-body">
-          <div id="health-alerts-container">
-            <div class="text-muted">Loading health data...</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Section 2 (Low Inventory Alerts) REMOVED — ADMIN_BUNDLES_UI_PLAN Phase 1b §7.3. Stock is a
+       subordinate advisory; the export-time out-of-stock failsafe warns, and per-bundle stock will
+       surface in the 1c deficiency strip. Stage 7 suggestion view replaces it later. -->
 
-  <!-- Section 3: Bundle Editor -->
-  <div class="row">
+  <!-- Section 3: Bundle Editor — hidden until a row is clicked (Phase 1c §7.3, UI_T2_1 Stage D) -->
+  <div class="row" id="bundle-editor-section" style="display: none;">
     <div class="col-12">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -94,9 +65,12 @@
             <button id="btn-add-text-slot" class="btn btn-sm mr-1">Add Text</button>
             <button id="btn-add-product-slot" class="btn btn-sm mr-1">Add Product</button>
             <button id="btn-save-bundle" class="btn btn-sm">Save Changes</button>
+            <button id="btn-close-editor" class="btn btn-sm ml-1">Close</button>
           </div>
         </div>
         <div class="card-body">
+          <!-- Deficiency strip (Phase 1c): what changed / status; grows with Stage 7 (Phase 4) -->
+          <div id="editor-deficiency-strip" class="mb-2"></div>
           <div class="row">
             <!-- Left: Slot List + Preview Controls -->
             <div class="col-md-4">
@@ -180,6 +154,8 @@
   var healthData = [];
   var selectedReplacements = [];
   var categoryOptions = [];
+  var pushBundleIds = [];        // bundleIds needing export (from cached push_status) — Phase 1b
+  var currentFilter = 'all';     // active chip: all | needs-export | ok
 
   // =================================================================================
   // INITIALIZATION
@@ -203,11 +179,12 @@
   }
 
   // Dispatch the consolidated init payload to each loader; each skips its own fetch.
+  // (Phase 1b: stats row + alerts panel removed; chips/list are driven by bundles + pushStatus.)
   function applyInitData(data) {
+    var ps = data.pushStatus || { count: 0, bundleIds: [] };
+    pushBundleIds = (ps.bundleIds || []).map(String);
     loadCategories(data.categories);
-    loadStats(data.stats);
     loadBundleList(data.bundles);
-    loadHealthAlerts(data.healthAlerts);
   }
 
   function loadCategories(preloadedData) {
@@ -232,7 +209,10 @@
     document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
     document.getElementById('btn-validate-parity').addEventListener('click', validateParity);
     document.getElementById('btn-export-bundles').addEventListener('click', exportBundles);
-    document.getElementById('btn-apply-replacements').addEventListener('click', applyReplacements);
+    document.querySelectorAll('.bundle-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() { setFilter(chip.dataset.filter); });
+    });
+    document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
     document.getElementById('btn-add-text-slot').addEventListener('click', function() { addSlot('Text'); });
     document.getElementById('btn-add-product-slot').addEventListener('click', function() { addSlot('Product'); });
     document.getElementById('btn-save-slot').addEventListener('click', saveSlot);
@@ -243,6 +223,9 @@
   // =================================================================================
 
   function loadStats(preloadedData) {
+    // Phase 1b: the 5-stat row was replaced by filter chips. Stat elements no longer exist, so
+    // this (and its leftover callers in slot/composition handlers) is a safe no-op.
+    if (!document.getElementById('stat-total')) return;
     if (preloadedData !== undefined) {
       renderStats(preloadedData);
       return;
@@ -308,29 +291,35 @@
   function renderBundleList(bundles) {
     var tbody = document.getElementById('bundle-list-body');
     if (!bundles || bundles.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-center">No bundles found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No bundles found</td></tr>';
+      updateChipCounts(0, 0);
       return;
     }
 
-    var html = bundles.map(function(b) {
+    // Mark needs-export from the cached push_status, then pin those rows to the top (Phase 1b §7.3).
+    var marked = bundles.map(function(b) {
+      return { b: b, needsPush: pushBundleIds.indexOf(String(b.bundleId)) !== -1 };
+    });
+    marked.sort(function(x, y) { return (y.needsPush ? 1 : 0) - (x.needsPush ? 1 : 0); });
+
+    var needsCount = 0;
+    var html = marked.map(function(m) {
+      var b = m.b;
+      if (m.needsPush) needsCount++;
       var statusClass = b.status === 'Active' ? 'badge-success' : (b.status === 'Draft' ? 'badge-warning' : 'badge-secondary');
-      var priceHtml = '';
+      var priceHtml = '-';
       if (b.totalPrice > 0) {
-        if (b.discount > 0) {
-          priceHtml = '<span class="text-muted" style="text-decoration: line-through; font-size: 0.85em;">' + b.totalPrice + '</span> ' +
-            '<strong>' + b.displayPrice + '</strong>';
-        } else {
-          priceHtml = b.displayPrice;
-        }
-      } else {
-        priceHtml = '-';
+        priceHtml = (b.discount > 0)
+          ? '<span class="text-muted" style="text-decoration: line-through; font-size: 0.85em;">' + b.totalPrice + '</span> <strong>' + b.displayPrice + '</strong>'
+          : b.displayPrice;
       }
-      return '<tr data-bundle-id="' + b.bundleId + '" style="cursor: pointer;">' +
-        '<td>' + b.bundleId + '</td>' +
-        '<td>' + (b.nameEn || '-') + '</td>' +
-        '<td>' + (b.nameHe || '-') + '</td>' +
+      var nameCell = '<strong>' + (b.nameEn || '-') + '</strong>' +
+        (b.nameHe ? '<div class="bundle-name-he">' + b.nameHe + '</div>' : '');
+      var pushBadge = m.needsPush ? ' <span class="badge badge-warning">Needs Push</span>' : '';
+      return '<tr data-bundle-id="' + b.bundleId + '" data-state="' + (m.needsPush ? 'needs-export' : 'ok') + '" style="cursor: pointer;">' +
+        '<td>' + nameCell + '</td>' +
         '<td>' + (b.type || 'Bundle') + '</td>' +
-        '<td><span class="badge ' + statusClass + '">' + b.status + '</span></td>' +
+        '<td><span class="badge ' + statusClass + '">' + b.status + '</span>' + pushBadge + '</td>' +
         '<td>' + priceHtml + '</td>' +
         '<td><button class="btn btn-sm btn-edit-bundle">Edit</button></td>' +
         '</tr>';
@@ -338,13 +327,67 @@
 
     tbody.innerHTML = html;
 
-    // Bind click handlers
+    // Row click anywhere opens the editor in place (Phase 1c §7.3). The Edit button is now just
+    // a visual affordance — its click bubbles to the row handler.
     tbody.querySelectorAll('tr').forEach(function(row) {
-      row.addEventListener('click', function(e) {
-        if (e.target.classList.contains('btn-edit-bundle')) {
-          loadBundleForEditing(row.dataset.bundleId);
-        }
+      if (!row.dataset.bundleId) return;
+      row.addEventListener('click', function() {
+        selectBundleRow(row);
+        loadBundleForEditing(row.dataset.bundleId);
       });
+    });
+
+    updateChipCounts(bundles.length, needsCount);
+    applyFilter();
+  }
+
+  function selectBundleRow(row) {
+    document.querySelectorAll('#bundle-list-body tr').forEach(function(r) {
+      r.classList.remove('bundle-row-selected');
+    });
+    if (row) row.classList.add('bundle-row-selected');
+  }
+
+  // Deficiency strip atop the editor (Phase 1c). v1 = push status; grows with Stage 7 (Phase 4).
+  function renderDeficiencyStrip(bundle) {
+    var strip = document.getElementById('editor-deficiency-strip');
+    if (!strip) return;
+    var needsPush = pushBundleIds.indexOf(String(bundle.bundleId)) !== -1;
+    if (needsPush) {
+      strip.innerHTML = '<div class="alert alert-warning py-2 mb-0">&#9888; Differs from web — export pending.</div>';
+    } else {
+      strip.innerHTML = '<div class="alert alert-success py-2 mb-0">&#10003; Matches web — nothing to export.</div>';
+    }
+  }
+
+  function closeEditor() {
+    var section = document.getElementById('bundle-editor-section');
+    if (section) section.style.display = 'none';
+    selectBundleRow(null);
+    currentBundleId = null;
+    currentBundle = null;
+  }
+
+  // ---- Filter chips (Phase 1b) -------------------------------------------------
+  function updateChipCounts(total, needs) {
+    document.getElementById('chip-count-all').textContent = total;
+    document.getElementById('chip-count-needs').textContent = needs;
+    document.getElementById('chip-count-ok').textContent = total - needs;
+  }
+
+  function setFilter(filter) {
+    currentFilter = filter || 'all';
+    document.querySelectorAll('.bundle-chip').forEach(function(chip) {
+      chip.classList.toggle('active', chip.dataset.filter === currentFilter);
+    });
+    applyFilter();
+  }
+
+  function applyFilter() {
+    document.querySelectorAll('#bundle-list-body tr').forEach(function(row) {
+      if (!row.dataset.state) return;  // skip the "no bundles" placeholder row
+      var show = currentFilter === 'all' || row.dataset.state === currentFilter;
+      row.style.display = show ? '' : 'none';
     });
   }
 
@@ -502,34 +545,31 @@
   }
 
   function renderBundleEditor(bundle, focusSlotId) {
+    // Reveal the editor in place (Phase 1c) and render the deficiency strip.
+    var section = document.getElementById('bundle-editor-section');
+    if (section) section.style.display = '';
+    renderDeficiencyStrip(bundle);
+
     document.getElementById('editor-bundle-name').textContent = bundle.nameEn || bundle.bundleId;
     document.getElementById('editor-actions').style.display = 'block';
 
-    // Calculate total price from saved slots
-    var calculatedTotal = 0;
-    if (bundle.slots && bundle.slots.length > 0) {
-      bundle.slots.forEach(function(slot) {
-        if (slot.slotType === 'Product' && slot.productPrice) {
-          calculatedTotal += slot.productPrice * (slot.defaultQty || 1);
-        }
-      });
-    }
-    bundle.calculatedTotal = calculatedTotal;
+    // Use the backend-computed pricing (BundleService._calculateBundlePrice): totalPrice sums
+    // price*qty with qty-0 contributing 0; discount = totalPrice - discountPrice (0 if none);
+    // displayPrice = the post-discount selling price. The old frontend recompute used
+    // (defaultQty || 1), counting qty-0 add-ons as qty-1 and producing phantom savings.
+    var totalPrice = bundle.totalPrice || 0;
+    var discount = bundle.discount || 0;
+    var displayPrice = bundle.displayPrice || 0;
+    bundle.calculatedTotal = totalPrice;  // the preview reads this
 
-    // Display price in header (use ₪ symbol)
+    // Title bar: total (price*qty, skips qty 0) · discount · total incl discount.
     var priceEl = document.getElementById('editor-bundle-price');
-    if (calculatedTotal > 0 || bundle.displayPrice > 0) {
-      var priceText = '';
-      if (calculatedTotal > 0) {
-        priceText = '₪' + calculatedTotal.toFixed(0);
-        if (bundle.displayPrice > 0 && bundle.displayPrice !== calculatedTotal) {
-          var savings = calculatedTotal - bundle.displayPrice;
-          if (savings > 0) {
-            priceText += ' → ₪' + bundle.displayPrice.toFixed(0) + ' (saves ₪' + savings.toFixed(0) + ')';
-          }
-        }
-      } else if (bundle.displayPrice > 0) {
-        priceText = '₪' + bundle.displayPrice.toFixed(0);
+    if (totalPrice > 0 || displayPrice > 0) {
+      var priceText;
+      if (discount > 0) {
+        priceText = 'Total ₪' + totalPrice.toFixed(0) + ' · Discount ₪' + discount.toFixed(0) + ' · Final ₪' + displayPrice.toFixed(0);
+      } else {
+        priceText = 'Total ₪' + (totalPrice > 0 ? totalPrice : displayPrice).toFixed(0);
       }
       priceEl.textContent = priceText;
       priceEl.style.display = 'inline';
