@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 — BUNDLE_PLAN Stage 2 (cost/profit data layer) COMPLETE @231→@233
+
+- **Stage 2 shipped end-to-end in one session.** Schema: appended `cpm_Cost` (CmxProdM) + `wpm_ProfitRate` (WebProdM), both master-only/append-only; activated via `rebuildSysConfigFromSource()` + `syncAllHeaders()` (user ran both, columns verified). Config: `system.pricing.vat_divisor=1.18` + `system.product_costs` (direct `DriveApp` read of `ComaxProductCosts.csv` by name, Windows-1255, NOT the import pipeline) + `last_recompute` tracker.
+- **New `ProductCostService.js`** (+ editor wrapper `runRecomputeProductCosts()`). Reads vendor cost via `Utilities.parseCsv` (NOT ComaxAdapter — product-schema-locked) → writes `cpm_Cost` (overwrites file SKUs only, preserves backfills) → computes ex-VAT rate `(price/1.18 − cost)/(price/1.18)` into `wpm_ProfitRate`. Targeted single-column writes (not clear+rewrite).
+- **@232 preserve-only refinement** (user call): rate is the durable field — computed/overwritten where cost exists, **preserved** where no cost so manual/assumed 0.25 survives recompute; real cost overwrites when a product is received in Comax. No auto-default (banked no-default stands; cost never hand-backfilled). Both columns survive the daily sync (verified preserve paths: ProductImportService `:385` truthiness for cost, `:740`/`:848` update-only-by-mapping for rate).
+- **@233 Step 3**: AdminInventory "Product Costs & Margins" card (`getCostStatus()` + `WebAppInventory_recomputeProductCosts`/`_getProductCostStatus`) — summary + web-scoped assumed-margin list + Recompute button. User-verified live.
+- **Live smoke:** costsInFile 104, webRatesComputed 60, webRatesPreserved 686, webStillBlank 0 (~746 web products). Cost file small → most web products ride an assumed 0.25 until cost flows in on receipt.
+- Earlier in session: deep review 2026-06-06 (outbound lever executing — email converting, newsletter QR live, flyer partner-stalled; internal build sprint healthy). Plan decisions banked along the way (cost-on-Comax/rate-on-web no read-time join; ex-VAT 18%; preserve-only).
+- **Next:** BUNDLE_PLAN Stage 3 (authoring + woosb export — the core win) when ready; Stages 4–7 after. Inline rate-edit on the card deferred (nice-to-have).
+
+---
+
 ## 2026-06-05 — BUNDLE_PLAN Stages 0+1 shipped (@227→@230)
 
 - **Stage 0 (qty=0 bundle price) — COMPLETE.** @227 fixed the calc (`BundleService.js:198`); user then reported the total *still* counted qty-0 slots. Traced: the 0 was destroyed at three slot-WRITE sites before the calc (`... || 1`) — `createSlot :489`, `importBundleFromWooCommerce :1147`, `reimportAllBundlesBatch :1263`. **Confirmed against live `wpm_WoosbIds` JSON** (user pasted it — members with `qty:"0","optional":"1"`, the Taste Treats / dessert add-ons). Fixed all three @230 (commit 7b38475); user ran Update Composition to re-derive and **verified totals now reflect qty 0**. The plan's Stage 0 scope had named only `:198` — write paths were the miss.
