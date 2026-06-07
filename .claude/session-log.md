@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-07 (cont 5) — UI-plan Phase 2 (Export UX) @250
+
+- **@250 Phase 2:** Export button re-plumbed from the in-page worklist to a **Google Sheet export**. New `BundleService.exportBundlesToSheet()` reuses `buildExportTable` for the diff, writes one row per bundle (Bundle · EN woosb_ids · HE woosb_ids · Warnings), creates a sheet via `SpreadsheetApp.create` → moves to `system.folder.jlmops_exports` → returns `fileUrl`. New controller `WebAppBundles_exportBundlesToSheet` carries the **task auto-close** (moved here from `WebAppBundles_buildExportTable`, which is now a pure read-only diff so housekeeping's status refresh stays side-effect free). Frontend `exportBundles()` now: `TaskWidgets.confirm` → call → `window.open(fileUrl)` + "Open Sheet" link fallback + toast.
+- Built by copying the product-detail export precedent (`ProductService.generateDetailExport` + `AdminProductsView.exportUpdates`) — same create/move/open pattern, **no new OAuth scope**. Out-of-stock failsafe warnings (@243) surface in the sheet's Warnings column.
+- `copyExport` + textarea worklist now dead (left defined, harmless). Un-exercisable live until diff>0 (current 0 of 14): Export with nothing to push just toasts "nothing to export".
+- **Next:** Phase 3 (composition sheet — header strip + draft + atomic `WebAppBundles_saveComposition` + sessionStorage), Phase 4 (Stage 7 deficiency), then BUNDLE_PLAN Stages 4–7.
+
+---
+
 ## 2026-06-07 (cont 4) — UI-plan Phase 1 COMPLETE (1b+1c) + price-bar fix + decisions @247→@249
 
 - **@247 Phase 1b:** AdminBundles 5-stat row → **filter chips** All/Needs export/OK (counts from cached `push_status`, added to `getViewData` payload); list now **status-sorted** (needs-export pinned top) with EN-bold/HE-muted name cell + "Needs Push" badge; **Low Inventory Alerts panel removed**; `loadStats` guarded (leftover callers no longer hit removed DOM). Editor untouched.

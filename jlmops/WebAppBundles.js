@@ -829,21 +829,37 @@ function WebAppBundles_buildExportTable() {
   const functionName = 'buildExportTable';
   try {
     LoggerService.info(serviceName, functionName, 'Building bundle export worklist (ops != web)');
-    const data = BundleService.buildExportTable();
-    // Primary close (ADMIN_BUNDLES_UI_PLAN Phase 1a-ii): producing the export IS the user
-    // action that clears the push-pending task — no separate paste-confirm step. If a paste
-    // is later partial/skipped, the next daily diff re-opens the task (§7.2 self-correcting).
-    if ((data.exportCount || 0) > 0) {
+    // Read-only diff used by the view and by the Phase 2 sheet export. The push-pending task
+    // close now lives in WebAppBundles_exportBundlesToSheet (the actual export action) — Phase 2.
+    return { error: null, data: BundleService.buildExportTable() };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Export build failed: ${e.message}`, e);
+    return { error: `Export build failed: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Phase 2 Export action (ADMIN_BUNDLES_UI_PLAN §7.6): produce the bundle worklist as a new Google
+ * Sheet (opened by the frontend). Producing the file auto-closes task.bundles.push_pending (§7.2);
+ * if a paste is later partial/skipped, the next daily diff re-opens it (self-correcting).
+ * @returns {{success:boolean, message:string, fileUrl:?string, exportCount:number}}
+ */
+function WebAppBundles_exportBundlesToSheet() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'exportBundlesToSheet';
+  try {
+    const data = BundleService.exportBundlesToSheet();
+    if (data.success && (data.exportCount || 0) > 0) {
       try {
         TaskService.completeTaskByTypeAndEntity('task.bundles.push_pending', '_SYSTEM');
       } catch (taskError) {
         LoggerService.warn(serviceName, functionName, `Could not close push-pending task: ${taskError.message}`);
       }
     }
-    return { error: null, data: data };
+    return data;
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Export build failed: ${e.message}`, e);
-    return { error: `Export build failed: ${e.message}`, data: null };
+    LoggerService.error(serviceName, functionName, `Bundle sheet export failed: ${e.message}`, e);
+    return { success: false, message: `Export failed: ${e.message}`, fileUrl: null, exportCount: 0 };
   }
 }
 

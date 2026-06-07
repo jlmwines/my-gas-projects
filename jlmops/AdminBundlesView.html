@@ -1250,53 +1250,37 @@
       .WebAppBundles_validateParity();
   }
 
-  // Export: list every bundle whose ops composition != web (EN or HE), with copy-paste
-  // woosb_ids cells for WPClever Import (BUNDLE_PLAN Stage 3). Direction is ops -> web.
+  // Export (Phase 2 §7.6): generate the worklist as a new Google Sheet (one row per bundle, EN/HE
+  // woosb_ids side by side + warnings), auto-open it in a new tab. Producing the file clears the
+  // push-pending task server-side. User copies cells from the sheet into WPClever Import.
   function exportBundles() {
-    var btn = document.getElementById('btn-export-bundles');
-    var restore = withButtonBusy(btn, 'Building...');
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        restore();
-        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        var d = result.data || {};
-        var rows = d.rows || [];
-        var summary = '<p>' + (d.exportCount || 0) + ' of ' + (d.total || 0) + ' bundles differ from web and need export.</p>';
-        if (rows.length === 0) {
-          showResults('Export Bundles', summary + '<p class="text-success">All bundles match web — nothing to export.</p>');
-          return;
-        }
-        var html = summary +
-          '<p class="small text-muted mb-2">Paste each EN/HE cell into that bundle\'s product via WPClever Import. Direction is ops &rarr; web.</p>';
-        rows.forEach(function(r, i) {
-          var flags = [];
-          if (r.enDiff) flags.push('EN differs');
-          if (r.heDiff) flags.push('HE differs');
-          var warn = (r.warnings && r.warnings.length)
-            ? '<div class="text-danger small mt-1">&#9888; ' + r.warnings.map(TaskWidgets.escape).join('<br>') + '</div>' : '';
-          html +=
-            '<div class="card mb-2"><div class="card-body p-2">' +
-              '<div class="d-flex justify-content-between align-items-center">' +
-                '<strong>' + TaskWidgets.escape(r.name) + '</strong>' +
-                '<span class="small text-muted">' + flags.join(' &middot; ') + '</span>' +
-              '</div>' + warn +
-              '<label class="small mb-0 mt-1">EN</label>' +
-              '<textarea readonly class="form-control form-control-sm" rows="2" id="exp-en-' + i + '">' + TaskWidgets.escape(r.en) + '</textarea>' +
-              '<button class="btn btn-sm mt-1 mr-2" onclick="BundlesView.copyExport(\'exp-en-' + i + '\')">Copy EN</button>' +
-              '<label class="small mb-0 mt-1">HE</label>' +
-              '<textarea readonly class="form-control form-control-sm" rows="2" id="exp-he-' + i + '">' + TaskWidgets.escape(r.he) + '</textarea>' +
-              '<button class="btn btn-sm mt-1" onclick="BundlesView.copyExport(\'exp-he-' + i + '\')">Copy HE</button>' +
-            '</div></div>';
-        });
-        showResults('Export Bundles', html);
-        TaskWidgets.toast('Export created for ' + (d.exportCount || 0) + ' bundle(s) — push task cleared.', 'success');
-      })
-      .withFailureHandler(function(err) {
-        restore();
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_buildExportTable();
+    TaskWidgets.confirm('Generate the bundle export sheet?', function() {
+      var btn = document.getElementById('btn-export-bundles');
+      var restore = withButtonBusy(btn, 'Exporting...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restore();
+          if (!res || !res.success) {
+            TaskWidgets.toast('Export failed: ' + ((res && res.message) || 'unknown'), 'error');
+            return;
+          }
+          if ((res.exportCount || 0) === 0) {
+            TaskWidgets.toast('All bundles match web — nothing to export.', 'info');
+            return;
+          }
+          try { window.open(res.fileUrl, '_blank'); } catch (e) { /* popup blocked — link below */ }
+          showResults('Export Bundles',
+            '<p class="text-success mb-2">Export created for ' + res.exportCount + ' bundle(s) — push task cleared.</p>' +
+            '<p class="small text-muted mb-2">Copy each EN/HE cell from the sheet and paste into that bundle\'s product via WPClever Import. Direction is ops &rarr; web.</p>' +
+            '<a href="' + res.fileUrl + '" target="_blank" class="btn btn-sm">Open Sheet</a>');
+          TaskWidgets.toast('Export created — ' + res.exportCount + ' bundle(s).', 'success');
+        })
+        .withFailureHandler(function(err) {
+          restore();
+          TaskWidgets.toast('Failed: ' + err.message, 'error');
+        })
+        .WebAppBundles_exportBundlesToSheet();
+    });
   }
 
   // Select + copy a textarea's contents (the textarea stays selected as a manual fallback).

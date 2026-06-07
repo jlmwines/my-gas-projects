@@ -1852,6 +1852,67 @@ const BundleService = (function () {
     return { rows: rows, total: bundles.length, exportCount: rows.length };
   }
 
+  /**
+   * Phase 2 export (ADMIN_BUNDLES_UI_PLAN §7.6): produce the export worklist as a new Google Sheet
+   * — one row per bundle needing push, EN and HE woosb_ids cells side by side, plus any out-of-stock
+   * / translation warnings. The user copies cells from the sheet and pastes into WPClever Import.
+   * Mirrors the product-detail export sequence (ProductService.generateDetailExport): create sheet,
+   * format, move to the exports folder. Task auto-close lives in the controller so the read-only
+   * diff (also called by housekeeping) stays side-effect free.
+   * @returns {{success:boolean, exportCount:number, total:number, fileUrl:?string, message:string}}
+   */
+  function exportBundlesToSheet() {
+    const result = buildExportTable();
+    if ((result.exportCount || 0) === 0) {
+      return {
+        success: true, exportCount: 0, total: result.total || 0, fileUrl: null,
+        message: 'All bundles match web — nothing to export.'
+      };
+    }
+
+    const header = ['Bundle', 'EN (woosb_ids)', 'HE (woosb_ids)', 'Warnings'];
+    const sheetRows = [header];
+    result.rows.forEach(function (r) {
+      sheetRows.push([
+        r.name,
+        r.en,
+        r.he,
+        (r.warnings && r.warnings.length) ? r.warnings.join('; ') : ''
+      ]);
+    });
+
+    const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm');
+    const newSpreadsheet = SpreadsheetApp.create('Bundles-Export-' + timestamp);
+    const sheet = newSpreadsheet.getSheets()[0];
+    sheet.setName('Bundle Export');
+    sheet.getRange(1, 1, sheetRows.length, header.length).setValues(sheetRows);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, sheet.getLastRow(), header.length).setWrap(true).setVerticalAlignment('top');
+    sheet.setColumnWidth(2, 480); // EN woosb_ids
+    sheet.setColumnWidth(3, 480); // HE woosb_ids
+    sheet.setColumnWidth(4, 240); // Warnings
+
+    // Move to the exports folder (same as the product-detail export sequence).
+    const allConfig = ConfigService.getAllConfig();
+    const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
+    try {
+      DriveApp.getFileById(newSpreadsheet.getId()).moveTo(DriveApp.getFolderById(exportFolderId));
+    } catch (moveError) {
+      LoggerService.warn(SERVICE_NAME, 'exportBundlesToSheet', `Created in root, move failed: ${moveError.message}`);
+    }
+
+    LoggerService.info(SERVICE_NAME, 'exportBundlesToSheet', `Exported ${result.exportCount} bundle(s) to ${newSpreadsheet.getUrl()}`);
+    return {
+      success: true,
+      exportCount: result.exportCount,
+      total: result.total || 0,
+      fileId: newSpreadsheet.getId(),
+      fileUrl: newSpreadsheet.getUrl(),
+      fileName: newSpreadsheet.getName(),
+      message: `Exported ${result.exportCount} bundle(s).`
+    };
+  }
+
   // =====================================================
   // PUBLIC API
   // =====================================================
@@ -1893,6 +1954,7 @@ const BundleService = (function () {
     // Authoring export (Stage 3) — slots -> WPClever woosb_ids JSON per language
     exportBundleWoosb: exportBundleWoosb,
     buildExportTable: buildExportTable,
+    exportBundlesToSheet: exportBundlesToSheet,
 
     // Stats
     getBundleStats: getBundleStats
