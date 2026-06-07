@@ -808,9 +808,6 @@
       return '<div class="form-check"><input type="checkbox" class="form-check-input ' + cls + '" id="' + idPfx + cid + '" data-cid="' + cid + '"' + (on ? ' checked' : '') + '><label class="form-check-label" for="' + idPfx + cid + '"' + (title ? ' title="' + title + '"' : '') + '>' + label + '</label></div>';
     }
     return '<div class="crit-grid mt-2 pt-2 border-top d-flex flex-wrap align-items-end" data-cid="' + cid + '" style="gap:6px 12px;">' +
-      '<div class="w-100">' +
-        '<button class="btn btn-sm btn-pick" data-cid="' + cid + '">' + (r.activeSKU ? 'Replace product' : 'Choose product') + '</button>' +
-      '</div>' +
       fld('Quantity', '<input type="number" min="0" class="form-control form-control-sm fld-qty" data-cid="' + cid + '" value="' + Number(r.defaultQty) + '" style="width:64px;">') +
       '<div class="align-self-center">' + chk('fld-qtyVariable', 'qv-', r.qtyVariable, 'Flexible', 'Customer can vary the quantity / member is optional (WPClever ‘optional’)') + '</div>' +
       fld('Category', '<select class="form-control form-control-sm fld-category" data-cid="' + cid + '" style="width:150px;">' + catOptions(r.category) + '</select>') +
@@ -822,6 +819,8 @@
       fld('Acidity', numAttr('fld-acidity', n(r.acidity))) +
       fld('Name contains', '<input type="text" class="form-control form-control-sm fld-nameContains" data-cid="' + cid + '" value="' + escAttr(r.nameContains) + '" style="width:150px;">') +
       '<div class="align-self-center">' + chk('fld-exclusive', 'ex-', r.exclusive, 'Exclusive') + '</div>' +
+      // Replace shares the Details row, pushed to the right end (margin-left:auto).
+      '<div class="align-self-center" style="margin-left:auto;"><button class="btn btn-sm btn-pick" data-cid="' + cid + '">' + (r.activeSKU ? 'Replace product' : 'Choose product') + '</button></div>' +
     '</div>';
   }
 
