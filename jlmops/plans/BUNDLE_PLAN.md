@@ -235,6 +235,34 @@ All Dispatch findings accepted; user answers fold in. Final build decisions:
 7. **Edge guards:** all-flexible bundle (base-count 0) → no budget division, skip the band math; "no candidate under ceiling" → keep current only if still valid, else flag the slot; **validate `sb_MinTotal ≤ sb_MaxTotal` on save**; align the generator's bundle population with the deficiency-gate's (no Active-only vs non-archived mismatch).
 8. **Unchanged from rev 2:** structure-preserving, Maintain (default) vs Re-roll (explicit), running-budget Option B, greedy + flag, auto-write via `assignProductToSlot` with export as the safety gate, deferred cohesion-knob + re-roll-preview.
 
+#### Stage 7 rev 2.1 — Round-2 verification review (2026-06-08, Dispatch, code-grounded)
+
+**Verdict: READY — pending 2 spec clarifications (neither a blocker).** Both round-1 blockers are genuinely resolved and confirmed feasible against the code. Grounded against `BundleService.js` (`getEligibleProducts` 853-1068, `_scoreCandidate` 1078-1087, `_generateBundleComposition`/`generateValueBundles`/`_isValueBundle` 1091-1170, `getBundlesWithLowInventory` 1178-1322, `assignProductToSlot` 772-817, `_loadSlots` 132-191), `HousekeepingService.checkBundleHealth` 1458-1501, `schemas.json` 426/441.
+
+**Round-1 findings — all resolved:**
+1. **Deficiency gate — resolved, buildable.** `_loadSlots:172-179` already exposes every stored slot criterion (category/price/intensity/complexity/acidity/nameContains), and WebProdM+WebDetM hold live attrs, so per-slot criteria-recheck reuses the filter block at `:1013-1027`. Closes the "Maintain misses broken bundles" hole. (`checkBundleHealth:1479` is stock-only today — must compute the richer signal.)
+2. **Fill targets band — undershoot fixed.** Top-up is monotone (each upgrade strictly pricier → terminates, no oscillation) and runs *after* the ceiling fill, so the two don't fight. Residual gaps below.
+3. **featured dropped — safe.** Was a 0.3 nudge (`:1076,1081`), never a filter; profit+stock already favour featured stock.
+4. **Only-in-Israel / Explorer — resolved** (brand-first titles confirm `nameContains` works; caveat: single substring per slot, fine for the per-slot model).
+5. **Edge guards — sufficient as specified** (all unbuilt; dropping `_isValueBundle` aligns generator+gate populations).
+6. **null-profit / title gate — resolved in spec** (code still buries null at `_scoreCandidate:1079` and still has `_isValueBundle:1091`; both trivial changes).
+
+**To nail down before build:**
+- **MAJOR — over-`sb_MaxTotal` Maintain repair undefined.** §2's top-up only pushes *toward min*. The bundle-total trigger also fires on `total > sb_MaxTotal` with no individually-deficient slot, and §2's "adjust cheapest/priciest slots toward the band" has no symmetric **down-pass** spec (which slot, how many, termination). Define it.
+- **MINOR — top-up needs a max-guard** (upgrading to the only pricier eligible wine could breach `sb_MaxTotal`; reject upgrades that breach max). And per-slot "over-band" at gate time should reduce to `price > stored slot.priceMax` or the bundle-total check — the running ceiling is a generation-run concept `checkBundleHealth` has no context for.
+- *Probed & clear:* criteria-miss recheck data is fully available (`_loadSlots`); `sb_MaxTotal` confirmed absent (`schemas.json:426`), append needed.
+
+**Build order:** (1) append `sb_MaxTotal` (schema + rebuild + syncHeaders, per @264); (2) widen deficiency in a `checkBundleHealth` helper (stock ∪ criteria-miss ∪ `priceMax` ∪ bundle total∉[min,max]); (3) price term + running-ceiling fill + top-up **with max-guard + the symmetric down-pass** in `_generateBundleComposition`; (4) drop `_isValueBundle`, run per-bundle off the deficiency set, split Maintain/Re-roll; (5) `_scoreCandidate`: remove featured, neutral null-profit default; (6) `min≤max` validation in `saveComposition`; (7) editor `sb_MinTotal`/`sb_MaxTotal` fields + status line.
+
+#### Stage 7 rev 2.2 — round-2 clarifications resolved (2026-06-08). FINALISES THE BUILD SPEC.
+
+Dispatch round-2 verdict = **READY**; these close its two open items.
+- **Symmetric down-pass (over-max repair).** After the ceiling-fill + top-up, if base total **> `sb_MaxTotal`**, run a **down-pass**: repeatedly **downgrade the priciest base slot that has a cheaper eligible wine** to that wine, until `total ≤ max` or no downgrade remains → flag **`max_total_exceeded`**. Strictly cheaper each step → monotone, terminates. (Primary trigger: operator lowers `sb_MaxTotal` below the current total; member prices rarely drift.)
+- **Top-up max-guard.** The top-up pass accepts an upgrade only if it keeps total **≤ `sb_MaxTotal`**; if the only pricier eligible wine would breach max, skip it (the floor can't be reached inside the band → flag `min_total_unmet`). Top-up never busts the ceiling.
+- **Gate-time "over-band" definition (no running ceiling at the gate).** `checkBundleHealth` has no generation-run context, so a slot is "over-band" at gate time **iff `slot.priceMax` is set and the wine's price > `slot.priceMax`**; the bundle-level band check is **base total ∉ `[sb_MinTotal, sb_MaxTotal]`**. The dynamic per-slot running ceiling is a generation-only concept, never used by the gate.
+
+**Spec is final. Build per the round-2 build order (7 steps).**
+
 ---
 
 ## 5. Data-model touches (cumulative)
