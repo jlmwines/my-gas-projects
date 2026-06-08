@@ -158,7 +158,9 @@ Cost lives in a **separate Comax export**, **not** the product export the daily 
 
 **Scope note:** standalone value is a variety-ranked picker (modest — the operator already sees the eligible list); the real payoff is Stage 7's generator consuming the same ranking. Small, low-risk change confined to `getEligibleProducts` + one helper.
 
-### Stage 7 — Unified composition generator (proactive suggestion view) — *capstone; MVP runs it on value bundles first*
+### Stage 7 — Unified composition generator — *capstone*
+> **Authoritative settled design = "Stage 7 Model — SETTLED 2026-06-08 rev 2" below.** The vision text in this subsection predates the chavruta and is partially superseded (no "suggestion view", no value-only scope, maintain-vs-re-roll added). Read it for background, then the rev-2 block for what to build.
+
 Replaces the unused alert view (Stage 1 Fix B) with a proactive one: open the view and each bundle shows a **recommended composition**. **Computed by the overnight batch and cached (§3.1)** — the view reads precomputed results, so it opens instantly and the expensive scoring never runs live; a manual **Recompute** is the override.
 
 **One generator, not per-class logic.** Every bundle/package is a **fixed set of slots** read from the existing composition; the generator **refreshes the wine in each slot** from one continuous pool and **never adds or removes slots** (pure wine swap — safe, structure-preserving). Bundle vs package, theme, sizing, and margin floor are all **parameters of this one engine**:
@@ -173,23 +175,41 @@ Replaces the unused alert view (Stage 1 Fix B) with a proactive one: open the vi
 
 **Deferred to a later cut (Open):** a real `sb_Purpose` attribute (replacing the title match); activating packages (pending business positioning); food-attr theme matching beyond category+attributes; diversity weighting + rotation (Stage 6 feeds this once built).
 
-#### Stage 7 Design — SETTLED 2026-06-08 (decisions A–C + constraints, with user)
+#### Stage 7 Model — SETTLED 2026-06-08 rev 2 (full chavruta; ready for Dispatch review)
 
-Two reframes from the vision text above, per user:
-- **AUTO-APPLY, not suggest-only (A).** The generator **writes** the refreshed composition straight into `SysBundleSlots` (reusing `assignProductToSlot` → sets `activeSKU` + history); the operator **overrides by editing** in the composition sheet. Rationale: bundles are currently unmanaged/"useless", so system-filled-then-reviewed beats a passive suggestion. **Web export is the safety gate** — a generated pick changes only the *ops* composition (→ bundle shows "Needs Push"); **nothing reaches the website until the operator exports.** So auto-apply is safe to run freely.
-- **Profit: floor → MAXIMIZE (no floor).** Replaces "profit is a satisfied floor, not maximized". There is **no minimum profit floor**; instead profit is a **maximization priority** alongside variety. The generator ranks candidates per slot on a **tunable composite**: profit (maximize) + cross-bundle diversity (Stage 6 usage, variety) + `wpm_Featured` bonus + stock. Weights are **config-tunable and expected to be iterated** ("if the algorithm is off, adjust it"); start simple, refine after the first real run.
+> **rev 2 supersedes rev 1.** rev 1 (auto-apply-all, "value"-title gate, min-total-only) was discarded after the first live test: re-rolling every slot churned the bundles and a value bundle ballooned past ₪1,000 (the composite maximizes profit per slot with no price ceiling). The model below — **uniform parameters for every bundle + maintain-vs-re-roll + a price band** — replaces it. The currently-deployed generator (@265/@266) is a rev-1 re-roll-all and **must be reworked to this model before it's usable.**
 
-Settled mechanics:
-- **Constraints = greedy + flag (B).** Fill each fixed slot variety/profit-best, then **flag** whether the bundle reaches its **minimum total** — do not force/backtrack. The operator sees the flag and edits if needed.
-- **Minimum total = per-bundle parameter.** New SysBundles column **`sb_MinTotal`** (append-only), **default ₪399** for value bundles, **editable per individual bundle** (exposed in the editor header strip; MVP applies it to value bundles only, not packages).
-- **Generation metadata on SysBundles columns (C):** append **`sb_LastGenerated`** (timestamp) + a small **`sb_GenFlags`** (e.g. `min_total_unmet`); the picks themselves live in the actual slots (auto-apply), so there is no separate suggestion-payload cache.
-- **Trigger:** ship an **on-demand "Generate Compositions" action** first (operator runs it, reviews, exports) to validate the picks; wire the **overnight cadence** (§3.1) as a fast-follow once the algorithm is trusted.
-- **Scope (unchanged):** value bundles only (title contains "value"), **Only-in-Israel excluded**, **structure-preserving** (refresh PRODUCT slots only; never touch text/section slots, never add/remove slots).
-- **Reuse / small extensions:** `getEligibleProducts` already returns price + `profitRate`; extend it to also surface `wpm_Featured` and the Stage 6 `usage` count so the generator's composite has its inputs. Per-slot eligibility (criteria + min-stock + same-bundle/Exclusive excludes) is unchanged.
+**Core principle: a bundle is a bundle.** No "value" hack, no per-bundle auto-generate flag, no per-class logic. Every bundle/package (value, package, seasonal, Only-in-Israel, Explorer) is the **same engine** driven by **bundle-level parameters + slot-level criteria**. The mix of those settings *is* what makes a bundle "a value bundle" or "Explorer" — there is no separate type switch.
 
-**Dependencies / order:** needs **Stage 6** (cross-bundle usage index) built first. The editor (UI Phase 4) grows: `sb_MinTotal` field in the header + a generation-status line (last generated, min-total flag) in the deficiency strip.
+**The structure is the recipe (operator-owned, manual).** The generator is **structure-preserving**: it swaps the *wine* in each existing product slot and **never adds/removes slots, never touches text/section slots**. So everything about *what kind* and *how many* is the slot structure, set by hand in the composition sheet:
+- bundle "is reds" → each base slot's **category = Red**; an alternate (token white) → one slot's **category = White**;
+- **N flexible extras** → N slots with **qty = 0** (optional add-ons; contribute 0 to the base — Stage 0);
+- **bottle count** = the number of slots (× their qty). To change the count, the operator edits the structure first; the program never does.
+- (This is the original "color / off-color count / alternates / slot count read from the existing composition — no new attribute" intent, now stated explicitly: those live in the slots, not in bundle fields.)
 
-**Still open (iterate, not blocking):** exact composite weights; overnight automation cutover; packages config; real `sb_Purpose` (replacing the "value" title match).
+**Parameters:**
+- **Bundle-level (the only true bundle fields):** a **price band** — `sb_MinTotal` (floor; free-shipping eligibility, e.g. 399) + `sb_MaxTotal` (ceiling/budget the fill stays under). Either may be blank (blank max = no ceiling, blank min = no floor flag). Plus generation metadata `sb_LastGenerated` / `sb_GenFlags`.
+- **Slot-level (refinement):** **category (primary)** + **attributes (occasional)** + `nameContains` (brand / Only-in-Israel) + **price min/max (rare override)**. All already exist on the slot.
+
+**Two operations (the change-frequency model — minimize manual export effort):**
+- **MAINTAIN — default, conservative.** Keep every current wine that is still **valid** (in stock ≥ min-stock, still meets its slot criteria, still within the band); **replace ONLY deficient slots** (out-of-stock, low-stock, or no-longer-eligible). Minimal change → one bundle, often one slot, one export. Preserves familiarity.
+- **RE-ROLL — explicit, on-demand (per bundle or all).** Ignore current wines; pick a **fresh optimal lineup** for every slot. For a seasonal reset, a new bundle, or "give me new wines." Higher churn, deliberate.
+- **Gate is per-bundle = "has ≥1 deficient slot".** This is exactly the `task.bundles.needs_update` signal (already built @266). A bundle with no deficiency is never touched. Because the export effort is fixed per-bundle regardless of how many slots change, the operator *chooses* Maintain (fix the deficiency, keep the rest) or Re-roll (refresh the whole bundle) once a bundle is on the table.
+- **Familiarity vs rotation:** left to the operator's choice of Maintain vs Re-roll — **no time-based rotation engine** (the eligible pool naturally recurs the same wines for value bundles anyway). Stays deferred.
+
+**Per-slot wine selection (both modes, when a slot needs filling):**
+1. Candidates = `getEligibleProducts(slot)` — slot criteria (category/attributes/name) + min-stock + same-bundle/Exclusive excludes, **plus** the Stage 6 `usage` and `wpm_Featured` signals (the `ignoreSameBundle`/`excludeSKUs` path manages intra-bundle dedup during a re-roll).
+2. **Price ceiling for the slot = the slot's own `priceMax` if set, else the bundle budget** via **running budget (Option B):** ceiling = `remaining sb_MaxTotal ÷ remaining base (qty≥1) slots`, recomputed as slots are filled (early cheap picks free up headroom for later slots). **Flexible (qty-0) slots** get the *average* base ceiling (`sb_MaxTotal ÷ base-slot-count`) so the optional add-on is **similar value to its neighbours**, but they **do not draw down the running budget** (qty 0 = 0 to the base).
+3. Among candidates **under the ceiling**, pick the highest **composite score** — `profit (maximize) + cross-bundle diversity + featured bonus + stock`, weights **tunable** (`GENERATOR_WEIGHTS`, iterate after real runs). No profit floor.
+4. After filling, recompute the base total; **flag** `min_total_unmet` if `< sb_MinTotal` (greedy + flag, never force/backtrack); the operator edits if the flag shows.
+
+**Reuse / writes:** picks commit via the existing `assignProductToSlot` (sets `activeSKU` + history). Web export remains the safety gate — generated picks change only the *ops* composition (→ "Needs Push"); nothing reaches the site until the operator exports.
+
+**Validated scenarios (chavruta):** new value reds bundle `[399,420]`, 5 red qty-1 + 1 white qty-0 → Re-roll fills reds ≤~₪84 + a ≤₪84 white add-on, total ~₪400; a red goes out of stock → "Needs Update" → Maintain swaps only that slot. Packages = tighter slot criteria; seasonal = reset slot categories per season; Only-in-Israel = slot `nameContains`=brand; Explorer = chosen categories + featured. All one engine.
+
+**Dependencies / order:** Stage 6 (usage index) — DONE @263. Reworks needed vs the deployed rev-1 generator: add `sb_MaxTotal`; split into **Maintain** (deficient-only) and **Re-roll** (all); running-budget ceiling + flexible-slot handling; per-bundle action (not just "all value"); drop the "value" title gate. Editor (UI Phase 4) grows: `sb_MinTotal`/`sb_MaxTotal` fields in the header + a generation/deficiency status line.
+
+**Deferred (noted, not blocking):** a per-bundle **price-cohesion knob** (how tightly bottle prices must cluster — loose Explorer vs tight value); **re-roll as a preview/suggestion** (accept / reject / alter before write — MVP uses write-then-review-then-export, where Export is the reject gate); overnight cadence for Maintain; exact composite weights; real `sb_Purpose`.
 
 ---
 
@@ -198,8 +218,9 @@ Settled mechanics:
 - `wpm_ProfitRate` (WebProdM, Stage 2) — cached ex-VAT margin `(exVat − cpm_Cost) / exVat`; written by the cost import for web products; the rare Comax-only case is computed on the fly, not stored.
 - ~~`sb_PendingExport`~~ — **dropped 2026-06-07.** The ops≠web diff is the export trigger; no flag needed (export set computed fresh each run).
 - ~~`sbs_WoosbKey`~~ — **not needed (resolved 2026-06-07):** the original woosb token is preserved in `slotId` (`${bundleId}-${token}`), so the serializer reuses exact keys; no regeneration.
-- `sb_MinTotal` (SysBundles, **Stage 7**) — per-bundle minimum total (₪), default 399 for value bundles, editable per bundle; the greedy fill flags when unmet. **Append-only** (end of SysBundles schema).
-- `sb_LastGenerated` + `sb_GenFlags` (SysBundles, **Stage 7**) — generator run timestamp + small flag string (e.g. `min_total_unmet`). Picks themselves go into `SysBundleSlots` (auto-apply), so no suggestion-payload column. **Append-only.**
+- `sb_MinTotal` (SysBundles, **Stage 7**) — per-bundle price-band **floor** (₪; free-shipping eligibility, default 399), editable per bundle; the greedy fill flags `min_total_unmet`. **Append-only** (added @264).
+- `sb_MaxTotal` (SysBundles, **Stage 7 rev 2**) — per-bundle price-band **ceiling/budget** the running-budget fill stays under (blank = no ceiling). **Append-only — NOT yet added** (needs the schema-append + rebuild + syncHeaders dance, like @264).
+- `sb_LastGenerated` + `sb_GenFlags` (SysBundles, **Stage 7**) — generator run timestamp + small flag string (e.g. `min_total_unmet`). Picks themselves go into `SysBundleSlots`, so no suggestion-payload column. **Append-only** (added @264).
 - cross-bundle usage index (derived/cached over `SysBundleSlots`, Stage 6).
 - suggestion cache (Stage 7) — persisted output of the overnight analysis batch (per-bundle recommended composition + timestamp), read by the view; on `SysBundles` or a small dedicated cache sheet (decide at build).
 - `sb_Type` — **derived, not authored**: bundle vs package is read from whether the composition has flexible slots; the column is a cache/corroboration, not a definer. No new column.
