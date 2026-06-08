@@ -23,20 +23,24 @@
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
           <h5>Bundle Management</h5>
+          <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). Update
+               Composition is a web→ops utility (new/re-baseline bundles), set apart at the end. -->
           <div>
-            <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull Bundle Data</button>
+            <button id="btn-review-stock" class="btn btn-sm mr-2">Review</button>
             <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
-            <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
-            <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
-            <button id="btn-export-bundles" class="btn btn-sm">Export</button>
+            <button id="btn-export-bundles" class="btn btn-sm mr-2">Export</button>
+            <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull from Web</button>
+            <button id="btn-update-composition" class="btn btn-sm ml-3 text-muted">Update Composition</button>
           </div>
         </div>
         <div class="card-body">
           <!-- Filter Chips (replace the old 5-stat row — ADMIN_BUNDLES_UI_PLAN Phase 1b) -->
-          <div class="mb-3" id="bundle-chips-row">
+          <div class="mb-3 d-flex align-items-center flex-wrap" id="bundle-chips-row">
             <button type="button" class="btn btn-sm mr-1 bundle-chip active" data-filter="all">All <span class="badge badge-secondary" id="chip-count-all">0</span></button>
-            <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="needs-export">Needs export <span class="badge badge-warning" id="chip-count-needs">0</span></button>
-            <button type="button" class="btn btn-sm bundle-chip" data-filter="ok">OK <span class="badge badge-success" id="chip-count-ok">0</span></button>
+            <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="attention">Needs attention <span class="badge badge-secondary" id="chip-count-attention">0</span></button>
+            <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="needs-export">Update web <span class="badge badge-secondary" id="chip-count-needs">0</span></button>
+            <button type="button" class="btn btn-sm mr-3 bundle-chip" data-filter="ok">OK <span class="badge badge-secondary" id="chip-count-ok">0</span></button>
+            <input type="text" id="bundle-name-filter" class="form-control form-control-sm" placeholder="Filter by name…" style="width:200px;">
           </div>
 
           <!-- Bundle List Table -->
@@ -45,7 +49,7 @@
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Type</th>
+                  <th>Flags</th>
                   <th>Status</th>
                   <th>Price</th>
                   <th>Actions</th>
@@ -83,44 +87,37 @@
           <!-- Deficiency strip (Phase 1c): what changed / status; grows with Stage 7 (Phase 4) -->
           <div id="editor-deficiency-strip" class="mb-2"></div>
 
-          <!-- Header strip (§7.4): names / status / type badge / price summary. Discount is
-               WC-managed (§7.1c) — shown only as part of the read-only price summary, never edited. -->
-          <div class="form-row align-items-end mb-3" id="editor-header-strip">
-            <!-- Name is web-derived (§7.1c-style) — read-only display, never edited/pushed. -->
-            <div class="col-md-3">
-              <label class="small text-muted mb-1">Name (English)</label>
-              <div id="hdr-nameEn" class="small font-weight-bold text-truncate"></div>
+          <!-- Header strip: name (EN bold + HE muted, no labels — web-derived/read-only §7.1c), price
+               summary on the left; Status + the open/close-all-details toggle on the right (the toggle
+               sits above the slot rows' button column). Type dropped — always "Bundle" (obvious). -->
+          <div class="d-flex justify-content-between align-items-start mb-2" id="editor-header-strip">
+            <div class="mr-3" style="min-width:0;">
+              <div id="hdr-nameEn" class="font-weight-bold text-truncate"></div>
+              <div id="hdr-nameHe" class="small text-muted text-truncate" dir="rtl"></div>
+              <div id="hdr-price" class="small font-weight-bold mt-1"></div>
             </div>
-            <div class="col-md-3">
-              <label class="small text-muted mb-1">Name (Hebrew)</label>
-              <div id="hdr-nameHe" class="small text-truncate" dir="rtl"></div>
-            </div>
-            <div class="col-md-2">
-              <label class="small text-muted mb-1">Status</label>
-              <select class="form-control form-control-sm" id="hdr-status">
+            <div class="d-flex align-items-center flex-shrink-0">
+              <select class="form-control form-control-sm mr-2" id="hdr-status" style="width:110px;">
                 <option value="Active">Active</option>
                 <option value="Draft">Draft</option>
                 <option value="Archived">Archived</option>
               </select>
-            </div>
-            <div class="col-md-4">
-              <div class="small text-muted mb-1">Type <span class="badge badge-secondary" id="hdr-type">-</span></div>
-              <div id="hdr-price" class="small font-weight-bold"></div>
+              <button id="btn-toggle-details" class="btn btn-sm">Open all details</button>
             </div>
           </div>
 
-          <!-- Price band + generation status (Stage 7 rev 2.2): sb_MinTotal / sb_MaxTotal drive the
-               running-budget fill; either may be blank. Status line shows last generated + any flags. -->
+          <!-- Price band (compact) + generation status (Stage 7 rev 2.2): sb_MinTotal / sb_MaxTotal
+               drive the running-budget fill; either may be blank. Status = last generated + flags. -->
           <div class="form-row align-items-end mb-3" id="editor-band-strip">
-            <div class="col-md-2">
-              <label class="small text-muted mb-1">Min Total (₪)</label>
-              <input type="number" class="form-control form-control-sm" id="hdr-minTotal" min="0" step="1" placeholder="none">
+            <div class="col-auto">
+              <label class="small text-muted mb-1">Min ₪</label>
+              <input type="number" class="form-control form-control-sm" id="hdr-minTotal" min="0" step="1" placeholder="none" style="width:80px;">
             </div>
-            <div class="col-md-2">
-              <label class="small text-muted mb-1">Max Total (₪)</label>
-              <input type="number" class="form-control form-control-sm" id="hdr-maxTotal" min="0" step="1" placeholder="none">
+            <div class="col-auto">
+              <label class="small text-muted mb-1">Max ₪</label>
+              <input type="number" class="form-control form-control-sm" id="hdr-maxTotal" min="0" step="1" placeholder="none" style="width:80px;">
             </div>
-            <div class="col-md-8">
+            <div class="col">
               <div class="small text-muted mb-1">Generation</div>
               <div id="hdr-gen-status" class="small"></div>
             </div>
@@ -132,7 +129,6 @@
           <div class="mt-2">
             <button id="btn-add-text" class="btn btn-sm mr-1">+ Add Text</button>
             <button id="btn-add-product" class="btn btn-sm mr-1">+ Add Product</button>
-            <button id="btn-toggle-details" class="btn btn-sm mr-1">Open all details</button>
             <button id="btn-export-meta" class="btn btn-sm">Export meta (EN/HE)</button>
           </div>
         </div>
@@ -181,6 +177,7 @@
   var selectedReplacements = [];
   var categoryOptions = [];
   var pushBundleIds = [];        // bundleIds needing export (from cached push_status) — Phase 1b
+  var needsUpdateBundleIds = []; // bundleIds flagged deficient (from cached needs_update_status / Review)
   var currentFilter = 'all';     // active chip: all | needs-export | ok
 
   // Composition-sheet draft (§7.5): the working copy. Edits mutate `draft`; nothing commits until
@@ -218,6 +215,8 @@
   function applyInitData(data) {
     var ps = data.pushStatus || { count: 0, bundleIds: [] };
     pushBundleIds = (ps.bundleIds || []).map(String);
+    var nu = data.needsUpdate || { count: 0, bundleIds: [] };
+    needsUpdateBundleIds = (nu.bundleIds || []).map(String);
     loadCategories(data.categories);
     loadBundleList(data.bundles);
   }
@@ -248,6 +247,8 @@
     document.querySelectorAll('.bundle-chip').forEach(function(chip) {
       chip.addEventListener('click', function() { setFilter(chip.dataset.filter); });
     });
+    var nameFilterEl = document.getElementById('bundle-name-filter');
+    if (nameFilterEl) nameFilterEl.addEventListener('input', applyFilter);
     // Editor (composition sheet)
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
     document.getElementById('btn-reroll-bundle').addEventListener('click', rerollBundle);
@@ -337,21 +338,29 @@
     var tbody = document.getElementById('bundle-list-body');
     if (!bundles || bundles.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No bundles found</td></tr>';
-      updateChipCounts(0, 0);
+      updateChipCounts(0, 0, 0, 0);
       return;
     }
 
-    // Mark needs-export from the cached push_status, then pin those rows to the top (Phase 1b §7.3).
+    // Mark per-row signals: needsAttention (deficient — Review/housekeeping cache) and needsPush
+    // (ops≠web → "Update web"). Pin rows needing action to the top.
     var marked = bundles.map(function(b) {
-      return { b: b, needsPush: pushBundleIds.indexOf(String(b.bundleId)) !== -1 };
+      return {
+        b: b,
+        needsAttention: needsUpdateBundleIds.indexOf(String(b.bundleId)) !== -1,
+        needsPush: pushBundleIds.indexOf(String(b.bundleId)) !== -1
+      };
     });
-    marked.sort(function(x, y) { return (y.needsPush ? 1 : 0) - (x.needsPush ? 1 : 0); });
+    marked.sort(function(x, y) {
+      return ((y.needsAttention || y.needsPush) ? 1 : 0) - ((x.needsAttention || x.needsPush) ? 1 : 0);
+    });
 
-    var needsCount = 0;
+    var needsCount = 0, attentionCount = 0, okCount = 0;
     var html = marked.map(function(m) {
       var b = m.b;
       if (m.needsPush) needsCount++;
-      var statusClass = b.status === 'Active' ? 'badge-success' : (b.status === 'Draft' ? 'badge-warning' : 'badge-secondary');
+      if (m.needsAttention) attentionCount++;
+      if (!m.needsPush && !m.needsAttention) okCount++;
       var priceHtml = '-';
       if (b.totalPrice > 0) {
         priceHtml = (b.discount > 0)
@@ -360,11 +369,14 @@
       }
       var nameCell = '<strong>' + (b.nameEn || '-') + '</strong>' +
         (b.nameHe ? '<div class="bundle-name-he">' + b.nameHe + '</div>' : '');
-      var pushBadge = m.needsPush ? ' <span class="badge badge-warning">Needs Push</span>' : '';
-      return '<tr data-bundle-id="' + b.bundleId + '" data-state="' + (m.needsPush ? 'needs-export' : 'ok') + '" style="cursor: pointer;">' +
+      // Flags (uncolored badges): Needs attention (deficient) + Update web (ops≠web).
+      var attentionBadge = m.needsAttention ? '<span class="badge badge-light border mr-1">Needs attention</span>' : '';
+      var updateWebBadge = m.needsPush ? '<span class="badge badge-light border">Update web</span>' : '';
+      var flags = (attentionBadge + updateWebBadge) || '<span class="text-muted">—</span>';
+      return '<tr data-bundle-id="' + b.bundleId + '" data-state="' + (m.needsPush ? 'needs-export' : 'ok') + '" data-attention="' + (m.needsAttention ? '1' : '0') + '" data-name="' + escAttr(((b.nameEn || '') + ' ' + (b.nameHe || '')).toLowerCase()) + '" style="cursor: pointer;">' +
         '<td>' + nameCell + '</td>' +
-        '<td>' + (b.type || 'Bundle') + '</td>' +
-        '<td><span class="badge ' + statusClass + '">' + b.status + '</span>' + pushBadge + '</td>' +
+        '<td>' + flags + '</td>' +
+        '<td>' + b.status + '</td>' +
         '<td>' + priceHtml + '</td>' +
         '<td><button class="btn btn-sm btn-edit-bundle">Edit</button></td>' +
         '</tr>';
@@ -382,7 +394,7 @@
       });
     });
 
-    updateChipCounts(bundles.length, needsCount);
+    updateChipCounts(bundles.length, needsCount, attentionCount, okCount);
     applyFilter();
   }
 
@@ -419,10 +431,11 @@
   }
 
   // ---- Filter chips (Phase 1b) -------------------------------------------------
-  function updateChipCounts(total, needs) {
+  function updateChipCounts(total, needs, attention, ok) {
     document.getElementById('chip-count-all').textContent = total;
+    document.getElementById('chip-count-attention').textContent = attention || 0;
     document.getElementById('chip-count-needs').textContent = needs;
-    document.getElementById('chip-count-ok').textContent = total - needs;
+    document.getElementById('chip-count-ok').textContent = (ok != null) ? ok : (total - needs);
   }
 
   function setFilter(filter) {
@@ -434,9 +447,18 @@
   }
 
   function applyFilter() {
+    var nameEl = document.getElementById('bundle-name-filter');
+    var q = nameEl ? (nameEl.value || '').toLowerCase().trim() : '';
     document.querySelectorAll('#bundle-list-body tr').forEach(function(row) {
       if (!row.dataset.state) return;  // skip the "no bundles" placeholder row
-      var show = currentFilter === 'all' || row.dataset.state === currentFilter;
+      var attn = row.dataset.attention === '1';
+      var push = row.dataset.state === 'needs-export';
+      var matchChip =
+        currentFilter === 'all' ? true :
+        currentFilter === 'attention' ? attn :
+        currentFilter === 'needs-export' ? push :
+        currentFilter === 'ok' ? (!attn && !push) : true;   // 'ok' = neither flag
+      var show = matchChip && (!q || (row.dataset.name || '').indexOf(q) !== -1);
       row.style.display = show ? '' : 'none';
     });
   }
@@ -608,6 +630,10 @@
 
   // ---- load + build draft -------------------------------------------------------
   function loadBundleForEditing(bundleId) {
+    // Clear any stale action-results panel (e.g. an Export-meta preview) when SWITCHING to a different
+    // bundle — its content is bundle-specific (user 2026-06-08). Same-bundle reloads (Maintain/Re-roll/
+    // post-save) keep the panel, so a Maintain summary isn't wiped by its own editor refresh.
+    if (String(bundleId) !== String(currentBundleId)) hideActionResults();
     currentBundleId = String(bundleId);
     showEditorLoading();
     google.script.run
@@ -657,7 +683,6 @@
     ['hdr-minTotal', 'hdr-maxTotal'].forEach(function(id) { document.getElementById(id).value = ''; });
     document.getElementById('hdr-nameEn').textContent = '';
     document.getElementById('hdr-nameHe').textContent = '';
-    document.getElementById('hdr-type').textContent = '-';
     document.getElementById('hdr-price').textContent = '';
     document.getElementById('hdr-gen-status').textContent = '';
     var td = document.getElementById('btn-toggle-details'); if (td) td.textContent = 'Open all details';
@@ -736,7 +761,6 @@
     document.getElementById('hdr-status').value = draft.header.status;
     document.getElementById('hdr-minTotal').value = (draft.header.minTotal != null ? draft.header.minTotal : '');
     document.getElementById('hdr-maxTotal').value = (draft.header.maxTotal != null ? draft.header.maxTotal : '');
-    document.getElementById('hdr-type').textContent = draft.type || '-';
     renderPriceSummary();
     renderGenStatus();
   }
@@ -849,16 +873,28 @@
       ? '<strong>' + esc(r.productName || '(unknown product)') + '</strong>' +
         ' <span class="text-muted small">' + esc(r.activeSKU) + '</span>'
       : '<span class="text-warning">No product selected</span>';
-    // Slot category criterion in the collapsed row (the generator/picker pool is restricted to it).
+    // Slot category criterion in the collapsed row (the generator/picker pool is restricted to it),
+    // plus a badge flagging ANY other active criteria (price / attributes / name) so the operator
+    // sees they're in use without opening Details (user 2026-06-08).
     var catStr = r.category
       ? esc(r.category) + (r.category2 ? ' <span class="text-muted">/ ' + esc(r.category2) + '</span>' : '')
       : '<span class="text-muted">any category</span>';
+    var extra = [];
+    if (r.priceMin != null || r.priceMax != null) extra.push('price');
+    if (r.intensity != null) extra.push('intensity');
+    if (r.complexity != null) extra.push('complexity');
+    if (r.acidity != null) extra.push('acidity');
+    if (r.nameContains) extra.push('name');
+    if (r.exclusive) extra.push('exclusive');
+    var critBadge = extra.length
+      ? ' <span class="badge badge-light border" title="Also filtered by: ' + extra.join(', ') + '">+' + extra.length + '</span>'
+      : '';
     return '<div class="comp-row' + (r._deleted ? ' deleted' : '') + '" data-cid="' + r.cid + '">' +
       '<div class="d-flex align-items-center comp-main">' +
         '<span class="comp-num">' + (n || '') + '</span>' +
         moveBtns(r, idx) +
         '<div class="flex-grow-1 mr-2 text-truncate">' + nameHtml + '</div>' +
-        '<div class="comp-cell mr-3 text-truncate small" style="width:120px;" title="Slot category">' + catStr + '</div>' +
+        '<div class="comp-cell mr-3 text-truncate small" style="width:120px;" title="Slot category">' + catStr + critBadge + '</div>' +
         '<div class="comp-cell text-right mr-3" style="width:60px;" title="Retail price">' + priceStr + '</div>' +
         '<div class="comp-cell text-right mr-3" style="width:42px;" title="Profit rate">' + pctStr + '</div>' +
         '<div class="comp-cell text-center mr-3" style="width:42px;" title="Quantity">&times;' + Number(r.defaultQty) + '</div>' +
@@ -901,8 +937,11 @@
       fld('Acidity', numAttr('fld-acidity', n(r.acidity))) +
       fld('Name contains', '<input type="text" class="form-control form-control-sm fld-nameContains" data-cid="' + cid + '" value="' + escAttr(r.nameContains) + '" style="width:150px;">') +
       '<div class="align-self-center">' + chk('fld-exclusive', 'ex-', r.exclusive, 'Exclusive') + '</div>' +
-      // Replace shares the Details row, pushed to the right end (margin-left:auto).
-      '<div class="align-self-center" style="margin-left:auto;"><button class="btn btn-sm btn-pick" data-cid="' + cid + '">' + (r.activeSKU ? 'Replace product' : 'Choose product') + '</button></div>' +
+      // Clear criteria + Replace share the Details row, pushed to the right end (margin-left:auto).
+      '<div class="align-self-center" style="margin-left:auto;">' +
+        '<button class="btn btn-sm btn-clear-crit mr-1" data-cid="' + cid + '" title="Reset category / price / attributes / name to none">Clear criteria</button>' +
+        '<button class="btn btn-sm btn-pick" data-cid="' + cid + '">' + (r.activeSKU ? 'Replace product' : 'Choose product') + '</button>' +
+      '</div>' +
     '</div>';
   }
 
@@ -958,6 +997,18 @@
     list.querySelectorAll('.btn-pick').forEach(function(b) {
       b.addEventListener('click', function() { openPicker(b.dataset.cid); });
     });
+    list.querySelectorAll('.btn-clear-crit').forEach(function(b) {
+      b.addEventListener('click', function() { clearSlotCriteria(b.dataset.cid); });
+    });
+  }
+
+  // Reset a slot's selection criteria (category / price / attributes / name) to "any". Leaves the
+  // chosen wine, qty, Flexible and Exclusive untouched. Re-renders so the closed-row badge updates.
+  function clearSlotCriteria(cid) {
+    var r = findRow(cid); if (!r) return;
+    r.category = ''; r.category2 = ''; r.priceMin = null; r.priceMax = null;
+    r.intensity = null; r.complexity = null; r.acidity = null; r.nameContains = '';
+    markDirty(); renderComposition();
   }
 
   function bindField(list, sel, evt, field, conv) {
@@ -1052,9 +1103,10 @@
   function addProductSlot() {
     if (!draft) return;
     var row = blankRow('Product');
+    row._open = true;   // open Details so criteria can be set; fill via Re-roll/Maintain or Replace —
+                        // no picker pop-up (adding an empty slot for the generator to fill, user 2026-06-08)
     draft.slots.push(row);
     markDirty(); renderComposition();
-    openPicker(row.cid);  // a new product row wants a product immediately
   }
 
   // ---- product picker (ModalOverlay over getEligibleProducts; §7.4) -------------
@@ -1143,11 +1195,9 @@
     if (!draft || !currentBundleId) return;
     var live = draft.slots.filter(function(r) { return !r._deleted; });
     if (!live.length) { TaskWidgets.toast('A bundle needs at least one slot.', 'warning'); return; }
-    // Block save if a product row has no product — it would export a blank woosb id to the live site.
-    if (live.some(function(r) { return r.slotType === 'Product' && !r.activeSKU; })) {
-      TaskWidgets.toast('Every product row needs a product selected (or delete the empty row).', 'warning');
-      return;
-    }
+    // Empty product slots are ALLOWED now — they're placeholders for Re-roll/Maintain to fill (user
+    // 2026-06-08). We don't block; we warn in the save confirm, and the Export path already flags any
+    // still-empty slot (blank woosb id) so it can't silently ship.
 
     var slots = live.map(function(r) {
       var o = { slotType: r.slotType };
@@ -1187,6 +1237,9 @@
     var delCount = draft.slots.filter(function(r) {
       return r._deleted && r.slotId && (r.slotType === 'Text' ? (r.textEn || r.textHe) : r.activeSKU);
     }).length;
+    // Empty product slots (placeholders) — warn so the operator knows to fill them (Re-roll/Maintain
+    // or Replace) before exporting.
+    var emptyCount = live.filter(function(r) { return r.slotType === 'Product' && !r.activeSKU; }).length;
 
     var doSave = function() {
       var btn = document.getElementById('btn-save-composition');
@@ -1202,14 +1255,18 @@
           renderEditor();
           setSaveEnabled(false);
           TaskWidgets.toast('Composition saved.', 'success');
+          hideActionResults();   // a saved edit makes any shown export preview stale
           afterSaveRefresh();
         })
         .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
         .WebAppBundles_saveComposition(currentBundleId, header, slots);
     };
 
-    if (delCount > 0) {
-      TaskWidgets.confirm('Save composition? ' + delCount + ' slot(s) will be removed.', doSave, { okLabel: 'Save', danger: true });
+    var notes = [];
+    if (delCount > 0) notes.push(delCount + ' slot(s) will be removed');
+    if (emptyCount > 0) notes.push(emptyCount + ' empty slot(s) — fill via Re-roll/Maintain or Replace before exporting');
+    if (notes.length) {
+      TaskWidgets.confirm('Save composition? ' + notes.join('; ') + '.', doSave, { okLabel: 'Save', danger: delCount > 0 });
     } else {
       doSave();
     }
@@ -1248,6 +1305,14 @@
   // MANAGEMENT CARD ACTIONS
   // =================================================================================
 
+  // Hide + clear the shared action-results panel (export preview / export-meta / Maintain summary).
+  function hideActionResults() {
+    var panel = document.getElementById('action-results-panel');
+    if (panel) panel.style.display = 'none';
+    var body = document.getElementById('action-results-body');
+    if (body) body.innerHTML = '';
+  }
+
   function showResults(title, html) {
     document.getElementById('action-results-title').textContent = title;
     document.getElementById('action-results-body').innerHTML = html;
@@ -1276,14 +1341,15 @@
           if (!res || !res.success) {
             var m = (res && res.message) || 'Pull failed';
             TaskWidgets.toast(m, 'error');
-            showResults('Pull Bundle Data', '<p class="text-warning">' + TaskWidgets.escape(m) + '</p>');
+            showResults('Pull from Web', '<p class="text-warning">' + TaskWidgets.escape(m) + '</p>');
             return;
           }
-          showResults('Pull Bundle Data',
+          showResults('Pull from Web',
             '<p class="text-success mb-2">' + TaskWidgets.escape(res.message) + '</p>' +
-            '<p class="small text-muted mb-0">Now click <strong>Update Composition</strong> to re-derive the bundles from the refreshed data.</p>');
+            '<p class="small text-muted mb-0">Needs Push refreshed — bundles now matching the website are cleared. ' +
+            '(Use <strong>Update Composition</strong> only to import a brand-new web bundle or re-baseline ops to the web — it overwrites ops compositions.)</p>');
           TaskWidgets.toast('Bundle data pulled.', 'success');
-          loadBundleList();
+          syncPushStatus();   // backend recomputed push-status post-pull; re-fetch so badges clear for matched bundles
         })
         .withFailureHandler(function(err) {
           restore();
@@ -1397,25 +1463,31 @@
   }
 
   function reviewStock() {
-    var btn = document.getElementById('btn-review-stock');
-    var restore = withButtonBusy(btn, 'Reviewing...');
+    // Read-only, but it's a slow full-bundle scan — confirm so an accidental click can't kick it off.
+    TaskWidgets.confirm('Review all bundles for problems (stock / criteria / price band)? Takes a moment.', function() {
+      var btn = document.getElementById('btn-review-stock');
+      var restore = withButtonBusy(btn, 'Reviewing...');
 
-    google.script.run
-      .withSuccessHandler(function(result) {
-        restore();
-        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        var d = result.data || {};
-        var n = d.bundlesNeedingUpdate || 0;
-        var msg = n > 0
-          ? n + ' bundle(s) need attention (stock, criteria, or price band) — flagged as "Bundles Need Update". Run Maintain to refresh them.'
-          : 'Bundle review complete — no bundles need updating.';
-        showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p>');
-      })
-      .withFailureHandler(function(err) {
-        restore();
-        TaskWidgets.toast('Failed: ' + err.message, 'error');
-      })
-      .WebAppBundles_reviewStock();
+      google.script.run
+        .withSuccessHandler(function(result) {
+          restore();
+          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
+          var d = result.data || {};
+          // Update the per-row "Needs attention" flags + re-render. Only when the check actually ran
+          // (bundleIds present) — if it skipped (no sync since last check), keep the mount-loaded flags.
+          if (d.bundleIds) { needsUpdateBundleIds = d.bundleIds.map(String); loadBundleList(); }
+          var n = d.bundlesNeedingUpdate || 0;
+          var msg = n > 0
+            ? n + ' bundle(s) need attention (stock, criteria, or price band) — flagged "Needs attention" in the list. Run Maintain (or edit) to fix them.'
+            : 'Bundle review complete — no bundles need attention.';
+          showResults('Review', '<p>' + TaskWidgets.escape(msg) + '</p>');
+        })
+        .withFailureHandler(function(err) {
+          restore();
+          TaskWidgets.toast('Failed: ' + err.message, 'error');
+        })
+        .WebAppBundles_reviewStock();
+    });
   }
 
   // Export (Phase 2 §7.6): generate the worklist as a new Google Sheet (one row per bundle, EN/HE

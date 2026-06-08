@@ -1502,6 +1502,16 @@ function HousekeepingService() {
         logger.warn('HousekeepingService', functionName, `Could not sync bundles-need-update task: ${taskError.message}`);
       }
 
+      // Cache the deficient bundle-ids so the Bundles list can flag "Needs attention" per row (parallel
+      // to system.bundles.push_status). Recomputed-not-recorded; refreshed here (housekeeping) + on
+      // on-demand Review. Empty default.
+      try {
+        ConfigService.setConfig('system.bundles.needs_update_status', 'value',
+          JSON.stringify({ count: affectedCount, bundleIds: affectedIds, ts: new Date().toISOString() }));
+      } catch (cacheError) {
+        logger.warn('HousekeepingService', functionName, `Could not cache needs-update status: ${cacheError.message}`);
+      }
+
       // Monthly review task - create on the 1st of each month
       const today = new Date();
       if (today.getDate() === 1) {
@@ -1527,7 +1537,7 @@ function HousekeepingService() {
       ConfigService.setConfig('system.bundle_health.last_check', 'value', new Date().toISOString());
 
       logger.info('HousekeepingService', functionName, `Bundle health check complete. Bundles needing update: ${affectedCount}`);
-      return { success: true, bundlesNeedingUpdate: affectedCount };
+      return { success: true, bundlesNeedingUpdate: affectedCount, bundleIds: affectedIds };
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Error during bundle health check: ${e.message}`, e);
       return false;

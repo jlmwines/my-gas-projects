@@ -1153,6 +1153,12 @@ const BundleService = (function () {
     opts = opts || {};
     const mode = opts.mode === 'maintain' ? 'maintain' : 'reroll';
     const deficientSet = (opts.deficientSlotIds instanceof Set) ? opts.deficientSlotIds : null;
+    // Preloaded eligible-products context (webData/cols/detailsMap/allSlots/minStock). When supplied
+    // (Maintain/Re-roll build it ONCE per run), getEligibleProducts reuses it instead of re-reading the
+    // whole WebProdM/WebDetM sheets on EVERY slot/top-up/down-pass call — the main reroll/maintain cost.
+    // Invariant within a run (product data doesn't change; intra-bundle dedup is handled via excludeSKUs,
+    // not the snapshot), so a single shared snapshot is safe. Null = legacy per-call reads (back-compat).
+    const genCtx = opts.ctx || null;
 
     const qtyOf = s => (s.defaultQty === '' || s.defaultQty == null) ? 1 : Number(s.defaultQty);
 
@@ -1186,7 +1192,7 @@ const BundleService = (function () {
     });
 
     // Eligible candidates for a slot, excluding the SKUs currently in OTHER product slots (intra-bundle
-    // dedup) plus any extra. Read fresh each call so committed picks are reflected.
+    // dedup) plus any extra. Uses the preloaded genCtx when present (no per-call sheet reads).
     function eligibleFor(slot, extraExclude) {
       const exclude = [];
       productSlots.forEach(s => {
@@ -1194,7 +1200,7 @@ const BundleService = (function () {
       });
       if (Array.isArray(extraExclude)) extraExclude.forEach(x => { if (x) exclude.push(x); });
       return getEligibleProducts(slot.slotId, {
-        limit: 500, excludeExclusiveSKUs: true, ignoreSameBundle: true, excludeSKUs: exclude
+        limit: 500, excludeExclusiveSKUs: true, ignoreSameBundle: true, excludeSKUs: exclude, ctx: genCtx
       });
     }
 
@@ -1359,11 +1365,15 @@ const BundleService = (function () {
   function maintainBundles() {
     const fnName = 'maintainBundles';
     const deficiencies = getBundleDeficiencies();
+    // Build the eligible-products context ONCE for the whole run (shared across every bundle's slot
+    // picks) instead of re-reading WebProdM/WebDetM per slot — the big maintain/reroll speedup.
+    const inv = _buildBundleInventoryContext();
+    const genCtx = inv ? inv.ctx : null;
     const results = [];
     deficiencies.forEach(d => {
       try {
         const ids = new Set((d.deficientSlots || []).map(ds => ds.slotId));
-        results.push(_generateBundleComposition(d.bundle, { mode: 'maintain', deficientSlotIds: ids }));
+        results.push(_generateBundleComposition(d.bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: genCtx }));
       } catch (e) {
         LoggerService.error(SERVICE_NAME, fnName, `Maintain failed for ${d.bundle.bundleId}: ${e.message}`, e);
         results.push({ bundleId: d.bundle.bundleId, bundleName: d.bundle.nameEn, error: e.message });
@@ -1389,10 +1399,13 @@ const BundleService = (function () {
     } else {
       bundles = _loadBundles().filter(b => b.status !== 'Archived');
     }
+    // Build the eligible-products context ONCE for the run (shared across all bundles' slot picks).
+    const inv = _buildBundleInventoryContext();
+    const genCtx = inv ? inv.ctx : null;
     const results = [];
     bundles.forEach(b => {
       try {
-        results.push(_generateBundleComposition(b, { mode: 'reroll' }));
+        results.push(_generateBundleComposition(b, { mode: 'reroll', ctx: genCtx }));
       } catch (e) {
         LoggerService.error(SERVICE_NAME, fnName, `Re-roll failed for ${b.bundleId}: ${e.message}`, e);
         results.push({ bundleId: b.bundleId, bundleName: b.nameEn, error: e.message });
@@ -2141,7 +2154,7 @@ const BundleService = (function () {
    * @param {string} lang      'en' | 'he'.
    * @returns {{json:string, warnings:Array<string>}}
    */
-  function exportBundleWoosb(bundleId, lang) {
+  function exportBundleWoosb(bundleId, lang, ctx) {
     const language = (lang === 'he') ? 'he' : 'en';
     const warnings = [];
 
@@ -2151,29 +2164,38 @@ const BundleService = (function () {
     }
     slots.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // SKU -> EN id, and (for HE) EN id -> HE id (via WebXltM wxm_WpmlOriginalId -> wxm_ID).
-    const allConfig = ConfigService.getAllConfig();
-    const ss = SheetAccessor.getDataSpreadsheet();
-    const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
-    const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
-    const wpmSkuIdx = wpmHeaders.indexOf('wpm_SKU');
-    const skuToEnId = {};
-    const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
-    for (let i = 1; i < wpmData.length; i++) {
-      const sku = String(wpmData[i][wpmSkuIdx] || '').trim();
-      const id = String(wpmData[i][wpmIdIdx] || '').trim();
-      if (sku && id) skuToEnId[sku] = id;
-    }
-    const enToHeId = {};
-    if (language === 'he') {
-      const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
-      const xltIdIdx = xltHeaders.indexOf('wxm_ID');
-      const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
-      const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
-      for (let i = 1; i < xltData.length; i++) {
-        const enId = String(xltData[i][xltOrigIdx] || '').trim();
-        const heId = String(xltData[i][xltIdIdx] || '').trim();
-        if (enId && heId) enToHeId[enId] = heId;
+    // SKU -> EN id, and (for HE) EN id -> HE id (WebXltM wxm_WpmlOriginalId -> wxm_ID). Reuse the
+    // preloaded maps when a caller supplies ctx (buildExportTable builds them ONCE for the whole diff)
+    // instead of re-reading WebProdM/WebXltM on every call — the export/diff N+1. Absent ctx → build
+    // them here (single-bundle callers: getBundleExportMeta, smoke), behaviour unchanged.
+    let skuToEnId, enToHeId;
+    if (ctx && ctx.skuToEnId) {
+      skuToEnId = ctx.skuToEnId;
+      enToHeId = ctx.enToHeId || {};
+    } else {
+      const allConfig = ConfigService.getAllConfig();
+      const ss = SheetAccessor.getDataSpreadsheet();
+      const wpmHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const wpmIdIdx = wpmHeaders.indexOf('wpm_ID');
+      const wpmSkuIdx = wpmHeaders.indexOf('wpm_SKU');
+      skuToEnId = {};
+      const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
+      for (let i = 1; i < wpmData.length; i++) {
+        const sku = String(wpmData[i][wpmSkuIdx] || '').trim();
+        const id = String(wpmData[i][wpmIdIdx] || '').trim();
+        if (sku && id) skuToEnId[sku] = id;
+      }
+      enToHeId = {};
+      if (language === 'he') {
+        const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+        const xltIdIdx = xltHeaders.indexOf('wxm_ID');
+        const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
+        const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
+        for (let i = 1; i < xltData.length; i++) {
+          const enId = String(xltData[i][xltOrigIdx] || '').trim();
+          const heId = String(xltData[i][xltIdIdx] || '').trim();
+          if (enId && heId) enToHeId[enId] = heId;
+        }
       }
     }
 
@@ -2301,28 +2323,34 @@ const BundleService = (function () {
     const wpmStockIdx = wpmHeaders.indexOf('wpm_Stock');
     const webEnByBundle = {};
     const skuToStock = {};   // web stock by SKU — for the pre-export out-of-stock failsafe (§3.1)
+    const skuToEnId = {};    // SKU -> EN id, built ONCE here + handed to exportBundleWoosb (kills its N+1)
     const wpmData = ss.getSheetByName('WebProdM').getDataRange().getValues();
     for (let i = 1; i < wpmData.length; i++) {
       const id = String(wpmData[i][wpmIdIdx] || '').trim();
       if (id) webEnByBundle[id] = String(wpmData[i][wpmWoosbIdx] || '');
       const sku = wpmSkuIdx >= 0 ? String(wpmData[i][wpmSkuIdx] || '').trim() : '';
       if (sku && wpmStockIdx >= 0) skuToStock[sku] = Number(wpmData[i][wpmStockIdx]);
+      if (sku && id) skuToEnId[sku] = id;
     }
     const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
     const xltOrigIdx = xltHeaders.indexOf('wxm_WpmlOriginalId');
     const xltWoosbIdx = xltHeaders.indexOf('wxm_WoosbIds');
+    const xltIdIdx = xltHeaders.indexOf('wxm_ID');
     const webHeByBundle = {};
+    const enToHeId = {};     // EN id -> HE id, built ONCE here + handed to exportBundleWoosb
     const xltData = ss.getSheetByName('WebXltM').getDataRange().getValues();
     for (let i = 1; i < xltData.length; i++) {
       const enId = String(xltData[i][xltOrigIdx] || '').trim();
       if (enId && xltWoosbIdx !== -1) webHeByBundle[enId] = String(xltData[i][xltWoosbIdx] || '');
+      if (enId && xltIdIdx !== -1) enToHeId[enId] = String(xltData[i][xltIdIdx] || '').trim();
     }
+    const exportCtx = { skuToEnId: skuToEnId, enToHeId: enToHeId };
 
     const bundles = getAllBundles();
     const rows = [];
     bundles.forEach(b => {
-      const en = exportBundleWoosb(b.bundleId, 'en');
-      const he = exportBundleWoosb(b.bundleId, 'he');
+      const en = exportBundleWoosb(b.bundleId, 'en', exportCtx);
+      const he = exportBundleWoosb(b.bundleId, 'he', exportCtx);
       const enDiff = !_woosbEqual(en.json, webEnByBundle[b.bundleId] || '');
       const heDiff = !_woosbEqual(he.json, webHeByBundle[b.bundleId] || '');
       if (enDiff || heDiff) {

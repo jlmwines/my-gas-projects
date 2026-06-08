@@ -66,7 +66,8 @@ function WebAppBundles_getViewData(sessionId) {
         categories:   WebAppBundles_getCategories().data || [],
         stats:        WebAppBundles_getStats().data || {},
         bundles:      WebAppBundles_getAllBundles().data || [],
-        pushStatus:   WebAppBundles_getPushStatus().data || { count: 0, bundleIds: [], ts: '' }
+        pushStatus:   WebAppBundles_getPushStatus().data || { count: 0, bundleIds: [], ts: '' },
+        needsUpdate:  WebAppBundles_getNeedsUpdateStatus().data || { count: 0, bundleIds: [], ts: '' }
         // healthAlerts intentionally omitted (Stage 1 Fix B): the low-inventory compute is the
         // slow part of the mount. The frontend's loadHealthAlerts(undefined) fallback lazy-fetches
         // it async after mount, so the view opens immediately. (Fix A keeps that async call fast.)
@@ -804,7 +805,12 @@ function WebAppBundles_pullBundleProducts() {
   const functionName = 'pullBundleProducts';
   try {
     LoggerService.info(serviceName, functionName, 'Fast bundles-only pull (composition + discount)');
-    return WooProductPullService.pullBundleProducts();
+    const result = WooProductPullService.pullBundleProducts();
+    // The pull refreshes jlmops's web copy (wpm_WoosbIds); recompute Needs Push now so a just-exported
+    // bundle whose web now matches ops clears immediately, instead of lagging to overnight housekeeping
+    // (user 2026-06-08: a fresh pull should clear the push flag — it reflects the real website state).
+    _refreshBundlePushStatusQuietly('pullBundleProducts');
+    return result;
   } catch (e) {
     LoggerService.error(serviceName, functionName, `Pull Bundle Data failed: ${e.message}`, e);
     return { success: false, message: `Pull Bundle Data failed: ${e.message}` };
@@ -955,6 +961,25 @@ function WebAppBundles_getPushStatus() {
   } catch (e) {
     LoggerService.error(serviceName, functionName, `getPushStatus failed: ${e.message}`, e);
     return { error: `Could not read push status: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Reads the cached bundle "needs attention" (deficiency) status — the bundle-ids flagged by the last
+ * Review / housekeeping checkBundleHealth (stock / criteria / price band). Instant, no recompute.
+ * @returns {Object} { error, data: { count, bundleIds, ts } }
+ */
+function WebAppBundles_getNeedsUpdateStatus() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'getNeedsUpdateStatus';
+  try {
+    const cfg = ConfigService.getConfig('system.bundles.needs_update_status');
+    const raw = (cfg && cfg.value) ? cfg.value : '';
+    const parsed = raw ? JSON.parse(raw) : { count: 0, bundleIds: [], ts: '' };
+    return { error: null, data: parsed };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `getNeedsUpdateStatus failed: ${e.message}`, e);
+    return { error: `Could not read needs-update status: ${e.message}`, data: null };
   }
 }
 
