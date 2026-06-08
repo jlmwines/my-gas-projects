@@ -435,11 +435,8 @@
 
     var html = '';
     state.filteredTasks.forEach(function(task) {
-      var overdueClass = (function() {
-        if (!task.dueDate) return '';
-        if (task.status === 'Done') return '';
-        return new Date(task.dueDate) < new Date() ? ' overdue' : '';
-      })();
+      // Overdue = due DATE before today (TaskWidgets.isOverdue; due-today is on-time until day's end).
+      var overdueClass = TaskWidgets.isOverdue(task.dueDate, task.status) ? ' overdue' : '';
       var expandedClass = state.expandedTaskId === task.id ? ' expanded' : '';
       var entityDisplay = task.entityName || task.entityId || '-';
       if (entityDisplay.length > 20) entityDisplay = entityDisplay.substring(0, 17) + '...';

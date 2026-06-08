@@ -1467,7 +1467,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       var dueDateDisp = t.st_DueDate ? TaskWidgets.formatDateShort(t.st_DueDate) : '-';
       var doneDateDisp = t.st_DoneDate ? TaskWidgets.formatDateShort(t.st_DoneDate) : '-';
       var createdDateDisp = t.st_CreatedDate ? TaskWidgets.formatDateShort(t.st_CreatedDate) : '-';
-      var isOverdue = t.st_DueDate && new Date(t.st_DueDate) < new Date() && status !== 'Done' && status !== 'Closed';
+      var isOverdue = TaskWidgets.isOverdue(t.st_DueDate, status);  // date-only; due-today not overdue
       var isSelected = id === state.selectedTaskId;
 
       var priBadge = '';

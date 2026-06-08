@@ -248,14 +248,28 @@
     return String(priority).toLowerCase();
   };
 
+  // Overdue = the due DATE is strictly before today (date-only). A task due TODAY is on-time until
+  // the day ends; comparing the due date's midnight against the current moment (the old behaviour)
+  // wrongly flagged due-today tasks overdue all day (fixed 2026-06-08). Excludes terminal statuses.
+  TaskWidgets.isOverdue = function(dueDate, status) {
+    if (!dueDate || status === 'Done' || status === 'Cancelled' || status === 'Closed') return false;
+    var d = new Date(dueDate);
+    if (isNaN(d.getTime())) return false;
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+  };
+
   TaskWidgets.dueClass = function(dueDateIso, status) {
     if (!dueDateIso || status === 'Done' || status === 'Cancelled') return '';
     var d = new Date(dueDateIso);
     if (isNaN(d.getTime())) return '';
-    var now = new Date();
-    var diffDays = (d - now) / (1000 * 60 * 60 * 24);
-    if (diffDays < 0) return 'overdue';
-    if (diffDays < 3) return 'soon';
+    if (TaskWidgets.isOverdue(dueDateIso, status)) return 'overdue';
+    // 'soon' = due within the next ~3 days (date-based; today counts as soon, not overdue)
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    var diffDays = (d - today) / (1000 * 60 * 60 * 24);
+    if (diffDays >= 0 && diffDays < 3) return 'soon';
     return '';
   };
 
