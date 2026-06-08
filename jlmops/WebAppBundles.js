@@ -984,6 +984,23 @@ function WebAppBundles_getNeedsUpdateStatus() {
 }
 
 /**
+ * Live deficiency detail for one bundle (editor "why does this need attention?"): per-slot reasons
+ * (stock / criteria / empty) + price-band flags. Recomputed against fresh Comax/web data.
+ * @param {string} bundleId
+ * @returns {Object} { error, data: { bundleId, deficientSlots:[{slotId,reason,stock}], baseTotal, bandFlags:[] } }
+ */
+function WebAppBundles_getBundleDeficiency(bundleId) {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'getBundleDeficiency';
+  try {
+    return { error: null, data: BundleService.getBundleDeficiency(bundleId) };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `getBundleDeficiency failed for ${bundleId}: ${e.message}`, e);
+    return { error: `Could not compute deficiency: ${e.message}`, data: null };
+  }
+}
+
+/**
  * Editor wrapper — recompute + cache the bundle push status now (BUNDLE_PLAN Phase 1 smoke).
  */
 function runRefreshBundlePushStatus() {

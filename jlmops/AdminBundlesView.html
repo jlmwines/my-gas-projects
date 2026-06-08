@@ -172,6 +172,7 @@
   // State
   var currentBundleId = null;
   var currentBundle = null;      // last backend-loaded bundle (type/price baseline)
+  var currentDeficiency = null;  // { deficientSlots:[], bandFlags:[], slotReason:{slotId:reason} } for the open bundle
   var selectedSlotId = null;
   var healthData = [];
   var selectedReplacements = [];
@@ -409,12 +410,48 @@
   function renderDeficiencyStrip(bundle) {
     var strip = document.getElementById('editor-deficiency-strip');
     if (!strip) return;
-    var needsPush = pushBundleIds.indexOf(String(bundle.bundleId)) !== -1;
-    if (needsPush) {
-      strip.innerHTML = '<div class="alert alert-warning py-2 mb-0">&#9888; Differs from web — export pending.</div>';
-    } else {
-      strip.innerHTML = '<div class="alert alert-success py-2 mb-0">&#10003; Matches web — nothing to export.</div>';
+    var html = '';
+    // "Needs attention" detail (why) — shown when the live deficiency check found issues for this bundle.
+    if (currentDeficiency) {
+      var slots = currentDeficiency.deficientSlots || [];
+      var counts = { stock: 0, criteria: 0, empty: 0 };
+      slots.forEach(function(s) { if (counts[s.reason] != null) counts[s.reason]++; });
+      var parts = [];
+      if (counts.stock) parts.push(counts.stock + ' out/low stock');
+      if (counts.criteria) parts.push(counts.criteria + ' off-criteria');
+      if (counts.empty) parts.push(counts.empty + ' empty');
+      (currentDeficiency.bandFlags || []).forEach(function(f) {
+        parts.push(f === 'below_min' ? 'total below min' : (f === 'above_max' ? 'total over max' : f));
+      });
+      if (parts.length) {
+        html += '<div class="alert alert-warning py-2 mb-1">&#9888; Needs attention: ' + TaskWidgets.escape(parts.join(', ')) +
+          '. Fix the flagged slot(s) below (Replace), or run Maintain.</div>';
+      }
     }
+    var needsPush = pushBundleIds.indexOf(String(bundle.bundleId)) !== -1;
+    html += needsPush
+      ? '<div class="alert alert-warning py-2 mb-0">&#9888; Differs from web — export pending.</div>'
+      : '<div class="alert alert-success py-2 mb-0">&#10003; Matches web — nothing to export.</div>';
+    strip.innerHTML = html;
+  }
+
+  // For a flagged bundle, fetch its live deficiency detail (why) and re-render the strip + composition
+  // (so the broken slot rows get tagged). Skipped for non-flagged bundles (keeps the open fast).
+  function fetchDeficiencyForEditor(bundleId) {
+    currentDeficiency = null;
+    if (needsUpdateBundleIds.indexOf(String(bundleId)) === -1) return;  // not flagged → nothing to show
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.error || !res.data) return;
+        if (String(res.data.bundleId) !== String(currentBundleId)) return;  // user moved on
+        var slotReason = {};
+        (res.data.deficientSlots || []).forEach(function(s) { slotReason[String(s.slotId)] = s.reason; });
+        currentDeficiency = { deficientSlots: res.data.deficientSlots || [], bandFlags: res.data.bandFlags || [], slotReason: slotReason };
+        renderDeficiencyStrip({ bundleId: currentBundleId });
+        renderComposition();
+      })
+      .withFailureHandler(function() { /* non-fatal — strip just won't show the detail */ })
+      .WebAppBundles_getBundleDeficiency(bundleId);
   }
 
   function closeEditor() {
@@ -635,6 +672,7 @@
     // post-save) keep the panel, so a Maintain summary isn't wiped by its own editor refresh.
     if (String(bundleId) !== String(currentBundleId)) hideActionResults();
     currentBundleId = String(bundleId);
+    currentDeficiency = null;   // cleared until the live deficiency check returns for a flagged bundle
     showEditorLoading();
     google.script.run
       .withSuccessHandler(function(result) {
@@ -666,6 +704,7 @@
         }
         renderEditor();
         setSaveEnabled(draftDirty);
+        fetchDeficiencyForEditor(currentBundleId);   // if flagged, load + show "why" + tag the bad slots
       })
       .withFailureHandler(function(err) {
         TaskWidgets.toast('Failed to load bundle: ' + err.message, 'error');
@@ -873,6 +912,12 @@
       ? '<strong>' + esc(r.productName || '(unknown product)') + '</strong>' +
         ' <span class="text-muted small">' + esc(r.activeSKU) + '</span>'
       : '<span class="text-warning">No product selected</span>';
+    // Deficiency tag (why this slot needs attention) — from the live check for a flagged bundle.
+    var defReason = (currentDeficiency && r.slotId) ? currentDeficiency.slotReason[String(r.slotId)] : null;
+    if (defReason) {
+      var defLbl = defReason === 'stock' ? 'out/low stock' : defReason === 'criteria' ? 'off-criteria' : defReason === 'empty' ? 'empty' : defReason;
+      nameHtml += ' <span class="badge badge-warning">&#9888; ' + defLbl + '</span>';
+    }
     // Slot category criterion in the collapsed row (the generator/picker pool is restricted to it),
     // plus a badge flagging ANY other active criteria (price / attributes / name) so the operator
     // sees they're in use without opening Details (user 2026-06-08).

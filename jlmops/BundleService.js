@@ -1617,76 +1617,86 @@ const BundleService = (function () {
    * @param {number} threshold - Stock threshold (uses system config if not specified)
    * @returns {Array<Object>} [{ bundle, deficientSlots:[{slotId,reason,stock}], baseTotal, bandFlags:[] }]
    */
-  function getBundleDeficiencies(threshold) {
-    const bundles = _loadBundles().filter(b => b.status !== 'Archived');
+  // Evaluate ONE bundle's deficiency against a prebuilt inventory context. Shared by getBundleDeficiencies
+  // (loop over all) and getBundleDeficiency (single, for the editor). Returns {deficientSlots, baseTotal, bandFlags}.
+  function _evaluateBundleDeficiency(bundle, inv) {
+    const comaxStockMap = inv.comaxStockMap, onHoldMap = inv.onHoldMap, webAttrMap = inv.webAttrMap,
+          detailsMap = inv.detailsMap, allSlots = inv.allSlots, threshold = inv.threshold;
+    const bundleSlots = allSlots
+      .filter(s => s.bundleId === bundle.bundleId && s.slotType === 'Product')
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    const inv = _buildBundleInventoryContext(threshold);
-    if (!inv) return [];   // CmxProdM missing
-    const comaxStockMap = inv.comaxStockMap;
-    const onHoldMap = inv.onHoldMap;
-    const webAttrMap = inv.webAttrMap;
-    const detailsMap = inv.detailsMap;
-    const allSlots = inv.allSlots;
-    threshold = inv.threshold;
+    const deficientSlots = [];
+    let baseTotal = 0;
 
-    const results = [];
+    for (const slot of bundleSlots) {
+      const qty = (slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty);
+      const isBase = qty >= 1;
 
-    for (const bundle of bundles) {
-      const bundleSlots = allSlots
-        .filter(s => s.bundleId === bundle.bundleId && s.slotType === 'Product')
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-      const deficientSlots = [];
-      let baseTotal = 0;
-
-      for (const slot of bundleSlots) {
-        const qty = (slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty);
-        const isBase = qty >= 1;
-
-        if (!slot.activeSKU) {
-          if (isBase) deficientSlots.push({ slotId: slot.slotId, reason: 'empty', stock: null });
-          continue;
-        }
-
-        const attrs = webAttrMap[slot.activeSKU];
-        const price = attrs ? attrs.price : 0;
-        if (isBase) baseTotal += price * qty;
-
-        // (a) stock — available = Comax − on-hold; only assessable when the SKU is in Comax.
-        const comaxStock = comaxStockMap[slot.activeSKU];
-        const stock = (comaxStock === undefined) ? null : comaxStock - (onHoldMap[slot.activeSKU] || 0);
-        let reason = null;
-        if (stock !== null && stock < threshold) {
-          reason = 'stock';
-        } else if (attrs) {
-          // (b) criteria recheck (includes price > slot.priceMax = over-band). Skip only when the wine
-          //     has no web row at all (can't evaluate — leave it to the stock/export paths).
-          const det = detailsMap[slot.activeSKU] || {};
-          const matches = _matchesSlotCriteria({
-            categories: attrs.categories, price: price, name: attrs.name,
-            intensity: det.intensity, complexity: det.complexity, acidity: det.acidity
-          }, slot);
-          if (!matches) reason = 'criteria';
-        }
-        if (reason) deficientSlots.push({ slotId: slot.slotId, reason: reason, stock: stock });
+      if (!slot.activeSKU) {
+        if (isBase) deficientSlots.push({ slotId: slot.slotId, reason: 'empty', stock: null });
+        continue;
       }
 
-      // Bundle-level band trigger (base total only; flexible slots excluded).
-      const bandFlags = [];
-      if (bundle.minTotal != null && baseTotal < bundle.minTotal) bandFlags.push('below_min');
-      if (bundle.maxTotal != null && baseTotal > bundle.maxTotal) bandFlags.push('above_max');
+      const attrs = webAttrMap[slot.activeSKU];
+      const price = attrs ? attrs.price : 0;
+      if (isBase) baseTotal += price * qty;
 
-      if (deficientSlots.length > 0 || bandFlags.length > 0) {
-        results.push({
-          bundle: bundle,
-          deficientSlots: deficientSlots,
-          baseTotal: Math.round(baseTotal * 100) / 100,
-          bandFlags: bandFlags
-        });
+      // (a) stock — available = Comax − on-hold; only assessable when the SKU is in Comax.
+      const comaxStock = comaxStockMap[slot.activeSKU];
+      const stock = (comaxStock === undefined) ? null : comaxStock - (onHoldMap[slot.activeSKU] || 0);
+      let reason = null;
+      if (stock !== null && stock < threshold) {
+        reason = 'stock';
+      } else if (attrs) {
+        // (b) criteria recheck (includes price > slot.priceMax = over-band). Skip only when the wine
+        //     has no web row at all (can't evaluate — leave it to the stock/export paths).
+        const det = detailsMap[slot.activeSKU] || {};
+        const matches = _matchesSlotCriteria({
+          categories: attrs.categories, price: price, name: attrs.name,
+          intensity: det.intensity, complexity: det.complexity, acidity: det.acidity
+        }, slot);
+        if (!matches) reason = 'criteria';
       }
+      if (reason) deficientSlots.push({ slotId: slot.slotId, reason: reason, stock: stock });
     }
 
+    // Bundle-level band trigger (base total only; flexible slots excluded).
+    const bandFlags = [];
+    if (bundle.minTotal != null && baseTotal < bundle.minTotal) bandFlags.push('below_min');
+    if (bundle.maxTotal != null && baseTotal > bundle.maxTotal) bandFlags.push('above_max');
+
+    return { deficientSlots: deficientSlots, baseTotal: Math.round(baseTotal * 100) / 100, bandFlags: bandFlags };
+  }
+
+  function getBundleDeficiencies(threshold) {
+    const bundles = _loadBundles().filter(b => b.status !== 'Archived');
+    const inv = _buildBundleInventoryContext(threshold);
+    if (!inv) return [];   // CmxProdM missing
+
+    const results = [];
+    for (const bundle of bundles) {
+      const d = _evaluateBundleDeficiency(bundle, inv);
+      if (d.deficientSlots.length > 0 || d.bandFlags.length > 0) {
+        results.push({ bundle: bundle, deficientSlots: d.deficientSlots, baseTotal: d.baseTotal, bandFlags: d.bandFlags });
+      }
+    }
     return results;
+  }
+
+  /**
+   * Deficiency detail for ONE bundle (for the editor — "why does this need attention?"). Returns the
+   * per-slot reasons + band flags even if the bundle is clean (empty arrays). null if not found / no Comax.
+   * @param {string} bundleId
+   * @returns {{bundleId, deficientSlots:[{slotId,reason,stock}], baseTotal, bandFlags:[]}|null}
+   */
+  function getBundleDeficiency(bundleId) {
+    const bundle = getBundle(bundleId);
+    if (!bundle) return null;
+    const inv = _buildBundleInventoryContext();
+    if (!inv) return null;
+    const d = _evaluateBundleDeficiency(bundle, inv);
+    return { bundleId: String(bundleId), deficientSlots: d.deficientSlots, baseTotal: d.baseTotal, bandFlags: d.bandFlags };
   }
 
   // =====================================================
@@ -2465,6 +2475,7 @@ const BundleService = (function () {
     getEligibleProducts: getEligibleProducts,
     getBundlesWithLowInventory: getBundlesWithLowInventory,
     getBundleDeficiencies: getBundleDeficiencies,
+    getBundleDeficiency: getBundleDeficiency,
 
     // Stage 7 — composition generator (rev 2.2: Maintain default + Re-roll explicit)
     maintainBundles: maintainBundles,

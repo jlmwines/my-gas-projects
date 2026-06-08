@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-08 (cont 3) — Bundle Stage 7 UI session @275→@282 + inventory reorg + overdue fix
+
+- **Admin Inventory lazy-load (@275-ish):** same long-load fix as Admin Products. Mount loads Counts-to-Review + Comax sync + Open manager-inventory Tasks (valuable, populates on load, sits after Comax sync); Create Count + Costs&Margins collapse + lazy-load. Card order: Review / Comax / OpenTasks / CreateCount / Costs.
+- **Overdue date-only fix:** `TaskWidgets.isOverdue(dueDate,status)` — overdue iff due DATE < today (a task due *today* is not past-due). Routed ManagerDashboard / AdminProjects / AdminTasks through it (manager-dash was showing today's packing slips in red).
+- **Bundle UI polish @275→@282 (per `ADMIN_BUNDLES_UI_PLAN.md`):** toolbar relabel/reorder (Review / Maintain / Export / Pull from Web + muted "Update Composition" utility), all major buttons confirm-gated (Review is slow + accidentally triggerable). Two distinct per-bundle signals surfaced: **Needs attention** (deficiency) vs **Update web** (ops≠web export diff) — uncolored Flags column + chips (All / Needs attention / Update web / OK), Status kept (no color). push_status is a recomputed cache → refreshed on save/maintain/reroll/pull + frontend `syncPushStatus` (this was the real cause of the stale "Matches web", not an overnight revert). Perf: shared eligible-products `ctx` (no per-slot reads). **@282: editor now reveals WHY** — `getBundleDeficiency` (per-bundle) → deficiency strip summary + per-slot warning tags (out/low stock, off-criteria, empty, band).
+- **Deferred next phase (agreed, not built):** inline-at-row bundle editor with per-bundle export attached inside it (batch sheet = fallback); single-bundle target for "Update Composition"; bundles missed-profit report (jlmops wishlist); website woosb bundle-explainer (theme wishlist). Captured in `ADMIN_BUNDLES_UI_PLAN.md`.
+- @282 confirmed live via `clasp deployments` (pinned ID carries the editor-deficiency description). Wrapper stamped `built` 21:09; in-file `VERSION.commit` was stale (Phase 1a-i) → corrected this wrap.
+
 ## 2026-06-08 (cont 2) — packing-task bugs #1 + #2 resolved @274 + config
 
 - **#1 close-path gap (orphaned `task.order.packing_available` at 0 Ready):** sync drains Ready→Ineligible without a print; only PrintService closed the task. Fix @274 — `processStagedOrders` closes it after the SysOrdLog write when 0 Ready remain (runs every sync → self-heals). Added `reconcilePackingAvailableTask()` one-shot (OrderService.js) for on-demand clear; user ran it, phantom gone. Note: processStagedOrders early-returns on an empty staged set, but a draining order is always in a non-empty set, so the recurring path is covered.
