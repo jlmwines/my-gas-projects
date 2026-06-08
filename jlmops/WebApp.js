@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-07 19:48',
+  built: '2026-06-08 07:55',
   commit: 'ADMIN_BUNDLES_UI_PLAN Phase 1a-i — cached daily bundle push status. New HousekeepingService.refreshBundlePushStatus() runs right after refreshBundleComposition: calls buildExportTable (ops!=web) and caches {count, bundleIds, ts} in system.bundles.push_status (recomputed-not-recorded; cached only for instant view/dashboard mount). Controller WebAppBundles_getPushStatus() reads it; runRefreshBundlePushStatus() editor wrapper to populate now. Run rebuildSysConfigFromSource to declare the config key, then runRefreshBundlePushStatus(). Next: 1a-ii task.bundles.push_pending + dashboard; 1b view list/chips.'
 };
 

@@ -807,6 +807,29 @@ const BundleService = (function () {
   // =====================================================
 
   /**
+   * Cross-bundle usage index (BUNDLE_PLAN Stage 6): SKU -> count of DISTINCT OTHER bundles that use
+   * it as a product slot's active SKU. Variety signal for diversity ranking; the current bundle is
+   * excluded so a wine already in this bundle isn't self-penalized. Takes a preloaded slots array
+   * (reuse `ctx.allSlots` or `_loadSlots()`) to avoid an extra sheet read.
+   * @param {Array<Object>} allSlots - all slot objects (from _loadSlots / ctx.allSlots)
+   * @param {string} excludeBundleId - the bundle being filled (not counted)
+   * @returns {Object} { [sku]: otherBundleCount }
+   */
+  function _buildCrossBundleUsage(allSlots, excludeBundleId) {
+    const exclude = String(excludeBundleId || '');
+    const bySku = {};   // sku -> Set of bundleIds
+    (allSlots || []).forEach(s => {
+      if (s.slotType !== 'Product' || !s.activeSKU) return;
+      if (String(s.bundleId) === exclude) return;
+      if (!bySku[s.activeSKU]) bySku[s.activeSKU] = new Set();
+      bySku[s.activeSKU].add(String(s.bundleId));
+    });
+    const usage = {};
+    Object.keys(bySku).forEach(sku => { usage[sku] = bySku[sku].size; });
+    return usage;
+  }
+
+  /**
    * Finds products eligible for a slot based on its criteria.
    * Uses WebProdM for product data (categories, stock, price).
    * @param {string} slotId - Slot ID
@@ -918,6 +941,10 @@ const BundleService = (function () {
       });
     }
 
+    // Cross-bundle usage index (BUNDLE_PLAN Stage 6): how many OTHER bundles already use each SKU.
+    // Drives the variety-first diversity sort below (and is surfaced on each candidate for Stage 7).
+    const usage = _buildCrossBundleUsage(allSlots, slot.bundleId);
+
     // Filter products
     const eligible = [];
     let debugStats = { total: 0, noSku: 0, notPublished: 0, excluded: 0, lowStock: 0, passed: 0 };
@@ -995,22 +1022,26 @@ const BundleService = (function () {
         price: price,
         profitRate: profitRate,
         stock: stock,
+        usage: usage[sku] || 0,   // cross-bundle uses (Stage 6) — diversity signal
         categories: categories,
         intensity: details.intensity,
         complexity: details.complexity,
         acidity: details.acidity
       });
-
-      if (eligible.length >= limit) break;
+      // NOTE: no early break — collect ALL eligible so the diversity sort below ranks the globally
+      // least-used wines first, then slice to `limit` (Stage 6).
     }
 
     // Log debug stats
     LoggerService.info(SERVICE_NAME, functionName, `Slot ${slotId} eligible search: ${JSON.stringify(debugStats)}, minStock=${minStock}`);
 
-    // Sort by stock descending (prefer products with more stock)
-    eligible.sort((a, b) => b.stock - a.stock);
+    // Diversity-first sort (BUNDLE_PLAN Stage 6): fewest cross-bundle uses first (variety), then
+    // higher stock. The min-stock floor already gated candidates, so an unused wine outranks a used
+    // one even at lower stock; duplication only surfaces once unique wines run out ("relax as stock
+    // runs low"). Then cap to `limit`. (Stage 7's generator applies its own profit+diversity composite.)
+    eligible.sort((a, b) => (a.usage - b.usage) || (b.stock - a.stock));
 
-    return eligible;
+    return eligible.slice(0, limit);
   }
 
   /**
