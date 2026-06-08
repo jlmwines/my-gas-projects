@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-08 (cont 2) — packing-task bugs #1 + #2 resolved @274 + config
+
+- **#1 close-path gap (orphaned `task.order.packing_available` at 0 Ready):** sync drains Ready→Ineligible without a print; only PrintService closed the task. Fix @274 — `processStagedOrders` closes it after the SysOrdLog write when 0 Ready remain (runs every sync → self-heals). Added `reconcilePackingAvailableTask()` one-shot (OrderService.js) for on-demand clear; user ran it, phantom gone. Note: processStagedOrders early-returns on an empty staged set, but a draining order is always in a non-empty set, so the recurring path is covered.
+- **#2 overdue aging (same task):** `due_pattern: immediate` set due=today, never refreshed → overdue-red. Demoted to no-due nudge per PACKING_SLIP_REPRINT_PLAN — `due_pattern → manual` (calculateDueDate returns null). Config-only: taskDefinitions.json → generate-config → `clasp push` (no deploy/version) → user ran `rebuildSysConfigFromSource`. Verified live (new orders → legit packing task, no overdue).
+- Dispatch report file (`plans/DISPATCH_BUGS.md`) cleared earlier this session. Committed 6563791 (+ pushed); also pushed the dead-code cleanup 7c1a2ec.
+- Deferred (noted, not needed for symptoms): full PACKING_SLIP_REPRINT redesign (retire singleton); Bundles `getBundlesWithLowInventory` N+1 perf.
+
 ## 2026-06-08 (cont) — Dispatch bugs + Admin Products lazy-load @271→@273
 
 - Dispatch report lived in `plans/DISPATCH_BUGS.md` (untracked; Dispatch can't write `.claude/`). Four items: #1 AdminSyncView scriptlet (already fixed @223 — verified not regressed), #2 packing_available orphan (already an open bugs.md item), #3 Admin Products no loading state, #4 Accepted blank-status tasks. Filed all into bugs.md, deleted DISPATCH_BUGS.md.
