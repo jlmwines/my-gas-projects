@@ -1049,60 +1049,9 @@ function WebAppProducts_getRecentSkuUpdates() {
   }
 }
 
-/**
- * Consolidates the data sections that AdminProductsView.refreshView() previously
- * fetched via separate google.script.run calls (UI Tier 3.1). One round-trip.
- *
- * NOTE on shapes (verified against the section getters): the 8 product getters are
- * global functions returning RAW ARRAYS (they throw on error); WebAppLookups_getMap
- * returns { error, data: { headers, rows } } — so lookups are unwrapped via .data.
- * Frontend AdminProductsView.applyAllSections(data) dispatches each section to its
- * loader's preloaded path.
- *
- * @param {string} [sessionId] Optional caller sessionId for traceability.
- * @returns {{success: boolean, data?: object, error?: string}}
- */
-function WebAppProducts_getAdminViewData(sessionId) {
-  // Per-section resilience: each card is fetched in its own try/catch so a single failing (or
-  // slow-and-throwing) section can't blank the whole page. Failed sections fall back to a safe empty
-  // and name themselves in `errors[]` (the frontend surfaces them per-card). NOTE: this guards THROWS,
-  // not a whole-call TIMEOUT — if the aggregate is simply too slow, the client still times out (that's
-  // the lazy-load redesign's job, not this).
-  const errors = [];
-  const sec = function (label, fn, fallback) {
-    try {
-      return fn();
-    } catch (e) {
-      LoggerService.error('WebAppProducts', 'getAdminViewData', `${label}: ${e.message}`, e);
-      errors.push(`${label}: ${e.message}`);
-      return fallback;
-    }
-  };
-  try {
-    return {
-      success: true,
-      errors: errors,
-      data: {
-        reviewTasks:        sec('reviewTasks',        WebAppProducts_getAdminReviewTasks,  []),
-        acceptedTasks:      sec('acceptedTasks',      WebAppProducts_getAcceptedTasks,     []),
-        pendingDetailTasks: sec('pendingDetailTasks', WebAppProducts_getPendingDetailTasks, []),
-        suggestionTasks:    sec('suggestionTasks',    WebAppProducts_getSuggestionTasks,   []),
-        submissionsTasks:   sec('submissionsTasks',   WebAppProducts_getSubmissionsTasks,  []),
-        linkageTasks:       sec('linkageTasks',       WebAppProducts_getLinkageTasks,      []),
-        pendingNewTasks:    sec('pendingNewTasks',    WebAppProducts_getPendingNewTasks,   []),
-        recentSkuUpdates:   sec('recentSkuUpdates',   WebAppProducts_getRecentSkuUpdates,  []),
-        lookups: {
-          grapes:  sec('lookups.grapes',  function () { return WebAppLookups_getMap('map.grape_lookups').data; },   {}),
-          kashrut: sec('lookups.kashrut', function () { return WebAppLookups_getMap('map.kashrut_lookups').data; }, {}),
-          texts:   sec('lookups.texts',   function () { return WebAppLookups_getMap('map.text_lookups').data; },     {})
-        }
-      }
-    };
-  } catch (e) {
-    LoggerService.error('WebAppProducts', 'getAdminViewData', e.message, e);
-    return { success: false, error: e.message };
-  }
-}
+// NOTE: WebAppProducts_getAdminViewData (the T3.1 single consolidated round-trip) was REMOVED 2026-06-08
+// when AdminProductsView switched to mount-Card-1 + lazy-load the rest (it was timing out loading all 11
+// sections). The per-card getters below are the live API; the frontend calls them on mount / on expand.
 
 /**
  * Looks up a product by SKU and returns comprehensive data from both Comax and Web.

@@ -1919,7 +1919,7 @@
     AdminProductsView.loadLookupSection = function(section, preloadedData) {
       const cfg = AdminProductsView.lookupSectionConfig[section];
       if (!cfg) return;
-      // payload shape: { headers, rows } (matches WebAppLookups_getMap().data and getAdminViewData's data.lookups.<section>)
+      // payload shape: { headers, rows } (matches WebAppLookups_getMap().data)
       const render = function(payload) {
         const rows = (payload && payload.rows) || [];
         const headers = (payload && payload.headers) || [];
