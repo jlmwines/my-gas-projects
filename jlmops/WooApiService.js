@@ -268,6 +268,23 @@ const WooApiService = (function() {
   }
 
   /**
+   * Fetch ONLY bundle (woosb) products for a language — WC REST `type=woosb`. Tens of products, not
+   * the full catalog; used by the fast bundles-only refresh (BUNDLE_PLAN Stage 5). Returns [] if the
+   * type filter yields nothing (caller treats that as "nothing to update", not an error).
+   * @param {string} lang - 'en' | 'he'
+   * @returns {Array} API product objects
+   */
+  function fetchBundleProducts(lang) {
+    var functionName = 'fetchBundleProducts';
+    lang = lang || 'en';
+    var params = { lang: lang, status: 'any', type: 'woosb', orderby: 'id', order: 'asc' };
+    logger.info(SERVICE_NAME, functionName, 'Fetching ' + lang.toUpperCase() + ' bundle (woosb) products');
+    var products = _fetchAllPages('/wc/v3/products', params) || [];
+    logger.info(SERVICE_NAME, functionName, 'Fetched ' + products.length + ' ' + lang.toUpperCase() + ' bundle products');
+    return products;
+  }
+
+  /**
    * Fetch orders from WooCommerce REST API.
    *
    * @param {string} [modifiedAfter] - ISO timestamp to fetch only orders modified after this date
@@ -349,6 +366,7 @@ const WooApiService = (function() {
 
   return {
     fetchProducts: fetchProducts,
+    fetchBundleProducts: fetchBundleProducts,
     fetchOrders: fetchOrders,
     testConnection: testConnection,
     // Exposed for use by pull services that need single-page fetches

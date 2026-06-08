@@ -779,6 +779,24 @@ function WebAppBundles_getProductName(sku) {
 // =================================================================================
 
 /**
+ * Pull Bundle Data button (BUNDLE_PLAN Stage 5): fast bundles-only refresh — pulls ONLY woosb
+ * products from WC (EN+HE) and writes composition + discount fields directly to WebProdM/WebXltM,
+ * bypassing the full staging pipeline. Run this, then Update Composition to re-derive the bundles.
+ * @returns {Object} pullBundleProducts result { success, enUpdated, enMissing, heUpdated, heMissing, message }
+ */
+function WebAppBundles_pullBundleProducts() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'pullBundleProducts';
+  try {
+    LoggerService.info(serviceName, functionName, 'Fast bundles-only pull (composition + discount)');
+    return WooProductPullService.pullBundleProducts();
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Pull Bundle Data failed: ${e.message}`, e);
+    return { success: false, message: `Pull Bundle Data failed: ${e.message}` };
+  }
+}
+
+/**
  * Update Composition button: re-derives SysBundles + SysBundleSlots from
  * current WebProdM + WebXltM data. Does NOT pull from WooCommerce — premise
  * is "sync just ran, WebProdM is fresh, but housekeeping bundle refresh

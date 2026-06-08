@@ -24,6 +24,7 @@
         <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
           <h5>Bundle Management</h5>
           <div>
+            <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull Bundle Data</button>
             <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
             <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
             <button id="btn-export-bundles" class="btn btn-sm">Export</button>
@@ -217,6 +218,7 @@
   }
 
   function bindEvents() {
+    document.getElementById('btn-pull-bundles').addEventListener('click', pullBundleData);
     document.getElementById('btn-update-composition').addEventListener('click', updateComposition);
     document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
     document.getElementById('btn-export-bundles').addEventListener('click', exportBundles);
@@ -1112,6 +1114,35 @@
       btn.disabled = false;
       btn.textContent = originalText;
     };
+  }
+
+  // Pull Bundle Data (Stage 5): fast bundles-only pull (composition + discount) straight to master.
+  // Then prompts to Update Composition (re-derive SysBundles from the refreshed master data).
+  function pullBundleData() {
+    TaskWidgets.confirm('Pull bundle data (composition + discount) from the website?', function() {
+      var btn = document.getElementById('btn-pull-bundles');
+      var restore = withButtonBusy(btn, 'Pulling...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restore();
+          if (!res || !res.success) {
+            var m = (res && res.message) || 'Pull failed';
+            TaskWidgets.toast(m, 'error');
+            showResults('Pull Bundle Data', '<p class="text-warning">' + TaskWidgets.escape(m) + '</p>');
+            return;
+          }
+          showResults('Pull Bundle Data',
+            '<p class="text-success mb-2">' + TaskWidgets.escape(res.message) + '</p>' +
+            '<p class="small text-muted mb-0">Now click <strong>Update Composition</strong> to re-derive the bundles from the refreshed data.</p>');
+          TaskWidgets.toast('Bundle data pulled.', 'success');
+          loadBundleList();
+        })
+        .withFailureHandler(function(err) {
+          restore();
+          TaskWidgets.toast('Failed: ' + err.message, 'error');
+        })
+        .WebAppBundles_pullBundleProducts();
+    });
   }
 
   function updateComposition() {

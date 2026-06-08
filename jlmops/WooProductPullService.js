@@ -485,9 +485,147 @@ const WooProductPullService = (function() {
     return null;
   }
 
+  // ===================================================================================
+  // Stage 5 — fast bundles-only refresh (direct to master, no staging/validation)
+  // ===================================================================================
+
+  // woosb_ids meta may arrive as an object or a JSON string — normalize to a JSON string
+  // (mirrors _transformApiProduct's woosb_ids handling).
+  function _woosbIdsString(meta) {
+    var raw = _getMetaValue(meta, 'woosb_ids');
+    return (raw && typeof raw === 'object') ? JSON.stringify(raw) : (raw || '');
+  }
+
+  /**
+   * Fast bundles-only refresh (BUNDLE_PLAN Stage 5): pull ONLY woosb products from WC (EN+HE) and
+   * write their bundle fields — composition (`woosb_ids`) + the four WOOSB discount fields — DIRECTLY
+   * into WebProdM/WebXltM, bypassing staging+validation. Safe: woosb is exempt from Comax validation,
+   * and the next full sync re-writes the same WC data (no divergence). Updates EXISTING master rows
+   * only (matched by id); ids not in master are counted as "new" and skipped (a full pull inserts
+   * them). Seconds instead of a full product pull.
+   * @returns {object} { success, enUpdated, enMissing, heUpdated, heMissing, message }
+   */
+  function pullBundleProducts() {
+    var functionName = 'pullBundleProducts';
+    var sessionId = generateSessionId();
+    logger.info(SERVICE_NAME, functionName, 'Starting fast bundles-only pull', { sessionId: sessionId });
+
+    try {
+      var enProducts = WooApiService.fetchBundleProducts('en') || [];
+      var heProducts = WooApiService.fetchBundleProducts('he') || [];
+
+      if (enProducts.length === 0 && heProducts.length === 0) {
+        var emptyMsg = 'No bundle (woosb) products returned from WooCommerce — nothing updated. ' +
+          '(Verify the store exposes products with ?type=woosb.)';
+        logger.warn(SERVICE_NAME, functionName, emptyMsg, { sessionId: sessionId });
+        return { success: false, enUpdated: 0, enMissing: 0, heUpdated: 0, heMissing: 0, message: emptyMsg };
+      }
+
+      var enResult = _upsertBundleFieldsToMaster(enProducts, 'WebProdM', 'wpm_ID', {
+        wpm_TaxProductType: function() { return 'woosb'; },
+        wpm_WoosbIds: function(m) { return _woosbIdsString(m); },
+        wpm_WoosbDiscount: function(m) { return _getMetaValue(m, 'woosb_discount') || ''; },
+        wpm_WoosbDiscountAmount: function(m) { return _getMetaValue(m, 'woosb_discount_amount') || ''; },
+        wpm_WoosbCustomPrice: function(m) { return _getMetaValue(m, 'woosb_custom_price') || ''; },
+        wpm_WoosbDisableAutoPrice: function(m) { return _getMetaValue(m, 'woosb_disable_auto_price') || ''; }
+      });
+
+      var heResult = _upsertBundleFieldsToMaster(heProducts, 'WebXltM', 'wxm_ID', {
+        wxm_WoosbIds: function(m) { return _woosbIdsString(m); },
+        wxm_WoosbDiscount: function(m) { return _getMetaValue(m, 'woosb_discount') || ''; },
+        wxm_WoosbDiscountAmount: function(m) { return _getMetaValue(m, 'woosb_discount_amount') || ''; },
+        wxm_WoosbCustomPrice: function(m) { return _getMetaValue(m, 'woosb_custom_price') || ''; },
+        wxm_WoosbDisableAutoPrice: function(m) { return _getMetaValue(m, 'woosb_disable_auto_price') || ''; }
+      });
+
+      var message = 'Bundle data pulled. EN: ' + enResult.updated + ' updated' +
+        (enResult.missing ? ' (' + enResult.missing + ' new, skipped)' : '') +
+        '; HE: ' + heResult.updated + ' updated' +
+        (heResult.missing ? ' (' + heResult.missing + ' new, skipped)' : '') + '.';
+      logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
+
+      return {
+        success: true,
+        enUpdated: enResult.updated, enMissing: enResult.missing,
+        heUpdated: heResult.updated, heMissing: heResult.missing,
+        message: message
+      };
+    } catch (e) {
+      logger.error(SERVICE_NAME, functionName, 'Bundle pull failed: ' + e.message, e, { sessionId: sessionId });
+      return { success: false, enUpdated: 0, enMissing: 0, heUpdated: 0, heMissing: 0, message: 'Failed: ' + e.message };
+    }
+  }
+
+  /**
+   * Direct-to-master upsert of bundle fields. Reads the sheet once, sets only the given columns on
+   * rows whose id matches a fetched product, writes once (mirrors the full upsert's full-range write).
+   * Ids not present in master are counted as "missing" and skipped. No staging, no validation.
+   * @param {Array} products   fetched API product objects (must have .id and .meta_data)
+   * @param {string} sheetName  'WebProdM' | 'WebXltM'
+   * @param {string} idField    schema header used as the join key ('wpm_ID' | 'wxm_ID')
+   * @param {Object} fieldFns   { columnHeader: fn(meta) -> cellValue }
+   * @returns {{updated:number, missing:number}}
+   */
+  function _upsertBundleFieldsToMaster(products, sheetName, idField, fieldFns) {
+    var fnName = '_upsertBundleFieldsToMaster';
+    var ss = SheetAccessor.getDataSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) throw new Error(sheetName + ' sheet not found');
+
+    var allConfig = ConfigService.getAllConfig();
+    var schema = allConfig['schema.data.' + sheetName];
+    if (!schema) throw new Error('schema.data.' + sheetName + ' not found');
+    var headers = schema.headers.split(',');
+    var idIdx = headers.indexOf(idField);
+    if (idIdx === -1) throw new Error(idField + ' not in ' + sheetName + ' schema');
+
+    // Resolve target column indices once; skip (and log) any header absent from the schema.
+    var colIdx = {};
+    Object.keys(fieldFns).forEach(function(col) {
+      var i = headers.indexOf(col);
+      if (i === -1) {
+        logger.warn(SERVICE_NAME, fnName, 'Column ' + col + ' absent from ' + sheetName + ' schema — skipped');
+      } else {
+        colIdx[col] = i;
+      }
+    });
+
+    // Map fetched products by id -> meta_data. HARD GUARD: only ACTUAL bundle products, keyed off the
+    // product's own `type` — never trust the `?type=woosb` query filter. If WC ignored the filter and
+    // returned the whole catalog, this prevents marking every product woosb + blanking its woosb_ids.
+    var byId = {};
+    products.forEach(function(p) {
+      if (!p || p.id == null) return;
+      var t = String(p.type || '').toLowerCase().trim();
+      if (t === 'woosb' || t === 'bundle') byId[String(p.id)] = p.meta_data || [];
+    });
+
+    var data = sheet.getDataRange().getValues();
+    var updated = 0;
+    var seen = {};
+    for (var r = 1; r < data.length; r++) {
+      var id = String(data[r][idIdx] || '').trim();
+      if (!id || !byId.hasOwnProperty(id)) continue;
+      var meta = byId[id];
+      seen[id] = true;
+      Object.keys(colIdx).forEach(function(col) {
+        data[r][colIdx[col]] = fieldFns[col](meta);
+      });
+      updated++;
+    }
+
+    if (updated > 0) {
+      sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+    }
+    var missing = Object.keys(byId).filter(function(id) { return !seen[id]; }).length;
+    logger.info(SERVICE_NAME, fnName, sheetName + ': ' + updated + ' updated, ' + missing + ' unmatched/new', {});
+    return { updated: updated, missing: missing };
+  }
+
   return {
     pullProducts: pullProducts,
-    pullAndImportAll: pullAndImportAll
+    pullAndImportAll: pullAndImportAll,
+    pullBundleProducts: pullBundleProducts
   };
 })();
 
