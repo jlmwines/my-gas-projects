@@ -112,6 +112,10 @@ const BundleService = (function () {
         type: row[cols.sb_Type] || 'Bundle',
         status: row[cols.sb_Status] || 'Draft',
         discountPrice: row[cols.sb_DiscountPrice] || '',
+        // Stage 7 (cols undefined until the schema rebuild → safely null/'')
+        minTotal: (cols.sb_MinTotal !== undefined && row[cols.sb_MinTotal] !== '' && row[cols.sb_MinTotal] != null) ? Number(row[cols.sb_MinTotal]) : null,
+        lastGenerated: (cols.sb_LastGenerated !== undefined) ? (row[cols.sb_LastGenerated] || '') : '',
+        genFlags: (cols.sb_GenFlags !== undefined) ? (row[cols.sb_GenFlags] || '') : '',
         rowNumber: i + 1 // 1-based for sheet operations
       });
     }
@@ -477,6 +481,16 @@ const BundleService = (function () {
     }
     if (updates.discountPrice !== undefined) {
       sheet.getRange(row, cols.sb_DiscountPrice + 1).setValue(updates.discountPrice);
+    }
+    // Stage 7 fields (guarded — columns exist only after the schema rebuild)
+    if (updates.minTotal !== undefined && cols.sb_MinTotal !== undefined) {
+      sheet.getRange(row, cols.sb_MinTotal + 1).setValue(updates.minTotal === null ? '' : updates.minTotal);
+    }
+    if (updates.lastGenerated !== undefined && cols.sb_LastGenerated !== undefined) {
+      sheet.getRange(row, cols.sb_LastGenerated + 1).setValue(updates.lastGenerated);
+    }
+    if (updates.genFlags !== undefined && cols.sb_GenFlags !== undefined) {
+      sheet.getRange(row, cols.sb_GenFlags + 1).setValue(updates.genFlags);
     }
 
     clearCache();
@@ -925,12 +939,16 @@ const BundleService = (function () {
       options.excludeSKUs.forEach(sku => { if (sku) excludedSKUs.add(String(sku)); });
     }
 
-    // Exclude SKUs already used in other slots of the same bundle
-    allSlots.forEach(s => {
-      if (s.bundleId === slot.bundleId && s.activeSKU && s.slotId !== slotId) {
-        excludedSKUs.add(s.activeSKU);
-      }
-    });
+    // Exclude SKUs already used in other slots of the same bundle. The Stage 7 generator sets
+    // options.ignoreSameBundle (it regenerates ALL slots, so the stored other-slot wines are stale)
+    // and manages intra-bundle dedup itself via options.excludeSKUs (wines picked so far this run).
+    if (!options.ignoreSameBundle) {
+      allSlots.forEach(s => {
+        if (s.bundleId === slot.bundleId && s.activeSKU && s.slotId !== slotId) {
+          excludedSKUs.add(s.activeSKU);
+        }
+      });
+    }
 
     // Also exclude SKUs from exclusive slots in other bundles
     if (options.excludeExclusiveSKUs) {
@@ -1015,6 +1033,10 @@ const BundleService = (function () {
       const prIdx = webCols.wpm_ProfitRate;
       const profitRate = (prIdx !== undefined && row[prIdx] !== '' && row[prIdx] !== null && row[prIdx] !== undefined)
         ? Number(row[prIdx]) : null;
+      // wpm_Featured — high-margin / move-this-stock flag; a Stage 7 scoring bonus.
+      const featIdx = webCols.wpm_Featured;
+      const fv = featIdx !== undefined ? String(row[featIdx]).toLowerCase().trim() : '';
+      const featured = (fv === 'true' || fv === '1' || fv === 'yes');
 
       eligible.push({
         sku: sku,
@@ -1023,6 +1045,7 @@ const BundleService = (function () {
         profitRate: profitRate,
         stock: stock,
         usage: usage[sku] || 0,   // cross-bundle uses (Stage 6) — diversity signal
+        featured: featured,        // Stage 7 scoring bonus
         categories: categories,
         intensity: details.intensity,
         complexity: details.complexity,
@@ -1042,6 +1065,108 @@ const BundleService = (function () {
     eligible.sort((a, b) => (a.usage - b.usage) || (b.stock - a.stock));
 
     return eligible.slice(0, limit);
+  }
+
+  // =====================================================
+  // PUBLIC API: Stage 7 — composition generator (auto-apply)
+  // =====================================================
+
+  // Composite ranking weights — TUNABLE (expected to be iterated after the first real run).
+  // profitRate is a fraction 0..1; diversity = 1/(1+usage) (0..1); featured = 0/1; stockNorm = 0..1.
+  const GENERATOR_WEIGHTS = { profit: 1.0, diversity: 1.0, featured: 0.3, stock: 0.1 };
+
+  function _scoreCandidate(c) {
+    const profit = (c.profitRate != null && !isNaN(c.profitRate)) ? c.profitRate : 0;  // missing profit = neutral-low
+    const diversity = 1 / (1 + (c.usage || 0));
+    const featured = c.featured ? 1 : 0;
+    const stockNorm = Math.min(c.stock || 0, 50) / 50;
+    return GENERATOR_WEIGHTS.profit * profit
+         + GENERATOR_WEIGHTS.diversity * diversity
+         + GENERATOR_WEIGHTS.featured * featured
+         + GENERATOR_WEIGHTS.stock * stockNorm;
+  }
+
+  // MVP gate: a "value" bundle (title match — temporary stand-in for a real sb_Purpose), excluding
+  // brand-restricted Only-in-Israel and Archived bundles.
+  function _isValueBundle(b) {
+    const name = String(b.nameEn || '');
+    if (b.status === 'Archived') return false;
+    if (!/value/i.test(name)) return false;
+    if (/only[\s-]*in[\s-]*israel/i.test(name)) return false;
+    return true;
+  }
+
+  /**
+   * Stage 7 generator — refresh one bundle's PRODUCT slots from the eligible pool, picking the
+   * highest composite score per slot (profit + diversity + featured + stock), structure-preserving
+   * (text/section slots untouched; never add/remove slots). Writes picks via assignProductToSlot
+   * (sets activeSKU + history). Greedy + FLAG: computes the new member total and flags `min_total_unmet`
+   * if it falls below the bundle's `sb_MinTotal` (default 399) — does NOT force/backtrack.
+   */
+  function _generateBundleComposition(bundle) {
+    const productSlots = getSlotsForBundle(bundle.bundleId)
+      .filter(s => s.slotType === 'Product')
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const assigned = [];   // SKUs picked this run — intra-bundle dedup (getEligibleProducts ignoreSameBundle)
+    const writes = [];     // {slotId, sku} to commit
+    let changed = 0;
+
+    productSlots.forEach(slot => {
+      const eligible = getEligibleProducts(slot.slotId, {
+        limit: 500, excludeExclusiveSKUs: true, ignoreSameBundle: true, excludeSKUs: assigned
+      });
+      if (!eligible.length) {
+        if (slot.activeSKU) assigned.push(slot.activeSKU);   // keep current; reserve it
+        return;
+      }
+      let best = eligible[0], bestScore = _scoreCandidate(eligible[0]);
+      for (let i = 1; i < eligible.length; i++) {
+        const sc = _scoreCandidate(eligible[i]);
+        if (sc > bestScore) { bestScore = sc; best = eligible[i]; }
+      }
+      assigned.push(best.sku);
+      if (best.sku !== slot.activeSKU) { writes.push({ slotId: slot.slotId, sku: best.sku }); changed++; }
+    });
+
+    // Commit picks (reuse the slot primitive; clears cache so downstream bundles see the new wines).
+    writes.forEach(w => assignProductToSlot(w.slotId, w.sku, 'Stage 7 generator'));
+
+    // Recompute the member total from the committed composition; flag if under the bundle minimum.
+    const refreshed = getBundleWithSlots(bundle.bundleId);
+    const total = refreshed ? (refreshed.totalPrice || 0) : 0;
+    const minTotal = (bundle.minTotal != null) ? bundle.minTotal : 399;
+    const flags = (total < minTotal) ? 'min_total_unmet' : '';
+
+    updateBundle(bundle.bundleId, { lastGenerated: new Date().toISOString(), genFlags: flags });
+
+    return {
+      bundleId: bundle.bundleId, bundleName: bundle.nameEn,
+      productSlots: productSlots.length, changed: changed,
+      total: Math.round(total), minTotal: minTotal, minTotalMet: total >= minTotal
+    };
+  }
+
+  /**
+   * Generate compositions for all value bundles (MVP scope). Auto-applies — writes picks into the
+   * slots; the web export remains the gate (nothing reaches the site until the operator exports).
+   * @returns {Object} { totalBundles, generated, results: [...] }
+   */
+  function generateValueBundles() {
+    const fnName = 'generateValueBundles';
+    const bundles = _loadBundles().filter(_isValueBundle);
+    const results = [];
+    bundles.forEach(b => {
+      try {
+        results.push(_generateBundleComposition(b));
+      } catch (e) {
+        LoggerService.error(SERVICE_NAME, fnName, `Generate failed for ${b.bundleId}: ${e.message}`, e);
+        results.push({ bundleId: b.bundleId, bundleName: b.nameEn, error: e.message });
+      }
+    });
+    const ok = results.filter(r => !r.error).length;
+    LoggerService.info(SERVICE_NAME, fnName, `Generated ${ok}/${bundles.length} value bundles`);
+    return { totalBundles: bundles.length, generated: ok, results: results };
   }
 
   /**
@@ -1930,6 +2055,9 @@ const BundleService = (function () {
     // Eligible Products / Health
     getEligibleProducts: getEligibleProducts,
     getBundlesWithLowInventory: getBundlesWithLowInventory,
+
+    // Stage 7 — composition generator (auto-apply)
+    generateValueBundles: generateValueBundles,
 
     // Import / Duplicate
     importBundleFromWooCommerce: importBundleFromWooCommerce,

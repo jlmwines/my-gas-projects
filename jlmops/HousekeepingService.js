@@ -1478,51 +1478,26 @@ function HousekeepingService() {
       // Get bundles with low inventory (BundleService uses system.inventory.minimum_stock)
       const bundlesWithIssues = BundleService.getBundlesWithLowInventory();
 
-      let criticalTasksCreated = 0;
-      let lowInventoryTasksCreated = 0;
-
-      for (const bundleData of bundlesWithIssues) {
-        const bundle = bundleData.bundle;
-
-        // Separate zero-stock (critical) from low-stock (normal)
-        const zeroStockSlots = bundleData.lowStockSlots.filter(s => s.stock === 0);
-        const lowStockSlots = bundleData.lowStockSlots.filter(s => s.stock > 0);
-
-        // Create critical inventory task for zero-stock
-        if (zeroStockSlots.length > 0) {
-          const skuList = zeroStockSlots.map(s => s.currentSKU).join(', ');
-          try {
-            TaskService.createTask(
-              'task.bundle.critical_inventory',
-              bundle.bundleId,
-              bundle.nameEn || bundle.nameHe || bundle.bundleId,
-              `Critical: Bundle has zero-stock products`,
-              `Bundle "${bundle.nameEn || bundle.nameHe}" has ${zeroStockSlots.length} product(s) with zero inventory: ${skuList}`,
-              null
-            );
-            criticalTasksCreated++;
-          } catch (taskError) {
-            logger.warn('HousekeepingService', functionName, `Could not create critical bundle task: ${taskError.message}`);
-          }
+      // Stage 7: per-bundle critical/low inventory tasks are RETIRED (user 2026-06-08). The
+      // generator (Generate Compositions) handles stock-driven swaps, so the actionable signal is a
+      // single "bundles need update" prompt — never per-bundle noise. Recomputed each run (open on
+      // count>0, safety-close on 0); self-corrects once the operator regenerates + the stock clears.
+      const affectedCount = bundlesWithIssues.length;
+      const affectedIds = bundlesWithIssues.map(bd => bd.bundle.bundleId);
+      try {
+        if (affectedCount > 0) {
+          TaskService.upsertSingletonTask(
+            'task.bundles.needs_update',
+            '_SYSTEM',
+            'Bundles Need Update',
+            `${affectedCount} bundle(s) have low/out-of-stock products — run Generate Compositions to refresh`,
+            { count: affectedCount, bundleIds: affectedIds }
+          );
+        } else {
+          TaskService.completeTaskByTypeAndEntity('task.bundles.needs_update', '_SYSTEM');
         }
-
-        // Create low inventory task for non-zero low stock (only if no critical task for same bundle)
-        if (lowStockSlots.length > 0 && zeroStockSlots.length === 0) {
-          const skuList = lowStockSlots.map(s => `${s.currentSKU}(${s.stock})`).join(', ');
-          try {
-            TaskService.createTask(
-              'task.bundle.low_inventory',
-              bundle.bundleId,
-              bundle.nameEn || bundle.nameHe || bundle.bundleId,
-              `Bundle has low-stock products`,
-              `Bundle "${bundle.nameEn || bundle.nameHe}" has ${lowStockSlots.length} product(s) with low inventory: ${skuList}`,
-              null
-            );
-            lowInventoryTasksCreated++;
-          } catch (taskError) {
-            logger.warn('HousekeepingService', functionName, `Could not create low inventory bundle task: ${taskError.message}`);
-          }
-        }
+      } catch (taskError) {
+        logger.warn('HousekeepingService', functionName, `Could not sync bundles-need-update task: ${taskError.message}`);
       }
 
       // Monthly review task - create on the 1st of each month
@@ -1549,8 +1524,8 @@ function HousekeepingService() {
       // Update last check timestamp
       ConfigService.setConfig('system.bundle_health.last_check', 'value', new Date().toISOString());
 
-      logger.info('HousekeepingService', functionName, `Bundle health check complete. Critical: ${criticalTasksCreated}, Low inventory: ${lowInventoryTasksCreated}`);
-      return true;
+      logger.info('HousekeepingService', functionName, `Bundle health check complete. Bundles needing update: ${affectedCount}`);
+      return { success: true, bundlesNeedingUpdate: affectedCount };
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Error during bundle health check: ${e.message}`, e);
       return false;

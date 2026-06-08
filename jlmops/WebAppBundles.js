@@ -797,6 +797,24 @@ function WebAppBundles_pullBundleProducts() {
 }
 
 /**
+ * Generate Compositions button (BUNDLE_PLAN Stage 7): auto-generates value-bundle compositions —
+ * picks the best wine per product slot (profit + diversity + featured + stock) and WRITES it into
+ * the slots. Structure-preserving. Web export remains the gate; nothing reaches the site until export.
+ * @returns {Object} { totalBundles, generated, results } (or { error } on failure)
+ */
+function WebAppBundles_generateCompositions() {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'generateCompositions';
+  try {
+    LoggerService.info(serviceName, functionName, 'Stage 7 generate value-bundle compositions');
+    return BundleService.generateValueBundles();
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Generate Compositions failed: ${e.message}`, e);
+    return { error: `Generate Compositions failed: ${e.message}`, totalBundles: 0, generated: 0, results: [] };
+  }
+}
+
+/**
  * Update Composition button: re-derives SysBundles + SysBundleSlots from
  * current WebProdM + WebXltM data. Does NOT pull from WooCommerce — premise
  * is "sync just ran, WebProdM is fresh, but housekeeping bundle refresh

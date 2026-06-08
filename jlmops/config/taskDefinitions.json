@@ -361,6 +361,18 @@
     ],
     [
         "task.template",
+        "task.bundles.needs_update",
+        "Bundles have low/out-of-stock members — run Generate Compositions to refresh (Stage 7; replaces per-bundle critical/low inventory tasks).",
+        "stable",
+        "topic", "Products",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "next_business_day",
+        "pack_form", "skeleton"
+    ],
+    [
+        "task.template",
         "task.order.packing_available",
         "Orders are ready for packing slip generation.",
         "stable",

@@ -591,8 +591,9 @@ function _getProductsData(allTasks) {
       newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
       newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
       // Bundle Critical / Bundle Low rows removed (ADMIN_BUNDLES_UI_PLAN Phase 1b, user call):
-      // "Bundles: Needs Push" is the single bundle signal on the dashboard; stock-driven changes
-      // flow into Needs Push (Stage 7 model). checkBundleHealth still creates the underlying tasks.
+      // "Bundles: Needs Push" is the single bundle signal on the dashboard. Stage 7 (2026-06-08):
+      // checkBundleHealth no longer creates per-bundle critical/low tasks — a single
+      // `task.bundles.needs_update` singleton replaces them (run Generate Compositions to fix).
       categoryLow: _countTasksByType(allTasks, 'task.deficiency.category_stock')
     };
   } catch (e) {

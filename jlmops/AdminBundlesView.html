@@ -25,6 +25,7 @@
           <h5>Bundle Management</h5>
           <div>
             <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull Bundle Data</button>
+            <button id="btn-generate-compositions" class="btn btn-sm mr-2">Generate Compositions</button>
             <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
             <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
             <button id="btn-export-bundles" class="btn btn-sm">Export</button>
@@ -219,6 +220,7 @@
 
   function bindEvents() {
     document.getElementById('btn-pull-bundles').addEventListener('click', pullBundleData);
+    document.getElementById('btn-generate-compositions').addEventListener('click', generateCompositions);
     document.getElementById('btn-update-composition').addEventListener('click', updateComposition);
     document.getElementById('btn-review-stock').addEventListener('click', reviewStock);
     document.getElementById('btn-export-bundles').addEventListener('click', exportBundles);
@@ -1145,6 +1147,35 @@
     });
   }
 
+  // Generate Compositions (Stage 7): auto-fill value bundles — picks best wine per slot and writes it.
+  // Web export is the gate; nothing reaches the website until the operator exports.
+  function generateCompositions() {
+    TaskWidgets.confirm('Auto-generate compositions for all value bundles? This replaces the wines in those bundles — review/edit after; nothing reaches the website until you Export.', function() {
+      var btn = document.getElementById('btn-generate-compositions');
+      var restore = withButtonBusy(btn, 'Generating...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restore();
+          if (res && res.error) { TaskWidgets.toast('Error: ' + res.error, 'error'); return; }
+          var results = (res && res.results) || [];
+          var rows = results.map(function(r) {
+            if (r.error) {
+              return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td colspan="3" class="text-danger">' + TaskWidgets.escape(r.error) + '</td></tr>';
+            }
+            var flag = r.minTotalMet ? '<span class="text-success">OK</span>' : '<span class="text-warning">under ₪' + r.minTotal + '</span>';
+            return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td>' + r.changed + ' / ' + r.productSlots + '</td><td>₪' + r.total + '</td><td>' + flag + '</td></tr>';
+          }).join('');
+          var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>Changed</th><th>Total</th><th>Min</th></tr></thead><tbody>' + rows + '</tbody></table>';
+          showResults('Generate Compositions',
+            '<p class="text-success mb-2">Generated ' + (res.generated || 0) + ' / ' + (res.totalBundles || 0) + ' value bundles. Review in the editor, then <strong>Export</strong> when ready.</p>' + table);
+          TaskWidgets.toast('Compositions generated.', 'success');
+          loadBundleList();
+        })
+        .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
+        .WebAppBundles_generateCompositions();
+    }, { danger: true });
+  }
+
   function updateComposition() {
     TaskWidgets.confirm('Re-derive bundle composition from WebProdM?', function() {
     var btn = document.getElementById('btn-update-composition');
@@ -1180,9 +1211,11 @@
         restore();
         if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         var d = result.data || {};
-        var msg = 'Bundle stock review complete. Critical: ' + (d.criticalTasksCreated || 0) + ', Low inventory: ' + (d.lowInventoryTasksCreated || 0) + '.';
-        showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p><p class="small text-muted">Tasks created for any issues. Reload the alerts panel to see them.</p>');
-        loadHealthAlerts();
+        var n = d.bundlesNeedingUpdate || 0;
+        var msg = n > 0
+          ? n + ' bundle(s) have low/out-of-stock members — flagged as "Bundles Need Update". Run Generate Compositions to refresh them.'
+          : 'Bundle stock review complete — no bundles need updating.';
+        showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p>');
       })
       .withFailureHandler(function(err) {
         restore();
