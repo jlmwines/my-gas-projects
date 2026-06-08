@@ -18,6 +18,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - **Stage 7 Model rev 2 SETTLED (BUNDLE_PLAN, committed cddb6b5; user passing to Dispatch for review):** a bundle is a bundle (no value hack / no type switch) — uniform **bundle price band** (`sb_MinTotal` + NEW `sb_MaxTotal`) + **slot criteria** (category primary, attributes occasional, name=brand, price rare); **structure is the recipe** (slots define kind/count; generator structure-preserving — bottle count = slots, edited manually). **Two operations: MAINTAIN** (default; fix ONLY deficient slots; per-bundle gate = needs_update task) **+ RE-ROLL** (explicit, fresh lineup). **Running-budget fill** (per-slot ceiling = remaining budget / remaining base slots; flexible qty-0 slots get the base ceiling but don't draw budget). Composite scoring (profit+diversity+featured+stock, tunable), greedy+flag. **Deferred:** price-cohesion knob; re-roll-as-preview/suggestion. Deployed rev-1 generator must be reworked to this.
 - **Commits:** f8386d5 (live rev-1 code), cddb6b5 (rev-2 plan), + STATUS/log. Stage 7 rev-1 code is LIVE @266 but to be reworked. Full editor smoke-test still owed.
 
+## 2026-06-08 (cont) — Stage 7 spec FINAL via 2 Dispatch review rounds; build-ready
+
+- **Two Dispatch design-review rounds on the rev-2 generator model, both folded into BUNDLE_PLAN.** Round 1 = needs-revision, 2 blockers: deficiency gate too narrow (stock-only → misses over-ceiling / criteria-miss / bundle-total-below-min) and the fill had no price term (would undershoot min). **rev 2.1** resolved them + user answers (Only-in-Israel: titles begin with brand → `nameContains` works, no brand field; featured dropped — redundant w/ profit+stock; Explorer = per-slot criteria). **Round 2 = READY** pending 2 clarifications; **rev 2.2** closed them: symmetric **down-pass** for over-`sb_MaxTotal`, top-up **max-guard**, gate-time over-band = stored `slot.priceMax` + bundle total (no running-ceiling at the gate).
+- **Spec FINAL.** Build per Dispatch's 7-step order (append `sb_MaxTotal` → widen `checkBundleHealth` deficiency → fill/top-up/down-pass → drop `_isValueBundle`+split Maintain/Re-roll → `_scoreCandidate` cleanup → min≤max validation → editor band fields). Commits cddb6b5 / d5c9955 / 1133034 / c564f86.
+- **Next:** build the rework (step 1 = `sb_MaxTotal` schema, needs user rebuild+syncHeaders). Editor smoke-test still owed.
+
 ---
 
 ## 2026-06-07 (cont 7) — Phase 3 FRONTEND shipped @251 (composition sheet)
