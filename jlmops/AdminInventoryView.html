@@ -54,37 +54,37 @@
     </div>
   </div>
 
-  <!-- Section 2b: Product Costs & Margins (BUNDLE_PLAN Stage 2) -->
+  <!-- Open Inventory Tasks (Manager Queue) — moved up (after Comax sync); open + loaded on mount. -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <h5>Product Costs &amp; Margins</h5>
-          <div>
-            <span id="cost-margin-last" class="text-muted small mr-2"></span>
-            <button id="btn-recompute-costs" class="btn btn-sm btn-light">Recompute</button>
-          </div>
+          <h5>Open Inventory Tasks (Manager Queue)</h5>
+          <span id="open-tasks-count" class="badge badge-secondary">0</span>
         </div>
         <div class="card-body">
-          <div id="cost-margin-summary" class="mb-2 text-muted small">Loading…</div>
-          <div id="cost-margin-list-container" class="table-responsive" style="max-height: 320px; overflow-y: auto;"></div>
+
+          <!-- Container for the open tasks table -->
+          <div id="open-tasks-table-container">
+            <!-- Table will be dynamically generated here -->
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Section 3: Unified Count Task Creation -->
+  <!-- Section 3: Unified Count Task Creation — collapsed + lazy-loaded on first expand (heavy). -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5>Create Count Tasks</h5>
+        <div class="card-header d-flex justify-content-between align-items-center" id="inv-header-count" style="cursor:pointer;">
+          <h5 class="mb-0"><span id="inv-chev-count">&#9656;</span> Create Count Tasks</h5>
           <div>
             <span id="count-planning-loaded" class="text-muted small mr-2"></span>
             <button id="btn-reload-planning" class="btn btn-sm btn-light">Reload Data</button>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" id="inv-card-body-count" style="display:none;">
           <div class="form-row align-items-end mb-2">
             <div class="col-auto">
               <label for="name-filter-mode" class="small mb-1 d-block">Name filter</label>
@@ -140,20 +140,20 @@
     </div>
   </div>
 
-  <!-- Section 4: Open Tasks List (Manager Queue) -->
-  <div class="row">
+  <!-- Product Costs & Margins (profit) — moved LAST; collapsed + lazy-loaded on first expand (heavy). -->
+  <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5>Open Inventory Tasks (Manager Queue)</h5>
-          <span id="open-tasks-count" class="badge badge-secondary">0</span>
-        </div>
-        <div class="card-body">
-
-          <!-- Container for the open tasks table -->
-          <div id="open-tasks-table-container">
-            <!-- Table will be dynamically generated here -->
+        <div class="card-header d-flex justify-content-between align-items-center" id="inv-header-profit" style="cursor:pointer;">
+          <h5 class="mb-0"><span id="inv-chev-profit">&#9656;</span> Product Costs &amp; Margins</h5>
+          <div>
+            <span id="cost-margin-last" class="text-muted small mr-2"></span>
+            <button id="btn-recompute-costs" class="btn btn-sm btn-light">Recompute</button>
           </div>
+        </div>
+        <div class="card-body" id="inv-card-body-profit" style="display:none;">
+          <div id="cost-margin-summary" class="mb-2 text-muted small">Loading…</div>
+          <div id="cost-margin-list-container" class="table-responsive" style="max-height: 320px; overflow-y: auto;"></div>
         </div>
       </div>
     </div>
@@ -705,11 +705,37 @@
   }
   if (recomputeCostsBtn) recomputeCostsBtn.addEventListener('click', handleRecomputeCosts);
 
-  // Initial load
+  // Initial load — only the on-mount cards: Inventory Counts to Review + Open Tasks (one call via
+  // loadAdminViewData) and Comax Sync. The two HEAVY cards (Create Count → loadPlanningData, Product
+  // Costs & Margins → loadCostMarginData) are collapsed and lazy-load on first expand, so the view no
+  // longer waits on all four sections at mount (was the long-load, user 2026-06-08).
   loadAdminViewData();
-  loadPlanningData();
-  loadComaxSyncData(); // Load data for the new Comax Sync card
-  loadCostMarginData(); // Product Costs & Margins card (Stage 2 Step 3)
+  loadComaxSyncData();
+
+  // Collapsible heavy cards: load their data once, on first expand.
+  var _invCardLoaded = { count: false, profit: false };
+  function _invToggleCard(key) {
+    var body = document.getElementById('inv-card-body-' + key);
+    var chev = document.getElementById('inv-chev-' + key);
+    if (!body) return;
+    var opening = body.style.display === 'none';
+    body.style.display = opening ? '' : 'none';
+    if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;';   // ▾ open / ▸ closed
+    if (opening && !_invCardLoaded[key]) {
+      _invCardLoaded[key] = true;
+      if (key === 'count') loadPlanningData();
+      else if (key === 'profit') loadCostMarginData();
+    }
+  }
+  ['count', 'profit'].forEach(function(key) {
+    var header = document.getElementById('inv-header-' + key);
+    if (!header) return;
+    header.addEventListener('click', function(e) {
+      // Don't toggle when an action button in the header was clicked (Reload Data / Recompute).
+      if (e.target.closest && e.target.closest('button')) return;
+      _invToggleCard(key);
+    });
+  });
 
   /**
    * Loads data specifically for the Comax Sync card.
