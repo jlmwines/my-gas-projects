@@ -380,7 +380,7 @@
         "default_priority", "Normal",
         "initial_status", "New",
         "flow_pattern", "manager_direct",
-        "due_pattern", "immediate",
+        "due_pattern", "manual",
         "pack_form", "inline"
     ],
     [

@@ -27903,7 +27903,7 @@ function getMasterConfiguration() {
         "Orders are ready for packing slip generation.",
         "stable",
         "due_pattern",
-        "immediate",
+        "manual",
         "",
         "",
         "",

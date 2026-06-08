@@ -912,6 +912,24 @@ function OrderService(productService) {
             logger.info(serviceName, functionName, `Upserted ${logData.length} total logs in SysOrdLog.`, { sessionId: sessionId });
         }
 
+        // --- 4b. Reconcile the packing-available task ---
+        // The sync can drain the 'Ready' pool by recomputing orders to Eligible/Ineligible above
+        // (e.g. an order cancelled/refunded/completed in Woo) WITHOUT a print. The singleton
+        // `task.order.packing_available` is only closed by PrintService on an actual print, so without
+        // this it orphans open at 0 Ready (bugs.md 2026-06-07 close-path gap). If no orders remain
+        // 'Ready' after this sync, ensure the task is closed (no-op if none open). Runs unconditionally
+        // so it also self-heals an already-orphaned task on the next sync. Mirrors PrintService.js:327-330.
+        try {
+            const stillReady = logData.filter(function (row) {
+                return String(row[logHeaderMap['sol_PackingStatus']]) === 'Ready';
+            }).length;
+            if (stillReady === 0) {
+                TaskService.completeTaskByTypeAndEntity('task.order.packing_available', 'PACKING');
+            }
+        } catch (taskError) {
+            logger.warn(serviceName, functionName, `Could not reconcile packing task: ${taskError.message}`, { sessionId: sessionId });
+        }
+
         // --- 5. Trigger Enrichment for Eligible Orders ---
         if (orderIdsToRefresh.size > 0) {
             logger.info(serviceName, functionName, `Triggering packing data preparation for ${orderIdsToRefresh.size} orders.`, { sessionId: sessionId });
@@ -1142,5 +1160,22 @@ function run_exportOrdersToComax() {
   // ProductService is a global singleton object, so we pass it directly.
   const orderService = new OrderService(ProductService);
   orderService.exportOrdersToComax();
+}
+
+/**
+ * Manual one-shot reconcile for the packing-available task (run from the Apps Script editor — no args).
+ * Closes `task.order.packing_available` when no orders are currently 'Ready'. Use once to clear an
+ * orphaned task left by a pre-fix sync drain; the recurring close path now lives in processStagedOrders.
+ * Safe anytime (no-op if there's no open task or orders are still Ready).
+ * @returns {{ready:number, closed:boolean}}
+ */
+function reconcilePackingAvailableTask() {
+  const orderService = new OrderService(ProductService);
+  const ready = orderService.getPackingSlipsReadyCount();   // -1 on read error → leave task as-is
+  if (ready === 0) {
+    TaskService.completeTaskByTypeAndEntity('task.order.packing_available', 'PACKING');
+    return { ready: 0, closed: true };
+  }
+  return { ready: ready, closed: false };
 }
 
