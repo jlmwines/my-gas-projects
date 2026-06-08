@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-08 21:09',
-  commit: 'Bundle editor reveals WHY a flagged bundle needs attention: getBundleDeficiency (per-bundle) -> strip summary + per-slot warning tags (out/low stock, off-criteria, empty, band). Caps the Stage 7 UI session (@275->@282: toolbar relabel/reorder, Needs-attention/Update-web flags + chips, push-status cache refresh, perf ctx, editor deficiency detail).'
+  built: '2026-06-08 21:20',
+  commit: 'Bundle editor header flattened to one band: EN.HE name + price (left) and Min/Max + Status + open-all + generation status (right) on two lines instead of two stacked strips. flex-wrap fallback on narrow screens. HTML-only; all JS ids preserved.'
 };
 
 function getVersion() {

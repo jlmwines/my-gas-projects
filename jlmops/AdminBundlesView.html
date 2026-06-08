@@ -87,39 +87,41 @@
           <!-- Deficiency strip (Phase 1c): what changed / status; grows with Stage 7 (Phase 4) -->
           <div id="editor-deficiency-strip" class="mb-2"></div>
 
-          <!-- Header strip: name (EN bold + HE muted, no labels — web-derived/read-only §7.1c), price
-               summary on the left; Status + the open/close-all-details toggle on the right (the toggle
-               sits above the slot rows' button column). Type dropped — always "Bundle" (obvious). -->
-          <div class="d-flex justify-content-between align-items-start mb-2" id="editor-header-strip">
-            <div class="mr-3" style="min-width:0;">
-              <div id="hdr-nameEn" class="font-weight-bold text-truncate"></div>
-              <div id="hdr-nameHe" class="small text-muted text-truncate" dir="rtl"></div>
+          <!-- Header (flattened to one band, §7.4 + Stage 7): identity on the left (EN · HE on line 1,
+               price on line 2 — web-derived/read-only §7.1c), and on the right the Min/Max price band +
+               Status + open-all toggle on line 1, generation status on line 2. Price band (sb_MinTotal /
+               sb_MaxTotal) drives the running-budget fill; either may be blank. flex-wrap so the two
+               sides stack gracefully on narrow screens. -->
+          <div class="d-flex flex-wrap justify-content-between align-items-start mb-3" id="editor-header-strip">
+            <!-- Left: identity -->
+            <div class="mr-3 mb-1" style="min-width:0; flex:1 1 260px;">
+              <div class="text-truncate">
+                <span id="hdr-nameEn" class="font-weight-bold"></span>
+                <span id="hdr-nameHe" class="small text-muted ml-2" dir="rtl"></span>
+              </div>
               <div id="hdr-price" class="small font-weight-bold mt-1"></div>
             </div>
-            <div class="d-flex align-items-center flex-shrink-0">
-              <select class="form-control form-control-sm mr-2" id="hdr-status" style="width:110px;">
-                <option value="Active">Active</option>
-                <option value="Draft">Draft</option>
-                <option value="Archived">Archived</option>
-              </select>
-              <button id="btn-toggle-details" class="btn btn-sm">Open all details</button>
-            </div>
-          </div>
-
-          <!-- Price band (compact) + generation status (Stage 7 rev 2.2): sb_MinTotal / sb_MaxTotal
-               drive the running-budget fill; either may be blank. Status = last generated + flags. -->
-          <div class="form-row align-items-end mb-3" id="editor-band-strip">
-            <div class="col-auto">
-              <label class="small text-muted mb-1">Min ₪</label>
-              <input type="number" class="form-control form-control-sm" id="hdr-minTotal" min="0" step="1" placeholder="none" style="width:80px;">
-            </div>
-            <div class="col-auto">
-              <label class="small text-muted mb-1">Max ₪</label>
-              <input type="number" class="form-control form-control-sm" id="hdr-maxTotal" min="0" step="1" placeholder="none" style="width:80px;">
-            </div>
-            <div class="col">
-              <div class="small text-muted mb-1">Generation</div>
-              <div id="hdr-gen-status" class="small"></div>
+            <!-- Right: price band + status + generation -->
+            <div class="flex-shrink-0">
+              <div class="d-flex align-items-end flex-wrap">
+                <div class="mr-2">
+                  <label class="small text-muted mb-1 d-block">Min ₪</label>
+                  <input type="number" class="form-control form-control-sm" id="hdr-minTotal" min="0" step="1" placeholder="none" style="width:72px;">
+                </div>
+                <div class="mr-2">
+                  <label class="small text-muted mb-1 d-block">Max ₪</label>
+                  <input type="number" class="form-control form-control-sm" id="hdr-maxTotal" min="0" step="1" placeholder="none" style="width:72px;">
+                </div>
+                <select class="form-control form-control-sm mr-2" id="hdr-status" style="width:110px;">
+                  <option value="Active">Active</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Archived">Archived</option>
+                </select>
+                <button id="btn-toggle-details" class="btn btn-sm">Open all details</button>
+              </div>
+              <div class="small mt-1 text-right">
+                <span class="text-muted">Generation:</span> <span id="hdr-gen-status"></span>
+              </div>
             </div>
           </div>
 
