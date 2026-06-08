@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-08 (cont) — Dispatch bugs + Admin Products lazy-load @271→@273
+
+- Dispatch report lived in `plans/DISPATCH_BUGS.md` (untracked; Dispatch can't write `.claude/`). Four items: #1 AdminSyncView scriptlet (already fixed @223 — verified not regressed), #2 packing_available orphan (already an open bugs.md item), #3 Admin Products no loading state, #4 Accepted blank-status tasks. Filed all into bugs.md, deleted DISPATCH_BUGS.md.
+- **#4 declined** — user confirmed NO blank-status rows exist; the bug that created them was fixed 2026-06-01, so hardening for an impossible state would be speculative. Dispatch's "repair to Accepted" was also wrong (those orphans were post-export → Done, not Accepted).
+- **#3 → @271** loading spinner. Then user hit the real problem: whole page "Failed to load," exec log still running = **getAdminViewData TIMEOUT** (11 sections every mount). @272 per-section resilience (didn't help — slowness not throw, but diagnostic). **@273 lazy-load redesign (user-directed):** mount loads only Card 1 (Detail Updates / approval workflow); Cards 2/3/4 (New Products, SKU Management, Lookups) collapse + lazy-load on first expand. Verified live — Card 1 incl. Accepted tasks loads fast.
+- Wishlist: dismissible bundle-explainer on website woosb pages (EN+HE copy pending, theme-side).
+- Note: misdiagnosed the bundles "Matches web" earlier (blamed overnight revert; was stale cache) — pattern: verify the actual mechanism before asserting. Also surfaced my #3 error-row made a previously-silent failure visible (good).
+
 ## 2026-06-08 — Stage 7 rev 2.2 generator BUILT + SHIPPED @267→@270; BUNDLE_PLAN complete
 
 - Built the rev-2.2 rework per Dispatch's 7-step order (@267), then iterated live across @268–@270. `getBundleDeficiencies` (richer gate) drives `task.bundles.needs_update`; `maintainBundles`/`rerollBundles` replace `generateValueBundles`/`_isValueBundle`; extracted `_matchesSlotCriteria` + `_buildBundleInventoryContext` (no dup).

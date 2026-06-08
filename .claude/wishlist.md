@@ -42,6 +42,7 @@ Projects: jlmops, web, marketing, content
 
 ## web
 
+- [ ] 2026-06-08: **Bundle explainer message on bundle pages (soon).** Closable/dismissible info area on jlmwines.com bundle (woosb) product pages explaining how bundles work to the customer (flexible vs fixed slots, how to swap/add, pricing). Per-language EN + HE copy — text being drafted (user). Dismissible (remember-dismissed). Theme-side, not jlmops.
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
 - [ ] Exit popup for website
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize

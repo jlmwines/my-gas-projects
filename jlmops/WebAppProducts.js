@@ -1063,22 +1063,38 @@ function WebAppProducts_getRecentSkuUpdates() {
  * @returns {{success: boolean, data?: object, error?: string}}
  */
 function WebAppProducts_getAdminViewData(sessionId) {
+  // Per-section resilience: each card is fetched in its own try/catch so a single failing (or
+  // slow-and-throwing) section can't blank the whole page. Failed sections fall back to a safe empty
+  // and name themselves in `errors[]` (the frontend surfaces them per-card). NOTE: this guards THROWS,
+  // not a whole-call TIMEOUT — if the aggregate is simply too slow, the client still times out (that's
+  // the lazy-load redesign's job, not this).
+  const errors = [];
+  const sec = function (label, fn, fallback) {
+    try {
+      return fn();
+    } catch (e) {
+      LoggerService.error('WebAppProducts', 'getAdminViewData', `${label}: ${e.message}`, e);
+      errors.push(`${label}: ${e.message}`);
+      return fallback;
+    }
+  };
   try {
     return {
       success: true,
+      errors: errors,
       data: {
-        reviewTasks:        WebAppProducts_getAdminReviewTasks(),
-        acceptedTasks:      WebAppProducts_getAcceptedTasks(),
-        pendingDetailTasks: WebAppProducts_getPendingDetailTasks(),
-        suggestionTasks:    WebAppProducts_getSuggestionTasks(),
-        submissionsTasks:   WebAppProducts_getSubmissionsTasks(),
-        linkageTasks:       WebAppProducts_getLinkageTasks(),
-        pendingNewTasks:    WebAppProducts_getPendingNewTasks(),
-        recentSkuUpdates:   WebAppProducts_getRecentSkuUpdates(),
+        reviewTasks:        sec('reviewTasks',        WebAppProducts_getAdminReviewTasks,  []),
+        acceptedTasks:      sec('acceptedTasks',      WebAppProducts_getAcceptedTasks,     []),
+        pendingDetailTasks: sec('pendingDetailTasks', WebAppProducts_getPendingDetailTasks, []),
+        suggestionTasks:    sec('suggestionTasks',    WebAppProducts_getSuggestionTasks,   []),
+        submissionsTasks:   sec('submissionsTasks',   WebAppProducts_getSubmissionsTasks,  []),
+        linkageTasks:       sec('linkageTasks',       WebAppProducts_getLinkageTasks,      []),
+        pendingNewTasks:    sec('pendingNewTasks',    WebAppProducts_getPendingNewTasks,   []),
+        recentSkuUpdates:   sec('recentSkuUpdates',   WebAppProducts_getRecentSkuUpdates,  []),
         lookups: {
-          grapes:  WebAppLookups_getMap('map.grape_lookups').data,
-          kashrut: WebAppLookups_getMap('map.kashrut_lookups').data,
-          texts:   WebAppLookups_getMap('map.text_lookups').data
+          grapes:  sec('lookups.grapes',  function () { return WebAppLookups_getMap('map.grape_lookups').data; },   {}),
+          kashrut: sec('lookups.kashrut', function () { return WebAppLookups_getMap('map.kashrut_lookups').data; }, {}),
+          texts:   sec('lookups.texts',   function () { return WebAppLookups_getMap('map.text_lookups').data; },     {})
         }
       }
     };

@@ -172,13 +172,13 @@
       </div>
     </div>
 
-    <!-- CARD 2: NEW PRODUCTS -->
+    <!-- CARD 2: NEW PRODUCTS — collapsed + lazy-loaded (rare) -->
     <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold">
-        New Products
+      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('new')">
+        <span id="chev-new">&#9656;</span> New Products
       </div>
-      <div class="card-body">
-        
+      <div class="card-body" id="card-body-new" style="display:none;">
+
         <!-- Section A: Suggestions -->
         <h6 class="text-muted mb-2">Suggestions (<span id="stat-suggestions">0</span>)</h6>
         <div class="table-responsive mb-4 border rounded">
@@ -270,12 +270,12 @@
       </div>
     </div>
 
-    <!-- CARD 3: SKU MANAGEMENT -->
+    <!-- CARD 3: SKU MANAGEMENT — collapsed + lazy-loaded (rare) -->
     <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold">
-        SKU Management
+      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('sku')">
+        <span id="chev-sku">&#9656;</span> SKU Management
       </div>
-      <div class="card-body">
+      <div class="card-body" id="card-body-sku" style="display:none;">
 
         <!-- Action Buttons -->
         <div class="d-flex mb-4">
@@ -306,12 +306,12 @@
       </div>
     </div>
 
-    <!-- CARD 4: LOOKUPS -->
+    <!-- CARD 4: LOOKUPS — collapsed + lazy-loaded (rare) -->
     <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold">
-        Lookups
+      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('lookups')">
+        <span id="chev-lookups">&#9656;</span> Lookups
       </div>
-      <div class="card-body">
+      <div class="card-body" id="card-body-lookups" style="display:none;">
 
         <!-- Section A: Grapes -->
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -782,46 +782,56 @@
     AdminProductsView.reviewTasks = [];
     AdminProductsView.currentIndex = -1;
 
-    // Single consolidated round-trip: fetch all sections at once, then dispatch
-    // to each loader with preloaded data (each loader skips its own fetch).
-    // Replaces the previous 12-call fanout (T3.1 Stage B).
-    AdminProductsView.refreshView = function() {
-      google.script.run
-        .withSuccessHandler(res => {
-          if (!res || !res.success) {
-            console.error('refreshView failed:', res && res.error);
-            return;
-          }
-          AdminProductsView.applyAllSections(res.data);
-        })
-        .withFailureHandler(err => {
-          console.error('refreshView call failed:', err);
-        })
-        .WebAppProducts_getAdminViewData();
+    // Mount loads ONLY Card 1 (Detail Updates — the daily product-approval workflow). The lower cards
+    // (New Products / SKU Management / Lookups) are collapsed and lazy-load on first expand, so their
+    // rarely-used (and, as of 2026-06-08, slow-enough-to-time-out) sections never block the page. The
+    // former single consolidated getAdminViewData() round-trip is retired here — it loaded all 11
+    // sections on every mount and was timing out (user 2026-06-08). Each loader self-fetches + self-
+    // paints "Loading…" when called with no argument.
+    AdminProductsView._cardLoaded = { new: false, sku: false, lookups: false };
+
+    // Load the sections of one collapsible lower card (each loader self-fetches).
+    AdminProductsView._loadCard = function(key) {
+      if (key === 'new') {
+        AdminProductsView.loadSuggestionList();
+        AdminProductsView.loadSubmissionsList();
+        AdminProductsView.loadLinkageList();
+        AdminProductsView.updateNewExportUI();      // export-UI counts (self-fetches linkage)
+        AdminProductsView.loadPendingNewList();
+      } else if (key === 'sku') {
+        AdminProductsView.loadSkuUpdates();
+      } else if (key === 'lookups') {
+        AdminProductsView.loadLookupSection('grapes');
+        AdminProductsView.loadLookupSection('kashrut');
+        AdminProductsView.loadLookupSection('texts');
+      }
     };
 
-    // Dispatch each preloaded section to its loader. Loaders called with an
-    // argument skip their fetch and render the supplied data directly.
-    AdminProductsView.applyAllSections = function(data) {
-      // Card 1
-      AdminProductsView.loadReviewList(data.reviewTasks);
-      AdminProductsView.loadAcceptedList(data.acceptedTasks);
-      AdminProductsView.loadPendingDetailsList(data.pendingDetailTasks);
+    // Collapse toggle for a lower card. First open lazy-loads its data; subsequent opens just reveal.
+    AdminProductsView.toggleCard = function(key) {
+      var body = document.getElementById('card-body-' + key);
+      var chev = document.getElementById('chev-' + key);
+      if (!body) return;
+      var opening = body.style.display === 'none';
+      body.style.display = opening ? '' : 'none';
+      if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;';   // ▾ open / ▸ closed
+      if (opening && !AdminProductsView._cardLoaded[key]) {
+        AdminProductsView._cardLoaded[key] = true;
+        AdminProductsView._loadCard(key);
+      }
+    };
 
-      // Card 2 — linkageTasks feeds both the list and the export-UI counts
-      AdminProductsView.loadSuggestionList(data.suggestionTasks);
-      AdminProductsView.loadSubmissionsList(data.submissionsTasks);
-      AdminProductsView.loadLinkageList(data.linkageTasks);
-      AdminProductsView.updateNewExportUI(data.linkageTasks);
-      AdminProductsView.loadPendingNewList(data.pendingNewTasks);
-
-      // Card 3
-      AdminProductsView.loadSkuUpdates(data.recentSkuUpdates);
-
-      // Card 4 — lookups arrive as { headers, rows } per section
-      AdminProductsView.loadLookupSection('grapes', data.lookups.grapes);
-      AdminProductsView.loadLookupSection('kashrut', data.lookups.kashrut);
-      AdminProductsView.loadLookupSection('texts', data.lookups.texts);
+    // Refresh = reload Card 1 always (the loaders self-paint + self-fetch), plus any lower card that is
+    // currently OPEN (so a post-action refresh updates the card the operator is working in). Closed
+    // cards stay closed and will lazy-load on next open. Used on mount AND after Card actions.
+    AdminProductsView.refreshView = function() {
+      AdminProductsView.loadReviewList();
+      AdminProductsView.loadAcceptedList();
+      AdminProductsView.loadPendingDetailsList();
+      ['new', 'sku', 'lookups'].forEach(function(key) {
+        var body = document.getElementById('card-body-' + key);
+        if (body && body.style.display !== 'none') AdminProductsView._loadCard(key);
+      });
     };
 
     // --- Card 3: SKU Management ---
