@@ -263,6 +263,22 @@ Dispatch round-2 verdict = **READY**; these close its two open items.
 
 **Spec is final. Build per the round-2 build order (7 steps).**
 
+#### Stage 7 — SHIPPED @267→@270 (2026-06-08). Built to rev 2.2, plus live-testing refinements.
+
+The 7-step build went in as specced. Key implementation notes + what the live test changed:
+
+- **Schema:** `sb_MaxTotal` appended at the END of `SysBundles` (not mid-list — `syncHeaders` only rewrites the header row, so a mid-insert would corrupt the existing `sb_LastGenerated`/`sb_GenFlags` data). Column added manually by the user + `rebuildSysConfigFromSource()`; `_loadBundles`/`updateBundle` carry `maxTotal` (column-guarded).
+- **Deficiency gate:** new `BundleService.getBundleDeficiencies()` (richer signal: stock ∨ criteria-miss ∨ over `slot.priceMax` ∨ base total ∉ band) replaces the stock-only `getBundlesWithLowInventory()` as the `task.bundles.needs_update` driver in `checkBundleHealth`. Shared `_buildBundleInventoryContext()` + extracted `_matchesSlotCriteria()` (behaviour-preserving pull-out of the `getEligibleProducts` filter, reused by the gate). `getBundlesWithLowInventory` kept for `getBundleStats`.
+- **Generator:** `_generateBundleComposition(bundle, {mode, deficientSlotIds})` — `maintainBundles()` (deficient slots only) + `rerollBundles(bundleId?)` (explicit). `_isValueBundle` deleted. `_scoreCandidate` = profit (null→`NEUTRAL_PROFIT` 0.25) + diversity + stock; featured dropped; price-pull is a separate fill term on **base slots only**.
+- **Fill (refined in live test):** base slots filled **descending-qty first** (profit×qty concentrates in high-qty slots; flex add-ons last so they don't starve the base — this also fixed a below-min re-roll). Budget is **qty-weighted** (÷ remaining base UNITS). Top-up (max-guard) + symmetric down-pass enforce the band.
+- **Flex (qty-0) slots (two reversals during live test):** NOT the average-base hard cap (too restrictive → unfillable) NOR uncapped (picked the priciest). Final = **two-tier**: prefer wines within the avg base-bottle budget, allow ≤`FLEX_HEADROOM` (1.5×) overage only when none fit, **no price-pull** (best-fit, not priciest). Honours explicit `slot.priceMax`; never draws base budget.
+- **Unfillable base slot:** never substitutes a different category — keeps the current wine (no blank export) and **flags** `unfilled` (category stock-out) / `over_ceiling` (in-criteria but over budget). Surfaced in results, the editor gen-status line, and the needs-update gate.
+- **Name is web-derived, read-only (§7.1c-style):** `saveComposition` no longer writes `nameEn`/`nameHe`; editor shows them as text. Recovery for a blanked name = **Update Composition** (re-derives from web title).
+- **Reimport preservation:** `reimportAllBundlesBatch` now preserves the jlmops-owned, non-web bundle fields (`sb_MinTotal`/`sb_MaxTotal`/`sb_LastGenerated`/`sb_GenFlags`) by `bundleId` — the daily refresh no longer wipes the band/gen metadata.
+- **Push-status freshness:** `saveComposition` / `maintainBundles` / `rerollBundles` controllers now refresh `system.bundles.push_status` after the write, and the editor refetches it (`syncPushStatus`) — fixes the stale "Matches web" the cache-only signal showed after an edit + page refresh.
+- **Editor:** `sb_MinTotal`/`sb_MaxTotal` fields + `min≤max` validation (client + `saveComposition`), generation-status line (last-generated + flag labels), category shown in the collapsed product row, Open/Close-all-details toggle, per-bundle **EN/HE export-meta copy panel** (`WebAppBundles_getBundleExportMeta`) for paste-testing. Single-bundle Re-roll drops the results card (editor reload + toast cover it); Maintain keeps it (cross-bundle summary).
+- **Live validation 2026-06-08:** EN + HE `woosb_ids` pasted into WPClever **flawlessly** — faithful dual-language output confirmed. Rough spots remain (tuning composite weights, full editor smoke); deferred knobs unchanged (price-cohesion, re-roll-as-preview, overnight Maintain cadence).
+
 ---
 
 ## 5. Data-model touches (cumulative)
@@ -271,7 +287,7 @@ Dispatch round-2 verdict = **READY**; these close its two open items.
 - ~~`sb_PendingExport`~~ — **dropped 2026-06-07.** The ops≠web diff is the export trigger; no flag needed (export set computed fresh each run).
 - ~~`sbs_WoosbKey`~~ — **not needed (resolved 2026-06-07):** the original woosb token is preserved in `slotId` (`${bundleId}-${token}`), so the serializer reuses exact keys; no regeneration.
 - `sb_MinTotal` (SysBundles, **Stage 7**) — per-bundle price-band **floor** (₪; free-shipping eligibility, default 399), editable per bundle; the greedy fill flags `min_total_unmet`. **Append-only** (added @264).
-- `sb_MaxTotal` (SysBundles, **Stage 7 rev 2**) — per-bundle price-band **ceiling/budget** the running-budget fill stays under (blank = no ceiling). **Append-only — NOT yet added** (needs the schema-append + rebuild + syncHeaders dance, like @264).
+- `sb_MaxTotal` (SysBundles, **Stage 7 rev 2**) — per-bundle price-band **ceiling/budget** the running-budget fill stays under (blank = no ceiling). **ADDED @267** (appended at the END of the header, after `sb_GenFlags`; column added manually + `rebuildSysConfigFromSource()`). Preserved across reimport.
 - `sb_LastGenerated` + `sb_GenFlags` (SysBundles, **Stage 7**) — generator run timestamp + small flag string (e.g. `min_total_unmet`). Picks themselves go into `SysBundleSlots`, so no suggestion-payload column. **Append-only** (added @264).
 - cross-bundle usage index (derived/cached over `SysBundleSlots`, Stage 6).
 - suggestion cache (Stage 7) — persisted output of the overnight analysis batch (per-bundle recommended composition + timestamp), read by the view; on `SysBundles` or a small dedicated cache sheet (decide at build).

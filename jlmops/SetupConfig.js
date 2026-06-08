@@ -3921,7 +3921,7 @@ function getMasterConfiguration() {
         "Schema for Bundle Header sheet - defines bundle/package metadata.",
         "stable",
         "headers",
-        "sb_BundleId,sb_NameEn,sb_NameHe,sb_Type,sb_Status,sb_DiscountPrice,sb_MinTotal,sb_LastGenerated,sb_GenFlags",
+        "sb_BundleId,sb_NameEn,sb_NameHe,sb_Type,sb_Status,sb_DiscountPrice,sb_MinTotal,sb_LastGenerated,sb_GenFlags,sb_MaxTotal",
         "key_column",
         "sb_BundleId",
         "",

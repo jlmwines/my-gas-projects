@@ -1475,13 +1475,15 @@ function HousekeepingService() {
 
       logger.info('HousekeepingService', functionName, "Starting bundle health check.");
 
-      // Get bundles with low inventory (BundleService uses system.inventory.minimum_stock)
-      const bundlesWithIssues = BundleService.getBundlesWithLowInventory();
+      // Stage 7 rev 2.2: the deficiency gate is the RICHER signal — stock ∨ criteria-miss ∨ over
+      // slot.priceMax ∨ bundle base total outside [sb_MinTotal, sb_MaxTotal] — not stock alone
+      // (BundleService.getBundleDeficiencies). Maintain fixes only the deficient slots.
+      const bundlesWithIssues = BundleService.getBundleDeficiencies();
 
       // Stage 7: per-bundle critical/low inventory tasks are RETIRED (user 2026-06-08). The
-      // generator (Generate Compositions) handles stock-driven swaps, so the actionable signal is a
-      // single "bundles need update" prompt — never per-bundle noise. Recomputed each run (open on
-      // count>0, safety-close on 0); self-corrects once the operator regenerates + the stock clears.
+      // generator (Maintain) handles the swaps, so the actionable signal is a single "bundles need
+      // update" prompt — never per-bundle noise. Recomputed each run (open on count>0, safety-close
+      // on 0); self-corrects once the operator runs Maintain + the deficiencies clear.
       const affectedCount = bundlesWithIssues.length;
       const affectedIds = bundlesWithIssues.map(bd => bd.bundle.bundleId);
       try {
@@ -1490,7 +1492,7 @@ function HousekeepingService() {
             'task.bundles.needs_update',
             '_SYSTEM',
             'Bundles Need Update',
-            `${affectedCount} bundle(s) have low/out-of-stock products — run Generate Compositions to refresh`,
+            `${affectedCount} bundle(s) need attention (stock, criteria, or price band) — run Maintain to refresh`,
             { count: affectedCount, bundleIds: affectedIds }
           );
         } else {

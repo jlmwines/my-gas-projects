@@ -114,6 +114,7 @@ const BundleService = (function () {
         discountPrice: row[cols.sb_DiscountPrice] || '',
         // Stage 7 (cols undefined until the schema rebuild → safely null/'')
         minTotal: (cols.sb_MinTotal !== undefined && row[cols.sb_MinTotal] !== '' && row[cols.sb_MinTotal] != null) ? Number(row[cols.sb_MinTotal]) : null,
+        maxTotal: (cols.sb_MaxTotal !== undefined && row[cols.sb_MaxTotal] !== '' && row[cols.sb_MaxTotal] != null) ? Number(row[cols.sb_MaxTotal]) : null,
         lastGenerated: (cols.sb_LastGenerated !== undefined) ? (row[cols.sb_LastGenerated] || '') : '',
         genFlags: (cols.sb_GenFlags !== undefined) ? (row[cols.sb_GenFlags] || '') : '',
         rowNumber: i + 1 // 1-based for sheet operations
@@ -486,6 +487,9 @@ const BundleService = (function () {
     if (updates.minTotal !== undefined && cols.sb_MinTotal !== undefined) {
       sheet.getRange(row, cols.sb_MinTotal + 1).setValue(updates.minTotal === null ? '' : updates.minTotal);
     }
+    if (updates.maxTotal !== undefined && cols.sb_MaxTotal !== undefined) {
+      sheet.getRange(row, cols.sb_MaxTotal + 1).setValue(updates.maxTotal === null ? '' : updates.maxTotal);
+    }
     if (updates.lastGenerated !== undefined && cols.sb_LastGenerated !== undefined) {
       sheet.getRange(row, cols.sb_LastGenerated + 1).setValue(updates.lastGenerated);
     }
@@ -720,12 +724,23 @@ const BundleService = (function () {
     bundleId = String(bundleId);
     const incoming = Array.isArray(slots) ? slots : [];
 
-    // 1. Header (discount intentionally omitted — WC-managed, §7.1c)
+    // 1. Header. nameEn/nameHe intentionally omitted — like the discount (§7.1c) the bundle NAME is
+    //    web-derived (set from the web product title on import) and never authored/pushed by jlmops, so
+    //    the editor shows it read-only and Save must not write it (a blank field would wipe the name).
+    //    minTotal/maxTotal = the Stage 7 price band; '' clears to null. Validate min ≤ max (rev 2.1 #7).
     if (header && typeof header === 'object') {
       const hu = {};
-      if (header.nameEn !== undefined) hu.nameEn = header.nameEn;
-      if (header.nameHe !== undefined) hu.nameHe = header.nameHe;
       if (header.status !== undefined) hu.status = header.status;
+      const toNum = v => (v === '' || v == null) ? null : Number(v);
+      if (header.minTotal !== undefined) hu.minTotal = toNum(header.minTotal);
+      if (header.maxTotal !== undefined) hu.maxTotal = toNum(header.maxTotal);
+      // Resolve the effective band (incoming value, else the stored one) and reject min > max.
+      const existing = getBundle(bundleId) || {};
+      const effMin = (hu.minTotal !== undefined) ? hu.minTotal : (existing.minTotal != null ? existing.minTotal : null);
+      const effMax = (hu.maxTotal !== undefined) ? hu.maxTotal : (existing.maxTotal != null ? existing.maxTotal : null);
+      if (effMin != null && effMax != null && effMin > effMax) {
+        throw new Error(`Price band invalid: min (${effMin}) must be ≤ max (${effMax}).`);
+      }
       if (Object.keys(hu).length) updateBundle(bundleId, hu);
     }
 
@@ -841,6 +856,32 @@ const BundleService = (function () {
     const usage = {};
     Object.keys(bySku).forEach(sku => { usage[sku] = bySku[sku].size; });
     return usage;
+  }
+
+  /**
+   * Does a product satisfy a slot's criteria? Pure predicate shared by getEligibleProducts (candidate
+   * filter) and the Stage 7 deficiency check (is the CURRENT wine still valid for its slot?). Exactly
+   * mirrors the former inline block — the `!== null` guards skip an unspecified criterion, and an
+   * undefined detail (no WebDetM row) fails an intensity/complexity/acidity criterion as before.
+   * `slot.priceMax` doubles as the gate-time "over-band" check (rev 2.2): price > priceMax → miss.
+   * @param {Object} p - {categories:[], price, name, intensity, complexity, acidity}
+   * @param {Object} slot - slot with criteria fields
+   * @returns {boolean} true if the product matches every specified criterion
+   */
+  function _matchesSlotCriteria(p, slot) {
+    // Category filter - exact match in category list
+    if (slot.category && !p.categories.includes(slot.category)) return false;
+    if (slot.category2 && !p.categories.includes(slot.category2)) return false;
+    // Price range
+    if (slot.priceMin !== null && p.price < slot.priceMin) return false;
+    if (slot.priceMax !== null && p.price > slot.priceMax) return false;
+    // Name contains
+    if (slot.nameContains && p.name.toLowerCase().indexOf(slot.nameContains.toLowerCase()) === -1) return false;
+    // Intensity/Complexity/Acidity from WebDetM (exact match if specified)
+    if (slot.intensity !== null && p.intensity !== null && p.intensity !== slot.intensity) return false;
+    if (slot.complexity !== null && p.complexity !== null && p.complexity !== slot.complexity) return false;
+    if (slot.acidity !== null && p.acidity !== null && p.acidity !== slot.acidity) return false;
+    return true;
   }
 
   /**
@@ -1007,24 +1048,12 @@ const BundleService = (function () {
         continue;
       }
 
-      // Apply criteria filters
-
-      // Category filter - exact match in category list
-      if (slot.category && !categories.includes(slot.category)) continue;
-      if (slot.category2 && !categories.includes(slot.category2)) continue;
-
-      // Price range
-      if (slot.priceMin !== null && price < slot.priceMin) continue;
-      if (slot.priceMax !== null && price > slot.priceMax) continue;
-
-      // Name contains
-      if (slot.nameContains && name.toLowerCase().indexOf(slot.nameContains.toLowerCase()) === -1) continue;
-
-      // Intensity/Complexity/Acidity from WebDetM (exact match if specified)
+      // Apply criteria filters (shared predicate — see _matchesSlotCriteria)
       const details = detailsMap[sku] || {};
-      if (slot.intensity !== null && details.intensity !== null && details.intensity !== slot.intensity) continue;
-      if (slot.complexity !== null && details.complexity !== null && details.complexity !== slot.complexity) continue;
-      if (slot.acidity !== null && details.acidity !== null && details.acidity !== slot.acidity) continue;
+      if (!_matchesSlotCriteria({
+        categories: categories, price: price, name: name,
+        intensity: details.intensity, complexity: details.complexity, acidity: details.acidity
+      }, slot)) continue;
 
       // Product matches criteria
       debugStats.passed++;
@@ -1072,114 +1101,319 @@ const BundleService = (function () {
   // =====================================================
 
   // Composite ranking weights — TUNABLE (expected to be iterated after the first real run).
-  // profitRate is a fraction 0..1; diversity = 1/(1+usage) (0..1); featured = 0/1; stockNorm = 0..1.
-  const GENERATOR_WEIGHTS = { profit: 1.0, diversity: 1.0, featured: 0.3, stock: 0.1 };
+  // profitRate is a fraction 0..1; diversity = 1/(1+usage) (0..1); stockNorm = 0..1; pricePull weights
+  // the fill-phase "use the budget toward the ceiling" term (NOT part of the static candidate score).
+  const GENERATOR_WEIGHTS = { profit: 1.0, diversity: 1.0, stock: 0.1, pricePull: 0.5 };
+  // Assumed margin when wpm_ProfitRate is blank — keeps a null-profit wine NEUTRAL (neither boosted
+  // nor pushed to the bottom) rather than scoring it 0 (rev 2.1: "null-profit neutral"). Matches the
+  // project's assumed-margin convention (ProductCostService manual/assumed backfill = 0.25). Now
+  // mostly moot — profit was backfilled — but kept for the occasional blank. TUNABLE.
+  const NEUTRAL_PROFIT = 0.25;
+  // Flex (qty-0) add-on headroom: a flexible upsell slot prefers wines within the average base-bottle
+  // budget, but if none fit it may exceed that budget by up to this factor (over-budget only WHEN
+  // NECESSARY, and not by a huge margin — user call 2026-06-08). TUNABLE.
+  const FLEX_HEADROOM = 1.5;
 
+  // Static candidate score: profit (null → neutral) + diversity + stock. Featured dropped (rev 2.1 —
+  // redundant with profit + stock). Price-toward-band is applied separately in the fill (it needs the
+  // per-slot running ceiling, which a lone candidate doesn't know).
   function _scoreCandidate(c) {
-    const profit = (c.profitRate != null && !isNaN(c.profitRate)) ? c.profitRate : 0;  // missing profit = neutral-low
+    const profit = (c.profitRate != null && !isNaN(c.profitRate)) ? c.profitRate : NEUTRAL_PROFIT;
     const diversity = 1 / (1 + (c.usage || 0));
-    const featured = c.featured ? 1 : 0;
     const stockNorm = Math.min(c.stock || 0, 50) / 50;
     return GENERATOR_WEIGHTS.profit * profit
          + GENERATOR_WEIGHTS.diversity * diversity
-         + GENERATOR_WEIGHTS.featured * featured
          + GENERATOR_WEIGHTS.stock * stockNorm;
   }
 
-  // MVP gate: a "value" bundle (title match — temporary stand-in for a real sb_Purpose), excluding
-  // brand-restricted Only-in-Israel and Archived bundles.
-  function _isValueBundle(b) {
-    const name = String(b.nameEn || '');
-    if (b.status === 'Archived') return false;
-    if (!/value/i.test(name)) return false;
-    if (/only[\s-]*in[\s-]*israel/i.test(name)) return false;
-    return true;
+  // Mild "use the budget toward the ceiling" pull — rewards picks closer to the running ceiling so the
+  // base total drifts up toward the band rather than undershooting (rev 2.1 #3). 0 when no finite ceiling.
+  function _priceFitScore(price, ceiling) {
+    if (!ceiling || !isFinite(ceiling) || ceiling <= 0) return 0;
+    return GENERATOR_WEIGHTS.pricePull * Math.min(price / ceiling, 1);
   }
 
   /**
-   * Stage 7 generator — refresh one bundle's PRODUCT slots from the eligible pool, picking the
-   * highest composite score per slot (profit + diversity + featured + stock), structure-preserving
-   * (text/section slots untouched; never add/remove slots). Writes picks via assignProductToSlot
-   * (sets activeSKU + history). Greedy + FLAG: computes the new member total and flags `min_total_unmet`
-   * if it falls below the bundle's `sb_MinTotal` (default 399) — does NOT force/backtrack.
+   * Stage 7 generator (rev 2.2) — structure-preserving refresh of one bundle's PRODUCT slots.
+   * Two modes:
+   *   - reroll: re-pick every product slot.
+   *   - maintain: re-pick only the deficient slots (opts.deficientSlotIds); keep the rest. A band-only
+   *     trigger refills nothing but the top-up / down-pass below still nudge the total into the band.
+   * Running-budget fill (Option B): per base (qty≥1) slot the ceiling = slot.priceMax, else
+   * (sb_MaxTotal − committed base total) / remaining base slots to fill; flexible (qty-0) slots get the
+   * average base ceiling (sb_MaxTotal / base-slot-count) and never draw budget. Among candidates under
+   * the ceiling, pick the best by composite + price-pull. Then a TOP-UP pass (while base < sb_MinTotal,
+   * apply the max-gain upgrade that keeps total ≤ sb_MaxTotal, else flag min_total_unmet) and a symmetric
+   * DOWN-PASS (while base > sb_MaxTotal, downgrade the priciest base slot to a cheaper eligible wine,
+   * else flag max_total_exceeded). Writes via assignProductToSlot. The web export remains the gate.
+   * @param {Object} bundle - bundle (with minTotal/maxTotal)
+   * @param {Object} opts - { mode:'maintain'|'reroll', deficientSlotIds:Set }
    */
-  function _generateBundleComposition(bundle) {
+  function _generateBundleComposition(bundle, opts) {
+    opts = opts || {};
+    const mode = opts.mode === 'maintain' ? 'maintain' : 'reroll';
+    const deficientSet = (opts.deficientSlotIds instanceof Set) ? opts.deficientSlotIds : null;
+
+    const qtyOf = s => (s.defaultQty === '' || s.defaultQty == null) ? 1 : Number(s.defaultQty);
+
     const productSlots = getSlotsForBundle(bundle.bundleId)
       .filter(s => s.slotType === 'Product')
       .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const baseSlots = productSlots.filter(s => qtyOf(s) >= 1);
+    const baseSlotCount = baseSlots.length;
+    // Base UNITS = Σqty over base slots — the average base-bottle budget (used for the flex slot's
+    // soft ceiling) is sb_MaxTotal ÷ base units, so a qty-2 slot counts as two bottles.
+    const baseUnitCount = baseSlots.reduce((sum, s) => sum + qtyOf(s), 0);
 
-    const assigned = [];   // SKUs picked this run — intra-bundle dedup (getEligibleProducts ignoreSameBundle)
-    const writes = [];     // {slotId, sku} to commit
-    let changed = 0;
+    const minTotal = bundle.minTotal;   // may be null → no floor flag
+    const maxTotal = bundle.maxTotal;   // may be null → no ceiling
 
-    productSlots.forEach(slot => {
-      const eligible = getEligibleProducts(slot.slotId, {
-        limit: 500, excludeExclusiveSKUs: true, ignoreSameBundle: true, excludeSKUs: assigned
-      });
-      if (!eligible.length) {
-        if (slot.activeSKU) assigned.push(slot.activeSKU);   // keep current; reserve it
-        return;
+    // Current committed SKU + web price per slot (price seeded from getBundleWithSlots, updated on pick).
+    const currentSku = {};
+    const priceBySlot = {};
+    const startState = getBundleWithSlots(bundle.bundleId);
+    (startState ? startState.slots : []).forEach(s => {
+      if (s.slotType === 'Product') {
+        currentSku[s.slotId] = s.activeSKU || '';
+        priceBySlot[s.slotId] = s.productPrice || 0;
       }
-      let best = eligible[0], bestScore = _scoreCandidate(eligible[0]);
-      for (let i = 1; i < eligible.length; i++) {
-        const sc = _scoreCandidate(eligible[i]);
-        if (sc > bestScore) { bestScore = sc; best = eligible[i]; }
-      }
-      assigned.push(best.sku);
-      if (best.sku !== slot.activeSKU) { writes.push({ slotId: slot.slotId, sku: best.sku }); changed++; }
     });
 
-    // Commit picks (reuse the slot primitive; clears cache so downstream bundles see the new wines).
-    writes.forEach(w => assignProductToSlot(w.slotId, w.sku, 'Stage 7 generator'));
+    // Which slots get re-picked this run.
+    const refill = {};
+    productSlots.forEach(s => {
+      refill[s.slotId] = (mode === 'reroll') ? true : (deficientSet ? deficientSet.has(s.slotId) : false);
+    });
 
-    // Recompute the member total from the committed composition; flag if under the bundle minimum.
-    const refreshed = getBundleWithSlots(bundle.bundleId);
-    const total = refreshed ? (refreshed.totalPrice || 0) : 0;
-    const minTotal = (bundle.minTotal != null) ? bundle.minTotal : 399;
-    const flags = (total < minTotal) ? 'min_total_unmet' : '';
+    // Eligible candidates for a slot, excluding the SKUs currently in OTHER product slots (intra-bundle
+    // dedup) plus any extra. Read fresh each call so committed picks are reflected.
+    function eligibleFor(slot, extraExclude) {
+      const exclude = [];
+      productSlots.forEach(s => {
+        if (s.slotId !== slot.slotId && currentSku[s.slotId]) exclude.push(currentSku[s.slotId]);
+      });
+      if (Array.isArray(extraExclude)) extraExclude.forEach(x => { if (x) exclude.push(x); });
+      return getEligibleProducts(slot.slotId, {
+        limit: 500, excludeExclusiveSKUs: true, ignoreSameBundle: true, excludeSKUs: exclude
+      });
+    }
+
+    let changed = 0;
+    const slotFlags = [];   // {slotId, flag:'no_candidate'}
+
+    // ---- Fill phase ----
+    // Budget already consumed by base slots we are NOT refilling (kept wines).
+    let committedBaseTotal = 0;
+    baseSlots.forEach(s => { if (!refill[s.slotId]) committedBaseTotal += (priceBySlot[s.slotId] || 0) * qtyOf(s); });
+    let remainingBaseUnits = baseSlots.filter(s => refill[s.slotId]).reduce((sum, s) => sum + qtyOf(s), 0);
+
+    // Fill order: base slots by DESCENDING qty first (the highest-qty slots get first pick of the
+    // profit-weighted pool, so profit×qty concentrates where it counts), then flexible (qty-0) add-ons
+    // LAST (they take leftovers and can't starve base slots of the good/high-value wines — which was
+    // also pulling the base total below sb_MinTotal). Equal qty keeps display order.
+    const fillOrder = productSlots
+      .filter(s => refill[s.slotId])
+      .sort((a, b) => (qtyOf(b) - qtyOf(a)) || ((a.order || 0) - (b.order || 0)));
+
+    fillOrder.forEach(slot => {
+      const q = qtyOf(slot);
+      const isBase = q >= 1;
+
+      // Candidate pool + scoring differ by slot kind:
+      //  • BASE slot — capped at the running per-unit budget (remaining ÷ remaining base units; a qty-2
+      //    slot draws 2 units). The price-pull nudges the pick toward the ceiling so the base total
+      //    climbs toward the band.
+      //  • FLEX (qty-0) add-on — an OPTIONAL upsell that doesn't draw the base budget. Prefer wines
+      //    within the average base-bottle budget; ONLY if none fit, allow exceeding it by up to
+      //    FLEX_HEADROOM (over-budget when necessary, modestly — user call 2026-06-08). No price-pull,
+      //    so it picks the best-FIT wine, not the priciest.
+      // An explicit slot.priceMax always wins as the hard cap.
+      const inCriteria = eligibleFor(slot);                       // in-category, in-stock, dedup'd
+      let pool, pullCeiling = Infinity, usePull = false;
+      if (slot.priceMax != null) {
+        pool = inCriteria.filter(c => c.price <= slot.priceMax);
+        pullCeiling = slot.priceMax; usePull = isBase;
+      } else if (isBase) {
+        pullCeiling = (maxTotal == null) ? Infinity
+          : (remainingBaseUnits > 0 ? (maxTotal - committedBaseTotal) / remainingBaseUnits : Infinity);
+        pool = inCriteria.filter(c => c.price <= pullCeiling);
+        usePull = true;
+      } else if (maxTotal == null) {
+        pool = inCriteria;                                        // flex, no band → any in-criteria wine
+      } else {
+        const flexBudget = baseUnitCount > 0 ? (maxTotal / baseUnitCount) : Infinity;
+        pool = inCriteria.filter(c => c.price <= flexBudget);                       // prefer in-budget
+        if (!pool.length) pool = inCriteria.filter(c => c.price <= flexBudget * FLEX_HEADROOM);  // else modest overage
+      }
+
+      if (!pool.length) {
+        // Couldn't fill the slot from in-stock, in-criteria wines. We NEVER substitute a different
+        // category (eligibleFor is hard-filtered by the slot's criteria); instead keep the current
+        // wine so the slot doesn't export blank, and FLAG the failure so the operator can fix
+        // conditions — restock the category, loosen the criteria, or widen the band. Distinguish:
+        //   'unfilled'     — no in-stock wine matches the slot's category/criteria at all (stock-out).
+        //   'over_ceiling' — in-criteria wines exist but all exceed the price ceiling (budget too tight).
+        // (Flags are raised for BASE slots; an optional flex add-on going unfilled isn't a failure.)
+        if (isBase) {
+          slotFlags.push({ slotId: slot.slotId, flag: inCriteria.length ? 'over_ceiling' : 'unfilled' });
+          if (currentSku[slot.slotId]) committedBaseTotal += (priceBySlot[slot.slotId] || 0) * q;
+          remainingBaseUnits -= q;
+        }
+        return;
+      }
+
+      let best = pool[0], bestScore = _scoreCandidate(pool[0]) + (usePull ? _priceFitScore(pool[0].price, pullCeiling) : 0);
+      for (let i = 1; i < pool.length; i++) {
+        const sc = _scoreCandidate(pool[i]) + (usePull ? _priceFitScore(pool[i].price, pullCeiling) : 0);
+        if (sc > bestScore) { bestScore = sc; best = pool[i]; }
+      }
+      if (best.sku !== currentSku[slot.slotId]) {
+        assignProductToSlot(slot.slotId, best.sku, 'Stage 7 generator');
+        currentSku[slot.slotId] = best.sku;
+        changed++;
+      }
+      priceBySlot[slot.slotId] = best.price;
+      if (isBase) { committedBaseTotal += best.price * q; remainingBaseUnits -= q; }
+    });
+
+    // ---- Band enforcement ----
+    let baseTotal = 0;
+    baseSlots.forEach(s => baseTotal += (priceBySlot[s.slotId] || 0) * qtyOf(s));
+    let flagMinUnmet = false, flagMaxExceeded = false;
+
+    // Top-up: raise the total toward sb_MinTotal with the most-gain upgrade that respects sb_MaxTotal.
+    if (minTotal != null && baseSlotCount > 0) {
+      let guard = 0;
+      while (baseTotal < minTotal && guard++ < 50) {
+        let pick = null;   // {slot, sku, price, cur, q, gain}
+        baseSlots.forEach(slot => {
+          const q = qtyOf(slot);
+          const cur = priceBySlot[slot.slotId] || 0;
+          eligibleFor(slot).forEach(c => {
+            if (c.price <= cur) return;                                  // upgrades only
+            const newTotal = baseTotal - cur * q + c.price * q;
+            if (maxTotal != null && newTotal > maxTotal) return;        // max-guard
+            const gain = (c.price - cur) * q;
+            if (!pick || gain > pick.gain) pick = { slot: slot, sku: c.sku, price: c.price, cur: cur, q: q, gain: gain };
+          });
+        });
+        if (!pick) break;
+        assignProductToSlot(pick.slot.slotId, pick.sku, 'Stage 7 top-up');
+        currentSku[pick.slot.slotId] = pick.sku;
+        priceBySlot[pick.slot.slotId] = pick.price;
+        baseTotal = baseTotal - pick.cur * pick.q + pick.price * pick.q;
+        changed++;
+      }
+      if (baseTotal < minTotal) flagMinUnmet = true;
+    }
+
+    // Down-pass: lower the total to ≤ sb_MaxTotal by downgrading the priciest base slot that has a
+    // cheaper eligible wine. Strictly cheaper each step → monotone, terminates (rev 2.2).
+    if (maxTotal != null && baseSlotCount > 0) {
+      let guard = 0;
+      while (baseTotal > maxTotal && guard++ < 50) {
+        const ordered = baseSlots.slice().sort((a, b) => (priceBySlot[b.slotId] || 0) - (priceBySlot[a.slotId] || 0));
+        let pick = null;   // {slot, sku, price, cur, q}
+        for (const slot of ordered) {
+          const q = qtyOf(slot);
+          const cur = priceBySlot[slot.slotId] || 0;
+          let cheaper = null;
+          eligibleFor(slot).forEach(c => { if (c.price < cur && (!cheaper || c.price < cheaper.price)) cheaper = c; });
+          if (cheaper) { pick = { slot: slot, sku: cheaper.sku, price: cheaper.price, cur: cur, q: q }; break; }
+        }
+        if (!pick) break;
+        assignProductToSlot(pick.slot.slotId, pick.sku, 'Stage 7 down-pass');
+        currentSku[pick.slot.slotId] = pick.sku;
+        priceBySlot[pick.slot.slotId] = pick.price;
+        baseTotal = baseTotal - pick.cur * pick.q + pick.price * pick.q;
+        changed++;
+      }
+      if (baseTotal > maxTotal) flagMaxExceeded = true;
+    }
+
+    // ---- Flags + stamp ----
+    const flagsArr = [];
+    if (flagMinUnmet) flagsArr.push('min_total_unmet');
+    if (flagMaxExceeded) flagsArr.push('max_total_exceeded');
+    slotFlags.forEach(f => flagsArr.push(f.flag + ':' + f.slotId));
+    const flags = flagsArr.join(';');
 
     updateBundle(bundle.bundleId, { lastGenerated: new Date().toISOString(), genFlags: flags });
 
+    const inBand = (minTotal == null || baseTotal >= minTotal) && (maxTotal == null || baseTotal <= maxTotal);
     return {
-      bundleId: bundle.bundleId, bundleName: bundle.nameEn,
-      productSlots: productSlots.length, changed: changed,
-      total: Math.round(total), minTotal: minTotal, minTotalMet: total >= minTotal
+      bundleId: bundle.bundleId, bundleName: bundle.nameEn, mode: mode,
+      productSlots: productSlots.length,
+      refilled: productSlots.filter(s => refill[s.slotId]).length,
+      changed: changed, baseTotal: Math.round(baseTotal),
+      minTotal: minTotal, maxTotal: maxTotal, inBand: inBand, flags: flags
     };
   }
 
   /**
-   * Generate compositions for all value bundles (MVP scope). Auto-applies — writes picks into the
-   * slots; the web export remains the gate (nothing reaches the site until the operator exports).
+   * MAINTAIN (default) — fix only the deficient slots across every deficient bundle (the
+   * `task.bundles.needs_update` set). Conservative: keeps every still-valid wine, swaps only what's
+   * broken, and nudges the total into the band. Auto-applies; the web export is the gate.
    * @returns {Object} { totalBundles, generated, results: [...] }
    */
-  function generateValueBundles() {
-    const fnName = 'generateValueBundles';
-    const bundles = _loadBundles().filter(_isValueBundle);
+  function maintainBundles() {
+    const fnName = 'maintainBundles';
+    const deficiencies = getBundleDeficiencies();
+    const results = [];
+    deficiencies.forEach(d => {
+      try {
+        const ids = new Set((d.deficientSlots || []).map(ds => ds.slotId));
+        results.push(_generateBundleComposition(d.bundle, { mode: 'maintain', deficientSlotIds: ids }));
+      } catch (e) {
+        LoggerService.error(SERVICE_NAME, fnName, `Maintain failed for ${d.bundle.bundleId}: ${e.message}`, e);
+        results.push({ bundleId: d.bundle.bundleId, bundleName: d.bundle.nameEn, error: e.message });
+      }
+    });
+    const ok = results.filter(r => !r.error).length;
+    LoggerService.info(SERVICE_NAME, fnName, `Maintained ${ok}/${deficiencies.length} deficient bundles`);
+    return { totalBundles: deficiencies.length, generated: ok, results: results };
+  }
+
+  /**
+   * RE-ROLL — explicit fresh lineup. One bundle (bundleId given) or every non-archived bundle.
+   * Higher churn; for a seasonal reset / new bundle / "give me new wines".
+   * @param {string} [bundleId] - re-roll just this bundle; omit to re-roll all non-archived bundles
+   * @returns {Object} { totalBundles, generated, results: [...] }
+   */
+  function rerollBundles(bundleId) {
+    const fnName = 'rerollBundles';
+    let bundles;
+    if (bundleId) {
+      const b = getBundle(bundleId);
+      bundles = b ? [b] : [];
+    } else {
+      bundles = _loadBundles().filter(b => b.status !== 'Archived');
+    }
     const results = [];
     bundles.forEach(b => {
       try {
-        results.push(_generateBundleComposition(b));
+        results.push(_generateBundleComposition(b, { mode: 'reroll' }));
       } catch (e) {
-        LoggerService.error(SERVICE_NAME, fnName, `Generate failed for ${b.bundleId}: ${e.message}`, e);
+        LoggerService.error(SERVICE_NAME, fnName, `Re-roll failed for ${b.bundleId}: ${e.message}`, e);
         results.push({ bundleId: b.bundleId, bundleName: b.nameEn, error: e.message });
       }
     });
     const ok = results.filter(r => !r.error).length;
-    LoggerService.info(SERVICE_NAME, fnName, `Generated ${ok}/${bundles.length} value bundles`);
+    LoggerService.info(SERVICE_NAME, fnName, `Re-rolled ${ok}/${bundles.length} bundles`);
     return { totalBundles: bundles.length, generated: ok, results: results };
   }
 
   /**
-   * Gets all bundles that have slots with low inventory products.
-   * Uses WebProdM for stock and product data.
+   * Builds the shared inventory context for stock/criteria evaluation — one set of sheet reads
+   * (CmxProdM stock, SysInventoryOnHold, WebProdM prices/names/categories, WebDetM attributes)
+   * consumed by BOTH getBundlesWithLowInventory (stock-only) and getBundleDeficiencies (richer
+   * Stage 7 signal). Collapses the per-slot N+1 to a single pass.
    * @param {number} threshold - Stock threshold (uses system config if not specified)
-   * @returns {Array<Object>} Array of {bundle, lowStockSlots: [{slot, product, stock, suggestions}]}
+   * @returns {Object|null} context, or null if CmxProdM is missing
    */
-  function getBundlesWithLowInventory(threshold) {
-    const functionName = 'getBundlesWithLowInventory';
-    const bundles = _loadBundles().filter(b => b.status === 'Active');
+  function _buildBundleInventoryContext(threshold) {
+    const functionName = '_buildBundleInventoryContext';
     const allSlots = _loadSlots();
-
     const allConfig = ConfigService.getAllConfig();
 
     // Use config threshold if not specified
@@ -1192,7 +1426,7 @@ const BundleService = (function () {
     const cmxSheet = SheetAccessor.getDataSheet('CmxProdM', false);
     if (!cmxSheet) {
       LoggerService.warn(SERVICE_NAME, functionName, 'CmxProdM sheet not found');
-      return [];
+      return null;
     }
 
     const cmxData = cmxSheet.getDataRange().getValues();
@@ -1230,10 +1464,14 @@ const BundleService = (function () {
       }
     }
 
-    // 3. Read WebProdM once — for English names here AND as the invariant context handed to
-    //    getEligibleProducts below (Fix A: build the per-slot inputs once, not per low-stock slot).
+    // 3. Read WebProdM once — English names for productMap here AND the invariant context handed to
+    //    getEligibleProducts (Fix A: build the per-slot inputs once, not per low-stock slot). Also
+    //    build webAttrMap (web price / title / categories) for the Stage 7 criteria recheck — the
+    //    deficiency test must use the WEB regular price (what getEligibleProducts filters on and what
+    //    _calculateBundlePrice sums), not the Comax price in productMap.
     let webData = [];
     const webCols = {};
+    const webAttrMap = {};
     const webSheet = spreadsheet.getSheetByName('WebProdM');
     if (webSheet) {
       webData = webSheet.getDataRange().getValues();
@@ -1243,9 +1481,16 @@ const BundleService = (function () {
       for (let i = 1; i < webData.length; i++) {
         const row = webData[i];
         const sku = String(row[webCols.wpm_SKU] || '');
-        if (sku && productMap[sku]) {
+        if (!sku) continue;
+        if (productMap[sku]) {
           productMap[sku].nameEn = row[webCols.wpm_PostTitle] || '';
         }
+        const catStr = String(row[webCols.wpm_TaxProductCat] || '');
+        webAttrMap[sku] = {
+          price: Number(row[webCols.wpm_RegularPrice]) || 0,
+          name: String(row[webCols.wpm_PostTitle] || ''),
+          categories: catStr.split(',').map(c => c.trim()).filter(c => c)
+        };
       }
     }
 
@@ -1276,6 +1521,32 @@ const BundleService = (function () {
     const eligibleMinStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
 
     const ctx = { webData: webData, webCols: webCols, detailsMap: detailsMap, allSlots: allSlots, minStock: eligibleMinStock };
+
+    return {
+      threshold: threshold, allSlots: allSlots,
+      comaxStockMap: comaxStockMap, onHoldMap: onHoldMap, productMap: productMap,
+      webAttrMap: webAttrMap, detailsMap: detailsMap, ctx: ctx
+    };
+  }
+
+  /**
+   * Gets all bundles that have slots with low inventory products.
+   * Uses WebProdM for stock and product data.
+   * @param {number} threshold - Stock threshold (uses system config if not specified)
+   * @returns {Array<Object>} Array of {bundle, lowStockSlots: [{slot, product, stock, suggestions}]}
+   */
+  function getBundlesWithLowInventory(threshold) {
+    const functionName = 'getBundlesWithLowInventory';
+    const bundles = _loadBundles().filter(b => b.status === 'Active');
+
+    const inv = _buildBundleInventoryContext(threshold);
+    if (!inv) return [];   // CmxProdM missing
+    const comaxStockMap = inv.comaxStockMap;
+    const onHoldMap = inv.onHoldMap;
+    const productMap = inv.productMap;
+    const allSlots = inv.allSlots;
+    const ctx = inv.ctx;
+    threshold = inv.threshold;
 
     const results = [];
 
@@ -1314,6 +1585,90 @@ const BundleService = (function () {
         results.push({
           bundle: bundle,
           lowStockSlots: lowStockSlots
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Stage 7 rev 2.2 — the richer deficiency signal driving `task.bundles.needs_update` and Maintain.
+   * A PRODUCT slot is deficient when its current wine is (a) out/low-stock (available = Comax − on-hold
+   * < threshold), (b) no longer satisfies its slot criteria (category/price/intensity/… — `_matchesSlotCriteria`,
+   * which also catches price > slot.priceMax, the gate-time "over-band"), or (c) a base (qty≥1) slot with
+   * no wine at all ('empty'). A BUNDLE is deficient if any slot is, OR its base total falls outside its
+   * price band (baseTotal < sb_MinTotal → 'below_min', > sb_MaxTotal → 'above_max'). Base total sums
+   * web price × qty over qty≥1 product slots; flexible (qty-0) add-ons contribute 0 (rev 2.2). Population
+   * = non-archived (matches the generator's, rev 2.1 #7).
+   * @param {number} threshold - Stock threshold (uses system config if not specified)
+   * @returns {Array<Object>} [{ bundle, deficientSlots:[{slotId,reason,stock}], baseTotal, bandFlags:[] }]
+   */
+  function getBundleDeficiencies(threshold) {
+    const bundles = _loadBundles().filter(b => b.status !== 'Archived');
+
+    const inv = _buildBundleInventoryContext(threshold);
+    if (!inv) return [];   // CmxProdM missing
+    const comaxStockMap = inv.comaxStockMap;
+    const onHoldMap = inv.onHoldMap;
+    const webAttrMap = inv.webAttrMap;
+    const detailsMap = inv.detailsMap;
+    const allSlots = inv.allSlots;
+    threshold = inv.threshold;
+
+    const results = [];
+
+    for (const bundle of bundles) {
+      const bundleSlots = allSlots
+        .filter(s => s.bundleId === bundle.bundleId && s.slotType === 'Product')
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const deficientSlots = [];
+      let baseTotal = 0;
+
+      for (const slot of bundleSlots) {
+        const qty = (slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty);
+        const isBase = qty >= 1;
+
+        if (!slot.activeSKU) {
+          if (isBase) deficientSlots.push({ slotId: slot.slotId, reason: 'empty', stock: null });
+          continue;
+        }
+
+        const attrs = webAttrMap[slot.activeSKU];
+        const price = attrs ? attrs.price : 0;
+        if (isBase) baseTotal += price * qty;
+
+        // (a) stock — available = Comax − on-hold; only assessable when the SKU is in Comax.
+        const comaxStock = comaxStockMap[slot.activeSKU];
+        const stock = (comaxStock === undefined) ? null : comaxStock - (onHoldMap[slot.activeSKU] || 0);
+        let reason = null;
+        if (stock !== null && stock < threshold) {
+          reason = 'stock';
+        } else if (attrs) {
+          // (b) criteria recheck (includes price > slot.priceMax = over-band). Skip only when the wine
+          //     has no web row at all (can't evaluate — leave it to the stock/export paths).
+          const det = detailsMap[slot.activeSKU] || {};
+          const matches = _matchesSlotCriteria({
+            categories: attrs.categories, price: price, name: attrs.name,
+            intensity: det.intensity, complexity: det.complexity, acidity: det.acidity
+          }, slot);
+          if (!matches) reason = 'criteria';
+        }
+        if (reason) deficientSlots.push({ slotId: slot.slotId, reason: reason, stock: stock });
+      }
+
+      // Bundle-level band trigger (base total only; flexible slots excluded).
+      const bandFlags = [];
+      if (bundle.minTotal != null && baseTotal < bundle.minTotal) bandFlags.push('below_min');
+      if (bundle.maxTotal != null && baseTotal > bundle.maxTotal) bandFlags.push('above_max');
+
+      if (deficientSlots.length > 0 || bandFlags.length > 0) {
+        results.push({
+          bundle: bundle,
+          deficientSlots: deficientSlots,
+          baseTotal: Math.round(baseTotal * 100) / 100,
+          bandFlags: bandFlags
         });
       }
     }
@@ -1557,6 +1912,24 @@ const BundleService = (function () {
       };
     }
 
+    // 1b. Read existing BUNDLE rows → preserve the jlmops-owned, NON-web-derived fields by bundleId.
+    //     The rebuild below sources name/type/status from web, but the Stage 7 price band
+    //     (sb_MinTotal/sb_MaxTotal) and generation metadata (sb_LastGenerated/sb_GenFlags) have NO web
+    //     source — without this they'd be wiped on every reimport (incl. the daily refresh).
+    const existingBundlesData = bundlesSheet.getDataRange().getValues();
+    const preservedBundleById = {};
+    for (let i = 1; i < existingBundlesData.length; i++) {
+      const row = existingBundlesData[i];
+      const bid = row[bundleCols.sb_BundleId];
+      if (!bid) continue;
+      preservedBundleById[bid] = {
+        minTotal: bundleCols.sb_MinTotal !== undefined ? row[bundleCols.sb_MinTotal] : '',
+        maxTotal: bundleCols.sb_MaxTotal !== undefined ? row[bundleCols.sb_MaxTotal] : '',
+        lastGenerated: bundleCols.sb_LastGenerated !== undefined ? row[bundleCols.sb_LastGenerated] : '',
+        genFlags: bundleCols.sb_GenFlags !== undefined ? row[bundleCols.sb_GenFlags] : ''
+      };
+    }
+
     // 2. Build new rows entirely in memory.
     const textSlotTypes = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'none', 'span', 'div'];
     const newBundleRows = [];
@@ -1576,6 +1949,14 @@ const BundleService = (function () {
         bundleRow[bundleCols.sb_Type] = b.type || 'Bundle';
         bundleRow[bundleCols.sb_Status] = b.status || 'Draft';
         bundleRow[bundleCols.sb_DiscountPrice] = '';
+        // Carry the jlmops-owned, non-web fields through the rebuild (Stage 7 band + gen metadata).
+        const pb = preservedBundleById[b.bundleId];
+        if (pb) {
+          if (bundleCols.sb_MinTotal !== undefined) bundleRow[bundleCols.sb_MinTotal] = pb.minTotal;
+          if (bundleCols.sb_MaxTotal !== undefined) bundleRow[bundleCols.sb_MaxTotal] = pb.maxTotal;
+          if (bundleCols.sb_LastGenerated !== undefined) bundleRow[bundleCols.sb_LastGenerated] = pb.lastGenerated;
+          if (bundleCols.sb_GenFlags !== undefined) bundleRow[bundleCols.sb_GenFlags] = pb.genFlags;
+        }
         newBundleRows.push(bundleRow);
 
         const preserved = preservedByBundleSku[b.bundleId] || {};
@@ -2055,9 +2436,11 @@ const BundleService = (function () {
     // Eligible Products / Health
     getEligibleProducts: getEligibleProducts,
     getBundlesWithLowInventory: getBundlesWithLowInventory,
+    getBundleDeficiencies: getBundleDeficiencies,
 
-    // Stage 7 — composition generator (auto-apply)
-    generateValueBundles: generateValueBundles,
+    // Stage 7 — composition generator (rev 2.2: Maintain default + Re-roll explicit)
+    maintainBundles: maintainBundles,
+    rerollBundles: rerollBundles,
 
     // Import / Duplicate
     importBundleFromWooCommerce: importBundleFromWooCommerce,

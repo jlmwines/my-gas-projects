@@ -25,7 +25,7 @@
           <h5>Bundle Management</h5>
           <div>
             <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull Bundle Data</button>
-            <button id="btn-generate-compositions" class="btn btn-sm mr-2">Generate Compositions</button>
+            <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
             <button id="btn-update-composition" class="btn btn-sm mr-2">Update Composition</button>
             <button id="btn-review-stock" class="btn btn-sm mr-2">Review Stock</button>
             <button id="btn-export-bundles" class="btn btn-sm">Export</button>
@@ -73,6 +73,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Bundle Editor</h5>
           <div>
+            <button id="btn-reroll-bundle" class="btn btn-sm mr-1">Re-roll</button>
             <button id="btn-save-composition" class="btn btn-sm mr-1" disabled>Save Composition</button>
             <button id="btn-discard-draft" class="btn btn-sm mr-1" style="display:none;">Discard</button>
             <button id="btn-close-editor" class="btn btn-sm">Close</button>
@@ -85,13 +86,14 @@
           <!-- Header strip (§7.4): names / status / type badge / price summary. Discount is
                WC-managed (§7.1c) — shown only as part of the read-only price summary, never edited. -->
           <div class="form-row align-items-end mb-3" id="editor-header-strip">
+            <!-- Name is web-derived (§7.1c-style) — read-only display, never edited/pushed. -->
             <div class="col-md-3">
               <label class="small text-muted mb-1">Name (English)</label>
-              <input type="text" class="form-control form-control-sm" id="hdr-nameEn">
+              <div id="hdr-nameEn" class="small font-weight-bold text-truncate"></div>
             </div>
             <div class="col-md-3">
               <label class="small text-muted mb-1">Name (Hebrew)</label>
-              <input type="text" class="form-control form-control-sm" id="hdr-nameHe" dir="rtl">
+              <div id="hdr-nameHe" class="small text-truncate" dir="rtl"></div>
             </div>
             <div class="col-md-2">
               <label class="small text-muted mb-1">Status</label>
@@ -107,12 +109,31 @@
             </div>
           </div>
 
+          <!-- Price band + generation status (Stage 7 rev 2.2): sb_MinTotal / sb_MaxTotal drive the
+               running-budget fill; either may be blank. Status line shows last generated + any flags. -->
+          <div class="form-row align-items-end mb-3" id="editor-band-strip">
+            <div class="col-md-2">
+              <label class="small text-muted mb-1">Min Total (₪)</label>
+              <input type="number" class="form-control form-control-sm" id="hdr-minTotal" min="0" step="1" placeholder="none">
+            </div>
+            <div class="col-md-2">
+              <label class="small text-muted mb-1">Max Total (₪)</label>
+              <input type="number" class="form-control form-control-sm" id="hdr-maxTotal" min="0" step="1" placeholder="none">
+            </div>
+            <div class="col-md-8">
+              <div class="small text-muted mb-1">Generation</div>
+              <div id="hdr-gen-status" class="small"></div>
+            </div>
+          </div>
+
           <!-- One ordered composition list (§7.4): text headers + product rows -->
           <div id="composition-list"></div>
 
           <div class="mt-2">
             <button id="btn-add-text" class="btn btn-sm mr-1">+ Add Text</button>
-            <button id="btn-add-product" class="btn btn-sm">+ Add Product</button>
+            <button id="btn-add-product" class="btn btn-sm mr-1">+ Add Product</button>
+            <button id="btn-toggle-details" class="btn btn-sm mr-1">Open all details</button>
+            <button id="btn-export-meta" class="btn btn-sm">Export meta (EN/HE)</button>
           </div>
         </div>
       </div>
@@ -229,13 +250,16 @@
     });
     // Editor (composition sheet)
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
+    document.getElementById('btn-reroll-bundle').addEventListener('click', rerollBundle);
     document.getElementById('btn-save-composition').addEventListener('click', saveComposition);
     document.getElementById('btn-discard-draft').addEventListener('click', discardDraft);
     document.getElementById('btn-add-text').addEventListener('click', addTextSlot);
     document.getElementById('btn-add-product').addEventListener('click', addProductSlot);
+    document.getElementById('btn-toggle-details').addEventListener('click', toggleAllDetails);
+    document.getElementById('btn-export-meta').addEventListener('click', showExportMeta);
 
-    // Header strip → draft
-    ['hdr-nameEn', 'hdr-nameHe', 'hdr-status'].forEach(function(id) {
+    // Status + price band → draft (name is read-only, web-derived — not bound)
+    ['hdr-status', 'hdr-minTotal', 'hdr-maxTotal'].forEach(function(id) {
       document.getElementById(id).addEventListener('input', onHeaderInput);
       document.getElementById(id).addEventListener('change', onHeaderInput);
     });
@@ -601,6 +625,12 @@
           // already signal the dirty state. Price stays fresh because renderPriceSummary reads
           // currentBundle, not the draft's frozen figure.
           draft = saved;
+          // Backfill band/gen fields on drafts saved before Stage 7 (else a blank band field could
+          // clear the bundle's real band on save). Only seeds when the draft doesn't already carry them.
+          if (!draft.header) draft.header = {};
+          if (draft.header.minTotal === undefined) draft.header.minTotal = (result.data.minTotal != null ? result.data.minTotal : '');
+          if (draft.header.maxTotal === undefined) draft.header.maxTotal = (result.data.maxTotal != null ? result.data.maxTotal : '');
+          if (!draft.gen) draft.gen = { lastGenerated: result.data.lastGenerated || '', genFlags: result.data.genFlags || '' };
           draftDirty = true;
           var maxCid = saved.slots.reduce(function(m, r) { return Math.max(m, Number(r.cid) || 0); }, 0);
           clientIdSeq = Math.max(clientIdSeq, maxCid + 1);
@@ -624,9 +654,13 @@
     if (section) section.style.display = '';
     var strip = document.getElementById('editor-deficiency-strip');
     if (strip) strip.innerHTML = '';
-    ['hdr-nameEn', 'hdr-nameHe'].forEach(function(id) { document.getElementById(id).value = ''; });
+    ['hdr-minTotal', 'hdr-maxTotal'].forEach(function(id) { document.getElementById(id).value = ''; });
+    document.getElementById('hdr-nameEn').textContent = '';
+    document.getElementById('hdr-nameHe').textContent = '';
     document.getElementById('hdr-type').textContent = '-';
     document.getElementById('hdr-price').textContent = '';
+    document.getElementById('hdr-gen-status').textContent = '';
+    var td = document.getElementById('btn-toggle-details'); if (td) td.textContent = 'Open all details';
     setSaveEnabled(false);
     var list = document.getElementById('composition-list');
     if (list) list.innerHTML = '<div class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm mr-2"></span>Loading bundle…</div>';
@@ -634,8 +668,12 @@
 
   function buildDraftFromBundle(b) {
     return {
-      header: { nameEn: b.nameEn || '', nameHe: b.nameHe || '', status: b.status || 'Draft' },
+      header: {
+        nameEn: b.nameEn || '', nameHe: b.nameHe || '', status: b.status || 'Draft',
+        minTotal: (b.minTotal != null ? b.minTotal : ''), maxTotal: (b.maxTotal != null ? b.maxTotal : '')
+      },
       type: b.type || 'Bundle',
+      gen: { lastGenerated: b.lastGenerated || '', genFlags: b.genFlags || '' },
       price: { totalPrice: b.totalPrice || 0, discount: b.discount || 0, displayPrice: b.displayPrice || 0 },
       slots: (b.slots || []).map(slotToDraftRow)
     };
@@ -692,11 +730,39 @@
   }
 
   function renderHeaderStrip() {
-    document.getElementById('hdr-nameEn').value = draft.header.nameEn;
-    document.getElementById('hdr-nameHe').value = draft.header.nameHe;
+    // Name is read-only (web-derived) — display, never an input.
+    document.getElementById('hdr-nameEn').textContent = draft.header.nameEn || '';
+    document.getElementById('hdr-nameHe').textContent = draft.header.nameHe || '';
     document.getElementById('hdr-status').value = draft.header.status;
+    document.getElementById('hdr-minTotal').value = (draft.header.minTotal != null ? draft.header.minTotal : '');
+    document.getElementById('hdr-maxTotal').value = (draft.header.maxTotal != null ? draft.header.maxTotal : '');
     document.getElementById('hdr-type').textContent = draft.type || '-';
     renderPriceSummary();
+    renderGenStatus();
+  }
+
+  // Last-generated time + any generation flags (min_total_unmet / max_total_exceeded / no_candidate:SLOT).
+  // Read from currentBundle (freshest backend load), not the possibly-frozen draft.
+  function renderGenStatus() {
+    var el = document.getElementById('hdr-gen-status');
+    if (!el) return;
+    var g = (currentBundle || draft.gen || {});
+    var when = g.lastGenerated ? new Date(g.lastGenerated).toLocaleString() : '';
+    var flags = String(g.genFlags || '').split(';').filter(function(f) { return f; });
+    var parts = [];
+    if (when) parts.push('<span class="text-muted">Last generated ' + TaskWidgets.escape(when) + '</span>');
+    if (flags.length) {
+      var labels = flags.map(function(f) {
+        if (f === 'min_total_unmet') return 'below min total';
+        if (f === 'max_total_exceeded') return 'over max total';
+        if (f.indexOf('unfilled') === 0) return 'a slot’s category has no in-stock wine — restock or loosen criteria';
+        if (f.indexOf('over_ceiling') === 0) return 'a slot’s category has no wine within budget — widen the band';
+        if (f.indexOf('no_candidate') === 0) return 'a slot has no eligible wine';
+        return f;
+      });
+      parts.push('<span class="text-warning">&#9888; ' + TaskWidgets.escape(labels.join(', ')) + '</span>');
+    }
+    el.innerHTML = parts.length ? parts.join(' · ') : '<span class="text-muted">Not yet generated.</span>';
   }
 
   // Price = backend figures from the last load/save (BundleService._calculateBundlePrice; qty-0
@@ -718,9 +784,13 @@
 
   function onHeaderInput() {
     if (!draft) return;
-    draft.header.nameEn = document.getElementById('hdr-nameEn').value;
-    draft.header.nameHe = document.getElementById('hdr-nameHe').value;
+    // Name is read-only (web-derived) — not read here; draft keeps the loaded value untouched.
     draft.header.status = document.getElementById('hdr-status').value;
+    // Price band — empty string clears to null server-side; keep '' in the draft so the field stays blank.
+    var minV = document.getElementById('hdr-minTotal').value;
+    var maxV = document.getElementById('hdr-maxTotal').value;
+    draft.header.minTotal = (minV === '' ? '' : Number(minV));
+    draft.header.maxTotal = (maxV === '' ? '' : Number(maxV));
     markDirty();
   }
 
@@ -779,11 +849,16 @@
       ? '<strong>' + esc(r.productName || '(unknown product)') + '</strong>' +
         ' <span class="text-muted small">' + esc(r.activeSKU) + '</span>'
       : '<span class="text-warning">No product selected</span>';
+    // Slot category criterion in the collapsed row (the generator/picker pool is restricted to it).
+    var catStr = r.category
+      ? esc(r.category) + (r.category2 ? ' <span class="text-muted">/ ' + esc(r.category2) + '</span>' : '')
+      : '<span class="text-muted">any category</span>';
     return '<div class="comp-row' + (r._deleted ? ' deleted' : '') + '" data-cid="' + r.cid + '">' +
       '<div class="d-flex align-items-center comp-main">' +
         '<span class="comp-num">' + (n || '') + '</span>' +
         moveBtns(r, idx) +
         '<div class="flex-grow-1 mr-2 text-truncate">' + nameHtml + '</div>' +
+        '<div class="comp-cell mr-3 text-truncate small" style="width:120px;" title="Slot category">' + catStr + '</div>' +
         '<div class="comp-cell text-right mr-3" style="width:60px;" title="Retail price">' + priceStr + '</div>' +
         '<div class="comp-cell text-right mr-3" style="width:42px;" title="Profit rate">' + pctStr + '</div>' +
         '<div class="comp-cell text-center mr-3" style="width:42px;" title="Quantity">&times;' + Number(r.defaultQty) + '</div>' +
@@ -912,6 +987,57 @@
     var r = findRow(cid); if (!r) return;
     r._open = !r._open;
     renderComposition();  // UI-only; not a draft mutation
+  }
+  // Expand / collapse every product row's Details at once (UI-only). Opens all if any are closed,
+  // otherwise closes all; the button label follows.
+  function toggleAllDetails() {
+    if (!draft) return;
+    var prods = draft.slots.filter(function(r) { return !r._deleted && r.slotType === 'Product'; });
+    var anyClosed = prods.some(function(r) { return !r._open; });
+    prods.forEach(function(r) { r._open = anyClosed; });
+    renderComposition();
+    var btn = document.getElementById('btn-toggle-details');
+    if (btn) btn.textContent = anyClosed ? 'Close all details' : 'Open all details';
+  }
+
+  // Per-bundle EN/HE export meta (the serialized woosb_ids) for copy/paste testing into WPClever.
+  // Shown in the shared action-results panel; read-only, nothing is pushed.
+  function showExportMeta() {
+    if (!currentBundleId) return;
+    showResults('Export meta (EN / HE)', '<div class="text-muted"><span class="spinner-border spinner-border-sm mr-2"></span>Building…</div>');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.error) { showResults('Export meta (EN / HE)', '<div class="text-danger">' + esc(res && res.error || 'Failed') + '</div>'); return; }
+        var d = res.data || {};
+        var warn = (d.warnings && d.warnings.length)
+          ? '<div class="text-warning small mb-2">&#9888; ' + d.warnings.map(esc).join('; ') + '</div>' : '';
+        function block(label, id, val) {
+          return '<div class="mb-3"><div class="d-flex justify-content-between align-items-center mb-1">' +
+            '<strong>' + label + '</strong><button class="btn btn-sm btn-copy-meta" data-target="' + id + '" data-label="' + label + '">Copy</button></div>' +
+            '<textarea class="form-control form-control-sm" rows="3" readonly id="' + id + '" dir="ltr" style="font-family:monospace;">' + esc(val || '') + '</textarea></div>';
+        }
+        showResults('Export meta (EN / HE) — paste into WPClever',
+          warn + block('EN woosb_ids', 'meta-en', d.en) + block('HE woosb_ids', 'meta-he', d.he));
+        document.querySelectorAll('.btn-copy-meta').forEach(function(b) {
+          b.addEventListener('click', function() { copyTextarea(b.dataset.target, b.dataset.label); });
+        });
+      })
+      .withFailureHandler(function(err) { showResults('Export meta (EN / HE)', '<div class="text-danger">Failed: ' + esc(err.message) + '</div>'); })
+      .WebAppBundles_getBundleExportMeta(currentBundleId);
+  }
+
+  // Select + copy a read-only textarea (clipboard API is often blocked in the Apps Script iframe, so
+  // use the select + execCommand fallback; if that fails the text is already selected for manual copy).
+  function copyTextarea(id, label) {
+    var ta = document.getElementById(id);
+    if (!ta) return;
+    ta.focus(); ta.select(); ta.setSelectionRange(0, 999999);
+    try {
+      if (document.execCommand('copy')) TaskWidgets.toast(label + ' copied.', 'success');
+      else TaskWidgets.toast('Text selected — press Ctrl+C to copy.', 'info');
+    } catch (e) {
+      TaskWidgets.toast('Text selected — press Ctrl+C to copy.', 'info');
+    }
   }
   function setDeleted(cid, val) {
     var r = findRow(cid); if (!r) return;
@@ -1044,7 +1170,18 @@
       }
       return o;
     });
-    var header = { nameEn: draft.header.nameEn, nameHe: draft.header.nameHe, status: draft.header.status };
+    // Price band: '' clears to null server-side. Guard min ≤ max here too (backend re-validates).
+    var minT = draft.header.minTotal, maxT = draft.header.maxTotal;
+    if (minT !== '' && minT != null && maxT !== '' && maxT != null && Number(minT) > Number(maxT)) {
+      TaskWidgets.toast('Min total must be ≤ max total.', 'warning');
+      return;
+    }
+    // Name omitted — web-derived, never written (§7.1c-style); only status + band are jlmops-authored.
+    var header = {
+      status: draft.header.status,
+      minTotal: (minT === '' || minT == null) ? '' : Number(minT),
+      maxTotal: (maxT === '' || maxT == null) ? '' : Number(maxT)
+    };
 
     // Count named existing slots being removed (for the confirm prompt; blank/new rows are silent).
     var delCount = draft.slots.filter(function(r) {
@@ -1078,14 +1215,23 @@
     }
   }
 
-  // A saved composition change makes ops differ from web until exported (§7.5). The authoritative
-  // needsPush diff is recomputed by overnight housekeeping; optimistically flag this bundle now so
-  // the list/strip reflect "export pending" immediately.
-  function afterSaveRefresh() {
-    if (pushBundleIds.indexOf(String(currentBundleId)) === -1) pushBundleIds.push(String(currentBundleId));
-    renderDeficiencyStrip({ bundleId: currentBundleId });
-    loadBundleList();
+  // A composition change (save / Maintain / Re-roll) makes ops differ from web until exported (§7.5).
+  // The op's CONTROLLER recomputes + caches the authoritative ops≠web diff server-side; re-fetch it
+  // here so the strip + list reflect "Needs Push" immediately AND stay correct across a page refresh
+  // (the old optimistic in-memory flag was lost on reload — that was the "Matches web" bug).
+  function syncPushStatus() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && !res.error && res.data) {
+          pushBundleIds = (res.data.bundleIds || []).map(String);
+          if (currentBundleId) renderDeficiencyStrip({ bundleId: currentBundleId });
+          loadBundleList();
+        }
+      })
+      .withFailureHandler(function() { /* non-fatal — cache is correct on the next full view load */ })
+      .WebAppBundles_getPushStatus();
   }
+  function afterSaveRefresh() { syncPushStatus(); }
 
   function discardDraft() {
     if (!currentBundleId || !currentBundle) return;
@@ -1147,32 +1293,80 @@
     });
   }
 
-  // Generate Compositions (Stage 7): auto-fill value bundles — picks best wine per slot and writes it.
-  // Web export is the gate; nothing reaches the website until the operator exports.
+  // Renders a generator run's per-bundle results (Maintain or Re-roll — same shape). Status column
+  // reflects in-band / out-of-band flags from the band enforcement.
+  function renderGenResults(title, res, lead) {
+    var results = (res && res.results) || [];
+    var rows = results.map(function(r) {
+      if (r.error) {
+        return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td colspan="3" class="text-danger">' + TaskWidgets.escape(r.error) + '</td></tr>';
+      }
+      // Show ANY flag (band OR an unfilled/over-budget slot) — a bundle can be in-band yet still have a
+      // slot whose category couldn't be filled. Only "no flags at all" reads as success.
+      var fl = String(r.flags || '').split(';').filter(function(f) { return f; }).map(function(f) {
+        if (f === 'min_total_unmet') return 'below min';
+        if (f === 'max_total_exceeded') return 'over max';
+        if (f.indexOf('unfilled') === 0) return 'category out of stock';
+        if (f.indexOf('over_ceiling') === 0) return 'over budget';
+        if (f.indexOf('no_candidate') === 0) return 'slot unfilled';
+        return f;
+      });
+      var status = fl.length
+        ? '<span class="text-warning">' + TaskWidgets.escape(fl.join(', ')) + '</span>'
+        : '<span class="text-success">ok</span>';
+      return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td>' + r.changed + ' / ' + r.productSlots + '</td><td>₪' + r.baseTotal + '</td><td>' + status + '</td></tr>';
+    }).join('');
+    var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>Changed</th><th>Base Total</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    showResults(title, '<p class="text-success mb-2">' + lead + '</p>' + table);
+  }
+
+  // Maintain (Stage 7 rev 2.2): for every DEFICIENT bundle, re-pick only the broken slots and nudge
+  // the total into the band. Web export is the gate; nothing reaches the website until the operator exports.
   function generateCompositions() {
-    TaskWidgets.confirm('Auto-generate compositions for all value bundles? This replaces the wines in those bundles — review/edit after; nothing reaches the website until you Export.', function() {
+    TaskWidgets.confirm('Run Maintain on all bundles that need attention? Only the deficient slots are re-picked; the total is nudged into the price band. Review/edit after — nothing reaches the website until you Export.', function() {
       var btn = document.getElementById('btn-generate-compositions');
-      var restore = withButtonBusy(btn, 'Generating...');
+      var restore = withButtonBusy(btn, 'Maintaining...');
       google.script.run
         .withSuccessHandler(function(res) {
           restore();
           if (res && res.error) { TaskWidgets.toast('Error: ' + res.error, 'error'); return; }
-          var results = (res && res.results) || [];
-          var rows = results.map(function(r) {
-            if (r.error) {
-              return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td colspan="3" class="text-danger">' + TaskWidgets.escape(r.error) + '</td></tr>';
-            }
-            var flag = r.minTotalMet ? '<span class="text-success">OK</span>' : '<span class="text-warning">under ₪' + r.minTotal + '</span>';
-            return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td>' + r.changed + ' / ' + r.productSlots + '</td><td>₪' + r.total + '</td><td>' + flag + '</td></tr>';
-          }).join('');
-          var table = '<table class="table table-sm"><thead><tr><th>Bundle</th><th>Changed</th><th>Total</th><th>Min</th></tr></thead><tbody>' + rows + '</tbody></table>';
-          showResults('Generate Compositions',
-            '<p class="text-success mb-2">Generated ' + (res.generated || 0) + ' / ' + (res.totalBundles || 0) + ' value bundles. Review in the editor, then <strong>Export</strong> when ready.</p>' + table);
-          TaskWidgets.toast('Compositions generated.', 'success');
-          loadBundleList();
+          renderGenResults('Maintain',
+            res, 'Maintained ' + (res.generated || 0) + ' / ' + (res.totalBundles || 0) + ' bundle(s). Review in the editor, then <strong>Export</strong> when ready.');
+          TaskWidgets.toast('Maintain complete.', 'success');
+          // Reload the open bundle so the editor reflects the new wines — but only if it's clean, so
+          // we never clobber the operator's unsaved edits (their explicit Save still wins, ops-as-truth).
+          if (currentBundleId && !draftDirty) { clearDraft(currentBundleId); loadBundleForEditing(currentBundleId); }
+          syncPushStatus();
         })
         .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
         .WebAppBundles_generateCompositions();
+    });
+  }
+
+  // Re-roll (Stage 7 rev 2.2): explicit fresh lineup for the OPEN bundle — re-picks every product slot.
+  function rerollBundle() {
+    if (!currentBundleId) return;
+    if (draftDirty) { TaskWidgets.toast('Save or discard your edits before re-rolling.', 'warning'); return; }
+    TaskWidgets.confirm('Re-roll this bundle? Every wine is re-picked from scratch (higher churn). Review/edit after — nothing reaches the website until you Export.', function() {
+      var btn = document.getElementById('btn-reroll-bundle');
+      var restore = withButtonBusy(btn, 'Re-rolling...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restore();
+          if (res && res.error) { TaskWidgets.toast('Error: ' + res.error, 'error'); return; }
+          // No results card for a single-bundle re-roll — the editor reload + the generation-status
+          // line below already show the new wines, base total, and any flags. Just toast the outcome
+          // (warn if a slot couldn't be filled / the band wasn't met, so the failure still surfaces).
+          clearDraft(currentBundleId);
+          loadBundleForEditing(currentBundleId);
+          syncPushStatus();
+          var r = (res.results && res.results[0]) || {};
+          var hasFlags = String(r.flags || '').split(';').filter(function(f) { return f; }).length > 0;
+          if (hasFlags) TaskWidgets.toast('Re-rolled — some slots need attention (see status line).', 'warning');
+          else TaskWidgets.toast('Re-roll complete.', 'success');
+        })
+        .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
+        .WebAppBundles_rerollBundles(currentBundleId);
     }, { danger: true });
   }
 
@@ -1213,8 +1407,8 @@
         var d = result.data || {};
         var n = d.bundlesNeedingUpdate || 0;
         var msg = n > 0
-          ? n + ' bundle(s) have low/out-of-stock members — flagged as "Bundles Need Update". Run Generate Compositions to refresh them.'
-          : 'Bundle stock review complete — no bundles need updating.';
+          ? n + ' bundle(s) need attention (stock, criteria, or price band) — flagged as "Bundles Need Update". Run Maintain to refresh them.'
+          : 'Bundle review complete — no bundles need updating.';
         showResults('Review Stock', '<p>' + TaskWidgets.escape(msg) + '</p>');
       })
       .withFailureHandler(function(err) {

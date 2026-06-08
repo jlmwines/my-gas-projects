@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-08 — Stage 7 rev 2.2 generator BUILT + SHIPPED @267→@270; BUNDLE_PLAN complete
+
+- Built the rev-2.2 rework per Dispatch's 7-step order (@267), then iterated live across @268–@270. `getBundleDeficiencies` (richer gate) drives `task.bundles.needs_update`; `maintainBundles`/`rerollBundles` replace `generateValueBundles`/`_isValueBundle`; extracted `_matchesSlotCriteria` + `_buildBundleInventoryContext` (no dup).
+- **`sb_MaxTotal` appended at END of SysBundles** (mid-insert would corrupt LastGenerated/GenFlags data — `syncHeaders` only writes row 1). User added the column manually + ran rebuild. Editor Run button can't pass args → use `syncAllHeaders()` not `syncHeaders('SysBundles')` (noted for next time).
+- Live-test fixes: qty-weighted fill + high-qty-first ordering (fixed below-min re-roll); flex (qty-0) slots reversed twice → final **two-tier** (in-budget first, ≤1.5× overage when needed, no price-pull); unfillable base slot keeps+flags (never cross-category); **name read-only** (web-derived, was getting blanked); reimport now **preserves band+gen fields**; **push-status cache refreshed on edit** (fixed stale "Matches web" — it's cache-only, was never refreshed by edits, NOT a revert).
+- Editor: band fields + gen-status line, category-in-row, open-all-details, per-bundle **EN/HE export-meta copy panel**. Single-reroll results card dropped (kept for Maintain).
+- **EN+HE woosb paste verified flawless live** — the dual-language faithfulness was the whole point; user very happy ("beyond initial scope"). Misdiagnosed the "Matches web" cause once (blamed overnight revert) — user corrected (no housekeeping ran); root cause was the stale cache.
+- Next: full editor smoke; tune composite weights; rough spots from live use. Deferred knobs unchanged (price-cohesion, reroll-preview, overnight Maintain).
+
 ## 2026-06-07 (cont 8) — editor polish @252→@255 + Stage 3 tail (real margin) @256; commits
 
 - **Editor UX iterated live @252→@255** (all on the Phase 3 composition sheet): @252 compact content-sized criteria fields + "Criteria" label on the disclosure; @253 Qty + Flexible as fixed-width aligned columns (qtyVariable out of criteria, relabeled "Flexible", qty-0 pill dropped) + load spinner on row-click + picker spinner; @254 collapsed product row is now **read-only data** (name/SKU/price/%/×qty/Flexible) with ALL editing moved into a per-row **Details** disclosure (Replace + integer Quantity + Flexible + criteria), narrower reorder arrows, profit as % only; @255 Replace shares the Details row, right-aligned (margin-left:auto).

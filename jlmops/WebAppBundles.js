@@ -374,10 +374,25 @@ function WebAppBundles_deleteSlot(slotId) {
 function WebAppBundles_saveComposition(bundleId, header, slots) {
   try {
     const bundle = BundleService.saveComposition(bundleId, header, slots);
+    _refreshBundlePushStatusQuietly('saveComposition');   // keep the ops≠web cache fresh post-edit
     return { error: null, data: bundle };
   } catch (e) {
     LoggerService.error('WebAppBundles', 'saveComposition', `Error saving composition for ${bundleId}: ${e.message}`, e);
     return { error: `Error saving composition: ${e.message}`, data: null };
+  }
+}
+
+/**
+ * Recompute + cache the bundle push-status after a composition-changing op (save / Maintain / Re-roll),
+ * so the "Needs Push" cache reflects ops≠web immediately instead of waiting for overnight housekeeping
+ * (the cache is otherwise only written by HousekeepingService.refreshBundlePushStatus). Best-effort:
+ * a refresh failure must never fail the underlying edit.
+ */
+function _refreshBundlePushStatusQuietly(caller) {
+  try {
+    housekeepingService.refreshBundlePushStatus();
+  } catch (e) {
+    LoggerService.warn('WebAppBundles', caller, `Push-status refresh after ${caller} failed (non-fatal): ${e.message}`);
   }
 }
 
@@ -797,20 +812,44 @@ function WebAppBundles_pullBundleProducts() {
 }
 
 /**
- * Generate Compositions button (BUNDLE_PLAN Stage 7): auto-generates value-bundle compositions —
- * picks the best wine per product slot (profit + diversity + featured + stock) and WRITES it into
- * the slots. Structure-preserving. Web export remains the gate; nothing reaches the site until export.
+ * Maintain button (BUNDLE_PLAN Stage 7 rev 2.2): conservative refresh — for every DEFICIENT bundle
+ * (stock / criteria-miss / over slot.priceMax / total outside the price band) re-picks ONLY the
+ * deficient slots and nudges the total into [sb_MinTotal, sb_MaxTotal]. Keeps every still-valid wine.
+ * Structure-preserving. Web export remains the gate; nothing reaches the site until export.
  * @returns {Object} { totalBundles, generated, results } (or { error } on failure)
  */
 function WebAppBundles_generateCompositions() {
   const serviceName = 'WebAppBundles';
   const functionName = 'generateCompositions';
   try {
-    LoggerService.info(serviceName, functionName, 'Stage 7 generate value-bundle compositions');
-    return BundleService.generateValueBundles();
+    LoggerService.info(serviceName, functionName, 'Stage 7 Maintain — refresh deficient bundle slots');
+    const result = BundleService.maintainBundles();
+    _refreshBundlePushStatusQuietly('maintainBundles');   // generated bundles now differ from web
+    return result;
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Generate Compositions failed: ${e.message}`, e);
-    return { error: `Generate Compositions failed: ${e.message}`, totalBundles: 0, generated: 0, results: [] };
+    LoggerService.error(serviceName, functionName, `Maintain failed: ${e.message}`, e);
+    return { error: `Maintain failed: ${e.message}`, totalBundles: 0, generated: 0, results: [] };
+  }
+}
+
+/**
+ * Re-roll button (BUNDLE_PLAN Stage 7 rev 2.2): explicit fresh lineup — re-picks EVERY product slot
+ * for the given bundle (or all non-archived bundles when bundleId is omitted). Higher churn; for a
+ * seasonal reset / new bundle / "give me new wines". Web export remains the gate.
+ * @param {string} [bundleId] - re-roll just this bundle; omit for all non-archived bundles
+ * @returns {Object} { totalBundles, generated, results } (or { error } on failure)
+ */
+function WebAppBundles_rerollBundles(bundleId) {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'rerollBundles';
+  try {
+    LoggerService.info(serviceName, functionName, `Stage 7 Re-roll — ${bundleId || 'all non-archived bundles'}`);
+    const result = BundleService.rerollBundles(bundleId);
+    _refreshBundlePushStatusQuietly('rerollBundles');   // re-rolled bundles now differ from web
+    return result;
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Re-roll failed: ${e.message}`, e);
+    return { error: `Re-roll failed: ${e.message}`, totalBundles: 0, generated: 0, results: [] };
   }
 }
 
@@ -924,4 +963,27 @@ function WebAppBundles_getPushStatus() {
  */
 function runRefreshBundlePushStatus() {
   return housekeepingService.refreshBundlePushStatus();
+}
+
+/**
+ * Per-bundle export meta for copy/paste testing — the serialized EN + HE woosb_ids the operator pastes
+ * into WPClever, plus any out-of-stock warnings. Lets a single bundle be verified without running the
+ * full Export sheet. Read-only; nothing is pushed.
+ * @param {string} bundleId
+ * @returns {Object} { error, data: { en, he, warnings:[] } }
+ */
+function WebAppBundles_getBundleExportMeta(bundleId) {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'getBundleExportMeta';
+  try {
+    const en = BundleService.exportBundleWoosb(bundleId, 'en');
+    const he = BundleService.exportBundleWoosb(bundleId, 'he');
+    return {
+      error: null,
+      data: { en: en.json, he: he.json, warnings: [].concat(en.warnings || [], he.warnings || []) }
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `getBundleExportMeta failed for ${bundleId}: ${e.message}`, e);
+    return { error: `Could not build export meta: ${e.message}`, data: null };
+  }
 }
