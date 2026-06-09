@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-09 07:30',
-  commit: 'Bundle editor Phase 5 (@284-@285): inline-at-row editor (persistent node, mounts under the active row, survives list re-renders) + per-bundle EN/HE export panel inside the row (retires the orphaned-panel bug) + single-bundle Maintain/Update-from-web; native discard confirm -> TaskWidgets.confirm; removed the 300px list-wrapper height cap that clipped the inline editor.'
+  built: '2026-06-09 07:37',
+  commit: 'Bundle view mobile-friendly @286 (≤768px): card-header titles stack above their buttons, full-width stacked button bars with separation, filter chips gapped + name filter full-width. CSS-only (one media query + bundle-card-header/bundle-btnbar marker classes); desktop unchanged. On top of Phase 5 @284-@285 (inline-at-row editor + per-bundle export panel + single-bundle Maintain/Update).'
 };
 
 function getVersion() {

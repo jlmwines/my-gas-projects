@@ -4,7 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
-## 2026-06-08 (cont 3) — Bundle Stage 7 UI session @275→@282 + inventory reorg + overdue fix
+## 2026-06-09 — Bundle editor Phase 5 (ADMIN_BUNDLES_UI_PLAN §9) BUILT + SHIPPED @284→@286
+
+- Pulled Phase 5 forward (was deferred). **A — inline-at-row editor:** the editor is one persistent node that mounts into an expansion `<tr>` under the active row and parks back home (hidden) before every `loadBundleList()` `tbody.innerHTML` (save/Maintain/Review re-render), then re-mounts — so the open editor + in-progress draft survive the refresh. Accordion toggle. Key trap found by reading the refresh paths first: `saveComposition`→`afterSaveRefresh`→`syncPushStatus`→`loadBundleList` re-renders the tbody mid-edit, which would destroy a naively-moved node.
+- **B — per-bundle export inside the row:** EN/HE export-meta now renders in `#editor-export-meta` inside the editor card (toggle, self-clears on load/edit/render), so it parks/closes with the row — retires the orphaned-panel bug. Shared bottom panel now reserved for GLOBAL batch results only (no longer wiped on close/switch/save). **C — single-bundle ops:** `BundleService.maintainBundle(bundleId)` + `WebAppBundles_maintainBundle`; `WebAppBundles_updateComposition(bundleId)` via filtered `reimportAllBundles(bundleId)`; new editor-header Maintain + Update-from-web buttons. Re-roll was already single.
+- Cleanups: native `window.confirm` → `TaskWidgets.confirm` on editor close (split `closeEditor`/`doCloseEditor`); dropped the redundant `hideActionResults()` from save + removed the now-dead helper.
+- Post-deploy smoke fixes: **@285** removed the `max-height:300px` list-wrapper cap that clipped the inline editor; **@286** mobile pass (≤768px) — card-header titles stack above full-width stacked button bars, chips gapped, name filter full-width (CSS-only). VERSION.commit kept current each deploy.
+- Also this session: `.claude/bugs.md` jlmops Open section groomed (15 resolved `[x]` entries moved to Resolved (recent); Open now = 6 real bugs); Stage 7 full editor smoke marked PASSED (user ran a clean full sync + bundle cycle).
+- Committed `798abf4` (A/B/C + bugs cleanup) + pushed. **Uncommitted still:** @285/@286 fixes + WebApp VERSION + STATUS — pending a second commit (user said "update status, docs, archive"; git left for explicit go). Next: composite-weight tuning of the generator's rough spots; otherwise bundle work is current.
 
 - **Admin Inventory lazy-load (@275-ish):** same long-load fix as Admin Products. Mount loads Counts-to-Review + Comax sync + Open manager-inventory Tasks (valuable, populates on load, sits after Comax sync); Create Count + Costs&Margins collapse + lazy-load. Card order: Review / Comax / OpenTasks / CreateCount / Costs.
 - **Overdue date-only fix:** `TaskWidgets.isOverdue(dueDate,status)` — overdue iff due DATE < today (a task due *today* is not past-due). Routed ManagerDashboard / AdminProjects / AdminTasks through it (manager-dash was showing today's packing slips in red).

@@ -18,17 +18,28 @@
 .comp-cell { font-size: 0.9em; flex: 0 0 auto; }
 .btn-move { padding: 1px 5px; line-height: 1.2; }
 .crit-grid label { font-size: 0.75em; color: #6c757d; margin-bottom: 1px; display: block; }
+/* Mobile (≤768px): the view is desktop-first, but make the toolbars usable in a pinch — stack each
+   card-header's title above its action buttons, full-width stacked buttons with clear separation,
+   and let the filter chips + name box wrap/fill instead of cramming. */
+@media (max-width: 768px) {
+  .bundle-card-header { flex-direction: column; align-items: stretch !important; }
+  .bundle-card-header > h5 { margin-bottom: .5rem; }
+  .bundle-btnbar { display: flex; flex-direction: column; align-items: stretch; }
+  .bundle-btnbar > .btn { width: 100%; margin: 0 0 .4rem 0 !important; }
+  #bundle-chips-row { gap: .35rem .25rem; }
+  #bundle-name-filter { width: 100% !important; margin-top: .25rem; }
+}
 </style>
 <div class="container-fluid">
   <!-- Section 1: Bundle Dashboard -->
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center" style="background: transparent;">
+        <div class="card-header bundle-card-header d-flex justify-content-between align-items-center" style="background: transparent;">
           <h5>Bundle Management</h5>
           <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). Update
                Composition is a web→ops utility (new/re-baseline bundles), set apart at the end. -->
-          <div>
+          <div class="bundle-btnbar">
             <button id="btn-review-stock" class="btn btn-sm mr-2">Review</button>
             <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
             <button id="btn-export-bundles" class="btn btn-sm mr-2">Export</button>
@@ -79,9 +90,9 @@
   <div class="row" id="bundle-editor-section" style="display: none;">
     <div class="col-12">
       <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header bundle-card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Bundle Editor</h5>
-          <div>
+          <div class="bundle-btnbar">
             <button id="btn-maintain-bundle" class="btn btn-sm mr-1">Maintain</button>
             <button id="btn-reroll-bundle" class="btn btn-sm mr-1">Re-roll</button>
             <button id="btn-update-bundle" class="btn btn-sm mr-1 text-muted">Update from web</button>
@@ -135,7 +146,7 @@
           <!-- One ordered composition list (§7.4): text headers + product rows -->
           <div id="composition-list"></div>
 
-          <div class="mt-2">
+          <div class="mt-2 bundle-btnbar">
             <button id="btn-add-text" class="btn btn-sm mr-1">+ Add Text</button>
             <button id="btn-add-product" class="btn btn-sm mr-1">+ Add Product</button>
             <button id="btn-export-meta" class="btn btn-sm">Export meta (EN/HE)</button>
