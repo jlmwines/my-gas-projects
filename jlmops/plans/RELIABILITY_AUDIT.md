@@ -39,6 +39,8 @@ Two artifacts to build and maintain:
 
 **Concrete next step (user-requested):** audit current detection coverage against these classes and produce the actual gap list (which aggregators don't union archive; which FK edges have no orphan check; what isn't archiving). That gap list feeds the tiers below and seeds the register. Every detected violation must terminate in `reportFailure` (→ self-healing task via `resolveFailure`, see `SYSTEM_TASK_LIFECYCLE_PLAN.md`) AND the status export, so neither the user nor a CLI session has a blind spot.
 
+**DONE 2026-06-09 — the audit ran and the register exists: `jlmops/plans/DETECTION_REGISTER.md`.** It catalogs every invariant across the five classes with check-or-GAP, anchor, severity, and whether each terminates in `reportFailure` + is surfaced. Dominant finding: the gap class is not missing *detection* but **Detect-but-don't-Communicate** (archiving-stall, library-integrity, bundle-health, validation-suite, schema-validation all log/passive-task only) plus **Display-but-don't-Detect** (integration heartbeats shown but never thresholded into an alert). The register's gap summary proposes four low-risk Tier-3 sessions (liveness+heartbeat-alerting; wire-detectors-to-reportFailure; master∪archive read fixes; orphan-scan = the still-open 3.4). Maintain the register going forward via its New-feature reliability gate.
+
 ## 2. Scope
 
 **In scope**
