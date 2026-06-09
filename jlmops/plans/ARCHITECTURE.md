@@ -249,9 +249,11 @@ The system is designed to be resilient and transparent about failures, incorpora
 
 All significant operations and events are logged to the `SysLog` sheet in the dedicated `JLMops_Logs` spreadsheet. This provides a comprehensive audit trail for debugging and performance monitoring. Key service functions are wrapped in `try/catch` blocks to ensure that both successful (`INFO`) and failed (`ERROR`) operations are captured.
 
-### 4.2. Real-Time Alerting
+### 4.2. Alerting
 
-For critical failures, the system provides immediate notifications via Google Chat. When the central `LoggerService` captures an `ERROR` level event, it automatically sends a concise alert to a pre-configured webhook URL stored in `SysConfig`. This ensures that administrators are notified of problems the moment they occur.
+For failures, `NotificationService.reportFailure(context, message, severity, details, sessionId)` is the central path. It is **severity-routed** via `SeverityService.getBehavior` (Critical / High / Normal): the log level is set accordingly, a de-duplicated `task.system.failure` is created (an existing open task for the same context gets an incremented `occurrenceCount` rather than a duplicate), and for High/Critical the `task.system.health_status` singleton is updated with an `urgentAlerts` entry. `resolveFailure(context)` auto-closes the task when the condition clears. Administrators see failures via the **dashboard health widget** (and the `jlmops-status.md` export).
+
+**No out-of-band push alert exists.** (Corrected 2026-06-09 by code re-verify — a prior version of this section claimed a Google Chat webhook on ERROR; there is none: `LoggerService` makes no `UrlFetchApp` call and no webhook URL is wired anywhere.) Alerting is dashboard-pull only. Adding a push bridge (Chat/email) — or formally accepting dashboard-only — is an open item in `RELIABILITY_AUDIT.md` §3.5.
 
 ### 4.3. Recovery & Dead Letter Queue
 

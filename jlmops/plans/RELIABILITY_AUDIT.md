@@ -77,7 +77,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 - No documented restore procedure (steps, who, RTO).
 - No post-write integrity check on a snapshot (silent corruption is invisible until the drill).
 - No row-count baselines per sheet; size drift is invisible.
-- No scheduled aggregate-consistency check (e.g., `SysContacts.sc_OrderCount` vs `WebOrdM` row count per email; open bug 2026-05-28).
+- No scheduled aggregate-consistency check (e.g., `SysContacts.sc_OrderCount` vs `WebOrdM` row count per email). **The underlying bug is fixed (1.1, @201); the *scheduled* check is Tier 3.4 — still open.** (All other §3.1 snapshot/DR gaps below remain open — Tier 4 not started.)
 
 ### 3.2 Code and deployment
 
@@ -87,18 +87,18 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 
 **Recovers via.** Git revert + redeploy. Pinned ID lookup. Manual `clasp undeploy` to clean orphans.
 
-**Who notices.** `validateDeployment` housekeeping check, currently broken (`.claude/bugs.md` 2026-05-27).
+**Who notices.** Drift is now prevented at the source: the `deploy.ps1` wrapper is the only deploy path and pins `--deploymentId`, so bare-deploy orphans can't form (Tier 2.1, 2026-06-03). The broken `validateDeployment` detector was removed.
 
 **Gaps.**
-- `validateDeployment` does not actually detect drift; compares two values GAS has no reason to keep equal.
-- Four orphan deployments accumulated (@66, @67, @73, @96) and have never been cleaned.
-- No external drift check (e.g., a local `clasp deployments` diff against an expected-IDs file).
-- No deploy log on Sheets side; only git captures what shipped when.
-- No rollback drill on record.
+- ✓ **CLOSED (2.1, 2026-06-03)** — `validateDeployment` removed; it never reliably detected drift. Root-cause prevention (pinned-ID wrapper) replaces detection.
+- ✓ **CLOSED (2.1, 2026-06-03)** — the four orphan deployments (@66, @67, @73, @96) were undeployed.
+- ✓ **RESOLVED-BY-DESIGN (2.1)** — no external drift check built; deemed unnecessary while the pinned-ID wrapper is the sole deploy path. Reopen only if bare `clasp deploy` ever returns.
+- No deploy log on Sheets side; only git captures what shipped when. **(still open)**
+- No rollback drill on record. **(still open)**
 
 ### 3.3 Triggers and execution
 
-**In place.** Time-driven triggers: hourly orchestrator, 15-minute `runFrequentMaintenance` (Sun-Thu 08-20 IL plus Fri 08-13 IL), daily housekeeping. Zombie killer (15-min stuck-PROCESSING) plus inline reaper in the poll path (8-min, shipped 2026-05-05 as @80).
+**In place** (deep code re-verify, 2026-06-09 — all confirmed). Time-driven triggers: hourly orchestrator, 15-minute `runFrequentMaintenance` (Sun-Thu 08-20 IL plus Fri 08-13 IL — cadence guard verified at `HousekeepingService.js:532, :550-562`), daily housekeeping. Zombie killer (15-min stuck-PROCESSING → FAILED + reportFailure, verified `OrchestratorService.js:566-603`) plus inline reaper in the poll path (`_reapStuckJobInSession`, 8-min `STUCK_JOB_THRESHOLD_MIN`, verified `:1105, :1179`; called from `_checkAndAdvanceSyncState` at `:1190/:1231/:1268`; shipped 2026-05-05 as @80). **Trigger management nuance:** only ONE trigger is installed by code (`runPostSyncBundleHealth`, `SyncStateService.js:133`); the hourly / 15-min / daily triggers are **created manually in the Apps Script Triggers UI**, so a deleted trigger is not self-reinstalled — sharpening the liveness gap below.
 
 **Fails when.** GAS hits the 6-minute hard execution limit mid-job. Trigger silently disabled (deleted by accident, OAuth scope revoked, account quota hit). Quota exhausted (UrlFetchApp daily limit, MailApp daily limit, drive operations).
 
@@ -106,12 +106,12 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 
 **Who notices.** `SysLog` (after the fact); user (when a workflow stalls).
 
-**Gaps.**
-- No trigger-health heartbeat (no record of "did the daily housekeeping run finish today?").
+**Gaps** (all still open as of 2026-06-09 deep re-verify).
+- No trigger-health heartbeat (no record of "did the daily housekeeping run finish today?"). **Sharpened:** since the hourly/15-min/daily triggers are UI-managed (not code-installed — see In place), an accidentally-deleted trigger silently stops with nothing to re-add or detect it.
 - Execution-time trends invisible; we know runs are getting longer only by anecdote.
 - Quota usage invisible.
 - OAuth scope revocations require a pre-emptive warning (memory exists) but no automated detector.
-- **No concurrency control between scheduled triggers and user-initiated workflows.** Housekeeping running while a user mid-syncs (or two triggers stepping on the same `SysJobQueue` row) is undefended; the zombie killer is not a concurrency control.
+- **No concurrency control between scheduled triggers and user-initiated workflows. (Tier 1.3 — NOT built; highest-risk remaining session.)** Housekeeping running while a user mid-syncs (or two triggers stepping on the same `SysJobQueue` row) is undefended; the zombie killer is not a concurrency control. Confirmed greenfield: `ScriptApp.newTrigger` appears once and `LockService` appears nowhere in code.
 
 ### 3.4 Integrations
 
@@ -124,23 +124,24 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 **Who notices.** `SysLog` ERROR → Google Chat webhook for hard failures. Silent staleness (last successful pull was 48 hours ago and nobody alerts) is invisible.
 
 **Gaps.**
-- No integration heartbeat per source (no last-successful-pull view).
-- **`woo.api.orders_last_pull` heartbeat key is dead** — declared in `config/system.json` and read at `WebAppSync.js:1058`, but `WooOrderPullService.pullOrders` never writes it. Separate bug to fix as part of the heartbeat session.
-- No rate-limit usage visibility.
-- Mailchimp campaign sends are pulled at aggregate level only; per-recipient activity log writes are missing (`.claude/bugs.md` 2026-05-28).
+- ✓ **CLOSED (3.1, 2026-06-03)** — Integrations heartbeat card on the admin dashboard shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds. **Comax heartbeat still omitted** (no config key; lives in SysJobQueue COMPLETED rows) — small 3.1 follow-up.
+- ✓ **CLOSED (3.1, 2026-06-03)** — `woo.api.orders_last_pull` dead key now written by `WooOrderPullService.pullOrders` on success + added to `RUNTIME_KEYS`.
+- No rate-limit usage visibility. **(still open)**
+- Mailchimp campaign sends are pulled at aggregate level only; per-recipient activity log writes are missing (`.claude/bugs.md` 2026-05-28). **(still open — Tier 3.3 not built)**
 
 ### 3.5 Observability
 
 **In place.** Centralized `SysLog` writes via `LoggerService`. `NotificationService.reportFailure` creates a system task on failure. System health widget on the admin dashboard reading `task.system.health_status`.
 
-**Verification note.** `ARCHITECTURE.md` §4.2 claims a Google Chat webhook fires on ERROR; code review (`LoggerService.js`, `NotificationService.js`) found a task-creation path but no direct webhook code. Either the webhook lives elsewhere unverified, or the doc overstates reality. Resolve in Tier 2 alongside the heartbeat panel.
+**Verification note — RESOLVED (deep code re-verify, 2026-06-09).** The Google Chat webhook `ARCHITECTURE.md` §4.2 claims **does not exist in code.** Confirmed three ways: no `chat.googleapis.com`/`webhook` string anywhere in `*.js`; no `UrlFetchApp` in `NotificationService.js`; no fetch/mail in `LoggerService.js`. The alerting path is task-creation + health-status only. **ARCHITECTURE.md §4.2 overstates reality and should be corrected** (no out-of-band push alert exists — a failure is only seen by opening the dashboard).
 
-**Gaps.**
-- Chat-alert path unverified end-to-end (see verification note).
-- All failures task-create at the same level; no severity routing, no rate limit.
-- No trend dashboard; SysLog accumulates but is not summarized.
-- No "is the system healthy this morning" snapshot beyond the single health task.
-- No SLO targets to compare against.
+**Gaps (deep code re-verify, 2026-06-09).**
+- ✓ **CORRECTED — there IS severity routing.** `NotificationService.reportFailure` calls `SeverityService.getBehavior(severity)` and routes by it: log level (Critical→error / High→warn / Normal→info, `:27`), `createTask` gate, `updateHealthStatus` gate (**Normal is excluded from the health-status escalation**, `:36`), and `shouldStop` (Critical halts the caller). `SeverityService.determineSeverity` maps contexts→levels. The old "all at the same level" claim was wrong.
+- ✓ **CORRECTED — there IS de-dup/rate-limiting.** `_createFailureTask` (`:59-83`) dedups by `entityId` derived from context: an existing open `task.system.failure` is updated with an incremented `occurrenceCount` instead of spawning duplicates. `resolveFailure` (`:241`) auto-closes the task when the condition clears; `urgentAlerts` capped at last 10. (Still missing: a *time-window* throttle, but task spam is prevented.)
+- **Chat/out-of-band push alert: confirmed ABSENT** (above). A failure reaches a human only via the dashboard health widget — no push. **(still open — build a push bridge OR formally accept dashboard-only + drop the §4.2 claim.)**
+- No true trend dashboard; SysLog is now **partially** summarized — Tier 3.2's `jlmops-status.md` carries a Recent-errors tail + capacity, but no time-series. **(partially addressed; trend view still open.)**
+- "Is the system healthy this morning" — **partially addressed**: the health task now carries `failed_job_*` (2.2), `urgentAlerts`, and integration heartbeats (3.1); `jlmops-status.md` (3.2) is the readable snapshot. **(largely addressed; no single SLO-scored verdict.)**
+- No SLO targets enforced/compared (the §4 capability targets exist on paper only). **(still open.)**
 
 ### 3.6 Data quality
 
@@ -149,10 +150,10 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 **Who notices.** Validation failures land in `SysLog`; the system health task picks up critical counts. No standalone notifier for data-quality drift; if SysLog isn't being read, drift is invisible.
 
 **Gaps.**
-- Aggregate-consistency check missing (open bug 2026-05-28 on SysContacts vs WebOrdM).
-- Test-suite freshness unverified; `TESTING_GUIDE.md` last touched 2025-12-08 (`TECH_DEBT_AUDIT.md` §1.7). If the tests pass-by-default because they error out cleanly, daily housekeeping is silently green on broken tests.
-- No scheduled cross-system reconciliation (e.g., Comax row counts vs WebProdM, WC API order count vs WebOrdM rolling window).
-- No defense against adversarial inputs. Specifically (corrected post code-anchor pass):
+- ✓ **PARTLY CLOSED** — the SysContacts vs WebOrdM aggregate *bug* is fixed (1.1, @201 2026-06-02); the *scheduled* weekly consistency check (Tier 3.4) is **still open**.
+- ✓ **CLOSED (2.3, 2026-06-03)** — `ComaxAdapterTest`/`WebAdapterTest`/`ProductServiceTest` rewritten to call real code (were decorative); Phase-2 empty/null-result guard (`tests.empty_or_null_result`, High) added, so housekeeping can no longer be silently green on broken tests.
+- No scheduled cross-system reconciliation (e.g., Comax row counts vs WebProdM, WC API order count vs WebOrdM rolling window). **(still open)**
+- ✓ **CLOSED (1.2, 2026-06-03, all 3 stages)** — adversarial-input defense shipped: WC response size cap (`woo.api.response_max_bytes`), Comax adapter outer try, Doc-bound bidi sanitization. (Formula-prefix guard intentionally omitted — wrong surface for a Doc; revisit if a slip→Sheets export is built.) Original detail retained below for record:
   - Oversized WC response → memory blow. Single chokepoint at `WooApiService.js:127-136` `_fetch` has no `Content-Length` check before `getContentText() + JSON.parse`.
   - Comax CSV parser. Plan-claim "leaves state machine in IMPORTING_COMAX" is wrong: `OrchestratorService.js:1218` already routes parse failures to FAILED with `failedAtStage='IMPORTING_COMAX'`, and retry returns to `WAITING_COMAX_IMPORT` correctly. The actual gap is narrower: `Drive.Files.insert` at `ComaxAdapter.js:31` lacks a top-level try.
   - Doc-bound text injection. Plan-claim "customer notes injecting into Doc templates" is wrong: grep across `jlmops/` finds zero `replaceText` calls; `customerNote` is read at `WebApp.js:163` and `WebAppOrders.js:160` for UI display only, never written to Docs. The real injection surface is the shipping address fields at `PrintService.js:180-188` (formula `=` if a slip is exported to Sheets; U+202E RTL flip on the operator's view).
@@ -877,7 +878,7 @@ To be written end-to-end during the Tier 4.2 drill session. Pre-decided structur
 
 Trimmed in v2. Only session-level unknowns that can be resolved at session start remain (most v1 questions either resolved or moved into per-session "Open" fields in §5).
 
-- **Chat webhook reality.** Did `ARCHITECTURE.md` §4.2's claim ever ship, or was it aspirational? Code agent found task-creation path in `NotificationService.reportFailure` but no `UrlFetchApp.fetch` to a Chat webhook. Resolve in Tier 3.1.
+- ~~**Chat webhook reality.**~~ **RESOLVED 2026-06-09 (deep code re-verify): the webhook does NOT exist in code** (no `chat.googleapis.com`/`webhook` in any `*.js`, no `UrlFetchApp` in `NotificationService.js`). It was aspirational. `ARCHITECTURE.md` §4.2 corrected. Decision still owed: build a push bridge OR formally accept dashboard-only alerting.
 - **`task.system.*` UI close path scope.** Uniform across all system task types, or just `validateDeployment`? Resolve in Tier 2.1.
 - **GitHub presence.** Is any jlmwines repo on github.com with secret-scanning available? Affects Tier 6.3 spike depth.
 - **External-contractor candidates** for Tier 6.4 contact tree.
@@ -892,6 +893,8 @@ Trimmed in v2. Only session-level unknowns that can be resolved at session start
 3. **Adversarial blind-spot review** — P0 modes added as new surfaces §3.7 (secrets), §3.8 (bus factor), §3.9 (vendor/account integrity); P1 modes folded into §3.6 (adversarial inputs) and Tier 3 item 12; P1 DSAR + P2 WC-compromise folded into new Tier 5.
 
 Convergent findings (multiple agents agreed): bus factor as primary risk, same-Drive snapshots not real DR, secrets surface entirely missing from v0.
+
+**Self-refresh checkpoint #1 (2026-06-09).** ~7 of 16 sessions had shipped (the 2026-06-03 push) with no §3 reality re-check — per §5/§6 the checkpoint fires every 3 shipped sessions, so it was overdue. This pass reconciled the §3 "current state / Gaps" inventory against the shipped session Status notes and annotated closed gaps inline (✓): §3.1 (1.1 aggregate bug fixed; scheduled check 3.4 still open), §3.2 (2.1 — `validateDeployment` removed at root + orphans undeployed), §3.4 (3.1 — heartbeat card + `orders_last_pull` fix; Comax heartbeat + Mailchimp per-recipient still open), §3.6 (1.2 input-safety all 3 stages + 2.3 real tests). **Deep code re-verify (2026-06-09, same day) — DONE for §3.3 + §3.5** (the part flagged as owed): (a) **Chat webhook confirmed ABSENT** — no `chat.googleapis.com`/`webhook` in any `*.js`, no `UrlFetchApp` in `NotificationService.js`, no fetch/mail in `LoggerService.js`; `ARCHITECTURE.md` §4.2 overstates and was corrected. (b) **§3.5 severity routing + dedup CORRECTED to "exists"** — `reportFailure`→`SeverityService.getBehavior` routes by level, `_createFailureTask` dedups by entityId, `resolveFailure` self-heals. (c) **§3.3 confirmed accurate** — zombie killer `OrchestratorService.js:566`, inline reaper `:1105` (8-min), business-hours guard `HousekeepingService.js:550`; nuance added that only `runPostSyncBundleHealth` is code-installed (rest UI-managed) and `LockService`/`ScriptApp.newTrigger` confirm 1.3 is greenfield. §3.4 (rate-limit visibility) + a fresh §3.6 cross-reconciliation re-grep remain for a future checkpoint. Open work of highest value: **1.3 concurrency** (greenfield LockService, real race exposure today) and **4.1 snapshots** (no DR exists yet).
 
 ## 10. Status
 
@@ -913,7 +916,7 @@ Draft v2.1 written 2026-05-28. Self-critique pass identified 14 issues; all fold
 
 **Plan now covers 16 sessions across 6 tiers** (was 14 in v2; +1 for Mailchimp moved up, +1 for V2 dashboard refactor deferred from 3.2). Sessions 1.2 and 1.3 ship multiple staged deploys, so total deploy count is higher than session count.
 
-**Ready to ship.** First session: **Tier 1.1 SysContacts aggregate fix** — anchored bug root, no dependencies, low rollback risk.
+**Progress (2026-06-09 self-refresh checkpoint #1).** ~7 of 16 sessions shipped, all in the 2026-06-03 push: **1.1** (SysContacts aggregate fix, @201), **1.2** (input-safety, 3 stages), **2.1** (drift — resolved at root, detector removed), **2.2** (FAILED-job sweep), **2.3** (real test suites + empty-result guard), **3.1** (integration heartbeats + `orders_last_pull` fix), **3.2** (status-export live blocks; KPI block deferred). **Open:** 1.3 concurrency (highest-risk, greenfield — not started), 3.2 KPI block, 3.3 Mailchimp per-recipient activity, 3.4 scheduled aggregate-consistency check, and all of Tier 4 (DR — snapshots/restore), Tier 5 (capacity), Tier 6 (crisis/human). Highest-value next: **1.3** (live race exposure) or **4.1** (no DR yet). Original "ready to ship" note (now historical): first session was Tier 1.1.
 
 Prior-version notes (superseded; kept for traceability):
 
