@@ -17,9 +17,19 @@ Let JLMops selectively export operational signal (system errors, KPIs) to a plac
 
 The sections below retain the fuller push-mode design for if/when it's wanted — treat them as deferred detail, not current scope.
 
+## Review pass (2026-06-10)
+
+Re-checked the plan against shipped code and the consumer skill. The bridge is **half-open: the producer shipped, the consumer was never wired.**
+
+- **P0 producer — SHIPPED 2026-06-03** (@217, commit `437e015`). `StatusReportService.refreshLiveBlocks` writes `jlmops-status.md` to the exports folder on every productive `performFrequentMaintenance` fire. Live blocks only (System / Integrations / Queue / Data quality / Capacity / Recent errors); KPI block still deferred. The "**Not built yet**" notes in "What already exists" below are stale — see `RELIABILITY_AUDIT.md` §3.2 for the as-built detail (and its three documented deviations: KPI block deferred, find-or-create-by-name placement, productive-fires-only refresh).
+- **P0 consumer — NOT done (open gap).** The plan's load-bearing pull-mode consume step was "fold *read the ops status, flag anything needing attention* into `/review-daily`." That never happened: `/review-daily` (and `/review-deep`) read STATUS / session-log / CALENDAR / bugs but **never read `jlmops-status.md` via Drive MCP** (confirmed: no command file references the export). So the producer writes the file every ~15 min and nothing in the routine reads it — the export's only intended consumer does not exist yet. The interactive consume path is buildable today (Drive MCP can read the single markdown file by ID, `reference_drive_files`), so this is a one-skill-edit gap, not blocked on anything. **Next action for this plan = add the export to `/review-daily`'s "Reads" step.**
+- **Open question #1 (headless Drive MCP) still gates P1–P3** and is untouched — correctly deferred; it only matters for the scheduled/push variant, which the current pull-mode scope doesn't need.
+
+Plan reasoning remains sound and internally consistent; no design changes needed. Only the build-status framing was stale and the consume leg is unbuilt.
+
 ## What already exists / is designed (don't rebuild — extend)
 
-- **Producer is mostly specced in `RELIABILITY_AUDIT.md` Tier 3.2** — `jlmops-status.md`, a single Claude-readable markdown file regenerated on the 15-min `runFrequentMaintenance` cadence (live blocks) + daily (KPI block), written via `DriveApp.getFileById(statusFileId).setContent(markdown)`, wrapped in `reportFailure('status_export.refresh', …)` so a regen failure never breaks maintenance. Sections: System / Integrations / Queue / Data quality / Capacity / KPIs / Recent errors. New `StatusReportService.js` + `LoggerService.getRecentErrors(n)`. **Not built yet.**
+- **Producer is mostly specced in `RELIABILITY_AUDIT.md` Tier 3.2** — `jlmops-status.md`, a single Claude-readable markdown file regenerated on the 15-min `runFrequentMaintenance` cadence (live blocks) + daily (KPI block), written via `DriveApp.getFileById(statusFileId).setContent(markdown)`, wrapped in `reportFailure('status_export.refresh', …)` so a regen failure never breaks maintenance. Sections: System / Integrations / Queue / Data quality / Capacity / KPIs / Recent errors. New `StatusReportService.js` + `LoggerService.getRecentErrors(n)`. **Live blocks SHIPPED 2026-06-03 (@217, commit `437e015`); KPI block (`refreshKpiBlock`) still deferred — see Review pass (2026-06-10) above.**
 - **Tier 4.1** mirrors that file to an off-account (`kosbracha@gmail.com`) Drive folder for DR.
 - **Error surface:** `NotificationService.reportFailure` → de-duped `task.system.failure` tasks + `task.system.health_status` singleton; `resolveFailure` (shipped @202) now auto-closes them on recovery (`SYSTEM_TASK_LIFECYCLE_PLAN.md`). So "open system errors" = open `task.system.failure` rows; this is the clean signal to export.
 - **KPIs:** `KpiService.js` is a stub; aggregations live in `WebAppDashboardV2.js`. Tier 3.2 plans fresh aggregators.
@@ -66,7 +76,7 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 
 ## Phasing
 
-- **P0 — producer.** Build `RELIABILITY_AUDIT` Tier 3.2 (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`). This is the prerequisite and is already in the audit queue.
+- **P0 — producer. ✅ live blocks SHIPPED 2026-06-03** (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`); KPI block still deferred. **Consume leg (fold into `/review-daily`) NOT done — open gap, see Review pass (2026-06-10).**
 - **P1 — machine block + headless transport.** Add the JSON block and the token-gated read endpoint.
 - **P2 — event trigger.** Hook `refreshLiveBlocks` into `reportFailure` for High/Critical.
 - **P3 — consumer routine.** Author the `/schedule` routine (read → triage → diagnose → report), read-only.
