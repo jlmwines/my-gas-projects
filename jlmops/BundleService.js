@@ -1385,6 +1385,35 @@ const BundleService = (function () {
   }
 
   /**
+   * MAINTAIN one bundle (single-bundle target for the editor, Phase 5 §C). Same logic as
+   * maintainBundles, scoped to the given bundle: re-picks only ITS deficient slots and nudges the
+   * total into [sb_MinTotal, sb_MaxTotal]. Structure-preserving; web export remains the gate.
+   * @param {string} bundleId
+   * @returns {Object} { totalBundles, generated, results, clean? } (or { error } on failure)
+   */
+  function maintainBundle(bundleId) {
+    const fnName = 'maintainBundle';
+    const bundle = getBundle(bundleId);
+    if (!bundle) return { error: 'Bundle not found: ' + bundleId, totalBundles: 0, generated: 0, results: [] };
+    const inv = _buildBundleInventoryContext();
+    if (!inv) return { error: 'Comax inventory data unavailable', totalBundles: 0, generated: 0, results: [] };
+    const d = _evaluateBundleDeficiency(bundle, inv);
+    if (d.deficientSlots.length === 0 && d.bandFlags.length === 0) {
+      LoggerService.info(SERVICE_NAME, fnName, `${bundleId} has no deficiency — nothing to maintain`);
+      return { totalBundles: 0, generated: 0, results: [], clean: true };
+    }
+    try {
+      const ids = new Set((d.deficientSlots || []).map(ds => ds.slotId));
+      const res = _generateBundleComposition(bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: inv.ctx });
+      LoggerService.info(SERVICE_NAME, fnName, `Maintained ${bundleId}`);
+      return { totalBundles: 1, generated: res.error ? 0 : 1, results: [res] };
+    } catch (e) {
+      LoggerService.error(SERVICE_NAME, fnName, `Maintain failed for ${bundleId}: ${e.message}`, e);
+      return { totalBundles: 1, generated: 0, results: [{ bundleId: bundle.bundleId, bundleName: bundle.nameEn, error: e.message }] };
+    }
+  }
+
+  /**
    * RE-ROLL — explicit fresh lineup. One bundle (bundleId given) or every non-archived bundle.
    * Higher churn; for a seasonal reset / new bundle / "give me new wines".
    * @param {string} [bundleId] - re-roll just this bundle; omit to re-roll all non-archived bundles
@@ -2479,6 +2508,7 @@ const BundleService = (function () {
 
     // Stage 7 — composition generator (rev 2.2: Maintain default + Re-roll explicit)
     maintainBundles: maintainBundles,
+    maintainBundle: maintainBundle,
     rerollBundles: rerollBundles,
 
     // Import / Duplicate

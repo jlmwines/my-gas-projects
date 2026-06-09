@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-08 21:20',
-  commit: 'Bundle editor header flattened to one band: EN.HE name + price (left) and Min/Max + Status + open-all + generation status (right) on two lines instead of two stacked strips. flex-wrap fallback on narrow screens. HTML-only; all JS ids preserved.'
+  built: '2026-06-09 07:30',
+  commit: 'Bundle editor Phase 5 (@284-@285): inline-at-row editor (persistent node, mounts under the active row, survives list re-renders) + per-bundle EN/HE export panel inside the row (retires the orphaned-panel bug) + single-bundle Maintain/Update-from-web; native discard confirm -> TaskWidgets.confirm; removed the 300px list-wrapper height cap that clipped the inline editor.'
 };
 
 function getVersion() {

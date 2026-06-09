@@ -560,12 +560,13 @@ function WebAppBundles_importFromWooCommerce(bundleId, woosbIdsJson, bundleInfo)
  * Scans WebProdM for woosb type products and imports/updates their bundle structure.
  * @returns {Object} Import results
  */
-function WebAppBundles_reimportAllBundles() {
+function WebAppBundles_reimportAllBundles(bundleId) {
   const serviceName = 'WebAppBundles';
   const functionName = 'reimportAllBundles';
 
   try {
-    LoggerService.info(serviceName, functionName, 'Starting full bundle reimport from WebProdM...');
+    LoggerService.info(serviceName, functionName,
+      bundleId ? `Re-deriving one bundle from WebProdM: ${bundleId}` : 'Starting full bundle reimport from WebProdM...');
 
     const allConfig = ConfigService.getAllConfig();
     const spreadsheet = SheetAccessor.getDataSpreadsheet();
@@ -650,7 +651,11 @@ function WebAppBundles_reimportAllBundles() {
       });
     }
 
-    const batchResult = BundleService.reimportAllBundlesBatch(bundlesToImport);
+    // Single-bundle target (Phase 5 §C): re-derive just the open bundle when bundleId is given.
+    const targets = bundleId
+      ? bundlesToImport.filter(b => String(b.bundleId) === String(bundleId))
+      : bundlesToImport;
+    const batchResult = BundleService.reimportAllBundlesBatch(targets);
 
     LoggerService.info(serviceName, functionName,
       `Bundle reimport complete. Imported: ${batchResult.imported}, Failed: ${batchResult.failed}, Skipped: ${skipped}, Slots: ${batchResult.slotCount}`);
@@ -839,6 +844,26 @@ function WebAppBundles_generateCompositions() {
 }
 
 /**
+ * Maintain ONE bundle (single-bundle target for the editor, Phase 5 §C). Same as the Maintain batch,
+ * scoped to the open bundle. Web export remains the gate.
+ * @param {string} bundleId
+ * @returns {Object} { totalBundles, generated, results, clean? } (or { error } on failure)
+ */
+function WebAppBundles_maintainBundle(bundleId) {
+  const serviceName = 'WebAppBundles';
+  const functionName = 'maintainBundle';
+  try {
+    LoggerService.info(serviceName, functionName, `Stage 7 Maintain (single) — ${bundleId}`);
+    const result = BundleService.maintainBundle(bundleId);
+    _refreshBundlePushStatusQuietly('maintainBundle');   // a maintained bundle now differs from web
+    return result;
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Maintain (single) failed: ${e.message}`, e);
+    return { error: `Maintain failed: ${e.message}`, totalBundles: 0, generated: 0, results: [] };
+  }
+}
+
+/**
  * Re-roll button (BUNDLE_PLAN Stage 7 rev 2.2): explicit fresh lineup — re-picks EVERY product slot
  * for the given bundle (or all non-archived bundles when bundleId is omitted). Higher churn; for a
  * seasonal reset / new bundle / "give me new wines". Web export remains the gate.
@@ -866,13 +891,15 @@ function WebAppBundles_rerollBundles(bundleId) {
  * didn't run". If WebProdM is stale, run the daily sync first.
  * @returns {Object} { error, data: { reimport } }
  */
-function WebAppBundles_updateComposition() {
+function WebAppBundles_updateComposition(bundleId) {
   const serviceName = 'WebAppBundles';
   const functionName = 'updateComposition';
   try {
-    LoggerService.info(serviceName, functionName, 'Update Composition: re-derive bundles from WebProdM (no WC pull)');
+    LoggerService.info(serviceName, functionName,
+      bundleId ? `Update Composition (single): re-derive ${bundleId} from WebProdM (no WC pull)`
+               : 'Update Composition: re-derive bundles from WebProdM (no WC pull)');
 
-    const reimportResult = WebAppBundles_reimportAllBundles();
+    const reimportResult = WebAppBundles_reimportAllBundles(bundleId);
     return {
       error: null,
       data: {

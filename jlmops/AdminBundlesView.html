@@ -6,6 +6,9 @@
 .bundle-chip.active { font-weight: bold; box-shadow: inset 0 0 0 2px #6c757d; }
 .bundle-name-he { font-size: 0.85em; color: #6c757d; }
 .bundle-row-selected { background: #e9f5ff !important; }
+/* Inline-at-row editor expansion (Phase 5): full-width cell, no hover striping, default cursor */
+.bundle-editor-expansion > td { background: #fff; cursor: default; }
+.table-hover tbody tr.bundle-editor-expansion:hover > td { background: #fff; }
 /* Composition sheet (§7.4/§7.5) */
 .comp-row { border: 1px solid #dee2e6; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: #fff; }
 .comp-row.text-row { background: #f1f3f5; }
@@ -44,7 +47,9 @@
           </div>
 
           <!-- Bundle List Table -->
-          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+          <!-- No vertical scroll cap: the inline-at-row editor (Phase 5) mounts as a row inside this
+               table, so a max-height here would clip it. At n=14 bundles the list is short; the page scrolls. -->
+          <div class="table-responsive">
             <table class="table table-sm table-hover" id="bundle-list-table">
               <thead>
                 <tr>
@@ -77,7 +82,9 @@
         <div class="card-header d-flex justify-content-between align-items-center">
           <h5 class="mb-0">Bundle Editor</h5>
           <div>
+            <button id="btn-maintain-bundle" class="btn btn-sm mr-1">Maintain</button>
             <button id="btn-reroll-bundle" class="btn btn-sm mr-1">Re-roll</button>
+            <button id="btn-update-bundle" class="btn btn-sm mr-1 text-muted">Update from web</button>
             <button id="btn-save-composition" class="btn btn-sm mr-1" disabled>Save Composition</button>
             <button id="btn-discard-draft" class="btn btn-sm mr-1" style="display:none;">Discard</button>
             <button id="btn-close-editor" class="btn btn-sm">Close</button>
@@ -133,6 +140,10 @@
             <button id="btn-add-product" class="btn btn-sm mr-1">+ Add Product</button>
             <button id="btn-export-meta" class="btn btn-sm">Export meta (EN/HE)</button>
           </div>
+
+          <!-- Per-bundle EN/HE export meta (Phase 5 §7): rendered inline so the copy panel lives WITH the
+               row and closes with it — no orphaned shared panel, no wrong-bundle paste. -->
+          <div id="editor-export-meta" class="mt-3"></div>
         </div>
       </div>
     </div>
@@ -182,6 +193,7 @@
   var pushBundleIds = [];        // bundleIds needing export (from cached push_status) — Phase 1b
   var needsUpdateBundleIds = []; // bundleIds flagged deficient (from cached needs_update_status / Review)
   var currentFilter = 'all';     // active chip: all | needs-export | ok
+  var editorHome = null;         // parked location of #bundle-editor-section when not mounted inline (Phase 5)
 
   // Composition-sheet draft (§7.5): the working copy. Edits mutate `draft`; nothing commits until
   // Save Composition. `draft.slots[]` are in display order; deleted rows stay (struck) until save.
@@ -197,6 +209,10 @@
   // =================================================================================
 
   function init() {
+    // Phase 5: the editor is a single persistent node that mounts inline under the active row. Capture
+    // its parked home (the container it lives in when closed) before any inline mount moves it.
+    var es = document.getElementById('bundle-editor-section');
+    editorHome = es ? es.parentNode : null;
     bindEvents();  // wire handlers before data arrives; clicks on not-yet-rendered rows no-op
     // Single consolidated round-trip (T3.3): replaces the 4-call init fanout.
     google.script.run
@@ -254,7 +270,9 @@
     if (nameFilterEl) nameFilterEl.addEventListener('input', applyFilter);
     // Editor (composition sheet)
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
+    document.getElementById('btn-maintain-bundle').addEventListener('click', maintainBundleOne);
     document.getElementById('btn-reroll-bundle').addEventListener('click', rerollBundle);
+    document.getElementById('btn-update-bundle').addEventListener('click', updateBundleOne);
     document.getElementById('btn-save-composition').addEventListener('click', saveComposition);
     document.getElementById('btn-discard-draft').addEventListener('click', discardDraft);
     document.getElementById('btn-add-text').addEventListener('click', addTextSlot);
@@ -339,6 +357,7 @@
 
   function renderBundleList(bundles) {
     var tbody = document.getElementById('bundle-list-body');
+    detachEditorToHome();   // rescue the persistent editor node before innerHTML wipes the tbody (Phase 5)
     if (!bundles || bundles.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No bundles found</td></tr>';
       updateChipCounts(0, 0, 0, 0);
@@ -392,13 +411,15 @@
     tbody.querySelectorAll('tr').forEach(function(row) {
       if (!row.dataset.bundleId) return;
       row.addEventListener('click', function() {
-        selectBundleRow(row);
-        loadBundleForEditing(row.dataset.bundleId);
+        // Accordion (Phase 5): clicking the open bundle's row closes it; another row switches to it.
+        if (String(row.dataset.bundleId) === String(currentBundleId)) { closeEditor(); return; }
+        loadBundleForEditing(row.dataset.bundleId);  // ensureEditorMounted handles selection + inline mount
       });
     });
 
     updateChipCounts(bundles.length, needsCount, attentionCount, okCount);
     applyFilter();
+    if (currentBundleId) ensureEditorMounted(currentBundleId);  // re-mount the open editor after the re-render
   }
 
   function selectBundleRow(row) {
@@ -456,11 +477,65 @@
       .WebAppBundles_getBundleDeficiency(bundleId);
   }
 
-  function closeEditor() {
-    if (draftDirty && !window.confirm('Discard unsaved composition changes?')) return;
-    if (currentBundleId) clearDraft(currentBundleId);
+  // ---- Inline-at-row editor mount (Phase 5 §7 / ADMIN_BUNDLES_UI_PLAN) -----------
+  // The editor is ONE persistent node. It mounts into an expansion <tr> directly under the active
+  // bundle row, and parks back in `editorHome` (hidden) when closed or when the list re-renders —
+  // so loadBundleList()'s `tbody.innerHTML` (fired on save/Maintain/Review) can't destroy it.
+  function findBundleRow(bundleId) {
+    return document.querySelector('#bundle-list-body tr[data-bundle-id="' + bundleId + '"]');
+  }
+  function editorExpansionRow() {
+    return document.querySelector('#bundle-list-body tr.bundle-editor-expansion');
+  }
+  function detachEditorToHome() {
     var section = document.getElementById('bundle-editor-section');
-    if (section) section.style.display = 'none';
+    if (section && editorHome && section.parentNode !== editorHome) {
+      section.style.display = 'none';
+      editorHome.appendChild(section);
+    }
+    var exp = editorExpansionRow();
+    if (exp && exp.parentNode) exp.parentNode.removeChild(exp);
+  }
+  function mountEditorInline(row) {
+    if (!row) return;
+    detachEditorToHome();   // pull the editor out of any prior row (also clears the old expansion row)
+    var section = document.getElementById('bundle-editor-section');
+    if (!section) return;
+    var tr = document.createElement('tr');
+    tr.className = 'bundle-editor-expansion';
+    var td = document.createElement('td');
+    td.colSpan = 5;
+    td.className = 'p-2';
+    tr.appendChild(td);
+    row.parentNode.insertBefore(tr, row.nextSibling);
+    td.appendChild(section);   // MOVE the persistent node (keeps IDs + bound events + in-progress draft DOM)
+    section.style.display = '';
+  }
+  // Mount the editor under bundleId's row if that row is present; called by loadBundleForEditing (so
+  // every caller mounts) and after each list re-render (so the open editor survives the refresh).
+  function ensureEditorMounted(bundleId) {
+    var row = findBundleRow(bundleId);
+    if (!row) return;   // row not in the current (filtered) list — editor stays parked/hidden
+    selectBundleRow(row);
+    var section = document.getElementById('bundle-editor-section');
+    var exp = editorExpansionRow();
+    if (exp && row.nextSibling === exp && section && exp.contains(section)) return;  // already mounted here
+    mountEditorInline(row);
+  }
+
+  function closeEditor() {
+    if (draftDirty) {
+      TaskWidgets.confirm('Discard unsaved composition changes?', doCloseEditor, { okLabel: 'Discard', danger: true });
+      return;
+    }
+    doCloseEditor();
+  }
+  function doCloseEditor() {
+    if (currentBundleId) clearDraft(currentBundleId);
+    // Park the editor back home (hidden) + remove the expansion row. The per-bundle export-meta panel
+    // is INSIDE the editor (Phase 5 §B), so it parks with it — no orphaned shared panel to clear here,
+    // and the global batch-results panel (Maintain/Review/Export) is intentionally left untouched.
+    detachEditorToHome();
     selectBundleRow(null);
     currentBundleId = null;
     currentBundle = null;
@@ -652,6 +727,7 @@
     draftDirty = true;
     setSaveEnabled(true);
     persistDraft();
+    renderExportMetaInline(null);   // an edit invalidates any shown export meta (stale woosb)
   }
 
   // ---- sessionStorage draft mirror (A0, RELOAD_RESILIENCE_PLAN §4.A0) ------------
@@ -669,12 +745,12 @@
 
   // ---- load + build draft -------------------------------------------------------
   function loadBundleForEditing(bundleId) {
-    // Clear any stale action-results panel (e.g. an Export-meta preview) when SWITCHING to a different
-    // bundle — its content is bundle-specific (user 2026-06-08). Same-bundle reloads (Maintain/Re-roll/
-    // post-save) keep the panel, so a Maintain summary isn't wiped by its own editor refresh.
-    if (String(bundleId) !== String(currentBundleId)) hideActionResults();
+    // (Phase 5 §B) The per-bundle export-meta panel is now INSIDE the editor and clears itself on load
+    // (showEditorLoading → renderExportMetaInline(null)). The shared bottom panel now only holds GLOBAL
+    // batch results (Maintain/Review/Export/Update Composition), so a bundle switch must NOT wipe it.
     currentBundleId = String(bundleId);
     currentDeficiency = null;   // cleared until the live deficiency check returns for a flagged bundle
+    ensureEditorMounted(currentBundleId);   // mount the editor inline under this row (Phase 5)
     showEditorLoading();
     google.script.run
       .withSuccessHandler(function(result) {
@@ -719,6 +795,7 @@
   function showEditorLoading() {
     var section = document.getElementById('bundle-editor-section');
     if (section) section.style.display = '';
+    renderExportMetaInline(null);   // drop the prior bundle's export panel while the new one loads
     var strip = document.getElementById('editor-deficiency-strip');
     if (strip) strip.innerHTML = '';
     ['hdr-minTotal', 'hdr-maxTotal'].forEach(function(id) { document.getElementById(id).value = ''; });
@@ -790,6 +867,7 @@
   function renderEditor() {
     var section = document.getElementById('bundle-editor-section');
     if (section) section.style.display = '';
+    renderExportMetaInline(null);   // any full re-render (load/save/discard/maintain) makes a shown export stale
     renderDeficiencyStrip({ bundleId: currentBundleId });
     renderHeaderStrip();
     renderComposition();
@@ -1098,14 +1176,31 @@
     if (btn) btn.textContent = anyClosed ? 'Close all details' : 'Open all details';
   }
 
-  // Per-bundle EN/HE export meta (the serialized woosb_ids) for copy/paste testing into WPClever.
-  // Shown in the shared action-results panel; read-only, nothing is pushed.
+  // Render the per-bundle export-meta panel INSIDE the editor (Phase 5). Pass null to clear it.
+  // Lives in #editor-export-meta (a child of the persistent editor node) so it moves + closes with the row.
+  function renderExportMetaInline(innerHtml) {
+    var el = document.getElementById('editor-export-meta');
+    if (!el) return;
+    if (innerHtml == null) { el.innerHTML = ''; return; }
+    el.innerHTML =
+      '<div class="card"><div class="card-header d-flex justify-content-between align-items-center py-2" style="background:transparent;">' +
+      '<strong>Export meta (EN / HE) — paste into WPClever</strong>' +
+      '<button type="button" class="close" id="btn-close-export-meta" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>' +
+      '<div class="card-body">' + innerHtml + '</div></div>';
+    var x = document.getElementById('btn-close-export-meta');
+    if (x) x.addEventListener('click', function() { renderExportMetaInline(null); });
+  }
+
+  // Per-bundle EN/HE export meta (the serialized woosb_ids) for copy/paste into WPClever. Read-only,
+  // nothing is pushed. Second click toggles it closed.
   function showExportMeta() {
     if (!currentBundleId) return;
-    showResults('Export meta (EN / HE)', '<div class="text-muted"><span class="spinner-border spinner-border-sm mr-2"></span>Building…</div>');
+    var el = document.getElementById('editor-export-meta');
+    if (el && el.innerHTML.trim()) { renderExportMetaInline(null); return; }   // toggle off if already shown
+    renderExportMetaInline('<div class="text-muted"><span class="spinner-border spinner-border-sm mr-2"></span>Building…</div>');
     google.script.run
       .withSuccessHandler(function(res) {
-        if (!res || res.error) { showResults('Export meta (EN / HE)', '<div class="text-danger">' + esc(res && res.error || 'Failed') + '</div>'); return; }
+        if (!res || res.error) { renderExportMetaInline('<div class="text-danger">' + esc(res && res.error || 'Failed') + '</div>'); return; }
         var d = res.data || {};
         var warn = (d.warnings && d.warnings.length)
           ? '<div class="text-warning small mb-2">&#9888; ' + d.warnings.map(esc).join('; ') + '</div>' : '';
@@ -1114,13 +1209,12 @@
             '<strong>' + label + '</strong><button class="btn btn-sm btn-copy-meta" data-target="' + id + '" data-label="' + label + '">Copy</button></div>' +
             '<textarea class="form-control form-control-sm" rows="3" readonly id="' + id + '" dir="ltr" style="font-family:monospace;">' + esc(val || '') + '</textarea></div>';
         }
-        showResults('Export meta (EN / HE) — paste into WPClever',
-          warn + block('EN woosb_ids', 'meta-en', d.en) + block('HE woosb_ids', 'meta-he', d.he));
+        renderExportMetaInline(warn + block('EN woosb_ids', 'meta-en', d.en) + block('HE woosb_ids', 'meta-he', d.he));
         document.querySelectorAll('.btn-copy-meta').forEach(function(b) {
           b.addEventListener('click', function() { copyTextarea(b.dataset.target, b.dataset.label); });
         });
       })
-      .withFailureHandler(function(err) { showResults('Export meta (EN / HE)', '<div class="text-danger">Failed: ' + esc(err.message) + '</div>'); })
+      .withFailureHandler(function(err) { renderExportMetaInline('<div class="text-danger">Failed: ' + esc(err.message) + '</div>'); })
       .WebAppBundles_getBundleExportMeta(currentBundleId);
   }
 
@@ -1299,10 +1393,9 @@
           draftDirty = false;
           currentBundle = result.data;
           draft = buildDraftFromBundle(result.data);
-          renderEditor();
+          renderEditor();   // clears the inline export panel (now stale); bottom batch panel left intact
           setSaveEnabled(false);
           TaskWidgets.toast('Composition saved.', 'success');
-          hideActionResults();   // a saved edit makes any shown export preview stale
           afterSaveRefresh();
         })
         .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
@@ -1351,14 +1444,6 @@
   // =================================================================================
   // MANAGEMENT CARD ACTIONS
   // =================================================================================
-
-  // Hide + clear the shared action-results panel (export preview / export-meta / Maintain summary).
-  function hideActionResults() {
-    var panel = document.getElementById('action-results-panel');
-    if (panel) panel.style.display = 'none';
-    var body = document.getElementById('action-results-body');
-    if (body) body.innerHTML = '';
-  }
 
   function showResults(title, html) {
     document.getElementById('action-results-title').textContent = title;
@@ -1481,6 +1566,54 @@
         .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
         .WebAppBundles_rerollBundles(currentBundleId);
     }, { danger: true });
+  }
+
+  // Maintain just the OPEN bundle (Phase 5 §C): re-pick only its deficient slots. Mirrors the batch
+  // Maintain + the per-bundle Re-roll flow (reload editor + refresh push status).
+  function maintainBundleOne() {
+    if (!currentBundleId) return;
+    if (draftDirty) { TaskWidgets.toast('Save or discard your edits before maintaining.', 'warning'); return; }
+    TaskWidgets.confirm('Maintain this bundle? Only its deficient slots are re-picked and the total nudged into the price band. Review/edit after — nothing reaches the website until you Export.', function() {
+      var btn = document.getElementById('btn-maintain-bundle');
+      var restore = withButtonBusy(btn, 'Maintaining...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          restore();
+          if (res && res.error) { TaskWidgets.toast('Error: ' + res.error, 'error'); return; }
+          if (res && res.clean) { TaskWidgets.toast('Nothing to maintain — this bundle is already in good shape.', 'info'); return; }
+          clearDraft(currentBundleId);
+          loadBundleForEditing(currentBundleId);
+          syncPushStatus();
+          var r = (res.results && res.results[0]) || {};
+          var hasFlags = String(r.flags || '').split(';').filter(function(f) { return f; }).length > 0;
+          if (hasFlags) TaskWidgets.toast('Maintained — some slots need attention (see status line).', 'warning');
+          else TaskWidgets.toast('Maintain complete.', 'success');
+        })
+        .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
+        .WebAppBundles_maintainBundle(currentBundleId);
+    });
+  }
+
+  // Update just the OPEN bundle from web (Phase 5 §C): the muted Update Composition utility, scoped to
+  // one bundle in context. Re-derives THIS bundle from WebProdM (web→ops re-baseline).
+  function updateBundleOne() {
+    if (!currentBundleId) return;
+    if (draftDirty) { TaskWidgets.toast('Save or discard your edits before updating from web.', 'warning'); return; }
+    TaskWidgets.confirm('Re-derive THIS bundle from WebProdM (web→ops)? Replaces the ops composition with the latest web data.', function() {
+      var btn = document.getElementById('btn-update-bundle');
+      var restore = withButtonBusy(btn, 'Updating...');
+      google.script.run
+        .withSuccessHandler(function(result) {
+          restore();
+          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
+          clearDraft(currentBundleId);
+          loadBundleForEditing(currentBundleId);
+          syncPushStatus();
+          TaskWidgets.toast('Updated from web.', 'success');
+        })
+        .withFailureHandler(function(err) { restore(); TaskWidgets.toast('Failed: ' + err.message, 'error'); })
+        .WebAppBundles_updateComposition(currentBundleId);
+    });
   }
 
   function updateComposition() {
