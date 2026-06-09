@@ -17,9 +17,25 @@ Let JLMops selectively export operational signal (system errors, KPIs) to a plac
 
 The sections below retain the fuller push-mode design for if/when it's wanted — treat them as deferred detail, not current scope.
 
+## Update (2026-06-09, with user) — health export shipped; KPI reshaped to review cadence
+
+State of the producer has moved on since the 2026-06-02 draft below:
+
+- **System-health export is SHIPPED** (Tier 3.2 live blocks, 2026-06-03). `StatusReportService.refreshLiveBlocks(sessionId)` writes `jlmops-status.md` to the `system.folder.jlmops_exports` Drive folder every 15 min on the `runFrequentMaintenance` cadence, never-throws (`reportFailure('status_export.refresh', …, 'Normal')` on regen failure). Blocks: System (version/pinned/sync stage) · Integrations (per-source last-pull + **STALE** flag via `_getIntegrationHeartbeats_v2`) · Queue (PENDING/PROCESSING/COMPLETED/FAILED + oldest-failed age) · Data quality (last housekeeping: tests / validation / schema / failed jobs) · Capacity (rows per data sheet) · Recent errors (`LoggerService.getRecentErrors(10)`). **A session can read this today via Drive MCP.** The "What already exists" note below saying *"Not built yet"* is stale for the live blocks.
+- **Health is now covered on both sides — do NOT rebuild.** The admin dashboard already has system-health + integration widgets (the *human* view); the export blocks are the *session* view of the same data. Right split; leave both.
+- **KPIs are review-cadence (weekly/monthly), NOT daily.** Supersedes the "daily KPI block" framing below. KPIs map onto the **Review Cadence checklists already in `plans/STATUS.md`**: *Weekly* = orders since last check, new customers + EN/HE split, open bugs / failed syncs; *Monthly* = new vs returning, language trend, AOV drift, top products. The build turns the review from "manually gather numbers" into "session reads the KPI export and walks the checklist with real data."
+- **Dashboard KPI widget: SKIPPED for now** (decision). Consistent with precedent — `KPI_SUMMARY_TAB.md` was parked because the user prefers periodic review over an always-on KPI surface, and "weekly/monthly review cadence" says the same. The widget stays a cheap later add (same `KpiService`, one card reading `AdminDashboardView_v2`) *if* an at-a-glance number ever proves useful; not built now.
+
+### Reshaped KPI build (one deploy session, build-ready)
+
+1. **`KpiService` aggregators** — the reusable, sink-agnostic core. Compute the Weekly + Monthly checklist metrics above. Read **master ∪ archive** (per `RELIABILITY_AUDIT.md` §1A / `DETECTION_REGISTER.md` Class 2 — WebOrdM + WebOrdM_Archive, or counts decay). `KpiService.js` is currently a ~3KB stub; flesh it out. Aggregation precedent lives in `WebAppDashboardV2.js`.
+2. **`jlmops-kpi.md` export** — a **separate file** from the 15-min `jlmops-status.md` so the two cadences don't entangle. A **Weekly** block behind a 7-day guard + a **Monthly** block behind a month-rollover guard, each cached. Daily housekeeping calls the refresh; the guard decides whether to recompute (CCP-5 days-since pattern, same as `checkBruryaReminder`; last-run stamps in SysConfig per CCP-6). Place in the same `jlmops_exports` folder; mirror `StatusReportService`'s never-throw + `reportFailure('kpi_export.refresh', …, 'Normal')` shape.
+3. **JSON twin** — emit the machine-readable `kpis{}` block (OPS_SESSION_BRIDGE P1) alongside the markdown so a session branches on values without prose-parsing. Bundle with the health export's JSON block when that lands.
+4. **Consumer wiring (free, no deploy):** fold "read `jlmops-status.md` + `jlmops-kpi.md`, flag anything off / digest the KPIs" into the `/review-daily` skill and the session-start surface — the load-bearing leg that's currently unwired (the export refreshes every 15 min and nothing reads it).
+
 ## What already exists / is designed (don't rebuild — extend)
 
-- **Producer is mostly specced in `RELIABILITY_AUDIT.md` Tier 3.2** — `jlmops-status.md`, a single Claude-readable markdown file regenerated on the 15-min `runFrequentMaintenance` cadence (live blocks) + daily (KPI block), written via `DriveApp.getFileById(statusFileId).setContent(markdown)`, wrapped in `reportFailure('status_export.refresh', …)` so a regen failure never breaks maintenance. Sections: System / Integrations / Queue / Data quality / Capacity / KPIs / Recent errors. New `StatusReportService.js` + `LoggerService.getRecentErrors(n)`. **Not built yet.**
+- **Producer is mostly specced in `RELIABILITY_AUDIT.md` Tier 3.2** — `jlmops-status.md`, a single Claude-readable markdown file regenerated on the 15-min `runFrequentMaintenance` cadence (live blocks) + daily (KPI block), written via `DriveApp.getFileById(statusFileId).setContent(markdown)`, wrapped in `reportFailure('status_export.refresh', …)` so a regen failure never breaks maintenance. Sections: System / Integrations / Queue / Data quality / Capacity / KPIs / Recent errors. New `StatusReportService.js` + `LoggerService.getRecentErrors(n)`. **Live blocks SHIPPED 2026-06-03** (`StatusReportService.refreshLiveBlocks`, file `jlmops-status.md`); **KPI block reshaped to weekly/monthly cadence as a separate `jlmops-kpi.md` — see the 2026-06-09 Update at the top.**
 - **Tier 4.1** mirrors that file to an off-account (`kosbracha@gmail.com`) Drive folder for DR.
 - **Error surface:** `NotificationService.reportFailure` → de-duped `task.system.failure` tasks + `task.system.health_status` singleton; `resolveFailure` (shipped @202) now auto-closes them on recovery (`SYSTEM_TASK_LIFECYCLE_PLAN.md`). So "open system errors" = open `task.system.failure` rows; this is the clean signal to export.
 - **KPIs:** `KpiService.js` is a stub; aggregations live in `WebAppDashboardV2.js`. Tier 3.2 plans fresh aggregators.
@@ -66,7 +82,7 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 
 ## Phasing
 
-- **P0 — producer.** Build `RELIABILITY_AUDIT` Tier 3.2 (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`). This is the prerequisite and is already in the audit queue.
+- **P0 — producer.** ~~Build `RELIABILITY_AUDIT` Tier 3.2 (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`).~~ **DONE 2026-06-03 (live blocks).** Remaining producer work = the reshaped KPI build (`KpiService` + `jlmops-kpi.md`, weekly/monthly) per the 2026-06-09 Update.
 - **P1 — machine block + headless transport.** Add the JSON block and the token-gated read endpoint.
 - **P2 — event trigger.** Hook `refreshLiveBlocks` into `reportFailure` for High/Critical.
 - **P3 — consumer routine.** Author the `/schedule` routine (read → triage → diagnose → report), read-only.
