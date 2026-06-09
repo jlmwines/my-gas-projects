@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-09 (cont) — Reliability §1A detection-coverage audit DONE → DETECTION_REGISTER.md
+
+- Session-start ran the `.claude/CLAUDE.md` protocol (no `start` skill exists). Examined RELIABILITY_AUDIT + the 2026-06-09 self-refresh/deep-re-verify notes; advised. User: "no preference" on next session → picked the §1A detection audit (read-only, user-flagged first-class, re-ranks the queue).
+- Ran 3 parallel Explore passes (archiving + master∪archive; orphan/FK; reconciliation + liveness). Wrote **`jlmops/plans/DETECTION_REGISTER.md`** — 5 invariant-class tables (check-or-GAP · anchor · sev · →reportFailure? · surfaced? · status) + already-wired detectors to copy + gap→4-sessions summary + New-feature reliability gate. Anchors flagged as a re-verify-before-implementing snapshot.
+- **Dominant finding: gap class is wiring, not detection** — archiving-stall, library-integrity, bundle-health, validation-suite, schema-validation all detect but die in a log/passive task (not `reportFailure`); integration heartbeats are displayed but never thresholded into an alert (Display-but-don't-Detect). CRITICAL Class-5 liveness gaps: no trigger-run heartbeat, no `getProjectTriggers()` scan, no heartbeat-staleness alert.
+- Register proposes 4 low-risk Tier-3 sessions (no LockService): (1) **liveness + heartbeat alerting** [lead], (2) wire-detectors-to-reportFailure sweep [cheap], (3) master∪archive read fixes [Class 2, mirror the 1.1 recipe], (4) orphan-scan = the still-open Tier 3.4. All safer near-term than 1.3 concurrency.
+- RELIABILITY_AUDIT §1A: DONE pointer to the register. Committed+pushed docs to branch `claude/new-session-8p4f5p` (`741fe0f`) per stop-hook (ephemeral container) — docs only, no code/deploy. STATUS Next-Action #4 updated to point at the register + 4 sessions. **Next: a code session for #1 (liveness/heartbeat) when there's bandwidth + live-deploy OK.**
+
 ## 2026-06-09 — Bundle editor Phase 5 (ADMIN_BUNDLES_UI_PLAN §9) BUILT + SHIPPED @284→@286
 
 - Pulled Phase 5 forward (was deferred). **A — inline-at-row editor:** the editor is one persistent node that mounts into an expansion `<tr>` under the active row and parks back home (hidden) before every `loadBundleList()` `tbody.innerHTML` (save/Maintain/Review re-render), then re-mounts — so the open editor + in-progress draft survive the refresh. Accordion toggle. Key trap found by reading the refresh paths first: `saveComposition`→`afterSaveRefresh`→`syncPushStatus`→`loadBundleList` re-renders the tbody mid-edit, which would destroy a naively-moved node.
