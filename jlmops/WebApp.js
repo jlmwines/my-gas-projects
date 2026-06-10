@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-09 07:37',
-  commit: 'Bundle view mobile-friendly @286 (≤768px): card-header titles stack above their buttons, full-width stacked button bars with separation, filter chips gapped + name filter full-width. CSS-only (one media query + bundle-card-header/bundle-btnbar marker classes); desktop unchanged. On top of Phase 5 @284-@285 (inline-at-row editor + per-bundle export panel + single-bundle Maintain/Update).'
+  built: '2026-06-10 04:18',
+  commit: 'Ops-bridge KPI block + on-demand status export @287. StatusReportService now writes BOTH health (15-min) and KPI (daily + on-demand) sections into jlmops-status.md via sentinel-wrapped section-aware writes. refreshKpiBlock: internal KPIs (orders/revenue/AOV/EN-HE/new-vs-returning from WebOrdM+SysContacts) + GA4/GSC Traffic mirror (OPS-only multi-tab read, header-located cols, fail-soft). Daily Phase 3 wiring + WebAppSystem_refreshStatusExport + Dev screen Push Status Export button. New config keys system.sheet.ga4_report/gsc_report (id+data_tab) — needs rebuildSysConfigFromSource + confirm data_tab names.'
 };
 
 function getVersion() {
