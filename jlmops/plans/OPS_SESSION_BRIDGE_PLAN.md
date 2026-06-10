@@ -22,10 +22,14 @@ The sections below retain the fuller push-mode design for if/when it's wanted �
 Re-checked the plan against shipped code and the consumer skill. The bridge is **half-open: the producer shipped, the consumer was never wired.**
 
 - **P0 producer — SHIPPED 2026-06-03** (@217, commit `437e015`). `StatusReportService.refreshLiveBlocks` writes `jlmops-status.md` to the exports folder on every productive `performFrequentMaintenance` fire. Live blocks only (System / Integrations / Queue / Data quality / Capacity / Recent errors); KPI block still deferred. The "**Not built yet**" notes in "What already exists" below are stale — see `RELIABILITY_AUDIT.md` §3.2 for the as-built detail (and its three documented deviations: KPI block deferred, find-or-create-by-name placement, productive-fires-only refresh).
-- **P0 consumer — NOT done (open gap).** The plan's load-bearing pull-mode consume step was "fold *read the ops status, flag anything needing attention* into `/review-daily`." That never happened: `/review-daily` (and `/review-deep`) read STATUS / session-log / CALENDAR / bugs but **never read `jlmops-status.md` via Drive MCP** (confirmed: no command file references the export). So the producer writes the file every ~15 min and nothing in the routine reads it — the export's only intended consumer does not exist yet. The interactive consume path is buildable today (Drive MCP can read the single markdown file by ID, `reference_drive_files`), so this is a one-skill-edit gap, not blocked on anything. **Next action for this plan = add the export to `/review-daily`'s "Reads" step.**
 - **Open question #1 (headless Drive MCP) still gates P1–P3** and is untouched — correctly deferred; it only matters for the scheduled/push variant, which the current pull-mode scope doesn't need.
 
-Plan reasoning remains sound and internally consistent; no design changes needed. Only the build-status framing was stale and the consume leg is unbuilt.
+Plan reasoning remains sound and internally consistent; no design changes needed. The build-status framing was stale (corrected) and the consume leg is unbuilt — flagged below.
+
+**⚠️ NEEDS ACTION (flagged 2026-06-10 review pass — pick up in next CLI session).** The bridge's load-bearing pull-mode **consume leg was never wired**, so the producer writes `jlmops-status.md` every ~15 min and nothing reads it. To close it:
+1. **Wire `/review-daily` to read the export.** Add `jlmops-status.md` (Drive MCP, by file ID) to the skill's "Reads (light)" step, and add a Pulse-line rule: if the export's System/Integrations/Queue/Errors blocks show anything degraded, surface it; otherwise stay silent. Skill lives at `~/.claude/commands/review-daily.md`; today its Reads are STATUS / session-log / CALENDAR / bugs only (confirmed: no command file references the export).
+2. **No blockers.** The interactive consume path works today — Drive MCP reads the single markdown file by ID (`reference_drive_files`). This is a one-skill-edit gap, not contingent on the deferred headless/push work or on the KPI block.
+3. **Scope guard.** Read-only, per the skill's existing rules and the plan's consumer guardrail — flag, don't fix/deploy.
 
 ## What already exists / is designed (don't rebuild — extend)
 
