@@ -100,13 +100,13 @@ Each KPI below maps to one of those three.
 - **`JLMops_Logs`** also in Drive (operational logs).
 - **Daily exports** (Comax order export, web inventory export, Comax inventory export) land in Drive folders.
 - **Setup guide** for GA4 + GSC → Sheets is in Drive root (file ID `1QWTJmlj-wvHYk3SfdTvPj7gxskEqPx2HDEznILljRYM`, "JLM Wines — GA4 + GSC to Drive: Setup Guide"). User runs the 15-min × 2 setup when ready.
-- **GA4 + GSC sheets EXIST (built, Drive-readable), but the weekly refresh is STALLED** (verified live 2026-06-10):
-  - **"JLM GA4 Weekly"** — id `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU` (GA4 property `279950414`, rolling 90-day, end = yesterday, Sheets add-on). Correctly configured but **last ran 2026-05-17** (newest data row 2026-05-16) — pull stopped ~3 weeks ago.
-  - **"JLM GSC Weekly"** — id `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`. Has data but **last modified 2026-05-07, its own setup day** — the weekly trigger never recurred.
-  - Both are **multi-tab** (Report + Configuration), so sessions/Drive MCP can NOT read them usefully — **only OPS (GAS) reads them and flattens KPIs into the shared one-tab export (`jlmops-status.md` KPI block) that sessions consume.** Sessions never open these source workbooks directly. The blocker is the **add-on weekly triggers not running** (re-auth / re-schedule the GA4 + Search Console Sheets add-ons), NOT the sheets themselves.
+- **GA4 + GSC sheets BUILT and REFRESHING (restored 2026-06-10):**
+  - **"JLM GA4 Weekly"** — id `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU` (GA4 property `279950414`, rolling 90-day, end = yesterday, Sheets add-on). Refreshing (last ran 2026-06-10). _(Had stalled 2026-05-17 → 2026-06-10; re-enabled.)_
+  - **"JLM GSC Weekly"** — id `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`. **Monthly cadence (3rd)** via Search Analytics for Sheets; recurring backup re-enabled + **Date dimension added** 2026-06-10 (was Page-only, so no trend accumulated before). _(Had not recurred since 2026-05-07.)_
+  - Both are **multi-tab** (Report + Configuration), so sessions/Drive MCP can NOT read them usefully — **only OPS (GAS) reads them and flattens KPIs into the shared one-tab export (`jlmops-status.md` KPI block) that sessions consume.** Sessions never open these source workbooks directly, and don't verify them — that's OPS's job (or a human eyeball in the sheet UI).
 
 ### What's needed
-1. **Restart the GA4 + GSC weekly pulls** — the sheets are built (IDs above); the Sheets add-on triggers have stopped (GA4 since 2026-05-17, GSC since 2026-05-07). User re-authorizes / re-schedules both add-ons. This is the real prerequisite for any KPI automation — without it the data is weeks stale.
+1. ~~**Restart the GA4 + GSC weekly pulls**~~ **DONE 2026-06-10** — both add-ons re-enabled and refreshing (GA4 daily-ish/rolling, GSC monthly on the 3rd with a Date dimension now). The KPI-automation prerequisite is cleared.
 2. **Summary tab in `JLMops_Data`** (small jlmops change). Pre-computes the 4 jlmops-source metrics (new customers, first-order conversion, AOV, 90-day return rate) so Claude doesn't parse 3MB of raw data per session. SQL-on-Sheets shape; not a pipeline build. Estimated: 30–60 min of jlmops work, deliverable in a single GAS deploy.
 3. **Mailchimp metrics flow** — comes through jlmops Half 1 (Mailchimp daily API pull). Already planned in `jlmops/plans/CONTACT_MANAGER_PLAN.md`. Don't double-plan.
 
