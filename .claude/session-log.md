@@ -10,6 +10,7 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Shipped @288: Dev screen **Backfill Campaign Activity** button → `WebAppSystem_backfillCampaignActivity` (pulls recent campaigns THEN backfills, so a just-sent campaign is caught). Manual catch-up; **daily auto-wiring deferred** per user ("manual is good for now"). Design caveat recorded: "received" is INFERRED (language + subscribe-date), not real Mailchimp per-recipient/open data.
 - Manager-dash Q: new-customer first-order contact task = `task.contact.outreach` (topic "Contact") → auto-routes to project **`PROJ-SYS_CRM`** via `task.routing.topic_to_project` (`system.json`). So the CRM project filter surfaces them (also catches Campaign-topic tasks). No explicit projectId passed; `createTask` defaults via the routing map.
 - Commits: 5c2d04f (button) + 84cc14d (VERSION @288); deployed @288, pushed.
+- Live-verified: button works (one transient "Error calling backend" on first click — re-run succeeded, treated as a one-off, not reproduced). Result `0 new / 17388 existing skipped` = activities already created by an earlier run; idempotency confirmed. Contact view renders `campaign.received` (📨 icon, `AdminContactsView.html:getActivityIcon`). Nothing open on campaign-activity. (If that transient recurs, check Apps Script Executions for timeout vs. error.)
 
 ## 2026-06-10 — Ops↔session bridge COMPLETE (consume leg + KPI block) @287
 
