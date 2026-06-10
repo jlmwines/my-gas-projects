@@ -60,6 +60,34 @@
         ""
     ],
     [
+        "system.sheet.ga4_report",
+        "GA4 weekly export workbook (id) + report data-tab name. Read by StatusReportService.refreshKpiBlock. CONFIRM data_tab matches the actual GA4 add-on report tab name.",
+        "stable",
+        "id",
+        "12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU",
+        "data_tab",
+        "JLM GA4 Weekly",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "system.sheet.gsc_report",
+        "GSC monthly export workbook (id) + data-tab name. Read by StatusReportService.refreshKpiBlock. CONFIRM data_tab matches the Search Analytics for Sheets output tab name.",
+        "stable",
+        "id",
+        "1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc",
+        "data_tab",
+        "JLM GSC Weekly",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "StockHealth",
         "Minimum required products for category: יין לבן יבש",
         "stable",

@@ -697,7 +697,8 @@ function HousekeepingService() {
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
-      { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() }
+      { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
+      { name: 'refreshKpiBlock', fn: () => StatusReportService.refreshKpiBlock(sessionId) }
     ];
 
     for (const task of phase3Tasks) {

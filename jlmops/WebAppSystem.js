@@ -580,3 +580,29 @@ function WebAppSystem_runUnitTests() {
   }
 }
 
+/**
+ * On-demand refresh of the flat-file status export (reliability audit 3.2 /
+ * OPS_SESSION_BRIDGE_PLAN). Pushes BOTH the health and KPI sections of
+ * jlmops-status.md now, instead of waiting for the 15-min / daily cadences.
+ * Driven by the Developer screen "Push Status Export" button.
+ * @returns {Object} { success, fileId } or { success:false, error }.
+ */
+function WebAppSystem_refreshStatusExport() {
+  const serviceName = 'WebAppSystem';
+  const functionName = 'refreshStatusExport';
+  const sessionId = Utilities.getUuid();
+  LoggerService.info(serviceName, functionName, 'On-demand status export refresh (health + KPI)...');
+
+  try {
+    const health = StatusReportService.refreshLiveBlocks(sessionId);
+    const kpi = StatusReportService.refreshKpiBlock(sessionId);
+    if (!health.success || !kpi.success) {
+      return { success: false, error: 'health: ' + (health.error || 'ok') + ' · kpi: ' + (kpi.error || 'ok') };
+    }
+    return { success: true, fileId: kpi.fileId };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Error refreshing status export: ${e.message}`, e);
+    return { success: false, error: e.message };
+  }
+}
+

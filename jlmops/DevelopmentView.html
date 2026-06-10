@@ -11,6 +11,7 @@
           <button class="btn mr-2 mb-2" onclick="runValidateSchema()">Validate Schema</button>
           <button class="btn mr-2 mb-2" onclick="runDailyHousekeeping()">Daily Housekeeping</button>
           <button class="btn mr-2 mb-2" onclick="runUnitTests()">Run Unit Tests</button>
+          <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
         </div>
         <div id="dev-tools-results" class="mt-3"></div>
       </div>
@@ -159,6 +160,23 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
       })
       .WebAppSystem_runUnitTests();
+  }
+
+  function runRefreshStatusExport() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Pushing status export (health + KPI)...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response && response.success) {
+          resultDiv.innerHTML = `<p class="alert alert-success">Status export pushed (health + KPI). jlmops-status.md refreshed.</p>`;
+        } else {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Status export failed: ${response ? response.error : 'no response'}</p>`;
+        }
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
+      })
+      .WebAppSystem_refreshStatusExport();
   }
 
 </script>

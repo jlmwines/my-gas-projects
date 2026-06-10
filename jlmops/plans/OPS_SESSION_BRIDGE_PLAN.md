@@ -37,7 +37,7 @@ Plan reasoning remains sound and internally consistent; no design changes needed
 
 Locks the scope discussed with the user. **OPS is the sole reader of the source systems and writes everything a session needs into the one flat file `jlmops-status.md`.** Two data kinds (system health + KPI), two trigger modes (scheduled + an on-demand admin button). The on-demand control pushes **both** blocks — it is not health-only.
 
-**State going in.** Health blocks ship and run on the 15-min cadence (`refreshLiveBlocks`, @217). The KPI block (`refreshKpiBlock`) is fully specced (§3.2 "KPI block scope", 2026-06-04) but **not built**. The on-demand control is **not built**. The GA4/GSC source pulls are **restored 2026-06-10** (step 0 done). This plan builds the remaining three pieces (KPI block, section-aware write, on-demand control).
+**State going in.** Health blocks ship and run on the 15-min cadence (`refreshLiveBlocks`, @217). The KPI block (`refreshKpiBlock`) is fully specced (§3.2 "KPI block scope", 2026-06-04) but **not built**. **Status 2026-06-10: steps 1-6 CODE COMPLETE in the working tree (committed, NOT pushed). Step 0 done. Remaining = user-side: `clasp push` + deploy + smoke (step 7), AND confirm the two `data_tab` config values (`system.sheet.ga4_report` / `gsc_report` data_tab) match the real add-on output tab names — they were set to best-guess workbook titles. `rebuildSysConfigFromSource()` needed after push for the new config keys.** The GA4/GSC source pulls are restored (step 0).
 
 **Build steps, in order:**
 
