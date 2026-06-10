@@ -24,12 +24,14 @@ Re-checked the plan against shipped code and the consumer skill. The bridge is *
 - **P0 producer — SHIPPED 2026-06-03** (@217, commit `437e015`). `StatusReportService.refreshLiveBlocks` writes `jlmops-status.md` to the exports folder on every productive `performFrequentMaintenance` fire. Live blocks only (System / Integrations / Queue / Data quality / Capacity / Recent errors); KPI block still deferred. The "**Not built yet**" notes in "What already exists" below are stale — see `RELIABILITY_AUDIT.md` §3.2 for the as-built detail (and its three documented deviations: KPI block deferred, find-or-create-by-name placement, productive-fires-only refresh).
 - **Open question #1 (headless Drive MCP) still gates P1–P3** and is untouched — correctly deferred; it only matters for the scheduled/push variant, which the current pull-mode scope doesn't need.
 
-Plan reasoning remains sound and internally consistent; no design changes needed. The build-status framing was stale (corrected) and the consume leg is unbuilt — flagged below.
+Plan reasoning remains sound and internally consistent; no design changes needed. The build-status framing was stale (corrected) and the consume leg was unbuilt — now closed (below).
 
-**⚠️ NEEDS ACTION (flagged 2026-06-10 review pass — pick up in next CLI session).** The bridge's load-bearing pull-mode **consume leg was never wired**, so the producer writes `jlmops-status.md` every ~15 min and nothing reads it. To close it:
-1. **Wire `/review-daily` to read the export.** Add `jlmops-status.md` (Drive MCP, by file ID) to the skill's "Reads (light)" step, and add a Pulse-line rule: if the export's System/Integrations/Queue/Errors blocks show anything degraded, surface it; otherwise stay silent. Skill lives at `~/.claude/commands/review-daily.md`; today its Reads are STATUS / session-log / CALENDAR / bugs only (confirmed: no command file references the export).
-2. **No blockers.** The interactive consume path works today — Drive MCP reads the single markdown file by ID (`reference_drive_files`). This is a one-skill-edit gap, not contingent on the deferred headless/push work or on the KPI block.
-3. **Scope guard.** Read-only, per the skill's existing rules and the plan's consumer guardrail — flag, don't fix/deploy.
+**✅ CONSUME LEG WIRED 2026-06-10.** `/review-daily` now reads `jlmops-status.md` (skill at `~/.claude/commands/review-daily.md`), closing the interactive pull loop end-to-end: producer writes every ~15 min, the daily review reads it each run. What was done:
+1. **Reads step 5** added — fetch `jlmops-status.md` via Drive MCP. **Deviation from the flagged spec:** located by **title search**, not by file ID. The ID lives in SysConfig (`system.file.status_report`) and isn't exposed to a CLI session; the producer also finds-or-creates the file by name (a §3.2 as-built deviation), so title search is both available and robust to ID changes. Graceful one-line no-op if Drive MCP is absent that run.
+2. **Pulse rule** added — open `task.system.failure` rows and a stale `generated_at` (no refresh in many business hours) surface in the Pulse output bullet; otherwise silent.
+3. **Posture reconciled, not just appended.** The skill's `Skip by default` line and its "Pulling Drive… preemptively" anti-pattern both target the heavy multi-tab pulls (`JLMops_Data`/GSC/GA4); both were amended to explicitly carve out the single-file ops export, so a future session doesn't read the anti-pattern and stop reading the export.
+4. **Scope guard honored** — read-only, flag-don't-fix, per the skill's existing rules and the plan's consumer guardrail.
+5. **`/review-deep` not wired** — daily is the right cadence for ops-health glance; revisit only if deep reviews want it too.
 
 ## What already exists / is designed (don't rebuild — extend)
 
@@ -80,7 +82,7 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 
 ## Phasing
 
-- **P0 — producer. ✅ live blocks SHIPPED 2026-06-03** (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`); KPI block still deferred. **Consume leg (fold into `/review-daily`) NOT done — open gap, see Review pass (2026-06-10).**
+- **P0 — producer + consumer. ✅ COMPLETE.** Producer live blocks SHIPPED 2026-06-03 (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`); KPI block still deferred. **Consume leg WIRED 2026-06-10** — `/review-daily` reads the export each run (see Review pass above). Interactive pull loop now closed end-to-end.
 - **P1 — machine block + headless transport.** Add the JSON block and the token-gated read endpoint.
 - **P2 — event trigger.** Hook `refreshLiveBlocks` into `reportFailure` for High/Critical.
 - **P3 — consumer routine.** Author the `/schedule` routine (read → triage → diagnose → report), read-only.
