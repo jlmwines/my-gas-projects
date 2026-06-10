@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-10 — Ops↔session bridge COMPLETE (consume leg + KPI block) @287
+
+- Examined Dispatch's review-pass on `OPS_SESSION_BRIDGE_PLAN.md`; verified the gap (producer shipped @217, consumer never wired). Confirmed by reading the skill: `/review-daily` read STATUS/log/CALENDAR/bugs only.
+- **Consume leg WIRED:** `/review-daily` now reads `jlmops-status.md` (Reads step 5 + Pulse rule); reconciled the skill's `Skip by default` line + "don't pull Drive preemptively" anti-pattern so a future session doesn't read them and stop. (Skill lives in `~/.claude/commands/` — outside the repo.)
+- **GA4/GSC pulls were stalled** (GA4 5/17, GSC 5/07). User restored both: GSC now monthly/3rd + **Date dimension added** (was Page-only → no trend). IDs recorded in `business/KPI.md` + `reference_drive_files` memory. Retired the `defer:2026-06-15` trajectory Inbox flag (data-path fixed; trend-spine deferred to the bridge plan).
+- **KPI block BUILT + DEPLOYED @287:** `StatusReportService` section-aware write (sentinel health/kpi sections, each preserves the other, legacy file migrates) + `refreshKpiBlock` (internal KPIs from WebOrdM/SysContacts + GA4/GSC Traffic via `openById`, header-located cols, fail-soft never-throw) + daily Phase 3 wiring + `WebAppSystem_refreshStatusExport` + Dev "Push Status Export" button. New config keys `system.sheet.ga4_report/gsc_report` (id+data_tab).
+- **Smoke PASSED** (read `jlmops-status.md` via Drive MCP): both sections render + coexist; orders counting (`wom_Status` assumption held); **GA4 Traffic live** (data_tab guess `JLM GA4 Weekly` correct); GSC fail-soft `no Date dimension yet` pending its dated fetch.
+- Next: GSC Traffic populates after next dated GSC fetch (`/review-daily` surfaces it). Surfaced for user: overnight Comax import HALTED on malformed 3-col file (02:26, `SysLog`) — today's Comax data may be stale; user aware. Standing: reliability/UI audit queues.
+
 ## 2026-06-09 — Bundle editor Phase 5 (ADMIN_BUNDLES_UI_PLAN §9) BUILT + SHIPPED @284→@286
 
 - Pulled Phase 5 forward (was deferred). **A — inline-at-row editor:** the editor is one persistent node that mounts into an expansion `<tr>` under the active row and parks back home (hidden) before every `loadBundleList()` `tbody.innerHTML` (save/Maintain/Review re-render), then re-mounts — so the open editor + in-progress draft survive the refresh. Accordion toggle. Key trap found by reading the refresh paths first: `saveComposition`→`afterSaveRefresh`→`syncPushStatus`→`loadBundleList` re-renders the tbody mid-edit, which would destroy a naively-moved node.
