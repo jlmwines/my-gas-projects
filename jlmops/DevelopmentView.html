@@ -12,6 +12,7 @@
           <button class="btn mr-2 mb-2" onclick="runDailyHousekeeping()">Daily Housekeeping</button>
           <button class="btn mr-2 mb-2" onclick="runUnitTests()">Run Unit Tests</button>
           <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
+          <button class="btn mr-2 mb-2" onclick="runBackfillCampaignActivity()">Backfill Campaign Activity</button>
         </div>
         <div id="dev-tools-results" class="mt-3"></div>
       </div>
@@ -177,6 +178,23 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
       })
       .WebAppSystem_refreshStatusExport();
+  }
+
+  function runBackfillCampaignActivity() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Pulling campaigns + backfilling activity...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response && response.success) {
+          resultDiv.innerHTML = `<p class="alert alert-success">Campaign activity backfilled — ${response.created} new rows (${response.skipped} existing skipped, ${response.pulled} campaigns pulled${response.errors ? ', ' + response.errors + ' errors' : ''}).</p>`;
+        } else {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Backfill failed: ${response ? response.error : 'no response'}</p>`;
+        }
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
+      })
+      .WebAppSystem_backfillCampaignActivity();
   }
 
 </script>

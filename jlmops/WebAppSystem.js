@@ -606,3 +606,28 @@ function WebAppSystem_refreshStatusExport() {
   }
 }
 
+/**
+ * Manual catch-up for Mailchimp broadcast campaigns as CRM activity. Pulls
+ * recent campaigns (so a just-sent one is captured even before the daily pull)
+ * then creates campaign.received activity rows for subscribed contacts —
+ * idempotent, skips existing. Driven by the Developer screen "Backfill Campaign
+ * Activity" button. Run after a broadcast send.
+ * @returns {Object} { success, pulled, created, skipped, errors } or { success:false, error }.
+ */
+function WebAppSystem_backfillCampaignActivity() {
+  const serviceName = 'WebAppSystem';
+  const functionName = 'backfillCampaignActivity';
+  LoggerService.info(serviceName, functionName, 'Manual campaign-activity backfill (pull + backfill)...');
+
+  try {
+    const pull = CampaignService.pullRecentCampaigns();
+    const result = ActivityBackfillService.backfillCampaignActivity();
+    LoggerService.info(serviceName, functionName,
+      `Pulled ${pull.upserted} campaigns; created ${result.created} activity rows (${result.skipped} existing).`);
+    return { success: true, pulled: pull.upserted, created: result.created, skipped: result.skipped, errors: result.errors };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, `Error backfilling campaign activity: ${e.message}`, e);
+    return { success: false, error: e.message };
+  }
+}
+
