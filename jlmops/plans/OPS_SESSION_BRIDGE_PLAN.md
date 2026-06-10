@@ -37,7 +37,7 @@ Plan reasoning remains sound and internally consistent; no design changes needed
 
 Locks the scope discussed with the user. **OPS is the sole reader of the source systems and writes everything a session needs into the one flat file `jlmops-status.md`.** Two data kinds (system health + KPI), two trigger modes (scheduled + an on-demand admin button). The on-demand control pushes **both** blocks — it is not health-only.
 
-**State going in.** Health blocks ship and run on the 15-min cadence (`refreshLiveBlocks`, @217). The KPI block (`refreshKpiBlock`) is fully specced (§3.2 "KPI block scope", 2026-06-04) but **not built**. **Status 2026-06-10: steps 1-6 CODE COMPLETE in the working tree (committed, NOT pushed). Step 0 done. Remaining = user-side: `clasp push` + deploy + smoke (step 7), AND confirm the two `data_tab` config values (`system.sheet.ga4_report` / `gsc_report` data_tab) match the real add-on output tab names — they were set to best-guess workbook titles. `rebuildSysConfigFromSource()` needed after push for the new config keys.** The GA4/GSC source pulls are restored (step 0).
+**State going in.** Health blocks ship and run on the 15-min cadence (`refreshLiveBlocks`, @217). The KPI block (`refreshKpiBlock`) is fully specced (§3.2 "KPI block scope", 2026-06-04) but **not built**. **Status 2026-06-10: ✅ SHIPPED @287 — smoke PASSED.** Deployed; `rebuildSysConfigFromSource()` run; Dev → Push Status Export verified live via Drive MCP read of `jlmops-status.md`. Both sections render and coexist (section-aware write holds). Internal KPIs correct (orders counting — `wom_Status` assumption held). **GA4 Traffic working** — `data_tab` guess (`JLM GA4 Weekly`) was right, no config fix needed. **GSC** shows the fail-soft `no Date dimension yet` line — its tab still holds the old Page-only data; populates after the next dated GSC fetch (monthly/3rd, or re-run the request with Date grouped). The export is already surfacing real signals (Woo Orders STALE, 13 failed jobs, overnight Comax schema-mismatch). GA4/GSC source pulls restored (step 0).
 
 **Build steps, in order:**
 
@@ -104,7 +104,7 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 
 ## Phasing
 
-- **P0 — producer + consumer.** **Health half COMPLETE:** producer live blocks SHIPPED 2026-06-03, consume leg WIRED 2026-06-10 (`/review-daily` reads the export each run). **KPI half + on-demand control = the active build** — see "Active build plan (2026-06-10)" above (foundation gate → config → section-aware write → `refreshKpiBlock` → Developer button → smoke). Once that ships, OPS supplies BOTH health + KPI, on cadence + on-demand, and P0 is truly complete.
+- **P0 — producer + consumer. ✅ COMPLETE (both halves).** Health: producer SHIPPED 2026-06-03, consume leg WIRED 2026-06-10. KPI + on-demand control: SHIPPED @287 2026-06-10 (smoke passed — see Active build plan above). OPS now supplies BOTH health + KPI into `jlmops-status.md`, on cadence (15-min health / daily KPI) + on-demand (Dev → Push Status Export). Only tail: GSC Traffic populates once its dated fetch lands.
 - **P1 — machine block + headless transport.** Add the JSON block and the token-gated read endpoint.
 - **P2 — event trigger.** Hook `refreshLiveBlocks` into `reportFailure` for High/Critical.
 - **P3 — consumer routine.** Author the `/schedule` routine (read → triage → diagnose → report), read-only.
