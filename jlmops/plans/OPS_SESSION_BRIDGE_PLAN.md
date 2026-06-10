@@ -33,6 +33,28 @@ Plan reasoning remains sound and internally consistent; no design changes needed
 4. **Scope guard honored** — read-only, flag-don't-fix, per the skill's existing rules and the plan's consumer guardrail.
 5. **`/review-deep` not wired** — daily is the right cadence for ops-health glance; revisit only if deep reviews want it too.
 
+## Active build plan (2026-06-10): OPS supplies BOTH health + KPI to sessions — on cadence AND on-demand
+
+Locks the scope discussed with the user. **OPS is the sole reader of the source systems and writes everything a session needs into the one flat file `jlmops-status.md`.** Two data kinds (system health + KPI), two trigger modes (scheduled + an on-demand admin button). The on-demand control pushes **both** blocks — it is not health-only.
+
+**State going in.** Health blocks ship and run on the 15-min cadence (`refreshLiveBlocks`, @217). The KPI block (`refreshKpiBlock`) is fully specced (§3.2 "KPI block scope", 2026-06-04) but **not built**. The on-demand control is **not built**. The GA4/GSC source pulls are **stalled** (GA4 last ran 2026-05-17, GSC 2026-05-07). This plan builds the three missing pieces.
+
+**Build steps, in order:**
+
+0. **Foundation gate — restart the source pulls (user-side, ~30 min, prerequisite).** The GA4 + GSC weekly add-on pulls have stopped; nothing downstream yields real KPI numbers until their data tabs are current again. Per §3.2 part 1: re-auth / re-schedule both add-ons; confirm GA4 fires (data-tab max date ≈ yesterday) and `Limit 1000` isn't truncating; add a **Date** dimension to GSC if it's grouped by Page only. **Effect on the STATUS `defer:2026-06-15` trajectory item:** restoring the pulls brings back the rolling-90-day window (near-term trend), but long-run trajectory is the **trend spine** (`KpiData` history) that this build keeps OUT. So the 6-15 item resolves as: restore the pulls, accept rolling-90-day as the trend horizon for now, and build the `KpiData` spine later only if longer history is wanted — it does NOT fully close via this build.
+
+1. **Register the source IDs in config.** Add `system.sheet.ga4_report = 12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU` + `system.sheet.ga4_data_tab`, and `system.sheet.gsc_report = 1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc` + `system.sheet.gsc_data_tab`, to `config/system.json` → `node generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`. (IDs verified live 2026-06-10; also in `business/KPI.md` + `reference_drive_files` memory.)
+
+2. **Make both writers section-aware (retrofit — do BEFORE the KPI block coexists).** Today `refreshLiveBlocks` does an atomic full-rewrite; once two cadences *and* a button write the same file, a full rewrite clobbers whichever block it didn't generate. Wrap each block in sentinel markers (`<!-- health:start -->…<!-- health:end -->`, `<!-- kpi:start -->…<!-- kpi:end -->`); each writer replaces only its own section and preserves the other. (§3.2 "Single-file write correction.")
+
+3. **Build `refreshKpiBlock(sessionId)`** per §3.2 part 2 (ops mirror). OPS opens the GA4 + GSC workbooks by ID (`SpreadsheetApp.openById(id).getSheetByName(dataTab).getDataRange().getValues()` — the multi-tab limit is Claude's Drive path only, not GAS), aggregates the window, and writes a **Traffic** subsection (GA4 sessions/users/engagement/keyEvents; GSC clicks/impressions/avg-position) alongside **internal KPIs** (today/week/month orders + revenue from WebOrdM, AOV, new-vs-returning via `sc_FirstCompletedDate`, EN/HE split) using fresh aggregators in `StatusReportService.js` (V2-dashboard refactor stays deferred to Tier 6.8). Each external metric stamped with its tab's max date; an empty tab renders "no data (last refresh <date>)" rather than throwing (CCP-1). Wire into daily housekeeping Phase 3. (Trend spine / `KpiData` append, §3.2 part 3, is optional and NOT in this build.)
+
+4. **On-demand Developer control (pushes both).** One button on `DevelopmentView.html` — "Push Status Export Now (Health + KPI)" — copying an existing button + `google.script.run` handler in that file, calling a new thin `WebAppSystem_refreshStatusExport()` wrapper that invokes **both** `refreshLiveBlocks()` and `refreshKpiBlock()` (mirrors the existing `WebAppSystem_runUnitTests` entry). Success → `TaskWidgets.toast`. Backend `refreshLiveBlocks` already exists and is exported; the wrapper + button are the only new surface. (If KPI refresh proves slow in practice, split into two buttons — a trivial variation, decided at build time, not now.)
+
+5. **Smoke.** Click the button → read `jlmops-status.md` via Drive MCP → confirm **both** the health section and the KPI section show current data with fresh IL timestamps, and neither clobbered the other (section-aware write holds). Then confirm the daily trigger refreshes the KPI block unattended, and the 15-min tick keeps refreshing health without wiping KPIs.
+
+**Result.** Sessions read one file carrying live health (15-min tick + button) and KPIs (daily tick + button), all placed by OPS; no session ever touches a source system. The deferred P1/P3 push-mode pieces (token endpoint, headless routine, machine-readable JSON) stay out of scope — this is the interactive pull bridge, made complete for both data kinds.
+
 ## What already exists / is designed (don't rebuild — extend)
 
 - **Producer is mostly specced in `RELIABILITY_AUDIT.md` Tier 3.2** — `jlmops-status.md`, a single Claude-readable markdown file regenerated on the 15-min `runFrequentMaintenance` cadence (live blocks) + daily (KPI block), written via `DriveApp.getFileById(statusFileId).setContent(markdown)`, wrapped in `reportFailure('status_export.refresh', …)` so a regen failure never breaks maintenance. Sections: System / Integrations / Queue / Data quality / Capacity / KPIs / Recent errors. New `StatusReportService.js` + `LoggerService.getRecentErrors(n)`. **Live blocks SHIPPED 2026-06-03 (@217, commit `437e015`); KPI block (`refreshKpiBlock`) still deferred — see Review pass (2026-06-10) above.**
@@ -82,7 +104,7 @@ This also composes with the lifecycle work: because `resolveFailure` self-closes
 
 ## Phasing
 
-- **P0 — producer + consumer. ✅ COMPLETE.** Producer live blocks SHIPPED 2026-06-03 (`StatusReportService` + `jlmops-status.md` + `getRecentErrors`); KPI block still deferred. **Consume leg WIRED 2026-06-10** — `/review-daily` reads the export each run (see Review pass above). Interactive pull loop now closed end-to-end.
+- **P0 — producer + consumer.** **Health half COMPLETE:** producer live blocks SHIPPED 2026-06-03, consume leg WIRED 2026-06-10 (`/review-daily` reads the export each run). **KPI half + on-demand control = the active build** — see "Active build plan (2026-06-10)" above (foundation gate → config → section-aware write → `refreshKpiBlock` → Developer button → smoke). Once that ships, OPS supplies BOTH health + KPI, on cadence + on-demand, and P0 is truly complete.
 - **P1 — machine block + headless transport.** Add the JSON block and the token-gated read endpoint.
 - **P2 — event trigger.** Hook `refreshLiveBlocks` into `reportFailure` for High/Critical.
 - **P3 — consumer routine.** Author the `/schedule` routine (read → triage → diagnose → report), read-only.
