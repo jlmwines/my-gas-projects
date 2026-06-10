@@ -149,5 +149,4 @@ _Only cross-project notes or pending-decision items belong here._
 
 ### Deferred
 
-- **2026-05-24: Trajectory monitoring — decide once `defer:2026-06-15`** (moved from Active 2026-06-01; not yet due). GA4/GSC date-bucketed trajectory flagged unmeasured across 3 deep reviews (2026-05-07, 2026-05-15, 2026-05-24). Unblock is user-side: re-run GSC report with a Date dimension (current rollup is by Page only); confirm GA4 add-on data tabs populate (last check found only the config tab readable via Drive MCP). By 2026-06-15: either schedule the sheet-config fix, or accept trajectory monitoring stays qualitative and stop carrying the flag review-to-review.
 - **2026-05-04: Offline-channel attribution scheme** `defer:2026-07-01` — When SE-of-Katamon flyer drops + newsletter inserts ship, need unique coupon code per offline campaign (e.g., `JLMSE50`) + UTM-tagged QR codes feeding GA4. First-order coupon system already supports per-code restrictions. Define naming convention + QR generator setup when offline campaigns are about to ship. Specific neighborhood SE of Katamon (Talpiot/Arnona/Mekor Haim/Baka) — TBD.
