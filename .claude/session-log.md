@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-10 (cont) — Campaign-as-CRM-activity button @288 + manager-dash project-routing trace
+
+- "Mailchimp campaign as activity" was already built — `ActivityBackfillService.backfillCampaignActivity` writes `campaign.received` rows (language-matched to campaign, post-subscribe-date, idempotent) — but its only caller was the manual `runActivityBackfill`. Daily `backfillActivities` is a disabled no-op stub; housekeeping only logs its OWN transactional `comm.email` sends (pending-payment/welcome), not Mailchimp broadcasts. So broadcasts never auto-logged.
+- Shipped @288: Dev screen **Backfill Campaign Activity** button → `WebAppSystem_backfillCampaignActivity` (pulls recent campaigns THEN backfills, so a just-sent campaign is caught). Manual catch-up; **daily auto-wiring deferred** per user ("manual is good for now"). Design caveat recorded: "received" is INFERRED (language + subscribe-date), not real Mailchimp per-recipient/open data.
+- Manager-dash Q: new-customer first-order contact task = `task.contact.outreach` (topic "Contact") → auto-routes to project **`PROJ-SYS_CRM`** via `task.routing.topic_to_project` (`system.json`). So the CRM project filter surfaces them (also catches Campaign-topic tasks). No explicit projectId passed; `createTask` defaults via the routing map.
+- Commits: 5c2d04f (button) + 84cc14d (VERSION @288); deployed @288, pushed.
+
 ## 2026-06-10 — Ops↔session bridge COMPLETE (consume leg + KPI block) @287
 
 - Examined Dispatch's review-pass on `OPS_SESSION_BRIDGE_PLAN.md`; verified the gap (producer shipped @217, consumer never wired). Confirmed by reading the skill: `/review-daily` read STATUS/log/CALENDAR/bugs only.
