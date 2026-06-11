@@ -185,6 +185,6 @@ Four phases, overlapping and recurring:
 - `jlmops/plans/CONTACT_MANAGER_PLAN.md` — Half 1 shipped @81; Half 2 action layer (per-customer welcome) queued
 - `jlmops/plans/CAMPAIGN_SYSTEM_PLAN.md` — campaign strategy / business levers (this plan provides the data shape)
 - `jlmops/docs/DATA_MODEL.md` — schema additions to be documented here
-- `jlmops/plans/WORKFLOWS.md` §12 — flow patterns reused for Project task chains
+- `jlmops/docs/WORKFLOWS.md` §12 — flow patterns reused for Project task chains
 - `content/PUBLICATION_CALENDAR.md` — external calendar view; annotates with `sm_CampaignId` and Project IDs as cross-link
 - `content/CLAUDE.md` — post format and blog/newsletter decoupling; aligns with Project task chain templates

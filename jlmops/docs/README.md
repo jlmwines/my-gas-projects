@@ -8,6 +8,7 @@ Governed by **Documentation Standards** in the portfolio kernel (`projects/.clau
 
 - **`ARCHITECTURE.md`** — system structure, layering, sync workflow, DR posture.
 - **`DATA_MODEL.md`** — every sheet, column, and relationship.
+- **`WORKFLOWS.md`** — the key user and system workflows. (Flagged in `../plans/TECH_DEBT_AUDIT.md` as possibly drifted from current code; needs a freshness pass.)
 
 ## The rules that keep these true
 
@@ -17,5 +18,4 @@ Governed by **Documentation Standards** in the portfolio kernel (`projects/.clau
 
 ## Not yet graduated
 
-- `../plans/WORKFLOWS.md` describes system behavior (sync/user workflows) and is a system-doc candidate; it stays in `plans/` until a reconciliation pass moves and freshens it.
-- Several large plan docs still hoard schema/architecture detail that should graduate here (cleanup-session backlog).
+- Several large plan docs still hoard schema/architecture detail that should graduate here (cleanup-session backlog). Notable: `../../docs/plans/projects recovery.txt` is the only record of the shipped Project-Task Integration (topic→project routing, the four system projects); its durable facts should graduate into a clean reference, then the dump can go.

@@ -43,6 +43,6 @@ For more detailed information on the system's design and implementation, please 
 
 *   **[ARCHITECTURE.md](../docs/ARCHITECTURE.md):** A detailed description of the system's technical architecture and UI/UX design.
 *   **[DATA_MODEL.md](../docs/DATA_MODEL.md):** A complete reference for all Google Sheets, their columns, and data relationships.
-*   **[WORKFLOWS.md](WORKFLOWS.md):** Detailed explanations of the key user and system workflows.
+*   **[WORKFLOWS.md](../docs/WORKFLOWS.md):** Detailed explanations of the key user and system workflows.
 *   **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md):** The high-level, phased plan for building and deploying the system.
 *   **[TESTING_AND_VERSIONING.md](TESTING_AND_VERSIONING.md):** The strategy for version control, testing, and safe deployment of new features.
