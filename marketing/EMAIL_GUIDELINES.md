@@ -10,16 +10,18 @@ Same as all JLM communications (see `business/CONTENT_STRATEGY.md`):
 
 ## Design Decisions
 
+Colors/fonts mirror the site's brand — source of truth is the theme CSS `:root` block, summarized in `business/BRAND_STANDARDS.md`. Keep these in sync if the theme palette changes.
+
 | Element | Choice | Rationale |
 |---------|--------|-----------|
 | Layout | Single column | Mobile-first (41%+ open on phone), multi-column crushes on small screens |
 | Hero image | Yes, via Mailchimp Image block | Sets mood, not in HTML code — keeps code clean |
-| CTA | One button, charcoal (#32373c) white text | Outperforms text links; matches site; one CTA avoids confusion |
+| CTA | One button, terracotta (#a83920) white text (hover #8e2f1a) | Matches the site's accent/CTA color; one CTA avoids confusion |
 | Inline links | Remove from body when button exists | Don't compete with the primary CTA |
 | Closing | Personal sign-off from Evyatar, below button | Warm ending after the action prompt |
-| Fonts | Marcellus (headings), Open Sans (body) | Matches website |
-| Text color | #32373c (headings), #444444 (body) | Matches website |
-| Background | #ffffff content, #f4f4f4 outer | Clean, warm |
+| Fonts | Secular One (headings), Rubik (body) — with a system sans-serif fallback | Matches the website (post-2026-05-05 cutover); most email clients fall back to system fonts anyway, so colors carry the brand more than fonts |
+| Text color | #1a1612 (warm near-black Ink, headings + body); #7a6e62 (Muted) for secondary text | Matches the website `:root` palette |
+| Background | #ffffff content surface on a #fcf9f2 warm-cream outer | Matches the site's cream background; clean, warm |
 
 ## Image Guidelines
 

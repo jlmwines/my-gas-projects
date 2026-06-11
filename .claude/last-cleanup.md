@@ -20,8 +20,10 @@ Doc-folder reconciliation:
 
 **Full project-scoped sweep COMPLETE** — all doc folders covered (`.claude` trackers, STATUS, CALENDAR, memory, jlmops docs+plans, website, business, marketing, content).
 
-Open items left for the user (not doc-cleanup — decisions):
-- `marketing/EMAIL_GUIDELINES.md` — fonts/colors (Marcellus/Open Sans/charcoal) predate the cutover; whether to realign email design to the new theme (Secular One/Rubik/terracotta) is a design call.
+Resolved after the sweep:
+- `marketing/EMAIL_GUIDELINES.md` — **realigned to the post-cutover brand per user** (2026-06-11): Secular One/Rubik fonts (system fallback noted), Ink #1a1612 text, terracotta #a83920 CTA, cream #fcf9f2 background; added a source-of-truth pointer to BRAND_STANDARDS.
+
+Open item left for the user:
 - `content/PUBLICATION_CALENDAR.md` June row — needs the user's session-end confirmation of YiV / Issue #2 / the May email-sent status.
 
 Triggered when: user asked for the full project-scoped cleanup sweep.
