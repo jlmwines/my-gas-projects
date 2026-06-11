@@ -118,7 +118,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 
 **Recovers via.** Next-scheduled run retries; FAILED job lands in the SysJobQueue dead-letter.
 
-**Who notices.** `SysLog` ERROR → Google Chat webhook for hard failures. Silent staleness (last successful pull was 48 hours ago and nobody alerts) is invisible.
+**Who notices.** Failures land in `SysLog` + a `task.system.failure` (dashboard health widget); there is **no out-of-band push alert** (the Chat webhook claimed in `ARCHITECTURE.md` §4.2 does not exist — confirmed 2026-06-09, §3.5). Silent staleness (last successful pull was 48 hours ago) is only caught by the 3.1 heartbeat card.
 
 **Gaps.**
 - ✓ **CLOSED (3.1, 2026-06-03)** — Integrations heartbeat card on the admin dashboard shows last-successful-pull per source (Woo orders/products, Mailchimp subscribers/campaigns) with per-source staleness thresholds. **Comax heartbeat still omitted** (no config key; lives in SysJobQueue COMPLETED rows) — small 3.1 follow-up.
@@ -159,7 +159,7 @@ For each surface: what is in place, what fails, how it recovers, who notices, wh
 
 **In place.** Secrets stored across `SysConfig`, PropertiesService (clasp), and local files (`.gcp-credentials.json` for the library register script, `jlmops/.clasprc.json` for clasp auth, the `accounts@jlmwines.com` Google session). `.gitignore` keeps the credential files out of git (verify in Tier 1).
 
-**Fails when.** A `git add .` accident commits a credential file. A public-repo flip exposes history. AI training-data scrape exfiltrates from screen shares or accidental paste. Local machine compromise reads files at rest. A leaked Chat webhook URL is abused.
+**Fails when.** A `git add .` accident commits a credential file. A public-repo flip exposes history. AI training-data scrape exfiltrates from screen shares or accidental paste. Local machine compromise reads files at rest.
 
 **Recovers via.** Revoke + rotate at the issuer (WC, Mailchimp, Google), redistribute to all consumers. No documented procedure today.
 
@@ -279,75 +279,13 @@ Each session below has: **goal** (one sentence), **anchors** (file:line refs), *
 
 ### Tier 1, data integrity now
 
-#### 1.1 SysContacts aggregate-consistency fix + ContactImportService typo
+#### 1.1 SysContacts aggregate-consistency fix — SHIPPED 2026-06-02 (@201)
 
-**Goal.** SysContacts aggregate columns (`sc_OrderCount`, `sc_TotalSpend`, `sc_LastOrderDate`, `sc_AvgOrderValue`) match union of `WebOrdM` + `WebOrdM_Archive` per normalized email, post status-exclusion.
+`updateContactsFromOrders` now reads `WebOrdM` ∪ `WebOrdM_Archive` (was master-only, so `sc_OrderCount` decremented when orders archived); CCP-3 batch + post-write verify (`reconciliation.sys_contacts.write_verify`, High, on mismatch); the `\`-for-`/` typo at `ContactImportService.js:818` fixed. This is the reconciler that 3.4 (scheduled check) reuses.
 
-**Anchors.**
-- Bug location: `ContactImportService.js:626-885` `updateContactsFromOrders` — reads only `WebOrdM`, never `WebOrdM_Archive`. Once an order leaves for archive, `sc_OrderCount` decrements.
-- Correct pattern to copy: `ContactImportService.js:78-131` in `importFromOrderHistory` — already does the archive merge correctly.
-- Pre-existing typo: `ContactImportService.js:818` `Math.round(newTotalSpend \ newOrderCount)` — backslash instead of slash. Fix in a separate commit within the same session.
-- Status-exclusion list (`cancelled / refunded / failed`): preserve as-is, both paths use it.
-- Email normalize: `ContactImportService.js:172, :692` (`.toLowerCase().trim()`).
-- Downstream readers (must not regress): `CampaignService.js:423-548` (segmentation), `ContactService.js:198-251, :829` (scoring), `ContactEnrichmentService.js:925-935` (has a known "may be from different data source" comment that flags this bug at author level).
+#### 1.2 Input-safety hardening — SHIPPED 2026-06-03 (3 stages)
 
-**Implementation.**
-1. Rewrite `updateContactsFromOrders` aggregation loop to read from `WebOrdM` + `WebOrdM_Archive` union (mirror the archive-merge block from `:78-131`).
-2. Apply CCP-3: one `getValues()` per sheet, group-by-normalized-email in memory, one `setValues()` for the SysContacts aggregate columns block.
-3. Verify step (CCP-3): post-write, sum SysContacts `sc_OrderCount` over all rows equals union row count (post status-exclusion); on mismatch, `reportFailure('reconciliation.sys_contacts.write_verify', ..., 'High', ..., sessionId)`.
-4. Separate commit: fix the `\` typo at `:818`.
-
-**CCPs.** CCP-1 (reportFailure on verify mismatch), CCP-2 (sessionId), CCP-3 (batch + flush + verify).
-
-**Smoke.** Pre-deploy: snapshot 3 contacts (one with archived orders, one with mixed, one current-only). Post-deploy: confirm `sc_OrderCount` matches `COUNTIFS` against the union (post status-exclusion) within 0; `sc_TotalSpend` within 1 NIS. Run an admin campaign-segment count and confirm <1% shift.
-
-**Rollback.** `git revert` + redeploy. Aggregate columns recompute on next run; divergence reverts naturally. No schema change.
-
-**Depends on.** Nothing. Independent. First session to ship.
-
-**Open.** None.
-
-**CCP audit.** CCP-1 reportFailure fires on verify mismatch; CCP-2 sessionId threaded through reconciler + reportFailure; CCP-3 read-once / setValues / flush / verify pattern applied to aggregate columns block.
-
-#### 1.2 Input-safety hardening (staged: 3 deploys)
-
-**Goal.** Adversarial inputs (oversized WC response, Comax adapter pre-parse throw, Doc-bound text with formula/RTL exploits) fail closed without corrupting state or crashing the executor.
-
-**Status (2026-06-03).** Stages A + B + C all SHIPPED (deploy in place) — session 1.2 complete. Stage C scope narrowed (bidi strip done; formula-prefix guard omitted as wrong-surface for a Doc — see Stage C below). Deviations from this plan as written: (1) config key landed as `woo.api.response_max_bytes`, NOT `system.woo.response_max_bytes` — followed the existing `woo.api.retry_max` / `retry_delay_ms` precedent so all woo HTTP knobs share a home (read in `WooApiService._getApiConfig` as `responseMaxBytes`); (2) the `_fetch` reportFailure passes `null` sessionId by design — `_fetch` is a deep internal called widely with no sessionId param, threading one through every caller is out-of-scope risk, and reportFailure tolerates null. Implementation also added a `wooNonRetryable` error tag so the oversize throw short-circuits the retry loop (fires reportFailure once, not retryMax+1 times).
-
-Three distinct work items, three distinct files, three distinct failure modes. Staged as three deploys within the session so each ships with its own smoke gate. If any sub-stage fails or surfaces unknowns, stop the session and re-plan rather than push through.
-
-**Anchors.**
-- WC single chokepoint: `WooApiService.js:127-136` `_fetch` — `getContentText() + JSON.parse` with no size check. All WC endpoints go through this; one cap covers everything.
-- Comax parser top-level miss: `ComaxAdapter.js:31` `Drive.Files.insert` has no try around it. Existing :42, :51-54, :120-126 throws already propagate to FAILED via `OrchestratorService.js:1218` correctly.
-- Doc-bound text sites: `PrintService.js:180-188` (shipping name/address/phone). NOT `customerNote` (never injected; grep confirms zero `replaceText` codebase-wide).
-
-**Stage A: WC response size cap. SHIPPED 2026-06-03.**
-- In `WooApiService._fetch` after `UrlFetchApp.fetch` returns but before `getContentText()`, read the `Content-Length` header (blob-bytes fallback when absent, e.g. chunked transfer) and compare to config `woo.api.response_max_bytes` (default 10 MB = 10485760).
-- On exceed: `reportFailure('integration.woo.response_oversize', ..., 'High', {endpoint, sizeBytes, maxBytes}, null)`, then throw a `wooNonRetryable`-tagged error so the retry loop short-circuits.
-- Smoke A (pending user run post-deploy): mock oversized WC response, confirm short-circuit + `integration.woo.response_oversize` failure task.
-
-**Stage B: Comax adapter outer try. SHIPPED 2026-06-03.**
-- Wrapped `ComaxAdapter.js:31` `Drive.Files.insert` in try/catch.
-- On catch: logs + throws a typed `INVALID FILE: ...could not be converted by Drive...` error; existing FAILED routing at `OrchestratorService.js:1218` preserved (no reportFailure added here — orchestrator owns that path).
-- Smoke B (pending user run): drop a truncated/non-CSV Comax file, confirm state machine ends at FAILED with `failedAtStage=IMPORTING_COMAX`, retry from sync widget returns to `WAITING_COMAX_IMPORT`.
-
-**Stage C: Doc-bound text sanitization. SHIPPED 2026-06-03 (scope narrowed).**
-- Added private `_sanitizeForDoc(str)` in `PrintService.js`: strips bidi override/embedding/isolate controls (`U+202A-202E`, `U+2066-2069`); non-strings returned as-is; benign `U+200E/200F` marks left alone (already treated as noise at `:33`).
-- Applied to the six shipping fields (name/address1/address2/city/phone) at the read site (now `:199-204` after the helper insertion).
-- **Formula-prefix guard (`=/+/-/@`) intentionally OMITTED.** The plan called for it, but this surface is a Google **Doc**, where a leading `=` is inert text — the guard would only stamp a visible literal `'` onto names/addresses for zero in-Doc benefit. Formula-injection defense belongs on an actual **Sheets-export** path (none exists today). Decision flagged to user 2026-06-03; revisit if a slip→Sheets export is ever built.
-- Smoke C (pending user run): (i) packing slip with an RLO/bidi-override-laced shipping name — confirm the slip's order#/address/phone are NOT visually reordered. (ii) packing slip with `שלום` in the name field — confirm Hebrew renders correctly.
-
-**CCPs.** CCP-1 (reportFailure on oversize), CCP-2 (sessionId), CCP-6 (max-bytes in SysConfig).
-
-**Rollback.** Per stage: git revert + redeploy. No data state. New SysConfig key can orphan or clean via rebuild. Each stage independently revertible.
-
-**Depends on.** Nothing. Independent.
-
-**Open.**
-- `[spike]` U+202E strip unconditional vs preserve with other bidi marks. Test with real Hebrew test names mid-Stage-C before committing.
-
-**CCP audit.** Stage A: CCP-1 reportFailure fires on oversize ✓; CCP-2 sessionId — passed `null` by design (see Status note) rather than threaded; CCP-6 `woo.api.response_max_bytes` lives in SysConfig (config/system.json regenerated → SetupConfig.js), not a code constant ✓. Stages B + C audit pending.
+Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._fetch` (config `woo.api.response_max_bytes`, default 10 MB; `wooNonRetryable` tag short-circuits the retry loop; `integration.woo.response_oversize` High on exceed). **(B)** outer try around `ComaxAdapter.js:31` `Drive.Files.insert` (FAILED routing via `OrchestratorService.js:1218` preserved). **(C)** `_sanitizeForDoc` in `PrintService.js` strips bidi override/embed/isolate controls from the six shipping fields. The formula-prefix guard was intentionally omitted — a leading `=` is inert in a Google Doc; that defense belongs on a Sheets-export path (none exists). Revisit if a slip→Sheets export is built.
 
 #### 1.3 Concurrency control (LockService — staged: helper + 4 lock applications, 5 deploys)
 
@@ -404,200 +342,29 @@ Three distinct work items, three distinct files, three distinct failure modes. S
 
 ### Tier 2, operational reliability now
 
-#### 2.1 Drift detection — RESOLVED / DROPPED 2026-06-03
+#### 2.1 Drift detection — RESOLVED AT ROOT 2026-06-03 (not built)
 
-**Goal (original).** `validateDeployment` reliably detects bare-clasp-deploy drift without daily false positives; orphan deployments removed; system tasks become user-closeable.
+Resolved at the source instead of detected: the drift cause was bare `clasp deploy` spawning orphan URLs, and the `deploy.ps1` wrapper already eliminates it (`--deploymentId <pinned>` + verify; bare deploy forbidden per the kernel). The orphans (@66/@67/@73/@96) were undeployed; the broken `validateDeployment` detector was removed from the codebase. **Decision: do not build a baseline-compare detector while the pinned-ID wrapper is the only deploy path** — reopen only if bare `clasp deploy` returns. The system-task UI close-path affordance that was bundled here is still useful and folds into 3.4's dependency.
 
-**Resolution (2026-06-03). Resolved at the root; this session is NOT built.** The re-eval settled: the drift *source* was bare `clasp deploy` spawning orphan URLs, and the `deploy.ps1` wrapper already eliminates it (deploys with `--deploymentId <pinned>` + verifies the pinned ID survived; bare deploy forbidden per the kernel — confirmed across ~10 deploys this session, same pinned ID every time). With no new orphans possible, in-script drift detection is monitoring for a problem that can't occur. The orphans (@66/@67/@73/@96) were undeployed by the user. The broken `validateDeployment` detector has been **removed from the codebase** (verified absent from all `.js`, not called in any housekeeping phase) — so the false-positive noise is gone too. **Decision: do NOT build the baseline-compare detector or the external `clasp deployments` diff while the pinned-ID wrapper is the only deploy path.** Reopen only if bare `clasp deploy` ever returns as a path. The implementation sketch below is retained only as a record of what was considered. (Stale `SetupConfig.js` pinned_id description corrected same day; `.claude/bugs.md` 2026-05-27 marked resolved.)
+#### 2.2 FAILED-job daily sweep — SHIPPED 2026-06-03
 
-**Anchors (historical — retained for record; detector no longer exists).**
-- Former detector `validateDeployment` (was in `HousekeepingService.js`) — **removed from the codebase as of 2026-06-03; the refs below are historical.**
-- Task close paths exist: `TaskService.completeTask :341-388`, `TaskService.updateTaskStatus :429-497`; UI wrappers `WebAppTasks.js:240 _completeTaskById`, `:313 _updateTaskStatus`. Just needs UI surface in dashboard.
-- Orphan deployments to undeploy: @66, @67, @73, @96 (per `.claude/bugs.md` 2026-05-27).
-- No `package.json` in `jlmops/` — for the local script, either add `package.json` or invoke node directly.
-- Memory `jlm_clasp_auth`: project-local `.clasprc.json` goes stale; local script must check auth state and exit clearly if stale.
+`HousekeepingService.checkFailedJobs(sessionId)` runs in Phase 1 before `purgeOldJobs`; writes `failed_job_count` + `failed_job_oldest_age_days` additively into the `task.system.health_status` notes; severity-ladders (Normal at >0, High at >7d, Critical when a FAILED job_type is still PROCESSING — zombie killer never fired); dedups on the stable `queue.failed_job_sweep` context; failures >30d are counted but excluded from High/Critical laddering.
 
-**Implementation.**
-1. New SysConfig key `system.deployment.runtime_url_baseline`. On first run after deploy, `validateDeployment` reads current `ScriptApp.getService().getUrl()` and stores as baseline. Subsequent runs compare against baseline (not pinned ID). **Bootstrap guard:** only write baseline from trigger context (e.g., guard with `e && e.triggerUid` or by detecting that the URL contains `/exec` not `/dev`) to avoid locking in a dev URL during manual editor runs.
-2. Local script `jlmops/scripts/check-deployments.js`: shells `clasp deployments`, parses output, diffs against checked-in `jlmops/.expected-deployments.txt` (initial contents: pinned `AKfycbz...49l26x9LK8vuIH8ELHI6yw` + HEAD). Exits non-zero on unexpected entries. If clasp auth is stale, prints "re-run `clasp login`" and exits non-zero.
-3. Add `package.json` to `jlmops/` with `"scripts": {"check-deployments": "node scripts/check-deployments.js"}`.
-4. Undeploy orphans: **before undeploying, audit any external integration** (Mailchimp webhook, WC webhook, saved bookmarks) for references to those orphan URLs. Then `clasp undeploy <id>` per orphan in same session.
-5. Add admin "Close drift task" affordance in `ManagerDashboardView_v2` (or admin dashboard) for `task.system.*` rows only. Re-uses existing `_completeTaskById`.
+#### 2.3 Test suite rewrite — SHIPPED 2026-06-03
 
-**CCPs.** CCP-1 (reportFailure on real drift), CCP-2 (sessionId), CCP-6 (baseline in SysConfig).
-
-**Smoke.** (a) Force a mismatch (set baseline to a known-fake value), run housekeeping, confirm `task.system.deployment_drift` opens. Close it via the new UI affordance, confirm done. (b) Hit each orphan URL post-undeploy: expect 404. Hit pinned URL: expect normal response. (c) Run `npm run check-deployments`: expect clean exit. (d) Confirm SysConfig has `system.deployment.runtime_url_baseline` populated post first-run.
-
-**Rollback.** Git revert + redeploy restores compare-to-pinned. Undeploys are not reversible — `clasp undeploy` is permanent. If an integration was pointing at an orphan and breaks, reconfigure the integration to the pinned URL.
-
-**Depends on.** Nothing. Independent.
-
-**Open.**
-- `[spike]` Confirm zero external references to orphan URLs before undeploy. Grep webhook configs in Mailchimp + WC admin at session start.
-- `[start]` `task.system.*` UI close path scope: uniform across all system task types, or scoped to `task.system.deployment_drift`? Default: uniform (replaces a recurring pattern across health, drift, deployment).
-
-**CCP audit.** CCP-1 reportFailure on real drift; CCP-2 sessionId in detector + close path; CCP-6 `system.deployment.runtime_url_baseline` in SysConfig.
-
-#### 2.2 FAILED-job daily sweep
-
-**Status (2026-06-03).** SHIPPED (deploy in place). `HousekeepingService.checkFailedJobs(sessionId)` added before `purgeOldJobs`. Notes-field names: `failed_job_count` + `failed_job_oldest_age_days` (additive in `last_housekeeping`). Implementation choices vs plan: (1) sweep is called EXPLICITLY before the phase-1 loop (not as a `phase1Tasks` array entry) so its return value can be threaded into the health-notes upsert — the array loop discards returns; (2) dedup uses the stable reportFailure **context** `'queue.failed_job_sweep'` (entityId is derived from context in `_createFailureTask`), so no separate entityId param is passed; (3) Open question resolved toward the **age-cap**: failures >30d are counted in `failed_job_count` but excluded from High/Critical laddering (legacy orphan-era noise doesn't spike first run); `oldest_age_days` reports the absolute oldest.
-
-**Goal.** Accumulating FAILED rows in SysJobQueue surface in the daily health snapshot with severity laddering, not silent rot.
-
-**Anchors.**
-- Sheet: `JLMops_Logs` workbook, `SysJobQueue` tab. Headers (from `config/schemas.json:157`): `job_id, session_id, job_type, status, archive_file_id, created_timestamp, processed_timestamp, error_message, retry_count, original_file_id, original_file_last_updated`. **Lowercase snake_case, no `sjq_*` prefix.**
-- Existing iteration: `HousekeepingService.purgeOldJobs :1839+` already iterates the queue + parses `processed_timestamp` as Date + applies threshold. Add sweep adjacent.
-- Phase ordering: `purgeOldJobs` is Phase 1; sweep must run BEFORE purge or aged FAILEDs vanish before being counted. Put sweep in Phase 1, before `purgeOldJobs`.
-- Health task notes shape: `HousekeepingService.js:700-718` writes `task.system.health_status` JSON. Add field additively (don't restructure).
-- Severity precedent: `SeverityService` referenced in `NotificationService.js:22`.
-- Dedup precedent: `NotificationService._createFailureTask :64-80` dedups by entityId; pass stable `failed_job_sweep` so daily runs update one task, not seven.
-
-**Implementation.**
-1. New method `HousekeepingService.checkFailedJobs(sessionId)`: read SysJobQueue once, filter `status === 'FAILED'`, compute count, oldest age, and `currentlyProcessingJobTypes` (job_types with any PROCESSING row).
-2. Severity laddering:
-   - FAILED count > 0 → Normal
-   - Any FAILED row > 7 days old → High
-   - Any FAILED row with `job_type` currently in PROCESSING set → Critical (zombie killer never fired)
-3. Write count + oldest_age to `task.system.health_status` notes additively. On High/Critical, call `reportFailure('queue.failed_job_sweep', ..., severity, details, sessionId)` with stable entityId `failed_job_sweep` for dedup.
-4. Insert call in Phase 1 of `performDailyMaintenance`, before `purgeOldJobs`.
-
-**CCPs.** CCP-1 (reportFailure with severity laddering), CCP-2 (sessionId), CCP-3 (read once, filter in memory).
-
-**Smoke.** Pre-deploy: count current FAILED rows by hand. Post-deploy: run `performDailyMaintenance` manually, inspect `task.system.health_status` notes JSON for `failed_job_count` and `failed_job_oldest_age_days`. Confirm dashboard widget still renders. **Expected on first run:** orphan-deployment-era FAILEDs (pre-zombie-killer) may spike the alert. Either age-cap the sweep to last 30 days, OR accept one-time noise + manually mark legacy FAILEDs reviewed.
-
-**Rollback.** Git revert + redeploy. No schema change. No data migration.
-
-**Depends on.** Nothing. Independent.
-
-**Open.**
-- `[start]` Age-cap 30 days (recommended for High/Critical thresholds; report absolute total in notes) vs absolute count (alarm-noise risk on first run).
-
-**CCP audit.** CCP-1 reportFailure with severity laddering + stable entityId for dedup; CCP-2 sessionId; CCP-3 read SysJobQueue once, filter in memory.
-
-#### 2.3 Test suite rewrite (scoped: ComaxAdapter + WebAdapter only)
-
-**Goal.** `TestRunner.runAllTests()` actually exercises the two import-safety-critical service shapes; daily housekeeping no longer green-by-default on broken tests.
-
-**Status (2026-06-03). SHIPPED — guard + both adapter rewrites.** Step 3 (empty/null guard) live: `HousekeepingService` Phase 2 `reportFailure('tests.empty_or_null_result', High, ...)` on null/`total===0`. Steps 1-2 DONE: `ComaxAdapterTest` + `WebAdapterTest` **rewritten to call the real adapters** with in-memory CSV fixtures (4 cases each: happy, structural-reject, empty, bad-data). They now go RED if the import path breaks — the decorative pass-by-default is gone.
-
-**Order/Product suites audited + ProductService rewritten (2026-06-03).** `OrderServiceTest`: **partly real** — Test 1 (mock-data integrity) is decorative, but Tests 2-3 call the real `OrderService.isEligibleForExport/isEligibleForPacking` (narrow pure helpers; the file itself notes sheet-level testing needs refactoring). Left as-is (the 1 mock test is a tiny residual). `ProductServiceTest`: **was fully decorative** (12 tests, 51 assertions, ZERO real calls — re-implemented logic inline / asserted on mocks). **Rewritten to 4 REAL tests** that call `ProductService.vendorSkuUpdate`/`fixOrphanSku` with invalid inputs and assert the real input-validation guards (which return before any product-sheet write — only a SysLog line precedes them, harmless). Honest scope note: ProductService is almost entirely sheet-coupled, so input-validation guards are the only logic unit-testable without the harness; the critical-field validation the old suite faked is now really covered by `ComaxAdapterTest`; quarantine/sanity-check logic lives in `ValidationOrchestratorService`/`ValidationLogic` (not ProductService) and needs the `TEST_HARNESS_PLAN` workbook for real coverage. **Net test count now ~15 real-ish** (was ~40 with 25+ decorative). Step 4 (physically moving suites to `tests-deferred/`) is moot — they're now real/honest in place.
-- **Risk was LOWER than this plan first assumed:** both adapters are *pure transforms* (CSV in → objects out, no production-tab writes; Comax only spins a self-trashing temp Drive file). No `Test*` sheets needed — in-memory fixtures suffice. Fixtures couple to the live `map.comax.product_columns` (18 cols) + `CmxProdS` schema and `map.web.product_columns` (`ID,SKU,Name,Published,Stock,Regular price`).
-- **Validation is NOT editor-only (corrected).** The admin **Developer screen "Run Unit Tests" button** runs `TestRunner.runAllTests()` (`WebAppSystem_runUnitTests`) and shows per-suite pass/fail in-app — so the rewrite is validated by a click, no Apps Script editor needed. **User action: click Run Unit Tests; the Comax/Web suites should pass on good input.** Test count drops ~40 → ~23 (8 real adapter tests replace 25 decorative ones) — fewer but meaningful.
-
-**Scope committed (v2.1).** Rewrite only `ComaxAdapterTest` and `WebAdapterTest` — the two suites on the import path that input-safety hardening (1.2) depends on. `OrderServiceTest` + `ProductServiceTest` rewrites defer to Tier 6.7 as backlog. This commits the scope so the session does not balloon.
-
-**Risk accepted (v2.1).** Per user priority of data-integrity over DR, this session ships before Tier 4.1 (snapshots). Rollback path if a test contaminates a live tab is reduced to Drive version history (~30 days) plus the existing SysConfig snapshot+restore around rebuild. Mitigation: tests MUST use dedicated `Test*` sheets from session start, never touch production tabs.
-
-**Anchors.**
-- `TestRunner.js:21-26` registers 4 suites: `OrderServiceTest`, `ProductServiceTest`, `ComaxAdapterTest`, `WebAdapterTest`.
-- Invoked at `HousekeepingService.js:641`; result logged at `:642-643` but `total === 0` not flagged.
-- **Current quality: decorative.** `ComaxAdapterTest:33-87` is inline mock arithmetic that never calls `ComaxAdapter.processProductCsv`. Tests "pass by default."
-- Existing test fixtures: `TestData.js`.
-
-**Implementation.**
-1. Rewrite `ComaxAdapterTest` to invoke `ComaxAdapter.processProductCsv` against `TestData.js` fixtures landed in dedicated `TestComax*` sheets. Cover: happy path, schema-mismatch column count, empty file, malformed row.
-2. Rewrite `WebAdapterTest` similarly against `TestWeb*` sheets.
-3. Add guard at `HousekeepingService.js:641-646`: if `testResult.total === 0` OR `testResult === null`, call `reportFailure('tests.empty_or_null_result', ..., 'High', ..., sessionId)`. Pass-by-default vanishes.
-4. Move `OrderServiceTest` + `ProductServiceTest` to `tests-deferred/` folder, `.claspignore` them, remove references from `TestRunner.js:21-26` (otherwise runtime errors). Document the deferral in Tier 6.7 of this doc.
-
-**CCPs.** CCP-1 (reportFailure on empty result), CCP-2 (sessionId).
-
-**Smoke.** Run `TestRunner.runAllTests()` from the editor. Expect non-zero total, all `ComaxAdapter` + `WebAdapter` tests passing. Run `performDailyMaintenance` and inspect SysLog: "Unit tests: N/N passed" with N > 0. Force a known-bad assertion in one test, redeploy, confirm Phase 2 reports failure.
-
-**Rollback.** Git revert + redeploy. Test sheets remain — manually delete if needed. If a test accidentally wrote to a production tab (despite using TestData fixtures), restore from Drive version history.
-
-**Depends on.** Nothing structural. Risk accepted on rollback without 4.1.
-
-**Open.**
-- `[start]` Confirm `TestData.js` fixtures exist for ComaxAdapter + WebAdapter happy-path inputs, or generate at session start.
-
-**CCP audit.** CCP-1 reportFailure fires on empty/null testResult; CCP-2 sessionId threaded into reportFailure.
+`ComaxAdapterTest` + `WebAdapterTest` rewritten to call the real adapters with in-memory CSV fixtures (happy / structural-reject / empty / bad-data) — they now go RED if the import path breaks. `ProductServiceTest` rewritten to 4 real input-validation-guard tests; `OrderServiceTest` left (mostly real already). Phase-2 empty/null-result guard (`tests.empty_or_null_result`, High) added so housekeeping can't be silently green on broken tests. Both adapters are pure transforms, so no `Test*` sheets were needed. Validated via the Developer screen's "Run Unit Tests" button. *Remaining (Tier 6.7):* deeper OrderService/ProductService coverage needs the `TEST_HARNESS_PLAN` workbook.
 
 ### Tier 3, visibility
 
-#### 3.1 Integration heartbeats panel + `orders_last_pull` fix
+#### 3.1 Integration heartbeats panel + `orders_last_pull` fix — SHIPPED 2026-06-03
 
-**Goal.** Dashboard widget shows last-successful-pull per integration with per-source staleness thresholds. Dead `orders_last_pull` key gets written.
-
-**Status (2026-06-03). DEAD-KEY FIX + HEARTBEAT PANEL SHIPPED; Chat-webhook check still open.** 
-- Step 1 (dead `orders_last_pull` key) live: `WooOrderPullService.pullOrders` stamps `woo.api.orders_last_pull` on BOTH success returns; added to `RUNTIME_KEYS` in `generate-config.js` so rebuilds preserve it like `products_last_pull`.
-- Steps 2-3 (aggregator + widget) live: `_getIntegrationHeartbeats_v2(allConfig)` in `WebAppDashboardV2.js` (pure config reads, stays on the read-once hot path) feeds an **Integrations** card on `AdminDashboardView_v2.html` (Row 3) — 4 sources (Woo orders/products, Mailchimp subscribers/campaigns), green check if fresh, ⚠ + red age if stale. Per-source thresholds `system.heartbeat.{products|orders|mailchimp}_threshold_min` (defaults 60/1440/1440 min; code falls back to those if the keys aren't yet in SysConfig). **Needs `rebuildSysConfigFromSource()` to make thresholds tunable; panel works on defaults immediately. Visual check is the user's (load admin dashboard).**
-- **Comax heartbeat OMITTED from the card** — it has no config key (lives in SysJobQueue COMPLETED rows); adding a cross-workbook read to the dashboard hot path wasn't worth it. 3.1 follow-up.
-- Step 4 (§3.5 Chat-webhook verification) STILL DEFERRED — separate spike.
-
-**Anchors.**
-- Already written: `woo.api.products_last_pull` at `WooProductPullService.js:53, :372`; `system.mailchimp.subscribers_last_update.value` at `ContactImportService.js:563`; `system.mailchimp.campaigns_last_update.value` at `CampaignService.js:1130`; `system.brurya.last_update` at `WebAppInventory.js:551, :1159`; `WebAppDashboardV2.js:676`.
-- **Bug: `woo.api.orders_last_pull` declared in `config/system.json` (per `SetupConfig.js:2158`), read at `WebAppSync.js:1058`, but `WooOrderPullService.pullOrders` (`:19-74`) never writes it.** Dead key.
-- Comax last-import: not a config key; query SysJobQueue for most recent COMPLETED row with `job_type='import.drive.comax_products'`, read its `processed_timestamp`.
-- Card precedent: existing card pattern in `AdminDashboardView_v2.html`.
-- Chat webhook reality (open question from §3.5): grep again definitively; build if missing.
-
-**Implementation.**
-1. Fix the dead key: in `WooOrderPullService.pullOrders`, on success path, write `setConfig('woo.api', 'orders_last_pull', new Date().toISOString())`. Mirror the precedent at `WooProductPullService:53`. Stamp on success only (not on attempt).
-2. New `WebAppSystem.js` (or similar) function `getIntegrationHeartbeats()` returning JSON for the widget: `{products: {ts, age_min}, orders: {ts, age_min}, mailchimp_subscribers: {...}, mailchimp_campaigns: {...}, comax: {...}}`.
-3. New `IntegrationHeartbeatWidget.html` (or addition to existing dashboard widget) reading the JSON and rendering staleness per source. Per-source thresholds in SysConfig: `system.heartbeat.threshold_min.{products|orders|mailchimp|comax}` (defaults: 60 min for orders, 1440 min for products and Mailchimp, 1440 for Comax).
-4. Resolve §3.5 Chat-webhook verification note: grep `LoggerService.js` + `NotificationService.js` for any `UrlFetchApp.fetch` to a webhook URL. If found, document. If not, decide: build a Chat-webhook bridge in `NotificationService._updateHealthStatusWithAlert`, or remove the claim from `ARCHITECTURE.md` §4.2.
-
-**CCPs.** CCP-1 (any error from heartbeat read → reportFailure), CCP-6 (thresholds in SysConfig).
-
-**Smoke.** (a) Trigger a real WC order pull, confirm `orders_last_pull` populates. (b) Open dashboard, see 5 sources with timestamps. (c) Set one threshold low (e.g., `products` to 1 min), confirm staleness alert renders. (d) Confirm Chat webhook either definitively works or definitively does not (close the §3.5 note).
-
-**Rollback.** Git revert + redeploy. New SysConfig keys orphan harmlessly or clean via rebuild. The `orders_last_pull` writer fix is non-reversible-impact (just adds a write) so safe to leave even on partial revert.
-
-**Depends on.** Nothing. Independent.
-
-**Open.**
-- `[spike]` Chat webhook reality. Grep `LoggerService.js` + `NotificationService.js` for `UrlFetchApp.fetch` to a webhook URL at session start. If absent, decide: build a Chat-webhook bridge or remove the claim from `ARCHITECTURE.md` §4.2.
-
-**CCP audit.** CCP-1 reportFailure on heartbeat-read error; CCP-6 per-source thresholds in SysConfig.
+Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrders` on success (+ added to `RUNTIME_KEYS`). `_getIntegrationHeartbeats_v2` feeds an **Integrations** card on the admin dashboard — 4 sources (Woo orders/products, Mailchimp subscribers/campaigns), fresh/stale per `system.heartbeat.{products|orders|mailchimp}_threshold_min` (defaults 60/1440/1440). *Remaining:* Comax heartbeat omitted (no config key; lives in SysJobQueue COMPLETED rows) — small follow-up. (The §3.5 Chat-webhook question is now resolved — see §3.5/§3.7: no webhook exists.)
 
 #### 3.2 Flat-file system status export (`jlmops-status.md`)
 
-**Goal.** Single Claude-readable markdown file regenerated periodically with system health, KPIs, recent errors. Also mirrored to kosbracha's snapshot folder when 4.1 ships.
+**Live blocks SHIPPED 2026-06-03.** `StatusReportService.refreshLiveBlocks(sessionId)` runs at the end of `performFrequentMaintenance` (15-min) and writes `jlmops-status.md` (find-or-create in the exports folder) with section-aware sentinel markers so each writer replaces only its own block. Blocks: System / Integrations (reuses `_getIntegrationHeartbeats_v2`) / Queue / Data quality (incl. the 2.2 `failed_job_*` fields) / Capacity (per-sheet row counts) / Recent errors (new `LoggerService.getRecentErrors`, bounded tail). Never throws (wraps to `reportFailure('status_export.refresh', Normal)`). Verify by reading `jlmops-status.md` via Drive MCP after a frequent-maintenance fire.
 
-**Status (2026-06-03). LIVE BLOCKS SHIPPED; KPI block DEFERRED.** New `StatusReportService.js` with `refreshLiveBlocks(sessionId)`, invoked at the end of `performFrequentMaintenance` (15-min cadence). Writes `jlmops-status.md` (find-or-create in `system.folder.jlmops_exports`; stays fresh so export-cleanup never trashes it). Blocks: System (version/pinned/sync stage) · Integrations (reuses `_getIntegrationHeartbeats_v2`) · Queue (SysJobQueue status counts + oldest FAILED) · Data quality (health-task notes incl. the 2.2 `failed_job_*` fields) · Capacity (per-data-sheet row counts) · Recent errors (new `LoggerService.getRecentErrors(n)`, bounded 500-row tail). Never throws — wraps to `reportFailure('status_export.refresh', Normal)`. No new SysConfig keys (reuses exports folder), so **no rebuild needed**. Deviations from plan: (1) **KPI block (`refreshKpiBlock`) DEFERRED** — heaviest/most-duplicative part, separate daily-cadence entry; (2) file placement is find-or-create-by-name in the exports folder rather than a stored `system.file.status_report` ID (avoids a runtime-mutable-ID bootstrap + RUNTIME_KEYS dance; ID stays stable since the file is updated not recreated); (3) refresh runs only on productive frequent-maintenance fires (skipped outside business hours / mid-sync). **Validation: not deploy-verifiable — after a `runFrequentMaintenance` fire (cron in business hours, or manual), read `jlmops-status.md` via Drive MCP to confirm content. Drive file ID/URL is logged at info on each refresh.**
-
-**KPI block scope (refined 2026-06-04, w/ user).** Confirmed shape for `refreshKpiBlock` (daily): KPIs render as a section **inside the same `jlmops-status.md`** (NOT a second file), so one Drive read yields health + KPIs for the session. Three parts:
-
-1. **Foundation gate (upstream — do first).** Verify/edit the GA4 + GSC add-on reports before building the mirror; the export is only as good as what the add-ons deposit in their tabs. GA4 ("JLM GA4 Weekly", GA4 Reports Builder, property `properties/279950414`): confirm the schedule is firing (data-tab max date ≈ yesterday), `date` dimension present (it is), metrics cover sessions/activeUsers/newUsers/engagementRate/keyEvents/totalRevenue, row `Limit` (1000) not truncating the window. GSC (Search Analytics for Sheets): likely edit — add a **Date** dimension if still grouped by Page only, otherwise each scheduled run overwrites one time-less snapshot and no trend accumulates; confirm cadence. The add-ons very likely already repeat on schedule (the `90daysAgo → yesterday` rolling window implies it) — this gate is verify-then-tweak, not build-from-scratch.
-2. **Ops mirror (the build).** jlmops runs as Apps Script with full `SpreadsheetApp` access — **the multi-tab read limit is Claude's Drive path ONLY, not ops.** So `refreshKpiBlock` opens the GA4 + GSC workbooks by ID (`SpreadsheetApp.openById(id).getSheetByName(dataTab).getDataRange().getValues()`), aggregates the window (last-7 / WTD / MTD), and writes a **Traffic** subsection (GA4 sessions/users/engagement/keyEvents; GSC clicks/impressions/avg-position) alongside the internal KPIs (today/week/month orders + revenue from WebOrdM, AOV, new-vs-returning via `sc_FirstCompletedDate`, EN/HE split). Stamp each external metric with its tab's max date; render "no data (last refresh <date>)" rather than throwing if a tab is empty (CCP-1). No GA4 Data API / service account needed — reading the add-on output tab replaces the earlier "net-new API integration" framing.
-3. **Trend spine (optional — history beyond the rolling window).** The GA4 data tab is a rolling 90-day window the add-on overwrites; for longer trend, append the daily aggregate to the `KpiData` sheet (`KpiService.js` already stubs `KPI_DATA_SHEET_NAME='KpiData'` + dated-row `updateAllKpis()` append) and render current + WoW/MoM delta off it. This is where the STATUS `defer:2026-06-15` trajectory-monitoring decision resolves — the trend lives in `KpiData`, not a GA4 tab Claude can't read.
-
-**Single-file write correction.** With two cadences (`refreshLiveBlocks` 15-min, `refreshKpiBlock` daily) writing one file, step 4's atomic `setContent` full-rewrite would clobber the KPI block on every live-block push. Each writer must be **section-aware** — wrap each block in sentinel markers (e.g. `<!-- kpi:start -->…<!-- kpi:end -->`) and replace only its own section, preserving the other. The step-5 "last refreshed N hours ago" KPI subline already assumes this persisted-across-refreshes model.
-
-**Anchors.**
-- Data sources (per agent pass):
-  - System: `WebApp.js:6-9` `VERSION.built` + `.commit`; `ConfigService.getConfig('system.deployment.pinned_id').value`; health-task notes JSON `last_housekeeping.timestamp` (`HousekeepingService.js:700-718`); `SyncStateService.getSyncState().stage` (`:58`).
-  - Integrations: SysConfig keys per 3.1 above; Comax last-success from SysJobQueue COMPLETED rows.
-  - Queue: SysJobQueue (lowercase columns per 2.2 anchors).
-  - Data quality: `task.system.health_status` notes JSON fields `last_housekeeping.unit_tests / validation_issues / schema_status / schema_critical` (`HousekeepingService.js:710-713`).
-  - Capacity: iterate `SheetAccessor.getDataSpreadsheet().getSheets()`, call `getLastRow()` per sheet (cheap, not `getDataRange().getValues()` which would be expensive).
-  - **KPIs: `KpiService.js` is a stub** (TODOs at `:52, :82`). Aggregations live in `WebAppDashboardV2.js:107, :186, :725-755`. Refactor a callable helper out of V2 dashboard, OR build new aggregators (today's orders, this-week's orders, etc.).
-  - Errors: net-new `LoggerService.getRecentErrors(n)` helper (LoggerService currently only writes).
-
-**Implementation.**
-1. New service `StatusReportService.js`. Public entries `refreshLiveBlocks(sessionId)` and `refreshKpiBlock(sessionId)`.
-2. New SysConfig keys: `system.file.status_report` (Drive file ID), `system.status.live_path` (Drive parent path). KPI-block adds: `system.sheet.ga4_report` (GA4 workbook ID) + `system.sheet.ga4_data_tab`, `system.sheet.gsc_report` (GSC workbook ID) + `system.sheet.gsc_data_tab`.
-3. `refreshLiveBlocks` invoked at end of `runFrequentMaintenance` (15-min cadence). `refreshKpiBlock` invoked once in daily housekeeping Phase 3.
-4. Atomic full-rewrite via `DriveApp.getFileById(statusFileId).setContent(markdown)`. **Wrap entire body in try/catch + `reportFailure('status_export.refresh', ..., 'Normal', ...)` so a regeneration failure does not break `runFrequentMaintenance`.** Status file is a reporting surface, not critical path; degrading to yesterday's file is acceptable.
-5. Markdown structure: sections System / Integrations / Queue / Data quality / Capacity / KPIs (with "last refreshed N hours ago" subline) / Recent errors.
-6. New `LoggerService.getRecentErrors(n)` helper. Query SysLog via range-limited read from bottom (not `getDataRange().getValues()` over thousands).
-7. KPI block: **commit to fresh aggregators in this session, defer V2 dashboard refactor to Tier 6.8.** Reasoning: refactoring V2 dashboard mid-status-file session risks breaking the live dashboard; ship fresh aggregators in `StatusReportService.js` accepting some duplication; Tier 6.8 reconciles later. Fresh aggregator scope: today/week/month orders count + revenue from WebOrdM aggregation (date-stamp filter), new vs returning customer split (count of contacts where `sc_FirstCompletedDate` is within window), EN/HE language split from order metadata. **Plus the GA4/GSC Traffic subsection, foundation gate, and section-merge write — see "KPI block scope (refined 2026-06-04)" above.**
-8. Time formatting: `Utilities.formatDate(new Date(), 'Asia/Jerusalem', '...')` precedent at `HousekeepingService.js:555`. **Memory `feedback_israel_time_powershell_not_tz` does NOT apply** — that's a developer-machine rule for Git Bash UTC. GAS runtime has the right API.
-
-**CCPs.** CCP-1 (reportFailure on body throw), CCP-2 (sessionId), CCP-3 (range-limited reads for SysLog tail).
-
-**Smoke.** (a) First run: open the file at configured Drive ID, confirm all sections render with real data, timestamps in IL time. (b) Force an error in `refreshLiveBlocks` (e.g., remove a SysConfig key the function reads), confirm next `runFrequentMaintenance` does not crash; a reportFailure task is created. (c) Confirm Drive MCP can fetch the file by ID without auth issues.
-
-**Rollback.** Git revert + redeploy. New SysConfig keys orphan harmlessly. The Drive file can be deleted manually.
-
-**Depends on.** Nothing structural. Soft sequence: ideally after 3.1 so heartbeat values exist; before 4.1 so the mirror-to-snapshot integration can hook the existing status file.
-
-**Open.**
-- `[start]` Foundation gate precedes the mirror build: verify GA4/GSC report params + cadence; GSC **Date**-dimension edit likely needed. Confirm via each data tab's max date.
-- `[defer]` V2 dashboard refactor for KPI source consolidation queued to Tier 6.8.
-
-**CCP audit.** CCP-1 reportFailure wraps the full body and does not propagate; CCP-2 sessionId threaded; CCP-3 SysLog tail read uses range-limited not getDataRange.
+**KPI block — OPEN (deferred; daily cadence).** `refreshKpiBlock` renders KPIs as a section *inside the same file*. Three parts: **(1) Foundation gate** — verify/edit the GA4 + GSC add-on reports first (GA4 "JLM GA4 Weekly", property `properties/279950414`: schedule firing, `date` dimension present, metrics cover sessions/users/engagement/keyEvents/revenue; GSC Search-Analytics-for-Sheets: add a **Date** dimension if still Page-only, else no trend accumulates). **(2) Ops mirror** — ops has full `SpreadsheetApp` access (the multi-tab limit is Claude's Drive path only), so `refreshKpiBlock` reads the GA4/GSC workbooks by ID, aggregates last-7/WTD/MTD, and writes a Traffic subsection alongside internal KPIs (today/week/month orders + revenue from WebOrdM, AOV, new-vs-returning via `sc_FirstCompletedDate`, EN/HE split); stamp each external metric with its tab's max date, render "no data" rather than throw. No GA4 Data API needed. **(3) Trend spine (optional)** — append the daily aggregate to the `KpiData` sheet (`KpiService.js` stubs it) for WoW/MoM beyond the rolling 90-day window; this is where the trajectory-monitoring deferral resolves. New SysConfig keys for the KPI build: `system.sheet.ga4_report`/`ga4_data_tab`, `system.sheet.gsc_report`/`gsc_data_tab`. Depends-on: soft after 3.1.
 
 #### 3.3 Mailchimp activity-log per-recipient writes (moved up from former 6.3)
 
@@ -881,52 +648,10 @@ Trimmed in v2. Only session-level unknowns that can be resolved at session start
 - **External-contractor candidates** for Tier 6.4 contact tree.
 - **Upgrade-to-external snapshot trigger.** When (if ever) does the strategy upgrade from second-account-only to add Backblaze B2? Triggers: revenue threshold, regulatory requirement, an actual close call. Document; don't act until.
 
-## 9. Review pass record
+## 9. Status & progress
 
-**v1 (2026-05-28).** Three expert reviews conducted in parallel via subagents:
+Durable shipped facts have graduated to `ARCHITECTURE.md` §4 (stuck-job recovery, trigger model, severity-routed alerting + DLQ); the review-pass history lives in git + `.claude/session-log.md`.
 
-1. **SRE design review** — flagged bus-factor as biggest blind spot; tightened RTO; demoted OAuth inventory; rejected same-Drive snapshots as DR; flagged weekly-review cadence as unrealistic.
-2. **Code-vs-claims verification** — 12/13 claims VERIFIED with file:line refs (snapshot+restore at `SetupConfig.js:19-109`, zombie killer at `OrchestratorService.js:566-600`, inline reaper at `:1105-1170`, trigger guard at `HousekeepingService.js:550-564`, etc.). One claim PARTIAL: `ARCHITECTURE.md` §4.2's Google Chat webhook on ERROR — code shows task-creation in `NotificationService.reportFailure` but no direct webhook found. Folded into §3.5 verification note.
-3. **Adversarial blind-spot review** — P0 modes added as new surfaces §3.7 (secrets), §3.8 (bus factor), §3.9 (vendor/account integrity); P1 modes folded into §3.6 (adversarial inputs) and Tier 3 item 12; P1 DSAR + P2 WC-compromise folded into new Tier 5.
+**Progress (self-refresh checkpoint, 2026-06-09).** ~7 of 16 sessions shipped, all in the 2026-06-03 push: **1.1** (SysContacts aggregate fix, @201), **1.2** (input-safety, 3 stages), **2.1** (drift — resolved at root, detector removed), **2.2** (FAILED-job sweep), **2.3** (real test suites + empty-result guard), **3.1** (integration heartbeats + `orders_last_pull` fix), **3.2** (status-export live blocks; KPI block deferred). **Open:** 1.3 concurrency (greenfield LockService, highest-risk — live race exposure today), 3.2 KPI block, 3.3 Mailchimp per-recipient activity, 3.4 scheduled aggregate-consistency check, all of Tier 4 (DR snapshots/restore — none exists yet), Tier 5 (capacity), Tier 6 (crisis/human). **Highest-value next: 1.3 or 4.1.**
 
-Convergent findings (multiple agents agreed): bus factor as primary risk, same-Drive snapshots not real DR, secrets surface entirely missing from v0.
-
-**Self-refresh checkpoint #1 (2026-06-09).** ~7 of 16 sessions had shipped (the 2026-06-03 push) with no §3 reality re-check — per §5/§6 the checkpoint fires every 3 shipped sessions, so it was overdue. This pass reconciled the §3 "current state / Gaps" inventory against the shipped session Status notes and annotated closed gaps inline (✓): §3.1 (1.1 aggregate bug fixed; scheduled check 3.4 still open), §3.2 (2.1 — `validateDeployment` removed at root + orphans undeployed), §3.4 (3.1 — heartbeat card + `orders_last_pull` fix; Comax heartbeat + Mailchimp per-recipient still open), §3.6 (1.2 input-safety all 3 stages + 2.3 real tests). **Deep code re-verify (2026-06-09, same day) — DONE for §3.3 + §3.5** (the part flagged as owed): (a) **Chat webhook confirmed ABSENT** — no `chat.googleapis.com`/`webhook` in any `*.js`, no `UrlFetchApp` in `NotificationService.js`, no fetch/mail in `LoggerService.js`; `ARCHITECTURE.md` §4.2 overstates and was corrected. (b) **§3.5 severity routing + dedup CORRECTED to "exists"** — `reportFailure`→`SeverityService.getBehavior` routes by level, `_createFailureTask` dedups by entityId, `resolveFailure` self-heals. (c) **§3.3 confirmed accurate** — zombie killer `OrchestratorService.js:566`, inline reaper `:1105` (8-min), business-hours guard `HousekeepingService.js:550`; nuance added that only `runPostSyncBundleHealth` is code-installed (rest UI-managed) and `LockService`/`ScriptApp.newTrigger` confirm 1.3 is greenfield. §3.4 (rate-limit visibility) + a fresh §3.6 cross-reconciliation re-grep remain for a future checkpoint. Open work of highest value: **1.3 concurrency** (greenfield LockService, real race exposure today) and **4.1 snapshots** (no DR exists yet).
-
-**⚠️ NEEDS CORRECTION (flagged 2026-06-09 review pass — pick up in next CLI session).** The checkpoint #1 webhook-absent conclusion was not propagated to every reference. Five follow-ups:
-1. **§3.4 "Who notices" (line ~124)** still reads "`SysLog` ERROR → Google Chat webhook for hard failures" — contradicts the re-verify (webhook confirmed absent). Replace with the dashboard-pull reality used in §3.5 / `ARCHITECTURE.md` §4.2.
-2. **Tier 3.1 session entry (lines ~525–553)** still carries the Chat-webhook check as open/deferred work ("check still open", "Step 4 STILL DEFERRED", smoke step (d), two `[spike]` grep lines). That spike was completed by checkpoint #1 — reconcile to: spike DONE, only the build-bridge-vs-accept-dashboard *decision* remains.
-3. **Doc header (line ~4)** still says `Updated: 2026-05-28 (v2.1…)` despite the 2026-06-09 checkpoint — bump it.
-4. **Duplication drift** — the "~7/16 shipped + open list" lives in four hand-maintained copies (STATUS *Next Milestone*, STATUS *effort #4*, §9 checkpoint, §10 Progress). Collapse to a one-line pointer in STATUS + authoritative breakdown in §10.
-5. **(Minor) Secrets threat (line ~165)** "A leaked Chat webhook URL is abused" is now moot (no webhook exists) — strike or annotate. The Mailchimp/WC webhook refs (lines ~427/439/553) are real, leave them.
-
-## 10. Status
-
-Draft v2.1 written 2026-05-28. Self-critique pass identified 14 issues; all folded in:
-1. Stale Tier cross-references in §6 / §7 / target map fixed.
-2. Tier 1.3 LockService restructured to 5 staged deploys (helper + 4 lock applications) with 24-hour observation between.
-3. Tier 1.2 input safety split into 3 staged deploys (WC cap / Comax try / Doc sanitization).
-4. Tier 2.3 test rewrite scope committed (ComaxAdapter + WebAdapter only; others deferred to Tier 6.7).
-5. Tier 2.3-before-4.1 risk explicitly accepted, mitigation documented.
-6. Mailchimp activity-log moved from Tier 6 to Tier 3.3 (visibility tier).
-7. Tier 3.2 KPI block scope committed (fresh aggregators in-session; V2 dashboard refactor deferred to new Tier 6.8).
-8. `[start]` / `[spike]` / `[defer]` taxonomy added to every Open question.
-9. CCP audit subsection added to every implementation session (sessions 1.1 through 5.2; Tier 6 entries lightweight don't need it).
-10. Capability targets table added at end of §4 mapping target → sessions.
-11. Snapshot/status Drive-MCP asymmetry made explicit in Tier 4.1 (workbook snapshots not Claude-readable, status file is).
-12. Session opening discipline pointer added at top of §5 (read plan + bugs + session-log; commit small; push then deploy as separate change-points).
-13. Self-refresh checkpoint added to §6 (re-read §3 surfaces every 3 shipped sessions).
-14. Tier 3.3 renumbered to 3.4 (aggregate-consistency scheduled check) since Mailchimp took 3.3.
-
-**Plan now covers 16 sessions across 6 tiers** (was 14 in v2; +1 for Mailchimp moved up, +1 for V2 dashboard refactor deferred from 3.2). Sessions 1.2 and 1.3 ship multiple staged deploys, so total deploy count is higher than session count.
-
-**Progress (2026-06-09 self-refresh checkpoint #1).** ~7 of 16 sessions shipped, all in the 2026-06-03 push: **1.1** (SysContacts aggregate fix, @201), **1.2** (input-safety, 3 stages), **2.1** (drift — resolved at root, detector removed), **2.2** (FAILED-job sweep), **2.3** (real test suites + empty-result guard), **3.1** (integration heartbeats + `orders_last_pull` fix), **3.2** (status-export live blocks; KPI block deferred). **Open:** 1.3 concurrency (highest-risk, greenfield — not started), 3.2 KPI block, 3.3 Mailchimp per-recipient activity, 3.4 scheduled aggregate-consistency check, and all of Tier 4 (DR — snapshots/restore), Tier 5 (capacity), Tier 6 (crisis/human). Highest-value next: **1.3** (live race exposure) or **4.1** (no DR yet). Original "ready to ship" note (now historical): first session was Tier 1.1.
-
-Prior-version notes (superseded; kept for traceability):
-
-Next decisions to unblock implementation:
-- Designate the secondary Google account email (could happen alongside Tier 1.1 session start)
-- Confirm operator identity for Tier 1.5 runbook
-- Confirm bus-factor time budget (~1 session runbook + ~30 min/quarter dry-runs)
-
-Tier 1.1 (snapshots) and Tier 1.2 (status file) are the natural first two remediation sessions, in that order. They can ship in one combined session if scope fits, or split if integrity-verification work expands.
+**Open decisions to unblock DR work:** designate the secondary Google account for off-account snapshots (Tier 4.1); confirm the operator identity for the runbook; decide build-a-push-bridge vs formally accept dashboard-only alerting (the Chat webhook was confirmed absent 2026-06-09 — `ARCHITECTURE.md` §4.2 is the authority).
