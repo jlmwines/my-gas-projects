@@ -11,7 +11,8 @@ Audited, no change needed:
 - `session-log.md` — all entries within 30 days (oldest ~2026-05-15); no pruning due.
 - The 5 audited plans + system docs — just reconciled/trimmed in the item-1 work (commits b0cc9e0 → 46b4202); current.
 
-Not swept this pass (no flagged staleness; offered to user):
-- `business/`, `marketing/`, `website/`, `content/` long-lived doc folders — out of scope for item 1; not reconciled this pass.
+Doc-folder reconciliation:
+- `website/` — **swept 2026-06-11.** 10 docs, all clean (no version-chain/dated-narrative rot). Fixed WEBSITE_UPDATE_PLAN's stale homepage-architecture note (→ custom Page Template, HOMEPAGE_BLOCKS Phase 1 shipped) + blog-post status (→ STATUS's 10-live/3-pipeline). Removed the killed exit-intent popup from WEBSITE_UPDATE_PLAN + HOMEPAGE_COPY (sections + placement mentions + voice-table row + MEET_EVYATAR ref), per user. Commits c6c3f3f + 155534b.
+- `business/`, `marketing/`, `content/` long-lived doc folders — not yet reconciled this pass.
 
 Triggered when: user asked for the full project-scoped cleanup sweep.
