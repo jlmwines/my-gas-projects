@@ -28,7 +28,8 @@ To ensure a clear separation of concerns, the interface between the HTML Views a
 
 **Guiding Principles:**
 
-*   **Separate HTML Views for Roles:** For workflows where different user roles (e.g., admin, manager) have distinct actions, separate HTML files are used for each role's screen (e.g., `AdminInventoryView.html`, `ManagerInventoryView.html`). This keeps the HTML for each role clean and simple.
+*   **Single-file role gating (current preferred pattern):** A workflow shared by more than one role is built as **one** HTML view that gates per-role sections declaratively, rather than as separate per-role files. Cards/sections declare `data-roles="admin manager"` (and `data-viewports="mobile desktop"`); the shell sets a body class `role-admin` / `role-manager` (via `setNavigationForRole()` in `AppView.html`) and CSS hides anything not matching the current role + viewport — a four-quadrant role×viewport matrix. Precedent: `OrdersView.html`, `LibraryView.html`. This is preferred for new and merged views because it keeps one source of truth per workflow.
+*   **Separate per-role files (legacy, still in use):** Older workflows predate the gating pattern and still ship as paired files (`AdminInventoryView.html` / `ManagerInventoryView.html`, and similarly for Products, Contacts, and the Dashboard). These are valid but are migrated to single-file gating opportunistically when a paired view is reworked.
 *   **Shared Logic:** To avoid code duplication, logic is shared at either the Controller or Data Provider layer, depending on the complexity of the views.
 
 **Controller Patterns:**
@@ -51,6 +52,7 @@ The data flow is typically: `HTML View` -> `View Controller (Shared or Dedicated
 ### 2.1.2. Client-Side Patterns
 
 *   **HTML Generation via JavaScript:** To prevent duplicating markup in separate but similar HTML files (e.g., an inventory list seen by both an admin and a manager), shared JavaScript functions can be used to generate the HTML for common components. These functions are called from the client-side script within each HTML view, passing parameters to control variations (e.g., making a field read-only for an admin).
+*   **Load-once, filter client-side:** A view fetches its dataset in a single bulk call on mount — one per-view data provider, e.g. `WebAppBundles_getViewData()`, `WebAppLibrary_getData()`, `WebAppOrders_getOrdersWidgetData()`, `WebAppProducts_getProductsWidgetData()`. For bounded result sets, filter / sort / search then run **client-side over the cached result**, so there is no server round-trip per keystroke; an explicit Refresh re-fetches. (Provider function names are per-area, not a single uniform name. A few large or unbounded sets — e.g. `WebAppContacts_getContactList(filters)` — still pass filters to the server rather than caching the whole set.)
 
 ### 2.2. Backend: API-Driven & Service-Oriented
 
@@ -264,6 +266,10 @@ To prevent a single bad file from halting a workflow, the system uses the **`Sys
 *   **File Inspection:** The problematic file remains untouched in its original location within the `Archive Folder`. An administrator must use the `archive_file_id` from the failed job record to locate the exact file for inspection.
 
 *   **Admin Dashboard:** A "System Health" widget on the main dashboard will query the `SysJobQueue` for any jobs with a 'FAILED' status, providing a centralized view of all processing failures.
+
+*   **Stuck-job recovery (two-tier):** A job can die silently mid-run (Apps Script's hard execution limit is 6 minutes), leaving its `SysJobQueue` row stuck in `PROCESSING` and the sync state machine paused. Two mechanisms reap these into the FAILED branch: (1) the **Zombie Killer** in `OrchestratorService.processPendingJobs` — on each hourly run, any job in `PROCESSING` for >15 min is set to `FAILED` and routed through `reportFailure` (High); (2) the **inline reaper** `_reapStuckJobInSession`, which runs on every poll-driven `_checkAndAdvanceSyncState` and reaps the current session's stuck job at a tighter 8-min threshold (so a stuck sync recovers on the next poll instead of waiting up to an hour for the zombie killer).
+
+*   **Trigger installation model (operational caveat):** Only **one** recurring trigger, `runPostSyncBundleHealth`, is installed by code (`SyncStateService.js`, via `ScriptApp.newTrigger`). All other recurring triggers — the hourly maintenance/zombie-killer pass, the frequent poll, and the daily housekeeping — are created **manually in the Apps Script Triggers UI**. Consequence: a deleted recurring trigger is **not** self-reinstalled, and its absence is invisible in code review. Re-create it in the Triggers UI if a scheduled pass stops firing.
 
 ### 4.4. Manual Recovery
 

@@ -458,6 +458,7 @@ This system provides a flexible, configurable way to manage all user and system-
     *   `st_Priority`: 'High', 'Normal', 'Low'.
     *   `st_AssignedTo`: The user responsible for the task.
     *   `st_LinkedEntityId`: The specific subject of the task (e.g., SKU, Order ID) OR the URL/Link to the asset/content (e.g., Google Doc ID).
+    *   `st_LinkedEntityName`: Human-readable label for the linked entity (display companion to `st_LinkedEntityId`).
     *   `st_SessionId`: The ID of the session that generated this task.
     *   `st_CreatedDate`
     *   `st_StartDate`: The date work begins on this task.
@@ -470,6 +471,8 @@ This system provides a flexible, configurable way to manage all user and system-
         - **Invariant:** If st_DueDate has value, st_StartDate and st_Status='Assigned' must also be set
     *   `st_DoneDate`: Populated when the task is closed.
     *   `st_Notes`
+    *   `st_EntityType`: **Polymorphic entity type.** Names what kind of thing the task is attached to — a Content Library content type (`blog`, `news`, `email`, etc.) or a *virtual entity type* (`customer`, `order`, `project`).
+    *   `st_EntityId`: **Polymorphic foreign key**, resolved by `st_EntityType`. For library content types it is a `SysLibrary.slb_Slug`; for virtual entity types it points at the source sheet's row id (`SysContacts.sc_Email`, an order id, or a `SysProjects.spro_ProjectId`). Distinct from `st_LinkedEntityId` (the older free-form subject/asset link). See `plans/CONTENT_LIBRARY_PLAN.md` §7 (virtual entity types).
 
 ## CRM Data Model
 
@@ -501,7 +504,9 @@ This section defines the sheets used for customer relationship management, conta
         *   `sc_LastOrderDate`: Date of most recent order.
         *   `sc_DaysSinceOrder`: Calculated daily. Days since last order.
         *   `sc_OrderCount`: Total completed orders.
-        *   `sc_TotalSpend`: Sum of order totals.
+        *   `sc_TotalSpend`: Sum of order totals (lifetime).
+        *   `sc_Spend12Month`: Sum of order totals over the trailing 12 months.
+        *   `sc_Tier`: Spend/loyalty tier.
         *   `sc_AvgOrderValue`: Calculated. Average order value.
     *   **Subscription:**
         *   `sc_SubscribedDate`: Date joined Mailchimp.
@@ -513,27 +518,33 @@ This section defines the sheets used for customer relationship management, conta
     *   **Predictions:**
         *   `sc_NextOrderExpected`: Predicted next order date.
         *   `sc_ChurnRisk`: `low`, `medium`, or `high`.
-    *   **Wine Preferences:** (Calculated from order history)
-        *   `sc_PreferredCategory`: Primary wine type (Dry Red, Dry White, etc.).
-        *   `sc_SecondaryCategory`: Secondary preference if mixed buyer.
+    *   **Wine Preferences:** (Calculated from order history. Several fields are stored as a dual-language `_En`/`_He` pair so bilingual labels can be rendered/exported without re-translation; the underlying value is the same.)
+        *   `sc_FrequentCategories_En` / `sc_FrequentCategories_He`: Most-purchased wine categories (dual-language).
+        *   `sc_PriceAvg`: Average bottle price purchased.
         *   `sc_PriceMin`: Lowest bottle price purchased.
         *   `sc_PriceMax`: Highest bottle price purchased.
-        *   `sc_PriceMedian`: Typical price point.
-        *   `sc_RedIntensityAvg`: Average intensity (1-5) of purchased reds.
-        *   `sc_RedComplexityAvg`: Average complexity (1-5) of purchased reds.
-        *   `sc_WhiteComplexityAvg`: Average complexity (1-5) of purchased whites.
-        *   `sc_WhiteAcidityAvg`: Average acidity (1-5) of purchased whites.
-        *   `sc_TopWineries`: Top 3 wineries by purchase count (comma-separated).
-        *   `sc_KashrutPrefs`: Observed kashrut patterns (mevushal, heter mechira).
-        *   `sc_GrapeVarieties`: Top grape varieties purchased.
+        *   `sc_RedIntensityRange`: Intensity band of purchased reds.
+        *   `sc_RedComplexityRange`: Complexity band of purchased reds.
+        *   `sc_WhiteComplexityRange`: Complexity band of purchased whites.
+        *   `sc_WhiteAcidityRange`: Acidity band of purchased whites.
+        *   `sc_TopWineries_En` / `sc_TopWineries_He`: Top wineries by purchase count (dual-language).
+        *   `sc_TopRedGrapes_En` / `sc_TopRedGrapes_He`: Top red grape varieties (dual-language).
+        *   `sc_TopWhiteGrapes_En` / `sc_TopWhiteGrapes_He`: Top white grape varieties (dual-language).
+        *   `sc_KashrutPrefs_En` / `sc_KashrutPrefs_He`: Observed kashrut patterns (dual-language).
         *   `sc_BundleBuyer`: Boolean. Has purchased bundles.
         *   `sc_AvgBottlesPerOrder`: Typical order size in bottles.
-        *   `sc_NewWineryExplorer`: Boolean. Buys from 5+ different wineries.
     *   **System:**
         *   `sc_Tags`: Comma-separated manual tags.
         *   `sc_Notes`: Free-form notes.
         *   `sc_CreatedDate`: Record creation date.
         *   `sc_LastUpdated`: Last refresh date.
+        *   `sc_LastEnriched`: Date the enrichment pass last recalculated this contact's derived fields.
+        *   `sc_FirstCompletedDate`: Date of the contact's first completed order.
+*   **Derived field rules:** The classification and preference fields are computed by `ContactService.js` (`_classifyCustomerType`, `_calculateLifecycleStatus`) and `ContactEnrichmentService.js`. Every threshold below is **config-driven** (read from `SysConfig`); the values shown are the current defaults used when the config key is absent.
+    *   `sc_LifecycleStatus` (by `sc_DaysSinceOrder`, key `crm.lifecycle.thresholds`): `Active` ≤30, `Recent` ≤90, `Cooling` ≤180, `Lapsed` ≤365, `Dormant` >365.
+    *   `sc_CustomerType` (key `crm.vip.thresholds`, `crm.prospect.thresholds`): non-customers → `prospect.fresh` (not subscribed, or subscribed <30 days), `prospect.stale` (subscribed ≥180 days), else `prospect.subscriber`. Customers: non-core → `noncore.gift`; core with `sc_OrderCount` ≥5 **or** `sc_TotalSpend` ≥3000 → `core.vip`; ≥2 orders → `core.repeat`; else `core.new`. (Note: `_classifyCustomerType` assigns only `noncore.gift` among non-core types — `noncore.war_support` is a legacy/manual value, not auto-assigned.)
+    *   `sc_ChurnRisk` (key `crm.churn.thresholds`): `low` when recently active (default ≤60 days) with ≥2 orders / ≥1000 spend; higher otherwise.
+    *   Wine-preference enrichment (`ContactEnrichmentService.js`): `sc_FrequentCategories_*` = categories making up ≥15% of purchases (key `crm.enrichment.category`); `sc_PriceMin`/`sc_PriceMax` = 10th/90th percentile of bottle prices to trim outliers (key `crm.enrichment.price`, needs ≥3 prices else raw min/max); `*Range` attribute fields = 15th–85th percentile of intensity/complexity/acidity (key `crm.enrichment.attributes`); `sc_TopWineries_*`/`sc_TopRedGrapes_*`/`sc_TopWhiteGrapes_*`/`sc_KashrutPrefs_*` = top 3 by purchase count; `sc_BundleBuyer` = bought any SKU with `wpm_TaxProductType='woosb'`.
 
 ### 2. `SysContactActivity` (Contact Timeline)
 *   **Purpose:** Stores timeline events for each contact - orders, status changes, communications, etc.
@@ -639,6 +650,55 @@ This section defines the sheets used for customer relationship management, conta
     *   `scu_OrderTotal`: Order total after discount.
     *   `scu_WasFirstOrder`: Boolean. Was this the customer's first order?
     *   `scu_ConvertedToRepeat`: Boolean. Did they order again within 90 days?
+
+## Content Library Data Model
+
+The Content Library is a single flat, polymorphic table holding every content/marketing entity (blog, news, mention, email/newsletter, social, template, image), plus a shared activity log. Full design intent lives in `plans/CONTENT_LIBRARY_PLAN.md`; the durable schema and placement facts are here.
+
+**Workbook placement (durable constraint).** `SysLibrary` does **not** live in `JLMops_Data`. It lives in a separate single-tab workbook, `JLMops_Library` (id in `system.spreadsheet.library`), because Drive MCP can only read single-tab workbooks and the library must stay MCP-readable (see `reference_drive_files`). Its schema key uses the `schema.library.*` prefix so the validator and `syncHeaders` route to `getLibrarySpreadsheet()` instead of `getDataSpreadsheet()`. `SysLibraryActivity`, by contrast, is an ops-only log and lives inside `JLMops_Data` (`schema.data.*`).
+
+**Slug as the universal key (§20).** `slb_Slug` is the key column — human-readable, immutable, globally unique, format `<type>-<topic>-<discriminator>[-<language>]` (lowercase kebab-case, type-prefix first, language last). There is no separate synthetic id: the slug is both the human handle and the cross-system foreign key. It is the value stored in `slb_References` entries, `slba_EntityId` (library rows), and `SysTasks.st_EntityId` (library-typed tasks), and it joins library rows to their Canva title, Mailchimp name, and Drive filename.
+
+### 1. `SysLibrary` (Library Master)
+*   **Purpose:** One row per content/marketing entity. Generic columns are always populated; per-type extension columns are sparse (only set for the relevant content type). `slb_Tags`, `slb_Taxonomy`, and `slb_References` are stored as JSON arrays.
+*   **Workbook:** `JLMops_Library` (NOT `JLMops_Data`).
+*   **Prefix:** `slb_`
+*   **Primary Key:** `slb_Slug`
+*   **Columns:**
+    *   **Generic (always populated):**
+        *   `slb_Slug`: **Primary Key.** See "Slug as the universal key" above.
+        *   `slb_Title`: Human-readable title.
+        *   `slb_ContentType`: Entity type — `blog`, `news`, `mention`, `email`, `social`, `template`, `image`.
+        *   `slb_Language`: `EN`, `HE`, or language-neutral.
+        *   `slb_State`: Lifecycle state (e.g. draft → published).
+        *   `slb_Version`: Version counter.
+        *   `slb_CreatedDate`, `slb_CreatedBy`, `slb_LastTouched`: Provenance / last-modified.
+        *   `slb_Tags`: JSON array of free-form tags.
+        *   `slb_Taxonomy`: JSON array of taxonomy terms.
+        *   `slb_References`: JSON array of related-entity slugs (cross-links).
+        *   `slb_Notes`: Free-form notes.
+    *   **Per-type extension (sparse, set only for the relevant type):**
+        *   *Article (blog/news/mention):* `slb_MdUrl`, `slb_DocUrl`, `slb_WpPostId`, `slb_Excerpt`, `slb_PostedAt`, `slb_ExternalUrl`.
+        *   *Newsletter / print:* `slb_IssueNumber`, `slb_PrintDate`, `slb_Position`.
+        *   *Email / Mailchimp:* `slb_MailchimpCampaignId`, `slb_SubjectLine`, `slb_SendDate`, `slb_RecipientCount`, `slb_Subject`, `slb_Body`, `slb_Channel`.
+        *   *Social:* `slb_Platform`, `slb_ScheduledAt`.
+        *   *Image / Canva:* `slb_CanvaDesignUrl`, `slb_Kind`, `slb_Index`, `slb_Descriptor`.
+
+### 2. `SysLibraryActivity` (Library Activity Log)
+*   **Purpose:** Per-entity audit trail across all library and virtual entities. Polymorphically attached via `(slba_EntityType, slba_EntityId)`.
+*   **Workbook:** `JLMops_Data` (ops-only log).
+*   **Prefix:** `slba_`
+*   **Primary Key:** `slba_ActivityId`
+*   **Columns:**
+    *   `slba_ActivityId`: **Primary Key.**
+    *   `slba_EntityType`: What the row is attached to — a library content type, or a *virtual entity type* (`customer`, `order`, `project`).
+    *   `slba_EntityId`: **Polymorphic foreign key**, resolved by `slba_EntityType` — a `SysLibrary.slb_Slug` for library types, or the source row id (`SysContacts.sc_Email`, an order id, a `SysProjects.spro_ProjectId`) for virtual types. See `plans/CONTENT_LIBRARY_PLAN.md` §7.
+    *   `slba_Timestamp`: When the action occurred.
+    *   `slba_Actor`: Who/what performed the action.
+    *   `slba_ActionType`: The action performed.
+    *   `slba_Summary`: One-line human-readable summary.
+    *   `slba_Details`: Structured detail (JSON).
+    *   `slba_ReferencedEntities`: JSON array of other entity slugs/ids touched by the action.
 
 ## System Configuration
 
