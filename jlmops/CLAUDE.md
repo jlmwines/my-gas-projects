@@ -47,7 +47,7 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 
 **Ask, don't guess:**
 - If unsure about project conventions, READ the docs first.
-- Key docs: `jlmops/docs/DATA_MODEL.md`, `jlmops/plans/PROJECT_TASK_PLAN.md`
+- Key docs: `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md`
 - If still unsure, ASK the user.
 
 ## Project-Specific Knowledge
