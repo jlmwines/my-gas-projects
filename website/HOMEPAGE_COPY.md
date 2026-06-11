@@ -191,33 +191,6 @@ Three trust points, icon + short text:
 
 ---
 
-## Exit-Intent Popup
-
-**Heading:**
-> Need a hand?
-
-**Body:**
-> Not sure what to get? I can help.
-
-**Option 1:**
-> Chat with me → [WhatsApp]
-
-**Option 2:**
-> Get my recommendations by email → [Email signup]
-
-**Option 3:**
-> Just browsing → [Close]
-
-**Alt version:**
-
-**Heading:**
-> Before you go...
-
-**Body:**
-> Wine shopping shouldn't be stressful. Let me help you find something good.
-
----
-
 ## Checkout WhatsApp Optin
 
 **Heading:**
@@ -272,7 +245,6 @@ Evyatar speaks directly when it's a personal promise or invitation:
 | Homepage hero | First-person | "I taste the wines" |
 | Bundles headings | First-person | "I recommend. You choose." |
 | Trust Builder | First-person | "How I Choose" |
-| Exit popup | First-person | "I can help" |
 | WhatsApp/Email signup | First-person | "from Evyatar" |
 | Checkout optin | First-person | "I send notes..." |
 | Packing slip note | First-person | "A note from Evyatar" |

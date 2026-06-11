@@ -205,7 +205,6 @@ Each channel has different content and requires its own optin with persuasion re
 
 **Placement:**
 - Footer (persistent)
-- Exit-intent popup (offer help + subscribe)
 - Post-purchase thank you page
 
 #### WhatsApp
@@ -218,24 +217,7 @@ Each channel has different content and requires its own optin with persuasion re
 
 **Placement:**
 - Checkout (new optin during purchase flow)
-- Exit-intent popup (alongside email option)
 - Floating button already exists for questions
-
-### Exit-Intent Popup
-
-**Trigger:** Mouse moves toward browser close/back
-
-**Purpose:** Offer help + capture subscription
-
-| Element | Content |
-|---------|---------|
-| Heading | "Leaving so soon?" or "Need a hand?" |
-| Body | "Not sure what to get? Evyatar can help." |
-| Option 1 | "Chat now" → WhatsApp |
-| Option 2 | "Get recommendations by email" → Email signup |
-| Option 3 | "Just browsing" → Close |
-
-**Tone:** Helpful, not desperate. Offer assistance, not discount.
 
 ### Checkout WhatsApp Optin
 

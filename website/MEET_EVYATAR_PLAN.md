@@ -65,7 +65,7 @@ Personal message establishing:
 
 | Element | Notes |
 |---------|-------|
-| **Hero photo** | Evyatar in shop (same as exit popup) |
+| **Hero photo** | Evyatar in shop (same as homepage hero) |
 | **Section photos** | Wine tasting, selection process, delivery |
 | **Testimonials** | Optional - 1-2 at bottom, or skip (homepage has them) |
 
