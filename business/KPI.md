@@ -1,6 +1,6 @@
 # JLM Wines — KPI Scope
 
-**Status.** Scoped 2026-05-04 (in conversation). Data path partially in place; full wiring deferred until after the theme cutover settles. This doc is the live working definition — refine as data starts flowing.
+**Status.** The live working definition of JLM's KPIs. Data path is in place: the GA4 + GSC Sheets add-ons are built and refreshing (restored 2026-06-10 — see "Data sources" below), so the automation prerequisite is cleared. Next step is the jlmops-side KPI block that reads those tabs into `jlmops-status.md` (RELIABILITY_AUDIT §3.2 KPI block). Refine as measurements accumulate.
 
 ---
 
@@ -138,4 +138,4 @@ Each KPI below maps to one of those three.
 
 ---
 
-Updated: 2026-05-04 (scoped in conversation; no measurements yet)
+Updated: 2026-06-10 (GA4 + GSC pulls restored and refreshing; jlmops KPI block pending)

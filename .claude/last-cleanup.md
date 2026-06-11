@@ -13,6 +13,8 @@ Audited, no change needed:
 
 Doc-folder reconciliation:
 - `website/` — **swept 2026-06-11.** 10 docs, all clean (no version-chain/dated-narrative rot). Fixed WEBSITE_UPDATE_PLAN's stale homepage-architecture note (→ custom Page Template, HOMEPAGE_BLOCKS Phase 1 shipped) + blog-post status (→ STATUS's 10-live/3-pipeline). Removed the killed exit-intent popup from WEBSITE_UPDATE_PLAN + HOMEPAGE_COPY (sections + placement mentions + voice-table row + MEET_EVYATAR ref), per user. Commits c6c3f3f + 155534b.
-- `business/`, `marketing/`, `content/` long-lived doc folders — not yet reconciled this pass.
+- `business/` — **swept 2026-06-11.** 6 docs. STRATEGY clean (exemplary, current). Fixed: README (wrongly described marketing/content as sub-folders + omitted the actual docs); CLAUDE Key Files (only listed CONTENT_STRATEGY → added STRATEGY/BRAND_STANDARDS/KPI); BRAND_STANDARDS stale per-channel statuses (theme cutover shipped 2026-05-05; newsletter Issue #1 distributing) + Updated bump; KPI header+Updated (was "deferred / 2026-05-04" but GA4/GSC built+refreshing 2026-06-10); CONTENT_STRATEGY per-file Content Status table → pointer (operational status doesn't belong in the brand bible). Sensory-doc refs verified (both SENSORY_FRAMEWORK + SENSORY_METAPHORS exist — no discrepancy).
+- **Cross-folder fix:** `website/BRAND.md` was stale (Visual Identity all `_(to be defined)_` placeholders + Open Sans, pre-cutover) — flagged by BRAND_STANDARDS as "do not consume" yet listed as a key doc in the project kernel. Reconciled to the shipped palette/fonts (Cream/Terracotta, Secular One/Rubik) + a single-source pointer to BRAND_STANDARDS; replaced the done "To Complete" list with current status. (Missed in the earlier website pass.)
+- `marketing/`, `content/` long-lived doc folders — not yet reconciled this pass.
 
 Triggered when: user asked for the full project-scoped cleanup sweep.

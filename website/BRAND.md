@@ -12,16 +12,11 @@ Full brand voice guidelines: `../business/CONTENT_STRATEGY.md`
 
 ## Visual Identity
 
-**Colors:**
-- Primary: _(to be defined — wine-adjacent but not cliched burgundy-on-everything)_
-- Accent: _(to be defined — warm, inviting)_
-- Background: _(warm neutrals, not clinical white)_
-- Text: _(readable, not overly dark)_
+**Single source of truth:** the theme CSS `:root` block (`website/jlmwines-theme/assets/css/main.css`), mirrored for non-developer use in `business/BRAND_STANDARDS.md`. The values below are the headline summary as shipped in the 2026-05-05 theme cutover — see BRAND_STANDARDS for the full palette/token table.
 
-**Typography:**
-- Headings: _(to be defined — personality, warmth)_
-- Body: _(to be defined — readable, not sterile)_
-- Currently using Open Sans (10 variants, needs optimization to 2-3)
+**Colors:** warm cream background (`#fcf9f2`), warm near-black ink (`#1a1612`), terracotta accent for CTAs/links (`#a83920`), sage for success, amber for sale flash.
+
+**Typography:** Secular One for display/headings, Rubik for UI/body (both Google Fonts; the old Open Sans was replaced in the cutover).
 
 **Photography/imagery:**
 - Canva AI generated: impressionist oil painting style, warm natural lighting, no text
@@ -53,12 +48,6 @@ Full brand voice guidelines: `../business/CONTENT_STRATEGY.md`
 
 Modern boutique wine shops that feel personal, not corporate. Think small-batch, neighborhood wine store with good taste — not a supermarket wine aisle and not a pretentious tasting room.
 
-## To Complete (Dedicated Design Session)
+## Status
 
-- [ ] Specific color palette with hex codes
-- [ ] Font selections (replace/optimize Open Sans)
-- [ ] Product card styles
-- [ ] Category page layouts
-- [ ] Blog post template refinements
-- [ ] Homepage hero approach
-- [ ] Mobile product browsing experience
+The design system shipped in the 2026-05-05 theme cutover — palette, fonts, product cards, category/blog layouts, and mobile browsing are all live. Remaining design work is the homepage section-by-section redesign (`website/WEBSITE_UPDATE_PLAN.md` + the Phase 2 Gutenberg blocks in `website/HOMEPAGE_BLOCKS_PLAN.md`); ongoing tweaks live in `website/tasks.md`.

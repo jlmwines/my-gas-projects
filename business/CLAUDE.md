@@ -7,6 +7,9 @@ Strategy documents for JLM operations. Not code.
 | File | Purpose |
 |------|---------|
 | `CONTENT_STRATEGY.md` | Brand voice, content approach, customer definition |
+| `STRATEGY.md` | Long-horizon strategic posture + direction principles (quarterly) |
+| `BRAND_STANDARDS.md` | Voice + visual identity index (palette, typography, per-channel) |
+| `KPI.md` | KPI definitions + data-source wiring |
 
 ## Related Folders
 

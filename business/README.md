@@ -1,13 +1,17 @@
 # Business Planning
 
-Non-code planning and content for JLM operations.
+Strategy and brand documents for JLM operations. Not code. Orientation lives in `CLAUDE.md`.
 
-## Folders
+## Docs in this folder
 
-- **marketing/** - Campaign plans, customer segmentation, CRM intelligence analysis
-- **content/** - Product copy, email templates, promotional content
+- **`CONTENT_STRATEGY.md`** — brand voice, content approach, customer definition (the full guidelines)
+- **`STRATEGY.md`** — long-horizon strategic posture + direction principles (reviewed quarterly)
+- **`BRAND_STANDARDS.md`** — voice + visual identity index (palette, typography, per-channel standards)
+- **`KPI.md`** — KPI definitions + data-source wiring
 
-## Notes
+## Sibling folders (at the project root, not inside business/)
 
-This folder is for business strategy and content, not code.
-Code-related work stays in `jlmops/` (backend) and `website/` (frontend customizations).
+- `marketing/` — campaigns, promotions, email
+- `content/` — the actual content pieces (blog posts, guides, scripts)
+- `jlmops/` — backend operations code
+- `website/` — frontend/theme code

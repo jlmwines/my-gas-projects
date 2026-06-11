@@ -76,8 +76,8 @@
 ### Website (jlmwines.com)
 
 - Voice: see Voice section
-- Visual: `website/BRAND.md`, theme design system
-- Status: Theme replacement active on staging; cutover early-mid May 2026
+- Visual: theme design system (the Visual Identity section below mirrors the theme CSS `:root`)
+- Status: Live — theme cutover shipped 2026-05-05; steady-state operation
 
 ### Email (Mailchimp)
 
@@ -90,7 +90,7 @@
 - Voice: editorial, not pitchy
 - Visual: matches website typography (Secular One + Rubik)
 - Operating model: `marketing/NEWSLETTER_PLAN.md`
-- Status: First issue queued for post-cutover
+- Status: Issue #1 printed and distributing (inserted into shipments + store bags)
 
 ### Packing slip
 
@@ -126,4 +126,4 @@
 
 ---
 
-Updated: 2026-04-30
+Updated: 2026-06-11

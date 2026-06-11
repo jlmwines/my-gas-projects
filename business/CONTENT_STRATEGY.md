@@ -171,19 +171,7 @@ These are the foundational concepts we communicate about:
 
 ### Content Status
 
-| File | Metaphor Alignment | Video Script | Notes |
-|------|-------------------|--------------|-------|
-| Intensity EN.md | Mostly aligned | Needs creation | Uses orchestra metaphor |
-| Complexity EN.md | Needs update | Needs creation | Still uses falafel/pizza |
-| Acidity EN.md | Needs update | Needs creation | Still uses "lemon squeeze" |
-| Pairing EN.md | Mixed | Needs creation | Some old references |
-| Context EN.md | Mixed | Needs creation | Some old references |
-| Handling and Storage EN.md | Mixed | Needs creation | Minor updates |
-| How We Choose EN.md | Clean | Needs creation | Business focus, not metaphor-heavy |
-| Price vs Quality EN.md | Clean | Needs creation | Business focus |
-| What is a Good Wine EN.md | Minor updates | Needs creation | Generic terms |
-| Reds Guide EN.md | Needs update | Needs creation | Mixed old/new |
-| Whites Guide EN.md | Needs update | Needs creation | Uses old metaphors |
+Per-file content-production status (which posts are live, in pipeline, or need video scripts) is operational tracking, not strategy — it lives in `plans/STATUS.md` (Content metric) and the content publication calendar, not here. This doc holds the voice/approach the content must follow.
 
 ---
 
