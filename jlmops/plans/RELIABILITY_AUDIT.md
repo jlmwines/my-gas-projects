@@ -1,9 +1,6 @@
 # Reliability Audit & Path Forward, jlmops
 
-**Created:** 2026-05-28
-**Updated:** 2026-05-28 (v2.1, self-critique fixes applied)
-**Status:** Draft v2.1. v2 went through a self-critique pass and 14 issues were folded back in: stale Tier cross-references fixed, high-risk LockService session restructured to staged deploys, input-safety session split into stages, Tier 2.3 scope committed, Mailchimp activity-log moved to visibility tier, "Open" question taxonomy added, capability targets mapped to sessions, CCP-audit mechanism added, session-opening discipline pointer added, snapshot/status Drive-MCP asymmetry made explicit, and a self-refresh checkpoint added to the ongoing assurance scheme.
-**Owner:** Session-driven. User observes and tests; does not co-author.
+**Status:** Active remediation audit — ~7 of 16 sessions shipped (the 2026-06-03 push); the rest is open intent in the §5 session queue. Durable reliability facts that have shipped (two-tier stuck-job recovery, the UI-managed vs code-installed trigger model, severity-routed alerting + the SysJobQueue DLQ) are graduated to `../docs/ARCHITECTURE.md` §4. **Owner:** session-driven; user observes and tests.
 
 ## 1. Why this exists
 

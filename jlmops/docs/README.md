@@ -32,6 +32,6 @@ Also graduated 2026-06-11 (verified against live code):
 Still open (not graduations — deferred):
 
 - **`ARCHITECTURE.md` §2.5.6** housekeeping-phase list may be slightly stale (missing some 2026-06-03 additions) — needs an in-place freshness check.
-- **Length trims:** the five audited plans (esp. `CONTENT_LIBRARY_PLAN` 1210, `CAMPAIGN_SYSTEM_PLAN` 1026, `UI_AUDIT` 820) still carry dated-narrative / completed-history bloat to cut toward the ≤150-line standard.
+- **Length trims (in progress).** Done 2026-06-11: `UI_AUDIT` 821→51, `CAMPAIGN_SYSTEM_PLAN` 1026→77, `CRM_PLAN` 679→70 (all cut to current-state + open intent; shipped specs + dated history removed, now in git/session-log). `RELIABILITY_AUDIT` header reframed. **Still to trim:** `RELIABILITY_AUDIT` (935 — collapse the interleaved per-session SHIPPED Status blocks + §9/§10 review history; keep the open session queue) and `CONTENT_LIBRARY_PLAN` (1210 — cut the §17 phasing log + graduated §12/§20, keep §1–9 design + the unbuilt phases 10–15/§21). Both are large + intent-heavy; give each a focused pass.
 
 _Graduated 2026-06-11: the Project-Task Integration (topic→project routing + the standing system projects) is now in `WORKFLOWS.md` §12.0; its archived plan dump is retired._
