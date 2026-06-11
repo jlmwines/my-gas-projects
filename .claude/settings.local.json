@@ -77,7 +77,13 @@
       "Skill(update-config)",
       "Bash(echo '{\"tool_input\":{\"pattern\":\"\\(?<!\\\\\\\\w\\)alert\\\\\\\\\\(\"}}')",
       "Bash(echo '{\"tool_input\":{\"pattern\":\"alert\\\\\\\\\\(\"}}')",
-      "WebFetch(domain:plugins.svn.wordpress.org)"
+      "WebFetch(domain:plugins.svn.wordpress.org)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(cat .claude/settings.json)",
+      "Bash(cat .claude/settings.local.json)",
+      "Bash(ls -la docs/)",
+      "Bash(ls jlmops/docs/)",
+      "Bash(awk '{print $6, $7, $8, $NF}')"
     ],
     "deny": [
       "Bash(git -C:*)",
