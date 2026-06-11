@@ -1,6 +1,6 @@
 # Publication Calendar
 
-**Updated:** 2026-06-11 (May row reconciled to shipped; June row needs the user's session-end confirmation)
+**Updated:** 2026-06-11 (May reconciled to shipped; June updated per user — Issue #2 text ready, rides the Content Library + tasks workflow)
 
 One timeline coordinating blog posts, email sends, print newsletter, and flyer drops. Source of truth for *what ships when*. Workflow stages (edit, translate, publish, promote) live in jlmops `SysTasks` per post — this calendar names the dates and dependencies.
 
@@ -18,12 +18,10 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 
 ### 2026-06 — June
 
-_Needs the user's confirmation — status below is as of 2026-05-18 and may have moved._
-
 | Channel | Item | Status | Notes |
 |---|---|---|---|
-| Blog | A Year in the Vineyard | Under review + translation _(confirm)_ | |
-| Print Newsletter | Issue #2 | TBD | Lead TBD; YiV month section in secondary slot when EN+HE ready |
+| Blog | A Year in the Vineyard | Text ready; under review + translation | YiV is the June lead / Making Wine section |
+| Print Newsletter | Issue #2 | **Text ready** — to be produced in an upcoming **Content Library + tasks workflow** session (the first issue on the library model, per `CONTENT_LIBRARY_PLAN.md` phase 11) | Lead = YiV month section |
 
 ### 2026-07 onward
 
