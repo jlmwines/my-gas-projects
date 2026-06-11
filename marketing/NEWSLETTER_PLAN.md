@@ -2,7 +2,7 @@
 
 **Purpose.** Two-sided printed sheet, one language per side (EN / HE), distributed monthly via online order shipments and brick-and-mortar store handouts. A companion email goes to the email list the same week. Drives signups to the email list and reinforces JLM's editorial voice.
 
-**Status.** Layout and content model agreed 2026-05-08. Workflow revised 2026-05-19: Google Doc template per language built once in Drive; per-issue paste-source docx files (one per language, links preserved) delivered to the issue folder; user duplicates template + pastes content + drops in article QR + prints. First issue (Context post) launching 2026-05.
+**Status.** Operating model established and live. Workflow: a Google Doc template per language is built once in Drive; per-issue paste-source docx files (one per language, links preserved) are delivered to the issue folder; the user duplicates the template, pastes content, drops in the article QR, and prints. **Issue #1 (Context post / May edition) has shipped** — printed and distributing via shipments + store bags (the pattern-setter for the monthly cadence). Issue #2 (June) is the next instance.
 
 ---
 
@@ -315,7 +315,7 @@ The site's footer signup CTA (next to the existing Evyatar-in-vineyard photo) ge
 
 ## Open Questions
 
-- **First issue timing.** Issue #1 launches alongside the Context post (live 2026-05-19). Print + drop within 1–2 weeks of post going live.
+- **First issue timing.** ~~Issue #1 launches alongside the Context post.~~ Resolved — Issue #1 (Context/May) printed and distributing; cadence is monthly from here.
 - **Print method.** Self-print, in-house. Quantity scales with observed demand — start with a small batch, replenish as needed.
 - **Volume estimate.** TBD by observation over first 2–3 issues.
 - **Logo asset.** Confirm a one-color SVG/PNG of the JLM logo is available for the masthead.
@@ -338,4 +338,4 @@ Per `business/BRAND_STANDARDS.md`. Editorial, not pitchy. Consistent with the we
 
 ---
 
-Updated: 2026-05-19
+Updated: 2026-06-11 (Issue #1 shipped; model live)
