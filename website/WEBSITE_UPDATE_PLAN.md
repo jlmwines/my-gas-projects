@@ -280,9 +280,9 @@ QR codes bridge physical → digital, but website remains primary subscription p
 - [x] Image recipe saved: `content/IMAGE_RECIPE.md`
 
 ### Pending
-- [ ] Blog posts ready for publishing
-- [ ] Homepage copy aligned with content strategy
-- [ ] "Meet Evyatar" page content
+- [ ] Blog posts — 10 editorial posts live (EN+HE) as of 2026-06; 3 in pipeline (per `plans/STATUS.md`)
+- [ ] Homepage copy aligned with content strategy (the redesign above; lands via Phase 2 blocks)
+- [ ] "Meet Evyatar" page content (plan: `MEET_EVYATAR_PLAN.md`)
 - [ ] Gifts destination page content
 
 ---
@@ -291,7 +291,7 @@ QR codes bridge physical → digital, but website remains primary subscription p
 
 - Website is WooCommerce/WordPress
 - Menu changes are admin configuration (Appearance > Menus)
-- Homepage likely uses page builder or theme customizer
+- Homepage is now a custom Page Template anchored on real EN+HE Pages (HOMEPAGE_BLOCKS_PLAN Phase 1, shipped 2026-05-07 / theme v1.2.16); the section-by-section redesign above lands via the Gutenberg carousel blocks in Phase 2 (queued)
 - No code changes required for menu restructure
 
 ---
