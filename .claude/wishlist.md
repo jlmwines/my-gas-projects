@@ -9,27 +9,20 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2025-12-14: improve and standardize confirmation messages
 - [ ] 2025-12-14: show task creation date in product detail update review and export
-- [x] 2025-12-18: protect header rows on all data sheets - DONE 2025-12-19
 - [ ] 2025-12-22: refactor config JSON files - remove empty padding, consolidate repetitive entries
-- [ ] 2025-12-29: Need a way to add new wineries, grapes, kashrut
-- [ ] 2025-12-29: Plan transition from current region system
+- [ ] 2025-12-29: Plan transition from current region system (regions overhaul — see CONTENT_LIBRARY_PLAN §14)
 - [ ] 2025-12-29: Texts lookup is random and probably inefficient - need to examine
-- [ ] 2025-12-30: product view - need an overview of product, status, open tasks
 - [ ] 2026-01-01: add pairing to packing slip
 - [ ] WooCommerce API - could replace CSV sync, enable real-time order/coupon data
 - [ ] Mailchimp API - better than manual exports for campaigns/subscribers
 - [ ] URL shortener integration for campaign tracking
 - [ ] 2026-05-08: Newsletter UTM/QR helper — admin form takes target URL + campaign code (e.g., `may26-art`), returns canonical UTM-tagged URL, registers a short redirect (`jlmwines.com/n/<code>`), generates a print-ready QR (SVG, error-correction Q, optimized for ~3cm print) downloadable for layout. Pairs with URL shortener item above.
 - [ ] Hourly order sync via WooCommerce API (infrastructure exists: runHourlyTrigger())
-- [ ] Campaigns Screen - unified admin view for Mailchimp, coupons, exports
 - [ ] Coupon Service - dedicated service for coupon management
 - [ ] Smarter reprint logic: Track first immutable print separately
 - [ ] Remove one-time backfill code when CRM is stable
 - [ ] Remove hardcoded workaround in WebAppProducts.js:438
 - [ ] 2026-06-08: **Bundles — surface missed profit opportunities.** Flag high-profit wines (`wpm_ProfitRate`) that aren't used in ANY bundle (cross-bundle `usage` = 0, the Stage 6 index) so the operator can pull them into a bundle. The signals already exist (profit from Stage 2, usage from Stage 6); this is a read-only "high-margin wines not in any bundle" report/card on AdminBundles. Capstone to the Stage 7 generator.
-- [ ] Phase 14: Bundle Management
-- [ ] Phase 15: Project Management
-- [ ] Contact list UI (AdminContactsView)
 - [ ] WhatsApp integration
 - [ ] Mailchimp export from CRM
 - [ ] Recommendation engine
@@ -47,7 +40,6 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-06-08: **Bundle explainer message on bundle pages (soon).** Closable/dismissible info area on jlmwines.com bundle (woosb) product pages explaining how bundles work to the customer (flexible vs fixed slots, how to swap/add, pricing). Per-language EN + HE copy — text being drafted (user). Dismissible (remember-dismissed). Theme-side, not jlmops.
 - [ ] 2025-12-29: Risk that redundant text is affecting SEO - research enriched text in products
-- [ ] Exit popup for website
 - [ ] 2026-01-22: Examine website cache and other speed-related settings to optimize
 - [ ] 2026-05-15: **Nav menu structure + mobile review** (consolidates 2026-04-29 + 2026-05-07 notes). Audit desktop layout, mobile drawer hierarchy, deep-link targets (e.g., `#footer-contact`). What customers actually need vs. what the menu currently has. Check mobile drawer appearance against design system. Single audit pass.
 

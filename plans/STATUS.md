@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-10 — jlmops @288 · theme v1.2.29 live; 0 blockers; next jlmops action open (reliability/UI audit queues).
+**Updated:** 2026-06-11 — jlmops @288 · theme v1.2.29 live; 0 blockers; doc-governance complete (the `jlmops/docs/` system docs are the verified single home for schema/behavior facts; the 5 biggest plans trimmed to current-state + open intent); next jlmops build action open.
 
 ## Metrics
 
