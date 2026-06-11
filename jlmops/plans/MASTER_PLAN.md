@@ -85,8 +85,8 @@ Before next deploy:
 | Bugs | `jlmops/BUGS.md` |
 | Wishlist | `jlmops/WISHLIST.md` |
 | CRM details | `jlmops/plans/CRM_PLAN.md` |
-| Architecture | `jlmops/plans/ARCHITECTURE.md` |
-| Data model | `jlmops/plans/DATA_MODEL.md` |
+| Architecture | `jlmops/docs/ARCHITECTURE.md` |
+| Data model | `jlmops/docs/DATA_MODEL.md` |
 | Optimizations | `jlmops/plans/RESOURCE_OPTIMIZATION_PLAN.md` |
 | Future phases | `jlmops/plans/IMPLEMENTATION_PLAN.md` |
 

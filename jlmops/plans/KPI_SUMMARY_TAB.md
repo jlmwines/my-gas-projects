@@ -194,6 +194,6 @@ Estimated total: 1 short session.
 ## Cross-references
 
 - `business/KPI.md` — strategic scope (the "what" and "why")
-- `jlmops/plans/DATA_MODEL.md` — source schemas (`SysContacts`, `SysCouponUsage`, `SysCampaigns`)
+- `jlmops/docs/DATA_MODEL.md` — source schemas (`SysContacts`, `SysCouponUsage`, `SysCampaigns`)
 - `jlmops/plans/CONTACT_MANAGER_PLAN.md` — Mailchimp daily pull (KPI #5 wiring; already shipped as Half 1)
 - `jlmops/plans/IMPLEMENTATION_PLAN.md` — overall jlmops phasing

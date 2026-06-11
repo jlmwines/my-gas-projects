@@ -35,14 +35,14 @@ The system utilizes a meticulously designed data model across several Google She
 *   **Order Data:** `WebOrdS` (staging), `WebOrdM` (master orders), `WebOrdItemsM` (order line items), `SysOrdLog` (order workflow log), `SysPackingCache` (packing slip data cache), `SysInventoryOnHold` (on-hold inventory summary).
 *   **System Data:** `SysConfig` (system settings), `SysTasks` (task management), `SysTaskTypes` (task type definitions), `SysTaskStatusWorkflow` (task status rules), `BruryaStock` (Brurya inventory management), `SysCampaigns` (campaign definitions), `SysCampaignAssets` (links campaigns to content).
 
-For detailed column structures and relationships, refer to `DATA_MODEL.md`.
+For detailed column structures and relationships, refer to `../docs/DATA_MODEL.md`.
 
 ## 5. Key Documents
 
 For more detailed information on the system's design and implementation, please refer to the following documents:
 
-*   **[ARCHITECTURE.md](ARCHITECTURE.md):** A detailed description of the system's technical architecture and UI/UX design.
-*   **[DATA_MODEL.md](DATA_MODEL.md):** A complete reference for all Google Sheets, their columns, and data relationships.
+*   **[ARCHITECTURE.md](../docs/ARCHITECTURE.md):** A detailed description of the system's technical architecture and UI/UX design.
+*   **[DATA_MODEL.md](../docs/DATA_MODEL.md):** A complete reference for all Google Sheets, their columns, and data relationships.
 *   **[WORKFLOWS.md](WORKFLOWS.md):** Detailed explanations of the key user and system workflows.
 *   **[IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md):** The high-level, phased plan for building and deploying the system.
 *   **[TESTING_AND_VERSIONING.md](TESTING_AND_VERSIONING.md):** The strategy for version control, testing, and safe deployment of new features.

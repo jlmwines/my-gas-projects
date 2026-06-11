@@ -305,7 +305,7 @@ Sibling-language pairs reference each other naturally as translation pairs (the 
 
 ### Task lifecycle dates (existing SysTasks schema)
 
-The library plan does NOT introduce new task date semantics — it reuses what jlmops already implements. See `jlmops/plans/DATA_MODEL.md` SysTasks section:
+The library plan does NOT introduce new task date semantics — it reuses what jlmops already implements. See `jlmops/docs/DATA_MODEL.md` SysTasks section:
 
 - `st_CreatedDate` — always set at spawn
 - `st_StartDate` — nullable until task moves to `Assigned`
