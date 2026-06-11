@@ -78,8 +78,8 @@ Do not write `btn-primary`, `btn-secondary`, or any color class unless you SEE i
 
 **Modals - MANDATORY RULES:**
 1. Do NOT use Bootstrap modal (`$().modal()`)
-2. Use the `modal-overlay` pattern with `style.display = 'flex'` / `'none'`
-3. Copy an existing modal structure from AdminProductsView.html
+2. Use the `modal-overlay` markup pattern, and open/close it with the shared **`ModalOverlay`** controller in `TaskWidgets.html` (CCP-UI-8): `ModalOverlay.open('my-modal')` / `ModalOverlay.close('my-modal')`. Do NOT toggle `style.display` by hand — `ModalOverlay` adds the focus management Bootstrap gave for free and raw `display` toggling lacks: focus the first interactive element on open and restore to the trigger on close, Esc closes the topmost modal, Tab/Shift+Tab trapped inside it, body scroll-lock while any modal is open, and z-index stacking for nested modals.
+3. Copy an existing modal structure from AdminProductsView.html (markup stays `.modal-overlay` with `display:none`; `ModalOverlay` does the toggling).
 4. Example:
 ```html
 <div class="modal-overlay" id="my-modal" style="display:none;">
@@ -87,12 +87,13 @@ Do not write `btn-primary`, `btn-secondary`, or any color class unless you SEE i
     <div class="modal-header">...</div>
     <div class="form-body">...</div>
     <div class="modal-footer bg-light">
-      <button class="btn" onclick="document.getElementById('my-modal').style.display='none'">Cancel</button>
+      <button class="btn" onclick="ModalOverlay.close('my-modal')">Cancel</button>
       <button class="btn" id="btn-submit">Submit</button>
     </div>
   </div>
 </div>
 ```
+Open it with `ModalOverlay.open('my-modal')` (not `style.display='flex'`).
 
 **Notifications & confirms - MANDATORY:**
 - NEVER use native `alert()` or `confirm()` - inside the Apps Script iframe the browser adds an ugly, un-styleable header. Use the shared helpers in `TaskWidgets.html`:

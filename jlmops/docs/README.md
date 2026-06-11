@@ -31,7 +31,6 @@ Also graduated 2026-06-11 (verified against live code):
 
 Still open (not graduations — deferred):
 
-- **`ModalOverlay.open/close`** focus-management helper (`TaskWidgets.html`) is a UI *convention*; belongs in `jlmops/CLAUDE.md` Modals rule, not a system doc.
 - **`ARCHITECTURE.md` §2.5.6** housekeeping-phase list may be slightly stale (missing some 2026-06-03 additions) — needs an in-place freshness check.
 - **Length trims:** the five audited plans (esp. `CONTENT_LIBRARY_PLAN` 1210, `CAMPAIGN_SYSTEM_PLAN` 1026, `UI_AUDIT` 820) still carry dated-narrative / completed-history bloat to cut toward the ≤150-line standard.
 
