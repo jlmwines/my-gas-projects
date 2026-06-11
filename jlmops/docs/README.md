@@ -8,7 +8,7 @@ Governed by **Documentation Standards** in the portfolio kernel (`projects/.clau
 
 - **`ARCHITECTURE.md`** — system structure, layering, sync workflow, DR posture.
 - **`DATA_MODEL.md`** — every sheet, column, and relationship.
-- **`WORKFLOWS.md`** — the key user and system workflows. (Flagged in `../plans/TECH_DEBT_AUDIT.md` as possibly drifted from current code; needs a freshness pass.)
+- **`WORKFLOWS.md`** — the key user and system workflows, plus task routing/assignment (§12: topic→project routing, flow_pattern→assignee, due dates). (Flagged in `../plans/TECH_DEBT_AUDIT.md` as possibly drifted from current code; needs a freshness pass.)
 
 ## The rules that keep these true
 
@@ -18,4 +18,6 @@ Governed by **Documentation Standards** in the portfolio kernel (`projects/.clau
 
 ## Not yet graduated
 
-- Several large plan docs still hoard schema/architecture detail that should graduate here (cleanup-session backlog). Notable: `../../docs/plans/projects recovery.txt` is the only record of the shipped Project-Task Integration (topic→project routing, the four system projects); its durable facts should graduate into a clean reference, then the dump can go.
+- Several large plan docs still hoard schema/architecture detail that should graduate here (cleanup-session backlog). The biggest plans (`CONTENT_LIBRARY_PLAN`, `CAMPAIGN_SYSTEM_PLAN`, `RELIABILITY_AUDIT`, `UI_AUDIT`, `CRM_PLAN`) are the candidates — verify before moving, since much is already covered here.
+
+_Graduated 2026-06-11: the Project-Task Integration (topic→project routing + the standing system projects) is now in `WORKFLOWS.md` §12.0; its archived plan dump is retired._

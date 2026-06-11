@@ -44,7 +44,44 @@ This workflow orchestrates the synchronization of data between the Web (WooComme
 
 ---
 
-## 12. Task Assignment & Dates
+## 12. Task Routing, Assignment & Dates
+
+### 12.0 Project Routing on Creation
+
+**Design rule:** every task belongs to exactly one project, carried in `st_ProjectId`. Routing is how that project is assigned at creation.
+
+`createTask()` stamps each new task with a project. When the caller passes no explicit `options.projectId`, the task's topic (`options.topic`, else the task type's `topic`) is looked up in the `task.routing.topic_to_project` config map and the match becomes `st_ProjectId`. An explicit `options.projectId` always wins. There is currently no fallback: a topic with no map entry, or a topic mapped to an unseeded project, yields a task that does not satisfy the design rule (see Coverage gaps below).
+
+**Topic → project map** (`task.routing.topic_to_project`, stored split-key in SysConfig):
+
+| Topic | Project |
+|-------|---------|
+| `Products` | `PROJ-SYS_PRODUCT` |
+| `WebXlt` | `PROJ-SYS_PRODUCT` |
+| `Inventory` | `PROJ-SYS_INVENTORY` |
+| `Orders` | `PROJ-SYS_ORDERS` |
+| `System` | `PROJ-SYS_SYSTEM` |
+| `CRM` | `PROJ-SYS_CRM` |
+| `Contact` | `PROJ-SYS_CRM` |
+| `Campaign` | `PROJ-SYS_CRM` |
+| `Content` | `PROJ-CONTENT` |
+
+To change routing, edit `config/system.json` → `node generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
+
+**Project classes.** Routing targets fall into two kinds:
+
+- **System-managed** — the `PROJ-SYS_*` projects (`SysProjects`, seeded Dec 2025): Product Data Quality (`PROJ-SYS_PRODUCT`), Inventory Management (`PROJ-SYS_INVENTORY`), System Health (`PROJ-SYS_SYSTEM`), Order Fulfillment (`PROJ-SYS_ORDERS`), CRM Operations (`PROJ-SYS_CRM`). They hold auto-generated system tasks and are **protected from deletion** (`ProjectService.deleteProject` rejects any `PROJ-SYS_` id).
+- **User-managed** — projects where a person creates and works the tasks directly, e.g. `PROJ-CONTENT` (editorial content production). These must **not** carry the `PROJ-SYS_` prefix, precisely so they stay user-deletable/editable; system tasks cannot be handled the way content tasks are.
+
+Campaign-type projects (e.g. Core Content, `PROJ-6878357E`) are created per program and carry a `spro_CampaignId`. Schema → `DATA_MODEL.md` (`SysProjects`).
+
+**Coverage gaps (current — a tracked fix closes these; see `.claude/bugs.md`).** Until that fix ships, some auto-created tasks do not resolve to a real project:
+
+- **`Content`** (16 task types) maps to `PROJ-CONTENT`, which is **not yet seeded** in `SysProjects`. These tasks are still tracked operationally via their Library entity (`st_EntityId`). Fix: seed `PROJ-CONTENT` as a user-managed project (plain id, not `PROJ-SYS_`, since users own its tasks).
+- **`Marketing`** (15 task types) has **no map entry**. Fix: fold into Content (add `Marketing → PROJ-CONTENT`).
+- **`Data`** (2 task types) has **no map entry**. Fix: re-topic per domain — `task.data.review` (cities lookup) → `CRM` (→ `PROJ-SYS_CRM`); `task.data.coupons_update` → `Marketing` (→ Content). The `Data` topic then retires.
+
+`Custom` (`task.project.custom`) is intentionally unmapped: user-created tasks require the user to choose a project (`WebAppTasks` rejects a missing one), so they already satisfy the rule.
 
 ### 12.1 Auto-Assignment on Creation
 
@@ -63,8 +100,7 @@ When `TaskService.createTask()` is called:
 |---------|------------------|-------------|
 | `admin_direct` | Administrator | Admin resolves directly |
 | `manager_direct` | Manager | Manager resolves directly |
-| `manager_to_admin_review` | Manager | Manager works, admin reviews |
-| `manager_suggestion` | (none) | Manager creates, admin approves |
+| `manager_to_admin_review` | Manager | Manager works, then hands off to Administrator on Review (e.g. `task.onboarding.add_product`, `task.validation.vintage_mismatch`) |
 
 ### 12.2 Due Date Patterns
 
