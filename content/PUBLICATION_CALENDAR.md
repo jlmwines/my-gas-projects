@@ -1,6 +1,6 @@
 # Publication Calendar
 
-**Updated:** 2026-05-18
+**Updated:** 2026-06-11 (May row reconciled to shipped; June row needs the user's session-end confirmation)
 
 One timeline coordinating blog posts, email sends, print newsletter, and flyer drops. Source of truth for *what ships when*. Workflow stages (edit, translate, publish, promote) live in jlmops `SysTasks` per post — this calendar names the dates and dependencies.
 
@@ -12,15 +12,17 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 
 | Channel | Item | Status | Notes |
 |---|---|---|---|
-| Blog | Context | EN+HE drafted to live drafts 67403/67405 with 4 body images (2026-05-18); awaiting user review | Lead for Newsletter Issue #1 |
-| Print Newsletter | Issue #1 | Gated on Context review + A4 Canva design (EN+HE) | Layout locked 2026-05-08; secondary slot TBD |
-| Email (Mailchimp) | Context post + redesign | Gated on Context review | Announces redesign + Context post (newsletter NOT part of email per 2026-05-18 decision) |
+| Blog | Context | **Published live (EN+HE)** | Lead for Newsletter Issue #1 |
+| Print Newsletter | Issue #1 | **Printed + distributing** (shipments + store bags) | Pattern-setter for the monthly cadence |
+| Email (Mailchimp) | Context post + redesign | _confirm sent_ | Announces redesign + Context post (newsletter NOT part of email per 2026-05-18 decision) |
 
 ### 2026-06 — June
 
+_Needs the user's confirmation — status below is as of 2026-05-18 and may have moved._
+
 | Channel | Item | Status | Notes |
 |---|---|---|---|
-| Blog | A Year in the Vineyard | Under review + translation | |
+| Blog | A Year in the Vineyard | Under review + translation _(confirm)_ | |
 | Print Newsletter | Issue #2 | TBD | Lead TBD; YiV month section in secondary slot when EN+HE ready |
 
 ### 2026-07 onward
