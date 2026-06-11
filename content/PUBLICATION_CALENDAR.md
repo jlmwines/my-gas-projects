@@ -14,7 +14,7 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 |---|---|---|---|
 | Blog | Context | **Published live (EN+HE)** | Lead for Newsletter Issue #1 |
 | Print Newsletter | Issue #1 | **Printed + distributing** (shipments + store bags) | Pattern-setter for the monthly cadence |
-| Email (Mailchimp) | Context post + redesign | _confirm sent_ | Announces redesign + Context post (newsletter NOT part of email per 2026-05-18 decision) |
+| Email (Mailchimp) | May AYIW entry | **Sent** | Led with the May "A Year in Wine" entry; linked to the Context post; mentioned the website update. (Newsletter NOT part of the email, per 2026-05-18 decision.) |
 
 ### 2026-06 — June
 

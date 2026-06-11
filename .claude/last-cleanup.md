@@ -23,7 +23,6 @@ Doc-folder reconciliation:
 Resolved after the sweep:
 - `marketing/EMAIL_GUIDELINES.md` — **realigned to the post-cutover brand per user** (2026-06-11): Secular One/Rubik fonts (system fallback noted), Ink #1a1612 text, terracotta #a83920 CTA, cream #fcf9f2 background; added a source-of-truth pointer to BRAND_STANDARDS.
 
-Open item left for the user:
-- `content/PUBLICATION_CALENDAR.md` June row — needs the user's session-end confirmation of YiV / Issue #2 / the May email-sent status.
+Calendar fully reconciled with the user 2026-06-11: May row all shipped/sent (Context live; Issue #1 distributing; companion email sent — May AYIW entry, linked Context, mentioned the website update); June row current (YiV text ready / in translation; Issue #2 text ready, rides the Content Library + tasks workflow per CONTENT_LIBRARY_PLAN phase 11). No open items remain.
 
 Triggered when: user asked for the full project-scoped cleanup sweep.
