@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-11 — jlmops @288 · theme v1.2.29 live; 0 blockers; doc-governance complete (the `jlmops/docs/` system docs are the verified single home for schema/behavior facts; the 5 biggest plans trimmed to current-state + open intent); next jlmops build action open.
+**Updated:** 2026-06-12 — jlmops @288 · theme v1.2.30 live (bundle edit-quantity hint shipped on bundle product pages); 0 blockers; next jlmops build action open.
 
 ## Metrics
 
@@ -9,11 +9,11 @@
 | Phase | Live, post-cutover. Theme cutover, Manager CRM, Lookup admin UI, Content Library, and the Admin task workbench (`AdminTasksView`) all shipped & live. Phase 12 cross-link renderer blocked on the §16 regions overhaul. |
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @288 · theme v1.2.29 |
-| Deploy Date | jlmops 2026-06-10 · theme 2026-06-04 |
+| Deploy Version | jlmops @288 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-10 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |
-| SEO | 87/100 (RankMath audit 2026-05-31). Open items → `plans/RANKMATH_WPML_AUDIT.md` (WPML per-language meta gap) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
+| SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
 | Open Bugs | See `.claude/bugs.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md`. Open: Session F (sync-hardening, pending staging repro), H (timestamp/date-format audit), I (count-task creation audit). |
 | Mobile PageSpeed | FCP ~3.5 / LCP ~4.2 (at baseline). Remaining lever: render-blocking pile (main.css critical-CSS + jQuery defer). |
 | Desktop PageSpeed | EN FCP 0.7 / LCP 0.8 · HE FCP 0.7 / LCP 1.2 |
@@ -38,7 +38,7 @@ The live "what now" — daily review reads these first.
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR builder, `AdminCampaignsView`). Short URLs pasted into RankMath manually (low volume); auto-push deferred. Plans → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`, `CADENCE_REALIGNMENT_PLAN.md`.
 - **Bundles** — all stages (0–7) complete, live; rev-2.2 suggestion generator + inline-at-row editor with per-bundle EN/HE export shipped. EN+HE woosb output verified live. Remaining: composite-weight tuning of rough spots. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — complete. OPS writes system-health (15-min) + KPI (daily + on-demand) into `jlmops-status.md`; `/review-daily` reads it each run. GA4 Traffic live; GSC populates on its next dated fetch. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
-- **Theme** — cutover shipped 2026-05-05; live runs jlmwines-theme v1.2.29 with Mailchimp pulls + post-sync bundle-health auto-trigger. Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
+- **Theme** — cutover shipped 2026-05-05; live runs jlmwines-theme v1.2.30 with Mailchimp pulls + post-sync bundle-health auto-trigger. Bundle product pages carry a dismissible edit-quantity hint (`website/BUNDLE_MESSAGE_PLAN.md`). Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
 
 ### Pending verification (watch items)
 

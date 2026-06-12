@@ -2262,7 +2262,7 @@ function getMasterConfiguration() {
         "Per-integration staleness thresholds in minutes for the dashboard Integrations heartbeat panel (reliability audit 3.1). A source older than its threshold renders stale.",
         "stable",
         "products_threshold_min",
-        "1440",
+        "2880",
         "",
         "",
         "",

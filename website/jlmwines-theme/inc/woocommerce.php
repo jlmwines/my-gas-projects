@@ -161,6 +161,47 @@ add_filter('woocommerce_sale_flash', function ($html, $post, $product) {
 }, 10, 3);
 
 /**
+ * Bundle edit-quantity hint — a short, dismissible note above the bundle
+ * items telling the customer that where a quantity is editable they choose
+ * how many (0 removes an item, raising from 0 adds one).
+ *
+ * The copy is self-guarding ("If a quantity can be edited…"), so it reads
+ * correctly on fixed packages too — which is why it shows on every bundle
+ * without per-item editability inspection. Dismissal persists via
+ * localStorage so it doesn't nag across bundle pages.
+ *
+ * Hook: `woocommerce_single_product_summary` at priority 6 — right after the
+ * title (5), before woosb renders its bundle-item builder (it hooks the
+ * summary at a low priority ~21, just after the excerpt, and the item list
+ * is tall). Priority 6 puts the hint ABOVE that whole builder so it's the
+ * first thing read on mobile. (Both `before_add_to_cart_form` and summary@25
+ * landed after the item list — at the bottom on tall mobile bundle pages.)
+ * Page chrome → inline is_rtl(), no textdomain string.
+ */
+add_action('woocommerce_single_product_summary', function () {
+    global $product;
+    if (!$product || !is_a($product, 'WC_Product')) {
+        return;
+    }
+    if (!in_array($product->get_type(), ['woosb', 'product_bundle'], true)) {
+        return;
+    }
+    $rtl   = is_rtl();
+    $text  = $rtl
+        ? 'מוצרים בהם ניתן לערוך את הכמות: בשדה הכמות הגדירו 0 על מנת להסיר פריט, או הוסיפו את מספר המוצרים שתרצו.'
+        : 'If a quantity can be edited, you can choose how many. Set it to 0 to remove an item, or raise it from 0 to add one.';
+    $close = $rtl ? 'סגירה' : 'Dismiss';
+    ?>
+    <div class="bundle-edit-hint" id="bundle-edit-hint" role="note">
+        <span class="bundle-edit-hint-text"><?php echo esc_html($text); ?></span>
+        <button type="button" class="bundle-edit-hint-close" aria-label="<?php echo esc_attr($close); ?>" data-bundle-hint-dismiss>&times;</button>
+    </div>
+    <?php
+    // Dismissal behavior lives in assets/js/main.js (the site's JS optimizer
+    // strips inline <script> rendered in this position).
+}, 6);
+
+/**
  * Floating add-to-cart bar on single product pages.
  *
  * Rendered to wp_footer so it lives outside the product summary container —

@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-12 — Bundle hint shipped (theme v1.2.30) + ops threshold + RankMath read abilities
+
+- **Bundle edit-quantity hint** shipped to live: dismissible note above bundle items on all bundle pages (EN+HE), `localStorage` persist. Plan `website/BUNDLE_MESSAGE_PLAN.md`. Two gotchas, both now memory: site JS optimizer **strips inline `<script>`** in hook-rendered markup (dismissal JS moved to `main.js`); woosb renders its item builder at a low summary priority (~21), so the hint hook is `woocommerce_single_product_summary`@6 to land above the items (not `before_add_to_cart_form`, which dropped it to the page bottom on mobile). Theme bumped 1.2.29→1.2.30; STATUS updated.
+- **Ops:** `system.heartbeat.products_threshold_min` 1440→2880 (config push + rebuild) — Woo Products is manually synced, so the 24h flag cried wolf; 48h fits cadence. The earlier "products STALE" was not a fault.
+- **RankMath MCP** gained 4 read abilities after a user plugin update (`get-post-seo-meta`, `get-post-schema`, `get-post-links`, `get-link-report`) — verified live via curl, documented in `RANKMATH_WPML_AUDIT.md` + memory. Checked all 9 EN/HE editorial pairs: canonicals all same-language correct (no WPML meta-inheritance gap on the blog), 7/9 keyworded. Recorded a 5-item low-cost fix checklist (missing FKs on context/about, FK typo on intensity EN, FK-not-in-title on complexity HE, overlong about desc) in the audit doc. Broken-link detection is PRO-gated.
+- **NEXT:** editorial SEO checklist is user's to knock out (manual sidebar). Next jlmops build action still open (reliability 1.3 concurrency / UI Tier 5). Branded cartons were due ~06-11 — nudge partner.
+
 ## 2026-06-11 (cont) — Doc-governance item 1 COMPLETE: graduations + length-trim program
 
 - **Graduations** (verified against live `config/schemas.json` + service code before writing): `DATA_MODEL.md` got the Content Library section (`SysLibrary`/`SysLibraryActivity` + workbook-placement + slug rule), the missing SysTasks polymorphic columns, and a reconciled SysContacts roster + config-driven Derived-field rules (the old roster was *stale* — listed fields that don't exist live). `ARCHITECTURE.md` got role-gating §2.1.1 (was contradicting live single-file `data-roles`), the load-once §2.1.2 pattern, and §4.3 stuck-job recovery + trigger model. `jlmops/CLAUDE.md` Modals rule now mandates `ModalOverlay.open/close`. `CAMPAIGN_SYSTEM_PLAN` had **zero** graduation gaps.

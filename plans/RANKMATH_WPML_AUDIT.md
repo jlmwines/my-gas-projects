@@ -4,7 +4,7 @@
 
 **Run from:** wp-admin on live (or staging — same WPML config). All steps read-only except where flagged "**FIX**".
 
-**Updated:** 2026-05-31 (Rank Math MCP tooling + usage decision added — see bottom)
+**Updated:** 2026-06-12 (Rank Math MCP gained four read abilities after a plugin update — see bottom)
 
 ---
 
@@ -158,11 +158,20 @@ Rank Math ships a built-in MCP server (no plugin install needed). It was found a
   2. `notifications/initialized` → POST with that header (no body response).
   3. `tools/call` → POST with the header. Audit call: `{"method":"tools/call","params":{"name":"mcp-adapter-execute-ability","arguments":{"ability_name":"rank-math/audit-site-seo","parameters":{"refresh":true}}}}`.
   - Headers: `Content-Type: application/json`, `Accept: application/json, text/event-stream`, Basic auth `gamboruch:<app-password>`. Use a generous `-m` timeout (audit takes ~30–60s; it hits the remote rankmath.com API).
-  - Abilities (from `discover-abilities`): `rank-math/audit-site-seo` (read-only) + `rank-math/fix-site-seo` (writes — never auto-run). `audit-site-seo` params: `refresh` (bool) + optional `url` (per-URL audit; remote tests only). **No `wpml_language` param — the audit is WPML-blind / global; the §A–F walk below is the only way to check per-language meta.**
+  - Abilities (from `discover-abilities`, six as of the 2026-06-12 plugin update): the two site-wide ones — `rank-math/audit-site-seo` (read-only) + `rank-math/fix-site-seo` (writes — never auto-run) — plus four **read-only** abilities added by the update (see the new-abilities subsection below). `audit-site-seo` params: `refresh` (bool) + optional `url` (per-URL audit; remote tests only). **No `wpml_language` param — the audit is WPML-blind / global; the §A–F walk below is the only way to check per-language meta.**
 
-**What it exposes — only two tools (the official Rank Math set, NOT the 23-ability open stack):**
+**What it exposes — six abilities (verified live 2026-06-12).** Two site-wide, four per-/cross-post readers added by the plugin update:
+
 - `rank-math/audit-site-seo` — **read-only.** Runs Rank Math's site-wide test suite, returns score + categorized findings. Can also audit a specified URL / competitor URL (competitor audits are PRO).
 - `rank-math/fix-site-seo` — **writes.** Auto-toggles a fixed checklist (blog visibility, permalink structure, tagline, sitemap/schema modules, robots.txt, missing focus keywords). Global and WPML-blind.
+
+**New read-only abilities (2026-06-12 update) — all read, all safe to call:**
+- `rank-math/get-post-seo-meta` — full SEO metadata for one post: title, description, focus keyword, robots, canonical, OG/Twitter overrides, and the current SEO score.
+- `rank-math/get-post-schema` — schema markup attached to a post + the schema types available on this install. (If a type isn't in `available_types.types` and an `upgrade_message` is returned, it's a PRO-gated type — surface that message, don't suggest adding the type.)
+- `rank-math/get-post-links` — paginated internal/external links stored for a post (URL, link type, target-post details for internal links).
+- `rank-math/get-link-report` — site-wide link health: total internal/external links, posts with no internal/external links, and (PRO) broken links, redirects, nofollow counts, HTTP-status distribution from Link Genius.
+
+**Where these help the JLM SEO backlog:** `get-post-seo-meta` per EN/HE post is a direct read on the WPML per-language meta gap (§A) — pull the EN post and its HE counterpart and compare title/description/canonical without the wp-admin walk. `get-post-schema` is the read side of the gtin13 / aggregateRating / product-schema items (#9, and the open `web` GTIN item). `get-link-report` / `get-post-links` give an internal-linking + broken-link picture for the cross-link work. All are **WPML-aware only to the extent each post has its own ID** — query the HE post by its own ID, not the EN one. Usage stance unchanged from below: read freely, never wire the writer.
 
 **Usage decision for JLM:**
 - **`audit-site-seo` — use freely as an on-demand read-only SEO pulse.** Fold a periodic run into the **monthly review** "SEO & Content" check (STATUS.md Review Cadence) as a cheap input alongside the GSC/GA4 glance. Matches the user's stated preference for periodic manual review over a built dashboard.
@@ -174,3 +183,19 @@ Rank Math ships a built-in MCP server (no plugin install needed). It was found a
 - **Open SEO backlog overlap: essentially none.** JLM's open items (homepage hreflang `http` #1, gtin13 #9, EN-only post #8, WPML Custom Fields Translation §A, HE front-page mapping #3) are all architecture/theme-code/WPML-settings work that `fix-site-seo` cannot touch. The generic auto-fixer and the real backlog do not overlap.
 
 **Net:** keep the MCP as a read-only SEO monitoring pulse on the monthly cadence; never wire the auto-fixer; it stays out of the hardening plan.
+
+---
+
+## Editorial-post SEO worklist (checked 2026-06-12 via the new read abilities)
+
+Ran `get-post-seo-meta` across all 9 EN/HE editorial pairs + `get-link-report`. **Canonicals are same-language correct on every post** (no WPML meta-inheritance problem on the blog — §A/§F clean here). 7 of 9 pairs already have focus keywords in both languages, mid-60s scores. Low-cost gaps to fix in the Rank Math sidebar (manual; no automation path for per-post focus keyword). The lever for the weak-but-keyworded posts is putting the keyword in the **SEO Title** + first paragraph (the visible H1 can stay as-is).
+
+- [ ] **`context` EN (67403)** — FK `wine for the occasion`; SEO title `Wine for the Occasion: Find the Wine That Defines the Moment`; desc `Choosing wine? Match it to the moment, not the label — from sunny afternoons to candlelit dinners, find the right pour for any occasion.`
+- [ ] **`context` HE (67405)** — FK candidate `יין לפי אירוע` (confirm real search intent); SEO title `יין לפי אירוע: איך לבחור את היין שמתאים לרגע`; desc `לבחור יין לפי הרגע, לא לפי התווית — מאחר צהריים קייצי ועד ארוחת ערב לאור נרות, איך למצוא את היין שמתאים לאירוע.`
+- [ ] **`intensity` EN (62818)** — fix FK typo: `Dry red wine intesity` → `red wine intensity` (matches slug); SEO title `Red Wine Intensity: How Much Presence Does Your Wine Have?` (score was 17).
+- [ ] **`complexity` HE (62614)** — keep FK `מורכבות ביין` but add it to the SEO title: `מורכבות ביין: כמה אקשן יש ביין שלכם?` (score was 19; keyword wasn't in the title).
+- [ ] **`about-evyatar` EN (66867)** — brand/story page; skip the focus keyword (accept the low score), just trim the 251-char desc to `I didn't set out to be a wine person — I needed a job in a Katamon shop. Ten years later I'm still learning. The story behind JLM Wines.`
+
+**Internal linking (`get-link-report`):** 5,810 internal / 517 external links site-wide; 199 items have no internal links (mostly products — category/related driven, lower priority; the editorial sensory cluster already cross-links). **Broken-link detection is PRO-gated** — not available without a Rank Math PRO upgrade.
+
+**Verdict (user, 2026-06-12):** blog organic is unlikely to drive many new customers, but these fixes are near-zero cost with no downside — knock out as light hygiene. Not a traffic project.

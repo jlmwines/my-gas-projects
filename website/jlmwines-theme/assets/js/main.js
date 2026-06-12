@@ -445,3 +445,22 @@
         document.body.appendChild(script);
     });
 })();
+
+// Bundle edit-quantity hint — dismiss + persist. The hint markup is injected
+// by a WC hook on bundle product pages; its behavior lives here (not inline in
+// the markup) because the site's JS optimizer strips inline <script> in that
+// position. localStorage keeps it dismissed across bundle pages.
+(function () {
+    var KEY = 'jlm_bundle_hint_dismissed';
+    var hint = document.getElementById('bundle-edit-hint');
+    if (!hint) return;
+    try {
+        if (localStorage.getItem(KEY) === '1') { hint.style.display = 'none'; return; }
+    } catch (e) {}
+    hint.addEventListener('click', function (e) {
+        if (e.target.closest('[data-bundle-hint-dismiss]')) {
+            hint.style.display = 'none';
+            try { localStorage.setItem(KEY, '1'); } catch (e2) {}
+        }
+    });
+})();

@@ -3140,3 +3140,35 @@ body.page-template-template-gifts {
   .page-gifts .carousel-arrow-prev { inset-inline-start: 0; }
   .page-gifts .carousel-arrow-next { inset-inline-end: 0; }
 }
+
+/* Bundle edit-quantity hint — dismissible note above the bundle items on
+   bundle product pages. Logical properties (border-inline-start /
+   margin-inline-start) auto-flip for RTL; no [dir="rtl"] override needed. */
+.bundle-edit-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-surface);
+  border: 1px solid var(--c-ink-12);
+  border-inline-start: 3px solid var(--c-accent);
+  border-radius: var(--radius-input);
+  color: var(--c-muted);
+  font-size: var(--t-small);
+  line-height: var(--lh-snug);
+}
+.bundle-edit-hint-text { flex: 1 1 auto; }
+.bundle-edit-hint-close {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--c-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.bundle-edit-hint-close:hover { color: var(--c-ink); }
