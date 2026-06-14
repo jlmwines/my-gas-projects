@@ -343,7 +343,9 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
 
 **CCP audit.** Per stage: CCP-4 pattern applied exactly (tryLock with 30s timeout, return on contention, always release in finally); CCP-1 no reportFailure on contention.
 
-#### 1.4 Sync result-reporting integrity — trust the return value, not a round-trip through shared state (IMMEDIATE)
+#### 1.4 Sync result-reporting integrity — trust the return value, not a round-trip through shared state — SHIPPED 2026-06-14 (@289, pending live smoke)
+
+**Shipped.** `exportWebInventory` now returns `{success, changed, fileName, fileId, count, fileUrl}`; `generateWebExportBackend` branches on `result.changed` and sets `webExportFilename`/stage from the return value, with a `reportFailure('sync.web_export.state_clobber', High)` detector that repairs the filename when shared state disagrees. Deployed @289. **Smoke still owed** — verify on the next live sync that reaches `WAITING_WEB_EXPORT` (a) real changes → "Export ready", `WAITING_WEB_CONFIRM`; (b) no changes → COMPLETE, no orphan; (c) if a clobber recurs, the detector logs/reports and the workflow still advances. The underlying race is unchanged — closed separately in §1.3.
 
 **Goal.** The web-export step decides "changes vs no changes" from `exportWebInventory`'s **return value**, never from a state field that a concurrent writer can clobber. This converts the 2026-06-14 silent-data-loss failure mode into, at worst, a visible error — and it ships independently of (and before) the LockService work in 1.3.
 
