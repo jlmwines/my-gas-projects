@@ -291,6 +291,8 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
 
 **Goal.** Eliminate race conditions where two triggers, or a trigger and a user-initiated workflow, step on the same SysJobQueue row or sync-state transition.
 
+**Live incident — concrete repro (2026-06-14, SysLog window 7:50:01–7:50:46).** This race is no longer theoretical. The user pressed "Generate" at `WAITING_WEB_EXPORT`. `exportWebInventory` correctly found real changes and created `Inv-Web-06-14-07-50.csv` (SysLog 7:50:26) plus its `task.confirmation.web_inventory_export` (7:50:35). Yet `generateWebExportBackend`, in the same execution, took the **noChanges** branch: completed the daily-sync session task (7:50:42), set stage **COMPLETE** (7:50:43), and ran `_registerSessionFiles` registering only `ComaxProducts.csv` — never the inventory CSV. The widget reported "No inventory changes detected"; the real stock/price export was orphaned and never pushed. (User applied the CSV by hand.) Mechanism: during the ~25s export, the single `system.sync.state` JSON was under unsynchronized read-modify-write by **multiple concurrent executions** — the button handler plus the SYNC session context plus **three separate** runners each firing `_checkAndAdvanceSyncState → "Advancing to WAITING_WEB_EXPORT"` for the same session (SysLog 7:50:19/:24/:23, contexts `085635c1`/`e5142428`/`4918c516`). A concurrent advance-write, holding a snapshot taken before `exportWebInventory` wrote `webExportFilename`, saved it back and clobbered the filename. `generateWebExportBackend` then re-read state with no filename → false "no changes." **Two distinct defects:** (1) lost update on shared state (this session, 1.3); (2) the caller infers result from a clobberable round-trip through shared state instead of `exportWebInventory`'s return value (new session 1.4 — ship first; it converts silent loss into a visible error even before locks land). Locking `setSyncState` per-call (Stage B) is necessary but **not sufficient** on its own: the export's filename-write and the concurrent advance-writes are separate transactions, so per-call locking still lets the last stale writer win unless the read-modify-write **re-reads inside the lock** (sharpened in Stage B below) and the duplicate advances are made idempotent.
+
 **Why staged.** This is the highest-risk session in the plan. LockService usage is greenfield (zero codebase precedent). Failure mode if scope wrong: `doGet/doPost` web-app handlers starve, admin dashboard becomes unresponsive. To make the risk observable, ship the helper first, then apply locks one at a time with at least 24 hours of observation between deploys. If `doGet` latency spikes after any deploy, stop and reconsider before adding more locks.
 
 **Anchors.**
@@ -298,7 +300,8 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
   - `OrchestratorService.processPendingJobs :540-815` — re-reads data per-iteration at `:614-616`, but two parallel triggers both pass the PENDING check and both write 'PROCESSING'. Cell write isn't atomic across triggers.
   - `HousekeepingService.performFrequentMaintenance :537-548` — guard reads sync state, then calls `pullOrders`. A user-clicked sync starting in the window races.
   - `HousekeepingService.purgeOldJobs :1839+` — clear + bulk rewrite. Concurrent enqueue from `processPendingJobs` lost.
-  - `SyncStateService.setSyncState` — full JSON overwrite. Two transitions race-write.
+  - `SyncStateService.setSyncState` — full JSON overwrite. Two transitions race-write. **Confirmed clobbering agent in the 2026-06-14 incident.**
+  - `OrchestratorService._checkAndAdvanceSyncState` — **non-idempotent advance.** Three concurrent runners advanced the same session to `WAITING_WEB_EXPORT` within 5s (2026-06-14). Each is a read-modify-write of `system.sync.state`; duplicates both waste work and supply the stale snapshots that clobber sibling writes. Needs an idempotency guard (no-op if the session is already at/past the target stage) in addition to locking.
 - LockService usage codebase-wide: **zero** (no precedent).
 
 **Stage A: ship the helper, no application yet.**
@@ -307,10 +310,10 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
 - Smoke A: editor-invoke the test function twice in 1 second. Expect one to complete, one to log `lock-contention` and return null. Confirm admin dashboard responsive while the test sleeps.
 - **Wait 24+ hours after deploy A before stage B.** Watch for any unexpected SysLog patterns.
 
-**Stage B: lock `setSyncState`.**
+**Stage B: lock `setSyncState` — and move read-modify-write inside the lock.**
 - Lowest-risk first: tightest critical section, simplest write, no fetch inside.
-- Wrap the JSON read-modify-write in `SyncStateService.setSyncState` with `withScriptLock('sync_state', 30000, ...)`.
-- Smoke B: trigger two state transitions concurrently (manual editor invocation or fire a user-action while housekeeping runs). Confirm one wins, one logs contention and returns. State remains consistent.
+- **Not just `setSyncState`.** The 2026-06-14 lost update proves that guarding the write alone is insufficient — callers read state, mutate a field, then write, and a concurrent writer with an older snapshot clobbers. Provide a `SyncStateService.mutateSyncState(fn)` that acquires the lock, **re-reads** current state, applies `fn(state)`, writes, releases — so the whole read-modify-write is atomic. Migrate the field-level updaters (`webExportFilename` write in `exportWebInventory`, `_checkAndAdvanceSyncState`'s stage advance, the order/comax export updaters) to it. A bare locked `setSyncState` still loses updates because the stale read happened outside the lock.
+- Smoke B: trigger two state transitions concurrently (manual editor invocation or fire a user-action while housekeeping runs). Confirm one wins, one logs contention and returns. State remains consistent. **Regression smoke for this incident:** with the 1.4 fix + Stage B in place, fire `generateWebExportBackend` while a `_checkAndAdvanceSyncState` runs; confirm `webExportFilename` survives and the widget reports the real file.
 - **Wait 24+ hours.**
 
 **Stage C: lock `purgeOldJobs`.**
@@ -339,6 +342,38 @@ Adversarial inputs fail closed: **(A)** WC response size cap in `WooApiService._
 - `[start]` Stage-D scope: confirm by reading `:614-680` again at session start that the inner service call boundary is clear before locking.
 
 **CCP audit.** Per stage: CCP-4 pattern applied exactly (tryLock with 30s timeout, return on contention, always release in finally); CCP-1 no reportFailure on contention.
+
+#### 1.4 Sync result-reporting integrity — trust the return value, not a round-trip through shared state (IMMEDIATE)
+
+**Goal.** The web-export step decides "changes vs no changes" from `exportWebInventory`'s **return value**, never from a state field that a concurrent writer can clobber. This converts the 2026-06-14 silent-data-loss failure mode into, at worst, a visible error — and it ships independently of (and before) the LockService work in 1.3.
+
+**Why immediate, why first.** 1.3 is a 5-stage, multi-day, greenfield LockService rollout. This is a single self-contained function-boundary fix that closes the *silent* leg of the failure today: even with the race still present, a clobbered state write can no longer masquerade as "no changes" and auto-complete the sync. It is the highest value-per-line fix in the plan right now.
+
+**Root cause (from the 2026-06-14 SysLog trace).** `ProductService.exportWebInventory` (`ProductService.js:897`) creates the CSV **unconditionally** when `exportProducts.length > 0` (`:1002`) but persists `webExportFilename` into sync state only inside a guard (`:1006-1014`). `WebAppSync.generateWebExportBackend` (`WebAppSync.js:389`) ignores the function's return (`{success, message, fileUrl}`) and re-derives `noChanges` purely from re-reading `state.webExportFilename` (`:410-411`). When a concurrent `setSyncState` clobbered the filename, the caller saw empty → declared no changes → COMPLETE → orphaned the real file.
+
+**Anchors.**
+- `ProductService.exportWebInventory` — `ProductService.js:897`; no-change return `:991`; file-create `:1002`; guarded state write `:1006-1014`; success return `:1033`.
+- `WebAppSync.generateWebExportBackend` — `WebAppSync.js:389`; the indirect inference `:410-411`; branch `:415-431`.
+
+**Implementation.**
+1. Make `exportWebInventory` return an explicit, authoritative result on both paths: no-change → `{success:true, changed:false}`; file-created → `{success:true, changed:true, fileName, fileId, count: exportProducts.length, fileUrl}`. (The data already exists at both return sites; this just names it.)
+2. In `generateWebExportBackend`, capture `const result = ProductService.exportWebInventory(sessionId)` and branch on `result.changed`, **not** on the re-read state field. On `changed`, set `webExportFilename = result.fileName` and stage `WAITING_WEB_CONFIRM` from the return value (authoritative); on `!changed`, the existing COMPLETE/skip path.
+3. Defense-in-depth: if `result.changed` is true but the re-read `state.webExportFilename` is missing/different, that is a detected clobber — `reportFailure('sync.web_export.state_clobber', ..., 'High', {fileName, fileId}, sessionId)` and still advance to `WAITING_WEB_CONFIRM` using the return value, so the file is never silently dropped. This is the early-warning detector for the race until 1.3 lands.
+4. Leave the file-creation and confirmation-task creation in `exportWebInventory` as-is (they already run on the correct path).
+
+**CCPs.** CCP-1 (the new clobber-detector reportFailure), CCP-2 (sessionId already threaded).
+
+**Smoke.** (a) Normal: at `WAITING_WEB_EXPORT` with real changes, press Generate — widget shows "Export ready: <file>", stage `WAITING_WEB_CONFIRM`, confirmation task present. (b) No-change: force-equal stock/price, press Generate — "No inventory changes detected", COMPLETE, no orphan file. (c) Race-detector: artificially blank `webExportFilename` immediately after the export (or fire a concurrent `_checkAndAdvanceSyncState`) — confirm the workflow still advances on the return value and logs `sync.web_export.state_clobber`.
+
+**Rollback.** Single-commit git revert + redeploy. No schema/config change.
+
+**Depends on.** Nothing. Independent of 1.3; should ship before it.
+
+**Open.**
+- `[start]` Confirm the no-change return site (`:991`) and success return site (`:1033`) are the only two exits before editing.
+- `[defer]` Audit the sibling steps that infer outcome the same indirect way — `exportComaxOrdersBackend` already branches on `result.exportedCount` (return value, good); confirm no other step re-reads state to decide success.
+
+**CCP audit.** CCP-1 the clobber-detector calls reportFailure with High; CCP-2 sessionId passed through both calls.
 
 ### Tier 2, operational reliability now
 
@@ -594,7 +629,7 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 
 ### Sequencing summary
 
-**Independent (can ship any order within tier):** 1.1, 1.2 (staged), 1.3 (staged), 2.1, 2.2, 2.3, 3.1, 3.3, 4.1, 5.1, 6.3, 6.5.
+**Independent (can ship any order within tier):** 1.1, 1.2 (staged), 1.3 (staged), 1.4, 2.1, 2.2, 2.3, 3.1, 3.3, 4.1, 5.1, 6.3, 6.5. **1.4 ships before 1.3** (closes the silent-loss leg immediately; 1.3 closes the race itself).
 
 **Hard dependencies:**
 - 3.4 depends on 1.1 (reconciler must exist) AND 2.1 (UI close path).
@@ -607,7 +642,7 @@ Dead `woo.api.orders_last_pull` key now stamped by `WooOrderPullService.pullOrde
 - 2.3 (test rewrite) ships before 4.1 (snapshots). **Risk accepted (v2.1):** user priority is data integrity over DR. Mitigation: tests must use dedicated `Test*` sheets from session start, never production tabs.
 - 3.2 (status file) ideally after 3.1 so heartbeat values exist; can ship before if 3.2 block shows "key missing" placeholders for the dead `orders_last_pull` key.
 
-**Recommended ship order:** 1.1 → 1.2 → 1.3 → 2.1 → 2.2 → 2.3 → 3.1 → 3.2 → 3.3 → 3.4 → 4.1 → 4.2 → 5.1 → 5.2 → 6.x (any order).
+**Recommended ship order:** 1.1 → 1.2 → **1.4 (immediate)** → 1.3 → 2.1 → 2.2 → 2.3 → 3.1 → 3.2 → 3.3 → 3.4 → 4.1 → 4.2 → 5.1 → 5.2 → 6.x (any order).
 
 **Staging within sessions.** Sessions 1.2 (3 stages) and 1.3 (5 stages) ship multiple deploys with smoke gates between. Within-session staging is shown in those entries.
 
@@ -652,6 +687,6 @@ Trimmed in v2. Only session-level unknowns that can be resolved at session start
 
 Durable shipped facts have graduated to `ARCHITECTURE.md` §4 (stuck-job recovery, trigger model, severity-routed alerting + DLQ); the review-pass history lives in git + `.claude/session-log.md`.
 
-**Progress (self-refresh checkpoint, 2026-06-09).** ~7 of 16 sessions shipped, all in the 2026-06-03 push: **1.1** (SysContacts aggregate fix, @201), **1.2** (input-safety, 3 stages), **2.1** (drift — resolved at root, detector removed), **2.2** (FAILED-job sweep), **2.3** (real test suites + empty-result guard), **3.1** (integration heartbeats + `orders_last_pull` fix), **3.2** (status-export live blocks; KPI block deferred). **Open:** 1.3 concurrency (greenfield LockService, highest-risk — live race exposure today), 3.2 KPI block, 3.3 Mailchimp per-recipient activity, 3.4 scheduled aggregate-consistency check, all of Tier 4 (DR snapshots/restore — none exists yet), Tier 5 (capacity), Tier 6 (crisis/human). **Highest-value next: 1.3 or 4.1.**
+**Progress (self-refresh checkpoint, 2026-06-09; incident addendum 2026-06-14).** ~7 of 16 sessions shipped, all in the 2026-06-03 push: **1.1** (SysContacts aggregate fix, @201), **1.2** (input-safety, 3 stages), **2.1** (drift — resolved at root, detector removed), **2.2** (FAILED-job sweep), **2.3** (real test suites + empty-result guard), **3.1** (integration heartbeats + `orders_last_pull` fix), **3.2** (status-export live blocks; KPI block deferred). **Open:** **1.4 sync result-reporting integrity (IMMEDIATE — new, motivated by the 2026-06-14 lost-update incident that silently dropped a real inventory export)**, 1.3 concurrency (greenfield LockService, highest-risk — race now confirmed live, not theoretical), 3.2 KPI block, 3.3 Mailchimp per-recipient activity, 3.4 scheduled aggregate-consistency check, all of Tier 4 (DR snapshots/restore — none exists yet), Tier 5 (capacity), Tier 6 (crisis/human). **Highest-value next: 1.4 (ship now — small, stops silent data loss), then 1.3.**
 
 **Open decisions to unblock DR work:** designate the secondary Google account for off-account snapshots (Tier 4.1); confirm the operator identity for the runbook; decide build-a-push-bridge vs formally accept dashboard-only alerting (the Chat webhook was confirmed absent 2026-06-09 — `ARCHITECTURE.md` §4.2 is the authority).

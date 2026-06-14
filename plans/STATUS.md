@@ -1,12 +1,21 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-12 — jlmops @288 · theme v1.2.30 live (bundle edit-quantity hint shipped on bundle product pages); 0 blockers; next jlmops build action open.
+**Updated:** 2026-06-14 — JLM Wines ecosystem live across all areas; jlmops @288 · theme v1.2.30; 0 blockers; next jlmops build action open.
+
+## At a glance
+
+One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
+
+- **jlmops** (GAS backend) — live @288; build queue open (reliability 1.3 concurrency / UI Tier 5).
+- **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
+- **content** — 10 editorial posts live (EN+HE); 3 in pipeline.
+- **marketing** — flyer round 1 active; newsletter Issue #1 distributing.
+- **business** — strategy/brand docs current.
 
 ## Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phase | Live, post-cutover. Theme cutover, Manager CRM, Lookup admin UI, Content Library, and the Admin task workbench (`AdminTasksView`) all shipped & live. Phase 12 cross-link renderer blocked on the §16 regions overhaul. |
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
 | Deploy Version | jlmops @288 · theme v1.2.30 |
