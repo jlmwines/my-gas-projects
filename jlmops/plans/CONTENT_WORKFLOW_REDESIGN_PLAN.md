@@ -154,3 +154,9 @@ The panel's five open questions, resolved with best advice and folded into the d
 4. **`fileUrl` — retire it, don't relocate it.** `TaskPacks` already sources doc links from the entity via `getEntity` (`TaskPacks.html:102`); `task.fileUrl` + `resolveContentFileUrl` are bespoke-editor artifacts. On convergence the dashboard supplies `getEntity` and both retire. Single source = the entity's `slb_DocUrl`; no `_getQueueTasks` change, no adapter, no drift (Decision 3 + Step 5). Cleaner than either option posed.
 
 5. **Sibling pairing — computed, no new column.** CONTENT_LIBRARY_PLAN §5/§12 already mandate the slug-pair lookup (siblings differ only by an immutable, language-last suffix), not a row field. Pair by stripping the language suffix; no `slb_SiblingSlug` (Decision 2). A diverging slug is a convention violation to fix at source.
+
+---
+
+## Review (2026-06-14)
+
+Review of 79556c2 resolutions against the panel record and the brief's constraints: all five resolutions are sound. Q1 and Q3 are grounded in code reality (`spawnContentChain` creates tasks up front; dashboard pack-coverage gaps verified at specific line numbers). Q4 is a genuine improvement over the original plan — `TaskPacks.html:102` already sources doc links via `getEntity`, making `task.fileUrl` an artifact of the bespoke editor rather than a shape gap to bridge; the original "client-side adapter" proposal was unnecessary. Q2 and Q5 are reversible preferences, both defensible. No new primitives were introduced, no locked decision was reversed, and no brief constraint was violated.
