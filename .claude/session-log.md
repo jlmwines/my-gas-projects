@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-14 — Content-workflow redesign: Deploys 1–2 shipped (@290→@293)
+
+- Chavruta on why content surfaces drifted into two task code-paths (admin TaskPacks vs manager bespoke). Authored a Dispatch brief; Dispatch produced `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md`; I resolved its 5 open Qs against verified code (fileUrl retires to the entity not relocated; manager pack coverage = 2 preserve-prereqs; sibling pairing computed; abandoned explicit; rolling deficiency window).
+- **Deploy 1 @290:** AdminTasks "+ Content" unhidden + repointed to `spawnContentChain` (entity-type + dedup existing-entity picker + target-date); `slb_TargetDate` schema col (user added col **AJ** manually + ran rebuild).
+- **Deploy 2 @291–@293:** LibraryView **Deficiency** demand view (config `system.content.deficiency_window_days`=56, default-safe); entity-drawer **Family** roll-up (client-side reverse-ref map); admin **Request Correction** (published-only, roll-forward) / **Abandon**; `slb_State` vocab `draft→locked→published`+`abandoned` documented in DATA_MODEL + publish-task auto-transition (`LibraryService.markPublished`; shared `TaskPacks.markPublished` now sets state). All verified live by user.
+- Findings: plan's granular states (editing/translating/in_review) were never wired → dropped not imposed. `slb_TargetDate` populates only on fresh spawns (pre-existing rows stay blank by design). New memory: accept other sessions editing plans.
+- **NEXT = Deploy 3** (Step 5 manager dashboard → shared TaskPacks convergence + Step 8 Notes de-dup). Touches the manager's live daily dashboard → riskiest, isolated, own session w/ fresh context. Spec in the plan's Step 5 + Deploy Plan; Step 8 needs a `ctx.hideNotes` pack option (skeleton pack Notes is readonly → can't just drop the MANAGE Notes).
+
 ## 2026-06-12 — Bundle hint shipped (theme v1.2.30) + ops threshold + RankMath read abilities
 
 - **Bundle edit-quantity hint** shipped to live: dismissible note above bundle items on all bundle pages (EN+HE), `localStorage` persist. Plan `website/BUNDLE_MESSAGE_PLAN.md`. Two gotchas, both now memory: site JS optimizer **strips inline `<script>`** in hook-rendered markup (dismissal JS moved to `main.js`); woosb renders its item builder at a low summary priority (~21), so the hint hook is `woocommerce_single_product_summary`@6 to land above the items (not `before_add_to_cart_form`, which dropped it to the page bottom on mobile). Theme bumped 1.2.29→1.2.30; STATUS updated.

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-14 — JLM Wines ecosystem live across all areas; jlmops @288 · theme v1.2.30; 0 blockers; next jlmops build action open.
+**Updated:** 2026-06-14 — JLM Wines ecosystem live; jlmops @293 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–2 shipped, Deploy 3 (manager↔TaskPacks convergence) is next.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @288; build queue open (reliability 1.3 concurrency / UI Tier 5).
+- **jlmops** (GAS backend) — live @293; content-workflow redesign Deploys 1–2 shipped (Deploy 3 convergence next); build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 10 editorial posts live (EN+HE); 3 in pipeline.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing.
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @288 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-10 · theme 2026-06-12 |
+| Deploy Version | jlmops @293 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-14 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
@@ -35,7 +35,7 @@ The live "what now" — daily review reads these first.
 1. **Newsletter Issue #1 — distribution underway.** Printed; being inserted into outgoing shipments and store bags. Physical / user-handled; Claude only if insert copy or a counter card is wanted.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
 3. **Flyer advertising — active.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Plan → `marketing/FLYER_PLAN.md`. Unblockers: vendor outreach (yoterplus / dilen), designer, photo assets; coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
-4. **Drive shipped jlmops/CRM/UI work through real daily use.** Next jlmops build action is **open** — candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
+4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 
 ## Current State
@@ -43,7 +43,7 @@ The live "what now" — daily review reads these first.
 - **Sync workflow** — stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce); imports, exports, validation all working.
 - **Import system** — full Woo REST API pull (products + translations + orders); "API Pull" button runs the pipeline. Order pull = 30-day rolling window. Plan → `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
 - **CRM enrichment** — complete; 548 contacts with dual-language preferences. `campaign.received` activity backfill works (manual via Dev → Backfill Campaign Activity button); daily auto-wiring deferred; richer per-recipient open/click data would need the Mailchimp member API. Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
-- **Content Library** — complete and permanent (entity / task / activity-log model; templates migrated from SysConfig; Campaigns absorbed). Remaining: Phase 12 cross-link renderer, blocked on the §16 regions overhaul. Plans → `plans/CONTENT_LIBRARY_PLAN.md`, `jlmops/plans/LIBRARY_VIEW_PLAN.md`.
+- **Content Library** — entity / task / activity-log model, live. **Content-workflow redesign Deploys 1–2 shipped @293:** content-chain spawner on AdminTasks + `slb_TargetDate`; LibraryView **Deficiency** demand view; entity-drawer **Family** roll-up; admin **Request Correction** / **Abandon**; `slb_State` vocabulary (draft→locked→published + abandoned) with publish-task auto-transition. **Deploy 3 next** = manager dashboard → shared TaskPacks convergence (Step 5) + Notes de-dup (Step 8) — the riskiest, isolated; deserves fresh context. Plans → `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` (deploy plan + Step 5 spec), `plans/CONTENT_LIBRARY_PLAN.md`. Older: Phase 12 cross-link renderer still blocked on regions overhaul.
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR builder, `AdminCampaignsView`). Short URLs pasted into RankMath manually (low volume); auto-push deferred. Plans → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`, `CADENCE_REALIGNMENT_PLAN.md`.
 - **Bundles** — all stages (0–7) complete, live; rev-2.2 suggestion generator + inline-at-row editor with per-bundle EN/HE export shipped. EN+HE woosb output verified live. Remaining: composite-weight tuning of rough spots. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — complete. OPS writes system-health (15-min) + KPI (daily + on-demand) into `jlmops-status.md`; `/review-daily` reads it each run. GA4 Traffic live; GSC populates on its next dated fetch. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
