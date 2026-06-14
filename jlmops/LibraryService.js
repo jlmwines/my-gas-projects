@@ -603,6 +603,69 @@ const LibraryService = (function() {
     }
 
     /**
+     * Requests a correction on an entity: spawns a task.content.edit against the
+     * same slug (roll-forward only per CONTENT_WORKFLOW_REDESIGN Decision 5 — a
+     * corrective edit = new task = new version). The entity keeps its current
+     * state (e.g. published) while the corrective task is open; closing/locking it
+     * bumps the version. Logs the request to the activity log.
+     * @param {Object} params - { entityId }
+     * @returns {Object} { entity, task }
+     */
+    function requestCorrection(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        const task = TaskService.createTask(
+            'task.content.edit',
+            entityId,
+            entity.slb_Title || entityId,
+            'Correction: ' + (entity.slb_Title || entityId),
+            '',
+            null,
+            { entityType: entity.slb_ContentType, entityId: entityId }
+        );
+
+        logEntityActivity({
+            entityId: entityId,
+            actionType: 'correction_requested',
+            details: { taskId: task && task.id ? task.id : null }
+        });
+
+        return { entity: entity, task: task };
+    }
+
+    /**
+     * Marks an entity abandoned: sets slb_State='abandoned' and logs the state
+     * change. Explicit per CONTENT_WORKFLOW_REDESIGN Decision 6 / Resolutions Q1 —
+     * never inferred from absence of tasks. The deficiency preset filters
+     * abandoned pieces out.
+     * @param {Object} params - { entityId }
+     * @returns {Object} { entity }
+     */
+    function abandonEntity(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+        const fromState = entity.slb_State || '';
+
+        const updated = _updateEntityRow(entityId, {
+            slb_State: 'abandoned',
+            slb_LastTouched: new Date().toISOString()
+        });
+
+        logEntityActivity({
+            entityId: entityId,
+            actionType: 'state_change',
+            details: { from: fromState, to: 'abandoned' }
+        });
+
+        return { entity: updated };
+    }
+
+    /**
      * Appends an activity log entry to SysLibraryActivity (lives in JLMops_Data).
      * Uses header-driven fieldMap pattern.
      * @param {Object} params - { entityId, actionType, details, referencedEntities, entityType? }
@@ -664,6 +727,8 @@ const LibraryService = (function() {
                 return 'Template sent';
             case 'state_change':
                 return 'State changed' + (details && details.to ? ' to ' + details.to : '');
+            case 'correction_requested':
+                return 'Correction requested';
             default:
                 return actionType;
         }
@@ -754,6 +819,8 @@ const LibraryService = (function() {
         createBlankDoc: createBlankDoc,
         attachExistingDoc: attachExistingDoc,
         lockVersion: lockVersion,
+        requestCorrection: requestCorrection,
+        abandonEntity: abandonEntity,
         logEntityActivity: logEntityActivity,
         getEntityDetail: getEntityDetail,
         getEntityBySlug: _getEntityRow

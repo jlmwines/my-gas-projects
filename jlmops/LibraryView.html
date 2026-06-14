@@ -401,6 +401,7 @@
         <div><label>Last touched</label><div class="field-value" id="lv-drawer-lasttouched">—</div></div>
       </div>
       <div class="lv-drawer-actions" id="lv-drawer-actions"></div>
+      <div class="lv-drawer-section"><h6>Family</h6><div id="lv-drawer-family"><span class="placeholder">—</span></div></div>
       <div class="lv-drawer-section"><h6>Files &amp; URLs</h6><div id="lv-drawer-files"><span class="placeholder">—</span></div></div>
       <div class="lv-drawer-section"><h6>Attached tasks</h6><div id="lv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
       <div class="lv-drawer-section"><h6>References out</h6><div id="lv-drawer-refs-out"><span class="placeholder">—</span></div></div>
@@ -923,7 +924,7 @@
         if (el) el.textContent = '…';
       });
       var loadingPlaceholder = '<span class="placeholder">Loading…</span>';
-      ['lv-drawer-files', 'lv-drawer-attached-tasks', 'lv-drawer-refs-out', 'lv-drawer-refs-in', 'lv-drawer-state-history', 'lv-drawer-activity-log'].forEach(function(id) {
+      ['lv-drawer-family', 'lv-drawer-files', 'lv-drawer-attached-tasks', 'lv-drawer-refs-out', 'lv-drawer-refs-in', 'lv-drawer-state-history', 'lv-drawer-activity-log'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.innerHTML = loadingPlaceholder;
       });
@@ -945,6 +946,7 @@
 
       renderDrawerFiles(entity);
       renderDrawerActions(entity);
+      renderDrawerFamily(entity);
       renderDrawerAttachedTasks((data && data.attached_tasks) || []);
       renderDrawerReferences((entity && entity.references) || [], 'lv-drawer-refs-out', 'No outgoing references.');
       renderDrawerReferences(((data && data.references_in) || []).map(function(e) { return e.slug; }), 'lv-drawer-refs-in', 'No incoming references.');
@@ -1056,6 +1058,53 @@
       el.innerHTML = rows;
     }
 
+    // Family roll-up (CONTENT_WORKFLOW_REDESIGN Decision 2 / Step 4): the top-down
+    // view of a piece and its companions, computed client-side from the cached
+    // entity list (state.library) — language siblings (shared base slug), pieces
+    // this one references, and pieces that reference it or a sibling. Grouped by
+    // type, each with a state pill and tap-to-open. No new surface, no container.
+    function renderDrawerFamily(entity) {
+      var el = document.getElementById('lv-drawer-family');
+      if (!el) return;
+      var lib = state.library || [];
+      var slug = entity && entity.slug;
+      if (!slug) { el.innerHTML = '<span class="placeholder">—</span>'; return; }
+      var base = String(slug).replace(/-(en|he)$/, '');
+
+      var sibSet = {};
+      var memberSet = {};
+      lib.forEach(function(e) {
+        if (String(e.slug).replace(/-(en|he)$/, '') === base) { sibSet[e.slug] = true; memberSet[e.slug] = true; }
+      });
+      (entity.references || []).forEach(function(s) { memberSet[s] = true; });
+      lib.forEach(function(e) {
+        var refs = e.references || [];
+        for (var i = 0; i < refs.length; i++) { if (sibSet[refs[i]]) { memberSet[e.slug] = true; break; } }
+      });
+
+      var members = lib.filter(function(e) { return memberSet[e.slug]; });
+      if (members.length <= 1) { el.innerHTML = '<span class="placeholder">No related pieces.</span>'; return; }
+
+      var groups = {};
+      members.forEach(function(e) { var t = e.contentType || 'other'; (groups[t] = groups[t] || []).push(e); });
+      var order = ['blog', 'news', 'mention', 'email', 'social', 'image', 'template'];
+      var typeKeys = Object.keys(groups).sort(function(a, b) {
+        var ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      el.innerHTML = typeKeys.map(function(t) {
+        var rows = groups[t].sort(function(a, b) { return String(a.slug).localeCompare(b.slug); }).map(function(e) {
+          var pill = '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
+          var name = TaskWidgets.escape(e.title || e.slug) + (e.language ? ' (' + TaskWidgets.escape(e.language) + ')' : '');
+          if (e.slug === slug) {
+            return '<div class="lv-drawer-task-row"><strong>' + name + '</strong> ' + pill + ' <span class="detail-meta">· this</span></div>';
+          }
+          return '<div class="lv-drawer-task-row" style="cursor:pointer;" title="Open ' + TaskWidgets.escape(e.slug) + '" onclick="LibraryView.navigateToEntity(\'' + TaskWidgets.escape(e.slug) + '\')">' + name + ' ' + pill + '</div>';
+        }).join('');
+        return '<div class="detail-meta" style="margin-top:4px;text-transform:capitalize;">' + TaskWidgets.escape(t) + '</div>' + rows;
+      }).join('');
+    }
+
     function renderDrawerFiles(entity) {
       var el = document.getElementById('lv-drawer-files');
       if (!el) return;
@@ -1110,6 +1159,16 @@
         }
       }
 
+      // Request Correction — published entities only (roll-forward corrective edit,
+      // Decision 5). Abandon — any non-terminal state (Decision 6 / Q1).
+      var st = entity ? String(entity.state).toLowerCase() : '';
+      if (st === 'published') {
+        buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.drawerRequestCorrection()">Request Correction</button>');
+      }
+      if (entity && entity.slug && st !== 'published' && st !== 'abandoned') {
+        buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.drawerAbandon()">Abandon</button>');
+      }
+
       el.innerHTML = buttons.join('');
     }
 
@@ -1123,6 +1182,38 @@
       if (!state.currentEntity) return;
       var preName = state.currentEntity.title || state.currentEntity.slug || '';
       openContentStreamModal(preName);
+    }
+
+    function drawerRequestCorrection() {
+      if (!state.currentEntity) return;
+      var slug = state.currentEntity.slug;
+      TaskWidgets.confirm('Spawn a correction edit task for "' + slug + '"?', function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res || !res.ok) { TaskWidgets.toast((res && res.error) || 'Failed', true); return; }
+            TaskWidgets.toast('Correction task created', 'success');
+            _loadEntityDrawer(slug);
+            load();
+          })
+          .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Failed', true); })
+          .WebAppLibrary_requestCorrection({ entityId: slug });
+      });
+    }
+
+    function drawerAbandon() {
+      if (!state.currentEntity) return;
+      var slug = state.currentEntity.slug;
+      TaskWidgets.confirm('Mark "' + slug + '" abandoned?', function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res || !res.ok) { TaskWidgets.toast((res && res.error) || 'Failed', true); return; }
+            TaskWidgets.toast('Marked abandoned', 'success');
+            _loadEntityDrawer(slug);
+            load();
+          })
+          .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Failed', true); })
+          .WebAppLibrary_abandonEntity({ entityId: slug });
+      }, { danger: true });
     }
 
     function drawerCreateHeSibling() {
@@ -1174,7 +1265,9 @@
       closeEntityDrawer: closeEntityDrawer,
       drawerOpenInDrive: drawerOpenInDrive,
       drawerCreateContentTasks: drawerCreateContentTasks,
-      drawerCreateHeSibling: drawerCreateHeSibling
+      drawerCreateHeSibling: drawerCreateHeSibling,
+      drawerRequestCorrection: drawerRequestCorrection,
+      drawerAbandon: drawerAbandon
     };
   })();
 

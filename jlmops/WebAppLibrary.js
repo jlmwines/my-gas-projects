@@ -233,6 +233,41 @@ function WebAppLibrary_spawnContentChain(params) {
 }
 
 /**
+ * Requests a correction on an entity — spawns a corrective task.content.edit
+ * (roll-forward, CONTENT_WORKFLOW_REDESIGN Decision 5). Admin-only in the UI.
+ * @param {Object} params - { entityId }
+ * @returns {Object} { ok, updated: { entity, task }, error? }
+ */
+function WebAppLibrary_requestCorrection(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'requestCorrection';
+  try {
+    const result = LibraryService.requestCorrection(params || {});
+    return { ok: true, updated: { entity: _getLibraryEntities([result.entity])[0], task: result.task } };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Marks an entity abandoned (slb_State='abandoned'). Admin-only in the UI.
+ * @param {Object} params - { entityId }
+ * @returns {Object} { ok, updated: { entity }, error? }
+ */
+function WebAppLibrary_abandonEntity(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'abandonEntity';
+  try {
+    const result = LibraryService.abandonEntity(params || {});
+    return { ok: true, updated: { entity: _getLibraryEntities([result.entity])[0] } };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
  * Creates a blank Google Doc at the canonical Drive path for this entity.
  * @param {Object} params - { entityId }
  * @returns {Object} { ok, updated: { entity }, docUrl, error? }
