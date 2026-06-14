@@ -2321,6 +2321,27 @@ function getMasterConfiguration() {
         ""
     ],
     [
+        "system.content",
+        "Content workflow settings (CONTENT_WORKFLOW_REDESIGN_PLAN Decision 1). deficiency_window_days: rolling forward window (days) for the LibraryView Deficiency preset — entities whose slb_TargetDate falls within the window, plus any overdue not-yet-published piece, surface as demand.",
+        "stable",
+        "deficiency_window_days",
+        "56",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "system.sheet_names",
         "Names of the sheets in the spreadsheets",
         "stable",

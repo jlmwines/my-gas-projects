@@ -314,6 +314,7 @@
     </div>
     <div class="lv-library-presets">
       <button class="tw-chip active" data-preset="all" onclick="LibraryView.switchPreset('all')">Library</button>
+      <button class="tw-chip" data-preset="deficiency" onclick="LibraryView.switchPreset('deficiency')" title="Pieces due soon or overdue — the demand view">Deficiency</button>
       <button class="tw-chip" data-preset="blog" onclick="LibraryView.switchPreset('blog')">Blog</button>
       <button class="tw-chip" data-preset="campaigns" onclick="LibraryView.switchPreset('campaigns')">Campaigns</button>
       <button class="tw-chip" data-preset="template" onclick="LibraryView.switchPreset('template')">Templates</button>
@@ -489,6 +490,7 @@
       }
       state.tasks = res.data.tasks || [];
       state.library = res.data.library || [];
+      state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
       populateFilterOptions();
       renderTasks();
       renderLibrary();
@@ -657,6 +659,8 @@
       var searchTerm = (document.getElementById('lv-search-library').value || '').toLowerCase();
       var sortBy = document.getElementById('lv-sort-library').value;
 
+      if (preset === 'deficiency') { renderDeficiency(searchTerm); return; }
+
       var rows = state.library.filter(function(e) {
         if (preset === 'campaigns') {
           if (['email', 'news', 'mention', 'social'].indexOf(e.contentType) === -1) return false;
@@ -699,6 +703,75 @@
       });
       html += '</tbody></table>';
       container.innerHTML = html;
+    }
+
+    // Deficiency preset (CONTENT_WORKFLOW_REDESIGN Decision 1 / Step 3): the demand
+    // view. Entities with a target date inside the rolling window, plus any overdue
+    // not-yet-published piece, sorted by target date. A piece in the window with no
+    // open task is the stall signal.
+    function renderDeficiency(searchTerm) {
+      var now = new Date();
+      var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var windowDays = state.deficiencyWindowDays || 56;
+      var horizon = new Date(startOfToday.getTime() + windowDays * 86400000);
+
+      var rows = state.library.filter(function(e) {
+        if (!e.targetDate) return false;
+        var td = new Date(e.targetDate);
+        if (isNaN(td.getTime())) return false;
+        var published = String(e.state).toLowerCase() === 'published';
+        var overdue = td < startOfToday && !published;
+        var inWindow = td >= startOfToday && td <= horizon;
+        if (!(overdue || inWindow)) return false;
+        if (searchTerm) {
+          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) { return (a.targetDate || '').localeCompare(b.targetDate || ''); });
+
+      var container = document.getElementById('lv-library-table-wrap');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="lv-empty">No pieces due within ' + windowDays + ' days. Pipeline is clear.</div>';
+        return;
+      }
+
+      var html = '<table class="lv-library-table responsive-stack"><thead><tr>';
+      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Tasks</th><th></th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(e) {
+        var td = new Date(e.targetDate);
+        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+        var openCount = (state.tasks || []).filter(function(t) {
+          return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
+        }).length;
+        var taskCell = openCount > 0
+          ? (openCount + ' open')
+          : '<span style="color:#856404;font-weight:600;" title="No open task — stalled">stalled</span>';
+        html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
+        html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
+        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
+        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Tasks">' + taskCell + '</td>';
+        html += '<td data-label=""><button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.spawnForEntity(\'' + TaskWidgets.escape(e.slug) + '\')" title="Create content tasks for this piece">Spawn</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // Deficiency-row "Spawn" → open the content-stream modal pre-filled from the entity.
+    function spawnForEntity(slug) {
+      var e = (state.library || []).find(function(x) { return x.slug === slug; });
+      openContentStreamModal(e ? e.title : '');
+      if (e) {
+        var typeEl = document.getElementById('lv-content-type');
+        if (typeEl) typeEl.value = e.contentType || 'blog';
+      }
     }
 
     // ===== CONTENT STREAM MODAL (CONTENT_LIBRARY_PLAN §17 phase 7a) =====
@@ -1093,6 +1166,7 @@
       switchTab: switchTab,
       openAttachedTask: openAttachedTask,
       switchPreset: switchPreset,
+      spawnForEntity: spawnForEntity,
       toggleTask: toggleTask,
       openEntityDrawer: openEntityDrawer,
       navigateToEntity: navigateToEntity,

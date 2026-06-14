@@ -46,7 +46,8 @@ function WebAppLibrary_getData() {
     const result = {
       timestamp: new Date().toISOString(),
       tasks: _getQueueTasks(allTasks, allConfig),
-      library: _getLibraryEntities(libraryRows)
+      library: _getLibraryEntities(libraryRows),
+      deficiencyWindowDays: parseInt((allConfig['system.content'] || {}).deficiency_window_days, 10) || 56
     };
 
     return { success: true, data: result };
@@ -140,6 +141,7 @@ function _getLibraryEntities(libraryRows) {
     createdBy: row.slb_CreatedBy || '',
     createdDate: _safeDate(row.slb_CreatedDate),
     lastTouched: _safeDate(row.slb_LastTouched),
+    targetDate: _safeDate(row.slb_TargetDate),
     tags: row.slb_Tags ? String(row.slb_Tags).split(',').map(s => s.trim()).filter(Boolean) : [],
     taxonomy: row.slb_Taxonomy ? String(row.slb_Taxonomy).split(',').map(s => s.trim()).filter(Boolean) : [],
     references: row.slb_References ? String(row.slb_References).split(',').map(s => s.trim()).filter(Boolean) : [],
