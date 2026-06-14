@@ -670,9 +670,10 @@ The Content Library is a single flat, polymorphic table holding every content/ma
         *   `slb_Title`: Human-readable title.
         *   `slb_ContentType`: Entity type — `blog`, `news`, `mention`, `email`, `social`, `template`, `image`.
         *   `slb_Language`: `EN`, `HE`, or language-neutral.
-        *   `slb_State`: Lifecycle state (e.g. draft → published).
+        *   `slb_State`: Lifecycle state. Controlled vocabulary (CONTENT_WORKFLOW_REDESIGN Decision 6): `draft` (seeded on spawn/registration by `addEntity`) → `locked` (in-app version lock, `LibraryService.lockVersion`) → `published` (set when the in-app publish task closes via `LibraryService.markPublished`, or session-side by `content/register-library.js`). `abandoned` is a terminal state set by `LibraryService.abandonEntity` (admin "Abandon" action), filtered out of the deficiency view. Pills render any value via `TaskWidgets.statusClass`. The granular `editing`/`translating`/`in_review` states in early drafts were never wired and are not in use — handoff progress is read from attached-task states + the deficiency stall signal instead.
         *   `slb_Version`: Version counter.
         *   `slb_CreatedDate`, `slb_CreatedBy`, `slb_LastTouched`: Provenance / last-modified.
+        *   `slb_TargetDate`: Target publish date (ISO). Optional, written by `spawnContentChain` when the caller supplies it. Drives the LibraryView **Deficiency** preset (pieces due within `system.content.deficiency_window_days`, plus overdue not-yet-`published`). Appended column (CONTENT_WORKFLOW_REDESIGN Decision 1).
         *   `slb_Tags`: JSON array of free-form tags.
         *   `slb_Taxonomy`: JSON array of taxonomy terms.
         *   `slb_References`: JSON array of related-entity slugs (cross-links).

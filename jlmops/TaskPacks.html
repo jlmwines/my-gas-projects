@@ -338,25 +338,26 @@
       var externalUrl = urlEl ? urlEl.value.trim() : '';
 
       var doActivityLog = function() {
-        if (externalUrl && task.entityId) {
+        // Transition the entity to 'published' (Step 6 auto-transition) and log
+        // it — server-side, with or without an external URL. Skip for URL-entity
+        // / entityless tasks (nothing to transition).
+        if (task.entityId && String(task.entityId).indexOf('http') !== 0) {
           google.script.run
             .withSuccessHandler(function(result) {
               if (!result || !result.ok) {
-                TaskWidgets.toast('Task closed; activity log failed: ' + ((result && result.error) || ''), true);
+                TaskWidgets.toast('Task closed; publish update failed: ' + ((result && result.error) || ''), true);
               } else {
-                TaskWidgets.toast('Published + URL logged');
+                TaskWidgets.toast(externalUrl ? 'Published + URL logged' : 'Published');
               }
               ctx.reload();
             })
             .withFailureHandler(function(err) {
-              TaskWidgets.toast('Task closed; activity log error: ' + (err && err.message ? err.message : ''), true);
+              TaskWidgets.toast('Task closed; publish update error: ' + (err && err.message ? err.message : ''), true);
               ctx.reload();
             })
-            .WebAppLibrary_logEntityActivity({
+            .WebAppLibrary_markPublished({
               entityId: task.entityId,
-              actionType: 'published',
-              details: { externalUrl: externalUrl },
-              referencedEntities: []
+              externalUrl: externalUrl
             });
         } else {
           TaskWidgets.toast('Published');

@@ -58,7 +58,7 @@ The deficiency preset row in LibraryView also exposes a contextual **"Spawn Chai
 
 **Locked:** Three layers, all client-side over data already loaded:
 
-1. **Entity list row** — state pill via `TaskWidgets.statusClass` (already dynamic; free-form `slb_State` strings render as pills with no schema change). Adopt a controlled vocabulary in `CONTENT_STAGES` config: `draft`, `editing`, `translating`, `in_review`, `published`, `abandoned`.
+1. **Entity list row** — state pill via `TaskWidgets.statusClass` (already dynamic; free-form `slb_State` strings render as pills with no schema change). Controlled vocabulary (reconciled to the live model 2026-06-14): `draft` → `locked` → `published`, plus terminal `abandoned`. The granular `editing`/`translating`/`in_review` states from early drafts were never wired and are dropped — attached-task states + the deficiency stall signal carry progress. Documented in `docs/DATA_MODEL.md` (`slb_State`).
 2. **Overdue chip** — open task's `dueDate` past today → red chip in drawer Tasks tab (already partially wired).
 3. **Deficiency preset blank** — entity with `slb_TargetDate` in window and no open task shows a blank task-column row; that is the stall signal.
 
@@ -113,9 +113,9 @@ New: Build reverse-reference map (`Map<slug, Set<referencing slugs>>`) post-load
 Anchor: `ManagerDashboardView_v2.html` bespoke editor lines ~597–677 (~80 lines to retire); `TaskPacks.html` `configure()` + `packBody()`; `WebAppDashboardV2_updateManagerTask` (write path preserved); `taskOpenTarget()` (survives, render above pack output)
 New: Provide `getTask`/`getEntity` callbacks (dashboard already reads SysLibrary at `WebAppDashboardV2.js:804`); render `TaskPacks` in the expand slot; **retire** `task.fileUrl` + `resolveContentFileUrl` (doc links come from the entity via the pack's `getEntity`) and drop the `taskOpenTarget` content case; keep `revertTaskToAdmin()` as a dedicated role-transfer button; **preserve the contact context block + a status-transition control** (the two verified coverage gaps) before deleting the bespoke editor.
 
-**Step 6 — Controlled `slb_State` vocabulary** — Cost: A (Reuse)
-Anchor: `CONTENT_STAGES` config array; `TaskWidgets.statusClass()` (already handles arbitrary lowercase-hyphenated strings)
-New: Define and document vocabulary (`draft`, `editing`, `translating`, `in_review`, `published`, `abandoned`) in `DATA_MODEL.md`; wire stage names into `spawnContentChain` task-close state transitions.
+**Step 6 — Controlled `slb_State` vocabulary** — Cost: A (Reuse) — Option A, done 2026-06-14
+Anchor: `LibraryService` state writers (`addEntity`→`draft`, `lockVersion`→`locked`, `abandonEntity`→`abandoned`); `TaskPacks.markPublished`; `TaskWidgets.statusClass()`.
+Done: documented the **live** vocabulary in `docs/DATA_MODEL.md` (`draft → locked → published` + terminal `abandoned`; the early-draft `editing`/`translating`/`in_review` were never wired → dropped, not imposed). Wired the one real gap: in-app publish-task close now transitions the entity to `published` via new `LibraryService.markPublished` + `WebAppLibrary_markPublished` (replacing the URL-only activity log in `TaskPacks.markPublished`).
 
 **Step 7 — "Request Correction" in entity drawer** — Cost: A (Reuse)
 Anchor: `LibraryView.html` admin-gated drawer action buttons; `TaskService.createTask`; `LibraryService.logEntityActivity`; `data-roles="admin"` CSS gate

@@ -666,6 +666,35 @@ const LibraryService = (function() {
     }
 
     /**
+     * Transitions an entity to 'published' when its in-app publish task closes
+     * (CONTENT_WORKFLOW_REDESIGN Step 6 — the one auto-transition: draft/locked →
+     * published). Logs a 'published' activity entry (with the external URL when
+     * supplied). Called from the Content publish pack's Mark Published action.
+     * @param {Object} params - { entityId, externalUrl? }
+     * @returns {Object} { entity }
+     */
+    function markPublished(params) {
+        const entityId = params && params.entityId;
+        const externalUrl = (params && params.externalUrl) || '';
+        if (!entityId) throw new Error('entityId is required');
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        const updated = _updateEntityRow(entityId, {
+            slb_State: 'published',
+            slb_LastTouched: new Date().toISOString()
+        });
+
+        logEntityActivity({
+            entityId: entityId,
+            actionType: 'published',
+            details: externalUrl ? { externalUrl: externalUrl } : {}
+        });
+
+        return { entity: updated };
+    }
+
+    /**
      * Appends an activity log entry to SysLibraryActivity (lives in JLMops_Data).
      * Uses header-driven fieldMap pattern.
      * @param {Object} params - { entityId, actionType, details, referencedEntities, entityType? }
@@ -821,6 +850,7 @@ const LibraryService = (function() {
         lockVersion: lockVersion,
         requestCorrection: requestCorrection,
         abandonEntity: abandonEntity,
+        markPublished: markPublished,
         logEntityActivity: logEntityActivity,
         getEntityDetail: getEntityDetail,
         getEntityBySlug: _getEntityRow

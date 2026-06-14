@@ -268,6 +268,24 @@ function WebAppLibrary_abandonEntity(params) {
 }
 
 /**
+ * Transitions an entity to 'published' on in-app publish-task close (Step 6 auto-
+ * transition) and logs the publish (with external URL when supplied).
+ * @param {Object} params - { entityId, externalUrl? }
+ * @returns {Object} { ok, updated: { entity }, error? }
+ */
+function WebAppLibrary_markPublished(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'markPublished';
+  try {
+    const result = LibraryService.markPublished(params || {});
+    return { ok: true, updated: { entity: _getLibraryEntities([result.entity])[0] } };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
  * Creates a blank Google Doc at the canonical Drive path for this entity.
  * @param {Object} params - { entityId }
  * @returns {Object} { ok, updated: { entity }, docUrl, error? }
