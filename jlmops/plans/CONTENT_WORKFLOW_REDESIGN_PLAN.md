@@ -1,6 +1,6 @@
 # Content Workflow Redesign Plan
 
-This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel. Implementation has not begun.
+This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel; the panel's open questions were resolved 2026-06-14 against verified code (see Resolutions). Implementation has not begun.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Deliver an editorial workflow where: admin reads a calendar-driven deficiency vi
 
 ### Decision 1: Calendar
 
-**Locked:** Markdown stays the calendar authoring surface. The in-app surface is a **Deficiency preset** in LibraryView — a filter chip showing entities whose `slb_TargetDate` falls within the current or next month, sorted by target date, with state and sibling state visible in each row.
+**Locked:** Markdown stays the calendar authoring surface. The in-app surface is a **Deficiency preset** in LibraryView — a filter chip showing entities whose `slb_TargetDate` falls within a rolling forward window (default 56 days; config key `system.content.deficiency_window_days`) **plus any overdue not-yet-`published` piece**, sorted by target date, with state and sibling state visible in each row.
 
 Gap rows for planned-but-nonexistent slots are **not** shown in-app. Reading the markdown to derive gap rows creates a sync/ownership problem — who owns the canonical date? The bridge remains manual: admin reads the markdown, identifies the gap, opens the deficiency preset, and spawns the chain. The markdown is editorial intent; the library is operational reality.
 
@@ -24,6 +24,8 @@ Gap rows for planned-but-nonexistent slots are **not** shown in-app. Reading the
 
 No new entity type. `slb_FamilyKey` (denormalized shared slug prefix) noted as a possible future optimization if the reverse scan proves inadequate; not added speculatively.
 
+**Sibling-state pairing** (EN/HE side-by-side) is computed by stripping the language suffix from the slug — CONTENT_LIBRARY_PLAN §5/§12 already mandate the slug-pair lookup, not a row field (the slug is immutable + language-last). No `slb_SiblingSlug` column: a diverging slug is a convention violation to fix at source, not to denormalize around.
+
 ### Decision 3: Task surface convergence
 
 **Locked:** Manager dashboard queue keeps its render loop and list UI. Task-working interaction is repointed onto **TaskPacks** (`configure({getTask, getEntity, refresh, reload})`). The bespoke inline editor (`saveTask`, `toggleTaskExpand`, `WebAppDashboardV2_updateManagerTask`) is replaced by `TaskPacks.packBody()` rendering inside the expanded row.
@@ -32,9 +34,11 @@ Two things that **survive unchanged:**
 - `taskOpenTarget()` deep-link buttons (navigation, not task-working — independent of the pack repointing)
 - `revertTaskToAdmin()` dedicated confirm button — this is a role-transfer (manager → admin), not a status change; it must remain a distinct action with its own confirm dialog
 
-**Key shape gap (verified in code):** `fileUrl` (Drive doc link for content tasks) is present in `WebAppDashboardV2` task objects but absent from `_getQueueTasks` normalized shape. Resolved via client-side adapter in the dashboard's `getTask()` callback (derive from entity data already in memory). Server feed change is deferred — see Open Questions.
+**Doc-link sourcing (verified in code 2026-06-14):** content-task doc links do **not** belong on the task shape. `TaskPacks` already sources the Doc link from the entity via its `getEntity(slug)` callback (`TaskPacks.html:102`), not from `task.fileUrl`. The dashboard's `task.fileUrl` + `resolveContentFileUrl` (`WebAppDashboardV2.js:887`) are an artifact of the bespoke inline editor, which had no entity-fetch path. On convergence the dashboard supplies a `getEntity` callback (it already reads SysLibrary once at `WebAppDashboardV2.js:804`), and `task.fileUrl` + `resolveContentFileUrl` **retire**. No `_getQueueTasks` change, no per-surface adapter, no drift: the single source for a doc link is the entity's `slb_DocUrl`. The `taskOpenTarget` content-task case (`ManagerDashboardView_v2.html:579`) becomes redundant with the pack's own file chip and is dropped; `taskOpenTarget` survives only for true cross-view navigation (contact, product-verify).
 
-Before retiring the bespoke editor, confirm the contact task pack archetype covers the `isContactTask` context block (entityPhone, entityLanguage, entity link) currently rendered by the dashboard inline editor.
+**Pack coverage (verified in code 2026-06-14).** The dashboard renders **no packs today** — one generic inline body (status `New/In Progress/Done` dropdown + Save + Notes) for every non-system task, plus per-type deep-link buttons and a CRM contact context block. Repointing onto `TaskPacks` is an upgrade for content/confirmation/deep-link/skeleton types (packs equal or exceed the generic body). Two things a naive repoint would regress — both prerequisites for retiring the bespoke editor:
+- **Contact context block** (`ManagerDashboardView_v2.html:468`) — name/email/phone/lang shown inline before navigating. The Outreach pack is `dedicated_view` (routes to ManagerContactView); preserve this preview, either as an inline pack header or by keeping the block above the pack.
+- **Status transition without close** — the dashboard lets the manager set `In Progress`, not just close. The skeleton pack's close-only affordance loses that; the converged component must keep a status control for skeleton/non-content types.
 
 End state: AdminProjectsView kept in-repo, removed from nav after soak confirmation.
 
@@ -57,6 +61,8 @@ The deficiency preset row in LibraryView also exposes a contextual **"Spawn Chai
 1. **Entity list row** — state pill via `TaskWidgets.statusClass` (already dynamic; free-form `slb_State` strings render as pills with no schema change). Adopt a controlled vocabulary in `CONTENT_STAGES` config: `draft`, `editing`, `translating`, `in_review`, `published`, `abandoned`.
 2. **Overdue chip** — open task's `dueDate` past today → red chip in drawer Tasks tab (already partially wired).
 3. **Deficiency preset blank** — entity with `slb_TargetDate` in window and no open task shows a blank task-column row; that is the stall signal.
+
+`abandoned` is set **explicitly** via an admin-only **"Abandon"** drawer action (mirrors "Request Correction", `data-roles="admin"`), never inferred from the absence of tasks: `spawnContentChain` creates all stage tasks up front, so a non-`published` entity with no open task is a **stall/orphan** signal, not abandonment. The deficiency preset filters `abandoned` out.
 
 Deferred: "in handoff" badge (open task assigned to counterpart role). Implement only if richer state vocabulary proves insufficient.
 
@@ -81,7 +87,7 @@ One schema addition required:
 
 - **`slb_TargetDate`** — append to `config/schemas.json` SysLibrary headers (per schema-append-only rule); null for existing rows; written by `spawnContentChain` when caller supplies it.
 
-No other column additions. `slb_State` controlled vocabulary is a config/convention change, not a schema column change. `st_LinkedEntityId` cleanup (redundant for library-typed tasks per DATA_MODEL.md) deferred.
+No other column additions. `slb_State` controlled vocabulary is a config/convention change, not a schema column change. `st_LinkedEntityId` cleanup (redundant for library-typed tasks per DATA_MODEL.md) deferred. The 2026-06-14 resolutions add **no further columns**: `fileUrl` retires to the entity (Q4); sibling pairing is computed from the slug (Q5). One config key is added: `system.content.deficiency_window_days` (Q2).
 
 ---
 
@@ -97,7 +103,7 @@ New: Append column to schema headers; add optional `targetDate` arg to `spawnCon
 
 **Step 3 — Deficiency preset in LibraryView** — Cost: B (Adapt)
 Anchor: `LibraryView.html` existing filter chip infrastructure; `_getLibraryEntities` shape (already includes entity dates)
-New: Date-range filter on `slb_TargetDate`; "Deficiency" preset chip rendering entities in window by state; contextual "Spawn Chain" row action calling `WebAppLibrary_spawnContentChain`.
+New: Date-range filter on `slb_TargetDate`; "Deficiency" preset chip rendering entities in window by state; contextual "Spawn Chain" row action calling `WebAppLibrary_spawnContentChain`. Window length from new config key `system.content.deficiency_window_days` (default 56); always include overdue not-yet-`published` rows.
 
 **Step 4 — Family section in entity drawer** — Cost: B (Adapt)
 Anchor: `LibraryView.html` `renderEntityDrawer()`; entity list already loaded client-side with `slb_References`
@@ -105,7 +111,7 @@ New: Build reverse-reference map (`Map<slug, Set<referencing slugs>>`) post-load
 
 **Step 5 — TaskPacks convergence on manager dashboard** — Cost: B/C (Adapt/Build)
 Anchor: `ManagerDashboardView_v2.html` bespoke editor lines ~597–677 (~80 lines to retire); `TaskPacks.html` `configure()` + `packBody()`; `WebAppDashboardV2_updateManagerTask` (write path preserved); `taskOpenTarget()` (survives, render above pack output)
-New: Shape adapter in `getTask()` mapping dashboard task objects → normalized shape, including `fileUrl` resolution client-side from entity data; configure `TaskPacks` in the expand slot; keep `revertTaskToAdmin()` as a dedicated button (role-transfer, not pack action); verify `isContactTask` context coverage before retiring bespoke editor.
+New: Provide `getTask`/`getEntity` callbacks (dashboard already reads SysLibrary at `WebAppDashboardV2.js:804`); render `TaskPacks` in the expand slot; **retire** `task.fileUrl` + `resolveContentFileUrl` (doc links come from the entity via the pack's `getEntity`) and drop the `taskOpenTarget` content case; keep `revertTaskToAdmin()` as a dedicated role-transfer button; **preserve the contact context block + a status-transition control** (the two verified coverage gaps) before deleting the bespoke editor.
 
 **Step 6 — Controlled `slb_State` vocabulary** — Cost: A (Reuse)
 Anchor: `CONTENT_STAGES` config array; `TaskWidgets.statusClass()` (already handles arbitrary lowercase-hyphenated strings)
@@ -113,7 +119,7 @@ New: Define and document vocabulary (`draft`, `editing`, `translating`, `in_revi
 
 **Step 7 — "Request Correction" in entity drawer** — Cost: A (Reuse)
 Anchor: `LibraryView.html` admin-gated drawer action buttons; `TaskService.createTask`; `LibraryService.logEntityActivity`; `data-roles="admin"` CSS gate
-New: Button visible when `slb_State === 'published'` and user is admin; spawns `task.content.edit` against entity slug; toast confirmation.
+New: Button visible when `slb_State === 'published'` and user is admin; spawns `task.content.edit` against entity slug; toast confirmation. Same step adds an admin-only **"Abandon"** drawer action setting `slb_State='abandoned'` + `LibraryService.logEntityActivity` (same gate/pattern).
 
 **Step 8 — De-dup Notes in AdminTasksView** — Cost: A (Reuse)
 Anchor: `AdminTasksView.html:337–338` (MANAGE form Notes textarea); `TaskPacks.html:63–64` (pack Notes textarea) — ADMIN_TASK_UI_PLAN follow-up #2
@@ -135,14 +141,16 @@ New: Remove Notes from MANAGE form; pack Notes is the single field.
 
 ---
 
-## Open Questions for the Product Owner
+## Resolutions (2026-06-14)
 
-1. **`abandoned` state** — Must admin explicitly set `abandoned`, or is "draft + no open task" sufficient signal? If explicit, what UI affordance sets it?
+The panel's five open questions, resolved with best advice and folded into the decisions/steps above. Three are grounded in verified code or existing locked decisions; two are reversible preferences (flagged).
 
-2. **Deficiency preset window** — Current/next month assumed. Should it be configurable, or is a rolling 8-week window more useful?
+1. **`abandoned` — explicit, not inferred.** `spawnContentChain` creates all stage tasks up front, so "draft + no open task" is a stall/orphan signal, not abandonment — it can't carry the meaning. Set explicitly via an admin-only "Abandon" drawer action (Decision 6, Step 7). *Reversible: if Abandon proves unused, fall back to surfacing task-less non-`published` entities as stalls in the deficiency preset.*
 
-3. **Manager pack coverage before convergence** — Confirm which manager task types currently handled inline (via bespoke Save) vs. via deep-link. Content task types and contact task types need verified pack archetypes before the bespoke inline editor can be retired (Step 5).
+2. **Deficiency window — rolling forward, config-driven.** Calendar-month boundaries cliff-edge a piece due in two days at the month flip. Use a rolling forward window (default 56 days) plus always-overdue, via `system.content.deficiency_window_days` (Decision 1, Step 3). *Reversible preference: default is tunable in config without code.*
 
-4. **`fileUrl` long-term home** — Today: `fileUrl` is computed server-side in `WebAppDashboardV2` and absent from `_getQueueTasks`. Short-term fix: client-side adapter in dashboard `getTask()`. Long-term: should `fileUrl` move into `_getQueueTasks` (cleaner, slower load for all surfaces) or stay as a per-surface adapter (cheaper now, drift risk over time)?
+3. **Manager pack coverage — verified; two prerequisites, no blocker.** The dashboard runs **no packs today** (one generic inline editor + deep-links + a contact context block). Repointing onto `TaskPacks` upgrades content/confirmation/deep-link/skeleton types. Two things must be preserved or it regresses: the **contact context block** (name/email/phone/lang preview) and a **status-transition control** (mark `In Progress` without closing). Folded into Decision 3 + Step 5 as prerequisites.
 
-5. **Sibling state in entity list** — Showing EN and HE state side-by-side requires pairing slugs client-side by base-slug convention. This is fragile if slug naming diverges. Prefer (a) computed pairing (no model change) or (b) an explicit `slb_SiblingSlug` column (additive, robust)?
+4. **`fileUrl` — retire it, don't relocate it.** `TaskPacks` already sources doc links from the entity via `getEntity` (`TaskPacks.html:102`); `task.fileUrl` + `resolveContentFileUrl` are bespoke-editor artifacts. On convergence the dashboard supplies `getEntity` and both retire. Single source = the entity's `slb_DocUrl`; no `_getQueueTasks` change, no adapter, no drift (Decision 3 + Step 5). Cleaner than either option posed.
+
+5. **Sibling pairing — computed, no new column.** CONTENT_LIBRARY_PLAN §5/§12 already mandate the slug-pair lookup (siblings differ only by an immutable, language-last suffix), not a row field. Pair by stripping the language suffix; no `slb_SiblingSlug` (Decision 2). A diverging slug is a convention violation to fix at source.
