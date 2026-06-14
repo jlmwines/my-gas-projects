@@ -400,19 +400,17 @@ function generateWebExportBackend() {
   const sessionId = currentState.sessionId;
 
   try {
-    // Run the export inline. ProductService.exportWebInventory writes the CSV
-    // (if any diff) and updates state.webExportFilename — either to the new
-    // filename or to 'No Changes Detected'.
-    ProductService.exportWebInventory(sessionId);
+    // Run the export inline. Decide changes-vs-none from the RETURN VALUE, not a
+    // re-read of state.webExportFilename — a concurrent writer can clobber that
+    // field and make a real export look like "no changes" (2026-06-14 incident;
+    // RELIABILITY_AUDIT §1.4). The race itself is closed separately in §1.3.
+    const result = ProductService.exportWebInventory(sessionId) || {};
+    const changed = result.changed === true;
 
-    // Re-read state to pick up webExportFilename that the export wrote.
     const postState = SyncStateService.getSyncState();
-    const exportFilename = postState.webExportFilename || '';
-    const noChanges = exportFilename === 'No Changes Detected' || !exportFilename;
-
     if (!postState.steps) postState.steps = {};
 
-    if (noChanges) {
+    if (!changed) {
       postState.stage = 'COMPLETE';
       postState.steps.step5 = { status: 'skipped', message: 'No inventory changes detected' };
 
@@ -422,15 +420,29 @@ function generateWebExportBackend() {
         logger.warn(serviceName, functionName, `Could not complete sync session task: ${taskError.message}`);
       }
     } else {
+      // The export created a file. If shared state lost the filename, a concurrent
+      // writer clobbered it — repair from the return value and flag it loudly so a
+      // real export is never again silently dropped.
+      if (postState.webExportFilename !== result.fileName) {
+        logger.warn(serviceName, functionName, `webExportFilename clobbered in state (state='${postState.webExportFilename}', export='${result.fileName}') — repairing from return value.`);
+        NotificationService.reportFailure(
+          'sync.web_export.state_clobber',
+          `Web export state lost the filename (state='${postState.webExportFilename}', file='${result.fileName}'). Recovered from the export return value; file is NOT lost.`,
+          'High',
+          { fileName: result.fileName, fileId: result.fileId, count: result.count },
+          sessionId
+        );
+      }
+      postState.webExportFilename = result.fileName;
       postState.stage = 'WAITING_WEB_CONFIRM';
-      postState.steps.step5 = { status: 'waiting', message: `Export ready: ${exportFilename}` };
+      postState.steps.step5 = { status: 'waiting', message: `Export ready: ${result.fileName}` };
     }
 
     postState.lastUpdated = new Date().toISOString();
     postState.errorMessage = null;
     SyncStateService.setSyncState(postState);
 
-    if (noChanges) {
+    if (!changed) {
       _registerSessionFiles(postState);
     }
 

@@ -988,7 +988,7 @@ const ProductService = (function() {
                 SyncStateService.setSyncState(currentState);
             }
         }
-        return { success: true, message: 'No product changes detected. Export file not created.' }; 
+        return { success: true, changed: false, message: 'No product changes detected. Export file not created.' };
       }
 
       // 5. Format and save the CSV
@@ -1030,7 +1030,15 @@ const ProductService = (function() {
       const taskNotes = `Web inventory export file ${file.getName()} has been generated. Please confirm that the web inventory has been updated.`;
       TaskService.createTask('task.confirmation.web_inventory_export', file.getId(), file.getName(), taskTitle, taskNotes, sessionId);
 
-      return { success: true, message: 'Web Inventory Export file created: ' + file.getName(), fileUrl: file.getUrl() };
+      return {
+        success: true,
+        changed: true,
+        fileName: fileName,
+        fileId: file.getId(),
+        count: exportProducts.length,
+        message: 'Web Inventory Export file created: ' + file.getName(),
+        fileUrl: file.getUrl()
+      };
 
     } catch (e) {
       LoggerService.error('ProductService', functionName, `Error generating WooCommerce inventory update export: ${e.message}`, e);
