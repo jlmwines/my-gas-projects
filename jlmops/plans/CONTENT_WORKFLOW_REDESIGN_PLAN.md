@@ -121,9 +121,21 @@ New: Define and document vocabulary (`draft`, `editing`, `translating`, `in_revi
 Anchor: `LibraryView.html` admin-gated drawer action buttons; `TaskService.createTask`; `LibraryService.logEntityActivity`; `data-roles="admin"` CSS gate
 New: Button visible when `slb_State === 'published'` and user is admin; spawns `task.content.edit` against entity slug; toast confirmation. Same step adds an admin-only **"Abandon"** drawer action setting `slb_State='abandoned'` + `LibraryService.logEntityActivity` (same gate/pattern).
 
-**Step 8 — De-dup Notes in AdminTasksView** — Cost: A (Reuse)
-Anchor: `AdminTasksView.html:337–338` (MANAGE form Notes textarea); `TaskPacks.html:63–64` (pack Notes textarea) — ADMIN_TASK_UI_PLAN follow-up #2
-New: Remove Notes from MANAGE form; pack Notes is the single field.
+**Step 8 — De-dup Notes in AdminTasksView** — Cost: B (Adapt) — **rides with Deploy 3**
+Anchor: `AdminTasksView.html:337–338` (MANAGE form Notes, saved by `saveTaskStatus` :2233); `TaskPacks.html` pack Notes (`tw-notes`) — ADMIN_TASK_UI_PLAN follow-up #2
+Trace (2026-06-14): can't simply drop the MANAGE Notes — the **skeleton** pack's Notes is readonly (`TaskPacks.html:172`), so for skeleton-type tasks the MANAGE field is the only editable Notes; removing it regresses them. Clean de-dup = give `TaskPacks` a `ctx.hideNotes` option so the pack omits its Notes block where a MANAGE Notes already exists (AdminTasksView), keeping the MANAGE field as the single one. Edits the shared pack → batch with Deploy 3's pack rework, not Deploy 1.
+
+---
+
+## Deploy Plan
+
+Three code deploys, sequenced 1 → 2 → 3. GAS has no `/dev`, so each deploy is the test — smoke each on the deployed surface before starting the next. Deploys 1–2 also carry a config push (`generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`); Deploy 3 is code-only. Live deploy via `deploy.ps1` is a change-point needing explicit OK each time.
+
+**Deploy 1 — schema + creation locus** (Steps 2 → 1). Config: append `slb_TargetDate`. Code: unhide + repoint the "+ Content" button to `spawnContentChain` (entity-type + existing-entity picker + target-date modal). Step 2 leads — Step 1's modal field and Step 3's filter both depend on the column. Admin-only surface; low risk. (Step 8 moved to Deploy 3 — see below.)
+
+**Deploy 2 — demand view + overview + lifecycle** (Steps 3, 4, 6, 7). Config: `system.content.deficiency_window_days`; `slb_State` vocabulary. Code: deficiency preset, family roll-up, state pills, Request Correction + Abandon. Clusters on LibraryView/the drawer; smoke together. Splittable if any piece smokes rough.
+
+**Deploy 3 — manager convergence + Notes de-dup** (Steps 5 + 8). Repoint the dashboard onto TaskPacks; retire the bespoke editor + `task.fileUrl`. Step 8 rides here because its clean fix (a `ctx.hideNotes` pack option) edits the shared `TaskPacks`, which this deploy already reworks — batching avoids touching the pack twice. Isolated otherwise — the only change touching the manager's live daily surface and the riskiest; ship and soak (mirrors ADMIN_TASK_UI's live-touching-change isolation). Never batch with Deploys 1–2.
 
 ---
 

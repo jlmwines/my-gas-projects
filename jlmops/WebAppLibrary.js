@@ -203,7 +203,7 @@ function WebAppLibrary_addEntity(params) {
  * Spawns a content task chain: entity rows + tasks attached via the polymorphic
  * SysTasks columns. For sibling-language types (blog/news/mention/email/social)
  * creates EN+HE entity rows; otherwise creates a single row.
- * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId }
+ * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId, targetDate? }
  * @returns {Object} { ok, updated: { entities, tasks }, streamCode, deduplicated_entities, error? }
  */
 function WebAppLibrary_spawnContentChain(params) {

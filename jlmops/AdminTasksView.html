@@ -94,7 +94,7 @@
             </select>
           </div>
           <div>
-            <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Create content task stream">+ Content</button>
+            <button id="btn-content-stream" class="btn btn-sm btn-light mr-1 hide-compact" title="Create content task stream">+ Content</button>
             <button id="btn-content-import" class="btn btn-sm btn-light mr-1 hide-compact" style="display:none;" title="Import content tasks">Import</button>
             <button id="btn-new" class="btn btn-sm btn-light mr-1">+ Task</button>
             <span class="btn-group btn-group-sm" id="panel-toggle-group">
@@ -571,8 +571,32 @@
     </div>
     <div style="padding:15px;">
       <div class="form-group">
+        <label class="small font-weight-bold">Entity Type</label>
+        <select class="form-control form-control-sm" id="content-entity-type">
+          <option value="blog">blog</option>
+          <option value="news">news</option>
+          <option value="mention">mention</option>
+          <option value="email">email</option>
+          <option value="social">social</option>
+          <option value="image">image</option>
+          <option value="template">template</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Add to existing <small class="text-muted font-weight-normal">(optional)</small></label>
+        <select class="form-control form-control-sm" id="content-existing-entity">
+          <option value="">— New entity —</option>
+        </select>
+        <small class="text-muted">Pick an existing piece to add stages to it; leave as "New entity" to create one.</small>
+      </div>
+      <div class="form-group">
         <label class="small font-weight-bold">Content Name</label>
         <input type="text" class="form-control form-control-sm" id="content-name" placeholder="e.g., Intensity, About Page">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Target Publish Date <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="date" class="form-control form-control-sm" id="content-target-date">
+        <small class="text-muted">Drives the deficiency view; leave blank if unscheduled.</small>
       </div>
       <div class="form-group">
         <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
@@ -991,11 +1015,32 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
     // Content stream buttons
     document.getElementById('btn-content-stream').addEventListener('click', function() {
-      document.getElementById('content-name').value = '';
+      var nameEl = document.getElementById('content-name');
+      var typeEl = document.getElementById('content-entity-type');
+      nameEl.value = ''; nameEl.disabled = false;
+      typeEl.value = 'blog'; typeEl.disabled = false;
       document.getElementById('content-stream-id').value = '';
+      document.getElementById('content-target-date').value = '';
+      populateContentExistingEntities();
+      document.getElementById('content-existing-entity').value = '';
       // Uncheck all stage checkboxes
       document.querySelectorAll('.content-stage-cb').forEach(function(cb) { cb.checked = false; });
       document.getElementById('contentStreamModal').style.display = 'flex';
+    });
+
+    document.getElementById('content-existing-entity').addEventListener('change', function() {
+      var opt = this.options[this.selectedIndex];
+      var nameEl = document.getElementById('content-name');
+      var typeEl = document.getElementById('content-entity-type');
+      if (this.value) {
+        typeEl.value = opt.getAttribute('data-type') || typeEl.value;
+        nameEl.value = opt.textContent;
+        nameEl.disabled = true;
+        typeEl.disabled = true;
+      } else {
+        nameEl.disabled = false;
+        typeEl.disabled = false;
+      }
     });
 
     document.getElementById('btn-content-import').addEventListener('click', function() {
@@ -1010,8 +1055,29 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
   // === CONTENT STREAM FUNCTIONS ===
 
+  // Populate the "Add to existing" picker from the already-loaded library list
+  // (state.library). Dedupe siblings to their base slug (strip -en/-he); picking
+  // an entity prefills + locks name/type and tasks attach to that base slug via
+  // spawnContentChain's slug dedup.
+  function populateContentExistingEntities() {
+    var sel = document.getElementById('content-existing-entity');
+    if (!sel) return;
+    var seen = {};
+    var opts = ['<option value="">— New entity —</option>'];
+    (state.library || []).forEach(function(e) {
+      var base = String(e.slug || '').replace(/-(en|he)$/, '');
+      if (!base || seen[base]) return;
+      seen[base] = true;
+      opts.push('<option value="' + TaskWidgets.escape(base) + '" data-type="' + TaskWidgets.escape(e.type || '') + '">' + TaskWidgets.escape(e.title || base) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+  }
+
   function createContentStream() {
+    var entityType = document.getElementById('content-entity-type').value;
+    var existingBase = document.getElementById('content-existing-entity').value;
     var name = document.getElementById('content-name').value.trim();
+    var targetDate = document.getElementById('content-target-date').value;
     var customStreamId = document.getElementById('content-stream-id').value.trim().toUpperCase();
 
     if (!name) {
@@ -1034,29 +1100,34 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     btn.disabled = true;
     btn.textContent = 'Creating...';
 
+    var params = {
+      entityType: entityType,
+      contentName: name,
+      stages: stages,
+      streamId: customStreamId || null,
+      targetDate: targetDate || ''
+    };
+    if (existingBase) params.baseSlug = existingBase;
+
     google.script.run
       .withSuccessHandler(function(result) {
         btn.disabled = false;
         btn.textContent = 'Create Tasks';
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-        } else {
-          document.getElementById('contentStreamModal').style.display = 'none';
-          TaskWidgets.toast('Created ' + result.data.tasksCreated + ' task(s) with stream ID: ' + result.data.streamCode, 'success');
-          loadData();
+        if (!result || !result.ok) {
+          TaskWidgets.toast('Error: ' + ((result && result.error) || 'Failed'), 'error');
+          return;
         }
+        document.getElementById('contentStreamModal').style.display = 'none';
+        var n = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
+        TaskWidgets.toast('Created ' + n + ' task(s) · stream ' + result.streamCode, 'success');
+        loadData();
       })
       .withFailureHandler(function(err) {
         btn.disabled = false;
         btn.textContent = 'Create Tasks';
         TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
-      .WebAppProjects_createContentStream({
-        projectId: state.selectedProjectId,
-        contentName: name,
-        stages: stages,
-        streamId: customStreamId || null
-      });
+      .WebAppLibrary_spawnContentChain(params);
   }
 
   function importContentTasks() {
@@ -1321,7 +1392,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
   function renderHeader() {
     // Task-only workbench (ADMIN_TASK_UI Deploy B): no project nav, breadcrumb,
-    // back/home, or content-stream/import chrome. Just "Tasks" + "+ Task".
+    // or back/home chrome. "+ Content" is the content-chain creation locus
+    // (CONTENT_WORKFLOW_REDESIGN Decision 4 / ADMIN_TASK_UI follow-up #8); Import
+    // stays hidden. Header shows "Tasks" + "+ Content" + "+ Task".
     var homeBtn = document.getElementById('btn-home');
     var backBtn = document.getElementById('btn-back');
     var breadcrumb = document.getElementById('breadcrumb');
@@ -1330,7 +1403,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     var contentImportBtn = document.getElementById('btn-content-import');
     if (homeBtn) homeBtn.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
-    if (contentStreamBtn) contentStreamBtn.style.display = 'none';
+    if (contentStreamBtn) contentStreamBtn.style.display = '';
     if (contentImportBtn) contentImportBtn.style.display = 'none';
     if (breadcrumb) breadcrumb.textContent = 'Tasks';
     if (newBtn) newBtn.textContent = '+ Task';

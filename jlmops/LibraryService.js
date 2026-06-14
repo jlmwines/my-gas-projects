@@ -164,6 +164,13 @@ const LibraryService = (function() {
             slb_References: references.join(',')
         };
 
+        // Optional target publish date — the deficiency-view demand signal
+        // (CONTENT_WORKFLOW_REDESIGN_PLAN Decision 1). Written only when supplied;
+        // ignored gracefully until slb_TargetDate is synced into the sheet header.
+        if (params.targetDate) {
+            fieldMap.slb_TargetDate = params.targetDate;
+        }
+
         // Apply typeFields → slb_* columns where they exist.
         Object.keys(typeFields).forEach(key => {
             const col = _typeFieldToColumn(key);
@@ -199,7 +206,7 @@ const LibraryService = (function() {
      * logic (first 3 letters uppercase + random suffix), or accepts a user-supplied
      * streamId.
      *
-     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId? }
+     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId?, targetDate? }
      * @returns {Object} { entities, tasks, streamCode, deduplicated_entities }
      */
     function spawnContentChain(params) {
@@ -207,6 +214,7 @@ const LibraryService = (function() {
         const contentName = params.contentName;
         const stages = params.stages || [];
         const streamId = params.streamId;
+        const targetDate = params.targetDate || '';
         const userRefs = Array.isArray(params.references)
             ? params.references.map(r => String(r).trim()).filter(Boolean)
             : [];
@@ -245,7 +253,7 @@ const LibraryService = (function() {
             const enResult = addEntity({
                 slug: enSlug, type: entityType, language: 'en',
                 title: contentName, references: userRefs.slice(),
-                softReferences: true
+                softReferences: true, targetDate: targetDate
             });
             entities.push(enResult.entity);
             if (enResult.deduplicated) deduplicated_entities.push(enSlug);
@@ -253,7 +261,7 @@ const LibraryService = (function() {
             const heResult = addEntity({
                 slug: heSlug, type: entityType, language: 'he',
                 title: contentName, references: [enSlug].concat(userRefs),
-                softReferences: true
+                softReferences: true, targetDate: targetDate
             });
             entities.push(heResult.entity);
             if (heResult.deduplicated) deduplicated_entities.push(heSlug);
@@ -261,7 +269,7 @@ const LibraryService = (function() {
             const result = addEntity({
                 slug: baseSlug, type: entityType, language: null,
                 title: contentName, references: userRefs.slice(),
-                softReferences: true
+                softReferences: true, targetDate: targetDate
             });
             entities.push(result.entity);
             if (result.deduplicated) deduplicated_entities.push(baseSlug);
