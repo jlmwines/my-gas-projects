@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @303 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; templates now editable via Docs (Create-Doc seeds inline content; pending-payment send reads from Doc with field fallback); edit-task close dialog plain-language ("Editing Done") (@302).
+**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @304 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; templates now editable via Docs (Create-Doc seeds inline content; pending-payment send reads from Doc with field fallback); edit-task close dialog plain-language ("Editing Done") (@302).
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @303 · theme v1.2.30 |
+| Deploy Version | jlmops @304 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-15 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |

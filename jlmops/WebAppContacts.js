@@ -740,7 +740,21 @@ function WebAppContacts_getOutreachTemplate(topic, channel, language) {
       return { success: true, text: '' };
     }
 
+    // Doc-first: the SysLibrary template entity's content (Doc when present, else
+    // inline fields) is the source of truth — so a manager's Doc edits seed the
+    // outreach. Falls back to the legacy SysConfig `crm.template.*` rows when no
+    // library entity/Doc exists. Slug convention: template-<topic>-<channel>-<lang>.
+    let content = null;
+    try {
+      content = LibraryService.getEntityContent({ entityId: `template-${t}-${ch}-${lang}` });
+    } catch (libErr) {
+      content = null;
+    }
+
     if (ch === 'email') {
+      if (content) {
+        return { success: true, subject: content.subject || '', body: content.body || '' };
+      }
       const subjectCfg = ConfigService.getConfig(`crm.template.${t}.email.subject.${lang}`);
       const bodyCfg = ConfigService.getConfig(`crm.template.${t}.email.body.${lang}`);
       return {
@@ -750,7 +764,10 @@ function WebAppContacts_getOutreachTemplate(topic, channel, language) {
       };
     }
 
-    // whatsapp (and any other single-text channel)
+    // whatsapp (and any other single-text channel) — body-only template
+    if (content) {
+      return { success: true, text: content.body || '' };
+    }
     const cfg = ConfigService.getConfig(`crm.template.${t}.${ch}.${lang}`);
     return {
       success: true,

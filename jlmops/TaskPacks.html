@@ -108,7 +108,7 @@
         var h = '';
         h += notesBlock(t, stopProp, false);
         h += '  <div class="detail-row"' + stopProp + '>';
-        h += '    <button class="btn btn-sm" onclick="TaskPacks.confirmTask(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabled + '>' + btnLabel + '</button>';
+        h += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.confirmTask(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabled + '>' + btnLabel + '</button>';
         h += '  </div>';
         return h;
       }
@@ -116,14 +116,14 @@
       // Deep-link packs: button to target view.
       if (kind === 'deeplink_orders') {
         return '<div class="detail-row"' + stopProp + '>' +
-               '<button class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerOrders\')">Open Orders</button>' +
+               '<button type="button" class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerOrders\')">Open Orders</button>' +
                '<span class="detail-meta" style="margin-left:12px">Task closes via the packing-slips workflow.</span>' +
                '</div>';
       }
       if (kind === 'deeplink_inventory') {
         var label = typeId === 'task.inventory.brurya_update' ? 'Open Inventory (Brurya)' : 'Open Inventory';
         return '<div class="detail-row"' + stopProp + '>' +
-               '<button class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerInventory\')">' + label + '</button>' +
+               '<button type="button" class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerInventory\')">' + label + '</button>' +
                '<span class="detail-meta" style="margin-left:12px">Task closes via the inventory workflow.</span>' +
                '</div>';
       }
@@ -140,8 +140,8 @@
           hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
         } else {
           hE += '    <span class="tw-file-link empty" style="margin-right:8px">No Doc yet</span>';
-          hE += '    <button class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
-          hE += '    <button class="btn btn-sm" style="margin-left:6px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
+          hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
+          hE += '    <button type="button" class="btn btn-sm" style="margin-left:6px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
         }
         // Translate variant — link to EN source (the peer entity).
         if (typeId === 'task.content.translate' || typeId === 'task.content.translate_edit') {
@@ -160,7 +160,7 @@
         hE += '  </div>';
         hE += notesBlock(t, stopProp, false);
         hE += '  <div class="detail-row"' + stopProp + '>';
-        hE += '    <button class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Editing Done</button>';
+        hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Editing Done</button>';
         if (entity) {
           hE += '    <span class="detail-meta" style="margin-left:12px">Current: v' + TaskWidgets.escape(entity.version || 0) + ' · ' + TaskWidgets.escape(entity.state || '—') + '</span>';
         }
@@ -179,7 +179,7 @@
         hP += '  </div></div>';
         hP += notesBlock(t, stopProp, false);
         hP += '  <div class="detail-row"' + stopProp + '>';
-        hP += '    <button class="btn btn-sm" onclick="TaskPacks.markPublished(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledP + '>' + btnLabelP + '</button>';
+        hP += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.markPublished(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledP + '>' + btnLabelP + '</button>';
         hP += '  </div>';
         return hP;
       }
