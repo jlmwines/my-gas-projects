@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @304 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; **all library templates now Doc-sourced** (edited via Docs; every consumer — pending-payment send + outreach Action Panel — reads the current Doc via `getEntityContent`, field/SysConfig fallback); edit-task close dialog plain-language ("Editing Done"); pack-button form-submit blank-page bug fixed (@304).
+**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @305 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; **all library templates now Doc-sourced** (edited via Docs; every consumer — pending-payment send + outreach Action Panel — reads the current Doc via `getEntityContent`, field/SysConfig fallback); edit-task close dialog plain-language ("Editing Done"); pack-button form-submit blank-page bug fixed (@305).
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @304; content-workflow redesign Deploys 1–4 shipped (manager TaskPacks convergence live); build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @305; content-workflow redesign Deploys 1–4 shipped (manager TaskPacks convergence live); build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 10 editorial posts live (EN+HE); 3 in pipeline.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing.
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @304 · theme v1.2.30 |
+| Deploy Version | jlmops @305 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-15 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |

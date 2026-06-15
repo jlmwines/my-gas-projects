@@ -35,7 +35,7 @@ function previewPendingPaymentEmail() {
             var addendumContent = isFirstTime
                 ? LibraryService.getEntityContent({ entityId: 'template-pending-payment-addendum-' + lang })
                 : null;
-            var firstTimeBlock = (addendumContent && addendumContent.body) || '';
+            var firstTimeBlock = (addendumContent && addendumContent.body) ? ('\n\n' + addendumContent.body) : '';
             var body = String(emailContent.body || '')
                 .replace(/\{name\}/g, 'Dani')
                 .replace(/\{first_time_block\}/g, firstTimeBlock)
@@ -1249,7 +1249,10 @@ function HousekeepingService() {
           const subject = emailContent.subject || '';
           const addendumContent = isFirstTime ? getTemplateContent(addendumSlug) : null;
           const addendumText = (addendumContent && addendumContent.body) || '';
-          const firstTimeBlock = isFirstTime ? addendumText : '';
+          // Prepend a paragraph break so the addendum reads as its own block (the
+          // Doc parser strips the addendum's own leading whitespace). Empty for
+          // returning customers.
+          const firstTimeBlock = addendumText ? ('\n\n' + addendumText) : '';
           const name = String(o.firstName || '').trim() || 'there';
 
           // Order-pay URL: prefer the guest-pay link with the captured key
