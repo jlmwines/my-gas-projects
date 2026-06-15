@@ -1,6 +1,6 @@
 # Content Workflow Redesign Plan
 
-This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel; the panel's open questions were resolved 2026-06-14 against verified code (see Resolutions). Implementation has not begun.
+This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel; the panel's open questions were resolved 2026-06-14 against verified code (see Resolutions). **All four deploys shipped 2026-06-14–15 (jlmops @290 → @295); ready to archive once its durable facts graduate to the system docs.**
 
 ## Goal
 
@@ -73,7 +73,7 @@ Deferred: "in handoff" badge (open task assigned to counterpart role). Implement
 | Surface | Roles | Job |
 |---|---|---|
 | **Dashboard** | Both | Daily ops: sync widget (admin), manager task queue via TaskPacks, ops cards |
-| **Library** | Both | Entity catalog; deficiency preset; family drawer; admin-only: spawn chain, lock, correct |
+| **Library** | Both | Entity catalog; deficiency preset; family drawer; admin-only: spawn chain, Request Correction, Abandon. (Lock/publish are task-pack actions in the workbench, not here.) |
 | **Tasks** | Admin only | Full workbench (create + do + manage); primary content-chain creation locus |
 | AdminProjectsView | Admin (fallback) | Retained in-repo; removed from nav after Tasks soaks |
 
@@ -109,7 +109,7 @@ New: Date-range filter on `slb_TargetDate`; "Deficiency" preset chip rendering e
 Anchor: `LibraryView.html` `renderEntityDrawer()`; entity list already loaded client-side with `slb_References`
 New: Build reverse-reference map (`Map<slug, Set<referencing slugs>>`) post-load; Family section HTML grouped by type (siblings / companions / images) with state pills and tap-to-open links.
 
-**Step 5 — TaskPacks convergence on manager dashboard** — Cost: B/C (Adapt/Build)
+**Step 5 — TaskPacks convergence on manager dashboard** — Cost: B/C (Adapt/Build) — done 2026-06-15 @295
 Anchor: `ManagerDashboardView_v2.html` bespoke editor lines ~597–677 (~80 lines to retire); `TaskPacks.html` `configure()` + `packBody()`; `WebAppDashboardV2_updateManagerTask` (write path preserved); `taskOpenTarget()` (survives, render above pack output)
 New: Provide `getTask`/`getEntity` callbacks (dashboard already reads SysLibrary at `WebAppDashboardV2.js:804`); render `TaskPacks` in the expand slot; **retire** `task.fileUrl` + `resolveContentFileUrl` (doc links come from the entity via the pack's `getEntity`) and drop the `taskOpenTarget` content case; keep `revertTaskToAdmin()` as a dedicated role-transfer button; **preserve the contact context block + a status-transition control** (the two verified coverage gaps) before deleting the bespoke editor.
 
@@ -121,21 +121,33 @@ Done: documented the **live** vocabulary in `docs/DATA_MODEL.md` (`draft → loc
 Anchor: `LibraryView.html` admin-gated drawer action buttons; `TaskService.createTask`; `LibraryService.logEntityActivity`; `data-roles="admin"` CSS gate
 New: Button visible when `slb_State === 'published'` and user is admin; spawns `task.content.edit` against entity slug; toast confirmation. Same step adds an admin-only **"Abandon"** drawer action setting `slb_State='abandoned'` + `LibraryService.logEntityActivity` (same gate/pattern).
 
-**Step 8 — De-dup Notes in AdminTasksView** — Cost: B (Adapt) — **rides with Deploy 3**
+**Step 8 — De-dup Notes in AdminTasksView** — Cost: B (Adapt) — **rides with Deploy 3** — done 2026-06-15 @295
 Anchor: `AdminTasksView.html:337–338` (MANAGE form Notes, saved by `saveTaskStatus` :2233); `TaskPacks.html` pack Notes (`tw-notes`) — ADMIN_TASK_UI_PLAN follow-up #2
 Trace (2026-06-14): can't simply drop the MANAGE Notes — the **skeleton** pack's Notes is readonly (`TaskPacks.html:172`), so for skeleton-type tasks the MANAGE field is the only editable Notes; removing it regresses them. Clean de-dup = give `TaskPacks` a `ctx.hideNotes` option so the pack omits its Notes block where a MANAGE Notes already exists (AdminTasksView), keeping the MANAGE field as the single one. Edits the shared pack → batch with Deploy 3's pack rework, not Deploy 1.
+
+**Step 9 — Direct Doc access from Library** — Cost: A (Reuse) — **independent of Deploy 3** — done 2026-06-15 @294
+Anchor: `LibraryView.html` list Title cell (`renderLibrary`:696, `renderDeficiency`:756); drawer action bar (`renderDrawerActions`:1140, which today deliberately omits an Open-Doc button per its :1145 comment); existing low-prominence "Open Doc" link in `renderDrawerFiles`:1118.
+Trace (2026-06-15, UX observation): opening the Doc is the most likely Library action, but the only control is a faint `tw-file-link` buried three sections down the drawer — and it's absent entirely when no Doc is attached. `slb_DocUrl` already rides on the client `state.library` entity (`res.data.library`, :493), so this is **client-only — no server/schema change.** New: a row-level **"↗ Doc"** link in the Title cell of both list presets, rendered only when `e.docUrl` (independent `<a target="_blank">` with `event.stopPropagation()` so it opens the file directly, no drawer hop; the link's absence = "no Doc yet" signal). Plus a prominent **"Open Doc"** button in the drawer action bar gated on `entity.docUrl` — reversing the :1145 no-duplicate decision now that direct-open is the primary path. The Files & URLs "Open Doc" link stays.
 
 ---
 
 ## Deploy Plan
 
-Three code deploys, sequenced 1 → 2 → 3. GAS has no `/dev`, so each deploy is the test — smoke each on the deployed surface before starting the next. Deploys 1–2 also carry a config push (`generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`); Deploy 3 is code-only. Live deploy via `deploy.ps1` is a change-point needing explicit OK each time.
+Three sequenced code deploys (1 → 2 → 3), plus one independent small Library deploy (4). GAS has no `/dev`, so each deploy is the test — smoke each on the deployed surface before starting the next. Deploys 1–2 also carry a config push (`generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`); Deploy 3 is code-only. Live deploy via `deploy.ps1` is a change-point needing explicit OK each time.
 
 **Deploy 1 — schema + creation locus** (Steps 2 → 1). Config: append `slb_TargetDate`. Code: unhide + repoint the "+ Content" button to `spawnContentChain` (entity-type + existing-entity picker + target-date modal). Step 2 leads — Step 1's modal field and Step 3's filter both depend on the column. Admin-only surface; low risk. (Step 8 moved to Deploy 3 — see below.)
 
 **Deploy 2 — demand view + overview + lifecycle** (Steps 3, 4, 6, 7). Config: `system.content.deficiency_window_days`; `slb_State` vocabulary. Code: deficiency preset, family roll-up, state pills, Request Correction + Abandon. Clusters on LibraryView/the drawer; smoke together. Splittable if any piece smokes rough.
 
-**Deploy 3 — manager convergence + Notes de-dup** (Steps 5 + 8). Repoint the dashboard onto TaskPacks; retire the bespoke editor + `task.fileUrl`. Step 8 rides here because its clean fix (a `ctx.hideNotes` pack option) edits the shared `TaskPacks`, which this deploy already reworks — batching avoids touching the pack twice. Isolated otherwise — the only change touching the manager's live daily surface and the riskiest; ship and soak (mirrors ADMIN_TASK_UI's live-touching-change isolation). Never batch with Deploys 1–2.
+**Deploy 3 — manager convergence + Notes de-dup** (Steps 5 + 8) — **[shipped @295, 2026-06-15].** Repoint the dashboard onto TaskPacks; retire the bespoke editor + `task.fileUrl`. Step 8 rides here because its clean fix (a `ctx.hideNotes` pack option) edits the shared `TaskPacks`, which this deploy already reworks — batching avoids touching the pack twice. Isolated otherwise — the only change touching the manager's live daily surface and the riskiest; ship and soak (mirrors ADMIN_TASK_UI's live-touching-change isolation). Never batch with Deploys 1–2, and keep Deploy 4 out of it.
+
+**Deploy 4 — Library direct Doc access** (Step 9) — **[shipped @294, 2026-06-15].** Client-only LibraryView change; `slb_DocUrl` is already on the client list entity, so no config push, no server, no schema. Independent of Deploy 3 — ship before or after it, never inside it (Deploy 3 stays isolated to the manager surface). Low risk; admin/manager Library only.
+
+**Follow-up — LibraryView default tab — [shipped @296, 2026-06-15].** LibraryView now opens to the entity catalog (was the standalone `tasks` tab, redundant once AdminTasksView became the workbench). Flipped the `active` tab/panel markup + `activeTab` default to `library`; admins keep the Tasks tab one click away, managers unchanged. Shipped in Deploy 5 alongside an unrelated AdminTasksView `createTask` double-submit guard (disable+relabel on submit, added the missing failure handler).
+
+**Deploy 6 — remove the Tasks tab from LibraryView — [shipped @297, 2026-06-15].** The Library Tasks tab/panel was a pre-convergence artifact (a co-equal task list) contradicting the surface map. Removed it (tab switcher, tasks panel + filters, `renderTasks`/`toggleTask`/`switchTab`, the `TaskPacks` include + `configure`, dead helpers/CSS). LibraryView is now **catalog-only** for both roles; `state.tasks` still loads (the Deficiency preset's open-task count). The task-list lens lives solely in AdminTasksView (admin) + the dashboard queue (manager).
+
+**Decision — Request Correction stays edit-only (accepted 2026-06-15).** A corrective edit on a published piece lands the entity at `locked` (no publish task spawned), so it drops out of `published` until re-published. Accepted as-is because corrections are rare; revisit (spawn an edit+publish mini-chain) only if it becomes common.
 
 ---
 

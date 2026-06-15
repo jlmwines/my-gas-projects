@@ -24,7 +24,10 @@
       getTask:   function() { return null; },
       getEntity: function() { return null; },
       refresh:   function() {},
-      reload:    function() {}
+      reload:    function() {},
+      hideNotes: false   // host opt: omit the pack's own Notes where the host
+                         // already renders an editable Notes field (AdminTasksView
+                         // MANAGE form) — avoids a duplicate Notes (Step 8).
     };
     var wired = false;
 
@@ -34,6 +37,7 @@
         if (opts.getEntity) ctx.getEntity = opts.getEntity;
         if (opts.refresh)   ctx.refresh   = opts.refresh;
         if (opts.reload)    ctx.reload    = opts.reload;
+        if (opts.hideNotes !== undefined) ctx.hideNotes = !!opts.hideNotes;
       }
       // Wire the modal buttons once (the modals live in this include's markup).
       if (!wired) {
@@ -47,22 +51,62 @@
       }
     }
 
+    // Single source of truth for which pack a task type renders. packBody()
+    // dispatches on this, and hasTypedPack() lets a host (manager dashboard) tell
+    // skeleton-fallback tasks apart from typed packs so it can supply its own
+    // status control where the pack offers none. Source: jlmops/plans/LIBRARY_VIEW_PLAN.md.
+    function packKind(typeId) {
+      var t = typeId || '';
+      if (t.indexOf('task.confirmation.') === 0 || t === 'task.sync.daily_session') return 'confirmation';
+      if (t === 'task.order.packing_available') return 'deeplink_orders';
+      if (t === 'task.inventory.count' || t === 'task.inventory.brurya_update') return 'deeplink_inventory';
+      if (t === 'task.content.edit' ||
+          t === 'task.content.translate' ||
+          t === 'task.content.translate_edit' ||
+          t === 'task.content.images' ||
+          t === 'task.content.print_newsletter_body' ||
+          t === 'task.content.draft' ||
+          t === 'task.content.video_create' ||
+          t === 'task.content.realign') return 'content_edit';
+      if (t === 'task.content.blog_publish' ||
+          t === 'task.content.video_publish' ||
+          t === 'task.content.email' ||
+          t === 'task.content.social' ||
+          t === 'task.content.whatsapp' ||
+          t === 'task.newsletter.distribute') return 'content_publish';
+      return 'skeleton';
+    }
+
+    // True when the type renders a real pack (with its own action), false when it
+    // falls to the read-only skeleton fallback. Hosts use this to decide whether
+    // they must supply a status-transition control of their own.
+    function hasTypedPack(typeId) { return packKind(typeId) !== 'skeleton'; }
+
+    // The pack's own Notes block. Suppressed when ctx.hideNotes (host renders its
+    // own editable Notes — AdminTasksView MANAGE form). `readonly` for the skeleton
+    // fallback, which has no save path of its own.
+    function notesBlock(t, stopProp, readonly) {
+      if (ctx.hideNotes) return '';
+      var notesId = 'lv-notes-' + TaskWidgets.escape(t.id);
+      var attrs = readonly ? ' readonly' : ' id="' + notesId + '"';
+      return '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>' +
+             '    <textarea class="tw-notes"' + attrs + '>' + TaskWidgets.escape(t.notes) + '</textarea>' +
+             '  </div></div>';
+    }
+
     // Pack body dispatcher — returns HTML for the expanded inline body per
-    // task type. Source of truth: jlmops/plans/LIBRARY_VIEW_PLAN.md pack table.
+    // task type (keyed by packKind). Source: jlmops/plans/LIBRARY_VIEW_PLAN.md pack table.
     function packBody(t) {
       var typeId = t.typeId || '';
+      var kind = packKind(typeId);
       var stopProp = ' onclick="event.stopPropagation()"';
-      var notesEscaped = TaskWidgets.escape(t.notes);
 
       // Confirmation pack: notes + "Mark Confirmed" button → closes task.
-      if (typeId.indexOf('task.confirmation.') === 0 || typeId === 'task.sync.daily_session') {
-        var notesId = 'lv-notes-' + TaskWidgets.escape(t.id);
+      if (kind === 'confirmation') {
         var btnDisabled = (t.status === 'Done') ? ' disabled' : '';
         var btnLabel = (t.status === 'Done') ? 'Confirmed' : 'Mark Confirmed';
         var h = '';
-        h += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        h += '    <textarea class="tw-notes" id="' + notesId + '">' + notesEscaped + '</textarea>';
-        h += '  </div></div>';
+        h += notesBlock(t, stopProp, false);
         h += '  <div class="detail-row"' + stopProp + '>';
         h += '    <button class="btn btn-sm" onclick="TaskPacks.confirmTask(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabled + '>' + btnLabel + '</button>';
         h += '  </div>';
@@ -70,13 +114,13 @@
       }
 
       // Deep-link packs: button to target view.
-      if (typeId === 'task.order.packing_available') {
+      if (kind === 'deeplink_orders') {
         return '<div class="detail-row"' + stopProp + '>' +
                '<button class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerOrders\')">Open Orders</button>' +
                '<span class="detail-meta" style="margin-left:12px">Task closes via the packing-slips workflow.</span>' +
                '</div>';
       }
-      if (typeId === 'task.inventory.count' || typeId === 'task.inventory.brurya_update') {
+      if (kind === 'deeplink_inventory') {
         var label = typeId === 'task.inventory.brurya_update' ? 'Open Inventory (Brurya)' : 'Open Inventory';
         return '<div class="detail-row"' + stopProp + '>' +
                '<button class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerInventory\')">' + label + '</button>' +
@@ -84,23 +128,11 @@
                '</div>';
       }
 
-      // Content edit pack — file link + lock; covers 7 content task types per
-      // LIBRARY_VIEW_PLAN Type packs table (edit/translate/translate_edit/images/
-      // print_newsletter_body/draft/video_create). Translate variants add an
-      // "Open EN source" link via slug-pair flip.
-      var isContentEditType = (
-        typeId === 'task.content.edit' ||
-        typeId === 'task.content.translate' ||
-        typeId === 'task.content.translate_edit' ||
-        typeId === 'task.content.images' ||
-        typeId === 'task.content.print_newsletter_body' ||
-        typeId === 'task.content.draft' ||
-        typeId === 'task.content.video_create' ||
-        typeId === 'task.content.realign'
-      );
-      if (isContentEditType) {
+      // Content edit pack — file link + lock; covers 8 content task types per
+      // LIBRARY_VIEW_PLAN Type packs table. Translate variants add an "Open EN
+      // source" link via slug-pair flip.
+      if (kind === 'content_edit') {
         var entity = ctx.getEntity(t.entityId);
-        var notesIdE = 'lv-notes-' + TaskWidgets.escape(t.id);
         var btnDisabledE = (t.status === 'Done') ? ' disabled' : '';
         var hE = '';
         hE += '  <div class="detail-row"' + stopProp + '>';
@@ -108,7 +140,7 @@
           hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
         } else {
           hE += '    <span class="tw-file-link empty" style="margin-right:8px">No Doc yet</span>';
-          hE += '    <button class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create blank Doc</button>';
+          hE += '    <button class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
           hE += '    <button class="btn btn-sm" style="margin-left:6px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
         }
         // Translate variant — link to EN source (the peer entity).
@@ -126,11 +158,9 @@
           }
         }
         hE += '  </div>';
-        hE += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        hE += '    <textarea class="tw-notes" id="' + notesIdE + '">' + notesEscaped + '</textarea>';
-        hE += '  </div></div>';
+        hE += notesBlock(t, stopProp, false);
         hE += '  <div class="detail-row"' + stopProp + '>';
-        hE += '    <button class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Lock + Version</button>';
+        hE += '    <button class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Editing Done</button>';
         if (entity) {
           hE += '    <span class="detail-meta" style="margin-left:12px">Current: v' + TaskWidgets.escape(entity.version || 0) + ' · ' + TaskWidgets.escape(entity.state || '—') + '</span>';
         }
@@ -139,17 +169,7 @@
       }
 
       // Content publish pack — Confirmation-pack variant with optional external URL.
-      // Covers blog_publish, video_publish, email, social, whatsapp, newsletter.distribute.
-      var isContentPublishType = (
-        typeId === 'task.content.blog_publish' ||
-        typeId === 'task.content.video_publish' ||
-        typeId === 'task.content.email' ||
-        typeId === 'task.content.social' ||
-        typeId === 'task.content.whatsapp' ||
-        typeId === 'task.newsletter.distribute'
-      );
-      if (isContentPublishType) {
-        var notesIdP = 'lv-notes-' + TaskWidgets.escape(t.id);
+      if (kind === 'content_publish') {
         var urlIdP = 'lv-ext-url-' + TaskWidgets.escape(t.id);
         var btnDisabledP = (t.status === 'Done') ? ' disabled' : '';
         var btnLabelP = (t.status === 'Done') ? 'Published' : 'Mark Published';
@@ -157,9 +177,7 @@
         hP += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>External URL <small class="text-muted">(optional — logged to entity activity)</small></label>';
         hP += '    <input type="url" class="form-control form-control-sm" id="' + urlIdP + '" placeholder="https://..." />';
         hP += '  </div></div>';
-        hP += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-        hP += '    <textarea class="tw-notes" id="' + notesIdP + '">' + notesEscaped + '</textarea>';
-        hP += '  </div></div>';
+        hP += notesBlock(t, stopProp, false);
         hP += '  <div class="detail-row"' + stopProp + '>';
         hP += '    <button class="btn btn-sm" onclick="TaskPacks.markPublished(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledP + '>' + btnLabelP + '</button>';
         hP += '  </div>';
@@ -168,9 +186,7 @@
 
       // Skeleton fallback — read-only notes; no action.
       var h2 = '';
-      h2 += '  <div class="detail-row"' + stopProp + '><div style="flex:1"><label>Notes</label>';
-      h2 += '    <textarea class="tw-notes" readonly>' + notesEscaped + '</textarea>';
-      h2 += '  </div></div>';
+      h2 += notesBlock(t, stopProp, true);
       h2 += '  <div class="detail-row detail-meta">No pack yet — actions land in subsequent build steps.</div>';
       return h2;
     }
@@ -217,7 +233,7 @@
       var task = ctx.getTask(taskId);
       if (!task) { TaskWidgets.toast('Task not found', true); return; }
       if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      TaskWidgets.confirm('Create a new blank Doc for "' + task.entityId + '"?', function() {
+      TaskWidgets.confirm('Create a Doc for "' + task.entityId + '" (seeded with any existing content)?', function() {
       google.script.run
         .withSuccessHandler(function(result) {
           if (!result || !result.ok) {
@@ -280,14 +296,21 @@
       var peerSlug = null;
       if (slug.length > 3 && slug.slice(-3) === '-en') peerSlug = slug.slice(0, -3) + '-he';
       else if (slug.length > 3 && slug.slice(-3) === '-he') peerSlug = slug.slice(0, -3) + '-en';
-      document.getElementById('lv-lock-slug').textContent = slug;
-      document.getElementById('lv-lock-peer').textContent = peerSlug || '(no language peer)';
+      // Name the peer's language (Hebrew/English) so the prompt + button read
+      // plainly in both directions — EN is the source, HE the translation, but the
+      // language name is correct whichever side is being edited.
+      var peerLang = peerSlug ? (peerSlug.slice(-3) === '-he' ? 'Hebrew' : 'English') : '';
       var peerRow = document.getElementById('lv-lock-peer-row');
       var yesBtn = document.getElementById('lv-btn-lock-yes');
+      var noBtn = document.getElementById('lv-btn-lock-no');
       if (peerSlug) {
+        document.getElementById('lv-lock-peer-lang').textContent = peerLang;
+        yesBtn.textContent = 'Yes, update ' + peerLang;
+        noBtn.textContent = 'No, just finish';
         peerRow.style.display = '';
         yesBtn.style.display = '';
       } else {
+        noBtn.textContent = 'Done';
         peerRow.style.display = 'none';
         yesBtn.style.display = 'none';
       }
@@ -313,7 +336,7 @@
           }
           modal.style.display = 'none';
           var relCount = (result.updated && result.updated.related_tasks) ? result.updated.related_tasks.length : 0;
-          TaskWidgets.toast('Locked' + (relCount ? ' (+' + relCount + ' realign task)' : ''));
+          TaskWidgets.toast('Editing done' + (relCount ? ' (+ update task created)' : ''));
           ctx.reload();
         })
         .withFailureHandler(function(err) {
@@ -389,6 +412,8 @@
     return {
       configure: configure,
       packBody: packBody,
+      packKind: packKind,
+      hasTypedPack: hasTypedPack,
       confirmTask: confirmTask,
       openView: openView,
       createBlankDoc: createBlankDoc,
@@ -401,22 +426,23 @@
   })();
 </script>
 
-<!-- Lock + Version modal — required peer-realignment choice at lock per §14. -->
+<!-- "Editing Done" modal — finishes the edit task (locks + versions the entity)
+     and, on Yes, creates an update task on the other-language sibling. Plain copy:
+     the buttons say what happens, so no explanatory paragraph. -->
 <div class="modal-overlay" id="lvLockModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
     <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Lock + Version</h6>
+      <h6 class="mb-0">Editing Done</h6>
     </div>
     <div style="padding:15px;">
-      <p class="mb-2 small">Locking <strong id="lv-lock-slug"></strong> at the next version.</p>
+      <p class="mb-2 small">Save your changes and finish this task.</p>
       <div id="lv-lock-peer-row">
-        <p class="mb-1">Does the peer-language sibling (<strong id="lv-lock-peer"></strong>) need editing for this change?</p>
-        <p class="small text-muted mb-0">Yes → spawns a realign task on the peer. No → records "no realignment needed" in the activity log. Required choice at lock per §14.</p>
+        <p class="mb-0">Did this edit also affect the <strong id="lv-lock-peer-lang"></strong> version?</p>
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:flex-end;gap:8px;">
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-no">No, just lock</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-yes">Yes, spawn realign</button>
+      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-no">No, just finish</button>
+      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-yes">Yes, update</button>
     </div>
   </div>
 </div>

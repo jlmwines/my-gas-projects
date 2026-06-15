@@ -1,76 +1,11 @@
 <?!= include('TaskWidgets') ?>
-<?!= include('TaskPacks') ?>
 
 <style>
   /* LibraryView — layout */
   .lv-container { padding: 0 10px; }
-  .lv-tabs {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid #dee2e6;
-    margin-bottom: 14px;
-  }
-  .lv-tab {
-    background: none;
-    border: none;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    color: #6c757d;
-    border-bottom: 2px solid transparent;
-  }
-  .lv-tab.active { color: #212529; border-bottom-color: #495057; font-weight: 600; }
-  .lv-tab:focus { outline: none; }
 
   .lv-panel { display: none; }
   .lv-panel.active { display: block; }
-
-  /* Task queue */
-  .lv-task-list {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    max-height: calc(100vh - 280px);
-    overflow-y: auto;
-  }
-  .lv-task-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-bottom: 1px solid #f1f3f5;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  .lv-task-row:hover { background: #f8f9fa; }
-  .lv-task-row.expanded { background: #e7f3ff; }
-  .lv-task-row .col-status { flex: 0 0 80px; }
-  .lv-task-row .col-name { flex: 3 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lv-task-row .col-chips { flex: 0 0 auto; display: flex; gap: 4px; }
-  .lv-task-row .col-assignee { flex: 0 0 90px; font-size: 12px; color: #6c757d; }
-  .lv-task-row .col-due { flex: 0 0 90px; }
-
-  .lv-task-detail {
-    display: none;
-    padding: 12px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-  }
-  .lv-task-detail.show { display: block; }
-  .lv-task-detail .detail-row {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-  }
-  .lv-task-detail label {
-    font-weight: 600;
-    font-size: 12px;
-    color: #495057;
-    margin-bottom: 2px;
-    display: block;
-  }
-  .lv-task-detail .detail-meta { font-size: 12px; color: #6c757d; }
 
   /* Library list */
   .lv-library-presets {
@@ -109,25 +44,11 @@
 
   /* Mobile */
   @media (max-width: 768px) {
-    .lv-task-row { flex-direction: column; align-items: stretch; }
-    .lv-task-row [class^="col-"] { flex: none; }
-    .lv-task-row .col-name { white-space: normal; }
-    /* Label the stacked fields uniformly (status was previously unlabeled) */
-    .lv-task-row .col-status::before { content: 'Status: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
-    .lv-task-row .col-assignee::before { content: 'Assigned: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
-    .lv-task-row .col-due::before { content: 'Due: '; color: #6c757d; font-weight: 600; font-size: 11px; margin-right: 4px; }
-    /* col-name and col-chips read fine on their own — no label. */
-
     /* Drawer header: single column on phone so the 8-10 label/value pairs get full width */
     .lv-drawer-header { grid-template-columns: 1fr; gap: 8px; }
 
-    /* Unify Tasks + Library cards on mobile: compact, flat, with one clear divider.
-       (Tasks rows had a near-invisible #f1f3f5 border; the Library list used the
-       shared responsive-stack boxed style — outline + radius + 12px margins — so
-       the two tabs looked different and wasted space.) Scoped to LibraryView so
-       Orders/Products responsive-stack cards are unaffected. */
-    .lv-task-row { padding: 8px 4px; border-bottom: 1px solid #ced4da; }
-    .lv-task-row [class^="col-"] { padding: 1px 0; }
+    /* Library list on mobile: compact, flat, one clear divider. Scoped to
+       LibraryView so Orders/Products responsive-stack cards are unaffected. */
     .lv-library-table.responsive-stack tr {
       border: none;
       border-bottom: 1px solid #ced4da;
@@ -267,48 +188,9 @@
 
 <div class="lv-container">
 
-  <!-- Tab switcher: Tasks / Library -->
-  <div class="lv-tabs">
-    <button class="lv-tab active" data-tab="tasks" data-roles="admin" onclick="LibraryView.switchTab('tasks')">Tasks</button>
-    <button class="lv-tab" data-tab="library" onclick="LibraryView.switchTab('library')">Library</button>
-  </div>
-
-  <!-- TASKS PANEL -->
-  <div class="lv-panel active" id="lv-panel-tasks" data-roles="admin">
-    <div class="tw-filter-bar">
-      <select id="lv-filter-status">
-        <option value="open">Open</option>
-        <option value="done">Done</option>
-        <option value="all">All</option>
-      </select>
-      <select id="lv-filter-entity-type">
-        <option value="">All entity types</option>
-      </select>
-      <select id="lv-filter-topic">
-        <option value="">All topics</option>
-      </select>
-      <select id="lv-filter-assignee">
-        <option value="">All assignees</option>
-      </select>
-      <select id="lv-filter-language">
-        <option value="">All languages</option>
-        <option value="en">EN</option>
-        <option value="he">HE</option>
-      </select>
-      <input type="search" id="lv-search-tasks" placeholder="Search title / entity..." />
-      <select id="lv-sort-tasks">
-        <option value="due">Sort: due date</option>
-        <option value="topic">Sort: topic</option>
-        <option value="title">Sort: title</option>
-      </select>
-    </div>
-    <div class="lv-task-list" id="lv-task-list">
-      <div class="lv-empty">Loading…</div>
-    </div>
-  </div>
-
-  <!-- LIBRARY PANEL -->
-  <div class="lv-panel" id="lv-panel-library">
+  <!-- LIBRARY (catalog only). The task-list lens lives in AdminTasksView (admin)
+       and the dashboard queue (manager) — the convergence end-state surface map. -->
+  <div class="lv-panel active" id="lv-panel-library">
     <div class="lv-library-toolbar mb-2" data-roles="admin">
       <button class="btn btn-sm" id="lv-btn-open-content-stream">Create Content Tasks</button>
     </div>
@@ -420,9 +302,7 @@
       tasks: [],
       library: [],
       contentStages: [],
-      activeTab: 'tasks',
       activePreset: 'all',
-      expandedTaskId: null,
       // Drawer back-stack (phase 9c): slugs of entities visited before the
       // current one in this open session. Fresh opens clear it; navigateToEntity
       // pushes the current slug before loading the new one; back pops.
@@ -434,18 +314,6 @@
 
     function init() {
       load();
-      // Managers get the Library as a catalog only — the Tasks tab + panel are
-      // admin-gated (data-roles="admin"), so land managers on the Library tab
-      // instead of the now-hidden Tasks tab.
-      if (document.body.classList.contains('role-manager')) {
-        switchTab('library');
-      }
-      ['lv-filter-status', 'lv-filter-entity-type', 'lv-filter-topic',
-       'lv-filter-assignee', 'lv-filter-language', 'lv-search-tasks',
-       'lv-sort-tasks'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('input', renderTasks);
-      });
       ['lv-search-library', 'lv-sort-library'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', renderLibrary);
@@ -454,13 +322,6 @@
       if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
       var submitBtn = document.getElementById('lv-btn-create-content-stream');
       if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
-      // Wire the shared TaskPacks kit to this view's state + refresh callbacks.
-      TaskPacks.configure({
-        getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
-        getEntity: function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
-        refresh: renderTasks,
-        reload: load
-      });
 
       // Escape closes the entity drawer when open (phase 9a).
       document.addEventListener('keydown', function(e) {
@@ -483,62 +344,20 @@
     function onLoaded(res) {
       if (!res || !res.success) {
         TaskWidgets.toast(res && res.error ? res.error : 'Failed to load LibraryView', true);
-        document.getElementById('lv-task-list').innerHTML =
-          '<div class="lv-empty">' + TaskWidgets.escape(res && res.error ? res.error : 'Load failed') + '</div>';
         document.getElementById('lv-library-table-wrap').innerHTML =
           '<div class="lv-empty">' + TaskWidgets.escape(res && res.error ? res.error : 'Load failed') + '</div>';
         return;
       }
+      // state.tasks is still loaded — the Deficiency preset counts open tasks per
+      // entity from it (the "stalled" signal). The task LIST UI moved out.
       state.tasks = res.data.tasks || [];
       state.library = res.data.library || [];
       state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
-      populateFilterOptions();
-      renderTasks();
       renderLibrary();
     }
 
     function onError(err) {
       TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
-    }
-
-    function populateFilterOptions() {
-      var entityTypes = uniqueSorted(state.tasks.map(function(t) { return t.entityType; }));
-      var topics = uniqueSorted(state.tasks.map(function(t) { return t.topic; }));
-      var assignees = uniqueSorted(state.tasks.map(function(t) { return t.assignedTo; }));
-
-      fillSelect('lv-filter-entity-type', 'All entity types', entityTypes);
-      fillSelect('lv-filter-topic', 'All topics', topics);
-      fillSelect('lv-filter-assignee', 'All assignees', assignees);
-    }
-
-    function uniqueSorted(values) {
-      var seen = {};
-      values.forEach(function(v) { if (v) seen[v] = true; });
-      return Object.keys(seen).sort();
-    }
-
-    function fillSelect(id, allLabel, values) {
-      var sel = document.getElementById(id);
-      if (!sel) return;
-      var current = sel.value;
-      sel.innerHTML = '<option value="">' + allLabel + '</option>';
-      values.forEach(function(v) {
-        var o = document.createElement('option');
-        o.value = v;
-        o.textContent = v;
-        sel.appendChild(o);
-      });
-      sel.value = current;
-    }
-
-    function switchTab(tab) {
-      state.activeTab = tab;
-      document.querySelectorAll('.lv-tab').forEach(function(t) {
-        t.classList.toggle('active', t.getAttribute('data-tab') === tab);
-      });
-      document.querySelectorAll('.lv-panel').forEach(function(p) {
-        p.classList.toggle('active', p.id === 'lv-panel-' + tab);
-      });
     }
 
     function switchPreset(preset) {
@@ -547,112 +366,6 @@
         b.classList.toggle('active', b.getAttribute('data-preset') === preset);
       });
       renderLibrary();
-    }
-
-    function renderTasks() {
-      var statusFilter = document.getElementById('lv-filter-status').value;
-      var entityTypeFilter = document.getElementById('lv-filter-entity-type').value;
-      var topicFilter = document.getElementById('lv-filter-topic').value;
-      var assigneeFilter = document.getElementById('lv-filter-assignee').value;
-      var languageFilter = document.getElementById('lv-filter-language').value;
-      var searchTerm = (document.getElementById('lv-search-tasks').value || '').toLowerCase();
-      var sortBy = document.getElementById('lv-sort-tasks').value;
-
-      var rows = state.tasks.filter(function(t) {
-        if (statusFilter === 'open' && (t.status === 'Done' || t.status === 'Cancelled')) return false;
-        if (statusFilter === 'done' && t.status !== 'Done') return false;
-        if (entityTypeFilter && t.entityType !== entityTypeFilter) return false;
-        if (topicFilter && t.topic !== topicFilter) return false;
-        if (assigneeFilter && t.assignedTo !== assigneeFilter) return false;
-        // Language filter: derive from entity slug (suffix -en / -he) when present.
-        if (languageFilter) {
-          var slug = String(t.entityId || '').toLowerCase();
-          if (!slug.endsWith('-' + languageFilter)) return false;
-        }
-        if (searchTerm) {
-          var hay = (String(t.name || '') + ' ' + String(t.entityName || '') + ' ' + String(t.entityId || '')).toLowerCase();
-          if (hay.indexOf(searchTerm) === -1) return false;
-        }
-        return true;
-      });
-
-      rows.sort(function(a, b) {
-        if (sortBy === 'topic') return (a.topic || '').localeCompare(b.topic || '');
-        if (sortBy === 'title') return (a.name || '').localeCompare(b.name || '');
-        // due date ascending; nulls last
-        if (!a.dueDate && !b.dueDate) return 0;
-        if (!a.dueDate) return 1;
-        if (!b.dueDate) return -1;
-        return new Date(a.dueDate) - new Date(b.dueDate);
-      });
-
-      var container = document.getElementById('lv-task-list');
-      if (rows.length === 0) {
-        container.innerHTML = '<div class="lv-empty">No tasks match the current filters.</div>';
-        return;
-      }
-
-      var html = '';
-      rows.forEach(function(t) {
-        var statusClass = TaskWidgets.statusClass(t.status);
-        var priorityClass = TaskWidgets.priorityClass(t.priority);
-        var dueClass = TaskWidgets.dueClass(t.dueDate, t.status);
-        var dueText = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
-        // Clickable when the task has a polymorphic entityId — opens the drawer.
-        // Falls back to non-clickable chip when only the type is known (legacy
-        // pre-polymorphic rows).
-        var entityTypeChip = '';
-        if (t.entityType && t.entityId) {
-          entityTypeChip = '<span class="tw-chip lv-entity-chip" onclick="event.stopPropagation();LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(t.entityId) + '\')" title="Open entity: ' + TaskWidgets.escape(t.entityId) + '">' + TaskWidgets.escape(t.entityType) + '</span>';
-        } else if (t.entityType) {
-          entityTypeChip = '<span class="tw-chip">' + TaskWidgets.escape(t.entityType) + '</span>';
-        }
-        var topicChip = t.topic
-          ? '<span class="tw-chip">' + TaskWidgets.escape(t.topic) + '</span>'
-          : '';
-        var priorityBadge = (t.priority === 'Critical' || t.priority === 'High')
-          ? '<span class="tw-priority-badge ' + priorityClass + '">' + TaskWidgets.escape(t.priority) + '</span>'
-          : '';
-        var expanded = state.expandedTaskId === t.id;
-
-        html += '<div class="lv-task-row' + (expanded ? ' expanded' : '') + '" data-id="' + TaskWidgets.escape(t.id) + '" onclick="LibraryView.toggleTask(\'' + TaskWidgets.escape(t.id) + '\')">';
-        html += '  <div class="col-status"><span class="tw-status-pill ' + statusClass + '">' + TaskWidgets.escape(t.status || '—') + '</span></div>';
-        html += '  <div class="col-name">' + TaskWidgets.escape(t.name) + (t.entityName ? ' <span class="detail-meta">· ' + TaskWidgets.escape(t.entityName) + '</span>' : '') + '</div>';
-        html += '  <div class="col-chips">' + topicChip + entityTypeChip + priorityBadge + '</div>';
-        html += '  <div class="col-assignee">' + TaskWidgets.escape(t.assignedTo || '—') + '</div>';
-        html += '  <div class="col-due"><span class="tw-due-chip ' + dueClass + '">' + dueText + '</span></div>';
-        html += '</div>';
-
-        // Expanded body — pack-specific. TaskPacks.packBody() dispatches per task type.
-        html += '<div class="lv-task-detail' + (expanded ? ' show' : '') + '" data-detail-id="' + TaskWidgets.escape(t.id) + '">';
-        html += '  <div class="detail-row">';
-        html += '    <div><label>Type</label><div class="detail-meta">' + TaskWidgets.escape(t.typeId) + '</div></div>';
-        html += '    <div><label>Created</label><div class="detail-meta">' + (t.createdDate ? TaskWidgets.formatDate(t.createdDate) : '—') + '</div></div>';
-        html += '    <div><label>Due</label><div class="detail-meta">' + dueText + '</div></div>';
-        html += '    <div><label>Priority</label><div class="detail-meta">' + TaskWidgets.escape(t.priority || '—') + '</div></div>';
-        html += '  </div>';
-        html += TaskPacks.packBody(t);
-        html += '</div>';
-      });
-
-      container.innerHTML = html;
-    }
-
-    function toggleTask(id) {
-      var task = state.tasks.find(function(t) { return t.id === id; });
-      if (task && task.packForm === 'dedicated_view' && task.entityType === 'customer') {
-        // Outreach pack: deep-link into ManagerContactView. The view picks up
-        // selectContactEmail on mount, opens the contact detail, and discovers
-        // the open outreach task for the contact automatically.
-        try { sessionStorage.setItem('selectContactEmail', task.entityId || ''); } catch (e) {}
-        if (typeof loadView === 'function') {
-          loadView('ManagerContacts');
-          return;
-        }
-      }
-      // Default: inline expand (skeleton + inline packs).
-      state.expandedTaskId = state.expandedTaskId === id ? null : id;
-      renderTasks();
     }
 
     function renderLibrary() {
@@ -693,7 +406,7 @@
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         html += '<tr>';
-        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' + (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') + '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
         html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
@@ -753,7 +466,7 @@
           : '<span style="color:#856404;font-weight:600;" title="No open task — stalled">stalled</span>';
         html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
         html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
-        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a><div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' + (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') + '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
         html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
@@ -1142,8 +855,12 @@
       if (!el) return;
       var buttons = [];
 
-      // Opening the document lives in the Files & URLs section ("Open Doc") — no
-      // duplicate action-bar button (drawerOpenInDrive kept for any direct callers).
+      // Open Doc — the most-likely action gets a prominent action-bar button,
+      // first in the bar, shown only when a Doc exists (Step 9). Not role-gated:
+      // managers open files too. The Files & URLs "Open Doc" link stays as well.
+      if (entity && entity.docUrl) {
+        buttons.push('<button class="btn btn-sm btn-light" onclick="LibraryView.drawerOpenInDrive()">&#8599; Open Doc</button>');
+      }
 
       // Admin-only via the body-class CSS gate (AppView.html:108).
       buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.drawerCreateContentTasks()">Create Content Tasks</button>');
@@ -1254,11 +971,9 @@
 
     return {
       init: init,
-      switchTab: switchTab,
       openAttachedTask: openAttachedTask,
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
-      toggleTask: toggleTask,
       openEntityDrawer: openEntityDrawer,
       navigateToEntity: navigateToEntity,
       backEntityDrawer: backEntityDrawer,

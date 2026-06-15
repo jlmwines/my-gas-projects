@@ -171,7 +171,7 @@ const CONTENT_STAGES = [
   { id: 'admin_review', typeId: 'task.content.admin_review', label: 'Admin Review', title: 'Admin Review: ', target_sibling: 'en' },
   { id: 'edit', typeId: 'task.content.edit', label: 'Edit', title: 'Edit: ', target_sibling: 'en' },
   { id: 'translate', typeId: 'task.content.translate', label: 'Translate', title: 'Translate: ', target_sibling: 'he' },
-  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Translate Edit', title: 'Review Translation: ', target_sibling: 'he' },
+  { id: 'translate_edit', typeId: 'task.content.translate_edit', label: 'Edit Translation', title: 'Edit Translation: ', target_sibling: 'he' },
   { id: 'images', typeId: 'task.content.images', label: 'Images', title: 'Images: ', target_sibling: 'en' },
   { id: 'blog_publish', typeId: 'task.content.blog_publish', label: 'Blog Publish', title: 'Publish: ', target_sibling: 'en' },
   { id: 'video_create', typeId: 'task.content.video_create', label: 'Video Create', title: 'Create Video: ', target_sibling: 'en' },

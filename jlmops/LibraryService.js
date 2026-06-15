@@ -26,7 +26,7 @@ const LibraryService = (function() {
     const VALID_LANGUAGES = ['en', 'he', null, ''];
 
     // §6 sibling-language types (the rest are language-agnostic or virtual).
-    const SIBLING_LANGUAGE_TYPES = ['blog', 'news', 'mention', 'email', 'social'];
+    const SIBLING_LANGUAGE_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template'];
 
     /**
      * Opens the library sheet and reads all rows into objects keyed by header.
@@ -194,13 +194,13 @@ const LibraryService = (function() {
     /**
      * Spawns a content task chain: entity rows + tasks attached polymorphically.
      *
-     * For sibling-language types (blog/news/mention/email/social): creates two
-     * entity rows (`-en` + `-he` with HE referencing EN), then for each stage in
+     * For sibling-language types (blog/news/mention/email/social/template): creates
+     * two entity rows (`-en` + `-he` with HE referencing EN), then for each stage in
      * `stages` creates a task attached to the sibling identified by
      * `CONTENT_STAGES[stage].target_sibling`.
      *
-     * For language-agnostic types (image/template): creates one entity row, all
-     * tasks attach to it.
+     * For language-agnostic types (image): creates one entity row, all tasks
+     * attach to it.
      *
      * Stream code generation matches the existing WebAppProjects_createContentStream
      * logic (first 3 letters uppercase + random suffix), or accepts a user-supplied
@@ -461,9 +461,32 @@ const LibraryService = (function() {
         }
 
         const doc = DocumentApp.create(entityId);
-        const file = DriveApp.getFileById(doc.getId());
+        const docId = doc.getId();
+
+        // Seed the Doc with any inline content the entity already carries.
+        // Templates/emails store slb_Subject/slb_Body inline; moving it into the
+        // Doc makes the Doc the editable source of truth so users can see/edit/
+        // translate it uniformly. Blogs carry no inline content, so their Doc
+        // stays blank (prior behavior). slb_Body is left intact — the
+        // pending-payment send still reads it until that runtime read is rewired
+        // to source from the Doc.
+        const seedSubject = entity.slb_Subject || '';
+        const seedBody = entity.slb_Body || '';
+        if (seedSubject || seedBody) {
+            const docBody = doc.getBody();
+            if (seedSubject) {
+                docBody.appendParagraph('Subject: ' + seedSubject);
+                docBody.appendParagraph('');
+            }
+            String(seedBody).split('\n').forEach(function(line) {
+                docBody.appendParagraph(line);
+            });
+            doc.saveAndClose();
+        }
+
+        const file = DriveApp.getFileById(docId);
         file.moveTo(canonicalFolder);
-        const docUrl = doc.getUrl();
+        const docUrl = file.getUrl();
 
         const now = new Date().toISOString();
         const updated = _updateEntityRow(entityId, {
@@ -842,8 +865,68 @@ const LibraryService = (function() {
         };
     }
 
+    /**
+     * Resolves an entity's rendered content as { subject, body }. The Doc
+     * (slb_DocUrl) is the source of truth when present — email templates seed the
+     * Doc as "Subject: <subject>" + blank line + body; other entities are
+     * body-only. Falls back to the inline slb_Subject/slb_Body fields during
+     * migration or if the Doc read fails (so a missing Doc never breaks a send).
+     * @param {Object} params - { entityId }
+     * @returns {Object|null} { subject, body, source: 'doc'|'fields' } or null if not found
+     */
+    function getEntityContent(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+        const entity = _getEntityRow(entityId);
+        if (!entity) return null;
+
+        const docUrl = entity.slb_DocUrl || '';
+        if (docUrl) {
+            try {
+                const m = String(docUrl).match(/[-\w]{25,}/);
+                if (m) {
+                    const text = DocumentApp.openById(m[0]).getBody().getText();
+                    return _parseDocContent(text, entity);
+                }
+            } catch (e) {
+                if (typeof LoggerService !== 'undefined' && LoggerService.warn) {
+                    LoggerService.warn('LibraryService', 'getEntityContent',
+                        `Doc read failed for ${entityId} (${docUrl}); using inline fields: ${e.message}`);
+                }
+            }
+        }
+        return {
+            subject: entity.slb_Subject || '',
+            body: entity.slb_Body || '',
+            source: 'fields'
+        };
+    }
+
+    /**
+     * Parses Doc plain text into { subject, body }. Convention (matches the
+     * createBlankDoc seed): an optional leading "Subject: <text>" line, then the
+     * body. Leading blank paragraphs (DocumentApp.create leaves one) are skipped;
+     * trailing whitespace is trimmed. No "Subject:" line → subject falls back to
+     * the entity's slb_Subject and the whole text is the body (addendum case).
+     * @private
+     */
+    function _parseDocContent(text, entity) {
+        const lines = String(text).split('\n');
+        let i = 0;
+        while (i < lines.length && lines[i].trim() === '') i++;
+        let subject = entity.slb_Subject || '';
+        if (i < lines.length && /^subject:\s?/i.test(lines[i])) {
+            subject = lines[i].replace(/^subject:\s?/i, '');
+            i++;
+            if (i < lines.length && lines[i].trim() === '') i++;
+        }
+        const body = lines.slice(i).join('\n').replace(/\s+$/, '');
+        return { subject: subject, body: body, source: 'doc' };
+    }
+
     return {
         addEntity: addEntity,
+        getEntityContent: getEntityContent,
         spawnContentChain: spawnContentChain,
         createBlankDoc: createBlankDoc,
         attachExistingDoc: attachExistingDoc,

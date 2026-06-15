@@ -19,6 +19,36 @@ function runDailyMaintenance() {
 }
 
 /**
+ * Read-only preview of the pending-payment follow-up email. Composes the exact
+ * subject + body (Doc-sourced via LibraryService.getEntityContent, same path as
+ * the live send) with sample values for all four variants (EN/HE x first-time/
+ * returning) and logs them. Sends nothing. Run from the Apps Script editor to
+ * verify formatting — especially the first-time addendum block — before the live
+ * sweep fires.
+ */
+function previewPendingPaymentEmail() {
+    ['en', 'he'].forEach(function(lang) {
+        [true, false].forEach(function(isFirstTime) {
+            var emailContent = LibraryService.getEntityContent({ entityId: 'template-pending-payment-email-' + lang });
+            Logger.log('===== ' + lang.toUpperCase() + (isFirstTime ? ' / first-time' : ' / returning') + ' =====');
+            if (!emailContent) { Logger.log('MISSING email template for ' + lang); return; }
+            var addendumContent = isFirstTime
+                ? LibraryService.getEntityContent({ entityId: 'template-pending-payment-addendum-' + lang })
+                : null;
+            var firstTimeBlock = (addendumContent && addendumContent.body) || '';
+            var body = String(emailContent.body || '')
+                .replace(/\{name\}/g, 'Dani')
+                .replace(/\{first_time_block\}/g, firstTimeBlock)
+                .replace(/\{order_pay_url\}/g, 'https://www.jlmwines.com/checkout/order-pay/12345/?pay_for_order=true&key=SAMPLE');
+            Logger.log('Subject: ' + (emailContent.subject || '(none)'));
+            Logger.log('Source: email=' + emailContent.source + (addendumContent ? ', addendum=' + addendumContent.source : ''));
+            Logger.log('Body:\n' + body);
+        });
+    });
+    return 'Logged 4 variants (EN/HE x first-time/returning) — check the Executions log.';
+}
+
+/**
  * A global function intended for high-frequency triggers (e.g., every 20 minutes
  * during business hours). Runs only the maintenance tasks that need near-real-time
  * cadence — currently the pending-payment follow-up sweep. Other phase3 tasks
@@ -1173,6 +1203,17 @@ function HousekeepingService() {
         lastSet.has(o.orderId) && !sentSet.has(o.orderId)
       );
 
+      // Read each template's content once per sweep (Doc-first via
+      // LibraryService.getEntityContent; falls back to inline fields). Keyed by
+      // slug so the per-order loop doesn't re-open the same Doc.
+      const templateContentCache = {};
+      const getTemplateContent = (slug) => {
+        if (!(slug in templateContentCache)) {
+          templateContentCache[slug] = LibraryService.getEntityContent({ entityId: slug });
+        }
+        return templateContentCache[slug];
+      };
+
       let sent = 0;
       eligible.forEach(o => {
         try {
@@ -1193,19 +1234,21 @@ function HousekeepingService() {
           ).length;
           const isFirstTime = completedCount === 0;
 
-          // Compose — templates read from SysLibrary (phase 10 migration 2026-05-28).
-          // Previous SysConfig source `crm.template.pending_payment.*` rows retire alongside welcome family.
+          // Compose — content sourced from the entity's Doc (slb_DocUrl) when
+          // present, else inline fields (LibraryService.getEntityContent). The Doc
+          // is the editable source of truth; the email Doc carries the subject as
+          // a leading "Subject:" line + the body, the addendum Doc is body-only.
           const lang = (o.language === 'he') ? 'he' : 'en';
           const emailSlug = `template-pending-payment-email-${lang}`;
           const addendumSlug = `template-pending-payment-addendum-${lang}`;
-          const emailEntity = LibraryService.getEntityBySlug(emailSlug);
-          const addendumEntity = LibraryService.getEntityBySlug(addendumSlug);
-          if (!emailEntity) {
+          const emailContent = getTemplateContent(emailSlug);
+          if (!emailContent) {
             logger.warn('HousekeepingService', functionName, `Missing library template ${emailSlug}. Skipping ${o.orderId}.`);
             return;
           }
-          const subject = emailEntity.slb_Subject || '';
-          const addendumText = (addendumEntity && addendumEntity.slb_Body) || '';
+          const subject = emailContent.subject || '';
+          const addendumContent = isFirstTime ? getTemplateContent(addendumSlug) : null;
+          const addendumText = (addendumContent && addendumContent.body) || '';
           const firstTimeBlock = isFirstTime ? addendumText : '';
           const name = String(o.firstName || '').trim() || 'there';
 
@@ -1216,7 +1259,7 @@ function HousekeepingService() {
             ? `https://www.jlmwines.com/checkout/order-pay/${o.orderId}/?pay_for_order=true&key=${o.orderKey}`
             : `https://www.jlmwines.com/my-account/view-order/${o.orderId}/`;
 
-          const body = String(emailEntity.slb_Body || '')
+          const body = String(emailContent.body || '')
             .replace(/\{name\}/g, name)
             .replace(/\{first_time_block\}/g, firstTimeBlock)
             .replace(/\{order_pay_url\}/g, orderPayUrl);

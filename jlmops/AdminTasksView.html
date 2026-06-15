@@ -696,7 +696,11 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
       getEntity: function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
       refresh: render,
-      reload: loadData
+      reload: loadData,
+      // MANAGE form already renders an editable Notes (task-field-notes, saved by
+      // saveTaskStatus) — suppress the pack's duplicate Notes so there's one field
+      // (Step 8). Pack handlers fall back to task.notes when the textarea is absent.
+      hideNotes: true
     });
 
     // Set initial panel state
@@ -1043,6 +1047,13 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       }
     });
 
+    // Re-filter the "add to existing" picker to the chosen type, and clear any
+    // prior selection so a stale cross-type pick can't linger.
+    document.getElementById('content-entity-type').addEventListener('change', function() {
+      populateContentExistingEntities();
+      document.getElementById('content-existing-entity').value = '';
+    });
+
     document.getElementById('btn-content-import').addEventListener('click', function() {
       document.getElementById('content-import-csv').value = '';
       document.getElementById('import-result').style.display = 'none';
@@ -1062,13 +1073,22 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   function populateContentExistingEntities() {
     var sel = document.getElementById('content-existing-entity');
     if (!sel) return;
+    var selectedType = document.getElementById('content-entity-type').value;
     var seen = {};
     var opts = ['<option value="">— New entity —</option>'];
     (state.library || []).forEach(function(e) {
-      var base = String(e.slug || '').replace(/-(en|he)$/, '');
+      // Show only entities of the chosen type, so the picker isn't a flat dump of
+      // every entity (blogs/images/templates) regardless of the selected type.
+      // (Server field is contentType, not type.)
+      if (selectedType && e.contentType !== selectedType) return;
+      // Collapse EN/HE siblings to one base entry; the base slug is the value
+      // spawnContentChain re-suffixes per stage. Label with the language-stripped
+      // title so a pair reads as one piece, not "the EN one".
+      var base = String(e.slug || '').replace(/-(en|he)$/i, '');
       if (!base || seen[base]) return;
       seen[base] = true;
-      opts.push('<option value="' + TaskWidgets.escape(base) + '" data-type="' + TaskWidgets.escape(e.type || '') + '">' + TaskWidgets.escape(e.title || base) + '</option>');
+      var label = String(e.title || base).replace(/\s*\((?:en|he)\)\s*$/i, '');
+      opts.push('<option value="' + TaskWidgets.escape(base) + '" data-type="' + TaskWidgets.escape(e.contentType || '') + '">' + TaskWidgets.escape(label) + '</option>');
     });
     sel.innerHTML = opts.join('');
   }
@@ -2174,11 +2194,25 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       return;
     }
 
+    // Disable + relabel before the round-trip so a second click can't submit a
+    // duplicate task; re-enable in both handlers. (No spinner/guard previously →
+    // double-submit created the task twice.)
+    var btn = document.getElementById('btn-create-task');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
     google.script.run
       .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = 'Create';
         if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
         document.getElementById('newTaskModal').style.display = 'none';
         loadData();
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = 'Create';
+        TaskWidgets.toast('Error: ' + (err.message || 'Failed to create task'), 'error');
       })
       .WebAppTasks_createTask({
         projectId: projectId,

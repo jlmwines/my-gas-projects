@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-14 — JLM Wines ecosystem live; jlmops @293 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–2 shipped, Deploy 3 (manager↔TaskPacks convergence) is next.
+**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @303 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; templates now editable via Docs (Create-Doc seeds inline content; pending-payment send reads from Doc with field fallback); edit-task close dialog plain-language ("Editing Done") (@302).
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @293; content-workflow redesign Deploys 1–2 shipped (Deploy 3 convergence next); build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @302; content-workflow redesign Deploys 1–4 shipped (manager TaskPacks convergence live); build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 10 editorial posts live (EN+HE); 3 in pipeline.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing.
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @293 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-14 · theme 2026-06-12 |
+| Deploy Version | jlmops @303 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-15 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
@@ -43,7 +43,7 @@ The live "what now" — daily review reads these first.
 - **Sync workflow** — stable. 12-state machine (Comax ↔ Sheets ↔ WooCommerce); imports, exports, validation all working.
 - **Import system** — full Woo REST API pull (products + translations + orders); "API Pull" button runs the pipeline. Order pull = 30-day rolling window. Plan → `jlmops/plans/WOO_ORDER_IMPORT_PLAN.md`.
 - **CRM enrichment** — complete; 548 contacts with dual-language preferences. `campaign.received` activity backfill works (manual via Dev → Backfill Campaign Activity button); daily auto-wiring deferred; richer per-recipient open/click data would need the Mailchimp member API. Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
-- **Content Library** — entity / task / activity-log model, live. **Content-workflow redesign Deploys 1–2 shipped @293:** content-chain spawner on AdminTasks + `slb_TargetDate`; LibraryView **Deficiency** demand view; entity-drawer **Family** roll-up; admin **Request Correction** / **Abandon**; `slb_State` vocabulary (draft→locked→published + abandoned) with publish-task auto-transition. **Deploy 3 next** = manager dashboard → shared TaskPacks convergence (Step 5) + Notes de-dup (Step 8) — the riskiest, isolated; deserves fresh context. Plans → `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` (deploy plan + Step 5 spec), `plans/CONTENT_LIBRARY_PLAN.md`. Older: Phase 12 cross-link renderer still blocked on regions overhaul.
+- **Content Library** — entity / task / activity-log model, live. **Content-workflow redesign Deploys 1–4 shipped (@293–@295):** content-chain spawner on AdminTasks + `slb_TargetDate`; LibraryView **Deficiency** demand view; entity-drawer **Family** roll-up; admin **Request Correction** / **Abandon**; `slb_State` vocabulary (draft→locked→published + abandoned) with publish-task auto-transition; manager dashboard converged onto **TaskPacks** (bespoke editor + `task.fileUrl` retired; editable status/Save/Notes kept for skeleton types) + AdminTasks **Notes de-dup** (`ctx.hideNotes`); **Library direct-Doc access** (list-row ↗ Doc link + drawer Open-Doc button); **LibraryView is now catalog-only** — the Tasks tab/panel was removed (the task-list lens lives in AdminTasksView for admin + the dashboard queue for manager; lock/publish happen there). Library keeps catalog + Deficiency + entity drawer (spawn / Request Correction / Abandon / Open Doc). Plans → `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md`, `plans/CONTENT_LIBRARY_PLAN.md`. Older: Phase 12 cross-link renderer still blocked on regions overhaul.
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR builder, `AdminCampaignsView`). Short URLs pasted into RankMath manually (low volume); auto-push deferred. Plans → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`, `CADENCE_REALIGNMENT_PLAN.md`.
 - **Bundles** — all stages (0–7) complete, live; rev-2.2 suggestion generator + inline-at-row editor with per-bundle EN/HE export shipped. EN+HE woosb output verified live. Remaining: composite-weight tuning of rough spots. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — complete. OPS writes system-health (15-min) + KPI (daily + on-demand) into `jlmops-status.md`; `/review-daily` reads it each run. GA4 Traffic live; GSC populates on its next dated fetch. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
@@ -54,6 +54,7 @@ The live "what now" — daily review reads these first.
 - **SKU management** (deployed 2026-02-19): Vendor SKU Update and Trim Safety not yet tested. (Product Replacement tested, working.)
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.
+- **Deploy 3 manager-dashboard pack types — partial smoke (@295).** Verified for task types present in the queue; **contact / confirmation / content-publish packs not yet exercised** (no such tasks live at deploy time). Smoke each when one next appears: contact context block + Open contact; Mark Confirmed; External-URL + Mark Published. Also confirm AdminTasks now shows a **single Notes** field (Step 8 `hideNotes`).
 
 ## Known Issues
 

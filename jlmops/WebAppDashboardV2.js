@@ -793,7 +793,12 @@ function WebAppDashboardV2_getManagerData() {
     // Resolve content tasks' related file via the existing task->entity linkage
     // (st_EntityId -> SysLibrary slb_Slug -> slb_DocUrl). Read SysLibrary once,
     // and only when a manager content task is actually present.
-    let libBySlug = {};
+    // Read SysLibrary once into a slug -> entity map so the client's TaskPacks
+    // getEntity() can source Doc links + version/state per content task (Step 5
+    // convergence). Only when a manager content task is actually present. This
+    // replaces the old per-task fileUrl resolution: the pack now sources the Doc
+    // from the entity, so there is no server-side fileUrl/resolveContentFileUrl.
+    let libraryBySlug = {};
     const hasContentTasks = allTasksIncludingDone.some(t =>
       t.st_AssignedTo === 'Manager' &&
       t.st_Status !== 'Cancelled' &&
@@ -805,29 +810,19 @@ function WebAppDashboardV2_getManagerData() {
         if (librarySheet) {
           _rowsToObjects(librarySheet.getDataRange().getValues()).forEach(r => {
             if (r.slb_Slug) {
-              libBySlug[r.slb_Slug] = {
-                doc: r.slb_DocUrl || '',
-                refs: String(r.slb_References || '').split(',').map(s => s.trim()).filter(Boolean)
+              libraryBySlug[r.slb_Slug] = {
+                slug: r.slb_Slug,
+                docUrl: r.slb_DocUrl || '',
+                version: r.slb_Version || 0,
+                state: r.slb_State || ''
               };
             }
           });
         }
       } catch (libErr) {
-        // Non-fatal — content tasks just won't carry a file link this load.
+        // Non-fatal — content packs just won't carry a Doc link this load.
       }
     }
-    // Resolve a content entity's related file: its own Doc, else a referenced
-    // source's Doc (a translation has no Doc yet -> open the source it references).
-    const resolveContentFileUrl = (slug) => {
-      const e = libBySlug[slug];
-      if (!e) return '';
-      if (e.doc) return e.doc;
-      for (let i = 0; i < e.refs.length; i++) {
-        const ref = libBySlug[e.refs[i]];
-        if (ref && ref.doc) return ref.doc;
-      }
-      return '';
-    };
 
     const managerTasks = allTasksIncludingDone
       .filter(task => task.st_AssignedTo === 'Manager')
@@ -879,17 +874,6 @@ function WebAppDashboardV2_getManagerData() {
           }
         }
 
-        // For content tasks, attach the related file's URL so the dashboard can
-        // link straight to it. If the entity ref is already a URL use it; else
-        // resolve via the linked library entity (st_EntityId -> slug -> Doc URL).
-        if (typeof base.typeId === 'string' && base.typeId.indexOf('.content.') !== -1) {
-          if (base.entityId && String(base.entityId).indexOf('http') === 0) {
-            base.fileUrl = base.entityId;
-          } else {
-            base.fileUrl = resolveContentFileUrl(task.st_EntityId || base.entityId || '');
-          }
-        }
-
         return base;
       })
       .sort((a, b) => {
@@ -914,7 +898,8 @@ function WebAppDashboardV2_getManagerData() {
       inventory: _getInventoryData(allOpenTasks),
       products: _getProductsData(allOpenTasks),
       projects: _getProjectSummaries(allOpenTasks),
-      managerTasks: managerTasks
+      managerTasks: managerTasks,
+      libraryBySlug: libraryBySlug
     };
 
     return { success: true, data: result };

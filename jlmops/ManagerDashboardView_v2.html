@@ -1,4 +1,5 @@
 <?!= include('TaskWidgets') ?>
+<?!= include('TaskPacks') ?>
 <style>
   /* Role-based visibility */
   .admin-only { display: none; }
@@ -253,10 +254,21 @@
   var state = {
     tasks: [],
     filteredTasks: [],
+    libraryBySlug: {},
     expandedTaskId: null,
     currentWeekStart: getWeekStart(new Date()),
     view: 'list'
   };
+
+  // Wire the shared TaskPacks kit to this view's state + refresh callbacks once.
+  // getEntity sources Doc links + version/state for content packs (Step 5); the
+  // closures read live state, so each load's data is picked up automatically.
+  TaskPacks.configure({
+    getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
+    getEntity: function(slug) { return state.libraryBySlug[slug] || null; },
+    refresh: renderTaskList,
+    reload: loadDashboard
+  });
 
   function getWeekStart(date) {
     var d = new Date(date);
@@ -282,6 +294,7 @@
     try {
       var data = response.data;
       state.tasks = data.managerTasks || [];
+      state.libraryBySlug = data.libraryBySlug || {};
 
       renderOrdersCard(data.orders);
       renderInventoryCard(data.inventory);
@@ -474,14 +487,18 @@
         html += '</div>';
       }
 
-      // Single row: Stream, Start, Due, Done, Priority, Open link, Status, Revert, Save
       var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
       var isSystemTask = task.typeId && (
         task.typeId.indexOf('task.inventory.') === 0 ||
         task.typeId.indexOf('task.validation.comax') === 0 ||
         task.typeId === 'task.order.packing_available'
       );
+      // Typed pack = content/confirmation/deep-link (has its own body + action).
+      // Skeleton-fallback types have no pack action, so they keep the editable
+      // status + Save + Notes editor below (Step 5 convergence).
+      var isTyped = TaskPacks.hasTypedPack(task.typeId);
 
+      // Read-only metadata context.
       html += '<div class="detail-row">';
       html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
       html += '<div><label>Start</label><div>' + TaskWidgets.formatDateFull(task.startDate) + '</div></div>';
@@ -491,23 +508,43 @@
       html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
       html += '</div>';
 
-      // Actions, separated from the metadata above: each is a real tappable button
-      // that wraps to share rows on mobile. The "open the resource" + complete
-      // (Save) actions are emphasized; Revert stays secondary.
-      html += '<div class="task-actions">';
-      if (isUrl2 && !(task.typeId && task.typeId.indexOf('task.content.') === 0)) {
-        html += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light tw-action tw-action-primary">&#8599; Document</a>';
+      // Navigation actions, rendered ABOVE the pack: a Document link for URL
+      // entities and the taskOpenTarget deep-link (both only for non-typed tasks —
+      // typed packs carry their own file chip / Open button), plus Revert (a
+      // manager->admin role-transfer, preserved as its own button for any
+      // non-system task). Task-working itself happens in the pack / editor below.
+      var navHtml = '';
+      if (isUrl2 && !isTyped) {
+        navHtml += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">&#8599; Document</a>';
       }
-      var openTarget = taskOpenTarget(task);
-      if (openTarget && openTarget.url) {
-        html += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
-      } else if (openTarget) {
-        var setAttr = openTarget.set
-          ? ' data-set-key="' + openTarget.set[0] + '" data-set-val="' + TaskWidgets.escape(openTarget.set[1]) + '"'
-          : '';
-        html += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
+      if (!isTyped) {
+        var openTarget = taskOpenTarget(task);
+        if (openTarget && openTarget.url) {
+          navHtml += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
+        } else if (openTarget) {
+          var setAttr = openTarget.set
+            ? ' data-set-key="' + openTarget.set[0] + '" data-set-val="' + TaskWidgets.escape(openTarget.set[1]) + '"'
+            : '';
+          navHtml += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
+        }
       }
       if (!isSystemTask) {
+        navHtml += '<button type="button" class="btn btn-sm btn-light tw-action btn-revert-task" data-id="' + task.id + '" data-name="' + TaskWidgets.escape(task.name) + '">Revert</button>';
+      }
+      if (navHtml) html += '<div class="task-actions">' + navHtml + '</div>';
+
+      // DO surface. Typed packs render their own body + action via TaskPacks.
+      // Skeleton/non-system tasks keep an editable status + Save + Notes (the pack's
+      // skeleton fallback is read-only and offers no status control — this preserves
+      // "set In Progress without closing"). System skeleton tasks stay read-only.
+      if (isTyped) {
+        html += '<div class="task-pack-do">' + TaskPacks.packBody(task) + '</div>';
+      } else if (isSystemTask) {
+        html += '<div><label>Notes</label></div>';
+        html += '<div class="p-2 bg-white border rounded small">' + TaskWidgets.escape(task.notes || '-') + '</div>';
+        html += '<div class="mt-2 small text-muted">System task - managed by workflow</div>';
+      } else {
+        html += '<div class="task-actions">';
         html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
         ['New', 'In Progress', 'Done'].forEach(function(s) {
           var sel = s === task.status ? ' selected' : '';
@@ -515,16 +552,8 @@
         });
         html += '</select>';
         html += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-save-task" data-id="' + task.id + '">Save</button>';
-        html += '<button type="button" class="btn btn-sm btn-light tw-action btn-revert-task" data-id="' + task.id + '" data-name="' + TaskWidgets.escape(task.name) + '">Revert</button>';
-      }
-      html += '</div>';
-
-      // Notes
-      html += '<div><label>Notes</label></div>';
-      if (isSystemTask) {
-        html += '<div class="p-2 bg-white border rounded small">' + TaskWidgets.escape(task.notes || '-') + '</div>';
-        html += '<div class="mt-2 small text-muted">System task - managed by workflow</div>';
-      } else {
+        html += '</div>';
+        html += '<div><label>Notes</label></div>';
         html += '<textarea class="form-control task-notes" data-id="' + task.id + '">' + TaskWidgets.escape(task.notes || '') + '</textarea>';
       }
       html += '</div>';
@@ -576,9 +605,8 @@
     if (t.indexOf('task.contact.') === 0 && task.entityId) {
       return { label: 'Open contact', view: 'ManagerContacts', set: ['selectContactEmail', task.entityId] };
     }
-    if (t.indexOf('task.content.') === 0 && task.fileUrl) {
-      return { label: 'Open file', url: task.fileUrl };
-    }
+    // Content tasks navigate via the pack's own Doc chip (task.fileUrl retired in
+    // the Step 5 convergence) — no taskOpenTarget content case.
     if (t === 'task.product.verify') {
       return { label: 'Verify', view: 'ManagerProducts', set: ['startVerifyWalk', '1'] };
     }
