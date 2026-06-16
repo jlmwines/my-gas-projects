@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-15 — JLM Wines ecosystem live; jlmops @305 · theme v1.2.30; 0 blockers; content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; templates spawn as EN/HE pairs; **all library templates now Doc-sourced** (edited via Docs; every consumer — pending-payment send + outreach Action Panel — reads the current Doc via `getEntityContent`, field/SysConfig fallback); edit-task close dialog plain-language ("Editing Done"); pack-button form-submit blank-page bug fixed (@305).
+**Updated:** 2026-06-16 — JLM Wines ecosystem live; jlmops @306 · theme v1.2.30; 0 blockers; Admin Products SKU Management gains a **Correct Product Name** tool (@306, title-only, write-and-confirm: writes WebProdM `wpm_PostTitle` + WebDetM names, WebXltM reference-only, Comax untouched — operator applies the title on WooCommerce by hand); content-workflow redesign Deploys 1–4 shipped; LibraryView catalog-only; all library templates Doc-sourced.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @305; content-workflow redesign Deploys 1–4 shipped (manager TaskPacks convergence live); build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @306; Correct Product Name tool in Admin Products SKU Management (@306); content-workflow redesign Deploys 1–4 shipped (manager TaskPacks convergence live); build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 10 editorial posts live (EN+HE); 3 in pipeline.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing.
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-10 |
 | Revenue | Steady |
-| Deploy Version | jlmops @305 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-15 · theme 2026-06-12 |
+| Deploy Version | jlmops @306 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-16 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 10 editorial posts live (EN+HE); 3 in pipeline (Handling and Storage, Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
@@ -51,7 +51,8 @@ The live "what now" — daily review reads these first.
 
 ### Pending verification (watch items)
 
-- **SKU management** (deployed 2026-02-19): Vendor SKU Update and Trim Safety not yet tested. (Product Replacement tested, working.)
+- **Correct Product Name tool** (@306, deployed live 2026-06-16, no /dev smoke): exercise once — search a product, edit EN and/or HE, Save, confirm the WebProdM `wpm_PostTitle` + WebDetM name cells changed and a "Name Update" row appears in Recent Updates. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
+- **SKU management** (deployed 2026-02-19): Vendor SKU Update and Trim Safety not yet tested. (Product Replacement tested, working — but see `.claude/bugs.md` 2026-06-16: its product search reads dead WebProdM columns.)
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.
 - **Deploy 3 manager-dashboard pack types — partial smoke (@295).** Verified for task types present in the queue; **contact / confirmation / content-publish packs not yet exercised** (no such tasks live at deploy time). Smoke each when one next appears: contact context block + Open contact; Mark Confirmed; External-URL + Mark Published. Also confirm AdminTasks now shows a **single Notes** field (Step 8 `hideNotes`).

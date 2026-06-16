@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-16 — Correct Product Name tool shipped (@306)
+
+- **Shipped @306:** title-only product-name correction in Admin Products → SKU Management (new 4th button + modal). Write-and-confirm in session (no /dev — jlmops has none; deployed straight to live, unsmoked → STATUS watch item). Writes WebProdM `wpm_PostTitle` (EN) + WebDetM `wdm_NameEn`/`wdm_NameHe` (both), keyed by EN SKU; WebXltM reference-only (nothing reads `wxm_PostTitle`); Comax untouched. Logs to SysLog, shows in Recent Updates as "Name Update". `ProductService.correctProductName` + `_findRowBySku` + `_logNameUpdate`; `WebAppProducts_correctProductName`; modal uses ModalOverlay/TaskWidgets.
+- **Grounded the data model against live exports** (user dropped today's CSVs in `jlmops/exchange/`): WebProdM = 746 EN rows, WebXltM = 746 HE rows (HE title in `wxm_PostTitle`, reference-only), WebDetM = 747 rows both names. EN SKU is the universal key.
+- **Logged a separate bug** (`.claude/bugs.md` 2026-06-16): Product Replacement's `searchWebProducts`/`lookupProductBySku` read dead `wpm_WebIdEn`/`wpm_WebIdHe` columns → blank web IDs (real ids: `wpm_ID` / WebXltM `wxm_ID`). Not traced through the swap; "tested working" tension noted. Independent of this tool.
+- **Clasp reauth** needed mid-deploy (`invalid_rapt`); user ran login, wrapper retried clean → @306.
+- **Next:** smoke the Correct Product Name tool live; examine the Product Replacement dead-column bug.
+
 ## 2026-06-15 — Content-workflow redesign: Deploys 3–4 shipped (@294→@295)
 
 - **Deploy 4 @294** (Step 9, shipped first as low-risk): Library **direct Doc access** — list-row `↗ Doc` link in both presets + drawer action-bar `↗ Open Doc` button, both gated on `entity.docUrl` (data already on `state.library`, client-only). Also relabeled the sync widget's post-sync nav button "Run Bundle Analysis" → **"Bundles"** (it only navigates; `runBundleAnalysis()` fn name left as-is). User confirmed Doc links work.
