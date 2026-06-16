@@ -84,6 +84,13 @@ const MANIFEST = [
     heSlug: 'context', heId: 67405,
     enFile: 'Context EN.post.md',
     heFile: 'Context HE.post.md'
+  },
+  {
+    name: 'handling',
+    enSlug: 'how-to-store-open-serve-wine', enId: 67497,
+    heSlug: 'how-to-store-open-serve-wine', heId: 67500,
+    enFile: 'Handling EN.post.md',
+    heFile: 'Handling HE.post.md'
   }
 ];
 
