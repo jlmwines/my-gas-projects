@@ -85,6 +85,8 @@ _One line each; full root-cause analysis lives in the git commit + `.claude/sess
 
 ### Open
 
+- [ ] 2026-06-16: **Gift + accessory descriptions blanked on jlmwines.com** — the ops description overlay wrote empty descriptions onto non-wine SKUs (no tasting attributes → formatter emits empty, and nothing stored in WebDetM). Originals found in old files; user restoring manually. **Recurrence prevention:** restored text must land in WebDetM `wdm_DescriptionEn/He` (the formatter inserts that freeform field verbatim — verified `WooCommerceFormatter.js:213`), not just the live WC site, else the next overlay re-blanks it.
+
 - [ ] 2026-05-11: **Mixed-content HTTP image on HE homepage** — `http://jlmwines.com/wp-content/uploads/2023/04/value-speical-sq-599x599.jpg` referenced in homepage Page #64199 (HE). Triggers Chrome "does not support secure connection" warning in private/incognito (HTTPS-Only Mode is stricter there). Fix: locate the image reference in the Page content and change to `https://` (or protocol-relative `//`). Slated AFTER WPML translation verification.
 
 - [ ] 2026-05-11: **GTIN structured-data enrichment** (deferred, separate from SKU admin issue) — populating `Product.gtin` would improve product schema (currently emits `pa_winery` / `pa_complexity` taxonomy slugs). Requires Comax-side source check + new column in `CmxProdM` + `WebDetM` + WC push path + GTIN-8/12/13/14 checksum validator. Policy: only write when value passes validation; never store false GTIN data. Same dependency profile as the cross-sell deferral.

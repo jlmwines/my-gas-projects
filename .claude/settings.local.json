@@ -83,7 +83,9 @@
       "Bash(cat .claude/settings.local.json)",
       "Bash(ls -la docs/)",
       "Bash(ls jlmops/docs/)",
-      "Bash(awk '{print $6, $7, $8, $NF}')"
+      "Bash(awk '{print $6, $7, $8, $NF}')",
+      "Bash(awk '{print $6, $7, $8, $9}')",
+      "WebFetch(domain:www.pulltex.com)"
     ],
     "deny": [
       "Bash(git -C:*)",
