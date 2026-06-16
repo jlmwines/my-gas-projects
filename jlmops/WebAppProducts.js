@@ -1006,6 +1006,24 @@ function WebAppProducts_vendorSkuUpdate(oldSku, newSku) {
 }
 
 /**
+ * Corrects a product's title (name) in one or both languages.
+ * Writes WebProdM (EN title) + WebDetM (both names); WebXltM stays reference-only.
+ * Write-and-confirm flow — the operator applies the title on WooCommerce by hand.
+ * @param {string} sku The product (EN) SKU.
+ * @param {string} newNameEn New English title ('' = leave EN unchanged).
+ * @param {string} newNameHe New Hebrew title ('' = leave HE unchanged).
+ * @returns {Object} { success, message, sku, webIdEn, webIdHe, changes }
+ */
+function WebAppProducts_correctProductName(sku, newNameEn, newNameHe) {
+  try {
+    return ProductService.correctProductName(sku, newNameEn, newNameHe);
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'correctProductName', `Error: ${e.message}`, e);
+    return { success: false, message: e.message };
+  }
+}
+
+/**
  * Reassigns a web product to a new Comax SKU, with optional IsWeb flag updates.
  * @param {string} webProductId The WooCommerce Product ID (EN or HE).
  * @param {string} oldSku The old Comax SKU being replaced.

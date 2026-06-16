@@ -2210,6 +2210,121 @@ const ProductService = (function() {
   }
 
   /**
+   * Corrects a product's title (name) in one or both languages. Write-and-confirm
+   * flow: this writes the jlmops sheets only — the product title is NOT auto-pushed,
+   * so the operator applies the change on WooCommerce by hand afterward.
+   *
+   * Title write homes, both keyed by the EN SKU:
+   *   - WebProdM `wpm_PostTitle`  (English title)
+   *   - WebDetM  `wdm_NameEn` / `wdm_NameHe`  (both names)
+   * WebXltM is reference-only (its `wxm_PostTitle` is not read by the system) and is
+   * NOT written; its `wxm_ID` is read only to surface the HE Woo product id for the
+   * operator. Comax (`cpm_NameHe`) is untouched.
+   *
+   * Only a language whose new name is non-empty AND differs from the current value
+   * is written (an empty field is treated as "leave unchanged" so a title is never
+   * accidentally blanked).
+   *
+   * @param {string} sku The product (EN) SKU.
+   * @param {string} newNameEn New English title ('' = leave EN unchanged).
+   * @param {string} newNameHe New Hebrew title ('' = leave HE unchanged).
+   * @returns {Object} { success, message, sku, webIdEn, webIdHe, changes:{en?,he?} }
+   */
+  function correctProductName(sku, newNameEn, newNameHe, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = 'correctProductName';
+
+    sku = String(sku || '').trim();
+    newNameEn = (newNameEn == null) ? '' : String(newNameEn).trim();
+    newNameHe = (newNameHe == null) ? '' : String(newNameHe).trim();
+
+    logger.info(serviceName, functionName, `Starting name correction for SKU ${sku}`, { sessionId, sku });
+
+    if (!sku) return { success: false, message: 'SKU is required.' };
+    if (!newNameEn && !newNameHe) return { success: false, message: 'Provide a new name in at least one language.' };
+
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const spreadsheet = SheetAccessor.getDataSpreadsheet();
+      const userEmail = Session.getActiveUser().getEmail();
+
+      // WebProdM — English title home (wpm_PostTitle) + wpm_ID for the operator summary
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+      const webProdHeaders = allConfig['schema.data.WebProdM'].headers.split(',');
+      const wpmSkuIdx = webProdHeaders.indexOf('wpm_SKU');
+      const wpmTitleIdx = webProdHeaders.indexOf('wpm_PostTitle');
+      const wpmIdIdx = webProdHeaders.indexOf('wpm_ID');
+
+      // WebDetM — both names (wdm_NameEn / wdm_NameHe)
+      const webDetSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+      const webDetHeaders = allConfig['schema.data.WebDetM'].headers.split(',');
+      const wdmSkuIdx = webDetHeaders.indexOf('wdm_SKU');
+      const wdmNameEnIdx = webDetHeaders.indexOf('wdm_NameEn');
+      const wdmNameHeIdx = webDetHeaders.indexOf('wdm_NameHe');
+
+      const wp = _findRowBySku(webProdSheet, wpmSkuIdx, sku);
+      const wd = _findRowBySku(webDetSheet, wdmSkuIdx, sku);
+
+      if (!wd) return { success: false, message: `No WebDetM record found for SKU ${sku}.` };
+
+      const oldNameEn = wp && wpmTitleIdx >= 0 ? String(wp.values[wpmTitleIdx] || '') : String(wd.values[wdmNameEnIdx] || '');
+      const oldNameHe = String(wd.values[wdmNameHeIdx] || '');
+
+      const updatedSheets = [];
+      const changes = {};
+      const pushSheet = (name) => { if (updatedSheets.indexOf(name) === -1) updatedSheets.push(name); };
+
+      // English: WebProdM wpm_PostTitle + WebDetM wdm_NameEn
+      if (newNameEn && newNameEn !== oldNameEn) {
+        if (wp && wpmTitleIdx >= 0) {
+          webProdSheet.getRange(wp.rowNum, wpmTitleIdx + 1).setValue(newNameEn);
+          pushSheet('WebProdM');
+        }
+        if (wdmNameEnIdx >= 0) {
+          webDetSheet.getRange(wd.rowNum, wdmNameEnIdx + 1).setValue(newNameEn);
+          pushSheet('WebDetM');
+        }
+        changes.en = { from: oldNameEn, to: newNameEn };
+      }
+
+      // Hebrew: WebDetM wdm_NameHe only
+      if (newNameHe && newNameHe !== oldNameHe) {
+        if (wdmNameHeIdx >= 0) {
+          webDetSheet.getRange(wd.rowNum, wdmNameHeIdx + 1).setValue(newNameHe);
+          pushSheet('WebDetM');
+        }
+        changes.he = { from: oldNameHe, to: newNameHe };
+      }
+
+      if (!changes.en && !changes.he) {
+        return { success: false, message: 'No change — the new name matches the current name.' };
+      }
+
+      _logNameUpdate(sku, changes, userEmail, updatedSheets.join(', '));
+      _invalidateProductCache();
+
+      // Operator summary — the two Woo products to update by hand. Reads the real
+      // post ids (wpm_ID / WebXltM wxm_ID), NOT the dead wpm_WebIdEn columns.
+      const webXltSheet = spreadsheet.getSheetByName('WebXltM');
+      const webXltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+      const wxmSkuIdx = webXltHeaders.indexOf('wxm_SKU');
+      const wxmIdIdx = webXltHeaders.indexOf('wxm_ID');
+      const wx = webXltSheet ? _findRowBySku(webXltSheet, wxmSkuIdx, sku) : null;
+
+      const webIdEn = wp && wpmIdIdx >= 0 ? String(wp.values[wpmIdIdx] || '') : '';
+      const webIdHe = wx && wxmIdIdx >= 0 ? String(wx.values[wxmIdIdx] || '') : '';
+
+      const message = `Updated ${Object.keys(changes).join(' + ').toUpperCase()} in: ${updatedSheets.join(', ')}`;
+      logger.info(serviceName, functionName, message, { sessionId, sku, updatedSheets });
+      return { success: true, message, sku, webIdEn, webIdHe, changes };
+
+    } catch (e) {
+      logger.error(serviceName, functionName, `Error correcting name: ${e.message}`, e, { sessionId, sku });
+      return { success: false, message: `Error: ${e.message}` };
+    }
+  }
+
+  /**
    * Fix Orphan SKU — rewrites a SKU across web-side sheets WITHOUT touching Comax.
    * Use this when Comax has already updated to a new SKU but web data still
    * references the old one (validation orphan). Different from vendorSkuUpdate
@@ -2556,6 +2671,23 @@ const ProductService = (function() {
   }
 
   /**
+   * Finds the first row matching a SKU and returns its 1-based row number and
+   * full value array (for reading old values and writing specific columns).
+   * @returns {{rowNum:number, values:Array}|null}
+   */
+  function _findRowBySku(sheet, skuColIdx, sku) {
+    if (!sheet || skuColIdx < 0) return null;
+    const data = sheet.getDataRange().getValues();
+    const target = String(sku).trim();
+    for (let i = 1; i < data.length; i++) { // Skip header
+      if (String(data[i][skuColIdx]).trim() === target) {
+        return { rowNum: i + 1, values: data[i] };
+      }
+    }
+    return null;
+  }
+
+  /**
    * Logs a SKU update to SysLog for audit trail.
    * @param {string} updateType 'VendorSkuUpdate' or 'WebProductReassign'
    * @param {string} oldSku The old SKU.
@@ -2587,6 +2719,35 @@ const ProductService = (function() {
   }
 
   /**
+   * Logs a product name correction to SysLog for the audit trail. Surfaced in the
+   * SKU Management "Recent Updates" table (via getRecentSkuUpdates) as a Name Update.
+   * @param {string} sku The product SKU.
+   * @param {Object} changes { en?:{from,to}, he?:{from,to} }
+   * @param {string} userEmail The user who performed the update.
+   * @param {string} affectedSheets Comma-separated list of updated sheets.
+   */
+  function _logNameUpdate(sku, changes, userEmail, affectedSheets) {
+    try {
+      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
+      if (logSheet) {
+        const logEntry = [
+          new Date(),
+          'INFO',
+          'ProductService',
+          'ProductNameCorrection',
+          `Name correction: ${sku}`,
+          JSON.stringify({ sku, changes, affectedSheets, updatedBy: userEmail }),
+          ''  // sessionId
+        ];
+        logSheet.appendRow(logEntry);
+      }
+    } catch (e) {
+      // Don't throw - logging failure shouldn't break the main operation
+      console.error(`Failed to log name update: ${e.message}`);
+    }
+  }
+
+  /**
    * Gets recent SKU updates from SysLog for display in the UI.
    * @param {number} limit Number of records to return (default 10).
    * @returns {Array<Object>} Array of { date, type, oldSku, newSku, updatedBy }
@@ -2614,6 +2775,20 @@ const ProductService = (function() {
               type: functionName === 'VendorSkuUpdate' ? 'Vendor Update' : 'Reassign',
               oldSku: details.oldSku || '',
               newSku: details.newSku || '',
+              updatedBy: details.updatedBy || ''
+            });
+          } catch (parseErr) {
+            // Skip malformed entries
+          }
+        } else if (functionName === 'ProductNameCorrection') {
+          try {
+            const details = JSON.parse(data[i][5] || '{}');
+            // Name corrections don't change the SKU; show it in both columns.
+            results.push({
+              date: data[i][0],
+              type: 'Name Update',
+              oldSku: details.sku || '',
+              newSku: details.sku || '',
               updatedBy: details.updatedBy || ''
             });
           } catch (parseErr) {
@@ -3323,6 +3498,7 @@ const ProductService = (function() {
     acceptProductSuggestion: acceptProductSuggestion,
     linkAndFinalizeNewProduct: linkAndFinalizeNewProduct,
     vendorSkuUpdate: vendorSkuUpdate,
+    correctProductName: correctProductName,
     fixOrphanSku: fixOrphanSku,
     webProductReassign: webProductReassign,
     getRecentSkuUpdates: getRecentSkuUpdates,

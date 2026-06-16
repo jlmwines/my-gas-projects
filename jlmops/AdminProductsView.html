@@ -278,10 +278,11 @@
       <div class="card-body" id="card-body-sku" style="display:none;">
 
         <!-- Action Buttons -->
-        <div class="d-flex mb-4">
-          <button class="btn btn-sm mr-3" onclick="AdminProductsView.openVendorSkuModal()">Vendor SKU Update</button>
-          <button class="btn btn-sm mr-3" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
+        <div class="d-flex flex-wrap mb-4" style="gap: 0.5rem;">
+          <button class="btn btn-sm" onclick="AdminProductsView.openVendorSkuModal()">Vendor SKU Update</button>
+          <button class="btn btn-sm" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
           <button class="btn btn-sm" onclick="AdminProductsView.openFixOrphanModal()">Fix Orphan SKU</button>
+          <button class="btn btn-sm" onclick="AdminProductsView.openCorrectNameModal()">Correct Product Name</button>
         </div>
 
         <!-- Recent Updates -->
@@ -589,6 +590,55 @@
         <div id="fix-orphan-modal-status" class="mr-auto small"></div>
         <button class="btn btn-sm" onclick="AdminProductsView.closeFixOrphanModal()">Cancel</button>
         <button class="btn btn-sm" onclick="AdminProductsView.submitFixOrphan()">Confirm - Rewrite Web Side</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Correct Product Name Modal -->
+  <div class="modal-overlay" id="correct-name-modal" style="display:none;">
+    <div class="modal-container" style="max-width: 640px;">
+      <div class="modal-header">
+        <h5 class="mb-0">Correct Product Name</h5>
+        <button type="button" class="close" onclick="ModalOverlay.close('correct-name-modal')">&times;</button>
+      </div>
+      <div class="form-body">
+
+        <!-- Edit panel -->
+        <div id="correct-name-edit">
+          <p class="small text-muted mb-2">Fix a product's title in one or both languages. Saving updates JLMops only — the title is not auto-pushed, so you update WooCommerce by hand next.</p>
+          <div class="mb-3">
+            <h6 class="text-muted">Find Product</h6>
+            <div class="position-relative">
+              <input type="text" class="form-control" id="correct-name-search" placeholder="Search by SKU or name..." oninput="AdminProductsView.searchCorrectNameProduct()">
+              <div id="correct-name-search-results" class="position-absolute w-100 bg-white border rounded shadow-sm" style="display:none; max-height:200px; overflow-y:auto; z-index:100;"></div>
+            </div>
+          </div>
+          <div id="correct-name-fields" style="display:none;">
+            <div class="mb-2"><small class="text-muted">SKU:</small> <span id="correct-name-sku" class="font-weight-bold"></span></div>
+            <div class="form-group">
+              <label class="small font-weight-bold">Product Name (EN)</label>
+              <input type="text" class="form-control" id="correct-name-en">
+            </div>
+            <div class="form-group mb-0">
+              <label class="small font-weight-bold">Product Name (HE)</label>
+              <input type="text" class="form-control hebrew-text" id="correct-name-he" dir="rtl">
+            </div>
+          </div>
+        </div>
+
+        <!-- Apply-on-web summary panel -->
+        <div id="correct-name-summary" style="display:none;">
+          <h6 class="text-muted">Saved to JLMops — now update WooCommerce</h6>
+          <p class="small text-muted">Apply these titles on the live product(s), then click Done.</p>
+          <div id="correct-name-summary-body"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer bg-light">
+        <div id="correct-name-status" class="mr-auto small"></div>
+        <button class="btn btn-sm" id="correct-name-cancel-btn" onclick="ModalOverlay.close('correct-name-modal')">Cancel</button>
+        <button class="btn btn-sm" id="correct-name-save-btn" onclick="AdminProductsView.submitCorrectName()" disabled>Save to JLMops</button>
+        <button class="btn btn-sm" id="correct-name-done-btn" onclick="AdminProductsView.finishCorrectName()" style="display:none;">Done</button>
       </div>
     </div>
   </div>
@@ -1030,6 +1080,127 @@
             statusDiv.className = 'mr-auto small text-danger';
             document.getElementById('vendor-submit-btn').disabled = false;
         }).WebAppProducts_vendorSkuUpdate(oldSku, newSku);
+    };
+
+    // Correct Product Name Modal
+    AdminProductsView.correctNameSelected = null;
+
+    AdminProductsView.openCorrectNameModal = function() {
+        AdminProductsView.correctNameSelected = null;
+        document.getElementById('correct-name-search').value = '';
+        document.getElementById('correct-name-search-results').style.display = 'none';
+        document.getElementById('correct-name-fields').style.display = 'none';
+        document.getElementById('correct-name-en').value = '';
+        document.getElementById('correct-name-he').value = '';
+        document.getElementById('correct-name-sku').textContent = '';
+        document.getElementById('correct-name-status').textContent = '';
+        document.getElementById('correct-name-edit').style.display = 'block';
+        document.getElementById('correct-name-summary').style.display = 'none';
+        document.getElementById('correct-name-save-btn').style.display = '';
+        document.getElementById('correct-name-save-btn').disabled = true;
+        document.getElementById('correct-name-cancel-btn').style.display = '';
+        document.getElementById('correct-name-done-btn').style.display = 'none';
+        ModalOverlay.open('correct-name-modal');
+    };
+
+    AdminProductsView.searchCorrectNameProduct = function() {
+        clearTimeout(AdminProductsView.searchDebounceTimer);
+        const term = document.getElementById('correct-name-search').value.trim();
+        const resultsDiv = document.getElementById('correct-name-search-results');
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        AdminProductsView.searchDebounceTimer = setTimeout(() => {
+            google.script.run.withSuccessHandler(results => {
+                resultsDiv.innerHTML = '';
+                if (!results || results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="p-2 text-muted small">No web products found</div>';
+                } else {
+                    results.forEach(p => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 border-bottom';
+                        div.style.cursor = 'pointer';
+                        div.innerHTML = `<strong>${p.sku}</strong> - ${p.nameEn || p.nameHe || ''}`;
+                        div.onclick = () => AdminProductsView.selectCorrectNameProduct(p);
+                        resultsDiv.appendChild(div);
+                    });
+                }
+                resultsDiv.style.display = 'block';
+            }).withFailureHandler(err => {
+                resultsDiv.innerHTML = '<div class="p-2 text-danger small">Search failed</div>';
+                resultsDiv.style.display = 'block';
+            }).WebAppProducts_searchWebProducts(term);
+        }, 300);
+    };
+
+    AdminProductsView.selectCorrectNameProduct = function(p) {
+        AdminProductsView.correctNameSelected = p;
+        document.getElementById('correct-name-search-results').style.display = 'none';
+        document.getElementById('correct-name-search').value = p.sku;
+        document.getElementById('correct-name-sku').textContent = p.sku;
+        document.getElementById('correct-name-en').value = p.nameEn || '';
+        document.getElementById('correct-name-he').value = p.nameHe || '';
+        document.getElementById('correct-name-fields').style.display = 'block';
+        document.getElementById('correct-name-save-btn').disabled = false;
+    };
+
+    AdminProductsView.submitCorrectName = function() {
+        const sel = AdminProductsView.correctNameSelected;
+        if (!sel) return;
+
+        const nameEn = document.getElementById('correct-name-en').value.trim();
+        const nameHe = document.getElementById('correct-name-he').value.trim();
+        if (!nameEn && !nameHe) {
+            TaskWidgets.toast('Enter a name in at least one language.', 'warning');
+            return;
+        }
+
+        const statusDiv = document.getElementById('correct-name-status');
+        statusDiv.textContent = 'Saving...';
+        statusDiv.className = 'mr-auto small text-info';
+        document.getElementById('correct-name-save-btn').disabled = true;
+
+        google.script.run.withSuccessHandler(res => {
+            if (res.success) {
+                AdminProductsView.showCorrectNameSummary(res);
+                AdminProductsView.loadSkuUpdates();
+            } else {
+                statusDiv.textContent = res.message;
+                statusDiv.className = 'mr-auto small text-danger';
+                document.getElementById('correct-name-save-btn').disabled = false;
+            }
+        }).withFailureHandler(err => {
+            statusDiv.textContent = 'Error: ' + err.message;
+            statusDiv.className = 'mr-auto small text-danger';
+            document.getElementById('correct-name-save-btn').disabled = false;
+        }).WebAppProducts_correctProductName(sel.sku, nameEn, nameHe);
+    };
+
+    AdminProductsView.showCorrectNameSummary = function(res) {
+        let html = '';
+        if (res.changes && res.changes.en) {
+            html += `<div class="mb-2 p-2 bg-light rounded"><div class="small text-muted">English product${res.webIdEn ? ' (ID ' + res.webIdEn + ')' : ''}</div><div class="font-weight-bold">${res.changes.en.to}</div></div>`;
+        }
+        if (res.changes && res.changes.he) {
+            html += `<div class="mb-2 p-2 bg-light rounded"><div class="small text-muted">Hebrew product${res.webIdHe ? ' (ID ' + res.webIdHe + ')' : ''}</div><div class="font-weight-bold hebrew-text" dir="rtl">${res.changes.he.to}</div></div>`;
+        }
+        document.getElementById('correct-name-summary-body').innerHTML = html;
+        document.getElementById('correct-name-edit').style.display = 'none';
+        document.getElementById('correct-name-summary').style.display = 'block';
+        document.getElementById('correct-name-save-btn').style.display = 'none';
+        document.getElementById('correct-name-cancel-btn').style.display = 'none';
+        document.getElementById('correct-name-done-btn').style.display = '';
+        const statusDiv = document.getElementById('correct-name-status');
+        statusDiv.textContent = res.message;
+        statusDiv.className = 'mr-auto small text-success';
+    };
+
+    AdminProductsView.finishCorrectName = function() {
+        ModalOverlay.close('correct-name-modal');
+        TaskWidgets.toast('Product name updated in JLMops.', 'success');
     };
 
     // Product Replacement Modal
