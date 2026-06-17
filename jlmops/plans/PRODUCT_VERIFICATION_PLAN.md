@@ -200,6 +200,20 @@ The `task.validation.vintage_mismatch` template itself stays — it still serves
 
 No automated due-reminder / cadence surfacing for verification. Unlike counts (which have a pre-sync prompt), the admin generates verification tasks **manually/ad-hoc** when they choose to. The ~180-day cadence is a guideline, not a system-enforced nudge. This is a deliberate decision, not a gap — future sessions should NOT build a "products due for verification" surfacing mechanism unless the user revisits it.
 
+## Reverted-task admin handling + detail-update transform (SHIPPED @312, 2026-06-17)
+
+Closes the loop the original plan left implicit: a reverted `task.product.verify` lands back on the admin (assignee = Admin, still open) but had **no Admin surface** and no defined action. This adds the surface and two admin actions. Decided with the user 2026-06-17.
+
+**Modal polish (`ManagerProductsView` verify mode).** Footer buttons relabel to **`Close` / `Revert` / `Done`** (the long "Revert to admin" / "Confirm & close" labels wrapped to two rows on mobile). Verify mode opens on the **Specs** tab (the Comax-vs-web comparison) instead of Descriptions.
+
+**Admin surface (`AdminProductsView`).** The "Create Verification Tasks" card generalizes to a **Verification** card: reverted verify tasks (`task.product.verify`, assignee Admin, open) list **above** the creation tool. Needs a thin getter (e.g. `WebAppProducts_getRevertedVerifyTasks()` — same shape as `getOpenVerifyTasks`, filtered to admin assignee). Lazy-load/collapse behavior unchanged.
+
+**Two admin actions per reverted task.**
+- **Close** — the issue was an image, fixed manually outside the app (admin reshoots/cleans/uploads to the website). Completes the verify task and stamps `pa_LastDetailAudit` (the admin-completes-reverted-task path the plan already names).
+- **Pass to manager (detail update)** — a verify task is read-only, so the admin can't just reassign it; the task **type** must change to a manager-editable detail type so it can be handled further. **Transform in place:** `st_TaskTypeId` `task.product.verify` → `task.validation.vintage_mismatch`, reassign to Manager (`manager_direct`), reset status to New/Assigned, **keep `st_Notes`** (the findings + references are already on the row). The manager then edits it through the existing **Detail Updates** flow; its completion stamps `pa_LastDetailAudit` via the existing vintage_mismatch close path.
+
+**Why reuse `vintage_mismatch` (user, 2026-06-17):** "vintage mismatch is the *reason*, but detail update is the *action*" — the vintage_mismatch path **is** the manager's product-detail edit action. Reusing it adds no task type and routes straight into the live Detail Updates surface. The misleading name is a future cleanup, not a different action. (Distinct from the settled no-image/media-task non-goal below: this is the detail-edit path; image remediation stays the manual admin Close.)
+
 ## Out of scope
 
 - **Product-overview ops view** (Inbox 2026-05-14) — separate plan. Useful for ops triage but not the verification surface

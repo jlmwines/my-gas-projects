@@ -491,8 +491,8 @@
         <button class="btn border edit-only" onclick="ManagerProductsView.closeModal()">Cancel</button>
         <button class="btn edit-only" onclick="ManagerProductsView.submitChanges()">Submit</button>
         <button class="btn border verify-action" onclick="ManagerProductsView.closeModal()">Close</button>
-        <button class="btn verify-action" onclick="ManagerProductsView.openRevertPrompt()">Revert to admin</button>
-        <button class="btn verify-action" onclick="ManagerProductsView.confirmVerify()">Confirm &amp; close</button>
+        <button class="btn verify-action" onclick="ManagerProductsView.openRevertPrompt()">Revert</button>
+        <button class="btn verify-action" onclick="ManagerProductsView.confirmVerify()">Done</button>
       </div>
     </div>
   </div>
@@ -953,8 +953,8 @@
       document.getElementById('preview-en').innerHTML = '';
       document.getElementById('preview-he').innerHTML = '';
       
-      // Reset tab to first
-      ManagerProductsView.switchTab('desc');
+      // Reset tab — Specs (Comax-vs-web comparison) in verify mode, else Descriptions
+      ManagerProductsView.switchTab(ManagerProductsView.verifyMode ? 'specs' : 'desc');
 
       google.script.run
             .withSuccessHandler(data => {

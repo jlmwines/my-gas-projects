@@ -1207,6 +1207,50 @@ function WebAppProducts_completeVerifyTask(taskId, sku) {
 }
 
 /**
+ * Reverted verify tasks waiting on the admin: open task.product.verify reassigned to
+ * Administrator (via revert-to-admin). Surfaced on AdminProductsView so the admin can
+ * Close them (image fixed manually) or pass them to the manager as a detail edit.
+ */
+function WebAppProducts_getRevertedVerifyTasks() {
+  try {
+    return WebAppTasks.getOpenTasksByTypeId('task.product.verify')
+      .filter(function(t) { return String(t.st_AssignedTo || '').trim() === 'Administrator'; })
+      .map(function(t) {
+        return {
+          taskId: t.st_TaskId,
+          sku: String(t.st_LinkedEntityId || '').trim(),
+          title: t.st_Title || '',
+          notes: t.st_Notes || ''
+        };
+      });
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getRevertedVerifyTasks', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
+ * Transform a reverted verify task into a manager-editable detail-update task, in place.
+ * The verify modal is read-only, so to let the manager actually fix the detail the task
+ * TYPE must change — switch it onto the existing vintage_mismatch (Detail Updates) edit
+ * path, reassign to Manager, reset to New. The findings note is left untouched (already on
+ * the row). Reuses task.validation.vintage_mismatch by decision (2026-06-17): vintage
+ * mismatch is the reason, detail update is the action — same manager edit flow.
+ */
+function WebAppProducts_passVerifyToManager(taskId) {
+  try {
+    return WebAppTasks_updateTask(taskId, {
+      taskTypeId: 'task.validation.vintage_mismatch',
+      assignedTo: 'Manager',
+      status: 'New'
+    });
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'passVerifyToManager', `Error: ${e.message}`, e);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Test description backfill with a single SKU.
  * Edit the SKU below before running.
  */

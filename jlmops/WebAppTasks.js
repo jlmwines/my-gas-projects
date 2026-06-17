@@ -414,6 +414,10 @@ function WebAppTasks_updateTask(taskId, updates) {
       const titleCol = headers.indexOf('st_Title');
       if (titleCol > -1) row[titleCol] = updates.title || '';
     }
+    if (updates.taskTypeId !== undefined) {
+      const typeCol = headers.indexOf('st_TaskTypeId');
+      if (typeCol > -1) row[typeCol] = updates.taskTypeId || '';
+    }
 
     // Write back the row
     sheet.getRange(rowIndex + 1, 1, 1, row.length).setValues([row]);

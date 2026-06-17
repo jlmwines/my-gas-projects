@@ -115,13 +115,31 @@
     <!-- CARD: VERIFICATION TASK CREATION -->
     <div class="card mb-4">
       <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
-        <span>Create Verification Tasks</span>
+        <span>Verification <span id="reverted-verify-count" class="badge badge-secondary badge-pill ml-1" title="Reverted verify tasks needing admin">0</span></span>
         <div>
           <span id="verify-planning-loaded" class="text-muted small mr-2"></span>
           <button id="btn-verify-toggle" class="btn btn-sm" onclick="AdminProductsView.toggleVerifyCard()">Show</button>
         </div>
       </div>
       <div class="card-body" id="verify-card-body" style="display:none;">
+
+        <!-- Reverted verify tasks needing admin: Close (image fixed manually) or Pass to manager (detail edit) -->
+        <div class="mb-3">
+          <h6 class="text-muted mb-2">Reverted — needs admin (<span id="reverted-verify-inline-count">0</span>)</h6>
+          <div class="table-responsive border rounded">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr><th class="border-top-0">SKU</th><th class="border-top-0">Findings</th><th class="border-top-0 text-right">Action</th></tr>
+              </thead>
+              <tbody id="reverted-verify-body">
+                <tr><td colspan="3" class="text-center text-muted py-2">None.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <hr class="my-3">
+
+        <h6 class="text-muted mb-2">Create verification tasks</h6>
         <div class="form-row align-items-end mb-2">
           <div class="col-auto">
             <label for="verify-name-mode" class="small mb-1 d-block">Name filter</label>
@@ -897,6 +915,7 @@
     // cards stay closed and will lazy-load on next open. Used on mount AND after Card actions.
     AdminProductsView.refreshView = function() {
       AdminProductsView.loadNewProductsBadge();   // header count for the collapsed New Products card
+      AdminProductsView.loadRevertedVerify();     // header count for reverted verify tasks (card collapsed)
       AdminProductsView.loadReviewList();
       AdminProductsView.loadAcceptedList();
       AdminProductsView.loadPendingDetailsList();
@@ -2378,9 +2397,77 @@
       }
       body.style.display = 'block';
       if (btn) btn.textContent = 'Hide';
+      AdminProductsView.loadRevertedVerify();   // refresh the reverted queue each time the card opens
       if (!AdminProductsView.verifyState.loaded) {
         AdminProductsView.loadVerifyPlanning();
       }
+    };
+
+    // --- Reverted verify tasks (needs-admin queue at the top of the Verification card) ---
+    AdminProductsView.loadRevertedVerify = function() {
+      const tbody = document.getElementById('reverted-verify-body');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">Loading…</td></tr>';
+      google.script.run.withSuccessHandler(function(tasks) {
+        AdminProductsView.renderRevertedVerify(tasks || []);
+      }).withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-danger py-2">Error: ' + AdminProductsView._escapeHtml(err.message) + '</td></tr>';
+      }).WebAppProducts_getRevertedVerifyTasks();
+    };
+
+    AdminProductsView.renderRevertedVerify = function(tasks) {
+      const tbody = document.getElementById('reverted-verify-body');
+      const inline = document.getElementById('reverted-verify-inline-count');
+      const n = tasks.length;
+      AdminProductsView.setCountBadge('reverted-verify-count', n, 'badge-warning');
+      if (inline) inline.textContent = n;
+      if (!tbody) return;
+      if (!n) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">None.</td></tr>'; return; }
+      tbody.innerHTML = '';
+      tasks.forEach(function(t) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + AdminProductsView._escapeHtml(t.sku) + '</td>' +
+          '<td class="small">' + AdminProductsView._escapeHtml(t.notes || '') + '</td>' +
+          '<td class="text-right" style="white-space:nowrap;"></td>';
+        const actions = tr.querySelector('td:last-child');
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn btn-sm border mr-1';
+        closeBtn.textContent = 'Close';
+        closeBtn.title = 'Image fixed manually — complete the task';
+        closeBtn.addEventListener('click', function() { AdminProductsView.closeRevertedVerify(t.taskId, t.sku); });
+        const passBtn = document.createElement('button');
+        passBtn.className = 'btn btn-sm';
+        passBtn.textContent = 'Pass to manager';
+        passBtn.title = 'Convert to a manager detail-edit task (keeps the findings note)';
+        passBtn.addEventListener('click', function() { AdminProductsView.passRevertedToManager(t.taskId); });
+        actions.appendChild(closeBtn);
+        actions.appendChild(passBtn);
+        tbody.appendChild(tr);
+      });
+    };
+
+    AdminProductsView.closeRevertedVerify = function(taskId, sku) {
+      TaskWidgets.confirm('Close this verification task (image fixed)?', function() {
+        google.script.run.withSuccessHandler(function(res) {
+          if (res && res.success === false) { TaskWidgets.toast('Error: ' + (res.message || res.error), 'error'); return; }
+          TaskWidgets.toast('Verification closed.', 'success');
+          AdminProductsView.loadRevertedVerify();
+        }).withFailureHandler(function(err) {
+          TaskWidgets.toast('Error: ' + err.message, 'error');
+        }).WebAppProducts_completeVerifyTask(taskId, sku);
+      });
+    };
+
+    AdminProductsView.passRevertedToManager = function(taskId) {
+      TaskWidgets.confirm('Pass to manager as a detail edit (keeps the note)?', function() {
+        google.script.run.withSuccessHandler(function(res) {
+          if (res && res.success === false) { TaskWidgets.toast('Error: ' + (res.error || res.message), 'error'); return; }
+          TaskWidgets.toast('Passed to manager as detail update.', 'success');
+          AdminProductsView.loadRevertedVerify();
+        }).withFailureHandler(function(err) {
+          TaskWidgets.toast('Error: ' + err.message, 'error');
+        }).WebAppProducts_passVerifyToManager(taskId);
+      });
     };
 
     AdminProductsView.loadVerifyPlanning = function() {
