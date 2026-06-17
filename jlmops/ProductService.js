@@ -1180,6 +1180,12 @@ const ProductService = (function() {
       if (!masterData.wdm_NameEn && webProdData && webProdData.wpm_PostTitle) {
           masterData.wdm_NameEn = webProdData.wpm_PostTitle;
       }
+      // New products being onboarded have no WebProdM row yet — the admin-supplied
+      // English name lives in detail staging (wds_NameEn). Fall back to it so the
+      // manager preview/header shows the EN name, not just the Hebrew one.
+      if (!masterData.wdm_NameEn && stagingData && stagingData.wds_NameEn) {
+          masterData.wdm_NameEn = stagingData.wds_NameEn;
+      }
       if (!masterData.wdm_NameHe && comaxData && comaxData.cpm_NameHe) {
           masterData.wdm_NameHe = comaxData.cpm_NameHe;
       }

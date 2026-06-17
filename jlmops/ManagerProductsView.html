@@ -144,11 +144,11 @@
 
     <!-- SECTION: Verification Tasks -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Verification Tasks</h5>
+        <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('verify')">
+            <h5 class="mb-0"><span id="chev-verify">&#9656;</span> Verification Tasks</h5>
             <span id="verify-task-count" class="badge badge-secondary badge-pill">0</span>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body p-0" id="card-body-verify" style="display:none;">
             <table class="table table-sm table-hover responsive-stack mb-0">
               <thead>
                 <tr>
@@ -166,10 +166,11 @@
 
     <!-- SECTION 2: New Products -->
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">New Products</h5>
+        <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('newprod')">
+            <h5 class="mb-0"><span id="chev-newprod">&#9656;</span> New Products</h5>
+            <span id="stat-onboarding-new" class="badge badge-info badge-pill" title="New product onboarding tasks pending">0</span>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body p-0" id="card-body-newprod" style="display:none;">
             <table class="table table-sm table-hover responsive-stack mb-0">
               <thead>
                 <tr>
@@ -189,10 +190,10 @@
 
     <!-- SECTION 3: Suggest Products -->
     <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Suggest Products</h5>
+        <div class="card-header" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('suggest')">
+            <h5 class="mb-0"><span id="chev-suggest">&#9656;</span> Suggest Products</h5>
         </div>
-        <div class="card-body">
+        <div class="card-body" id="card-body-suggest" style="display:none;">
             
             <!-- Category Filter Panel -->
             <div id="category-status-panel" class="mb-3 p-2 border rounded bg-light">
@@ -534,10 +535,16 @@
 
     // --- Initialization ---
     ManagerProductsView.refreshView = function() {
-      ManagerProductsView.loadWidgetData();
-      ManagerProductsView.loadTaskList();
-      ManagerProductsView.loadVerifyList();
-      ManagerProductsView.loadCategoryStatus(); // Load section 3 contents immediately
+      // Detail Updates is the open card → its content + header count badges load now.
+      // The collapsed lower cards load in page order, chained so they don't compete with
+      // the main card (New Products' body is already covered by loadTaskList; Suggest
+      // Products is heaviest, so it loads last). Each badge fills as its load returns.
+      ManagerProductsView.loadWidgetData();                 // Detail Updates + New Products count badges (light)
+      ManagerProductsView.loadTaskList(function() {         // Detail Updates + New Products bodies
+        ManagerProductsView.loadVerifyList(function() {     // Verification (collapsed)
+          ManagerProductsView.loadCategoryStatus();         // Suggest Products (collapsed, heaviest, last)
+        });
+      });
       ManagerProductsView.initializeSearch(); // Attach search listener
 
       // Deep-link entry: a dashboard verify task requests the read-only batch walk.
@@ -546,6 +553,18 @@
         sessionStorage.removeItem('startVerifyWalk');
         ManagerProductsView.startVerifyWalk();
       }
+    };
+
+    // Collapsible lower cards (Verification / New Products / Suggest Products).
+    // Content is pre-loaded progressively at mount, so toggling just reveals/hides;
+    // the header badge already reflects the pending count while the card is collapsed.
+    ManagerProductsView.toggleCard = function(key) {
+        const body = document.getElementById('card-body-' + key);
+        const chev = document.getElementById('chev-' + key);
+        if (!body) return;
+        const opening = body.style.display === 'none';
+        body.style.display = opening ? '' : 'none';
+        if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;'; // ▾ open / ▸ closed
     };
 
     // --- Widget Data & Category Status (Updated) ---
@@ -562,10 +581,16 @@
         if (onboardingWidget) {
             onboardingWidget.textContent = data.data['onboarding_tasks'] || 0;
         }
+
+        // New Products card badge (same onboarding count, so it shows while collapsed).
+        const onboardingNew = document.getElementById('stat-onboarding-new');
+        if (onboardingNew) {
+            onboardingNew.textContent = data.data['onboarding_tasks'] || 0;
+        }
       }).WebAppProducts_getProductsWidgetData();
     };
 
-    ManagerProductsView.loadCategoryStatus = function() {
+    ManagerProductsView.loadCategoryStatus = function(onDone) {
         const panel = document.getElementById('category-status-panel');
         panel.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading status...';
 
@@ -599,8 +624,10 @@
                 panel.innerHTML += '<p class="text-muted ml-2">No categories configured.</p>';
             }
 
+            if (onDone) onDone();
         }).withFailureHandler(err => {
             panel.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+            if (onDone) onDone();
         }).WebAppProducts_getManagerWidgetData();
     };
 
@@ -789,7 +816,7 @@
 
 
     // --- Task List Logic (Existing) ---
-    ManagerProductsView.loadTaskList = function() {
+    ManagerProductsView.loadTaskList = function(onDone) {
       const detailBody = document.getElementById('task-list-body');
       const onboardingBody = document.getElementById('onboarding-list-body');
 
@@ -806,6 +833,7 @@
         if (!tasks || tasks.length === 0) {
           detailBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
           onboardingBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
+          if (onDone) onDone();
           return;
         }
 
@@ -833,6 +861,11 @@
         if (detailCount === 0) detailBody.innerHTML = '<tr><td colspan="5">No detail updates pending.</td></tr>';
         if (onboardingCount === 0) onboardingBody.innerHTML = '<tr><td colspan="5">No new products pending.</td></tr>';
 
+        if (onDone) onDone();
+      }).withFailureHandler(err => {
+        detailBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading tasks.</td></tr>';
+        onboardingBody.innerHTML = '';
+        if (onDone) onDone();
       }).WebAppProducts_getManagerProductTasks();
     };
 
@@ -1142,7 +1175,7 @@
 
     // List card: render the open verify tasks so the manager can start the walk
     // from this view (alongside the dashboard deep-link). Mirrors loadTaskList.
-    ManagerProductsView.loadVerifyList = function() {
+    ManagerProductsView.loadVerifyList = function(onDone) {
       const body = document.getElementById('verify-list-body');
       const countEl = document.getElementById('verify-task-count');
       if (!body) return;
@@ -1153,6 +1186,7 @@
         if (countEl) countEl.textContent = list.length;
         if (!list.length) {
           body.innerHTML = '<tr><td colspan="3" class="text-muted">No open verification tasks.</td></tr>';
+          if (onDone) onDone();
           return;
         }
         body.innerHTML = '';
@@ -1165,8 +1199,10 @@
           `;
           body.appendChild(tr);
         });
+        if (onDone) onDone();
       }).withFailureHandler(err => {
         body.innerHTML = `<tr><td colspan="3" class="text-danger">Error: ${(err && err.message) || err}</td></tr>`;
+        if (onDone) onDone();
       }).WebAppProducts_getOpenVerifyTasks();
     };
 
