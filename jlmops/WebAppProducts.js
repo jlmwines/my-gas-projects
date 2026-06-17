@@ -891,14 +891,25 @@ function WebAppProducts_getSuggestionTasks() {
 function WebAppProducts_getSubmissionsTasks() {
   try {
     const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Review');
-    
-    return tasks.map(t => ({
-        taskId: t.st_TaskId,
-        sku: t.st_LinkedEntityId,
-        productName: t.st_LinkedEntityName,
-        title: t.st_Title,
-        createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
-    }));
+
+    // Product title comes from WebDetS staging (the live name the manager edits during
+    // onboarding), not the task's st_LinkedEntityName — a stale snapshot stamped from the
+    // Comax-derived suggestion name at accept-time.
+    const stagingHeaders = ConfigService.getConfig('schema.data.WebDetS').headers.split(',');
+    const stagingMap = ConfigService._getSheetDataAsMap('WebDetS', stagingHeaders, 'wds_SKU').map;
+
+    return tasks.map(t => {
+        const sku = t.st_LinkedEntityId;
+        const staged = stagingMap.get(String(sku).trim());
+        const stagedName = staged && (staged.wds_NameEn || staged.wds_NameHe);
+        return {
+            taskId: t.st_TaskId,
+            sku: sku,
+            productName: stagedName || t.st_LinkedEntityName,
+            title: t.st_Title,
+            createdDate: String(t.st_CreatedDate instanceof Date ? t.st_CreatedDate.toISOString() : t.st_CreatedDate)
+        };
+    });
   } catch (e) {
     LoggerService.error('WebAppProducts', 'getSubmissionsTasks', `Error: ${e.message}`, e);
     throw e;

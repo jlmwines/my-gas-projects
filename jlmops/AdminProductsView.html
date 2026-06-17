@@ -174,8 +174,9 @@
 
     <!-- CARD 2: NEW PRODUCTS — collapsed + lazy-loaded (rare) -->
     <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('new')">
-        <span id="chev-new">&#9656;</span> New Products
+      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('new')">
+        <span><span id="chev-new">&#9656;</span> New Products</span>
+        <span id="stat-new-products" class="badge badge-secondary badge-pill" title="New products pending (suggestions + submissions)">0</span>
       </div>
       <div class="card-body" id="card-body-new" style="display:none;">
 
@@ -857,6 +858,26 @@
       }
     };
 
+    // Count-badge color: dark gray at zero, the given color when there are pending items.
+    AdminProductsView.setCountBadge = function(id, count, activeClass) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var n = Number(count) || 0;
+      el.textContent = n;
+      el.classList.remove('badge-secondary', 'badge-info', 'badge-warning');
+      el.classList.add(n > 0 ? activeClass : 'badge-secondary');
+    };
+
+    // Lightweight count for the New Products header badge — shows pending suggestions +
+    // submissions while the card is collapsed (the heavy section loads stay lazy-on-expand).
+    AdminProductsView.loadNewProductsBadge = function() {
+      google.script.run.withSuccessHandler(function(res) {
+        if (!res || res.error || !res.data) return;
+        var np = res.data.newProducts || {};
+        AdminProductsView.setCountBadge('stat-new-products', (np.suggested || 0) + (np.review || 0), 'badge-info');
+      }).WebAppProducts_getProductsWidgetData();
+    };
+
     // Collapse toggle for a lower card. First open lazy-loads its data; subsequent opens just reveal.
     AdminProductsView.toggleCard = function(key) {
       var body = document.getElementById('card-body-' + key);
@@ -875,6 +896,7 @@
     // currently OPEN (so a post-action refresh updates the card the operator is working in). Closed
     // cards stay closed and will lazy-load on next open. Used on mount AND after Card actions.
     AdminProductsView.refreshView = function() {
+      AdminProductsView.loadNewProductsBadge();   // header count for the collapsed New Products card
       AdminProductsView.loadReviewList();
       AdminProductsView.loadAcceptedList();
       AdminProductsView.loadPendingDetailsList();
