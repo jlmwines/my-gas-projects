@@ -121,7 +121,7 @@
         <h5 class="mb-0">Detail Updates</h5>
         <div id="stat-mismatch-container">
             <span id="stat-mismatch" class="badge badge-secondary badge-pill mr-1" title="Vintage Mismatch">0</span>
-            <span id="stat-onboarding" class="badge badge-info badge-pill" title="New Product Onboarding">0</span>
+            <span id="stat-onboarding" class="badge badge-secondary badge-pill" title="New Product Onboarding">0</span>
         </div>
       </div>
       <div class="card-body p-0">
@@ -168,7 +168,7 @@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('newprod')">
             <h5 class="mb-0"><span id="chev-newprod">&#9656;</span> New Products</h5>
-            <span id="stat-onboarding-new" class="badge badge-info badge-pill" title="New product onboarding tasks pending">0</span>
+            <span id="stat-onboarding-new" class="badge badge-secondary badge-pill" title="New product onboarding tasks pending">0</span>
         </div>
         <div class="card-body p-0" id="card-body-newprod" style="display:none;">
             <table class="table table-sm table-hover responsive-stack mb-0">
@@ -567,26 +567,26 @@
         if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;'; // ▾ open / ▸ closed
     };
 
+    // Count-badge color: dark gray (badge-secondary) when zero, the given color
+    // when there are pending items, so a glance shows which cards need attention.
+    ManagerProductsView.setCountBadge = function(id, count, activeClass) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const n = Number(count) || 0;
+        el.textContent = n;
+        el.classList.remove('badge-secondary', 'badge-info', 'badge-warning');
+        el.classList.add(n > 0 ? activeClass : 'badge-secondary');
+    };
+
     // --- Widget Data & Category Status (Updated) ---
     ManagerProductsView.loadWidgetData = function() {
       google.script.run.withSuccessHandler(data => {
         if (data.error) return console.error(data.error);
         
-        const mismatchWidget = document.getElementById('stat-mismatch');
-        if (mismatchWidget) {
-            mismatchWidget.textContent = data.data['vintage_mismatch_tasks'] || 0;
-        }
-        
-        const onboardingWidget = document.getElementById('stat-onboarding');
-        if (onboardingWidget) {
-            onboardingWidget.textContent = data.data['onboarding_tasks'] || 0;
-        }
-
+        ManagerProductsView.setCountBadge('stat-mismatch', data.data['vintage_mismatch_tasks'], 'badge-warning');
+        ManagerProductsView.setCountBadge('stat-onboarding', data.data['onboarding_tasks'], 'badge-info');
         // New Products card badge (same onboarding count, so it shows while collapsed).
-        const onboardingNew = document.getElementById('stat-onboarding-new');
-        if (onboardingNew) {
-            onboardingNew.textContent = data.data['onboarding_tasks'] || 0;
-        }
+        ManagerProductsView.setCountBadge('stat-onboarding-new', data.data['onboarding_tasks'], 'badge-info');
       }).WebAppProducts_getProductsWidgetData();
     };
 
@@ -1183,7 +1183,7 @@
       google.script.run.withSuccessHandler(tasks => {
         const list = tasks || [];
         ManagerProductsView.verifyListCache = list;
-        if (countEl) countEl.textContent = list.length;
+        ManagerProductsView.setCountBadge('verify-task-count', list.length, 'badge-warning');
         if (!list.length) {
           body.innerHTML = '<tr><td colspan="3" class="text-muted">No open verification tasks.</td></tr>';
           if (onDone) onDone();
