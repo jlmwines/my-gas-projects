@@ -221,10 +221,10 @@
                         <tr>
                             <th width="40" class="text-center"><input type="checkbox" id="check-all-suggestions" onclick="ManagerProductsView.toggleAllSuggestions()"></th>
                             <th>SKU</th>
-                            <th>Name</th>
+                            <th style="cursor:pointer;" onclick="ManagerProductsView.sortSuggestions('name')" title="Sort by name">Name <span id="sort-ind-name"></span></th>
                             <th>Category</th>
-                            <th>Price</th>
-                            <th>Stock</th>
+                            <th style="cursor:pointer;" onclick="ManagerProductsView.sortSuggestions('price')" title="Sort by price">Price <span id="sort-ind-price"></span></th>
+                            <th style="cursor:pointer;" onclick="ManagerProductsView.sortSuggestions('stock')" title="Sort by stock">Stock <span id="sort-ind-stock"></span></th>
                         </tr>
                     </thead>
                     <tbody id="suggestion-list-body">
@@ -605,6 +605,58 @@
     };
 
     // --- Suggestion Tool Logic ---
+    // --- Suggestion list: sorting + shared render ---
+    // Default sort is alphabetical by product name; Price / Stock are user-selectable.
+    // suggestionsList is sorted IN PLACE so the row checkbox value="index" stays aligned
+    // with it (submitSuggestions reads suggestionsList[index]).
+    ManagerProductsView.suggestionSort = { key: 'name', dir: 'asc' };
+
+    ManagerProductsView.renderSuggestions = function() {
+        const tbody = document.getElementById('suggestion-list-body');
+        const list = ManagerProductsView.suggestionsList || [];
+        const key = ManagerProductsView.suggestionSort.key;
+        const mul = ManagerProductsView.suggestionSort.dir === 'asc' ? 1 : -1;
+        list.sort((a, b) => {
+            if (key === 'price') return ((parseFloat(a.price) || 0) - (parseFloat(b.price) || 0)) * mul;
+            if (key === 'stock') return ((parseInt(a.stock, 10) || 0) - (parseInt(b.stock, 10) || 0)) * mul;
+            return String(a.name || '').localeCompare(String(b.name || ''), undefined, { numeric: true }) * mul;
+        });
+
+        tbody.innerHTML = '';
+        list.forEach((p, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
+                <td>${p.sku}</td>
+                <td>${p.name}</td>
+                <td>${p.category}</td>
+                <td>${p.price} ₪</td>
+                <td>${p.stock}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        ['name', 'price', 'stock'].forEach(k => {
+            const ind = document.getElementById('sort-ind-' + k);
+            if (ind) ind.textContent = (k === key) ? (mul === 1 ? '▲' : '▼') : '';
+        });
+        // A re-sort rebuilds the rows unchecked — reset the master toggle + button.
+        const master = document.getElementById('check-all-suggestions');
+        if (master) master.checked = false;
+        ManagerProductsView.updateSuggestButton();
+    };
+
+    ManagerProductsView.sortSuggestions = function(key) {
+        const s = ManagerProductsView.suggestionSort;
+        if (s.key === key) {
+            s.dir = s.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            s.key = key;
+            s.dir = (key === 'name') ? 'asc' : 'desc'; // names A→Z; price/stock high→low first
+        }
+        ManagerProductsView.renderSuggestions();
+    };
+
     ManagerProductsView.loadSuggestions = function(category) {
         ManagerProductsView.currentCategory = category; // Track for search filtering
 
@@ -629,18 +681,7 @@
                 return;
             }
 
-            products.forEach((p, index) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
-                    <td>${p.sku}</td>
-                    <td>${p.name}</td>
-                    <td>${p.category}</td>
-                    <td>${p.price}</td>
-                    <td>${p.stock}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+            ManagerProductsView.renderSuggestions();
         }).withFailureHandler(err => {
              tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error: ${err.message}</td></tr>`;
         }).WebAppProducts_getPotentialProducts(category);
@@ -683,19 +724,7 @@
                     return;
                 }
 
-                products.forEach((p, index) => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="text-center"><input type="checkbox" class="suggestion-check" value="${index}" onchange="ManagerProductsView.updateSuggestButton()"></td>
-                        <td>${p.sku}</td>
-                        <td>${p.name}</td>
-                        <td>${p.category}</td>
-                        <td>${p.price} ₪</td>
-                        <td>${p.stock}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
+                ManagerProductsView.renderSuggestions();
                 title.textContent = `Found ${products.length} product(s) for: "${searchTerm}"`;
 
             }).withFailureHandler(err => {

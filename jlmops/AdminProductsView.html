@@ -1621,10 +1621,14 @@
                     <td class="text-right">${price}</td>
                     <td class="text-right">${stock}</td>
                     <td>
-                        <button class="btn btn-sm mr-1" onclick="AdminProductsView.openSuggestionModal('${t.taskId}', '${t.sku}', '${t.title}')">Accept</button>
-                        <button class="btn btn-sm" onclick="AdminProductsView.cancelSuggestion('${t.taskId}')">Cancel</button>
+                        <button class="btn btn-sm mr-1" data-action="accept">Accept</button>
+                        <button class="btn btn-sm" data-action="cancel">Cancel</button>
                     </td>
                 `;
+                // Bind via closures so a product name containing a quote/apostrophe
+                // can't break an inline onclick string (was: interpolated title/sku).
+                tr.querySelector('[data-action="accept"]').addEventListener('click', () => AdminProductsView.openSuggestionModal(t.taskId, t.sku, t.title));
+                tr.querySelector('[data-action="cancel"]').addEventListener('click', () => AdminProductsView.cancelSuggestion(t.taskId));
                 tbody.appendChild(tr);
             });
         };
@@ -1685,8 +1689,9 @@
                     <td>${t.title}</td>
                     <td>${t.sku}</td>
                     <td><span class="badge badge-success">${t.status}</span></td>
-                    <td><button class="btn btn-sm btn-primary" onclick="AdminProductsView.openLinkageModal('${t.taskId}', '${t.sku}')">Link</button></td>
+                    <td><button class="btn btn-sm btn-primary" data-action="link">Link</button></td>
                 `;
+                tr.querySelector('[data-action="link"]').addEventListener('click', () => AdminProductsView.openLinkageModal(t.taskId, t.sku));
                 tbody.appendChild(tr);
             });
         };
