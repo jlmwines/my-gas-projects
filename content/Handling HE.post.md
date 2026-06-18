@@ -1,13 +1,20 @@
 ## TITLE
-מוציאים את המקסימום מכל בקבוק
+הנאה מקסימלית מכל בקבוק
 
 ## EXCERPT
-יין הוא יצור חי ועדין.
+מצאתם את הבקבוק המושלם? עכשיו נדאג שגם יטעם הכי טוב: מדריך פשוט וברור לאחסון, פתיחה והגשה של היין שלכם.
+
+## FEATURED MEDIA
+67502
 
 ## NOTES
-- מקור: Drive Doc `blog-handling-he` — טקסט מילה-במילה. ה-EXCERPT הוא משפט פתיחה זמני עד שיגיע נוסח ערוך.
-- חסר ב-HE (ממתין לעורך): NEWSLETTER EXCERPT, PRINT NEWSLETTER BODY, CTA, meta description.
+- מקור: Drive Doc `blog-handling-he` — טקסט מילה-במילה.
+- חסר ב-HE (ממתין לעורך): NEWSLETTER EXCERPT, PRINT NEWSLETTER BODY, CTA.
 - Images shared with EN (same WP media IDs).
+- SEO (RankMath, manual paste in wp-admin):
+  - Focus keyword: אחסון והגשת יין
+  - SEO title: אחסון והגשת יין: מדריך פשוט | JLM Wines
+  - Meta description (snippet): איך לאחסן ולהגיש יין כך שכל בקבוק יטעם במיטבו: המדריך הפשוט של JLM Wines לאחסון נכון, פתיחת הבקבוק, טמפרטורת הגשה, ושמירה על יין פתוח לימים הבאים.
 
 Paste below into WordPress Code Editor:
 
@@ -21,18 +28,23 @@ Paste below into WordPress Code Editor:
 @media (max-width: 781px) {
   .cols-flip { flex-direction: column; }
 }
+@media (min-width: 782px) {
+  .txt-pad { padding-top: 1.5em; }
+  .txt-pad-m { padding-top: 1em; }
+  .txt-pad-s { padding-top: 0.5em; }
+}
 </style>
 <!-- /wp:html -->
 
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
-<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67503,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"25%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:25%;padding-top:1em"><!-- wp:image {"id":67503,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-storage.png" alt="ציור אימפרסיוניסטי של בקבוקי יין שוכבים על צידם בארון מוצל הרחק מחלון שטוף שמש" class="wp-image-67503"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%"} -->
-<div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"75%","className":"txt-pad"} -->
+<div class="wp-block-column txt-pad" style="flex-basis:75%"><!-- wp:heading -->
 <h2 class="wp-block-heading">אחסון: מוצאים את ה"פינה הקרירה"</h2>
 <!-- /wp:heading -->
 
@@ -53,14 +65,14 @@ Paste below into WordPress Code Editor:
 <!-- /wp:columns -->
 
 <!-- wp:columns {"className":"cols-flip"} -->
-<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
-<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67504,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns cols-flip"><!-- wp:column {"width":"25%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:25%;padding-top:1em"><!-- wp:image {"id":67504,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-opening.png" alt="ציור אימפרסיוניסטי של יד מוציאה בעדינות שעם מבקבוק בעזרת חולץ פקקים" class="wp-image-67504"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%"} -->
-<div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"75%"} -->
+<div class="wp-block-column" style="flex-basis:75%"><!-- wp:heading -->
 <h2 class="wp-block-heading">פתיחה: בעדינות, לא בכוח</h2>
 <!-- /wp:heading -->
 
@@ -91,8 +103,8 @@ Paste below into WordPress Code Editor:
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%"} -->
-<div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"60%","className":"txt-pad-s"} -->
+<div class="wp-block-column txt-pad-s" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">מזיגה לקראף (דקנטר): מתי זה כדאי?</h2>
 <!-- /wp:heading -->
 
@@ -123,12 +135,12 @@ Paste below into WordPress Code Editor:
 <!-- wp:columns {"className":"cols-flip"} -->
 <div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
 <div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67506,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-serving.png" alt="ציור אימפרסיוניסטי של שתי כוסות יין מזוגות עד שליש על שולחן עץ פשוט" class="wp-image-67506"/></figure>
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-serving.png" alt="ציור אימפרסיוניסטי של שתי כוסות יין מזוגות עד רבע על שולחן עץ פשוט" class="wp-image-67506"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%"} -->
-<div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"60%","className":"txt-pad-m"} -->
+<div class="wp-block-column txt-pad-m" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">הגשה: טמפרטורה וכוסות</h2>
 <!-- /wp:heading -->
 
@@ -173,8 +185,8 @@ Paste below into WordPress Code Editor:
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%"} -->
-<div class="wp-block-column" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"60%","className":"txt-pad"} -->
+<div class="wp-block-column txt-pad" style="flex-basis:60%"><!-- wp:heading -->
 <h2 class="wp-block-heading">שומרים קצת לאחר כך</h2>
 <!-- /wp:heading -->
 
@@ -190,9 +202,7 @@ Paste below into WordPress Code Editor:
 <!-- wp:list-item -->
 <li><strong>קירור:</strong> אפשר לשים יין פתוח (גם אדום!) במקרר. זה פועל כמו "כפתור השהיה" עבור היין. רק תזכרו לתת לאדומים להתחמם מעט לפני שתשתו אותם למחרת.</li>
 <!-- /wp:list-item --></ol>
-<!-- /wp:list --></div>
-<!-- /wp:column --></div>
-<!-- /wp:columns -->
+<!-- /wp:list -->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">לסיכום</h2>
@@ -200,4 +210,6 @@ Paste below into WordPress Code Editor:
 
 <!-- wp:paragraph -->
 <p>ב-JLM Wines, אנחנו רוצים שכל בקבוק יהיה חוויה מהנה. הצעדים הפשוטים האלה מבטיחים שהיין שתהנו ממנו בבית יהיה בדיוק כמו שהתכוונו כשבחרנו אותו לאוסף שלנו.</p>
-<!-- /wp:paragraph -->
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->

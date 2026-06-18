@@ -4,12 +4,15 @@ Getting the Best from Every Bottle
 ## EXCERPT
 You've found the perfect bottle, now make sure it tastes its best: a jargon-free guide to storing, opening, and serving your wine.
 
+## FEATURED MEDIA
+67502
+
 ## NEWSLETTER EXCERPT (web/social)
 Temperature is the biggest wine mistake. Too warm, and it tastes boozy. Too cold, and you miss the complexity. Reds: slightly cooler than room temperature. Whites: fridge-cold. Storage: find an interior cabinet away from heat and light. Open bottles? Vacuum pump plus refrigerator—even for reds. Let them warm before the next pour.
 [Read the full guide →]
 
 ## PRINT NEWSLETTER BODY
-A great bottle deserves a little care, and none of it is complicated. Start with storage: wine doesn't like heat, light, or vibration, so skip the kitchen counter and pick an interior cabinet that stays cool year-round. When you open it, twist the opener, not the bottle, and lift the cork out gently. Temperature is where most of us slip up. A red served too warm tastes boozy; a white too cold hides its character. Serve reds slightly cooler than room temperature (fifteen minutes in the fridge if your home runs warm) and whites straight from the fridge. Pour to the widest part of the glass, about a third full, so the wine has room to open up. And if you don't finish the bottle, don't pour it away: a vacuum stopper and the fridge keep it fresh for days, reds included. Just let them warm a little before the next pour. Small habits, better wine.
+A great bottle deserves a little care, and none of it is complicated. Start with storage: wine doesn't like heat, light, or vibration, so skip the kitchen counter and pick an interior cabinet that stays cool year-round. When you open it, twist the opener, not the bottle, and lift the cork out gently. Temperature is where most of us slip up. A red served too warm tastes boozy; a white too cold hides its character. Serve reds slightly cooler than room temperature (fifteen minutes in the fridge if your home runs warm) and whites straight from the fridge. Pour to the widest part of the glass, about a quarter full, so the wine has room to open up. And if you don't finish the bottle, don't pour it away: a vacuum stopper and the fridge keep it fresh for days, reds included. Just let them warm a little before the next pour. Small habits, better wine.
 
 — Evyatar
 
@@ -22,13 +25,16 @@ Read the full guide →
 - Body 1 (storage): a quiet corner cupboard away from a sunlit window, bottles lying on their sides in soft shadow.
 - Body 2 (opening): a hand easing a cork from a bottle with a waiter's corkscrew, unhurried, close and warm.
 - Body 3 (decanting): red wine poured into a glass decanter, the stream catching the light.
-- Body 4 (serving): two glasses poured a third full on a simple wooden table, a bead of condensation on the white.
+- Body 4 (serving): two glasses poured a quarter full on a simple wooden table, a bead of condensation on the white.
 - Body 5 (saving): a re-corked open bottle with a vacuum stopper beside a half-full glass, cool fridge light.
 
 ## NOTES
-- Source: Drive Doc `blog-handling-en` (Evyatar's locked edits). HE from `blog-handling-he`, synced to this EN (HE had the older 1/4-rule draft).
-- Images: 6 Canva PNGs in `content/handling/`; uploaded via `upload-handling-images.js`. Featured set manually in wp-admin.
-- Search engine snippet (RankMath meta description, manual paste): "How to store, open, and serve wine for the best flavor. JLM Wines' guide to decanting, serving temperatures, and preserving open bottles."
+- Source: Drive Doc `blog-handling-en` (Evyatar's locked edits). HE from `blog-handling-he`. Both standardized on the **1/4** "widest point" pour rule (2026-06-17, per manager) — EN was reverted from 1/3 to match HE.
+- Images: 6 Canva PNGs in `content/handling/`; uploaded via `upload-handling-images.js`. Featured (id 67502) set by the push via `## FEATURED MEDIA`.
+- SEO (RankMath, manual paste in wp-admin):
+  - Focus keyword: how to store and serve wine
+  - SEO title: How to Store and Serve Wine: A Simple Guide | JLM Wines
+  - Meta description (snippet, ~158 chars): How to store and serve wine so every bottle tastes its best. JLM Wines' plain-English guide to storage, opening, serving temperature, and saving open bottles.
 
 Paste below into WordPress Code Editor:
 
@@ -53,14 +59,14 @@ Paste below into WordPress Code Editor:
 <!-- /wp:html -->
 
 <!-- wp:columns -->
-<div class="wp-block-columns"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
-<div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67503,"sizeSlug":"large","linkDestination":"none"} -->
+<div class="wp-block-columns"><!-- wp:column {"width":"25%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
+<div class="wp-block-column" style="flex-basis:25%;padding-top:1em"><!-- wp:image {"id":67503,"sizeSlug":"large","linkDestination":"none"} -->
 <figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-storage.png" alt="Impressionist painting of wine bottles lying on their sides in a shadowed cabinet away from a sunlit window" class="wp-image-67503"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"width":"60%","className":"txt-pad"} -->
-<div class="wp-block-column txt-pad" style="flex-basis:60%"><!-- wp:heading -->
+<!-- wp:column {"width":"75%","className":"txt-pad"} -->
+<div class="wp-block-column txt-pad" style="flex-basis:75%"><!-- wp:heading -->
 <h2 class="wp-block-heading">Storage: Finding the "Coolest Spot"</h2>
 <!-- /wp:heading -->
 
@@ -151,7 +157,7 @@ Paste below into WordPress Code Editor:
 <!-- wp:columns {"className":"cols-flip"} -->
 <div class="wp-block-columns cols-flip"><!-- wp:column {"width":"40%","style":{"spacing":{"padding":{"top":"1em"}}}} -->
 <div class="wp-block-column" style="flex-basis:40%;padding-top:1em"><!-- wp:image {"id":67506,"sizeSlug":"large","linkDestination":"none"} -->
-<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-serving.png" alt="Impressionist painting of two wine glasses poured a third full on a simple wooden table" class="wp-image-67506"/></figure>
+<figure class="wp-block-image size-large"><img src="https://jlmwines.com/wp-content/uploads/2026/06/handling-serving.png" alt="Impressionist painting of two wine glasses poured a quarter full on a simple wooden table" class="wp-image-67506"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column -->
 
@@ -184,7 +190,7 @@ Paste below into WordPress Code Editor:
 
 <!-- wp:list -->
 <ul class="wp-block-list"><!-- wp:list-item -->
-<li><strong>The 1/3 Rule:</strong> Pour your wine to the widest point of the bowl (about one-third full). This gives the wine room to swirl and release its scents.</li>
+<li><strong>The 1/4 Rule:</strong> Pour your wine to the widest point of the bowl (about one-quarter full). This gives the wine room to swirl and release its scents.</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->

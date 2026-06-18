@@ -82,6 +82,8 @@ Blog cadence and newsletter cadence run on independent tracks. Don't treat newsl
 
 Each blog post lives as a `.md` file (one EN, one HE) with a fixed section structure. Start new posts by copying `_post-template.md`.
 
+**Publishing a post → see `content/PUBLISHING.md`** for the full pipeline (the image-upload + `push-posts.js` scripts, the manifest, credentials/target, commands, and the manual wp-admin checklist after a push). Planned automation of that checklist: `content/PUBLISH_ENHANCEMENT_PLAN.md`.
+
 ### Required sections (in this order)
 
 | Section | Length | Purpose |

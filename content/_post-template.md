@@ -6,6 +6,13 @@
 <!-- WordPress post excerpt. 1–2 sentences (~150 chars). Shows on category and search listings. -->
 
 
+## FEATURED MEDIA
+<!-- WP media ID for the Featured Image. The per-post image-upload script stamps it
+     here (replaces __FEATURED_ID__); push-posts.js then sets it as featured_media.
+     Shared EN/HE — same media ID in both files. -->
+__FEATURED_ID__
+
+
 ## NEWSLETTER EXCERPT (web/social)
 <!-- ~50 words. Used on social, email teasers, web snippets. End with: [Read the full guide →] -->
 

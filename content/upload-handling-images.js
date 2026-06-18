@@ -9,8 +9,9 @@
 //        Handling EN.post.md
 //        Handling HE.post.md
 //
-// The featured image (slot F) is uploaded too, but is NOT in the body —
-// its media ID is printed so it can be set as Featured Image in wp-admin.
+// The featured image is uploaded too. It is not in the body, but its media ID
+// is stamped into the `## FEATURED MEDIA` section (replaces __FEATURED_ID__) so
+// push-posts.js sets it as the post's featured_media — no manual wp-admin step.
 //
 // Run from jlmwines/ root: node content/upload-handling-images.js
 // ═══════════════════════════════════════════════════════════════════
@@ -76,7 +77,7 @@ const SLOTS = [
 ];
 
 // ─── Replace placeholders in a .post.md file ────────────────────────
-function substitute(filePath, idMap, urlMap) {
+function substitute(filePath, idMap, urlMap, featuredId) {
   if (!fs.existsSync(filePath)) {
     console.log('  WARN: ' + filePath + ' not found');
     return false;
@@ -86,6 +87,9 @@ function substitute(filePath, idMap, urlMap) {
     content = content.replace(new RegExp('__IMG_' + n + '_ID__', 'g'), String(idMap[n]));
     content = content.replace(new RegExp('__IMG_' + n + '_URL__', 'g'), urlMap[n]);
   }
+  // Stamp the featured media ID into the `## FEATURED MEDIA` section
+  // (push-posts.js reads it and sets featured_media).
+  content = content.replace(/__FEATURED_ID__/g, String(featuredId));
   fs.writeFileSync(filePath, content);
   return true;
 }
@@ -121,14 +125,14 @@ async function main() {
     urlMap[slot.n] = data.source_url;
   }
 
-  console.log('\n─── Substituting body placeholders ───');
-  substitute(path.join(CONTENT_DIR, 'Handling EN.post.md'), idMap, urlMap);
+  console.log('\n─── Substituting body + featured placeholders ───');
+  substitute(path.join(CONTENT_DIR, 'Handling EN.post.md'), idMap, urlMap, feat.id);
   console.log('  Handling EN.post.md updated.');
-  substitute(path.join(CONTENT_DIR, 'Handling HE.post.md'), idMap, urlMap);
+  substitute(path.join(CONTENT_DIR, 'Handling HE.post.md'), idMap, urlMap, feat.id);
   console.log('  Handling HE.post.md updated.');
 
   console.log('\n─── Summary ───');
-  console.log('  FEATURED (set manually in wp-admin): id=' + feat.id + '  ' + feat.source_url);
+  console.log('  FEATURED (stamped into ## FEATURED MEDIA → set by push as featured_media): id=' + feat.id + '  ' + feat.source_url);
   for (var n = 1; n <= SLOTS.length; n++) {
     console.log('  Slot ' + n + ': id=' + idMap[n] + '  ' + urlMap[n]);
   }

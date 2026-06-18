@@ -90,7 +90,8 @@ const MANIFEST = [
     enSlug: 'how-to-store-open-serve-wine', enId: 67497,
     heSlug: 'how-to-store-open-serve-wine', heId: 67500,
     enFile: 'Handling EN.post.md',
-    heFile: 'Handling HE.post.md'
+    heFile: 'Handling HE.post.md',
+    enCategoryId: 947, heCategoryId: 948   // Basics / יסודות (WPML-translated terms)
   }
 ];
 
@@ -107,11 +108,17 @@ function parsePostMd(filePath) {
   var excerptMatch = content.match(/^## EXCERPT\n(.+?)(?=\n## )/ms);
   if (excerptMatch) excerpt = excerptMatch[1].trim();
 
+  // Extract FEATURED MEDIA section (optional) — a single WP media ID.
+  // Stamped by the per-post image-upload script; absent posts push unchanged.
+  var featuredMedia = 0;
+  var fmMatch = content.match(/^## FEATURED MEDIA\s*\n\s*(\d+)/m);
+  if (fmMatch) featuredMedia = parseInt(fmMatch[1], 10);
+
   // Extract BODY section (everything after "Paste below into WordPress Code Editor:\n\n")
   var bodyMatch = content.match(/Paste below into WordPress Code Editor:\n\n([\s\S]+)$/);
   if (bodyMatch) body = bodyMatch[1].trim();
 
-  return { title: title, excerpt: excerpt, body: body };
+  return { title: title, excerpt: excerpt, body: body, featuredMedia: featuredMedia };
 }
 
 // Wrap the raw HTML in a Custom HTML block so the WP block editor opens
@@ -144,6 +151,11 @@ async function pushPost(wp, entry, lang) {
     content: wrapAsHtmlBlock(parsed.body),
     excerpt: parsed.excerpt || ''
   };
+  if (parsed.featuredMedia) payload.featured_media = parsed.featuredMedia;
+
+  // Optional per-language category (manifest opt-in — replaces existing categories).
+  var categoryId = isHe ? entry.heCategoryId : entry.enCategoryId;
+  if (categoryId) payload.categories = [categoryId];
 
   var result;
   if (postId) {
