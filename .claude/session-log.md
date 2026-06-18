@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-18 (later 3) — Decision 7 core slice completed (@319–@321) + Negev redraft
+
+- **@319** version-machinery retirement: `lockVersion` no longer bumps `slb_Version` / sets `locked` (keeps task-close + peer-realign prompt); stripped the version display (content pack → `Status: <state>`; LibraryView "Ver" column + drawer field removed); activity label "Editing done". **@320** UI fixes: Cancel on the Editing-Done modal; admin pack buttons got `#task-pack-do .detail-row` flex+gap + removed redundant inline margins. **@321** housekeeping duplicate backstop (`reconcileLibraryDuplicates` — newest `<slug> <ts>` wins, rest superseded; daily batch + `runLibraryDuplicateReconcile` editor entry).
+- **Negev redraft:** new version per the manager's 4 notes (cut AT-A-GLANCE grapes; add Spice Route; expand soil/diurnal/photosynthesis; reframe the over-generalized glass section) → Doc, attached to the Negev task (old archived). Drive-comments fetch errored repeatedly; manager's notes pasted in chat. Wineries section still needs the carry-list + visitor details (human data).
+- **Smoked:** @319/@320 UI confirmed. Still to smoke: translation button, mobile-URL paste, `runLibraryDuplicateReconcile`.
+- **Next:** #3 — externalize `_getTranslationPrompt` to a maintainable flat sheet (engine/project columns) + refine the Hebrew-paraphrase wording.
+
+---
+
 ## 2026-06-18 (later 2) — Content-library versioning shipped (Decision 7 / Plan B, @316–@318)
 
 - Built Decision 7 in three deploys. **@316:** timestamped filenames (`<slug> <ts>`) — createBlankDoc/attachExistingDoc emit them, slug-aware overwrite + integrity matcher, one-time `runLibraryFileNameMigration` (14 renamed), Dev "Library Integrity" button. **@317:** attach-to-replace — attach a new version → displaced file gets "Superseded by →" stamp + moves to flat `_archive`; "Attach new version" button when a Doc exists. **@318:** Create-translation-text button (copy EN Doc + paraphrase prompt → attach as HE current) + robust Drive-URL id extraction.

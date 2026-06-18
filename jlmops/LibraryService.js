@@ -666,10 +666,11 @@ const LibraryService = (function() {
     }
 
     /**
-     * Locks the entity at the next version: increments slb_Version, sets state
-     * to 'locked', updates last-touched, closes the originating task, optionally
-     * spawns a realign task on the peer-language sibling, and logs the lock to
-     * SysLibraryActivity.
+     * Finishes a content-edit task: closes the originating task, updates
+     * last-touched, optionally spawns a realign task on the peer-language
+     * sibling, and logs it. Per Decision 7 / Plan B this no longer bumps a
+     * version counter or sets a 'locked' state — versioning is file-based
+     * (attach-to-replace). Name kept for the existing UI/wrapper call sites.
      *
      * @param {Object} params - { entityId, taskId, peerNeedsRealignment }
      * @returns {Object} { entity: updatedRow, task: closedTask, related_tasks: [...] }
@@ -684,13 +685,8 @@ const LibraryService = (function() {
         const entity = _getEntityRow(entityId);
         if (!entity) throw new Error(`Entity "${entityId}" not found`);
 
-        const currentVersion = Number(entity.slb_Version) || 0;
-        const newVersion = currentVersion + 1;
         const now = new Date().toISOString();
-
         const updatedEntity = _updateEntityRow(entityId, {
-            slb_Version: newVersion,
-            slb_State: 'locked',
             slb_LastTouched: now
         });
 
@@ -729,7 +725,6 @@ const LibraryService = (function() {
             entityId: entityId,
             actionType: 'version_lock',
             details: {
-                version: newVersion,
                 peerRealignmentSpawned: !!realignTask
             },
             referencedEntities: realignTask && peerSlug ? [peerSlug] : []
@@ -889,7 +884,9 @@ const LibraryService = (function() {
     function _summaryForActionType(actionType, details) {
         switch (actionType) {
             case 'version_lock':
-                return 'Version locked' + (details && details.version ? ' (v' + details.version + ')' : '');
+                // Decision 7 / Plan B: this event is now "editing done" (no
+                // version counter); older rows may still carry a details.version.
+                return 'Editing done' + (details && details.version ? ' (v' + details.version + ')' : '');
             case 'published':
                 return 'Published' + (details && details.externalUrl ? ' to ' + details.externalUrl : '');
             case 'template_send':
@@ -1159,6 +1156,73 @@ const LibraryService = (function() {
         return summary;
     }
 
+    /**
+     * Housekeeping backstop (Decision 7 / Plan B): when more than one `<slug> <ts>`
+     * file sits in an entity's canonical folder — a stray fork, a raw Sheets-API
+     * write, an attach that skipped the clean path — the newest (max timestamp,
+     * lexical) wins. Repoints `slb_DocUrl` to it if needed and supersedes the rest
+     * (stamp + move to `_archive`). The normal attach-to-replace path keeps folders
+     * to one file per slug; this only catches what skipped it. Idempotent.
+     * @returns {{ entitiesChecked: number, duplicatesResolved: number, repointed: number }}
+     */
+    function reconcileLibraryDuplicates() {
+        const { rows } = _openLibrary();
+        const summary = { entitiesChecked: 0, duplicatesResolved: 0, repointed: 0 };
+
+        rows.forEach(function(entity) {
+            const slug = String(entity.slb_Slug || '').trim();
+            const type = entity.slb_ContentType;
+            if (!slug || !type) return;
+            summary.entitiesChecked++;
+
+            let folder;
+            try {
+                folder = _getCanonicalFolder(type, _deriveConcept(slug, type));
+            } catch (e) { return; }
+
+            // Files in the canonical folder belonging to this slug.
+            const matches = [];
+            const files = folder.getFiles();
+            while (files.hasNext()) {
+                const f = files.next();
+                if (_slugFromFileName(f.getName()) === slug) matches.push(f);
+            }
+            if (matches.length < 2) return;
+
+            // Newest wins — big-endian timestamp suffix sorts lexically.
+            matches.sort(function(a, b) {
+                const an = a.getName(), bn = b.getName();
+                return an < bn ? 1 : (an > bn ? -1 : 0);
+            });
+            const current = matches[0];
+            const currentUrl = current.getUrl();
+
+            // Repoint if the entity isn't already pointing at the newest.
+            if (_extractDriveFileId(entity.slb_DocUrl) !== current.getId()) {
+                _updateEntityRow(slug, { slb_DocUrl: currentUrl, slb_LastTouched: new Date().toISOString() });
+                summary.repointed++;
+            }
+
+            // Supersede the older duplicates (collected list, so moving is safe).
+            for (let i = 1; i < matches.length; i++) {
+                _supersedeFile(matches[i].getId(), currentUrl);
+                summary.duplicatesResolved++;
+            }
+
+            logEntityActivity({
+                entityId: slug,
+                actionType: 'duplicates_reconciled',
+                details: { kept: current.getName(), superseded: matches.length - 1 }
+            });
+        });
+
+        if (typeof LoggerService !== 'undefined' && LoggerService.info) {
+            LoggerService.info('LibraryService', 'reconcileLibraryDuplicates',
+                `Checked ${summary.entitiesChecked}, resolved ${summary.duplicatesResolved} duplicate(s), repointed ${summary.repointed}.`);
+        }
+        return summary;
+    }
+
     return {
         addEntity: addEntity,
         getEntityContent: getEntityContent,
@@ -1174,7 +1238,8 @@ const LibraryService = (function() {
         getEntityDetail: getEntityDetail,
         getEntityBySlug: _getEntityRow,
         slugFromFileName: _slugFromFileName,
-        migrateLibraryFileNames: migrateLibraryFileNames
+        migrateLibraryFileNames: migrateLibraryFileNames,
+        reconcileLibraryDuplicates: reconcileLibraryDuplicates
     };
 })();
 
@@ -1185,4 +1250,13 @@ const LibraryService = (function() {
  */
 function runLibraryFileNameMigration() {
     return LibraryService.migrateLibraryFileNames();
+}
+
+/**
+ * Editor entry point for the Decision 7 / Plan B duplicate backstop: resolves any
+ * canonical folder holding more than one `<slug> <ts>` file (newest wins, rest
+ * superseded to `_archive`). Also runs in the daily maintenance batch. Idempotent.
+ */
+function runLibraryDuplicateReconcile() {
+    return LibraryService.reconcileLibraryDuplicates();
 }

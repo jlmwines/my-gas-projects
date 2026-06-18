@@ -279,7 +279,6 @@
         <div><label>Type</label><div class="field-value" id="lv-drawer-type">—</div></div>
         <div><label>Language</label><div class="field-value" id="lv-drawer-language">—</div></div>
         <div><label>State</label><div class="field-value" id="lv-drawer-state">—</div></div>
-        <div><label>Version</label><div class="field-value" id="lv-drawer-version">—</div></div>
         <div><label>Last touched</label><div class="field-value" id="lv-drawer-lasttouched">—</div></div>
       </div>
       <div class="lv-drawer-actions" id="lv-drawer-actions"></div>
@@ -402,7 +401,7 @@
 
       // Columns: generic + sparse per-type extension
       var html = '<table class="lv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Ver</th><th>Last touched</th><th>Refs</th>';
+      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Last touched</th><th>Refs</th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         html += '<tr>';
@@ -410,7 +409,6 @@
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
         html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-        html += '<td data-label="Ver">' + TaskWidgets.escape(e.version || '—') + '</td>';
         html += '<td data-label="Last touched">' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
         html += '<td data-label="Refs">' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
         html += '</tr>';
@@ -632,7 +630,7 @@
     function setDrawerLoading(slug) {
       document.getElementById('lv-drawer-title').textContent = 'Loading…';
       document.getElementById('lv-drawer-slug').textContent = slug || '—';
-      ['lv-drawer-type', 'lv-drawer-language', 'lv-drawer-state', 'lv-drawer-version', 'lv-drawer-lasttouched'].forEach(function(id) {
+      ['lv-drawer-type', 'lv-drawer-language', 'lv-drawer-state', 'lv-drawer-lasttouched'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.textContent = '…';
       });
@@ -654,7 +652,6 @@
       document.getElementById('lv-drawer-type').textContent = entity.contentType || '—';
       document.getElementById('lv-drawer-language').textContent = entity.language || '(none)';
       document.getElementById('lv-drawer-state').textContent = entity.state || '—';
-      document.getElementById('lv-drawer-version').textContent = (entity.version !== null && entity.version !== undefined) ? String(entity.version) : '—';
       document.getElementById('lv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
 
       renderDrawerFiles(entity);

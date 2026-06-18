@@ -45,6 +45,10 @@
         if (lockNoBtn) lockNoBtn.addEventListener('click', function() { submitLock(false); });
         var lockYesBtn = document.getElementById('lv-btn-lock-yes');
         if (lockYesBtn) lockYesBtn.addEventListener('click', function() { submitLock(true); });
+        var lockCancelBtn = document.getElementById('lv-btn-lock-cancel');
+        if (lockCancelBtn) lockCancelBtn.addEventListener('click', function() {
+          document.getElementById('lvLockModal').style.display = 'none';
+        });
         var attachSubmitBtn = document.getElementById('lv-btn-attach-submit');
         if (attachSubmitBtn) attachSubmitBtn.addEventListener('click', submitAttachDoc);
         wired = true;
@@ -138,11 +142,11 @@
         hE += '  <div class="detail-row"' + stopProp + '>';
         if (entity && entity.docUrl) {
           hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
-          hE += '    <button type="button" class="btn btn-sm" style="margin-left:8px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach new version</button>';
+          hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach new version</button>';
         } else {
-          hE += '    <span class="tw-file-link empty" style="margin-right:8px">No Doc yet</span>';
+          hE += '    <span class="tw-file-link empty">No Doc yet</span>';
           hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
-          hE += '    <button type="button" class="btn btn-sm" style="margin-left:6px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
+          hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
         }
         // Translate variant — link to EN source (the peer entity).
         if (typeId === 'task.content.translate' || typeId === 'task.content.translate_edit') {
@@ -152,10 +156,10 @@
           if (enPeerSlug) {
             var enPeer = ctx.getEntity(enPeerSlug);
             if (enPeer && enPeer.docUrl) {
-              hE += '    <a class="tw-file-link" style="margin-left:8px" href="' + TaskWidgets.escape(enPeer.docUrl) + '" target="_blank" rel="noopener">Open EN source</a>';
-              hE += '    <button type="button" class="btn btn-sm" style="margin-left:8px" onclick="TaskPacks.createTranslationDraft(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create translation text</button>';
+              hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(enPeer.docUrl) + '" target="_blank" rel="noopener">Open EN source</a>';
+              hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createTranslationDraft(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create translation text</button>';
             } else {
-              hE += '    <span class="tw-file-link empty" style="margin-left:8px">EN source not attached yet</span>';
+              hE += '    <span class="tw-file-link empty">EN source not attached yet</span>';
             }
           }
         }
@@ -164,7 +168,7 @@
         hE += '  <div class="detail-row"' + stopProp + '>';
         hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Editing Done</button>';
         if (entity) {
-          hE += '    <span class="detail-meta" style="margin-left:12px">Current: v' + TaskWidgets.escape(entity.version || 0) + ' · ' + TaskWidgets.escape(entity.state || '—') + '</span>';
+          hE += '    <span class="detail-meta">Status: ' + TaskWidgets.escape(entity.state || '—') + '</span>';
         }
         hE += '  </div>';
         return hE;
@@ -466,6 +470,7 @@
       </div>
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:flex-end;gap:8px;">
+      <button type="button" class="btn btn-sm" id="lv-btn-lock-cancel">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-no">No, just finish</button>
       <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-yes">Yes, update</button>
     </div>

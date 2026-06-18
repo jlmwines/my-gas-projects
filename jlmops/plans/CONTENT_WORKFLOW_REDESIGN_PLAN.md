@@ -95,10 +95,11 @@ The library's only versioning job is to name the single authoritative file per s
 - **@316 — naming foundation (step 2):** `createBlankDoc`/`attachExistingDoc` emit `<slug> <ts>`; slug-aware overwrite check; integrity matcher (`HousekeepingService.js`) strips the suffix + skips `_archive`; one-time `runLibraryFileNameMigration` (rename-only — canonical relocation considered then dropped, only one stray file existed); Dev "Library Integrity" button.
 - **@317 — attach-to-replace (step 3):** `attachExistingDoc` captures the displaced file → "Superseded by →" stamp + move to flat `_archive` (`_getArchiveFolder` / `_supersedeFile`); **"Attach new version"** button on tasks whose entity already has a Doc (the gap that blocked saving a redraft).
 - **@318 — adjacent:** Create-translation-text button (`createTranslationDraft` — copy EN Doc + inline paraphrase prompt → attach as HE current) + robust Drive-URL id extraction (`_extractDriveFileId`, handles mobile/redirect paste).
+- **@319 — version-machinery retirement (steps 1 + 4):** `lockVersion` no longer bumps `slb_Version` or sets `locked` (keeps task-close + peer-realign + log); version display stripped (content pack → `Status: <state>`; LibraryView "Ver" column + drawer field removed); activity label "Editing done". `slb_Version` column kept inert (append-only).
+- **@320 — UI fixes:** Cancel on the Editing-Done modal; admin task-detail pack buttons get `#task-pack-do .detail-row` flex+gap (+ removed redundant inline margins so spacing is uniform across admin + manager).
+- **@321 — housekeeping duplicate backstop:** `reconcileLibraryDuplicates` — per entity, >1 `<slug> <ts>` in the canonical folder → newest wins, repoint + supersede the rest; runs in the daily batch + `runLibraryDuplicateReconcile` editor entry.
 
 **Still queued:**
-- **Housekeeping multiplicity backstop** — stray duplicate `<slug> <ts>` files in an active folder → newest wins, demote the rest (stamp + `_archive`).
-- **State cleanup (steps 1 + 4):** `lockVersion` stops writing `slb_Version`/`locked` (keeps task-close + peer-realign prompt); strip the version-number display (`TaskPacks.html:166`, `WebAppLibrary.js:140`, `WebAppDashboardV2.js:816`). `slb_Version` column stays inert (append-only).
 - **Translation-prompt flat sheet (#3):** externalize `_getTranslationPrompt`'s inline English default to a maintainable sheet Ops reads at run time (columns for engine/project variants); refine the wording.
 
 **Original slice (for reference):**

@@ -1,6 +1,10 @@
 <?!= include('TaskWidgets') ?>
 <?!= include('TaskPacks') ?>
 <style>
+  /* Pack action rows (#task-pack-do): match the manager dashboard's flex+gap
+     layout so the shared TaskPacks buttons/links don't render touching or with
+     irregular inline margins here. Mirrors ManagerDashboardView_v2's rule. */
+  #task-pack-do .detail-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
   /* Task row and header use flexbox to fill 100% width */
   .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
   .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }

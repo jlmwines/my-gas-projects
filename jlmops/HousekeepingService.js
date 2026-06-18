@@ -725,6 +725,7 @@ function HousekeepingService() {
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
+      { name: 'reconcileLibraryDuplicates', fn: () => LibraryService.reconcileLibraryDuplicates() },
       { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
