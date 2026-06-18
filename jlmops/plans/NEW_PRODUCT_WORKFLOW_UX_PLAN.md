@@ -40,6 +40,28 @@ Touches the manager's live daily surface → expect 1-2 small deploys via the wr
 
 Smallest/lowest-risk first: **(3) sort → (2) EN-name fallback → (1) lazy cards**. Each can be its own deploy. (Shipped in this order @308/@309.)
 
+## Export parity fix (post-plan)
+
+The new-product export (`generateNewProductExport`) used a different, EN-heavy column set (Name EN / Price / Stock / Short EN / Long EN / Long HE) than the product-detail-update export, so a linked new product reached WooCommerce with an empty/mismatched description. Root cause: the hot-insert (`linkAndFinalizeNewProduct`) writes name/price/stock/Woo-IDs but never a description, and after it closes the task (Accepted→Done) the SKU drops out of the export pool — descriptions never got exported.
+
+**Fix:** `generateDetailExport` and `generateNewProductExport` now both delegate to one shared builder `ProductService._buildProductDetailExport(skus, sessionId)`. The new-product export is therefore byte-identical to the detail export (SKU · Title EN · Short EN · Long EN · Short HE · Long HE · Title HE), and the two can never drift. Each caller still owns its own task pool (`vintage_mismatch` Accepted vs `add_product` Accepted).
+
+Operationally: export **before** the hot-insert (while the task is still Accepted), or re-queue a record by reverting its status to Accepted, then export. No revert UI or recovery routine was built — recovery is a manual status flip.
+
+## Deferred — retire the manual hot-link (sync owns new-product insertion)
+
+**Status: deferred (warranted, too costly now). Revisit as its own session.**
+
+The manual hot-link (`linkAndFinalizeNewProduct`) is a relic of the original design, when the system managed EN price/qty only and a separate HE translation feed ran *after* a product already existed in Woo. Today the Woo pull fetches both languages in one pass, and each HE product carries `translations.en` pointing at its EN original (`WooProductPullService._transformApiTranslation`). So the EN↔HE relationship the hot-link supplies by hand is already in every sync payload.
+
+What the hot-link actually does for a new SKU is **two inserts**: it creates the **WebProdM** (EN master) row *and* the **WebXltM** (translation) row — the only `WebProdM.appendRow` and `WebXltM` insert in the onboarding path. Accept (`acceptProductDetails`) only seeds **WebDetM**; the EN pull (`_upsertWebProductsData`) is **update-only** (skips SKUs not already in master). So before the link, only WebDetM (+ WebDetS staging) carries the SKU.
+
+**Target design:** keep WebXltM, but maintain it (and the new WebProdM row) from the sync pull rather than user input. Once the admin creates the EN+HE products in Woo and pairs them in WPML, the next pull has everything to insert both rows from `translations.en`. New products handled once; hot-link retires.
+
+**Why deferred:** product import flows staging → validation → master. A brand-new SKU appearing in staging is (today) a validation-rule violation — which is exactly why the upsert is update-only. Making the pull insert-capable for new products means reworking that validation gate. Real scope, not warranted yet.
+
+**Interim (current):** keep creating stubs + hot-linking to get the Woo IDs. The description now exports correctly (export-parity fix above), which was the actual day-to-day pain.
+
 ## Follow-ons shipped (post-plan, @310–@311)
 
 - **Badge color (@310):** count badges show dark-gray (`badge-secondary`) at zero, color when pending — amber for to-clear counts (mismatch, verify), blue for onboarding. `ManagerProductsView.setCountBadge`.

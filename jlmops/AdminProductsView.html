@@ -263,7 +263,7 @@
                 <span id="stat-onboarding-export" class="badge badge-secondary">0</span>
             </div>
             <div>
-                <button id="btn-export-new" class="btn btn-primary mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
+                <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
             </div>
         </div>
         <div id="new-export-status" class="mt-2 small text-right"></div>
@@ -715,7 +715,7 @@
       </div>
       <div class="modal-footer bg-light">
         <button class="btn border" onclick="document.getElementById('linkage-modal').style.display='none'">Cancel</button>
-        <button class="btn btn-primary" onclick="AdminProductsView.submitLinkage()">Finalize Hot Insert</button>
+        <button class="btn btn-sm" onclick="AdminProductsView.submitLinkage()">Finalize Hot Insert</button>
       </div>
     </div>
   </div>
@@ -1730,7 +1730,7 @@
                     <td>${t.title}</td>
                     <td>${t.sku}</td>
                     <td><span class="badge badge-success">${t.status}</span></td>
-                    <td><button class="btn btn-sm btn-primary" data-action="link">Link</button></td>
+                    <td><button class="btn btn-sm" data-action="link">Link</button></td>
                 `;
                 tr.querySelector('[data-action="link"]').addEventListener('click', () => AdminProductsView.openLinkageModal(t.taskId, t.sku));
                 tbody.appendChild(tr);

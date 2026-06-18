@@ -1390,7 +1390,23 @@ const ProductService = (function() {
         }
         
         const skus = acceptedTasks.map(t => t.st_LinkedEntityId);
-        
+        return _buildProductDetailExport(skus, sessionId);
+    } catch (e) {
+        logger.error(serviceName, functionName, `Error generating product details export: ${e.message}`, e, { sessionId: sessionId });
+        throw e;
+    }
+  }
+
+  /**
+   * Shared export builder: one SKU list -> the WooCommerce product-detail export
+   * sheet. Used by BOTH the detail-update export (generateDetailExport) and the
+   * new-product onboarding export (generateNewProductExport) so the two can never
+   * drift in columns, data, or formatting. Callers own the task pool/status query.
+   */
+  function _buildProductDetailExport(skus, sessionId) {
+    const serviceName = 'ProductService';
+    const functionName = '_buildProductDetailExport';
+    try {
         // 2. Fetch Data
         const allConfig = ConfigService.getAllConfig();
         const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
@@ -1548,229 +1564,15 @@ const ProductService = (function() {
     }
   }
 
-    function generateNewProductExport(sessionId) { // Added sessionId
-
-      const serviceName = 'ProductService';
-
-      const functionName = 'generateNewProductExport';
-
-      logger.info(serviceName, functionName, 'Starting export of new products to Google Sheet.', { sessionId: sessionId });
-
-      try {
-
-          // 1. Identify Accepted Tasks
-
-          const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted', sessionId); // Pass sessionId
-
-          
-
-          if (tasks.length === 0) {
-
-               return { success: false, message: 'No new products ready for export.' };
-
-          }
-
-          
-
-          const skus = tasks.map(t => t.st_LinkedEntityId);
-
-          
-
-          // 2. Fetch Data
-
-          const allConfig = ConfigService.getAllConfig();
-
-          
-
-          // Helper to get map
-
-          const getMap = (sheetName, schemaKey, keyCol) => {
-
-              const headers = allConfig[schemaKey].headers.split(',');
-
-              return ConfigService._getSheetDataAsMap(sheetName, headers, keyCol).map;
-
-          };
-
-  
-
-          const webDetMap = getMap('WebDetM', 'schema.data.WebDetM', 'wdm_SKU');
-
-          const cmxMap = getMap('CmxProdM', 'schema.data.CmxProdM', 'cpm_SKU');
-
-          
-
-          // Load Lookups
-
-          const lookupMaps = {
-
-              texts: LookupService.getLookupMap('map.text_lookups'),
-
-              grapes: LookupService.getLookupMap('map.grape_lookups'),
-
-              kashrut: LookupService.getLookupMap('map.kashrut_lookups')
-
-          };
-
-  
-
-          // 3. Prepare data
-
-          const exportDataRows = [];
-
-          const headers = [
-
-              'SKU', 
-
-              'Name (EN)', 
-
-              'Price',
-
-              'Stock',
-
-              'Short Description (EN)', 
-
-              'Long Description (EN)', 
-
-              'Long Description (HE)'
-
-          ];
-
-          exportDataRows.push(headers);
-
-  
-
-          skus.forEach(rawSku => {
-
-              const sku = String(rawSku);
-
-              const webDetRow = webDetMap.get(sku);
-
-              const cmxRow = cmxMap.get(sku);
-
-              
-
-              if (!webDetRow) {
-
-                  logger.warn(serviceName, functionName, `Skipping SKU ${sku}: Details not found in WebDetM.`, { sessionId: sessionId, sku: sku });
-
-                  return;
-
-              }
-
-  
-
-              const nameEn = webDetRow.wdm_NameEn || '';
-
-              const price = cmxRow ? cmxRow.cpm_Price : 0;
-
-              const stock = cmxRow ? cmxRow.cpm_Stock : 0;
-
-              
-
-              const shortDescriptionEn = webDetRow.wdm_ShortDescrEn || '';
-
-              const longDescriptionEnHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'EN', lookupMaps, true);
-
-              const longDescriptionHeHtml = WooCommerceFormatter.formatDescriptionHTML(sku, webDetRow, cmxRow, 'HE', lookupMaps, true);
-
-              
-
-              exportDataRows.push([
-
-                  sku,
-
-                  nameEn,
-
-                  price,
-
-                  stock,
-
-                  shortDescriptionEn,
-
-                  longDescriptionEnHtml,
-
-                  longDescriptionHeHtml
-
-              ]);
-
-          });
-
-  
-
-          if (exportDataRows.length <= 1) {
-
-              return { success: false, message: 'No data found to export.' };
-
-          }
-
-  
-
-          // 4. Create Sheet
-
-          const namePattern = allConfig['system.files.output_names']?.web_product_update || 'Prod-Web-{timestamp}';
-          const fileName = namePattern.replace('{timestamp}', Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MM-dd-HH-mm')).replace('.csv', '');
-
-          const newSpreadsheet = SpreadsheetApp.create(fileName);
-
-          const sheet = newSpreadsheet.getSheets()[0];
-
-          
-
-          sheet.getRange(1, 1, exportDataRows.length, headers.length).setValues(exportDataRows);
-
-          
-
-          // Formatting
-
-          sheet.setFrozenRows(1);
-
-          sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
-
-          sheet.autoResizeColumns(1, headers.length);
-
-  
-
-          // Move to Export Folder
-
-          const exportFolderId = allConfig['system.folder.jlmops_exports'].id;
-
-          try {
-
-              const folder = DriveApp.getFolderById(exportFolderId);
-
-              DriveApp.getFileById(newSpreadsheet.getId()).moveTo(folder);
-
-          } catch (moveError) {
-
-              logger.warn(serviceName, functionName, `Failed to move to export folder: ${moveError.message}`, { sessionId: sessionId, fileId: newSpreadsheet.getId(), folderId: exportFolderId });
-
-          }
-
-  
-
-          return { 
-
-              success: true, 
-
-              message: `Exported ${exportDataRows.length - 1} new products to ${fileName}`, 
-
-              fileId: newSpreadsheet.getId(),
-
-              fileUrl: newSpreadsheet.getUrl()
-
-          };
-
-  
-
-      } catch (e) {
-
-          logger.error(serviceName, functionName, `Error: ${e.message}`, e, { sessionId: sessionId });
-
-          throw e;
-
+    function generateNewProductExport(sessionId) {
+      const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted', sessionId);
+      if (!tasks || tasks.length === 0) {
+        return { success: false, message: 'No new products ready for export.' };
       }
-
+      const skus = tasks.map(t => t.st_LinkedEntityId);
+      // Delegate to the shared builder so the new-product export is identical to
+      // the detail-update export (same columns, data, and formatting).
+      return _buildProductDetailExport(skus, sessionId);
     }
 
   function confirmWebUpdates(sessionId) { // Added sessionId

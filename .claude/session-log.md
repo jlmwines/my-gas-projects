@@ -4,6 +4,21 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-18 (later) — Content Library versioning decision (Decision 7, not built)
+
+- Long design chew on Doc-sourced content versioning. Landed model written as **Decision 7** in `CONTENT_WORKFLOW_REDESIGN_PLAN.md` (Decisions 5 & 6 annotated as superseded). Nothing built.
+- Model: `SysLibrary` = one row per slug (clean face); current = newest `<slug> yy-mm-dd-hh-mm` file (lexical max); humans edit in place / sessions fork-and-repoint; Ops stamps "Superseded by →" + moves old to a `_superseded` subfolder under existing `system.folder.library`; housekeeping backstop demotes extras. Retire `slb_Version`, lock step, `locked` state. Open-Doc primary. Templates excluded.
+- Verified low-build: version-trigger UI already exists (Request Correction + `lockVersion` on task close), HousekeepingService already archives, library folder already declared. ~1 focused session when picked up; only genuinely new bit = a `DocumentApp` "superseded" stamp.
+- **Next (when prioritized):** the 4-step implementation slice in Decision 7.
+
+## 2026-06-18 — New-product export = detail-update export (@314), legible buttons (@315)
+
+- **@314:** new-product onboarding export was a divergent EN-heavy column set, so hot-linked products reached Woo with empty/mismatched descriptions. Extracted shared `ProductService._buildProductDetailExport(skus, sessionId)`; both `generateDetailExport` and `generateNewProductExport` delegate to it → byte-identical output, can't drift. `node --check` clean.
+- **@315:** Export/Link/Finalize Hot Insert buttons used `btn-primary` (illegible in theme) → `btn btn-sm` to match the rest of AdminProductsView.
+- **Recovery:** user re-queues the one lost record manually (flip onboarding task → Accepted), then re-exports. No revert UI built.
+- **Deferred (designed, not built):** retire the manual hot-link — make the sync insert new products into WebProdM + WebXltM from the pull's HE `translations.en`. Blocked by staging→validation gate rejecting new SKUs (EN upsert is update-only). Scope in `NEW_PRODUCT_WORKFLOW_UX_PLAN.md` "Deferred — retire the manual hot-link". Interim = stubs + hot-link.
+- **Confirmed live:** lost onboarding record recovered (re-queued + re-exported); @315 buttons legible. Hot-link retirement remains a future session.
+
 ## 2026-06-17 (later 2) — Product verification: reverted-task admin handling (@312)
 
 - **Shipped @312** (plan `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`, new "Reverted-task admin handling" section): closes the loop the original verify plan left implicit — a reverted `task.product.verify` (assignee Administrator) had no admin surface.

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-17 — JLM Wines ecosystem live; jlmops @312 · theme v1.2.30; 0 blockers; Handling guide published EN+HE (11 posts) + EN/HE companion email scheduled; Products-view UX overhauled (@307–@312: new-product onboarding + verification reverted-task handling); blog push auto-sets featured image + category.
+**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @315 · theme v1.2.30; 0 blockers; new-product export now matches the detail-update export exactly (shared `_buildProductDetailExport`, @314) so onboarded products no longer reach Woo with empty descriptions, plus legible Products buttons (@315); manual hot-link retirement scoped + deferred (`jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`).
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @312; Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @315; new-product onboarding export now byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides).
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) created, scheduled for this evening.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-06-17 |
+| Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @312 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-17 · theme 2026-06-12 |
+| Deploy Version | jlmops @315 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-18 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |

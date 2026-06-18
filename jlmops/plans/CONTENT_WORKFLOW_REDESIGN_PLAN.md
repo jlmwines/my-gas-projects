@@ -52,19 +52,48 @@ The deficiency preset row in LibraryView also exposes a contextual **"Spawn Chai
 
 ### Decision 5: Revert/re-edit after close
 
-**Locked:** Roll-forward-only. Closed/published entities get an admin-only **"Request Correction"** button in the entity drawer (gated by `data-roles="admin"`). It spawns `task.content.edit` against the same entity slug via `TaskService.createTask` + `LibraryService.logEntityActivity`. Entity stays `published` while the corrective task is open; task close bumps `slb_Version` to N+1 via `LibraryService.lockVersion`. Content recovery uses Drive (~30d) / git — no in-app revert. "Revert" needs no separate definition: it is a corrective edit whose content happens to match a prior state.
+**Locked:** Roll-forward-only. Closed/published entities get an admin-only **"Request Correction"** button in the entity drawer (gated by `data-roles="admin"`). It spawns `task.content.edit` against the same entity slug via `TaskService.createTask` + `LibraryService.logEntityActivity`. Entity stays `published` while the corrective task is open; task close bumps `slb_Version` to N+1 via `LibraryService.lockVersion`. **(Superseded 2026-06-18 → Decision 7: `slb_Version` and the lock step retire; versioning becomes file-based — newest-timestamp file is authoritative, Ops stamps + archives the predecessor.)** Content recovery uses Drive (~30d) / git — no in-app revert. "Revert" needs no separate definition: it is a corrective edit whose content happens to match a prior state.
 
 ### Decision 6: Handoff visibility
 
 **Locked:** Three layers, all client-side over data already loaded:
 
-1. **Entity list row** — state pill via `TaskWidgets.statusClass` (already dynamic; free-form `slb_State` strings render as pills with no schema change). Controlled vocabulary (reconciled to the live model 2026-06-14): `draft` → `locked` → `published`, plus terminal `abandoned`. The granular `editing`/`translating`/`in_review` states from early drafts were never wired and are dropped — attached-task states + the deficiency stall signal carry progress. Documented in `docs/DATA_MODEL.md` (`slb_State`).
+1. **Entity list row** — state pill via `TaskWidgets.statusClass` (already dynamic; free-form `slb_State` strings render as pills with no schema change). Controlled vocabulary (reconciled to the live model 2026-06-14): `draft` → `locked` → `published`, plus terminal `abandoned`. **(Decision 7, 2026-06-18, collapses this to `draft` → `published` + `abandoned`: the `locked` middle state retires with the lock step.)** The granular `editing`/`translating`/`in_review` states from early drafts were never wired and are dropped — attached-task states + the deficiency stall signal carry progress. Documented in `docs/DATA_MODEL.md` (`slb_State`).
 2. **Overdue chip** — open task's `dueDate` past today → red chip in drawer Tasks tab (already partially wired).
 3. **Deficiency preset blank** — entity with `slb_TargetDate` in window and no open task shows a blank task-column row; that is the stall signal.
 
 `abandoned` is set **explicitly** via an admin-only **"Abandon"** drawer action (mirrors "Request Correction", `data-roles="admin"`), never inferred from the absence of tasks: `spawnContentChain` creates all stage tasks up front, so a non-`published` entity with no open task is a **stall/orphan** signal, not abandonment. The deficiency preset filters `abandoned` out.
 
 Deferred: "in handoff" badge (open task assigned to counterpart role). Implement only if richer state vocabulary proves insufficient.
+
+### Decision 7: Versioning model — file-based, library-blind (supersedes the lock/version mechanics in Decisions 5–6)
+
+**Decided 2026-06-18. Not yet built — implementation slice flagged at the end.**
+
+The library's only versioning job is to name the single authoritative file per slug. It does not track versions. The earlier lock/version machinery retires: `slb_Version` is inert (set at create, bumped at lock, only ever *displayed* — no logic branches on it), and the "lock" step's sole real work was closing the task. Both read as version control the system doesn't actually provide.
+
+**Authoritative resolution.** `SysLibrary` holds **one row per slug** — the clean face that never shows versions. Version multiplicity lives only in Drive (a fork just created a new file). Files are named **`<slug> yy-mm-dd-hh-mm`** (e.g. `blog-region-negev-en 26-06-18-12-30`); **current = the slug's file with the maximum timestamp suffix** — big-endian and zero-padded, so newest-wins is a plain lexical string-max, no date parsing. Match files by exact **slug + space** to avoid prefix collisions (`...-negev` vs `...-negev-reds`). Nothing auto-publishes by recency (publishing and its derivatives are deliberate downstream acts), so newest-as-authoritative is safe — the clobber worry is moot.
+
+**Editing paths (preferred — keep confusion out):**
+- **Humans edit in place** on the live Doc; Google Docs' own revision history is the within-version trail. The convenient default.
+- **Anyone may create a new version via Ops** — a coordinated GAS action: fork from the current file, repoint, stamp + archive the old one, in one transaction.
+- **Sessions must fork** (they can read + create, not edit a Doc in place): create a new `<slug> <timestamp>` file **from the current pointer** (never a stale base) and repoint `slb_DocUrl` via the Sheets API.
+
+**Supersede lifecycle (Ops owns it).** When a new version becomes current, Ops stamps the old Doc with **"Superseded by → [link to successor]"** at the top and moves it to the **Archive** folder, returning the active folder to one file per slug. Ops/GAS can edit a Doc body in place and move files — a session cannot — so Ops is the right actor. Breadcrumb: the repoint hands Ops the prior file id to process (or housekeeping detects the multiplicity).
+
+**Housekeeping backstop.** If multiple slug-bearing files sit in the active folder, newest wins and the rest are demoted (stamp + archive). Insurance for the cases that skip the clean paths (a raw Sheets-API fork, a stray duplicate), not the normal workflow.
+
+**No new fields.** No predecessor column — the forward "superseded by" links plus timestamp order already give the chain, and the current file is the one with no successor. No explicit current-flag — current is computed as newest. No version counter — `slb_Version` retired. The registry needs only slug + `slb_DocUrl` + timestamp.
+
+**Primary action:** Open-Doc-from-the-task (Decision 3 / Step 9) is the main interaction; it always follows the pointer to whatever is current, so no one edits a superseded copy by accident.
+
+**Scope: documents only.** Templates keep the stricter lock/version handling — they feed live runtime sends (pending-payment email, outreach), so an uncontrolled edit has immediate blast radius.
+
+**Implementation slice (not built):**
+1. Strip the version number + lock affordance from the content-task UI; make Open-Doc primary.
+2. Adopt `<slug> yy-mm-dd-hh-mm` naming + newest-wins resolution in the session fork path and in `LibraryService` lookups.
+3. Add the "Superseded by →" stamp + move to an archive **subfolder under the existing `system.folder.library`** in Ops housekeeping (`HousekeepingService`), driven off the repoint breadcrumb. Reuse the library service's existing auto-created-concept-subfolder pattern (CONTENT_LIBRARY_PLAN §5) — e.g. a `_superseded` subfolder minted on demand — so **no new top-level folder or SysConfig key is needed** (`system.folder.library` and `system.folder.archive` already exist).
+4. Collapse `slb_State` to `draft → published` (+ terminal `abandoned`); retire `slb_Version` and `lockVersion`'s version bump.
 
 ---
 
