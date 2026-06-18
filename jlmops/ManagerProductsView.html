@@ -539,8 +539,7 @@
       // The collapsed lower cards load in page order, chained so they don't compete with
       // the main card (New Products' body is already covered by loadTaskList; Suggest
       // Products is heaviest, so it loads last). Each badge fills as its load returns.
-      ManagerProductsView.loadWidgetData();                 // Detail Updates + New Products count badges (light)
-      ManagerProductsView.loadTaskList(function() {         // Detail Updates + New Products bodies
+      ManagerProductsView.loadTaskList(function() {         // Detail Updates + New Products bodies + their header badges
         ManagerProductsView.loadVerifyList(function() {     // Verification (collapsed)
           ManagerProductsView.loadCategoryStatus();         // Suggest Products (collapsed, heaviest, last)
         });
@@ -578,22 +577,15 @@
         el.classList.add(n > 0 ? activeClass : 'badge-secondary');
     };
 
-    // --- Widget Data & Category Status (Updated) ---
-    ManagerProductsView.loadWidgetData = function() {
-      google.script.run.withSuccessHandler(data => {
-        if (data.error) return console.error(data.error);
-        
-        // getProductsWidgetData returns { detailUpdates:{edit,review}, newProducts:{suggested,review} }.
-        const wd = data.data || {};
-        const dux = wd.detailUpdates || {};
-        const np = wd.newProducts || {};
-        const mismatchCount = (dux.edit || 0) + (dux.review || 0);
-        const newProductCount = (np.suggested || 0) + (np.review || 0);
-        ManagerProductsView.setCountBadge('stat-mismatch', mismatchCount, 'badge-warning');
-        ManagerProductsView.setCountBadge('stat-onboarding', newProductCount, 'badge-info');
-        // New Products card badge (same onboarding count, so it shows while collapsed).
-        ManagerProductsView.setCountBadge('stat-onboarding-new', newProductCount, 'badge-info');
-      }).WebAppProducts_getProductsWidgetData();
+    // Detail Updates (vintage mismatch) + New Products (onboarding) header badges, set
+    // from the actual rendered list counts (loadTaskList) so a badge always matches what
+    // its card shows. (Superseded the getProductsWidgetData-based loadWidgetData, which
+    // counted a different slice — Review-status + suggestion tasks — and disagreed with
+    // the lists, leaving non-zero badges over a "No tasks found" list.)
+    ManagerProductsView._setTaskBadges = function(detailCount, onboardingCount) {
+      ManagerProductsView.setCountBadge('stat-mismatch', detailCount, 'badge-warning');
+      ManagerProductsView.setCountBadge('stat-onboarding', onboardingCount, 'badge-info');
+      ManagerProductsView.setCountBadge('stat-onboarding-new', onboardingCount, 'badge-info');
     };
 
     ManagerProductsView.loadCategoryStatus = function(onDone) {
@@ -839,6 +831,7 @@
         if (!tasks || tasks.length === 0) {
           detailBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
           onboardingBody.innerHTML = '<tr><td colspan="5">No tasks found.</td></tr>';
+          ManagerProductsView._setTaskBadges(0, 0);
           if (onDone) onDone();
           return;
         }
@@ -867,6 +860,7 @@
         if (detailCount === 0) detailBody.innerHTML = '<tr><td colspan="5">No detail updates pending.</td></tr>';
         if (onboardingCount === 0) onboardingBody.innerHTML = '<tr><td colspan="5">No new products pending.</td></tr>';
 
+        ManagerProductsView._setTaskBadges(detailCount, onboardingCount);
         if (onDone) onDone();
       }).withFailureHandler(err => {
         detailBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading tasks.</td></tr>';
