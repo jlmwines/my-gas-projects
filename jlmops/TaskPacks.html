@@ -138,6 +138,7 @@
         hE += '  <div class="detail-row"' + stopProp + '>';
         if (entity && entity.docUrl) {
           hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
+          hE += '    <button type="button" class="btn btn-sm" style="margin-left:8px" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach new version</button>';
         } else {
           hE += '    <span class="tw-file-link empty" style="margin-right:8px">No Doc yet</span>';
           hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
@@ -152,6 +153,7 @@
             var enPeer = ctx.getEntity(enPeerSlug);
             if (enPeer && enPeer.docUrl) {
               hE += '    <a class="tw-file-link" style="margin-left:8px" href="' + TaskWidgets.escape(enPeer.docUrl) + '" target="_blank" rel="noopener">Open EN source</a>';
+              hE += '    <button type="button" class="btn btn-sm" style="margin-left:8px" onclick="TaskPacks.createTranslationDraft(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create translation text</button>';
             } else {
               hE += '    <span class="tw-file-link empty" style="margin-left:8px">EN source not attached yet</span>';
             }
@@ -278,7 +280,7 @@
             return;
           }
           modal.style.display = 'none';
-          TaskWidgets.toast('Doc attached');
+          TaskWidgets.toast(result.superseded ? 'New version attached, previous archived' : 'Doc attached');
           ctx.reload();
         })
         .withFailureHandler(function(err) {
@@ -286,6 +288,28 @@
           TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
         })
         .WebAppLibrary_attachExistingDoc({ entityId: task.entityId, driveUrl: url });
+    }
+
+    function createTranslationDraft(taskId) {
+      var task = ctx.getTask(taskId);
+      if (!task) { TaskWidgets.toast('Task not found', true); return; }
+      if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
+      TaskWidgets.confirm('Create a fresh Hebrew draft from the English Doc? Any current Hebrew draft is archived.', function() {
+        TaskWidgets.toast('Creating translation draft...');
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (!result || !result.ok) {
+              TaskWidgets.toast((result && result.error) || 'Failed', true);
+              return;
+            }
+            TaskWidgets.toast(result.superseded ? 'Translation draft created, previous archived' : 'Translation draft created');
+            ctx.reload();
+          })
+          .withFailureHandler(function(err) {
+            TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
+          })
+          .WebAppLibrary_createTranslationDraft({ heEntityId: task.entityId });
+      });
     }
 
     function openLockModal(taskId) {
@@ -418,6 +442,7 @@
       openView: openView,
       createBlankDoc: createBlankDoc,
       attachExistingDoc: attachExistingDoc,
+      createTranslationDraft: createTranslationDraft,
       submitAttachDoc: submitAttachDoc,
       openLockModal: openLockModal,
       submitLock: submitLock,

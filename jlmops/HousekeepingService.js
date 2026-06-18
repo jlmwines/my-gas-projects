@@ -1395,6 +1395,9 @@ function HousekeepingService() {
         const subfolders = folder.getFolders();
         while (subfolders.hasNext()) {
           const sub = subfolders.next();
+          // Skip the supersede archive — its copies are deliberate version
+          // history, not orphans (Decision 7, Plan B).
+          if (sub.getName() === '_archive') continue;
           walkFolder(sub, pathPrefix + '/' + sub.getName(), out);
         }
       }
@@ -1402,10 +1405,12 @@ function HousekeepingService() {
       const driveFiles = [];
       walkFolder(libraryFolder, '', driveFiles);
 
-      // Orphan files — Drive files whose extension-stripped name doesn't match a slug.
+      // Orphan files — Drive files whose slug (version suffix + extension
+      // stripped) doesn't match a SysLibrary slug. Active files now carry a
+      // `<slug> <ts>` suffix (Decision 7, Plan B), so strip it before matching.
       const orphanFiles = [];
       driveFiles.forEach(f => {
-        const baseName = String(f.name).replace(/\.[^.]+$/, '');
+        const baseName = LibraryService.slugFromFileName(f.name);
         if (!slugSet.has(baseName)) {
           orphanFiles.push({ name: f.name, fileId: f.fileId, path: f.path });
         }
@@ -1418,7 +1423,8 @@ function HousekeepingService() {
         `Orphan files: ${orphanFiles.length}`,
         { count: orphanFiles.length, entries: orphanFiles });
 
-      return true;
+      // Return counts for the Dev-view button; the daily batch ignores the value.
+      return { orphanEntities: orphanEntities.length, orphanFiles: orphanFiles.length };
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Report failed: ${e.message}`);
       return false;
@@ -2433,3 +2439,14 @@ function HousekeepingService() {
 
 // Global instance for easy access throughout the project
 const housekeepingService = new HousekeepingService();
+
+/**
+ * Editor entry point for the content-library orphan-integrity report. Runs the
+ * same check the daily maintenance batch runs (HousekeepingService.js:727), but
+ * standalone so it can be invoked from the Apps Script editor. Writes the
+ * `library_integrity.orphan_entities` / `library_integrity.orphan_files` SysLog
+ * rows; returns true on success.
+ */
+function runLibraryIntegrityReport() {
+  return housekeepingService.runLibraryIntegrityReport();
+}

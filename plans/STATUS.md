@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @315 · theme v1.2.30; 0 blockers; new-product export now matches the detail-update export exactly (shared `_buildProductDetailExport`, @314) so onboarded products no longer reach Woo with empty descriptions, plus legible Products buttons (@315); manual hot-link retirement scoped + deferred (`jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`).
+**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @318 · theme v1.2.30; 0 blockers; content-library versioning shipped (Decision 7 / Plan B): timestamped library files + attach-to-replace (a new version supersedes the old to `_archive`) + a Create-translation-text button; rest of the slice (housekeeping multiplicity backstop, `lockVersion`/version-display cleanup, translation-prompt flat sheet) queued in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Decision 7.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @315; new-product onboarding export now byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @318; content-library versioning (Decision 7 / Plan B) shipped @316–@318: every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), robust Drive-URL id extraction, Dev "Library Integrity" button; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides).
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) created, scheduled for this evening.
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @315 · theme v1.2.30 |
+| Deploy Version | jlmops @318 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-18 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -51,6 +51,7 @@ The live "what now" — daily review reads these first.
 
 ### Pending verification (watch items)
 
+- **Content-library versioning** (@316–@318, Decision 7 / Plan B): attach-to-replace + supersede→`_archive` confirmed live on the Negev blog task (EN draft v2 attached, old draft archived). Still to smoke: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived) and a messy/mobile-pasted URL through the hardened id extraction. Migration `runLibraryFileNameMigration` already run (14 renamed).
 - **Correct Product Name tool** (@306, deployed live 2026-06-16, no /dev smoke): exercise once — search a product, edit EN and/or HE, Save, confirm the WebProdM `wpm_PostTitle` + WebDetM name cells changed and a "Name Update" row appears in Recent Updates. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** (@307–@311, deployed live 2026-06-17, only the suggestion sort smoked): plan `jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`. Smoke the rest — (a) Admin Suggestions/Linkage Accept & Link buttons open on a name with a quote; (b) Manager Products loads fast with Detail Updates open + 3 collapsed cards showing count badges (gray=0, colored when pending); expand each, confirm category/search/Suggest-Selected work; (c) a new-product onboarding task shows the EN name (not blank) in the Manager preview/header; (d) Admin Review Submissions shows the WebDetS staging name; (e) Admin New Products collapsed header shows its count badge.
 - **Verification reverted-task handling** (@312, deployed live 2026-06-17, unsmoked): plan `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`. Smoke — verify modal footer is Close/Revert/Done on one mobile row + opens on Specs; revert a verify task → it lands in Admin → Verification → "Reverted — needs admin" (+ header badge); **Close** completes it; **Pass to manager** transforms it to a manager Detail-Updates editable task with the findings note intact (confirm the note surfaces to the manager).

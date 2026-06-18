@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-18 (later 2) — Content-library versioning shipped (Decision 7 / Plan B, @316–@318)
+
+- Built Decision 7 in three deploys. **@316:** timestamped filenames (`<slug> <ts>`) — createBlankDoc/attachExistingDoc emit them, slug-aware overwrite + integrity matcher, one-time `runLibraryFileNameMigration` (14 renamed), Dev "Library Integrity" button. **@317:** attach-to-replace — attach a new version → displaced file gets "Superseded by →" stamp + moves to flat `_archive`; "Attach new version" button when a Doc exists. **@318:** Create-translation-text button (copy EN Doc + paraphrase prompt → attach as HE current) + robust Drive-URL id extraction.
+- **Design pivot:** dropped the planned fork engine for the user's simpler model — attach-to-replace, task-attach seals the version, housekeeping backstop for strays. Plan B = timestamp every file (active + archive) for naming consistency.
+- **Verified live:** attach-to-replace on the Negev blog (v2 attached, old archived); migration 14 renamed; integrity 0/0. Negev redrafted per manager's 4 notes (Spice Route, soil/diurnal, glass reframe, cut AT-A-GLANCE grapes) → Doc attached to the Negev task. Caution surfaced: a manual `doc_url` Doc sat in Library root (resolved by the attach landing it canonically) — relocation migration considered then dropped (only one file).
+- **Queued (Decision 7 remainder):** housekeeping multiplicity backstop; `lockVersion` drops version-bump/`locked` + strip version display; #3 externalize translation prompt to a flat sheet + refine wording. Smoke the translation button + a mobile URL.
+
+---
+
 ## 2026-06-18 (later) — Content Library versioning decision (Decision 7, not built)
 
 - Long design chew on Doc-sourced content versioning. Landed model written as **Decision 7** in `CONTENT_WORKFLOW_REDESIGN_PLAN.md` (Decisions 5 & 6 annotated as superseded). Nothing built.

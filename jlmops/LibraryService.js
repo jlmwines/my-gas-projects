@@ -438,9 +438,100 @@ const LibraryService = (function() {
     }
 
     /**
+     * Israel-local version stamp `yy-MM-dd-HH-mm` (script TZ = Asia/Jerusalem).
+     * Big-endian + zero-padded so lexical string order == chronological order.
+     * @private
+     */
+    function _versionStamp() {
+        return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yy-MM-dd-HH-mm');
+    }
+
+    /**
+     * Builds the timestamped library file name for a slug: `<slug> <yy-MM-dd-HH-mm>`
+     * (CONTENT_WORKFLOW_REDESIGN_PLAN Decision 7, Plan B — every file timestamped).
+     * @private
+     */
+    function _versionedFileName(slug) {
+        return slug + ' ' + _versionStamp();
+    }
+
+    /**
+     * Strips the ` yy-MM-dd-HH-mm` version suffix (and any extension) from a Drive
+     * file name, yielding the bare slug. A legacy bare-slug file (pre-migration,
+     * no suffix) is returned unchanged. Match the suffix by exact shape so a
+     * hyphenated slug tail is never mistaken for a stamp.
+     * @private
+     */
+    function _slugFromFileName(fileName) {
+        const base = String(fileName).replace(/\.[^.]+$/, '');
+        return base.replace(/ \d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/, '');
+    }
+
+    /**
+     * True if `fileName` already carries a `<slug> <yy-MM-dd-HH-mm>` version suffix.
+     * @private
+     */
+    function _isVersionedFileName(fileName) {
+        return / \d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/.test(String(fileName).replace(/\.[^.]+$/, ''));
+    }
+
+    /**
+     * Extracts a Drive file ID from a pasted URL, robust to messy mobile/redirect
+     * links. Prefers the canonical `/d/<id>` path segment, then a `?id=<id>` query
+     * param, and only falls back to the first 25+ char run (the old behaviour) when
+     * neither is present — so a tracking token like `usg=...` no longer wins over
+     * the real ID. Returns '' if nothing plausible is found.
+     * @private
+     */
+    function _extractDriveFileId(url) {
+        const s = String(url || '');
+        const m = s.match(/\/d\/([-\w]{25,})/)
+               || s.match(/[?&]id=([-\w]{25,})/)
+               || s.match(/([-\w]{25,})/);
+        return m ? m[1] : '';
+    }
+
+    /**
+     * Resolves (creating if missing) the flat `_archive` subfolder under
+     * `system.folder.library` — the single home for superseded library files
+     * (Decision 7, Plan B). Underscore prefix keeps it clear of content `<type>`
+     * folders and excluded from the integrity walk.
+     * @private
+     */
+    function _getArchiveFolder() {
+        const rootCfg = ConfigService.getConfig('system.folder.library');
+        const rootId = rootCfg && rootCfg.id ? String(rootCfg.id).trim() : '';
+        if (!rootId) throw new Error('system.folder.library not configured');
+        return _getOrCreateChildFolder(DriveApp.getFolderById(rootId), '_archive');
+    }
+
+    /**
+     * Supersedes a now-displaced library file: stamps "Superseded by → <successor>"
+     * at the top of the old Doc (best-effort — a non-Doc file just skips the stamp)
+     * and moves it into the flat `_archive` folder. The file keeps its
+     * `<slug> <ts>` name so the version order survives in the archive.
+     * @private
+     */
+    function _supersedeFile(fileId, successorUrl) {
+        try {
+            const doc = DocumentApp.openById(fileId);
+            const stamp = 'Superseded by → ' + successorUrl + '  (' +
+                Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm') + ')';
+            doc.getBody().insertParagraph(0, stamp);
+            doc.saveAndClose();
+        } catch (e) {
+            if (typeof LoggerService !== 'undefined' && LoggerService.warn) {
+                LoggerService.warn('LibraryService', '_supersedeFile',
+                    `Could not stamp superseded file ${fileId}: ${e.message}`);
+            }
+        }
+        DriveApp.getFileById(fileId).moveTo(_getArchiveFolder());
+    }
+
+    /**
      * Creates a blank Google Doc at the canonical Drive path for this entity.
-     * Refuses silent overwrite if a file with the same name already exists in
-     * the canonical folder.
+     * Refuses silent overwrite if a file already belongs to this slug (bare or
+     * versioned) in the canonical folder. New files are named `<slug> <ts>`.
      * @param {Object} params - { entityId: slug }
      * @returns {Object} { entity: updatedRow, docUrl }
      */
@@ -455,12 +546,16 @@ const LibraryService = (function() {
         const concept = _deriveConcept(entityId, type);
         const canonicalFolder = _getCanonicalFolder(type, concept);
 
-        // Refuse silent overwrite.
-        if (canonicalFolder.getFilesByName(entityId).hasNext()) {
-            throw new Error(`A file named "${entityId}" already exists in the canonical folder; refusing silent overwrite`);
+        // Refuse silent overwrite — any file already belonging to this slug
+        // (bare legacy name or `<slug> <ts>`) means a current version exists.
+        const existingFiles = canonicalFolder.getFiles();
+        while (existingFiles.hasNext()) {
+            if (_slugFromFileName(existingFiles.next().getName()) === entityId) {
+                throw new Error(`A file for "${entityId}" already exists in the canonical folder; refusing silent overwrite`);
+            }
         }
 
-        const doc = DocumentApp.create(entityId);
+        const doc = DocumentApp.create(_versionedFileName(entityId));
         const docId = doc.getId();
 
         // Seed the Doc with any inline content the entity already carries.
@@ -498,11 +593,13 @@ const LibraryService = (function() {
     }
 
     /**
-     * Attaches an existing Drive file to this entity. Moves the file to the
-     * canonical folder if it lives elsewhere; renames to match slug if needed.
-     * Drive file ID is stable through move/rename so external links keep working.
+     * Attaches a Drive file as the entity's new current version (Decision 7,
+     * Plan B — attach-to-replace). Moves the file into the canonical folder,
+     * names it `<slug> <ts>`, repoints slb_DocUrl, and supersedes the previously
+     * current file (stamp "Superseded by →" + move to _archive). Drive file ID is
+     * stable through move/rename so external links keep working.
      * @param {Object} params - { entityId, driveUrl }
-     * @returns {Object} { entity: updatedRow, docUrl }
+     * @returns {Object} { entity: updatedRow, docUrl, superseded: boolean }
      */
     function attachExistingDoc(params) {
         const entityId = params && params.entityId;
@@ -510,12 +607,16 @@ const LibraryService = (function() {
         if (!entityId) throw new Error('entityId is required');
         if (!driveUrl) throw new Error('driveUrl is required');
 
-        const match = String(driveUrl).match(/[-\w]{25,}/);
-        if (!match) throw new Error(`Could not extract Drive file ID from URL "${driveUrl}"`);
-        const fileId = match[0];
+        const fileId = _extractDriveFileId(driveUrl);
+        if (!fileId) throw new Error(`Could not find a Drive file ID in "${driveUrl}". Paste the Doc's share link or open URL.`);
 
         const entity = _getEntityRow(entityId);
         if (!entity) throw new Error(`Entity "${entityId}" not found`);
+
+        // Capture the currently-current file so we can supersede it once the
+        // new version is attached (Decision 7, Plan B — attach-to-replace).
+        const oldMatch = String(entity.slb_DocUrl || '').match(/[-\w]{25,}/);
+        const oldFileId = oldMatch ? oldMatch[0] : '';
 
         const type = entity.slb_ContentType;
         const concept = _deriveConcept(entityId, type);
@@ -534,18 +635,34 @@ const LibraryService = (function() {
         if (!inCanonical) {
             file.moveTo(canonicalFolder);
         }
-        // Rename if name doesn't match the slug.
-        if (file.getName() !== entityId) {
-            file.setName(entityId);
+        // Ensure the file is named `<slug> <ts>` (Decision 7, Plan B). Keep an
+        // existing valid versioned name for this slug; otherwise stamp a fresh one.
+        if (_slugFromFileName(file.getName()) !== entityId || !_isVersionedFileName(file.getName())) {
+            file.setName(_versionedFileName(entityId));
         }
 
         const now = new Date().toISOString();
+        const newUrl = file.getUrl();
         const updated = _updateEntityRow(entityId, {
-            slb_DocUrl: file.getUrl(),
+            slb_DocUrl: newUrl,
             slb_LastTouched: now
         });
 
-        return { entity: updated, docUrl: file.getUrl() };
+        // Replace: supersede the displaced file (stamp + move to _archive) so the
+        // active folder returns to one current file per slug. Skip when there was
+        // no prior file or the same file was re-attached.
+        let superseded = false;
+        if (oldFileId && oldFileId !== fileId) {
+            _supersedeFile(oldFileId, newUrl);
+            superseded = true;
+            logEntityActivity({
+                entityId: entityId,
+                actionType: 'version_superseded',
+                details: { supersededFileId: oldFileId, successorUrl: newUrl }
+            });
+        }
+
+        return { entity: updated, docUrl: newUrl, superseded: superseded };
     }
 
     /**
@@ -924,18 +1041,148 @@ const LibraryService = (function() {
         return { subject: subject, body: body, source: 'doc' };
     }
 
+    /**
+     * The prompt prepended to a fresh translation draft, instructing Gemini to
+     * paraphrase the English into natural Hebrew in JLM's voice rather than
+     * translate literally. INLINE DEFAULT for now — translation step #3 moves
+     * this to a maintainable flat sheet (engine/project-specific), swapping only
+     * this one function so the call site never changes.
+     * @private
+     */
+    function _getTranslationPrompt() {
+        return [
+            '>>> TRANSLATION INSTRUCTION — delete this block once the Hebrew is written <<<',
+            'Rewrite the English article below as a Hebrew article for JLM Wines.',
+            'Do NOT translate word-for-word. Paraphrase the ideas into natural, flowing Hebrew',
+            'that a native speaker would actually write. Keep JLM\'s voice: friendly, plain-spoken,',
+            'no jargon, never talking down. Preserve the structure and section headings, and all',
+            'facts, names and numbers. Where a literal translation would sound stiff, choose the',
+            'idiomatic Hebrew phrasing instead.',
+            '',
+            '----- ENGLISH SOURCE BELOW -----'
+        ].join('\n');
+    }
+
+    /**
+     * Creates a fresh Hebrew translation draft for a sibling-language HE entity:
+     * copies the EN peer's current Doc, prepends the translation prompt, and
+     * attaches the copy as the HE entity's current version (superseding any
+     * existing HE draft, per attach-to-replace). The translator then opens the
+     * Doc and lets Gemini paraphrase in place.
+     * @param {Object} params - { heEntityId }
+     * @returns {Object} { entity, docUrl, superseded }
+     */
+    function createTranslationDraft(params) {
+        const heEntityId = params && params.heEntityId;
+        if (!heEntityId) throw new Error('heEntityId is required');
+
+        const heEntity = _getEntityRow(heEntityId);
+        if (!heEntity) throw new Error(`Entity "${heEntityId}" not found`);
+
+        const enSlug = _flipPeerSlug(heEntityId);
+        if (!enSlug) throw new Error(`"${heEntityId}" has no language suffix; cannot find an English peer`);
+        const enEntity = _getEntityRow(enSlug);
+        if (!enEntity) throw new Error(`English peer "${enSlug}" not found`);
+        const enFileId = _extractDriveFileId(enEntity.slb_DocUrl);
+        if (!enFileId) throw new Error(`English peer "${enSlug}" has no Doc to translate yet`);
+
+        // Copy the EN Doc, prepend the prompt (line by line so each is its own
+        // paragraph), then attach the copy as the HE entity's current version.
+        const copy = DriveApp.getFileById(enFileId).makeCopy();
+        const copyDoc = DocumentApp.openById(copy.getId());
+        const promptLines = _getTranslationPrompt().split('\n');
+        for (let i = promptLines.length - 1; i >= 0; i--) {
+            copyDoc.getBody().insertParagraph(0, promptLines[i]);
+        }
+        copyDoc.saveAndClose();
+
+        const result = attachExistingDoc({ entityId: heEntityId, driveUrl: copy.getUrl() });
+
+        logEntityActivity({
+            entityId: heEntityId,
+            actionType: 'translation_draft_created',
+            details: { fromEntity: enSlug, fromFileId: enFileId }
+        });
+
+        return result;
+    }
+
+    /**
+     * One-time migration (Decision 7, Plan B): renames legacy bare-`<slug>`
+     * library files to `<slug> <yy-MM-dd-HH-mm>` so every active file carries a
+     * version stamp and a name-sorted view is never a mix of bare + stamped
+     * names. The timestamp is derived from each file's Drive last-updated time.
+     * Idempotent: already-versioned files, and files whose bare name isn't a
+     * known SysLibrary slug, are skipped. The `_archive` subfolder is skipped
+     * (its copies are stamped at supersede time). Run once from the editor.
+     * @returns {{ scanned: number, renamed: number, skipped: number }}
+     */
+    function migrateLibraryFileNames() {
+        const rootCfg = ConfigService.getConfig('system.folder.library');
+        const rootId = rootCfg && rootCfg.id ? String(rootCfg.id).trim() : '';
+        if (!rootId) throw new Error('system.folder.library not configured');
+
+        const { rows } = _openLibrary();
+        const slugSet = new Set(rows.map(r => String(r.slb_Slug).trim()).filter(Boolean));
+        const tz = Session.getScriptTimeZone();
+        const summary = { scanned: 0, renamed: 0, skipped: 0 };
+
+        function walk(folder) {
+            const files = folder.getFiles();
+            while (files.hasNext()) {
+                const file = files.next();
+                summary.scanned++;
+                const name = file.getName();
+                const base = _slugFromFileName(name);
+                // Already versioned, or not a recognised slug → leave alone.
+                if (_isVersionedFileName(name) || !slugSet.has(base)) {
+                    summary.skipped++;
+                    continue;
+                }
+                const stamp = Utilities.formatDate(file.getLastUpdated(), tz, 'yy-MM-dd-HH-mm');
+                file.setName(base + ' ' + stamp);
+                summary.renamed++;
+            }
+            const subs = folder.getFolders();
+            while (subs.hasNext()) {
+                const sub = subs.next();
+                if (sub.getName() === '_archive') continue;
+                walk(sub);
+            }
+        }
+
+        walk(DriveApp.getFolderById(rootId));
+        if (typeof LoggerService !== 'undefined' && LoggerService.info) {
+            LoggerService.info('LibraryService', 'migrateLibraryFileNames',
+                `Renamed ${summary.renamed}, skipped ${summary.skipped}, scanned ${summary.scanned}.`);
+        }
+        return summary;
+    }
+
     return {
         addEntity: addEntity,
         getEntityContent: getEntityContent,
         spawnContentChain: spawnContentChain,
         createBlankDoc: createBlankDoc,
         attachExistingDoc: attachExistingDoc,
+        createTranslationDraft: createTranslationDraft,
         lockVersion: lockVersion,
         requestCorrection: requestCorrection,
         abandonEntity: abandonEntity,
         markPublished: markPublished,
         logEntityActivity: logEntityActivity,
         getEntityDetail: getEntityDetail,
-        getEntityBySlug: _getEntityRow
+        getEntityBySlug: _getEntityRow,
+        slugFromFileName: _slugFromFileName,
+        migrateLibraryFileNames: migrateLibraryFileNames
     };
 })();
+
+/**
+ * Editor entry point for the one-time Decision 7 / Plan B file-name migration.
+ * Run this once from the Apps Script editor (file: LibraryService.gs) after the
+ * naming change deploys. Safe to re-run — idempotent.
+ */
+function runLibraryFileNameMigration() {
+    return LibraryService.migrateLibraryFileNames();
+}

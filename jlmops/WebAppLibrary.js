@@ -323,7 +323,33 @@ function WebAppLibrary_attachExistingDoc(params) {
     return {
       ok: true,
       updated: { entity: shaped },
-      docUrl: result.docUrl
+      docUrl: result.docUrl,
+      superseded: !!result.superseded
+    };
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Creates a fresh Hebrew translation draft (copy of the EN peer's Doc + prompt,
+ * attached as the HE entity's current version).
+ * @param {Object} params - { heEntityId }
+ * @returns {Object} { ok, updated: { entity }, docUrl, superseded, error? }
+ */
+function WebAppLibrary_createTranslationDraft(params) {
+  const serviceName = 'WebAppLibrary';
+  const functionName = 'createTranslationDraft';
+
+  try {
+    const result = LibraryService.createTranslationDraft(params || {});
+    const shaped = _getLibraryEntities([result.entity])[0];
+    return {
+      ok: true,
+      updated: { entity: shaped },
+      docUrl: result.docUrl,
+      superseded: !!result.superseded
     };
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
