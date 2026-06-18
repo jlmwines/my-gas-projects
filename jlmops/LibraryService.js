@@ -1041,12 +1041,22 @@ const LibraryService = (function() {
     /**
      * The prompt prepended to a fresh translation draft, instructing Gemini to
      * paraphrase the English into natural Hebrew in JLM's voice rather than
-     * translate literally. INLINE DEFAULT for now — translation step #3 moves
-     * this to a maintainable flat sheet (engine/project-specific), swapping only
-     * this one function so the call site never changes.
+     * translate literally. The live prompt is **Doc-sourced** from the
+     * `template-xlt` library entity so the manager can refine it (in Docs, from
+     * their own Claude account) with no deploy — the `template-xlt-*` namespace
+     * holds all translation assets and can grow (e.g. `template-xlt-region` term
+     * lists). Falls back to the built-in default below if that entity/Doc isn't
+     * present or readable.
      * @private
      */
+    const XLT_PROMPT_ENTITY = 'template-xlt';
     function _getTranslationPrompt() {
+        try {
+            const c = getEntityContent({ entityId: XLT_PROMPT_ENTITY });
+            if (c && c.body && c.body.trim()) return c.body;
+        } catch (e) {
+            // fall through to the built-in default
+        }
         return [
             '>>> TRANSLATION INSTRUCTION — delete this block once the Hebrew is written <<<',
             'Rewrite the English article below as a Hebrew article for JLM Wines.',

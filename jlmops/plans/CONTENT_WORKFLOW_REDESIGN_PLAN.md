@@ -98,9 +98,9 @@ The library's only versioning job is to name the single authoritative file per s
 - **@319 — version-machinery retirement (steps 1 + 4):** `lockVersion` no longer bumps `slb_Version` or sets `locked` (keeps task-close + peer-realign + log); version display stripped (content pack → `Status: <state>`; LibraryView "Ver" column + drawer field removed); activity label "Editing done". `slb_Version` column kept inert (append-only).
 - **@320 — UI fixes:** Cancel on the Editing-Done modal; admin task-detail pack buttons get `#task-pack-do .detail-row` flex+gap (+ removed redundant inline margins so spacing is uniform across admin + manager).
 - **@321 — housekeeping duplicate backstop:** `reconcileLibraryDuplicates` — per entity, >1 `<slug> <ts>` in the canonical folder → newest wins, repoint + supersede the rest; runs in the daily batch + `runLibraryDuplicateReconcile` editor entry.
+- **@322 — Doc-sourced translation prompt (#3):** the prompt lives in the `template-xlt` library entity's Doc (type `template`, language-agnostic); `_getTranslationPrompt` reads `getEntityContent('template-xlt')` with the inline text as fallback. Manager refines it in Docs (no deploy). Chosen over a standalone prompts sheet to reuse the existing Doc-sourced template mechanism (zero new infrastructure); the `template-xlt-*` namespace can grow (e.g. `template-xlt-region` term lists).
 
-**Still queued:**
-- **Translation-prompt flat sheet (#3):** externalize `_getTranslationPrompt`'s inline English default to a maintainable sheet Ops reads at run time (columns for engine/project variants); refine the wording.
+**Decision 7 / Plan B fully shipped @316–@322. Nothing queued.** Remaining is live smoke only (translation button, mobile-URL paste, `runLibraryDuplicateReconcile`).
 
 **Original slice (for reference):**
 1. Strip the version number + lock affordance from the content-task UI; make Open-Doc primary.

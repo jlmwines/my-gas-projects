@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-18 (later 4) — Decision 7 fully complete: Doc-sourced translation prompt (#3, @322)
+
+- **#3 shipped (@322):** the translation prompt is now Doc-sourced from the `template-xlt` library entity (type `template`, language-agnostic) — `_getTranslationPrompt` reads `getEntityContent('template-xlt')` with the inline text as fallback. Manager refines it in Docs (own Claude account), no deploy. Created the Doc + registered the entity (register-library.js manifest + run); verified `slb_DocUrl` set. `xlt` matches the project's `WebXltM` abbreviation; `template-xlt-*` namespace expandable (e.g. `template-xlt-region` term lists).
+- **Decision 7 / Plan B fully shipped** (@316–@322). Nothing queued.
+- **Remaining = live smoke (user):** Create-translation-text button (now Doc-sourced), mobile-URL paste, `runLibraryDuplicateReconcile` (expect 0).
+
+---
+
 ## 2026-06-18 (later 3) — Decision 7 core slice completed (@319–@321) + Negev redraft
 
 - **@319** version-machinery retirement: `lockVersion` no longer bumps `slb_Version` / sets `locked` (keeps task-close + peer-realign prompt); stripped the version display (content pack → `Status: <state>`; LibraryView "Ver" column + drawer field removed); activity label "Editing done". **@320** UI fixes: Cancel on the Editing-Done modal; admin pack buttons got `#task-pack-do .detail-row` flex+gap + removed redundant inline margins. **@321** housekeeping duplicate backstop (`reconcileLibraryDuplicates` — newest `<slug> <ts>` wins, rest superseded; daily batch + `runLibraryDuplicateReconcile` editor entry).

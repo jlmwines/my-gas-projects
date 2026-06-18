@@ -251,6 +251,18 @@ JLM Wines`,
     doc_url: 'https://docs.google.com/document/d/1vPwP_uE3IH8SuycisBLb0IUlMt8WBDVuF9Y-P-nca_Y/edit',
     references: ['blog-region-negev-he'],
   },
+  // ─── Translation assets (template-xlt namespace) ─────────────────────
+  // The Gemini paraphrase prompt, Doc-sourced so the manager refines it in
+  // Docs (no deploy). LibraryService._getTranslationPrompt reads this entity;
+  // namespace can grow (e.g. template-xlt-region term lists).
+  {
+    slug: 'template-xlt',
+    content_type: 'template',
+    language: null,
+    state: 'published',
+    title: 'Translation prompt (Gemini paraphrase)',
+    doc_url: 'https://docs.google.com/document/d/1lm4DOQXAGsOjJ0DjsCmZPbVaYmRrEBBp78eI1WCETfg/edit',
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────

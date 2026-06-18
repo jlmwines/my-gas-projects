@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @321 · theme v1.2.30; 0 blockers; content-library versioning **core slice complete** (Decision 7 / Plan B): timestamped library files + attach-to-replace (new version supersedes old to `_archive`) + Create-translation-text button + version-machinery retirement + housekeeping duplicate backstop; only the translation-prompt flat sheet (#3) remains queued in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Decision 7.
+**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @322 · theme v1.2.30; 0 blockers; content-library versioning **fully shipped** (Decision 7 / Plan B, @316–@322): timestamped library files + attach-to-replace (new version supersedes old to `_archive`) + Create-translation-text button + Doc-sourced translation prompt (`template-xlt`, manager-refineable, no deploy) + version-machinery retirement + housekeeping duplicate backstop. Nothing queued; remaining = live smoke (translation button, mobile-URL paste, `runLibraryDuplicateReconcile`).
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @321; content-library versioning core slice complete (Decision 7 / Plan B) @316–@321: every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), version-counter/`locked`-state retired (Editing-Done just finishes; version display gone), housekeeping **duplicate backstop** (daily: newest `<slug> <ts>` wins, rest archived), robust Drive-URL id extraction, Dev "Library Integrity" button, lock-modal Cancel + admin pack button spacing fix; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @322; content-library versioning fully shipped (Decision 7 / Plan B) @316–@322: **Doc-sourced translation prompt** (`template-xlt` entity — manager refines in Docs, no deploy; `template-xlt-*` namespace expandable), every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), version-counter/`locked`-state retired (Editing-Done just finishes; version display gone), housekeeping **duplicate backstop** (daily: newest `<slug> <ts>` wins, rest archived), robust Drive-URL id extraction, Dev "Library Integrity" button, lock-modal Cancel + admin pack button spacing fix; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides).
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) created, scheduled for this evening.
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @321 · theme v1.2.30 |
+| Deploy Version | jlmops @322 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-18 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
