@@ -126,25 +126,62 @@ Encyclopedic, evergreen, SEO-friendly. These are the building blocks that theme 
 - Terroir diversity explanation
 - How to use this guide
 
+**Hub backbone — three coexisting region systems** (per the authoritative source, Adam Montefiore, *Israel Wine Regions*, 2023). The overview post's spine is that "Israeli wine regions" means three different things, and the post untangles them:
+1. **The legal 5-region appellations** (decided mid-1970s; registered with the US TTB and the EU): Galilee, Shomron, Samson, Judean Hills, Negev. This is what prints on *export* bottles. Quirk worth explaining: Golan Heights is registered as a *sub-region of Galilee* for export law only, though it's geographically distinct.
+2. **The IPEVO professional map** (2020; the winemakers'/viticulturists' association): 6 regions / 15 sub-regions — and this is the taxonomy this guide uses for its six spokes. It matches the Israel Wine Board map (wineboard.co.il/map).
+3. **The "main quality regions"** — where the best wine actually comes from today: Upper Galilee, Upper Golan, Zichron–Hanadiv Valley, Judean Foothills, Judean Hills, Mitzpe Ramon.
+
+Friendly framing for the anti-snob voice: a reader doesn't need the legal detail to enjoy the wine, but it explains why the label says "Galilee" when the bottle is really from the Golan — and that's a satisfying thing to understand. Keep the legalese light; lead with geography people can picture.
+
 **Individual Posts (6 — official map of major regions; sub-regions are sections within the parent post):**
 
-| Region | Sub-regions | Notes |
+| Region | Sub-regions (IPEVO 2020) | Notes |
 |--------|-------------|-------|
-| Galilee | — | Diverse microclimates, limestone/basalt mix |
-| Golan Heights | — | High altitude, volcanic basalt soil, cool nights |
-| Coastal Plain | — | Mediterranean influence, sandy soils |
-| Central Mountains | Gilboa, Shomron, Judean Hills | The highland spine running north → south. Each sub-region gets its own section in the post. Judean Hills covers limestone terrain around Jerusalem; Shomron the historic Rothschild-revival heartland; Gilboa the northern transition zone. |
-| Judea | Judean Foothills (Shfela) | Lowland strip west of the Judean Hills — historically planted, warmer, lower elevation than the mountain spine above. |
-| Negev | — | Desert viticulture, extreme conditions, climate-adaptation pioneer |
+| Galilee | Upper Galilee West, Upper Galilee East, Lower Galilee | Diverse microclimates, limestone/basalt mix. Upper Galilee East carries most of the quality reputation — high-altitude (350–800m), cooler, planted from the mid-1990s; 800–1,000mm rain. Israel's most beautiful vineyard region. |
+| Golan Heights | Upper Golan, Lower Golan | Volcanic plateau to 1,200m; cool breezes off snow-capped Mt Hermon. Best wines from the Upper Golan (Central Golan 600–700m + Northern Golan 750–1,200m). Volcanic tuff + black basalt. First vines 1976; Golan Heights Winery 1983. |
+| Coastal Plain | Zichron Ya'acov–Hanadiv Valley, Judean Coast | Israel's most traditional region — first planted by Baron Edmond de Rothschild in the 1880s. Zichron/Binyamina valleys, 0–150m, Mediterranean breezes off the Carmel range. Known now for old-vine Carignan, not volume. Carmel's Zichron cellars (1892). |
+| Central Mountains | Mt. Gilboa, Shomron Hills, Judean Hills, Negev Judea | The highland spine running north → south. Each sub-region gets its own section in the post. Judean Hills is the quality star — Jerusalem corridor 400–1,000m, thin terra rossa over limestone bedrock, snow in winter; pioneers Domaine du Castel (1992) and Tzora (1993). Shomron is the historic Rothschild-revival heartland; Gilboa the northern transition zone. |
+| Judea | Judean Foothills (Shfela), Lachish | Lowland strip west of the Judean Hills — historically planted, warmer (50–300m), lower than the mountain spine above. Fast-growing for new vineyards/start-ups; limestone + chalky clay loams. Largest winery: Barkan at Hulda; oldest: Latroun Monastery (1890). |
+| Negev | Ramat Arad, Mitzpe Ramon | Desert viticulture, extreme conditions, climate-adaptation pioneer. Main area Mitzpe Ramon at 800m — very hot days, cold nights, morning mists; dryness keeps disease low. Carmel planted the first vineyard at Ramat Arad (1998). |
 
-Each region post includes:
-- Geography & climate
-- Soil types
-- Key grape varieties that thrive
-- Featured wineries (prominent + boutique)
-- How it compares to European counterparts
-- Historical context
-- Map/visual
+Each region post covers these elements — but **led as a story, not a checklist** (see the narrative principle below):
+- **Opening narrative** — open with the region's *ancient* winemaking history where any exists (biblical / archaeological roots), carry it forward into the modern revival and today, and let geology, climate, soil/terroir, and grape varieties emerge **through** that story rather than as standalone encyclopedia sections.
+- **Opener summary block** (companion to the narrative) — one-line region identity (the sentence that sets this region apart from the other five, so they don't blur) plus an at-a-glance fact strip: altitude / soil / rainfall / signature grapes / key wineries. The skimmable data box for readers who want facts fast — the prose tells the story, the box holds the data. Featured-snippet bait for SEO; Montefiore data fills it.
+- **Geology & geography**, **climate**, **soil & terroir** — woven into the narrative, not bolted on as separate dry sections.
+- **Typical flavors & what to expect** — the region's signature wine styles and the terroir-related *experience*, framed in our sensory language (intensity / complexity / acidity); what to look for in the glass. Generic to the region, **not specific bottles** (specific picks are a future automated feature — see scope note).
+- **Grape varieties** that thrive (cross-link to the Grapes category).
+- **Wineries of the region** — named in prose; internal cross-links to the Wineries / People categories (which carry the winemaker storytelling), and **external links to each winery's official site** (links are in from the start — see scope note).
+- **World-region comparison** (esp. European counterparts) — honest terroir caveat: in Israel terroir is one factor; microclimate + winemaker style do more of the work.
+- **Map/visual.**
+- **Wineries block (foot of post)** — a standing "wineries to know" list for the region: names each winery, links its official site, and a short **visit note** where relevant (visitor center, tours, tasting program, by-appointment, etc.). A list with real visit info, **not a tourist itinerary**.
+- **Cross-links** to the Grapes / Wineries / People / History / Uniqueness spokes (the hub-and-spoke SEO engine).
+
+**Narrative principle — open as a story.** The post earns attention by reading as a story, not a fact dump: terroir and varieties revealed along the way, never bolted on as dry sections. This keeps a "building block" reference post from becoming an encyclopedia entry, while staying in its lane (the place and its wine — the deeper winery/winemaker/grape stories live in their own categories). **But the opening arc is not one-size** — ancient winemaking history is real but concentrated, and the modern story carries different weight in each region, so each post opens on the archetype that's true to it (below).
+
+**Opening archetypes (the opener flexes per region; the rest of the template is shared).**
+1. **Ancient-rediscovery** — deep ancient roots → dormancy → modern rediscovery. **Judea / Judean Hills** (biblical heartland, rock-cut winepresses, the indigenous-grape revival around Bethlehem) and the **Negev** (Nabataean/Byzantine desert viticulture at Avdat, Shivta, Nizzana — ancient desert wine that modern desert pioneers rediscovered; arguably the strongest arc of the six).
+2. **Modern-revolution** — thin/non-iconic ancient history; the story *is* the modern leap. **Golan Heights** (volcanic plateau, first vines 1976, Golan Heights Winery 1983, the quality revolution).
+3. **Heritage-continuity / founding** — birthplace of the modern industry. **Coastal Plain** (Baron Edmond de Rothschild, 1880s; Carmel; oldest continuously producing modern region; Byzantine "Gaza wine" as ancient colour, not the lead).
+4. **Quality-heartland / mixed** — lead with the dominant thread. **Galilee** (the modern high-altitude quality heartland; ancient Galilean wine as backdrop) and **Central Mountains** (composite — open on whichever sub-region anchors the post: Judean Hills' antiquity, Shomron's biblical Samaria, or Gilboa).
+
+**Grapes are also not uniform.** Signature varieties are climate-driven and mostly international (cool Golan / Upper Galilee → Bordeaux reds + whites; hot Coastal → Carignan / Mediterranean; Negev → extreme-adapted). The ancient/indigenous-grape angle (Marawi/Hamdani, Bittuni, Dabouki) is localized — mainly Judea / Bethlehem — so it's a story only some region posts can tell, not a shared section.
+
+**Biblical tribal geography (light recurring thread).** The Twelve Tribes' allotments (Book of Joshua) overlay the modern regions; where the tie is strong it's a heritage layer that lands well with the guide's "interested in / visiting Israel" audience. Use it where it's strongest, a one-line nod elsewhere, never forced:
+- **Judea** — **Judah**, *the* wine tribe: Jacob's blessing (Genesis 49:11–12, "he washed his garments in wine"); territory = Judean Hills / Foothills reaching into the northern Negev.
+- **Galilee** — Naphtali (Upper Galilee), Asher (west), Zebulun + Issachar (Lower Galilee).
+- **Golan Heights** — eastern half-tribe of Manasseh (biblical Bashan); the city of Dan at its northern foot.
+- **Central Mountains** — Ephraim + western Manasseh (Shomron / Samaria); Benjamin and Judah around Jerusalem.
+- **Negev** — weakest tie (Judah's southern frontier + Simeon near Beersheba; mostly wilderness in tribal times) → one-liner or skip; the Nabataean→modern arc is stronger.
+- **Coastal Plain** — borderland (Carmel coast was largely Phoenician/Philistine); brushes Asher and Manasseh.
+- *Cautions:* verify Joshua allotment boundaries before printing specifics; handle as ancient/biblical heritage, apolitical (Samaria + the Judean Hills sit in the West Bank) — same posture as the indigenous-grape note.
+
+**Wineries vs vineyards (naming nuance).** Region posts so far name *wineries*, but a winery is often based in one region while farming *vineyards* in several (e.g. a Galilee winery sourcing Negev or Judean Hills fruit). When listing wineries in a region post, distinguish **"based here"** from **"farms vineyards here"** — both are worth mentioning, and a winery can legitimately appear in more than one region post for its vineyard holdings. It's also why a winery's signature wine may not taste of the region the winery sits in. Vineyard-level detail is sourced per-winery (Woo doesn't carry it); add it where known, don't force it.
+
+**Scope note — region posts are building blocks.**
+- These are foundation/reference posts. Wineries, winemakers, and grape varieties each get their **own** category in this guide and carry the storytelling; the region spoke stays in its lane (the place itself) and cross-links out. The future book weaves the stories across categories — a region post is one thread, not the whole weave.
+- **Winery website links: yes, from the start.** External links to wineries' official sites are in now, not deferred — they help SEO and topical authority, and because JLM is often cheaper than a winery's own shop, linking out carries no real sales leak.
+- **Post→product links: future / under consideration** (attribute-dependent). The likely first linkage direction is the reverse — product pages linking *to* the relevant region post — so build the posts to be good link targets.
+- **Specific wine picks: a future automated feature**, surfaced by product attribute (region) — not hand-curated into the prose now (which would also couple a post to live inventory).
 
 **Composition principle — the Europe comparison.** When a region post compares to a European counterpart, name the asymmetry explicitly: European wine regions are shaped heavily by tradition (appellation law, guilds, inherited practices, available nursery stock), so terroir reads as a clean, predictable signal there. Israel has terroir too, but microclimate diversity and winemaker style do more of the work — terroir is one factor, not the dominant one. Don't write Europe-Israel comparisons as if both sides are pure-terroir stories; the inputs are different.
 
@@ -458,6 +495,7 @@ Overviews update as individual posts publish
 - [ ] Extract grape varieties from inventory
 - [ ] Identify exemplary wines for each category
 - [ ] Source historical dates/figures
+- [ ] **Source ancient/archaeological winemaking history per region** (for the "ancient-rediscovery" openers) — Nabataean/Byzantine Negev viticulture (Avdat, Shivta, Nizzana), Judean Hills rock-cut winepresses, the indigenous-grape revival (Marawi/Hamdani, Bittuni, Dabouki). Montefiore is modern-focused and won't carry this; needs archaeological/historical sources. See the Resources list below.
 - [ ] Find comparison data (European regions)
 - [ ] Locate/commission maps and visuals
 - [ ] Contact regional wine councils/marketing bodies for content input
@@ -544,3 +582,24 @@ Theme posts:
 - `content/VIDEO_GUIDE.md` - For video production
 - `business/CONTENT_STRATEGY.md` - Brand voice
 - `content/JLMops_Data - WebProdM.csv` - Product inventory
+
+### Regions — authoritative sources
+
+- **Adam Montefiore, *Israel Wine Regions* (2023)** — `adammontefiore.com/wp-content/uploads/2023/12/ISRAEL-WINE-REGIONS.pdf`. The authority for region taxonomy (legal 5 / IPEVO 6+15 / main quality 6), per-region geography, soil, altitude, rainfall, pioneering wineries, and "first wine on the appellation." Primary source for all region spokes + the hub. (PDF is binary — extract text with `pdftotext`, not WebFetch.) Montefiore also has topical essays (e.g. "The Wine Elite of the Judean Highlands") for modern colour.
+- **Israel Wine Board map** — `wineboard.co.il/map` — confirms the 6-region division; interactive visual reference.
+
+**Ancient / archaeological history** (for the "ancient-rediscovery" openers — Negev + Judea; checked 2026-06-18):
+
+- *Negev / Nabataean-Byzantine desert wine ("Gaza wine," vinum Gazentum):*
+  - PNAS, "The rise and fall of viticulture in the Late Antique Negev Highlands" (2020) — `pnas.org/content/117/33/19780` — peer-reviewed, the authoritative scientific account.
+  - PLOS One, "Wine economy in Byzantine Shivta" — `journals.plos.org/plosone/article?id=10.1371/journal.pone.0325204`.
+  - "Wine from the Desert: Late-Antique Negev Viniculture and the Famous Gaza Wine" (ResearchGate) — academic context for the Gaza export trade.
+  - Shivta — `en.wikipedia.org/wiki/Shivta` (general orientation; ~2M litres/yr scale claim).
+  - Modern revival of the **Sariki & Beer** desert varieties replanted at Avdat (2023) / Shivta (2026): ynetnews + vinetur write-ups.
+- *Judea / Judean Hills — biblical winepresses + indigenous grapes:*
+  - BibleWalks, "WinePresses in the Holy Land" — `biblewalks.com/winepresses` — catalogue of rock-cut press sites.
+  - Genesis 49:11–12 (the Judah/wine blessing) — primary biblical reference.
+  - Indigenous-grape revival (**Marawi/Hamdani, Bittuni, Dabouki, Jandali**): the Dr. Elyashiv Drori / Ariel University research program is the scientific backbone; Cremisan Monastery (Bethlehem) and Recanati (first commercial Marawi) are the wine touchpoints. Coverage: GrapeCollective "What Would Jesus Drink," ScienceDirect "In Dabouki Land," Joshua London (Substack).
+- *General / History category overlap:* the 5,000-year-old Canaanite winepress at Tel Megiddo (2025, Israel Antiquities Authority) — Haaretz / archaeologymag — earliest in Israel; feeds the History overview more than a single region.
+
+**Editorial caution — the indigenous-grape story is politically contested.** The native-grape narrative is claimed in both Israeli and Palestinian framings (cf. MERIP "Indigenous Wine and Settler Colonialism" vs. JPost "Sour grapes"). Per brand voice (earnest, never negative, apolitical), handle it as a wine-and-archaeology story — the grapes, the science, the rediscovery — and stay out of the ownership argument entirely.

@@ -38,6 +38,7 @@ When the user says the session is being foolish: stop and re-run this checklist 
 ## Key Documents
 
 - `plans/STATUS.md` — current state, metrics, next action, inbox (dashboard only — no session history)
+- `plans/OPERATIONS.md` — operational task registry; read when a session is about to execute a recurring task (publish post, register content, create email, deploy, etc.)
 - `.claude/session-log.md` — Claude-internal session log
 - `CALENDAR.md` — dated tasks and milestones
 - `website/BRAND.md` — visual identity and brand guidelines for jlmwines.com

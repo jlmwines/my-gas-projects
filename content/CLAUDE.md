@@ -84,6 +84,8 @@ Each blog post lives as a `.md` file (one EN, one HE) with a fixed section struc
 
 **Publishing a post → see `content/PUBLISHING.md`** for the full pipeline (the image-upload + `push-posts.js` scripts, the manifest, credentials/target, commands, and the manual wp-admin checklist after a push). Planned automation of that checklist: `content/PUBLISH_ENHANCEMENT_PLAN.md`.
 
+**Registering a post in the jlmops content library → see `content/register-library.js` header** for all usage modes (`<slug>`, `--all`, `--update`). Add a manifest entry to the script, then run `node content/register-library.js <slug>`.
+
 ### Required sections (in this order)
 
 | Section | Length | Purpose |

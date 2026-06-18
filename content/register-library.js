@@ -237,6 +237,20 @@ JLM Wines`,
     body: '\n\nונקודה נוספת — כלקוח חדש, ניתן להשתמש בקוד NEW50 ל-₪50 הנחה על כל הזמנה מעל ₪399, כולל משלוח חינם.',
     references: ['template-pending-payment-addendum-en'],
   },
+  // ─── Region spoke: Negev (2026-06-18, draft for manager review) ──────
+  // First "regions" category blog. Draft lives in the linked Doc (manager
+  // edits there per the Doc-sourced content workflow). state='draft' — the
+  // manager's Edit task Lock+Versions it to 'locked' when review is done.
+  // HE sibling not created yet (added at the translate stage).
+  {
+    slug: 'blog-region-negev-en',
+    content_type: 'blog',
+    language: 'en',
+    state: 'draft',
+    title: 'Wine in the Desert: The Negev',
+    doc_url: 'https://docs.google.com/document/d/1vPwP_uE3IH8SuycisBLb0IUlMt8WBDVuF9Y-P-nca_Y/edit',
+    references: ['blog-region-negev-he'],
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────
