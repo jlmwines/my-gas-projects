@@ -14,6 +14,8 @@
           <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
           <button class="btn mr-2 mb-2" onclick="runBackfillCampaignActivity()">Backfill Campaign Activity</button>
           <button class="btn mr-2 mb-2" onclick="runLibraryIntegrity()">Library Integrity</button>
+          <button class="btn mr-2 mb-2" onclick="runSeedCoreContentCampaign()">Seed Core Content Campaign</button>
+          <button class="btn mr-2 mb-2" onclick="runBackfillCoreContentCampaignId()">Backfill Core Content CampaignId</button>
         </div>
         <div id="dev-tools-results" class="mt-3"></div>
       </div>
@@ -213,6 +215,40 @@
         resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
       })
       .runLibraryIntegrityReport();
+  }
+
+  function runSeedCoreContentCampaign() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Seeding core-content campaign row...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response && response.success) {
+          resultDiv.innerHTML = `<p class="alert alert-success">Core-content campaign: ${response.seeded ? 'seeded' : 'already exists, skipped'}.</p>`;
+        } else {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Seed failed: ${response ? response.error : 'unknown error'}</p>`;
+        }
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error: ${err.message}</p>`;
+      })
+      .WebAppSystem_seedCoreContentCampaign();
+  }
+
+  function runBackfillCoreContentCampaignId() {
+    const resultDiv = document.getElementById('dev-tools-results');
+    resultDiv.innerHTML = '<p class="text-info">Backfilling slb_CampaignId on blog entities...</p>';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response && response.success) {
+          resultDiv.innerHTML = `<p class="alert alert-success">Backfill done: ${response.updated} rows updated, ${response.skipped} already set.</p>`;
+        } else {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Backfill failed: ${response ? response.error : 'unknown error'}</p>`;
+        }
+      })
+      .withFailureHandler(err => {
+        resultDiv.innerHTML = `<p class="alert alert-danger">Error: ${err.message}</p>`;
+      })
+      .WebAppSystem_backfillCoreContentCampaignId();
   }
 
 </script>

@@ -20,7 +20,7 @@ const LibraryService = (function() {
     const LIBRARY_SHEET = 'SysLibrary';
 
     // §6 entity types — physical library rows. Matches content/register-library.js TYPES.
-    const VALID_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template', 'image', 'customer'];
+    const VALID_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template', 'image', 'customer', 'other'];
 
     // §6 language axis — null/empty for language-agnostic entities.
     const VALID_LANGUAGES = ['en', 'he', null, ''];
