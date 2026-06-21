@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-21 — PublishingView plan written
+
+- Planning session: designed the Publishing View (LibraryView promoted to PublishingView). New plan: `jlmops/plans/PUBLISHING_VIEW_PLAN.md`.
+- Key decisions: 4 admin tabs (Calendar / Campaigns / Projects / Library); 3 manager tabs (Calendar / Tasks / Library). `news` + `email` entity types already in VALID_TYPES; `other` type to add (slug `pub-*`, admin task-selection). `JLMops_Calendar` workbook (Drive-MCP-writable by sessions) for holidays; `jlmops-calendar.md` export alongside `jlmops-status.md`. Campaign FK on Library entities (`slb_CampaignId`); `core-content` added to SysMarketingCampaigns; SysProjects distribution rows deprecated + purged.
+- Two fork review passes; all conflicts and gaps resolved.
+- Also provided EN/HE handling post URLs (en: `/how-to-store-open-serve-wine/`, he: `/he/how-to-store-open-serve-wine/`).
+- Next: build session for PublishingView; QR codes for newsletter still needed.
+
+---
+
 ## 2026-06-21 — Cleanup pass
 
 - Fixed CALENDAR.md BUG_FIX_SEQUENCE entry (A-D → A-E/G shipped; F/H/I open).
