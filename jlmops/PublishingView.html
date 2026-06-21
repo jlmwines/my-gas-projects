@@ -240,9 +240,9 @@
        manager sees Calendar/Library (Tasks tab added in Deploy 4). -->
   <div class="pv-tabs">
     <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
+    <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
     <button class="pv-tab" data-tab="projects" onclick="PublishingView.switchTab('projects')" data-roles="admin">Projects</button>
-    <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
   </div>
 
   <!-- ===== CALENDAR TAB ===== -->
@@ -468,11 +468,19 @@
           if (res && res.success) {
             state.campaigns = res.data.campaigns || [];
             state.projects = res.data.projects || [];
-            if (state.activeTab === 'campaigns') renderCampaigns();
-            if (state.activeTab === 'projects') renderProjects();
+            renderCampaigns();
+            renderProjects();
+          } else {
+            var msg = (res && res.error) ? res.error : 'Failed to load campaigns/projects';
+            document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+            document.getElementById('pv-projects-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
           }
         })
-        .withFailureHandler(function() {})
+        .withFailureHandler(function(err) {
+          var msg = err && err.message ? err.message : 'Network error';
+          document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+          document.getElementById('pv-projects-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+        })
         .WebAppPublishing_getCampaignsAndProjects();
     }
 
