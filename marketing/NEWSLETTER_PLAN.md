@@ -277,29 +277,22 @@ For each issue:
 
 ## Companion Email Campaign
 
-A separate email send (EN + HE) accompanies each issue. Different role from the print insert: the email is the channel where the Making Wine content lives most fully (longer than what fits in the print column) and where subscribers get the personal note from Evyatar directly.
+A separate email send (EN + HE) accompanies each issue. **Actual model (confirmed via Issue #1 + June Handling send):** the email is post-promo-led — it features the month's blog post, not the Making Wine series. The manager prepares a full marketing suite in the Drive doc alongside each blog post (excerpt/meta/social/email/newsletter sections); the session reads the `## EMAIL` section verbatim as the email body. Making Wine stays in the print secondary slot; it does not anchor the companion email.
 
 ### Structure
 
-1. **Subject line:** teaser phrase, not a series announcement. E.g., "Behind the scenes, before the bottle." Conveys the content type without naming it as a series.
-2. **Preview text:** complements subject; sets expectation of personal/insider content.
-3. **Lead body:** Evyatar's full Making Wine note for the month — what's happening in the vineyard and the winery right now. Personal voice, first-person, no meta-framing. The email IS the content; readers don't get told "this is our new monthly series."
-4. **Below the lead:** brief secondary mentions — new blog post (when there is one), notable site changes, anything else worth surfacing. Short, plain.
-5. **Sign-off:** `— Evyatar`.
+1. **Hero:** blog post featured image (referenced by the post's Mailchimp-side upload).
+2. **Body:** verbatim from the `## EMAIL` section of the manager's Drive doc for that post (EN or HE). The manager writes this; the session does not paraphrase.
+3. **Sign-off:** `— Evyatar`.
+4. **No footer:** no `jlmwines.com` URL band; no boilerplate. The Mailchimp footer handles compliance.
 
 ### No signup CTA inside the email
 
 Subscribers are already subscribed. The signup ask lives on the print insert + the site footer, where non-subscribers see it. Don't sell subscription inside an email to subscribers.
 
-### Issue #1 specifics (Context launch + first Making Wine)
-
-- Subject line teases the Making Wine angle (not Context-launch wording).
-- Lead body: May edition of Making Wine, from Evyatar's edited 12-month draft.
-- Below the lead: mention of the new Context blog post + the new site look (post-cutover redesign reference).
-
 ### Workflow
 
-Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session drafts subject/preview/HTML body in chat; user pastes into the Mailchimp draft they've set up manually with the correct audience targeting.
+Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session builds the HTML body from the manager's Drive email copy; user creates the Mailchimp campaign draft and pastes in the content, then reviews and schedules.
 
 ---
 
@@ -338,4 +331,4 @@ Per `business/BRAND_STANDARDS.md`. Editorial, not pitchy. Consistent with the we
 
 ---
 
-Updated: 2026-06-11 (Issue #1 shipped; model live)
+Updated: 2026-06-21 (companion email model corrected to post-promo-led per Issue #1 + June Handling send)

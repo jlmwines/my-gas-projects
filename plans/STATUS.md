@@ -34,7 +34,7 @@ The live "what now" — daily review reads these first.
 
 1. **Newsletter Issue #1 — distribution underway.** Printed; being inserted into outgoing shipments and store bags. Physical / user-handled; Claude only if insert copy or a counter card is wanted.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
-3. **Flyer advertising — active.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Plan → `marketing/FLYER_PLAN.md`. Unblockers: vendor outreach (yoterplus / dilen), designer, photo assets; coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
+3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
 4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 
@@ -93,7 +93,7 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Active
 
-- _(empty)_
+- **CALENDAR.md JLM rows stale** `defer:2026-06-28` — 2 consecutive reviews flagging; needs a cleanup pass to strike past dates + shipped phases. In-session fix next available cleanup/session.
 
 ### Deferred
 
