@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-21 — Cleanup pass
+
+- Fixed CALENDAR.md BUG_FIX_SEQUENCE entry (A-D → A-E/G shipped; F/H/I open).
+- CONTENT_WORKFLOW_REDESIGN_PLAN: Decision 7 "Not yet built" → shipped @316-322; header updated.
+- STATUS.md: date bumped, CALENDAR-stale Inbox item resolved.
+- No code changes. Nothing queued.
+
+---
+
 ## 2026-06-18 (later 4) — Decision 7 fully complete: Doc-sourced translation prompt (#3, @322)
 
 - **#3 shipped (@322):** the translation prompt is now Doc-sourced from the `template-xlt` library entity (type `template`, language-agnostic) — `_getTranslationPrompt` reads `getEntityContent('template-xlt')` with the inline text as fallback. Manager refines it in Docs (own Claude account), no deploy. Created the Doc + registered the entity (register-library.js manifest + run); verified `slb_DocUrl` set. `xlt` matches the project's `WebXltM` abbreviation; `template-xlt-*` namespace expandable (e.g. `template-xlt-region` term lists).
