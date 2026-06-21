@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-19 — JLM Wines ecosystem live; jlmops @323 · theme v1.2.30; 0 blockers; @323 shipped on-demand WebXltM translation refresh (New Products card, Track A) so mid-day product adds get their EN↔HE link without waiting for the next sync. Content-library versioning fully shipped (Decision 7 / Plan B, @316–@322). Remaining = live smoke (Refresh Translations button; plus carried Decision 7 smokes: translation button, mobile-URL paste, `runLibraryDuplicateReconcile`).
+**Updated:** 2026-06-21 — JLM Wines ecosystem live; jlmops @323 · theme v1.2.30; 0 blockers; Decision 7 / Plan B (content-library versioning) fully shipped @316–@322; on-demand WebXltM refresh @323. Several features pending live smoke (see § Pending verification).
 
 ## At a glance
 
@@ -93,7 +93,7 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Active
 
-- **CALENDAR.md JLM rows stale** `defer:2026-06-28` — 2 consecutive reviews flagging; needs a cleanup pass to strike past dates + shipped phases. In-session fix next available cleanup/session.
+_(clear)_
 
 ### Deferred
 
