@@ -1,0 +1,1094 @@
+<?!= include('TaskWidgets') ?>
+
+<style>
+  /* PublishingView — layout */
+  .pv-container { padding: 0 10px; }
+
+  /* Tab bar */
+  .pv-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 12px;
+  }
+  .pv-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+  }
+  .pv-tab.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    font-weight: 600;
+  }
+  .pv-tab:hover:not(.active) { color: #212529; border-bottom-color: #adb5bd; }
+
+  /* Panels */
+  .pv-panel { display: none; }
+  .pv-panel.active { display: block; }
+
+  /* Calendar */
+  .pv-cal-table-wrap {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+  }
+  .pv-cal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .pv-cal-table th, .pv-cal-table td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .pv-cal-table thead th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 12px;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .pv-cal-table tr:hover td { background: #f8f9fa; }
+  .pv-cal-holiday td { background: #f0f0f0 !important; color: #6c757d; font-style: italic; }
+  .pv-cal-overdue td { background: #fff3cd !important; }
+
+  /* Library (catalog) — same as LibraryView */
+  .pv-library-presets {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .pv-library-table-wrap {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+  }
+  .pv-library-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .pv-library-table th, .pv-library-table td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .pv-library-table thead th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 12px;
+    color: #495057;
+    position: sticky;
+    top: 0;
+  }
+  .pv-library-table tr:hover td { background: #f8f9fa; }
+
+  .pv-empty { padding: 24px; text-align: center; color: #6c757d; font-style: italic; }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .pv-drawer-header { grid-template-columns: 1fr; gap: 8px; }
+    .pv-library-table.responsive-stack tr {
+      border: none;
+      border-bottom: 1px solid #ced4da;
+      border-radius: 0;
+      margin-bottom: 0;
+      padding: 8px 4px;
+      background: transparent;
+    }
+    .pv-library-table.responsive-stack td { padding: 1px 0; }
+    .pv-tabs { overflow-x: auto; }
+  }
+
+  /* Entity drawer */
+  .pv-drawer-panel {
+    background: #fff;
+    width: 560px;
+    max-width: 95vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .pv-drawer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+  }
+  .pv-drawer-toolbar h6 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pv-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .pv-drawer-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+  }
+  .pv-drawer-header label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .pv-drawer-header .field-value { font-size: 13px; color: #212529; }
+  .pv-drawer-header .field-value.mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
+  .pv-drawer-section {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 12px;
+  }
+  .pv-drawer-section h6 {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+  }
+  .pv-drawer-section .placeholder { color: #adb5bd; font-style: italic; }
+
+  .pv-entity-title-link {
+    color: #0d6efd;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .pv-entity-title-link:hover { text-decoration: underline; }
+
+  .pv-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+  }
+  .pv-drawer-actions:empty { display: none; }
+
+  .pv-drawer-task-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 12px;
+  }
+  .pv-drawer-task-row:last-child { border-bottom: none; }
+  .pv-drawer-task-title { flex: 1; color: #212529; }
+  .pv-drawer-activity-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid #f8f9fa;
+    font-size: 12px;
+    color: #495057;
+  }
+  .pv-drawer-activity-row:last-child { border-bottom: none; }
+  .pv-drawer-activity-time { color: #6c757d; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
+  .pv-drawer-activity-action {
+    background: #e9ecef;
+    color: #495057;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px;
+  }
+
+  .pv-entity-chip {
+    cursor: pointer;
+    color: #0d6efd;
+    border-color: #b6d4fe;
+  }
+  .pv-entity-chip:hover { background: #d9e9ff; }
+</style>
+
+<div class="pv-container">
+
+  <!-- Tab bar — admin sees Calendar/Campaigns/Projects/Library;
+       manager sees Calendar/Library (Tasks tab added in Deploy 4). -->
+  <div class="pv-tabs">
+    <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
+    <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
+    <button class="pv-tab" data-tab="projects" onclick="PublishingView.switchTab('projects')" data-roles="admin">Projects</button>
+    <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
+  </div>
+
+  <!-- ===== CALENDAR TAB ===== -->
+  <div class="pv-panel active" id="pv-panel-calendar">
+    <div class="tw-filter-bar">
+      <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
+      <select id="pv-cal-filter-campaign">
+        <option value="">All campaigns</option>
+        <option value="core-content">Core Content</option>
+        <option value="newsletter-print">Newsletter</option>
+        <option value="email-broadcast">Email</option>
+        <option value="flyer-acquisition">Flyer</option>
+      </select>
+      <select id="pv-cal-filter-state">
+        <option value="">All states</option>
+        <option value="draft">Draft</option>
+        <option value="locked">Locked</option>
+        <option value="published">Published</option>
+        <option value="abandoned">Abandoned</option>
+      </select>
+    </div>
+    <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
+      <div class="pv-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ===== CAMPAIGNS TAB (stub — full content in Deploy 3) ===== -->
+  <div class="pv-panel" id="pv-panel-campaigns">
+    <div id="pv-campaigns-content">
+      <div class="pv-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ===== PROJECTS TAB (stub — full content in Deploy 3) ===== -->
+  <div class="pv-panel" id="pv-panel-projects">
+    <div id="pv-projects-content">
+      <div class="pv-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ===== LIBRARY TAB ===== -->
+  <div class="pv-panel" id="pv-panel-library">
+    <div class="pv-library-toolbar mb-2" data-roles="admin">
+      <button class="btn btn-sm" id="pv-btn-open-content-stream">Create Content Tasks</button>
+    </div>
+    <div class="pv-library-presets">
+      <button class="tw-chip active" data-preset="all" onclick="PublishingView.switchPreset('all')">Library</button>
+      <button class="tw-chip" data-preset="deficiency" onclick="PublishingView.switchPreset('deficiency')" title="Pieces due soon or overdue — the demand view">Deficiency</button>
+      <button class="tw-chip" data-preset="blog" onclick="PublishingView.switchPreset('blog')">Blog</button>
+      <button class="tw-chip" data-preset="campaigns" onclick="PublishingView.switchPreset('campaigns')">Campaigns</button>
+      <button class="tw-chip" data-preset="template" onclick="PublishingView.switchPreset('template')">Templates</button>
+      <button class="tw-chip" data-preset="image" onclick="PublishingView.switchPreset('image')">Images</button>
+    </div>
+    <div class="tw-filter-bar">
+      <input type="search" id="pv-search-library" placeholder="Search title / slug..." />
+      <select id="pv-sort-library">
+        <option value="last_touched">Sort: last touched</option>
+        <option value="created">Sort: created</option>
+        <option value="title">Sort: title</option>
+      </select>
+    </div>
+    <div class="pv-library-table-wrap" id="pv-library-table-wrap">
+      <div class="pv-empty">Loading…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Content Stream Modal -->
+<div class="modal-overlay" id="pvContentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Create Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Type</label>
+        <select class="form-control form-control-sm" id="pv-content-type">
+          <option value="blog">Blog</option>
+          <option value="email">Email</option>
+          <option value="news">News (newsletter)</option>
+          <option value="other">Other</option>
+          <option value="social">Social</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Content Name</label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-name" placeholder="e.g., Intensity, About Page">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-stream-id" placeholder="e.g., INT, ABOUT">
+        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
+        <small class="text-muted">Comma-separated source slugs.</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Stages</label>
+        <div id="pv-content-stages-checkboxes" class="d-flex flex-wrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('pvContentStreamModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-create-content-stream">Create Tasks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Entity detail drawer -->
+<div class="modal-overlay" id="pvEntityDrawer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div class="pv-drawer-panel">
+    <div class="pv-drawer-toolbar">
+      <button type="button" class="btn btn-sm btn-light" id="pv-drawer-back" style="display:none;margin-right:8px" onclick="PublishingView.backEntityDrawer()" title="Back to previous entity">← Back</button>
+      <h6 id="pv-drawer-title">Entity</h6>
+      <button type="button" class="btn btn-sm btn-light" onclick="PublishingView.closeEntityDrawer()">Close</button>
+    </div>
+    <div class="pv-drawer-body">
+      <div class="pv-drawer-header">
+        <div><label>Slug</label><div class="field-value mono" id="pv-drawer-slug">—</div></div>
+        <div><label>Type</label><div class="field-value" id="pv-drawer-type">—</div></div>
+        <div><label>Language</label><div class="field-value" id="pv-drawer-language">—</div></div>
+        <div><label>State</label><div class="field-value" id="pv-drawer-state">—</div></div>
+        <div><label>Target date</label><div class="field-value" id="pv-drawer-targetdate">—</div></div>
+        <div><label>Campaign</label><div class="field-value" id="pv-drawer-campaign">—</div></div>
+        <div><label>Last touched</label><div class="field-value" id="pv-drawer-lasttouched">—</div></div>
+      </div>
+      <div class="pv-drawer-actions" id="pv-drawer-actions"></div>
+      <div class="pv-drawer-section"><h6>Family</h6><div id="pv-drawer-family"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>Files &amp; URLs</h6><div id="pv-drawer-files"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>Attached tasks</h6><div id="pv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>References out</h6><div id="pv-drawer-refs-out"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>References in</h6><div id="pv-drawer-refs-in"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>State history</h6><div id="pv-drawer-state-history"><span class="placeholder">—</span></div></div>
+      <div class="pv-drawer-section"><h6>Activity log</h6><div id="pv-drawer-activity-log"><span class="placeholder">—</span></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.PublishingView = (function() {
+    'use strict';
+
+    var CAMPAIGN_LABELS = {
+      'core-content': 'Core Content',
+      'newsletter-print': 'Newsletter',
+      'email-broadcast': 'Email',
+      'flyer-acquisition': 'Flyer'
+    };
+
+    var state = {
+      activeTab: 'calendar',
+      tasks: [],
+      library: [],
+      campaigns: [],
+      projects: [],
+      contentStages: [],
+      activePreset: 'all',
+      deficiencyWindowDays: 56,
+      entityStack: [],
+      currentEntitySlug: null,
+      currentEntity: null
+    };
+
+    function init() {
+      _loadData();
+      ['pv-cal-search', 'pv-cal-filter-campaign', 'pv-cal-filter-state'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', renderCalendar);
+      });
+      ['pv-search-library', 'pv-sort-library'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', renderLibrary);
+      });
+      var openBtn = document.getElementById('pv-btn-open-content-stream');
+      if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
+      var submitBtn = document.getElementById('pv-btn-create-content-stream');
+      if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.keyCode === 27) {
+          var drawer = document.getElementById('pvEntityDrawer');
+          if (drawer && drawer.style.display === 'flex') closeEntityDrawer();
+        }
+      });
+    }
+
+    function _loadData() {
+      google.script.run
+        .withSuccessHandler(_onLoaded)
+        .withFailureHandler(_onError)
+        .WebAppLibrary_getData();
+    }
+
+    function _onLoaded(res) {
+      if (!res || !res.success) {
+        var msg = res && res.error ? res.error : 'Failed to load PublishingView';
+        TaskWidgets.toast(msg, true);
+        document.getElementById('pv-cal-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+        document.getElementById('pv-library-table-wrap').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
+        return;
+      }
+      state.tasks = res.data.tasks || [];
+      state.library = res.data.library || [];
+      state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
+      renderCalendar();
+      renderLibrary();
+      _loadCampaignsAndProjects();
+    }
+
+    function _onError(err) {
+      TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
+    }
+
+    function _loadCampaignsAndProjects() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success) {
+            state.campaigns = res.data.campaigns || [];
+            state.projects = res.data.projects || [];
+            if (state.activeTab === 'campaigns') renderCampaigns();
+            if (state.activeTab === 'projects') renderProjects();
+          }
+        })
+        .withFailureHandler(function() {})
+        .WebAppPublishing_getCampaignsAndProjects();
+    }
+
+    // ===== TAB SWITCHING =====
+
+    function switchTab(tab) {
+      state.activeTab = tab;
+      document.querySelectorAll('.pv-tab').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      });
+      document.querySelectorAll('.pv-panel').forEach(function(p) {
+        p.classList.toggle('active', p.id === 'pv-panel-' + tab);
+      });
+      if (tab === 'campaigns') renderCampaigns();
+      if (tab === 'projects') renderProjects();
+    }
+
+    // ===== CALENDAR TAB =====
+
+    function renderCalendar() {
+      var search = (document.getElementById('pv-cal-search').value || '').toLowerCase();
+      var filterCampaign = (document.getElementById('pv-cal-filter-campaign').value || '');
+      var filterState = (document.getElementById('pv-cal-filter-state').value || '');
+      var today = new Date();
+      var startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      var rows = (state.library || []).filter(function(e) {
+        if (!e.targetDate) return false;
+        var td = new Date(e.targetDate);
+        if (isNaN(td.getTime())) return false;
+        if (filterCampaign && e.campaignId !== filterCampaign) return false;
+        if (filterState && (e.state || '').toLowerCase() !== filterState) return false;
+        if (search) {
+          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) { return (a.targetDate || '').localeCompare(b.targetDate || ''); });
+
+      var container = document.getElementById('pv-cal-table-wrap');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="pv-empty">No entities with target dates match the current filters.</div>';
+        return;
+      }
+
+      var html = '<table class="pv-cal-table"><thead><tr>';
+      html += '<th>Date</th><th>Campaign</th><th>Title</th><th>State</th><th>Tasks</th>';
+      html += '</tr></thead><tbody>';
+
+      rows.forEach(function(e) {
+        var td = new Date(e.targetDate);
+        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+        var openTasks = (state.tasks || []).filter(function(t) {
+          return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
+        }).length;
+        var taskCell = openTasks > 0 ? (openTasks + ' open') : '<span style="color:#6c757d;">—</span>';
+        var rowClass = overdue ? ' class="pv-cal-overdue"' : '';
+        html += '<tr' + rowClass + ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
+        html += '<td>' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
+        html += '<td>' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
+        html += '<td><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
+                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599; Doc</a>' : '') +
+                '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td>' + taskCell + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ===== CAMPAIGNS TAB =====
+
+    function renderCampaigns() {
+      var container = document.getElementById('pv-campaigns-content');
+      if (!state.campaigns.length) {
+        container.innerHTML = '<div class="pv-empty">Loading campaigns…</div>';
+        return;
+      }
+      var html = '<table class="pv-cal-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Project</th><th>Entities</th></tr></thead><tbody>';
+      state.campaigns.forEach(function(c) {
+        var entityCount = (state.library || []).filter(function(e) { return e.campaignId === c.campaignId; }).length;
+        html += '<tr>';
+        html += '<td><span class="tw-chip" style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px">' + TaskWidgets.escape(c.campaignId || '—') + '</span></td>';
+        html += '<td><strong>' + TaskWidgets.escape(c.name || '—') + '</strong></td>';
+        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(c.status) + '">' + TaskWidgets.escape(c.status || '—') + '</span></td>';
+        html += '<td>' + TaskWidgets.escape(c.projectId || '—') + '</td>';
+        html += '<td>' + entityCount + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ===== PROJECTS TAB =====
+
+    function renderProjects() {
+      var container = document.getElementById('pv-projects-content');
+      if (!state.projects.length) {
+        container.innerHTML = '<div class="pv-empty">Loading projects…</div>';
+        return;
+      }
+      var html = '<table class="pv-cal-table"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th></tr></thead><tbody>';
+      state.projects.forEach(function(p) {
+        html += '<tr>';
+        html += '<td><span class="tw-chip" style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px">' + TaskWidgets.escape(p.projectId || '—') + '</span></td>';
+        html += '<td><strong>' + TaskWidgets.escape(p.name || '—') + '</strong></td>';
+        html += '<td>' + TaskWidgets.escape(p.type || '—') + '</td>';
+        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(p.status) + '">' + TaskWidgets.escape(p.status || '—') + '</span></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ===== LIBRARY TAB =====
+
+    function switchPreset(preset) {
+      state.activePreset = preset;
+      document.querySelectorAll('.pv-library-presets .tw-chip').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('data-preset') === preset);
+      });
+      renderLibrary();
+    }
+
+    function renderLibrary() {
+      var preset = state.activePreset;
+      var searchTerm = (document.getElementById('pv-search-library').value || '').toLowerCase();
+      var sortBy = document.getElementById('pv-sort-library').value;
+      if (preset === 'deficiency') { renderDeficiency(searchTerm); return; }
+
+      var rows = state.library.filter(function(e) {
+        if (preset === 'campaigns') {
+          if (['email', 'news', 'mention', 'social'].indexOf(e.contentType) === -1) return false;
+        } else if (preset !== 'all' && e.contentType !== preset) {
+          return false;
+        }
+        if (searchTerm) {
+          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) {
+        if (sortBy === 'created') return (b.createdDate || '').localeCompare(a.createdDate || '');
+        if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
+        return (b.lastTouched || '').localeCompare(a.lastTouched || '');
+      });
+
+      var container = document.getElementById('pv-library-table-wrap');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="pv-empty">No entities match the current preset / search.</div>';
+        return;
+      }
+
+      var html = '<table class="pv-library-table responsive-stack"><thead><tr>';
+      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Last touched</th><th>Refs</th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(e) {
+        html += '<tr>';
+        html += '<td data-label="Title"><a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' +
+                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') +
+                '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
+        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Last touched">' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
+        html += '<td data-label="Refs">' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function renderDeficiency(searchTerm) {
+      var now = new Date();
+      var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var windowDays = state.deficiencyWindowDays || 56;
+      var horizon = new Date(startOfToday.getTime() + windowDays * 86400000);
+
+      var rows = state.library.filter(function(e) {
+        if (!e.targetDate) return false;
+        var td = new Date(e.targetDate);
+        if (isNaN(td.getTime())) return false;
+        var published = String(e.state).toLowerCase() === 'published';
+        var overdue = td < startOfToday && !published;
+        var inWindow = td >= startOfToday && td <= horizon;
+        if (!(overdue || inWindow)) return false;
+        if (searchTerm) {
+          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
+        return true;
+      });
+
+      rows.sort(function(a, b) { return (a.targetDate || '').localeCompare(b.targetDate || ''); });
+
+      var container = document.getElementById('pv-library-table-wrap');
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="pv-empty">No pieces due within ' + windowDays + ' days. Pipeline is clear.</div>';
+        return;
+      }
+
+      var html = '<table class="pv-library-table responsive-stack"><thead><tr>';
+      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Tasks</th><th></th>';
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(e) {
+        var td = new Date(e.targetDate);
+        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+        var openCount = (state.tasks || []).filter(function(t) {
+          return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
+        }).length;
+        var taskCell = openCount > 0 ? (openCount + ' open') : '<span style="color:#856404;font-weight:600;" title="No open task — stalled">stalled</span>';
+        html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
+        html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
+        html += '<td data-label="Title"><a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' +
+                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') +
+                '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
+        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Tasks">' + taskCell + '</td>';
+        html += '<td data-label=""><button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.spawnForEntity(\'' + TaskWidgets.escape(e.slug) + '\')" title="Create content tasks for this piece">Spawn</button></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    function spawnForEntity(slug) {
+      var e = (state.library || []).find(function(x) { return x.slug === slug; });
+      openContentStreamModal(e ? e.title : '');
+      if (e) {
+        var typeEl = document.getElementById('pv-content-type');
+        if (typeEl) typeEl.value = e.contentType || 'blog';
+      }
+    }
+
+    // ===== CONTENT STREAM MODAL =====
+
+    function openContentStreamModal(preFilledName) {
+      var typeEl = document.getElementById('pv-content-type');
+      if (typeEl) typeEl.value = 'blog';
+      document.getElementById('pv-content-name').value = preFilledName || '';
+      document.getElementById('pv-content-stream-id').value = '';
+      var refsEl = document.getElementById('pv-content-references');
+      if (refsEl) refsEl.value = '';
+      if (state.contentStages.length) {
+        _populateStagesCheckboxes();
+      } else {
+        _loadContentStages();
+      }
+      document.getElementById('pvContentStreamModal').style.display = 'flex';
+    }
+
+    function _loadContentStages() {
+      google.script.run
+        .withSuccessHandler(function(stages) {
+          state.contentStages = stages || [];
+          _populateStagesCheckboxes();
+        })
+        .withFailureHandler(_onError)
+        .WebAppProjects_getContentStages();
+    }
+
+    function _populateStagesCheckboxes() {
+      var container = document.getElementById('pv-content-stages-checkboxes');
+      container.innerHTML = state.contentStages.map(function(s) {
+        return '<label class="mr-3 mb-1 small"><input type="checkbox" class="pv-content-stage-cb mr-1" value="' +
+          TaskWidgets.escape(s.id) + '">' + TaskWidgets.escape(s.label) + '</label>';
+      }).join('');
+    }
+
+    function submitContentStream() {
+      var typeEl = document.getElementById('pv-content-type');
+      var entityType = typeEl ? typeEl.value : 'blog';
+      var name = document.getElementById('pv-content-name').value.trim();
+      var customStreamId = document.getElementById('pv-content-stream-id').value.trim().toUpperCase();
+      var refsRaw = (document.getElementById('pv-content-references').value || '').trim();
+      var references = refsRaw ? refsRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+      if (!name) { TaskWidgets.toast('Please enter content name', 'warning'); return; }
+      var stages = [];
+      document.querySelectorAll('.pv-content-stage-cb:checked').forEach(function(cb) { stages.push(cb.value); });
+      if (stages.length === 0) { TaskWidgets.toast('Please select at least one stage', 'warning'); return; }
+
+      var btn = document.getElementById('pv-btn-create-content-stream');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          btn.textContent = 'Create Tasks';
+          if (!result || !result.ok) { TaskWidgets.toast('Error: ' + ((result && result.error) || 'Unknown'), 'error'); return; }
+          document.getElementById('pvContentStreamModal').style.display = 'none';
+          var entityCount = (result.updated && result.updated.entities) ? result.updated.entities.length : 0;
+          var taskCount = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
+          TaskWidgets.toast('Created ' + entityCount + ' entity(ies) + ' + taskCount + ' task(s). Stream: ' + result.streamCode, 'success');
+          _loadData();
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Create Tasks';
+          TaskWidgets.toast('Error: ' + (err && err.message ? err.message : 'Failed'), 'error');
+        })
+        .WebAppLibrary_spawnContentChain({ entityType: entityType, contentName: name, stages: stages, streamId: customStreamId || null, references: references });
+    }
+
+    // ===== ENTITY DRAWER =====
+
+    function openEntityDrawer(slug) {
+      if (!slug) return;
+      state.entityStack = [];
+      _loadEntityDrawer(slug);
+    }
+
+    function navigateToEntity(slug) {
+      if (!slug) return;
+      if (slug === state.currentEntitySlug) return;
+      if (state.currentEntitySlug) state.entityStack.push(state.currentEntitySlug);
+      _loadEntityDrawer(slug);
+    }
+
+    function backEntityDrawer() {
+      if (!state.entityStack.length) return;
+      _loadEntityDrawer(state.entityStack.pop());
+    }
+
+    function _loadEntityDrawer(slug) {
+      state.currentEntitySlug = slug;
+      _setDrawerLoading(slug);
+      _updateDrawerBackButton();
+      document.getElementById('pvEntityDrawer').style.display = 'flex';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) { TaskWidgets.toast((res && res.error) || 'Drawer load failed', true); return; }
+          _renderEntityDrawer(res.data);
+        })
+        .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Network error', true); })
+        .WebAppLibrary_getEntityDetail({ entityId: slug });
+    }
+
+    function _updateDrawerBackButton() {
+      var btn = document.getElementById('pv-drawer-back');
+      if (btn) btn.style.display = state.entityStack.length ? '' : 'none';
+    }
+
+    function _setDrawerLoading(slug) {
+      document.getElementById('pv-drawer-title').textContent = 'Loading…';
+      document.getElementById('pv-drawer-slug').textContent = slug || '—';
+      ['pv-drawer-type', 'pv-drawer-language', 'pv-drawer-state', 'pv-drawer-lasttouched', 'pv-drawer-targetdate', 'pv-drawer-campaign'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '…';
+      });
+      var ph = '<span class="placeholder">Loading…</span>';
+      ['pv-drawer-family', 'pv-drawer-files', 'pv-drawer-attached-tasks', 'pv-drawer-refs-out', 'pv-drawer-refs-in', 'pv-drawer-state-history', 'pv-drawer-activity-log'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = ph;
+      });
+      var actEl = document.getElementById('pv-drawer-actions');
+      if (actEl) actEl.innerHTML = '';
+    }
+
+    function _renderEntityDrawer(data) {
+      var entity = (data && data.entity) || {};
+      state.currentEntity = entity;
+      document.getElementById('pv-drawer-title').textContent = entity.title || entity.slug || 'Entity';
+      document.getElementById('pv-drawer-slug').textContent = entity.slug || '—';
+      document.getElementById('pv-drawer-type').textContent = entity.contentType || '—';
+      document.getElementById('pv-drawer-language').textContent = entity.language || '(none)';
+      document.getElementById('pv-drawer-state').textContent = entity.state || '—';
+      document.getElementById('pv-drawer-targetdate').textContent = entity.targetDate ? TaskWidgets.formatDate(entity.targetDate) : '—';
+      document.getElementById('pv-drawer-campaign').textContent = CAMPAIGN_LABELS[entity.campaignId] || entity.campaignId || '—';
+      document.getElementById('pv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
+
+      _renderDrawerFiles(entity);
+      _renderDrawerActions(entity);
+      _renderDrawerFamily(entity);
+      _renderDrawerAttachedTasks((data && data.attached_tasks) || []);
+      _renderDrawerReferences((entity && entity.references) || [], 'pv-drawer-refs-out', 'No outgoing references.');
+      _renderDrawerReferences(((data && data.references_in) || []).map(function(e) { return e.slug; }), 'pv-drawer-refs-in', 'No incoming references.');
+      _renderDrawerActivityLog((data && data.activity_log) || []);
+      _renderDrawerStateHistory((data && data.activity_log) || []);
+    }
+
+    function openAttachedTask(id) {
+      if (!id) return;
+      document.body.style.overflow = '';
+      if (document.body.classList.contains('role-manager')) {
+        sessionStorage.setItem('selectDashboardTaskId', id);
+        if (typeof loadView === 'function') loadView('ManagerDashboard');
+      } else {
+        sessionStorage.setItem('selectTaskId', id);
+        if (typeof loadView === 'function') loadView('AdminTasks');
+      }
+    }
+
+    function _renderDrawerAttachedTasks(tasks) {
+      var el = document.getElementById('pv-drawer-attached-tasks');
+      if (!el) return;
+      if (!tasks.length) { el.innerHTML = '<span class="placeholder">No tasks attached.</span>'; return; }
+      var sorted = tasks.slice().sort(function(a, b) {
+        var aDone = (a.status === 'Done' || a.status === 'Cancelled') ? 1 : 0;
+        var bDone = (b.status === 'Done' || b.status === 'Cancelled') ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1; if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+      el.innerHTML = sorted.map(function(t) {
+        var dueChip = t.dueDate ? '<span class="tw-due-chip ' + TaskWidgets.dueClass(t.dueDate, t.status) + '">' + TaskWidgets.formatDate(t.dueDate) + '</span>' : '';
+        return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(t.id) + '\')">' +
+          '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
+          '<span class="pv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
+          dueChip + '</div>';
+      }).join('');
+    }
+
+    function _renderDrawerReferences(slugs, elId, emptyMsg) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (!slugs || !slugs.length) { el.innerHTML = '<span class="placeholder">' + emptyMsg + '</span>'; return; }
+      el.innerHTML = slugs.map(function(slug) {
+        var s = TaskWidgets.escape(slug);
+        return '<span class="tw-chip pv-entity-chip" onclick="PublishingView.navigateToEntity(\'' + s + '\')" style="margin-right:4px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px" title="Open entity: ' + s + '">' + s + '</span>';
+      }).join('');
+    }
+
+    function _renderDrawerActivityLog(entries) {
+      var el = document.getElementById('pv-drawer-activity-log');
+      if (!el) return;
+      if (!entries.length) { el.innerHTML = '<span class="placeholder">No activity entries.</span>'; return; }
+      var sorted = entries.slice().sort(function(a, b) { return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
+      el.innerHTML = sorted.map(function(e) {
+        return '<div class="pv-drawer-activity-row">' +
+          '<span class="pv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
+          '<span class="pv-drawer-activity-action">' + TaskWidgets.escape(e.actionType || '—') + '</span>' +
+          '<span>' + TaskWidgets.escape(e.summary || '—') + '</span>' +
+          '<span class="detail-meta">· ' + TaskWidgets.escape(e.actor || '—') + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function _renderDrawerStateHistory(entries) {
+      var el = document.getElementById('pv-drawer-state-history');
+      if (!el) return;
+      var stateEvents = entries.filter(function(e) { return e.actionType === 'version_lock' || e.actionType === 'state_change'; });
+      if (!stateEvents.length) { el.innerHTML = '<span class="placeholder">No state changes recorded.</span>'; return; }
+      var sorted = stateEvents.slice().sort(function(a, b) { return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
+      el.innerHTML = sorted.map(function(e) {
+        return '<div class="pv-drawer-activity-row">' +
+          '<span class="pv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
+          '<span>' + TaskWidgets.escape(e.summary || e.actionType) + '</span></div>';
+      }).join('');
+    }
+
+    function _renderDrawerFamily(entity) {
+      var el = document.getElementById('pv-drawer-family');
+      if (!el) return;
+      var lib = state.library || [];
+      var slug = entity && entity.slug;
+      if (!slug) { el.innerHTML = '<span class="placeholder">—</span>'; return; }
+      var base = String(slug).replace(/-(en|he)$/, '');
+      var sibSet = {}, memberSet = {};
+      lib.forEach(function(e) {
+        if (String(e.slug).replace(/-(en|he)$/, '') === base) { sibSet[e.slug] = true; memberSet[e.slug] = true; }
+      });
+      (entity.references || []).forEach(function(s) { memberSet[s] = true; });
+      lib.forEach(function(e) {
+        var refs = e.references || [];
+        for (var i = 0; i < refs.length; i++) { if (sibSet[refs[i]]) { memberSet[e.slug] = true; break; } }
+      });
+      var members = lib.filter(function(e) { return memberSet[e.slug]; });
+      if (members.length <= 1) { el.innerHTML = '<span class="placeholder">No related pieces.</span>'; return; }
+      var groups = {};
+      members.forEach(function(e) { var t = e.contentType || 'other'; (groups[t] = groups[t] || []).push(e); });
+      var order = ['blog', 'news', 'mention', 'email', 'social', 'image', 'template', 'other'];
+      var typeKeys = Object.keys(groups).sort(function(a, b) {
+        var ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      el.innerHTML = typeKeys.map(function(t) {
+        var rows = groups[t].sort(function(a, b) { return String(a.slug).localeCompare(b.slug); }).map(function(e) {
+          var pill = '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
+          var name = TaskWidgets.escape(e.title || e.slug) + (e.language ? ' (' + TaskWidgets.escape(e.language) + ')' : '');
+          if (e.slug === slug) return '<div class="pv-drawer-task-row"><strong>' + name + '</strong> ' + pill + ' <span class="detail-meta">· this</span></div>';
+          return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="PublishingView.navigateToEntity(\'' + TaskWidgets.escape(e.slug) + '\')">' + name + ' ' + pill + '</div>';
+        }).join('');
+        return '<div class="detail-meta" style="margin-top:4px;text-transform:capitalize;">' + TaskWidgets.escape(t) + '</div>' + rows;
+      }).join('');
+    }
+
+    function _renderDrawerFiles(entity) {
+      var el = document.getElementById('pv-drawer-files');
+      if (!el) return;
+      var chips = [];
+      if (entity.docUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">Open Doc</a>');
+      if (entity.canvaDesignUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.canvaDesignUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">Open Canva</a>');
+      if (entity.externalUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.externalUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">External</a>');
+      if (entity.mdUrl) chips.push('<span class="tw-chip" style="margin-right:6px">MD: ' + TaskWidgets.escape(entity.mdUrl) + '</span>');
+      if (entity.wpPostId) chips.push('<span class="tw-chip" style="margin-right:6px">WP post: ' + TaskWidgets.escape(entity.wpPostId) + '</span>');
+      if (entity.mailchimpCampaignId) chips.push('<span class="tw-chip" style="margin-right:6px">Mailchimp: ' + TaskWidgets.escape(entity.mailchimpCampaignId) + '</span>');
+      el.innerHTML = chips.length ? chips.join('') : '<span class="placeholder">No files or URLs attached.</span>';
+    }
+
+    function closeEntityDrawer() {
+      document.getElementById('pvEntityDrawer').style.display = 'none';
+      state.entityStack = [];
+      state.currentEntitySlug = null;
+      state.currentEntity = null;
+    }
+
+    function _renderDrawerActions(entity) {
+      var el = document.getElementById('pv-drawer-actions');
+      if (!el) return;
+      var buttons = [];
+      if (entity && entity.docUrl) {
+        buttons.push('<button class="btn btn-sm btn-light" onclick="PublishingView.drawerOpenInDrive()">&#8599; Open Doc</button>');
+      }
+      buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.drawerCreateContentTasks()">Create Content Tasks</button>');
+      if (entity && entity.slug && entity.slug.length > 3 && entity.slug.slice(-3) === '-en') {
+        var heSlug = entity.slug.slice(0, -3) + '-he';
+        if (!(state.library || []).some(function(e) { return e.slug === heSlug; })) {
+          buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.drawerCreateHeSibling()">Create HE sibling stub</button>');
+        }
+      }
+      var st = entity ? String(entity.state).toLowerCase() : '';
+      if (st === 'published') buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.drawerRequestCorrection()">Request Correction</button>');
+      if (entity && entity.slug && st !== 'published' && st !== 'abandoned') buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.drawerAbandon()">Abandon</button>');
+      el.innerHTML = buttons.join('');
+    }
+
+    function drawerOpenInDrive() {
+      if (state.currentEntity && state.currentEntity.docUrl) window.open(state.currentEntity.docUrl, '_blank', 'noopener');
+    }
+
+    function drawerCreateContentTasks() {
+      if (!state.currentEntity) return;
+      openContentStreamModal(state.currentEntity.title || state.currentEntity.slug || '');
+    }
+
+    function drawerRequestCorrection() {
+      if (!state.currentEntity) return;
+      var slug = state.currentEntity.slug;
+      TaskWidgets.confirm('Spawn a correction edit task for "' + slug + '"?', function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res || !res.ok) { TaskWidgets.toast((res && res.error) || 'Failed', true); return; }
+            TaskWidgets.toast('Correction task created', 'success');
+            _loadEntityDrawer(slug);
+            _loadData();
+          })
+          .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Failed', true); })
+          .WebAppLibrary_requestCorrection({ entityId: slug });
+      });
+    }
+
+    function drawerAbandon() {
+      if (!state.currentEntity) return;
+      var slug = state.currentEntity.slug;
+      TaskWidgets.confirm('Mark "' + slug + '" abandoned?', function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res || !res.ok) { TaskWidgets.toast((res && res.error) || 'Failed', true); return; }
+            TaskWidgets.toast('Marked abandoned', 'success');
+            _loadEntityDrawer(slug);
+            _loadData();
+          })
+          .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Failed', true); })
+          .WebAppLibrary_abandonEntity({ entityId: slug });
+      }, { danger: true });
+    }
+
+    function drawerCreateHeSibling() {
+      if (!state.currentEntity) return;
+      var enSlug = state.currentEntity.slug;
+      if (!enSlug || enSlug.slice(-3) !== '-en') { TaskWidgets.toast('Not an EN-side entity', true); return; }
+      var heSlug = enSlug.slice(0, -3) + '-he';
+      TaskWidgets.confirm('Create HE sibling "' + heSlug + '"?', function() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res || !res.ok) { TaskWidgets.toast((res && res.error) || 'Create failed', true); return; }
+            TaskWidgets.toast(res.deduplicated ? 'HE peer already exists' : 'HE sibling created', 'success');
+            _loadData();
+            _loadEntityDrawer(state.currentEntitySlug);
+          })
+          .withFailureHandler(function(err) { TaskWidgets.toast(err && err.message ? err.message : 'Failed', true); })
+          .WebAppLibrary_addEntity({ slug: heSlug, type: state.currentEntity.contentType, language: 'he', title: state.currentEntity.title, references: [enSlug] });
+      });
+    }
+
+    return {
+      init: init,
+      switchTab: switchTab,
+      switchPreset: switchPreset,
+      spawnForEntity: spawnForEntity,
+      openAttachedTask: openAttachedTask,
+      openEntityDrawer: openEntityDrawer,
+      navigateToEntity: navigateToEntity,
+      backEntityDrawer: backEntityDrawer,
+      closeEntityDrawer: closeEntityDrawer,
+      drawerOpenInDrive: drawerOpenInDrive,
+      drawerCreateContentTasks: drawerCreateContentTasks,
+      drawerCreateHeSibling: drawerCreateHeSibling,
+      drawerRequestCorrection: drawerRequestCorrection,
+      drawerAbandon: drawerAbandon
+    };
+  })();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.PublishingView) window.PublishingView.init();
+  });
+  if (document.readyState !== 'loading' && window.PublishingView) {
+    window.PublishingView.init();
+  }
+</script>

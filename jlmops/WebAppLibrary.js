@@ -168,7 +168,8 @@ function _getLibraryEntities(libraryRows) {
     channel: row.slb_Channel || '',
     kind: row.slb_Kind || '',
     index: row.slb_Index || '',
-    descriptor: row.slb_Descriptor || ''
+    descriptor: row.slb_Descriptor || '',
+    campaignId: row.slb_CampaignId || ''
   }));
 }
 

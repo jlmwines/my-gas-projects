@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-22 01:37',
+  built: '2026-06-22 01:48',
   commit: "Sync web-export result-reporting integrity @289 (RELIABILITY_AUDIT §1.4). generateWebExportBackend now branches on exportWebInventory's return value ({changed,fileName,fileId,count}) instead of re-reading the clobberable state.webExportFilename — fixes the 2026-06-14 lost update where a real inventory CSV was created but the sync reported 'no changes', went COMPLETE, and orphaned the file. Adds a reportFailure('sync.web_export.state_clobber', High) detector that repairs the filename from the return value, so a real export can never again be silently dropped. The race itself is closed separately in §1.3 (LockService)."
 };
 
@@ -88,12 +88,13 @@ function getView(viewName) {
     'AdminContacts': 'AdminContactsView',
     'ManagerContacts': 'ManagerContactView',
     'Library': 'LibraryView',
+    'Publishing': 'PublishingView',
     'Development': 'DevelopmentView'
   };
 
   if (viewMap[viewName]) {
     // Use template evaluation so views can use scriptlets like `<?!= include('TaskWidgets') ?>`.
-    // Audited 2026-05-25: only AppView (rendered separately) and LibraryView use `<?` scriptlets;
+    // Audited 2026-05-25: only AppView (rendered separately), LibraryView, and PublishingView use `<?` scriptlets;
     // other views render unchanged through template evaluation (no false matches).
     return HtmlService.createTemplateFromFile(viewMap[viewName]).evaluate().getContent();
   }
