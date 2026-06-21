@@ -1,15 +1,15 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-21 — JLM Wines ecosystem live; jlmops @323 · theme v1.2.30; 0 blockers; PublishingView plan written (`jlmops/plans/PUBLISHING_VIEW_PLAN.md`) — next major jlmops surface.
+**Updated:** 2026-06-22 — jlmops @327; PublishingView Deploys 1–2 shipped: schema changes, `other` type, Calendar + Library + Campaigns + Projects tabs live; mobile-optimised EN/HE paired rows.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @322; content-library versioning fully shipped (Decision 7 / Plan B) @316–@322: **Doc-sourced translation prompt** (`template-xlt` entity — manager refines in Docs, no deploy; `template-xlt-*` namespace expandable), every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), version-counter/`locked`-state retired (Editing-Done just finishes; version display gone), housekeeping **duplicate backstop** (daily: newest `<slug> <ts>` wins, rest archived), robust Drive-URL id extraction, Dev "Library Integrity" button, lock-modal Cancel + admin pack button spacing fix; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
+- **jlmops** (GAS backend) — live @327; **PublishingView Deploys 1–2 shipped** @324–@327: schema (slb_CampaignId, sm_ProjectId, ssu_EntitySlug), `other` VALID_TYPE, core-content campaign seeded + backfilled, PublishingView.html (Calendar / Library / Campaigns / Projects tabs), mobile EN+HE paired rows in Library, nav renamed Publishing. Next: Deploy 3 (Campaigns tab inline create, AdminCampaignsView folded) + Deploy 4 (manager Tasks tab, Distribute panel, jlmops-calendar.md). Content-library versioning fully shipped (Decision 7 / Plan B) @316–@322: **Doc-sourced translation prompt** (`template-xlt` entity — manager refines in Docs, no deploy; `template-xlt-*` namespace expandable), every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), version-counter/`locked`-state retired (Editing-Done just finishes; version display gone), housekeeping **duplicate backstop** (daily: newest `<slug> <ts>` wins, rest archived), robust Drive-URL id extraction, Dev "Library Integrity" button, lock-modal Cancel + admin pack button spacing fix; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides).
-- **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) sent. PublishingView plan ready for build (calendar + campaigns + content hub).
+- **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) sent. PublishingView Calendar + Library tabs live — editorial overview now in the app.
 - **business** — strategy/brand docs current.
 
 ## Metrics
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @323 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-19 · theme 2026-06-12 |
+| Deploy Version | jlmops @327 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-22 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |

@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — PublishingView Deploys 1–2 shipped @324–@327
+
+- Deploy 1 (@324): schema changes (slb_CampaignId on SysLibrary, sm_ProjectId on SysMarketingCampaigns, dropped spro_CampaignId, ssu_EntitySlug replaces ssu_ProjectId), `other` added to VALID_TYPES, Dev buttons (Seed Core Content Campaign + Backfill Core Content CampaignId). User ran syncAllHeaders + seeded.
+- Deploy 2 (@325–@327): PublishingView.html (Calendar / Library / Campaigns / Projects tabs), WebAppPublishing.js, campaignId exposed in WebAppLibrary. Library groups EN+HE siblings into paired rows. Calendar responsive-stack on mobile. Nav renamed Library → Publishing.
+- Next: Deploy 3 — Campaigns tab gets inline create-campaign form + AdminCampaignsView folded in; Deploy 4 — manager Tasks tab, Distribute panel, jlmops-calendar.md export.
+
+---
+
 ## 2026-06-21 — PublishingView plan written
 
 - Planning session: designed the Publishing View (LibraryView promoted to PublishingView). New plan: `jlmops/plans/PUBLISHING_VIEW_PLAN.md`.
