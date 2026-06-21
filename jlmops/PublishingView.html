@@ -102,7 +102,8 @@
   /* Mobile */
   @media (max-width: 768px) {
     .pv-drawer-header { grid-template-columns: 1fr; gap: 8px; }
-    .pv-library-table.responsive-stack tr {
+    .pv-library-table.responsive-stack tr,
+    .pv-cal-table.responsive-stack tr {
       border: none;
       border-bottom: 1px solid #ced4da;
       border-radius: 0;
@@ -111,6 +112,24 @@
       background: transparent;
     }
     .pv-library-table.responsive-stack td { padding: 1px 0; }
+    .pv-cal-table.responsive-stack thead { display: none; }
+    .pv-cal-table.responsive-stack td {
+      display: flex;
+      gap: 6px;
+      padding: 2px 0;
+      font-size: 12px;
+      align-items: baseline;
+    }
+    .pv-cal-table.responsive-stack td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 600;
+      color: #6c757d;
+      text-transform: uppercase;
+      min-width: 56px;
+      flex-shrink: 0;
+    }
+    .pv-cal-table.responsive-stack td:first-child { padding-top: 4px; }
     .pv-tabs { overflow-x: auto; }
   }
 
@@ -528,7 +547,7 @@
         return;
       }
 
-      var html = '<table class="pv-cal-table"><thead><tr>';
+      var html = '<table class="pv-cal-table responsive-stack"><thead><tr>';
       html += '<th>Date</th><th>Campaign</th><th>Title</th><th>State</th><th>Tasks</th>';
       html += '</tr></thead><tbody>';
 
@@ -538,16 +557,15 @@
         var openTasks = (state.tasks || []).filter(function(t) {
           return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
         }).length;
-        var taskCell = openTasks > 0 ? (openTasks + ' open') : '<span style="color:#6c757d;">—</span>';
-        var rowClass = overdue ? ' class="pv-cal-overdue"' : '';
-        html += '<tr' + rowClass + ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
-        html += '<td>' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
-        html += '<td>' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
-        html += '<td><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
-                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599; Doc</a>' : '') +
-                '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
-        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-        html += '<td>' + taskCell + '</td>';
+        var taskCell = openTasks > 0 ? (openTasks + ' open') : '—';
+        var rowCls = overdue ? 'pv-cal-overdue' : '';
+        html += '<tr class="' + rowCls + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
+        html += '<td data-label="Date">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
+        html += '<td data-label="Campaign">' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
+        html += '<td data-label="Title"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
+                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599;</a>' : '') + '</td>';
+        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Tasks">' + taskCell + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -614,7 +632,7 @@
       var sortBy = document.getElementById('pv-sort-library').value;
       if (preset === 'deficiency') { renderDeficiency(searchTerm); return; }
 
-      var rows = state.library.filter(function(e) {
+      var filtered = state.library.filter(function(e) {
         if (preset === 'campaigns') {
           if (['email', 'news', 'mention', 'social'].indexOf(e.contentType) === -1) return false;
         } else if (preset !== 'all' && e.contentType !== preset) {
@@ -627,31 +645,73 @@
         return true;
       });
 
-      rows.sort(function(a, b) {
-        if (sortBy === 'created') return (b.createdDate || '').localeCompare(a.createdDate || '');
-        if (sortBy === 'title') return (a.title || '').localeCompare(b.title || '');
-        return (b.lastTouched || '').localeCompare(a.lastTouched || '');
+      // Group bilingual entities (slug ends in -en / -he) into paired rows.
+      // Language-neutral entities get their own row.
+      var groups = {};    // baseSlug → { en, he, base, type, lastTouched }
+      var order = [];     // insertion order for base slugs
+      filtered.forEach(function(e) {
+        var slug = e.slug || '';
+        var isEn = slug.slice(-3) === '-en';
+        var isHe = slug.slice(-3) === '-he';
+        var base = (isEn || isHe) ? slug.slice(0, -3) : slug;
+        if (!groups[base]) { groups[base] = { base: base, en: null, he: null, neutral: null, type: e.contentType, lastTouched: '' }; order.push(base); }
+        var g = groups[base];
+        if (isEn) g.en = e;
+        else if (isHe) g.he = e;
+        else g.neutral = e;
+        // Track latest lastTouched across the group
+        if (e.lastTouched && e.lastTouched > g.lastTouched) { g.lastTouched = e.lastTouched; g.type = e.contentType; }
+      });
+
+      order.sort(function(a, b) {
+        var ga = groups[a], gb = groups[b];
+        var repA = ga.en || ga.neutral || ga.he;
+        var repB = gb.en || gb.neutral || gb.he;
+        if (sortBy === 'created') return ((repB && repB.createdDate) || '').localeCompare((repA && repA.createdDate) || '');
+        if (sortBy === 'title') return ((repA && repA.title) || a).localeCompare((repB && repB.title) || b);
+        return (gb.lastTouched || '').localeCompare(ga.lastTouched || '');
       });
 
       var container = document.getElementById('pv-library-table-wrap');
-      if (rows.length === 0) {
+      if (order.length === 0) {
         container.innerHTML = '<div class="pv-empty">No entities match the current preset / search.</div>';
         return;
       }
 
       var html = '<table class="pv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Last touched</th><th>Refs</th>';
+      html += '<th>Title</th><th>Type</th><th>EN</th><th>HE</th><th>Last touched</th>';
       html += '</tr></thead><tbody>';
-      rows.forEach(function(e) {
+
+      order.forEach(function(base) {
+        var g = groups[base];
+        var rep = g.en || g.neutral || g.he;
+        if (!rep) return;
+
+        // Title cell: click opens EN (or neutral) drawer; slug shown below
+        var titleLink = '<a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(rep.slug) + '\')">' +
+          '<strong>' + TaskWidgets.escape(rep.title || base) + '</strong></a>';
+        var docLink = rep.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(rep.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:4px">&#8599;</a>' : '';
+
+        var enCell, heCell;
+        if (g.neutral) {
+          // Language-neutral entity: span both EN+HE columns
+          enCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.neutral.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.neutral.slug) + '\')">' + TaskWidgets.escape(g.neutral.state || '—') + '</span>';
+          heCell = '—';
+        } else {
+          enCell = g.en
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.en.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.en.slug) + '\')">' + TaskWidgets.escape(g.en.state || '—') + '</span>'
+            : '<span style="color:#adb5bd;">—</span>';
+          heCell = g.he
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.he.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.he.slug) + '\')">' + TaskWidgets.escape(g.he.state || '—') + '</span>'
+            : '<span style="color:#adb5bd;">—</span>';
+        }
+
         html += '<tr>';
-        html += '<td data-label="Title"><a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' +
-                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') +
-                '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
-        html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
-        html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
-        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-        html += '<td data-label="Last touched">' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
-        html += '<td data-label="Refs">' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
+        html += '<td data-label="Title">' + titleLink + docLink + '<div class="detail-meta">' + TaskWidgets.escape(base) + '</div></td>';
+        html += '<td data-label="Type">' + TaskWidgets.escape(g.type || '—') + '</td>';
+        html += '<td data-label="EN">' + enCell + '</td>';
+        html += '<td data-label="HE">' + heCell + '</td>';
+        html += '<td data-label="Touched">' + (g.lastTouched ? TaskWidgets.formatDate(g.lastTouched) : '—') + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
