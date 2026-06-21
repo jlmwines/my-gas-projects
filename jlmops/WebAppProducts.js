@@ -968,6 +968,21 @@ function WebAppProducts_exportNewProducts() {
 }
 
 /**
+ * On-demand WebXltM (translation links) refresh. Re-pulls HE products from Woo and
+ * rebuilds the translation master so a newly-added product's EN↔HE link appears
+ * without waiting for the next full daily sync. Skips if a sync is in progress.
+ * @returns {object} { success, heCount, message }
+ */
+function WebAppProducts_refreshTranslations() {
+    try {
+        return WooProductPullService.refreshTranslationLinks();
+    } catch (e) {
+        LoggerService.error('WebAppProducts', 'refreshTranslations', `Error: ${e.message}`, e);
+        throw e;
+    }
+}
+
+/**
  * Creates 'New Product' tasks for the selected products.
  *
  * @param {Array<Object>} products List of objects {sku, name}.

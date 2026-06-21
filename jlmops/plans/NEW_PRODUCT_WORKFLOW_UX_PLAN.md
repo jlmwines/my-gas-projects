@@ -62,6 +62,39 @@ What the hot-link actually does for a new SKU is **two inserts**: it creates the
 
 **Interim (current):** keep creating stubs + hot-linking to get the Woo IDs. The description now exports correctly (export-parity fix above), which was the actual day-to-day pain.
 
+**WebXltM correction (verified 2026-06-19).** The framing above overstated the hot-link's role in translations. The daily **API Pull** (`pullAndImportAll`) already rebuilds WebXltM wholesale every sync: it re-pulls HE products and `ProductImportService.upsertWebXltData` **clears WebXltM and rewrites it** from the HE staging pull (using the fixed `translations.en` linkage). So WebXltM is sync-owned, not hot-link-owned. Two real findings stand: (a) the hot-link's WebXltM insert in `linkAndFinalizeNewProduct` is **dead code** — it writes `wxl_*` columns but the live schema is `wxm_*` (31 cols, mirroring staging), so every `indexOf` returns -1 and it appends a blank row the next sync overwrites; (b) `docs/DATA_MODEL.md` still documents the old 4-column `wxl_` WebXltM schema — stale. Both logged for a cleanup pass.
+
+## Track A — on-demand translation refresh (shipped @323, 2026-06-19)
+
+The only genuine new-product translation gap is **timing**: between adding a product mid-day and the next daily sync, WebXltM has no EN↔HE link for it. Closed with an **on-demand WebXltM refresh** control instead of a new importer.
+
+- **Backend:** `WooProductPullService.refreshTranslationLinks()` — mirrors Phase B of `pullAndImportAll` (HE pull → stage → `web_xlt_staging` validation → `upsertWebXltData`), minus the sync-state-machine step updates, plus the active-sync guard copied from `pullProducts` (it clears+rebuilds WebXltM, so it must not collide with an in-flight sync). Exposed via `WebAppProducts_refreshTranslations()`.
+- **UI:** "Refresh Translations" button on the Admin Products → New Products card, Section D (next to Export), confirm-gated, with status feedback.
+- **Behavior:** identical to the daily sync's HE phase, so validation behaves the same (the row-count-decrease quarantine guard only trips on removals, not adds). Full HE re-pull each call — chosen over a surgical single-product insert for lowest new code / proven safety.
+- **Smoke:** add a product (hot-link), click Refresh Translations, confirm its `wxm_*` row appears in WebXltM linking HE→EN; verify it skips cleanly if a sync is mid-flight.
+
+## Track B — retire the hot-link (sketch, not built)
+
+The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) entirely. The product flow becomes "create the post IDs first, then populate" — like a blog post.
+
+**Constraint that shapes the design:** ops **cannot** create the products or the WPML pairing via API (the REST API can't author the EN↔HE translation link). So jlmops does *not* create products. The **user creates both drafts in WooCommerce** — the EN draft and the HE draft — and pairs them in WPML. The system only needs to *reach* them.
+
+**Front-loaded flow** (draft creation moves to the *start*, at acceptance):
+1. At **acceptance**, the user creates the EN draft + HE draft in Woo and pairs them in WPML. Names, real Woo IDs, and the `translations.en` link now all exist up front.
+2. The pull reaches the drafts and **inserts** WebProdM (EN, keyed on the real Woo `wpm_ID`) + WebXltM (from `translations.en`) automatically — replacing today's end-of-flow hot-link / manual Woo-ID entry.
+3. Accept/onboarding populates WebDetM details as today.
+4. System **pushes** the details (descriptions, attributes, SEO) back to the drafts via API, then the user publishes — replacing today's manual Woo data entry.
+
+The win of front-loading: because the IDs exist from the start, the **Link** step disappears entirely (it's no longer a separate end stage — the pull does it), and detail work happens against products that are already in the system.
+
+**What has to change:**
+- **Pull insert-capable for new SKUs** — the one real blocker. Today the EN pull (`_upsertWebProductsData`) is update-only and a brand-new SKU in staging is a **validation violation** by design. The validation gate has to allow a known/expected new SKU through to insert. (WebXltM is already full-replace, so it inserts for free.)
+- **Linkage step removed** + **dead `wxl_` hot-link insert** goes away with the hot-link.
+
+**Already met:** the pull fetches drafts — `WooApiService.fetchProducts` passes `status: 'any'`, so draft EN/HE products are already visible. No change needed there.
+
+**Why still deferred:** the validation-gate rework (allow-list a new SKU to insert rather than quarantine) is the substantive piece and warrants its own session. Track A already removed the day-to-day translation pain, so there's no pressure.
+
 ## Follow-ons shipped (post-plan, @310–@311)
 
 - **Badge color (@310):** count badges show dark-gray (`badge-secondary`) at zero, color when pending — amber for to-clear counts (mismatch, verify), blue for onboarding. `ManagerProductsView.setCountBadge`.

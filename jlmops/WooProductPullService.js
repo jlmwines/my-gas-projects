@@ -386,6 +386,67 @@ const WooProductPullService = (function() {
   }
 
   /**
+   * On-demand WebXltM refresh — re-pull HE products and rebuild the translation
+   * master, independent of the daily sync state machine. Used when a product is
+   * added mid-day (between syncs) so its EN↔HE translation link appears in WebXltM
+   * without waiting for the next full API Pull. Mirrors Phase B of pullAndImportAll,
+   * minus the sync-step progress updates (it runs outside the state machine).
+   *
+   * Guards against running while a sync session is active (upsertWebXltData clears
+   * and rebuilds WebXltM, which must not collide with an in-flight sync).
+   *
+   * @returns {object} { success, heCount, message }
+   */
+  function refreshTranslationLinks() {
+    var functionName = 'refreshTranslationLinks';
+    var sessionId = generateSessionId();
+    logger.info(SERVICE_NAME, functionName, 'Starting on-demand translation refresh', { sessionId: sessionId });
+
+    // Guard: skip if a sync session is already active (it clears WebXltM).
+    try {
+      var syncState = SyncStateService.getState();
+      if (syncState && syncState.currentStage && syncState.currentStage !== 'IDLE' && syncState.currentStage !== 'COMPLETE' && syncState.currentStage !== 'FAILED') {
+        var skipMsg = 'Skipping translation refresh — sync session active at stage: ' + syncState.currentStage;
+        logger.warn(SERVICE_NAME, functionName, skipMsg, { sessionId: sessionId });
+        return { success: false, heCount: 0, message: skipMsg };
+      }
+    } catch (e) {
+      // SyncStateService might not be initialized — proceed anyway
+      logger.warn(SERVICE_NAME, functionName, 'Could not check sync state: ' + e.message, { sessionId: sessionId });
+    }
+
+    try {
+      var sheetNames = ConfigService.getConfig('system.sheet_names');
+
+      var heProducts = WooApiService.fetchProducts('he');
+      var heStaging = [];
+      for (var j = 0; j < heProducts.length; j++) {
+        var ht = _transformApiTranslation(heProducts[j]);
+        if (ht) heStaging.push(ht);
+      }
+      _writeToStagingSheet(heStaging, sheetNames.WebXltS, sessionId);
+
+      var heValidation = ValidationLogic.runValidationSuite('web_xlt_staging', sessionId);
+      var heProcessed = ValidationOrchestratorService.processValidationResults(heValidation, sessionId);
+      if (heProcessed.quarantineTriggered) {
+        var qMsg = 'Translation validation triggered quarantine — WebXltM NOT updated';
+        logger.error(SERVICE_NAME, functionName, qMsg, null, { sessionId: sessionId });
+        return { success: false, heCount: heStaging.length, message: qMsg };
+      }
+
+      ProductImportService.upsertWebXltData(sessionId);
+
+      var message = 'Translation links refreshed. HE: ' + heStaging.length;
+      logger.info(SERVICE_NAME, functionName, message, { sessionId: sessionId });
+      return { success: true, heCount: heStaging.length, message: message };
+
+    } catch (e) {
+      logger.error(SERVICE_NAME, functionName, 'Translation refresh failed: ' + e.message, e, { sessionId: sessionId });
+      return { success: false, heCount: 0, message: 'Failed: ' + e.message };
+    }
+  }
+
+  /**
    * Transform a single HE API product to the full 31-column wxs_* staging format.
    * Uses heProd.translations.en for the original ID (the fix for the broken _wpml_original_post_id lookup).
    *
@@ -625,7 +686,8 @@ const WooProductPullService = (function() {
   return {
     pullProducts: pullProducts,
     pullAndImportAll: pullAndImportAll,
-    pullBundleProducts: pullBundleProducts
+    pullBundleProducts: pullBundleProducts,
+    refreshTranslationLinks: refreshTranslationLinks
   };
 })();
 

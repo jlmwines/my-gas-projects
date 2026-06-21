@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-18 — JLM Wines ecosystem live; jlmops @322 · theme v1.2.30; 0 blockers; content-library versioning **fully shipped** (Decision 7 / Plan B, @316–@322): timestamped library files + attach-to-replace (new version supersedes old to `_archive`) + Create-translation-text button + Doc-sourced translation prompt (`template-xlt`, manager-refineable, no deploy) + version-machinery retirement + housekeeping duplicate backstop. Nothing queued; remaining = live smoke (translation button, mobile-URL paste, `runLibraryDuplicateReconcile`).
+**Updated:** 2026-06-19 — JLM Wines ecosystem live; jlmops @323 · theme v1.2.30; 0 blockers; @323 shipped on-demand WebXltM translation refresh (New Products card, Track A) so mid-day product adds get their EN↔HE link without waiting for the next sync. Content-library versioning fully shipped (Decision 7 / Plan B, @316–@322). Remaining = live smoke (Refresh Translations button; plus carried Decision 7 smokes: translation button, mobile-URL paste, `runLibraryDuplicateReconcile`).
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @322 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-18 · theme 2026-06-12 |
+| Deploy Version | jlmops @323 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-19 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP gained 4 read abilities (2026-06-12); editorial blog meta verified clean (per-language canonicals correct — no WPML inheritance gap on posts). Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, aggregateRating, HE OG image, EN-only discovery post). |
@@ -51,6 +51,7 @@ The live "what now" — daily review reads these first.
 
 ### Pending verification (watch items)
 
+- **On-demand translation refresh** (@323, 2026-06-19, no /dev smoke): Admin → Products → New Products → **Refresh Translations** button re-pulls HE + rebuilds WebXltM. Smoke — click it (expect "Translation links refreshed. HE: N"); add a product via hot-link then refresh and confirm its `wxm_*` row appears linking HE→EN; confirm it skips cleanly if a sync is mid-flight. Plan → `jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md` (Track A). Also logged there: dead `wxl_` hot-link insert + stale DATA_MODEL.md WebXltM schema.
 - **Content-library versioning** (@316–@321, Decision 7 / Plan B): attach-to-replace + supersede→`_archive` confirmed live on the Negev blog task; version-retirement UI + lock-modal Cancel + admin pack spacing smoked (@319/@320). Still to smoke: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; and `runLibraryDuplicateReconcile` from the editor (expect `0 resolved` on clean folders). Migration `runLibraryFileNameMigration` already run (14 renamed).
 - **Correct Product Name tool** (@306, deployed live 2026-06-16, no /dev smoke): exercise once — search a product, edit EN and/or HE, Save, confirm the WebProdM `wpm_PostTitle` + WebDetM name cells changed and a "Name Update" row appears in Recent Updates. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** (@307–@311, deployed live 2026-06-17, only the suggestion sort smoked): plan `jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`. Smoke the rest — (a) Admin Suggestions/Linkage Accept & Link buttons open on a name with a quote; (b) Manager Products loads fast with Detail Updates open + 3 collapsed cards showing count badges (gray=0, colored when pending); expand each, confirm category/search/Suggest-Selected work; (c) a new-product onboarding task shows the EN name (not blank) in the Manager preview/header; (d) Admin Review Submissions shows the WebDetS staging name; (e) Admin New Products collapsed header shows its count badge.

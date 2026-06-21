@@ -264,6 +264,7 @@
             </div>
             <div>
                 <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
+                <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh Translations</button>
             </div>
         </div>
         <div id="new-export-status" class="mt-2 small text-right"></div>
@@ -1772,7 +1773,37 @@
             }
         }).WebAppProducts_exportNewProducts();
     };
-    
+
+    // Re-pull HE products and rebuild WebXltM so a product added since the last
+    // sync gets its EN↔HE translation link without waiting for the next daily sync.
+    AdminProductsView.refreshTranslations = function() {
+        TaskWidgets.confirm('Refresh translation links from WooCommerce? Re-pulls all Hebrew products.', function() {
+            const statusDiv = document.getElementById('new-export-status');
+            const btn = document.getElementById('btn-refresh-xlt');
+            btn.disabled = true;
+            statusDiv.textContent = 'Refreshing translation links...';
+            statusDiv.className = 'mt-2 small text-info';
+
+            google.script.run.withSuccessHandler(res => {
+                btn.disabled = false;
+                if (res.success) {
+                    statusDiv.textContent = res.message;
+                    statusDiv.className = 'mt-2 small text-success';
+                    TaskWidgets.toast('Translation links refreshed.', 'success');
+                } else {
+                    statusDiv.textContent = res.message;
+                    statusDiv.className = 'mt-2 small text-danger';
+                    TaskWidgets.toast(res.message, 'warning');
+                }
+            }).withFailureHandler(err => {
+                btn.disabled = false;
+                statusDiv.textContent = 'Refresh failed: ' + err.message;
+                statusDiv.className = 'mt-2 small text-danger';
+                TaskWidgets.toast('Error: ' + err.message, 'error');
+            }).WebAppProducts_refreshTranslations();
+        });
+    };
+
     AdminProductsView.loadPendingNewList = function(preloadedData) {
       const tbody = document.getElementById('pending-new-list-body');
       const render = tasks => {
