@@ -251,14 +251,34 @@
     border-color: #b6d4fe;
   }
   .pv-entity-chip:hover { background: #d9e9ff; }
+
+  /* Campaigns tab */
+  .pv-cmp-row {
+    padding: 10px 0;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+  }
+  .pv-cmp-row:hover { background: #f8f9fa; }
+  .pv-cmp-row.expanded { background: #f8f9fa; }
+  .pv-cmp-name { font-weight: 600; font-size: 14px; }
+  .pv-cmp-id { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; color: #6c757d; }
+  .pv-cmp-detail { background: #fff; border-bottom: 1px solid #dee2e6; padding: 10px 12px; font-size: 12px; }
+  .pv-cmp-entity-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid #f1f3f5;
+  }
+  .pv-cmp-entity-row:last-child { border-bottom: none; }
 </style>
 
 <div class="pv-container">
 
-  <!-- Tab bar — admin sees Calendar/Campaigns/Projects/Library;
-       manager sees Calendar/Library (Tasks tab added in Deploy 4). -->
+  <!-- Tab bar — admin: Calendar/Library/Campaigns/Projects; manager: Calendar/Tasks/Library -->
   <div class="pv-tabs">
     <button class="pv-tab active" data-tab="calendar" onclick="PublishingView.switchTab('calendar')">Calendar</button>
+    <button class="pv-tab" data-tab="tasks" onclick="PublishingView.switchTab('tasks')" data-roles="manager">Tasks</button>
     <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
     <button class="pv-tab" data-tab="projects" onclick="PublishingView.switchTab('projects')" data-roles="admin">Projects</button>
@@ -288,14 +308,21 @@
     </div>
   </div>
 
-  <!-- ===== CAMPAIGNS TAB (stub — full content in Deploy 3) ===== -->
+  <!-- ===== TASKS TAB (manager: content tasks with entity context) ===== -->
+  <div class="pv-panel" id="pv-panel-tasks">
+    <div id="pv-tasks-content">
+      <div class="pv-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ===== CAMPAIGNS TAB ===== -->
   <div class="pv-panel" id="pv-panel-campaigns">
     <div id="pv-campaigns-content">
       <div class="pv-empty">Loading…</div>
     </div>
   </div>
 
-  <!-- ===== PROJECTS TAB (stub — full content in Deploy 3) ===== -->
+  <!-- ===== PROJECTS TAB ===== -->
   <div class="pv-panel" id="pv-panel-projects">
     <div id="pv-projects-content">
       <div class="pv-empty">Loading…</div>
@@ -376,6 +403,48 @@
   </div>
 </div>
 
+<!-- New Campaign Modal -->
+<div class="modal-overlay" id="pvNewCampaignModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:460px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">New Campaign</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Campaign ID <small class="text-muted font-weight-normal">(slug, e.g. newsletter-2026)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-nc-id" placeholder="e.g., newsletter-2026">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Name</label>
+        <input type="text" class="form-control form-control-sm" id="pv-nc-name" placeholder="Campaign display name">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Status</label>
+        <select class="form-control form-control-sm" id="pv-nc-status">
+          <option value="active">active</option>
+          <option value="planned">planned</option>
+          <option value="paused">paused</option>
+          <option value="completed">completed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Primary Goal <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-nc-goal" placeholder="e.g., Acquire newsletter subscribers">
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Project <small class="text-muted font-weight-normal">(optional)</small></label>
+        <select class="form-control form-control-sm" id="pv-nc-project">
+          <option value="">— none —</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="PublishingView.closeNewCampaignModal()">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-create-campaign">Create</button>
+    </div>
+  </div>
+</div>
+
 <!-- Entity detail drawer -->
 <div class="modal-overlay" id="pvEntityDrawer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div class="pv-drawer-panel">
@@ -391,10 +460,20 @@
         <div><label>Language</label><div class="field-value" id="pv-drawer-language">—</div></div>
         <div><label>State</label><div class="field-value" id="pv-drawer-state">—</div></div>
         <div><label>Target date</label><div class="field-value" id="pv-drawer-targetdate">—</div></div>
-        <div><label>Campaign</label><div class="field-value" id="pv-drawer-campaign">—</div></div>
+        <div><label>Campaign</label>
+          <div class="field-value" id="pv-drawer-campaign">—</div>
+          <div data-roles="admin" style="margin-top:4px;display:flex;gap:6px;align-items:center">
+            <select class="form-control form-control-sm" id="pv-drawer-campaign-select" style="font-size:12px;height:28px;flex:1"></select>
+            <button type="button" class="btn btn-sm btn-light" id="pv-drawer-campaign-save" style="white-space:nowrap" onclick="PublishingView.saveCampaignField()">Save</button>
+          </div>
+        </div>
         <div><label>Last touched</label><div class="field-value" id="pv-drawer-lasttouched">—</div></div>
       </div>
       <div class="pv-drawer-actions" id="pv-drawer-actions"></div>
+      <div class="pv-drawer-section" id="pv-drawer-distribute-wrap" data-roles="admin" style="display:none">
+        <h6>Distribute</h6>
+        <div id="pv-drawer-distribute"></div>
+      </div>
       <div class="pv-drawer-section"><h6>Family</h6><div id="pv-drawer-family"><span class="placeholder">—</span></div></div>
       <div class="pv-drawer-section"><h6>Files &amp; URLs</h6><div id="pv-drawer-files"><span class="placeholder">—</span></div></div>
       <div class="pv-drawer-section"><h6>Attached tasks</h6><div id="pv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
@@ -423,9 +502,11 @@
       library: [],
       campaigns: [],
       projects: [],
+      shortUrls: [],
       contentStages: [],
       activePreset: 'all',
       deficiencyWindowDays: 56,
+      expandedCampaignId: null,
       entityStack: [],
       currentEntitySlug: null,
       currentEntity: null
@@ -445,6 +526,8 @@
       if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
       var submitBtn = document.getElementById('pv-btn-create-content-stream');
       if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
+
+      document.getElementById('pv-btn-create-campaign').addEventListener('click', createCampaign);
 
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' || e.keyCode === 27) {
@@ -474,6 +557,7 @@
       state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
       renderCalendar();
       renderLibrary();
+      renderTasks();
       _loadCampaignsAndProjects();
     }
 
@@ -487,6 +571,7 @@
           if (res && res.success) {
             state.campaigns = res.data.campaigns || [];
             state.projects = res.data.projects || [];
+            state.shortUrls = res.data.shortUrls || [];
             renderCampaigns();
             renderProjects();
           } else {
@@ -513,6 +598,7 @@
       document.querySelectorAll('.pv-panel').forEach(function(p) {
         p.classList.toggle('active', p.id === 'pv-panel-' + tab);
       });
+      if (tab === 'tasks') renderTasks();
       if (tab === 'campaigns') renderCampaigns();
       if (tab === 'projects') renderProjects();
     }
@@ -576,23 +662,298 @@
 
     function renderCampaigns() {
       var container = document.getElementById('pv-campaigns-content');
-      if (!state.campaigns.length) {
-        container.innerHTML = '<div class="pv-empty">Loading campaigns…</div>';
+      if (!state.campaigns) {
+        container.innerHTML = '<div class="pv-empty">Loading…</div>';
         return;
       }
-      var html = '<table class="pv-cal-table"><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Project</th><th>Entities</th></tr></thead><tbody>';
+      var html = '<div data-roles="admin" style="display:flex;justify-content:flex-end;margin-bottom:8px">' +
+        '<button class="btn btn-sm" onclick="PublishingView.openNewCampaignModal()">+ New Campaign</button>' +
+        '</div>';
+      if (!state.campaigns.length) {
+        container.innerHTML = html + '<div class="pv-empty">No campaigns found.</div>';
+        return;
+      }
+      html += '<div id="pv-cmp-list">';
       state.campaigns.forEach(function(c) {
-        var entityCount = (state.library || []).filter(function(e) { return e.campaignId === c.campaignId; }).length;
-        html += '<tr>';
-        html += '<td><span class="tw-chip" style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px">' + TaskWidgets.escape(c.campaignId || '—') + '</span></td>';
-        html += '<td><strong>' + TaskWidgets.escape(c.name || '—') + '</strong></td>';
-        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(c.status) + '">' + TaskWidgets.escape(c.status || '—') + '</span></td>';
-        html += '<td>' + TaskWidgets.escape(c.projectId || '—') + '</td>';
-        html += '<td>' + entityCount + '</td>';
-        html += '</tr>';
+        var cid = c.campaignId;
+        var entityCount = (state.library || []).filter(function(e) { return e.campaignId === cid; }).length;
+        var isExpanded = state.expandedCampaignId === cid;
+        html += '<div class="pv-cmp-row' + (isExpanded ? ' expanded' : '') + '" data-cmp-id="' + TaskWidgets.escape(cid) + '">';
+        html +=   '<div style="display:flex;justify-content:space-between;align-items:center">';
+        html +=     '<div>';
+        html +=       '<div class="pv-cmp-name">' + TaskWidgets.escape(c.name || cid) + '</div>';
+        html +=       '<div class="pv-cmp-id">' + TaskWidgets.escape(cid) + '</div>';
+        html +=     '</div>';
+        html +=     '<div style="text-align:right">';
+        html +=       '<span class="tw-status-pill ' + TaskWidgets.statusClass(c.status) + '">' + TaskWidgets.escape(c.status || '—') + '</span>';
+        html +=       ' <span class="tw-chip" style="font-size:11px;margin-left:4px">' + entityCount + '</span>';
+        html +=     '</div>';
+        html +=   '</div>';
+        if (c.primaryGoal) {
+          html += '<div class="small text-muted mt-1">' + TaskWidgets.escape(c.primaryGoal) + '</div>';
+        }
+        html += '</div>';
+        if (isExpanded) {
+          html += renderCampaignDetail(c);
+        }
       });
-      html += '</tbody></table>';
+      html += '</div>';
       container.innerHTML = html;
+      container.querySelectorAll('.pv-cmp-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+          var cid = this.dataset.cmpId;
+          state.expandedCampaignId = (state.expandedCampaignId === cid) ? null : cid;
+          renderCampaigns();
+        });
+      });
+    }
+
+    function renderCampaignDetail(c) {
+      var cid = c.campaignId;
+      var entities = (state.library || []).filter(function(e) { return e.campaignId === cid; });
+      var html = '<div class="pv-cmp-detail">';
+      if (c.notes) {
+        html += '<div class="small mb-2">' + TaskWidgets.escape(c.notes) + '</div>';
+      }
+      if (!entities.length) {
+        html += '<div class="small text-muted">No library entities assigned to this campaign.</div>';
+      } else {
+        entities.forEach(function(e) {
+          html += '<div class="pv-cmp-entity-row">';
+          html +=   '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
+          html +=   '<span class="small">' + TaskWidgets.escape(e.title || e.slug) + '</span>';
+          html +=   '<span class="small text-muted" style="margin-left:auto">' + TaskWidgets.escape(e.contentType || '') + '</span>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function openNewCampaignModal() {
+      document.getElementById('pv-nc-id').value = '';
+      document.getElementById('pv-nc-name').value = '';
+      document.getElementById('pv-nc-status').value = 'active';
+      document.getElementById('pv-nc-goal').value = '';
+      var projectSel = document.getElementById('pv-nc-project');
+      projectSel.innerHTML = '<option value="">— none —</option>';
+      (state.projects || []).forEach(function(p) {
+        var opt = document.createElement('option');
+        opt.value = p.projectId;
+        opt.textContent = p.name || p.projectId;
+        projectSel.appendChild(opt);
+      });
+      document.getElementById('pvNewCampaignModal').style.display = 'flex';
+    }
+
+    function closeNewCampaignModal() {
+      document.getElementById('pvNewCampaignModal').style.display = 'none';
+    }
+
+    var DISTRIBUTE_CAMPAIGNS = ['newsletter-print', 'email-broadcast', 'flyer-acquisition'];
+
+    function _extractTopic(slug) {
+      var prefixes = ['blog-', 'news-', 'email-', 'flyer-', 'template-', 'image-', 'other-', 'customer-', 'social-'];
+      var s = slug;
+      for (var i = 0; i < prefixes.length; i++) {
+        if (s.indexOf(prefixes[i]) === 0) { s = s.slice(prefixes[i].length); break; }
+      }
+      if (s.slice(-3) === '-en' || s.slice(-3) === '-he') s = s.slice(0, -3);
+      return s;
+    }
+
+    function _autoTargetUrl(entity) {
+      var refs = entity.references || [];
+      var libBySlug = {};
+      (state.library || []).forEach(function(e) { libBySlug[e.slug] = e; });
+      for (var i = 0; i < refs.length; i++) {
+        var ref = libBySlug[refs[i]];
+        if (ref && ref.externalUrl) return ref.externalUrl;
+        if (ref && ref.slug && ref.slug.indexOf('blog-') === 0) {
+          var topic = _extractTopic(ref.slug);
+          return 'https://jlmwines.com/' + topic + '/';
+        }
+      }
+      return '';
+    }
+
+    function _renderDistributePanel(entity) {
+      var wrap = document.getElementById('pv-drawer-distribute-wrap');
+      var el   = document.getElementById('pv-drawer-distribute');
+      if (!wrap || !el) return;
+      var cid = entity && entity.campaignId;
+      if (!cid || DISTRIBUTE_CAMPAIGNS.indexOf(cid) === -1) {
+        wrap.style.display = 'none';
+        return;
+      }
+      wrap.style.display = '';
+
+      // Existing short URLs for this entity
+      var existing = (state.shortUrls || []).filter(function(r) { return r.entitySlug === entity.slug; });
+      var existingHtml = '';
+      if (existing.length) {
+        existingHtml = '<div class="small font-weight-bold mb-1">Short URLs</div>';
+        existing.forEach(function(r) {
+          var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent('https://jlmwines.com/n/' + r.shortCode) + '&format=svg&size=160x160';
+          existingHtml += '<div style="margin-bottom:8px;padding:6px 8px;background:#f8f9fa;border-radius:4px">';
+          existingHtml += '<div class="detail-meta">' + TaskWidgets.escape(r.language.toUpperCase()) + ' · <code>' + TaskWidgets.escape(r.shortCode) + '</code></div>';
+          existingHtml += '<div class="small" style="word-break:break-all">' + TaskWidgets.escape('jlmwines.com/n/' + r.shortCode) + '</div>';
+          existingHtml += '<div class="small text-muted" style="word-break:break-all">' + TaskWidgets.escape(r.targetUrl) + '</div>';
+          existingHtml += '<div style="margin-top:4px"><img src="' + qrUrl + '" width="80" height="80" alt="QR" style="border:1px solid #dee2e6"> ';
+          existingHtml += '<a href="' + qrUrl + '" download="qr-' + TaskWidgets.escape(r.shortCode.replace('/', '-')) + '.svg" class="btn btn-sm btn-light" style="font-size:11px">&#8595; SVG</a></div>';
+          existingHtml += '</div>';
+        });
+      }
+
+      // Generate form
+      var lang = entity.language === 'he' ? 'he' : 'en';
+      var topic = _extractTopic(entity.slug);
+      var suggestedCode = lang === 'he' ? 'he/' + topic : topic;
+      var autoUrl = _autoTargetUrl(entity);
+
+      var html = existingHtml +
+        '<div class="small font-weight-bold mb-1 mt-2">Generate</div>' +
+        '<div class="form-group mb-1">' +
+          '<label class="small">Target URL</label>' +
+          '<input type="text" class="form-control form-control-sm" id="pv-dist-target-url" value="' + TaskWidgets.escape(autoUrl) + '" placeholder="https://jlmwines.com/…">' +
+        '</div>' +
+        '<div class="form-group mb-1">' +
+          '<label class="small">Content marker <span class="text-muted">(utm_content)</span></label>' +
+          '<input type="text" class="form-control form-control-sm" id="pv-dist-marker" placeholder="e.g. handling-issue-3">' +
+        '</div>' +
+        '<div class="form-group mb-2" style="display:flex;gap:8px;align-items:center">' +
+          '<label class="small mb-0">Language</label>' +
+          '<select class="form-control form-control-sm" id="pv-dist-lang" style="width:auto">' +
+            '<option value="en"' + (lang === 'en' ? ' selected' : '') + '>EN — ' + topic + '</option>' +
+            '<option value="he"' + (lang === 'he' ? ' selected' : '') + '>HE — he/' + topic + '</option>' +
+          '</select>' +
+        '</div>' +
+        '<button type="button" class="btn btn-sm btn-light" id="pv-dist-generate-btn" onclick="PublishingView.generateDistribute()">Generate</button>' +
+        '<div id="pv-dist-output" style="margin-top:8px"></div>' +
+        '<div class="small text-muted mt-2">After generating, add a RankMath redirect: <code>/n/' + TaskWidgets.escape(suggestedCode) + '</code> → UTM URL above.</div>';
+
+      el.innerHTML = html;
+    }
+
+    function generateDistribute() {
+      var entity = state.currentEntity;
+      if (!entity || !entity.slug) return;
+      var targetUrl = (document.getElementById('pv-dist-target-url').value || '').trim();
+      var marker    = (document.getElementById('pv-dist-marker').value || '').trim();
+      var language  = document.getElementById('pv-dist-lang').value;
+      if (!targetUrl) { TaskWidgets.toast('Target URL is required.', 'error'); return; }
+      var btn = document.getElementById('pv-dist-generate-btn');
+      btn.disabled = true; btn.textContent = 'Generating…';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false; btn.textContent = 'Generate';
+          if (res && res.success) {
+            var d = res.data;
+            state.shortUrls.push({
+              shortCode: d.shortCode, campaignId: entity.campaignId,
+              entitySlug: entity.slug, language: language,
+              targetUrl: d.utmUrl, createdDate: ''
+            });
+            var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(d.shortUrl) + '&format=svg&size=200x200';
+            var out = '<div style="padding:8px;background:#f0f7f0;border-radius:4px;font-size:12px">' +
+              '<div class="font-weight-bold mb-1">Generated</div>' +
+              '<div><strong>Short URL:</strong> <code>' + TaskWidgets.escape(d.shortCode) + '</code></div>' +
+              '<div style="word-break:break-all"><strong>UTM URL:</strong> <span id="pv-dist-utm-text">' + TaskWidgets.escape(d.utmUrl) + '</span> ' +
+              '<button class="btn btn-sm btn-light" style="font-size:11px" onclick="PublishingView.copyDistUrl()">Copy</button></div>' +
+              '<div style="margin-top:6px"><img src="' + qrUrl + '" width="100" height="100" alt="QR"> ' +
+              '<a href="' + qrUrl + '" download="qr-' + TaskWidgets.escape(d.shortCode.replace('/', '-')) + '.svg" class="btn btn-sm btn-light" style="font-size:11px">&#8595; SVG</a></div>' +
+              '</div>';
+            document.getElementById('pv-dist-output').innerHTML = out;
+            TaskWidgets.toast('Short URL generated.', 'success');
+          } else {
+            TaskWidgets.toast((res && res.error) || 'Failed to generate.', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'Generate';
+          TaskWidgets.toast(err && err.message ? err.message : 'Error.', 'error');
+        })
+        .WebAppPublishing_generateDistributeOutputs({
+          entitySlug: entity.slug, campaignId: entity.campaignId,
+          language: language, targetUrl: targetUrl, contentMarker: marker
+        });
+    }
+
+    function copyDistUrl() {
+      var el = document.getElementById('pv-dist-utm-text');
+      if (!el) return;
+      try { navigator.clipboard.writeText(el.textContent); TaskWidgets.toast('Copied.', 'success'); }
+      catch(e) { TaskWidgets.toast('Copy failed — select manually.', 'error'); }
+    }
+
+    function saveCampaignField() {
+      var entity = state.currentEntity;
+      if (!entity || !entity.slug) return;
+      var sel = document.getElementById('pv-drawer-campaign-select');
+      var campaignId = sel ? sel.value : '';
+      var saveBtn = document.getElementById('pv-drawer-campaign-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+          if (res && res.success) {
+            var updated = res.data && res.data.entity;
+            if (updated) {
+              var newCampaignId = campaignId;
+              state.currentEntity.campaignId = newCampaignId;
+              document.getElementById('pv-drawer-campaign').textContent = CAMPAIGN_LABELS[newCampaignId] || newCampaignId || '—';
+              var libEntity = (state.library || []).find(function(e) { return e.slug === entity.slug; });
+              if (libEntity) libEntity.campaignId = newCampaignId;
+            }
+            TaskWidgets.toast('Campaign updated.', 'success');
+          } else {
+            TaskWidgets.toast((res && res.error) ? res.error : 'Failed to update campaign.', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+          TaskWidgets.toast(err && err.message ? err.message : 'Error saving campaign.', 'error');
+        })
+        .WebAppPublishing_setEntityCampaign({ entityId: entity.slug, campaignId: campaignId });
+    }
+
+    function createCampaign() {
+      var cid = (document.getElementById('pv-nc-id').value || '').trim();
+      var name = (document.getElementById('pv-nc-name').value || '').trim();
+      var status = document.getElementById('pv-nc-status').value;
+      var goal = (document.getElementById('pv-nc-goal').value || '').trim();
+      var projectId = document.getElementById('pv-nc-project').value;
+      if (!cid || !name) {
+        TaskWidgets.toast('Campaign ID and Name are required.', 'error');
+        return;
+      }
+      TaskWidgets.confirm('Create campaign "' + cid + '"?', function() {
+      var btn = document.getElementById('pv-btn-create-campaign');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.textContent = 'Create';
+          if (res && res.success) {
+            closeNewCampaignModal();
+            TaskWidgets.toast('Campaign created.', 'success');
+            state.campaigns.push({ campaignId: cid, name: name, status: status, primaryGoal: goal, projectId: projectId, notes: '' });
+            renderCampaigns();
+          } else {
+            TaskWidgets.toast((res && res.error) ? res.error : 'Failed to create campaign.', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Create';
+          TaskWidgets.toast(err && err.message ? err.message : 'Error creating campaign.', 'error');
+        })
+        .WebAppPublishing_createCampaign({ campaignId: cid, name: name, status: status, primaryGoal: goal, projectId: projectId });
+      }, { title: 'New Campaign', okLabel: 'Create' });
     }
 
     // ===== PROJECTS TAB =====
@@ -600,7 +961,7 @@
     function renderProjects() {
       var container = document.getElementById('pv-projects-content');
       if (!state.projects.length) {
-        container.innerHTML = '<div class="pv-empty">Loading projects…</div>';
+        container.innerHTML = '<div class="pv-empty">No projects found.</div>';
         return;
       }
       var html = '<table class="pv-cal-table"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th></tr></thead><tbody>';
@@ -610,6 +971,42 @@
         html += '<td><strong>' + TaskWidgets.escape(p.name || '—') + '</strong></td>';
         html += '<td>' + TaskWidgets.escape(p.type || '—') + '</td>';
         html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(p.status) + '">' + TaskWidgets.escape(p.status || '—') + '</span></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ===== TASKS TAB =====
+
+    function renderTasks() {
+      var container = document.getElementById('pv-tasks-content');
+      var contentTasks = (state.tasks || []).filter(function(t) {
+        return t.typeId && t.typeId.indexOf('task.content.') === 0 &&
+               t.status !== 'Done' && t.status !== 'Cancelled';
+      });
+      if (!contentTasks.length) {
+        container.innerHTML = '<div class="pv-empty">No open content tasks.</div>';
+        return;
+      }
+      var libBySlug = {};
+      (state.library || []).forEach(function(e) { libBySlug[e.slug] = e; });
+      var html = '<table class="pv-cal-table"><thead><tr>' +
+        '<th>Task</th><th>Entity</th><th>Status</th><th>Due</th><th></th>' +
+        '</tr></thead><tbody>';
+      contentTasks.forEach(function(t) {
+        var entity = libBySlug[t.entityId] || null;
+        var entityLabel = entity ? (entity.title || entity.slug) : (t.entityName || t.entityId || '—');
+        var due = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
+        var docBtn = (entity && entity.docUrl)
+          ? '<a class="btn btn-sm btn-light" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">&#8599; Doc</a>'
+          : '';
+        html += '<tr style="cursor:pointer" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(t.entityId) + '\')">';
+        html += '<td data-label="Task"><strong>' + TaskWidgets.escape(t.name || t.typeId) + '</strong></td>';
+        html += '<td data-label="Entity"><span class="detail-meta">' + TaskWidgets.escape(entityLabel) + '</span></td>';
+        html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span></td>';
+        html += '<td data-label="Due">' + due + '</td>';
+        html += '<td data-label="" onclick="event.stopPropagation()">' + docBtn + '</td>';
         html += '</tr>';
       });
       html += '</tbody></table>';
@@ -905,6 +1302,8 @@
       });
       var actEl = document.getElementById('pv-drawer-actions');
       if (actEl) actEl.innerHTML = '';
+      var distWrap = document.getElementById('pv-drawer-distribute-wrap');
+      if (distWrap) distWrap.style.display = 'none';
     }
 
     function _renderEntityDrawer(data) {
@@ -918,9 +1317,21 @@
       document.getElementById('pv-drawer-targetdate').textContent = entity.targetDate ? TaskWidgets.formatDate(entity.targetDate) : '—';
       document.getElementById('pv-drawer-campaign').textContent = CAMPAIGN_LABELS[entity.campaignId] || entity.campaignId || '—';
       document.getElementById('pv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
+      var campSel = document.getElementById('pv-drawer-campaign-select');
+      if (campSel) {
+        campSel.innerHTML = '<option value="">— none —</option>';
+        (state.campaigns || []).forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c.campaignId;
+          opt.textContent = c.name || c.campaignId;
+          if (c.campaignId === entity.campaignId) opt.selected = true;
+          campSel.appendChild(opt);
+        });
+      }
 
       _renderDrawerFiles(entity);
       _renderDrawerActions(entity);
+      _renderDistributePanel(entity);
       _renderDrawerFamily(entity);
       _renderDrawerAttachedTasks((data && data.attached_tasks) || []);
       _renderDrawerReferences((entity && entity.references) || [], 'pv-drawer-refs-out', 'No outgoing references.');
@@ -1149,7 +1560,13 @@
       drawerCreateContentTasks: drawerCreateContentTasks,
       drawerCreateHeSibling: drawerCreateHeSibling,
       drawerRequestCorrection: drawerRequestCorrection,
-      drawerAbandon: drawerAbandon
+      drawerAbandon: drawerAbandon,
+      openNewCampaignModal: openNewCampaignModal,
+      closeNewCampaignModal: closeNewCampaignModal,
+      createCampaign: createCampaign,
+      saveCampaignField: saveCampaignField,
+      generateDistribute: generateDistribute,
+      copyDistUrl: copyDistUrl
     };
   })();
 

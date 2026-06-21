@@ -801,6 +801,28 @@ const LibraryService = (function() {
     }
 
     /**
+     * Sets slb_CampaignId on a Library entity. Pass empty string to clear.
+     * @param {Object} params - { entityId, campaignId }
+     * @returns {Object} { entity }
+     */
+    function setEntityCampaign(params) {
+        const entityId = params && params.entityId;
+        if (!entityId) throw new Error('entityId is required');
+        const entity = _getEntityRow(entityId);
+        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+        const updated = _updateEntityRow(entityId, {
+            slb_CampaignId: params.campaignId || '',
+            slb_LastTouched: new Date().toISOString()
+        });
+        logEntityActivity({
+            entityId: entityId,
+            actionType: 'field_update',
+            details: { field: 'slb_CampaignId', to: params.campaignId || '' }
+        });
+        return { entity: updated };
+    }
+
+    /**
      * Transitions an entity to 'published' when its in-app publish task closes
      * (CONTENT_WORKFLOW_REDESIGN Step 6 — the one auto-transition: draft/locked →
      * published). Logs a 'published' activity entry (with the external URL when
@@ -1235,6 +1257,7 @@ const LibraryService = (function() {
 
     return {
         addEntity: addEntity,
+        setEntityCampaign: setEntityCampaign,
         getEntityContent: getEntityContent,
         spawnContentChain: spawnContentChain,
         createBlankDoc: createBlankDoc,

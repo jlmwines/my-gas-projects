@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-22 01:56',
-  commit: "Sync web-export result-reporting integrity @289 (RELIABILITY_AUDIT §1.4). generateWebExportBackend now branches on exportWebInventory's return value ({changed,fileName,fileId,count}) instead of re-reading the clobberable state.webExportFilename — fixes the 2026-06-14 lost update where a real inventory CSV was created but the sync reported 'no changes', went COMPLETE, and orphaned the file. Adds a reportFailure('sync.web_export.state_clobber', High) detector that repairs the filename from the return value, so a real export can never again be silently dropped. The race itself is closed separately in §1.3 (LockService)."
+  built: '2026-06-22 02:46',
+  commit: "PublishingView Deploy 3 — Campaigns tab full (expandable rows + linked entities + New Campaign modal + create backend); Projects empty state fixed; AdminCampaigns removed from nav (folded into Publishing)."
 };
 
 function getVersion() {

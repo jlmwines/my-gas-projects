@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — PublishingView Deploys 3–4 shipped @328–@331
+
+- Deploy 3 (@328–@329): Campaigns tab full — expandable rows with linked entity list, "New Campaign" modal (ID/Name/Status/Goal/Project) with TaskWidgets.confirm, WebAppPublishing_createCampaign; Projects empty state fixed; AdminCampaigns removed from admin nav.
+- Deploy 4a (@330): Manager Tasks tab — content tasks (task.content.*) with entity context inline + Doc link. slb_CampaignId editable in entity drawer (admin select + Save), backed by LibraryService.setEntityCampaign → _updateEntityRow.
+- Deploy 4b (@331): Distribute panel in entity drawer (admin, distribution campaigns only) — existing short URLs list + generate form (target URL auto-filled from referenced entity, content marker, language), UTM URL + short code (handling / he/handling), QR via qrserver.com img tag; WebAppPublishing_generateDistributeOutputs writes SysShortUrls; SysShortUrls now loaded in getCampaignsAndProjects.
+- Next: jlmops-calendar.md export (StatusReportService) + JLMops_Calendar Google Sheet (Drive MCP). Both are ops-bridge work, separate session.
+
+---
+
 ## 2026-06-22 — PublishingView Deploys 1–2 shipped @324–@327
 
 - Deploy 1 (@324): schema changes (slb_CampaignId on SysLibrary, sm_ProjectId on SysMarketingCampaigns, dropped spro_CampaignId, ssu_EntitySlug replaces ssu_ProjectId), `other` added to VALID_TYPES, Dev buttons (Seed Core Content Campaign + Backfill Core Content CampaignId). User ran syncAllHeaders + seeded.
