@@ -4,6 +4,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — PublishingView complete @335; JLMops_Publishing is the shared calendar
+
+- Reverted calendar .md export (@334/@335): JLMops_Publishing Google Sheet is the publishing calendar — sessions read it via Drive MCP; jlmops reads via SpreadsheetApp.openById. No separate export file.
+- StatusReportService restored to health+KPI only. Plan doc updated.
+- PublishingView installation complete (Deploys 1–5 + revert of misguided Deploy 6).
+
 ## 2026-06-22 — PublishingView Deploy 5 @332; holiday sheet wired
 
 - Deploy 5 (@332): Calendar tab now loads holidays from JLMops_Publishing via `_loadHolidays()` (SpreadsheetApp.openById from system.calendar.sheet_id in SysConfig). Holiday rows merged chronologically with Library entity rows — non-clickable, grey/italic (.pv-cal-holiday). Holidays always show regardless of campaign/state filters.
