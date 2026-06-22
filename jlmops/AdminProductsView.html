@@ -245,24 +245,6 @@
             </table>
         </div>
 
-        <!-- Section C: Finalize Linkage -->
-        <h6 class="text-muted mb-2">Finalize Linkage (<span id="stat-linkage">0</span>)</h6>
-        <div class="table-responsive mb-4 border rounded">
-            <table class="table table-hover mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th class="border-top-0">Task</th>
-                  <th class="border-top-0">SKU</th>
-                  <th class="border-top-0">Status</th>
-                  <th class="border-top-0">Action</th>
-                </tr>
-              </thead>
-              <tbody id="linkage-list-body">
-                <!-- Linkage tasks populated here -->
-              </tbody>
-            </table>
-        </div>
-
         <!-- Section D: Export -->
         <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-4">
             <div>
@@ -691,39 +673,13 @@
             <label>Product Name HE</label>
             <input type="text" class="form-control hebrew-text" id="sugg-name-he">
         </div>
+        <div class="alert alert-info small p-2 mb-0">
+          After approving: create the EN and HE product drafts in WooCommerce, then pair them in WPML.
+        </div>
       </div>
       <div class="modal-footer bg-light">
         <button class="btn btn-sm" onclick="document.getElementById('suggestion-modal').style.display='none'">Cancel</button>
         <button class="btn btn-sm" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Linkage Modal -->
-  <div class="modal-overlay" id="linkage-modal">
-    <div class="modal-container" style="max-width: 500px; max-height: auto;">
-      <div class="modal-header">
-        <h5 class="mb-0">Link & Finalize Product</h5>
-        <button type="button" class="close" onclick="document.getElementById('linkage-modal').style.display='none'">&times;</button>
-      </div>
-      <div class="form-body">
-        <p class="text-muted small">Enter the WooCommerce IDs to finalize the Hot Insert.</p>
-        <div class="form-group">
-            <label>SKU</label>
-            <input type="text" class="form-control" id="link-sku" readonly>
-        </div>
-        <div class="form-group">
-            <label>WooCommerce ID (English)</label>
-            <input type="text" class="form-control" id="link-woo-en" placeholder="e.g., 12345">
-        </div>
-        <div class="form-group">
-            <label>WooCommerce ID (Hebrew)</label>
-            <input type="text" class="form-control" id="link-woo-he" placeholder="e.g., 12346">
-        </div>
-      </div>
-      <div class="modal-footer bg-light">
-        <button class="btn border" onclick="document.getElementById('linkage-modal').style.display='none'">Cancel</button>
-        <button class="btn btn-sm" onclick="AdminProductsView.submitLinkage()">Finalize Hot Insert</button>
       </div>
     </div>
   </div>
@@ -872,8 +828,7 @@
       if (key === 'new') {
         AdminProductsView.loadSuggestionList();
         AdminProductsView.loadSubmissionsList();
-        AdminProductsView.loadLinkageList();
-        AdminProductsView.updateNewExportUI();      // export-UI counts (self-fetches linkage)
+        AdminProductsView.updateNewExportUI();
         AdminProductsView.loadPendingNewList();
       } else if (key === 'sku') {
         AdminProductsView.loadSkuUpdates();
@@ -1736,31 +1691,6 @@
         google.script.run.withSuccessHandler(render).WebAppProducts_getSubmissionsTasks();
     };
 
-    AdminProductsView.loadLinkageList = function(preloadedData) {
-        const tbody = document.getElementById('linkage-list-body');
-        const render = tasks => {
-            tbody.innerHTML = '';
-            if (!tasks || tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No finalized products waiting for link.</td></tr>';
-                return;
-            }
-            tasks.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${t.title}</td>
-                    <td>${t.sku}</td>
-                    <td><span class="badge badge-success">${t.status}</span></td>
-                    <td><button class="btn btn-sm" data-action="link">Link</button></td>
-                `;
-                tr.querySelector('[data-action="link"]').addEventListener('click', () => AdminProductsView.openLinkageModal(t.taskId, t.sku));
-                tbody.appendChild(tr);
-            });
-        };
-        if (preloadedData !== undefined) { render(preloadedData); return; }
-        tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
-        google.script.run.withSuccessHandler(render).WebAppProducts_getLinkageTasks();
-    };
-
     AdminProductsView.updateNewExportUI = function(preloadedData) {
         const render = tasks => {
             const count = tasks ? tasks.length : 0;
@@ -1872,6 +1802,7 @@
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 document.getElementById('suggestion-modal').style.display = 'none';
+                TaskWidgets.toast('Task created. Now create EN + HE drafts in WooCommerce and pair them in WPML.', 'info');
                 AdminProductsView.refreshView();
             } else {
                 TaskWidgets.toast('Error: ' + res.message, 'error');
@@ -1879,42 +1810,6 @@
         }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
         .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe);
         });
-    };
-
-    // Linkage Logic
-    AdminProductsView.openLinkageModal = function(taskId, sku) {
-        AdminProductsView.currentTaskId = taskId;
-        AdminProductsView.currentSku = sku;
-        document.getElementById('link-sku').value = sku;
-        document.getElementById('link-woo-en').value = '';
-        document.getElementById('link-woo-he').value = '';
-        document.getElementById('linkage-modal').style.display = 'flex';
-    };
-
-    AdminProductsView.submitLinkage = function() {
-        const wooEn = document.getElementById('link-woo-en').value.trim();
-        const wooHe = document.getElementById('link-woo-he').value.trim();
-        if (!wooEn || !wooHe) {
-            TaskWidgets.toast('Please provide both WooCommerce IDs.', 'warning');
-            return;
-        }
-        if (isNaN(wooEn) || isNaN(wooHe)) {
-             TaskWidgets.toast('IDs must be numeric.', 'warning');
-             return;
-        }
-
-        TaskWidgets.confirm(`Finalize and Hot Insert ${AdminProductsView.currentSku}? Cannot be undone.`, function() {
-        google.script.run.withSuccessHandler(res => {
-            if (res.success) {
-                TaskWidgets.toast('Success! Product is now live in JLMops.', 'success');
-                document.getElementById('linkage-modal').style.display = 'none';
-                AdminProductsView.refreshView();
-            } else {
-                TaskWidgets.toast('Error: ' + res.message, 'error');
-            }
-        }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
-        .WebAppProducts_finalizeProduct(AdminProductsView.currentTaskId, AdminProductsView.currentSku, wooEn, wooHe);
-        }, { danger: true });
     };
 
     // --- Editor Logic (Simplified/Shared) ---

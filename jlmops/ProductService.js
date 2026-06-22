@@ -1362,8 +1362,26 @@ const ProductService = (function() {
       }
       ConfigService.forceReload(); // Force reload of config cache after updating master data
 
-      // 3. Update Task Status to "Accepted" (not "Done" - Done happens after finalize/export)
+      // 3. Update Task Status to "Accepted"
       TaskService.updateTaskStatus(taskId, 'Accepted');
+
+      // 4. Clean up WebDetS row — staging no longer needed once details are in master
+      const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
+      const stagingSchema = allConfig['schema.data.WebDetS'];
+      if (stagingSheet && stagingSchema) {
+        const stagingHeaders = stagingSchema.headers.split(',');
+        const skuColIndex = stagingHeaders.indexOf('wds_SKU');
+        if (skuColIndex >= 0) {
+          const stagingData = stagingSheet.getDataRange().getValues();
+          for (let i = stagingData.length - 1; i > 0; i--) {
+            if (String(stagingData[i][skuColIndex]) === String(sku)) {
+              stagingSheet.deleteRow(i + 1);
+              LoggerService.info('ProductService', 'acceptProductDetails', `Deleted WebDetS row for SKU ${sku}`);
+              break;
+            }
+          }
+        }
+      }
 
       // Invalidate caches after data modification
       _invalidateProductCache();
@@ -1715,6 +1733,75 @@ const ProductService = (function() {
         stagingSheet.appendRow(rowData);
       }
 
+      // 4. Insert WebProdM row — seeds product master with SKU + name + price/stock from Comax
+      const webProdSchema = allConfig['schema.data.WebProdM'];
+      const webProdHeaders = webProdSchema.headers.split(',');
+      const webProdSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebProdM);
+
+      const cmxHeaders = allConfig['schema.data.CmxProdM'].headers.split(',');
+      const cmxSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].CmxProdM);
+      let cmxPrice = '', cmxStock = '';
+      if (cmxSheet) {
+        const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
+        const cmxPriceIdx = cmxHeaders.indexOf('cpm_Price');
+        const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
+        const cmxData = cmxSheet.getDataRange().getValues();
+        const cmxRow = cmxData.find((row, i) => i > 0 && String(row[cmxSkuIdx]).trim() === String(sku).trim());
+        if (cmxRow) {
+          cmxPrice = cmxRow[cmxPriceIdx] || '';
+          cmxStock = cmxRow[cmxStockIdx] || '';
+        }
+      }
+
+      const newWebProdRow = new Array(webProdHeaders.length).fill('');
+      const wp_SkuIdx = webProdHeaders.indexOf('wpm_SKU');
+      const wp_NameIdx = webProdHeaders.indexOf('wpm_PostTitle');
+      const wp_PriceIdx = webProdHeaders.indexOf('wpm_RegularPrice');
+      const wp_StockIdx = webProdHeaders.indexOf('wpm_Stock');
+      if (wp_SkuIdx > -1) newWebProdRow[wp_SkuIdx] = sku;
+      if (wp_NameIdx > -1) newWebProdRow[wp_NameIdx] = suggestedNameEn;
+      if (wp_PriceIdx > -1) newWebProdRow[wp_PriceIdx] = cmxPrice;
+      if (wp_StockIdx > -1) newWebProdRow[wp_StockIdx] = cmxStock;
+
+      const webProdData = webProdSheet.getDataRange().getValues();
+      let webProdRowIndex = -1;
+      for (let i = 1; i < webProdData.length; i++) {
+        if (String(webProdData[i][wp_SkuIdx]) === String(sku)) { webProdRowIndex = i + 1; break; }
+      }
+      if (webProdRowIndex > 0) {
+        webProdSheet.getRange(webProdRowIndex, 1, 1, newWebProdRow.length).setValues([newWebProdRow]);
+      } else {
+        webProdSheet.appendRow(newWebProdRow);
+      }
+      logger.info(serviceName, functionName, `Seeded WebProdM row for SKU ${sku}`, { sessionId: sessionId, sku: sku });
+
+      // 5. Seed WebDetM row with names
+      const masterSchema = allConfig['schema.data.WebDetM'];
+      const masterHeaders = masterSchema.headers.split(',');
+      const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+
+      const newMasterRow = new Array(masterHeaders.length).fill('');
+      const wdm_SkuIdx = masterHeaders.indexOf('wdm_SKU');
+      const wdm_NameEnIdx = masterHeaders.indexOf('wdm_NameEn');
+      const wdm_NameHeIdx = masterHeaders.indexOf('wdm_NameHe');
+      if (wdm_SkuIdx > -1) newMasterRow[wdm_SkuIdx] = sku;
+      if (wdm_NameEnIdx > -1) newMasterRow[wdm_NameEnIdx] = suggestedNameEn;
+      if (wdm_NameHeIdx > -1) newMasterRow[wdm_NameHeIdx] = suggestedNameHe;
+
+      const masterData = masterSheet.getDataRange().getValues();
+      let masterRowIndex = -1;
+      for (let i = 1; i < masterData.length; i++) {
+        if (String(masterData[i][wdm_SkuIdx]) === String(sku)) { masterRowIndex = i + 1; break; }
+      }
+      if (masterRowIndex > 0) {
+        masterSheet.getRange(masterRowIndex, 1, 1, newMasterRow.length).setValues([newMasterRow]);
+      } else {
+        masterSheet.appendRow(newMasterRow);
+      }
+      logger.info(serviceName, functionName, `Seeded WebDetM row for SKU ${sku}`, { sessionId: sessionId, sku: sku });
+
+      _invalidateProductCache();
+
       return { success: true };
     } catch (e) {
       logger.error(serviceName, functionName, `Error: ${e.message}`, e, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
@@ -1730,7 +1817,8 @@ const ProductService = (function() {
    * @param {string} wooIdEn The WooCommerce Product ID (English).
    * @param {string} wooIdHe The WooCommerce Product ID (Hebrew).
    */
-  function linkAndFinalizeNewProduct(onboardingTaskId, sku, wooIdEn, wooIdHe, sessionId) { // Added sessionId
+  // RETIRED — UI removed; WebProdM/WebDetM now seeded in acceptProductSuggestion. Keep until smoke complete.
+  function linkAndFinalizeNewProduct(onboardingTaskId, sku, wooIdEn, wooIdHe, sessionId) {
     const serviceName = 'ProductService';
     const functionName = 'linkAndFinalizeNewProduct';
     logger.info(serviceName, functionName, `Starting Hot Insert for SKU ${sku}. IDs: ${wooIdEn} / ${wooIdHe}`, { sessionId: sessionId, sku: sku, wooIdEn: wooIdEn, wooIdHe: wooIdHe });

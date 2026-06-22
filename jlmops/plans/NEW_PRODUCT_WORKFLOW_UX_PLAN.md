@@ -73,27 +73,39 @@ The only genuine new-product translation gap is **timing**: between adding a pro
 - **Behavior:** identical to the daily sync's HE phase, so validation behaves the same (the row-count-decrease quarantine guard only trips on removals, not adds). Full HE re-pull each call — chosen over a surgical single-product insert for lowest new code / proven safety.
 - **Smoke:** add a product (hot-link), click Refresh Translations, confirm its `wxm_*` row appears in WebXltM linking HE→EN; verify it skips cleanly if a sync is mid-flight.
 
-## Track B — retire the hot-link (sketch, not built)
+## Track B — retire the hot-link (design ready, not yet implemented)
 
-The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) entirely. The product flow becomes "create the post IDs first, then populate" — like a blog post.
+The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) entirely.
 
-**Constraint that shapes the design:** ops **cannot** create the products or the WPML pairing via API (the REST API can't author the EN↔HE translation link). So jlmops does *not* create products. The **user creates both drafts in WooCommerce** — the EN draft and the HE draft — and pairs them in WPML. The system only needs to *reach* them.
+**Revised design (2026-06-22).** The earlier framing assumed the sync would insert WebProdM for new SKUs, which hit the validation-gate blocker. The correct design is simpler: `acceptProductSuggestion` (the accept step) inserts both WebProdM and WebDetM directly, so the sync's existing update-only path continues to work unchanged — the row is already there when the sync runs.
 
-**Front-loaded flow** (draft creation moves to the *start*, at acceptance):
-1. At **acceptance**, the user creates the EN draft + HE draft in Woo and pairs them in WPML. Names, real Woo IDs, and the `translations.en` link now all exist up front.
-2. The pull reaches the drafts and **inserts** WebProdM (EN, keyed on the real Woo `wpm_ID`) + WebXltM (from `translations.en`) automatically — replacing today's end-of-flow hot-link / manual Woo-ID entry.
-3. Accept/onboarding populates WebDetM details as today.
-4. System **pushes** the details (descriptions, attributes, SEO) back to the drafts via API, then the user publishes — replacing today's manual Woo data entry.
+**Target flow:**
 
-The win of front-loading: because the IDs exist from the start, the **Link** step disappears entirely (it's no longer a separate end stage — the pull does it), and detail work happens against products that are already in the system.
+1. Manager suggests a new product.
+2. Admin accepts + supplies EN/HE names → `acceptProductSuggestion`:
+   - Inserts **WebProdM** row (SKU + EN name + price/stock from CmxProdM) — *new*
+   - Seeds **WebDetM** row (SKU + EN/HE names) — *new*
+   - Pre-populates WebDetS with names (as today)
+   - Admin also creates EN + HE drafts in WooCommerce and pairs them in WPML (manual).
+3. Manager submits details → `submitProductDetails` → updates WebDetS (as today).
+4. Admin reviews and accepts details → `acceptProductDetails` → updates WebDetM from WebDetS + **deletes WebDetS row** (cleanup moves here from the hot-link).
+5. Admin publishes the Woo product (manual).
+6. Admin updates Comax (manual).
+7. Next sync: EN pull finds SKU already in WebProdM, updates it (wpm_ID, price, stock, etc.); HE pull rebuilds WebXltM with the EN↔HE link.
 
-**What has to change:**
-- **Pull insert-capable for new SKUs** — the one real blocker. Today the EN pull (`_upsertWebProductsData`) is update-only and a brand-new SKU in staging is a **validation violation** by design. The validation gate has to allow a known/expected new SKU through to insert. (WebXltM is already full-replace, so it inserts for free.)
-- **Linkage step removed** + **dead `wxl_` hot-link insert** goes away with the hot-link.
+**`linkAndFinalizeNewProduct` (hot-link) is retired** — its WebProdM insert moves to step 2; the dead `wxl_` insert is removed with it.
 
-**Already met:** the pull fetches drafts — `WooApiService.fetchProducts` passes `status: 'any'`, so draft EN/HE products are already visible. No change needed there.
+**What needs to change in code:**
 
-**Why still deferred:** the validation-gate rework (allow-list a new SKU to insert rather than quarantine) is the substantive piece and warrants its own session. Track A already removed the day-to-day translation pain, so there's no pressure.
+| Change | Location |
+|--------|----------|
+| Insert WebProdM row (SKU + EN name + price/stock from CmxProdM) | `acceptProductSuggestion` |
+| Seed WebDetM row (SKU + EN/HE names) | `acceptProductSuggestion` |
+| Delete WebDetS row after accepting details | `acceptProductDetails` (move from `linkAndFinalizeNewProduct`) |
+| Remove Linkage UI button | `AdminProductsView.html` |
+| Retire `linkAndFinalizeNewProduct` | Remove or dead-code after smoke |
+
+**Interim (current @341):** hot-link still in place. WebDetS cleanup was added to `linkAndFinalizeNewProduct` at @341 — when Track B ships, move it to `acceptProductDetails` and drop the hot-link's copy.
 
 ## Open bug — draft products flagged as unexpected
 
