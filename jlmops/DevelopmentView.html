@@ -7,15 +7,17 @@
       <div class="card-body">
         <div class="d-flex flex-wrap">
           <button class="btn mr-2 mb-2" onclick="runRebuildSysConfig()">Rebuild SysConfig</button>
-          <button class="btn mr-2 mb-2" onclick="runProtectHeaders()">Protect Headers</button>
           <button class="btn mr-2 mb-2" onclick="runValidateSchema()">Validate Schema</button>
           <button class="btn mr-2 mb-2" onclick="runDailyHousekeeping()">Daily Housekeeping</button>
           <button class="btn mr-2 mb-2" onclick="runUnitTests()">Run Unit Tests</button>
           <button class="btn mr-2 mb-2" onclick="runRefreshStatusExport()">Push Status Export</button>
-          <button class="btn mr-2 mb-2" onclick="runBackfillCampaignActivity()">Backfill Campaign Activity</button>
           <button class="btn mr-2 mb-2" onclick="runLibraryIntegrity()">Library Integrity</button>
-          <button class="btn mr-2 mb-2" onclick="runSeedCoreContentCampaign()">Seed Core Content Campaign</button>
-          <button class="btn mr-2 mb-2" onclick="runBackfillCoreContentCampaignId()">Backfill Core Content CampaignId</button>
+        </div>
+        <div class="d-flex align-items-center flex-wrap mt-1">
+          <select id="sync-headers-sheet" class="mr-2 mb-2" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:14px; min-width:180px;">
+            <option value="">— select sheet —</option>
+          </select>
+          <button class="btn mr-2 mb-2" onclick="runSyncHeaders()">Sync Headers</button>
         </div>
         <div id="dev-tools-results" class="mt-3"></div>
       </div>
@@ -73,19 +75,6 @@
         })
         .runRebuildSysConfigFromSource();
     });
-  }
-
-  function runProtectHeaders() {
-    const resultDiv = document.getElementById('dev-tools-results');
-    resultDiv.innerHTML = '<p class="text-info">Protecting headers...</p>';
-    google.script.run
-      .withSuccessHandler(message => {
-        resultDiv.innerHTML = `<p class="alert alert-success">${message}</p>`;
-      })
-      .withFailureHandler(err => {
-        resultDiv.innerHTML = `<p class="alert alert-danger">${err.message}</p>`;
-      })
-      .protectAllSheetHeadersFromUI(); // Backend function name
   }
 
   function runValidateSchema() {
@@ -183,23 +172,6 @@
       .WebAppSystem_refreshStatusExport();
   }
 
-  function runBackfillCampaignActivity() {
-    const resultDiv = document.getElementById('dev-tools-results');
-    resultDiv.innerHTML = '<p class="text-info">Pulling campaigns + backfilling activity...</p>';
-    google.script.run
-      .withSuccessHandler(response => {
-        if (response && response.success) {
-          resultDiv.innerHTML = `<p class="alert alert-success">Campaign activity backfilled — ${response.created} new rows (${response.skipped} existing skipped, ${response.pulled} campaigns pulled${response.errors ? ', ' + response.errors + ' errors' : ''}).</p>`;
-        } else {
-          resultDiv.innerHTML = `<p class="alert alert-danger">Backfill failed: ${response ? response.error : 'no response'}</p>`;
-        }
-      })
-      .withFailureHandler(err => {
-        resultDiv.innerHTML = `<p class="alert alert-danger">Error calling backend: ${err.message}</p>`;
-      })
-      .WebAppSystem_backfillCampaignActivity();
-  }
-
   function runLibraryIntegrity() {
     const resultDiv = document.getElementById('dev-tools-results');
     resultDiv.innerHTML = '<p class="text-info">Running library integrity report...</p>';
@@ -217,38 +189,40 @@
       .runLibraryIntegrityReport();
   }
 
-  function runSeedCoreContentCampaign() {
-    const resultDiv = document.getElementById('dev-tools-results');
-    resultDiv.innerHTML = '<p class="text-info">Seeding core-content campaign row...</p>';
+  // Populate sheet picker on load
+  (function() {
     google.script.run
-      .withSuccessHandler(response => {
-        if (response && response.success) {
-          resultDiv.innerHTML = `<p class="alert alert-success">Core-content campaign: ${response.seeded ? 'seeded' : 'already exists, skipped'}.</p>`;
-        } else {
-          resultDiv.innerHTML = `<p class="alert alert-danger">Seed failed: ${response ? response.error : 'unknown error'}</p>`;
-        }
+      .withSuccessHandler(function(names) {
+        var sel = document.getElementById('sync-headers-sheet');
+        names.forEach(function(name) {
+          var opt = document.createElement('option');
+          opt.value = name; opt.textContent = name;
+          sel.appendChild(opt);
+        });
       })
-      .withFailureHandler(err => {
-        resultDiv.innerHTML = `<p class="alert alert-danger">Error: ${err.message}</p>`;
-      })
-      .WebAppSystem_seedCoreContentCampaign();
-  }
+      .withFailureHandler(function() {})
+      .WebAppSystem_getSchemaSheetNames();
+  })();
 
-  function runBackfillCoreContentCampaignId() {
-    const resultDiv = document.getElementById('dev-tools-results');
-    resultDiv.innerHTML = '<p class="text-info">Backfilling slb_CampaignId on blog entities...</p>';
-    google.script.run
-      .withSuccessHandler(response => {
-        if (response && response.success) {
-          resultDiv.innerHTML = `<p class="alert alert-success">Backfill done: ${response.updated} rows updated, ${response.skipped} already set.</p>`;
-        } else {
-          resultDiv.innerHTML = `<p class="alert alert-danger">Backfill failed: ${response ? response.error : 'unknown error'}</p>`;
-        }
-      })
-      .withFailureHandler(err => {
-        resultDiv.innerHTML = `<p class="alert alert-danger">Error: ${err.message}</p>`;
-      })
-      .WebAppSystem_backfillCoreContentCampaignId();
+  function runSyncHeaders() {
+    var sheet = document.getElementById('sync-headers-sheet').value;
+    if (!sheet) return;
+    devConfirm('Sync headers on ' + sheet + '? The header row will be rewritten from the schema.', function() {
+      const resultDiv = document.getElementById('dev-tools-results');
+      resultDiv.innerHTML = '<p class="text-info">Syncing headers on ' + sheet + '...</p>';
+      google.script.run
+        .withSuccessHandler(response => {
+          if (response && response.success) {
+            resultDiv.innerHTML = `<p class="alert alert-success">Headers synced on ${sheet}${response.columns ? ' (' + response.columns + ' columns)' : ''}.</p>`;
+          } else {
+            resultDiv.innerHTML = `<p class="alert alert-danger">Sync failed: ${response ? response.error : 'no response'}</p>`;
+          }
+        })
+        .withFailureHandler(err => {
+          resultDiv.innerHTML = `<p class="alert alert-danger">Error: ${err.message}</p>`;
+        })
+        .WebAppSystem_syncHeaders(sheet);
+    });
   }
 
 </script>

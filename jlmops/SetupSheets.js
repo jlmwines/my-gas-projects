@@ -121,20 +121,6 @@ function setupMarketingSheets() {
 // ============================================================================
 
 /**
- * Public function called from the UI (Development view → Protect Headers button).
- * @returns {string} Success message; throws on failure.
- */
-function protectAllSheetHeadersFromUI() {
-    try {
-        protectAllSheetHeaders();
-        return 'All sheet headers have been protected.';
-    } catch (error) {
-        console.error('Error protecting all sheet headers from UI: ' + error.message);
-        throw new Error('Failed to protect sheet headers: ' + error.message);
-    }
-}
-
-/**
  * Freeze row 1 and apply WARNING-only header-row protection across every
  * data, log, and library sheet declared in config.
  *

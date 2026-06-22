@@ -608,101 +608,42 @@ function WebAppSystem_refreshStatusExport() {
 }
 
 /**
- * Manual catch-up for Mailchimp broadcast campaigns as CRM activity. Pulls
- * recent campaigns (so a just-sent one is captured even before the daily pull)
- * then creates campaign.received activity rows for subscribed contacts —
- * idempotent, skips existing. Driven by the Developer screen "Backfill Campaign
- * Activity" button. Run after a broadcast send.
- * @returns {Object} { success, pulled, created, skipped, errors } or { success:false, error }.
+ * Returns sorted list of sheet names discoverable from schema config keys
+ * (schema.data.* + schema.library.*). Used to populate the Dev view Sync Headers picker.
+ * @returns {string[]}
  */
-function WebAppSystem_backfillCampaignActivity() {
-  const serviceName = 'WebAppSystem';
-  const functionName = 'backfillCampaignActivity';
-  LoggerService.info(serviceName, functionName, 'Manual campaign-activity backfill (pull + backfill)...');
-
+function WebAppSystem_getSchemaSheetNames() {
   try {
-    const pull = CampaignService.pullRecentCampaigns();
-    const result = ActivityBackfillService.backfillCampaignActivity();
-    LoggerService.info(serviceName, functionName,
-      `Pulled ${pull.upserted} campaigns; created ${result.created} activity rows (${result.skipped} existing).`);
-    return { success: true, pulled: pull.upserted, created: result.created, skipped: result.skipped, errors: result.errors };
+    const allConfig = ConfigService.getAllConfig();
+    const names = Object.keys(allConfig)
+      .filter(k => k.startsWith('schema.data.') || k.startsWith('schema.library.'))
+      .map(k => k.replace('schema.data.', '').replace('schema.library.', ''))
+      .sort();
+    return names;
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error backfilling campaign activity: ${e.message}`, e);
-    return { success: false, error: e.message };
+    return [];
   }
 }
 
 /**
- * Seeds the core-content campaign row in SysMarketingCampaigns if not already present.
- * Idempotent — skips if sm_CampaignId='core-content' already exists.
- * Driven by Dev "Seed Core Content Campaign" button.
- * @returns {Object} { success, seeded } or { success:false, error }.
+ * Syncs the header row of a single sheet from its schema config entry.
+ * Driven by the Developer screen "Sync Headers" picker.
+ * @param {string} sheetName
+ * @returns {Object} { success, columns } or { success:false, error }.
  */
-function WebAppSystem_seedCoreContentCampaign() {
+function WebAppSystem_syncHeaders(sheetName) {
   const serviceName = 'WebAppSystem';
-  const functionName = 'seedCoreContentCampaign';
+  const functionName = 'syncHeaders';
   try {
-    const sheet = SheetAccessor.getDataSheet('SysMarketingCampaigns');
-    const range = sheet.getDataRange();
-    const values = range.getValues();
-    const headers = values[0] || [];
-    const idCol = headers.indexOf('sm_CampaignId');
-    const existing = values.slice(1).some(row => row[idCol] === 'core-content');
-    if (existing) {
-      LoggerService.info(serviceName, functionName, 'core-content campaign already exists — skipped.');
-      return { success: true, seeded: false };
-    }
-    const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    const row = headers.map(h => {
-      if (h === 'sm_CampaignId') return 'core-content';
-      if (h === 'sm_Name') return 'Core Content';
-      if (h === 'sm_Status') return 'active';
-      if (h === 'sm_StartDate') return today;
-      if (h === 'sm_PrimaryGoal') return 'Publish editorial blog posts';
-      if (h === 'sm_ProjectId') return 'PROJ-CONTENT';
-      return '';
-    });
-    sheet.appendRow(row);
-    LoggerService.info(serviceName, functionName, 'core-content campaign seeded.');
-    return { success: true, seeded: true };
+    if (!sheetName) return { success: false, error: 'No sheet name provided.' };
+    const allConfig = ConfigService.getAllConfig();
+    const schema = allConfig[`schema.data.${sheetName}`] || allConfig[`schema.library.${sheetName}`];
+    const columns = schema && schema.headers ? schema.headers.split(',').length : null;
+    syncHeaders(sheetName);
+    LoggerService.info(serviceName, functionName, `Headers synced on ${sheetName}.`);
+    return { success: true, columns: columns };
   } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error seeding core-content campaign: ${e.message}`, e);
-    return { success: false, error: e.message };
-  }
-}
-
-/**
- * Backfills slb_CampaignId='core-content' on all blog-type Library entities
- * that currently have no campaign assigned.
- * Idempotent — skips rows already carrying a campaignId.
- * Driven by Dev "Backfill Core Content CampaignId" button.
- * @returns {Object} { success, updated, skipped } or { success:false, error }.
- */
-function WebAppSystem_backfillCoreContentCampaignId() {
-  const serviceName = 'WebAppSystem';
-  const functionName = 'backfillCoreContentCampaignId';
-  try {
-    const sheet = SheetAccessor.getLibrarySheet('SysLibrary');
-    const range = sheet.getDataRange();
-    const values = range.getValues();
-    const headers = values[0] || [];
-    const typeCol = headers.indexOf('slb_ContentType');
-    const campaignCol = headers.indexOf('slb_CampaignId');
-    if (typeCol === -1 || campaignCol === -1) {
-      throw new Error('slb_ContentType or slb_CampaignId column not found — run syncAllHeaders first.');
-    }
-    let updated = 0, skipped = 0;
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i];
-      if (row[typeCol] !== 'blog') continue;
-      if (row[campaignCol]) { skipped++; continue; }
-      sheet.getRange(i + 1, campaignCol + 1).setValue('core-content');
-      updated++;
-    }
-    LoggerService.info(serviceName, functionName, `Backfill done: ${updated} updated, ${skipped} already set.`);
-    return { success: true, updated: updated, skipped: skipped };
-  } catch (e) {
-    LoggerService.error(serviceName, functionName, `Error backfilling campaignId: ${e.message}`, e);
+    LoggerService.error(serviceName, functionName, `Error syncing headers on ${sheetName}: ${e.message}`, e);
     return { success: false, error: e.message };
   }
 }
