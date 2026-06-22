@@ -507,6 +507,7 @@
       activePreset: 'all',
       deficiencyWindowDays: 56,
       expandedCampaignId: null,
+      holidays: [],
       entityStack: [],
       currentEntitySlug: null,
       currentEntity: null
@@ -572,8 +573,10 @@
             state.campaigns = res.data.campaigns || [];
             state.projects = res.data.projects || [];
             state.shortUrls = res.data.shortUrls || [];
+            state.holidays = res.data.holidays || [];
             renderCampaigns();
             renderProjects();
+            renderCalendar();
           } else {
             var msg = (res && res.error) ? res.error : 'Failed to load campaigns/projects';
             document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
@@ -612,7 +615,8 @@
       var today = new Date();
       var startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-      var rows = (state.library || []).filter(function(e) {
+      // Entity rows — apply all filters
+      var entityRows = (state.library || []).filter(function(e) {
         if (!e.targetDate) return false;
         var td = new Date(e.targetDate);
         if (isNaN(td.getTime())) return false;
@@ -623,12 +627,18 @@
           if (hay.indexOf(search) === -1) return false;
         }
         return true;
+      }).map(function(e) { return { _kind: 'entity', _date: e.targetDate, _data: e }; });
+
+      // Holiday rows — always shown regardless of filters
+      var holidayRows = (state.holidays || []).map(function(h) {
+        return { _kind: 'holiday', _date: h.date, _data: h };
       });
 
-      rows.sort(function(a, b) { return (a.targetDate || '').localeCompare(b.targetDate || ''); });
+      var merged = entityRows.concat(holidayRows);
+      merged.sort(function(a, b) { return (a._date || '').localeCompare(b._date || ''); });
 
       var container = document.getElementById('pv-cal-table-wrap');
-      if (rows.length === 0) {
+      if (merged.length === 0) {
         container.innerHTML = '<div class="pv-empty">No entities with target dates match the current filters.</div>';
         return;
       }
@@ -637,22 +647,35 @@
       html += '<th>Date</th><th>Campaign</th><th>Title</th><th>State</th><th>Tasks</th>';
       html += '</tr></thead><tbody>';
 
-      rows.forEach(function(e) {
-        var td = new Date(e.targetDate);
-        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
-        var openTasks = (state.tasks || []).filter(function(t) {
-          return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
-        }).length;
-        var taskCell = openTasks > 0 ? (openTasks + ' open') : '—';
-        var rowCls = overdue ? 'pv-cal-overdue' : '';
-        html += '<tr class="' + rowCls + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
-        html += '<td data-label="Date">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
-        html += '<td data-label="Campaign">' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
-        html += '<td data-label="Title"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
-                (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599;</a>' : '') + '</td>';
-        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-        html += '<td data-label="Tasks">' + taskCell + '</td>';
-        html += '</tr>';
+      merged.forEach(function(row) {
+        if (row._kind === 'holiday') {
+          var h = row._data;
+          html += '<tr class="pv-cal-holiday">';
+          html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + '</td>';
+          html += '<td data-label="Campaign">—</td>';
+          html += '<td data-label="Title"><em>' + TaskWidgets.escape(h.name) + '</em>' +
+                  (h.notes ? ' <span class="text-muted" style="font-size:11px">— ' + TaskWidgets.escape(h.notes) + '</span>' : '') + '</td>';
+          html += '<td data-label="State"><span style="font-size:11px;color:#6c757d;">' + TaskWidgets.escape(h.type) + '</span></td>';
+          html += '<td data-label="Tasks">—</td>';
+          html += '</tr>';
+        } else {
+          var e = row._data;
+          var td = new Date(e.targetDate);
+          var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+          var openTasks = (state.tasks || []).filter(function(t) {
+            return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
+          }).length;
+          var taskCell = openTasks > 0 ? (openTasks + ' open') : '—';
+          var rowCls = overdue ? 'pv-cal-overdue' : '';
+          html += '<tr class="' + rowCls + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
+          html += '<td data-label="Date">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
+          html += '<td data-label="Campaign">' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
+          html += '<td data-label="Title"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
+                  (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599;</a>' : '') + '</td>';
+          html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+          html += '<td data-label="Tasks">' + taskCell + '</td>';
+          html += '</tr>';
+        }
       });
       html += '</tbody></table>';
       container.innerHTML = html;

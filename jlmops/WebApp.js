@@ -4,8 +4,8 @@
  */
 
 const VERSION = {
-  built: '2026-06-22 02:46',
-  commit: "PublishingView Deploy 3 — Campaigns tab full (expandable rows + linked entities + New Campaign modal + create backend); Projects empty state fixed; AdminCampaigns removed from nav (folded into Publishing)."
+  built: '2026-06-22 09:41',
+  commit: "PublishingView Deploy 5 — Calendar tab wired: holiday rows from JLMops_Publishing merged into calendar list (non-clickable, distinct style); _loadHolidays() reads via SpreadsheetApp.openById(system.calendar.sheet_id)."
 };
 
 function getVersion() {

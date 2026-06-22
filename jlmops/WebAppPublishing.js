@@ -43,8 +43,9 @@ function WebAppPublishing_getCampaignsAndProjects() {
     }).filter(function(p) { return p.projectId; });
 
     const shortUrls = _loadShortUrls();
+    const holidays = _loadHolidays();
 
-    return { success: true, data: { campaigns: campaigns, projects: projects, shortUrls: shortUrls } };
+    return { success: true, data: { campaigns: campaigns, projects: projects, shortUrls: shortUrls, holidays: holidays } };
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
     return { success: false, error: e.message };
@@ -71,6 +72,40 @@ function _loadShortUrls() {
       };
     }).filter(function(r) { return r.shortCode; });
   } catch (e) {
+    return [];
+  }
+}
+
+function _loadHolidays() {
+  try {
+    const allConfig = ConfigService.getAllConfig();
+    const sheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+    if (!sheetId) return [];
+    const ss = SpreadsheetApp.openById(sheetId);
+    const sheet = ss.getSheets()[0];
+    if (!sheet) return [];
+    const values = sheet.getDataRange().getValues();
+    if (values.length < 2) return [];
+    const headers = values[0].map(function(h) { return String(h).trim(); });
+    const dateIdx  = headers.indexOf('cal_Date');
+    const nameIdx  = headers.indexOf('cal_Name');
+    const typeIdx  = headers.indexOf('cal_Type');
+    const notesIdx = headers.indexOf('cal_Notes');
+    if (dateIdx === -1 || nameIdx === -1) return [];
+    return values.slice(1).map(function(row) {
+      var d = row[dateIdx];
+      var dateStr = d instanceof Date
+        ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+        : String(d || '').trim();
+      return {
+        date:  dateStr,
+        name:  String(row[nameIdx] || '').trim(),
+        type:  typeIdx > -1 ? String(row[typeIdx] || '').trim() : 'holiday',
+        notes: notesIdx > -1 ? String(row[notesIdx] || '').trim() : ''
+      };
+    }).filter(function(r) { return r.date && r.name; });
+  } catch (e) {
+    LoggerService.error('WebAppPublishing', '_loadHolidays', 'Could not load holidays: ' + e.message, e);
     return [];
   }
 }

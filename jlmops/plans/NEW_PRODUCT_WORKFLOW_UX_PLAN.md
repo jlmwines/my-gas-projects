@@ -95,6 +95,12 @@ The win of front-loading: because the IDs exist from the start, the **Link** ste
 
 **Why still deferred:** the validation-gate rework (allow-list a new SKU to insert rather than quarantine) is the substantive piece and warrants its own session. Track A already removed the day-to-day translation pain, so there's no pressure.
 
+## Open bug — draft products flagged as unexpected
+
+Ops validation/reconciliation treats any product not in ops data as unexpected. Draft products (created in WooCommerce before the hot-link or Track B pull inserts them into WebProdM) now trigger this check. The rule should apply to **published** products only — drafts are expected and in-progress. Fix: gate the unexpected-product check on `post_status = 'publish'` (or the equivalent status field in WebProdM/WebProdS). See `.claude/bugs.md` 2026-06-22.
+
+---
+
 ## Follow-ons shipped (post-plan, @310–@311)
 
 - **Badge color (@310):** count badges show dark-gray (`badge-secondary`) at zero, color when pending — amber for to-clear counts (mismatch, verify), blue for onboarding. `ManagerProductsView.setCountBadge`.

@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — PublishingView Deploy 5 @332; holiday sheet wired
+
+- Deploy 5 (@332): Calendar tab now loads holidays from JLMops_Publishing via `_loadHolidays()` (SpreadsheetApp.openById from system.calendar.sheet_id in SysConfig). Holiday rows merged chronologically with Library entity rows — non-clickable, grey/italic (.pv-cal-holiday). Holidays always show regardless of campaign/state filters.
+- JLMops_Publishing sheet: created; header row + 2026–2027 Israeli holidays imported from `exchange/jlmops-publishing-holidays.csv`. Columns: cal_Date, cal_Name, cal_Type, cal_Notes (updated from plain names after user question). system.json + SetupConfig.js updated + pushed + rebuildSysConfigFromSource run.
+- Bug logged + plan updated: draft products flagged as unexpected by ops validation — should only gate on published status. See `.claude/bugs.md` 2026-06-22 + `NEW_PRODUCT_WORKFLOW_UX_PLAN.md §Open bug`.
+- Next: jlmops-calendar.md export (StatusReportService generates it alongside jlmops-status.md).
+
 ## 2026-06-22 — PublishingView Deploys 3–4 shipped @328–@331
 
 - Deploy 3 (@328–@329): Campaigns tab full — expandable rows with linked entity list, "New Campaign" modal (ID/Name/Status/Goal/Project) with TaskWidgets.confirm, WebAppPublishing_createCampaign; Projects empty state fixed; AdminCampaigns removed from admin nav.

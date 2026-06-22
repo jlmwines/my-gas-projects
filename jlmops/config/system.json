@@ -1115,6 +1115,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "system.calendar.sheet_id",
+        "ID of JLMops_Publishing — standalone single-tab Google Sheet for holiday/blackout markers. Sessions read/write via Drive MCP; jlmops reads via SpreadsheetApp.openById(). Columns: cal_Date, cal_Name, cal_Type (holiday/blackout/note), cal_Notes. See jlmops/plans/PUBLISHING_VIEW_PLAN.md.",
+        "stable",
+        "id",
+        "1l-mrCcmIYpkabTaxy4yTRmJ4nxqIaw7VwU2YRQ_8rbg",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.folder.library",
         "Google Drive folder ID for the library content archive (DOCs, editorial images, newsletter PDFs, email HTML lock copies). Concept subfolders auto-created by the library service on register-on-create per plans/CONTENT_LIBRARY_PLAN.md §5 folder placement.",
         "stable",
