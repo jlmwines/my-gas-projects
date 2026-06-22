@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — Calendar bug fixed; 2026 content plan complete
+
+- `_loadHolidays()` bug fixed: now filters to `cal_Type` holiday/blackout/note only — entity rows no longer appear as holiday-style in PublishingView Calendar. Deployed @341.
+- CALENDAR.md populated with full 2026 editorial schedule (8 newsletter issues, 7 AYIW emails, 6 blog email sends).
+- 6 region posts assigned to slots A–F: Galilee / Golan Heights / Central Mountains / Judea / Coastal Plain / Negev (Dec, draft exists).
+- `content/REGION_POSTS_PLAN.md` created: slot→slug→date mapping, per-region notes, production checklist. Sources: Montefiore 2023 + Asado/IPEVO map (both in `content/regions/`).
+- Next: June newsletter PRINT paste-source (`2026-06-handling-news-en/he.md/.docx`); then Negev draft.
+
+---
+
 ## 2026-06-22 — Newsletter workflow documented; June email output produced
 
 - Newsletter workflow fully documented in OPERATIONS.md: .md → pandoc → .docx (local, plain two-section format, no table/images), email HTML, library registration.
