@@ -103,7 +103,7 @@ function _loadHolidays() {
         type:  typeIdx > -1 ? String(row[typeIdx] || '').trim() : 'holiday',
         notes: notesIdx > -1 ? String(row[notesIdx] || '').trim() : ''
       };
-    }).filter(function(r) { return r.date && r.name; });
+    }).filter(function(r) { return r.date && r.name && ['holiday', 'blackout', 'note'].indexOf(r.type) > -1; });
   } catch (e) {
     LoggerService.error('WebAppPublishing', '_loadHolidays', 'Could not load holidays: ' + e.message, e);
     return [];

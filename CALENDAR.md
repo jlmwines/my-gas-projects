@@ -11,6 +11,34 @@ The bulk of forward work now lives in dated plan documents, not in this calendar
 
 This calendar tracks only items that are NOT inside one of those plan queues.
 
+## 2026 Content Calendar
+
+Blog posts A–F are region posts (slots not yet assigned). AYIW = A Year in Wine monthly email. Each blog post has an email send + newsletter insert. Handling (June) already distributed.
+
+| Date | Type | Item | Status |
+|------|------|------|--------|
+| 2026-06-17 | Email | Handling post-promo (EN+HE) | Done |
+| 2026-06-23 | Email | AYIW June — Making Wine: Fruit Set | Files ready |
+| 2026-06-23 | Newsletter | Issue #2 — Handling primary, AYIW secondary | In progress |
+| 2026-07-07 | Email | Blog A | — |
+| 2026-07-27 | Newsletter | Issue #3 — Blog A | — |
+| 2026-07-28 | Email | AYIW July | — |
+| 2026-08-11 | Email | Blog B | — |
+| 2026-08-25 | Newsletter | Issue #4 — Blog B | — |
+| 2026-08-25 | Email | Blog C | — |
+| 2026-09-08 | Email | AYIW August | — |
+| 2026-09-23 | Newsletter | Issue #5 — Blog C | — |
+| 2026-10-06 | Email | AYIW September | — |
+| 2026-10-20 | Email | Blog D | — |
+| 2026-10-27 | Newsletter | Issue #6 — Blog D | — |
+| 2026-11-03 | Email | AYIW October | — |
+| 2026-11-17 | Email | Blog E | — |
+| 2026-11-24 | Newsletter | Issue #7 — Blog E | — |
+| 2026-12-01 | Email | AYIW November | — |
+| 2026-12-15 | Email | Blog F | — |
+| 2026-12-29 | Newsletter | Issue #8 — Blog F | — |
+| 2026-12-29 | Email | AYIW December | — |
+
 ## Upcoming
 
 | Date | Area | Item | Notes |
