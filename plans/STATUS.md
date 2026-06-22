@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-22 — jlmops @335; PublishingView complete: JLMops_Publishing sheet is the shared publishing calendar (sessions read via Drive MCP; no .md export).
+**Updated:** 2026-06-22 — jlmops @336; PublishingView complete + calendar export live (daily merge of SysLibrary entities + holidays → JLMops_Publishing).
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-18 |
 | Revenue | Steady |
-| Deploy Version | jlmops @335 · theme v1.2.30 |
+| Deploy Version | jlmops @336 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-22 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

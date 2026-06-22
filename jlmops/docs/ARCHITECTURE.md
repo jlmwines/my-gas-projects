@@ -126,7 +126,13 @@ Daily maintenance runs in three phases:
 - `checkBundleHealth()` - Bundle inventory alerts
 - `checkBruryaReminder()` - Brurya warehouse reminder
 - `refreshCrmContacts()` - Update contact metrics
+- `createWelcomeOutreachTasks()` - Welcome new contacts
+- `runLibraryIntegrityReport()` - Library health check
+- `reconcileLibraryDuplicates()` - De-dup library files
+- `backfillActivities()` - CRM activity backfill
 - `runCrmIntelligence()` - Generate campaign suggestions
+- `refreshKpiBlock()` - Regenerate KPI section of `jlmops-status.md`
+- `refreshCalendarExport()` - Merge SysLibrary entities + JLMops_Publishing holidays; write merged calendar back to `JLMops_Publishing` (sessions read via Drive MCP)
 
 ### 2.3. Data Adapters & Formatters
 

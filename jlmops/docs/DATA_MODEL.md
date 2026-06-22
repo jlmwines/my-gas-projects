@@ -401,14 +401,14 @@ This section defines the sheets used to manage all types of projects, from marke
     *   `spro_Status`: The current state (e.g., 'PLANNING', 'ACTIVE', 'COMPLETED', 'ARCHIVED').
     *   `spro_StartDate`: The planned start date.
     *   `spro_EndDate`: The planned end date (optional for ongoing operational projects).
-    *   `spro_CampaignId`: **Nullable FK** to `SysMarketingCampaigns.sm_CampaignId`. Distribution Projects (newsletter issue, email send, flyer drop) carry this link; standalone Projects (blog posts under Core Content, ops projects) leave it blank. See `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
+    *   ~~`spro_CampaignId`~~ — **Dropped.** FK direction reversed: `SysMarketingCampaigns.sm_ProjectId` now points to `SysProjects` (one campaign → one project). The old back-link on SysProjects rows is gone.
 
 ## Marketing Campaign Data Model
 
 This section defines the sheets supporting the Campaign attribution layer. Designed for shared-attribution reporting (one row per "how did this do" question) and unified UTM/short-URL/QR generation. Full architecture in `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
 
 ### 1. `SysMarketingCampaigns` (Top-level Campaign Container)
-*   **Purpose:** Each row defines a shared-attribution unit — typically a delivery-channel program (`newsletter-print`, `email-broadcast`). Distribution Projects link to one via `spro_CampaignId`. Bounded topic/promo Campaigns are supported but not seeded at launch.
+*   **Purpose:** Each row defines a shared-attribution unit — typically a delivery-channel program (`newsletter-print`, `email-broadcast`). Each campaign links to one SysProject via `sm_ProjectId`. Bounded topic/promo Campaigns are supported but not seeded at launch. Seeded rows: `core-content`, `newsletter-print`, `email-broadcast`, `flyer-acquisition`.
 *   **Prefix:** `sm_`
 *   **Columns:**
     *   `sm_CampaignId`: **Primary Key.** Pure slug for ongoing programs (`newsletter-print`); slug + date for rare bounded campaigns.
@@ -416,6 +416,7 @@ This section defines the sheets supporting the Campaign attribution layer. Desig
     *   `sm_Status`: PLANNING / ACTIVE / COMPLETED / ARCHIVED.
     *   `sm_StartDate`: First distribution under this campaign.
     *   `sm_EndDate`: Nullable. Null = ongoing. Set = bounded.
+    *   `sm_ProjectId`: **FK** to `SysProjects.spro_ProjectId`. One campaign → one project. Replaces the old `spro_CampaignId` direction (dropped from SysProjects).
     *   `sm_PrimaryGoal`: Free text, one line — what success looks like.
     *   `sm_Notes`
 
@@ -425,7 +426,7 @@ This section defines the sheets supporting the Campaign attribution layer. Desig
 *   **Columns:**
     *   `ssu_ShortCode`: **Primary Key.** Unique code used in `jlmwines.com/n/<code>` URLs.
     *   `ssu_CampaignId`: FK to `SysMarketingCampaigns.sm_CampaignId`.
-    *   `ssu_ProjectId`: Nullable FK to `SysProjects.spro_ProjectId` (null for standalone Campaign Service uses).
+    *   `ssu_EntitySlug`: **FK** to `SysLibrary.slb_Slug`. Distribution events are Library entities, not Projects rows. Replaced the old `ssu_ProjectId`.
     *   `ssu_Language`: `en` or `he`.
     *   `ssu_TargetUrl`: Utm-tagged destination URL.
     *   `ssu_CreatedDate`
@@ -433,10 +434,10 @@ This section defines the sheets supporting the Campaign attribution layer. Desig
 
 ### Cross-Sheet FKs Introduced
 
-*   `SysProjects.spro_CampaignId` → `SysMarketingCampaigns.sm_CampaignId` (nullable; Distribution Projects fill in)
+*   `SysMarketingCampaigns.sm_ProjectId` → `SysProjects.spro_ProjectId` (replaces old `spro_CampaignId` back-link)
 *   `SysCampaigns.scm_MarketingCampaignId` → `SysMarketingCampaigns.sm_CampaignId` (nullable; Mailchimp sends rolling up under a marketing campaign)
 *   `SysShortUrls.ssu_CampaignId` → `SysMarketingCampaigns.sm_CampaignId`
-*   `SysShortUrls.ssu_ProjectId` → `SysProjects.spro_ProjectId` (nullable)
+*   `SysShortUrls.ssu_EntitySlug` → `SysLibrary.slb_Slug` (replaced `ssu_ProjectId`)
 
 Two further FKs are documented for future use but not added at launch (added when their workflows ship):
 *   `SysContactActivity.sca_CampaignId` → `SysMarketingCampaigns.sm_CampaignId` (deferred until Contact Manager Half 2)
@@ -674,6 +675,7 @@ The Content Library is a single flat, polymorphic table holding every content/ma
         *   `slb_Version`: Version counter.
         *   `slb_CreatedDate`, `slb_CreatedBy`, `slb_LastTouched`: Provenance / last-modified.
         *   `slb_TargetDate`: Target publish date (ISO). Optional, written by `spawnContentChain` when the caller supplies it. Drives the LibraryView **Deficiency** preset (pieces due within `system.content.deficiency_window_days`, plus overdue not-yet-`published`). Appended column (CONTENT_WORKFLOW_REDESIGN Decision 1).
+        *   `slb_CampaignId`: **Nullable FK** to `SysMarketingCampaigns.sm_CampaignId`. Set at spawn; null for templates and non-campaign entities. Blog posts carry `core-content`; newsletter/email/flyer entities carry the relevant distribution campaign ID.
         *   `slb_Tags`: JSON array of free-form tags.
         *   `slb_Taxonomy`: JSON array of taxonomy terms.
         *   `slb_References`: JSON array of related-entity slugs (cross-links).
@@ -701,6 +703,20 @@ The Content Library is a single flat, polymorphic table holding every content/ma
     *   `slba_Summary`: One-line human-readable summary.
     *   `slba_Details`: Structured detail (JSON).
     *   `slba_ReferencedEntities`: JSON array of other entity slugs/ids touched by the action.
+
+## Publishing Calendar
+
+### `JLMops_Publishing` (Standalone Google Sheet)
+
+*   **Purpose:** The shared publishing calendar. Read by sessions via Drive MCP; read and written by jlmops via `SpreadsheetApp.openById()`. Holds manually-maintained holiday/blackout/note rows. Jlmops daily housekeeping regenerates entity rows from SysLibrary (`refreshCalendarExport`), merging them with the manual rows sorted by date. Sessions read the merged result for planning context.
+*   **Workbook:** Standalone single-tab Google Sheet (`system.calendar.sheet_id` in SysConfig). Drive MCP compatible (single-tab).
+*   **Prefix:** `cal_`
+*   **Columns:**
+    *   `cal_Date`: Date of the event (ISO or Google Sheets date).
+    *   `cal_Name`: Display name — holiday name or entity title.
+    *   `cal_Type`: Row kind. Manual rows: `holiday`, `blackout`, `note`. Entity rows: content type (`blog`, `news`, `email`, `flyer`, `other`).
+    *   `cal_Notes`: For manual rows: optional notes. For entity rows: `state · campaignId`.
+*   **Write rules:** Manual rows (`cal_Type` ∈ `holiday / blackout / note`) are preserved by `refreshCalendarExport` and never overwritten. All other rows are cleared and regenerated from SysLibrary on each daily run.
 
 ## System Configuration
 
