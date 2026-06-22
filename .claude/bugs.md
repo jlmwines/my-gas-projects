@@ -104,7 +104,9 @@ _One line each; full root-cause analysis lives in the git commit + `.claude/sess
 
 ## marketing
 
-(none)
+### Open
+
+- [ ] 2026-06-22: **PublishingView Calendar shows library entities as holiday-style rows.** `_loadHolidays()` loads ALL rows from JLMops_Publishing (including entity rows written by `refreshCalendarExport()`). Those entity rows then appear as grey/italic non-clickable rows alongside real holidays, duplicating the live entity rows already loaded from SysLibrary. Fix: `_loadHolidays()` should filter to `cal_Type = 'holiday'` (and 'blackout', 'note') only — not entity rows.
 
 ## content
 

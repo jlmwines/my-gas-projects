@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-22 — jlmops @336; PublishingView complete + calendar export live (daily merge of SysLibrary entities + holidays → JLMops_Publishing).
+**Updated:** 2026-06-22 — Newsletter workflow documented + June email output produced; 2026 editorial calendar established (6 region posts + canonical + monthly AYIW).
 
 ## At a glance
 
@@ -8,8 +8,8 @@ One current-state line per business area. The umbrella has no single phase label
 
 - **jlmops** (GAS backend) — live @335; **PublishingView complete** @324–@335: schema (slb_CampaignId, sm_ProjectId, ssu_EntitySlug), `other` VALID_TYPE, core-content campaign seeded + backfilled; full PublishingView hub — Calendar / Library / Campaigns (expandable + create) / Projects / Tasks (manager) tabs; Distribute panel in entity drawer (UTM URL + short code + QR, writes SysShortUrls); slb_CampaignId editable in drawer; AdminCampaigns folded into Publishing tab; Calendar holiday rows live (JLMops_Publishing, 2026–2027 Israeli holidays); JLMops_Publishing sheet is the shared publishing calendar — sessions read via Drive MCP, jlmops reads via SpreadsheetApp. Content-library versioning fully shipped (Decision 7 / Plan B) @316–@322: **Doc-sourced translation prompt** (`template-xlt` entity — manager refines in Docs, no deploy; `template-xlt-*` namespace expandable), every library file timestamped `<slug> <ts>`, **attach-to-replace** (attach a new version → old gets "Superseded by →" stamp + moves to flat `_archive`), **Create-translation-text** button (copy EN Doc + paraphrase prompt → attach as HE current), version-counter/`locked`-state retired (Editing-Done just finishes; version display gone), housekeeping **duplicate backstop** (daily: newest `<slug> <ts>` wins, rest archived), robust Drive-URL id extraction, Dev "Library Integrity" button, lock-modal Cancel + admin pack button spacing fix; new-product onboarding export byte-identical to the detail-update export via shared builder (@314) + legible Products buttons (@315); Products-view UX overhauled (@307–@312: new-product Accept-button fix, sortable suggestions, Manager lazy/collapsed cards + count badges, EN-name + submissions-title from staging; verify-modal Close/Revert/Done + Admin reverted-verify queue with Close/Pass-to-manager transform); Correct Product Name tool (@306); content-workflow redesign Deploys 1–4 shipped; build queue open (reliability 1.3 / UI Tier 5).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
-- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides).
-- **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) sent. PublishingView Calendar + Library tabs live — editorial overview now in the app.
+- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post in draft.
+- **marketing** — flyer round 1 active; newsletter Issue #1 distributing; Handling post-promo email (EN+HE) sent 2026-06-18. **June newsletter Issue #2 in progress** — AYIW companion email HTML done (`marketing/newsletter/issues/2026-06/`); print newsletter (Handling primary, AYIW secondary) pending. Entities registered in library (`email-newsletter-2026-06-en/he`).
 - **business** — strategy/brand docs current.
 
 ## Metrics
@@ -32,7 +32,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **Newsletter Issue #1 — distribution underway.** Printed; being inserted into outgoing shipments and store bags. Physical / user-handled; Claude only if insert copy or a counter card is wanted.
+1. **Newsletter Issue #2 (June) — print in progress.** AYIW companion email HTML done; print paste-source (Handling primary article, AYIW Making Wine secondary) still to produce. File naming convention established: `<YYYY-MM>-<slug>-news-en/he.md/.docx` for print, `email-en/he.html` for Mailchimp. Run pandoc after .md is ready. Set `slb_TargetDate` on library entities in jlmops.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
 4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.

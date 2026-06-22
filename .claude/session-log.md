@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — Newsletter workflow documented; June email output produced
+
+- Newsletter workflow fully documented in OPERATIONS.md: .md → pandoc → .docx (local, plain two-section format, no table/images), email HTML, library registration.
+- June AYIW companion email HTML produced (EN+HE): `marketing/newsletter/issues/2026-06/2026-06-ayiw-email-en/he.html`. URLs verified live.
+- register-library.js: added slb_TargetDate + slb_CampaignId to fieldMap; June newsletter manifest entries added. Entities `email-newsletter-2026-06-en/he` registered in JLMops_Library.
+- 2026 editorial calendar read (`exchange/editorial calendar - Sheet3.csv`): 6 blog posts (A-F) + monthly AYIW emails = full 2026 schedule. Plan: 6 region posts + 1 canonical summary satisfies it.
+- Bug logged: PublishingView Calendar shows library entity rows as holiday-style (fix: filter `_loadHolidays()` to `cal_Type='holiday'` only).
+- Next: June newsletter PRINT — Handling as left column (primary article, has blog URL), AYIW June as right column (Making Wine secondary). Rename existing 2026-06 files to `<slug>-news-en/he` pattern. Set slb_TargetDate on library entities.
+
+---
+
 ## 2026-06-22 — PublishingView fully complete @336; system docs updated
 
 - Deploy 6 (@336): `refreshCalendarExport()` in StatusReportService writes merged calendar back to JLMops_Publishing — keeps holiday/blackout/note rows, regenerates entity rows from SysLibrary slb_TargetDate, sorted by date. Wired into daily housekeeping phase3 + Push Status Export on-demand.

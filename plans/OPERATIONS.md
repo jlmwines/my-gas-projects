@@ -35,10 +35,16 @@ A session-readable index of every recurring operational task this project suppor
 - Templates: `marketing/newsletter/issues/2026-06-handling-en.html` + sibling HE file (current reference examples)
 - Notes: write inline HTML only (the `<h1>` through closing `<p>`); Mailchimp wraps the outer structure. Two sends — EN and HE to language-segmented lists. Hero image goes in a Mailchimp Image block, not in the code.
 
-**Create the print newsletter (monthly insert)**
+**Create the newsletter (print insert + companion email)**
 - Procedure: `marketing/NEWSLETTER_PLAN.md`
-- Templates: `marketing/newsletter/issues/` (per-issue docx + md + html — use most-recent issue as pattern)
-- Notes: A4 two-sided (EN front / HE back); produced as a docx; user duplicates the Drive template, pastes content, adds article QR, prints. Companion email goes out the same week.
+- Pattern: most-recent issue in `marketing/newsletter/issues/` — copy structure
+- Session produces (all files local — session-owned, user pastes from them):
+  1. `<YYYY-MM>-<label>-en.md` + `he.md` — two sections (`## LEFT COLUMN` / `## RIGHT COLUMN`), plain text only, no table or image refs (QR images live in the Drive template)
+  2. Convert to docx: `pandoc <file>.md -o <file>.docx` (run for both EN + HE)
+  3. `<YYYY-MM>-<label>-email-en.html` + `email-he.html` — Mailchimp-ready code block
+- User opens each .docx → copies left block into Drive template left cell, right block into right cell → prints (EN front / HE back)
+- User opens each .html → pastes into Mailchimp Code block (after adding hero Image block) → schedules
+- After output files are ready: register issue as library entities (see Register content below) — one EN+HE pair per issue, content_type='email', slug prefix `email-newsletter-<YYYY-MM>-`
 
 ---
 

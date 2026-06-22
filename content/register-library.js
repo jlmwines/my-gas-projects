@@ -263,6 +263,31 @@ JLM Wines`,
     title: 'Translation prompt (Gemini paraphrase)',
     doc_url: 'https://docs.google.com/document/d/1lm4DOQXAGsOjJ0DjsCmZPbVaYmRrEBBp78eI1WCETfg/edit',
   },
+  // ─── Monthly newsletter issues ────────────────────────────────────
+  // One EN+HE pair per issue. content_type='email' (covers both print insert
+  // and companion email send). Files are local (session-owned):
+  //   marketing/newsletter/issues/<YYYY-MM>/<YYYY-MM>-<label>-en.md/docx/html
+  // slb_TargetDate set via jlmops after registration.
+  {
+    slug: 'email-newsletter-2026-06-en',
+    content_type: 'email',
+    language: 'en',
+    state: 'draft',
+    title: 'June 2026 newsletter (EN) — Making Wine: Fruit Set',
+    subject_line: 'June from the vineyard — Fruit Set',
+    references: ['email-newsletter-2026-06-he'],
+    notes: 'Print insert + companion email. Source: marketing/newsletter/issues/2026-06/',
+  },
+  {
+    slug: 'email-newsletter-2026-06-he',
+    content_type: 'email',
+    language: 'he',
+    state: 'draft',
+    title: 'June 2026 newsletter (HE) — Making Wine: Fruit Set',
+    subject_line: 'יוני מהכרם — יצירת הפרי',
+    references: ['email-newsletter-2026-06-en'],
+    notes: 'הוספת גיליון יוני + מייל מלווה. מקור: marketing/newsletter/issues/2026-06/',
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────
@@ -341,6 +366,8 @@ function buildRow(headers, entry, derived) {
     slb_SubjectLine: entry.subject_line || '',
     slb_SendDate: entry.send_date || '',
     slb_ExternalUrl: entry.external_url || '',
+    slb_TargetDate: entry.target_date || '',
+    slb_CampaignId: entry.campaign_id || '',
   };
   return headers.map(h => (fieldMap[h] !== undefined ? fieldMap[h] : ''));
 }
