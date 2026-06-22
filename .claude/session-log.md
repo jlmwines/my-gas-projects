@@ -4,11 +4,11 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
-## 2026-06-22 — PublishingView complete @335; JLMops_Publishing is the shared calendar
+## 2026-06-22 — PublishingView fully complete @336; system docs updated
 
-- Reverted calendar .md export (@334/@335): JLMops_Publishing Google Sheet is the publishing calendar — sessions read it via Drive MCP; jlmops reads via SpreadsheetApp.openById. No separate export file.
-- StatusReportService restored to health+KPI only. Plan doc updated.
-- PublishingView installation complete (Deploys 1–5 + revert of misguided Deploy 6).
+- Deploy 6 (@336): `refreshCalendarExport()` in StatusReportService writes merged calendar back to JLMops_Publishing — keeps holiday/blackout/note rows, regenerates entity rows from SysLibrary slb_TargetDate, sorted by date. Wired into daily housekeeping phase3 + Push Status Export on-demand.
+- DATA_MODEL.md: graduated slb_CampaignId, sm_ProjectId, ssu_EntitySlug, spro_CampaignId dropped, JLMops_Publishing section added. ARCHITECTURE.md Phase 3 list updated. PUBLISHING_VIEW_PLAN.md archived.
+- To smoke: click Push Status Export → check JLMops_Publishing sheet for entity rows merged with holiday rows, sorted by date.
 
 ## 2026-06-22 — PublishingView Deploy 5 @332; holiday sheet wired
 
