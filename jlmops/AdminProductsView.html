@@ -199,7 +199,14 @@
       <div class="card-body" id="card-body-new" style="display:none;">
 
         <!-- Section A: Suggestions -->
-        <h6 class="text-muted mb-2">Suggestions (<span id="stat-suggestions">0</span>)</h6>
+        <div class="d-flex align-items-center mb-2">
+          <h6 class="text-muted mb-0 mr-3">Suggestions (<span id="stat-suggestions">0</span>)</h6>
+          <select id="suggestions-sort" class="form-control form-control-sm" style="width:auto" onchange="AdminProductsView.renderSuggestionSort()">
+            <option value="title">Sort: Title</option>
+            <option value="price">Sort: Price</option>
+            <option value="stock">Sort: Stock</option>
+          </select>
+        </div>
         <div class="table-responsive mb-4 border rounded">
             <table class="table table-hover table-sm mb-0">
               <thead class="thead-light">
@@ -1642,40 +1649,52 @@
 
     // --- Card 2: New Products ---
 
-    AdminProductsView.loadSuggestionList = function(preloadedData) {
+    AdminProductsView._suggestionTasks = [];
+
+    AdminProductsView.renderSuggestionSort = function() {
+        const sort = (document.getElementById('suggestions-sort') || {}).value || 'title';
+        const tasks = AdminProductsView._suggestionTasks.slice();
+        tasks.sort((a, b) => {
+            if (sort === 'price') return parseFloat(b.price || 0) - parseFloat(a.price || 0);
+            if (sort === 'stock') return parseFloat(b.stock || 0) - parseFloat(a.stock || 0);
+            return String(a.title || '').localeCompare(String(b.title || ''));
+        });
         const tbody = document.getElementById('suggestions-list-body');
+        tbody.innerHTML = '';
+        if (!tasks.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No new suggestions.</td></tr>';
+            return;
+        }
+        tasks.forEach(t => {
+            const tr = document.createElement('tr');
+            const price = t.price ? '₪' + t.price : '-';
+            const stock = t.stock !== '' ? t.stock : '-';
+            tr.innerHTML = `
+                <td>${t.sku}</td>
+                <td>${t.title}</td>
+                <td class="small">${t.division || '-'}</td>
+                <td class="small">${t.group || '-'}</td>
+                <td class="text-right">${price}</td>
+                <td class="text-right">${stock}</td>
+                <td>
+                    <button class="btn btn-sm mr-1" data-action="accept">Accept</button>
+                    <button class="btn btn-sm" data-action="cancel">Cancel</button>
+                </td>
+            `;
+            tr.querySelector('[data-action="accept"]').addEventListener('click', () => AdminProductsView.openSuggestionModal(t.taskId, t.sku, t.title));
+            tr.querySelector('[data-action="cancel"]').addEventListener('click', () => AdminProductsView.cancelSuggestion(t.taskId));
+            tbody.appendChild(tr);
+        });
+    };
+
+    AdminProductsView.loadSuggestionList = function(preloadedData) {
         const render = tasks => {
-            document.getElementById('stat-suggestions').textContent = tasks ? tasks.length : 0;
-            tbody.innerHTML = '';
-            if (!tasks || tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No new suggestions.</td></tr>';
-                return;
-            }
-            tasks.forEach(t => {
-                const tr = document.createElement('tr');
-                const price = t.price ? '₪' + t.price : '-';
-                const stock = t.stock !== '' ? t.stock : '-';
-                tr.innerHTML = `
-                    <td>${t.sku}</td>
-                    <td>${t.title}</td>
-                    <td class="small">${t.division || '-'}</td>
-                    <td class="small">${t.group || '-'}</td>
-                    <td class="text-right">${price}</td>
-                    <td class="text-right">${stock}</td>
-                    <td>
-                        <button class="btn btn-sm mr-1" data-action="accept">Accept</button>
-                        <button class="btn btn-sm" data-action="cancel">Cancel</button>
-                    </td>
-                `;
-                // Bind via closures so a product name containing a quote/apostrophe
-                // can't break an inline onclick string (was: interpolated title/sku).
-                tr.querySelector('[data-action="accept"]').addEventListener('click', () => AdminProductsView.openSuggestionModal(t.taskId, t.sku, t.title));
-                tr.querySelector('[data-action="cancel"]').addEventListener('click', () => AdminProductsView.cancelSuggestion(t.taskId));
-                tbody.appendChild(tr);
-            });
+            AdminProductsView._suggestionTasks = tasks || [];
+            document.getElementById('stat-suggestions').textContent = AdminProductsView._suggestionTasks.length;
+            AdminProductsView.renderSuggestionSort();
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
-        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        document.getElementById('suggestions-list-body').innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
         google.script.run.withSuccessHandler(render).WebAppProducts_getSuggestionTasks();
     };
 

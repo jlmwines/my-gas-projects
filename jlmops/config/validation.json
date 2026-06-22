@@ -112,6 +112,7 @@
         "test_type", "EXISTENCE_CHECK",
         "source_sheet", "WebProdS_EN",
         "source_key", "wps_ID",
+        "source_filter", "wps_PostStatus,publish",
         "target_sheet", "WebProdM",
         "target_key", "wpm_ID",
         "invert_result", "TRUE",
