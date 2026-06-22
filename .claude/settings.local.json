@@ -89,7 +89,11 @@
       "Bash(grep -l \"img\" *.post.md)",
       "Bash(ls ../tools/)",
       "Bash(ls *.js)",
-      "Bash(grep -i \"url\" ../.wp-credentials)"
+      "Bash(grep -i \"url\" ../.wp-credentials)",
+      "WebFetch(domain:adammontefiore.com)",
+      "WebFetch(domain:winboard.co.il)",
+      "Bash(pdftotext \"C:/Users/B/projects/jlmwines/content/regions/ISRAEL-WINE-REGIONS.pdf\" -)",
+      "Bash(pdftotext *)"
     ],
     "deny": [
       "Bash(git -C:*)",
