@@ -281,7 +281,6 @@
     <button class="pv-tab" data-tab="tasks" onclick="PublishingView.switchTab('tasks')">Tasks</button>
     <button class="pv-tab" data-tab="library" onclick="PublishingView.switchTab('library')">Library</button>
     <button class="pv-tab" data-tab="campaigns" onclick="PublishingView.switchTab('campaigns')" data-roles="admin">Campaigns</button>
-    <button class="pv-tab" data-tab="projects" onclick="PublishingView.switchTab('projects')" data-roles="admin">Projects</button>
   </div>
 
   <!-- ===== CALENDAR TAB ===== -->
@@ -318,13 +317,6 @@
   <!-- ===== CAMPAIGNS TAB ===== -->
   <div class="pv-panel" id="pv-panel-campaigns">
     <div id="pv-campaigns-content">
-      <div class="pv-empty">Loading…</div>
-    </div>
-  </div>
-
-  <!-- ===== PROJECTS TAB ===== -->
-  <div class="pv-panel" id="pv-panel-projects">
-    <div id="pv-projects-content">
       <div class="pv-empty">Loading…</div>
     </div>
   </div>
@@ -575,18 +567,15 @@
             state.shortUrls = res.data.shortUrls || [];
             state.holidays = res.data.holidays || [];
             renderCampaigns();
-            renderProjects();
             renderCalendar();
           } else {
             var msg = (res && res.error) ? res.error : 'Failed to load campaigns/projects';
             document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
-            document.getElementById('pv-projects-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
           }
         })
         .withFailureHandler(function(err) {
           var msg = err && err.message ? err.message : 'Network error';
           document.getElementById('pv-campaigns-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
-          document.getElementById('pv-projects-content').innerHTML = '<div class="pv-empty">' + TaskWidgets.escape(msg) + '</div>';
         })
         .WebAppPublishing_getCampaignsAndProjects();
     }
@@ -603,7 +592,6 @@
       });
       if (tab === 'tasks') renderTasks();
       if (tab === 'campaigns') renderCampaigns();
-      if (tab === 'projects') renderProjects();
     }
 
     // ===== CALENDAR TAB =====
@@ -977,27 +965,6 @@
         })
         .WebAppPublishing_createCampaign({ campaignId: cid, name: name, status: status, primaryGoal: goal, projectId: projectId });
       }, { title: 'New Campaign', okLabel: 'Create' });
-    }
-
-    // ===== PROJECTS TAB =====
-
-    function renderProjects() {
-      var container = document.getElementById('pv-projects-content');
-      if (!state.projects.length) {
-        container.innerHTML = '<div class="pv-empty">No projects found.</div>';
-        return;
-      }
-      var html = '<table class="pv-cal-table"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th></tr></thead><tbody>';
-      state.projects.forEach(function(p) {
-        html += '<tr>';
-        html += '<td><span class="tw-chip" style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px">' + TaskWidgets.escape(p.projectId || '—') + '</span></td>';
-        html += '<td><strong>' + TaskWidgets.escape(p.name || '—') + '</strong></td>';
-        html += '<td>' + TaskWidgets.escape(p.type || '—') + '</td>';
-        html += '<td><span class="tw-status-pill ' + TaskWidgets.statusClass(p.status) + '">' + TaskWidgets.escape(p.status || '—') + '</span></td>';
-        html += '</tr>';
-      });
-      html += '</tbody></table>';
-      container.innerHTML = html;
     }
 
     // ===== TASKS TAB =====

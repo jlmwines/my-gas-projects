@@ -796,6 +796,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "task.routing.topic_to_project",
+        "Topic-to-project routing for auto-assignment",
+        "stable",
+        "Marketing",
+        "PROJ-CONTENT",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.brurya.last_update",
         "Tracks last Brurya inventory update",
         "stable",
