@@ -446,8 +446,156 @@ const StatusReportService = (function() {
     }
   }
 
+  // ── Calendar export ──────────────────────────────────────────────────────
+  const CALENDAR_FILE_NAME = 'jlmops-calendar.md';
+  const CAL_CAMPAIGN_LABELS = {
+    'core-content':     'core-content',
+    'newsletter-print': 'newsletter',
+    'email-broadcast':  'email',
+    'flyer-acquisition':'flyer'
+  };
+
+  function _loadCalendarEntities() {
+    try {
+      const sheet = SheetAccessor.getLibrarySheet('SysLibrary');
+      if (!sheet) return [];
+      const values = sheet.getDataRange().getValues();
+      if (values.length < 2) return [];
+      const H = values[0];
+      const idx = function(n) { return H.indexOf(n); };
+      const slugCol = idx('slb_Slug'), titleCol = idx('slb_Title'),
+            typeCol  = idx('slb_ContentType'), langCol = idx('slb_Language'),
+            stateCol = idx('slb_State'), dateCol = idx('slb_TargetDate'),
+            campCol  = idx('slb_CampaignId');
+      if (slugCol === -1 || dateCol === -1) return [];
+      const results = [];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const dv = row[dateCol];
+        if (!dv) continue;
+        const d = dv instanceof Date ? dv : new Date(dv);
+        if (isNaN(d.getTime())) continue;
+        const dateStr = Utilities.formatDate(d, 'Asia/Jerusalem', 'yyyy-MM-dd');
+        results.push({
+          _kind:      'entity',
+          date:       dateStr,
+          slug:       String(row[slugCol] || ''),
+          title:      String(titleCol > -1 ? row[titleCol] : ''),
+          contentType:String(typeCol  > -1 ? row[typeCol]  : ''),
+          language:   String(langCol  > -1 ? row[langCol]  : ''),
+          state:      String(stateCol > -1 ? row[stateCol] : ''),
+          campaignId: String(campCol  > -1 ? row[campCol]  : '')
+        });
+      }
+      return results;
+    } catch (e) { return []; }
+  }
+
+  function _loadCalendarHolidays(allConfig) {
+    try {
+      const sheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+      if (!sheetId) return [];
+      const ss = SpreadsheetApp.openById(sheetId);
+      const sheet = ss.getSheets()[0];
+      if (!sheet) return [];
+      const values = sheet.getDataRange().getValues();
+      if (values.length < 2) return [];
+      const H = values[0].map(function(h) { return String(h).trim(); });
+      const dateIdx = H.indexOf('cal_Date'), nameIdx = H.indexOf('cal_Name'),
+            typeIdx = H.indexOf('cal_Type'), notesIdx = H.indexOf('cal_Notes');
+      if (dateIdx === -1 || nameIdx === -1) return [];
+      const results = [];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const dv = row[dateIdx];
+        const dateStr = dv instanceof Date
+          ? Utilities.formatDate(dv, 'Asia/Jerusalem', 'yyyy-MM-dd')
+          : String(dv || '').trim();
+        const name = String(row[nameIdx] || '').trim();
+        if (!dateStr || !name) continue;
+        results.push({
+          _kind: 'holiday',
+          date:  dateStr,
+          name:  name,
+          type:  typeIdx > -1 ? String(row[typeIdx] || 'holiday').trim() : 'holiday',
+          notes: notesIdx > -1 ? String(row[notesIdx] || '').trim() : ''
+        });
+      }
+      return results;
+    } catch (e) { return []; }
+  }
+
+  /**
+   * Regenerate jlmops-calendar.md — upcoming Library entities (with target dates)
+   * + holidays from JLMops_Publishing, sorted chronologically. Composition sessions
+   * read this file at session start for publishing context. Never throws.
+   * @param {string} sessionId correlation id (CCP-2).
+   */
+  function refreshCalendarExport(sessionId) {
+    const fnName = 'refreshCalendarExport';
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const folderCfg = allConfig['system.folder.jlmops_exports'];
+      if (!folderCfg || !folderCfg.id) throw new Error('system.folder.jlmops_exports not configured');
+      const folder = DriveApp.getFolderById(folderCfg.id);
+      const existing = folder.getFilesByName(CALENDAR_FILE_NAME);
+      const file = existing.hasNext() ? existing.next() : folder.createFile(CALENDAR_FILE_NAME, '', 'text/plain');
+
+      const entityRows  = _loadCalendarEntities();
+      const holidayRows = _loadCalendarHolidays(allConfig);
+      const merged = entityRows.concat(holidayRows);
+      merged.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
+
+      const lines = [
+        '# JLMops Publishing Calendar',
+        '',
+        '_Generated ' + _il(new Date()) + ' (Asia/Jerusalem) · daily cadence._',
+        '',
+        'Library entities with target dates + Israeli holidays, chronological.',
+        'Entities without a target date are not listed — use the Library Deficiency view.',
+        '',
+        '| Date | Type | Title / Name | State | Campaign | Slug |',
+        '|------|------|-------------|-------|----------|------|'
+      ];
+
+      merged.forEach(function(row) {
+        if (row._kind === 'holiday') {
+          lines.push(
+            '| ' + row.date +
+            ' | _' + row.type + '_ ' +
+            ' | _' + (row.name || '').replace(/\|/g, '-') +
+            (row.notes ? ' — ' + row.notes.replace(/\|/g, '-') : '') + '_ ' +
+            ' | — | — | — |'
+          );
+        } else {
+          const lang    = row.language === 'he' ? ' (HE)' : (row.language === 'en' ? ' (EN)' : '');
+          const title   = (row.title || row.slug || '').replace(/\|/g, '-');
+          const camp    = CAL_CAMPAIGN_LABELS[row.campaignId] || row.campaignId || '—';
+          lines.push(
+            '| ' + row.date +
+            ' | ' + (row.contentType || '—') +
+            ' | ' + title + lang +
+            ' | ' + (row.state || '—') +
+            ' | ' + camp +
+            ' | `' + (row.slug || '—') + '` |'
+          );
+        }
+      });
+
+      lines.push('');
+      file.setContent(lines.join('\n'));
+      logger.info(SERVICE_NAME, fnName, 'Calendar export refreshed: ' + file.getUrl(), { sessionId: sessionId });
+      return { success: true, fileId: file.getId() };
+    } catch (e) {
+      NotificationService.reportFailure('status_export.calendar_refresh',
+        'Calendar export regeneration failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     refreshLiveBlocks: refreshLiveBlocks,
-    refreshKpiBlock: refreshKpiBlock
+    refreshKpiBlock: refreshKpiBlock,
+    refreshCalendarExport: refreshCalendarExport
   };
 })();
