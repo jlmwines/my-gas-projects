@@ -446,8 +446,97 @@ const StatusReportService = (function() {
     }
   }
 
+  /**
+   * Write the merged publishing calendar back to JLMops_Publishing:
+   * keeps holiday/blackout/note rows (manually maintained), regenerates all
+   * other rows from SysLibrary entities that have a slb_TargetDate, sorts the
+   * whole sheet by date. Sessions read the result via Drive MCP. Never throws.
+   * @param {string} sessionId correlation id (CCP-2).
+   */
+  function refreshCalendarExport(sessionId) {
+    const fnName = 'refreshCalendarExport';
+    const MANUAL_TYPES = ['holiday', 'blackout', 'note'];
+    try {
+      const allConfig = ConfigService.getAllConfig();
+      const sheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+      if (!sheetId) throw new Error('system.calendar.sheet_id not configured');
+
+      const ss = SpreadsheetApp.openById(sheetId);
+      const sheet = ss.getSheets()[0];
+      if (!sheet) throw new Error('No sheet in JLMops_Publishing');
+
+      const existing = sheet.getDataRange().getValues();
+      if (existing.length < 1) throw new Error('Sheet has no header row');
+      const headers = existing[0].map(function(h) { return String(h).trim(); });
+      const dateIdx  = headers.indexOf('cal_Date'),  nameIdx  = headers.indexOf('cal_Name'),
+            typeIdx  = headers.indexOf('cal_Type'),  notesIdx = headers.indexOf('cal_Notes');
+      if (dateIdx === -1 || nameIdx === -1 || typeIdx === -1) throw new Error('Missing required headers');
+
+      // Preserve manually-maintained rows
+      const manual = existing.slice(1).filter(function(row) {
+        return MANUAL_TYPES.indexOf(String(row[typeIdx] || '').trim().toLowerCase()) !== -1;
+      });
+
+      // Build entity rows from SysLibrary
+      const entityRows = [];
+      const libSheet = SheetAccessor.getLibrarySheet('SysLibrary');
+      if (libSheet) {
+        const lv = libSheet.getDataRange().getValues();
+        const LH = lv[0];
+        const slugC  = LH.indexOf('slb_Slug'),    titleC = LH.indexOf('slb_Title'),
+              typeC  = LH.indexOf('slb_ContentType'), stateC = LH.indexOf('slb_State'),
+              dateC  = LH.indexOf('slb_TargetDate'), campC  = LH.indexOf('slb_CampaignId');
+        if (slugC !== -1 && dateC !== -1) {
+          for (var i = 1; i < lv.length; i++) {
+            var row = lv[i];
+            var dv = row[dateC];
+            if (!dv) continue;
+            var d = dv instanceof Date ? dv : new Date(dv);
+            if (isNaN(d.getTime())) continue;
+            var slug  = String(row[slugC]  || '').trim(); if (!slug) continue;
+            var title = String(titleC > -1 ? row[titleC] : slug).trim() || slug;
+            var ctype = String(typeC  > -1 ? row[typeC]  : '').trim() || 'other';
+            var state = String(stateC > -1 ? row[stateC] : '').trim();
+            var camp  = String(campC  > -1 ? row[campC]  : '').trim();
+            var newRow = new Array(headers.length).fill('');
+            newRow[dateIdx]  = d;
+            newRow[nameIdx]  = title;
+            newRow[typeIdx]  = ctype;
+            if (notesIdx > -1) newRow[notesIdx] = state + (camp ? ' · ' + camp : '');
+            entityRows.push({ d: d, row: newRow });
+          }
+        }
+      }
+
+      // Merge and sort
+      var allRows = manual.map(function(row) {
+        var dv = row[dateIdx];
+        var d = dv instanceof Date ? dv : new Date(String(dv));
+        return { d: isNaN(d) ? new Date(0) : d, row: row };
+      }).concat(entityRows);
+      allRows.sort(function(a, b) { return a.d.getTime() - b.d.getTime(); });
+
+      // Write back (clear data rows only, keep header)
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
+      if (allRows.length > 0) {
+        sheet.getRange(2, 1, allRows.length, headers.length).setValues(allRows.map(function(r) { return r.row; }));
+      }
+
+      logger.info(SERVICE_NAME, fnName,
+        'Calendar refreshed: ' + manual.length + ' manual + ' + entityRows.length + ' entities = ' + allRows.length + ' rows',
+        { sessionId: sessionId });
+      return { success: true, rows: allRows.length };
+    } catch (e) {
+      NotificationService.reportFailure('status_export.calendar_refresh',
+        'Calendar export failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
+      return { success: false, error: e.message };
+    }
+  }
+
   return {
     refreshLiveBlocks: refreshLiveBlocks,
-    refreshKpiBlock: refreshKpiBlock
+    refreshKpiBlock: refreshKpiBlock,
+    refreshCalendarExport: refreshCalendarExport
   };
 })();

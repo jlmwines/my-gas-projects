@@ -596,10 +596,11 @@ function WebAppSystem_refreshStatusExport() {
   try {
     const health = StatusReportService.refreshLiveBlocks(sessionId);
     const kpi = StatusReportService.refreshKpiBlock(sessionId);
+    const cal = StatusReportService.refreshCalendarExport(sessionId);
     if (!health.success || !kpi.success) {
       return { success: false, error: 'health: ' + (health.error || 'ok') + ' · kpi: ' + (kpi.error || 'ok') };
     }
-    return { success: true, fileId: kpi.fileId };
+    return { success: true, fileId: kpi.fileId, calRows: cal.rows };
   } catch (e) {
     LoggerService.error(serviceName, functionName, `Error refreshing status export: ${e.message}`, e);
     return { success: false, error: e.message };
