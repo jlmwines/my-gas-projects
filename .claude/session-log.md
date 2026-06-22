@@ -4,6 +4,19 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-22 — Hot-link retired; new-product accept flow ships @342
+
+- WebDetS stale-row gap diagnosed: new-product (`add_product`) rows were never cleaned up; only `vintage_mismatch` path had cleanup via `confirmWebUpdates`.
+- `acceptProductSuggestion` now seeds WebProdM (SKU + EN name + price/stock from Comax) and WebDetM (SKU + EN/HE names) at accept time — replacing the hot-link's only real job.
+- `acceptProductDetails` now deletes the WebDetS row after writing to master.
+- `linkAndFinalizeNewProduct` marked RETIRED (backend kept for smoke).
+- Admin Products: Linkage section (Section C + modal + JS) removed. Suggestion modal now prompts admin to create Woo drafts + WPML pairing.
+- Track B plan updated with correct design (accept step owns master inserts; sync update-only path unchanged).
+- Smoke pending: awaiting live product data to test the full flow.
+- Next: smoke new-product flow; June newsletter print paste-source.
+
+---
+
 ## 2026-06-22 — Calendar bug fixed; 2026 content plan complete
 
 - `_loadHolidays()` bug fixed: now filters to `cal_Type` holiday/blackout/note only — entity rows no longer appear as holiday-style in PublishingView Calendar. Deployed @341.
