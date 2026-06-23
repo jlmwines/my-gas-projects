@@ -21,6 +21,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - @353: Container px-2 (was p-4) — tighter mobile side padding.
 - Plan `ADMIN_PRODUCTS_TAB_PLAN.md` marked shipped.
 
+## 2026-06-23 — Unified Task UI Deploy A @355–@357 + content distribution plan
+
+- @355: TaskDetail layout redesigned — 4-field compact row (status/assignee/start/due) always visible; notes always visible; entity section removed; More holds title/drive-url/footer.
+- @356: Fixed TaskPacks include — GAS `createHtmlOutputFromFile` does not evaluate nested `<?!= ?>` tags; hosts must include TaskPacks directly, TaskDetail cannot chain it.
+- @357: Admin task list stream column replaced with project column.
+- Content distribution plan written (`jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`): newsletter entity type + AYIW under email + URL pair written to `content/<slug>/urls.md` on publish by session (GAS logs to activity feed); sessions cannot edit Drive docs in place.
+- Next: Unified Task UI Deploy B (TaskDetail modal into PublishingView + LibraryView); CONTENT_DISTRIBUTION_PLAN Step 1 (newsletter schema + Drive folder).
+
 ## 2026-06-23 — Unified Task UI plan
 
 - Problem: task detail is context-dependent (entity drawer in Publishing, display-only in Library, bespoke inline in dashboard); no shared component, no consistent layout or language.
