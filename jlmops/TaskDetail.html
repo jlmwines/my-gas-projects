@@ -29,27 +29,23 @@
 </div>
 
 <style>
-  /* Pack action rows inside TaskDetail */
-  #task-pack-do .detail-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+  /* Pack: single row of buttons, no wrap */
+  #task-pack-do .detail-row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
 
-  /* Compact header */
   .td-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* Status chip */
-  .td-chip { font-size: 10px; padding: 2px 6px; border-radius: 10px; display: inline-block; }
-  .td-chip-new      { background: #e9ecef; color: #495057; }
-  .td-chip-assigned { background: #cfe2ff; color: #084298; }
-  .td-chip-review   { background: #fff3cd; color: #664d03; }
-  .td-chip-done, .td-chip-closed { background: #d1e7dd; color: #0a3622; }
-  .td-chip-cancelled { background: #f8d7da; color: #842029; }
-  .td-chip-default  { background: #e9ecef; color: #495057; }
+  /* Compact 4-field row */
+  .td-fields { display: flex; gap: 4px; margin-bottom: 6px; }
+  .td-fields > div { flex: 1; min-width: 0; }
+  .td-field-label { font-size: 9px; color: #6c757d; margin-bottom: 1px; }
+  .td-fields select, .td-fields input[type=date] {
+    width: 100%; font-size: 10px; height: 24px; padding: 0 2px;
+    border: 1px solid #ced4da; border-radius: 3px; background: #fff;
+  }
+  .td-fields select:disabled, .td-fields input[readonly] { background: #e9ecef; }
 
   /* More section */
   .td-more-section { border-top: 1px solid #dee2e6; margin-top: 6px; padding-top: 8px; }
-
-  /* Entity section */
-  .td-entity-section { border-top: 1px solid #dee2e6; margin-top: 6px; padding-top: 6px; }
-  .td-entity-body    { padding: 4px 0; }
 </style>
 
 <script>
@@ -116,14 +112,6 @@ window.TaskDetail = (function() {
 
   // ── HTML builder ────────────────────────────────────────────────────
 
-  function _statusChipClass(status) {
-    var map = {
-      New: 'new', Assigned: 'assigned', Review: 'review',
-      Done: 'done', Closed: 'closed', Cancelled: 'cancelled'
-    };
-    return 'td-chip td-chip-' + (map[status] || 'default');
-  }
-
   function _buildHTML(task, mode) {
     var esc = TaskWidgets.escape;
 
@@ -132,131 +120,114 @@ window.TaskDetail = (function() {
     var isSystem  = typeId.indexOf('task.system') === 0 || typeId.indexOf('task.sync') === 0;
     var isData    = isSystem;
     var isDone    = task.status === 'Done' || task.status === 'Closed' || task.status === 'Cancelled';
-
-    // Allow date edits on content tasks + certain deficiency types
     var allowsDateEdit = isContent ||
       typeId === 'task.deficiency.category_stock' ||
       typeId === 'task.deficiency.bundle_stock';
 
-    // ── Compact header ────────────────────────────────────────────────
-    var isOverdue = task.dueDate && TaskWidgets.isOverdue(task.dueDate, task.status);
-    var dueChipClass = isOverdue ? 'badge badge-danger' : 'td-chip td-chip-default';
-    var chips = '<span class="' + _statusChipClass(task.status) + '">' + esc(task.status || 'New') + '</span>';
-    if (task.assignedTo) {
-      chips += ' <span class="td-chip td-chip-default">' + esc(task.assignedTo.split('@')[0]) + '</span>';
-    }
-    if (task.dueDate) {
-      chips += ' <span class="' + dueChipClass + '">' + esc(TaskWidgets.formatDateShort(task.dueDate)) + '</span>';
-    }
-
-    // ── Pack ──────────────────────────────────────────────────────────
+    // ── Pack (primary DO action) ───────────────────────────────────────
     var packHtml = TaskPacks.packBody(task);
     var packSection = packHtml
-      ? '<div id="task-pack-do" class="mt-2">' + packHtml + '</div><hr class="my-2">'
+      ? '<div id="task-pack-do" class="mb-2">' + packHtml + '</div><hr class="my-2">'
       : '';
 
-    // ── Admin controls ────────────────────────────────────────────────
+    // ── Compact 4-field row (always visible) ───────────────────────────
     var statusOpts = ['New','Assigned','Review','Done','Closed'].map(function(s) {
       return '<option value="' + s + '"' + (task.status === s ? ' selected' : '') + '>' + s + '</option>';
     }).join('');
-
-    var moreOpen = false;
-    try { moreOpen = sessionStorage.getItem('td-more-open') === '1'; } catch(e) {}
-    var moreDisplay = moreOpen ? '' : 'display:none;';
-    var moreLabel   = 'More ' + (moreOpen ? '▴' : '▾');
-
-    var showSave   = !isSystem || allowsDateEdit || isContent;
-    var showDone   = !isData;
-    var showDelete = !isData;
-
-    // Extra fields for content tasks in More
-    var titleField = isContent
-      ? '<div class="form-group mb-2"><label class="small font-weight-bold mb-0">Title</label>' +
-        '<input type="text" class="form-control form-control-sm td-f-title" value="' + esc(task.name || '') + '"></div>'
-      : '';
-
-    var entityUrlField = isContent
-      ? '<div class="form-group mb-2"><label class="small font-weight-bold mb-0">Drive URL</label>' +
-        '<div class="input-group input-group-sm">' +
-        '<input type="text" class="form-control form-control-sm td-f-entity-id" value="' + esc(String(task.entityId || '')) + '" placeholder="https://drive.google.com/...">' +
-        '<div class="input-group-append"><button type="button" class="btn btn-light td-open-entity-btn" title="Open">↗</button></div>' +
-        '</div></div>'
-      : '';
-
-    var startReadonly = (!allowsDateEdit && !isDone) ? ' readonly' : '';
-    var dueReadonly   = (!allowsDateEdit && !isDone) ? ' readonly' : '';
-
-    var adminControls =
-      '<div class="td-controls mt-2">' +
-        '<div class="d-flex align-items-center">' +
-          '<select class="form-control form-control-sm mr-1 td-f-status" style="width:auto;"' +
-            (isSystem && !isContent ? ' disabled' : '') + '>' + statusOpts + '</select>' +
-          (showDone
-            ? ' <button type="button" class="btn btn-sm btn-light mr-1 td-done-btn"' + (isDone ? ' disabled' : '') + '>Done</button>'
-            : '') +
-          ' <button type="button" class="btn btn-sm btn-light td-more-toggle-btn">' + moreLabel + '</button>' +
+    var startVal = task.startDate ? TaskWidgets.formatDate(task.startDate) : '';
+    var dueVal   = task.dueDate   ? TaskWidgets.formatDate(task.dueDate)   : '';
+    var fieldsRow =
+      '<div class="td-fields">' +
+        '<div>' +
+          '<div class="td-field-label">Status</div>' +
+          '<select class="td-f-status"' + (isSystem && !isContent ? ' disabled' : '') + '>' + statusOpts + '</select>' +
         '</div>' +
-        '<div class="td-more-section" style="' + moreDisplay + '">' +
-          '<div class="form-row mt-1">' +
-            '<div class="col-12 col-sm-4 mb-2">' +
-              '<label class="small font-weight-bold mb-0">Assigned To</label>' +
-              '<select class="form-control form-control-sm td-f-assignee"' + (isSystem && !isContent ? ' disabled' : '') + '>' +
-                '<option value="">- Unassigned -</option>' +
-              '</select>' +
-            '</div>' +
-            '<div class="col-6 col-sm-4 mb-2">' +
-              '<label class="small font-weight-bold mb-0">Start</label>' +
-              '<input type="date" class="form-control form-control-sm td-f-start"' + startReadonly +
-                ' value="' + (task.startDate ? TaskWidgets.formatDate(task.startDate) : '') + '">' +
-            '</div>' +
-            '<div class="col-6 col-sm-4 mb-2">' +
-              '<label class="small font-weight-bold mb-0">Due</label>' +
-              '<input type="date" class="form-control form-control-sm td-f-due"' + dueReadonly +
-                ' value="' + (task.dueDate ? TaskWidgets.formatDate(task.dueDate) : '') + '">' +
-            '</div>' +
-          '</div>' +
-          titleField +
-          entityUrlField +
-          '<div class="form-group mb-2">' +
-            '<label class="small font-weight-bold mb-0">Notes</label>' +
-            '<textarea class="form-control form-control-sm td-f-notes" rows="3" style="font-size:12px;">' +
-              esc(task.notes || '') +
-            '</textarea>' +
-          '</div>' +
-          (task.createdDate
-            ? '<div class="text-muted mb-2" style="font-size:11px;">Created: ' + esc(TaskWidgets.formatDateShort(task.createdDate)) + '</div>'
-            : '') +
-          '<div class="d-flex justify-content-between">' +
-            (showSave
-              ? '<button type="button" class="btn btn-sm btn-light td-save-btn">Save</button>'
-              : '<span></span>') +
-            (showDelete
-              ? '<button type="button" class="btn btn-sm btn-light td-delete-btn"' + (isDone ? ' disabled' : '') + '>Delete</button>'
-              : '') +
-          '</div>' +
+        '<div>' +
+          '<div class="td-field-label">Assignee</div>' +
+          '<select class="td-f-assignee"' + (isSystem && !isContent ? ' disabled' : '') + '><option value="">-</option></select>' +
+        '</div>' +
+        '<div>' +
+          '<div class="td-field-label">Start</div>' +
+          '<input type="date" class="td-f-start"' + (!allowsDateEdit ? ' readonly' : '') + ' value="' + startVal + '">' +
+        '</div>' +
+        '<div>' +
+          '<div class="td-field-label">Due</div>' +
+          '<input type="date" class="td-f-due"' + (!allowsDateEdit ? ' readonly' : '') + ' value="' + dueVal + '">' +
         '</div>' +
       '</div>';
 
-    // ── Entity section (lazy) ─────────────────────────────────────────
-    var hasEntity = !!(task.entityName || task.entitySlug);
-    var entitySlug = task.entitySlug || '';
-    var entitySection = hasEntity
-      ? '<div class="td-entity-section">' +
-          '<a href="#" class="small text-muted td-entity-toggle">▸ Entity</a>' +
-          '<div class="td-entity-body" style="display:none;" data-slug="' + esc(entitySlug) + '"></div>' +
+    // ── Action row ─────────────────────────────────────────────────────
+    var showSave   = !isSystem || allowsDateEdit || isContent;
+    var showDone   = !isData;
+    var showDelete = !isData;
+    var hasMore    = showSave || showDelete || isContent || !!task.createdDate;
+
+    var moreOpen = false;
+    try { moreOpen = sessionStorage.getItem('td-more-open') === '1'; } catch(e) {}
+
+    var actionRow =
+      '<div class="d-flex align-items-center mb-2">' +
+        (showDone
+          ? '<button type="button" class="btn btn-sm btn-light mr-1 td-done-btn"' + (isDone ? ' disabled' : '') + '>Done</button>'
+          : '') +
+        (hasMore
+          ? '<button type="button" class="btn btn-sm btn-light td-more-toggle-btn">More ' + (moreOpen ? '▴' : '▾') + '</button>'
+          : '') +
+      '</div>';
+
+    // ── Notes (always visible) ─────────────────────────────────────────
+    var notesArea =
+      '<textarea class="form-control form-control-sm td-f-notes mb-2" rows="2"' +
+        (isData ? ' readonly' : '') +
+        ' placeholder="Notes…" style="font-size:11px;">' +
+        esc(task.notes || '') +
+      '</textarea>';
+
+    // ── More section ───────────────────────────────────────────────────
+    var titleField = isContent
+      ? '<div class="form-group mb-1">' +
+          '<label class="small font-weight-bold mb-0" style="font-size:10px;">Title</label>' +
+          '<input type="text" class="form-control form-control-sm td-f-title" value="' + esc(task.name || '') + '" style="font-size:11px;"></div>'
+      : '';
+
+    var driveField = isContent
+      ? '<div class="form-group mb-2">' +
+          '<label class="small font-weight-bold mb-0" style="font-size:10px;">Drive URL</label>' +
+          '<div class="input-group input-group-sm">' +
+          '<input type="text" class="form-control form-control-sm td-f-entity-id"' +
+            ' value="' + esc(String(task.entityId || '')) + '" placeholder="https://drive.google.com/..." style="font-size:11px;">' +
+          '<div class="input-group-append"><button type="button" class="btn btn-light td-open-entity-btn" title="Open">↗</button></div>' +
+          '</div></div>'
+      : '';
+
+    var createdText = task.createdDate ? esc(TaskWidgets.formatDateShort(task.createdDate)) : '';
+    var footerRow =
+      '<div class="d-flex justify-content-between align-items-center">' +
+        (showSave
+          ? '<button type="button" class="btn btn-sm btn-light td-save-btn">Save</button>'
+          : '<span></span>') +
+        (createdText ? '<span class="text-muted" style="font-size:10px;">' + createdText + '</span>' : '') +
+        (showDelete
+          ? '<button type="button" class="btn btn-sm btn-light td-delete-btn"' + (isDone ? ' disabled' : '') + '>Delete</button>'
+          : '<span></span>') +
+      '</div>';
+
+    var moreSection = hasMore
+      ? '<div class="td-more-section" style="' + (moreOpen ? '' : 'display:none;') + '">' +
+          titleField + driveField + footerRow +
         '</div>'
       : '';
 
     // ── Assemble ──────────────────────────────────────────────────────
-    return '<div class="d-flex justify-content-between align-items-center mb-1">' +
+    return '<div class="d-flex justify-content-between align-items-center mb-2">' +
              '<span class="td-title font-weight-bold small" title="' + esc(task.name || '') + '">' + esc(task.name || '-') + '</span>' +
              '<button type="button" class="btn btn-sm btn-light td-close-btn" style="font-size:11px;">✕</button>' +
            '</div>' +
-           '<div class="td-chips mb-1">' + chips + '</div>' +
-           '<hr class="my-2">' +
            packSection +
-           adminControls +
-           entitySection;
+           fieldsRow +
+           actionRow +
+           notesArea +
+           moreSection;
   }
 
   // ── Event binding ───────────────────────────────────────────────────
@@ -379,30 +350,6 @@ window.TaskDetail = (function() {
       });
     }
 
-    // Entity toggle — lazy-loads on expand
-    var entityToggle = root.querySelector('.td-entity-toggle');
-    var entityBody   = root.querySelector('.td-entity-body');
-    if (entityToggle && entityBody) {
-      entityToggle.addEventListener('click', function(e) {
-        e.preventDefault();
-        var open = entityBody.style.display === 'none';
-        if (!open) {
-          entityBody.style.display = 'none';
-          entityToggle.textContent = '▸ Entity';
-          return;
-        }
-        entityToggle.textContent = '▾ Entity';
-        entityBody.style.display = '';
-        if (entityBody.getAttribute('data-loaded')) return;
-        entityBody.setAttribute('data-loaded', '1');
-        entityBody.innerHTML = '<span class="text-muted small">Loading…</span>';
-        var slug = entityBody.getAttribute('data-slug') || task.entitySlug || '';
-        cfg.loadEntityDetail(slug, function(detail) {
-          if (!entityBody.parentNode) return;  // unmounted
-          entityBody.innerHTML = _renderEntityDetail(detail, task);
-        });
-      });
-    }
   }
 
   // ── Field reader ─────────────────────────────────────────────────────
@@ -425,30 +372,6 @@ window.TaskDetail = (function() {
       if (title    !== null) fields.title           = title.trim();
     }
     return fields;
-  }
-
-  // ── Entity detail renderer ───────────────────────────────────────────
-
-  function _renderEntityDetail(detail, task) {
-    // Fall back to getEntity if loadEntityDetail returned null
-    if (!detail && task.entitySlug) detail = cfg.getEntity(task.entitySlug);
-    var esc = TaskWidgets.escape;
-    if (!detail) {
-      // Show just the entity name from the task (no extra server data)
-      var name = task.entityName || '';
-      if (!name) return '<span class="text-muted small">No entity linked</span>';
-      return '<div class="small">' + esc(name) + '</div>';
-    }
-    var parts = [];
-    if (detail.title) parts.push('<strong>' + esc(detail.title) + '</strong>');
-    if (detail.state) parts.push('<span class="badge badge-secondary" style="font-size:10px;">' + esc(detail.state) + '</span>');
-    if (task.projectId) {
-      parts.push('<span class="td-chip td-chip-default">Project: ' + esc(task.projectId) + '</span>');
-    }
-    if (detail.campaignId) {
-      parts.push('<span class="td-chip td-chip-default">Campaign: ' + esc(detail.campaignId) + '</span>');
-    }
-    return '<div class="small mt-1">' + parts.join(' &nbsp; ') + '</div>';
   }
 
   return { configure: configure, render: render, open: open };
