@@ -41,7 +41,7 @@
   .panel-state-2 .scope-links { display: inline; }
   .panel-state-2 .expand-compact { display: none !important; }
 
-  /* State 3: full (11 cols = 100%) - check, stream, title, entity, entity-id, assignee, status, priority, start, due, done */
+  /* State 3: full (11 cols = 100%) - check, project, title, entity, entity-id, assignee, status, priority, start, due, done */
   .panel-state-3 .task-col-hideable { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-wide-only { display: flex !important; align-items: center; }
   .panel-state-3 .task-col-check { width: 2%; min-width: 25px; }
@@ -132,7 +132,7 @@
               <input type="checkbox" id="select-all-tasks" title="Select all">
             </div>
             <div class="task-col-wide-only task-col-session">
-              <input type="text" id="filter-task-session" class="form-control form-control-sm py-0" style="height:22px;font-size:10px;width:100%;" placeholder="Stream">
+              Project
             </div>
             <div class="task-col-title"><a href="#" class="text-muted sort-col" data-field="title">Title <span id="sort-icon-title"></span></a></div>
             <div class="task-col-hideable task-col-entity">
@@ -864,16 +864,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       render();
     });
 
-    // Session filter with debounce
-    var sessionFilterTimeout = null;
-    document.getElementById('filter-task-session').addEventListener('input', function() {
-      var val = this.value;
-      clearTimeout(sessionFilterTimeout);
-      sessionFilterTimeout = setTimeout(function() {
-        state.taskSessionFilter = val.trim().toLowerCase();
-        render();
-      }, 300);
-    });
+
 
     // Entity filter with debounce
     var entityFilterTimeout = null;
@@ -1485,7 +1476,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
 
       return '<div class="border-bottom py-1 px-2 task-row' + (isSelected ? ' bg-info text-white' : '') + rowClass + '" data-id="' + id + '">' +
         '<div class="task-col-check"><input type="checkbox" class="task-checkbox" data-id="' + id + '"' + (isChecked ? ' checked' : '') + '></div>' +
-        '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(sessionId) + '">' + TaskWidgets.escape(sessionId) + '</div>' +
+        '<div class="task-col-wide-only task-col-session text-truncate" title="' + TaskWidgets.escape(t.projectId || '') + '">' + TaskWidgets.escape(t.projectId || '') + '</div>' +
         '<div class="task-col-title text-truncate" style="cursor:pointer;">' + TaskWidgets.escape(title) + '</div>' +
         '<div class="task-col-hideable task-col-entity text-truncate">' + entityHtml + '</div>' +
         '<div class="task-col-wide-only task-col-entity-id text-truncate">' + entityIdHtml + '</div>' +
