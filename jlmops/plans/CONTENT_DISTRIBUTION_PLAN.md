@@ -1,6 +1,6 @@
 # Content Distribution Plan
 
-Extends the content library/task model (see `CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **partially shipped**. Drive/register-library side done; GAS Steps 1, 3–6 not yet shipped.
+Extends the content library/task model (see `CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **complete @366** (2026-06-23). All steps shipped.
 
 ---
 

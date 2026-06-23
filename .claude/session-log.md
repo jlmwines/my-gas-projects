@@ -968,3 +968,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Deploy E shipped @365: PublishingView Tasks tab `renderTasks()` refactored to iterate `TASK_COLUMNS` array (title/entity/assignee/status/due/doc). Header and body both driven by the array via `_renderPvTaskCell`. No behavior change.
 - AdminTasksView excluded from Deploy E (12-column/3-panel-state system too complex without regression risk). Deferred to future session if needed.
 - UNIFIED_TASK_UI_PLAN.md closed: Deploys A–E all shipped @354–@365. Future items (inline quick actions, mobile filter toggle) remain as "later" in the plan.
+
+## 2026-06-23 — Content Distribution Plan complete @366
+
+- Verified CONTENT_DISTRIBUTION_PLAN against reality: Drive/register side done, GAS side not yet. Fixed plan header and Step 1/2 descriptions.
+- Added `print` to LibraryService VALID_TYPES and SIBLING_LANGUAGE_TYPES.
+- 6 new task types in taskDefinitions.json: print.create-en/he, print.distribute, email.create-en/he, email.send.
+- TaskPacks: print create/email create → content_edit; print.distribute → confirmation; email.send → content_publish.
+- WebAppProjects: 6 new CONTENT_STAGES for spawnContentChain.
+- markPublished: propagates url-stamped activity to referencing entities when externalUrl provided.
+- Next: run rebuildSysConfigFromSource() in GAS to pick up new task definitions; then spawn print/email chains for June entities.
