@@ -39,13 +39,38 @@
 <body>
   <div class="container-fluid p-4">
     <h2 class="mb-4">Products</h2>
-    
-    <!-- CARD 1: DETAIL UPDATES -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold">
-        Detail Updates
-      </div>
-      <div class="card-body">
+
+    <!-- Tab navigation -->
+    <ul class="nav nav-tabs mb-3" id="admin-products-tabs">
+      <li class="nav-item">
+        <a class="nav-link active" id="tab-link-details" href="#" onclick="AdminProductsView.switchTab('details'); return false;">
+          Detail Updates <span id="stat-review-tab" class="badge badge-pill ml-1 badge-secondary">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-link-new" href="#" onclick="AdminProductsView.switchTab('new'); return false;">
+          New Products <span id="stat-new-products" class="badge badge-pill ml-1 badge-secondary">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-link-verify" href="#" onclick="AdminProductsView.switchTab('verify'); return false;">
+          Verification <span id="reverted-verify-count" class="badge badge-pill ml-1 badge-secondary" title="Reverted verify tasks needing admin">0</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-link-sku" href="#" onclick="AdminProductsView.switchTab('sku'); return false;">
+          SKU Management
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tab-link-lookups" href="#" onclick="AdminProductsView.switchTab('lookups'); return false;">
+          Lookups
+        </a>
+      </li>
+    </ul>
+
+    <!-- Tab pane: Detail Updates -->
+    <div id="tab-pane-details" class="pt-3">
         
         <!-- Section A: Review Pending (Primary) -->
         <h6 class="text-muted mb-2">Review Pending (<span id="stat-review">0</span>)</h6>
@@ -109,19 +134,11 @@
             </table>
         </div>
 
-      </div>
     </div>
 
-    <!-- CARD: VERIFICATION TASK CREATION -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center">
-        <span>Verification <span id="reverted-verify-count" class="badge badge-secondary badge-pill ml-1" title="Reverted verify tasks needing admin">0</span></span>
-        <div>
-          <span id="verify-planning-loaded" class="text-muted small mr-2"></span>
-          <button id="btn-verify-toggle" class="btn btn-sm" onclick="AdminProductsView.toggleVerifyCard()">Show</button>
-        </div>
-      </div>
-      <div class="card-body" id="verify-card-body" style="display:none;">
+    <!-- Tab pane: Verification -->
+    <div id="tab-pane-verify" class="pt-3" style="display:none;">
+      <span id="verify-planning-loaded" class="text-muted small"></span>
 
         <!-- Reverted verify tasks needing admin: Close (image fixed manually) or Pass to manager (detail edit) -->
         <div class="mb-3">
@@ -187,16 +204,10 @@
         <div id="verify-preview-container" class="table-responsive" style="max-height: 340px; overflow-y: auto;">
           <p class="text-muted small mb-0">Click Show to load product data…</p>
         </div>
-      </div>
     </div>
 
-    <!-- CARD 2: NEW PRODUCTS — collapsed + lazy-loaded (rare) -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('new')">
-        <span><span id="chev-new">&#9656;</span> New Products</span>
-        <span id="stat-new-products" class="badge badge-secondary badge-pill" title="New products pending (suggestions + submissions)">0</span>
-      </div>
-      <div class="card-body" id="card-body-new" style="display:none;">
+    <!-- Tab pane: New Products -->
+    <div id="tab-pane-new" class="pt-3" style="display:none;">
 
         <!-- Section A: Suggestions -->
         <div class="d-flex align-items-center mb-2">
@@ -291,15 +302,10 @@
             </table>
         </div>
 
-      </div>
     </div>
 
-    <!-- CARD 3: SKU MANAGEMENT — collapsed + lazy-loaded (rare) -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('sku')">
-        <span id="chev-sku">&#9656;</span> SKU Management
-      </div>
-      <div class="card-body" id="card-body-sku" style="display:none;">
+    <!-- Tab pane: SKU Management -->
+    <div id="tab-pane-sku" class="pt-3" style="display:none;">
 
         <!-- Action Buttons -->
         <div class="d-flex flex-wrap mb-4" style="gap: 0.5rem;">
@@ -328,15 +334,10 @@
             </table>
         </div>
 
-      </div>
     </div>
 
-    <!-- CARD 4: LOOKUPS — collapsed + lazy-loaded (rare) -->
-    <div class="card mb-4">
-      <div class="card-header bg-white font-weight-bold" style="cursor:pointer;" onclick="AdminProductsView.toggleCard('lookups')">
-        <span id="chev-lookups">&#9656;</span> Lookups
-      </div>
-      <div class="card-body" id="card-body-lookups" style="display:none;">
+    <!-- Tab pane: Lookups -->
+    <div id="tab-pane-lookups" class="pt-3" style="display:none;">
 
         <!-- Section A: Grapes -->
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -408,7 +409,6 @@
             </table>
         </div>
 
-      </div>
     </div>
 
   </div>
@@ -836,9 +836,10 @@
     // former single consolidated getAdminViewData() round-trip is retired here — it loaded all 11
     // sections on every mount and was timing out (user 2026-06-08). Each loader self-fetches + self-
     // paints "Loading…" when called with no argument.
-    AdminProductsView._cardLoaded = { new: false, sku: false, lookups: false };
+    AdminProductsView._cardLoaded = { new: false, verify: false, sku: false, lookups: false };
+    AdminProductsView._activeTab = 'details';
 
-    // Load the sections of one collapsible lower card (each loader self-fetches).
+    // Load the sections of a lazy tab (each loader self-fetches).
     AdminProductsView._loadCard = function(key) {
       if (key === 'new') {
         AdminProductsView.loadSuggestionList();
@@ -851,6 +852,30 @@
         AdminProductsView.loadLookupSection('grapes');
         AdminProductsView.loadLookupSection('kashrut');
         AdminProductsView.loadLookupSection('texts');
+      }
+    };
+
+    AdminProductsView.switchTab = function(key) {
+      var keys = ['details', 'new', 'verify', 'sku', 'lookups'];
+      keys.forEach(function(k) {
+        var pane = document.getElementById('tab-pane-' + k);
+        var link = document.getElementById('tab-link-' + k);
+        if (pane) pane.style.display = 'none';
+        if (link) link.classList.remove('active');
+      });
+      var pane = document.getElementById('tab-pane-' + key);
+      var link = document.getElementById('tab-link-' + key);
+      if (pane) pane.style.display = '';
+      if (link) link.classList.add('active');
+      AdminProductsView._activeTab = key;
+      // Lazy-load on first switch
+      if (key === 'verify' && !AdminProductsView._cardLoaded.verify) {
+        AdminProductsView._cardLoaded.verify = true;
+        AdminProductsView.loadRevertedVerify();
+        if (!AdminProductsView.verifyState.loaded) AdminProductsView.loadVerifyPlanning();
+      } else if (key !== 'details' && !AdminProductsView._cardLoaded[key]) {
+        AdminProductsView._cardLoaded[key] = true;
+        AdminProductsView._loadCard(key);
       }
     };
 
@@ -874,33 +899,22 @@
       }).WebAppProducts_getProductsWidgetData();
     };
 
-    // Collapse toggle for a lower card. First open lazy-loads its data; subsequent opens just reveal.
-    AdminProductsView.toggleCard = function(key) {
-      var body = document.getElementById('card-body-' + key);
-      var chev = document.getElementById('chev-' + key);
-      if (!body) return;
-      var opening = body.style.display === 'none';
-      body.style.display = opening ? '' : 'none';
-      if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;';   // ▾ open / ▸ closed
-      if (opening && !AdminProductsView._cardLoaded[key]) {
-        AdminProductsView._cardLoaded[key] = true;
-        AdminProductsView._loadCard(key);
-      }
-    };
-
-    // Refresh = reload Card 1 always (the loaders self-paint + self-fetch), plus any lower card that is
-    // currently OPEN (so a post-action refresh updates the card the operator is working in). Closed
-    // cards stay closed and will lazy-load on next open. Used on mount AND after Card actions.
+    // Refresh = reload Detail Updates always + the currently active tab (if different).
     AdminProductsView.refreshView = function() {
-      AdminProductsView.loadNewProductsBadge();   // header count for the collapsed New Products card
-      AdminProductsView.loadRevertedVerify();     // header count for reverted verify tasks (card collapsed)
+      AdminProductsView.loadNewProductsBadge();
+      AdminProductsView.loadRevertedVerify();
       AdminProductsView.loadReviewList();
       AdminProductsView.loadAcceptedList();
       AdminProductsView.loadPendingDetailsList();
-      ['new', 'sku', 'lookups'].forEach(function(key) {
-        var body = document.getElementById('card-body-' + key);
-        if (body && body.style.display !== 'none') AdminProductsView._loadCard(key);
-      });
+      var tab = AdminProductsView._activeTab;
+      if (tab && tab !== 'details') {
+        if (tab === 'verify') {
+          AdminProductsView.loadRevertedVerify();
+          if (AdminProductsView.verifyState.loaded) AdminProductsView.loadVerifyPlanning();
+        } else {
+          AdminProductsView._loadCard(tab);
+        }
+      }
     };
 
     // --- Card 3: SKU Management ---
@@ -1497,7 +1511,9 @@
       const render = tasks => {
         tbody.innerHTML = '';
         AdminProductsView.reviewTasks = tasks || [];
-        document.getElementById('stat-review').textContent = AdminProductsView.reviewTasks.length;
+        const reviewCount = AdminProductsView.reviewTasks.length;
+        document.getElementById('stat-review').textContent = reviewCount;
+        AdminProductsView.setCountBadge('stat-review-tab', reviewCount, 'badge-warning');
 
         if (AdminProductsView.reviewTasks.length === 0) {
           tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
@@ -2075,6 +2091,7 @@
           if (idx >= 0 && idx < tasks.length) {
             tasks.splice(idx, 1);
             document.getElementById('stat-review').textContent = tasks.length;
+            AdminProductsView.setCountBadge('stat-review-tab', tasks.length, 'badge-warning');
             // Re-render the review table in the background so the list stays in sync,
             // but don't block the next open on it.
             AdminProductsView._rerenderReviewTable();
@@ -2385,23 +2402,6 @@
       if (caret) caret.innerHTML = showing ? '&#9656;' : '&#9662;';
     };
 
-    AdminProductsView.toggleVerifyCard = function() {
-      const body = document.getElementById('verify-card-body');
-      const btn = document.getElementById('btn-verify-toggle');
-      if (!body) return;
-      const showing = body.style.display !== 'none';
-      if (showing) {
-        body.style.display = 'none';
-        if (btn) btn.textContent = 'Show';
-        return;
-      }
-      body.style.display = 'block';
-      if (btn) btn.textContent = 'Hide';
-      AdminProductsView.loadRevertedVerify();   // refresh the reverted queue each time the card opens
-      if (!AdminProductsView.verifyState.loaded) {
-        AdminProductsView.loadVerifyPlanning();
-      }
-    };
 
     // --- Reverted verify tasks (needs-admin queue at the top of the Verification card) ---
     AdminProductsView.loadRevertedVerify = function() {
