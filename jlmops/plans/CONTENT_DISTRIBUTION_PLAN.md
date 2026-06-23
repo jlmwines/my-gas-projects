@@ -100,7 +100,7 @@ Newsletter doc is assembled manually — no machine template. The newsletter Goo
 ## Build Sequence
 
 **Step 1 — Schema: add `newsletter` entity type**
-Append `newsletter` to the valid `slb_EntityType` values in `config/schemas.json`. Add `system.folder.newsletter` key to `config/system.json` pointing to the `Library/newsletter/` Drive folder ID (create folder first). Run `generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
+Append `newsletter` to the valid `slb_EntityType` values in `config/schemas.json`. No new SysConfig folder key needed — `LibraryService._getCanonicalFolder(type, concept)` reads only `system.folder.library` (already configured) and auto-creates `Library/<type>/<slug>/` subfolders on demand via `_getOrCreateChildFolder`. Run `generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
 
 **Step 2 — LibraryService: newsletter folder routing**
 `LibraryService._getEntityFolder(type)` already maps type → folder. Add `newsletter` case. `spawnContentChain` already works for any type; it will work for newsletter once the folder is registered.
@@ -124,6 +124,20 @@ In `LibraryService.markPublished(slug)`, after state update, resolve `jlmwines.c
 
 **Step 6 — `spawnContentChain` for newsletter and email**
 Verify `spawnContentChain` covers the new task type lists. Likely config-driven already — just needs the new task type keys in `taskDefinitions.json` and a `chainTasks` list per type. Confirm in `LibraryService.js` before assuming.
+
+---
+
+## Drive Reorganization + Register Fix
+
+User will reorganize Drive folders (safe — Drive file IDs are stable, `slb_DocUrl` links survive moves). After reorganization, session fixes `content/register-library.js`:
+
+1. Add `'newsletter'` to the `TYPES` array (line ~39)
+2. Add `'slb_EntityType'` to `UPDATE_FIELDS` (line ~434) so `--update` can correct entity types
+3. Update manifest entries: AYIW slugs get `content_type: 'email'`; add newsletter slug entries with `content_type: 'newsletter'`
+4. Run `node content/register-library.js --update <ayiw-slug>` for each AYIW entity to flip type from `blog` → `email`
+5. Run `node content/register-library.js <newsletter-slug>` to register new newsletter entities
+
+Note: `newsletter` type also needs to be appended to `slb_EntityType` valid values in `config/schemas.json` (Step 1 of build sequence) before GAS will accept newsletter entities through the task/library system.
 
 ---
 
