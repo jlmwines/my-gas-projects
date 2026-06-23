@@ -34,6 +34,11 @@
     .desc-short { min-height: 40px; }
     /* 3 lines approx */
     .desc-long { min-height: 120px; }
+    /* Page-level tab bar — mirrors PublishingView pv-tab pattern */
+    .ap-tabs { display: flex; gap: 2px; border-bottom: 2px solid #dee2e6; margin-bottom: 12px; overflow-x: auto; }
+    .ap-tab { padding: 6px 14px; font-size: 13px; font-weight: 500; color: #495057; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; }
+    .ap-tab.active { color: #0d6efd; border-bottom-color: #0d6efd; font-weight: 600; }
+    .ap-tab:hover:not(.active) { color: #212529; border-bottom-color: #adb5bd; }
   </style>
 </head>
 <body>
@@ -41,33 +46,13 @@
     <h2 class="mb-4">Products</h2>
 
     <!-- Tab navigation -->
-    <ul class="nav nav-tabs mb-3" id="admin-products-tabs">
-      <li class="nav-item">
-        <a class="nav-link active" id="tab-link-details" href="javascript:void(0);" onclick="AdminProductsView.switchTab('details')">
-          Detail Updates <span id="stat-review-tab" class="badge badge-pill ml-1 badge-secondary">0</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="tab-link-new" href="javascript:void(0);" onclick="AdminProductsView.switchTab('new')">
-          New Products <span id="stat-new-products" class="badge badge-pill ml-1 badge-secondary">0</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="tab-link-verify" href="javascript:void(0);" onclick="AdminProductsView.switchTab('verify')">
-          Verification <span id="reverted-verify-count" class="badge badge-pill ml-1 badge-secondary" title="Reverted verify tasks needing admin">0</span>
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="tab-link-sku" href="javascript:void(0);" onclick="AdminProductsView.switchTab('sku')">
-          SKU Management
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" id="tab-link-lookups" href="javascript:void(0);" onclick="AdminProductsView.switchTab('lookups')">
-          Lookups
-        </a>
-      </li>
-    </ul>
+    <div class="ap-tabs" id="admin-products-tabs">
+      <button class="ap-tab active" id="tab-link-details" data-tab="details" onclick="AdminProductsView.switchTab('details')">Detail Updates <span id="stat-review-tab" class="badge badge-pill ml-1 badge-secondary">0</span></button>
+      <button class="ap-tab" id="tab-link-new" data-tab="new" onclick="AdminProductsView.switchTab('new')">New Products <span id="stat-new-products" class="badge badge-pill ml-1 badge-secondary">0</span></button>
+      <button class="ap-tab" id="tab-link-verify" data-tab="verify" onclick="AdminProductsView.switchTab('verify')">Verification <span id="reverted-verify-count" class="badge badge-pill ml-1 badge-secondary" title="Reverted verify tasks needing admin">0</span></button>
+      <button class="ap-tab" id="tab-link-sku" data-tab="sku" onclick="AdminProductsView.switchTab('sku')">SKU Mgmt</button>
+      <button class="ap-tab" id="tab-link-lookups" data-tab="lookups" onclick="AdminProductsView.switchTab('lookups')">Lookups</button>
+    </div>
 
     <!-- Tab pane: Detail Updates -->
     <div id="tab-pane-details" class="pt-3">
