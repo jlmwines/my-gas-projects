@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-23 — PublishingView Tasks tab role split + assignee visibility @343–@344
+
+- Bug: PublishingView Tasks tab showed all content tasks to all roles; drawer showed no assignee.
+- @343: manager sees only Manager-assigned tasks (`renderTasks` role filter); drawer `_renderDrawerAttachedTasks` shows assignee.
+- @344: admin gets assignee dropdown filter + Assignee column in Tasks tab table; LibraryView drawer also shows assignee on attached-task rows. `renderTasks` exposed on public API for the filter's `onchange`.
+- Memory: corrected stale `feedback_clasp_push_not_deploy.md` — no standalone clasp push for code, always deploy.ps1.
+- Marketing: June AYIW email (EN+HE) scheduled 2026-06-24 (Tuesday evening).
+- Next: June print newsletter paste-source; set slb_TargetDate on email-newsletter-2026-06 library entities.
+
+---
+
 ## 2026-06-22 — Hot-link retired; new-product accept flow ships @342
 
 - WebDetS stale-row gap diagnosed: new-product (`add_product`) rows were never cleaned up; only `vintage_mismatch` path had cleanup via `confirmWebUpdates`.

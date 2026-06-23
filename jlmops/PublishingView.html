@@ -971,18 +971,44 @@
 
     function renderTasks() {
       var container = document.getElementById('pv-tasks-content');
-      var contentTasks = (state.tasks || []).filter(function(t) {
-        return t.typeId && t.typeId.indexOf('task.content.') === 0 &&
-               t.status !== 'Done' && t.status !== 'Cancelled';
+      var isManager = document.body.classList.contains('role-manager');
+      var allContentTasks = (state.tasks || []).filter(function(t) {
+        if (!t.typeId || t.typeId.indexOf('task.content.') !== 0) return false;
+        if (t.status === 'Done' || t.status === 'Cancelled') return false;
+        if (isManager && t.assignedTo !== 'Manager') return false;
+        return true;
       });
-      if (!contentTasks.length) {
+      if (!allContentTasks.length) {
         container.innerHTML = '<div class="pv-empty">No open content tasks.</div>';
         return;
       }
+
+      // Build assignee filter (admin only — manager already sees only their tasks).
+      var filterSel = document.getElementById('pv-tasks-assignee-filter');
+      var selectedAssignee = filterSel ? filterSel.value : '';
+      var contentTasks = selectedAssignee
+        ? allContentTasks.filter(function(t) { return t.assignedTo === selectedAssignee; })
+        : allContentTasks;
+
       var libBySlug = {};
       (state.library || []).forEach(function(e) { libBySlug[e.slug] = e; });
-      var html = '<table class="pv-cal-table"><thead><tr>' +
-        '<th>Task</th><th>Entity</th><th>Status</th><th>Due</th><th></th>' +
+
+      var filterBar = '';
+      if (!isManager) {
+        var assignees = [];
+        allContentTasks.forEach(function(t) {
+          if (t.assignedTo && assignees.indexOf(t.assignedTo) === -1) assignees.push(t.assignedTo);
+        });
+        assignees.sort();
+        var opts = '<option value="">All assignees</option>' +
+          assignees.map(function(a) {
+            return '<option value="' + TaskWidgets.escape(a) + '"' + (a === selectedAssignee ? ' selected' : '') + '>' + TaskWidgets.escape(a) + '</option>';
+          }).join('');
+        filterBar = '<div class="mb-2"><select id="pv-tasks-assignee-filter" class="form-control form-control-sm" style="max-width:200px" onchange="PublishingView.renderTasks()">' + opts + '</select></div>';
+      }
+
+      var html = filterBar + '<table class="pv-cal-table"><thead><tr>' +
+        '<th>Task</th><th>Entity</th><th>Assignee</th><th>Status</th><th>Due</th><th></th>' +
         '</tr></thead><tbody>';
       contentTasks.forEach(function(t) {
         var entity = libBySlug[t.entityId] || null;
@@ -994,6 +1020,7 @@
         html += '<tr style="cursor:pointer" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(t.entityId) + '\')">';
         html += '<td data-label="Task"><strong>' + TaskWidgets.escape(t.name || t.typeId) + '</strong></td>';
         html += '<td data-label="Entity"><span class="detail-meta">' + TaskWidgets.escape(entityLabel) + '</span></td>';
+        html += '<td data-label="Assignee"><span class="detail-meta">' + TaskWidgets.escape(t.assignedTo || '—') + '</span></td>';
         html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span></td>';
         html += '<td data-label="Due">' + due + '</td>';
         html += '<td data-label="" onclick="event.stopPropagation()">' + docBtn + '</td>';
@@ -1359,6 +1386,7 @@
         return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(t.id) + '\')">' +
           '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
           '<span class="pv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
+          (t.assignedTo ? '<span class="detail-meta">' + TaskWidgets.escape(t.assignedTo) + '</span>' : '') +
           dueChip + '</div>';
       }).join('');
     }
@@ -1538,6 +1566,7 @@
 
     return {
       init: init,
+      renderTasks: renderTasks,
       switchTab: switchTab,
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,

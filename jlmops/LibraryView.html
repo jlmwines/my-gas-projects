@@ -703,6 +703,7 @@
         return '<div class="lv-drawer-task-row" style="cursor:pointer;" title="Open this task" onclick="LibraryView.openAttachedTask(\'' + TaskWidgets.escape(t.id) + '\')">' +
           '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
           '<span class="lv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
+          (t.assignedTo ? '<span class="detail-meta">' + TaskWidgets.escape(t.assignedTo) + '</span>' : '') +
           dueChip +
           '</div>';
       }).join('');
