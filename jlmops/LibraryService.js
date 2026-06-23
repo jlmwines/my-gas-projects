@@ -20,13 +20,13 @@ const LibraryService = (function() {
     const LIBRARY_SHEET = 'SysLibrary';
 
     // §6 entity types — physical library rows. Matches content/register-library.js TYPES.
-    const VALID_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template', 'image', 'customer', 'other'];
+    const VALID_TYPES = ['blog', 'news', 'mention', 'email', 'print', 'social', 'template', 'image', 'customer', 'other'];
 
     // §6 language axis — null/empty for language-agnostic entities.
     const VALID_LANGUAGES = ['en', 'he', null, ''];
 
     // §6 sibling-language types (the rest are language-agnostic or virtual).
-    const SIBLING_LANGUAGE_TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template'];
+    const SIBLING_LANGUAGE_TYPES = ['blog', 'news', 'mention', 'email', 'print', 'social', 'template'];
 
     /**
      * Opens the library sheet and reads all rows into objects keyed by header.
@@ -847,6 +847,23 @@ const LibraryService = (function() {
             actionType: 'published',
             details: externalUrl ? { externalUrl: externalUrl } : {}
         });
+
+        // Propagate URL stamp to entities that reference this slug.
+        if (externalUrl) {
+            const { rows } = _openLibrary();
+            rows.forEach(function(row) {
+                const refs = String(row.slb_References || '').split(',').map(function(s) { return s.trim(); });
+                if (refs.indexOf(entityId) > -1 && row.slb_Slug && row.slb_Slug !== entityId) {
+                    try {
+                        logEntityActivity({
+                            entityId: row.slb_Slug,
+                            actionType: 'url-stamped',
+                            details: { sourceSlug: entityId, externalUrl: externalUrl }
+                        });
+                    } catch (e) { /* non-fatal — don't block publish */ }
+                }
+            });
+        }
 
         return { entity: updated };
     }

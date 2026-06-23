@@ -1,6 +1,6 @@
 # Content Distribution Plan
 
-Extends the content library/task model (see `CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **planning**. Nothing shipped yet.
+Extends the content library/task model (see `CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **partially shipped**. Drive/register-library side done; GAS Steps 1, 3–6 not yet shipped.
 
 ---
 
@@ -99,11 +99,11 @@ Newsletter doc is assembled manually — no machine template. The newsletter Goo
 
 ## Build Sequence
 
-**Step 1 — Schema: add `print` entity type**
-Append `print` to the valid `slb_EntityType` values in `config/schemas.json`. No new SysConfig folder key needed — `LibraryService._getCanonicalFolder(type, concept)` reads only `system.folder.library` (already configured) and auto-creates `Library/<type>/<slug>/` subfolders on demand via `_getOrCreateChildFolder`. Run `generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
+**Step 1 — Add `print` to LibraryService VALID_TYPES** *(not yet shipped)*
+Add `'print'` to the `VALID_TYPES` array in `LibraryService.js` line 23. Without this, any LibraryService call on a print entity (attach doc, spawn chain, mark published) throws `type "print" not in vocabulary`. Note: `config/schemas.json` has no separate valid-values list for `slb_EntityType` — VALID_TYPES in LibraryService.js is the sole gate. No config regeneration needed; `clasp push` is sufficient.
 
-**Step 2 — LibraryService: print folder routing**
-`LibraryService._getEntityFolder(type)` already maps type → folder. Add `print` case. `spawnContentChain` already works for any type; it will work for print once the folder is registered.
+**Step 2 — LibraryService: print folder routing** *(already handled)*
+`_getCanonicalFolder(type, concept)` is fully generic — it auto-creates `<root>/<type>/<concept>` subfolders on demand. No print-specific case needed.
 
 **Step 3 — Task definitions: print + email task types**
 Add to `config/taskDefinitions.json`:
@@ -131,12 +131,12 @@ Verify `spawnContentChain` covers the new task type lists. Likely config-driven 
 
 User will reorganize Drive folders (safe — Drive file IDs are stable, `slb_DocUrl` links survive moves). After reorganization, session fixes `content/register-library.js`:
 
-1. `TYPES` updated to `['blog', 'email', 'print', 'template']` — done.
-2. `slb_EntityType` added to `UPDATE_FIELDS` — done.
-3. Add print manifest entries: `print-newsletter-2026-06-en/he` (and future print entities) with `content_type: 'print'`
-4. Run `node content/register-library.js <print-slug>` to register print entities
+1. ~~`TYPES` updated to `['blog', 'email', 'print', 'template']`~~ — **done**.
+2. ~~`slb_EntityType` added to `UPDATE_FIELDS`~~ — **done**.
+3. ~~Add print manifest entries~~ — **done**: `print-newsletter-2026-06-en/he` and `print-newsletter-2026-07-en/he` manifested with `content_type: 'print'`.
+4. ~~Run `node content/register-library.js <print-slug>` to register print entities~~ — **done** (06 and 07 en/he registered).
 
-Note: `print` type also needs to be appended to `slb_EntityType` valid values in `config/schemas.json` (Step 1 of build sequence) before GAS will accept print entities through the task/library system.
+Note: `print` entities are in the sheet but GAS LibraryService.js will reject operations on them until Step 1 (VALID_TYPES) is shipped.
 
 ---
 

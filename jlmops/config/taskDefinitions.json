@@ -970,5 +970,77 @@
         "flow_pattern", "manager_direct",
         "due_pattern", "one_week",
         "pack_form", "dedicated_view"
+    ],
+    [
+        "task.template",
+        "task.content.print.create-en",
+        "Assemble EN print newsletter doc (blog excerpt + AYIW body + layout).",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
+        "task.content.print.create-he",
+        "Assemble HE print newsletter doc.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
+        "task.content.print.distribute",
+        "Print EN + HE newsletter and distribute physically.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "manager_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
+        "task.content.email.create-en",
+        "Draft AYIW email body EN (subject, preview text, body, CTA).",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
+        "task.content.email.create-he",
+        "Draft AYIW email body HE.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
+    ],
+    [
+        "task.template",
+        "task.content.email.send",
+        "Send AYIW email (Mailchimp or GmailApp); confirm send and close.",
+        "stable",
+        "topic", "Content",
+        "default_priority", "Normal",
+        "initial_status", "New",
+        "flow_pattern", "admin_direct",
+        "due_pattern", "one_week",
+        "pack_form", "inline"
     ]
 ]

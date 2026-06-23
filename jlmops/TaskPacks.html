@@ -71,13 +71,19 @@
           t === 'task.content.print_newsletter_body' ||
           t === 'task.content.draft' ||
           t === 'task.content.video_create' ||
-          t === 'task.content.realign') return 'content_edit';
+          t === 'task.content.realign' ||
+          t === 'task.content.print.create-en' ||
+          t === 'task.content.print.create-he' ||
+          t === 'task.content.email.create-en' ||
+          t === 'task.content.email.create-he') return 'content_edit';
+      if (t === 'task.content.print.distribute') return 'confirmation';
       if (t === 'task.content.blog_publish' ||
           t === 'task.content.video_publish' ||
           t === 'task.content.email' ||
           t === 'task.content.social' ||
           t === 'task.content.whatsapp' ||
-          t === 'task.newsletter.distribute') return 'content_publish';
+          t === 'task.newsletter.distribute' ||
+          t === 'task.content.email.send') return 'content_publish';
       return 'skeleton';
     }
 
