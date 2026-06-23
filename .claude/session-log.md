@@ -31,6 +31,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Drive: user moved print newsletter Docs to `Library/print/`.
 - Next: AYIW email sends 2026-06-24; mark June entities published after send+distribute. Then CONTENT_DISTRIBUTION_PLAN Step 1 (add `print` to schemas.json).
 
+## 2026-06-23 — Unified Task UI Deploy C @363
+
+- AdminDashboard task rows: click → `_openTask(id)` → fetch full task via `WebAppTasks_getTaskById` → cache → `TaskDetail.open(id)`. No navigate-away.
+- `WebAppTasks_getTaskById`: new public GAS function; normalizes `st_*` fields to UI shape (same mapping as WebAppLibrary.js:70-95).
+- `_getAdminTasksList`: added `assignedTo` to thin shape.
+- `_taskCache` cleared on save/complete/delete so stale data never re-opens.
+- Next: Deploy D — Manager Dashboard bespoke inline editor retired; `toggleTaskExpand`/`saveTask`/`revertTask` replaced by TaskDetail modal. Read ManagerDashboardView_v2.html carefully first — touches manager's live daily surface.
+
 ## 2026-06-23 — Unified Task UI Deploy B @358–@362
 
 - Root cause fixes: `#task-detail-modal` had no `position:fixed` (`.modal-overlay` CSS is per-view, not global); `.modal-container` had no `background:white`. Both added inline.
