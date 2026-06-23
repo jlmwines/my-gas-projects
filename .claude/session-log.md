@@ -31,6 +31,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Drive: user moved print newsletter Docs to `Library/print/`.
 - Next: AYIW email sends 2026-06-24; mark June entities published after send+distribute. Then CONTENT_DISTRIBUTION_PLAN Step 1 (add `print` to schemas.json).
 
+## 2026-06-23 — Unified Task UI Deploy B @358–@362
+
+- Root cause fixes: `#task-detail-modal` had no `position:fixed` (`.modal-overlay` CSS is per-view, not global); `.modal-container` had no `background:white`. Both added inline.
+- Manager role: status/assignee/dates locked; Delete hidden; Revert→Admin button wired (`WebAppDashboardV2_revertTaskToAdmin`); confirm: "Revert 'task' to Admin?". `revertTask` added to host contract; LibraryView + PublishingView both provide it.
+- More section: always collapsed on open (sessionStorage removed).
+- "Revert" means workflow role-transfer (manager → admin), not form reset — learned from CONTENT_WORKFLOW_REDESIGN_PLAN + ManagerDashboardView.
+- Next: Deploy C (AdminDashboard task cards → TaskDetail modal); CONTENT_DISTRIBUTION_PLAN Step 1.
+
 ## 2026-06-23 — Unified Task UI Deploy A @355–@357 + content distribution plan
 
 - @355: TaskDetail layout redesigned — 4-field compact row (status/assignee/start/due) always visible; notes always visible; entity section removed; More holds title/drive-url/footer.

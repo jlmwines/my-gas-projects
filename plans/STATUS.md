@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-23 — Library types redesigned (blog/email/print/template); June print newsletter registered; July entities pre-registered; publication calendar filled through December.
+**Updated:** 2026-06-23 — Unified Task UI Deploy B complete @362: TaskDetail modal wired into PublishingView Tasks tab + LibraryView entity drawer; manager field locks, Revert→Admin button, modal positioning fixed.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-23 |
 | Revenue | Steady |
-| Deploy Version | jlmops @357 · theme v1.2.30 |
+| Deploy Version | jlmops @362 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-23 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -35,7 +35,7 @@ The live "what now" — daily review reads these first.
 1. **Newsletter Issue #2 (June) — AYIW sends 2026-06-24; print ready to distribute.** After send: mark `email-newsletter-2026-06-en/he` published in jlmops. After print distribute: mark `print-newsletter-2026-06-en/he` published. Set `slb_TargetDate` on entities in jlmops if not set.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
-4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. **Unified Task UI Deploy A shipped @354–@357** (`jlmops/plans/UNIFIED_TASK_UI_PLAN.md`): shared TaskDetail component wired into AdminTasksView panel; next = **Deploy B** (TaskDetail modal into PublishingView + LibraryView). **Content distribution plan written** (`jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`): newsletter entity type + AYIW under email + URL stamp to `content/<slug>/urls.md` on publish; next = Step 1 (schema + Drive folder). Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
+4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. **Unified Task UI Deploy B shipped @358–@362** (`jlmops/plans/UNIFIED_TASK_UI_PLAN.md`): TaskDetail modal wired into PublishingView Tasks tab + LibraryView entity drawer; manager locks (status/assignee/dates), Revert→Admin button, modal positioning + container styling fixed; next = **Deploy C** (AdminDashboard task cards → TaskDetail modal). **Content distribution plan written** (`jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`): newsletter entity type + AYIW under email + URL stamp to `content/<slug>/urls.md` on publish; next = Step 1 (schema + Drive folder). Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 
 ## Current State
