@@ -11,6 +11,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Plan `jlmops/plans/PRODUCT_EDITOR_UX_PLAN.md` marked shipped. Smoke new-product flow end-to-end to verify searchable dropdowns retain values on tab-switch.
 - Next: Unified Task UI Deploy A, or ongoing product onboarding.
 
+## 2026-06-23 — Admin Products tab layout @347
+
+- AdminProductsView.html: 5 stacked cards → Bootstrap nav-tabs. Detail Updates eager-loads; New Products / Verify / SKU / Lookups lazy-load on first switch. Toggle buttons and chevrons removed. Badge IDs unchanged, now inside tab labels. switchTab() replaces toggleCard()/toggleVerifyCard().
+- Plan `ADMIN_PRODUCTS_TAB_PLAN.md` marked shipped @347.
+- Smoke: tab switching, badge counts, lazy-load first-switch, refreshView from accept actions.
+
 ## 2026-06-23 — Unified Task UI plan
 
 - Problem: task detail is context-dependent (entity drawer in Publishing, display-only in Library, bespoke inline in dashboard); no shared component, no consistent layout or language.

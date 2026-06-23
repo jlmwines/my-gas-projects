@@ -1,6 +1,6 @@
 # Admin Products View — Card-to-Tab Conversion
 
-Convert the five stacked cards in `AdminProductsView.html` into a Bootstrap `nav-tabs` layout. Eliminates scrolling, hides irrelevant sections, preserves all existing lazy-load and badge behavior. **Status: Planning.**
+Convert the five stacked cards in `AdminProductsView.html` into a Bootstrap `nav-tabs` layout. Eliminates scrolling, hides irrelevant sections, preserves all existing lazy-load and badge behavior. **Status: Shipped @347 (2026-06-23).**
 
 ---
 
