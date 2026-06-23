@@ -194,9 +194,74 @@
     <!-- Tab pane: New Products -->
     <div id="tab-pane-new" class="pt-3" style="display:none;">
 
-        <!-- Section A: Suggestions -->
+        <!-- Section 1: Ready for Web — export + confirm published -->
+        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-2">
+            <div>
+                <span class="font-weight-bold mr-2">Ready for Web:</span>
+                <span id="stat-onboarding-export" class="badge badge-secondary">0</span>
+            </div>
+            <div>
+                <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export</button>
+                <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
+                <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh XLT</button>
+            </div>
+        </div>
+        <div class="table-responsive border rounded mb-2">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Date</th>
+                </tr>
+              </thead>
+              <tbody id="linkage-list-body">
+                <tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>
+              </tbody>
+            </table>
+        </div>
+        <div id="new-export-status" class="mt-1 mb-3 small text-right"></div>
+
+        <!-- Section 2: Review Submissions — accepted details awaiting admin -->
+        <h6 class="text-muted mb-2">Review Submissions (<span id="stat-submissions">0</span>)</h6>
+        <div class="table-responsive mb-4 border rounded">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Task</th>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="submissions-list-body">
+                <!-- Submissions tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section 3: Awaiting manager — approved, not yet submitted -->
+        <h6 class="text-muted mb-2">Awaiting Manager (<span id="stat-pending-new">0</span>)</h6>
+        <div class="table-responsive border rounded mb-4" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Date</th>
+                </tr>
+              </thead>
+              <tbody id="pending-new-list-body">
+                <!-- Pending new product tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+
+        <!-- Section 4: Suggestions — new candidates awaiting approval -->
         <div class="d-flex align-items-center mb-2">
-          <h6 class="text-muted mb-0 mr-3">Suggestions (<span id="stat-suggestions">0</span>)</h6>
+          <h6 class="text-muted mb-0 mr-3">Candidates (<span id="stat-suggestions">0</span>)</h6>
           <select id="suggestions-sort" class="form-control form-control-sm" style="width:auto" onchange="AdminProductsView.renderSuggestionSort()">
             <option value="title">Sort: Title</option>
             <option value="price">Sort: Price</option>
@@ -218,71 +283,6 @@
               </thead>
               <tbody id="suggestions-list-body">
                 <!-- Suggestions tasks populated here -->
-              </tbody>
-            </table>
-        </div>
-
-        <!-- Section B: Review Submissions -->
-        <h6 class="text-muted mb-2">Review Submissions (<span id="stat-submissions">0</span>)</h6>
-        <div class="table-responsive mb-4 border rounded">
-            <table class="table table-hover mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th class="border-top-0">Product</th>
-                  <th class="border-top-0">SKU</th>
-                  <th class="border-top-0">Task</th>
-                  <th class="border-top-0">Date</th>
-                  <th class="border-top-0">Action</th>
-                </tr>
-              </thead>
-              <tbody id="submissions-list-body">
-                <!-- Submissions tasks populated here -->
-              </tbody>
-            </table>
-        </div>
-
-        <!-- Section D: Export -->
-        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-4">
-            <div>
-                <span class="font-weight-bold mr-2">Ready for Web:</span>
-                <span id="stat-onboarding-export" class="badge badge-secondary">0</span>
-            </div>
-            <div>
-                <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
-                <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
-                <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh Translations</button>
-            </div>
-        </div>
-        <div class="table-responsive border rounded mt-3 mb-2">
-            <table class="table table-sm mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th class="border-top-0">SKU</th>
-                  <th class="border-top-0">Title</th>
-                  <th class="border-top-0">Date</th>
-                </tr>
-              </thead>
-              <tbody id="linkage-list-body">
-                <tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>
-              </tbody>
-            </table>
-        </div>
-        <div id="new-export-status" class="mt-2 small text-right"></div>
-
-        <!-- Section E: Pending (Secondary) -->
-        <h6 class="text-muted mb-2 mt-4">Pending (<span id="stat-pending-new">0</span>)</h6>
-        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
-            <table class="table table-sm mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th class="border-top-0">SKU</th>
-                  <th class="border-top-0">Product</th>
-                  <th class="border-top-0">Title</th>
-                  <th class="border-top-0">Date</th>
-                </tr>
-              </thead>
-              <tbody id="pending-new-list-body">
-                <!-- Pending new product tasks populated here -->
               </tbody>
             </table>
         </div>
@@ -1857,7 +1857,7 @@
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 ModalOverlay.close('suggestion-modal');
-                TaskWidgets.toast('Task created. Now create EN + HE drafts in WooCommerce and pair them in WPML.', 'info');
+                TaskWidgets.toast('Suggestion approved — onboarding task created.', 'success');
                 AdminProductsView.refreshView();
             } else {
                 TaskWidgets.toast('Error: ' + res.message, 'error');
