@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-23 — New-product workflow UX @345–@346
+
+- @345: Fixed wdm_NameHe fallback (staging before Comax) in getProductDetails; spinner on accept-details; accept-details getFormData now uses val() for names (prefers staging).
+- @346: SearchableSelect widget on Region/Grape1-5/Kashrut1-5 in ManagerProductsView; price column B in _buildProductDetailExport; price in suggestion modal header; suggestion prefix fix + ModalOverlay migration; ready-for-web SKU table in Section D; confirmNewProducts() backend + Confirm Published button closes add_product task to Done.
+- Plan `jlmops/plans/PRODUCT_EDITOR_UX_PLAN.md` marked shipped. Smoke new-product flow end-to-end to verify searchable dropdowns retain values on tab-switch.
+- Next: Unified Task UI Deploy A, or ongoing product onboarding.
+
 ## 2026-06-23 — Unified Task UI plan
 
 - Problem: task detail is context-dependent (entity drawer in Publishing, display-only in Library, bespoke inline in dashboard); no shared component, no consistent layout or language.

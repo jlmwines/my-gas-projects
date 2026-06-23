@@ -1,6 +1,6 @@
 # Product Editor UX — Round 2
 
-Three independent UX improvements to the product workflow. All are unshipped; any can deploy in isolation. **Status: Planning.**
+Three independent UX improvements to the product workflow. **Status: All shipped @345–@346.**
 
 ---
 
