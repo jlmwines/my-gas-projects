@@ -1186,6 +1186,9 @@ const ProductService = (function() {
       if (!masterData.wdm_NameEn && stagingData && stagingData.wds_NameEn) {
           masterData.wdm_NameEn = stagingData.wds_NameEn;
       }
+      if (!masterData.wdm_NameHe && stagingData && stagingData.wds_NameHe) {
+          masterData.wdm_NameHe = stagingData.wds_NameHe;
+      }
       if (!masterData.wdm_NameHe && comaxData && comaxData.cpm_NameHe) {
           masterData.wdm_NameHe = comaxData.cpm_NameHe;
       }
