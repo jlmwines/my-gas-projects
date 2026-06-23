@@ -253,8 +253,23 @@
             </div>
             <div>
                 <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export New Products</button>
+                <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
                 <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh Translations</button>
             </div>
+        </div>
+        <div class="table-responsive border rounded mt-3 mb-2">
+            <table class="table table-sm mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Title</th>
+                  <th class="border-top-0">Date</th>
+                </tr>
+              </thead>
+              <tbody id="linkage-list-body">
+                <tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>
+              </tbody>
+            </table>
         </div>
         <div id="new-export-status" class="mt-2 small text-right"></div>
 
@@ -656,8 +671,8 @@
   <div class="modal-overlay" id="suggestion-modal">
     <div class="modal-container" style="max-width: 500px; max-height: auto;">
       <div class="modal-header">
-        <h5 class="mb-0">Approve Suggestion</h5>
-        <button type="button" class="close" onclick="document.getElementById('suggestion-modal').style.display='none'">&times;</button>
+        <h5 class="mb-0">Approve Suggestion <small id="sugg-price-meta" class="text-muted font-weight-normal"></small></h5>
+        <button type="button" class="close" onclick="ModalOverlay.close('suggestion-modal')">&times;</button>
       </div>
       <div class="form-body">
         <p class="text-muted small">Define the official names for the new product.</p>
@@ -678,7 +693,7 @@
         </div>
       </div>
       <div class="modal-footer bg-light">
-        <button class="btn btn-sm" onclick="document.getElementById('suggestion-modal').style.display='none'">Cancel</button>
+        <button class="btn btn-sm" onclick="ModalOverlay.close('suggestion-modal')">Cancel</button>
         <button class="btn btn-sm" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
       </div>
     </div>
@@ -1636,7 +1651,7 @@
                     <button class="btn btn-sm" data-action="cancel">Cancel</button>
                 </td>
             `;
-            tr.querySelector('[data-action="accept"]').addEventListener('click', () => AdminProductsView.openSuggestionModal(t.taskId, t.sku, t.title));
+            tr.querySelector('[data-action="accept"]').addEventListener('click', () => AdminProductsView.openSuggestionModal(t.taskId, t.sku, t.title, t.price));
             tr.querySelector('[data-action="cancel"]').addEventListener('click', () => AdminProductsView.cancelSuggestion(t.taskId));
             tbody.appendChild(tr);
         });
@@ -1695,13 +1710,31 @@
         const render = tasks => {
             const count = tasks ? tasks.length : 0;
             const el = document.getElementById('stat-linkage');
-            if(el) el.textContent = count; // Header count
+            if(el) el.textContent = count;
 
             const exportEl = document.getElementById('stat-onboarding-export');
-            if(exportEl) exportEl.textContent = count; // Footer count
+            if(exportEl) exportEl.textContent = count;
 
             const btnExport = document.getElementById('btn-export-new');
             if(btnExport) btnExport.disabled = (count === 0);
+
+            const tbody = document.getElementById('linkage-list-body');
+            if (tbody) {
+                if (!tasks || tasks.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>';
+                } else {
+                    tbody.innerHTML = '';
+                    tasks.forEach(t => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${t.sku}</td>
+                            <td>${t.title || ''}</td>
+                            <td>${new Date(t.createdDate).toLocaleDateString()}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
         google.script.run.withSuccessHandler(render).WebAppProducts_getLinkageTasks();
@@ -1716,11 +1749,31 @@
             if (res.success) {
                 statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
                 statusDiv.className = 'mt-2 small text-success';
+                document.getElementById('btn-confirm-new').disabled = false;
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;
                 statusDiv.className = 'mt-2 small text-danger';
             }
         }).WebAppProducts_exportNewProducts();
+    };
+
+    AdminProductsView.confirmNewProducts = function() {
+        TaskWidgets.confirm('Product published in WooCommerce and Comax updated? This closes the onboarding task.', function() {
+            const statusDiv = document.getElementById('new-export-status');
+            statusDiv.textContent = 'Closing task...';
+            statusDiv.className = 'mt-2 small text-info';
+            google.script.run.withSuccessHandler(res => {
+                if (res.success) {
+                    statusDiv.textContent = res.message;
+                    statusDiv.className = 'mt-2 small text-success';
+                    document.getElementById('btn-confirm-new').disabled = true;
+                    AdminProductsView.refreshView();
+                } else {
+                    statusDiv.textContent = 'Error: ' + res.message;
+                    statusDiv.className = 'mt-2 small text-danger';
+                }
+            }).WebAppProducts_confirmNewProducts();
+        });
     };
 
     // Re-pull HE products and rebuild WebXltM so a product added since the last
@@ -1780,15 +1833,16 @@
     // --- Modal Logic ---
 
     // Suggestion Logic
-    AdminProductsView.openSuggestionModal = function(taskId, sku, title) {
+    AdminProductsView.openSuggestionModal = function(taskId, sku, title, price) {
         AdminProductsView.currentTaskId = taskId;
         AdminProductsView.currentSku = sku;
         document.getElementById('sugg-sku').value = sku;
-        // Extract name from title "New Product Suggestion: [Name]" - this is the Hebrew name
-        let name = title.replace('New Product Suggestion:', '').trim();
-        document.getElementById('sugg-name-en').value = ''; // User must provide
-        document.getElementById('sugg-name-he').value = name; // Suggest the Hebrew name from title
-        document.getElementById('suggestion-modal').style.display = 'flex';
+        // Title format is "Suggestion: <HE name from Comax>" — strip the prefix
+        let comaxName = title.replace(/^Suggestion:\s*/, '').trim();
+        document.getElementById('sugg-name-en').value = '';
+        document.getElementById('sugg-name-he').value = comaxName;
+        document.getElementById('sugg-price-meta').textContent = price ? '— ₪' + price : '';
+        ModalOverlay.open('suggestion-modal');
     };
 
     AdminProductsView.submitSuggestionApproval = function() {
@@ -1801,7 +1855,7 @@
         TaskWidgets.confirm(`Approve suggestion for ${nameEn}?`, function() {
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                document.getElementById('suggestion-modal').style.display = 'none';
+                ModalOverlay.close('suggestion-modal');
                 TaskWidgets.toast('Task created. Now create EN + HE drafts in WooCommerce and pair them in WPML.', 'info');
                 AdminProductsView.refreshView();
             } else {
@@ -1925,8 +1979,8 @@
 
       const fd = {
         wdm_WebIdEn: m.wdm_WebIdEn,
-        wdm_NameEn: m.wdm_NameEn,
-        wdm_NameHe: m.wdm_NameHe,
+        wdm_NameEn: val('NameEn'),
+        wdm_NameHe: val('NameHe'),
         wdm_Region: val('Region'),
         wdm_ABV: val('ABV'),
         wdm_Intensity: val('Intensity'),
@@ -2010,7 +2064,7 @@
     AdminProductsView.acceptChanges = function() {
       TaskWidgets.confirm(`Accept changes for ${AdminProductsView.currentSku}?`, function() {
       const formData = AdminProductsView.getFormData();
-      document.getElementById('modal-status').textContent = 'Accepting...';
+      document.getElementById('modal-status').innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status"></span>Accepting...';
       google.script.run.withSuccessHandler(res => {
         if (res.success) {
           // Auto-advance: splice accepted task out and open the next one in place.
@@ -2036,6 +2090,7 @@
             AdminProductsView.refreshView();
           }
         } else {
+          document.getElementById('modal-status').innerHTML = '';
           TaskWidgets.toast('Error: ' + res.message, 'error');
         }
       }).WebAppProducts_handleAdminAccept(AdminProductsView.currentTaskId, AdminProductsView.currentSku, formData);

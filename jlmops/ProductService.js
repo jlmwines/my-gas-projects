@@ -1460,6 +1460,7 @@ const ProductService = (function() {
         const exportDataRows = [];
         const headers = [
             'SKU',
+            'Price (₪)',
             'Product Title EN',
             'Short Description EN',
             'Long Description EN',
@@ -1499,6 +1500,7 @@ const ProductService = (function() {
 
             exportDataRows.push([
                 sku,
+                cmxRow ? (cmxRow.cpm_Price || '') : '',
                 productTitleEn,
                 shortDescriptionEn,
                 longDescriptionEnHtml,
@@ -1531,8 +1533,8 @@ const ProductService = (function() {
              .setVerticalAlignment('top');
 
         // Apply specific column widths
-        sheet.setColumnWidth(4, 550); // Column D: Long Description (EN)
-        sheet.setColumnWidth(6, 550); // Column F: Long Description (HE)
+        sheet.setColumnWidth(5, 550); // Column E: Long Description (EN)
+        sheet.setColumnWidth(7, 550); // Column G: Long Description (HE)
 
         // Set vertical alignment for the header row to bottom
         sheet.getRange(1, 1, 1, headers.length).setVerticalAlignment('bottom');
@@ -1595,6 +1597,22 @@ const ProductService = (function() {
       // the detail-update export (same columns, data, and formatting).
       return _buildProductDetailExport(skus, sessionId);
     }
+
+  function confirmNewProducts(sessionId) {
+    try {
+      const tasks = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.onboarding.add_product', 'Accepted', sessionId);
+      let count = 0;
+      tasks.forEach(t => {
+        TaskService.updateTaskStatus(t.st_TaskId, 'Done');
+        count++;
+      });
+      WebAppTasks.invalidateCache();
+      return { success: true, message: `Marked ${count} new product task(s) as Done.` };
+    } catch (e) {
+      LoggerService.error('ProductService', 'confirmNewProducts', `Error: ${e.message}`, e);
+      throw e;
+    }
+  }
 
   function confirmWebUpdates(sessionId) { // Added sessionId
     const serviceName = 'ProductService';
@@ -3391,6 +3409,7 @@ const ProductService = (function() {
     acceptProductDetails: acceptProductDetails,
     generateDetailExport: generateDetailExport,
     generateNewProductExport: generateNewProductExport,
+    confirmNewProducts: confirmNewProducts,
     exportDescriptionBackfill: exportDescriptionBackfill,
     confirmWebUpdates: confirmWebUpdates,
     getProductHtmlPreview: getProductHtmlPreview,

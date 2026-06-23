@@ -47,7 +47,11 @@
     .col-header { font-weight: 600; color: #555; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .hebrew-text { direction: rtl; text-align: right; }
-    select#edit-Region option { text-align: right !important; }
+    .ss-wrap { position: relative; }
+    .ss-dropdown { display:none; position:absolute; z-index:1050; background:#fff; border:1px solid #ced4da; border-radius:4px; max-height:200px; overflow-y:auto; width:100%; box-shadow:0 2px 6px rgba(0,0,0,.15); }
+    .ss-item { padding:6px 12px; cursor:pointer; font-size:14px; }
+    .ss-item:hover, .ss-item.ss-active { background:#e9ecef; }
+    .ss-item-empty { padding:6px 12px; color:#6c757d; font-size:14px; }
     .preview-box { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 4px; min-height: 200px; white-space: pre-wrap; font-size: 13px; }
 
     /* Flexible Description Boxes */
@@ -336,7 +340,7 @@
             </div>
             <div>
               <div class="col-header">Edit</div>
-              <div class="form-group"><label>Region</label><select class="form-control" id="edit-Region"></select></div>
+              <div class="form-group"><label>Region</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Region-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Region"><div class="ss-dropdown" id="edit-Region-dd"></div></div></div>
               <div class="form-group"><label>Alcohol by Volume (%)</label><input type="text" class="form-control" id="edit-ABV" list="abv-options" placeholder=""></div>
             </div>
           </div>
@@ -433,11 +437,11 @@
              </div>
              <div>
                <div class="col-header">Edit</div>
-               <div class="form-group"><label>Grape 1</label><select class="form-control" id="edit-Grape1"></select></div>
-               <div class="form-group"><label>Grape 2</label><select class="form-control" id="edit-Grape2"></select></div>
-               <div class="form-group"><label>Grape 3</label><select class="form-control" id="edit-Grape3"></select></div>
-               <div class="form-group"><label>Grape 4</label><select class="form-control" id="edit-Grape4"></select></div>
-               <div class="form-group"><label>Grape 5</label><select class="form-control" id="edit-Grape5"></select></div>
+               <div class="form-group"><label>Grape 1</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Grape1-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Grape1"><div class="ss-dropdown" id="edit-Grape1-dd"></div></div></div>
+               <div class="form-group"><label>Grape 2</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Grape2-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Grape2"><div class="ss-dropdown" id="edit-Grape2-dd"></div></div></div>
+               <div class="form-group"><label>Grape 3</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Grape3-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Grape3"><div class="ss-dropdown" id="edit-Grape3-dd"></div></div></div>
+               <div class="form-group"><label>Grape 4</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Grape4-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Grape4"><div class="ss-dropdown" id="edit-Grape4-dd"></div></div></div>
+               <div class="form-group"><label>Grape 5</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Grape5-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Grape5"><div class="ss-dropdown" id="edit-Grape5-dd"></div></div></div>
              </div>
            </div>
         </div>
@@ -462,11 +466,11 @@
                    <input type="checkbox" class="custom-control-input" id="edit-HeterMechira">
                    <label class="custom-control-label" for="edit-HeterMechira">Heter Mechira (היתר מכירה)</label>
                </div>
-               <div class="form-group"><label>Kashrut 1</label><select class="form-control" id="edit-Kashrut1"></select></div>
-               <div class="form-group"><label>Kashrut 2</label><select class="form-control" id="edit-Kashrut2"></select></div>
-               <div class="form-group"><label>Kashrut 3</label><select class="form-control" id="edit-Kashrut3"></select></div>
-               <div class="form-group"><label>Kashrut 4</label><select class="form-control" id="edit-Kashrut4"></select></div>
-               <div class="form-group"><label>Kashrut 5</label><select class="form-control" id="edit-Kashrut5"></select></div>
+               <div class="form-group"><label>Kashrut 1</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Kashrut1-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Kashrut1"><div class="ss-dropdown" id="edit-Kashrut1-dd"></div></div></div>
+               <div class="form-group"><label>Kashrut 2</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Kashrut2-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Kashrut2"><div class="ss-dropdown" id="edit-Kashrut2-dd"></div></div></div>
+               <div class="form-group"><label>Kashrut 3</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Kashrut3-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Kashrut3"><div class="ss-dropdown" id="edit-Kashrut3-dd"></div></div></div>
+               <div class="form-group"><label>Kashrut 4</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Kashrut4-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Kashrut4"><div class="ss-dropdown" id="edit-Kashrut4-dd"></div></div></div>
+               <div class="form-group"><label>Kashrut 5</label><div class="ss-wrap"><input type="text" class="form-control ss-input" id="edit-Kashrut5-display" autocomplete="off" placeholder="Type to filter…"><input type="hidden" id="edit-Kashrut5"><div class="ss-dropdown" id="edit-Kashrut5-dd"></div></div></div>
              </div>
            </div>
         </div>
@@ -517,6 +521,82 @@
   </div>
 
   <script>
+    // Searchable dropdown widget — text input (display/filter) + hidden input (stores code).
+    // The hidden input keeps the same id as the original <select> so all save/preview code works unchanged.
+    var SearchableSelect = (function() {
+      var _registry = {}; // id → { data, currentCode }
+
+      function _render(id, term) {
+        var entry = _registry[id];
+        var dd = document.getElementById(id + '-dd');
+        var filtered = term
+          ? entry.data.filter(function(d) { return d.textEN.toLowerCase().indexOf(term.toLowerCase()) !== -1; })
+          : entry.data;
+        dd.innerHTML = '';
+        if (filtered.length === 0) {
+          dd.innerHTML = '<div class="ss-item-empty">No matches</div>';
+        } else {
+          filtered.forEach(function(d) {
+            var div = document.createElement('div');
+            div.className = 'ss-item';
+            div.textContent = d.textEN;
+            div.addEventListener('mousedown', function(e) {
+              e.preventDefault(); // keep focus from leaving input before click registers
+              _select(id, d.code, d.textEN);
+            });
+            dd.appendChild(div);
+          });
+        }
+        dd.style.display = 'block';
+      }
+
+      function _select(id, code, textEN) {
+        var entry = _registry[id];
+        entry.currentCode = code;
+        document.getElementById(id).value = code;
+        document.getElementById(id + '-display').value = textEN;
+        document.getElementById(id + '-dd').style.display = 'none';
+      }
+
+      function init(id, items) {
+        _registry[id] = { data: items, currentCode: '' };
+        var display = document.getElementById(id + '-display');
+        var dd = document.getElementById(id + '-dd');
+        if (!display || !dd) return;
+
+        display.addEventListener('input', function() { _render(id, this.value); });
+        display.addEventListener('focus', function() { _render(id, this.value); });
+        display.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') { dd.style.display = 'none'; }
+        });
+        display.addEventListener('blur', function() {
+          setTimeout(function() { dd.style.display = 'none'; }, 150);
+          // If display is non-empty but no match, revert to last known code's text
+          var entry = _registry[id];
+          if (display.value === '') {
+            document.getElementById(id).value = '';
+            entry.currentCode = '';
+          } else {
+            var match = entry.data.find(function(d) { return d.code === entry.currentCode; });
+            display.value = match ? match.textEN : '';
+          }
+        });
+      }
+
+      function setValue(id, code) {
+        if (!_registry[id]) return;
+        var entry = _registry[id];
+        entry.currentCode = code || '';
+        document.getElementById(id).value = code || '';
+        var match = code ? entry.data.find(function(d) { return d.code === code; }) : null;
+        document.getElementById(id + '-display').value = match ? match.textEN : '';
+      }
+
+      function isRegistered(id) { return !!_registry[id]; }
+
+      return { init: init, setValue: setValue, isRegistered: isRegistered };
+    })();
+
     // Namespace to prevent global scope pollution on reload
     window.ManagerProductsView = {};
 
@@ -872,18 +952,7 @@
     // Helper to populate select dropdowns with data objects {code, textEN, textHE}
     ManagerProductsView.populateSelectWithData = function(selectIds, data) {
         selectIds.forEach(selectId => {
-            const selectEl = document.getElementById(selectId);
-            if (!selectEl) return;
-
-            selectEl.innerHTML = '<option value="">-- Select --</option>'; 
-            if (data && Array.isArray(data)) {
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.code;
-                    opt.textContent = item.textEN;
-                    selectEl.appendChild(opt);
-                });
-            }
+            SearchableSelect.init(selectId, data || []);
         });
     };
 
@@ -1145,24 +1214,18 @@
 
     // Helper to populate the Region dropdown
     ManagerProductsView.populateRegionDropdown = function(regions) {
-        const selectEl = document.getElementById('edit-Region');
-        if (!selectEl) return;
-
-        // Clear existing options and add a default "Select Region" option
-        selectEl.innerHTML = '<option value="">Select Region</option>'; 
-
-        if (regions && Array.isArray(regions)) {
-            regions.forEach(region => {
-                const opt = document.createElement('option');
-                opt.value = region.code; // Use 'code' property from the mapped object
-                opt.textContent = region.code; // Use 'code' property for display text for testing
-                selectEl.appendChild(opt);
-            });
-        }
+        SearchableSelect.init('edit-Region', regions || []);
     };
 
     ManagerProductsView.setVal = function(id, val) { document.getElementById(id).textContent = val || '-'; };
-    ManagerProductsView.setInp = function(id, val) { document.getElementById(id).value = val || ''; };
+    ManagerProductsView.setInp = function(id, val) {
+        if (SearchableSelect.isRegistered(id)) {
+            SearchableSelect.setValue(id, val || '');
+        } else {
+            var el = document.getElementById(id);
+            if (el) el.value = val || '';
+        }
+    };
 
     ManagerProductsView.closeModal = function() {
       const m = document.getElementById('editor-modal');
@@ -1352,28 +1415,13 @@
             document.getElementById('edit-ShortDescrEn').value = m.wdm_ShortDescrEn || '';
             document.getElementById('edit-DescriptionEn').value = m.wdm_DescriptionEn || '';
         } else if (tab === 'specs') {
-            // Special Logic for Region: Map Name to Code if needed
             let regionVal = m.wdm_Region || '';
-            const selectEl = document.getElementById('edit-Region');
-            
-            // 1. Try direct assignment (assuming regionVal is a Code)
-            selectEl.value = regionVal;
-            
-            // 2. If failed (selectedIndex is -1 or 0/default but value was not empty), try to find by Name or Code match
-            if (regionVal && selectEl.selectedIndex <= 0) {
-                // Try finding by TextHE
-                let match = ManagerProductsView.lookupRegions.find(r => r.textHE === regionVal);
-                
-                // If not found, try finding by Code (just in case strict equality failed above due to types)
-                if (!match) {
-                    match = ManagerProductsView.lookupRegions.find(r => String(r.code) === String(regionVal));
-                }
-
-                if (match) {
-                    selectEl.value = match.code;
-                }
+            // Resolve code: try direct, then textHE fallback
+            if (regionVal && !ManagerProductsView.lookupRegions.find(r => r.code === regionVal)) {
+                const match = ManagerProductsView.lookupRegions.find(r => r.textHE === regionVal || String(r.code) === String(regionVal));
+                if (match) regionVal = match.code;
             }
-            
+            SearchableSelect.setValue('edit-Region', regionVal);
             document.getElementById('edit-ABV').value = ManagerProductsView.formatABVForInput(m.wdm_ABV || '');
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = m.wdm_Intensity || '';
@@ -1393,15 +1441,13 @@
             }
         } else if (tab === 'grapes') {
              for (let i = 1; i <= 5; i++) {
-                 const val = m[`wdm_GrapeG${i}`];
-                 if (val) document.getElementById(`edit-Grape${i}`).value = val;
+                 SearchableSelect.setValue(`edit-Grape${i}`, m[`wdm_GrapeG${i}`] || '');
              }
         } else if (tab === 'kashrut') {
              const hmEl = document.getElementById('edit-HeterMechira');
              if (hmEl) hmEl.checked = (m.wdm_HeterMechira == 1);
              for (let i = 1; i <= 5; i++) {
-                 const val = m[`wdm_KashrutK${i}`];
-                 if (val) document.getElementById(`edit-Kashrut${i}`).value = val;
+                 SearchableSelect.setValue(`edit-Kashrut${i}`, m[`wdm_KashrutK${i}`] || '');
              }
         }
         ManagerProductsView.updatePreview();
@@ -1415,7 +1461,7 @@
             document.getElementById('edit-ShortDescrEn').value = '';
             document.getElementById('edit-DescriptionEn').value = '';
         } else if (tab === 'specs') {
-            document.getElementById('edit-Region').value = '';
+            SearchableSelect.setValue('edit-Region', '');
             document.getElementById('edit-ABV').value = '';
         } else if (tab === 'attr') {
             document.getElementById('edit-Intensity').value = '';
@@ -1429,17 +1475,11 @@
                 if(el) el.checked = false;
             });
         } else if (tab === 'grapes') {
-             ['edit-Grape1', 'edit-Grape2', 'edit-Grape3', 'edit-Grape4', 'edit-Grape5'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
-            });
+             ['edit-Grape1', 'edit-Grape2', 'edit-Grape3', 'edit-Grape4', 'edit-Grape5'].forEach(id => SearchableSelect.setValue(id, ''));
         } else if (tab === 'kashrut') {
              const hmEl = document.getElementById('edit-HeterMechira');
              if (hmEl) hmEl.checked = false;
-             ['edit-Kashrut1', 'edit-Kashrut2', 'edit-Kashrut3', 'edit-Kashrut4', 'edit-Kashrut5'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
-            });
+             ['edit-Kashrut1', 'edit-Kashrut2', 'edit-Kashrut3', 'edit-Kashrut4', 'edit-Kashrut5'].forEach(id => SearchableSelect.setValue(id, ''));
         }
         ManagerProductsView.updatePreview();
     };

@@ -968,6 +968,13 @@ function WebAppProducts_exportNewProducts() {
 }
 
 /**
+ * Marks all Accepted new-product tasks as Done (called after export + Woo publish confirmed).
+ */
+function WebAppProducts_confirmNewProducts() {
+    return ProductService.confirmNewProducts();
+}
+
+/**
  * On-demand WebXltM (translation links) refresh. Re-pulls HE products from Woo and
  * rebuilds the translation master so a newly-added product's EN↔HE link appears
  * without waiting for the next full daily sync. Skips if a sync is in progress.
