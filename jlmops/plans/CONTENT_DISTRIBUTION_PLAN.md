@@ -16,15 +16,15 @@ The existing model tracks blog posts (entity type `blog`) through draft → publ
 |---|---|---|---|
 | `blog` | `Library/blog/<slug>/` | Blog posts | Yes |
 | `email` | `Library/email/<slug>/` | AYIW emails | Yes |
-| `newsletter` | `Library/newsletter/<slug>/` | Print newsletter (Wine Talk) | Yes |
+| `print` | `Library/print/<slug>/` | Print newsletter (Wine Talk), flyers, carton art | Yes (where applicable) |
 | `image` | `Library/image/<slug>/` | Post images | No (shared) |
 | `template` | `Library/template/<slug>/` | Draft templates only — post, ayiw, newsletter | No |
 
 **AYIW** lives under `email` type. Current `blog/ayiw-june/` folder is misplaced — user will relocate after library setup is final.
 
-**Newsletter** is a new entity type. The printed newsletter (Wine Talk) is assembled by admin from blog post PRINT NEWSLETTER BODY + AYIW body, then EN and HE Google Docs are attached. Manager prints from those docs. Images and QR codes are local files, not library entities.
+**Print** is a new entity type covering all physical output: printed newsletter (Wine Talk), flyers, carton art. The newsletter is assembled by admin from blog post PRINT NEWSLETTER BODY + AYIW body, then EN and HE Google Docs are attached. Manager prints from those docs. Images and QR codes are local files, not library entities.
 
-**Templates folder** holds only draft-structure templates: `template-post`, `template-ayiw`, `template-newsletter`. Not content instances. Any newsletter instances currently there are misplaced and should move to `Library/newsletter/`.
+**Templates folder** holds only draft-structure templates: `template-post`, `template-ayiw`, `template-newsletter`. Not content instances. Any newsletter instances currently there are misplaced and should move to `Library/print/`.
 
 ---
 
@@ -99,17 +99,17 @@ Newsletter doc is assembled manually — no machine template. The newsletter Goo
 
 ## Build Sequence
 
-**Step 1 — Schema: add `newsletter` entity type**
-Append `newsletter` to the valid `slb_EntityType` values in `config/schemas.json`. No new SysConfig folder key needed — `LibraryService._getCanonicalFolder(type, concept)` reads only `system.folder.library` (already configured) and auto-creates `Library/<type>/<slug>/` subfolders on demand via `_getOrCreateChildFolder`. Run `generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
+**Step 1 — Schema: add `print` entity type**
+Append `print` to the valid `slb_EntityType` values in `config/schemas.json`. No new SysConfig folder key needed — `LibraryService._getCanonicalFolder(type, concept)` reads only `system.folder.library` (already configured) and auto-creates `Library/<type>/<slug>/` subfolders on demand via `_getOrCreateChildFolder`. Run `generate-config.js` → `clasp push` → `rebuildSysConfigFromSource()`.
 
-**Step 2 — LibraryService: newsletter folder routing**
-`LibraryService._getEntityFolder(type)` already maps type → folder. Add `newsletter` case. `spawnContentChain` already works for any type; it will work for newsletter once the folder is registered.
+**Step 2 — LibraryService: print folder routing**
+`LibraryService._getEntityFolder(type)` already maps type → folder. Add `print` case. `spawnContentChain` already works for any type; it will work for print once the folder is registered.
 
-**Step 3 — Task definitions: newsletter + email task types**
+**Step 3 — Task definitions: print + email task types**
 Add to `config/taskDefinitions.json`:
-- `task.content.newsletter.create-en`
-- `task.content.newsletter.create-he`
-- `task.content.newsletter.print`
+- `task.content.print.create-en`
+- `task.content.print.create-he`
+- `task.content.print.distribute`
 - `task.content.email.create-en`
 - `task.content.email.create-he`
 - `task.content.email.send`
@@ -117,12 +117,12 @@ Add to `config/taskDefinitions.json`:
 These follow the same shape as existing `task.content.*` types (doc-attachable, assignable, language-flagged).
 
 **Step 4 — TaskPacks: pack bodies for new types**
-Add pack rendering in `TaskPacks.packBody()` for the new task types. Newsletter create packs: same as blog content-edit (Open Doc, Editing Done). Newsletter print pack: simple confirm button. Email create packs: same as content-edit. Email send pack: confirm send button.
+Add pack rendering in `TaskPacks.packBody()` for the new task types. Print create packs: same as blog content-edit (Open Doc, Editing Done). Print distribute pack: simple confirm button. Email create packs: same as content-edit. Email send pack: confirm send button.
 
 **Step 5 — URL stamp on publish**
 In `LibraryService.markPublished(slug)`, after state update, resolve `jlmwines.com/<slug>` and `jlmwines.com/he/<slug>`, find all entities where `slb_References` contains the slug, and call `logEntityActivity` with type `url-stamped` and the URL payload. LibraryView drawer activity tab will surface this automatically.
 
-**Step 6 — `spawnContentChain` for newsletter and email**
+**Step 6 — `spawnContentChain` for print and email**
 Verify `spawnContentChain` covers the new task type lists. Likely config-driven already — just needs the new task type keys in `taskDefinitions.json` and a `chainTasks` list per type. Confirm in `LibraryService.js` before assuming.
 
 ---
@@ -131,13 +131,12 @@ Verify `spawnContentChain` covers the new task type lists. Likely config-driven 
 
 User will reorganize Drive folders (safe — Drive file IDs are stable, `slb_DocUrl` links survive moves). After reorganization, session fixes `content/register-library.js`:
 
-1. Add `'newsletter'` to the `TYPES` array (line ~39)
-2. Add `'slb_EntityType'` to `UPDATE_FIELDS` (line ~434) so `--update` can correct entity types
-3. Update manifest entries: AYIW slugs get `content_type: 'email'`; add newsletter slug entries with `content_type: 'newsletter'`
-4. Run `node content/register-library.js --update <ayiw-slug>` for each AYIW entity to flip type from `blog` → `email`
-5. Run `node content/register-library.js <newsletter-slug>` to register new newsletter entities
+1. `TYPES` updated to `['blog', 'email', 'print', 'template']` — done.
+2. `slb_EntityType` added to `UPDATE_FIELDS` — done.
+3. Add print manifest entries: `print-newsletter-2026-06-en/he` (and future print entities) with `content_type: 'print'`
+4. Run `node content/register-library.js <print-slug>` to register print entities
 
-Note: `newsletter` type also needs to be appended to `slb_EntityType` valid values in `config/schemas.json` (Step 1 of build sequence) before GAS will accept newsletter entities through the task/library system.
+Note: `print` type also needs to be appended to `slb_EntityType` valid values in `config/schemas.json` (Step 1 of build sequence) before GAS will accept print entities through the task/library system.
 
 ---
 

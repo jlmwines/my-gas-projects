@@ -21,6 +21,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - @353: Container px-2 (was p-4) — tighter mobile side padding.
 - Plan `ADMIN_PRODUCTS_TAB_PLAN.md` marked shipped.
 
+## 2026-06-23 — Library type taxonomy + June/July content entities
+
+- Library entity types redesigned: `['blog', 'email', 'print', 'template']`. Dropped news/mention/social/customer/image (all unused). Added `print` for physical output (newsletters, flyers, carton art).
+- `register-library.js`: TYPES trimmed, `slb_EntityType` added to UPDATE_FIELDS, image manifest entries removed (orphan rows in SysLibrary harmless), July email+print entries added.
+- June print newsletter (EN+HE Google Docs) registered as `print-newsletter-2026-06-en/he`. July AYIW email + print newsletter registered as drafts.
+- `CONTENT_DISTRIBUTION_PLAN.md`: `newsletter` type renamed `print` throughout; Drive folder `Library/print/`.
+- `PUBLICATION_CALENDAR.md`: July–December slots filled from REGION_POSTS_PLAN.md with dates.
+- Drive: user moved print newsletter Docs to `Library/print/`.
+- Next: AYIW email sends 2026-06-24; mark June entities published after send+distribute. Then CONTENT_DISTRIBUTION_PLAN Step 1 (add `print` to schemas.json).
+
 ## 2026-06-23 — Unified Task UI Deploy A @355–@357 + content distribution plan
 
 - @355: TaskDetail layout redesigned — 4-field compact row (status/assignee/start/due) always visible; notes always visible; entity section removed; More holds title/drive-url/footer.

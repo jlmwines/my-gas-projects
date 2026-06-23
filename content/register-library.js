@@ -35,8 +35,10 @@ const CRED_PATH = path.join(CONTENT_DIR, '..', '.gcp-credentials.json');
 const LIBRARY_SPREADSHEET_ID = '1Xu8XNFCxLm-65UWopz0jHJD7s7aGKNhIbqcoQtBDMGs';
 const SHEET_NAME = 'SysLibrary';
 
-// Controlled vocabulary per §6 + §20
-const TYPES = ['blog', 'news', 'mention', 'email', 'social', 'template', 'image', 'customer'];
+// Controlled vocabulary — channel-based types only.
+// blog=source content (web); email=email channel output; print=print channel output; template=reusable draft structures.
+// Dropped: news, mention, social, customer (no registered entries); image (images tracked on blog entity notes, not as library entities).
+const TYPES = ['blog', 'email', 'print', 'template'];
 const LANGUAGES = ['en', 'he', null];
 
 // ─── Manifest ───────────────────────────────────────────────────────
@@ -60,65 +62,9 @@ const MANIFEST = [
     wp_post_id: 67405,
     references: ['blog-context-en'],
   },
-  {
-    slug: 'image-context-featured',
-    content_type: 'image',
-    language: null,
-    state: 'published',
-    title: 'Context — featured image',
-    kind: 'featured',
-    descriptor: 'featured',
-    references: ['blog-context-en', 'blog-context-he'],
-    notes: 'wp_media_id: 67422; wp_url: /wp-content/uploads/2026/05/context-featured.jpg',
-  },
-  {
-    slug: 'image-context-body-01-season-clock',
-    content_type: 'image',
-    language: null,
-    state: 'published',
-    title: 'Context — body 1, season clock',
-    kind: 'body',
-    index: '01',
-    descriptor: 'season-clock',
-    references: ['blog-context-en', 'blog-context-he'],
-    notes: 'wp_media_id: 67407; wp_url: /wp-content/uploads/2026/05/context-season-clock.jpg',
-  },
-  {
-    slug: 'image-context-body-02-pairing',
-    content_type: 'image',
-    language: null,
-    state: 'published',
-    title: 'Context — body 2, pairing',
-    kind: 'body',
-    index: '02',
-    descriptor: 'pairing',
-    references: ['blog-context-en', 'blog-context-he'],
-    notes: 'wp_media_id: 67413; wp_url: /wp-content/uploads/2026/05/context-pairing-v2.jpg',
-  },
-  {
-    slug: 'image-context-body-03-gathering',
-    content_type: 'image',
-    language: null,
-    state: 'published',
-    title: 'Context — body 3, gathering',
-    kind: 'body',
-    index: '03',
-    descriptor: 'gathering',
-    references: ['blog-context-en', 'blog-context-he'],
-    notes: 'wp_media_id: 67409; wp_url: /wp-content/uploads/2026/05/context-gathering.jpg',
-  },
-  {
-    slug: 'image-context-body-04-curation',
-    content_type: 'image',
-    language: null,
-    state: 'published',
-    title: 'Context — body 4, curation',
-    kind: 'body',
-    index: '04',
-    descriptor: 'curation',
-    references: ['blog-context-en', 'blog-context-he'],
-    notes: 'wp_media_id: 67414; wp_url: /wp-content/uploads/2026/05/context-curation-v2.jpg',
-  },
+  // All image-context-* entries removed from manifest (image type dropped).
+  // Rows remain in SysLibrary as orphans — harmless.
+  // wp_media_ids: 67422 featured, 67407 season-clock, 67413 pairing, 67409 gathering, 67414 curation
   // ─── Welcome family templates (phase 10 migration 2026-05-27) ──────
   // Content copy-pasted from current SysConfig source rows in
   // jlmops/config/otherSettings.json — `crm.template.welcome.*`.
@@ -264,8 +210,8 @@ JLM Wines`,
     doc_url: 'https://docs.google.com/document/d/1lm4DOQXAGsOjJ0DjsCmZPbVaYmRrEBBp78eI1WCETfg/edit',
   },
   // ─── Monthly newsletter issues ────────────────────────────────────
-  // One EN+HE pair per issue. content_type='email' (covers both print insert
-  // and companion email send). Files are local (session-owned):
+  // AYIW companion email: content_type='email'. Print newsletter (Wine Talk): content_type='print'.
+  // Files are local (session-owned):
   //   marketing/newsletter/issues/<YYYY-MM>/<YYYY-MM>-<label>-en.md/docx/html
   // slb_TargetDate set via jlmops after registration.
   {
@@ -287,6 +233,65 @@ JLM Wines`,
     subject_line: 'יוני מהכרם — יצירת הפרי',
     references: ['email-newsletter-2026-06-en'],
     notes: 'הוספת גיליון יוני + מייל מלווה. מקור: marketing/newsletter/issues/2026-06/',
+  },
+  // ─── Slot A: July 2026 — Galilee ─────────────────────────────────
+  {
+    slug: 'email-ayiw-2026-07-en',
+    content_type: 'email',
+    language: 'en',
+    state: 'draft',
+    title: 'July 2026 AYIW email (EN) — Galilee',
+    references: ['email-ayiw-2026-07-he'],
+    notes: 'Target send: 2026-07-07. Source: marketing/newsletter/issues/2026-07/',
+  },
+  {
+    slug: 'email-ayiw-2026-07-he',
+    content_type: 'email',
+    language: 'he',
+    state: 'draft',
+    title: 'July 2026 AYIW email (HE) — Galilee',
+    references: ['email-ayiw-2026-07-en'],
+    notes: 'שליחה מתוכננת: 2026-07-07. מקור: marketing/newsletter/issues/2026-07/',
+  },
+  {
+    slug: 'print-newsletter-2026-07-en',
+    content_type: 'print',
+    language: 'en',
+    state: 'draft',
+    title: 'Wine Talk July 2026 (EN) — Galilee',
+    references: ['print-newsletter-2026-07-he', 'email-ayiw-2026-07-en'],
+    notes: 'Target distribution: 2026-07-27.',
+  },
+  {
+    slug: 'print-newsletter-2026-07-he',
+    content_type: 'print',
+    language: 'he',
+    state: 'draft',
+    title: 'Wine Talk יולי 2026 (HE) — גליל',
+    references: ['print-newsletter-2026-07-en', 'email-ayiw-2026-07-he'],
+    notes: 'הפצה מתוכננת: 2026-07-27.',
+  },
+  // ─── Print newsletter issues ──────────────────────────────────────
+  // Wine Talk assembled print newsletter (EN + HE Google Docs).
+  // content_type='print'. Drive docs live in Library/print/<slug>/.
+  // slb_TargetDate set via jlmops after registration.
+  {
+    slug: 'print-newsletter-2026-06-en',
+    content_type: 'print',
+    language: 'en',
+    state: 'draft',
+    title: 'Wine Talk June 2026 (EN) — Handling & Making Wine',
+    doc_url: 'https://docs.google.com/document/d/1GvB8ApNF0g5_MoAXVzhg1wNDQl8eOfDE7Mc6SophdjU/edit',
+    references: ['print-newsletter-2026-06-he', 'email-newsletter-2026-06-en'],
+  },
+  {
+    slug: 'print-newsletter-2026-06-he',
+    content_type: 'print',
+    language: 'he',
+    state: 'draft',
+    title: 'Wine Talk יוני 2026 (HE) — טיפול ואיך מכינים יין',
+    doc_url: 'https://docs.google.com/document/d/1yfLiUGEkQ-93HapagcOfPRTkrh2GawHacIcSqOeWxR4/edit',
+    references: ['print-newsletter-2026-06-en', 'email-newsletter-2026-06-he'],
   },
 ];
 
@@ -433,6 +438,7 @@ async function readExistingSlugs(sheets, slugColIdx) {
 // without a deliberate decision.
 const UPDATE_FIELDS = [
   'slb_LastTouched',
+  'slb_EntityType',
   'slb_MailchimpCampaignId',
   'slb_SubjectLine',
   'slb_SendDate',
