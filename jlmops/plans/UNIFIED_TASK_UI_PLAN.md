@@ -1,6 +1,6 @@
 # Unified Task UI — Shared List + Detail Component
 
-**Status:** Planning
+**Status:** Deploys A–D shipped @354–@364; Deploy E (column pattern) queued.
 **Supersedes:** `ADMIN_TASK_UI_PLAN.md` post-go-live follow-ups #1, #4, and the Manager ↔ Admin convergence section.
 
 Tasks appear in five places today (AdminTasksView, PublishingView Tasks tab, LibraryView entity drawer, Manager Dashboard, AdminDashboard summary) with different layouts, different language, and different capabilities at each. Opening a task from Publishing opens an entity drawer with no task controls. Opening from the dashboard uses a bespoke inline editor that doesn't share code with anything else. No consistent path through a task anywhere.

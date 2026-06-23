@@ -31,6 +31,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Drive: user moved print newsletter Docs to `Library/print/`.
 - Next: AYIW email sends 2026-06-24; mark June entities published after send+distribute. Then CONTENT_DISTRIBUTION_PLAN Step 1 (add `print` to schemas.json).
 
+## 2026-06-23 — Unified Task UI Deploy D @364
+
+- ManagerDashboardView_v2.html: include('TaskPacks') → include('TaskDetail'); TaskPacks.configure → TaskDetail.configure with getTask (injects assignedTo:'Manager'), getEntity from libraryBySlug, saveTask/completeTask/revertTask via WebAppDashboardV2_* callbacks.
+- Inline .task-detail expand removed; toggleTaskExpand/saveTask/revertTask/taskOpenTarget functions retired; state.expandedTaskId removed.
+- Row click and calendar click → TaskDetail.open; deep-link sessionStorage → TaskDetail.open.
+- Smoked: modal opens from manager dashboard task row.
+- Next: Deploy E — column pattern on AdminTasksView table + Publishing Tasks tab.
+
 ## 2026-06-23 — Unified Task UI Deploy C @363
 
 - AdminDashboard task rows: click → `_openTask(id)` → fetch full task via `WebAppTasks_getTaskById` → cache → `TaskDetail.open(id)`. No navigate-away.

@@ -1,5 +1,5 @@
 <?!= include('TaskWidgets') ?>
-<?!= include('TaskPacks') ?>
+<?!= include('TaskDetail') ?>
 <style>
   /* Role-based visibility */
   .admin-only { display: none; }
@@ -12,7 +12,6 @@
   .task-list { max-height: calc(100vh - 320px); min-height: 300px; overflow-y: auto; }
   .task-row { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; }
   .task-row:hover { background-color: #f8f9fa; }
-  .task-row.expanded { background-color: #e3f2fd; }
   .task-row.overdue { color: #dc3545; }
   .task-col-topic { flex: 1; }
   .task-col-entity { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -23,20 +22,6 @@
   .task-col-created { flex: 1; text-align: center; }
   .task-col-link { flex: 0.5; text-align: center; }
 
-  /* Expanded row detail */
-  .task-detail { display: none; padding: 15px; background: #f8f9fa; border-bottom: 1px solid #ddd; }
-  .task-detail.show { display: block; }
-  .task-detail textarea { width: 100%; min-height: 80px; margin: 10px 0; }
-  .task-detail .detail-row { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
-  .task-detail .detail-row.justify-content-between { justify-content: space-between; }
-  .task-detail label { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
-  .task-status { width: 100px; }
-
-  /* Expanded-detail actions: separated from the metadata above, wrap to share
-     rows; the open-resource + complete (Save) actions are emphasized. */
-  .task-detail .task-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e3e3e3; }
-  .task-detail .task-actions .btn { border: 1px solid #ced4da; }
-  .task-detail .task-actions .tw-action-primary { font-weight: 600; border-color: #6c757d; }
 
   /* Calendar view */
   .calendar-container { display: none; }
@@ -114,22 +99,9 @@
     .task-row .task-col-created,
     .task-row .task-col-link { display: none; }
 
-    /* Expanded task detail: bigger tap targets; actions wrap + share rows. */
-    .task-detail { padding: 12px; }
-    .task-detail .task-actions { gap: 10px; }
-    .task-detail .task-actions .btn { min-height: 44px; padding-left: 16px; padding-right: 16px; }
-    .task-detail .task-actions .task-status { min-height: 44px; }
-
     /* Calendar view doesn't fit on phone — hide its toggle + the grid itself */
     #btn-calendar-view { display: none; }
     .calendar-container { display: none !important; }
-
-    /* Task detail expanded view: full-width inputs */
-    .task-detail .detail-row { flex-direction: column; align-items: stretch; gap: 8px; }
-    /* Inner d-flex (6 pairs + status select + Revert) also stacks on phone — was overflowing horizontally */
-    .task-detail .detail-row > .d-flex { flex-direction: column; align-items: stretch; gap: 8px; }
-    .task-status { width: 100%; }
-    .task-detail textarea { min-height: 100px; font-size: 16px; }
   }
 </style>
 
@@ -255,17 +227,44 @@
     tasks: [],
     filteredTasks: [],
     libraryBySlug: {},
-    expandedTaskId: null,
     currentWeekStart: getWeekStart(new Date()),
     view: 'list'
   };
 
-  // Wire the shared TaskPacks kit to this view's state + refresh callbacks once.
-  // getEntity sources Doc links + version/state for content packs (Step 5); the
-  // closures read live state, so each load's data is picked up automatically.
-  TaskPacks.configure({
-    getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
+  // Wire TaskDetail (which owns TaskPacks internally) to this view's data + callbacks.
+  // getEntity sources Doc links + version/state for content packs; closures read live
+  // state so each load's data is picked up automatically. assignedTo is always
+  // 'Manager' for manager-dashboard tasks — injected here so TaskDetail can render it.
+  TaskDetail.configure({
+    getTask: function(id) {
+      var t = state.tasks.find(function(t) { return t.id === id; });
+      if (!t) return null;
+      var copy = {};
+      for (var k in t) { if (t.hasOwnProperty(k)) copy[k] = t[k]; }
+      copy.assignedTo = 'Manager';
+      return copy;
+    },
     getEntity: function(slug) { return state.libraryBySlug[slug] || null; },
+    getAssignees: function() { return []; },
+    loadEntityDetail: function(slug, cb) { cb(null); },
+    saveTask: function(id, fields, cb) {
+      google.script.run
+        .withSuccessHandler(function(result) { cb(result || {}); })
+        .withFailureHandler(function(err) { cb({ error: err.message || 'Failed to save' }); })
+        .WebAppDashboardV2_updateManagerTask(id, { notes: fields.notes || '', status: fields.status });
+    },
+    completeTask: function(id, cb) {
+      google.script.run
+        .withSuccessHandler(function(result) { cb(!(result && result.error)); })
+        .withFailureHandler(function() { cb(false); })
+        .WebAppDashboardV2_updateManagerTask(id, { status: 'Done' });
+    },
+    revertTask: function(id, cb) {
+      google.script.run
+        .withSuccessHandler(function(result) { cb(!(result && result.error)); })
+        .withFailureHandler(function() { cb(false); })
+        .WebAppDashboardV2_revertTaskToAdmin(id);
+    },
     refresh: renderTaskList,
     reload: loadDashboard
   });
@@ -301,17 +300,12 @@
       renderProductsCard(data.products);
       applyFilters();
 
-      // Deep-link from the Library entity drawer (the manager's task home is here):
-      // expand + scroll to the requested task once the queue has rendered.
+      // Deep-link from the Library entity drawer: open TaskDetail modal for the
+      // requested task once the queue has rendered and the DOM is ready.
       var selectId = sessionStorage.getItem('selectDashboardTaskId');
       if (selectId) {
         sessionStorage.removeItem('selectDashboardTaskId');
-        state.expandedTaskId = selectId;
-        renderTaskList();
-        setTimeout(function() {
-          var row = document.querySelector('.task-row[data-id="' + selectId + '"]');
-          if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' });
-        }, 50);
+        setTimeout(function() { TaskDetail.open(selectId); }, 100);
       }
     } catch (e) {
       console.error('Dashboard render error:', e);
@@ -450,7 +444,6 @@
     state.filteredTasks.forEach(function(task) {
       // Overdue = due DATE before today (TaskWidgets.isOverdue; due-today is on-time until day's end).
       var overdueClass = TaskWidgets.isOverdue(task.dueDate, task.status) ? ' overdue' : '';
-      var expandedClass = state.expandedTaskId === task.id ? ' expanded' : '';
       var entityDisplay = task.entityName || task.entityId || '-';
       if (entityDisplay.length > 20) entityDisplay = entityDisplay.substring(0, 17) + '...';
 
@@ -459,7 +452,7 @@
         ? '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light" onclick="event.stopPropagation();">&#8599; Document</a>'
         : '-';
 
-      html += '<div class="task-row' + overdueClass + expandedClass + '" data-id="' + task.id + '">';
+      html += '<div class="task-row' + overdueClass + '" data-id="' + task.id + '">';
       html += '<div class="task-col-topic"><span class="badge badge-secondary">' + task.topic + '</span></div>';
       html += '<div class="task-col-entity" title="' + TaskWidgets.escape(task.entityName) + '">' + TaskWidgets.escape(entityDisplay) + '</div>';
       html += '<div class="task-col-title" title="' + TaskWidgets.escape(task.name) + '">' + TaskWidgets.escape(task.name) + '</div>';
@@ -469,241 +462,21 @@
       html += '<div class="task-col-created">' + TaskWidgets.formatDateShort(task.createdDate) + '</div>';
       html += '<div class="task-col-link">' + linkHtml + '</div>';
       html += '</div>';
-
-      // Expanded detail row
-      var showClass = state.expandedTaskId === task.id ? ' show' : '';
-      html += '<div class="task-detail' + showClass + '" data-id="' + task.id + '">';
-
-      // CRM contact tasks: surface name/email/phone/language inline so the
-      // manager can decide channel before navigating, plus a deep-link button
-      // that opens the contact in ManagerContactView with the action panel ready.
-      var isContactTask = task.typeId && task.typeId.indexOf('task.contact.') === 0;
-      if (isContactTask) {
-        html += '<div class="detail-row contact-detail-row" style="background: #fff3cd; border-radius: 4px; padding: 8px 12px; margin-bottom: 10px;">';
-        html += '<div><label>Name</label><div>' + TaskWidgets.escape(task.entityName || '-') + '</div></div>';
-        html += '<div><label>Email</label><div>' + TaskWidgets.escape(task.entityId || '-') + '</div></div>';
-        html += '<div><label>Phone</label><div>' + TaskWidgets.escape(task.entityPhone || '-') + '</div></div>';
-        html += '<div><label>Lang</label><div>' + TaskWidgets.escape((task.entityLanguage || 'en').toUpperCase()) + '</div></div>';
-        html += '</div>';
-      }
-
-      var isUrl2 = task.entityId && String(task.entityId).indexOf('http') === 0;
-      var isSystemTask = task.typeId && (
-        task.typeId.indexOf('task.inventory.') === 0 ||
-        task.typeId.indexOf('task.validation.comax') === 0 ||
-        task.typeId === 'task.order.packing_available'
-      );
-      // Typed pack = content/confirmation/deep-link (has its own body + action).
-      // Skeleton-fallback types have no pack action, so they keep the editable
-      // status + Save + Notes editor below (Step 5 convergence).
-      var isTyped = TaskPacks.hasTypedPack(task.typeId);
-
-      // Read-only metadata context.
-      html += '<div class="detail-row">';
-      html += '<div><label>Stream</label><div>' + (task.sessionId || '-') + '</div></div>';
-      html += '<div><label>Start</label><div>' + TaskWidgets.formatDateFull(task.startDate) + '</div></div>';
-      html += '<div><label>Due</label><div>' + TaskWidgets.formatDateFull(task.dueDate) + '</div></div>';
-      html += '<div><label>Done</label><div>' + TaskWidgets.formatDateFull(task.doneDate) + '</div></div>';
-      html += '<div><label>Created</label><div>' + TaskWidgets.formatDateFull(task.createdDate) + '</div></div>';
-      html += '<div><label>Priority</label><div>' + (task.priority || '-') + '</div></div>';
-      html += '</div>';
-
-      // Navigation actions, rendered ABOVE the pack: a Document link for URL
-      // entities and the taskOpenTarget deep-link (both only for non-typed tasks —
-      // typed packs carry their own file chip / Open button), plus Revert (a
-      // manager->admin role-transfer, preserved as its own button for any
-      // non-system task). Task-working itself happens in the pack / editor below.
-      var navHtml = '';
-      if (isUrl2 && !isTyped) {
-        navHtml += '<a href="' + TaskWidgets.escape(task.entityId) + '" target="_blank" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">&#8599; Document</a>';
-      }
-      if (!isTyped) {
-        var openTarget = taskOpenTarget(task);
-        if (openTarget && openTarget.url) {
-          navHtml += '<a href="' + TaskWidgets.escape(openTarget.url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-light tw-action tw-action-primary" onclick="event.stopPropagation();">' + TaskWidgets.escape(openTarget.label) + '</a>';
-        } else if (openTarget) {
-          var setAttr = openTarget.set
-            ? ' data-set-key="' + openTarget.set[0] + '" data-set-val="' + TaskWidgets.escape(openTarget.set[1]) + '"'
-            : '';
-          navHtml += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-open-task" data-view="' + openTarget.view + '"' + setAttr + '>' + TaskWidgets.escape(openTarget.label) + '</button>';
-        }
-      }
-      if (!isSystemTask) {
-        navHtml += '<button type="button" class="btn btn-sm btn-light tw-action btn-revert-task" data-id="' + task.id + '" data-name="' + TaskWidgets.escape(task.name) + '">Revert</button>';
-      }
-      if (navHtml) html += '<div class="task-actions">' + navHtml + '</div>';
-
-      // DO surface. Typed packs render their own body + action via TaskPacks.
-      // Skeleton/non-system tasks keep an editable status + Save + Notes (the pack's
-      // skeleton fallback is read-only and offers no status control — this preserves
-      // "set In Progress without closing"). System skeleton tasks stay read-only.
-      if (isTyped) {
-        html += '<div class="task-pack-do">' + TaskPacks.packBody(task) + '</div>';
-      } else if (isSystemTask) {
-        html += '<div><label>Notes</label></div>';
-        html += '<div class="p-2 bg-white border rounded small">' + TaskWidgets.escape(task.notes || '-') + '</div>';
-        html += '<div class="mt-2 small text-muted">System task - managed by workflow</div>';
-      } else {
-        html += '<div class="task-actions">';
-        html += '<select class="form-control form-control-sm task-status" data-id="' + task.id + '">';
-        ['New', 'In Progress', 'Done'].forEach(function(s) {
-          var sel = s === task.status ? ' selected' : '';
-          html += '<option value="' + s + '"' + sel + '>' + s + '</option>';
-        });
-        html += '</select>';
-        html += '<button type="button" class="btn btn-sm btn-light tw-action tw-action-primary btn-save-task" data-id="' + task.id + '">Save</button>';
-        html += '</div>';
-        html += '<div><label>Notes</label></div>';
-        html += '<textarea class="form-control task-notes" data-id="' + task.id + '">' + TaskWidgets.escape(task.notes || '') + '</textarea>';
-      }
-      html += '</div>';
     });
 
     container.innerHTML = html;
 
-    // Add click handlers for row expansion
+    // Task row click opens TaskDetail modal (Deploy D).
     container.querySelectorAll('.task-row').forEach(function(row) {
       row.addEventListener('click', function(e) {
         if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
-        toggleTaskExpand(this.dataset.id);
-      });
-    });
-
-    // Add save handlers
-    container.querySelectorAll('.btn-save-task').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        saveTask(this.dataset.id);
-      });
-    });
-
-    // Add revert handlers
-    container.querySelectorAll('.btn-revert-task').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        revertTask(this.dataset.id, this.dataset.name);
-      });
-    });
-
-    // Unified "Open" deep-link: examine in place (expand), then click through to the
-    // task's execution location. Destination + any sessionStorage handoff come from
-    // taskOpenTarget(); the target view consumes the key on mount (contact email,
-    // verify walk). Types with no target complete inline (status + Save).
-    container.querySelectorAll('.btn-open-task').forEach(function(btn) {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (btn.dataset.setKey) sessionStorage.setItem(btn.dataset.setKey, btn.dataset.setVal);
-        if (typeof loadView === 'function') loadView(btn.dataset.view);
+        TaskDetail.open(this.dataset.id);
       });
     });
   }
 
   // Where a manager task is executed. Returns {label, view, set?} or null when the
   // task completes inline (status + Save) with no separate execution surface.
-  function taskOpenTarget(task) {
-    var t = task.typeId || '';
-    if (t.indexOf('task.contact.') === 0 && task.entityId) {
-      return { label: 'Open contact', view: 'ManagerContacts', set: ['selectContactEmail', task.entityId] };
-    }
-    // Content tasks navigate via the pack's own Doc chip (task.fileUrl retired in
-    // the Step 5 convergence) — no taskOpenTarget content case.
-    if (t === 'task.product.verify') {
-      return { label: 'Verify', view: 'ManagerProducts', set: ['startVerifyWalk', '1'] };
-    }
-    if (t.indexOf('task.product.') === 0 || t.indexOf('task.validation.vintage') === 0) {
-      return { label: 'Open in Products', view: 'ManagerProducts' };
-    }
-    if (t.indexOf('task.inventory.') === 0) {
-      return { label: 'Open in Inventory', view: 'ManagerInventory' };
-    }
-    if (t === 'task.order.packing_available') {
-      return { label: 'Open in Orders', view: 'ManagerOrders' };
-    }
-    return null;
-  }
-
-  function toggleTaskExpand(taskId) {
-    if (state.expandedTaskId === taskId) {
-      state.expandedTaskId = null;
-    } else {
-      state.expandedTaskId = taskId;
-    }
-    renderTaskList();
-
-    // After re-render, scroll the expanded row into view so the detail panel
-    // doesn't end up below the viewport requiring a manual scroll.
-    if (state.expandedTaskId) {
-      setTimeout(function() {
-        var row = document.querySelector('.task-row[data-id="' + state.expandedTaskId + '"]');
-        if (row && row.scrollIntoView) {
-          row.scrollIntoView({ block: 'start', behavior: 'smooth' });
-        }
-      }, 50);
-    }
-  }
-
-  function saveTask(taskId) {
-    var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
-    var notes = detail.querySelector('.task-notes').value;
-    var status = detail.querySelector('.task-status').value;
-
-    var btn = detail.querySelector('.btn-save-task');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        btn.disabled = false;
-        btn.textContent = 'Save';
-        if (result.error) {
-          TaskWidgets.toast('Error: ' + result.error, 'error');
-        } else {
-          // Update local state
-          var task = state.tasks.find(function(t) { return t.id === taskId; });
-          if (task) {
-            task.notes = notes;
-            task.status = status;
-          }
-          applyFilters();
-        }
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Save';
-        TaskWidgets.toast('Error: ' + (err.message || 'Failed to save'), 'error');
-      })
-      .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes, status: status });
-  }
-
-  function revertTask(taskId, taskName) {
-    TaskWidgets.confirm('Revert "' + taskName + '" to Admin?', function() {
-      var detail = document.querySelector('.task-detail[data-id="' + taskId + '"]');
-      var btn = detail.querySelector('.btn-revert-task');
-      btn.disabled = true;
-      btn.textContent = 'Reverting...';
-
-      google.script.run
-        .withSuccessHandler(function(result) {
-          btn.disabled = false;
-          btn.textContent = 'Revert to Admin';
-          if (result.error) {
-            TaskWidgets.toast('Error: ' + result.error, 'error');
-          } else {
-            // Remove task from local state since it's now assigned to Admin
-            state.tasks = state.tasks.filter(function(t) { return t.id !== taskId; });
-            state.expandedTaskId = null;
-            applyFilters();
-          }
-        })
-        .withFailureHandler(function(err) {
-          btn.disabled = false;
-          btn.textContent = 'Revert to Admin';
-          TaskWidgets.toast('Error: ' + (err.message || 'Failed to revert'), 'error');
-        })
-        .WebAppDashboardV2_revertTaskToAdmin(taskId);
-    });
-  }
-
   // === Calendar View ===
 
   function renderCalendar() {
@@ -755,18 +528,14 @@
 
       cell.innerHTML = html;
 
-      // Click on cell to filter to that date
+      // Click on cell to open first task of that day in TaskDetail modal.
       cell.addEventListener('click', function() {
-        // For now, just expand first task of that day
         var dots = this.querySelectorAll('.task-dot');
         if (dots.length > 0) {
           var taskId = dots[0].dataset.id;
           toggleView('list');
-          state.expandedTaskId = taskId;
           renderTaskList();
-          // Scroll to task
-          var row = document.querySelector('.task-row[data-id="' + taskId + '"]');
-          if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(function() { TaskDetail.open(taskId); }, 50);
         }
       });
     }
