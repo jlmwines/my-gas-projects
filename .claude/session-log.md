@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-23 — Unified Task UI plan
+
+- Problem: task detail is context-dependent (entity drawer in Publishing, display-only in Library, bespoke inline in dashboard); no shared component, no consistent layout or language.
+- Designed and reviewed `UNIFIED_TASK_UI_PLAN.md`: shared `TaskDetail` component (two mounting modes: panel in AdminTasksView, modal elsewhere); consistent task list column pattern (Project → Campaign → Task → Status → Due → Notes); lazy entity context at bottom; admin controls always visible; manager read-only.
+- Two agent reviews caught and resolved: ID collision risk, priority placement (list only), manager shape constraints, admin dashboard thin shape, `getEntity` null-safety, manager backend routing.
+- Next: Deploy A — build TaskDetail, wire into AdminTasksView right panel only.
+
 ## 2026-06-23 — PublishingView Tasks tab role split + assignee visibility @343–@344
 
 - Bug: PublishingView Tasks tab showed all content tasks to all roles; drawer showed no assignee.

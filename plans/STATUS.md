@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-23 — PublishingView Tasks tab: manager sees own tasks only; admin gets assignee filter + column; LibraryView drawer shows assignee. Live @344.
+**Updated:** 2026-06-23 — Unified Task UI plan written and reviewed: shared TaskDetail component + consistent task list pattern across all surfaces. Plan: `jlmops/plans/UNIFIED_TASK_UI_PLAN.md`.
 
 ## At a glance
 
@@ -35,7 +35,7 @@ The live "what now" — daily review reads these first.
 1. **Newsletter Issue #2 (June) — email scheduled, print pending.** AYIW companion email (EN+HE) scheduled 2026-06-24. Print paste-source (Handling primary, AYIW Making Wine secondary) still to produce. Files: `2026-06-handling-news-en/he.md/.docx`. Run pandoc after .md is ready. Set `slb_TargetDate` on library entities in jlmops.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
-4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
+4. **Drive shipped jlmops/CRM/UI work through real daily use.** Top content build = **Deploy 3** of the content-workflow redesign (manager dashboard → shared TaskPacks convergence + Notes de-dup; spec in `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` Step 5 / Deploy Plan) — touches the manager's live daily surface, so its own session. **Unified Task UI** plan ready to implement (`jlmops/plans/UNIFIED_TASK_UI_PLAN.md`): shared TaskDetail component + consistent task list across all surfaces, 5-deploy sequence. Other open jlmops candidates: reliability audit queue (`jlmops/plans/RELIABILITY_AUDIT.md`, ~7/16 shipped; next = 1.3 concurrency [highest-risk] or 4.1 snapshots/DR) and UI audit queue (`jlmops/plans/UI_AUDIT.md`, Tiers 1–4 mobile shipped, Tier 5 partial). Mobile LCP tuning (~4.0s) also queued.
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 
 ## Current State
