@@ -149,6 +149,22 @@ During normal work, briefly flag obvious issues in code you're touching:
 
 **Don't hunt:** Only flag what's in your immediate work area, not the whole codebase.
 
+## Critical Rules
+
+**Data integrity:**
+- **Schema columns: append only.** Loaders use SCHEMA as position source of truth. Inserting a column in the middle silently shifts all downstream reads and corrupts data. Always append new columns at end of `schema.data.*`.
+- **Data definitions first.** Questions about valid values start at the schema/data-model, never by grepping data dumps.
+- **SysConfig keys are split.** Keys are stored as SettingName + param name columns, never as dotted strings. Answer from DATA_MODEL, not grep output.
+
+**Architecture:**
+- **Read `docs/DATA_MODEL.md` + `docs/ARCHITECTURE.md` before any new write pattern.** SysConfig is generated at deploy time and never written at runtime.
+- **jlmops and the WordPress theme share no rendering path.** Don't debug theme issues by pulling SysJobQueue or jlmops state.
+
+**Operational:**
+- **Name the `.gs` file** when telling the user to run a GAS function. Never just name the function.
+- **Never hand-stamp `VERSION.built`.** `deploy.ps1` owns it via the timezone API. Manual stamps can be fabricated or drift.
+- **Compound instructions are literal.** "commit, version, push, deploy" = four discrete steps; don't collapse them. "version" in jlmops = the `VERSION.built` update that deploy.ps1 does.
+
 ## Common Mistakes to Avoid
 
 1. **Wrong field names:** `st_TaskTypeId` not `st_TypeId`

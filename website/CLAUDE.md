@@ -31,3 +31,8 @@ Full brand guidelines: `business/CONTENT_STRATEGY.md`
 - Platform: WooCommerce/WordPress
 - Bilingual: Hebrew + English (JLM is only bilingual Israeli wine site)
 - See `jlmops/CLAUDE.md` for backend patterns
+
+## Critical Rules
+
+- **Translation: never `__('…','jlmwines')`.** Only translate at runtime what can't be stored in advance. Static page content goes in real per-language Pages or `is_rtl()` PHP for chrome.
+- **Theme JS lives in `main.js`.** The live site's JS optimizer strips inline `<script>` from product/hook-rendered markup. Page HTML is full-page-cached — verify changes with `curl` or `?x=1`, not a plain reload.

@@ -60,6 +60,10 @@ Full reference: `content/SENSORY_FRAMEWORK.md`
 
 Every piece answers: "Why should I trust you to pick my wine?"
 
+## Hebrew Source of Truth
+
+The manager's Drive doc is the authoritative source for HE text. Local `.post.md` HE content can be stale. Always copy Hebrew from the Drive doc before publishing or using it — terminal RTL reversal makes stale content hard to detect.
+
 ## Quick Checks
 
 Before publishing any content, verify:

@@ -25,6 +25,10 @@ Run before any action that touches code, modifies user data, or instructs the us
 
 When the user says the session is being foolish: stop and re-run this checklist for the current step.
 
+7. **Bug report ≠ ship order.** A report authorizes investigation only. Explicit OK at each gate: investigate → fix → deploy. Never fix-and-deploy on a report alone.
+8. **Verify state before speaking.** Don't describe current state, open gaps, or what's in place without a positive tool result. Planning docs describe intent, not reality.
+9. **Check live systems directly.** Use WebFetch or the REST API to answer "what's configured/installed" — don't ask the user.
+
 ## Sub-Areas
 
 | Area | Folder | What | Context |
