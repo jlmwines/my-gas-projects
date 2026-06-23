@@ -11,11 +11,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Plan `jlmops/plans/PRODUCT_EDITOR_UX_PLAN.md` marked shipped. Smoke new-product flow end-to-end to verify searchable dropdowns retain values on tab-switch.
 - Next: Unified Task UI Deploy A, or ongoing product onboarding.
 
-## 2026-06-23 — Admin Products tab layout @347
+## 2026-06-23 — Admin Products tab UX @347–@353
 
-- AdminProductsView.html: 5 stacked cards → Bootstrap nav-tabs. Detail Updates eager-loads; New Products / Verify / SKU / Lookups lazy-load on first switch. Toggle buttons and chevrons removed. Badge IDs unchanged, now inside tab labels. switchTab() replaces toggleCard()/toggleVerifyCard().
-- Plan `ADMIN_PRODUCTS_TAB_PLAN.md` marked shipped @347.
-- Smoke: tab switching, badge counts, lazy-load first-switch, refreshView from accept actions.
+- @347: 5 stacked cards → nav-tabs; switchTab() replaces toggleCard()/toggleVerifyCard(); lazy-load and badges preserved.
+- @348: href="#" → javascript:void(0) on tab links; Projects nav retired (22-day soak confirmed).
+- @349: inner editor switchTab renamed switchEditorTab — was overwriting outer tab switcher on load.
+- @350–@351: Bootstrap nav-tabs replaced with compact ap-tab buttons (PublishingView pattern); labels shortened to Details/New/Verify/Identity/Lookups; padding 5px 8px, font 12px, overflow-x auto.
+- @352: New tab section order: Ready for Web → Review Submissions → Awaiting Manager → Candidates. Stub reminder removed from post-approval toast (stays in modal body).
+- @353: Container px-2 (was p-4) — tighter mobile side padding.
+- Plan `ADMIN_PRODUCTS_TAB_PLAN.md` marked shipped.
 
 ## 2026-06-23 — Unified Task UI plan
 
