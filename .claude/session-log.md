@@ -960,3 +960,11 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 ## 2026-05-15 (deep review + Inbox routing fix + frequent pipeline @117→@119 — condensed)
 
 - Frequent pipeline shipped @117→@119: `createWelcomeOutreachTasks` refactored off `sc_FirstCompletedDate` (reads WebOrdM directly); forward cursor `crm.frequent_pipeline.last_modified_floor` bounds the pull (30-day → run-start ISO; runtime 58s → 10s); business-hours cadence guard lives in code (Sun-Thu 08-20, Fri 08-13, Sat off); 15-min time-driven trigger on `runFrequentMaintenance`. Deep review at `plans/reviews/review-deep-2026-05-15.md` (GA4 data tabs did not surface; GSC only as Page-dim rollup). Inbox routing-prompt header added to STATUS so capture-time routing holds.
+
+---
+
+## 2026-06-23 — Unified Task UI Deploy E
+
+- Deploy E shipped @365: PublishingView Tasks tab `renderTasks()` refactored to iterate `TASK_COLUMNS` array (title/entity/assignee/status/due/doc). Header and body both driven by the array via `_renderPvTaskCell`. No behavior change.
+- AdminTasksView excluded from Deploy E (12-column/3-panel-state system too complex without regression risk). Deferred to future session if needed.
+- UNIFIED_TASK_UI_PLAN.md closed: Deploys A–E all shipped @354–@365. Future items (inline quick actions, mobile filter toggle) remain as "later" in the plan.

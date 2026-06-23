@@ -1,6 +1,6 @@
 # Unified Task UI — Shared List + Detail Component
 
-**Status:** Deploys A–D shipped @354–@364; Deploy E (column pattern) queued.
+**Status:** Deploys A–E complete @354–@365. All five deploys shipped.
 **Supersedes:** `ADMIN_TASK_UI_PLAN.md` post-go-live follow-ups #1, #4, and the Manager ↔ Admin convergence section.
 
 Tasks appear in five places today (AdminTasksView, PublishingView Tasks tab, LibraryView entity drawer, Manager Dashboard, AdminDashboard summary) with different layouts, different language, and different capabilities at each. Opening a task from Publishing opens an entity drawer with no task controls. Opening from the dashboard uses a bespoke inline editor that doesn't share code with anything else. No consistent path through a task anywhere.
@@ -151,8 +151,8 @@ Task card row opens `TaskDetail.open(id)`. Admin dashboard task shape is thin (m
 **D — Manager Dashboard repointed onto TaskDetail modal.**
 `toggleTaskExpand` and `saveTask`/`revertTask` retired. `getEntity` wired to `libraryBySlug` map already present in the manager data response — "Open Doc" works. `typeId` confirmed present on dashboard task objects; pack dispatch works without changes. `assignedTo` is always 'Manager' for manager-dashboard tasks — host hard-codes it in `getTask`. Backend routes to `WebAppDashboardV2_updateManagerTask` via `saveTask` callback (notes + status only).
 
-**E — Column pattern applied to AdminTasksView table, then Publishing Tasks tab.**
-Render functions refactored to iterate `TASK_COLUMNS`. Behaviour unchanged.
+**E — Column pattern applied to PublishingView Tasks tab (scoped down from original).**
+`TASK_COLUMNS` array (title, entity, assignee, status, due, doc) defined; both `<thead>` and `<tbody>` iterate it via `_renderPvTaskCell`. AdminTasksView excluded — its 3-panel-state/12-column system is too complex for this pattern without regression risk. Behaviour unchanged.
 
 Later: inline quick actions on list rows; mobile filter collapse toggle.
 

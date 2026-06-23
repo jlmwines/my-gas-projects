@@ -1029,6 +1029,28 @@
 
     // ===== TASKS TAB =====
 
+    var TASK_COLUMNS = [
+      { label: 'Task',     key: 'title' },
+      { label: 'Entity',   key: 'entity' },
+      { label: 'Assignee', key: 'assignee' },
+      { label: 'Status',   key: 'status' },
+      { label: 'Due',      key: 'due' },
+      { label: '',         key: 'doc' }
+    ];
+
+    function _renderPvTaskCell(key, t, entity, due, docBtn) {
+      var esc = TaskWidgets.escape;
+      switch (key) {
+        case 'title':    return '<td data-label="Task"><strong>' + esc(t.name || t.typeId) + '</strong></td>';
+        case 'entity':   return '<td data-label="Entity"><span class="detail-meta">' + esc(entity ? (entity.title || entity.slug) : (t.entityName || t.entityId || '—')) + '</span></td>';
+        case 'assignee': return '<td data-label="Assignee"><span class="detail-meta">' + esc(t.assignedTo || '—') + '</span></td>';
+        case 'status':   return '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + esc(t.status || '—') + '</span></td>';
+        case 'due':      return '<td data-label="Due">' + due + '</td>';
+        case 'doc':      return '<td data-label="" onclick="event.stopPropagation()">' + docBtn + '</td>';
+        default:         return '<td></td>';
+      }
+    }
+
     function renderTasks() {
       var container = document.getElementById('pv-tasks-content');
       var isManager = document.body.classList.contains('role-manager');
@@ -1068,23 +1090,17 @@
       }
 
       var html = filterBar + '<table class="pv-cal-table"><thead><tr>' +
-        '<th>Task</th><th>Entity</th><th>Assignee</th><th>Status</th><th>Due</th><th></th>' +
+        TASK_COLUMNS.map(function(col) { return '<th>' + col.label + '</th>'; }).join('') +
         '</tr></thead><tbody>';
       contentTasks.forEach(function(t) {
         var entity = libBySlug[t.entityId] || null;
-        var entityLabel = entity ? (entity.title || entity.slug) : (t.entityName || t.entityId || '—');
         var due = t.dueDate ? TaskWidgets.formatDate(t.dueDate) : '—';
         var docBtn = (entity && entity.docUrl)
           ? '<a class="btn btn-sm btn-light" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">&#8599; Doc</a>'
           : '';
-        html += '<tr style="cursor:pointer" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">';
-        html += '<td data-label="Task"><strong>' + TaskWidgets.escape(t.name || t.typeId) + '</strong></td>';
-        html += '<td data-label="Entity"><span class="detail-meta">' + TaskWidgets.escape(entityLabel) + '</span></td>';
-        html += '<td data-label="Assignee"><span class="detail-meta">' + TaskWidgets.escape(t.assignedTo || '—') + '</span></td>';
-        html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span></td>';
-        html += '<td data-label="Due">' + due + '</td>';
-        html += '<td data-label="" onclick="event.stopPropagation()">' + docBtn + '</td>';
-        html += '</tr>';
+        html += '<tr style="cursor:pointer" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">' +
+          TASK_COLUMNS.map(function(col) { return _renderPvTaskCell(col.key, t, entity, due, docBtn); }).join('') +
+          '</tr>';
       });
       html += '</tbody></table>';
       container.innerHTML = html;
