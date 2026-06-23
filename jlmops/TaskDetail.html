@@ -21,8 +21,8 @@
 -->
 
 <!-- Modal container: Deploy B+ wires tasks from other surfaces here -->
-<div class="modal-overlay" id="task-detail-modal" style="display:none;" aria-hidden="true">
-  <div class="modal-container" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+<div class="modal-overlay" id="task-detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1060;justify-content:center;align-items:center;" aria-hidden="true">
+  <div class="modal-container" style="max-width:560px;max-height:90vh;overflow-y:auto;background:#fff;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);width:90%;">
     <div id="td-modal-body" style="padding:12px;"></div>
   </div>
 </div>
@@ -59,6 +59,7 @@ window.TaskDetail = (function() {
     saveTask:         function(i, f, cb){ cb && cb({ error: 'not configured' }); },
     completeTask:     function(i, cb)   { cb && cb(false); },
     deleteTask:       function(i, cb)   { cb && cb({ error: 'not configured' }); },
+    revertTask:       function(i, cb)   { cb && cb(false); },
     close:            function()        {},
     refresh:          function()        {},
     reload:           function()        {}
@@ -72,7 +73,7 @@ window.TaskDetail = (function() {
   function configure(opts) {
     if (!opts) return;
     var keys = ['getTask','getEntity','getAssignees','loadEntityDetail','saveTask',
-                'completeTask','deleteTask','close','refresh','reload'];
+                'completeTask','deleteTask','revertTask','close','refresh','reload'];
     keys.forEach(function(k) { if (opts[k]) cfg[k] = opts[k]; });
 
     // Wire TaskPacks internally — hosts must NOT also include TaskPacks directly.
@@ -118,6 +119,7 @@ window.TaskDetail = (function() {
     var isContent = typeId.indexOf('task.content') === 0 || typeId === 'task.newsletter.distribute';
     var isSystem  = typeId.indexOf('task.system') === 0 || typeId.indexOf('task.sync') === 0;
     var isData    = isSystem;
+    var isManager = document.body.classList.contains('role-manager');
     var isDone    = task.status === 'Done' || task.status === 'Closed' || task.status === 'Cancelled';
     var allowsDateEdit = isContent ||
       typeId === 'task.deficiency.category_stock' ||
@@ -139,35 +141,38 @@ window.TaskDetail = (function() {
       '<div class="td-fields">' +
         '<div>' +
           '<div class="td-field-label">Status</div>' +
-          '<select class="td-f-status"' + (isSystem && !isContent ? ' disabled' : '') + '>' + statusOpts + '</select>' +
+          '<select class="td-f-status"' + (isSystem && !isContent || isManager ? ' disabled' : '') + '>' + statusOpts + '</select>' +
         '</div>' +
         '<div>' +
           '<div class="td-field-label">Assignee</div>' +
-          '<select class="td-f-assignee"' + (isSystem && !isContent ? ' disabled' : '') + '><option value="">-</option></select>' +
+          '<select class="td-f-assignee"' + (isSystem && !isContent || isManager ? ' disabled' : '') + '><option value="">-</option></select>' +
         '</div>' +
         '<div>' +
           '<div class="td-field-label">Start</div>' +
-          '<input type="date" class="td-f-start"' + (!allowsDateEdit ? ' readonly' : '') + ' value="' + startVal + '">' +
+          '<input type="date" class="td-f-start"' + (!allowsDateEdit || isManager ? ' readonly' : '') + ' value="' + startVal + '">' +
         '</div>' +
         '<div>' +
           '<div class="td-field-label">Due</div>' +
-          '<input type="date" class="td-f-due"' + (!allowsDateEdit ? ' readonly' : '') + ' value="' + dueVal + '">' +
+          '<input type="date" class="td-f-due"' + (!allowsDateEdit || isManager ? ' readonly' : '') + ' value="' + dueVal + '">' +
         '</div>' +
       '</div>';
 
     // ── Action row ─────────────────────────────────────────────────────
     var showSave   = !isSystem || allowsDateEdit || isContent;
     var showDone   = !isData;
-    var showDelete = !isData;
+    var showDelete = !isData && !isManager;
+    var showRevert = isManager && !isDone;
     var hasMore    = showSave || showDelete || isContent || !!task.createdDate;
 
     var moreOpen = false;
-    try { moreOpen = sessionStorage.getItem('td-more-open') === '1'; } catch(e) {}
 
     var actionRow =
       '<div class="d-flex align-items-center mb-2">' +
         (showDone
           ? '<button type="button" class="btn btn-sm btn-light mr-1 td-done-btn"' + (isDone ? ' disabled' : '') + '>Done</button>'
+          : '') +
+        (showRevert
+          ? '<button type="button" class="btn btn-sm btn-light mr-1 td-revert-btn">Revert</button>'
           : '') +
         (hasMore
           ? '<button type="button" class="btn btn-sm btn-light td-more-toggle-btn">More ' + (moreOpen ? '▴' : '▾') + '</button>'
@@ -270,7 +275,6 @@ window.TaskDetail = (function() {
         var open = moreSection.style.display === 'none';
         moreSection.style.display = open ? '' : 'none';
         moreToggle.textContent = 'More ' + (open ? '▴' : '▾');
-        try { sessionStorage.setItem('td-more-open', open ? '1' : '0'); } catch(e) {}
       });
     }
 
@@ -289,6 +293,31 @@ window.TaskDetail = (function() {
               return;
             }
             _currentId = null;
+            if (mode === 'modal') { ModalOverlay.close('task-detail-modal'); }
+            if (_panelEl) _panelEl.innerHTML = '';
+            cfg.refresh();
+            cfg.reload();
+          });
+        });
+      });
+    }
+
+    // Revert button (manager → admin role transfer)
+    var revertBtn = root.querySelector('.td-revert-btn');
+    if (revertBtn) {
+      revertBtn.addEventListener('click', function() {
+        TaskWidgets.confirm('Revert "' + (task.name || 'this task') + '" to Admin?', function() {
+          revertBtn.disabled = true;
+          revertBtn.textContent = 'Reverting…';
+          cfg.revertTask(id, function(success) {
+            revertBtn.disabled = false;
+            revertBtn.textContent = 'Revert';
+            if (!success) {
+              TaskWidgets.toast('Could not revert task', 'error');
+              return;
+            }
+            _currentId = null;
+            if (mode === 'modal') { ModalOverlay.close('task-detail-modal'); }
             if (_panelEl) _panelEl.innerHTML = '';
             cfg.refresh();
             cfg.reload();
@@ -331,6 +360,7 @@ window.TaskDetail = (function() {
               return;
             }
             _currentId = null;
+            if (mode === 'modal') { ModalOverlay.close('task-detail-modal'); }
             if (_panelEl) _panelEl.innerHTML = '';
             cfg.refresh();
             cfg.reload();

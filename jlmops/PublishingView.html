@@ -1,4 +1,6 @@
 <?!= include('TaskWidgets') ?>
+<?!= include('TaskPacks') ?>
+<?!= include('TaskDetail') ?>
 
 <style>
   /* PublishingView — layout */
@@ -506,6 +508,64 @@
     };
 
     function init() {
+      TaskDetail.configure({
+        getTask:      function(id)   { return (state.tasks || []).find(function(t) { return t.id === id; }) || null; },
+        getEntity:    function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }) || null; },
+        getAssignees: function() {
+          var seen = {};
+          return (state.tasks || []).reduce(function(a, t) {
+            if (t.assignedTo && !seen[t.assignedTo]) { seen[t.assignedTo] = true; a.push(t.assignedTo); }
+            return a;
+          }, []).sort();
+        },
+        loadEntityDetail: function(slug, cb) {
+          var entity = (state.library || []).find(function(e) { return e.slug === slug; });
+          cb(entity || null);
+        },
+        saveTask: function(id, fields, cb) {
+          var task = (state.tasks || []).find(function(t) { return t.id === id; });
+          var taskType = task ? (task.typeId || '') : '';
+          var isContent = taskType.indexOf('task.content') === 0 || taskType === 'task.newsletter.distribute';
+          var allowsDateEdit = isContent ||
+            taskType === 'task.deficiency.category_stock' ||
+            taskType === 'task.deficiency.bundle_stock';
+          if (allowsDateEdit || isContent) {
+            var updates = { status: fields.status, assignedTo: fields.assignedTo || null,
+              startDate: fields.startDate || null, dueDate: fields.dueDate || null, notes: fields.notes };
+            if (isContent) { updates.linkedEntityId = fields.linkedEntityId; updates.title = fields.title; }
+            google.script.run
+              .withSuccessHandler(function(r) { cb(r); })
+              .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+              .WebAppTasks_updateTask(id, updates);
+          } else {
+            google.script.run
+              .withSuccessHandler(function(r) { cb(r); })
+              .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+              .WebAppTasks_updateTaskStatus(id, fields.status);
+          }
+        },
+        completeTask: function(id, cb) {
+          google.script.run
+            .withSuccessHandler(function(ok) { cb(ok); })
+            .withFailureHandler(function()    { cb(false); })
+            .WebAppTasks_completeTaskById(id);
+        },
+        deleteTask: function(id, cb) {
+          google.script.run
+            .withSuccessHandler(function(r) { cb(r); })
+            .withFailureHandler(function(e) { cb({ error: e.message || 'Failed' }); })
+            .WebAppTasks_deleteTask(id);
+        },
+        revertTask: function(id, cb) {
+          google.script.run
+            .withSuccessHandler(function(ok) { cb(ok); })
+            .withFailureHandler(function() { cb(false); })
+            .WebAppDashboardV2_revertTaskToAdmin(id);
+        },
+        close:   function() {},
+        refresh: function() { renderTasks(); },
+        reload:  _loadData
+      });
       _loadData();
       ['pv-cal-search', 'pv-cal-filter-campaign', 'pv-cal-filter-state'].forEach(function(id) {
         var el = document.getElementById(id);
@@ -1017,7 +1077,7 @@
         var docBtn = (entity && entity.docUrl)
           ? '<a class="btn btn-sm btn-light" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">&#8599; Doc</a>'
           : '';
-        html += '<tr style="cursor:pointer" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(t.entityId) + '\')">';
+        html += '<tr style="cursor:pointer" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">';
         html += '<td data-label="Task"><strong>' + TaskWidgets.escape(t.name || t.typeId) + '</strong></td>';
         html += '<td data-label="Entity"><span class="detail-meta">' + TaskWidgets.escape(entityLabel) + '</span></td>';
         html += '<td data-label="Assignee"><span class="detail-meta">' + TaskWidgets.escape(t.assignedTo || '—') + '</span></td>';
@@ -1383,7 +1443,7 @@
       });
       el.innerHTML = sorted.map(function(t) {
         var dueChip = t.dueDate ? '<span class="tw-due-chip ' + TaskWidgets.dueClass(t.dueDate, t.status) + '">' + TaskWidgets.formatDate(t.dueDate) + '</span>' : '';
-        return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(t.id) + '\')">' +
+        return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="TaskDetail.open(\'' + TaskWidgets.escape(t.id) + '\')">' +
           '<span class="tw-status-pill ' + TaskWidgets.statusClass(t.status) + '">' + TaskWidgets.escape(t.status || '—') + '</span>' +
           '<span class="pv-drawer-task-title">' + TaskWidgets.escape(t.name || t.typeId) + '</span>' +
           (t.assignedTo ? '<span class="detail-meta">' + TaskWidgets.escape(t.assignedTo) + '</span>' : '') +
