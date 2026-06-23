@@ -1,10 +1,6 @@
 <?!= include('TaskWidgets') ?>
-<?!= include('TaskPacks') ?>
+<?!= include('TaskDetail') ?>
 <style>
-  /* Pack action rows (#task-pack-do): match the manager dashboard's flex+gap
-     layout so the shared TaskPacks buttons/links don't render touching or with
-     irregular inline margins here. Mirrors ManagerDashboardView_v2's rule. */
-  #task-pack-do .detail-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
   /* Task row and header use flexbox to fill 100% width */
   .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
   .task-row > div, #subheader-tasks .row > div { padding: 0 3px; box-sizing: border-box; overflow: hidden; }
@@ -277,87 +273,8 @@
             </form>
           </div>
 
-          <!-- Task detail form -->
-          <div id="detail-task" style="display:none;">
-            <form id="task-form">
-              <div class="form-group mb-2">
-                <label class="small font-weight-bold mb-0">Title</label>
-                <input type="text" class="form-control form-control-sm" id="task-field-title" readonly>
-              </div>
-              <div class="form-row">
-                <div class="col-6">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Status</label>
-                    <select class="form-control form-control-sm" id="task-field-status"></select>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Priority</label>
-                    <select class="form-control form-control-sm" id="task-field-priority">
-                      <option value="Critical">Critical</option>
-                      <option value="High">High</option>
-                      <option value="Normal">Normal</option>
-                      <option value="Low">Low</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="col-4">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Assigned To</label>
-                    <select class="form-control form-control-sm" id="task-field-assignee"></select>
-                  </div>
-                </div>
-                <div class="col-4">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Start</label>
-                    <input type="date" class="form-control form-control-sm" id="task-field-start">
-                  </div>
-                </div>
-                <div class="col-4">
-                  <div class="form-group mb-2">
-                    <label class="small font-weight-bold mb-0">Due</label>
-                    <input type="date" class="form-control form-control-sm" id="task-field-due">
-                  </div>
-                </div>
-              </div>
-              <div class="text-muted small mb-2" id="task-field-created-display" style="font-size:11px;"></div>
-              <div class="form-group mb-2">
-                <label class="small font-weight-bold mb-0">Linked Entity</label>
-                <input type="text" class="form-control form-control-sm" id="task-field-entity" readonly>
-              </div>
-              <div class="form-group mb-2">
-                <label class="small font-weight-bold mb-0">Entity URL/ID <small class="text-muted">(Drive link for content tasks)</small></label>
-                <div class="input-group input-group-sm">
-                  <input type="text" class="form-control form-control-sm" id="task-field-entity-id" placeholder="https://drive.google.com/...">
-                  <div class="input-group-append">
-                    <button type="button" class="btn btn-light" id="btn-open-entity" title="Open in new tab">↗</button>
-                  </div>
-                </div>
-              </div>
-              <div class="form-group mb-2">
-                <label class="small font-weight-bold mb-0">Notes</label>
-                <textarea class="form-control form-control-sm" id="task-field-notes" rows="3" style="font-size:12px;"></textarea>
-              </div>
-              <hr class="my-2">
-              <div class="d-flex justify-content-between">
-                <button type="button" id="btn-save-task" class="btn btn-sm btn-light">Save</button>
-                <div>
-                  <button type="button" id="btn-view-product" class="btn btn-sm btn-light mr-1" title="View product details">View</button>
-                  <button type="button" id="btn-complete-task" class="btn btn-sm btn-light mr-1">Done</button>
-                  <button type="button" id="btn-cancel-task" class="btn btn-sm btn-light">Delete</button>
-                </div>
-              </div>
-              <!-- DO region: the task's pack (shared TaskPacks kit) renders here, below the MANAGE form. -->
-              <div id="task-pack-do" class="mt-2 pt-2 border-top"></div>
-              <!-- Product Info Panel -->
-              <div id="product-info-panel" style="display:none;" class="small mt-2 p-2 border rounded bg-light">
-                <div id="product-info-content"></div>
-              </div>
-            </form>
-          </div>
+          <!-- Task detail: rendered by shared TaskDetail component -->
+          <div id="td-panel-host"></div>
         </div>
       </div>
     </div>
@@ -695,16 +612,60 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     loadContentStages();
     bindEventHandlers();
 
-    // Wire the shared TaskPacks "DO" kit (packs render below the MANAGE form).
-    TaskPacks.configure({
-      getTask: function(id) { return state.tasks.find(function(t) { return t.id === id; }); },
-      getEntity: function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
+    // Wire the shared TaskDetail component (owns TaskPacks internally).
+    TaskDetail.configure({
+      getTask:      function(id)   { return state.tasks.find(function(t) { return t.id === id; }); },
+      getEntity:    function(slug) { return (state.library || []).find(function(e) { return e.slug === slug; }); },
+      getAssignees: function()     { return state.assignees || []; },
+      loadEntityDetail: function(slug, cb) {
+        var entity = (state.library || []).find(function(e) { return e.slug === slug; });
+        cb(entity || null);
+      },
+      saveTask: function(id, fields, cb) {
+        var task = state.tasks.find(function(t) { return t.id === id; });
+        var taskType = task ? (task.typeId || '') : '';
+        var isContent = taskType.indexOf('task.content') === 0 || taskType === 'task.newsletter.distribute';
+        var allowsDateEdit = isContent ||
+          taskType === 'task.deficiency.category_stock' ||
+          taskType === 'task.deficiency.bundle_stock';
+        if (allowsDateEdit || isContent) {
+          var updates = {
+            status:     fields.status,
+            assignedTo: fields.assignedTo || null,
+            startDate:  fields.startDate  || null,
+            dueDate:    fields.dueDate    || null,
+            notes:      fields.notes
+          };
+          if (isContent) {
+            updates.linkedEntityId = fields.linkedEntityId;
+            updates.title          = fields.title;
+          }
+          google.script.run
+            .withSuccessHandler(function(r) { cb(r); })
+            .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+            .WebAppTasks_updateTask(id, updates);
+        } else {
+          google.script.run
+            .withSuccessHandler(function(r) { cb(r); })
+            .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+            .WebAppTasks_updateTaskStatus(id, fields.status);
+        }
+      },
+      completeTask: function(id, cb) {
+        google.script.run
+          .withSuccessHandler(function(success) { cb(success); })
+          .withFailureHandler(function() { cb(false); })
+          .WebAppTasks_completeTaskById(id);
+      },
+      deleteTask: function(id, cb) {
+        google.script.run
+          .withSuccessHandler(function(r) { cb(r); })
+          .withFailureHandler(function(e) { cb({ error: e.message || 'Failed' }); })
+          .WebAppTasks_deleteTask(id);
+      },
+      close:   function() { state.selectedTaskId = null; render(); },
       refresh: render,
-      reload: loadData,
-      // MANAGE form already renders an editable Notes (task-field-notes, saved by
-      // saveTaskStatus) — suppress the pack's duplicate Notes so there's one field
-      // (Step 8). Pack handlers fall back to task.notes when the textarea is absent.
-      hideNotes: true
+      reload:  loadData
     });
 
     // Set initial panel state
@@ -777,12 +738,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       state.priorityOptions.map(function(p) {
         return '<option value="' + p + '">' + p + '</option>';
       }).join('');
-
-    // Task detail status dropdown
-    var taskFieldSelect = document.getElementById('task-field-status');
-    taskFieldSelect.innerHTML = state.statusOptions.map(function(s) {
-      return '<option value="' + s + '">' + s + '</option>';
-    }).join('');
   }
 
   function populateAssigneeFilter() {
@@ -954,19 +909,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     });
 
     document.getElementById('btn-save-project').addEventListener('click', saveProject);
-    document.getElementById('btn-save-task').addEventListener('click', saveTaskStatus);
-
-    document.getElementById('btn-complete-task').addEventListener('click', function() {
-      showConfirm('Mark this task as complete?', function() {
-        completeTask(state.selectedTaskId);
-      });
-    });
-
-    document.getElementById('btn-cancel-task').addEventListener('click', function() {
-      showConfirm('Delete this task? This cannot be undone.', function() {
-        cancelTask(state.selectedTaskId);
-      });
-    });
 
     document.getElementById('confirm-yes').addEventListener('click', function() {
       var callback = confirmCallback;
@@ -982,15 +924,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     document.getElementById('btn-generate-outputs').addEventListener('click', openGenerateOutputsModal);
     document.getElementById('btn-generate-outputs-submit').addEventListener('click', submitGenerateOutputs);
     document.getElementById('btn-create-task').addEventListener('click', createTask);
-
-    document.getElementById('btn-view-product').addEventListener('click', viewProductDetails);
-
-    document.getElementById('btn-open-entity').addEventListener('click', function() {
-      var entityId = document.getElementById('task-field-entity-id').value.trim();
-      if (entityId && entityId.indexOf('http') === 0) {
-        window.open(entityId, '_blank');
-      }
-    });
 
     // Bulk selection handlers
     document.getElementById('select-all-tasks').addEventListener('change', function() {
@@ -1192,73 +1125,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         document.getElementById('import-result').style.display = '';
       })
       .WebAppProjects_importContentStreams(csvData, state.selectedProjectId);
-  }
-
-  // === PRODUCT LOOKUP ===
-
-  function viewProductDetails() {
-    var panel = document.getElementById('product-info-panel');
-
-    // Toggle - if visible, hide it
-    if (panel.style.display !== 'none') {
-      panel.style.display = 'none';
-      return;
-    }
-
-    var entityId = document.getElementById('task-field-entity-id').value;
-    if (!entityId) {
-      document.getElementById('product-info-content').innerHTML = '<span class="text-muted">No entity ID</span>';
-      panel.style.display = '';
-      return;
-    }
-
-    // Show loading
-    document.getElementById('product-info-content').innerHTML = '<span class="text-muted">Loading...</span>';
-    panel.style.display = '';
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        renderProductInfo(result, entityId);
-      })
-      .withFailureHandler(function(err) {
-        document.getElementById('product-info-content').innerHTML =
-          '<span class="text-danger">Error: ' + TaskWidgets.escape(err.message || 'Failed to load') + '</span>';
-      })
-      .WebAppProducts_lookupProductBySku(entityId);
-  }
-
-  function renderProductInfo(data, sku) {
-    var content = document.getElementById('product-info-content');
-
-    if (!data || !data.comax) {
-      content.innerHTML = '<span class="text-warning">SKU not found: ' + TaskWidgets.escape(sku) + '</span>';
-      return;
-    }
-
-    var comax = data.comax;
-    var web = data.web;
-
-    // Compact 2-3 row display
-    var soldOnlineClass = comax.isWeb ? 'text-success' : 'text-danger';
-    var soldOnlineText = comax.isWeb ? 'YES' : 'NO';
-
-    var html = '<div style="line-height:1.4;">';
-    // Row 1: Sold Online (most important) + Active + Stock
-    html += '<strong class="' + soldOnlineClass + '">Sold Online: ' + soldOnlineText + '</strong>';
-    html += ' &nbsp;|&nbsp; Active: ' + (comax.isActive ? 'Yes' : 'No');
-    html += ' &nbsp;|&nbsp; Stock: ' + (comax.stock || 0);
-    html += ' &nbsp;|&nbsp; ₪' + (comax.price || 0);
-    // Row 2: Name
-    html += '<br>' + TaskWidgets.escape(comax.nameHe || '-');
-    // Row 3: Web status (if relevant)
-    if (web) {
-      html += '<br><span class="text-muted">Web: EN#' + (web.webIdEn || '-') + ' HE#' + (web.webIdHe || '-') + '</span>';
-    } else {
-      html += '<br><span class="text-muted">Not on web store</span>';
-    }
-    html += '</div>';
-
-    content.innerHTML = html;
   }
 
   // === NAVIGATION ===
@@ -1744,21 +1610,20 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
   }
 
   function renderDetailPanel() {
-    var summary = document.getElementById('detail-summary');
+    var summary       = document.getElementById('detail-summary');
     var projectDetail = document.getElementById('detail-project');
-    var taskDetail = document.getElementById('detail-task');
-    var title = document.getElementById('detail-title');
+    var panelHost     = document.getElementById('td-panel-host');
+    var title         = document.getElementById('detail-title');
 
-    summary.style.display = 'none';
+    summary.style.display       = 'none';
     projectDetail.style.display = 'none';
-    taskDetail.style.display = 'none';
+    if (panelHost) panelHost.innerHTML = '';
 
     if (state.selectedTaskId) {
       var task = getSelectedTask();
       if (task) {
         title.textContent = 'Task Details';
-        taskDetail.style.display = '';
-        populateTaskForm(task);
+        TaskDetail.render(task.id, panelHost);
       }
     } else if (state.selectedProjectId && state.mode === 'tasks') {
       var project = getSelectedProject();
@@ -1820,121 +1685,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       html += '<option value="' + TaskWidgets.escape(c.id) + '"' + sel + '>' + TaskWidgets.escape(c.name) + '</option>';
     });
     select.innerHTML = html;
-  }
-
-  function populateTaskForm(task) {
-    // Hide product info panel when switching tasks
-    document.getElementById('product-info-panel').style.display = 'none';
-
-    document.getElementById('task-field-title').value = task.name || '';
-    document.getElementById('task-field-status').value = task.status || 'New';
-    document.getElementById('task-field-priority').value = task.priority || 'Normal';
-
-    // Populate assignee dropdown
-    var assigneeSelect = document.getElementById('task-field-assignee');
-    var assigneeHtml = '<option value="">- Unassigned -</option>';
-    state.assignees.forEach(function(a) {
-      var selected = a === task.assignedTo ? ' selected' : '';
-      assigneeHtml += '<option value="' + a + '"' + selected + '>' + a.split('@')[0] + '</option>';
-    });
-    assigneeSelect.innerHTML = assigneeHtml;
-
-    document.getElementById('task-field-start').value = task.startDate ? TaskWidgets.formatDate(task.startDate) : '';
-    document.getElementById('task-field-due').value = task.dueDate ? TaskWidgets.formatDate(task.dueDate) : '';
-    var createdDisp = task.createdDate ? TaskWidgets.formatDateShort(task.createdDate) : '';
-    document.getElementById('task-field-created-display').textContent = createdDisp ? 'Created: ' + createdDisp : '';
-
-    document.getElementById('task-field-entity').value = task.entityName || '';
-    document.getElementById('task-field-entity-id').value = task.entityId || '';
-    document.getElementById('task-field-notes').value = task.notes || '';
-
-    // Show/hide View button based on whether there's an entity ID
-    var hasEntityId = !!(task.entityId);
-    document.getElementById('btn-view-product').style.display = hasEntityId ? '' : 'none';
-
-    // Auto-lookup product for sold online status in entity name
-    if (hasEntityId) {
-      lookupSoldOnlineStatus(task.entityId, task.entityName);
-    }
-
-    var isDone = task.status === 'Done' || task.status === 'Cancelled';
-
-    // Check if this is a system-created task (not user-created)
-    // Note: task.content tasks ARE editable by admin
-    var taskType = task.typeId || '';
-    var isSystemTask = taskType.indexOf('task.system') === 0 ||
-                       taskType.indexOf('task.validation') === 0 ||
-                       taskType.indexOf('task.sync') === 0 ||
-                       taskType.indexOf('task.bundle') === 0 ||
-                       taskType.indexOf('task.deficiency') === 0 ||
-                       taskType.indexOf('task.inventory') === 0 ||
-                       taskType.indexOf('task.onboarding') === 0 ||
-                       taskType.indexOf('task.order') === 0 ||
-                       taskType.indexOf('task.confirmation') === 0 ||
-                       taskType.indexOf('task.data') === 0 ||
-                       taskType.indexOf('task.crm') === 0 ||
-                       taskType.indexOf('task.export') === 0;
-
-    // Content tasks are fully editable
-    var isContentTask = taskType.indexOf('task.content') === 0;
-
-    // Data-carrying tasks that should be completely protected (read-only, no actions)
-    var isDataTask = taskType.indexOf('task.system') === 0 ||
-                     taskType.indexOf('task.sync') === 0;
-
-    // Tasks that allow date editing (even if system-created)
-    var allowsDateEdit = isContentTask ||
-                         taskType === 'task.deficiency.category_stock' ||
-                         taskType === 'task.deficiency.bundle_stock';
-
-    // System tasks: disable field editing (except content tasks)
-    // Done tasks remain editable so admin can adjust dates
-    document.getElementById('task-field-status').disabled = isSystemTask && !isContentTask;
-    document.getElementById('task-field-priority').disabled = isSystemTask && !isContentTask;
-    document.getElementById('task-field-assignee').disabled = isSystemTask && !isContentTask;
-    document.getElementById('task-field-notes').readOnly = isDataTask;
-
-    // Date fields: editable for content tasks and specific system task types
-    document.getElementById('task-field-start').readOnly = !allowsDateEdit;
-    document.getElementById('task-field-due').readOnly = !allowsDateEdit;
-
-    // Entity ID: editable for content tasks (so admin can add Drive URL)
-    document.getElementById('task-field-entity-id').readOnly = !isContentTask;
-
-    // Title: editable for content tasks (code prefix links them, rest is editable)
-    document.getElementById('task-field-title').readOnly = !isContentTask;
-
-    // Open entity button: show only if entity ID looks like a URL
-    var entityId = task.entityId != null ? String(task.entityId) : '';
-    var openBtn = document.getElementById('btn-open-entity');
-    openBtn.style.display = entityId.indexOf('http') === 0 ? '' : 'none';
-
-    // Data tasks: hide all action buttons (system manages these)
-    // Content tasks: allow all actions
-    // Regular system tasks: allow Done/Cancel but not Save
-    var showSave = !isSystemTask || allowsDateEdit || isContentTask;
-    document.getElementById('btn-save-task').style.display = showSave ? '' : 'none';
-    document.getElementById('btn-complete-task').style.display = isDataTask ? 'none' : '';
-    document.getElementById('btn-cancel-task').style.display = isDataTask ? 'none' : '';
-    document.getElementById('btn-complete-task').disabled = isDone || isDataTask;
-    document.getElementById('btn-cancel-task').disabled = isDone || isDataTask;
-
-    // DO region: render the task's pack (shared TaskPacks kit) below the MANAGE form.
-    var doRegion = document.getElementById('task-pack-do');
-    if (doRegion) doRegion.innerHTML = TaskPacks.packBody(task);
-  }
-
-  function lookupSoldOnlineStatus(entityId, entityName) {
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result && result.comax) {
-          var indicator = result.comax.isWeb ? ' [WEB]' : ' [NOT WEB]';
-          var indicatorClass = result.comax.isWeb ? 'text-success' : 'text-danger';
-          var field = document.getElementById('task-field-entity');
-          field.value = (entityName || '') + indicator;
-        }
-      })
-      .WebAppProducts_lookupProductBySku(entityId);
   }
 
   function updateStats() {
@@ -2248,85 +1998,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       });
   }
 
-  function saveTaskStatus() {
-    if (!state.selectedTaskId) return;
-
-    var task = getSelectedTask();
-    var taskType = task ? task.typeId : '';
-    var isContentTask = taskType.indexOf('task.content') === 0;
-
-    // Check if this task allows full editing
-    var allowsDateEdit = isContentTask ||
-                         taskType === 'task.deficiency.category_stock' ||
-                         taskType === 'task.deficiency.bundle_stock';
-
-    if (allowsDateEdit || isContentTask) {
-      // Save all editable fields
-      var updates = {
-        status: document.getElementById('task-field-status').value,
-        priority: document.getElementById('task-field-priority').value,
-        assignedTo: document.getElementById('task-field-assignee').value || null,
-        startDate: document.getElementById('task-field-start').value || null,
-        dueDate: document.getElementById('task-field-due').value || null,
-        notes: document.getElementById('task-field-notes').value
-      };
-      // For content tasks, also save entity ID (Drive URL) and title
-      if (isContentTask) {
-        updates.linkedEntityId = document.getElementById('task-field-entity-id').value.trim();
-        updates.title = document.getElementById('task-field-title').value.trim();
-      }
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-          loadData();
-        })
-        .WebAppTasks_updateTask(state.selectedTaskId, updates);
-    } else {
-      // Save status only (original behavior for system tasks)
-      var newStatus = document.getElementById('task-field-status').value;
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-          loadData();
-        })
-        .WebAppTasks_updateTaskStatus(state.selectedTaskId, newStatus);
-    }
-  }
-
-  function completeTask(taskId) {
-    showTaskActionSpinner('btn-complete-task');
-    google.script.run
-      .withSuccessHandler(function(success) {
-        hideTaskActionSpinner('btn-complete-task', 'Done');
-        if (!success) { TaskWidgets.toast('Could not complete task', 'error'); return; }
-        state.selectedTaskId = null;
-        render();  // Clear detail panel immediately
-        loadData();
-      })
-      .withFailureHandler(function(err) {
-        hideTaskActionSpinner('btn-complete-task', 'Done');
-        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
-      })
-      .WebAppTasks_completeTaskById(taskId);
-  }
-
-  function cancelTask(taskId) {
-    showTaskActionSpinner('btn-cancel-task');
-    google.script.run
-      .withSuccessHandler(function(result) {
-        hideTaskActionSpinner('btn-cancel-task', 'Delete');
-        if (result.error) { TaskWidgets.toast('Error: ' + result.error, 'error'); return; }
-        state.selectedTaskId = null;
-        render();
-        loadData();
-      })
-      .withFailureHandler(function(err) {
-        hideTaskActionSpinner('btn-cancel-task', 'Delete');
-        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
-      })
-      .WebAppTasks_deleteTask(taskId);
-  }
-
   function cancelSelectedTasks() {
     var taskIds = state.selectedTaskIds.slice();  // Copy array
     if (taskIds.length === 0) return;
@@ -2362,22 +2033,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
       })
       .WebAppTasks_deleteTasks(taskIds);
-  }
-
-  function showTaskActionSpinner(buttonId) {
-    var btn = document.getElementById(buttonId);
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-    document.getElementById('btn-complete-task').disabled = true;
-    document.getElementById('btn-cancel-task').disabled = true;
-  }
-
-  function hideTaskActionSpinner(buttonId, label) {
-    var btn = document.getElementById(buttonId);
-    btn.innerHTML = label;
-    btn.disabled = false;
-    document.getElementById('btn-complete-task').disabled = false;
-    document.getElementById('btn-cancel-task').disabled = false;
   }
 
 })();

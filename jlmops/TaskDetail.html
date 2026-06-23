@@ -1,0 +1,456 @@
+<?!= include('TaskPacks') ?>
+<!--
+  TaskDetail — shared task detail component.
+
+  Hosts configure once via TaskDetail.configure(), then call:
+    TaskDetail.render(taskId, containerEl)  — panel mode (AdminTasksView right panel)
+    TaskDetail.open(taskId)                 — modal mode (Deploy B+; stub for Deploy A)
+
+  TaskPacks is owned here. Hosts that previously included TaskPacks directly
+  must drop that include once they adopt TaskDetail.
+
+  Host contract:
+    getTask(id)                → task object or null
+    getEntity(slug)            → library entity or null (for DO pack)
+    loadEntityDetail(slug, cb) → async; cb(detail) on expand toggle
+    saveTask(id, fields, cb)   → route save to correct backend; cb({error?})
+    completeTask(id, cb)       → mark Done; cb(true/false)
+    deleteTask(id, cb)         → delete task; cb({error?})
+    close()                    → called when Close button hit in panel mode
+    refresh()                  → light re-render of host list
+    reload()                   → full server reload
+-->
+
+<!-- Modal container: Deploy B+ wires tasks from other surfaces here -->
+<div class="modal-overlay" id="task-detail-modal" style="display:none;" aria-hidden="true">
+  <div class="modal-container" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div id="td-modal-body" style="padding:12px;"></div>
+  </div>
+</div>
+
+<style>
+  /* Pack action rows inside TaskDetail */
+  #task-pack-do .detail-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+
+  /* Compact header */
+  .td-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Status chip */
+  .td-chip { font-size: 10px; padding: 2px 6px; border-radius: 10px; display: inline-block; }
+  .td-chip-new      { background: #e9ecef; color: #495057; }
+  .td-chip-assigned { background: #cfe2ff; color: #084298; }
+  .td-chip-review   { background: #fff3cd; color: #664d03; }
+  .td-chip-done, .td-chip-closed { background: #d1e7dd; color: #0a3622; }
+  .td-chip-cancelled { background: #f8d7da; color: #842029; }
+  .td-chip-default  { background: #e9ecef; color: #495057; }
+
+  /* More section */
+  .td-more-section { border-top: 1px solid #dee2e6; margin-top: 6px; padding-top: 8px; }
+
+  /* Entity section */
+  .td-entity-section { border-top: 1px solid #dee2e6; margin-top: 6px; padding-top: 6px; }
+  .td-entity-body    { padding: 4px 0; }
+</style>
+
+<script>
+window.TaskDetail = (function() {
+  'use strict';
+
+  var cfg = {
+    getTask:          function()        { return null; },
+    getEntity:        function()        { return null; },
+    getAssignees:     function()        { return []; },
+    loadEntityDetail: function(s, cb)   { cb(null); },
+    saveTask:         function(i, f, cb){ cb && cb({ error: 'not configured' }); },
+    completeTask:     function(i, cb)   { cb && cb(false); },
+    deleteTask:       function(i, cb)   { cb && cb({ error: 'not configured' }); },
+    close:            function()        {},
+    refresh:          function()        {},
+    reload:           function()        {}
+  };
+
+  var _panelEl   = null;
+  var _currentId = null;
+
+  // ── Public API ──────────────────────────────────────────────────────
+
+  function configure(opts) {
+    if (!opts) return;
+    var keys = ['getTask','getEntity','getAssignees','loadEntityDetail','saveTask',
+                'completeTask','deleteTask','close','refresh','reload'];
+    keys.forEach(function(k) { if (opts[k]) cfg[k] = opts[k]; });
+
+    // Wire TaskPacks internally — hosts must NOT also include TaskPacks directly.
+    TaskPacks.configure({
+      getTask:   cfg.getTask,
+      getEntity: cfg.getEntity,
+      refresh:   cfg.refresh,
+      reload:    cfg.reload,
+      hideNotes: true  // TaskDetail's More section renders Notes; suppress duplicate in pack
+    });
+  }
+
+  // Panel mode: render into a host-provided container element.
+  function render(taskId, containerEl) {
+    _currentId = taskId;
+    _panelEl   = containerEl;
+    if (!containerEl) return;
+    if (!taskId) { containerEl.innerHTML = ''; return; }
+    var task = cfg.getTask(taskId);
+    if (!task) { containerEl.innerHTML = ''; return; }
+    containerEl.innerHTML = _buildHTML(task, 'panel');
+    _bind(task, containerEl, 'panel');
+  }
+
+  // Modal mode (Deploy B+): render into #td-modal-body and open modal.
+  function open(taskId) {
+    _currentId = taskId;
+    var task = cfg.getTask(taskId);
+    if (!task) return;
+    var body = document.getElementById('td-modal-body');
+    if (!body) return;
+    body.innerHTML = _buildHTML(task, 'modal');
+    _bind(task, body, 'modal');
+    ModalOverlay.open('task-detail-modal');
+  }
+
+  // ── HTML builder ────────────────────────────────────────────────────
+
+  function _statusChipClass(status) {
+    var map = {
+      New: 'new', Assigned: 'assigned', Review: 'review',
+      Done: 'done', Closed: 'closed', Cancelled: 'cancelled'
+    };
+    return 'td-chip td-chip-' + (map[status] || 'default');
+  }
+
+  function _buildHTML(task, mode) {
+    var esc = TaskWidgets.escape;
+
+    var typeId    = task.typeId || '';
+    var isContent = typeId.indexOf('task.content') === 0 || typeId === 'task.newsletter.distribute';
+    var isSystem  = typeId.indexOf('task.system') === 0 || typeId.indexOf('task.sync') === 0;
+    var isData    = isSystem;
+    var isDone    = task.status === 'Done' || task.status === 'Closed' || task.status === 'Cancelled';
+
+    // Allow date edits on content tasks + certain deficiency types
+    var allowsDateEdit = isContent ||
+      typeId === 'task.deficiency.category_stock' ||
+      typeId === 'task.deficiency.bundle_stock';
+
+    // ── Compact header ────────────────────────────────────────────────
+    var isOverdue = task.dueDate && TaskWidgets.isOverdue(task.dueDate, task.status);
+    var dueChipClass = isOverdue ? 'badge badge-danger' : 'td-chip td-chip-default';
+    var chips = '<span class="' + _statusChipClass(task.status) + '">' + esc(task.status || 'New') + '</span>';
+    if (task.assignedTo) {
+      chips += ' <span class="td-chip td-chip-default">' + esc(task.assignedTo.split('@')[0]) + '</span>';
+    }
+    if (task.dueDate) {
+      chips += ' <span class="' + dueChipClass + '">' + esc(TaskWidgets.formatDateShort(task.dueDate)) + '</span>';
+    }
+
+    // ── Pack ──────────────────────────────────────────────────────────
+    var packHtml = TaskPacks.packBody(task);
+    var packSection = packHtml
+      ? '<div id="task-pack-do" class="mt-2">' + packHtml + '</div><hr class="my-2">'
+      : '';
+
+    // ── Admin controls ────────────────────────────────────────────────
+    var statusOpts = ['New','Assigned','Review','Done','Closed'].map(function(s) {
+      return '<option value="' + s + '"' + (task.status === s ? ' selected' : '') + '>' + s + '</option>';
+    }).join('');
+
+    var moreOpen = false;
+    try { moreOpen = sessionStorage.getItem('td-more-open') === '1'; } catch(e) {}
+    var moreDisplay = moreOpen ? '' : 'display:none;';
+    var moreLabel   = 'More ' + (moreOpen ? '▴' : '▾');
+
+    var showSave   = !isSystem || allowsDateEdit || isContent;
+    var showDone   = !isData;
+    var showDelete = !isData;
+
+    // Extra fields for content tasks in More
+    var titleField = isContent
+      ? '<div class="form-group mb-2"><label class="small font-weight-bold mb-0">Title</label>' +
+        '<input type="text" class="form-control form-control-sm td-f-title" value="' + esc(task.name || '') + '"></div>'
+      : '';
+
+    var entityUrlField = isContent
+      ? '<div class="form-group mb-2"><label class="small font-weight-bold mb-0">Drive URL</label>' +
+        '<div class="input-group input-group-sm">' +
+        '<input type="text" class="form-control form-control-sm td-f-entity-id" value="' + esc(String(task.entityId || '')) + '" placeholder="https://drive.google.com/...">' +
+        '<div class="input-group-append"><button type="button" class="btn btn-light td-open-entity-btn" title="Open">↗</button></div>' +
+        '</div></div>'
+      : '';
+
+    var startReadonly = (!allowsDateEdit && !isDone) ? ' readonly' : '';
+    var dueReadonly   = (!allowsDateEdit && !isDone) ? ' readonly' : '';
+
+    var adminControls =
+      '<div class="td-controls mt-2">' +
+        '<div class="d-flex align-items-center">' +
+          '<select class="form-control form-control-sm mr-1 td-f-status" style="width:auto;"' +
+            (isSystem && !isContent ? ' disabled' : '') + '>' + statusOpts + '</select>' +
+          (showDone
+            ? ' <button type="button" class="btn btn-sm btn-light mr-1 td-done-btn"' + (isDone ? ' disabled' : '') + '>Done</button>'
+            : '') +
+          ' <button type="button" class="btn btn-sm btn-light td-more-toggle-btn">' + moreLabel + '</button>' +
+        '</div>' +
+        '<div class="td-more-section" style="' + moreDisplay + '">' +
+          '<div class="form-row mt-1">' +
+            '<div class="col-12 col-sm-4 mb-2">' +
+              '<label class="small font-weight-bold mb-0">Assigned To</label>' +
+              '<select class="form-control form-control-sm td-f-assignee"' + (isSystem && !isContent ? ' disabled' : '') + '>' +
+                '<option value="">- Unassigned -</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="col-6 col-sm-4 mb-2">' +
+              '<label class="small font-weight-bold mb-0">Start</label>' +
+              '<input type="date" class="form-control form-control-sm td-f-start"' + startReadonly +
+                ' value="' + (task.startDate ? TaskWidgets.formatDate(task.startDate) : '') + '">' +
+            '</div>' +
+            '<div class="col-6 col-sm-4 mb-2">' +
+              '<label class="small font-weight-bold mb-0">Due</label>' +
+              '<input type="date" class="form-control form-control-sm td-f-due"' + dueReadonly +
+                ' value="' + (task.dueDate ? TaskWidgets.formatDate(task.dueDate) : '') + '">' +
+            '</div>' +
+          '</div>' +
+          titleField +
+          entityUrlField +
+          '<div class="form-group mb-2">' +
+            '<label class="small font-weight-bold mb-0">Notes</label>' +
+            '<textarea class="form-control form-control-sm td-f-notes" rows="3" style="font-size:12px;">' +
+              esc(task.notes || '') +
+            '</textarea>' +
+          '</div>' +
+          (task.createdDate
+            ? '<div class="text-muted mb-2" style="font-size:11px;">Created: ' + esc(TaskWidgets.formatDateShort(task.createdDate)) + '</div>'
+            : '') +
+          '<div class="d-flex justify-content-between">' +
+            (showSave
+              ? '<button type="button" class="btn btn-sm btn-light td-save-btn">Save</button>'
+              : '<span></span>') +
+            (showDelete
+              ? '<button type="button" class="btn btn-sm btn-light td-delete-btn"' + (isDone ? ' disabled' : '') + '>Delete</button>'
+              : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // ── Entity section (lazy) ─────────────────────────────────────────
+    var hasEntity = !!(task.entityName || task.entitySlug);
+    var entitySlug = task.entitySlug || '';
+    var entitySection = hasEntity
+      ? '<div class="td-entity-section">' +
+          '<a href="#" class="small text-muted td-entity-toggle">▸ Entity</a>' +
+          '<div class="td-entity-body" style="display:none;" data-slug="' + esc(entitySlug) + '"></div>' +
+        '</div>'
+      : '';
+
+    // ── Assemble ──────────────────────────────────────────────────────
+    return '<div class="d-flex justify-content-between align-items-center mb-1">' +
+             '<span class="td-title font-weight-bold small" title="' + esc(task.name || '') + '">' + esc(task.name || '-') + '</span>' +
+             '<button type="button" class="btn btn-sm btn-light td-close-btn" style="font-size:11px;">✕</button>' +
+           '</div>' +
+           '<div class="td-chips mb-1">' + chips + '</div>' +
+           '<hr class="my-2">' +
+           packSection +
+           adminControls +
+           entitySection;
+  }
+
+  // ── Event binding ───────────────────────────────────────────────────
+
+  function _bind(task, root, mode) {
+    var esc = TaskWidgets.escape;
+    var id  = task.id;
+
+    // Populate assignee select from host-provided list (synchronous, no GAS round-trip)
+    var assigneeEl = root.querySelector('.td-f-assignee');
+    if (assigneeEl) {
+      var currentAssignee = task.assignedTo || '';
+      var roles = cfg.getAssignees();
+      var html = '<option value="">- Unassigned -</option>';
+      (roles || []).forEach(function(r) {
+        html += '<option value="' + esc(r) + '"' + (r === currentAssignee ? ' selected' : '') + '>' +
+                esc(r.split('@')[0]) + '</option>';
+      });
+      assigneeEl.innerHTML = html;
+    }
+
+    // Close button
+    var closeBtn = root.querySelector('.td-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        if (mode === 'modal') {
+          ModalOverlay.close('task-detail-modal');
+        } else {
+          if (_panelEl) _panelEl.innerHTML = '';
+          _currentId = null;
+          cfg.close();
+        }
+      });
+    }
+
+    // More toggle
+    var moreToggle  = root.querySelector('.td-more-toggle-btn');
+    var moreSection = root.querySelector('.td-more-section');
+    if (moreToggle && moreSection) {
+      moreToggle.addEventListener('click', function() {
+        var open = moreSection.style.display === 'none';
+        moreSection.style.display = open ? '' : 'none';
+        moreToggle.textContent = 'More ' + (open ? '▴' : '▾');
+        try { sessionStorage.setItem('td-more-open', open ? '1' : '0'); } catch(e) {}
+      });
+    }
+
+    // Done button
+    var doneBtn = root.querySelector('.td-done-btn');
+    if (doneBtn) {
+      doneBtn.addEventListener('click', function() {
+        TaskWidgets.confirm('Mark this task as complete?', function() {
+          doneBtn.disabled = true;
+          doneBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+          cfg.completeTask(id, function(success) {
+            if (!success) {
+              doneBtn.disabled = false;
+              doneBtn.textContent = 'Done';
+              TaskWidgets.toast('Could not complete task', 'error');
+              return;
+            }
+            _currentId = null;
+            if (_panelEl) _panelEl.innerHTML = '';
+            cfg.refresh();
+            cfg.reload();
+          });
+        });
+      });
+    }
+
+    // Save button
+    var saveBtn = root.querySelector('.td-save-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function() {
+        var fields = _readFields(root, task);
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving…';
+        cfg.saveTask(id, fields, function(result) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save';
+          if (result && result.error) {
+            TaskWidgets.toast('Error: ' + result.error, 'error');
+            return;
+          }
+          cfg.reload();
+        });
+      });
+    }
+
+    // Delete button
+    var deleteBtn = root.querySelector('.td-delete-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', function() {
+        TaskWidgets.confirm('Delete this task? This cannot be undone.', function() {
+          deleteBtn.disabled = true;
+          deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+          cfg.deleteTask(id, function(result) {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete';
+            if (result && result.error) {
+              TaskWidgets.toast('Error: ' + result.error, 'error');
+              return;
+            }
+            _currentId = null;
+            if (_panelEl) _panelEl.innerHTML = '';
+            cfg.refresh();
+            cfg.reload();
+          });
+        });
+      });
+    }
+
+    // Open entity URL (Drive link for content tasks)
+    var openEntityBtn = root.querySelector('.td-open-entity-btn');
+    if (openEntityBtn) {
+      openEntityBtn.addEventListener('click', function() {
+        var el = root.querySelector('.td-f-entity-id');
+        var val = el ? el.value.trim() : '';
+        if (val && val.indexOf('http') === 0) window.open(val, '_blank');
+      });
+    }
+
+    // Entity toggle — lazy-loads on expand
+    var entityToggle = root.querySelector('.td-entity-toggle');
+    var entityBody   = root.querySelector('.td-entity-body');
+    if (entityToggle && entityBody) {
+      entityToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        var open = entityBody.style.display === 'none';
+        if (!open) {
+          entityBody.style.display = 'none';
+          entityToggle.textContent = '▸ Entity';
+          return;
+        }
+        entityToggle.textContent = '▾ Entity';
+        entityBody.style.display = '';
+        if (entityBody.getAttribute('data-loaded')) return;
+        entityBody.setAttribute('data-loaded', '1');
+        entityBody.innerHTML = '<span class="text-muted small">Loading…</span>';
+        var slug = entityBody.getAttribute('data-slug') || task.entitySlug || '';
+        cfg.loadEntityDetail(slug, function(detail) {
+          if (!entityBody.parentNode) return;  // unmounted
+          entityBody.innerHTML = _renderEntityDetail(detail, task);
+        });
+      });
+    }
+  }
+
+  // ── Field reader ─────────────────────────────────────────────────────
+
+  function _readFields(root, task) {
+    var typeId    = task.typeId || '';
+    var isContent = typeId.indexOf('task.content') === 0 || typeId === 'task.newsletter.distribute';
+    var get = function(sel) { var el = root.querySelector(sel); return el ? el.value : null; };
+    var fields = {
+      status:     get('.td-f-status')   || task.status,
+      assignedTo: get('.td-f-assignee') || null,
+      startDate:  get('.td-f-start')    || null,
+      dueDate:    get('.td-f-due')      || null,
+      notes:      get('.td-f-notes')    || ''
+    };
+    if (isContent) {
+      var entityId = get('.td-f-entity-id');
+      var title    = get('.td-f-title');
+      if (entityId !== null) fields.linkedEntityId = entityId.trim();
+      if (title    !== null) fields.title           = title.trim();
+    }
+    return fields;
+  }
+
+  // ── Entity detail renderer ───────────────────────────────────────────
+
+  function _renderEntityDetail(detail, task) {
+    // Fall back to getEntity if loadEntityDetail returned null
+    if (!detail && task.entitySlug) detail = cfg.getEntity(task.entitySlug);
+    var esc = TaskWidgets.escape;
+    if (!detail) {
+      // Show just the entity name from the task (no extra server data)
+      var name = task.entityName || '';
+      if (!name) return '<span class="text-muted small">No entity linked</span>';
+      return '<div class="small">' + esc(name) + '</div>';
+    }
+    var parts = [];
+    if (detail.title) parts.push('<strong>' + esc(detail.title) + '</strong>');
+    if (detail.state) parts.push('<span class="badge badge-secondary" style="font-size:10px;">' + esc(detail.state) + '</span>');
+    if (task.projectId) {
+      parts.push('<span class="td-chip td-chip-default">Project: ' + esc(task.projectId) + '</span>');
+    }
+    if (detail.campaignId) {
+      parts.push('<span class="td-chip td-chip-default">Campaign: ' + esc(detail.campaignId) + '</span>');
+    }
+    return '<div class="small mt-1">' + parts.join(' &nbsp; ') + '</div>';
+  }
+
+  return { configure: configure, render: render, open: open };
+})();
+</script>
