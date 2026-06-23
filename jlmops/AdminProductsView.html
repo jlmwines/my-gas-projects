@@ -757,8 +757,8 @@
       <div class="form-body">
         <div class="tab-bar">
           <div class="tab-group">
-            <div class="tab-btn active" onclick="AdminProductsView.switchTab('preview')">Preview</div>
-            <div class="tab-btn" onclick="AdminProductsView.switchTab('desc')">Descriptions</div>
+            <div class="tab-btn active" onclick="AdminProductsView.switchEditorTab('preview')">Preview</div>
+            <div class="tab-btn" onclick="AdminProductsView.switchEditorTab('desc')">Descriptions</div>
           </div>
         </div>
 
@@ -1929,7 +1929,7 @@
       AdminProductsView.currentTaskId = taskId;
       document.getElementById('editor-modal').style.display = 'flex';
       document.getElementById('modal-status').textContent = 'Loading data...';
-      AdminProductsView.switchTab('preview');
+      AdminProductsView.switchEditorTab('preview');
 
       // Clear inputs
       document.getElementById('header-name-en-display').textContent = '';
@@ -2066,7 +2066,7 @@
       AdminProductsView.currentIndex = -1;
       AdminProductsView._updateNavUI();
     };
-    AdminProductsView.switchTab = function(tabName) {
+    AdminProductsView.switchEditorTab = function(tabName) {
         document.querySelectorAll('.tab-content').forEach(e=>e.style.display='none');
         document.getElementById('tab-'+tabName).style.display='block';
         document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
