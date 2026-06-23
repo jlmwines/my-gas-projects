@@ -233,6 +233,47 @@ const WebAppTasks = (() => {
 })();
 
 /**
+ * Fetches a single task by ID, normalized to the UI task shape.
+ * Used by AdminDashboard Deploy C (thin dashboard task shape lacks notes/startDate).
+ */
+function WebAppTasks_getTaskById(taskId) {
+  try {
+    const t = WebAppTasks.getTaskById(taskId);
+    if (!t) return { error: null, data: null };
+    const allConfig = ConfigService.getAllConfig();
+    const taskTypeConfig = allConfig[t.st_TaskTypeId] || {};
+    const safeDate = function(v) {
+      if (!v) return null;
+      try { return v instanceof Date ? v.toISOString() : (String(v) || null); } catch(e) { return null; }
+    };
+    return {
+      error: null,
+      data: {
+        id:          t.st_TaskId,
+        typeId:      t.st_TaskTypeId,
+        name:        t.st_Title || t.st_TaskTypeId,
+        entityId:    t.st_EntityId || t.st_LinkedEntityId || '',
+        entityName:  t.st_LinkedEntityName || '',
+        entityType:  t.st_EntityType || '',
+        assignedTo:  t.st_AssignedTo || '',
+        projectId:   t.st_ProjectId || '',
+        createdDate: safeDate(t.st_CreatedDate),
+        startDate:   safeDate(t.st_StartDate),
+        dueDate:     safeDate(t.st_DueDate),
+        doneDate:    safeDate(t.st_DoneDate),
+        status:      t.st_Status,
+        priority:    t.st_Priority,
+        notes:       t.st_Notes || '',
+        packForm:    taskTypeConfig.pack_form || 'skeleton'
+      }
+    };
+  } catch (e) {
+    LoggerService.error('WebAppTasks', 'getTaskById_public', e.message, e);
+    return { error: e.message, data: null };
+  }
+}
+
+/**
  * Completes a task by its ID. This is a global function callable from the client-side.
  * @param {string} taskId The ID of the task to complete.
  * @returns {boolean} True if successful.

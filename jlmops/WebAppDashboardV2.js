@@ -667,6 +667,7 @@ function _getAdminTasksList(allTasks) {
         entityId: task.st_LinkedEntityId || '',
         entityName: task.st_LinkedEntityName || '',
         projectId: task.st_ProjectId || '',
+        assignedTo: task.st_AssignedTo || '',
         dueDate: dueDate,
         status: task.st_Status,
         priority: task.st_Priority

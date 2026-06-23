@@ -1,3 +1,6 @@
+<?!= include('TaskPacks') ?>
+<?!= include('TaskDetail') ?>
+
 <style>
   /* === Mobile overrides (≤768px) === */
   @media (max-width: 768px) {
@@ -87,6 +90,65 @@
 <script>
 (function() {
   'use strict';
+
+  var _taskCache = {};  // id → full normalized task (fetched on first open)
+
+  TaskDetail.configure({
+    getTask: function(id) { return _taskCache[id] || null; },
+    getEntity: function() { return null; },
+    getAssignees: function() { return []; },
+    loadEntityDetail: function(slug, cb) { cb(null); },
+    saveTask: function(id, fields, cb) {
+      var task = _taskCache[id];
+      var typeId = task ? (task.typeId || '') : '';
+      var isContent = typeId.indexOf('task.content') === 0;
+      var allowsDateEdit = isContent ||
+        typeId === 'task.deficiency.category_stock' ||
+        typeId === 'task.deficiency.bundle_stock';
+      var updates = { status: fields.status, assignedTo: fields.assignedTo || null,
+        startDate: fields.startDate || null, dueDate: fields.dueDate || null, notes: fields.notes };
+      if (isContent) { updates.linkedEntityId = fields.linkedEntityId; updates.title = fields.title; }
+      google.script.run
+        .withSuccessHandler(function(r) { if (r && !r.error) delete _taskCache[id]; cb(r); })
+        .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+        .WebAppTasks_updateTask(id, updates);
+    },
+    completeTask: function(id, cb) {
+      google.script.run
+        .withSuccessHandler(function(ok) { if (ok) delete _taskCache[id]; cb(ok); })
+        .withFailureHandler(function() { cb(false); })
+        .WebAppTasks_completeTaskById(id);
+    },
+    deleteTask: function(id, cb) {
+      google.script.run
+        .withSuccessHandler(function(r) { if (r && !r.error) delete _taskCache[id]; cb(r); })
+        .withFailureHandler(function(e) { cb({ error: e.message || 'Failed' }); })
+        .WebAppTasks_deleteTask(id);
+    },
+    close:   function() {},
+    refresh: function() {},
+    reload:  function() { loadDashboard(); }
+  });
+
+  function _openTask(taskId) {
+    if (_taskCache[taskId]) {
+      TaskDetail.open(taskId);
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.data) {
+          _taskCache[result.data.id] = result.data;
+          TaskDetail.open(taskId);
+        } else {
+          TaskWidgets.toast('Could not load task', 'error');
+        }
+      })
+      .withFailureHandler(function() {
+        TaskWidgets.toast('Could not load task', 'error');
+      })
+      .WebAppTasks_getTaskById(taskId);
+  }
 
   function loadDashboard() {
     google.script.run
@@ -362,15 +424,10 @@
     html += '</tbody></table>';
     el.innerHTML = html;
 
-    // Add click handlers to open the task in the Tasks view (ADMIN_TASK_UI go-live).
+    // Task row click opens TaskDetail modal (Deploy C).
     el.querySelectorAll('.task-row').forEach(function(row) {
       row.addEventListener('click', function() {
-        var taskId = this.dataset.taskId;
-        var projectId = this.dataset.projectId;
-        // Store selection for the Tasks view to pick up (checkDashboardNavigation).
-        sessionStorage.setItem('selectTaskId', taskId);
-        sessionStorage.setItem('selectProjectId', projectId);
-        loadView('AdminTasks');
+        _openTask(this.dataset.taskId);
       });
     });
   }
