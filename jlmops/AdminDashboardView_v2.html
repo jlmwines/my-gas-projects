@@ -133,34 +133,53 @@
 
   function _openTask(taskId) {
     if (_taskCache[taskId]) {
-      TaskDetail.open(taskId);
+      var eid = _taskCache[taskId].entityId || '';
+      if (eid && !_entityCache[eid]) {
+        google.script.run
+          .withSuccessHandler(function(r) {
+            if (r && r.data && r.data.entity) _entityCache[r.data.entity.slug] = r.data.entity;
+            TaskDetail.open(taskId);
+          })
+          .withFailureHandler(function() { TaskDetail.open(taskId); })
+          .WebAppLibrary_getEntityDetail({ entityId: eid });
+      } else {
+        TaskDetail.open(taskId);
+      }
       return;
     }
+
+    // entityId is already known from the initial load — read from the row so both
+    // calls can fire in parallel rather than sequentially.
+    var row = document.querySelector('.task-row[data-task-id="' + taskId + '"]');
+    var entityId = row ? (row.dataset.entityId || '') : '';
+    var needsEntity = !!(entityId && !_entityCache[entityId]);
+
+    var taskDone = false, entityDone = !needsEntity;
+
+    function tryOpen() {
+      if (taskDone && entityDone) TaskDetail.open(taskId);
+    }
+
     google.script.run
       .withSuccessHandler(function(result) {
-        if (!result || !result.data) {
-          TaskWidgets.toast('Could not load task', 'error');
-          return;
-        }
-        var task = result.data;
-        _taskCache[task.id] = task;
-        var entityId = task.entityId;
-        if (entityId && !_entityCache[entityId]) {
-          google.script.run
-            .withSuccessHandler(function(r) {
-              if (r && r.entity) _entityCache[r.entity.slug] = r.entity;
-              TaskDetail.open(taskId);
-            })
-            .withFailureHandler(function() { TaskDetail.open(taskId); })
-            .WebAppLibrary_getEntityDetail({ entityId: entityId });
-        } else {
-          TaskDetail.open(taskId);
-        }
+        if (!result || !result.data) { TaskWidgets.toast('Could not load task', 'error'); return; }
+        _taskCache[result.data.id] = result.data;
+        taskDone = true;
+        tryOpen();
       })
-      .withFailureHandler(function() {
-        TaskWidgets.toast('Could not load task', 'error');
-      })
+      .withFailureHandler(function() { TaskWidgets.toast('Could not load task', 'error'); })
       .WebAppTasks_getTaskById(taskId);
+
+    if (needsEntity) {
+      google.script.run
+        .withSuccessHandler(function(r) {
+          if (r && r.data && r.data.entity) _entityCache[r.data.entity.slug] = r.data.entity;
+          entityDone = true;
+          tryOpen();
+        })
+        .withFailureHandler(function() { entityDone = true; tryOpen(); })
+        .WebAppLibrary_getEntityDetail({ entityId: entityId });
+    }
   }
 
   function loadDashboard() {
@@ -427,7 +446,7 @@
 
       var dueDisplay = formatDate(task.dueDate);
 
-      html += '<tr class="task-row ' + priorityClass + '" data-task-id="' + task.id + '" data-project-id="' + (task.projectId || '') + '" style="cursor:pointer;">';
+      html += '<tr class="task-row ' + priorityClass + '" data-task-id="' + task.id + '" data-project-id="' + (task.projectId || '') + '" data-entity-id="' + (task.entityId || '') + '" style="cursor:pointer;">';
       html += '<td title="' + task.typeId + '">' + task.name + '</td>';
       html += '<td title="' + task.entityId + '">' + entityDisplay + '</td>';
       html += '<td>' + dueDisplay + '</td>';

@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-24 — New-product workflow hardening + dashboard speed @369–@371
+
+- @369: Admin dashboard task open — fixed sequential→parallel GAS calls (task + entity fetch); fixed `r.entity` → `r.data.entity` bug that prevented entity cache from ever filling. Task open drops from ~4-6s to ~2-3s.
+- @370: Accept modal now requires Woo Post ID (EN) before approving; `acceptProductSuggestion` receives and seeds `wpm_ID` into WebProdM at accept time. Fixes root cause of post-accept sync wiping the WebProdM row (empty key excluded from masterMap → clearContent deletes it).
+- @371: `acceptProductSuggestion` now also sets `cpm_IsWeb=true` in CmxProdM (was only done by retired hotlink). Uses `findIndex` to get row position for cell write.
+- Two pre-existing products manually fixed: copied from WebProdStaging to WebProdMaster; `cpm_IsWeb` set manually in CmxProdM.
+- New-product accept flow being smoke-tested now; awaiting result.
+- Next: confirm accept smoke passes; continue new-product onboarding or next jlmops queue item.
+
 ## 2026-06-23 — New-product workflow UX @345–@346
 
 - @345: Fixed wdm_NameHe fallback (staging before Comax) in getProductDetails; spinner on accept-details; accept-details getFormData now uses val() for names (prefers staging).

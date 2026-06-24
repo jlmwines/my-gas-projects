@@ -673,8 +673,12 @@
             <label>Product Name HE</label>
             <input type="text" class="form-control hebrew-text" id="sugg-name-he">
         </div>
-        <div class="alert alert-info small p-2 mb-0">
-          After approving: create the EN and HE product drafts in WooCommerce, then pair them in WPML.
+        <div class="alert alert-info small p-2 mb-2">
+          Create the EN product draft in WooCommerce first, then paste its Post ID below. After approving, create the HE draft and pair them in WPML.
+        </div>
+        <div class="form-group mb-0">
+            <label>Woo Post ID (EN) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="sugg-woo-id" placeholder="e.g. 4821">
         </div>
       </div>
       <div class="modal-footer bg-light">
@@ -1843,14 +1847,20 @@
         document.getElementById('sugg-name-en').value = '';
         document.getElementById('sugg-name-he').value = comaxName;
         document.getElementById('sugg-price-meta').textContent = price ? '— ₪' + price : '';
+        document.getElementById('sugg-woo-id').value = '';
         ModalOverlay.open('suggestion-modal');
     };
 
     AdminProductsView.submitSuggestionApproval = function() {
         const nameEn = document.getElementById('sugg-name-en').value.trim();
         const nameHe = document.getElementById('sugg-name-he').value.trim();
+        const wooId = document.getElementById('sugg-woo-id').value.trim();
         if (!nameEn || !nameHe) {
             TaskWidgets.toast('Please provide both Product Name EN and Product Name HE.', 'warning');
+            return;
+        }
+        if (!wooId) {
+            TaskWidgets.toast('Please enter the Woo Post ID (EN) before approving.', 'warning');
             return;
         }
         TaskWidgets.confirm(`Approve suggestion for ${nameEn}?`, function() {
@@ -1863,7 +1873,7 @@
                 TaskWidgets.toast('Error: ' + res.message, 'error');
             }
         }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
-        .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe);
+        .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe, wooId);
         });
     };
 

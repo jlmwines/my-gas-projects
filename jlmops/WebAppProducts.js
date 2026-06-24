@@ -939,9 +939,9 @@ function WebAppProducts_getLinkageTasks() {
 /**
  * Accepts a suggestion and creates the onboarding task.
  */
-function WebAppProducts_acceptSuggestion(taskId, sku, nameEn, nameHe) {
+function WebAppProducts_acceptSuggestion(taskId, sku, nameEn, nameHe, wpmId) {
     try {
-        return ProductService.acceptProductSuggestion(taskId, sku, nameEn, nameHe);
+        return ProductService.acceptProductSuggestion(taskId, sku, nameEn, nameHe, wpmId);
     } catch (e) {
         LoggerService.error('WebAppProducts', 'acceptSuggestion', `Error: ${e.message}`, e);
         throw e;

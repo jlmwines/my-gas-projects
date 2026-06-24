@@ -1704,7 +1704,7 @@ const ProductService = (function() {
    * @param {string} suggestedNameEn The confirmed English name.
    * @param {string} suggestedNameHe The confirmed Hebrew name.
    */
-  function acceptProductSuggestion(suggestionTaskId, sku, suggestedNameEn, suggestedNameHe, sessionId) { // Added sessionId
+  function acceptProductSuggestion(suggestionTaskId, sku, suggestedNameEn, suggestedNameHe, wpmId, sessionId) {
     const serviceName = 'ProductService';
     const functionName = 'acceptProductSuggestion';
     logger.info(serviceName, functionName, `Accepting suggestion for SKU ${sku}`, { sessionId: sessionId, sku: sku, suggestionTaskId: suggestionTaskId });
@@ -1766,19 +1766,26 @@ const ProductService = (function() {
         const cmxSkuIdx = cmxHeaders.indexOf('cpm_SKU');
         const cmxPriceIdx = cmxHeaders.indexOf('cpm_Price');
         const cmxStockIdx = cmxHeaders.indexOf('cpm_Stock');
+        const cmxIsWebIdx = cmxHeaders.indexOf('cpm_IsWeb');
         const cmxData = cmxSheet.getDataRange().getValues();
-        const cmxRow = cmxData.find((row, i) => i > 0 && String(row[cmxSkuIdx]).trim() === String(sku).trim());
-        if (cmxRow) {
+        const cmxRowIdx = cmxData.findIndex((row, i) => i > 0 && String(row[cmxSkuIdx]).trim() === String(sku).trim());
+        if (cmxRowIdx > -1) {
+          const cmxRow = cmxData[cmxRowIdx];
           cmxPrice = cmxRow[cmxPriceIdx] || '';
           cmxStock = cmxRow[cmxStockIdx] || '';
+          if (cmxIsWebIdx > -1) {
+            cmxSheet.getRange(cmxRowIdx + 1, cmxIsWebIdx + 1).setValue(true);
+          }
         }
       }
 
       const newWebProdRow = new Array(webProdHeaders.length).fill('');
+      const wp_IdIdx = webProdHeaders.indexOf('wpm_ID');
       const wp_SkuIdx = webProdHeaders.indexOf('wpm_SKU');
       const wp_NameIdx = webProdHeaders.indexOf('wpm_PostTitle');
       const wp_PriceIdx = webProdHeaders.indexOf('wpm_RegularPrice');
       const wp_StockIdx = webProdHeaders.indexOf('wpm_Stock');
+      if (wp_IdIdx > -1) newWebProdRow[wp_IdIdx] = wpmId || '';
       if (wp_SkuIdx > -1) newWebProdRow[wp_SkuIdx] = sku;
       if (wp_NameIdx > -1) newWebProdRow[wp_NameIdx] = suggestedNameEn;
       if (wp_PriceIdx > -1) newWebProdRow[wp_PriceIdx] = cmxPrice;
