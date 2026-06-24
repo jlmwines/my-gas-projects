@@ -9,7 +9,7 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
-- [x] 2026-06-24: **Draft products flagged as unexpected by ops validation.** Fixed @368: rule 17 (Status Mismatch) gated to `wpm_PostStatus=publish`; `_upsertWebProductsData` SKU fallback links `wpm_ID` on first sync for products accepted via jlmops before Woo ID was known.
+- [x] 2026-06-24: **Draft products flagged as unexpected by ops validation.** Fixed @368 (rule 17 gated to `wpm_PostStatus=publish`) + @370 (accept modal now requires Woo Post ID so WebProdM is always seeded with a real `wpm_ID` — eliminates the empty-key row that `clearContent` wiped on every sync). @371: `cpm_IsWeb` also set at accept time (was only in retired hotlink).
 
 - [ ] 2026-06-16: **Product Replacement reads dead WebProdM columns — examine + repair if needed.** `ProductService.searchWebProducts` and `lookupProductBySku` do `indexOf('wpm_WebIdEn')`/`indexOf('wpm_WebIdHe')` on WebProdM, but the live sheet (confirmed against 2026-06-16 export) has no such columns — EN post id is `wpm_ID`, HE post id is WebXltM `wxm_ID`. So both reads return `-1` → blank `webIdEn`/`webIdHe`. Visible symptom: Product Replacement panel "Web IDs" line (`AdminProductsView.html:1105/1113`) shows empty. STATUS lists Product Replacement as "tested, working", so the swap may run off SKU and the blanks be cosmetic — OR the sheets were restructured after that test. NOT yet traced through the actual reassign step (`webProductReassign` takes `webProductId`); trace whether the blanks break the swap or are harmless display before fixing. Related to latent note at the @148 resolved entry ("webProductReassign still misses some sheets").
 

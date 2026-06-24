@@ -73,7 +73,7 @@ The only genuine new-product translation gap is **timing**: between adding a pro
 - **Behavior:** identical to the daily sync's HE phase, so validation behaves the same (the row-count-decrease quarantine guard only trips on removals, not adds). Full HE re-pull each call — chosen over a surgical single-product insert for lowest new code / proven safety.
 - **Smoke:** add a product (hot-link), click Refresh Translations, confirm its `wxm_*` row appears in WebXltM linking HE→EN; verify it skips cleanly if a sync is mid-flight.
 
-## Track B — retire the hot-link (design ready, not yet implemented)
+## Track B — retire the hot-link (shipped @342 + @370 + @371)
 
 The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) entirely.
 
@@ -105,11 +105,7 @@ The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) 
 | Remove Linkage UI button | `AdminProductsView.html` |
 | Retire `linkAndFinalizeNewProduct` | Remove or dead-code after smoke |
 
-**Interim (current @341):** hot-link still in place. WebDetS cleanup was added to `linkAndFinalizeNewProduct` at @341 — when Track B ships, move it to `acceptProductDetails` and drop the hot-link's copy.
-
-## Open bug — draft products flagged as unexpected
-
-Ops validation/reconciliation treats any product not in ops data as unexpected. Draft products (created in WooCommerce before the hot-link or Track B pull inserts them into WebProdM) now trigger this check. The rule should apply to **published** products only — drafts are expected and in-progress. Fix: gate the unexpected-product check on `post_status = 'publish'` (or the equivalent status field in WebProdM/WebProdS). See `.claude/bugs.md` 2026-06-22.
+**Shipped:** hotlink retired @342 (WebProdM + WebDetM seeded in `acceptProductSuggestion`; WebDetS cleanup moved to `acceptProductDetails`). Accept modal requires Woo Post ID @370 (seeds `wpm_ID` in WebProdM at accept time, eliminating empty-key row loss). `cpm_IsWeb` set at accept @371. Draft-product validation false-positives resolved @368 (rule 17 gated to `wpm_PostStatus=publish`). See `.claude/bugs.md` 2026-06-24.
 
 ---
 

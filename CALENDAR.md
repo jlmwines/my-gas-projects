@@ -18,8 +18,8 @@ Blog posts A–F are region posts (slots not yet assigned). AYIW = A Year in Win
 | Date | Type | Item | Status |
 |------|------|------|--------|
 | 2026-06-17 | Email | Handling post-promo (EN+HE) | Done |
-| 2026-06-23 | Email | AYIW June — Making Wine: Fruit Set | Files ready |
-| 2026-06-23 | Newsletter | Issue #2 — Handling primary, AYIW secondary | In progress |
+| 2026-06-24 | Email | AYIW June — Making Wine: Fruit Set | Scheduled/sending |
+| 2026-06-24 | Newsletter | Issue #2 — Handling primary, AYIW secondary | Print ready to distribute |
 | 2026-07-07 | Email | Galilee region post | — |
 | 2026-07-27 | Newsletter | Issue #3 — Galilee | — |
 | 2026-07-28 | Email | AYIW July | — |
