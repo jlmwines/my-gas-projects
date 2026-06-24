@@ -9,7 +9,7 @@ Projects: jlmops, web, marketing, content
 
 ### Open
 
-- [ ] 2026-06-22: **Draft products flagged as unexpected by ops validation.** New product workflow introduces WooCommerce draft products (staging step before publish); validation/reconciliation logic treats any product not in ops data as unexpected. Rule should apply to published products only — drafts should be exempt. Find and gate the unexpected-product check on `post_status = 'publish'` (or equivalent status field in WebProdM/WebProdS).
+- [x] 2026-06-24: **Draft products flagged as unexpected by ops validation.** Fixed @368: rule 17 (Status Mismatch) gated to `wpm_PostStatus=publish`; `_upsertWebProductsData` SKU fallback links `wpm_ID` on first sync for products accepted via jlmops before Woo ID was known.
 
 - [ ] 2026-06-16: **Product Replacement reads dead WebProdM columns — examine + repair if needed.** `ProductService.searchWebProducts` and `lookupProductBySku` do `indexOf('wpm_WebIdEn')`/`indexOf('wpm_WebIdHe')` on WebProdM, but the live sheet (confirmed against 2026-06-16 export) has no such columns — EN post id is `wpm_ID`, HE post id is WebXltM `wxm_ID`. So both reads return `-1` → blank `webIdEn`/`webIdHe`. Visible symptom: Product Replacement panel "Web IDs" line (`AdminProductsView.html:1105/1113`) shows empty. STATUS lists Product Replacement as "tested, working", so the swap may run off SKU and the blanks be cosmetic — OR the sheets were restructured after that test. NOT yet traced through the actual reassign step (`webProductReassign` takes `webProductId`); trace whether the blanks break the swap or are harmless display before fixing. Related to latent note at the @148 resolved entry ("webProductReassign still misses some sheets").
 

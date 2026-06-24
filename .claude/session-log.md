@@ -70,6 +70,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Two agent reviews caught and resolved: ID collision risk, priority placement (list only), manager shape constraints, admin dashboard thin shape, `getEntity` null-safety, manager backend routing.
 - Next: Deploy A — build TaskDetail, wire into AdminTasksView right panel only.
 
+## 2026-06-24 — Validation: suppress spurious new-product violations @368
+
+- Investigated validation violations triggered by new product onboarding flow.
+- Root cause 1: rule 17 (Status Mismatch) fired for products with `wpm_PostStatus=EMPTY` (accepted but Woo product not yet published). Fix: added `source_filter: wpm_PostStatus,publish` to rule 17 in `config/validation.json`.
+- Root cause 2: `_upsertWebProductsData` keyed only by `wpm_ID`; accepted products have `wpm_ID=EMPTY` so sync skipped them, rule 7 (Unexpected Web Product) fired after publish. Fix: SKU fallback in the else branch — when ID lookup misses, checks `wps_SKU` against `wpm_SKU` map, updates row and writes `wpm_ID` from staging.
+- Rule 14 (Not In Web Store) has a dead filter `cpm_IsWeb=1` while data stores `"כן"` — never fires. No action.
+- Rule 36 (Not In Web Store Staging) clears naturally after accept (SKU written to WebProdM). No code change.
+- Next sync: accepted products will have `wpm_ID` linked via SKU fallback; rule 7 + 17 violations clear.
+
 ## 2026-06-23 — PublishingView Tasks tab role split + assignee visibility @343–@344
 
 - Bug: PublishingView Tasks tab showed all content tasks to all roles; drawer showed no assignee.

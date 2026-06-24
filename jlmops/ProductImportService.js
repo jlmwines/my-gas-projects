@@ -740,7 +740,7 @@ const ProductImportService = (function() {
   function _upsertWebProductsData(sessionId) {
     const serviceName = 'ProductImportService';
     const functionName = '_upsertWebProductsData';
-    logger.info(serviceName, functionName, 'Starting UPDATE-ONLY process for WebProdM.', { sessionId: sessionId });
+    logger.info(serviceName, functionName, 'Starting upsert process for WebProdM.', { sessionId: sessionId });
 
     const allConfig = ConfigService.getAllConfig();
     const stagingSchema = allConfig['schema.data.WebProdS_EN'];
@@ -761,6 +761,7 @@ const ProductImportService = (function() {
 
     let updatedCount = 0;
     let skippedCount = 0;
+    let linkedCount = 0;
     const stagingToMasterMap = ConfigService.getConfig('map.staging_to_master.web_products');
 
     // Validate mapping configuration exists and is complete
@@ -789,6 +790,16 @@ const ProductImportService = (function() {
     }
 
     const mappingErrors = [];
+
+    // Secondary lookup: wpm_SKU → masterMap key. Enables SKU-based matching when wpm_ID is empty
+    // (new products accepted via acceptProductSuggestion before their Woo ID is known).
+    const masterSkuToIdKey = new Map();
+    const masterSkuColIdx = masterHeaders.indexOf('wpm_SKU');
+    masterMap.forEach((row, mapKey) => {
+        const sku = String(row['wpm_SKU'] || '').trim();
+        if (sku) masterSkuToIdKey.set(sku, mapKey);
+    });
+    const stagingSkuColIdx = stagingHeaders.indexOf('wps_SKU');
 
     stagingData.values.forEach((stagingRow, idx) => {
         const rawKey = stagingRow[stagingKeyIndex];
@@ -825,6 +836,25 @@ const ProductImportService = (function() {
 
             masterMap.set(key, masterRow);
             updatedCount++;
+        } else if (key && stagingSkuColIdx > -1) {
+            // ID-based lookup missed. Try SKU fallback for onboarding products (wpm_ID still empty).
+            const stagingRowObject = {};
+            stagingHeaders.forEach((h, i) => { stagingRowObject[h] = stagingRow[i]; });
+            const stagingSku = String(stagingRowObject['wps_SKU'] || '').trim();
+            if (stagingSku && masterSkuToIdKey.has(stagingSku)) {
+                const oldKey = masterSkuToIdKey.get(stagingSku);
+                const masterRow = masterMap.get(oldKey);
+                for (const sKey in stagingToMasterMap) {
+                    const mKey = stagingToMasterMap[sKey];
+                    if (stagingRowObject.hasOwnProperty(sKey)) masterRow[mKey] = stagingRowObject[sKey];
+                }
+                masterRow['wpm_ID'] = key;
+                masterMap.delete(oldKey);
+                masterMap.set(key, masterRow);
+                linkedCount++;
+            } else {
+                skippedCount++;
+            }
         } else {
             skippedCount++;
         }
@@ -839,7 +869,7 @@ const ProductImportService = (function() {
         throw new Error(errorMsg);
     }
 
-    logger.info(serviceName, functionName, `WebProdM upsert complete: ${updatedCount} products updated, ${skippedCount} not found in master`, { sessionId });
+    logger.info(serviceName, functionName, `WebProdM upsert complete: ${updatedCount} updated, ${linkedCount} linked via SKU fallback, ${skippedCount} skipped`, { sessionId });
 
     // Convert the map back to a 2D array to write to the sheet
     const finalData = Array.from(masterMap.values()).map(rowObject => {
