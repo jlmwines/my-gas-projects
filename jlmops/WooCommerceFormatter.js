@@ -172,10 +172,15 @@ const WooCommerceFormatter = (function() {
         const getLookupText = (code, lookupType, fallback = '') => {
             if (!code) return fallback;
             const map = lookupMaps[lookupType];
-            const item = map ? map.get(String(code).trim().toUpperCase()) : null;
+            if (!map) return fallback;
+            const keyUpper = String(code).trim().toUpperCase();
+            let item = map.get(keyUpper);
             if (!item) {
-                return fallback;
+                for (const [k, v] of map) {
+                    if (String(k).trim().toUpperCase() === keyUpper) { item = v; break; }
+                }
             }
+            if (!item) return fallback;
             if (lookupType === 'texts') return isEn ? item.slt_TextEN : item.slt_TextHE;
             if (lookupType === 'grapes') return isEn ? item.slg_TextEN : item.slg_TextHE;
             if (lookupType === 'kashrut') return isEn ? item.slk_TextEN : item.slk_TextHE;

@@ -1081,7 +1081,9 @@
       ManagerProductsView.setVal('cur-DescriptionEn', m.wdm_DescriptionEn);
       
       // Specs Tab - Current
-      ManagerProductsView.setVal('cur-Region', m.wdm_Region);
+      const _regionEn = ManagerProductsView.getLookupText(m.wdm_Region, ManagerProductsView.lookupRegions, 'en');
+      const _regionHe = ManagerProductsView.getLookupText(m.wdm_Region, ManagerProductsView.lookupRegions, 'he');
+      ManagerProductsView.setVal('cur-Region', (_regionEn === _regionHe) ? _regionEn : `${_regionEn} / ${_regionHe}`);
       ManagerProductsView.setVal('cur-ABV', ManagerProductsView.formatABV(m.wdm_ABV));
       ManagerProductsView.setVal('cur-CmxVintage', c.cpm_Vintage);
       ManagerProductsView.setVal('cur-CmxSize', c.cpm_Size);

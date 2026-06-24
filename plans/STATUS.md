@@ -94,7 +94,7 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Active
 
-_(clear)_
+- **PROJ-CONTENT task routing** `defer:2026-07-08` — decided June 11, not built (3rd review carry). Three-step fix in `.claude/bugs.md`. Schedule in next jlmops session after new-product smoke settles.
 
 ### Deferred
 

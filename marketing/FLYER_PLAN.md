@@ -2,7 +2,7 @@
 
 **Purpose.** Two-sided printed flyer (EN / HE) distributed via mailbox insertion in selected Jerusalem neighborhoods. Acquisition channel: drive new (first-order) customers to jlmwines.com using the existing ₪50-off-first-order coupon as the incentive.
 
-**Status.** ACTIVATED 2026-05-31 — moving from scoping to execution (user: "the time for fliers has arrived"). Still pre-test phase: round-1 design, vendor outreach (yoterplus / dilen), and photo assets are the immediate unblockers before a print run can be scheduled. Drafted 2026-05-08.
+**Status.** EN design complete 2026-06-24 — file in `marketing/flyer/flyer-50new-26-06-24-16-19.jpg`. Hebrew copy sent for translation review; expected back by ~2026-07-01. Coupon code: `50NEW`. QR links to bundles category (UTM-tagged). Vendor quote received 2026-06-21. Print run pending HE copy approval.
 
 **Strategic frame.** Acquisition test, not a proven channel. ₪2,000/round is right-scaled as a test, not a campaign. Round 1 produces the data that decides whether the channel scales. Round 1 targets the local area first: new-customer acquisition is the goal, in a warm, well-matched, Evyatar-aware audience, with some offline-only regulars converting online as a secondary benefit; colder, further-out neighborhoods come in Round 2+. Going in with that expectation makes a "this didn't work" outcome a useful result, not a sunk cost.
 
@@ -75,7 +75,7 @@ Candidate alternates (outward / cold): French Hill (EN), Beit HaKerem (HE), Arno
 ## Offer + Attribution
 
 - **Coupon:** ₪50 off first order (existing coupon plumbing, first-order-restricted at code level).
-- **Code:** single code across all flyers (e.g., `JLMFLYER50` — TBD). One print version = lower cost. Round-by-round code rotation not needed; billing-address attribution carries the per-neighborhood signal.
+- **Code:** `50NEW` — single code across all flyers. One print version = lower cost. Round-by-round code rotation not needed; billing-address attribution carries the per-neighborhood signal.
 - **Attribution mechanism:** every redemption order has a billing address. Israeli 7-digit postal codes (assigned 2013+) map fairly cleanly to neighborhoods. Post-flyer analysis groups redemptions by postal code → reads which area drove what.
 - **Timing:** stagger drops between rounds (2–3 weeks minimum) so coupon redemptions cluster in time and round-level effectiveness is readable. Within a round, simultaneous drops are fine — billing addresses do the per-neighborhood split.
 
