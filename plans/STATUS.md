@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-24 — New-product workflow hardened @369–@371: admin dashboard task open parallelised (2→1 round-trip); accept modal now requires Woo Post ID (EN) and seeds wpm_ID + cpm_IsWeb at accept time.
+**Updated:** 2026-06-24 — Region lookup fixed @373–@374: cur-Region shows EN/HE bilingual; WCF HE exports now return Hebrew region text (case-insensitive fallback); flyer EN design complete (code 50NEW).
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-24 |
 | Revenue | Steady |
-| Deploy Version | jlmops @371 · theme v1.2.30 |
+| Deploy Version | jlmops @374 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-24 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

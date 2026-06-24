@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-24 — Region lookup fix + flyer EN complete @372–@374
+
+- Deep review written (`plans/reviews/review-deep-2026-06-24.md`).
+- Flyer EN design approved (`marketing/flyer/flyer-50new-26-06-24-16-19.jpg`); code `50NEW`; HE sent for translation (~2026-07-01).
+- @372: forced version bump so partner saw latest deploy.
+- @373: `cur-Region` in ManagerProductsView now uses `getLookupText` (EN lookup text) instead of raw `wdm_Region` code.
+- @374: WCF `getLookupText` — added case-insensitive fallback iteration so mixed-case region keys (e.g. "Galilee") are found when map stores them case-sensitively. HE exports now return "גליל" not "Galilee". `cur-Region` display updated to show "EN / HE" bilingual.
+- Next: HE flyer copy (~2026-07-01); new-product accept smoke test result still pending.
+
 ## 2026-06-24 — New-product workflow hardening + dashboard speed @369–@371
 
 - @369: Admin dashboard task open — fixed sequential→parallel GAS calls (task + entity fetch); fixed `r.entity` → `r.data.entity` bug that prevented entity cache from ever filling. Task open drops from ~4-6s to ~2-3s.
