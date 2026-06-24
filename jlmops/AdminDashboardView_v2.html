@@ -91,11 +91,12 @@
 (function() {
   'use strict';
 
-  var _taskCache = {};  // id → full normalized task (fetched on first open)
+  var _taskCache = {};    // id → full normalized task (fetched on first open)
+  var _entityCache = {}; // slug → shaped entity (fetched when task opened)
 
   TaskDetail.configure({
     getTask: function(id) { return _taskCache[id] || null; },
-    getEntity: function() { return null; },
+    getEntity: function(slug) { return _entityCache[slug] || null; },
     getAssignees: function() { return []; },
     loadEntityDetail: function(slug, cb) { cb(null); },
     saveTask: function(id, fields, cb) {
@@ -137,11 +138,23 @@
     }
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result && result.data) {
-          _taskCache[result.data.id] = result.data;
-          TaskDetail.open(taskId);
-        } else {
+        if (!result || !result.data) {
           TaskWidgets.toast('Could not load task', 'error');
+          return;
+        }
+        var task = result.data;
+        _taskCache[task.id] = task;
+        var entityId = task.entityId;
+        if (entityId && !_entityCache[entityId]) {
+          google.script.run
+            .withSuccessHandler(function(r) {
+              if (r && r.entity) _entityCache[r.entity.slug] = r.entity;
+              TaskDetail.open(taskId);
+            })
+            .withFailureHandler(function() { TaskDetail.open(taskId); })
+            .WebAppLibrary_getEntityDetail({ entityId: entityId });
+        } else {
+          TaskDetail.open(taskId);
         }
       })
       .withFailureHandler(function() {
