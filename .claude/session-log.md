@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-25 — Orientation / context recovery (no changes)
+
+- Session ran after previous context limit; re-read STATUS + plans to re-orient.
+- Confirmed /start skill runs the full session-start protocol; answered user question.
+- No code, docs, or plan changes this session.
+- Next: Track C implementation (seed WebXltM at accept time); remaining smoke items.
+
+---
+
 ## 2026-06-25 — Documentation cleanup pass
 
 - STATUS.md: jlmops at-a-glance line collapsed from 400-word changelog to one sentence; Current State bullets stripped of deploy narrative; Next Action item 4 trimmed; CONTENT_LIBRARY_PLAN dead reference removed; stale plan pointers to archived docs removed.

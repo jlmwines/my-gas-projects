@@ -97,15 +97,15 @@ The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) 
 
 **What needs to change in code:**
 
-| Change | Location |
-|--------|----------|
-| Insert WebProdM row (SKU + EN name + price/stock from CmxProdM) | `acceptProductSuggestion` |
-| Seed WebDetM row (SKU + EN/HE names) | `acceptProductSuggestion` |
-| Delete WebDetS row after accepting details | `acceptProductDetails` (move from `linkAndFinalizeNewProduct`) |
-| Remove Linkage UI button | `AdminProductsView.html` |
-| Retire `linkAndFinalizeNewProduct` | Remove or dead-code after smoke |
+| Change | Location | Status |
+|--------|----------|--------|
+| Insert WebProdM row (SKU + EN name + price/stock from CmxProdM) | `acceptProductSuggestion` | ✓ @342 |
+| Seed WebDetM row (SKU + EN/HE names) | `acceptProductSuggestion` | ✓ @342 |
+| Delete WebDetS row after accepting details | `acceptProductDetails` | ✓ @342 |
+| Remove Linkage UI button | `AdminProductsView.html` | pending |
+| Delete `linkAndFinalizeNewProduct` (incl. dead `wxl_` insert) | GAS codebase | pending |
 
-**Shipped:** hotlink retired @342 (WebProdM + WebDetM seeded in `acceptProductSuggestion`; WebDetS cleanup moved to `acceptProductDetails`). Accept modal requires Woo Post ID @370 (seeds `wpm_ID` in WebProdM at accept time, eliminating empty-key row loss). `cpm_IsWeb` set at accept @371. Draft-product validation false-positives resolved @368 (rule 17 gated to `wpm_PostStatus=publish`). See `.claude/bugs.md` 2026-06-24.
+**Shipped:** hotlink retired @342 (WebProdM + WebDetM seeded in `acceptProductSuggestion`; WebDetS cleanup moved to `acceptProductDetails`). Accept modal requires Woo Post ID @370 (seeds `wpm_ID` in WebProdM at accept time, eliminating empty-key row loss). `cpm_IsWeb` set at accept @371. Draft-product validation false-positives resolved @368 (rule 17 gated to `wpm_PostStatus=publish`). See `.claude/bugs.md` 2026-06-24. **Pending:** Linkage UI button removal + `linkAndFinalizeNewProduct` deletion deferred to Track C completion (remove together in one pass).
 
 ---
 
@@ -115,3 +115,24 @@ The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) 
 - **Manager badge counts were broken (@311):** `loadWidgetData` read flat keys (`vintage_mismatch_tasks`/`onboarding_tasks`) that `getProductsWidgetData` never returns (it returns `detailUpdates.{edit,review}` + `newProducts.{suggested,review}`) — badges had been stuck at 0. Remapped to the real fields.
 - **Admin submissions title (@311):** `getSubmissionsTasks` now reads the product title from WebDetS staging (`wds_NameEn` ‖ `wds_NameHe`), not the stale Comax-derived `st_LinkedEntityName`.
 - **Admin New Products badge (@311):** collapsed-card header count (suggestions + submissions), loaded on mount via `getProductsWidgetData`; lazy section loads unchanged. **Open:** linkage (add_product Accepted) isn't counted by that widget — include it if a fuller count is wanted.
+
+## Track C — seed WebXltM at accept time (pending)
+
+**Goal:** close the WebXltM timing gap without the Refresh Translations button. When the admin supplies the EN Woo Post ID at accept, the EN↔HE WPML pairing already exists (user creates EN draft → clicks Create Translation → gets HE ID in sequence). So `translations.he` is guaranteed to be on the EN product at accept time.
+
+**Change:** in `acceptProductSuggestion`, after writing `wpm_ID` to WebProdM, fetch the EN product from the Woo REST API (`WooApiService` — same credentials, same pattern as the pull pipeline), read `product.translations.he`, and upsert the WebXltM row for this SKU.
+
+**Effect:** WebXltM is populated on accept. The daily sync still rebuilds WebXltM wholesale on each run (no change needed). The Refresh Translations button becomes a fallback for manual corrections rather than a required step for new-product onboarding.
+
+**Location:** `acceptProductSuggestion` in `WebAppProducts.js` (or the service it delegates to). Single Woo API fetch, single WebXltM upsert. No sync-state-machine involvement — this runs synchronously in the accept handler like the existing WebProdM/WebDetM writes.
+
+**Cleanup — after Track C is smoked and confirmed:**
+
+| Remove | Location |
+|--------|----------|
+| "Refresh Translations" button + confirm gate | `AdminProductsView.html` (Track A UI) |
+| `WebAppProducts_refreshTranslations()` | `WebAppProducts.js` (Track A backend) |
+| `WooProductPullService.refreshTranslationLinks()` | `WooProductPullService.js` (Track A backend) |
+| Linkage UI button | `AdminProductsView.html` (Track B pending) |
+| `linkAndFinalizeNewProduct` function (incl. dead `wxl_` insert) | GAS codebase (Track B pending) |
+| Stale `wxl_` schema documentation | `docs/DATA_MODEL.md` |
