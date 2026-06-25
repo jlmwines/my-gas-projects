@@ -188,13 +188,15 @@ JLM Wines`,
   // edits there per the Doc-sourced content workflow). state='draft' — the
   // manager's Edit task Lock+Versions it to 'locked' when review is done.
   // HE sibling not created yet (added at the translate stage).
+  // 2026-06-25: new doc created with full template (TITLE/EXCERPT/NEWSLETTER/PRINT/CTA/IMAGE PROMPTS/body).
   {
     slug: 'blog-region-negev-en',
     content_type: 'blog',
     language: 'en',
     state: 'draft',
     title: 'Wine in the Desert: The Negev',
-    doc_url: 'https://docs.google.com/document/d/1vPwP_uE3IH8SuycisBLb0IUlMt8WBDVuF9Y-P-nca_Y/edit',
+    doc_url: 'https://docs.google.com/document/d/1SYAMHttRYq2guUiM32YGCH9_yf1bq0sXg3PzWDgEBfY/edit',
+    md_file: 'regions/negev-en.post.md',
     references: ['blog-region-negev-he'],
   },
   // ─── Translation assets (template-xlt namespace) ─────────────────────
@@ -443,6 +445,8 @@ const UPDATE_FIELDS = [
   'slb_SubjectLine',
   'slb_SendDate',
   'slb_ExternalUrl',
+  'slb_DocUrl',
+  'slb_MdUrl',
 ];
 
 // ─── Main ──────────────────────────────────────────────────────────
@@ -496,6 +500,8 @@ async function main() {
       const now = new Date().toISOString();
       const patch = {
         slb_LastTouched: now,
+        slb_DocUrl: entry.doc_url || '',
+        slb_MdUrl: entry.md_file ? path.posix.join('content', entry.md_file.replace(/\\/g, '/')) : '',
         slb_MailchimpCampaignId: entry.mailchimp_campaign_id || '',
         slb_SubjectLine: entry.subject_line || '',
         slb_SendDate: entry.send_date || '',

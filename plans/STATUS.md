@@ -1,14 +1,14 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-25 — New-product sync fixes @375: wdm_WebIdEn now seeded at accept time (was blank after hot-link retirement, causing B3/B4 validation false positives); validation entity names now show product title for Web Publish Status Changed tasks. Sync confirmed clean after manual ID patch on two pre-existing products.
+**Updated:** 2026-06-25 — @376: lvAttachModal in TaskPacks.html now uses ModalOverlay.open/close (was raw style.display, caused modal to stack behind task card on mobile). Negev region post redrafted to full template format (all newsletter/WP/SEO sections). Content workflow protocol added to auto-loaded .claude/CLAUDE.md.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @375; new-product accept flow hardened (wdm_WebIdEn seeded at accept, B3/B4 false positives fixed); sync clean; build queue open (reliability 1.3 / UI Tier 5 partial).
+- **jlmops** (GAS backend) — live @376; new-product accept flow hardened (wdm_WebIdEn seeded at accept, B3/B4 false positives fixed); sync clean; lvAttachModal mobile stacking fixed; build queue open (reliability 1.3 / UI Tier 5 partial).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
-- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post in draft.
+- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post template-formatted (all sections ready); pending winery verification + HE translation before publish.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing. **June Issue #2** — AYIW email (EN+HE) scheduled 2026-06-24; print newsletter EN+HE produced + registered (`print-newsletter-2026-06-en/he`), ready to print + distribute. July entities pre-registered (`email-ayiw-2026-07-en/he`, `print-newsletter-2026-07-en/he`). 2026 calendar filled through December (slots A–F in `content/PUBLICATION_CALENDAR.md`). Plan: `content/REGION_POSTS_PLAN.md`.
 - **business** — strategy/brand docs current.
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-24 |
 | Revenue | Steady |
-| Deploy Version | jlmops @375 · theme v1.2.30 |
+| Deploy Version | jlmops @376 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-25 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -35,7 +35,7 @@ The live "what now" — daily review reads these first.
 1. **Newsletter Issue #2 (June) — AYIW scheduled 2026-06-24; print ready to distribute.** After send: mark `email-newsletter-2026-06-en/he` published in jlmops. After print distribute: mark `print-newsletter-2026-06-en/he` published. Set `slb_TargetDate` on entities in jlmops if not set.
 2. **Branded shipping cartons — postponed, expected ~2026-06-11.** Partner-owned. Track only: nudge in daily review; re-flag if it slips. No Claude action.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
-4. **Drive shipped jlmops/CRM/UI work through real daily use.** Open candidates: content distribution Step 1 (schema + Drive folder, → `jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`); Deploy 3 of content-workflow redesign (→ `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md`); reliability audit next = 1.3 concurrency or 4.1 snapshots/DR (→ `jlmops/plans/RELIABILITY_AUDIT.md`); UI audit Tier 5 partial (→ `jlmops/plans/UI_AUDIT.md`); mobile LCP tuning (~4.0s).
+4. **Next build candidate — pick from open queue.** Content distribution Step 1 → `jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`; Deploy 3 content-workflow redesign → `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md`; reliability 1.3 or 4.1 → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s).
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 
 ## Current State

@@ -32,6 +32,10 @@ __FEATURED_ID__
 <!-- One prompt per illustration. Impressionist oil painting. Consistent palette across the post. -->
 
 
+<!-- TARGET BODY LENGTH: 800–1,200 words. Check word count before editorial review so
+     heavy editing still lands above 800. Shorter posts lose SEO weight; over ~1,500
+     risks losing the reader. Count only the body text — exclude the sections above. -->
+
 Paste below into WordPress Code Editor:
 
 <!-- wp:html -->

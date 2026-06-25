@@ -270,7 +270,7 @@
       document.getElementById('lv-attach-url').value = '';
       var modal = document.getElementById('lvAttachModal');
       modal.setAttribute('data-task-id', task.id);
-      modal.style.display = 'flex';
+      ModalOverlay.open('lvAttachModal');
     }
 
     function submitAttachDoc() {
@@ -289,7 +289,7 @@
             TaskWidgets.toast((result && result.error) || 'Attach failed', true);
             return;
           }
-          modal.style.display = 'none';
+          ModalOverlay.close('lvAttachModal');
           TaskWidgets.toast(result.superseded ? 'New version attached, previous archived' : 'Doc attached');
           ctx.reload();
         })
@@ -494,7 +494,7 @@
       <input type="url" class="form-control form-control-sm" id="lv-attach-url" placeholder="https://docs.google.com/document/d/..." />
     </div>
     <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('lvAttachModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('lvAttachModal')">Cancel</button>
       <button type="button" class="btn btn-sm btn-light" id="lv-btn-attach-submit">Attach</button>
     </div>
   </div>

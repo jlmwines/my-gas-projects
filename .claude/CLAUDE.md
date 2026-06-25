@@ -63,3 +63,27 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 - **jlmops live deploy:** always use the wrapper `pwsh -NoProfile -File jlmops/deploy.ps1 "<description>"`. NEVER call bare `clasp deploy` — that's the failure mode that has historically created orphan deployment URLs (memory `jlm_stable_deploy_id`). The wrapper now does three things in order: (1) **auto-stamps `VERSION.built` in `WebApp.js` with the real Israel-local time** via the timezone API — NEVER hand-stamp `built` yourself, the script owns it so the deploy timestamp can't be fabricated or drift; (2) runs `clasp push` itself — for a code deploy do NOT run `clasp push` separately first; (3) `clasp deploy --deploymentId <pinned>` + verifies the pinned ID survived. You still write the `commit:` description (and it's passed as the wrapper arg). If the pinned ID needs to change, update both `.deployment-id` and `system.deployment.pinned_id` in `config/system.json`. (Config-only pushes with no deploy still use bare `clasp push` + `rebuildSysConfigFromSource()`.)
 - **Git:** remote `origin` over SSH config alias `github-jlmwines` (in `~/.ssh/config`). Branch `main`. Push command: `git push origin main`. Sessions push only when explicitly asked.
 - **Live site (jlmwines.com):** user-driven only. Sessions don't push to live without explicit per-task authorization.
+
+## Content Workflow
+
+When working on blog posts, read these facts before touching any `.post.md` file or running `push-posts.js`. Full pipeline details: `content/PUBLISHING.md`. Full section spec: `content/CLAUDE.md`.
+
+**Template:** start every post from `content/_post-template.md`. Required sections in order:
+- `## TITLE` — 50-70 chars, plain language
+- `## EXCERPT` — 1-2 sentences (~150 chars), for WordPress listing pages
+- `## FEATURED MEDIA` — leave `__FEATURED_ID__` until image is uploaded
+- `## NEWSLETTER EXCERPT (web/social)` — ~50 words, end with `[Read the full guide →]`
+- `## PRINT NEWSLETTER BODY` — ~150-200 words, self-contained, signed "— Evyatar"
+- `## CTA` — one-line link text
+- `## IMAGE PROMPTS` — impressionist oil painting style, one prompt per image
+- Body HTML after `Paste below into WordPress Code Editor:` inside `<!-- wp:html -->`
+
+**Target body length:** 800-1,200 words. Count only the body, not the sections above.
+
+**File naming:** `content/<slug>-en.post.md` (general); `content/regions/<slug>-en.post.md` (regional). HE translation: same path, `-he.post.md`.
+
+**Publishing pipeline:** `node content/push-posts.js <slug>` sends TITLE, EXCERPT, and body HTML to WordPress via REST API. RankMath fields (SEO meta, focus keyword, slug) are pasted manually in wp-admin. Featured image: upload separately, then stamp `## FEATURED MEDIA` with the WP media ID.
+
+**Work order:** body draft → title → WP excerpt → newsletter excerpt → print body → CTA → image prompts → HE translation.
+
+**Library registration:** add `doc_url` (Drive doc URL) and `md_file` (path relative to `content/`) to the manifest entry in `content/register-library.js`, then run `node content/register-library.js <slug>`. Use `--update` to patch an existing row.

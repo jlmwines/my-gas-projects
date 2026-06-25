@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-25 — Negev post redraft + ModalOverlay fix @376 + content workflow docs
+
+- Negev region post (`content/regions/negev-en.post.md`) redrafted to full template format: TITLE, EXCERPT, NEWSLETTER EXCERPT, PRINT NEWSLETTER BODY, CTA, IMAGE PROMPTS, body HTML. Drive doc created + wired to task via register-library.js (doc_url + md_file patched; UPDATE_FIELDS fix needed — patch object was missing slb_DocUrl/slb_MdUrl entries).
+- `content/_post-template.md`: word count guidance comment added (800-1,200 words target).
+- `TaskPacks.html`: lvAttachModal now uses ModalOverlay.open/close instead of raw style.display — fixes mobile stacking bug (modal was rendering behind task card). Deployed @376.
+- `.claude/CLAUDE.md`: Content Workflow section added (template sections, file naming, pipeline, work order, library registration) so future sessions have drafting/publishing protocol without seeking `content/CLAUDE.md` mid-task.
+- Next: smoke "Attach new version" modal on mobile @376. Negev: winery verification (which do we carry) + HE translation. Next build candidate from STATUS item 4.
+
+---
+
 ## 2026-06-25 — Orientation / context recovery (no changes)
 
 - Session ran after previous context limit; re-read STATUS + plans to re-orient.
