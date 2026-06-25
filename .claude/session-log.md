@@ -4,6 +4,22 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-25 — Documentation cleanup pass
+
+- STATUS.md: jlmops at-a-glance line collapsed from 400-word changelog to one sentence; Current State bullets stripped of deploy narrative; Next Action item 4 trimmed; CONTENT_LIBRARY_PLAN dead reference removed; stale plan pointers to archived docs removed.
+- review-claude skill: step 6 extended with structural compliance checks (at-a-glance drift, Current State narrative creep); STRUCTURE line added to output format.
+- Plans: 21 shipped/superseded plans moved to _archive/ (see git diff); BUNDLE_PLAN.md status header updated to reflect all stages shipped.
+- Active plan count: 44 → 44 remaining (45 files minus README), archive count: 13 → 34.
+- Next: remaining open plans are all legitimately in-progress; no further archiving warranted without new completions.
+
+## 2026-06-25 — New-product sync hardening @375
+
+- Root cause found: `acceptProductSuggestion` seeded WebDetM but omitted `wdm_WebIdEn` (the key column), leaving it blank after hot-link retirement @342. Sync validation rules B3/B4 then fired false positives on every sync.
+- Fix: two lines added to step 5 of `acceptProductSuggestion` — `wdm_WebIdEnIdx` + write `wpmId` to the new row.
+- Also: `ValidationLogic._extractName` priority list now includes `wpm_PostTitle` so "Web Publish Status Changed" tasks show the product EN title as entity name.
+- Two pre-existing products had `wdm_WebIdEn` patched manually in the sheet; sync confirmed clean.
+- Next: ongoing new-product onboarding; remaining pending-verification items in STATUS.
+
 ## 2026-06-24 — Region lookup fix + flyer EN complete @372–@374
 
 - Deep review written (`plans/reviews/review-deep-2026-06-24.md`).
