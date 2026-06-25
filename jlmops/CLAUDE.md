@@ -36,7 +36,6 @@ If instructions are unclear, ask. Do not substitute your judgment for the user's
 | `plans/STATUS.md` | Current state, next action, metrics, inbox (dashboard only — no session history) |
 | `.claude/session-log.md` | Claude-internal session log |
 | `jlmops/plans/` | Middleware implementation plans |
-| `jlmops/SESSION_SUMMARY.md` | Legacy session history (pre-standardization) |
 
 ## Communication Style
 
