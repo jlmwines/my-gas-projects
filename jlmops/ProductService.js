@@ -1809,9 +1809,11 @@ const ProductService = (function() {
       const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
 
       const newMasterRow = new Array(masterHeaders.length).fill('');
+      const wdm_WebIdEnIdx = masterHeaders.indexOf('wdm_WebIdEn');
       const wdm_SkuIdx = masterHeaders.indexOf('wdm_SKU');
       const wdm_NameEnIdx = masterHeaders.indexOf('wdm_NameEn');
       const wdm_NameHeIdx = masterHeaders.indexOf('wdm_NameHe');
+      if (wdm_WebIdEnIdx > -1) newMasterRow[wdm_WebIdEnIdx] = wpmId || '';
       if (wdm_SkuIdx > -1) newMasterRow[wdm_SkuIdx] = sku;
       if (wdm_NameEnIdx > -1) newMasterRow[wdm_NameEnIdx] = suggestedNameEn;
       if (wdm_NameHeIdx > -1) newMasterRow[wdm_NameHeIdx] = suggestedNameHe;
