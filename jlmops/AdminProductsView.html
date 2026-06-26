@@ -39,11 +39,13 @@
     .ap-tab { padding: 5px 8px; font-size: 12px; font-weight: 500; color: #495057; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; }
     .ap-tab.active { color: #0d6efd; border-bottom-color: #0d6efd; font-weight: 600; }
     .ap-tab:hover:not(.active) { color: #212529; border-bottom-color: #adb5bd; }
+
+    /* ds-v2 CSS is global — loaded from AppView.html */
+    .ds-v2 [id^="tab-pane-"] { padding-top:4px; }
   </style>
 </head>
 <body>
-  <div class="container-fluid px-2 py-3">
-    <h2 class="mb-4">Products</h2>
+  <div class="container-fluid px-2 pb-3 ds-v2">
 
     <!-- Tab navigation -->
     <div class="ap-tabs" id="admin-products-tabs">
@@ -56,10 +58,14 @@
 
     <!-- Tab pane: Detail Updates -->
     <div id="tab-pane-details" class="pt-3">
-        
-        <!-- Section A: Review Pending (Primary) -->
-        <h6 class="text-muted mb-2">Review Pending (<span id="stat-review">0</span>)</h6>
-        <div class="table-responsive mb-4 border rounded">
+
+        <!-- Section A: Review Pending -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Review Pending</h6>
+            <span id="stat-review" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive ds-action" style="display:none;">
             <table class="table table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -70,15 +76,18 @@
                   <th class="border-top-0">Action</th>
                 </tr>
               </thead>
-              <tbody id="review-list-body">
-                <!-- Review tasks populated here -->
-              </tbody>
+              <tbody id="review-list-body"></tbody>
             </table>
+          </div>
         </div>
 
-        <!-- Section B: Accepted Updates -->
-        <h6 class="text-muted mb-2">Accepted (<span id="stat-accepted">0</span>)</h6>
-        <div class="table-responsive mb-2 border rounded">
+        <!-- Section B: Accepted -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Accepted</h6>
+            <span id="stat-accepted" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive" style="display:none;">
             <table class="table table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -88,22 +97,25 @@
                   <th class="border-top-0">Date</th>
                 </tr>
               </thead>
-              <tbody id="accepted-list-body">
-                <!-- Accepted tasks populated here -->
-              </tbody>
+              <tbody id="accepted-list-body"></tbody>
             </table>
+          </div>
         </div>
-
-        <!-- Export & Confirm Bar -->
-        <div class="d-flex justify-content-end align-items-center p-2">
+        <div id="details-export-bar" style="display:none;">
+          <div class="d-flex justify-content-end align-items-center p-2">
             <button id="btn-export-details" class="btn btn-sm mr-2" onclick="AdminProductsView.exportUpdates()">Export</button>
             <button id="btn-confirm-details" class="btn btn-sm" onclick="AdminProductsView.confirmUpdates()" disabled>Confirm</button>
+          </div>
         </div>
-        <div id="export-status" class="text-right mt-2"></div>
+        <div id="export-status" class="text-right mb-2"></div>
 
-        <!-- Section C: Pending (Info only - awaiting manager action) -->
-        <h6 class="text-muted mb-2 mt-4">Pending (<span id="stat-pending-details">0</span>)</h6>
-        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+        <!-- Section C: Pending -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Pending</h6>
+            <span id="stat-pending-details" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive" style="display:none; max-height:200px; overflow-y:auto;">
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
@@ -113,10 +125,9 @@
                   <th class="border-top-0">Date</th>
                 </tr>
               </thead>
-              <tbody id="pending-details-list-body">
-                <!-- Pending detail tasks populated here -->
-              </tbody>
+              <tbody id="pending-details-list-body"></tbody>
             </table>
+          </div>
         </div>
 
     </div>
@@ -126,22 +137,23 @@
       <span id="verify-planning-loaded" class="text-muted small"></span>
 
         <!-- Reverted verify tasks needing admin: Close (image fixed manually) or Pass to manager (detail edit) -->
-        <div class="mb-3">
-          <h6 class="text-muted mb-2">Reverted — needs admin (<span id="reverted-verify-inline-count">0</span>)</h6>
-          <div class="table-responsive border rounded">
+        <div class="ds-section mb-3">
+          <div class="ds-section-head">
+            <h6>Reverted — needs admin</h6>
+            <span id="reverted-verify-inline-count" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive ds-action" style="display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr><th class="border-top-0">SKU</th><th class="border-top-0">Findings</th><th class="border-top-0 text-right">Action</th></tr>
               </thead>
-              <tbody id="reverted-verify-body">
-                <tr><td colspan="3" class="text-center text-muted py-2">None.</td></tr>
-              </tbody>
+              <tbody id="reverted-verify-body"></tbody>
             </table>
           </div>
         </div>
         <hr class="my-3">
 
-        <h6 class="text-muted mb-2">Create verification tasks</h6>
+        <h6 class="mb-2">Create verification tasks</h6>
         <div class="form-row align-items-end mb-2">
           <div class="col-auto">
             <label for="verify-name-mode" class="small mb-1 d-block">Name filter</label>
@@ -194,19 +206,18 @@
     <!-- Tab pane: New Products -->
     <div id="tab-pane-new" class="pt-3" style="display:none;">
 
-        <!-- Section 1: Ready for Web — export + confirm published -->
-        <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-2">
-            <div>
-                <span class="font-weight-bold mr-2">Ready for Web:</span>
-                <span id="stat-onboarding-export" class="badge badge-secondary">0</span>
-            </div>
-            <div>
-                <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export</button>
-                <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
-                <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh XLT</button>
-            </div>
-        </div>
-        <div class="table-responsive border rounded mb-2">
+        <!-- Section 1: Ready for Web -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Ready for Web</h6>
+            <span id="stat-onboarding-export" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div id="new-web-actions" class="ds-section-actions" style="display:none;">
+            <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export</button>
+            <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
+            <button id="btn-refresh-xlt" class="btn btn-sm" onclick="AdminProductsView.refreshTranslations()" title="Re-pull HE products and rebuild translation links (for products added since the last sync)">Refresh XLT</button>
+          </div>
+          <div class="table-responsive ds-action" style="display:none;">
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
@@ -215,16 +226,19 @@
                   <th class="border-top-0">Date</th>
                 </tr>
               </thead>
-              <tbody id="linkage-list-body">
-                <tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>
-              </tbody>
+              <tbody id="linkage-list-body"></tbody>
             </table>
+          </div>
         </div>
-        <div id="new-export-status" class="mt-1 mb-3 small text-right"></div>
+        <div id="new-export-status" class="mb-2 small text-right"></div>
 
-        <!-- Section 2: Review Submissions — accepted details awaiting admin -->
-        <h6 class="text-muted mb-2">Review Submissions (<span id="stat-submissions">0</span>)</h6>
-        <div class="table-responsive mb-4 border rounded">
+        <!-- Section 2: Review Submissions -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Review Submissions</h6>
+            <span id="stat-submissions" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive ds-action" style="display:none;">
             <table class="table table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -235,15 +249,18 @@
                   <th class="border-top-0">Action</th>
                 </tr>
               </thead>
-              <tbody id="submissions-list-body">
-                <!-- Submissions tasks populated here -->
-              </tbody>
+              <tbody id="submissions-list-body"></tbody>
             </table>
+          </div>
         </div>
 
-        <!-- Section 3: Awaiting manager — approved, not yet submitted -->
-        <h6 class="text-muted mb-2">Awaiting Manager (<span id="stat-pending-new">0</span>)</h6>
-        <div class="table-responsive border rounded mb-4" style="max-height: 200px; overflow-y: auto;">
+        <!-- Section 3: Awaiting Manager -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Awaiting Manager</h6>
+            <span id="stat-pending-new" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive" style="display:none; max-height:200px; overflow-y:auto;">
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
@@ -253,22 +270,25 @@
                   <th class="border-top-0">Date</th>
                 </tr>
               </thead>
-              <tbody id="pending-new-list-body">
-                <!-- Pending new product tasks populated here -->
-              </tbody>
+              <tbody id="pending-new-list-body"></tbody>
             </table>
+          </div>
         </div>
 
-        <!-- Section 4: Suggestions — new candidates awaiting approval -->
-        <div class="d-flex align-items-center mb-2">
-          <h6 class="text-muted mb-0 mr-3">Candidates (<span id="stat-suggestions">0</span>)</h6>
-          <select id="suggestions-sort" class="form-control form-control-sm" style="width:auto" onchange="AdminProductsView.renderSuggestionSort()">
-            <option value="title">Sort: Title</option>
-            <option value="price">Sort: Price</option>
-            <option value="stock">Sort: Stock</option>
-          </select>
-        </div>
-        <div class="table-responsive mb-4 border rounded">
+        <!-- Section 4: Candidates -->
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Candidates</h6>
+            <div class="d-flex align-items-center">
+              <span id="stat-suggestions" class="badge badge-secondary badge-pill mr-2">0</span>
+              <select id="suggestions-sort" class="form-control form-control-sm" style="width:auto" onchange="AdminProductsView.renderSuggestionSort()">
+                <option value="title">Sort: Title</option>
+                <option value="price">Sort: Price</option>
+                <option value="stock">Sort: Stock</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive" style="display:none;">
             <table class="table table-hover table-sm mb-0">
               <thead class="thead-light">
                 <tr>
@@ -281,10 +301,9 @@
                   <th class="border-top-0">Action</th>
                 </tr>
               </thead>
-              <tbody id="suggestions-list-body">
-                <!-- Suggestions tasks populated here -->
-              </tbody>
+              <tbody id="suggestions-list-body"></tbody>
             </table>
+          </div>
         </div>
 
     </div>
@@ -293,7 +312,7 @@
     <div id="tab-pane-sku" class="pt-3" style="display:none;">
 
         <!-- Action Buttons -->
-        <div class="d-flex flex-wrap mb-4" style="gap: 0.5rem;">
+        <div class="d-flex flex-wrap mb-4" style="gap: 0.5rem; padding: 10px 0;">
           <button class="btn btn-sm" onclick="AdminProductsView.openVendorSkuModal()">Vendor SKU Update</button>
           <button class="btn btn-sm" onclick="AdminProductsView.openReplacementModal()">Product Replacement</button>
           <button class="btn btn-sm" onclick="AdminProductsView.openFixOrphanModal()">Fix Orphan SKU</button>
@@ -301,8 +320,11 @@
         </div>
 
         <!-- Recent Updates -->
-        <h6 class="text-muted mb-2">Recent SKU Updates</h6>
-        <div class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto;">
+        <div class="ds-section">
+          <div class="ds-section-head">
+            <h6>Recent SKU Updates</h6>
+          </div>
+          <div class="table-responsive" style="display:none; max-height:200px; overflow-y:auto;">
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
@@ -313,10 +335,9 @@
                   <th class="border-top-0">Updated By</th>
                 </tr>
               </thead>
-              <tbody id="sku-updates-body">
-                <!-- Recent SKU updates populated here -->
-              </tbody>
+              <tbody id="sku-updates-body"></tbody>
             </table>
+          </div>
         </div>
 
     </div>
@@ -325,32 +346,33 @@
     <div id="tab-pane-lookups" class="pt-3" style="display:none;">
 
         <!-- Section A: Grapes -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('grapes')"><span id="lookup-grapes-caret">&#9656;</span> Grape Varieties (<span id="lookup-grapes-count">0</span>)</h6>
-          <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('grapes')">Add Grape</button>
-        </div>
-        <div id="lookup-grapes-section" class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
+        <div class="ds-section">
+          <div class="ds-section-head" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('grapes')">
+            <h6><span id="lookup-grapes-caret">&#9656;</span> Grape Varieties (<span id="lookup-grapes-count">0</span>)</h6>
+            <button class="btn btn-sm" onclick="event.stopPropagation(); AdminProductsView.openLookupModalAdd('grapes')">Add Grape</button>
+          </div>
+          <div id="lookup-grapes-section" class="table-responsive" style="max-height:200px; overflow-y:auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
                   <th class="border-top-0">Code</th>
                   <th class="border-top-0">English</th>
                   <th class="border-top-0">Hebrew</th>
-                  <th class="border-top-0" style="width: 80px;"></th>
+                  <th class="border-top-0" style="width:80px;"></th>
                 </tr>
               </thead>
-              <tbody id="lookup-grapes-body">
-                <!-- Grapes populated here -->
-              </tbody>
+              <tbody id="lookup-grapes-body"></tbody>
             </table>
+          </div>
         </div>
 
         <!-- Section B: Kashrut -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('kashrut')"><span id="lookup-kashrut-caret">&#9656;</span> Kashrut Certifications (<span id="lookup-kashrut-count">0</span>)</h6>
-          <button class="btn btn-sm" onclick="AdminProductsView.openLookupModalAdd('kashrut')">Add Kashrut</button>
-        </div>
-        <div id="lookup-kashrut-section" class="table-responsive mb-4 border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
+        <div class="ds-section">
+          <div class="ds-section-head" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('kashrut')">
+            <h6><span id="lookup-kashrut-caret">&#9656;</span> Kashrut Certifications (<span id="lookup-kashrut-count">0</span>)</h6>
+            <button class="btn btn-sm" onclick="event.stopPropagation(); AdminProductsView.openLookupModalAdd('kashrut')">Add Kashrut</button>
+          </div>
+          <div id="lookup-kashrut-section" class="table-responsive" style="max-height:200px; overflow-y:auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -358,26 +380,26 @@
                   <th class="border-top-0">Code</th>
                   <th class="border-top-0">English</th>
                   <th class="border-top-0">Hebrew</th>
-                  <th class="border-top-0" style="width: 80px;"></th>
+                  <th class="border-top-0" style="width:80px;"></th>
                 </tr>
               </thead>
-              <tbody id="lookup-kashrut-body">
-                <!-- Kashrut populated here -->
-              </tbody>
+              <tbody id="lookup-kashrut-body"></tbody>
             </table>
+          </div>
         </div>
 
         <!-- Section C: Texts -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="text-muted mb-0" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('texts')"><span id="lookup-texts-caret">&#9656;</span> Marketing Texts (<span id="lookup-texts-count">0</span>)</h6>
-          <div>
-            <select id="lookup-texts-filter" class="form-control form-control-sm d-inline-block" style="width: auto;" onchange="AdminProductsView.renderLookupTable('texts')">
-              <option value="">All categories</option>
-            </select>
-            <button class="btn btn-sm ml-2" onclick="AdminProductsView.openLookupModalAdd('texts')">Add Text</button>
+        <div class="ds-section">
+          <div class="ds-section-head" style="cursor:pointer;" onclick="AdminProductsView.toggleLookupSection('texts')">
+            <h6><span id="lookup-texts-caret">&#9656;</span> Marketing Texts (<span id="lookup-texts-count">0</span>)</h6>
+            <div onclick="event.stopPropagation()">
+              <select id="lookup-texts-filter" class="form-control form-control-sm d-inline-block" style="width:auto;" onchange="AdminProductsView.renderLookupTable('texts')">
+                <option value="">All categories</option>
+              </select>
+              <button class="btn btn-sm ml-2" onclick="AdminProductsView.openLookupModalAdd('texts')">Add Text</button>
+            </div>
           </div>
-        </div>
-        <div id="lookup-texts-section" class="table-responsive border rounded" style="max-height: 200px; overflow-y: auto; display:none;">
+          <div id="lookup-texts-section" class="table-responsive" style="max-height:200px; overflow-y:auto; display:none;">
             <table class="table table-sm table-hover mb-0">
               <thead class="thead-light">
                 <tr>
@@ -385,13 +407,12 @@
                   <th class="border-top-0">English</th>
                   <th class="border-top-0">Hebrew</th>
                   <th class="border-top-0">Category</th>
-                  <th class="border-top-0" style="width: 80px;"></th>
+                  <th class="border-top-0" style="width:80px;"></th>
                 </tr>
               </thead>
-              <tbody id="lookup-texts-body">
-                <!-- Texts populated here -->
-              </tbody>
+              <tbody id="lookup-texts-body"></tbody>
             </table>
+          </div>
         </div>
 
     </div>
@@ -876,6 +897,39 @@
       el.textContent = n;
       el.classList.remove('badge-secondary', 'badge-info', 'badge-warning');
       el.classList.add(n > 0 ? activeClass : 'badge-secondary');
+    };
+
+    // Hides a table wrapper and shows a single empty-state note, or restores it.
+    // When empty and the preceding sibling is an h6, injects a small inline span
+    // inside the label so the whole section reads as one line.
+    AdminProductsView._tableState = function(tbody, hasData, emptyMsg) {
+      var wrap = tbody.closest('.table-responsive');
+      if (!wrap) return;
+      var prev = wrap.previousElementSibling;
+      while (prev && prev.tagName !== 'H6') { prev = prev.previousElementSibling; }
+      var labelEl = prev || null;
+      if (!labelEl) {
+        var sec = wrap.closest('.ds-section');
+        if (sec) labelEl = sec.querySelector('.ds-section-head h6');
+      }
+      // Always clean up inline span first
+      if (labelEl) {
+        var old = labelEl.querySelector('.ds-empty-inline');
+        if (old) old.remove();
+      }
+      if (hasData) {
+        if (labelEl) labelEl.classList.add('ds-label-connected');
+        wrap.style.display = '';
+      } else {
+        if (labelEl) labelEl.classList.remove('ds-label-connected');
+        wrap.style.display = 'none';
+        if (labelEl) {
+          var span = document.createElement('span');
+          span.className = 'ds-empty-inline';
+          span.textContent = ' — ' + (emptyMsg || 'none');
+          labelEl.appendChild(span);
+        }
+      }
     };
 
     // Lightweight count for the New Products header badge — shows pending suggestions +
@@ -1469,9 +1523,10 @@
     AdminProductsView.loadSkuUpdates = function(preloadedData) {
         const tbody = document.getElementById('sku-updates-body');
         const render = updates => {
+            AdminProductsView._tableState(tbody, true);
             tbody.innerHTML = '';
             if (!updates || updates.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">No recent SKU updates.</td></tr>';
+                AdminProductsView._tableState(tbody, false, 'No recent SKU updates.');
                 return;
             }
             updates.forEach(u => {
@@ -1487,9 +1542,10 @@
             });
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Loading...</td></tr>';
         google.script.run.withSuccessHandler(render).withFailureHandler(err => {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted small">Failed to load updates.</td></tr>';
+            AdminProductsView._tableState(tbody, false, 'Failed to load updates.');
         }).WebAppProducts_getRecentSkuUpdates();
     }
 
@@ -1498,6 +1554,7 @@
     AdminProductsView.loadReviewList = function(preloadedData) {
       const tbody = document.getElementById('review-list-body');
       const render = tasks => {
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '';
         AdminProductsView.reviewTasks = tasks || [];
         const reviewCount = AdminProductsView.reviewTasks.length;
@@ -1505,7 +1562,7 @@
         AdminProductsView.setCountBadge('stat-review-tab', reviewCount, 'badge-warning');
 
         if (AdminProductsView.reviewTasks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
+          AdminProductsView._tableState(tbody, false, 'No updates to review.');
           return;
         }
 
@@ -1522,6 +1579,7 @@
         });
       };
       if (preloadedData !== undefined) { render(preloadedData); return; }
+      AdminProductsView._tableState(tbody, true);
       tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
       google.script.run.withSuccessHandler(render).WebAppProducts_getAdminReviewTasks();
     };
@@ -1529,17 +1587,20 @@
     AdminProductsView.loadAcceptedList = function(preloadedData) {
         const tbody = document.getElementById('accepted-list-body');
         const render = tasks => {
+            AdminProductsView._tableState(tbody, true);
             tbody.innerHTML = '';
             const count = tasks ? tasks.length : 0;
             document.getElementById('stat-accepted').textContent = count;
 
-            // Enable/disable export button based on count (Confirm stays disabled until export succeeds)
+            // Show export/confirm bar only when there are accepted items
             const hasItems = count > 0;
-            document.getElementById('btn-export-details').disabled = !hasItems;
+            const exportBar = document.getElementById('details-export-bar');
+            if (exportBar) exportBar.style.display = hasItems ? '' : 'none';
+            document.getElementById('btn-export-details').disabled = false;
             document.getElementById('btn-confirm-details').disabled = true; // Always disabled until export
 
             if (!tasks || tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No accepted updates.</td></tr>';
+                AdminProductsView._tableState(tbody, false, 'No accepted updates.');
                 return;
             }
 
@@ -1555,6 +1616,7 @@
             });
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
         google.script.run.withSuccessHandler(render).WebAppProducts_getAcceptedTasks();
     };
@@ -1601,10 +1663,11 @@
     AdminProductsView.loadPendingDetailsList = function(preloadedData) {
       const tbody = document.getElementById('pending-details-list-body');
       const render = tasks => {
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '';
         document.getElementById('stat-pending-details').textContent = tasks ? tasks.length : 0;
         if (!tasks || tasks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted small">No pending tasks.</td></tr>';
+          AdminProductsView._tableState(tbody, false, 'No pending tasks.');
           return;
         }
         tasks.forEach(task => {
@@ -1635,9 +1698,10 @@
             return String(a.title || '').localeCompare(String(b.title || ''));
         });
         const tbody = document.getElementById('suggestions-list-body');
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '';
         if (!tasks.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No new suggestions.</td></tr>';
+            AdminProductsView._tableState(tbody, false, 'No new suggestions.');
             return;
         }
         tasks.forEach(t => {
@@ -1669,7 +1733,9 @@
             AdminProductsView.renderSuggestionSort();
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
-        document.getElementById('suggestions-list-body').innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        const sugTbody = document.getElementById('suggestions-list-body');
+        AdminProductsView._tableState(sugTbody, true);
+        sugTbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
         google.script.run.withSuccessHandler(render).WebAppProducts_getSuggestionTasks();
     };
 
@@ -1688,10 +1754,11 @@
     AdminProductsView.loadSubmissionsList = function(preloadedData) {
         const tbody = document.getElementById('submissions-list-body');
         const render = tasks => {
+            AdminProductsView._tableState(tbody, true);
             document.getElementById('stat-submissions').textContent = tasks ? tasks.length : 0;
             tbody.innerHTML = '';
             if (!tasks || tasks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No submissions to review.</td></tr>';
+                AdminProductsView._tableState(tbody, false, 'No submissions to review.');
                 return;
             }
             tasks.forEach(t => {
@@ -1707,6 +1774,7 @@
             });
         };
         if (preloadedData !== undefined) { render(preloadedData); return; }
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
         google.script.run.withSuccessHandler(render).WebAppProducts_getSubmissionsTasks();
     };
@@ -1720,14 +1788,15 @@
             const exportEl = document.getElementById('stat-onboarding-export');
             if(exportEl) exportEl.textContent = count;
 
-            const btnExport = document.getElementById('btn-export-new');
-            if(btnExport) btnExport.disabled = (count === 0);
+            const actionsDiv = document.getElementById('new-web-actions');
+            if(actionsDiv) actionsDiv.style.display = count > 0 ? '' : 'none';
 
             const tbody = document.getElementById('linkage-list-body');
             if (tbody) {
                 if (!tasks || tasks.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">None ready.</td></tr>';
+                    AdminProductsView._tableState(tbody, false, 'None ready.');
                 } else {
+                    AdminProductsView._tableState(tbody, true);
                     tbody.innerHTML = '';
                     tasks.forEach(t => {
                         const tr = document.createElement('tr');
@@ -1814,10 +1883,11 @@
     AdminProductsView.loadPendingNewList = function(preloadedData) {
       const tbody = document.getElementById('pending-new-list-body');
       const render = tasks => {
+        AdminProductsView._tableState(tbody, true);
         tbody.innerHTML = '';
         document.getElementById('stat-pending-new').textContent = tasks ? tasks.length : 0;
         if (!tasks || tasks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted small">No pending tasks.</td></tr>';
+          AdminProductsView._tableState(tbody, false, 'No pending tasks.');
           return;
         }
         tasks.forEach(task => {
@@ -2114,9 +2184,10 @@
     AdminProductsView._rerenderReviewTable = function() {
       const tbody = document.getElementById('review-list-body');
       if (!tbody) return;
+      AdminProductsView._tableState(tbody, true);
       tbody.innerHTML = '';
       if (AdminProductsView.reviewTasks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No updates to review.</td></tr>';
+        AdminProductsView._tableState(tbody, false, 'No updates to review.');
         return;
       }
       AdminProductsView.reviewTasks.forEach((task, i) => {
@@ -2401,7 +2472,7 @@
     // --- Reverted verify tasks (needs-admin queue at the top of the Verification card) ---
     AdminProductsView.loadRevertedVerify = function() {
       const tbody = document.getElementById('reverted-verify-body');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">Loading…</td></tr>';
+      if (tbody) { AdminProductsView._tableState(tbody, true); tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">Loading…</td></tr>'; }
       google.script.run.withSuccessHandler(function(tasks) {
         AdminProductsView.renderRevertedVerify(tasks || []);
       }).withFailureHandler(function(err) {
@@ -2416,7 +2487,9 @@
       AdminProductsView.setCountBadge('reverted-verify-count', n, 'badge-warning');
       if (inline) inline.textContent = n;
       if (!tbody) return;
-      if (!n) { tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-2">None.</td></tr>'; return; }
+      AdminProductsView._tableState(tbody, true);
+      tbody.innerHTML = '';
+      if (!n) { AdminProductsView._tableState(tbody, false, 'None.'); return; }
       tbody.innerHTML = '';
       tasks.forEach(function(t) {
         const tr = document.createElement('tr');

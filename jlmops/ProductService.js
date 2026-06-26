@@ -2623,52 +2623,20 @@ const ProductService = (function() {
    */
   function _logSkuUpdate(updateType, oldSku, newSku, userEmail, affectedSheets) {
     try {
-      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
-
-      if (logSheet) {
-        const timestamp = new Date();
-        const logEntry = [
-          timestamp,
-          'INFO',
-          'ProductService',
-          updateType,
-          `SKU Update: ${oldSku} -> ${newSku}`,
-          JSON.stringify({ oldSku, newSku, affectedSheets, updatedBy: userEmail }),
-          ''  // sessionId
-        ];
-        logSheet.appendRow(logEntry);
-      }
+      LoggerService.info('ProductService', updateType, `SKU Update: ${oldSku} -> ${newSku}`, {
+        data: { oldSku, newSku, affectedSheets, updatedBy: userEmail }
+      });
     } catch (e) {
-      // Don't throw - logging failure shouldn't break the main operation
       console.error(`Failed to log SKU update: ${e.message}`);
     }
   }
 
-  /**
-   * Logs a product name correction to SysLog for the audit trail. Surfaced in the
-   * SKU Management "Recent Updates" table (via getRecentSkuUpdates) as a Name Update.
-   * @param {string} sku The product SKU.
-   * @param {Object} changes { en?:{from,to}, he?:{from,to} }
-   * @param {string} userEmail The user who performed the update.
-   * @param {string} affectedSheets Comma-separated list of updated sheets.
-   */
   function _logNameUpdate(sku, changes, userEmail, affectedSheets) {
     try {
-      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
-      if (logSheet) {
-        const logEntry = [
-          new Date(),
-          'INFO',
-          'ProductService',
-          'ProductNameCorrection',
-          `Name correction: ${sku}`,
-          JSON.stringify({ sku, changes, affectedSheets, updatedBy: userEmail }),
-          ''  // sessionId
-        ];
-        logSheet.appendRow(logEntry);
-      }
+      LoggerService.info('ProductService', 'ProductNameCorrection', `Name correction: ${sku}`, {
+        data: { sku, changes, affectedSheets, updatedBy: userEmail }
+      });
     } catch (e) {
-      // Don't throw - logging failure shouldn't break the main operation
       console.error(`Failed to log name update: ${e.message}`);
     }
   }
@@ -2681,7 +2649,11 @@ const ProductService = (function() {
   function getRecentSkuUpdates(limit) {
     limit = limit || 10;
     try {
-      const logSheet = SheetAccessor.getLogSheet('SysLog', false);
+      const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
+      const sheetNames = ConfigService.getConfig('system.sheet_names');
+      if (!logSheetConfig || !sheetNames) return [];
+      const ss = SpreadsheetApp.openById(logSheetConfig.id);
+      const logSheet = ss ? ss.getSheetByName(sheetNames.SysLog) : null;
 
       if (!logSheet || logSheet.getLastRow() <= 1) {
         return [];
@@ -2690,12 +2662,12 @@ const ProductService = (function() {
       const data = logSheet.getDataRange().getValues();
       const results = [];
 
-      // Search from the end (most recent) backwards
+      // LoggerService column layout: [0]=timestamp [1]=sessionId [2]=level [3]=service [4]=function [5]=message [6]=data
       for (let i = data.length - 1; i >= 1 && results.length < limit; i--) {
-        const functionName = String(data[i][3] || '');
+        const functionName = String(data[i][4] || '');
         if (functionName === 'VendorSkuUpdate' || functionName === 'WebProductReassign') {
           try {
-            const details = JSON.parse(data[i][5] || '{}');
+            const details = JSON.parse(data[i][6] || '{}');
             results.push({
               date: data[i][0],
               type: functionName === 'VendorSkuUpdate' ? 'Vendor Update' : 'Reassign',
@@ -2708,13 +2680,17 @@ const ProductService = (function() {
           }
         } else if (functionName === 'ProductNameCorrection') {
           try {
-            const details = JSON.parse(data[i][5] || '{}');
-            // Name corrections don't change the SKU; show it in both columns.
+            const details = JSON.parse(data[i][6] || '{}');
+            const ch = details.changes || {};
+            let detail = '';
+            if (ch.en) detail += '”' + ch.en.from + '” → “' + ch.en.to + '”';
+            if (ch.he) detail += (detail ? ' | ' : '') + 'HE updated';
             results.push({
               date: data[i][0],
               type: 'Name Update',
               oldSku: details.sku || '',
               newSku: details.sku || '',
+              detail: detail,
               updatedBy: details.updatedBy || ''
             });
           } catch (parseErr) {

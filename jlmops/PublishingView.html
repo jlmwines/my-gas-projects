@@ -3,34 +3,9 @@
 <?!= include('TaskDetail') ?>
 
 <style>
-  /* PublishingView — layout */
-  .pv-container { padding: 0 10px; }
-
-  /* Tab bar */
-  .pv-tabs {
-    display: flex;
-    gap: 2px;
-    border-bottom: 2px solid #dee2e6;
-    margin-bottom: 12px;
-  }
-  .pv-tab {
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #495057;
-    cursor: pointer;
-    border: none;
-    background: none;
-    border-bottom: 3px solid transparent;
-    margin-bottom: -2px;
-    white-space: nowrap;
-  }
-  .pv-tab.active {
-    color: #0d6efd;
-    border-bottom-color: #0d6efd;
-    font-weight: 600;
-  }
-  .pv-tab:hover:not(.active) { color: #212529; border-bottom-color: #adb5bd; }
+  /* PublishingView — layout; pv-tab handled entirely by AppView global ds-v2 */
+  .pv-container { padding: 0; }
+  .pv-tabs { display:flex; gap:1px; overflow-x:auto; }
 
   /* Panels */
   .pv-panel { display: none; }
@@ -43,6 +18,8 @@
     max-height: calc(100vh - 300px);
     overflow-y: auto;
   }
+  .ds-section .pv-cal-table-wrap,
+  .ds-section .pv-library-table-wrap { border: none !important; border-radius: 0 !important; }
   .pv-cal-table {
     width: 100%;
     border-collapse: collapse;
@@ -54,7 +31,7 @@
     border-bottom: 1px solid #f1f3f5;
   }
   .pv-cal-table thead th {
-    background: #f8f9fa;
+    background: var(--ds-header-action, #f2ede3);
     font-weight: 600;
     font-size: 12px;
     color: #495057;
@@ -64,7 +41,7 @@
   }
   .pv-cal-table tr:hover td { background: #f8f9fa; }
   .pv-cal-holiday td { background: #f0f0f0 !important; color: #6c757d; font-style: italic; }
-  .pv-cal-overdue td { background: #fff3cd !important; }
+  .pv-cal-overdue td { color: #c9882c; font-weight: 600; }
 
   /* Library (catalog) — same as LibraryView */
   .pv-library-presets {
@@ -90,7 +67,7 @@
     border-bottom: 1px solid #f1f3f5;
   }
   .pv-library-table thead th {
-    background: #f8f9fa;
+    background: var(--ds-header-action, #f2ede3);
     font-weight: 600;
     font-size: 12px;
     color: #495057;
@@ -132,7 +109,7 @@
       flex-shrink: 0;
     }
     .pv-cal-table.responsive-stack td:first-child { padding-top: 4px; }
-    .pv-tabs { overflow-x: auto; }
+    /* pv-tab mobile handled by AppView global ds-v2 */
   }
 
   /* Entity drawer */
@@ -201,7 +178,7 @@
   .pv-drawer-section .placeholder { color: #adb5bd; font-style: italic; }
 
   .pv-entity-title-link {
-    color: #0d6efd;
+    color: var(--ds-go, #4a7a3e);
     cursor: pointer;
     text-decoration: none;
   }
@@ -249,10 +226,10 @@
 
   .pv-entity-chip {
     cursor: pointer;
-    color: #0d6efd;
-    border-color: #b6d4fe;
+    color: var(--ds-go, #4a7a3e);
+    border-color: rgba(74,122,62,0.3);
   }
-  .pv-entity-chip:hover { background: #d9e9ff; }
+  .pv-entity-chip:hover { background: rgba(74,122,62,0.08); }
 
   /* Campaigns tab */
   .pv-cmp-row {
@@ -275,7 +252,7 @@
   .pv-cmp-entity-row:last-child { border-bottom: none; }
 </style>
 
-<div class="pv-container">
+<div class="pv-container ds-v2">
 
   <!-- Tab bar — admin: Calendar/Library/Campaigns/Projects; manager: Calendar/Tasks/Library -->
   <div class="pv-tabs">
@@ -287,25 +264,32 @@
 
   <!-- ===== CALENDAR TAB ===== -->
   <div class="pv-panel active" id="pv-panel-calendar">
-    <div class="tw-filter-bar">
-      <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
-      <select id="pv-cal-filter-campaign">
-        <option value="">All campaigns</option>
-        <option value="core-content">Core Content</option>
-        <option value="newsletter-print">Newsletter</option>
-        <option value="email-broadcast">Email</option>
-        <option value="flyer-acquisition">Flyer</option>
-      </select>
-      <select id="pv-cal-filter-state">
-        <option value="">All states</option>
-        <option value="draft">Draft</option>
-        <option value="locked">Locked</option>
-        <option value="published">Published</option>
-        <option value="abandoned">Abandoned</option>
-      </select>
-    </div>
-    <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
-      <div class="pv-empty">Loading…</div>
+    <div class="ds-section">
+      <div class="ds-section-head">
+        <h6>Calendar</h6>
+      </div>
+      <div class="ds-section-actions">
+        <div class="tw-filter-bar">
+          <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
+          <select id="pv-cal-filter-campaign">
+            <option value="">All campaigns</option>
+            <option value="core-content">Core Content</option>
+            <option value="newsletter-print">Newsletter</option>
+            <option value="email-broadcast">Email</option>
+            <option value="flyer-acquisition">Flyer</option>
+          </select>
+          <select id="pv-cal-filter-state">
+            <option value="">All states</option>
+            <option value="draft">Draft</option>
+            <option value="locked">Locked</option>
+            <option value="published">Published</option>
+            <option value="abandoned">Abandoned</option>
+          </select>
+        </div>
+      </div>
+      <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
+        <div class="pv-empty">Loading…</div>
+      </div>
     </div>
   </div>
 
@@ -325,27 +309,32 @@
 
   <!-- ===== LIBRARY TAB ===== -->
   <div class="pv-panel" id="pv-panel-library">
-    <div class="pv-library-toolbar mb-2" data-roles="admin">
-      <button class="btn btn-sm" id="pv-btn-open-content-stream">Create Content Tasks</button>
-    </div>
-    <div class="pv-library-presets">
-      <button class="tw-chip active" data-preset="all" onclick="PublishingView.switchPreset('all')">Library</button>
-      <button class="tw-chip" data-preset="deficiency" onclick="PublishingView.switchPreset('deficiency')" title="Pieces due soon or overdue — the demand view">Deficiency</button>
-      <button class="tw-chip" data-preset="blog" onclick="PublishingView.switchPreset('blog')">Blog</button>
-      <button class="tw-chip" data-preset="campaigns" onclick="PublishingView.switchPreset('campaigns')">Campaigns</button>
-      <button class="tw-chip" data-preset="template" onclick="PublishingView.switchPreset('template')">Templates</button>
-      <button class="tw-chip" data-preset="image" onclick="PublishingView.switchPreset('image')">Images</button>
-    </div>
-    <div class="tw-filter-bar">
-      <input type="search" id="pv-search-library" placeholder="Search title / slug..." />
-      <select id="pv-sort-library">
-        <option value="last_touched">Sort: last touched</option>
-        <option value="created">Sort: created</option>
-        <option value="title">Sort: title</option>
-      </select>
-    </div>
-    <div class="pv-library-table-wrap" id="pv-library-table-wrap">
-      <div class="pv-empty">Loading…</div>
+    <div class="ds-section">
+      <div class="ds-section-head">
+        <h6>Library</h6>
+        <button class="btn btn-sm" id="pv-btn-open-content-stream" data-roles="admin">Create Content Tasks</button>
+      </div>
+      <div class="ds-section-actions">
+        <div class="pv-library-presets" style="margin-bottom:6px;">
+          <button class="tw-chip active" data-preset="all" onclick="PublishingView.switchPreset('all')">Library</button>
+          <button class="tw-chip" data-preset="deficiency" onclick="PublishingView.switchPreset('deficiency')" title="Pieces due soon or overdue — the demand view">Deficiency</button>
+          <button class="tw-chip" data-preset="blog" onclick="PublishingView.switchPreset('blog')">Blog</button>
+          <button class="tw-chip" data-preset="campaigns" onclick="PublishingView.switchPreset('campaigns')">Campaigns</button>
+          <button class="tw-chip" data-preset="template" onclick="PublishingView.switchPreset('template')">Templates</button>
+          <button class="tw-chip" data-preset="image" onclick="PublishingView.switchPreset('image')">Images</button>
+        </div>
+        <div class="tw-filter-bar">
+          <input type="search" id="pv-search-library" placeholder="Search title / slug..." />
+          <select id="pv-sort-library">
+            <option value="last_touched">Sort: last touched</option>
+            <option value="created">Sort: created</option>
+            <option value="title">Sort: title</option>
+          </select>
+        </div>
+      </div>
+      <div class="pv-library-table-wrap" id="pv-library-table-wrap">
+        <div class="pv-empty">Loading…</div>
+      </div>
     </div>
   </div>
 
