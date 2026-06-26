@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-26 — ds-v2 applied to all admin + manager views @401
+
+- AppView.html: added global Bootstrap card theming (`.ds-v2 .card-header` → cream, h5 normalized, details/summary marker hidden).
+- All 9 admin views + 4 manager views: `ds-v2` class added to outer container; inline h1/h2/h3 page titles removed (title lives in app shell header).
+- AdminCampaignsView: status colors aligned to ds tokens (active/completed → green, planning → amber).
+- JLMOPS_DESIGN_SYSTEM.md: implementation order updated to reflect completion.
+- Next: link-color pass (Bootstrap blue links → ds-go in TasksView scope-links, entity-links, etc.); AdminProducts column ordering fix (SKU|Product → Product|SKU).
+
+---
+
 ## 2026-06-25 — Negev post redraft + ModalOverlay fix @376 + content workflow docs
 
 - Negev region post (`content/regions/negev-en.post.md`) redrafted to full template format: TITLE, EXCERPT, NEWSLETTER EXCERPT, PRINT NEWSLETTER BODY, CTA, IMAGE PROMPTS, body HTML. Drive doc created + wired to task via register-library.js (doc_url + md_file patched; UPDATE_FIELDS fix needed — patch object was missing slb_DocUrl/slb_MdUrl entries).

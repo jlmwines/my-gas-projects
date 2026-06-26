@@ -12,11 +12,8 @@
             flex-direction: column;
             height: 100vh;
         }
-        .header h1 {
-            margin-bottom: 0;
-            margin-right: 15px;
-            padding-left: 1rem; /* Align with nav-link text */
-            font-size: 1.25rem;
+        .header img {
+            margin-right: 4px;
         }
         .header {
             display: flex;
@@ -34,22 +31,20 @@
         }
         .jlmops-role-switcher {
             position: relative;
+            margin-left: 8px;
         }
         .jlmops-role-switcher select {
-            /* color: white !important; Removed */
-            /* background-color: #212529 !important; Removed */
-            /* border: 1px solid #555; Removed */
+            width: auto;
+            max-width: 120px;
         }
-        .jlmops-role-switcher select option {
-            /* color: white !important; Removed */
-            /* background-color: #343a40 !important; Removed */
+        .view-title-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1612;
+            margin-left: auto;
+            padding-left: 12px;
+            white-space: nowrap;
         }
-        /* Force dark background for primary buttons */
-        /* .jlmops-btn-dark {
-            background-color: #212529 !important;
-            border-color: #212529 !important;
-            color: white !important; Removed */
-        /* } */
         .main-body {
             display: flex;
             flex-grow: 1;
@@ -70,6 +65,14 @@
         .sidebar .nav-link {
             padding: 6px 10px;
             font-size: 0.9rem;
+            color: #495057;
+        }
+        .sidebar .nav-link:hover { color: #212529; }
+        .sidebar .nav-link.active {
+            color: #4a7a3e;
+            font-weight: 600;
+            background: rgba(74,122,62,0.08);
+            border-radius: 4px;
         }
         .content {
             margin-left: 170px;
@@ -141,7 +144,7 @@
         @media (max-width: 768px) {
             /* Typography baseline — 16px body avoids iOS input auto-zoom */
             body { font-size: 16px; }
-            .header h1 { font-size: 1.1rem; padding-left: 0; }
+            .header img { height: 22px; }
 
             /* Touch targets */
             .nav-link {
@@ -157,6 +160,8 @@
                 font-size: 16px !important;
                 min-height: 40px;
             }
+
+            .jlmops-role-switcher select { max-width: 90px; font-size: 13px; }
 
             /* Show the hamburger, hide the sidebar by default */
             .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -186,19 +191,61 @@
         @media (min-width: 769px) {
             [data-viewports]:not([data-viewports~="desktop"]) { display: none !important; }
         }
+
+        /* ===== Design System v2 — global, scoped to .ds-v2 containers ===== */
+        .ds-v2 { --ds-go:#4a7a3e; --ds-bg-action:#fcf9f2; --ds-urgent:#c9882c; --ds-delete:#a83920; --ds-muted:#a09489; --ds-header-action:#f2ede3; }
+        /* Tab bars — ap-tab (AdminProductsView) and pv-tab (PublishingView) share the same underline style */
+        .ds-v2 .ap-tabs, .ds-v2 .pv-tabs { padding:0; border-radius:0; margin-bottom:8px; border-bottom:2px solid #dee2e6; scrollbar-width:none; }
+        .ds-v2 .ap-tabs::-webkit-scrollbar, .ds-v2 .pv-tabs::-webkit-scrollbar { display:none; }
+        .ds-v2 .ap-tab, .ds-v2 .pv-tab { border:1px solid transparent !important; border-radius:0 !important; background:none !important; margin-bottom:-2px; padding:6px 10px; border-bottom:3px solid transparent !important; font-size:13px; font-weight:500; color:#495057; cursor:pointer; white-space:nowrap; }
+        .ds-v2 .ap-tab.active, .ds-v2 .pv-tab.active { color:var(--ds-go) !important; border-bottom-color:var(--ds-go) !important; font-weight:600; background:none !important; border-top:none !important; }
+        .ds-v2 .ap-tab:hover:not(.active), .ds-v2 .pv-tab:hover:not(.active) { color:#212529; border-bottom-color:#adb5bd !important; background:none !important; }
+        .ds-v2 .ap-tab.active .badge { background:var(--ds-urgent) !important; color:#fff !important; }
+        .ds-v2 .ap-tab:not(.active) .badge { background:#d6cfc8 !important; color:#4a3f36 !important; }
+        @media (max-width:576px) { .ds-v2 .ap-tab, .ds-v2 .pv-tab { padding:5px 5px; font-size:11px; } }
+        /* Table headers */
+        .ds-v2 .thead-light th { background-color:var(--ds-header-action); }
+        /* Actionable section wrappers */
+        .ds-v2 .ds-action { background:var(--ds-bg-action); border-radius:4px; padding:2px 4px; }
+        /* Standalone h6 section labels */
+        .ds-v2 h6.ds-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; background:var(--ds-header-action); padding:4px 8px; margin-bottom:8px !important; border:1px solid #dee2e6; border-radius:4px; }
+        .ds-v2 h6.ds-label.ds-label-connected { border-bottom:none !important; border-radius:4px 4px 0 0 !important; margin-bottom:0 !important; }
+        .ds-v2 h6.ds-label.ds-label-connected + .table-responsive { border-top-left-radius:0 !important; border-top-right-radius:0 !important; border-top:none !important; }
+        /* Utility classes */
+        .ds-v2 .ds-info-header { color:var(--ds-muted) !important; }
+        .ds-v2 .ds-link { color:var(--ds-go); cursor:pointer; }
+        .ds-v2 .ds-overdue { color:var(--ds-urgent); font-weight:600; }
+        .ds-v2 .ds-destructive { color:var(--ds-delete); }
+        .ds-empty-inline { font-size:11px; color:#6c584f; font-weight:400; text-transform:none; letter-spacing:0; }
+        .ds-v2 .btn.btn-sm { border-color:#dee2e6; }
+        .ds-v2 .btn.btn-sm:hover { border-color:var(--ds-go); color:var(--ds-go); }
+        /* Section cards */
+        .ds-v2 .ds-section { border:1px solid #dee2e6; border-radius:4px; margin-bottom:12px; overflow:clip; }
+        .ds-v2 .ds-section-head { display:flex; align-items:center; justify-content:space-between; background:var(--ds-header-action); padding:4px 8px; border-bottom:1px solid #dee2e6; }
+        .ds-v2 .ds-section-head h6 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; border:none !important; border-radius:0 !important; padding:0 !important; margin:0 !important; background:none !important; }
+        .ds-v2 .ds-section .table-responsive { border:none !important; border-radius:0 !important; margin-bottom:0 !important; }
+        .ds-v2 .ds-section-actions { padding:6px 8px; border-bottom:1px solid #dee2e6; background:#fff; }
+        /* Calendar / table overdue row — amber+bold replaces yellow highlight */
+        .ds-v2 .pv-cal-overdue td, .ds-v2 .ds-row-overdue td { background:transparent !important; color:var(--ds-urgent); font-weight:600; }
+        /* Bootstrap card → ds-v2 theming */
+        .ds-v2 .card-header { background:var(--ds-header-action) !important; }
+        .ds-v2 .card-header h5 { font-size:13px; font-weight:600; margin:0; }
+        .ds-v2 details.card > summary.card-header { list-style:none; }
+        .ds-v2 details.card > summary.card-header::-webkit-details-marker { display:none; }
     </style>
 </head>
 <body>
     <div class="header">
         <button id="hamburger-btn" class="hamburger-btn" type="button" aria-label="Toggle navigation">&#9776;</button>
-        <h1>JLM Wines</h1>
+        <img src="https://jlmwines.com/wp-content/uploads/2025/02/cropped-jlm-wines-black-600.png" alt="JLM Wines" style="height:28px; width:auto; display:block;">
         <div class="jlmops-role-switcher">
-            <select id="roleSelect" class="form-control form-control-sm" style="min-width: 150px;">
+            <select id="roleSelect" class="form-control form-control-sm">
                 <? for (let r of availableRoles) { ?>
                     <option value="<?= r ?>" <?= r === initialRole ? 'selected' : '' ?>><?= r.charAt(0).toUpperCase() + r.slice(1) ?></option>
                 <? } ?>
             </select>
         </div>
+        <span id="view-title" class="view-title-label"></span>
     </div>
 
     <div class="main-body">
@@ -290,6 +337,17 @@
        * @param {string} viewName - The name of the view to load.
        * @param {HTMLElement} [linkElement] - The navigation link element that was clicked.
        */
+      const VIEW_LABELS = {
+        AdminDashboard: '', ManagerDashboard: '',
+        AdminTasks: 'Tasks', AdminSyncView: 'Sync',
+        AdminOrders: 'Orders', AdminInventory: 'Inventory',
+        AdminProducts: 'Products', AdminBundles: 'Bundles',
+        ManagerContacts: 'Contacts', Publishing: 'Publishing',
+        Development: 'Development',
+        ManagerOrders: 'Orders', ManagerInventory: 'Inventory',
+        ManagerProducts: 'Products',
+      };
+
       function loadView(viewName, linkElement) {
         const viewContent = document.getElementById('content');
         viewContent.innerHTML = '<h2>Loading...</h2>';
@@ -297,34 +355,29 @@
         // Auto-dismiss the off-canvas sidebar on nav click (mobile)
         closeSidebar();
 
+        // View title in header
+        const titleEl = document.getElementById('view-title');
+        if (titleEl) titleEl.textContent = VIEW_LABELS[viewName] || '';
+
         // Highlight Navigation
         const activeNavId = document.getElementById('admin-nav').style.display === 'block' ? 'admin-nav' : 'manager-nav';
         const navLinks = document.querySelectorAll(`#${activeNavId} .nav-link`);
-        
+
         navLinks.forEach(link => {
             link.classList.remove('active');
-            link.classList.remove('font-weight-bold');
-            link.style.color = '#007bff'; // Default link color
         });
 
         let activeLink = linkElement;
-        
-        // If no element passed, try to find it by viewName
+
         if (!activeLink) {
-            // Special case for Dashboards called via switchRole
             if (viewName === 'AdminDashboard' || viewName === 'ManagerDashboard') {
-                 // Find the link that calls switchRole() which implies Dashboard
-                 activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes('switchRole'));
+                activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes('switchRole'));
             } else {
-                 activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes(`'${viewName}'`));
+                activeLink = Array.from(navLinks).find(link => link.getAttribute('onclick').includes(`'${viewName}'`));
             }
         }
 
-        if (activeLink) {
-            activeLink.classList.add('active');
-            activeLink.classList.add('font-weight-bold');
-            activeLink.style.color = '#0056b3'; // darker active color
-        }
+        if (activeLink) activeLink.classList.add('active');
 
         google.script.run
           .withSuccessHandler(html => {
