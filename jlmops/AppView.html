@@ -32,10 +32,11 @@
         .jlmops-role-switcher {
             position: relative;
             margin-left: 8px;
+            flex-shrink: 0;
         }
         .jlmops-role-switcher select {
-            width: auto;
-            max-width: 160px;
+            width: auto !important;
+            padding-right: 2rem;
         }
         .view-title-label {
             font-size: 1rem;
@@ -161,7 +162,7 @@
                 min-height: 40px;
             }
 
-            .jlmops-role-switcher select { max-width: 120px; font-size: 13px; }
+            .jlmops-role-switcher select { font-size: 13px; }
 
             /* Show the hamburger, hide the sidebar by default */
             .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }

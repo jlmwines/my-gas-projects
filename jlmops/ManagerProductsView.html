@@ -117,6 +117,16 @@
 <body>
   <div class="container-fluid p-4 ds-v2">
 
+    <!-- View-level tabs -->
+    <div class="ap-tabs d-flex overflow-auto mb-3">
+      <button type="button" id="mpv-tab-details" class="ap-tab active" onclick="ManagerProductsView.switchViewTab('details')">Details <span id="mpv-badge-details" class="badge ml-1">0</span></button>
+      <button type="button" id="mpv-tab-new" class="ap-tab" onclick="ManagerProductsView.switchViewTab('new')">New <span id="mpv-badge-new" class="badge ml-1">0</span></button>
+      <button type="button" id="mpv-tab-verify" class="ap-tab" onclick="ManagerProductsView.switchViewTab('verify')">Verify <span id="mpv-badge-verify" class="badge ml-1">0</span></button>
+    </div>
+
+    <!-- Details panel -->
+    <div id="mpv-panel-details">
+
     <!-- SECTION 1: Detail Updates -->
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('detail')">
@@ -144,27 +154,10 @@
       </div>
     </div>
 
-    <!-- SECTION: Verification Tasks -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('verify')">
-            <h5 class="mb-0"><span id="chev-verify">&#9656;</span> Verification Tasks</h5>
-            <span id="verify-task-count" class="badge badge-secondary badge-pill">0</span>
-        </div>
-        <div class="card-body p-0" id="card-body-verify" style="display:none;">
-            <table class="table table-sm table-hover responsive-stack mb-0">
-              <thead>
-                <tr>
-                  <th class="border-top-0">Product</th>
-                  <th class="border-top-0">SKU</th>
-                  <th class="border-top-0">Action</th>
-                </tr>
-              </thead>
-              <tbody id="verify-list-body">
-                <!-- Open verify tasks populated here -->
-              </tbody>
-            </table>
-        </div>
-    </div>
+    </div><!-- /mpv-panel-details -->
+
+    <!-- New panel: New Products + Pending Acceptance + Suggest Products -->
+    <div id="mpv-panel-new" style="display:none;">
 
     <!-- SECTION 2: New Products -->
     <div class="card mb-4">
@@ -217,7 +210,7 @@
             <h5 class="mb-0"><span id="chev-suggest">&#9656;</span> Suggest Products</h5>
         </div>
         <div class="card-body" id="card-body-suggest" style="display:none;">
-            
+
             <!-- Category Filter Panel -->
             <div id="category-status-panel" class="mb-3 p-2 border rounded bg-light">
                 <p class="text-muted small mb-0">Loading categories...</p>
@@ -238,7 +231,7 @@
                 <h6 class="mb-0 text-muted" id="suggestion-table-title">Select a category above to view products</h6>
                 <button class="btn btn-light btn-sm" id="btn-suggest-products" disabled onclick="ManagerProductsView.submitSuggestions()">Suggest Selected</button>
             </div>
-            
+
             <div class="table-responsive border rounded">
                 <table class="table table-hover mb-0 table-striped table-sm">
                     <thead>
@@ -258,6 +251,35 @@
             </div>
         </div>
     </div>
+
+    </div><!-- /mpv-panel-new -->
+
+    <!-- Verify panel -->
+    <div id="mpv-panel-verify" style="display:none;">
+
+    <!-- SECTION: Verification Tasks -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('verify')">
+            <h5 class="mb-0"><span id="chev-verify">&#9656;</span> Verification Tasks</h5>
+            <span id="verify-task-count" class="badge badge-secondary badge-pill">0</span>
+        </div>
+        <div class="card-body p-0" id="card-body-verify" style="display:none;">
+            <table class="table table-sm table-hover responsive-stack mb-0">
+              <thead>
+                <tr>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Action</th>
+                </tr>
+              </thead>
+              <tbody id="verify-list-body">
+                <!-- Open verify tasks populated here -->
+              </tbody>
+            </table>
+        </div>
+    </div>
+
+    </div><!-- /mpv-panel-verify -->
 
   </div>
 
@@ -683,10 +705,30 @@
     // its card shows. (Superseded the getProductsWidgetData-based loadWidgetData, which
     // counted a different slice — Review-status + suggestion tasks — and disagreed with
     // the lists, leaving non-zero badges over a "No tasks found" list.)
+    ManagerProductsView._newTabCount = { onboarding: 0, pending: 0 };
+    ManagerProductsView._updateNewTabBadge = function() {
+      const total = ManagerProductsView._newTabCount.onboarding + ManagerProductsView._newTabCount.pending;
+      const el = document.getElementById('mpv-badge-new');
+      if (el) el.textContent = total;
+    };
+
+    ManagerProductsView.switchViewTab = function(tab) {
+      ['details', 'new', 'verify'].forEach(function(t) {
+        const panel = document.getElementById('mpv-panel-' + t);
+        const btn = document.getElementById('mpv-tab-' + t);
+        if (panel) panel.style.display = (t === tab) ? '' : 'none';
+        if (btn) btn.classList.toggle('active', t === tab);
+      });
+    };
+
     ManagerProductsView._setTaskBadges = function(detailCount, onboardingCount) {
       ManagerProductsView.setCountBadge('stat-mismatch', detailCount, 'badge-warning');
       ManagerProductsView.setCountBadge('stat-onboarding', onboardingCount, 'badge-info');
       ManagerProductsView.setCountBadge('stat-onboarding-new', onboardingCount, 'badge-info');
+      const detailBadge = document.getElementById('mpv-badge-details');
+      if (detailBadge) detailBadge.textContent = detailCount;
+      ManagerProductsView._newTabCount.onboarding = onboardingCount;
+      ManagerProductsView._updateNewTabBadge();
     };
 
     ManagerProductsView.loadCategoryStatus = function(onDone) {
@@ -1272,6 +1314,8 @@
         const list = tasks || [];
         ManagerProductsView.verifyListCache = list;
         ManagerProductsView.setCountBadge('verify-task-count', list.length, 'badge-warning');
+        const vTabBadge = document.getElementById('mpv-badge-verify');
+        if (vTabBadge) vTabBadge.textContent = list.length;
         if (list.length > 0) { const b = document.getElementById('card-body-verify'); if (b && b.style.display === 'none') ManagerProductsView.toggleCard('verify'); }
         if (!list.length) {
           body.innerHTML = '<tr><td colspan="3" class="text-muted">No open verification tasks.</td></tr>';
@@ -1302,6 +1346,8 @@
       google.script.run.withSuccessHandler(tasks => {
         const list = tasks || [];
         ManagerProductsView.setCountBadge('pending-accept-count', list.length, 'badge-info');
+        ManagerProductsView._newTabCount.pending = list.length;
+        ManagerProductsView._updateNewTabBadge();
         if (!list.length) {
           body.innerHTML = '<tr><td colspan="4" class="text-muted">No pending suggestions.</td></tr>';
           if (onDone) onDone();

@@ -148,7 +148,14 @@
 
 
 
-    <!-- New Product Counts Section -->
+    <!-- View-level tabs -->
+    <div class="ap-tabs d-flex overflow-auto mb-3">
+      <button type="button" id="inv-tab-counts" class="ap-tab active" onclick="switchInvTab('counts')">Counts <span id="inv-badge-counts" class="badge ml-1">0</span></button>
+      <button type="button" id="inv-tab-brurya" class="ap-tab" onclick="switchInvTab('brurya')">Brurya</button>
+    </div>
+
+    <div id="inv-panel-counts">
+    <!-- Product Counts -->
     <div class="card mb-4">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
             <h5 class="mb-0" style="cursor:pointer;" onclick="toggleInvCard('productCountsCollapse','chev-counts')"><span id="chev-counts">&#9656;</span> Product Counts <span id="badge-counts" class="badge badge-secondary badge-pill ml-2">0</span></h5>
@@ -167,8 +174,10 @@
             </div>
         </div>
     </div>
+    </div><!-- /inv-panel-counts -->
 
-    <!-- Section for Brurya Inventory Management -->
+    <div id="inv-panel-brurya" style="display:none;">
+    <!-- Brurya Stock Management -->
 <div class="card mb-4">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
         <h5 class="mb-0" style="cursor:pointer;" onclick="toggleInvCard('brurya-collapse','chev-brurya')"><span id="chev-brurya">&#9656;</span> Brurya Stock Management</h5>
@@ -184,10 +193,11 @@
             <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
         </div>
     </div>
-    <div id="brurya-collapse" class="card-body" style="display:none;">
+    <div id="brurya-collapse" class="card-body">
         <div id="brurya-inventory-list">Loading...</div>
     </div>
 </div>
+    </div><!-- /inv-panel-brurya -->
 
 <!-- T4.3 Stage B — mobile count-entry modal (tap a Product Counts row to open) -->
 <div class="modal-overlay" id="count-entry-modal" style="display:none;">
@@ -233,6 +243,15 @@
 </div>
 
     <script>
+        function switchInvTab(tab) {
+            ['counts', 'brurya'].forEach(function(t) {
+                const panel = document.getElementById('inv-panel-' + t);
+                const btn = document.getElementById('inv-tab-' + t);
+                if (panel) panel.style.display = (t === tab) ? '' : 'none';
+                if (btn) btn.classList.toggle('active', t === tab);
+            });
+        }
+
         function toggleInvCard(bodyId, chevId) {
             const body = document.getElementById(bodyId);
             const chev = document.getElementById(chevId);
@@ -422,6 +441,8 @@
 
                 const badge = document.getElementById('badge-counts');
                 if (badge) { badge.textContent = productsToCount.length; badge.className = 'badge badge-pill ml-2 badge-info'; }
+                const tabBadge = document.getElementById('inv-badge-counts');
+                if (tabBadge) tabBadge.textContent = productsToCount.length;
                 if (document.getElementById('productCountsCollapse').style.display === 'none') toggleInvCard('productCountsCollapse', 'chev-counts');
             }
 
