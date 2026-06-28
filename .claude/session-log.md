@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-28 — ds-v2 appearance pass @402-@409
+
+- Cream unified to #f4f2e6 across header, sidebar, card-headers; link-color pass (scope/entity/library → ds-go green).
+- AdminProducts: Product|SKU column order, view-title left of role-switcher, nav active link green + stronger tint.
+- Manager cards: all start closed, auto-open when data arrives with badge counts. New "Pending Acceptance" card in ManagerProducts (manager suggestions awaiting admin). ManagerInventory Product Counts badge + auto-open.
+- tw-chip.active: gray → ds-go green. ds-v2 implementation complete.
+- Next: T5.2 btn-primary cleanup in AdminProductsView; smoke new manager cards with live data.
+
 ## 2026-06-26 — ds-v2 applied to all admin + manager views @401
 
 - AppView.html: added global Bootstrap card theming (`.ds-v2 .card-header` → cream, h5 normalized, details/summary marker hidden).
