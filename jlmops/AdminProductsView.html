@@ -119,8 +119,8 @@
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
-                  <th class="border-top-0">SKU</th>
                   <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
                   <th class="border-top-0">Title</th>
                   <th class="border-top-0">Date</th>
                 </tr>
@@ -264,8 +264,8 @@
             <table class="table table-sm mb-0">
               <thead class="thead-light">
                 <tr>
-                  <th class="border-top-0">SKU</th>
                   <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
                   <th class="border-top-0">Title</th>
                   <th class="border-top-0">Date</th>
                 </tr>
@@ -1673,8 +1673,8 @@
         tasks.forEach(task => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${task.sku}</td>
             <td>${task.productName || ''}</td>
+            <td>${task.sku}</td>
             <td>${task.title}</td>
             <td>${new Date(task.createdDate).toLocaleDateString()}</td>
           `;
@@ -1893,8 +1893,8 @@
         tasks.forEach(task => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td>${task.sku}</td>
             <td>${task.productName || ''}</td>
+            <td>${task.sku}</td>
             <td>${task.title}</td>
             <td>${new Date(task.createdDate).toLocaleDateString()}</td>
           `;

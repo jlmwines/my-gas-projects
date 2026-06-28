@@ -151,7 +151,7 @@
     <!-- New Product Counts Section -->
     <div class="card mb-4">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
-            <h5 class="mb-0">Product Counts</h5>
+            <h5 class="mb-0" style="cursor:pointer;" onclick="toggleInvCard('productCountsCollapse','chev-counts')"><span id="chev-counts">&#9656;</span> Product Counts <span id="badge-counts" class="badge badge-secondary badge-pill ml-2">0</span></h5>
             <div class="header-actions">
               <button id="export-counts-btn" class="btn btn-light btn-sm" type="button">Export to Sheet</button>
               <button id="import-counts-btn" class="btn btn-light btn-sm" type="button">Import from Sheet</button>
@@ -161,7 +161,7 @@
         <div id="export-link-container" class="alert alert-info mt-2" style="display: none;">
             Exported to: <a id="exported-sheet-link" href="#" target="_blank"></a>
         </div>
-        <div id="productCountsCollapse">
+        <div id="productCountsCollapse" style="display:none;">
             <div class="card-body">
                 <div id="product-counts-list">Loading products for count...</div>
             </div>
@@ -171,7 +171,7 @@
     <!-- Section for Brurya Inventory Management -->
 <div class="card mb-4">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center" style="background: transparent; border-bottom: 1px solid rgba(0,0,0,.125); gap: 8px;">
-        <h5 class="mb-0"><i class="fas fa-warehouse mr-1"></i> Brurya Stock Management</h5>
+        <h5 class="mb-0" style="cursor:pointer;" onclick="toggleInvCard('brurya-collapse','chev-brurya')"><span id="chev-brurya">&#9656;</span> Brurya Stock Management</h5>
         <div class="brurya-add-group input-group input-group-sm" style="position: relative; max-width: 300px;">
             <input type="text" id="brurya-add-product-input" class="form-control" placeholder="Product Name">
             <div class="input-group-append">
@@ -184,7 +184,7 @@
             <button id="brurya-save-button" class="btn btn-light btn-sm" type="button">Save</button>
         </div>
     </div>
-    <div class="card-body">
+    <div id="brurya-collapse" class="card-body" style="display:none;">
         <div id="brurya-inventory-list">Loading...</div>
     </div>
 </div>
@@ -233,6 +233,15 @@
 </div>
 
     <script>
+        function toggleInvCard(bodyId, chevId) {
+            const body = document.getElementById(bodyId);
+            const chev = document.getElementById(chevId);
+            if (!body) return;
+            const opening = body.style.display === 'none';
+            body.style.display = opening ? '' : 'none';
+            if (chev) chev.innerHTML = opening ? '&#9662;' : '&#9656;';
+        }
+
         (function() {
             const addProductInput = document.getElementById('brurya-add-product-input');
             const addProductBtn = document.getElementById('brurya-add-product-button');
@@ -410,6 +419,10 @@
                 updateSubmitButtonState(); // Initial state check
 
                 restoreCountDrafts(); // A0: rehydrate any in-progress counts saved before a reload
+
+                const badge = document.getElementById('badge-counts');
+                if (badge) { badge.textContent = productsToCount.length; badge.className = 'badge badge-pill ml-2 badge-info'; }
+                if (document.getElementById('productCountsCollapse').style.display === 'none') toggleInvCard('productCountsCollapse', 'chev-counts');
             }
 
             // --- T4.3 mobile count-entry modal ---

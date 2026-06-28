@@ -22,7 +22,7 @@
             padding: 10px 20px; /* Match sidebar padding */
             border-bottom: 1px solid #ccc;
             height: 60px;
-            background: #f8f9fa;
+            background: #f4f2e6;
             width: 100%;
             position: fixed;
             top: 0;
@@ -35,14 +35,14 @@
         }
         .jlmops-role-switcher select {
             width: auto;
-            max-width: 120px;
+            max-width: 160px;
         }
         .view-title-label {
             font-size: 1rem;
             font-weight: 600;
             color: #1a1612;
-            margin-left: auto;
-            padding-left: 12px;
+            margin-left: 12px;
+            margin-right: 4px;
             white-space: nowrap;
         }
         .main-body {
@@ -54,7 +54,7 @@
             width: 160px;
             height: calc(100vh - 60px);
             position: fixed;
-            background: #f8f9fa;
+            background: #f4f2e6;
             padding: 12px 8px;
             display: flex;
             flex-direction: column;
@@ -69,9 +69,9 @@
         }
         .sidebar .nav-link:hover { color: #212529; }
         .sidebar .nav-link.active {
-            color: #4a7a3e;
+            color: #4a7a3e !important;
             font-weight: 600;
-            background: rgba(74,122,62,0.08);
+            background: rgba(74,122,62,0.15);
             border-radius: 4px;
         }
         .content {
@@ -161,7 +161,7 @@
                 min-height: 40px;
             }
 
-            .jlmops-role-switcher select { max-width: 90px; font-size: 13px; }
+            .jlmops-role-switcher select { max-width: 120px; font-size: 13px; }
 
             /* Show the hamburger, hide the sidebar by default */
             .hamburger-btn { display: inline-flex; align-items: center; justify-content: center; }
@@ -193,7 +193,7 @@
         }
 
         /* ===== Design System v2 — global, scoped to .ds-v2 containers ===== */
-        .ds-v2 { --ds-go:#4a7a3e; --ds-bg-action:#fcf9f2; --ds-urgent:#c9882c; --ds-delete:#a83920; --ds-muted:#a09489; --ds-header-action:#f2ede3; }
+        .ds-v2 { --ds-go:#4a7a3e; --ds-bg-action:#fcf9f2; --ds-urgent:#c9882c; --ds-delete:#a83920; --ds-muted:#a09489; --ds-header-action:#f4f2e6; }
         /* Tab bars — ap-tab (AdminProductsView) and pv-tab (PublishingView) share the same underline style */
         .ds-v2 .ap-tabs, .ds-v2 .pv-tabs { padding:0; border-radius:0; margin-bottom:8px; border-bottom:2px solid #dee2e6; scrollbar-width:none; }
         .ds-v2 .ap-tabs::-webkit-scrollbar, .ds-v2 .pv-tabs::-webkit-scrollbar { display:none; }
@@ -232,6 +232,10 @@
         .ds-v2 .card-header h5 { font-size:13px; font-weight:600; margin:0; }
         .ds-v2 details.card > summary.card-header { list-style:none; }
         .ds-v2 details.card > summary.card-header::-webkit-details-marker { display:none; }
+        /* Link-color pass — scope-links (Tasks filter), entity-links (Tasks rows), any plain <a> in ds-v2 */
+        .ds-v2 .scope-link, .ds-v2 .scope-link:hover { color:var(--ds-go); }
+        .ds-v2 .entity-link, .ds-v2 .entity-link:hover { color:var(--ds-go); }
+        .ds-v2 .tw-chip.active { background:var(--ds-go); color:#fff; border-color:var(--ds-go); }
     </style>
 </head>
 <body>

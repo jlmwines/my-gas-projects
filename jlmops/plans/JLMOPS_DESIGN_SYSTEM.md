@@ -14,7 +14,7 @@ Sourced from the JLM Wines theme CSS (`:root` in `website/jlmwines-theme/assets/
 |---|---|---|
 | `--ds-go` | `#4a7a3e` | Links, active nav/tab, published state |
 | `--ds-bg-action` | `#fcf9f2` | Actionable area background |
-| `--ds-header-action` | `#f2ede3` | Section header cream (very light — ~5% off white) |
+| `--ds-header-action` | `#f4f2e6` | Section header cream — also used for app header + sidebar backgrounds |
 | `--ds-urgent` | `#c9882c` | Overdue signal (always paired with bold) |
 | `--ds-delete` | `#a83920` | Destructive actions only |
 | `--ds-muted` | `#a09489` | Informational secondary text |
@@ -189,5 +189,4 @@ Tables to fix:
 
 ## Remaining
 
-- **AdminProductsView.html** — column ordering fix (`SKU | Product` → `Product | SKU` in "Pending" and "Awaiting Manager" tables). Separate JS renderer pass.
-- **Link colors** — per-view pass to fix Bootstrap blue links to `var(--ds-go)` (scope-links in Tasks, entity-links, etc.).
+None. Design system implementation complete @403.

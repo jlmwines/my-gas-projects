@@ -119,14 +119,14 @@
 
     <!-- SECTION 1: Detail Updates -->
     <div class="card mb-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Detail Updates</h5>
+      <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('detail')">
+        <h5 class="mb-0"><span id="chev-detail">&#9656;</span> Detail Updates</h5>
         <div id="stat-mismatch-container">
             <span id="stat-mismatch" class="badge badge-secondary badge-pill mr-1" title="Vintage Mismatch">0</span>
             <span id="stat-onboarding" class="badge badge-secondary badge-pill" title="New Product Onboarding">0</span>
         </div>
       </div>
-      <div class="card-body p-0">
+      <div class="card-body p-0" id="card-body-detail" style="display:none;">
         <table class="table table-sm table-hover responsive-stack mb-0">
           <thead>
             <tr>
@@ -186,6 +186,27 @@
               <tbody id="onboarding-list-body">
                 <!-- Onboarding tasks will be populated here -->
               </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION: Pending Acceptance -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick="ManagerProductsView.toggleCard('pending-accept')">
+            <h5 class="mb-0"><span id="chev-pending-accept">&#9656;</span> Pending Acceptance</h5>
+            <span id="pending-accept-count" class="badge badge-secondary badge-pill">0</span>
+        </div>
+        <div class="card-body p-0" id="card-body-pending-accept" style="display:none;">
+            <table class="table table-sm table-hover responsive-stack mb-0">
+              <thead>
+                <tr>
+                  <th class="border-top-0">Product</th>
+                  <th class="border-top-0">SKU</th>
+                  <th class="border-top-0">Date</th>
+                  <th class="border-top-0">Status</th>
+                </tr>
+              </thead>
+              <tbody id="pending-accept-list-body"></tbody>
             </table>
         </div>
     </div>
@@ -618,8 +639,10 @@
       // the main card (New Products' body is already covered by loadTaskList; Suggest
       // Products is heaviest, so it loads last). Each badge fills as its load returns.
       ManagerProductsView.loadTaskList(function() {         // Detail Updates + New Products bodies + their header badges
-        ManagerProductsView.loadVerifyList(function() {     // Verification (collapsed)
-          ManagerProductsView.loadCategoryStatus();         // Suggest Products (collapsed, heaviest, last)
+        ManagerProductsView.loadVerifyList(function() {     // Verification
+          ManagerProductsView.loadSuggestionList(function() { // Pending Acceptance
+            ManagerProductsView.loadCategoryStatus();         // Suggest Products (heaviest, last)
+          });
         });
       });
       ManagerProductsView.initializeSearch(); // Attach search listener
@@ -939,6 +962,8 @@
         if (onboardingCount === 0) onboardingBody.innerHTML = '<tr><td colspan="5">No new products pending.</td></tr>';
 
         ManagerProductsView._setTaskBadges(detailCount, onboardingCount);
+        if (detailCount > 0) { const b = document.getElementById('card-body-detail'); if (b && b.style.display === 'none') ManagerProductsView.toggleCard('detail'); }
+        if (onboardingCount > 0) { const b = document.getElementById('card-body-newprod'); if (b && b.style.display === 'none') ManagerProductsView.toggleCard('newprod'); }
         if (onDone) onDone();
       }).withFailureHandler(err => {
         detailBody.innerHTML = '<tr><td colspan="5" class="text-danger">Error loading tasks.</td></tr>';
@@ -1247,6 +1272,7 @@
         const list = tasks || [];
         ManagerProductsView.verifyListCache = list;
         ManagerProductsView.setCountBadge('verify-task-count', list.length, 'badge-warning');
+        if (list.length > 0) { const b = document.getElementById('card-body-verify'); if (b && b.style.display === 'none') ManagerProductsView.toggleCard('verify'); }
         if (!list.length) {
           body.innerHTML = '<tr><td colspan="3" class="text-muted">No open verification tasks.</td></tr>';
           if (onDone) onDone();
@@ -1267,6 +1293,39 @@
         body.innerHTML = `<tr><td colspan="3" class="text-danger">Error: ${(err && err.message) || err}</td></tr>`;
         if (onDone) onDone();
       }).WebAppProducts_getOpenVerifyTasks();
+    };
+
+    ManagerProductsView.loadSuggestionList = function(onDone) {
+      const body = document.getElementById('pending-accept-list-body');
+      if (!body) { if (onDone) onDone(); return; }
+      body.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+      google.script.run.withSuccessHandler(tasks => {
+        const list = tasks || [];
+        ManagerProductsView.setCountBadge('pending-accept-count', list.length, 'badge-info');
+        if (!list.length) {
+          body.innerHTML = '<tr><td colspan="4" class="text-muted">No pending suggestions.</td></tr>';
+          if (onDone) onDone();
+          return;
+        }
+        body.innerHTML = '';
+        list.forEach(task => {
+          const tr = document.createElement('tr');
+          const statusLabel = task.status === 'Assigned' ? 'With admin' : 'Submitted';
+          tr.innerHTML = `
+            <td data-label="Product">${task.title || ''}</td>
+            <td data-label="SKU">${task.sku || ''}</td>
+            <td data-label="Date">${new Date(task.createdDate).toLocaleDateString()}</td>
+            <td data-label="Status"><span class="badge badge-secondary">${statusLabel}</span></td>
+          `;
+          body.appendChild(tr);
+        });
+        const b = document.getElementById('card-body-pending-accept');
+        if (b && b.style.display === 'none') ManagerProductsView.toggleCard('pending-accept');
+        if (onDone) onDone();
+      }).withFailureHandler(err => {
+        body.innerHTML = '<tr><td colspan="4" class="text-danger">Error loading suggestions.</td></tr>';
+        if (onDone) onDone();
+      }).WebAppProducts_getSuggestionTasks();
     };
 
     // Start the read-only walk at a chosen list row, using the rendered list as the
