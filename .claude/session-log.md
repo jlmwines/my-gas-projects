@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-28 — SEO growth plan + meta worksheet
+
+- RankMath MCP adapter now also exposes WooCommerce/GA4/SMTP abilities (6 RankMath abilities unchanged since June 12).
+- Wrote `plans/SEO_GROWTH_PLAN.md`: two-path model (browse/discover vs. product search); Tier 1 foundation → Tier 2 product schema → Tier 3 content.
+- wp-admin verified: WPML custom fields (`_rank_math_title/description/focus_keyword`) all set to Translate (clean). HE site name already `JLM Wines`.
+- Wrote `content/seo-meta-review.md`: EN/HE side-by-side meta proposals for 4 editorial posts. Registered in library as `template-seo-meta-review`.
+- Rule saved to memory: all Hebrew text reviewed before any WordPress update.
+- Next: homepage meta descriptions (Stop 3) + HE meta worksheet review; then gtin13 in seo-fixes.php.
+
 ## 2026-06-28 — view-level tabs + role-switcher fix @410-@412
 
 - ManagerProductsView: Details / New / Verify tabs; New tab holds New Products + Pending Acceptance + Suggest Products; Verify moved to third tab; tab badges track live counts.

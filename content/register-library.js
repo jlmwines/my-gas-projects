@@ -295,6 +295,15 @@ JLM Wines`,
     doc_url: 'https://docs.google.com/document/d/1yfLiUGEkQ-93HapagcOfPRTkrh2GawHacIcSqOeWxR4/edit',
     references: ['print-newsletter-2026-06-en', 'email-newsletter-2026-06-he'],
   },
+  // ─── SEO meta review worksheet ─────────────────────────────────────
+  {
+    slug: 'template-seo-meta-review',
+    content_type: 'template',
+    language: null,
+    state: 'draft',
+    title: 'SEO Meta Review — Editorial Posts',
+    md_file: 'seo-meta-review.md',
+  },
 ];
 
 // ─── MD parsing (mirror push-posts.js) ─────────────────────────────
