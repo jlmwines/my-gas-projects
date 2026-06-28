@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-28 — view-level tabs + role-switcher fix @410-@412
+
+- ManagerProductsView: Details / New / Verify tabs; New tab holds New Products + Pending Acceptance + Suggest Products; Verify moved to third tab; tab badges track live counts.
+- ManagerInventoryView: Counts / Brurya tabs; Brurya card starts open; Counts tab badge from renderProductCountsTable.
+- Role-switcher: Bootstrap form-control width:100% was overriding width:auto — fixed with !important + padding-right:2rem + flex-shrink:0.
+- Next: T5.2 btn-primary cleanup in AdminProductsView; smoke manager tabs + new cards with live data.
+
 ## 2026-06-28 — ds-v2 appearance pass @402-@409
 
 - Cream unified to #f4f2e6 across header, sidebar, card-headers; link-color pass (scope/entity/library → ds-go green).
