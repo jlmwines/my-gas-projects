@@ -285,6 +285,10 @@
   }
 
   function handleData(response) {
+    if (!response) {
+      handleError({ message: 'No response from server — function may have timed out or been terminated.' });
+      return;
+    }
     if (!response.success) {
       handleError({ message: response.error });
       return;
