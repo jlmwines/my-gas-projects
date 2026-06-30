@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-30 — jlmops @420-@422: new product onboarding complete + Active Plans tracking
+
+- @420: Track C — `acceptProductSuggestion` now seeds WebXltM at accept time via `WooApiService.fetchProductById(wpmId)` → `translations.he`. Closes translation validation gap immediately on accept.
+- @421: Refresh XLT button moved from "Ready for Web" (hidden when empty) to "Awaiting Manager" (always visible).
+- @422: Track B cleanup — deleted `linkAndFinalizeNewProduct` + `WebAppProducts_finalizeProduct`. No references remain.
+- Pre-action checklist updated: read system docs before plans. WORKFLOWS.md §14 written (new product onboarding pipeline). Active Plans section added to STATUS.md for daily review visibility.
+- New product onboarding plan fully shipped; ready to archive.
+- Next: smoke new product accept flow (confirm WebXltM row appears); then Bug Fix Sequence F/H/I or next build candidate.
+
 ## 2026-06-30 — jlmops @413-@417: print type, manager dash fix, bundles UI
 
 - @413: `print` option added to AdminTasksView entity type selector (was in VALID_TYPES/CONTENT_STAGES/TaskPacks but missing from the dropdown).

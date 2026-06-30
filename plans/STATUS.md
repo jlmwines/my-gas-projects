@@ -6,7 +6,7 @@
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @417; AdminBundlesView UI pass (chips+results in card header, inline green result strip, vivid blue selected row, cream editor header, actual stock qty in deficiency badges); manager dashboard fix (TaskPacks include); print entity type added to task creator; ds-v2 complete; sync clean.
+- **jlmops** (GAS backend) — live @422; new product onboarding fully shipped (Track B+C complete — WebXltM seeded at accept, hot-link deleted); Active Plans tracking added to STATUS; manager task deeplinks + pre-action checklist updated this session.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post template-formatted (all sections ready); pending winery verification + HE translation before publish.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing. **June Issue #2** — AYIW email (EN+HE) scheduled 2026-06-24; print newsletter EN+HE produced + registered (`print-newsletter-2026-06-en/he`), ready to print + distribute. July entities pre-registered (`email-ayiw-2026-07-en/he`, `print-newsletter-2026-07-en/he`). 2026 calendar filled through December (slots A–F in `content/PUBLICATION_CALENDAR.md`). Plan: `content/REGION_POSTS_PLAN.md`.
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-24 |
 | Revenue | Steady |
-| Deploy Version | jlmops @417 · theme v1.2.30 |
+| Deploy Version | jlmops @422 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-06-30 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
