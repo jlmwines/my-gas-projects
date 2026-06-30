@@ -42,7 +42,7 @@ The live "what now" — daily review reads these first.
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
-- **New product onboarding** (`jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`) — Track C shipped @420. Pending: remove Linkage UI button (AdminProductsView) + delete `linkAndFinalizeNewProduct` function (Track B cleanup, deferred until Track C confirmed).
+- ~~**New product onboarding**~~ — fully shipped @422. Plan → `jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md` (ready to archive).
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
 - **Bundles** (`jlmops/plans/BUNDLE_PLAN.md`) — Stages 1–7 + UI phases 1–5 shipped. Pending: composite-weight tuning (per-slot/per-bundle weight overrides).
 

@@ -948,17 +948,6 @@ function WebAppProducts_acceptSuggestion(taskId, sku, nameEn, nameHe, wpmId) {
     }
 }
 
-/**
- * Finalizes the new product by linking Woo IDs and hot-inserting.
- */
-function WebAppProducts_finalizeProduct(taskId, sku, wooIdEn, wooIdHe) {
-    try {
-        return ProductService.linkAndFinalizeNewProduct(taskId, sku, wooIdEn, wooIdHe);
-    } catch (e) {
-        LoggerService.error('WebAppProducts', 'finalizeProduct', `Error: ${e.message}`, e);
-        throw e;
-    }
-}
 
 /**
  * Triggers the export of new products to a Google Sheet.

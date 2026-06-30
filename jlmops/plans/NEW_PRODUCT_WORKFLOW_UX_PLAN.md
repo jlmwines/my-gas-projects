@@ -102,8 +102,8 @@ The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) 
 | Insert WebProdM row (SKU + EN name + price/stock from CmxProdM) | `acceptProductSuggestion` | ✓ @342 |
 | Seed WebDetM row (SKU + EN/HE names) | `acceptProductSuggestion` | ✓ @342 |
 | Delete WebDetS row after accepting details | `acceptProductDetails` | ✓ @342 |
-| Remove Linkage UI button | `AdminProductsView.html` | pending |
-| Delete `linkAndFinalizeNewProduct` (incl. dead `wxl_` insert) | GAS codebase | pending |
+| Remove Linkage UI button | `AdminProductsView.html` | ✓ (removed in earlier session) |
+| Delete `linkAndFinalizeNewProduct` (incl. dead `wxl_` insert) | GAS codebase | ✓ @422 |
 
 **Shipped:** hotlink retired @342 (WebProdM + WebDetM seeded in `acceptProductSuggestion`; WebDetS cleanup moved to `acceptProductDetails`). Accept modal requires Woo Post ID @370 (seeds `wpm_ID` in WebProdM at accept time, eliminating empty-key row loss). `cpm_IsWeb` set at accept @371. Draft-product validation false-positives resolved @368 (rule 17 gated to `wpm_PostStatus=publish`). See `.claude/bugs.md` 2026-06-24. **Pending:** Linkage UI button removal + `linkAndFinalizeNewProduct` deletion deferred to Track C completion (remove together in one pass).
 
