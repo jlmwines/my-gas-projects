@@ -4,7 +4,7 @@
  */
 
 const VERSION = {
-  built: '2026-06-30 09:21',
+  built: '2026-06-30 11:20',
   commit: "PublishingView Deploy 5 — Calendar tab wired: holiday rows from JLMops_Publishing merged into calendar list (non-clickable, distinct style); _loadHolidays() reads via SpreadsheetApp.openById(system.calendar.sheet_id)."
 };
 

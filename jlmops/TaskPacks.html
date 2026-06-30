@@ -64,6 +64,13 @@
       if (t.indexOf('task.confirmation.') === 0 || t === 'task.sync.daily_session') return 'confirmation';
       if (t === 'task.order.packing_available') return 'deeplink_orders';
       if (t === 'task.inventory.count' || t === 'task.inventory.brurya_update') return 'deeplink_inventory';
+      if (t === 'task.product.verify') return 'deeplink_products';
+      if (t === 'task.crm.contact_followup' ||
+          t === 'task.crm.churn_risk' ||
+          t === 'task.crm.vip_attention' ||
+          t === 'task.crm.coupon_expiring' ||
+          t === 'task.crm.suggestion' ||
+          t === 'task.contact.outreach') return 'deeplink_contacts';
       if (t === 'task.content.edit' ||
           t === 'task.content.translate' ||
           t === 'task.content.translate_edit' ||
@@ -135,6 +142,17 @@
         return '<div class="detail-row"' + stopProp + '>' +
                '<button type="button" class="btn btn-sm" onclick="TaskPacks.openView(\'ManagerInventory\')">' + label + '</button>' +
                '<span class="detail-meta" style="margin-left:12px">Task closes via the inventory workflow.</span>' +
+               '</div>';
+      }
+      if (kind === 'deeplink_products') {
+        return '<div class="detail-row"' + stopProp + '>' +
+               '<button type="button" class="btn btn-sm" onclick="TaskPacks.openProductsView()">Open Products</button>' +
+               '<span class="detail-meta" style="margin-left:12px">Task closes via the product edit workflow.</span>' +
+               '</div>';
+      }
+      if (kind === 'deeplink_contacts') {
+        return '<div class="detail-row"' + stopProp + '>' +
+               '<button type="button" class="btn btn-sm" onclick="TaskPacks.openContactView(\'' + TaskWidgets.escape(t.id) + '\')">Open Contact</button>' +
                '</div>';
       }
 
@@ -239,6 +257,18 @@
 
     function openView(viewName) {
       if (typeof loadView === 'function') loadView(viewName);
+    }
+
+    function openProductsView() {
+      try { sessionStorage.setItem('startVerifyWalk', '1'); } catch(e) {}
+      if (typeof loadView === 'function') loadView('ManagerProducts');
+    }
+
+    function openContactView(taskId) {
+      var task = ctx.getTask(taskId);
+      var email = task && task.entityId ? String(task.entityId) : '';
+      try { if (email) sessionStorage.setItem('selectContactEmail', email); } catch(e) {}
+      if (typeof loadView === 'function') loadView('ManagerContacts');
     }
 
     function createBlankDoc(taskId) {
@@ -450,6 +480,8 @@
       hasTypedPack: hasTypedPack,
       confirmTask: confirmTask,
       openView: openView,
+      openProductsView: openProductsView,
+      openContactView: openContactView,
       createBlankDoc: createBlankDoc,
       attachExistingDoc: attachExistingDoc,
       createTranslationDraft: createTranslationDraft,
