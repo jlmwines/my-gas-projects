@@ -16,15 +16,14 @@ A session-readable index of every recurring operational task this project suppor
 - Script: write a fresh `upload-<topic>-images.js` from `upload-handling-images.js` template; run `node content/upload-<topic>-images.js`
 - Notes: uploads to live WP media library; prints the featured image ID for the `## FEATURED MEDIA` section; stamps body image placeholders in the `.post.md` file.
 
-**Upload a content draft doc to Drive (blog post, newsletter, etc.)**
-- Procedure: pandoc → Drive MCP → jlmops "Attach new version"
+**Upload a content draft doc to Drive (blog post draft)**
+- Procedure: Drive MCP `create_file` with text content → jlmops "Attach new version"
 - Steps:
-  1. `pandoc content/<path>/<slug>-en.post.md -o <scratchpad>/<slug>-en-draft.docx`
-  2. Get Israel timestamp: `pwsh -NoProfile -Command "[System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([datetime]::UtcNow, 'Israel Standard Time').ToString('yy-MM-dd-HH-mm')"`
-  3. Call Drive MCP `create_file`: title = `<slug>-en <timestamp>`, base64Content = .docx bytes, contentMimeType = `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, parentId = content library folder ID (see reference_drive_files.md memory for IDs)
-  4. Drive auto-converts the .docx to a Google Doc. Copy the returned file URL.
-  5. In jlmops PublishingView → find the content entity → "Attach new version" button → paste the URL. Old doc is superseded and archived automatically.
-- Notes: base64 MUST come from a fresh file read in the current session — never from a conversation summary (summaries truncate binary content and corrupt it). Timestamp format `yy-MM-dd-HH-mm` via PowerShell timezone API only (Git Bash returns UTC).
+  1. Get Israel timestamp: `pwsh -NoProfile -Command "[System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([datetime]::UtcNow, 'Israel Standard Time').ToString('yy-MM-dd-HH-mm')"`
+  2. Read the `.post.md` file with the Read tool.
+  3. Call Drive MCP `create_file`: title = `<slug>-en <timestamp>`, textContent = the .md file text, contentMimeType = `text/plain`, parentId = content library folder ID (see memory `reference_drive_files.md` for IDs). Drive auto-converts plain text to a Google Doc — fast, native format, consistent with prior docs.
+  4. In jlmops PublishingView → find the content entity → "Attach new version" → paste the returned URL. Old doc is superseded and archived automatically.
+- Notes: use `textContent`, NOT `base64Content` + pandoc .docx. The .docx path is slow, forces a binary conversion, and produces different formatting. Timestamp via PowerShell timezone API only (Git Bash returns UTC).
 
 **Register content in the jlmops library**
 - Procedure: `content/register-library.js` header (read it — covers all modes)
