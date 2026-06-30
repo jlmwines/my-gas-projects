@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-30 — @417 live; AdminBundlesView UI pass (chips in header, inline result strip, stock qty in deficiency badges); manager dashboard TaskPacks fix; print entity type in task creator.
+**Updated:** 2026-06-30 — @421 live; Track C (WebXltM seeded at accept time); Refresh XLT button moved to Awaiting Manager; Active Plans section added to STATUS for daily review visibility.
 
 ## At a glance
 
@@ -37,6 +37,14 @@ The live "what now" — daily review reads these first.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
 4. **Next build candidate — pick from open queue.** Content distribution Step 1 → `jlmops/plans/CONTENT_DISTRIBUTION_PLAN.md`; Deploy 3 content-workflow redesign → `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md`; reliability 1.3 or 4.1 → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s).
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
+
+## Active Plans
+
+Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
+
+- **New product onboarding** (`jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`) — Track C shipped @420. Pending: remove Linkage UI button (AdminProductsView) + delete `linkAndFinalizeNewProduct` function (Track B cleanup, deferred until Track C confirmed).
+- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
+- **Bundles** (`jlmops/plans/BUNDLE_PLAN.md`) — Stages 1–7 + UI phases 1–5 shipped. Pending: composite-weight tuning (per-slot/per-bundle weight overrides).
 
 ## Current State
 
