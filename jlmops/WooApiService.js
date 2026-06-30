@@ -364,11 +364,17 @@ const WooApiService = (function() {
     }
   }
 
+  function fetchProductById(id) {
+    if (!id) throw new Error('fetchProductById: id is required');
+    return _fetch('GET', '/wc/v3/products/' + encodeURIComponent(String(id)), {});
+  }
+
   return {
     fetchProducts: fetchProducts,
     fetchBundleProducts: fetchBundleProducts,
     fetchOrders: fetchOrders,
     testConnection: testConnection,
+    fetchProductById: fetchProductById,
     // Exposed for use by pull services that need single-page fetches
     _fetch: _fetch,
     _fetchAllPages: _fetchAllPages

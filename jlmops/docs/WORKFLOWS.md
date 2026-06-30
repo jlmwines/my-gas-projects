@@ -239,6 +239,6 @@ Admin updates the product record in Comax to mark it active on the web store.
 
 The next daily sync's EN pull finds the SKU already in WebProdM (seeded at accept) and updates price, stock, and status. The HE pull rebuilds WebXltM wholesale, adding the `wxm_WpmlOriginalId` link for the new product.
 
-### 14.7 Translation validation gap
+### 14.7 Translation validation
 
-The validation rule `master_translation_missing` checks that every WebProdM row has a matching WebXltM entry (`wxm_WpmlOriginalId = wpm_ID`). For newly accepted products this row is absent from accept time until the next sync's HE phase. To close this gap before the nightly sync, use **Refresh Translations** (AdminProductsView → New Products tab) — this re-pulls HE products from Woo and rebuilds WebXltM immediately. The daily sync resolves it automatically overnight even without this step.
+The validation rule `master_translation_missing` checks that every WebProdM row has a matching WebXltM entry (`wxm_WpmlOriginalId = wpm_ID`). `acceptProductSuggestion` seeds the WebXltM row at accept time by fetching the EN product from the Woo REST API, reading `translations.he`, and upserting the row immediately. The daily sync still rebuilds WebXltM wholesale on each run. Refresh Translations (AdminProductsView → New Products tab) remains available for manual corrections.

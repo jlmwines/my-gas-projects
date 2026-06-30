@@ -1830,6 +1830,42 @@ const ProductService = (function() {
       }
       logger.info(serviceName, functionName, `Seeded WebDetM row for SKU ${sku}`, { sessionId: sessionId, sku: sku });
 
+      // 6. Seed WebXltM row to close translation validation gap at accept time (Track C)
+      if (wpmId) {
+        try {
+          const enProduct = WooApiService.fetchProductById(wpmId);
+          const heWooId = enProduct && enProduct.translations && enProduct.translations.he
+            ? String(enProduct.translations.he) : '';
+          if (heWooId) {
+            const xltSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebXltM);
+            const xltHeaders = allConfig['schema.data.WebXltM'].headers.split(',');
+            const xltRow = new Array(xltHeaders.length).fill('');
+            const xi = col => xltHeaders.indexOf(col);
+            if (xi('wxm_ID') > -1) xltRow[xi('wxm_ID')] = heWooId;
+            if (xi('wxm_SKU') > -1) xltRow[xi('wxm_SKU')] = sku;
+            if (xi('wxm_WpmlLanguageCode') > -1) xltRow[xi('wxm_WpmlLanguageCode')] = 'he';
+            if (xi('wxm_WpmlOriginalId') > -1) xltRow[xi('wxm_WpmlOriginalId')] = String(wpmId);
+            if (xi('wxm_WpmlOriginalSku') > -1) xltRow[xi('wxm_WpmlOriginalSku')] = sku;
+            const xltData = xltSheet.getDataRange().getValues();
+            const xltOrigIdx = xi('wxm_WpmlOriginalId');
+            let xltRowIndex = -1;
+            for (let r = 1; r < xltData.length; r++) {
+              if (String(xltData[r][xltOrigIdx]) === String(wpmId)) { xltRowIndex = r + 1; break; }
+            }
+            if (xltRowIndex > 0) {
+              xltSheet.getRange(xltRowIndex, 1, 1, xltRow.length).setValues([xltRow]);
+            } else {
+              xltSheet.appendRow(xltRow);
+            }
+            logger.info(serviceName, functionName, `Seeded WebXltM row for SKU ${sku} (heId=${heWooId})`, { sessionId: sessionId, sku: sku });
+          } else {
+            logger.warn(serviceName, functionName, `WebXltM seed skipped: no translations.he on EN product ${wpmId}`, { sessionId: sessionId, sku: sku });
+          }
+        } catch (xltErr) {
+          logger.warn(serviceName, functionName, `WebXltM seed failed (non-fatal): ${xltErr.message}`, { sessionId: sessionId, sku: sku });
+        }
+      }
+
       _invalidateProductCache();
 
       return { success: true };

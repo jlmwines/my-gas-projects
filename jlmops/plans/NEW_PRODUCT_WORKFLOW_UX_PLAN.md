@@ -116,7 +116,7 @@ The destination: eliminate the manual **Link** step (Woo-ID entry + hot-insert) 
 - **Admin submissions title (@311):** `getSubmissionsTasks` now reads the product title from WebDetS staging (`wds_NameEn` ‖ `wds_NameHe`), not the stale Comax-derived `st_LinkedEntityName`.
 - **Admin New Products badge (@311):** collapsed-card header count (suggestions + submissions), loaded on mount via `getProductsWidgetData`; lazy section loads unchanged. **Open:** linkage (add_product Accepted) isn't counted by that widget — include it if a fuller count is wanted.
 
-## Track C — seed WebXltM at accept time (pending — gap covered by Track A + daily sync)
+## Track C — seed WebXltM at accept time (shipped)
 
 
 **Goal:** close the WebXltM timing gap without the Refresh Translations button. When the admin supplies the EN Woo Post ID at accept, the EN↔HE WPML pairing already exists (user creates EN draft → clicks Create Translation → gets HE ID in sequence). So `translations.he` is guaranteed to be on the EN product at accept time.
