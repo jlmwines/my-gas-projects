@@ -198,3 +198,47 @@ Admin opens the entity drawer → **Request Correction** (published pieces only)
 ### 13.6 Templates (email/WhatsApp) — Doc-sourced, edited like any content
 
 Templates are sibling-language content like blogs (EN/HE pairs) and are edited through the same Edit / Edit-Translation tasks. Their content lives in **Docs** (`slb_DocUrl`), not inline: a manager opens the Doc, edits, and finishes with **Editing Done**. The **system reads template content from the Doc at runtime** — the pending-payment follow-up send (`HousekeepingService`) resolves the email + first-time addendum via `LibraryService.getEntityContent` (Doc-first, inline-field fallback). So editing a template's Doc changes what the system sends; the legacy inline `slb_Subject`/`slb_Body` fields are a migration fallback only. Full content-source model: `DATA_MODEL.md` (`SysLibrary` → "Content source of truth"). Scaffolding still to retire once migration is fully confirmed: `createBlankDoc` seeding, the inline fields, and admin-gating the Create-Doc action (it isn't part of the manager's normal flow).
+
+---
+
+## 14. New Product Onboarding Pipeline
+
+Moves a product from Comax-only existence through data preparation, WooCommerce publication, and full system integration. Two task types: `task.onboarding.suggestion` (stage 1) and `task.onboarding.add_product` (stages 2–5). Flow pattern: `manager_to_admin_review`.
+
+### 14.1 Stage 1 — Suggestion (manager submits, admin accepts)
+
+Manager finds a Comax product not yet on the web store and submits it from ManagerProductsView → New Products tab. This creates a `task.onboarding.suggestion` task.
+
+Admin opens the suggestion in AdminProductsView → New Products → Candidates and clicks Accept. The accept dialog requires: EN name, HE name, and the EN Woo Post ID. **Admin must create the EN draft product in WooCommerce first, then use WPML "Create Translation" to get the HE draft, before accepting** — both Woo drafts must exist at accept time.
+
+`acceptProductSuggestion` on accept atomically:
+- Completes the suggestion task
+- Creates `task.onboarding.add_product` assigned to Manager
+- Seeds **WebDetS** (staging) with EN/HE names
+- Inserts **WebProdM** row: SKU, EN name (`wpm_PostTitle`), price + stock from CmxProdM, Woo Post ID (`wpm_ID`)
+- Inserts **WebDetM** row: SKU, EN/HE names, `wdm_WebIdEn`
+- Sets `cpm_IsWeb=true` in CmxProdM
+
+### 14.2 Stage 2 — Detail submission (manager)
+
+Manager opens the product in ManagerProductsView → Detail Updates tab (surfaced via the `task.onboarding.add_product` task pack). Fills in product details (region, grape varieties, tasting notes, kashrut, etc.) in WebDetS staging and submits. Task status moves to Review.
+
+### 14.3 Stage 3 — Detail acceptance (admin)
+
+Admin reviews submissions in AdminProductsView → Detail Updates. On accept, `acceptProductDetails` writes WebDetM from WebDetS and deletes the WebDetS staging row. Task status moves to Accepted.
+
+### 14.4 Stage 4 — Export and publish (manual)
+
+Admin exports product details (Detail export on AdminProductsView) to generate the WooCommerce update file. Admin publishes the EN and HE Woo products. Admin clicks "Confirm Published" in AdminProductsView → closes the `task.onboarding.add_product` task to Done.
+
+### 14.5 Stage 5 — Comax update (manual)
+
+Admin updates the product record in Comax to mark it active on the web store.
+
+### 14.6 Next sync
+
+The next daily sync's EN pull finds the SKU already in WebProdM (seeded at accept) and updates price, stock, and status. The HE pull rebuilds WebXltM wholesale, adding the `wxm_WpmlOriginalId` link for the new product.
+
+### 14.7 Translation validation gap
+
+The validation rule `master_translation_missing` checks that every WebProdM row has a matching WebXltM entry (`wxm_WpmlOriginalId = wpm_ID`). For newly accepted products this row is absent from accept time until the next sync's HE phase. To close this gap before the nightly sync, use **Refresh Translations** (AdminProductsView → New Products tab) — this re-pulls HE products from Woo and rebuilds WebXltM immediately. The daily sync resolves it automatically overnight even without this step.

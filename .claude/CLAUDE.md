@@ -16,12 +16,13 @@ After the universal session-start (per portfolio kernel — read `plans/STATUS.m
 
 Run before any action that touches code, modifies user data, or instructs the user to do something. Skip only for pure discussion/explanation.
 
-1. **Cite the plan.** Point to the plan section/line that informed the action. If you can't, you haven't read enough.
-2. **Search for automation.** Before "you need to do X manually," grep for an existing function that does X. Schema-to-sheet header updates already exist as `SetupSheets.js#syncHeaders`. See [[feedback_search_automation_before_manual_instructions]].
-3. **Search for existing infrastructure.** Before "you need to create X," grep `.clasp.json`, `config/*.json`, `.gitignore`, `package.json`, memory. See [[feedback_search_repo_before_proposing_new]].
-4. **Pick when the plan offers options.** "X or Y" in the plan = pick from precedent and proceed; don't bounce to the user. See [[feedback_pick_plan_options_not_pass_back]].
-5. **Stale-framing scan.** If you just revised the plan, downstream framings must update — don't carry forward a constraint the revision removed.
-6. **Narrate, don't re-ask.** In execution mode: "pushing now," not "OK to push?" The user already authorized the scope.
+1. **Read system docs first.** `jlmops/docs/` describes what is true now. Read the relevant doc (DATA_MODEL, WORKFLOWS, ARCHITECTURE) before reading any plan. Plans describe intent; docs describe reality.
+2. **Cite the plan.** Point to the plan section/line that informed the action. If you can't, you haven't read enough.
+3. **Search for automation.** Before "you need to do X manually," grep for an existing function that does X. Schema-to-sheet header updates already exist as `SetupSheets.js#syncHeaders`. See [[feedback_search_automation_before_manual_instructions]].
+4. **Search for existing infrastructure.** Before "you need to create X," grep `.clasp.json`, `config/*.json`, `.gitignore`, `package.json`, memory. See [[feedback_search_repo_before_proposing_new]].
+5. **Pick when the plan offers options.** "X or Y" in the plan = pick from precedent and proceed; don't bounce to the user. See [[feedback_pick_plan_options_not_pass_back]].
+6. **Stale-framing scan.** If you just revised the plan, downstream framings must update — don't carry forward a constraint the revision removed.
+7. **Narrate, don't re-ask.** In execution mode: "pushing now," not "OK to push?" The user already authorized the scope.
 
 When the user says the session is being foolish: stop and re-run this checklist for the current step.
 
