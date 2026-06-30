@@ -57,62 +57,60 @@ Impressionist oil painting, close-up of a wine glass reflecting a desert sunset,
 - Slug: `blog-negev` (per REGION_POSTS_PLAN.md — add manifest entry with WP post ID after first push)
 
 
-Paste below into WordPress Code Editor:
+## BODY
 
-<!-- wp:html -->
-<p style="font-size:1.15em">Fifteen hundred years ago, the Negev was one of the ancient world's great wine regions. Today, after a thousand years of silence, it is making wine again — and it is unlike anything else in Israel.</p>
+Fifteen hundred years ago, the Negev was one of the ancient world's great wine regions. Today, after a thousand years of silence, it is making wine again — and it is unlike anything else in Israel.
 
-<div style="background:#f9f6f0;border-left:4px solid #8b1a1a;padding:1em 1.4em;margin:1.5em 0;font-size:0.95em;line-height:1.7">
-<strong>At a glance</strong><br>
-<strong>Where:</strong> the southern desert — more than half the country by area. Main vineyards around Mitzpe Ramon (about 800m up) and Ramat Arad.<br>
-<strong>Climate:</strong> scorching days, cold nights, very scarce rain.<br>
-<strong>Soil:</strong> pale desert loess — fine, wind-blown silt with good water retention, over limestone.
-</div>
+**At a glance**
+Where: the southern desert — more than half the country by area. Main vineyards around Mitzpe Ramon (about 800m up) and Ramat Arad.
+Climate: scorching days, cold nights, very scarce rain.
+Soil: pale desert loess — fine, wind-blown silt with good water retention, over limestone.
 
-<h2>The Story</h2>
 
-<p>Fifteen hundred years ago, the Negev was wine country. It is hard to picture now, looking at the bare hills, but the desert once shipped wine across the whole Mediterranean.</p>
+**The Story**
 
-<p>The Nabataeans — the traders who built Petra — prospered running the great Spice Route, the desert highway that carried frankincense and myrrh from Arabia to the sea. The towns they raised out of the sand, Avdat, Shivta, Nizzana, Mamshit, were its stations, and wine became a second cargo alongside the spices. The Nabataeans, and the Byzantines after them, were brilliant at catching water: they terraced the slopes, channelled the rare flash floods into their vineyards, and even built towers to collect pigeon droppings for fertilizer. Out of all that effort came a sweet white wine the Romans called <em>Vinum Gazentum</em>, "Gaza Wine," named for the port it sailed from. One town alone, Shivta, may have produced around two million litres a year.</p>
+Fifteen hundred years ago, the Negev was wine country. It is hard to picture now, looking at the bare hills, but the desert once shipped wine across the whole Mediterranean.
 
-<p>Sometime in the seventh century CE the vineyards were abandoned. The cities emptied, and the desert went quiet for more than a thousand years.</p>
+The Nabataeans — the traders who built Petra — prospered running the great Spice Route, the desert highway that carried frankincense and myrrh from Arabia to the sea. The towns they raised out of the sand, Avdat, Shivta, Nizzana, Mamshit, were its stations, and wine became a second cargo alongside the spices. The Nabataeans, and the Byzantines after them, were brilliant at catching water: they terraced the slopes, channelled the rare flash floods into their vineyards, and even built towers to collect pigeon droppings for fertilizer. Out of all that effort came a sweet white wine the Romans called Vinum Gazentum, "Gaza Wine," named for the port it sailed from. One town alone, Shivta, may have produced around two million litres a year.
 
-<p>The modern chapter starts with a very Israeli idea: if you are stubborn enough, any place can be farmed. Drip irrigation made the impossible merely difficult. In the late 1990s growers began planting vines again, at Ramat Arad and near Mitzpe Ramon, sometimes irrigating with salty water drawn from wells hundreds of metres underground. In 1997, Alon Zadok of Ramat Negev winery planted the first quality vines and made the first wines truly raised and produced in the Negev.</p>
+Sometime in the seventh century CE the vineyards were abandoned. The cities emptied, and the desert went quiet for more than a thousand years.
 
-<p>The best recent twist: archaeologists digging in the old Byzantine sites found grape pips that had survived in the dry soil for around 1,500 years. DNA testing identified two local varieties, Sariki and Be'er — possible parents of that famous Gaza Wine. In 2023 a vineyard of these revived ancient grapes was planted at Avdat. The desert is making wine from its own lost grapes again.</p>
+The modern chapter starts with a very Israeli idea: if you are stubborn enough, any place can be farmed. Drip irrigation made the impossible merely difficult. In the late 1990s growers began planting vines again, at Ramat Arad and near Mitzpe Ramon, sometimes irrigating with salty water drawn from wells hundreds of metres underground. In 1997, Alon Zadok of Ramat Negev winery planted the first quality vines and made the first wines truly raised and produced in the Negev.
 
-<h2>Why the Desert Works — and Why It's Hard</h2>
+The best recent twist: archaeologists digging in the old Byzantine sites found grape pips that had survived in the dry soil for around 1,500 years. DNA testing identified two local varieties, Sariki and Be'er — possible parents of that famous Gaza Wine. In 2023 a vineyard of these revived ancient grapes was planted at Avdat. The desert is making wine from its own lost grapes again.
 
-<p>A desert sounds like a terrible place to grow wine. But the Negev has a few things working in its favour.</p>
 
-<p>Start with the soil. The pale loess covering these hills is fine, wind-blown dust over limestone, reflective and low in fertility. Poor soil sounds like a problem, but vines that are not pushed to grow lush and heavy put their energy into fewer, more concentrated grapes instead. The limestone drains well and holds just enough moisture to matter in a place with almost no rain.</p>
+**Why the Desert Works — and Why It's Hard**
 
-<p>Then there is the day-night temperature swing — the desert's real gift. Hot afternoons drive the vine hard, building the sugars that become alcohol. But cold nights slow the vine right down, locking in the acids and aromas it spent the day making. The fruit can ripen fully without going flat: sugar and freshness together, which is exactly the balance a hot climate usually destroys.</p>
+A desert sounds like a terrible place to grow wine. But the Negev has a few things working in its favour.
 
-<p>The dryness helps too. With so little humidity, vine diseases struggle to take hold, so the grapes grow clean with very little spraying.</p>
+Start with the soil. The pale loess covering these hills is fine, wind-blown dust over limestone, reflective and low in fertility. Poor soil sounds like a problem, but vines that are not pushed to grow lush and heavy put their energy into fewer, more concentrated grapes instead. The limestone drains well and holds just enough moisture to matter in a place with almost no rain.
 
-<p>The hard part is water, and always has been. From the Nabataeans' flood channels to today's drip lines — sometimes drawing salty water from wells hundreds of metres down — human ingenuity does at least as much as the soil here. The Negev has no Old World counterpart to compare it to, and that is rather the point.</p>
+Then there is the day-night temperature swing — the desert's real gift. Hot afternoons drive the vine hard, building the sugars that become alcohol. But cold nights slow the vine right down, locking in the acids and aromas it spent the day making. The fruit can ripen fully without going flat: sugar and freshness together, which is exactly the balance a hot climate usually destroys.
 
-<h2>What to Expect in the Glass</h2>
+The dryness helps too. With so little humidity, vine diseases struggle to take hold, so the grapes grow clean with very little spraying.
 
-<p>The Negev is too young and too varied to have one "desert style." Different altitudes, different producers, different choices about irrigation and oak add up to a range of experiences rather than a single profile. The one thread they share is the conditions behind them: fruit ripened fully by the sun, often with a line of freshness from those cold nights. Beyond that, the best approach is to taste across producers rather than expect a type.</p>
+The hard part is water, and always has been. From the Nabataeans' flood channels to today's drip lines — sometimes drawing salty water from wells hundreds of metres down — human ingenuity does at least as much as the soil here. The Negev has no Old World counterpart to compare it to, and that is rather the point.
 
-<p>The revived ancient grapes — Sariki and Be'er — are newer still. Only a handful of bottles exist so far. Too early to generalise, but worth watching.</p>
 
-<h2>Wineries to Know</h2>
+**What to Expect in the Glass**
 
-<p>A handful of producers have made the Negev their home, each working the desert in its own way:</p>
+The Negev is too young and too varied to have one "desert style." Different altitudes, different producers, different choices about irrigation and oak add up to a range of experiences rather than a single profile. The one thread they share is the conditions behind them: fruit ripened fully by the sun, often with a line of freshness from those cold nights. Beyond that, the best approach is to taste across producers rather than expect a type.
 
-<ul>
-<li><strong>Ramat Negev</strong> — pioneers of the modern revival, in the Ramat Negev / Kadesh Barnea area.</li>
-<li><strong>Nana Estate</strong> — boutique winery in the crater country near Mitzpe Ramon.</li>
-<li><strong>Midbar</strong> — desert winery in the Arad area.</li>
-<li><strong>Kerem Ramon</strong> — Mitzpe Ramon.</li>
-<li><strong>Pinto</strong> — Yerucham.</li>
-<li><strong>Yatir</strong> — Tel Arad.</li>
-<li><strong>Sde Boker</strong> — Sde Boker.</li>
-<li><strong>Meshek Tushia</strong> — Be'er Milka.</li>
-</ul>
+The revived ancient grapes — Sariki and Be'er — are newer still. Only a handful of bottles exist so far. Too early to generalise, but worth watching.
 
-<!-- TODO before publishing: confirm which of the above we carry, add shop links for those we do, verify visitor details. -->
-<!-- /wp:html -->
+
+**Wineries to Know**
+
+A handful of producers have made the Negev their home, each working the desert in its own way:
+
+- Ramat Negev — pioneers of the modern revival, in the Ramat Negev / Kadesh Barnea area.
+- Nana Estate — boutique winery in the crater country near Mitzpe Ramon.
+- Midbar — desert winery in the Arad area.
+- Kerem Ramon — Mitzpe Ramon.
+- Pinto — Yerucham.
+- Yatir — Tel Arad.
+- Sde Boker — Sde Boker.
+- Meshek Tushia — Be'er Milka.
+
+(Before publishing: confirm which of the above we carry, add shop links for those we do, verify visitor details.)

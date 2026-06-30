@@ -114,8 +114,8 @@ The other sections (Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompt
 ### Work order (how a post gets produced)
 
 1. Topic + angle agreed
-2. **Body draft** — first pass from source material or outline
-3. Editorial review + revisions until body is locked
+2. **Body draft** — first pass from source material or outline. Write as plain prose under `## BODY`. NO HTML, no "Paste below" block — that is added by the publishing session only.
+3. Editorial review + revisions until body is locked (manager edits the prose in the file or Drive doc)
 4. **Title** confirmed
 5. **WP Excerpt** — derived from locked body
 6. **Newsletter Excerpt (web)** — derived from locked body
@@ -123,6 +123,9 @@ The other sections (Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompt
 8. **CTA**
 9. **Image prompts**
 10. HE translation — entire chain duplicates into the HE file last
+11. **Publishing session only** — converts `## BODY` prose to HTML, replaces it with `Paste below into WordPress Code Editor:` + HTML block, then runs `push-posts.js`.
+
+**A drafting session stops after step 9.** Steps 10–11 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
 
 Body is always first; derivatives are extracted/condensed from a locked body.
 
