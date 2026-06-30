@@ -96,4 +96,4 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Deferred
 
-- **Offline-channel attribution scheme** `defer:2026-07-01` — when flyer drops + newsletter inserts ship, need a unique coupon code per offline campaign + UTM-tagged QR codes feeding GA4. Define naming convention + QR setup when offline campaigns are about to ship.
+- **Offline-channel attribution scheme** `defer:2026-07-14` — newsletter attribution confirmed. Flyer not yet distributed; allow ~2 weeks post-drop to smoke results before reviewing naming convention + QR/coupon setup.

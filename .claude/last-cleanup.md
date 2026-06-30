@@ -1,17 +1,17 @@
-2026-06-21 — project-scoped cleanup pass (jlmwines).
+2026-06-30 — portfolio-scoped cleanup pass (jlmwines + portfolio root; VaadAi skipped per user).
 
 Touched this pass:
-- `CALENDAR.md` — BUG_FIX_SEQUENCE entry updated: A-D shipped → A-E and G shipped; F/H/I remain. Updated date bumped.
-- `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` — Decision 7 "Not yet built" annotation updated to reflect shipped @316–@322. Plan header updated to include Decision 7 ship date.
-- `plans/STATUS.md` — Updated: date bumped to 2026-06-21. Inbox Active CALENDAR-stale item struck (resolved this session).
+- `projects/CALENDAR.md` — Newsletter Issue #1 + MCP vetting moved to Completed; mobile perf date labels updated to Queued; stale "June 2026 issue" future-newsletter row struck; memory prune one-time entry promoted to Recurring cadence.
+- `projects/STATUS.md` — JLM row updated to @417 / 2026-06-30.
+- `plans/STATUS.md` — Updated: date, jlmops at-a-glance, deploy version/date all updated to @417; offline-attribution defer updated to 2026-07-14.
 
 Audited, no change needed:
-- `.claude/bugs.md` — all open bugs still valid; resolved (recent) section is current.
-- `.claude/session-log.md` — oldest entries 2026-06-18; all within 30 days, no pruning due.
-- `plans/CONTENT_LIBRARY_PLAN.md` — §14 Open intent (templates, distribution events, cross-link renderer) still accurately describes what's open; templates partially shipped but scaffold cleanup pending, so "open" is correct.
-- `jlmops/plans/NEW_PRODUCT_WORKFLOW_UX_PLAN.md` — current; Track A (@323) and WebXltM correction already documented.
-- `jlmops/plans/BUG_FIX_SEQUENCE.md` — current; sessions E and G already marked resolved inline.
-- Memory (~/.claude/.../memory/, 56+ pointers) — no stale entries identified.
-- `CALENDAR.md` Deferred: offline-attribution `defer:2026-07-01` still future-valid.
+- `plans/CUTOVER_CHECKLIST.md` — status header correct (COMPLETE 2026-05-05, retained as playbook).
+- `plans/TRANSLATION_PLAN.md` — current reference doc.
+- `plans/THEME_FOUNDATIONS.md` — current living reference.
+- `.claude/bugs.md` — open bugs current; resolved-recent section accurate.
+- `.claude/session-log.md` — entries within 30 days, concise; no pruning due.
+- `~/.claude/projects/.../memory/MEMORY.md` — JLM and portfolio entries current; no stale entries found.
+- `plans/STATUS.md` Inbox — two deferred items, both future-valid (defer:2026-07-08, defer:2026-07-14).
 
-Triggered when: user requested cleanup at session start.
+Skipped: VaadAi (per user), AliyahNet (on hold, low activity).

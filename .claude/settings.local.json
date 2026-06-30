@@ -94,7 +94,9 @@
       "WebFetch(domain:adammontefiore.com)",
       "WebFetch(domain:winboard.co.il)",
       "Bash(pdftotext \"C:/Users/B/projects/jlmwines/content/regions/ISRAEL-WINE-REGIONS.pdf\" -)",
-      "Bash(pdftotext *)"
+      "Bash(pdftotext *)",
+      "Bash(awk '{print $1}')",
+      "Bash(xargs git show --no-patch --format=\"%ci\")"
     ],
     "deny": [
       "Bash(git -C:*)",

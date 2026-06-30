@@ -40,29 +40,18 @@ These fixes are one-time config or code changes. Each is low risk and has multip
 **After:** for any field that was on Copy, existing HE pages need their RankMath sidebar values set manually. Audit scope: homepage, 3 product pages, 3 blog posts.
 **Reference:** `RANKMATH_WPML_AUDIT.md` §A.
 
-### 1c. Homepage meta descriptions
-**What:** RankMath → Titles & Meta → Homepage → Description, set per language.
-**Why it matters:** EN is 25 chars, HE is ~17 chars. Google suppresses short descriptions and auto-generates from page content — we lose snippet control on the highest-traffic page.
-**Suggested copy** (from the audit):
-- EN: "Hand-picked Israeli wines with no jargon and no fuss. Curated bundles, fast Israel-wide delivery, and honest guidance from someone who actually tastes every bottle."
-- HE: "יינות ישראליים נבחרים — בלי ז'רגון ובלי הצגות. חבילות אוצרות, משלוח מהיר לכל הארץ, והדרכה כנה ממישהו שטועם כל בקבוק."
-**Effort:** 5 minutes. **Risk:** zero.
+### 1c. Homepage meta descriptions — DONE (2026-05-06)
+Both EN and HE already updated during the May 6 audit session. Live values are full-length and on-brand (EN 155 chars; HE equivalent). No action needed.
 
 ---
 
 ## Tier 2 — Product discoverability
 
-### 2a. gtin13 in Product schema
-**What:** add a `gtin13` filter to `seo-fixes.php`. For SKUs matching `^\d{13}$` (Israeli EAN-13), emit them in the Product schema `gtin13` field.
-**Why it matters:** Google increasingly requires GTIN for full Product rich result treatment (price, availability, ratings strip in SERPs). JLM products have EAN-13 barcodes stored as SKUs.
-**Pre-check needed:** verify what fraction of products have valid 13-digit SKUs vs internal codes. Run `woocommerce/products-query` (now available in the MCP adapter) to spot-check.
-**Effort:** ~1 hour (code + staging smoke + deploy). **Risk:** low (additive schema field).
-**Filter code** is in `SEO_AUDIT_2026-05-06.md` §9.
+### 2a. gtin13 in Product schema — SKIP (2026-06-28)
+Google Shopping feed already maps SKU → GTIN for Shopping eligibility. Adding `gtin13` to JSON-LD schema would be a secondary signal for organic Product snippets only — marginal gain doesn't justify the theme code change + deploy. Deprioritized.
 
-### 2b. Category page HE meta
-**What:** after §1b is verified clean, audit HE category pages (Reds, Whites, Rosé, Sparkling, Bundles) — confirm each has a distinct HE title and description in the RankMath sidebar.
-**Why it matters:** category pages are high-commercial-intent landing pages for queries like "יינות אדומים" or "יין לבן ישראל". If they inherit EN meta or have no description, they rank poorly for HE queries.
-**Effort:** 30-minute wp-admin pass. Blocks on 1b being clean.
+### 2b. Category page HE meta — LOW PRIORITY (2026-06-28)
+Checked: all 5 HE category pages have no meta description; most EN pages also blank. Not worth fixing — category-level search queries don't fit either acquisition path. Path 1 buyers don't arrive via category searches; Path 2 buyers search specific wines and land on product pages. Google auto-generates category snippets from product names anyway.
 
 ---
 
@@ -111,11 +100,11 @@ Do these in order. Each tier unblocks or amplifies the next.
 
 | Step | Work | Tier | When |
 |------|------|------|------|
-| 1 | §1a HE site name | Foundation | Next session |
-| 2 | §1c Homepage meta descriptions | Foundation | Next session |
-| 3 | §1b WPML Custom Fields audit | Foundation | Next session (wp-admin walk) |
+| 1 | §1a HE site name — DONE (already correct) | Foundation | — |
+| 2 | §1c Homepage meta descriptions — DONE (2026-05-06) | Foundation | — |
+| 3 | §1b WPML Custom Fields audit — DONE (all Translate) | Foundation | — |
 | 4 | §2b Category page HE meta | Product | After 1b clean |
-| 5 | §2a gtin13 schema | Product | Next theme session |
+| 5 | §2a gtin13 — SKIP (feed already covers Shopping) | Product | — |
 | 6 | Negev region post (already templated) | Content | Per content calendar |
 | 7 | Remaining region posts | Content | Per 2026 calendar |
 | 8 | Commercial-intent posts | Content | After region sequence |
