@@ -4,6 +4,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-06-30 — jlmops @413-@417: print type, manager dash fix, bundles UI
+
+- @413: `print` option added to AdminTasksView entity type selector (was in VALID_TYPES/CONTENT_STAGES/TaskPacks but missing from the dropdown).
+- @415-@416: Manager dashboard "Loading..." bug fixed. Root cause: `TaskPacks.html` not included in `ManagerDashboardView_v2.html`; admin sees it fine because TaskPacks loads from admin dashboard first. Fix: added `<?!= include('TaskPacks') ?>` include + null guard on `handleData`.
+- @417: AdminBundlesView UI pass — chips moved to card header, action results now appear as inline green strip immediately below header (not bottom of page), selected row more vivid blue with matching left border on expansion row, editor card header cream, deficiency badges show actual stock qty ("No stock (0)" red / "Stock: N" yellow) by wiring through `slotStock` from the backend response.
+- Next: smoke bundles screen with a flagged bundle to verify stock qty display.
+
 ## 2026-06-28 — SEO growth plan + meta worksheet
 
 - RankMath MCP adapter now also exposes WooCommerce/GA4/SMTP abilities (6 RankMath abilities unchanged since June 12).
@@ -11,7 +18,9 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - wp-admin verified: WPML custom fields (`_rank_math_title/description/focus_keyword`) all set to Translate (clean). HE site name already `JLM Wines`.
 - Wrote `content/seo-meta-review.md`: EN/HE side-by-side meta proposals for 4 editorial posts. Registered in library as `template-seo-meta-review`.
 - Rule saved to memory: all Hebrew text reviewed before any WordPress update.
-- Next: homepage meta descriptions (Stop 3) + HE meta worksheet review; then gtin13 in seo-fixes.php.
+- Tier 1 fully done (homepage meta already updated 2026-05-06; WPML fields clean; HE site name correct).
+- Tier 2 closed: gtin13 skipped (Shopping feed already maps SKU→GTIN); category HE meta deprioritized (category searches don't fit either acquisition path; all 5 HE category pages have no desc but not worth fixing).
+- Next: HE meta worksheet review (content/seo-meta-review.md) → wp-admin entry; then Tier 3 region posts.
 
 ## 2026-06-28 — view-level tabs + role-switcher fix @410-@412
 

@@ -5,10 +5,14 @@
 .form-body { padding: 20px; }
 .bundle-chip.active { font-weight: bold; box-shadow: inset 0 0 0 2px #6c757d; }
 .bundle-name-he { font-size: 0.85em; color: #6c757d; }
-.bundle-row-selected { background: #e9f5ff !important; }
+.bundle-row-selected { background: #c2deff !important; border-left: 3px solid #5aacee; }
 /* Inline-at-row editor expansion (Phase 5): full-width cell, no hover striping, default cursor */
-.bundle-editor-expansion > td { background: #fff; cursor: default; }
-.table-hover tbody tr.bundle-editor-expansion:hover > td { background: #fff; }
+.bundle-editor-expansion > td { background: #f0f7ff; cursor: default; border-left: 3px solid #5aacee; }
+.table-hover tbody tr.bundle-editor-expansion:hover > td { background: #f0f7ff; }
+/* Editor card header: cream to visually group the open bundle's controls */
+#bundle-editor-section .card-header { background: #fef9e7 !important; }
+/* Action result message strip: green background */
+#bundle-mgmt-msg { background: #d4edda; }
 /* Composition sheet (§7.4/§7.5) */
 .comp-row { border: 1px solid #dee2e6; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: #fff; }
 .comp-row.text-row { background: #f1f3f5; }
@@ -22,8 +26,8 @@
    card-header's title above its action buttons, full-width stacked buttons with clear separation,
    and let the filter chips + name box wrap/fill instead of cramming. */
 @media (max-width: 768px) {
-  .bundle-card-header { flex-direction: column; align-items: stretch !important; }
-  .bundle-card-header > h5 { margin-bottom: .5rem; }
+  .bundle-card-header .d-flex { flex-direction: column; align-items: stretch !important; }
+  .bundle-card-header .d-flex > h5 { margin-bottom: .5rem; }
   .bundle-btnbar { display: flex; flex-direction: column; align-items: stretch; }
   .bundle-btnbar > .btn { width: 100%; margin: 0 0 .4rem 0 !important; }
   #bundle-chips-row { gap: .35rem .25rem; }
@@ -35,32 +39,38 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="card">
-        <div class="card-header bundle-card-header d-flex justify-content-between align-items-center" style="background: transparent;">
-          <h5>Bundle Management</h5>
-          <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). Update
-               Composition is a web→ops utility (new/re-baseline bundles), set apart at the end. -->
-          <div class="bundle-btnbar">
-            <button id="btn-review-stock" class="btn btn-sm mr-2">Review</button>
-            <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
-            <button id="btn-export-bundles" class="btn btn-sm mr-2">Export</button>
-            <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull from Web</button>
-            <button id="btn-update-composition" class="btn btn-sm ml-3 text-muted">Update Composition</button>
+        <div class="card-header bundle-card-header" style="background: transparent;">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Bundle Management</h5>
+            <!-- Ordered to the workflow: Review → Maintain → Export → Pull from Web (confirm). Update
+                 Composition is a web→ops utility (new/re-baseline bundles), set apart at the end. -->
+            <div class="bundle-btnbar">
+              <button id="btn-review-stock" class="btn btn-sm mr-2">Review</button>
+              <button id="btn-generate-compositions" class="btn btn-sm mr-2">Maintain</button>
+              <button id="btn-export-bundles" class="btn btn-sm mr-2">Export</button>
+              <button id="btn-pull-bundles" class="btn btn-sm mr-2">Pull from Web</button>
+              <button id="btn-update-composition" class="btn btn-sm ml-3 text-muted">Update Composition</button>
+            </div>
           </div>
-        </div>
-        <div class="card-body">
-          <!-- Filter Chips (replace the old 5-stat row — ADMIN_BUNDLES_UI_PLAN Phase 1b) -->
-          <div class="mb-3 d-flex align-items-center flex-wrap" id="bundle-chips-row">
+          <!-- Filter chips in the management section — badge area doubles as message area for action results -->
+          <div class="mt-2 d-flex align-items-center flex-wrap" id="bundle-chips-row">
             <button type="button" class="btn btn-sm mr-1 bundle-chip active" data-filter="all">All <span class="badge badge-secondary" id="chip-count-all">0</span></button>
             <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="attention">Needs attention <span class="badge badge-secondary" id="chip-count-attention">0</span></button>
             <button type="button" class="btn btn-sm mr-1 bundle-chip" data-filter="needs-export">Update web <span class="badge badge-secondary" id="chip-count-needs">0</span></button>
             <button type="button" class="btn btn-sm mr-3 bundle-chip" data-filter="ok">OK <span class="badge badge-secondary" id="chip-count-ok">0</span></button>
             <input type="text" id="bundle-name-filter" class="form-control form-control-sm" placeholder="Filter by name…" style="width:200px;">
           </div>
-
+        </div>
+        <div class="card-body p-0">
+          <!-- Action result message strip — immediately below the header/buttons; green when shown -->
+          <div id="bundle-mgmt-msg" style="display:none;" class="px-3 py-2 border-bottom d-flex align-items-start justify-content-between">
+            <div id="bundle-mgmt-msg-body" class="flex-grow-1"></div>
+            <button type="button" class="close ml-3" id="btn-close-mgmt-msg" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
           <!-- Bundle List Table -->
           <!-- No vertical scroll cap: the inline-at-row editor (Phase 5) mounts as a row inside this
                table, so a max-height here would clip it. At n=14 bundles the list is short; the page scrolls. -->
-          <div class="table-responsive">
+          <div class="p-3 table-responsive">
             <table class="table table-sm table-hover" id="bundle-list-table">
               <thead>
                 <tr>
@@ -180,14 +190,6 @@
   </div>
 </div>
 
-<!-- Action results panel (Update Composition / Review Stock / Export) -->
-<div class="card mb-3" id="action-results-panel" style="display:none;">
-  <div class="card-header" style="background: transparent;">
-    <span id="action-results-title" class="font-weight-bold"></span>
-    <button type="button" class="close" onclick="document.getElementById('action-results-panel').style.display='none'">&times;</button>
-  </div>
-  <div class="card-body" id="action-results-body"></div>
-</div>
 
 <script>
 (function() {
@@ -279,6 +281,9 @@
     });
     var nameFilterEl = document.getElementById('bundle-name-filter');
     if (nameFilterEl) nameFilterEl.addEventListener('input', applyFilter);
+    document.getElementById('btn-close-mgmt-msg').addEventListener('click', function() {
+      document.getElementById('bundle-mgmt-msg').style.display = 'none';
+    });
     // Editor (composition sheet)
     document.getElementById('btn-close-editor').addEventListener('click', closeEditor);
     document.getElementById('btn-maintain-bundle').addEventListener('click', maintainBundleOne);
@@ -478,9 +483,12 @@
       .withSuccessHandler(function(res) {
         if (!res || res.error || !res.data) return;
         if (String(res.data.bundleId) !== String(currentBundleId)) return;  // user moved on
-        var slotReason = {};
-        (res.data.deficientSlots || []).forEach(function(s) { slotReason[String(s.slotId)] = s.reason; });
-        currentDeficiency = { deficientSlots: res.data.deficientSlots || [], bandFlags: res.data.bandFlags || [], slotReason: slotReason };
+        var slotReason = {}, slotStock = {};
+        (res.data.deficientSlots || []).forEach(function(s) {
+          slotReason[String(s.slotId)] = s.reason;
+          if (s.stock !== null && s.stock !== undefined) slotStock[String(s.slotId)] = s.stock;
+        });
+        currentDeficiency = { deficientSlots: res.data.deficientSlots || [], bandFlags: res.data.bandFlags || [], slotReason: slotReason, slotStock: slotStock };
         renderDeficiencyStrip({ bundleId: currentBundleId });
         renderComposition();
       })
@@ -1006,8 +1014,20 @@
     // Deficiency tag (why this slot needs attention) — from the live check for a flagged bundle.
     var defReason = (currentDeficiency && r.slotId) ? currentDeficiency.slotReason[String(r.slotId)] : null;
     if (defReason) {
-      var defLbl = defReason === 'stock' ? 'out/low stock' : defReason === 'criteria' ? 'off-criteria' : defReason === 'empty' ? 'empty' : defReason;
-      nameHtml += ' <span class="badge badge-warning">&#9888; ' + defLbl + '</span>';
+      if (defReason === 'stock') {
+        var qty = (currentDeficiency.slotStock && currentDeficiency.slotStock[String(r.slotId)] !== undefined)
+          ? currentDeficiency.slotStock[String(r.slotId)] : null;
+        if (qty !== null && qty <= 0) {
+          nameHtml += ' <span class="badge badge-danger">&#9888; No stock (0)</span>';
+        } else if (qty !== null) {
+          nameHtml += ' <span class="badge badge-warning">&#9888; Stock: ' + qty + '</span>';
+        } else {
+          nameHtml += ' <span class="badge badge-warning">&#9888; low stock</span>';
+        }
+      } else {
+        var defLbl = defReason === 'criteria' ? 'off-criteria' : defReason === 'empty' ? 'empty' : defReason;
+        nameHtml += ' <span class="badge badge-warning">&#9888; ' + defLbl + '</span>';
+      }
     }
     // Slot category criterion in the collapsed row (the generator/picker pool is restricted to it),
     // plus a badge flagging ANY other active criteria (price / attributes / name) so the operator
@@ -1457,9 +1477,11 @@
   // =================================================================================
 
   function showResults(title, html) {
-    document.getElementById('action-results-title').textContent = title;
-    document.getElementById('action-results-body').innerHTML = html;
-    document.getElementById('action-results-panel').style.display = '';
+    var msgBody = document.getElementById('bundle-mgmt-msg-body');
+    var msg = document.getElementById('bundle-mgmt-msg');
+    if (!msgBody || !msg) return;
+    msgBody.innerHTML = (title ? '<strong class="mr-2">' + title + '</strong>' : '') + html;
+    msg.style.display = '';
   }
 
   function withButtonBusy(btn, label) {

@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-06-28 — @412 live (view-level tabs, ds-v2 complete); SEO growth plan written; WPML custom fields verified clean; meta review worksheet ready.
+**Updated:** 2026-06-30 — @417 live; AdminBundlesView UI pass (chips in header, inline result strip, stock qty in deficiency badges); manager dashboard TaskPacks fix; print entity type in task creator.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @412; view-level tabs shipped (ManagerProducts: Details/New/Verify; ManagerInventory: Counts/Brurya); ds-v2 appearance pass complete; sync clean; build queue open (reliability 1.3, T5.2 btn-primary cleanup).
+- **jlmops** (GAS backend) — live @417; AdminBundlesView UI pass (chips+results in card header, inline green result strip, vivid blue selected row, cream editor header, actual stock qty in deficiency badges); manager dashboard fix (TaskPacks include); print entity type added to task creator; ds-v2 complete; sync clean.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post template-formatted (all sections ready); pending winery verification + HE translation before publish.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing. **June Issue #2** — AYIW email (EN+HE) scheduled 2026-06-24; print newsletter EN+HE produced + registered (`print-newsletter-2026-06-en/he`), ready to print + distribute. July entities pre-registered (`email-ayiw-2026-07-en/he`, `print-newsletter-2026-07-en/he`). 2026 calendar filled through December (slots A–F in `content/PUBLICATION_CALENDAR.md`). Plan: `content/REGION_POSTS_PLAN.md`.
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-06-24 |
 | Revenue | Steady |
-| Deploy Version | jlmops @412 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-06-28 · theme 2026-06-12 |
+| Deploy Version | jlmops @417 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-06-30 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
