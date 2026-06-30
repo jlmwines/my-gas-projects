@@ -16,6 +16,16 @@ A session-readable index of every recurring operational task this project suppor
 - Script: write a fresh `upload-<topic>-images.js` from `upload-handling-images.js` template; run `node content/upload-<topic>-images.js`
 - Notes: uploads to live WP media library; prints the featured image ID for the `## FEATURED MEDIA` section; stamps body image placeholders in the `.post.md` file.
 
+**Upload a content draft doc to Drive (blog post, newsletter, etc.)**
+- Procedure: pandoc → Drive MCP → jlmops "Attach new version"
+- Steps:
+  1. `pandoc content/<path>/<slug>-en.post.md -o <scratchpad>/<slug>-en-draft.docx`
+  2. Get Israel timestamp: `pwsh -NoProfile -Command "[System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([datetime]::UtcNow, 'Israel Standard Time').ToString('yy-MM-dd-HH-mm')"`
+  3. Call Drive MCP `create_file`: title = `<slug>-en <timestamp>`, base64Content = .docx bytes, contentMimeType = `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, parentId = content library folder ID (see reference_drive_files.md memory for IDs)
+  4. Drive auto-converts the .docx to a Google Doc. Copy the returned file URL.
+  5. In jlmops PublishingView → find the content entity → "Attach new version" button → paste the URL. Old doc is superseded and archived automatically.
+- Notes: base64 MUST come from a fresh file read in the current session — never from a conversation summary (summaries truncate binary content and corrupt it). Timestamp format `yy-MM-dd-HH-mm` via PowerShell timezone API only (Git Bash returns UTC).
+
 **Register content in the jlmops library**
 - Procedure: `content/register-library.js` header (read it — covers all modes)
 - Command: `node content/register-library.js <slug>` (or `--all`, `--update`)

@@ -50,7 +50,7 @@ Impressionist oil painting, close-up of a wine glass reflecting a desert sunset,
 
 
 ## NOTES
-- Source: Drive doc `blog-region-negev-en 26-06-18-19-41` (modified 2026-06-24, partner edit). Content taken verbatim from that version.
+- Drive doc: `blog-region-negev-en 26-06-30-19-20` (ID: `11kL4zhcHoauO-ZifgoSQtoX4-Z2Me-wkvAkYWUumDOQ`) — clean prose draft, restored 2026-06-30 after prior session incorrectly placed HTML in the draft. Attach to Negev task via jlmops PublishingView "Attach new version" to supersede the old doc.
 - **Before publishing:** confirm which wineries in the Wineries section we carry, add shop page links for those we do, verify visitor-centre details are current.
 - SEO meta description (paste into RankMath): "The Negev desert was once the ancient world's greatest wine region. Today it's making wine again — discover the story, the science, and the wineries to know."
 - Focus keyword suggestion: "Negev wine"
