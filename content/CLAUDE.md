@@ -96,6 +96,10 @@ Each blog post lives as a `.md` file (one EN, one HE) with a fixed section struc
 |---|---|---|
 | `## TITLE` | 50–70 chars | Final post title |
 | `## EXCERPT` | 1–2 sentences (~150 chars) | WordPress post excerpt — category/search listings |
+| `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Manager fills in after editorial review. |
+| `## EMAIL PREVIEW TEXT` | 1–2 sentences | Preheader shown in email clients before opening. Manager fills in. |
+| `## EMAIL BODY` | full email copy | Companion email body. Manager writes after editorial review. |
+| `## EMAIL CTA` | one line | Email call-to-action button/link text. Manager fills in. |
 | `## NEWSLETTER EXCERPT (web/social)` | ~50 words | Social posts, email teasers, web snippets — ends with `[Read the full guide →]` |
 | `## PRINT NEWSLETTER BODY` | ~150–200 words | Printed Wine Talk insert (left column). Self-contained — reader may not scan the QR. Signs off `— Evyatar` |
 | `## CTA` | one line | End-of-post link copy. Default: `Read the full guide →` |

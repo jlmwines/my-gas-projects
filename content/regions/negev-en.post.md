@@ -10,6 +10,18 @@ The Negev desert was one of the ancient world's great wine regions. After a thou
 __FEATURED_ID__
 
 
+## EMAIL SUBJECT
+
+
+## EMAIL PREVIEW TEXT
+
+
+## EMAIL BODY
+
+
+## EMAIL CTA
+
+
 ## NEWSLETTER EXCERPT (web/social)
 The Negev desert shipped wine across the Mediterranean 1,500 years ago. After a thousand years of silence, it's making wine again — hot days that build rich fruit, cold nights that lock in freshness. Bold, sun-filled wines unlike anything else in Israel.
 [Read the full guide →]

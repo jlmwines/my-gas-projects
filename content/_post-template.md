@@ -13,6 +13,22 @@
 __FEATURED_ID__
 
 
+## EMAIL SUBJECT
+<!-- Subject line for the companion promotional email. -->
+
+
+## EMAIL PREVIEW TEXT
+<!-- Preheader — shown in email clients before the email is opened. 1–2 sentences. -->
+
+
+## EMAIL BODY
+<!-- Full email body copy. Manager writes after editorial review. -->
+
+
+## EMAIL CTA
+<!-- Call-to-action link/button text for the email. e.g. "Read the full guide →" -->
+
+
 ## NEWSLETTER EXCERPT (web/social)
 <!-- ~50 words. Used on social, email teasers, web snippets. End with: [Read the full guide →] -->
 
