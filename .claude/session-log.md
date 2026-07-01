@@ -25,6 +25,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Same latent bug existed on the pre-existing "Create Content Tasks" modal (identical pattern, never previously triggered from an open drawer in a way that surfaced it) — fixed the same way, both files (@425).
 - User smoke-tested both fixes: confirmed working.
 
+## 2026-07-01 — /review-claude + /review-deep, GSC KPI feed fixed @426
+
+- `/review-claude`: hooks/files/skills all OK. Found portfolio STATUS.md stale (JLM Wines row still @417, three versions behind); fixed and committed separately.
+- `/review-deep` (first run): initial draft had two real mistakes, both corrected after user pushback — (1) used git-commit volume as a proxy for "effort allocation" and concluded acquisition was under-weighted vs. STRATEGY.md's stated period focus; retracted — commits can't see acquisition work (content, email, print, flyers leave no git trail), so the comparison was invalid. (2) Treated the print newsletter as a discrete "distribute" event needing confirmation; corrected — it's an ongoing channel (every shipment + shop handout), already always current once printed.
+- Real finding that survived: GSC KPI feed was broken. Root cause (verified in `StatusReportService.js:335-336`): `system.sheet.gsc_report.data_tab` config held `"JLM GSC Weekly"` — the workbook's own title, matching no real tab — so the reader silently fell back to `Sheets()[0]` (`Sheet1`, old Page-only data) and reported "no Date dimension yet" even though the dimension had been added 2026-06-10 into a separate dated tab. User deleted that extra tab, confirmed `Sheet1` as the permanent one. Fixed config to `"Sheet1"`, deployed @426. Pending: user runs `rebuildSysConfigFromSource()` + confirms the GSC add-on's recurring report writes into `Sheet1` (not a new dated tab each run) — tracked in STATUS.md Pending Verification.
+- Review saved to `plans/reviews/review-deep-2026-07-01.md` (corrections applied in place, not left wrong).
+- Next: verify GSC data flows after user's two steps; two small stale-doc fixes from the review (`business/KPI.md`'s "KPI block pending" framing, portfolio `CALENDAR.md`'s stale phase-7 entry) are still proposed, not yet applied — need go-ahead.
+
 ## 2026-07-01 — Portfolio kernel: enforce plan graduation/archiving + mid-session staleness fix
 
 - User's underlying complaint across this whole session: sessions keep failing to maintain docs "as prescribed" — the rules already existed (graduation rule, staleness contract) but had no concrete trigger, so plans sat at 100% done, unarchived, with facts never graduated. Strengthened `projects/.claude/CLAUDE.md` session-end protocol step 2 with an explicit checkable trigger (any plan touched this session that's now fully done gets graduated + archived same-session, not deferred to cleanup), plus a "mid-session staleness" rule: fix a discovered-stale doc immediately, don't flag for later.

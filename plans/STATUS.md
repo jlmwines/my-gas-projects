@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-01 — @425 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy).
+**Updated:** 2026-07-01 — @426 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy); GSC KPI data_tab config fixed (was reading the wrong tab).
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @425 · theme v1.2.30 |
+| Deploy Version | jlmops @426 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-07-01 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -58,6 +58,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 ### Pending verification (watch items)
 
+- **GSC KPI data feed** (@426, 2026-07-01): `system.sheet.gsc_report.data_tab` was `"JLM GSC Weekly"` (the workbook's own title, matching no real tab) — `StatusReportService._readGsc` silently fell back to `Sheets()[0]`, reading old Page-only data and reporting "no Date dimension yet" even after the dimension was added 2026-06-10 into a separate dated tab. Fixed to `"Sheet1"` and deployed. **User to do:** (1) run `rebuildSysConfigFromSource()` to push the corrected value into the live SysConfig sheet; (2) confirm in the GSC sheet's Search Analytics for Sheets add-on that its recurring report writes Date-dimensioned data into `Sheet1` itself (not a new dated tab each run) — the one extra dated tab was removed. Verify by reading `jlmops-status.md` after the next GSC pull: should show `GSC (latest data ...)` instead of `no data`.
 - **Content-library versioning** (@316–@321, Decision 7 / Plan B): attach-to-replace + supersede→`_archive` confirmed live on the Negev blog task; version-retirement UI + lock-modal Cancel + admin pack spacing smoked (@319/@320). Still to smoke: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; and `runLibraryDuplicateReconcile` from the editor (expect `0 resolved` on clean folders). Migration `runLibraryFileNameMigration` already run (14 renamed).
 - **Correct Product Name tool** (@306, deployed live 2026-06-16, no /dev smoke): Admin → Products → **SKU Management tab** → Correct Product Name button → modal → search a product, edit EN and/or HE, Save; confirm WebProdM `wpm_PostTitle` + WebDetM name cells changed and a "Name Update" row appears in the **Recent SKU Updates** table in that same tab. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** (@307–@311, deployed live 2026-06-17, only the suggestion sort smoked): plan (archived, fully shipped) → `jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`; current behavior → `jlmops/docs/WORKFLOWS.md` §14. Smoke the rest — (a) Admin Suggestions/Linkage Accept & Link buttons open on a name with a quote; (b) Manager Products loads fast with Detail Updates open + 3 collapsed cards showing count badges (gray=0, colored when pending); expand each, confirm category/search/Suggest-Selected work; (c) a new-product onboarding task shows the EN name (not blank) in the Manager preview/header; (d) Admin Review Submissions shows the WebDetS staging name; (e) Admin New Products collapsed header shows its count badge.
