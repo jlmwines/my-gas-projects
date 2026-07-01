@@ -25,6 +25,13 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Same latent bug existed on the pre-existing "Create Content Tasks" modal (identical pattern, never previously triggered from an open drawer in a way that surfaced it) — fixed the same way, both files (@425).
 - User smoke-tested both fixes: confirmed working.
 
+## 2026-07-01 — Portfolio kernel: enforce plan graduation/archiving + mid-session staleness fix
+
+- User's underlying complaint across this whole session: sessions keep failing to maintain docs "as prescribed" — the rules already existed (graduation rule, staleness contract) but had no concrete trigger, so plans sat at 100% done, unarchived, with facts never graduated. Strengthened `projects/.claude/CLAUDE.md` session-end protocol step 2 with an explicit checkable trigger (any plan touched this session that's now fully done gets graduated + archived same-session, not deferred to cleanup), plus a "mid-session staleness" rule: fix a discovered-stale doc immediately, don't flag for later.
+- Applied it as proof: `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` (fully shipped since 2026-06-20, self-annotated "ready to archive" but never was) — graduated its durable facts (attach-to-replace versioning, `slb_Version` retirement, `print` content-type gap) into `jlmops/docs/DATA_MODEL.md`, archived the plan to `_archive/`, fixed stale STATUS.md pointers to it.
+- Found the same pattern in `CONTENT_DISTRIBUTION_PLAN.md` (marked "complete @366" but its own Step 1 said "not yet shipped" — verified in code it's actually shipped, fixed the annotation). Left the plan itself unarchived pending user confirmation — not yet graduated/archived.
+- Next: confirm whether to also graduate + archive `CONTENT_DISTRIBUTION_PLAN.md`. Going forward, apply the new session-end check for real — this is the test of whether the fix holds.
+
 ## 2026-06-30 — jlmops @420-@422: new product onboarding complete + Active Plans tracking
 
 - @420: Track C — `acceptProductSuggestion` now seeds WebXltM at accept time via `WooApiService.fetchProductById(wpmId)` → `translations.he`. Closes translation validation gap immediately on accept.

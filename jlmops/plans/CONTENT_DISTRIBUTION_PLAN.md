@@ -99,8 +99,7 @@ Newsletter doc is assembled manually — no machine template. The newsletter Goo
 
 ## Build Sequence
 
-**Step 1 — Add `print` to LibraryService VALID_TYPES** *(not yet shipped)*
-Add `'print'` to the `VALID_TYPES` array in `LibraryService.js` line 23. Without this, any LibraryService call on a print entity (attach doc, spawn chain, mark published) throws `type "print" not in vocabulary`. Note: `config/schemas.json` has no separate valid-values list for `slb_EntityType` — VALID_TYPES in LibraryService.js is the sole gate. No config regeneration needed; `clasp push` is sufficient.
+**Step 1 — Add `print` to LibraryService VALID_TYPES** *(shipped — verified 2026-07-01: `'print'` is in `VALID_TYPES` in `LibraryService.js`)*
 
 **Step 2 — LibraryService: print folder routing** *(already handled)*
 `_getCanonicalFolder(type, concept)` is fully generic — it auto-creates `<root>/<type>/<concept>` subfolders on demand. No print-specific case needed.

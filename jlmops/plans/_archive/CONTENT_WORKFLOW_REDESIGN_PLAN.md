@@ -1,6 +1,6 @@
 # Content Workflow Redesign Plan
 
-This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel; the panel's open questions were resolved 2026-06-14 against verified code (see Resolutions). **Deploys 1–4 shipped 2026-06-14–15 (jlmops @290–@295). Decision 7 (content versioning) shipped @316–@322, 2026-06-18. Fully shipped; ready to archive once durable facts graduate to system docs.**
+**ARCHIVED 2026-07-01.** This plan defines the end-state workflow for JLM Wines content operations — who does what, on which surface, in what sequence — as of 2026-06-14. It is the output of a five-lens adversarial design panel; the panel's open questions were resolved 2026-06-14 against verified code (see Resolutions). Deploys 1–4 shipped 2026-06-14–15 (jlmops @290–@295). Decision 7 (content versioning) shipped @316–@322, 2026-06-18, later extended to entity-scoped attach (@423-425, 2026-07-01). Durable facts graduated to `jlmops/docs/DATA_MODEL.md` (Content Library Data Model § SysLibrary — `slb_State`, `slb_TargetDate`, `slb_Version` retirement, document versioning). Kept here for historical design rationale only — read the system doc for current behavior.
 
 ## Goal
 
