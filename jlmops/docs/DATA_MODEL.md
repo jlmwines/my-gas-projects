@@ -700,7 +700,7 @@ The Content Library is a single flat, polymorphic table holding every content/ma
     *   `slba_EntityId`: **Polymorphic foreign key**, resolved by `slba_EntityType` — a `SysLibrary.slb_Slug` for library types, or the source row id (`SysContacts.sc_Email`, an order id, a `SysProjects.spro_ProjectId`) for virtual types. See `plans/CONTENT_LIBRARY_PLAN.md` §7.
     *   `slba_Timestamp`: When the action occurred.
     *   `slba_Actor`: Who/what performed the action.
-    *   `slba_ActionType`: The action performed.
+    *   `slba_ActionType`: The action performed. Includes `version_superseded` (see "Document versioning" above) and `url-stamped` — `LibraryService.markPublished` resolves the published `jlmwines.com/<slug>` (+ `/he/<slug>`) URL and logs it against every entity whose `slb_References` names the newly-published slug, surfacing it in that entity's LibraryView/PublishingView drawer activity tab. (The companion session-side idea of writing a `content/<slug>/urls.md` file, from `CONTENT_DISTRIBUTION_PLAN.md`, was never adopted — `push-posts.js` already prints the published URL to the console on a successful push, which covers the same need.)
     *   `slba_Summary`: One-line human-readable summary.
     *   `slba_Details`: Structured detail (JSON).
     *   `slba_ReferencedEntities`: JSON array of other entity slugs/ids touched by the action.

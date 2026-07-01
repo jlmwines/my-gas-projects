@@ -1,6 +1,6 @@
 # Content Distribution Plan
 
-Extends the content library/task model (see `CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **complete @366** (2026-06-23). All steps shipped.
+**ARCHIVED 2026-07-01.** Extends the content library/task model (see `_archive/CONTENT_WORKFLOW_REDESIGN_PLAN.md`) to cover newsletter and email distribution. Status: **complete @366** (2026-06-23). All steps shipped (Step 1's "not yet shipped" annotation was itself stale — verified 2026-07-01 that `print` is in `LibraryService.js` `VALID_TYPES`). Durable facts graduated to `jlmops/docs/DATA_MODEL.md`: `print` as a `slb_ContentType` value, and the `url-stamped` activity action logged by `markPublished`. The session-side `content/<slug>/urls.md` idea (§ Post-Publish URL Stamp) was never adopted — superseded in practice by `push-posts.js` printing the published URL to console. Kept here for historical design rationale only.
 
 ---
 
