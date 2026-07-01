@@ -31,7 +31,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Applied it as proof: `jlmops/plans/CONTENT_WORKFLOW_REDESIGN_PLAN.md` (fully shipped since 2026-06-20, self-annotated "ready to archive" but never was) — graduated its durable facts (attach-to-replace versioning, `slb_Version` retirement, `print` content-type gap) into `jlmops/docs/DATA_MODEL.md`, archived the plan to `_archive/`, fixed stale STATUS.md pointers to it.
 - Found the same pattern in `CONTENT_DISTRIBUTION_PLAN.md` (marked "complete @366" but its own Step 1 said "not yet shipped" — verified in code it's actually shipped, fixed the annotation). Left the plan itself unarchived pending user confirmation — not yet graduated/archived.
 - User confirmed: also archived `CONTENT_DISTRIBUTION_PLAN.md`. Graduated its real facts to `DATA_MODEL.md` (`print` content-type, `url-stamped` activity action — verified both actually shipped in code); noted its session-side `urls.md` idea was never adopted (superseded by `push-posts.js` console output). Fixed STATUS.md's stale pointer to it.
-- Going forward, apply the new session-end check for real — this is the test of whether the fix holds. Spotted but NOT touched (out of today's scope): `NEW_PRODUCT_WORKFLOW_UX_PLAN.md` in STATUS.md's Active Plans is also flagged "fully shipped @422... ready to archive" — same pattern, candidate for the next session that touches it or the next cleanup pass.
+- Going forward, apply the new session-end check for real — this is the test of whether the fix holds.
+
+## 2026-07-01 — Archived NEW_PRODUCT_WORKFLOW_UX_PLAN, fixed stale WebXltM schema
+
+- Third instance of the same pattern. Its onboarding-pipeline facts had already graduated to `jlmops/docs/WORKFLOWS.md` §14 in a prior session (confirmed current and accurate). One genuinely stale fact remained and got fixed: `docs/DATA_MODEL.md` still documented WebXltM's old 4-column `wxl_` schema; verified the real live schema in `config/schemas.json` (31 columns, `wxm_` prefix, key `wxm_ID`) and corrected both the prefix table and the WebXltM section, with a historical note on the retired `wxl_` names.
+- Verified in code (not assumed): `linkAndFinalizeNewProduct` is fully gone, matching the plan's @422 claim.
+- Archived the plan; fixed STATUS.md's Active Plans (struck, now archived) and Pending Verification (path updated to `_archive/` + `WORKFLOWS.md` §14) pointers. Left the UI-polish smoke checklist (items a-e) open — no verified basis to clear it, didn't invent one.
+- Next: STATUS.md's remaining Active Plans are Bug Fix Sequence and Bundles — both genuinely have open steps, not stale. This graduation pass across three plans (content-workflow, content-distribution, new-product-UX) is the concrete test of the session-end protocol fix — watch whether it holds without prompting next time.
 
 ## 2026-06-30 — jlmops @420-@422: new product onboarding complete + Active Plans tracking
 

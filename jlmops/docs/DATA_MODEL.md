@@ -24,7 +24,7 @@ The pattern is `sheetPrefix_FieldName`, where the prefix is a short, lowercase a
 | `WebDetM`    | `wdm_` |
 | `CmxProdS`   | `cps_` |
 | `CmxProdM`   | `cpm_` |
-| `WebXltM`    | `wxl_` |
+| `WebXltM`    | `wxm_` |
 | `WebXltS`    | `wxs_` |
 | `BruryaStock`| `bru_` |
 | `SysBundles` | `sb_` |
@@ -227,12 +227,9 @@ The following sheets represent the core data model for managing simple products.
     *   `cpm_Exclude`: Flag to exclude the product from synchronization.
 
 ### `WebXltM` (Web Translate Master)
-*   **Purpose:** Stores the master relationship between original language and translated language products for WPML. This data is populated from the `WebXltS` staging sheet.
-*   **Columns:**
-    *   `wxl_WebIdHe`: The unique ID of the Hebrew (translated) product.
-    *   `wxl_NameHe`: The Hebrew product name, for readability and debugging.
-    *   `wxl_WebIdEn`: The ID of the original English product it's linked to.
-    *   `wxl_SKU`: The SKU, for reference and data validation.
+*   **Purpose:** Master table of Hebrew (translated) product data pulled from WooCommerce/WPML. Populated from `WebXltS` staging via the daily HE pull (`WooProductPullService` → `ProductImportService.upsertWebXltData`), which **clears and rewrites the whole table every sync run** — WebXltM is fully sync-owned, never hand-maintained.
+*   **Columns:** 31 columns mirroring `WebXltS` staging (`schema.data.WebXltM` in `config/schemas.json`) — WordPress/WPML fields (`wxm_ID`, `wxm_PostTitle`, `wxm_SKU`, `wxm_WpmlLanguageCode`, `wxm_WpmlOriginalId`, `wxm_WpmlOriginalSku`) plus RankMath and Woosb (bundle) fields, matching the equivalent EN-side fields on `WebProdM`. **Key column:** `wxm_ID`. The EN↔HE link is `wxm_WpmlOriginalId`/`wxm_WpmlOriginalSku`, pointing back to the EN product.
+*   **Historical note:** an earlier, much smaller 4-column schema (`wxl_WebIdHe`, `wxl_NameHe`, `wxl_WebIdEn`, `wxl_SKU`) was retired before the live `wxm_` schema above; the manual new-product hot-link (`linkAndFinalizeNewProduct`, deleted @422 per `_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`) kept writing those old `wxl_` column names until removal — dead code, since the live headers never matched and every write silently no-opped.
 
 ## Bundle Management Data Model
 
