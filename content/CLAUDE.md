@@ -135,6 +135,8 @@ Every other `## `-headed section — including `## BODY` itself — is a human-f
 11. HE translation — entire chain duplicates into the HE file last
 12. **Publishing session only** — converts `## BODY` prose to HTML, replaces it with `Paste below into WordPress Code Editor:` + HTML block **moved to the end of the file** (the parser reads to end-of-file from that marker), then runs `push-posts.js`.
 
+**Once body is locked (step 3), it is verbatim for every later step.** "Derived from locked body" in steps 5–10 means extracted/condensed *from* the existing wording — never a fresh paraphrase of the body itself. A session adding Email fields, Newsletter Excerpt, or a translation must not also rewrite `## BODY` as a side effect. (Real incident, 2026-07-01: the Negev post's body was progressively paraphrased across three sessions while later sections were being added, losing real content — restored from the original Drive doc. If the body genuinely needs a content change, that's a deliberate, called-out edit, not an incidental rewrite.)
+
 **A drafting session stops after step 10.** Steps 11–12 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
 
 Body is always written and locked first, in place at the top of the file; derivatives are extracted/condensed from it after.
