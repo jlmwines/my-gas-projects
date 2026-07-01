@@ -96,7 +96,9 @@
       "Bash(pdftotext \"C:/Users/B/projects/jlmwines/content/regions/ISRAEL-WINE-REGIONS.pdf\" -)",
       "Bash(pdftotext *)",
       "Bash(awk '{print $1}')",
-      "Bash(xargs git show --no-patch --format=\"%ci\")"
+      "Bash(xargs git show --no-patch --format=\"%ci\")",
+      "mcp__claude_ai_Google_Drive__create_file",
+      "mcp__claude_ai_Google_Drive__get_file_metadata"
     ],
     "deny": [
       "Bash(git -C:*)",

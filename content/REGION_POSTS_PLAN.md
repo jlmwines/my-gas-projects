@@ -51,6 +51,7 @@ Post source files (per `content/CLAUDE.md` naming convention):
 - [ ] Body draft (from Montefiore + map sources + guide plan spec)
 - [ ] Title confirmed
 - [ ] WP Excerpt
+- [ ] Email fields — Subject/Preview/Body/CTA (required — these all lead a companion email; session drafts, manager edits/translates)
 - [ ] Newsletter Excerpt (web)
 - [ ] Print Newsletter Body (required — these all lead a newsletter)
 - [ ] CTA

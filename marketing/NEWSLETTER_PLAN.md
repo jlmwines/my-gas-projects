@@ -277,12 +277,12 @@ For each issue:
 
 ## Companion Email Campaign
 
-A separate email send (EN + HE) accompanies each issue. **Actual model (confirmed via Issue #1 + June Handling send):** the email is post-promo-led — it features the month's blog post, not the Making Wine series. The manager prepares a full marketing suite in the Drive doc alongside each blog post (excerpt/meta/social/email/newsletter sections); the session reads the `## EMAIL` section verbatim as the email body. Making Wine stays in the print secondary slot; it does not anchor the companion email.
+A separate email send (EN + HE) accompanies each issue. The email is post-promo-led — it features the month's blog post, not the Making Wine series. **Actual model (corrected 2026-07-01 — the prior "manager writes it verbatim" description was wrong):** the session drafts the full post — body, excerpt, and every extract needed (Newsletter Excerpt, Print Newsletter Body, Email Subject/Preview/Body/CTA, Image Prompts) — from seed facts and guidance, same drafting pass, same effort. The manager's job is to edit the English draft and translate it to Hebrew, not to originate the email copy from scratch. Making Wine stays in the print secondary slot; it does not anchor the companion email.
 
 ### Structure
 
 1. **Hero:** blog post featured image (referenced by the post's Mailchimp-side upload).
-2. **Body:** verbatim from the `## EMAIL` section of the manager's Drive doc for that post (EN or HE). The manager writes this; the session does not paraphrase.
+2. **Body:** drafted by the session into the `## EMAIL BODY` section of the post's `.post.md` file, from the same locked body as the rest of the post's derivatives. Manager edits the English, then translates to Hebrew.
 3. **Sign-off:** `— Evyatar`.
 4. **No footer:** no `jlmwines.com` URL band; no boilerplate. The Mailchimp footer handles compliance.
 
@@ -292,7 +292,7 @@ Subscribers are already subscribed. The signup ask lives on the print insert + t
 
 ### Workflow
 
-Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session builds the HTML body from the manager's Drive email copy; user creates the Mailchimp campaign draft and pastes in the content, then reviews and schedules.
+Same Mailchimp MCP constraint as documented: the integration cannot edit user-created drafts. Session builds the HTML body from the post's own `## EMAIL BODY` section (once locked and translated); user creates the Mailchimp campaign draft and pastes in the content, then reviews and schedules.
 
 ---
 
@@ -331,4 +331,4 @@ Per `business/BRAND_STANDARDS.md`. Editorial, not pitchy. Consistent with the we
 
 ---
 
-Updated: 2026-06-21 (companion email model corrected to post-promo-led per Issue #1 + June Handling send)
+Updated: 2026-07-01 (companion email is post-promo-led, session-drafted from seed facts alongside the rest of the post; manager edits English + translates to Hebrew — corrects a prior wrong "manager writes it" description)

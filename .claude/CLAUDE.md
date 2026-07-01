@@ -67,24 +67,6 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 
 ## Content Workflow
 
-When working on blog posts, read these facts before touching any `.post.md` file or running `push-posts.js`. Full pipeline details: `content/PUBLISHING.md`. Full section spec: `content/CLAUDE.md`.
+Blog posts have one canonical spec — don't restate it here, it drifts. Before touching any `.post.md` file or running `push-posts.js`, read: `content/_post-template.md` (the actual section order — start every post by copying it) and `content/CLAUDE.md` (full spec: required sections, parser dependencies, work order, file naming, library registration). Pipeline mechanics: `content/PUBLISHING.md`.
 
-**Template:** start every post from `content/_post-template.md`. Required sections in order:
-- `## TITLE` — 50-70 chars, plain language
-- `## EXCERPT` — 1-2 sentences (~150 chars), for WordPress listing pages
-- `## FEATURED MEDIA` — leave `__FEATURED_ID__` until image is uploaded
-- `## NEWSLETTER EXCERPT (web/social)` — ~50 words, end with `[Read the full guide →]`
-- `## PRINT NEWSLETTER BODY` — ~150-200 words, self-contained, signed "— Evyatar"
-- `## CTA` — one-line link text
-- `## IMAGE PROMPTS` — impressionist oil painting style, one prompt per image
-- Body HTML after `Paste below into WordPress Code Editor:` inside `<!-- wp:html -->`
-
-**Target body length:** 800-1,200 words. Count only the body, not the sections above.
-
-**File naming:** `content/<slug>-en.post.md` (general); `content/regions/<slug>-en.post.md` (regional). HE translation: same path, `-he.post.md`.
-
-**Publishing pipeline:** `node content/push-posts.js <slug>` sends TITLE, EXCERPT, and body HTML to WordPress via REST API. RankMath fields (SEO meta, focus keyword, slug) are pasted manually in wp-admin. Featured image: upload separately, then stamp `## FEATURED MEDIA` with the WP media ID.
-
-**Work order:** body draft → title → WP excerpt → newsletter excerpt → print body → CTA → image prompts → HE translation.
-
-**Library registration:** add `doc_url` (Drive doc URL) and `md_file` (path relative to `content/`) to the manifest entry in `content/register-library.js`, then run `node content/register-library.js <slug>`. Use `--update` to patch an existing row.
+The one fact worth repeating here because it's the constraint that keeps getting violated: **Body is the section right after Title, written and locked first.** Everything else in the template (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) is derived from the locked body afterward, and a drafting session never adds HTML or a "Paste below" block — that's a separate publishing-session step.

@@ -4,6 +4,27 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-01 — Blog template ordering fix (root cause: duplicate spec)
+
+- Root cause of repeated content-workflow failures: `jlmwines/.claude/CLAUDE.md` carried its own stale, incomplete duplicate of the `.post.md` section spec (wrong order, missing EMAIL fields entirely) — sessions read that auto-loaded copy instead of the real spec in `content/CLAUDE.md`.
+- Fixed: `_post-template.md` and `content/CLAUDE.md` reordered so `## BODY` sits right after `## TITLE` (human reads post first, derivatives after); documented the two real parser constraints (TITLE must be file's first line, final HTML block must be file's last content — everything else is position-independent). `.claude/CLAUDE.md`'s duplicate list replaced with a pointer — one canonical spec now.
+- `content/regions/negev-en.post.md` reordered to match; Drive doc regenerated (`blog-region-negev-en 26-07-01-08-17`, verified by direct read) — still needs "Attach new version" in jlmops PublishingView to supersede the old doc.
+- Next: user should attach the new Negev doc version in jlmops; future content sessions should self-verify against `_post-template.md` directly rather than any summary.
+
+## 2026-07-01 — Corrected false "manager writes the email" policy
+
+- `marketing/NEWSLETTER_PLAN.md` stated the companion email is manager-written, session-reads-verbatim. User corrected this as flatly false: the session drafts 100% of the post and every extract (including Email Subject/Preview/Body/CTA) from seed facts and guidance; the manager's job is to edit the English and translate to Hebrew, not originate content. Doc corrected.
+- Also fixed `content/CLAUDE.md` (table + work order) and `_post-template.md` to say "session drafts, manager edits/translates" for Email fields instead of "manager fills in." `REGION_POSTS_PLAN.md`'s per-post checklist was missing Email fields entirely — added.
+- Drafted the actual Negev Email Subject/Preview/Body/CTA (previously blank stubs) into `content/regions/negev-en.post.md`; regenerated its Drive doc (`blog-region-negev-en 26-07-01-09-23`) to match — still needs "Attach new version" in jlmops.
+- Also this session: added jlmops "Attach new version" capability directly to the Library detail drawer (`LibraryView.html` + `PublishingView.html`), deployed live @423.
+- Next: user attaches the new Negev doc version in jlmops; watch that future drafting sessions actually draft Email fields per the corrected policy (they were the recurring miss).
+
+## 2026-07-01 — Modal-stacking fix on library drawer actions, @424-@425
+
+- User reported the new "Attach new version" modal opened behind the entity drawer. Root cause: both are raw-toggled `.modal-overlay` elements at static `z-index:1050`; the drawer isn't in `ModalOverlay`'s stack, so DOM order (not z-index) decides paint order, and the drawer rendered after the modal. Fixed by moving the modal markup below the drawer's closing tag in both `LibraryView.html` and `PublishingView.html` (@424).
+- Same latent bug existed on the pre-existing "Create Content Tasks" modal (identical pattern, never previously triggered from an open drawer in a way that surfaced it) — fixed the same way, both files (@425).
+- User smoke-tested both fixes: confirmed working.
+
 ## 2026-06-30 — jlmops @420-@422: new product onboarding complete + Active Plans tracking
 
 - @420: Track C — `acceptProductSuggestion` now seeds WebXltM at accept time via `WooApiService.fetchProductById(wpmId)` → `translations.he`. Closes translation validation gap immediately on accept.

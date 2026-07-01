@@ -340,52 +340,6 @@
 
 </div>
 
-<!-- Content Stream Modal -->
-<div class="modal-overlay" id="pvContentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Create Content Tasks</h6>
-    </div>
-    <div style="padding:15px;">
-      <div class="form-group">
-        <label class="small font-weight-bold">Type</label>
-        <select class="form-control form-control-sm" id="pv-content-type">
-          <option value="blog">Blog</option>
-          <option value="email">Email</option>
-          <option value="news">News (newsletter)</option>
-          <option value="other">Other</option>
-          <option value="social">Social</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Content Name</label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-name" placeholder="e.g., Intensity, About Page">
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-stream-id" placeholder="e.g., INT, ABOUT">
-        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
-        <small class="text-muted">Comma-separated source slugs.</small>
-      </div>
-      <div class="form-group mb-0">
-        <label class="small font-weight-bold">Stages</label>
-        <div id="pv-content-stages-checkboxes" class="d-flex flex-wrap">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('pvContentStreamModal').style.display='none'">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="pv-btn-create-content-stream">Create Tasks</button>
-    </div>
-  </div>
-</div>
-
 <!-- New Campaign Modal -->
 <div class="modal-overlay" id="pvNewCampaignModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div style="background:white;border-radius:4px;max-width:460px;width:90%;">
@@ -464,6 +418,77 @@
       <div class="pv-drawer-section"><h6>References in</h6><div id="pv-drawer-refs-in"><span class="placeholder">—</span></div></div>
       <div class="pv-drawer-section"><h6>State history</h6><div id="pv-drawer-state-history"><span class="placeholder">—</span></div></div>
       <div class="pv-drawer-section"><h6>Activity log</h6><div id="pv-drawer-activity-log"><span class="placeholder">—</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Content Stream Modal. Placed AFTER the entity drawer in the DOM (see the
+     Attach-new-version modal comment below for why: raw-toggled .modal-overlay
+     + static z-index means paint order decides stacking, not z-index). -->
+<div class="modal-overlay" id="pvContentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Create Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Type</label>
+        <select class="form-control form-control-sm" id="pv-content-type">
+          <option value="blog">Blog</option>
+          <option value="email">Email</option>
+          <option value="news">News (newsletter)</option>
+          <option value="other">Other</option>
+          <option value="social">Social</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Content Name</label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-name" placeholder="e.g., Intensity, About Page">
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-stream-id" placeholder="e.g., INT, ABOUT">
+        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="pv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
+        <small class="text-muted">Comma-separated source slugs.</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Stages</label>
+        <div id="pv-content-stages-checkboxes" class="d-flex flex-wrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('pvContentStreamModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-create-content-stream">Create Tasks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Attach new version modal (drawer-scoped) — replaces the entity's current
+     Doc with a new Drive file, reached directly from the library card with one
+     click (no task required). Placed AFTER the entity drawer in the DOM: both
+     are raw-toggled .modal-overlay elements at the same static z-index, and the
+     entity drawer isn't run through ModalOverlay's stack (it's shown via a
+     direct style.display flip), so paint order — not z-index — decides which
+     one is on top. Keep this block below the drawer's closing tag. -->
+<div class="modal-overlay" id="pvDrawerAttachModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Attach new version</h6>
+    </div>
+    <div style="padding:15px;">
+      <p class="mb-2 small">Paste the Drive URL of the new Doc for <strong id="pv-drawer-attach-slug"></strong>. The current Doc is archived and superseded.</p>
+      <input type="url" class="form-control form-control-sm" id="pv-drawer-attach-url" placeholder="https://docs.google.com/document/d/..." />
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('pvDrawerAttachModal')">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="pv-btn-drawer-attach-submit">Attach</button>
     </div>
   </div>
 </div>
@@ -568,6 +593,8 @@
       if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
       var submitBtn = document.getElementById('pv-btn-create-content-stream');
       if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
+      var drawerAttachSubmitBtn = document.getElementById('pv-btn-drawer-attach-submit');
+      if (drawerAttachSubmitBtn) drawerAttachSubmitBtn.addEventListener('click', submitDrawerAttachDoc);
 
       document.getElementById('pv-btn-create-campaign').addEventListener('click', createCampaign);
 
@@ -1556,6 +1583,7 @@
       var buttons = [];
       if (entity && entity.docUrl) {
         buttons.push('<button class="btn btn-sm btn-light" onclick="PublishingView.drawerOpenInDrive()">&#8599; Open Doc</button>');
+        buttons.push('<button class="btn btn-sm btn-light" onclick="PublishingView.drawerAttachNewVersion()">Attach new version</button>');
       }
       buttons.push('<button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.drawerCreateContentTasks()">Create Content Tasks</button>');
       if (entity && entity.slug && entity.slug.length > 3 && entity.slug.slice(-3) === '-en') {
@@ -1572,6 +1600,43 @@
 
     function drawerOpenInDrive() {
       if (state.currentEntity && state.currentEntity.docUrl) window.open(state.currentEntity.docUrl, '_blank', 'noopener');
+    }
+
+    // Replace the entity's current Doc from the drawer directly — same
+    // WebAppLibrary_attachExistingDoc endpoint TaskPacks uses per-task, called
+    // here with the entity slug so it reaches the current version with one click
+    // regardless of which (or whether any) task produced it.
+    function drawerAttachNewVersion() {
+      if (!state.currentEntity) return;
+      document.getElementById('pv-drawer-attach-slug').textContent = state.currentEntity.slug;
+      document.getElementById('pv-drawer-attach-url').value = '';
+      ModalOverlay.open('pvDrawerAttachModal');
+    }
+
+    function submitDrawerAttachDoc() {
+      if (!state.currentEntity) return;
+      var entityId = state.currentEntity.slug;
+      var url = document.getElementById('pv-drawer-attach-url').value.trim();
+      if (!url) { TaskWidgets.toast('Drive URL required', true); return; }
+      var btn = document.getElementById('pv-btn-drawer-attach-submit');
+      btn.disabled = true; btn.textContent = 'Attaching...';
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false; btn.textContent = 'Attach';
+          if (!result || !result.ok) {
+            TaskWidgets.toast((result && result.error) || 'Failed', true);
+            return;
+          }
+          ModalOverlay.close('pvDrawerAttachModal');
+          TaskWidgets.toast(result.superseded ? 'New version attached, previous archived' : 'Doc attached');
+          _loadData();
+          _loadEntityDrawer(entityId);
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false; btn.textContent = 'Attach';
+          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
+        })
+        .WebAppLibrary_attachExistingDoc({ entityId: entityId, driveUrl: url });
     }
 
     function drawerCreateContentTasks() {
@@ -1641,6 +1706,7 @@
       backEntityDrawer: backEntityDrawer,
       closeEntityDrawer: closeEntityDrawer,
       drawerOpenInDrive: drawerOpenInDrive,
+      drawerAttachNewVersion: drawerAttachNewVersion,
       drawerCreateContentTasks: drawerCreateContentTasks,
       drawerCreateHeSibling: drawerCreateHeSibling,
       drawerRequestCorrection: drawerRequestCorrection,

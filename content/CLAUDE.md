@@ -92,46 +92,52 @@ Each blog post lives as a `.md` file (one EN, one HE) with a fixed section struc
 
 ### Required sections (in this order)
 
+This table must mirror `_post-template.md` exactly — if they disagree, the template file is stale and gets fixed, not read around. Body sits right after Title: a human opening the file reads the post first, then sees the derived fields below it.
+
 | Section | Length | Purpose |
 |---|---|---|
 | `## TITLE` | 50–70 chars | Final post title |
+| `## BODY` | 800–1,200 words | The full post, plain prose during drafting. Write/lock this first — everything below is derived from it. |
 | `## EXCERPT` | 1–2 sentences (~150 chars) | WordPress post excerpt — category/search listings |
-| `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Manager fills in after editorial review. |
-| `## EMAIL PREVIEW TEXT` | 1–2 sentences | Preheader shown in email clients before opening. Manager fills in. |
-| `## EMAIL BODY` | full email copy | Companion email body. Manager writes after editorial review. |
-| `## EMAIL CTA` | one line | Email call-to-action button/link text. Manager fills in. |
+| `## FEATURED MEDIA` | — | WP media ID, stamped by the per-post image-upload script |
+| `## EMAIL SUBJECT` | one line | Subject line for the companion promotional email. Session drafts from the locked body, same as every other extract; manager edits/translates, doesn't originate it. |
+| `## EMAIL PREVIEW TEXT` | 1–2 sentences | Preheader shown in email clients before opening. Session drafts; manager edits/translates. |
+| `## EMAIL BODY` | full email copy | Companion email body — post-promo-led, features this post (see `marketing/NEWSLETTER_PLAN.md` Companion Email Campaign). Session drafts; manager edits/translates. |
+| `## EMAIL CTA` | one line | Email call-to-action button/link text. Session drafts; manager edits/translates. |
 | `## NEWSLETTER EXCERPT (web/social)` | ~50 words | Social posts, email teasers, web snippets — ends with `[Read the full guide →]` |
 | `## PRINT NEWSLETTER BODY` | ~150–200 words | Printed Wine Talk insert (left column). Self-contained — reader may not scan the QR. Signs off `— Evyatar` |
 | `## CTA` | one line | End-of-post link copy. Default: `Read the full guide →` |
 | `## IMAGE PROMPTS` | one prompt per illustration | Canva prompts. Impressionist oil painting style |
-| Body HTML | full post | Goes after the line `Paste below into WordPress Code Editor:` |
+| `## NOTES` | optional | Source docs, SEO meta draft, pre-publish checklist, manifest slug. Human-facing only. |
+| Body → HTML (publish-time only) | full post | Publishing session converts `## BODY` prose into HTML and moves it to the very end of the file, after the line `Paste below into WordPress Code Editor:` |
 
 ### Parser dependencies
 
 `content/push-posts.js` parses three things from each source file:
-- `## TITLE` → WP post title
-- `## EXCERPT` → WP excerpt field
-- Everything after `Paste below into WordPress Code Editor:` → WP post body
+- `## TITLE` → WP post title. **Must be the first line of the file** — the regex anchors to file-start, not just any `## ` boundary.
+- `## EXCERPT` → WP excerpt field. Position-independent.
+- Everything after `Paste below into WordPress Code Editor:` → WP post body. **Must be the last thing in the file** — the parser captures from that marker to end-of-file; anything placed after it (Notes, Image Prompts, etc.) would get swallowed into the WordPress post body.
 
-The other sections (Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) are human-facing references — the parser ignores them, they're never sent to WordPress. Adding new `## `-headed sections between EXCERPT and the body marker is safe.
+Every other `## `-headed section — including `## BODY` itself — is a human-facing reference the parser ignores. This is why `## BODY` can sit right after Title for readability: only the two constraints above are load-bearing.
 
 ### Work order (how a post gets produced)
 
 1. Topic + angle agreed
-2. **Body draft** — first pass from source material or outline. Write as plain prose under `## BODY`. NO HTML, no "Paste below" block — that is added by the publishing session only.
+2. **Body draft** — first pass from source material or outline, written directly into `## BODY` (sits right after Title in the template). Plain prose. NO HTML, no "Paste below" block — that is added by the publishing session only.
 3. Editorial review + revisions until body is locked (manager edits the prose in the file or Drive doc)
 4. **Title** confirmed
 5. **WP Excerpt** — derived from locked body
-6. **Newsletter Excerpt (web)** — derived from locked body
-7. **Print Newsletter Body** — derived from locked body, fuller treatment
-8. **CTA**
-9. **Image prompts**
-10. HE translation — entire chain duplicates into the HE file last
-11. **Publishing session only** — converts `## BODY` prose to HTML, replaces it with `Paste below into WordPress Code Editor:` + HTML block, then runs `push-posts.js`.
+6. **Email fields** (Subject/Preview/Body/CTA) — drafted by the session from the locked body, same pass as the rest of the post's derivatives
+7. **Newsletter Excerpt (web)** — derived from locked body
+8. **Print Newsletter Body** — derived from locked body, fuller treatment
+9. **CTA**
+10. **Image prompts**
+11. HE translation — entire chain duplicates into the HE file last
+12. **Publishing session only** — converts `## BODY` prose to HTML, replaces it with `Paste below into WordPress Code Editor:` + HTML block **moved to the end of the file** (the parser reads to end-of-file from that marker), then runs `push-posts.js`.
 
-**A drafting session stops after step 9.** Steps 10–11 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
+**A drafting session stops after step 10.** Steps 11–12 are separate sessions. Never add HTML or copy-paste instructions to a draft file.
 
-Body is always first; derivatives are extracted/condensed from a locked body.
+Body is always written and locked first, in place at the top of the file; derivatives are extracted/condensed from it after.
 
 ### Backfill
 
