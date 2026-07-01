@@ -41,6 +41,12 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Found along the way (logged, not fixed): homepage tracked as two separate URLs in GSC (`http://` vs `https://`), suggesting incomplete canonicalization — `.claude/bugs.md`.
 - Next: watch the following `jlmops-status.md` refresh for the first real week-over-week GSC delta.
 
+## 2026-07-01 — HTTPS investigation → found + fixed a bigger mixed-content bug
+
+- User asked to investigate why GSC shows the homepage as two URLs (http/https) given HTTPS "should be enforced long ago." Verified live via `curl -I`: `http://jlmwines.com/` → clean single-hop 301 → `https://jlmwines.com/` (200). Enforcement is correct; the GSC split is residual Google-index history, not a live gap. (`http://www.jlmwines.com/` takes a redundant extra hop — minor, noted, not fixed.)
+- Investigating the related open bug (mixed-content HTTP image, logged 2026-05-11) via the WP REST API turned up a much bigger scope than the ticket described: **9 images referenced via `http://` on both homepages** (EN Page 9019 `home-elegant` + HE Page 64199), not 1 image on HE only. Fixed both pages with a protocol-only string replace (`http://jlmwines.com/wp-content/uploads/` → `https://`), leaving unrelated `w3.org` SVG namespace strings untouched. Verified zero remaining refs in both the saved content and the live public pages.
+- `.claude/bugs.md` and `plans/STATUS.md` updated to reflect actual scope and resolution.
+
 ## 2026-07-01 — Portfolio kernel: enforce plan graduation/archiving + mid-session staleness fix
 
 - User's underlying complaint across this whole session: sessions keep failing to maintain docs "as prescribed" — the rules already existed (graduation rule, staleness contract) but had no concrete trigger, so plans sat at 100% done, unarchived, with facts never graduated. Strengthened `projects/.claude/CLAUDE.md` session-end protocol step 2 with an explicit checkable trigger (any plan touched this session that's now fully done gets graduated + archived same-session, not deferred to cleanup), plus a "mid-session staleness" rule: fix a discovered-stale doc immediately, don't flag for later.
