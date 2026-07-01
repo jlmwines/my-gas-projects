@@ -326,8 +326,19 @@ const StatusReportService = (function() {
     return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
   }
 
-  // GSC (Search Analytics for Sheets) output. Requires a Date column — if the
-  // report is still Page-grouped only, returns ok:false with that reason.
+  // GSC (Search Analytics for Sheets) output. By design (per the setup guide
+  // and business/KPI.md — GSC is a page-level diagnostic tool, not a tracked
+  // trend metric; GA4 carries the trend role) the sheet is Page-grouped with
+  // NO Date column — Clicks/Impressions/Position per page, trailing 90 days.
+  // Reports total clicks/impressions + top pages by clicks (the "which content
+  // is working for organic discovery" signal), and derives a week-over-week
+  // delta by comparing against the last pull's totals stored in SysConfig
+  // (system.kpi.gsc_last_snapshot) — the sheet never needs a Date column for
+  // this, jlmops just remembers its own history across refreshes.
+  function _shortPage(url) {
+    return String(url || '').replace(/^https?:\/\/[^/]+/, '') || '/';
+  }
+
   function _readGsc(cfg) {
     if (!cfg || !cfg.id) return { ok: false, reason: 'not configured' };
     let ss;
@@ -342,22 +353,33 @@ const StatusReportService = (function() {
       if (row.indexOf('clicks') !== -1 && row.indexOf('impressions') !== -1) { hr = i; H = row; break; }
     }
     if (hr === -1) return { ok: false, reason: 'header row not found' };
-    const dCol = H.indexOf('date');
-    if (dCol === -1) return { ok: false, reason: 'no Date dimension yet (still Page-grouped)' };
-    const clCol = H.indexOf('clicks'), imCol = H.indexOf('impressions'), poCol = H.indexOf('position');
-    const wk = _windowStart(7), mo = _monthStart();
-    const blank = () => ({ clicks: 0, impr: 0, posW: 0 });
-    const agg = { w: blank(), m: blank() }; let maxD = null;
+    const pgCol = H.indexOf('page'), clCol = H.indexOf('clicks'), imCol = H.indexOf('impressions'), poCol = H.indexOf('position');
+    let totClicks = 0, totImpr = 0, posW = 0;
+    const rows = [];
     for (let i = hr + 1; i < vals.length; i++) {
-      const dv = vals[i][dCol]; if (dv === '' || dv == null) continue;
-      const d = _parseYmd(dv); if (!d) continue;
-      if (!maxD || d > maxD) maxD = d;
       const cl = _num(vals[i][clCol]), im = _num(vals[i][imCol]), po = poCol !== -1 ? _num(vals[i][poCol]) : 0;
-      const add = b => { b.clicks += cl; b.impr += im; b.posW += po * im; };
-      if (d >= mo) add(agg.m);
-      if (d >= wk) add(agg.w);
+      if (!cl && !im) continue;
+      totClicks += cl; totImpr += im; posW += po * im;
+      rows.push({ page: pgCol !== -1 ? vals[i][pgCol] : '', clicks: cl, impr: im, pos: po });
     }
-    return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
+    if (!rows.length) return { ok: false, reason: 'no data rows' };
+    rows.sort(function(a, b) { return b.clicks - a.clicks; });
+    const top = rows.slice(0, 5);
+    const avgPos = totImpr ? (posW / totImpr) : 0;
+
+    let delta = null;
+    try {
+      const prevCfg = ConfigService.getConfig('system.kpi.gsc_last_snapshot');
+      if (prevCfg && prevCfg.value) {
+        const prev = JSON.parse(prevCfg.value);
+        delta = { clicks: totClicks - prev.clicks, impr: totImpr - prev.impr, sinceDate: prev.date };
+      }
+    } catch (e) { /* no snapshot yet — first run, that's fine */ }
+    try {
+      ConfigService.setConfig('system.kpi.gsc_last_snapshot', 'value', JSON.stringify({ date: _il(new Date()), clicks: totClicks, impr: totImpr }));
+    } catch (e) { /* non-fatal — trend just won't advance this cycle */ }
+
+    return { ok: true, totClicks: totClicks, totImpr: totImpr, avgPos: avgPos, top: top, delta: delta };
   }
 
   function _trafficBlock(allConfig) {
@@ -373,10 +395,11 @@ const StatusReportService = (function() {
     }
     const gs = _readGsc(allConfig['system.sheet.gsc_report']);
     if (gs.ok) {
-      const pos = w => w.impr ? (w.posW / w.impr).toFixed(1) : '-';
-      lines.push('- GSC (latest data ' + _ilDate(gs.maxDate) + '):');
-      lines.push('  - 7d: ' + gs.w.clicks + ' clicks · ' + gs.w.impr + ' impr · avg pos ' + pos(gs.w));
-      lines.push('  - MTD: ' + gs.m.clicks + ' clicks · ' + gs.m.impr + ' impr · avg pos ' + pos(gs.m));
+      const d = n => n == null ? '' : (n >= 0 ? '+' + n : String(n));
+      lines.push('- GSC (trailing 90d, page-grouped snapshot):');
+      lines.push('  - Total: ' + gs.totClicks + ' clicks · ' + gs.totImpr + ' impr · avg pos ' + gs.avgPos.toFixed(1) +
+        (gs.delta ? ' (Δ vs last pull: ' + d(gs.delta.clicks) + ' clicks, ' + d(gs.delta.impr) + ' impr, since ' + gs.delta.sinceDate + ')' : ' (first snapshot — trend starts next pull)'));
+      lines.push('  - Top pages: ' + gs.top.map(function(r) { return _shortPage(r.page) + ' (' + r.clicks + ' clicks, pos ' + r.pos.toFixed(1) + ')'; }).join('; '));
     } else {
       lines.push('- GSC: no data (' + gs.reason + ')');
     }

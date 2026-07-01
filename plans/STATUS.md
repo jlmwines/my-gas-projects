@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-01 — @426 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy); GSC KPI data_tab config fixed (was reading the wrong tab).
+**Updated:** 2026-07-01 — @427 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy); GSC KPI reporting reworked to match its actual Page-grouped design (top pages + snapshot-based trend) and confirmed live.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @425; new product onboarding fully shipped (Track B+C complete — WebXltM seeded at accept, hot-link deleted); Library detail drawer (LibraryView + PublishingView) can now attach a new Doc version directly, no task required; Active Plans tracking added to STATUS.
+- **jlmops** (GAS backend) — live @427; new product onboarding fully shipped (Track B+C complete — WebXltM seeded at accept, hot-link deleted); Library detail drawer (LibraryView + PublishingView) can now attach a new Doc version directly, no task required; GSC KPI feed live (top pages + week-over-week trend via SysConfig snapshot); Active Plans tracking added to STATUS.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post fully drafted (body + all extracts, including Email Subject/Preview/Body/CTA); pending winery verification + HE translation before publish. Content-workflow docs corrected: `_post-template.md` orders Body right after Title; session drafts every extract (Email fields included) from seed facts, manager edits/translates.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing. **June Issue #2** — AYIW email (EN+HE) scheduled 2026-06-24; print newsletter EN+HE produced + registered (`print-newsletter-2026-06-en/he`), ready to print + distribute. July entities pre-registered (`email-ayiw-2026-07-en/he`, `print-newsletter-2026-07-en/he`). 2026 calendar filled through December (slots A–F in `content/PUBLICATION_CALENDAR.md`). Plan: `content/REGION_POSTS_PLAN.md`.
@@ -18,11 +18,11 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @426 · theme v1.2.30 |
+| Deploy Version | jlmops @427 · theme v1.2.30 |
 | Deploy Date | jlmops 2026-07-01 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
-| SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
+| SEO | 87/100 (RankMath audit 2026-05-31). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post) + `.claude/bugs.md` (homepage tracked as separate http/https URLs in GSC). |
 | Open Bugs | See `.claude/bugs.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md`. Open: Session F (sync-hardening, pending staging repro), H (timestamp/date-format audit), I (count-task creation audit). |
 | Mobile PageSpeed | FCP ~3.5 / LCP ~4.2 (at baseline). Remaining lever: render-blocking pile (main.css critical-CSS + jQuery defer). |
 | Desktop PageSpeed | EN FCP 0.7 / LCP 0.8 · HE FCP 0.7 / LCP 1.2 |
@@ -56,9 +56,6 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
 - **Theme** — live v1.2.30; Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
 
-### Pending verification (watch items)
-
-- **GSC KPI data feed** (@426, 2026-07-01): `system.sheet.gsc_report.data_tab` was `"JLM GSC Weekly"` (the workbook's own title, matching no real tab) — `StatusReportService._readGsc` silently fell back to `Sheets()[0]`, reading old Page-only data and reporting "no Date dimension yet" even after the dimension was added 2026-06-10 into a separate dated tab. Fixed to `"Sheet1"` and deployed. **User to do:** (1) run `rebuildSysConfigFromSource()` to push the corrected value into the live SysConfig sheet; (2) confirm in the GSC sheet's Search Analytics for Sheets add-on that its recurring report writes Date-dimensioned data into `Sheet1` itself (not a new dated tab each run) — the one extra dated tab was removed. Verify by reading `jlmops-status.md` after the next GSC pull: should show `GSC (latest data ...)` instead of `no data`.
 - **Content-library versioning** (@316–@321, Decision 7 / Plan B): attach-to-replace + supersede→`_archive` confirmed live on the Negev blog task; version-retirement UI + lock-modal Cancel + admin pack spacing smoked (@319/@320). Still to smoke: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; and `runLibraryDuplicateReconcile` from the editor (expect `0 resolved` on clean folders). Migration `runLibraryFileNameMigration` already run (14 renamed).
 - **Correct Product Name tool** (@306, deployed live 2026-06-16, no /dev smoke): Admin → Products → **SKU Management tab** → Correct Product Name button → modal → search a product, edit EN and/or HE, Save; confirm WebProdM `wpm_PostTitle` + WebDetM name cells changed and a "Name Update" row appears in the **Recent SKU Updates** table in that same tab. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** (@307–@311, deployed live 2026-06-17, only the suggestion sort smoked): plan (archived, fully shipped) → `jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`; current behavior → `jlmops/docs/WORKFLOWS.md` §14. Smoke the rest — (a) Admin Suggestions/Linkage Accept & Link buttons open on a name with a quote; (b) Manager Products loads fast with Detail Updates open + 3 collapsed cards showing count badges (gray=0, colored when pending); expand each, confirm category/search/Suggest-Selected work; (c) a new-product onboarding task shows the EN name (not blank) in the Manager preview/header; (d) Admin Review Submissions shows the WebDetS staging name; (e) Admin New Products collapsed header shows its count badge.

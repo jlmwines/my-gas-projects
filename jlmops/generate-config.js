@@ -137,7 +137,8 @@ function rebuildSysConfigFromSource() {
         { name: 'system.crm_intelligence.last_run', key: 'value' },
         { name: 'system.sync.state', key: 'json' },
         { name: 'woo.api', key: 'products_last_pull' },
-        { name: 'woo.api', key: 'orders_last_pull' }
+        { name: 'woo.api', key: 'orders_last_pull' },
+        { name: 'system.kpi.gsc_last_snapshot', key: 'value' }
     ];
 
     try {
