@@ -326,6 +326,47 @@ const StatusReportService = (function() {
     return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
   }
 
+  /**
+   * KPI #1 (organic traffic, EN/HE split) - reads the dedicated audience
+   * report (same workbook as ga4_report, different tab). Audience values
+   * present: All Users, HE IL, EN IL, Not IL, Purchasers. Only HE IL/EN IL/
+   * Not IL are summed (Not IL presumed English per the user, 2026-07-02);
+   * All Users and Purchasers are NOT additive with the language audiences
+   * and must be excluded, not summed in.
+   */
+  function _readGa4Audience(idCfg, tabCfg) {
+    const id = idCfg && idCfg.value, dataTab = tabCfg && tabCfg.value;
+    if (!id) return { ok: false, reason: 'not configured' };
+    let ss;
+    try { ss = SpreadsheetApp.openById(id); } catch (e) { return { ok: false, reason: 'open failed: ' + e.message }; }
+    let sheet = dataTab ? ss.getSheetByName(dataTab) : null;
+    if (!sheet) return { ok: false, reason: 'no sheet' };
+    const vals = sheet.getDataRange().getValues();
+    let hr = -1, H = null;
+    for (let i = 0; i < Math.min(vals.length, 20); i++) {
+      const row = vals[i].map(c => String(c).trim().toLowerCase());
+      if (row.indexOf('date') !== -1 && row.indexOf('audiencename') !== -1) { hr = i; H = row; break; }
+    }
+    if (hr === -1) return { ok: false, reason: 'header row not found' };
+    const c = { date: H.indexOf('date'), aud: H.indexOf('audiencename'), s: H.indexOf('sessions') };
+    const BUCKET = { 'he il': 'HE', 'en il': 'EN', 'not il': 'EN' };
+    const wk = _windowStart(7), mo = _monthStart();
+    const blank = () => ({ EN: 0, HE: 0 });
+    const agg = { w: blank(), m: blank() };
+    let maxD = null;
+    for (let i = hr + 1; i < vals.length; i++) {
+      const dv = vals[i][c.date]; if (dv === '' || dv == null) continue;
+      const d = _parseYmd(dv); if (!d) continue;
+      const bucket = BUCKET[String(vals[i][c.aud] || '').trim().toLowerCase()];
+      if (!bucket) continue; // excludes All Users, Purchasers, anything unrecognized
+      if (!maxD || d > maxD) maxD = d;
+      const sess = _num(vals[i][c.s]);
+      if (d >= mo) agg.m[bucket] += sess;
+      if (d >= wk) agg.w[bucket] += sess;
+    }
+    return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
+  }
+
   // GSC (Search Analytics for Sheets) output. By design (per the setup guide
   // and business/KPI.md — GSC is a page-level diagnostic tool, not a tracked
   // trend metric; GA4 carries the trend role) the sheet is Page-grouped with
@@ -392,6 +433,14 @@ const StatusReportService = (function() {
       lines.push('  - MTD: ' + ga.m.s + ' sessions · ' + ga.m.u + ' users · ' + ga.m.nu + ' new · ' + ga.m.ke + ' key events · ₪' + Math.round(ga.m.rev));
     } else {
       lines.push('- GA4: no data (' + ga.reason + ')');
+    }
+    const gaAud = _readGa4Audience(allConfig['system.sheet.ga4_audience_report_id'], allConfig['system.sheet.ga4_audience_report_tab']);
+    if (gaAud.ok) {
+      lines.push('- GA4 organic traffic by audience (latest data ' + _ilDate(gaAud.maxDate) + '):');
+      lines.push('  - 7d: ' + gaAud.w.EN + ' EN · ' + gaAud.w.HE + ' HE sessions');
+      lines.push('  - MTD: ' + gaAud.m.EN + ' EN · ' + gaAud.m.HE + ' HE sessions');
+    } else {
+      lines.push('- GA4 audience split: no data (' + gaAud.reason + ')');
     }
     const gs = _readGsc(allConfig['system.sheet.gsc_report']);
     if (gs.ok) {
@@ -609,4 +658,41 @@ const StatusReportService = (function() {
  */
 function runRefreshKpiBlock() {
   return StatusReportService.refreshKpiBlock(Utilities.getUuid());
+}
+
+/**
+ * One-off diagnostic: lists every actual tab name in the GA4 workbook,
+ * each wrapped in brackets so trailing/leading whitespace is visible.
+ * Check View > Logs (or Executions) after running to see the output.
+ */
+function runListGa4Tabs() {
+  const allConfig = ConfigService.getAllConfig();
+  const id = allConfig['system.sheet.ga4_report'].id;
+  const ss = SpreadsheetApp.openById(id);
+  const names = ss.getSheets().map(function(s) { return '[' + s.getName() + ']'; });
+  Logger.log(names.join('\n'));
+  return names;
+}
+
+/**
+ * One-off diagnostic: dumps exactly what live SysConfig resolves for
+ * system.sheet.ga4_audience_report, and whether getSheetByName finds it
+ * using that resolved value directly (not a stand-in). Check View > Logs.
+ */
+function runCheckGa4AudienceConfig() {
+  const allConfig = ConfigService.getAllConfig();
+  const cfg = allConfig['system.sheet.ga4_audience_report'];
+  const out = { cfg: cfg };
+  if (cfg && cfg.id) {
+    try {
+      const ss = SpreadsheetApp.openById(cfg.id);
+      out.openedOk = true;
+      out.sheetFound = !!(cfg.data_tab && ss.getSheetByName(cfg.data_tab));
+      out.allTabs = ss.getSheets().map(function(s) { return '[' + s.getName() + ']'; });
+    } catch (e) {
+      out.openError = e.message;
+    }
+  }
+  Logger.log(JSON.stringify(out, null, 2));
+  return out;
 }

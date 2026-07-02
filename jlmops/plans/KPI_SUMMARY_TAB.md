@@ -29,7 +29,9 @@ The four jlmops-source KPIs from `business/KPI.md`:
 | 4 | 90-day return rate | `SysContacts.sc_DaysSinceOrder` ≤ 90 / total core customers |
 | 5 | Newsletter (subscribers + open/click) | `SysContacts.sc_IsSubscribed` for subscriber count; `SysCampaigns.scm_*` for engagement |
 
-The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) are out of scope for `SysKPISummary` itself, but KPI #1's EN/HE split should be added to the GA4 block `jlmops-status.md` already reads (per `OPS_SESSION_BRIDGE_PLAN.md`) rather than left to the user's separately-owned sheet — that separate-sheet framing predates the GA4 pull shipping. Confirm feasibility (does the GA4 Sheets add-on export a Language dimension) before committing to this as part of the same build.
+The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) are out of scope for `SysKPISummary` itself, but KPI #1's EN/HE split should be added to the GA4 block `jlmops-status.md` already reads (per `OPS_SESSION_BRIDGE_PLAN.md`) rather than left to the user's separately-owned sheet — that separate-sheet framing predates the GA4 pull shipping.
+
+**New finding (2026-07-02):** GA4 already has audiences defined for this — `Not IL`, `EN IL`, `HE IL` (Not IL presumed English) — but this is not yet reflected anywhere: not in the Sheets add-on report jlmops reads (`_readGa4` in `StatusReportService.js` reads one flat date/sessions/users row set, no audience dimension in its columns), not in any doc. Before `_readGa4` can be extended, the GA4 Sheets add-on report itself needs reconfiguring (a manual step in the Sheets/GA4 UI, same as the original 2026-05-04 setup) to break out by these three audiences — either as separate tabs or an added Audience column. Code change follows once that export exists; nothing to build against yet.
 
 ---
 

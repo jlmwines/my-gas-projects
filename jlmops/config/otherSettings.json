@@ -74,6 +74,22 @@
         ""
     ],
     [
+        "system.sheet.ga4_audience_report_id",
+        "GA4 organic-traffic-by-audience workbook id, same workbook as ga4_report. Split into two single-param entries (see this + _tab below) because ConfigService.loadConfig only parses a second P03/P04 pair for schema.data.*/schema.log.* settings - a two-param system.* row like this used to be silently truncated to just the first pair (2026-07-02 finding, see .claude/bugs.md).",
+        "stable",
+        "value",
+        "12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU",
+        "", "", "", "", "", "", ""
+    ],
+    [
+        "system.sheet.ga4_audience_report_tab",
+        "GA4 organic-traffic-by-audience report tab name, workbook id in ga4_audience_report_id. Dimensions: date, audienceName, sessionMedium (filtered to exactly 'organic'). Audiences present: All Users, HE IL, EN IL, Not IL, Purchasers - only HE IL/EN IL/Not IL are relevant (Not IL presumed English); All Users and Purchasers must be excluded from any sum, they are not additive with the language audiences.",
+        "stable",
+        "value",
+        "Audience Weekly",
+        "", "", "", "", "", "", ""
+    ],
+    [
         "system.sheet.gsc_report",
         "GSC monthly export workbook (id) + data-tab name. Read by StatusReportService.refreshKpiBlock. data_tab is the literal sheet-tab name (Sheet1), not the workbook title — a prior value ('JLM GSC Weekly', the workbook's own title) never matched any real tab, so the reader silently fell back to Sheets()[0]. Sheet1 is the single stable tab going forward (2026-07-01) — the one extra dated tab the Search Analytics for Sheets add-on had created was removed; the add-on's recurring report must write its Date-dimensioned pull into Sheet1 itself, not spawn a new tab each run.",
         "stable",

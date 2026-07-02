@@ -138,4 +138,4 @@ Each KPI below maps to one of those three.
 
 ---
 
-Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; 4 of the 6 KPIs below now compute daily via `SysKPISummary` and surface in the "Business KPIs" block — KPI #1 organic traffic EN/HE split and #6 organic-source engagement remain unbuilt, still owned by the user's separate GA4 sheet)
+Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; 5 of 6 KPIs now compute automatically — 4 via `SysKPISummary`'s "Business KPIs" block, KPI #1 organic-traffic EN/HE split via a dedicated GA4 audience report ("Audience Weekly" tab, audiences Not IL/EN IL/HE IL) surfaced in the Traffic block. Only KPI #6 organic-source engagement remains unbuilt.)
