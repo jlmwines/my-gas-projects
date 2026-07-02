@@ -723,6 +723,7 @@ function HousekeepingService() {
       { name: 'checkBruryaReminder', fn: () => this.checkBruryaReminder() },
       { name: 'checkCouponsReminder', fn: () => this.checkCouponsReminder() },
       { name: 'refreshCrmContacts', fn: () => this.refreshCrmContacts() },
+      { name: 'recomputeKpiSummary', fn: () => { KPISummaryService.recomputeCurrent(); KPISummaryService.maybeCloseMonth(); } },
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'reconcileLibraryDuplicates', fn: () => LibraryService.reconcileLibraryDuplicates() },

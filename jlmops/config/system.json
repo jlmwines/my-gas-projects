@@ -868,6 +868,14 @@
         "", "", "", "", "", "", "", ""
     ],
     [
+        "kpi.first_purchase_coupons",
+        "Comma-separated coupon codes that count as first-purchase coupons for KPI #3 (see jlmops/plans/KPI_SUMMARY_TAB.md). Matched case-insensitively.",
+        "stable",
+        "value",
+        "50NEW",
+        "", "", "", "", "", "", "", ""
+    ],
+    [
         "system.deployment.pinned_id",
         "Pinned Apps Script deployment ID for the live JLM Wines URL. Source of truth is jlmops/.deployment-id; this config row mirrors it. The deploy.ps1 wrapper deploys with --deploymentId <this> and verifies it survived, so bare clasp deploy can't spawn orphan URLs. (No in-script drift check runs: the former validateDeployment detector was removed 2026-06-03 once the wrapper closed the drift source — see .claude/bugs.md 2026-05-27.)",
         "stable",

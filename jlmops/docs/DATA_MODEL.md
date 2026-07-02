@@ -10,6 +10,10 @@ To ensure clarity, consistency, and robust programmatic access, all sheets and c
 
 Sheet names follow a `Source_Topic_Type` pattern, modified for brevity and clarity.
 
+### Boolean Columns
+
+Columns typed "Boolean" in this doc are not reliably real GAS booleans on the sheet — some are written as the string `'TRUE'`/`'FALSE'` instead (confirmed live, 2026-07-02; `ContactService.js:933` already defends against both forms). Never compare with `=== true` alone; check both (`v === true || v === 'TRUE'`).
+
 ### Column Names
 
 All column names across all sheets are **globally unique**. This is to support programming and debugging by allowing for unique global constants for each column.

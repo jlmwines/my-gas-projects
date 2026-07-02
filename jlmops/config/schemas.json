@@ -509,6 +509,21 @@
         ""
     ],
     [
+        "schema.data.SysKPISummary",
+        "Pre-computed business/KPI.md jlmops-source KPIs (see jlmops/plans/KPI_SUMMARY_TAB.md) - one row per period, read by StatusReportService's KPI block.",
+        "stable",
+        "headers",
+        "sk_Period,sk_AsOfTimestamp,sk_NewCustomersEN,sk_NewCustomersHE,sk_NewCustomersTotal,sk_FirstOrderConvRate,sk_FirstOrderAOV,sk_Return90Rate,sk_TotalCoreCustomers,sk_Subscribers,sk_SubscriberGrowthMoM,sk_CampaignsSent,sk_AvgOpenRate,sk_AvgClickRate,sk_Notes",
+        "key_column",
+        "sk_Period",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
         "schema.data.SysLkp_Cities",
         "Lookup table for city normalization with geographic and targeting attributes.",
         "stable",

@@ -407,11 +407,50 @@ const StatusReportService = (function() {
     return lines.join('\n');
   }
 
+  /**
+   * business/KPI.md's 4 jlmops-source KPIs, pre-computed by
+   * KPISummaryService into SysKPISummary's 'current' row (trailing 90d).
+   * See jlmops/plans/KPI_SUMMARY_TAB.md.
+   */
+  function _kpiSummaryBlock(allConfig) {
+    const lines = ['### Business KPIs (trailing 90d)'];
+    try {
+      const sheetNames = allConfig['system.sheet_names'] || {};
+      const ds = SheetAccessor.getDataSpreadsheet();
+      const sheet = ds.getSheetByName(sheetNames.SysKPISummary || 'SysKPISummary');
+      if (!sheet || sheet.getLastRow() < 2) { lines.push('- (SysKPISummary not yet populated)', ''); return lines.join('\n'); }
+
+      const values = sheet.getDataRange().getValues();
+      const H = values[0];
+      const idx = {}; H.forEach((h, i) => { idx[h] = i; });
+      let row = null;
+      for (let i = 1; i < values.length; i++) {
+        if (String(values[i][idx.sk_Period]) === 'current') { row = values[i]; break; }
+      }
+      if (!row) { lines.push('- (no "current" row yet)', ''); return lines.join('\n'); }
+
+      const g = k => row[idx[k]];
+      const pct = v => (v === '' || v == null) ? '-' : (Number(v) * 100).toFixed(0) + '%';
+      const nis = v => (v === '' || v == null) ? '-' : '₪' + Math.round(Number(v));
+
+      lines.push('- New customers: ' + g('sk_NewCustomersEN') + ' EN · ' + g('sk_NewCustomersHE') + ' HE (' + g('sk_NewCustomersTotal') + ' total)');
+      lines.push('- First-order conversion: ' + pct(g('sk_FirstOrderConvRate')) + ' · AOV ' + nis(g('sk_FirstOrderAOV')));
+      lines.push('- 90-day return rate: ' + pct(g('sk_Return90Rate')) + ' (' + g('sk_TotalCoreCustomers') + ' core customers)');
+      lines.push('- Newsletter: ' + g('sk_Subscribers') + ' subscribers' + (g('sk_SubscriberGrowthMoM') !== '' && g('sk_SubscriberGrowthMoM') != null ? ' (' + (g('sk_SubscriberGrowthMoM') >= 0 ? '+' : '') + g('sk_SubscriberGrowthMoM') + ' MoM)' : '') + '; ' + g('sk_CampaignsSent') + ' campaigns sent, avg open ' + pct(g('sk_AvgOpenRate')) + ' / click ' + pct(g('sk_AvgClickRate')));
+      lines.push('- As of: ' + _il(g('sk_AsOfTimestamp')));
+      lines.push('');
+    } catch (e) {
+      lines.push('- (error reading SysKPISummary: ' + e.message + ')', '');
+    }
+    return lines.join('\n');
+  }
+
   function _buildKpiInner(allConfig) {
     return [
       '_KPIs — generated ' + _il(new Date()) + ' (Asia/Jerusalem) · daily cadence + on-demand._', '',
       '## KPIs',
       _internalKpisBlock(allConfig),
+      _kpiSummaryBlock(allConfig),
       _trafficBlock(allConfig)
     ].join('\n');
   }
@@ -563,3 +602,11 @@ const StatusReportService = (function() {
     refreshCalendarExport: refreshCalendarExport
   };
 })();
+
+/**
+ * Global function to refresh the KPI section of jlmops-status.md on demand
+ * (normally runs daily via HousekeepingService phase 3).
+ */
+function runRefreshKpiBlock() {
+  return StatusReportService.refreshKpiBlock(Utilities.getUuid());
+}
