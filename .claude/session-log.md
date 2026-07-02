@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-02 — STATUS.md hygiene hook, KPI Summary Tab shipped @427→@435
+
+- Built `status-hygiene-guard.js` (PreToolUse hook, `~/.claude/settings.json`) blocking changelog drift back into `plans/STATUS.md` — direct response to recurring drift `/review-claude` kept flagging but never got mechanically enforced. Collapsed the existing drift same session.
+- Merged a parallel cloud session's Negev-post fix; kept our version (it correctly omitted the premature publish-time HTML block a still-drafting post shouldn't have — see `content/CLAUDE.md`'s work order).
+- Un-parked `jlmops/plans/KPI_SUMMARY_TAB.md` and shipped it: new `KPISummaryService.js` computes 4 of `business/KPI.md`'s 6 KPIs into `SysKPISummary`; new GA4 audience report (tab "Audience Weekly", audiences Not IL/EN IL/HE IL) adds organic-traffic EN/HE split. 5 of 6 KPIs now live in `jlmops-status.md`, only #6 (organic-source engagement) unbuilt.
+- Found + worked around a real bug: `ConfigService.loadConfig` only parses a second (P03/P04) config param pair for `schema.data.*`/`schema.log.*` settings — every other two-param `system.*` entry silently drops its second value. `ga4_report` "worked" only by luck (`_readGa4`'s first-sheet fallback). Logged in `.claude/bugs.md`, real fix (extend to all settings) not yet done.
+- Next: no month-over-month trend surfaced yet — `SysKPISummary` has 6 backfilled months sitting unread; `_kpiSummaryBlock` only reads `current`. KPI #6 (organic engagement) still unbuilt. Portfolio kernel gained "Project Cadence & Scrutiny" (JLM Wines primary, VaadAi/AliyahNet may lag) and a tightened cleanup bug-grooming rule (cross-check plan docs, not just self-validity).
+
 ## 2026-07-02 — Negev post reconciliation: local file was stale vs. jlmops-attached Drive doc
 
 - Investigation (prompted by a user question re: whether 07-01's drafting-process fixes actually held) surfaced an untracked correction: the Drive doc attached live in jlmops (`SysLibrary.blog-region-negev-en`, doc `26-07-01-16-47`, created 13:48) had been manually rebuilt verbatim on 2026-07-01 afternoon after its own notes record that every regeneration between 2026-06-25 and 2026-07-01 had progressively paraphrased/simplified the locked BODY instead of preserving it — the exact "doesn't stick to the text" failure the same day's earlier template-order fix was supposed to have closed. That correction was never logged and never written back to the repo.

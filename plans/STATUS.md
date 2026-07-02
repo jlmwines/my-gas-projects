@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-02 — @427 live; Library detail drawer gained an "Attach new version" action; GSC KPI reporting reworked to its actual Page-grouped design; Negev region post body confirmed correct and live, manager now translating to Hebrew.
+**Updated:** 2026-07-02 — @435 live; KPI Summary Tab shipped (5 of 6 `business/KPI.md` KPIs now compute automatically into `jlmops-status.md`, including GA4 organic-traffic EN/HE split); Negev region post body confirmed correct and live, manager translating to Hebrew.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @427; full product/order sync, CRM, content library, and KPI reporting stack running.
+- **jlmops** (GAS backend) — live @435; full product/order sync, CRM, content library, and KPI reporting stack running.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
 - **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides); 2026 plan adds 6 region posts + 1 canonical summary (`content/REGION_POSTS_PLAN.md`).
 - **marketing** — flyer round 1 active (Katamon local acquisition); newsletter Issue #2 (June) in final distribution; 2026 calendar filled through December (`content/PUBLICATION_CALENDAR.md`).
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @427 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-07-01 · theme 2026-06-12 |
+| Deploy Version | jlmops @435 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-07-02 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31, pre-dates the 2026-07-01 mixed-content fix below). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. HTTPS enforcement verified correct (clean single-hop 301); mixed-content HTTP images fixed on both homepages (9 images, EN+HE — was undersold as 1 image in the original ticket, see `.claude/bugs.md`). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
@@ -56,7 +56,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
 - **Bundles** — all stages (0–7) live; EN/HE export working; composite-weight tuning pending. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
-- **KPI Summary Tab** — live @430. `business/KPI.md`'s 4 jlmops-source KPIs (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) compute daily into `SysKPISummary` and surface in `jlmops-status.md`'s "Business KPIs" block. No jlmops UI. Plan → `jlmops/plans/KPI_SUMMARY_TAB.md`.
+- **KPI Summary Tab** — live @435. 5 of 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split via a dedicated audience report. All surface in `jlmops-status.md`, no jlmops UI. Only #6 (organic-source engagement) remains unbuilt. Current snapshot only — no month-over-month trend surfaced yet, though 6 months of history already sit in `SysKPISummary` unread. Plan → `jlmops/plans/KPI_SUMMARY_TAB.md`. Found + worked around along the way: `ConfigService.loadConfig` silently drops a second param pair for non-schema settings (`.claude/bugs.md` 2026-07-02).
 - **Theme** — live v1.2.30; Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
 
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
