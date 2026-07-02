@@ -1,9 +1,10 @@
 # KPI Summary Tab — Implementation Spec
 
 **Created:** 2026-05-06
-**Status:** DEFERRED / parked (2026-05-07). This spec was Claude's pitch, not the user's. User prefers periodic manual review of GA4 + GSC + JLMops_Data on cadence over a built dashboard tab. Do not re-surface as "ready to build" in session pickups.
-**Reframed (2026-05-31):** Superseded in direction by `OPS_DATA_TRIGGERS.md`, which captures a broader two-trigger concept (on-demand KPI export + ad-hoc diagnostics export, both phone-triggerable). This narrow pre-computed cache stays DEFERRED and becomes, at most, one downstream *consumer* of that KPI trigger's export — not its own pipeline. Captured as concept only; not approved for build.
-**Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so weekly review sessions can read 13 cells instead of parsing 3 MB of raw sheets.
+**Status:** APPROVED FOR BUILD (2026-07-02) — next jlmops build item, ahead of the open queue. The 2026-05-07 parking was specifically about a *dashboard view*; the user does not want any jlmops-side KPI UI (see Build sequence — the old step 6 "Manager UI surfacing" is cut, not deferred). What's actually missing, confirmed 2026-07-02: `jlmops-status.md`'s KPI block (shipped via `OPS_SESSION_BRIDGE_PLAN.md`) carries generic order/traffic totals, not `business/KPI.md`'s 6 defined KPIs in their defined shape — this spec is what computes them. Output must feed the existing `jlmops-status.md` export so sessions read it exactly as they already do today; it is not a separate consumer surface.
+**Relation to `OPS_DATA_TRIGGERS.md`:** that doc's "KPI trigger — periodic/broad" concept is what shipped as `jlmops-status.md`'s KPI block. This spec is the missing computation layer underneath it — `SysKPISummary` becomes an input the KPI-block generator reads, not a rival pipeline.
+**Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so `jlmops-status.md` can read 13 cells instead of parsing 3 MB of raw sheets.
+**Companion item (separate build, not bundled here):** KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") depends on per-recipient activity writes that don't exist yet — see `.claude/bugs.md` 2026-05-28 "Mailchimp campaign sends not written to per-contact activity log." KPI #5 (newsletter engagement) does NOT depend on this — it reads `SysCampaigns` aggregates, already pulled daily.
 
 ---
 
@@ -28,7 +29,7 @@ The four jlmops-source KPIs from `business/KPI.md`:
 | 4 | 90-day return rate | `SysContacts.sc_DaysSinceOrder` ≤ 90 / total core customers |
 | 5 | Newsletter (subscribers + open/click) | `SysContacts.sc_IsSubscribed` for subscriber count; `SysCampaigns.scm_*` for engagement |
 
-The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) live in the GA4-to-Sheets export the user runs separately. Out of scope here.
+The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) are out of scope for `SysKPISummary` itself, but KPI #1's EN/HE split should be added to the GA4 block `jlmops-status.md` already reads (per `OPS_SESSION_BRIDGE_PLAN.md`) rather than left to the user's separately-owned sheet — that separate-sheet framing predates the GA4 pull shipping. Confirm feasibility (does the GA4 Sheets add-on export a Language dimension) before committing to this as part of the same build.
 
 ---
 
@@ -148,7 +149,7 @@ If retroactive correction is ever needed, `backfillMonths` is the explicit path.
 
 ## Read pattern (the value this delivers)
 
-A weekly review session loads `SysKPISummary` (one read, 13 rows × 15 cells). It now has:
+The `jlmops-status.md` KPI-block generator loads `SysKPISummary` (one read, 13 rows × 15 cells) and folds it into the export sessions already read. No session ever reads `SysKPISummary` directly. Once wired, a review session has:
 
 - This month's pace so far (from the `current` row).
 - Last 12 monthly closes (from frozen rows).
@@ -185,9 +186,9 @@ Once the open questions are resolved:
 3. **Config** — `config/system.json` row for `kpi.first_purchase_coupons`. Regenerate `SetupConfig.js`. Run `rebuildSysConfigFromSource()` post-deploy.
 4. **Housekeeping wiring** — extend `HousekeepingService` with the new phase (recomputeCurrent every run; closeMonth gated on month-rollover).
 5. **Backfill** — manual admin call to populate history.
-6. **Manager UI surfacing (optional, later)** — a simple read-only KPI tile in `AdminDashboardView_v2.html` showing the `current` row values.
+6. **Wire into `jlmops-status.md`** — extend the `OPS_SESSION_BRIDGE_PLAN.md` KPI-block generator to read `SysKPISummary` and fold its columns into the existing KPI export. This is the actual delivery point — a session never reads `SysKPISummary` directly, and there is no jlmops UI view of this data (a prior "optional later" UI-tile step is explicitly cut, not deferred — see Status above).
 
-Estimated total: 1 short session.
+Estimated total: 1 short session, plus the wiring step above.
 
 ---
 

@@ -107,7 +107,7 @@ Each KPI below maps to one of those three.
 
 ### What's needed
 1. ~~**Restart the GA4 + GSC weekly pulls**~~ **DONE 2026-06-10** — both add-ons re-enabled and refreshing (GA4 daily-ish/rolling, GSC monthly on the 3rd with a Date dimension now). The KPI-automation prerequisite is cleared.
-2. **Summary tab in `JLMops_Data`** (small jlmops change). Pre-computes the 4 jlmops-source metrics (new customers, first-order conversion, AOV, 90-day return rate) so Claude doesn't parse 3MB of raw data per session. SQL-on-Sheets shape; not a pipeline build. Estimated: 30–60 min of jlmops work, deliverable in a single GAS deploy.
+2. **Summary tab in `JLMops_Data`** — **APPROVED 2026-07-02, queued as next jlmops build** (`plans/STATUS.md` Next Action). Pre-computes the 4 jlmops-source metrics (new customers, first-order conversion, AOV, 90-day return rate) and wires them into `jlmops-status.md`'s existing KPI export — no jlmops UI. Full spec → `jlmops/plans/KPI_SUMMARY_TAB.md`.
 3. **Mailchimp metrics flow** — comes through jlmops Half 1 (Mailchimp daily API pull). Already planned in `jlmops/plans/CONTACT_MANAGER_PLAN.md`. Don't double-plan.
 
 ### Sequence
@@ -138,4 +138,4 @@ Each KPI below maps to one of those three.
 
 ---
 
-Updated: 2026-06-10 (GA4 + GSC pulls restored and refreshing; jlmops KPI block pending)
+Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; the 6 KPIs below are still not computed in their defined shape, but the fix is now approved and queued — see "What's needed" §2)
