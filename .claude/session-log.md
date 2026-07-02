@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-02 — Negev post reconciliation: local file was stale vs. jlmops-attached Drive doc
+
+- Investigation (prompted by a user question re: whether 07-01's drafting-process fixes actually held) surfaced an untracked correction: the Drive doc attached live in jlmops (`SysLibrary.blog-region-negev-en`, doc `26-07-01-16-47`, created 13:48) had been manually rebuilt verbatim on 2026-07-01 afternoon after its own notes record that every regeneration between 2026-06-25 and 2026-07-01 had progressively paraphrased/simplified the locked BODY instead of preserving it — the exact "doesn't stick to the text" failure the same day's earlier template-order fix was supposed to have closed. That correction was never logged and never written back to the repo.
+- `content/regions/negev-en.post.md` (git-tracked — the actual publish source `push-posts.js` reads) still held the older, paraphrased BODY and an earlier draft of the Email fields. Live landmine: publishing today would have shipped the wrong text and silently undone the verbatim fix, since jlmops and the repo had silently diverged.
+- Reconciled: local file now matches the jlmops-attached doc verbatim (BODY, EXCERPT, Email fields, Wineries section renamed to match). Added an explicit body-fidelity note in the file's `## NOTES` instructing future sessions not to reword the BODY on a later touch, and recorded which Drive doc is canonical.
+- Process gap this exposes: a Drive-doc-only fix doesn't count as done — it has to sync back to the git source of truth and get logged, or it's invisible to the next session. Flagged, not actioned: `content/CLAUDE.md` could use an explicit "never reword already-locked BODY prose, diff before saving" rule to make this structural rather than relying on a session catching it after the fact.
+- Next: HE translation + winery-carry verification still pending before publish (unchanged from prior status).
+
 ## 2026-07-01 — Blog template ordering fix (root cause: duplicate spec)
 
 - Root cause of repeated content-workflow failures: `jlmwines/.claude/CLAUDE.md` carried its own stale, incomplete duplicate of the `.post.md` section spec (wrong order, missing EMAIL fields entirely) — sessions read that auto-loaded copy instead of the real spec in `content/CLAUDE.md`.

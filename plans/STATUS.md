@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-01 — @427 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy); GSC KPI reporting reworked to match its actual Page-grouped design (top pages + snapshot-based trend) and confirmed live.
+**Updated:** 2026-07-02 — @427 live; Library detail drawer gained an "Attach new version" action; GSC KPI reporting reworked to its actual Page-grouped design; Negev region post body confirmed correct and live, manager now translating to Hebrew.
 
 ## At a glance
 
@@ -37,7 +37,7 @@ The live "what now" — daily review reads these first.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Quote received (2026-06-21); art in progress. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
 4. **Next build candidate — pick from open queue.** Reliability 1.3 or 4.1 → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s). (Content-workflow redesign and content-distribution plans are both fully shipped and archived — `jlmops/plans/_archive/`; facts live in `jlmops/docs/DATA_MODEL.md`.)
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
-6. **Negev region post** — body redrafted from its correct source text; pending winery verification + HE translation before publish.
+6. **Negev region post** — body confirmed correct and live; manager now translating to Hebrew. Still needs winery verification before publish. Leave the file alone otherwise — it's been broken by editing sessions repeatedly.
 
 ## Active Plans
 
