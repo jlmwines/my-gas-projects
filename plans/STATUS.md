@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-01 — @427 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; blog content-workflow docs corrected (Body-first template order, session-drafts-everything-including-email policy); GSC KPI reporting reworked to match its actual Page-grouped design (top pages + snapshot-based trend) and confirmed live.
+**Updated:** 2026-07-02 — Negev post reconciled: the git-tracked `.post.md` (the actual `push-posts.js` publish source) had silently drifted from the Drive doc jlmops has attached live, carrying a stale, paraphrased BODY left over from an untracked 07-01 fix — resynced verbatim and logged. Prior (2026-07-01): @427 live; Library detail drawer gained an "Attach new version" action (LibraryView + PublishingView) with a modal-stacking fix; GSC KPI reporting reworked to match its actual Page-grouped design (top pages + snapshot-based trend) and confirmed live.
 
 ## At a glance
 
@@ -8,7 +8,7 @@ One current-state line per business area. The umbrella has no single phase label
 
 - **jlmops** (GAS backend) — live @427; new product onboarding fully shipped (Track B+C complete — WebXltM seeded at accept, hot-link deleted); Library detail drawer (LibraryView + PublishingView) can now attach a new Doc version directly, no task required; GSC KPI feed live (top pages + week-over-week trend via SysConfig snapshot); Active Plans tracking added to STATUS.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
-- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post fully drafted (body + all extracts, including Email Subject/Preview/Body/CTA); pending winery verification + HE translation before publish. Content-workflow docs corrected: `_post-template.md` orders Body right after Title; session drafts every extract (Email fields included) from seed facts, manager edits/translates.
+- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides). 2026 plan: 6 region posts + 1 canonical summary = 7 posts satisfying full email+newsletter schedule (calendar: `exchange/editorial calendar - Sheet3.csv`). Negev region post fully drafted (body + all extracts, including Email Subject/Preview/Body/CTA) and reconciled 2026-07-02 — local `.post.md` now matches the jlmops-attached Drive doc verbatim after a body-paraphrase drift was found and fixed; pending winery verification + HE translation before publish. Content-workflow docs corrected: `_post-template.md` orders Body right after Title; session drafts every extract (Email fields included) from seed facts, manager edits/translates.
 - **marketing** — flyer round 1 active; newsletter Issue #1 distributing. **June Issue #2** — AYIW email (EN+HE) scheduled 2026-06-24; print newsletter EN+HE produced + registered (`print-newsletter-2026-06-en/he`), ready to print + distribute. July entities pre-registered (`email-ayiw-2026-07-en/he`, `print-newsletter-2026-07-en/he`). 2026 calendar filled through December (slots A–F in `content/PUBLICATION_CALENDAR.md`). Plan: `content/REGION_POSTS_PLAN.md`.
 - **business** — strategy/brand docs current.
 
