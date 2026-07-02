@@ -88,8 +88,6 @@ _One line each; full root-cause analysis lives in the git commit + `.claude/sess
 
 - [ ] 2026-06-16: **Gift + accessory descriptions blanked on jlmwines.com** — the ops description overlay wrote empty descriptions onto non-wine SKUs (no tasting attributes → formatter emits empty, and nothing stored in WebDetM). Originals found in old files; user restoring manually. **Recurrence prevention:** restored text must land in WebDetM `wdm_DescriptionEn/He` (the formatter inserts that freeform field verbatim — verified `WooCommerceFormatter.js:213`), not just the live WC site, else the next overlay re-blanks it.
 
-- [ ] 2026-05-11: **GTIN structured-data enrichment** (deferred, separate from SKU admin issue) — populating `Product.gtin` would improve product schema (currently emits `pa_winery` / `pa_complexity` taxonomy slugs). Requires Comax-side source check + new column in `CmxProdM` + `WebDetM` + WC push path + GTIN-8/12/13/14 checksum validator. Policy: only write when value passes validation; never store false GTIN data. Same dependency profile as the cross-sell deferral.
-
 - [ ] 2026-05-11: **Auto-push short URL redirects to RankMath** (deferred) — Campaign Service generates short codes and writes to `SysShortUrls`, but RankMath redirect rules are created manually in wp-admin. Acceptable at low volume (5–10 URLs/month). Build trigger: when monthly volume makes manual paste a real friction. Implementation: small WP mu-plugin exposing `POST /wp-json/jlmops/v1/redirect` that writes to `wp_rank_math_redirections` directly; jlmops `_pushToRankMath` in `MarketingCampaignService.js` calls it. RankMath's own `/wp-json/rankmath/v1/updateRedirection` is not usable — it only attaches redirects to existing WP objects, not arbitrary source paths.
 
 ### Resolved

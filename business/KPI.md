@@ -1,6 +1,6 @@
 # JLM Wines — KPI Scope
 
-**Status.** The live working definition of JLM's KPIs. Data path is in place: the GA4 + GSC Sheets add-ons are built and refreshing (restored 2026-06-10 — see "Data sources" below), so the automation prerequisite is cleared. Next step is the jlmops-side KPI block that reads those tabs into `jlmops-status.md` (RELIABILITY_AUDIT §3.2 KPI block). Refine as measurements accumulate.
+**Status.** The live working definition of JLM's KPIs. Data path is live end-to-end: GA4 + GSC Sheets add-ons refresh on schedule, and the jlmops-side KPI block reads them into `jlmops-status.md` (orders/customers, GA4 traffic, GSC top-pages + week-over-week trend via SysConfig snapshot) on a daily cadence plus on-demand. Refine as measurements accumulate.
 
 ---
 

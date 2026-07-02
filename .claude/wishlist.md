@@ -45,12 +45,11 @@ Projects: jlmops, web, marketing, content
 
 ## marketing
 
-- [ ] Loyalty Rewards coupons
+- [ ] 2026-07-02: **Loyalty rewards program** — not a discount (deliberately moving away from automated coupons); reward is an extra or upgraded bottle. Plan → `marketing/REWARDS_PLAN.md`.
 - [ ] Year in Wine product dynamic content
 - [ ] Referral coupons
 - [ ] Referral short URL
 - [ ] Year in Wine 2025
-- [ ] Year in Wine 2024
 - [ ] Blog Posts
 - [ ] Video content
 - [ ] FAQ/Glossary
