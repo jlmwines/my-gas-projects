@@ -1,10 +1,25 @@
 # KPI Summary Tab — Implementation Spec
 
 **Created:** 2026-05-06
-**Status:** APPROVED FOR BUILD (2026-07-02) — next jlmops build item, ahead of the open queue. The 2026-05-07 parking was specifically about a *dashboard view*; the user does not want any jlmops-side KPI UI (see Build sequence — the old step 6 "Manager UI surfacing" is cut, not deferred). What's actually missing, confirmed 2026-07-02: `jlmops-status.md`'s KPI block (shipped via `OPS_SESSION_BRIDGE_PLAN.md`) carries generic order/traffic totals, not `business/KPI.md`'s 6 defined KPIs in their defined shape — this spec is what computes them. Output must feed the existing `jlmops-status.md` export so sessions read it exactly as they already do today; it is not a separate consumer surface.
+**Status:** SHIPPED 2026-07-02 @427→@435. `KPISummaryService.js` computes 4 of `business/KPI.md`'s 6 KPIs daily into `SysKPISummary`; a companion GA4 audience report added the organic-traffic EN/HE split (KPI #1). Both surface in `jlmops-status.md`'s "Business KPIs" / "Traffic" blocks — no jlmops UI, per the 2026-05-07 parking's real intent (that was about a *dashboard view* specifically, not the underlying computation). Only KPI #6 (organic-source engagement) remains unbuilt. **Open follow-on, not yet built — see "Next: trend surfacing" below.**
 **Relation to `OPS_DATA_TRIGGERS.md`:** that doc's "KPI trigger — periodic/broad" concept is what shipped as `jlmops-status.md`'s KPI block. This spec is the missing computation layer underneath it — `SysKPISummary` becomes an input the KPI-block generator reads, not a rival pipeline.
 **Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so `jlmops-status.md` can read 13 cells instead of parsing 3 MB of raw sheets.
 **Companion item (separate build, not bundled here):** KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") depends on per-recipient activity writes that don't exist yet — see `.claude/bugs.md` 2026-05-28 "Mailchimp campaign sends not written to per-contact activity log." KPI #5 (newsletter engagement) does NOT depend on this — it reads `SysCampaigns` aggregates, already pulled daily.
+
+---
+
+## Next: trend surfacing (not yet built)
+
+**The problem.** `jlmops-status.md` currently shows only the `current` row's snapshot (e.g., "5% return rate") — no comparison against history, so "is this improving?" isn't answerable from the file. The data to answer it already exists: `SysKPISummary` has 7 rows today (`current` + 6 backfilled closed months, `2026-01` through `2026-06`), but `StatusReportService._kpiSummaryBlock` only reads the `current` row and ignores the rest.
+
+**The fix.** In `_kpiSummaryBlock` (`StatusReportService.js`), after finding the `current` row, also find the row with the most recent `YYYY-MM` period (highest string when sorted — currently `2026-06`) and show a delta for the metrics that matter most: `sk_NewCustomersEN`/`HE`, `sk_Return90Rate`, `sk_Subscribers`. Something like "90-day return rate: 5% (vs. 4% last month)" alongside the existing snapshot line, not a replacement for it.
+
+**Caveats worth knowing before touching this:**
+- `sk_SubscriberGrowthMoM` is only computed inside `closeMonth()`, never `recomputeCurrent()` — so `current`'s copy of that field is always blank. Don't read it for the current-vs-last-month delta; compute the diff directly from `current.sk_Subscribers` minus the latest closed row's `sk_Subscribers` instead.
+- The GA4 audience organic-traffic split (KPI #1) has no history at all yet — it was built the same day as this trend gap was found, so there's nothing to compare it against until at least one more month closes. Trend surfacing only applies to the 4 `SysKPISummary`-sourced metrics for now.
+- Finding "most recent closed month" from 7 rows is a simple string-max over `sk_Period` values matching `YYYY-MM` (exclude `current`) — no need for date parsing, string comparison sorts correctly for this format.
+
+**Not in scope for this follow-on:** KPI #6 (organic-source engagement — bounce rate / pages-per-session for organic visitors) is a separate, unbuilt metric, not a trend-surfacing question. See the Status line above.
 
 ---
 
