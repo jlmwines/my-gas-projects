@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-03 — KPI trend surfacing + test-noise fix @437→@440; Galilee + Grapes anchor drafted
+
+- KPI #6 (organic engagement) and month-over-month trend surfacing both shipped, but trend surfacing needed a real detour: `sk_Period` closed-month values get silently converted to Dates by Sheets, so the first deploy showed no deltas — fixed by normalizing before comparing (`.claude/bugs.md`). Also found + fixed unrelated: unit-test suites' deliberate malformed-input tests were writing into the production `SysLog`, surfacing as false import-failure alarms in `jlmops-status.md` — `LoggerService.setTestSuppression` + `TestRunner` wrapper fixes it going forward.
+- `KPI_SUMMARY_TAB.md` graduated: durable schema facts moved to `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`), plan archived. Stale "KPI tab parked, don't build" memory + STATUS.md line removed — contradicted the now-shipped reality.
+- Galilee region post drafted, fact-checked against `ISRAEL-WINE-REGIONS.pdf`, registered in the content library (`blog-region-galilee-en`, draft). Held per sequencing — not pushed to the manager until Negev's HE is confirmed done.
+- New: `content/grapes/grapes-en.post.md`, the Grapes category's anchor post, plus a substantial rework of `content/guide/ISRAELI_WINE_GUIDE_PLAN.md` §GRAPES — anchor-first sequencing (spokes deferred), scope corrected to Israel's real grape landscape (not JLM's inventory), three-list structure (Historic/Dominant/Interesting), and a "real mechanism over European-appellation comparison" writing rule. All facts verified via Montefiore + targeted web research this session (Carignan's 1882→40%→20% arc, Emerald Riesling's UC Davis breeding, Colombard's brandy role, Argaman's Volcani Institute origin, Golan Heights Winery's UC Davis consultant Peter Stern).
+- Next: register the Grapes anchor in the library when ready; Negev HE translation is the pipeline's current bottleneck.
+
+---
+
 ## 2026-07-02 — STATUS.md hygiene hook, KPI Summary Tab shipped @427→@435
 
 - Built `status-hygiene-guard.js` (PreToolUse hook, `~/.claude/settings.json`) blocking changelog drift back into `plans/STATUS.md` — direct response to recurring drift `/review-claude` kept flagging but never got mechanically enforced. Collapsed the existing drift same session.

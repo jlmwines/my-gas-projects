@@ -199,6 +199,20 @@ JLM Wines`,
     md_file: 'regions/negev-en.post.md',
     references: ['blog-region-negev-he'],
   },
+  // ─── Region spoke: Galilee (2026-07-03, draft for manager review) ────
+  // Slot A (email 2026-07-07, newsletter 2026-07-27). Body drafted through
+  // Image Prompts + Notes (steps 1-10 of content/CLAUDE.md's work order).
+  // HE sibling not created yet (added at the translate stage).
+  {
+    slug: 'blog-region-galilee-en',
+    content_type: 'blog',
+    language: 'en',
+    state: 'draft',
+    title: 'High Ground: Wine Country in the Galilee',
+    doc_url: 'https://docs.google.com/document/d/196d5011ZxotD1WAZl8t8CE0ohFKzr2pOfkfkcuGeobk/edit',
+    md_file: 'regions/galilee-en.post.md',
+    references: ['blog-region-galilee-he'],
+  },
   // ─── Translation assets (template-xlt namespace) ─────────────────────
   // The Gemini paraphrase prompt, Doc-sourced so the manager refines it in
   // Docs (no deploy). LibraryService._getTranslationPrompt reads this entity;

@@ -97,7 +97,7 @@ Each category has one **Overview Post** (the hub/pillar) plus multiple **Individ
 |----------|---------------------|---------------------------|
 | Regions | "Israeli Wine Regions: Complete Guide" | 6 region posts |
 | Wineries | "Israeli Wineries: A Guide" | 10-15 winery posts |
-| Grapes | "Grape Varieties in Israel" | 8-12 grape posts |
+| Grapes | "Grape Varieties in Israel" | Deferred to later — anchor written first (see §GRAPES) |
 | History | "The History of Israeli Wine" | 4-6 period posts |
 | Uniqueness | "What Makes Israeli Wine Different" | 4-6 topic posts |
 | People | "The People Behind Israeli Wine" | 8-12 profile posts |
@@ -214,37 +214,69 @@ Each winery post includes:
 
 #### 3. GRAPES
 
+**Sequencing decision (2026-07-03):** unlike Regions/Wineries/History/Uniqueness, Grapes leads with the anchor post first; the individual spoke posts are deferred to later, not abandoned. Consequence: the anchor's per-variety sections need to carry real weight now (not just a thin "brief intro + link"), since the spokes won't exist for a while — write each variety's entry in the anchor with enough depth to stand alone until its spoke eventually arrives.
+
+**Scope correction (2026-07-03):** which grapes to cover is driven by **what's actually grown and made into wine in Israel** — modern international workhorses, Israeli-bred crosses, and the ancient/indigenous revival varieties — researched from Montefiore, the region-post sourcing, and external sources. It is NOT driven by JLM's own product inventory. `WebDetM` (checked this session: 758 products, `wdm_GrapeG1` tally) shows what JLM stocks and is useful later for each variety's optional "recommended wines from JLM catalog" bullet, but a grape Israel grows and JLM doesn't currently carry still belongs in the anchor — inventory is a downstream detail, not a filter on scope.
+
+**Structure decision (2026-07-03):** three lists, not one flat table — **Historic** (how a grape got here / its arc over time — e.g. Carignan: planted 1882 by Rothschild's agronomists, became ~40% of all Israeli plantings by the early 2000s, fell to ~20% as the quality revolution favored Cabernet/Merlot, then found new respect as old-vine bottlings), **Dominant** (most planted today by hectares — Cabernet Sauvignon ~20%, Carignan ~20%, Merlot ~16%; whites led by Colombard and Emerald Riesling, ahead of Chardonnay/Sauvignon Blanc), **Interesting** (smaller-footprint, story-rich varieties — Malbec, Syrah/Shiraz, Barbera, Gewürztraminer, Argaman). A grape spanning two lists (Carignan spans Historic + Dominant) gets its full writeup in whichever list has the better story, cross-referenced from the other — no duplicated writeups.
+
+**Writing guidance for grape write-ups (2026-07-03, corrects the tone of the first draft pass):**
+- **Flavor notes: one or two, not a profile.** Don't list a full tasting-note stack (tannin, acid, oak, fruit, finish) — pick the one or two things a reader would actually notice, then move on to the story.
+- **Explain with real mechanism, not European appellation comparison (2026-07-03, supersedes the country-not-subregion fix above).** Even naming a country as "the standard" still leans on Old World guild/appellation prestige as the reference point. Lead instead with the actual, physical reason a grape tastes the way it does here — climate (altitude, day-night swing, rainfall), soil, vine physiology, winemaking choices (oak, skin contact, ferment temperature) — science, botany, technique, real cause and effect. This is exactly how the region posts already work (altitude cooling grapes, day-night swings locking in acidity) and matches the Sensory Framework's own experiential, non-hierarchical approach. A country/region name can still appear as a light, incidental reference, but it's not the organizing comparison anymore — the mechanism is.
+- **Plain language over wine-textbook language.** This sharpens `content/CLAUDE.md`'s existing "no wine jargon" rule specifically for this category — the goal is a real, accessible story about the grape, not a classic sommelier-style variety profile.
+- The Carignan draft (above, in session — not yet filed anywhere) is a good example of the target tone. The Cabernet/Merlot/Chardonnay/Sauvignon Blanc/Gewürztraminer descriptions drafted earlier this session are too technical against this standard and need a rewrite pass before anything gets finalized.
+- **Status: anchor drafted 2026-07-03** → `content/grapes/grapes-en.post.md` (body through Image Prompts + Notes, 975 words). All facts in the tables below verified this session. Individual grape spokes still deferred per the sequencing decision above.
+
 **Overview Post:** "Grape Varieties in Israel"
 - Introduction to Israel's grape landscape
 - Red vs. white variety distribution
 - The "familiar grapes, unexpected wines" concept
 - How Israeli climate changes variety character
-- Brief intro to each variety (links to individual posts)
+- Per-variety section for each grape below — full enough to stand alone if no spoke post follows (comparison to the famous counterpart, how Israeli climate/winemaking choices change its character, illustrative personal angle where one exists — e.g. Malbec's Evyatar anecdote)
 - Blending freedom unique to Israel
 
-**Individual Posts (8-12):**
+**Individual Posts (8-12, deferred to later):**
 
 Organized by variety, with emphasis on how Israeli expression differs from famous counterparts.
 
-| Variety | Israeli Character | Compare To | Notes |
-|---------|-------------------|------------|-------|
-| Cabernet Sauvignon | [TBD from inventory] | Bordeaux, Napa | Workhorse variety |
-| Merlot | [TBD] | Bordeaux | |
-| Syrah/Shiraz | [TBD] | Rhone, Australia | Growing popularity |
-| Malbec | Different from Argentina - [describe] | Argentina | Unique Israeli expression |
-| Barbera | Milder than Italy | Piedmont | |
-| Carignan | [TBD] | Languedoc | Mediterranean variety |
-| Chardonnay | [TBD] | Burgundy | |
-| Sauvignon Blanc | [TBD] | Loire, NZ | |
-| Gewürztraminer | [TBD] | Alsace | |
-| Regional Blends | Freedom to blend | N/A - unique to Israel | No appellation restrictions |
+Below are working-draft tables, not exhaustive — expand as research turns up other varieties genuinely grown in Israel (the goal is Israel's real grape landscape, not a fixed list). "Origin" is a light, incidental fact only — the write-up itself should lead with real mechanism (climate, soil, physiology, technique), not a comparison to that origin as a standard.
+
+**Historic** (the arc — how a grape got here, how its role changed over time):
+
+| Variety | Story | Origin | Notes |
+|---------|-------|--------|-------|
+| Carignan | Planted 1882 by Rothschild's agronomists at Rishon LeZion/Zichron Ya'akov (climate similarity to southern France); became ~40% of all Israeli plantings by the early 2000s as the bulk-wine backbone; fell to ~20% as the quality revolution favored Cabernet/Merlot; old-vine bottlings later rehabilitated as a serious, characterful wine — now a signature of the Coastal Plain. Full draft written this session (in conversation, not yet filed). | France | Also appears in Dominant (~20% today) — full story lives here |
+| Marawi / Hamdani / Bittuni / Dabouki / Jandali | Ancient/indigenous revival varieties, mainly Judea/Bethlehem. Recanati's Marawi is the first commercial bottling. | N/A — indigenous | **Politically sensitive** — see the editorial-caution note under Judea sourcing below; handle as wine-and-archaeology, stay out of the ownership argument entirely. |
+| Sariki / Be'er | Ancient Negev varieties, recovered 2023 from ~1,500-year-old grape pips found in Byzantine ruins; replanted at Avdat/Shivta. Only a handful of bottles exist so far. | N/A — ancient revival | Negev-specific; see `content/regions/negev-en.post.md` |
+
+**Dominant** (most planted today by hectares, ~5,500 total):
+
+| Variety | Israeli Character (real mechanism, once researched) | Origin | Notes |
+|---------|-------------------------------------------------------|--------|-------|
+| Cabernet Sauvignon | Israel's basic climate problem: heat builds sugar fast, so the real challenge is keeping enough acid to balance it. Solved by planting high — mostly Golan Heights/Galilee/Judean Hills, up to 800-1,000m, where each 100m of elevation cools things by roughly half a degree C. Big day-night temperature swings at height slow ripening down and protect the acid. Real, distinctive note: Israeli Cabernet (and Merlot) often carries a mint/eucalyptus edge alongside the dark fruit. | France | ~20% of plantings — Israel's single most-grown grape |
+| Carignan | See Historic — full story there | France | ~20% today (down from ~40%) |
+| Merlot | Same altitude-for-acid logic as Cabernet, same mint/eucalyptus note sometimes present. Softer tannin than Cabernet by nature, so the result reads as rounder and more fruit-forward. | France | ~16%, mostly planted in the 1990s wave |
+| Colombard | The real story isn't a table wine at all — Colombard is Israel's main brandy grape, the backbone of Carmel 100 Brandy alongside a little Emerald Riesling and Chenin Blanc, grown in the Shefela and around Mt. Carmel. High acid and a neutral flavor (which matters little once distilled) are exactly what a base wine for brandy needs — which is why a grape few people can name still covers this much ground. | France | Leading white by hectares — bigger footprint than Chardonnay/Sauvignon Blanc, barely present in JLM's boutique catalog |
+| Emerald Riesling | Literally lab-built for this problem: bred at UC Davis by Harold Olmo (released 1948) specifically to make a Riesling-style grape that holds its acid in hot climates. Israel is where it's said to work best — usually made off-dry here, and some of the best examples anywhere come from Israeli producers. | N/A — bred at UC Davis for hot-climate acid retention | Leading white by hectares alongside Colombard; same boutique-catalog gap |
+| Chardonnay | Extremely flexible grape — real character comes mostly from winemaking choice (oak/lees/malolactic vs. none) more than climate. Regarded as Israel's finest white since first planted in the late 1980s. | France | Dominates the quality/boutique conversation, not the vineyard footprint |
+| Sauvignon Blanc | Newer plantings pushed to higher altitude, picked earlier, fermented cold in stainless steel — all deliberate choices to keep it fresh and crisp (citrus/tropical) rather than flat and heavy. | France | Same as Chardonnay — boutique-prominent, smaller by area |
+
+**Interesting** (smaller footprint, story-rich):
+
+| Variety | Israeli Character (real mechanism, once researched) | Origin | Notes |
+|---------|-------------------------------------------------------|--------|-------|
+| Syrah/Shiraz | Thrives generally in Israel's Mediterranean climate; older vines (now old enough to matter, decades after first plantings) are producing noticeably more pronounced, concentrated flavor — an age-of-vine effect more than a stylistic choice. | France | Growing popularity |
+| Malbec | Argentina's huge, intense style comes from a specific place: Mendoza plants at 2,000-5,000ft in a high desert, where intense UV thickens the grape skins and concentrates color/tannin/flavor, while the big day-night swing lets it ripen slowly without losing acid. Israeli vineyards, even the high ones, don't reach that altitude or that UV intensity, so Malbec here doesn't get pushed into the same concentrated register — it comes out gentler and more mid-weight by comparison, not because anyone's holding it back. Historic footnote: Malbec was actually one of Rothschild's original 1880s imports too, alongside Cabernet Sauvignon and Cabernet Franc — see Historic/Carignan. **Illustrative personal angle:** Evyatar rejected Israeli Malbecs repeatedly, expecting Mendoza-style intensity, before coming to genuinely love them once he stopped comparing — a real first-person "expectation vs. reality" story, good lead-in for this post. | Argentina | Unique Israeli expression |
+| Barbera | Piedmont's cool climate keeps Barbera's naturally high acid sharp and tart. Israel's warmer days ripen the fruit further before that acid backs off, so the wine comes out gentler and rounder — riper black cherry and plum instead of the tart red-fruit edge. Real examples: Ramot Naftaly (Kedesh Valley, winemaker Yitzhak Cohen, something of an Israeli Barbera pioneer) and Tabor's Adama Barbera Rosé. | Italy | |
+| Gewürztraminer | Specifically needs the colder northern Golan to get its full varietal aromatics right — this one doesn't just prefer cool climate, it depends on it. Usually made semi-dry. | France | |
+| Argaman | CONFIRMED 2026-07-03: bred at the Volcani Institute (Roi Spiegel + Shlomo Cohen, Israeli Wine Institute), a 1972 cross of Souzão × Carignan, selected 1984. The name means "crimson" in Hebrew. Purpose-built to solve a real problem — Carignan's color was always weak — and specifically meant to replace Carignan as Israel's main blending grape. Mostly a blending grape rather than varietal-labeled. Ties directly to Historic/Carignan. | N/A — Israeli-bred | Unique to Israel |
+| Regional Blends | Freedom to blend, no appellation restrictions | N/A — unique to Israel | |
 
 Each grape post includes:
-- The variety globally (brief)
-- How it expresses in Israel (climate/terroir effect)
+- The variety's origin (brief, incidental)
+- The real mechanism behind how it expresses in Israel — climate (altitude, day-night swing, rainfall), soil, vine physiology, winemaking technique
 - Which regions grow it best
 - Recommended wines from JLM catalog
-- Comparison to famous regions
 
 #### 4. HISTORY
 
@@ -492,11 +524,12 @@ Overviews update as individual posts publish
 ## Research Needed
 
 - [ ] Map wineries to regions (verify locations)
-- [ ] Extract grape varieties from inventory
-- [ ] Identify exemplary wines for each category
+- [ ] **Research the full range of grapes actually grown/vinified in Israel** (modern international, Israeli-bred crosses like Argaman, ancient/indigenous revival varieties) — this drives the Grapes anchor's variety list, not JLM's inventory (2026-07-03 scope correction, see §GRAPES).
+- [ ] Identify exemplary wines for each category, where JLM carries one (optional per-variety detail, not scope-gating for Grapes)
 - [ ] Source historical dates/figures
 - [ ] **Source ancient/archaeological winemaking history per region** (for the "ancient-rediscovery" openers) — Nabataean/Byzantine Negev viticulture (Avdat, Shivta, Nizzana), Judean Hills rock-cut winepresses, the indigenous-grape revival (Marawi/Hamdani, Bittuni, Dabouki). Montefiore is modern-focused and won't carry this; needs archaeological/historical sources. See the Resources list below.
 - [ ] Find comparison data (European regions)
+- [x] **UC Davis consultant influence on the Golan Heights Winery's 1983 founding — CONFIRMED 2026-07-03.** Peter Stern, a California-trained winemaker, was invited in 1982 to design the winery and consult; he specifically recruited a succession of young UC Davis graduates as winemakers, several of whom went on to make names for themselves. Yarden/Gamla were recognized as Israel's first world-class wines. Ties into the Golan Heights region post and the Uniqueness category's "Trained Abroad, Innovate at Home" post. Source: Jerusalem Post "Wine Talk: The pioneer."
 - [ ] Locate/commission maps and visuals
 - [ ] Contact regional wine councils/marketing bodies for content input
 

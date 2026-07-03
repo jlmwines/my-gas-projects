@@ -2,11 +2,13 @@
 
 **Goal:** Increase organic traffic and new customer acquisition. Not a page-by-page audit — the audit lives in `SEO_AUDIT_2026-05-06.md` and `RANKMATH_WPML_AUDIT.md`. This plan organizes the work by leverage, sequences it for gradual rollout, and defines how to monitor results.
 
-**Updated:** 2026-06-28 — initial plan.
+**Updated:** 2026-07-03 — added organic-traffic recovery baseline to Frame.
 
 ---
 
 ## Frame
+
+**Background — the organic-traffic baseline this plan works from.** A prior rollout of rich, expanded product descriptions introduced too much duplicate text across product pages, which hurt organic traffic. That was fixed early 2026, and organic traffic has been recovering since — steady, involving both EN and HE, but has not yet returned to its pre-issue level. Overall sales remain below last year's, but conversion rate has increased. Read current organic-traffic numbers (`jlmops-status.md`, GA4 audience block) against this baseline: "still below last year" is an already-diagnosed, recovering trend, not a new problem to chase.
 
 The site's technical SEO foundation is solid (87/100, clean schema, correct hreflang on all pages except homepage, language-correct canonicals).
 

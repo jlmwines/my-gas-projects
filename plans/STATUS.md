@@ -1,14 +1,14 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-02 — @435 live; KPI Summary Tab shipped (5 of 6 `business/KPI.md` KPIs now compute automatically into `jlmops-status.md`, including GA4 organic-traffic EN/HE split); Negev region post body confirmed correct and live, manager translating to Hebrew.
+**Updated:** 2026-07-03 — @440 live; KPI Summary Tab + trend surfacing shipped, all 6 `business/KPI.md` KPIs automatic; test-harness log-noise fix shipped; Negev region post body confirmed correct and live (manager translating to Hebrew); Galilee region post drafted + registered in the library, ready for the manager once Negev's HE is done; Grapes anchor post ("Grape Varieties in Israel") drafted, all facts verified.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @435; full product/order sync, CRM, content library, and KPI reporting stack running.
+- **jlmops** (GAS backend) — live @440; full product/order sync, CRM, content library, and KPI reporting stack running.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30.
-- **content** — 11 editorial posts live (EN+HE); 2 in pipeline (Reds/Whites guides); 2026 plan adds 6 region posts + 1 canonical summary (`content/REGION_POSTS_PLAN.md`).
+- **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer round 1 active (Katamon local acquisition); newsletter Issue #2 (June) in final distribution; 2026 calendar filled through December (`content/PUBLICATION_CALENDAR.md`).
 - **business** — strategy/brand docs current.
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @435 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-07-02 · theme 2026-06-12 |
+| Deploy Version | jlmops @440 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-07-03 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31, pre-dates the 2026-07-01 mixed-content fix below). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. HTTPS enforcement verified correct (clean single-hop 301); mixed-content HTTP images fixed on both homepages (9 images, EN+HE — was undersold as 1 image in the original ticket, see `.claude/bugs.md`). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
@@ -35,10 +35,11 @@ The live "what now" — daily review reads these first.
 1. **Newsletter Issue #2 (June) — AYIW email confirmed sent 2026-06-24 (user-confirmed); print ready to distribute.** Mark `email-newsletter-2026-06-en/he` published in jlmops. After print distribute: mark `print-newsletter-2026-06-en/he` published. Set `slb_TargetDate` on entities in jlmops if not set.
 2. **Branded shipping cartons — vendor has artwork + colors in hand.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Vendor has print artwork + target areas in hand. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
-4. **Next build — KPI trend surfacing, ready for a fresh session.** `_kpiSummaryBlock` (`StatusReportService.js`) only shows the current snapshot; 6 months of history already sit unread in `SysKPISummary`. Fully scoped → `jlmops/plans/KPI_SUMMARY_TAB.md` "Next: trend surfacing". After that: Reliability 1.3 or 4.1 → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s). (Content-workflow redesign and content-distribution plans are both fully shipped and archived — `jlmops/plans/_archive/`; facts live in `jlmops/docs/DATA_MODEL.md`.)
+4. **Next build — Reliability 1.3 or 4.1** → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s). (KPI Summary Tab + trend surfacing both shipped @440 — see Current State. Content-workflow redesign and content-distribution plans are both fully shipped and archived — `jlmops/plans/_archive/`; facts live in `jlmops/docs/DATA_MODEL.md`.)
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 6. **Negev region post** — body confirmed correct and live; manager now translating to Hebrew, may finish today. Still needs winery verification before publish. Leave the file alone otherwise — it's been broken by editing sessions repeatedly.
-7. **Galilee region post (Slot A, due 2026-07-07)** — deliberately not started; sequenced to begin only after the manager finishes Negev. Don't push or flag to the manager before then.
+7. **Galilee region post (Slot A, due 2026-07-07)** — drafted + registered in the library (`blog-region-galilee-en`, state `draft`), ready for the manager. Deliberately not yet flagged/pushed to the manager — hold until Negev's Hebrew translation is confirmed done.
+8. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, all facts verified this session. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 
 ## Active Plans
 
@@ -56,7 +57,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
 - **Bundles** — all stages (0–7) live; EN/HE export working; composite-weight tuning pending. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
-- **KPI Summary Tab** — live @435. 5 of 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split via a dedicated audience report. All surface in `jlmops-status.md`, no jlmops UI. Only #6 (organic-source engagement) remains unbuilt. Current snapshot only — no month-over-month trend surfaced yet, though 6 months of history already sit in `SysKPISummary` unread. Plan → `jlmops/plans/KPI_SUMMARY_TAB.md`. Found + worked around along the way: `ConfigService.loadConfig` silently drops a second param pair for non-schema settings (`.claude/bugs.md` 2026-07-02).
+- **KPI Summary Tab** — live @440. All 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split and organic-source engagement (bounce rate + pages/session) via a dedicated GA4 audience report. All surface in `jlmops-status.md`, no jlmops UI. Month-over-month trend surfacing also live (new customers, return rate, subscriber MoM vs. last closed month) — but the return-rate/subscriber deltas aren't trustworthy until a month closes naturally (next: 2026-08-01), since all 6 backfilled months share one retroactive snapshot; new-customers deltas are trustworthy now. Schema/system doc → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`); engineering history archived at `jlmops/plans/_archive/KPI_SUMMARY_TAB.md`. Found + worked around along the way: `ConfigService.loadConfig` silently drops a second param pair for non-schema settings, and `sk_Period` closed-month values get silently converted to Dates by Sheets (`.claude/bugs.md` 2026-07-02/03).
 - **Theme** — live v1.2.30; Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.
 
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
@@ -77,7 +78,6 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 - **Year in Wine PDF** — needs PDF-generation research.
 - **Woo Brand + GTIN structured-data enrichment** — needs a jlmops-side data-shape change (new WC sync fields or CSV columns); deferred alongside cross-sell.
-- **KPI Summary tab** — parked; user prefers periodic manual review of GA4 + GSC + JLMops_Data over a built dashboard. Don't re-surface as "ready to build." Spec → `jlmops/plans/KPI_SUMMARY_TAB.md`.
 - **Gift recipient campaigns** — lowest priority.
 - **VIP recognition + referral program** — after campaigns launch.
 

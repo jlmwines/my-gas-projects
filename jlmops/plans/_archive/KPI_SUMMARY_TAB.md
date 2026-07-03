@@ -1,25 +1,24 @@
 # KPI Summary Tab — Implementation Spec
 
 **Created:** 2026-05-06
-**Status:** SHIPPED 2026-07-02 @427→@435. `KPISummaryService.js` computes 4 of `business/KPI.md`'s 6 KPIs daily into `SysKPISummary`; a companion GA4 audience report added the organic-traffic EN/HE split (KPI #1). Both surface in `jlmops-status.md`'s "Business KPIs" / "Traffic" blocks — no jlmops UI, per the 2026-05-07 parking's real intent (that was about a *dashboard view* specifically, not the underlying computation). Only KPI #6 (organic-source engagement) remains unbuilt. **Open follow-on, not yet built — see "Next: trend surfacing" below.**
+**Status:** SHIPPED 2026-07-02→2026-07-03 @427→@439. `KPISummaryService.js` computes 4 of `business/KPI.md`'s 6 KPIs daily into `SysKPISummary`; a companion GA4 audience report added the organic-traffic EN/HE split (KPI #1) and, after widening that same report's metrics (`bounceRate`, `screenPageViewsPerSession`), organic-source engagement (KPI #6). Month-over-month trend surfacing also shipped (@439) — see "Trend surfacing" below for the one caveat on trusting it. All 6 KPIs surface in `jlmops-status.md`'s "Business KPIs" / "Traffic" blocks — no jlmops UI, per the 2026-05-07 parking's real intent (that was about a *dashboard view* specifically, not the underlying computation).
 **Relation to `OPS_DATA_TRIGGERS.md`:** that doc's "KPI trigger — periodic/broad" concept is what shipped as `jlmops-status.md`'s KPI block. This spec is the missing computation layer underneath it — `SysKPISummary` becomes an input the KPI-block generator reads, not a rival pipeline.
 **Pairs with:** `business/KPI.md` (strategic — what we measure and why). This doc is the engineering side — how the four jlmops-source KPIs get pre-computed and stored in `JLMops_Data` so `jlmops-status.md` can read 13 cells instead of parsing 3 MB of raw sheets.
 **Companion item (separate build, not bundled here):** KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") depends on per-recipient activity writes that don't exist yet — see `.claude/bugs.md` 2026-05-28 "Mailchimp campaign sends not written to per-contact activity log." KPI #5 (newsletter engagement) does NOT depend on this — it reads `SysCampaigns` aggregates, already pulled daily.
 
 ---
 
-## Next: trend surfacing (not yet built)
+## Trend surfacing — SHIPPED @439, one caveat before trusting it
 
-**The problem.** `jlmops-status.md` currently shows only the `current` row's snapshot (e.g., "5% return rate") — no comparison against history, so "is this improving?" isn't answerable from the file. The data to answer it already exists: `SysKPISummary` has 7 rows today (`current` + 6 backfilled closed months, `2026-01` through `2026-06`), but `StatusReportService._kpiSummaryBlock` only reads the `current` row and ignores the rest.
+**What it does.** `_kpiSummaryBlock` (`StatusReportService.js`) finds the most recent closed `YYYY-MM` row alongside `current` and shows a delta: new customers EN/HE, 90-day return rate, and subscriber MoM (computed directly from `current.sk_Subscribers` minus the latest closed row's — `sk_SubscriberGrowthMoM` is only ever populated by `closeMonth()`, never `recomputeCurrent()`, so `current`'s own copy is always blank and unusable for this).
 
-**The fix.** In `_kpiSummaryBlock` (`StatusReportService.js`), after finding the `current` row, also find the row with the most recent `YYYY-MM` period (highest string when sorted — currently `2026-06`) and show a delta for the metrics that matter most: `sk_NewCustomersEN`/`HE`, `sk_Return90Rate`, `sk_Subscribers`. Something like "90-day return rate: 5% (vs. 4% last month)" alongside the existing snapshot line, not a replacement for it.
+**Real bug found + fixed along the way:** `sk_Period` closed-month values are stored as Date objects by Sheets (not the `"YYYY-MM"` strings the code writes) — `_kpiSummaryBlock` now normalizes Date-typed cells back to `"YYYY-MM"` before comparing. The underlying write-side issue (`_upsertRow`'s dedup check has the same mismatch, so a re-run of an already-closed month would append a duplicate rather than overwrite) is unfixed — see `.claude/bugs.md` 2026-07-03.
 
-**Caveats worth knowing before touching this:**
-- `sk_SubscriberGrowthMoM` is only computed inside `closeMonth()`, never `recomputeCurrent()` — so `current`'s copy of that field is always blank. Don't read it for the current-vs-last-month delta; compute the diff directly from `current.sk_Subscribers` minus the latest closed row's `sk_Subscribers` instead.
-- The GA4 audience organic-traffic split (KPI #1) has no history at all yet — it was built the same day as this trend gap was found, so there's nothing to compare it against until at least one more month closes. Trend surfacing only applies to the 4 `SysKPISummary`-sourced metrics for now.
-- Finding "most recent closed month" from 7 rows is a simple string-max over `sk_Period` values matching `YYYY-MM` (exclude `current`) — no need for date parsing, string comparison sorts correctly for this format.
+**The one caveat that matters for reading the output: don't trust the return-rate/subscriber deltas yet.** All 6 closed months were backfilled retroactively in one batch on 2026-07-02. `sk_Return90Rate` and `sk_Subscribers` are point-in-time snapshots, not period-bounded — so every backfilled month's snapshot value is just a copy of *that day's* live state, not a true end-of-month figure. Result: the "vs last month" comparison for these two is currently always ~flat by construction, not a real signal. It becomes trustworthy once a month closes naturally (next: 2026-08-01, closing July) instead of via backfill. **New-customers EN/HE is fine to trust now** — it's genuinely period-bounded (computed from date-windowed order data), not a snapshot.
 
-**Not in scope for this follow-on:** KPI #6 (organic-source engagement — bounce rate / pages-per-session for organic visitors) is a separate, unbuilt metric, not a trend-surfacing question. See the Status line above.
+The GA4 audience organic-traffic split (KPI #1) and organic-source engagement (KPI #6) have no history yet — both were built 2026-07-02/03, nothing to compare against until at least one more month closes.
+
+KPI #6 (organic-source engagement) shipped @436; trend surfacing shipped @439.
 
 ---
 
@@ -44,9 +43,9 @@ The four jlmops-source KPIs from `business/KPI.md`:
 | 4 | 90-day return rate | `SysContacts.sc_DaysSinceOrder` ≤ 90 / total core customers |
 | 5 | Newsletter (subscribers + open/click) | `SysContacts.sc_IsSubscribed` for subscriber count; `SysCampaigns.scm_*` for engagement |
 
-The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) are out of scope for `SysKPISummary` itself, but KPI #1's EN/HE split should be added to the GA4 block `jlmops-status.md` already reads (per `OPS_SESSION_BRIDGE_PLAN.md`) rather than left to the user's separately-owned sheet — that separate-sheet framing predates the GA4 pull shipping.
+The two GA4-source KPIs (#1 organic traffic and #6 organic-source engagement) are out of scope for `SysKPISummary` itself; both instead fold into the GA4 block `jlmops-status.md` already reads (per `OPS_SESSION_BRIDGE_PLAN.md`).
 
-**New finding (2026-07-02):** GA4 already has audiences defined for this — `Not IL`, `EN IL`, `HE IL` (Not IL presumed English) — but this is not yet reflected anywhere: not in the Sheets add-on report jlmops reads (`_readGa4` in `StatusReportService.js` reads one flat date/sessions/users row set, no audience dimension in its columns), not in any doc. Before `_readGa4` can be extended, the GA4 Sheets add-on report itself needs reconfiguring (a manual step in the Sheets/GA4 UI, same as the original 2026-05-04 setup) to break out by these three audiences — either as separate tabs or an added Audience column. Code change follows once that export exists; nothing to build against yet.
+Both read from the same "Audience Weekly" GA4 Sheets add-on report/tab (workbook id `12zBAZZPfhWqLGLsf1Lu8-eOMcYKOyi_HrlGkSmPkTFU`), which filters to organic traffic only (`sessionMedium CONTAINS 'organic'`) and splits by audience (`Not IL`/`EN IL`/`HE IL` — `Not IL` presumed English). `_readGa4Audience` in `StatusReportService.js` reads `sessions` for KPI #1's EN/HE split, and `bounceRate`/`screenPageViewsPerSession` (added to the report's Metrics config 2026-07-02, session-weighted across EN+HE combined per KPI #6's un-split definition) for KPI #6.
 
 ---
 

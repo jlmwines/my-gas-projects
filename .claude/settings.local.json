@@ -99,7 +99,8 @@
       "Bash(xargs git show --no-patch --format=\"%ci\")",
       "mcp__claude_ai_Google_Drive__create_file",
       "mcp__claude_ai_Google_Drive__get_file_metadata",
-      "Bash(echo \"\\(exit: $?\\)\")"
+      "Bash(echo \"\\(exit: $?\\)\")",
+      "Bash(awk '/^## BODY/{flag=1;next}/^## EXCERPT/{flag=0}flag' \"C:/Users/B/projects/jlmwines/content/grapes/grapes-en.post.md\")"
     ],
     "deny": [
       "Bash(git -C:*)",

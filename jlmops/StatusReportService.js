@@ -348,11 +348,17 @@ const StatusReportService = (function() {
       if (row.indexOf('date') !== -1 && row.indexOf('audiencename') !== -1) { hr = i; H = row; break; }
     }
     if (hr === -1) return { ok: false, reason: 'header row not found' };
-    const c = { date: H.indexOf('date'), aud: H.indexOf('audiencename'), s: H.indexOf('sessions') };
+    const c = {
+      date: H.indexOf('date'), aud: H.indexOf('audiencename'), s: H.indexOf('sessions'),
+      br: H.indexOf('bouncerate'), pps: H.indexOf('screenpageviewspersession')
+    };
     const BUCKET = { 'he il': 'HE', 'en il': 'EN', 'not il': 'EN' };
     const wk = _windowStart(7), mo = _monthStart();
     const blank = () => ({ EN: 0, HE: 0 });
     const agg = { w: blank(), m: blank() };
+    // KPI #6 (organic-source engagement): session-weighted across EN+HE combined,
+    // not split by language — business/KPI.md #6 doesn't call for a split.
+    const eng = { w: { s: 0, brW: 0, ppsW: 0 }, m: { s: 0, brW: 0, ppsW: 0 } };
     let maxD = null;
     for (let i = hr + 1; i < vals.length; i++) {
       const dv = vals[i][c.date]; if (dv === '' || dv == null) continue;
@@ -361,10 +367,19 @@ const StatusReportService = (function() {
       if (!bucket) continue; // excludes All Users, Purchasers, anything unrecognized
       if (!maxD || d > maxD) maxD = d;
       const sess = _num(vals[i][c.s]);
-      if (d >= mo) agg.m[bucket] += sess;
-      if (d >= wk) agg.w[bucket] += sess;
+      const br = c.br !== -1 ? _num(vals[i][c.br]) : 0;
+      const pps = c.pps !== -1 ? _num(vals[i][c.pps]) : 0;
+      const addEng = b => { b.s += sess; b.brW += br * sess; b.ppsW += pps * sess; };
+      if (d >= mo) { agg.m[bucket] += sess; addEng(eng.m); }
+      if (d >= wk) { agg.w[bucket] += sess; addEng(eng.w); }
     }
-    return { ok: true, maxDate: maxD, w: agg.w, m: agg.m };
+    const rate = b => b.s ? (b.brW / b.s) : null;
+    const perSess = b => b.s ? (b.ppsW / b.s) : null;
+    return {
+      ok: true, maxDate: maxD, w: agg.w, m: agg.m,
+      engW: { bounce: rate(eng.w), pps: perSess(eng.w) },
+      engM: { bounce: rate(eng.m), pps: perSess(eng.m) }
+    };
   }
 
   // GSC (Search Analytics for Sheets) output. By design (per the setup guide
@@ -439,6 +454,10 @@ const StatusReportService = (function() {
       lines.push('- GA4 organic traffic by audience (latest data ' + _ilDate(gaAud.maxDate) + '):');
       lines.push('  - 7d: ' + gaAud.w.EN + ' EN · ' + gaAud.w.HE + ' HE sessions');
       lines.push('  - MTD: ' + gaAud.m.EN + ' EN · ' + gaAud.m.HE + ' HE sessions');
+      const fmtPct = v => v == null ? '-' : (v * 100).toFixed(0) + '%';
+      const fmtPps = v => v == null ? '-' : v.toFixed(1);
+      lines.push('  - Organic engagement — 7d: ' + fmtPct(gaAud.engW.bounce) + ' bounce · ' + fmtPps(gaAud.engW.pps) + ' pages/session');
+      lines.push('  - Organic engagement — MTD: ' + fmtPct(gaAud.engM.bounce) + ' bounce · ' + fmtPps(gaAud.engM.pps) + ' pages/session');
     } else {
       lines.push('- GA4 audience split: no data (' + gaAud.reason + ')');
     }
@@ -472,21 +491,45 @@ const StatusReportService = (function() {
       const values = sheet.getDataRange().getValues();
       const H = values[0];
       const idx = {}; H.forEach((h, i) => { idx[h] = i; });
-      let row = null;
+      // Sheets sometimes auto-converts a plain "YYYY-MM" string cell into a real
+      // Date (the 1st of that month) — normalize back to "YYYY-MM" before matching,
+      // don't rely on the stored type. See .claude/bugs.md 2026-07-03.
+      const asPeriodKey = v => {
+        if (v instanceof Date) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0');
+        return String(v);
+      };
+      let row = null, lastClosed = null, lastClosedPeriod = null;
+      const reYm = /^\d{4}-\d{2}$/;
       for (let i = 1; i < values.length; i++) {
-        if (String(values[i][idx.sk_Period]) === 'current') { row = values[i]; break; }
+        const period = asPeriodKey(values[i][idx.sk_Period]);
+        if (period === 'current') { row = values[i]; continue; }
+        if (reYm.test(period) && (!lastClosedPeriod || period > lastClosedPeriod)) {
+          lastClosedPeriod = period; lastClosed = values[i];
+        }
       }
       if (!row) { lines.push('- (no "current" row yet)', ''); return lines.join('\n'); }
 
       const g = k => row[idx[k]];
+      const gPrev = k => lastClosed[idx[k]];
       const pct = v => (v === '' || v == null) ? '-' : (Number(v) * 100).toFixed(0) + '%';
       const nis = v => (v === '' || v == null) ? '-' : '₪' + Math.round(Number(v));
 
-      lines.push('- New customers: ' + g('sk_NewCustomersEN') + ' EN · ' + g('sk_NewCustomersHE') + ' HE (' + g('sk_NewCustomersTotal') + ' total)');
+      const enNow = Number(g('sk_NewCustomersEN')) || 0, heNow = Number(g('sk_NewCustomersHE')) || 0;
+      const custTrend = lastClosed ? ' (vs ' + (Number(gPrev('sk_NewCustomersEN')) || 0) + ' EN · ' + (Number(gPrev('sk_NewCustomersHE')) || 0) + ' HE last month)' : '';
+      lines.push('- New customers: ' + enNow + ' EN · ' + heNow + ' HE (' + g('sk_NewCustomersTotal') + ' total)' + custTrend);
+
       lines.push('- First-order conversion: ' + pct(g('sk_FirstOrderConvRate')) + ' · AOV ' + nis(g('sk_FirstOrderAOV')));
-      lines.push('- 90-day return rate: ' + pct(g('sk_Return90Rate')) + ' (' + g('sk_TotalCoreCustomers') + ' core customers)');
-      lines.push('- Newsletter: ' + g('sk_Subscribers') + ' subscribers' + (g('sk_SubscriberGrowthMoM') !== '' && g('sk_SubscriberGrowthMoM') != null ? ' (' + (g('sk_SubscriberGrowthMoM') >= 0 ? '+' : '') + g('sk_SubscriberGrowthMoM') + ' MoM)' : '') + '; ' + g('sk_CampaignsSent') + ' campaigns sent, avg open ' + pct(g('sk_AvgOpenRate')) + ' / click ' + pct(g('sk_AvgClickRate')));
-      lines.push('- As of: ' + _il(g('sk_AsOfTimestamp')));
+
+      const retPrev = lastClosed ? gPrev('sk_Return90Rate') : null;
+      const retTrend = (lastClosed && retPrev !== '' && retPrev != null) ? ' (vs ' + pct(retPrev) + ' last month)' : '';
+      lines.push('- 90-day return rate: ' + pct(g('sk_Return90Rate')) + retTrend + ' (' + g('sk_TotalCoreCustomers') + ' core customers)');
+
+      const subNow = Number(g('sk_Subscribers')) || 0;
+      // sk_SubscriberGrowthMoM is only ever populated by closeMonth(), never recomputeCurrent() —
+      // current's copy is always blank, so MoM here is computed directly against the last closed row.
+      const subMoM = lastClosed ? (subNow - (Number(gPrev('sk_Subscribers')) || 0)) : null;
+      lines.push('- Newsletter: ' + subNow + ' subscribers' + (subMoM != null ? ' (' + (subMoM >= 0 ? '+' : '') + subMoM + ' MoM)' : '') + '; ' + g('sk_CampaignsSent') + ' campaigns sent, avg open ' + pct(g('sk_AvgOpenRate')) + ' / click ' + pct(g('sk_AvgClickRate')));
+      lines.push('- As of: ' + _il(g('sk_AsOfTimestamp')) + (lastClosedPeriod ? ' · trend vs ' + lastClosedPeriod : ''));
       lines.push('');
     } catch (e) {
       lines.push('- (error reading SysKPISummary: ' + e.message + ')', '');

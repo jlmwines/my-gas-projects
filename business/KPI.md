@@ -1,6 +1,6 @@
 # JLM Wines — KPI Scope
 
-**Status.** The live working definition of JLM's KPIs. Data path is live end-to-end: GA4 + GSC Sheets add-ons refresh on schedule, and the jlmops-side KPI block reads them into `jlmops-status.md` (orders/customers, GA4 traffic, GSC top-pages + week-over-week trend via SysConfig snapshot) on a daily cadence plus on-demand. Refine as measurements accumulate.
+**Status.** The live working definition of JLM's KPIs. Data path is live end-to-end: GA4 + GSC Sheets add-ons refresh on schedule, and the jlmops-side KPI block reads them into `jlmops-status.md` (orders/customers, GA4 traffic + organic EN/HE split + organic engagement, GSC top-pages + week-over-week trend via SysConfig snapshot) on a daily cadence plus on-demand. All 6 KPIs below compute automatically. Refine as measurements accumulate.
 
 ---
 
@@ -105,17 +105,8 @@ Each KPI below maps to one of those three.
   - **"JLM GSC Weekly"** — id `1535CDgL8oD8o2L5ceOTAXtxrXGVnRgQfEddfc3b6hHc`. **Monthly cadence (3rd)** via Search Analytics for Sheets; recurring backup re-enabled + **Date dimension added** 2026-06-10 (was Page-only, so no trend accumulated before). _(Had not recurred since 2026-05-07.)_
   - Both are **multi-tab** (Report + Configuration), so sessions/Drive MCP can NOT read them usefully — **only OPS (GAS) reads them and flattens KPIs into the shared one-tab export (`jlmops-status.md` KPI block) that sessions consume.** Sessions never open these source workbooks directly, and don't verify them — that's OPS's job (or a human eyeball in the sheet UI).
 
-### What's needed
-1. ~~**Restart the GA4 + GSC weekly pulls**~~ **DONE 2026-06-10** — both add-ons re-enabled and refreshing (GA4 daily-ish/rolling, GSC monthly on the 3rd with a Date dimension now). The KPI-automation prerequisite is cleared.
-2. ~~**Summary tab in `JLMops_Data`**~~ **SHIPPED 2026-07-02 @430.** `SysKPISummary` computes the 4 jlmops-source metrics (new customers, first-order conversion, AOV, 90-day return rate) daily and feeds `jlmops-status.md`'s "Business KPIs" block — no jlmops UI. Spec → `jlmops/plans/KPI_SUMMARY_TAB.md`.
-3. **Mailchimp metrics flow** — comes through jlmops Half 1 (Mailchimp daily API pull). Already planned in `jlmops/plans/CONTACT_MANAGER_PLAN.md`. Don't double-plan.
-
-### Sequence
-- **Now:** scope captured (this doc).
-- **After cutover settles:** user runs GA4 + GSC sheet setup → Claude verifies end-to-end read.
-- **In parallel or after:** add summary tab to `JLMops_Data` in a small jlmops deploy.
-- **After jlmops Half 1 ships:** newsletter metrics start flowing.
-- **Then:** we do the first weekly review session against real data.
+### Remaining sub-item
+KPI #3's Mailchimp-campaign-attribution half ("did this order follow a campaign") still depends on per-recipient activity writes that don't exist yet — see `.claude/bugs.md` 2026-05-28. Doesn't block anything above; KPI #3's coupon-based conversion+AOV numbers and KPI #5 (newsletter engagement) are both already live without it. Data path → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`).
 
 ---
 
@@ -138,4 +129,4 @@ Each KPI below maps to one of those three.
 
 ---
 
-Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; 5 of 6 KPIs now compute automatically — 4 via `SysKPISummary`'s "Business KPIs" block, KPI #1 organic-traffic EN/HE split via a dedicated GA4 audience report ("Audience Weekly" tab, audiences Not IL/EN IL/HE IL) surfaced in the Traffic block. Only KPI #6 organic-source engagement remains unbuilt.)
+Updated: 2026-07-02 (jlmops KPI block live in `jlmops-status.md`, reworked to its Page-grouped GSC design; all 6 KPIs now compute automatically — 4 via `SysKPISummary`'s "Business KPIs" block, KPI #1 organic-traffic EN/HE split and KPI #6 organic-source engagement (bounce rate + pages/session) both via the GA4 "Audience Weekly" report (audiences Not IL/EN IL/HE IL), surfaced in the Traffic block.)

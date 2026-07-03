@@ -9,6 +9,10 @@
 const LoggerService = (function() {
   const LOG_SHEET_NAME = "SysLog";
   let internalSessionId = null; // Renamed to avoid confusion with context.sessionId
+  // Set by TestRunner around suite execution — unit tests deliberately feed adapters
+  // malformed input to verify error handling, and those errors would otherwise land
+  // in the production SysLog and surface in jlmops-status.md as false alarms.
+  let testSuppression = false;
 
   function getInternalSessionId() {
     if (!internalSessionId) {
@@ -55,6 +59,8 @@ const LoggerService = (function() {
     // Log to Apps Script execution log for immediate debugging
     console.log(logEntry);
 
+    if (testSuppression) return; // still visible above via console.log, never written to SysLog
+
     try {
       const logSheetConfig = ConfigService.getConfig('system.spreadsheet.logs');
       const sheetNames = ConfigService.getConfig('system.sheet_names');
@@ -89,6 +95,14 @@ const LoggerService = (function() {
     error: function(serviceName, functionName, message, error, context = {}) {
       const stackTrace = error && error.stack ? error.stack : '';
       _log('ERROR', serviceName, functionName, message, context, stackTrace);
+    },
+
+    /**
+     * TestRunner-only: suppress SysLog writes for the duration of a test suite run
+     * (console.log still fires). Always re-disable in a finally block.
+     */
+    setTestSuppression: function(on) {
+      testSuppression = !!on;
     },
 
     /**
