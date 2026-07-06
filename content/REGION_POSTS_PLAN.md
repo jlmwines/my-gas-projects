@@ -44,7 +44,7 @@ Post source files (per `content/CLAUDE.md` naming convention):
 
 **Coastal Plain** — Opening archetype: heritage-continuity. Baron Edmond de Rothschild (1880s), Carmel's Zichron Ya'akov cellars (1892). 0–150m, Mediterranean breezes; known now for old-vine Carignan. Alexander, Recanati. Tribal: brushes Asher and Manasseh coastline (borderland/Phoenician — keep light).
 
-**Negev** — Opening archetype: ancient-rediscovery (strongest arc). Nabataean/Byzantine desert viticulture at Avdat, Shivta, Nizzana → modern revival at Mitzpe Ramon (800m). Carmel first at Ramat Arad 1998; Yatir. Ancient sources in guide plan §Regions. Draft exists — check `content/regions/` for current file.
+**Negev** — Opening archetype: ancient-rediscovery (strongest arc). Nabataean/Byzantine desert viticulture at Avdat, Shivta, Nizzana → modern revival at Mitzpe Ramon (800m). Carmel first at Ramat Arad 1998; Yatir. Ancient sources in guide plan §Regions. **Text complete both languages** (2026-07-06) — EN through Image Prompts locked in `content/regions/negev-en.post.md`; HE translation done in the manager's Drive doc, admin now has Editor access. Remaining: winery verification, Canva images, `negev-he.post.md` creation, image upload, library registration, WP push — see `plans/STATUS.md` Next Action for the full checklist.
 
 ## Production checklist (per post)
 

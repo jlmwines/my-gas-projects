@@ -4,6 +4,17 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-06 (cont'd) — Wine Talk category groundwork + Negev pipeline mapped out
+
+- Delivered the Negev EN post's Image Prompts (already drafted 2026-07-01, still current against the locked body) — no new prompts needed, just surfaced them.
+- User reported the manager finished the Negev HE translation and shared both Drive docs, closing out the ownership gap found earlier this session.
+- Wrote `website/BLOG_CATEGORIES_PLAN.md`: Wine Talk's blog roll is hardcoded to a single `basics` category (`template-articles.php:31`); the guide plan already road-maps six eventual categories, so this needed a scalable answer, not a one-off fix. Iterated through three rounds of user feedback: (1) filter tabs instead of stacking sections, since 5-6 categories would make a long, repetitive scroll; (2) tabs must be gated on real published-post counts, not just "the WP term exists" — the Regions category was created ahead of any posts; (3) `All` specifically is deferred as its own build, timed to when the first region post is ready to publish, rather than a runtime "2+ categories populated" check.
+- User then executed steps 1-2 in wp-admin themselves: renamed Basics → Wine Basics (EN `947`/HE `948`, same IDs/slugs) and created Regions (EN `1272` slug `regions`, HE `1273` slug `regions-he` name `אזורים`) — verified live via the REST API. Noticed Bundles category (formerly `669`/`677`) disappeared from both language listings; flagged to user, unexplained, not investigated further (out of scope, 0 posts either way).
+- Updated `content/REGION_POSTS_PLAN.md`'s Negev note and `plans/STATUS.md` Next Action with the concrete remaining pipeline: winery verification, Canva image generation, creating `negev-he.post.md` (translation duplicates the whole section chain per `content/CLAUDE.md`, not just the body — this file doesn't exist yet), image upload script, library registration, `push-posts.js --both`, wp-admin checklist. Category assignment (`enCategoryId`/`heCategoryId` = 1272/1273) folds into the manifest entry at push time.
+- Next: a publishing session picks up the Negev checklist above end-to-end; Galilee stays held until Negev clears it.
+
+---
+
 ## 2026-07-06 — Admin Bundles message-strip fix + Library Doc-ownership fix @441→@442
 
 - Bundle-management message strip never closed (visible even when empty, on load): `#bundle-mgmt-msg` combined inline `style="display:none"` with Bootstrap's `.d-flex` utility, whose `display: flex !important` always beat the JS toggle in both directions. Fixed by moving the flex layout into inline style and dropping the class, so plain `style.display` toggling works (@441).
