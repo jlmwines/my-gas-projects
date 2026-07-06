@@ -100,7 +100,17 @@
       "mcp__claude_ai_Google_Drive__create_file",
       "mcp__claude_ai_Google_Drive__get_file_metadata",
       "Bash(echo \"\\(exit: $?\\)\")",
-      "Bash(awk '/^## BODY/{flag=1;next}/^## EXCERPT/{flag=0}flag' \"C:/Users/B/projects/jlmwines/content/grapes/grapes-en.post.md\")"
+      "Bash(awk '/^## BODY/{flag=1;next}/^## EXCERPT/{flag=0}flag' \"C:/Users/B/projects/jlmwines/content/grapes/grapes-en.post.md\")",
+      "Bash(cat .gitattributes)",
+      "Bash(git check-attr *)",
+      "WebFetch(domain:negevwine.co.il)",
+      "WebFetch(domain:yatirwinery.com)",
+      "WebFetch(domain:pintowinery.com)",
+      "WebFetch(domain:www.keremramon.org)",
+      "WebFetch(domain:midbar-winery.co.il)",
+      "WebFetch(domain:nanawine.com)",
+      "WebFetch(domain:www.rnwinery.co.il)",
+      "WebFetch(domain:tushia.co.il)"
     ],
     "deny": [
       "Bash(git -C:*)",
