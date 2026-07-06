@@ -63,7 +63,7 @@
         </div>
         <div class="card-body p-0">
           <!-- Action result message strip — immediately below the header/buttons; green when shown -->
-          <div id="bundle-mgmt-msg" style="display:none;" class="px-3 py-2 border-bottom d-flex align-items-start justify-content-between">
+          <div id="bundle-mgmt-msg" style="display:none; align-items:flex-start; justify-content:space-between;" class="px-3 py-2 border-bottom">
             <div id="bundle-mgmt-msg-body" class="flex-grow-1"></div>
             <button type="button" class="close ml-3" id="btn-close-mgmt-msg" aria-label="Close"><span aria-hidden="true">&times;</span></button>
           </div>
@@ -1481,7 +1481,7 @@
     var msg = document.getElementById('bundle-mgmt-msg');
     if (!msgBody || !msg) return;
     msgBody.innerHTML = (title ? '<strong class="mr-2">' + title + '</strong>' : '') + html;
-    msg.style.display = '';
+    msg.style.display = 'flex';
   }
 
   function withButtonBusy(btn, label) {

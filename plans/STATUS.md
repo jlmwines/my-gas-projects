@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-03 — @440 live; KPI Summary Tab + trend surfacing shipped, all 6 `business/KPI.md` KPIs automatic; test-harness log-noise fix shipped; Negev region post body confirmed correct and live (manager translating to Hebrew); Galilee region post drafted + registered in the library, ready for the manager once Negev's HE is done; Grapes anchor post ("Grape Varieties in Israel") drafted, all facts verified.
+**Updated:** 2026-07-06 — @442 live; Admin Bundles message-strip close bug fixed (Bootstrap `.d-flex !important` was overriding `style.display`); Library Doc-ownership gap found and partially fixed (`createTranslationDraft` now transfers HE-copy ownership to admin, but the generic `attachExistingDoc` path and the already-created Negev-HE doc are not yet fixed — see Next Action). Negev region post body confirmed correct and live (manager translating to Hebrew); Galilee region post drafted + registered in the library, ready for the manager once Negev's HE is done; Grapes anchor post ("Grape Varieties in Israel") drafted, all facts verified.
 
 ## At a glance
 
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-01 |
 | Revenue | Steady |
-| Deploy Version | jlmops @440 · theme v1.2.30 |
-| Deploy Date | jlmops 2026-07-03 · theme 2026-06-12 |
+| Deploy Version | jlmops @442 · theme v1.2.30 |
+| Deploy Date | jlmops 2026-07-06 · theme 2026-06-12 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31, pre-dates the 2026-07-01 mixed-content fix below). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. HTTPS enforcement verified correct (clean single-hop 301); mixed-content HTTP images fixed on both homepages (9 images, EN+HE — was undersold as 1 image in the original ticket, see `.claude/bugs.md`). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
@@ -37,7 +37,7 @@ The live "what now" — daily review reads these first.
 3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Vendor has print artwork + target areas in hand. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
 4. **Next build — Reliability 1.3 or 4.1** → `jlmops/plans/RELIABILITY_AUDIT.md`; UI Tier 5 → `jlmops/plans/UI_AUDIT.md`; mobile LCP (~4.0s). (KPI Summary Tab + trend surfacing both shipped @440 — see Current State. Content-workflow redesign and content-distribution plans are both fully shipped and archived — `jlmops/plans/_archive/`; facts live in `jlmops/docs/DATA_MODEL.md`.)
 5. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
-6. **Negev region post** — body confirmed correct and live; manager now translating to Hebrew, may finish today. Still needs winery verification before publish. Leave the file alone otherwise — it's been broken by editing sessions repeatedly.
+6. **Negev region post** — body confirmed correct and live; manager now translating to Hebrew, may finish today. Still needs winery verification before publish. Leave the file alone otherwise — it's been broken by editing sessions repeatedly. **The manager also needs to share the existing Negev-HE Google Doc with `accounts@jlmwines.com` (Editor)** — it was created under the manager's own account before the @442 ownership fix, so the admin currently cannot open it.
 7. **Galilee region post (Slot A, due 2026-07-07)** — drafted + registered in the library (`blog-region-galilee-en`, state `draft`), ready for the manager. Deliberately not yet flagged/pushed to the manager — hold until Negev's Hebrew translation is confirmed done.
 8. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, all facts verified this session. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 

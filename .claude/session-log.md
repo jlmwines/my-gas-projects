@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-06 — Admin Bundles message-strip fix + Library Doc-ownership fix @441→@442
+
+- Bundle-management message strip never closed (visible even when empty, on load): `#bundle-mgmt-msg` combined inline `style="display:none"` with Bootstrap's `.d-flex` utility, whose `display: flex !important` always beat the JS toggle in both directions. Fixed by moving the flex layout into inline style and dropping the class, so plain `style.display` toggling works (@441).
+- User couldn't open the Negev-HE Library Doc despite it showing attached. Traced to `executeAs: "USER_ACCESSING"` (`appsscript.json`): `createTranslationDraft`'s `DriveApp...makeCopy()` is owned by whoever clicked the button (the manager), and `attachExistingDoc`'s later `file.moveTo` only reparents the file into the Library folder — it never transfers ownership or grants access. Fixed `createTranslationDraft` to call `copy.setOwner(TaskService.getUserByRole('admin'))` right after the copy is made (@442; also exposed `getUserByRole` on `TaskService`'s public API, it existed but wasn't returned). Forward-looking only — doesn't retroactively fix the existing Negev-HE doc (manager still needs to share it manually) and the generic `attachExistingDoc` path (entity/task "Attach new version" buttons) has the same gap, still open — see `.claude/bugs.md`.
+- Durable fact recorded in `jlmops/docs/DATA_MODEL.md` Content Library section (Doc ownership vs. folder placement) so this doesn't get rediscovered from scratch next time.
+- Next: confirm with user that Bundles message strip now closes; get the manager to share the Negev-HE doc; decide whether to extend the ownership-transfer fix to `attachExistingDoc` generically.
+
+---
+
 ## 2026-07-03 — KPI trend surfacing + test-noise fix @437→@440; Galilee + Grapes anchor drafted
 
 - KPI #6 (organic engagement) and month-over-month trend surfacing both shipped, but trend surfacing needed a real detour: `sk_Period` closed-month values get silently converted to Dates by Sheets, so the first deploy showed no deltas — fixed by normalizing before comparing (`.claude/bugs.md`). Also found + fixed unrelated: unit-test suites' deliberate malformed-input tests were writing into the production `SysLog`, surfacing as false import-failure alarms in `jlmops-status.md` — `LoggerService.setTestSuppression` + `TestRunner` wrapper fixes it going forward.

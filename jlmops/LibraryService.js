@@ -1134,7 +1134,12 @@ const LibraryService = (function() {
 
         // Copy the EN Doc, prepend the prompt (line by line so each is its own
         // paragraph), then attach the copy as the HE entity's current version.
+        // executeAs:USER_ACCESSING means makeCopy() owns the file as whoever is
+        // clicked the button — transfer to the admin account so it lands back
+        // in the Library owner's reach regardless of who ran the translation.
         const copy = DriveApp.getFileById(enFileId).makeCopy();
+        const adminEmail = TaskService.getUserByRole('admin');
+        if (adminEmail) copy.setOwner(adminEmail);
         const copyDoc = DocumentApp.openById(copy.getId());
         const promptLines = _getTranslationPrompt().split('\n');
         for (let i = promptLines.length - 1; i >= 0; i--) {

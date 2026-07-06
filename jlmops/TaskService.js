@@ -727,7 +727,8 @@ const TaskService = (function() {
     updateTaskNotes: updateTaskNotes,
     updateTaskDates: updateTaskDates,
     findOpenTaskByType: findOpenTaskByType,
-    upsertSingletonTask: upsertSingletonTask
+    upsertSingletonTask: upsertSingletonTask,
+    getUserByRole: getUserByRole
   };
 
 })();
