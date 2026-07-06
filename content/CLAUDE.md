@@ -90,6 +90,8 @@ Each blog post lives as a `.md` file (one EN, one HE) with a fixed section struc
 
 **Registering a post in the jlmops content library → see `content/register-library.js` header** for all usage modes (`<slug>`, `--all`, `--update`). Add a manifest entry to the script, then run `node content/register-library.js <slug>`.
 
+**Writing the post's HTML block (the `Paste below into WordPress Code Editor:` section) → see `content/HTML_BLOCK_GUIDE.md` first.** Copy column/image layout from `content/existing-layouts/*.raw.txt` or an existing bilingual pair (e.g. `Handling EN.post.md`/`Handling HE.post.md`) — never invent column widths or CSS from scratch. The single most important rule: **the HE HTML is a structural copy of the EN HTML — same columns, same order, same classes, only the text is translated.** There is no cross-language mirroring/flipping convention on this site; do not try to build one.
+
 ### Required sections (in this order)
 
 This table must mirror `_post-template.md` exactly — if they disagree, the template file is stale and gets fixed, not read around. Body sits right after Title: a human opening the file reads the post first, then sees the derived fields below it.

@@ -4,6 +4,28 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-06 (cont'd, part 3) — HE column-mirroring rabbit hole resolved; Negev published live
+
+- Spent most of a session chasing a wrong theory: that HE's column/image layout needed to be a left-right *mirror* of EN's. Tried a generic `.wp-block-columns` reversal, then `cols-flip` applied uniformly to every column row, then `cols-flip` alternating with manually-reordered DOM — none rendered correctly, confirmed by the user checking the actual live/preview page each time (curl/WebFetch can't load WP draft previews, which cost real time before realizing it).
+- Root cause of the whole detour: never checked for a documented/established convention before inventing one. Diffing the already-published `Handling EN.post.md`/`Handling HE.post.md` (prompted by the user pointing at a known-working post) showed the real answer immediately — `cols-flip` occurrences line up 1:1, same sections, same sequence, in both languages. **The actual convention: HE HTML is a structural copy of EN's, translated text only — no cross-language flipping mechanism exists on this site.** Reverted Negev-HE to match Negev-EN exactly; fixed.
+- Wrote `content/HTML_BLOCK_GUIDE.md` (new) capturing this + the `cols-flip` (same-language rhythm alternation) / `img-first-mobile` (mobile stacking fix) conventions, column-width patterns, and "check `existing-layouts/` and a real precedent before inventing" — added a pointer in `content/CLAUDE.md`'s quick reference so this doesn't get re-derived from scratch again.
+- User published both Negev posts live during this process (EN `https://jlmwines.com/blog-negev/`, HE `https://jlmwines.com/he/blog-negev/`) — superseding the earlier "stays draft until other regions ready" plan. Remaining: WPML link, SEO meta (HE), focus keyword, winery verification — all wp-admin/manual, not yet done.
+- Next: same convention applies to Galilee/Golan/Central Mountains/Judea/Coastal Plain when they're built — read `HTML_BLOCK_GUIDE.md` first, don't reinvent.
+
+---
+
+## 2026-07-06 (cont'd, part 2) — Negev pushed live as a draft, both languages
+
+- User created WP draft stubs (EN `67600`, HE `67602`), pointed to the local images folder (`content/regions/negev/`, 4 Canva PNGs already there), shared both Drive docs, and said the goal was "what the session must do" — execute the pipeline, not hand back a manual task list. Explicit framing: draft production for this series "went poorly for several sessions" (matches the paraphrasing/template-order/Drive-divergence incidents logged 2026-07-01/02) — asked to get columns/image placement right by best guess, user reviews after.
+- Built `content/regions/negev-he.post.md` from the Drive HE doc (`blog-region-negev-he 26-06-30-18-14`) — full section chain, verbatim, no paraphrasing.
+- Converted both EN and HE `## BODY` to Gutenberg HTML: 40/60 image/text columns alternating sides (`cols-flip`), mirroring `Context EN.post.md`'s established convention (chose this over `Handling`'s 25/75 step-by-step layout — narrative shape fits Negev's structure better). CTA links to `/articles/` (EN) / `/he/articles/` (HE) — the real Wine Talk page path, not the not-yet-existing regions hub.
+- Wrote `content/regions/upload-negev-images.js` (per-post one-shot, mirrors `upload-handling-images.js`), ran it — uploaded 4 images to WP media (ids 67603-67606), substituted `__IMG_N_ID__`/`__IMG_N_URL__`/`__FEATURED_ID__` into both files.
+- Added the `negev` manifest entry to `push-posts.js` (`enCategoryId: 1272`/`heCategoryId: 1273`). Hit one real bug: the two new post files had CRLF line endings (from the Write tool) while the parser's regexes expect bare LF — EN push silently failed parse ("missing title or body") until normalized to LF.
+- Pushed both (`push-posts.js negev --both`), verified live via REST API (`context=edit`): both `status: draft`, correct featured_media, correct category. Noticed each image URL appears twice in `content.rendered` but only once in `content.raw` — confirmed it's the site's standard lazy-load `data-src`/`src` pattern (present site-wide), not a duplication bug.
+- Next: user reviews the layout/content on both drafts; then winery verification, HE SEO meta, WPML link (manual, `push-posts.js` doesn't do it); publish stays on hold until other region posts are ready (user decision, not gated on winery verification alone).
+
+---
+
 ## 2026-07-06 (cont'd) — Wine Talk category groundwork + Negev pipeline mapped out
 
 - Delivered the Negev EN post's Image Prompts (already drafted 2026-07-01, still current against the locked body) — no new prompts needed, just surfaced them.

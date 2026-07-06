@@ -92,6 +92,14 @@ const MANIFEST = [
     enFile: 'Handling EN.post.md',
     heFile: 'Handling HE.post.md',
     enCategoryId: 947, heCategoryId: 948   // Basics / יסודות (WPML-translated terms)
+  },
+  {
+    name: 'negev',
+    enSlug: 'blog-negev', enId: 67600,
+    heSlug: 'blog-negev', heId: 67602,
+    enFile: 'regions/negev-en.post.md',
+    heFile: 'regions/negev-he.post.md',
+    enCategoryId: 1272, heCategoryId: 1273   // Regions / אזורים (WPML-translated terms)
   }
 ];
 
