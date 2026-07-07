@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-07 — jlmops content-publishing simplification fully designed (calendar/library/tasks); Negev URL corrections
+
+- Built and fully designed `jlmops/plans/CALENDAR_LIBRARY_LOOP_PLAN.md`: the calendar becomes a simple, manually-maintained sheet (no auto-derivation from SysLibrary); no automatic EN/HE sibling pairing anywhere; no lock/version/roll-forward machinery; one consolidated content-creation modal replacing three duplicated ones; progressive task-entity attachment (via a small `WebAppTasks_updateTask` allow-list addition, not a `TaskService.js` change); translation triggered by finishing the English edit task, not a separate guess-the-peer step.
+- Reviewed three times: two independent adversarial design reviews (fresh agents, not forks) plus one red-team pass on the implementation sequence specifically. Every finding from all three got a concrete resolution written into the plan — nothing left unaddressed. Plan includes a 6-phase dependency-ordered build sequence with verify steps; ready to implement, starting with Phase 1 (calendar foundation).
+- Corrected Negev's live URLs across several docs: EN slug is actually `negev-wine` (changed from the draft `blog-negev` during wp-admin finishing), HE stayed `blog-negev` — the two languages no longer share a slug, a real break from site convention worth remembering for Galilee etc.
+- Wrote `plans/FILE_CLEANUP_PLAN.md` — surveyed both `exchange/` scratch folders, found real load-bearing files mixed in (a live credential, a kept SEO-audit reference) and one stale doc reference (files cited in `EMAIL_GUIDELINES.md` that no longer exist). Categorized the rest; awaiting a decision on which categories to act on.
+- Next: read `CALENDAR_LIBRARY_LOOP_PLAN.md` in full before starting Phase 1 — it's self-contained. `SysLibrary`'s existing Galilee duplicate (`blog-region-galilee-en` vs `blog-galilee-en`) and the July newsletter's duplicate entities are still unresolved, flagged for manual cleanup once the new model is live.
+
+---
+
 ## 2026-07-06 (cont'd, part 3) — HE column-mirroring rabbit hole resolved; Negev published live
 
 - Spent most of a session chasing a wrong theory: that HE's column/image layout needed to be a left-right *mirror* of EN's. Tried a generic `.wp-block-columns` reversal, then `cols-flip` applied uniformly to every column row, then `cols-flip` alternating with manually-reordered DOM — none rendered correctly, confirmed by the user checking the actual live/preview page each time (curl/WebFetch can't load WP draft previews, which cost real time before realizing it).
