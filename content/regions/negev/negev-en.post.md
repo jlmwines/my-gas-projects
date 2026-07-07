@@ -77,7 +77,7 @@ The Desert Is Making Wine Again
 
 
 ## EMAIL PREVIEW TEXT
-Fifteen hundred years ago the Negev shipped wine across the Mediterranean. After a thousand years of silence, it's happening again — and the desert is even growing back its own lost grapes.
+Fifteen hundred years ago the Negev shipped wine across the Mediterranean. It's happening again — and even regrowing its own lost ancient grapes.
 
 
 ## EMAIL BODY
@@ -136,8 +136,8 @@ Impressionist oil painting, close-up of a wine glass reflecting a desert sunset,
 - **Before publishing:** confirm which of the Wineries to Visit we carry, add shop page links for those we do, verify visitor-centre details are current.
 - SEO meta description (paste into RankMath): "The Negev desert was once the ancient world's greatest wine region — home of Vinum Gazentum. Today it's making wine again, and even regrowing its own 1,500-year-old lost grapes."
 - Focus keyword suggestion: "Negev wine"
-- Slug: `blog-negev` — WP draft stub created 2026-07-06, post ID 67600 (paired with HE post ID 67602). Manifest entry `negev` added to `content/push-posts.js` (`enCategoryId: 1272`/`heCategoryId: 1273`, Regions category).
-- **Stays draft** until some or all of the remaining region posts (Galilee, Golan Heights, Central Mountains, Judea, Coastal Plain) are also ready — user decision 2026-07-06, not a solo-post publish.
+- Slug: live EN slug is `negev-wine` (https://jlmwines.com/negev-wine/, confirmed 2026-07-06) — matches the focus keyword above; changed from the original draft slug `blog-negev` during wp-admin finishing. HE slug was also changed during finishing, landing back on `blog-negev` (https://jlmwines.com/he/blog-negev/) — **EN and HE slugs no longer match**, unlike the site's usual same-slug-across-languages convention. Post IDs: EN 67600, HE 67602. Manifest entry `negev` in `content/push-posts.js` updated to match (`enSlug: 'negev-wine'`, `heSlug: 'blog-negev'`).
+- Published live both languages 2026-07-06 (superseded the original "stays draft until other regions ready" plan — user decision, see `plans/STATUS.md`).
 - HTML block below: column layout (40/60 image/text, alternating sides) mirrors the site's established convention (`Context EN.post.md`) — first pass, user reviews after push and can request changes; nothing here is final.
 
 Paste below into WordPress Code Editor:

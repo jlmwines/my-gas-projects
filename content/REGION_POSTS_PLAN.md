@@ -4,33 +4,37 @@ Six region posts complete the Regions spoke of the Israeli Wine Guide. Each maps
 
 **Sources:** `content/regions/ISRAEL-WINE-REGIONS.pdf` (Montefiore 2023) + `content/regions/ISRAEL WINE MAP - REGIONS.pdf` (Asado/IPEVO) + `content/regions/region map.png`
 
+**Calendar source of truth:** the [content calendar sheet](https://docs.google.com/spreadsheets/d/1xnhFKCPUkvVdMy7GWXDWwiipT6j028ZrZ_69GJ6HWjc) (`cal_Date`/`cal_Name`/`cal_Type` rows) is the live, user-maintained schedule — this table is a reconciled mirror. Re-check the sheet before trusting dates here if it's been a while.
+
 ---
 
 ## Slot assignments
 
+Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), reshuffling the queue: Negev takes Slot A, Galilee moves to Slot B (inheriting the old Golan Heights dates), Central Mountains/Judea/Coastal Plain keep their original dates. **Golan Heights → Slot F is inferred, not confirmed** — the calendar sheet only names slots once they're imminent; C/D/E/F beyond Galilee are still generic "blog C/D/E/F" rows there, so Golan Heights landing at F is our best read of "whichever region got displaced," not a sheet-confirmed fact.
+
 | Slot | Email date | Newsletter date | Region | Slug | Status |
 |------|-----------|----------------|--------|------|--------|
-| A | 2026-07-07 | 2026-07-27 | Galilee | `blog-galilee` | — |
-| B | 2026-08-11 | 2026-08-25 | Golan Heights | `blog-golan-heights` | — |
+| A | 2026-07-07 | 2026-07-27 | Negev | `blog-negev` | **Published live (EN+HE) 2026-07-06** |
+| B | 2026-08-11 | 2026-08-25 | Galilee | `blog-galilee` | Drafted + registered, held |
 | C | 2026-08-25 | 2026-09-23 | Central Mountains | `blog-central-mountains` | — |
 | D | 2026-10-20 | 2026-10-27 | Judea (Foothills) | `blog-judea` | — |
 | E | 2026-11-17 | 2026-11-24 | Coastal Plain | `blog-coastal-plain` | — |
-| F | 2026-12-15 | 2026-12-29 | Negev | `blog-negev` | Draft exists |
+| F | 2026-12-15 | 2026-12-29 | Golan Heights (inferred — confirm) | `blog-golan-heights` | — |
 
-Email date = post publish + email send. Newsletter date = print insert distribution.
+Email date = post publish + companion email send (separate from the monthly AYIW email, which runs on its own date). Newsletter date = print insert distribution.
 
 ## Source files
 
-Post source files (per `content/CLAUDE.md` naming convention):
+Post source files live in a per-region subfolder alongside that region's image assets (confirmed convention as of Negev/Galilee — each subfolder holds the `.post.md` pair, Canva source images, and the per-post upload script):
 
 | Region | EN file | HE file |
 |--------|---------|---------|
-| Galilee | `content/regions/galilee-en.post.md` | `content/regions/galilee-he.post.md` |
-| Golan Heights | `content/regions/golan-heights-en.post.md` | `content/regions/golan-heights-he.post.md` |
-| Central Mountains | `content/regions/central-mountains-en.post.md` | `content/regions/central-mountains-he.post.md` |
-| Judea | `content/regions/judea-en.post.md` | `content/regions/judea-he.post.md` |
-| Coastal Plain | `content/regions/coastal-plain-en.post.md` | `content/regions/coastal-plain-he.post.md` |
-| Negev | `content/regions/negev-en.post.md` | `content/regions/negev-he.post.md` |
+| Galilee | `content/regions/galilee/galilee-en.post.md` | `content/regions/galilee/galilee-he.post.md` |
+| Golan Heights | `content/regions/golan-heights/golan-heights-en.post.md` | `content/regions/golan-heights/golan-heights-he.post.md` |
+| Central Mountains | `content/regions/central-mountains/central-mountains-en.post.md` | `content/regions/central-mountains/central-mountains-he.post.md` |
+| Judea | `content/regions/judea/judea-en.post.md` | `content/regions/judea/judea-he.post.md` |
+| Coastal Plain | `content/regions/coastal-plain/coastal-plain-en.post.md` | `content/regions/coastal-plain/coastal-plain-he.post.md` |
+| Negev | `content/regions/negev/negev-en.post.md` | `content/regions/negev/negev-he.post.md` |
 
 ## Per-region notes
 
@@ -57,6 +61,8 @@ Post source files (per `content/CLAUDE.md` naming convention):
 - [ ] CTA
 - [ ] Image prompts (Canva, impressionist oil painting)
 - [ ] HE translation
+- [ ] Canva images generated from prompts, dropped into `content/regions/<region>/`
+- [ ] Image upload script (`content/regions/<region>/upload-<region>-images.js`) — **copy `content/regions/negev/upload-negev-images.js` as the template, not a flat-post script like `upload-handling-images.js`.** Region posts are nested one level deeper (`content/regions/<region>/`, not `content/`) — the credential/module require paths differ. See `content/PUBLISHING.md` "Two directory depths" before writing or running it.
 - [ ] Register in library (`node content/register-library.js <slug>`)
 - [ ] Push to WordPress (`node content/push-posts.js <slug> --both`)
 - [ ] wp-admin checklist (focus keyword, SEO snippet, WPML link, publish)

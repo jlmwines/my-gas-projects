@@ -4,7 +4,12 @@ How a finished `.post.md` becomes a WordPress post. This is the reference for wh
 
 ## The two scripts
 
-**`upload-<topic>-images.js`** — one-shot, per post. Uploads the local Canva PNGs from `content/<topic>/` to the WP media library (with alt text + title), then substitutes the returned media IDs/URLs into the `__IMG_N_ID__` / `__IMG_N_URL__` placeholders in both `.post.md` files. The **featured** image is uploaded too but is *not* in the body — its media ID is only printed to the console for a manual Featured-Image set in wp-admin. These scripts are written fresh per post (see `upload-handling-images.js`, `upload-context-images.js` as templates); they are not manifest-driven.
+**`upload-<topic>-images.js`** — one-shot, per post. Uploads the local Canva PNGs from the post's own folder to the WP media library (with alt text + title), then substitutes the returned media IDs/URLs into the `__IMG_N_ID__` / `__IMG_N_URL__` placeholders in both `.post.md` files. The **featured** image is uploaded too but is *not* in the body — its media ID is stamped into `## FEATURED MEDIA` (see below). These scripts are written fresh per post; they are not manifest-driven.
+
+**Two directory depths exist — copy the matching template, don't just paste-and-tweak the other one:**
+
+- **Flat posts** (`Context`, `Handling`) — script and `.post.md` files sit directly in `content/`, images one level down in `content/<topic>/`. Template: `upload-handling-images.js`. From `content/`: `CRED_PATH = path.join(__dirname, '..', '.wp-credentials')`, `require('../../tools/wp-api')`.
+- **Region posts** (`content/regions/<region>/`, one folder per region — Negev is the first) — script, `.post.md` files, and images are all co-located in that one folder. Template: `content/regions/negev/upload-negev-images.js`. From `content/regions/<region>/` (two levels deeper than flat posts): `NEGEV_DIR`-equivalent = `__dirname` (everything's alongside the script), `CRED_PATH = path.resolve(__dirname, '../../../.wp-credentials')`, `require('../../../../tools/wp-api')`. **Getting this wrong doesn't error at write time** — `fs`/`path` calls resolve silently to a wrong-but-valid path, and the failure only shows up when the script actually runs (file-not-found or module-not-found). Double-check the directory depth before running, not after.
 
 **`push-posts.js`** — the repeatable publisher. Manifest-driven, slug-keyed, idempotent. Reads a `.post.md`, parses three sections, and POSTs them to WordPress. Re-running updates the same post by its pinned ID.
 

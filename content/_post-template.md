@@ -31,7 +31,8 @@ __FEATURED_ID__
 
 
 ## EMAIL PREVIEW TEXT
-<!-- Preheader — shown in email clients before the email is opened. 1–2 sentences.
+<!-- Preheader — shown in email clients before the email is opened. 150 chars max
+     (most clients truncate past this; longer text just gets cut mid-word).
      Session drafts; manager edits/translates. -->
 
 

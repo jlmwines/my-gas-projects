@@ -95,7 +95,7 @@ const MANIFEST = [
   },
   {
     name: 'negev',
-    enSlug: 'blog-negev', enId: 67600,
+    enSlug: 'negev-wine', enId: 67600,
     heSlug: 'blog-negev', heId: 67602,
     enFile: 'regions/negev-en.post.md',
     heFile: 'regions/negev-he.post.md',

@@ -46,6 +46,15 @@ Apply `className: "img-first-mobile"` to the specific column that needs to jump 
 
 Pick based on how much text is actually in that section — not a fixed rule, but stay consistent with an existing example rather than inventing a new ratio.
 
+## Design goals when choosing layout per section
+
+These are judgment calls made while building the HTML, not a formula — but check the result against all four before moving to the next section:
+
+- **Long section → more columns, not one tall column.** A section with several paragraphs next to a single image column produces a lopsided row (one short column, one very tall one). Split the text across two text columns (the 3-column `33.3%/33.3%/33.3%` pattern) instead of stretching a single text column vertically.
+- **Alternate image side section-to-section.** Beyond just "visual rhythm," the actual point is to avoid a page where every image sits on the same side and the post reads as monotonous — apply `cols-flip` (see above) across consecutive sections so the eye isn't tracking the same left-image/right-text pattern all the way down the post.
+- **Balance column height within a row on desktop.** The columns in one row should end up roughly similar length — an image column is a fixed height (set by its aspect ratio), so the text column(s) next to it should carry roughly the amount of copy that fills that same height, not noticeably more or less. This is the practical reason to reach for a wider text ratio (`25%/75%`) or a second text column (3-column) when a section runs long, and a narrower one (`50%/50%`) when it's short — pick the ratio that makes the row look balanced, not just "the default."
+- **Check the mobile stack makes sense, not just that the image is early.** `img-first-mobile` forces a column to the front on mobile, but "first" isn't automatically "reasonable" — the image should land somewhere that still reads naturally next to the text it illustrates (usually immediately before or after its own paragraph, not detached at the very top of an unrelated stack). Check the actual mobile stacking order per row, not just whether the class is applied.
+
 ## Verifying a push
 
 `push-posts.js` only updates `post_content` (and `featured_media`/`categories` if configured) — it never sets `post_status`. After pushing, checking correctness means reading the actual saved HTML back via the REST API (`?context=edit` with the site's Application Password), not assuming the push succeeded. A browser preview of a **draft** requires a logged-in cookie session — `curl`/`WebFetch` cannot load it (returns "Page not found"), so draft-preview visual bugs can only be diagnosed by the human looking at the actual page, or by briefly publishing so the real permalink becomes fetchable. Don't try to reverse-engineer rendering behavior (RTL flex direction, cascade specificity, etc.) from CSS spec theory alone — check a live, working precedent instead; theory repeatedly gave wrong answers this session where checking Handling's actual committed source gave the right one immediately.

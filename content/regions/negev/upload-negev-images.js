@@ -13,16 +13,15 @@
 // is stamped into the `## FEATURED MEDIA` section (replaces __FEATURED_ID__) so
 // push-posts.js sets it as the post's featured_media — no manual wp-admin step.
 //
-// Run from jlmwines/ root: node content/regions/upload-negev-images.js
+// Run from jlmwines/ root: node content/regions/negev/upload-negev-images.js
 // ═══════════════════════════════════════════════════════════════════
 
 const fs = require('fs');
 const path = require('path');
 
-const CONTENT_DIR = path.resolve(__dirname, '..');
-const NEGEV_DIR = path.join(CONTENT_DIR, 'regions', 'negev');
-const CRED_PATH = path.join(CONTENT_DIR, '..', '.wp-credentials');
-const wp = require('../../../tools/wp-api')(CRED_PATH);
+const NEGEV_DIR = __dirname;
+const CRED_PATH = path.resolve(__dirname, '../../../.wp-credentials');
+const wp = require('../../../../tools/wp-api')(CRED_PATH);
 
 // Featured (not in body — stamped into ## FEATURED MEDIA)
 const FEATURED = {
@@ -110,9 +109,9 @@ async function main() {
   }
 
   console.log('\n─── Substituting body + featured placeholders ───');
-  substitute(path.join(CONTENT_DIR, 'regions', 'negev-en.post.md'), idMap, urlMap, feat.id);
+  substitute(path.join(NEGEV_DIR, 'negev-en.post.md'), idMap, urlMap, feat.id);
   console.log('  negev-en.post.md updated.');
-  substitute(path.join(CONTENT_DIR, 'regions', 'negev-he.post.md'), idMap, urlMap, feat.id);
+  substitute(path.join(NEGEV_DIR, 'negev-he.post.md'), idMap, urlMap, feat.id);
   console.log('  negev-he.post.md updated.');
 
   console.log('\n─── Summary ───');
