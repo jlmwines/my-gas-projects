@@ -1,17 +1,16 @@
-2026-06-30 — portfolio-scoped cleanup pass (jlmwines + portfolio root; VaadAi skipped per user).
+2026-07-08 — project-scoped cleanup pass (jlmwines only).
 
 Touched this pass:
-- `projects/CALENDAR.md` — Newsletter Issue #1 + MCP vetting moved to Completed; mobile perf date labels updated to Queued; stale "June 2026 issue" future-newsletter row struck; memory prune one-time entry promoted to Recurring cadence.
-- `projects/STATUS.md` — JLM row updated to @417 / 2026-06-30.
-- `plans/STATUS.md` — Updated: date, jlmops at-a-glance, deploy version/date all updated to @417; offline-attribution defer updated to 2026-07-14.
+- `.claude/bugs.md` — 4 stale entries resolved/trimmed: PROJ-CONTENT task routing (trimmed to pointer, full analysis already in `WORKFLOWS.md` §12.0); `attachExistingDoc` Drive-ownership bug (fixed 2026-07-08 per `DATA_MODEL.md`, moved to Resolved); Bundles N+1 (fixed @228/@229 2026-06-05, moved to Resolved); Calendar-shows-library-entities bug (resolved as a side effect of the CALENDAR_LIBRARY_LOOP_PLAN rework, moved to Resolved).
+- `jlmops/plans/PERFORMANCE_OPTIMIZATION_PLAN.md` — fixed internal contradiction (header said "done," trailing `## Status` section still said "not implemented").
+- `marketing/FLYER_PLAN.md` — Status + Open Items updated to current reality (printed, distribution scheduled after 9 Av to 5,000 Talbiye residences; done items checked off).
+- `content/REGION_POSTS_PLAN.md` — Galilee slot status corrected from "held" to "in progress."
+- `plans/STATUS.md` — at-a-glance (marketing) and Next Action items 1/2/3/5/6 updated to current reality (newsletter cadence, cartons, flyer, Negev promo email, Galilee) earlier in this session.
+- `.claude/session-log.md` — pruned entries older than 30 days (2026-05-15 through 2026-06-07, ~620 lines) to a condensed pointer note; kept everything from 2026-06-08 forward plus two out-of-order 2026-06-23 entries that were sitting after the old block.
 
 Audited, no change needed:
-- `plans/CUTOVER_CHECKLIST.md` — status header correct (COMPLETE 2026-05-05, retained as playbook).
-- `plans/TRANSLATION_PLAN.md` — current reference doc.
-- `plans/THEME_FOUNDATIONS.md` — current living reference.
-- `.claude/bugs.md` — open bugs current; resolved-recent section accurate.
-- `.claude/session-log.md` — entries within 30 days, concise; no pruning due.
-- `~/.claude/projects/.../memory/MEMORY.md` — JLM and portfolio entries current; no stale entries found.
-- `plans/STATUS.md` Inbox — two deferred items, both future-valid (defer:2026-07-08, defer:2026-07-14).
+- `plans/STATUS.md` Inbox — 2 items, both current (PROJ-CONTENT `defer:2026-07-08` still genuinely blocked; offline-attribution `defer:2026-07-14` future-valid).
+- `~/.claude/projects/.../memory/MEMORY.md` — no stale entries; `feedback_flag_convention_breaks_before_building` pattern recurred again this week (translation-trigger convention change), confirming it's still load-bearing.
+- Other open bugs (jlmops: KPI sk_Period Date bug, ConfigService second-param drop, Product Replacement dead columns, web-inventory-export race, Mailchimp activity-log gap, sync-hardening/timestamp/count-task audits; web: gift/accessory description blanking, RankMath auto-push) — checked against relevant plan docs, all still genuinely open, no drift found.
 
-Skipped: VaadAi (per user), AliyahNet (on hold, low activity).
+Out of scope this pass (project-scoped, not portfolio-wide): portfolio `CALENDAR.md`, VaadAi, AliyahNet.

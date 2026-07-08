@@ -9,7 +9,7 @@ One current-state line per business area. The umbrella has no single phase label
 - **jlmops** (GAS backend) — live @460, stable. Content-publishing pipeline settled and live-tested.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
-- **marketing** — flyer round 1 active (Katamon local acquisition); newsletter Issue #2 (June) in final distribution; 2026 calendar filled through December (`content/PUBLICATION_CALENDAR.md`).
+- **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
 - **business** — strategy/brand docs current.
 
 ## Metrics
@@ -32,12 +32,12 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **Newsletter Issue #2 (June) — AYIW email confirmed sent 2026-06-24 (user-confirmed); print ready to distribute.** Mark `email-newsletter-2026-06-en/he` published in jlmops. After print distribute: mark `print-newsletter-2026-06-en/he` published. Set `slb_TargetDate` on entities in jlmops if not set.
-2. **Branded shipping cartons — vendor has artwork + colors in hand.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
-3. **Flyer advertising — active, moving.** Round 1 = local acquisition within ~2km of the Katamon shop; ~₪2,000 test. Vendor has print artwork + target areas in hand. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-01`).
+1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) content in progress — finish drafting and send before month end.
+2. **Branded shipping cartons — art in review with vendor.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
+3. **Flyer advertising — printed; distribution scheduled after 9 Av to 5,000 Talbiye residences.** Vendor-owned execution. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-14`).
 4. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
-5. **Negev region post — published live in both languages, 2026-07-06.** EN: https://jlmwines.com/negev-wine/ (post 67600). HE: https://jlmwines.com/he/blog-negev/ (post 67602). Slugs no longer match between languages (EN changed from the original `blog-negev` draft slug to `negev-wine` during wp-admin finishing). **Remaining wp-admin finishing:** (a) HE SEO meta description; (b) focus keyword both languages; (c) WPML-link the two posts as translations of each other (`push-posts.js` doesn't do this); (d) winery verification (confirm which Wineries to Visit entries JLM actually carries, add shop links).
-6. **Galilee region post (Slot B, due 2026-08-11 — reshuffled after Negev published out of sequence, see `content/REGION_POSTS_PLAN.md`)** — drafted + registered in the library (`blog-region-galilee-en`, state `draft`), ready for the manager. Held until Negev clears the pipeline above.
+5. **Negev region post — published live in both languages, 2026-07-06; promotional email sent 2026-07-07.** EN: https://jlmwines.com/negev-wine/ (post 67600). HE: https://jlmwines.com/he/blog-negev/ (post 67602). Slugs no longer match between languages (EN changed from the original `blog-negev` draft slug to `negev-wine` during wp-admin finishing). **Remaining wp-admin finishing:** (a) HE SEO meta description; (b) focus keyword both languages; (c) WPML-link the two posts as translations of each other (`push-posts.js` doesn't do this); (d) winery verification (confirm which Wineries to Visit entries JLM actually carries, add shop links).
+6. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
 8. **Local file/folder cleanup** (`plans/FILE_CLEANUP_PLAN.md`) — six categories surveyed (screenshots, superseded CSV snapshots, tool-output folders, pre-cutover HTML mockups, jlmops CSV dumps, uncategorized remainder). Awaiting decision on which to act on before any files are touched.
 

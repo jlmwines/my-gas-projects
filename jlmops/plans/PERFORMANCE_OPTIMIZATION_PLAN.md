@@ -440,4 +440,4 @@ Do **Fix A first** — it's the root cause, behavior-identical, low risk. Add **
 
 ## Status
 
-Planned 2026-06-01, not implemented. Bug logged in `.claude/bugs.md` (2026-06-01).
+Done — see header above (implemented 2026-06-05, @228→@229).

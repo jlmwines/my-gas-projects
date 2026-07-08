@@ -2,7 +2,7 @@
 
 **Purpose.** Two-sided printed flyer (EN / HE) distributed via mailbox insertion in selected Jerusalem neighborhoods. Acquisition channel: drive new (first-order) customers to jlmwines.com using the existing ₪50-off-first-order coupon as the incentive.
 
-**Status.** EN design complete 2026-06-24 — file in `marketing/flyer/flyer-50new-26-06-24-16-19.jpg`. Hebrew copy sent for translation review; expected back by ~2026-07-01. Coupon code: `50NEW`. QR links to bundles category (UTM-tagged). Vendor quote received 2026-06-21. Print run pending HE copy approval.
+**Status.** Printed (EN+HE). Distribution scheduled for after 9 Av to 5,000 Talbiye residences (first drop within the Round 1 radius). Coupon code: `50NEW`. QR links to bundles category (UTM-tagged).
 
 **Strategic frame.** Acquisition test, not a proven channel. ₪2,000/round is right-scaled as a test, not a campaign. Round 1 produces the data that decides whether the channel scales. Round 1 targets the local area first: new-customer acquisition is the goal, in a warm, well-matched, Evyatar-aware audience, with some offline-only regulars converting online as a secondary benefit; colder, further-out neighborhoods come in Round 2+. Going in with that expectation makes a "this didn't work" outcome a useful result, not a sunk cost.
 
@@ -128,13 +128,11 @@ LTV math: if a repeat customer's first-year revenue lands at ₪1,500–₪3,000
 
 (Roughly in order. None scheduled.)
 
-1. **Vendor outreach** — quote yoterplus.co.il + dilen.co.il for half-A4, two-sided, mailbox-insertion in target neighborhoods. Confirm price/unit, drop volumes possible at ₪2,000, lead time, design file specs.
-2. **Designer engagement** — decide in-house vs. external. The Evyatar photo + inset + ₪50 treatment isn't a 30-min job; it's a real design ask.
-3. **Photo asset** — confirm the Evyatar shop photo + customer-with-wine inset images are available, or whether new shoots are needed.
-4. **Coupon code creation** — issue `JLMFLYER50` (or chosen name) in WooCommerce, first-order-restricted, expiry-bounded for the test window.
-5. **Bundles category description copy** — write 1–2 sentences in EN + HE, install via WC category description.
-6. **Round 1 timing** — pick a drop date that makes sense relative to current inventory state (avoid the magnums-phase-out window; align with category fill-in completion).
-7. **Round 2 neighborhood pre-selection** — defer until round 1 redemption data is in. Round 2 is the first outward / cold drop (French Hill, Beit HaKerem, wider pool).
+1. **Bundles category description copy** — write 1–2 sentences in EN + HE, install via WC category description (pre-print polish item above; confirm done before distribution).
+2. **Post-drop attribution read** — after distribution, group `50NEW` redemptions by billing postal code to isolate Talbiye response; feeds the decision triggers below.
+3. **Round 2 neighborhood pre-selection** — defer until round 1 redemption data is in. Round 2 is the first outward / cold drop (French Hill, Beit HaKerem, wider pool).
+
+Done: vendor outreach, design, photo asset, coupon code (`50NEW`), print run, drop-date scheduling (after 9 Av).
 
 ---
 

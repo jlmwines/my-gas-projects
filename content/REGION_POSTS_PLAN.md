@@ -15,7 +15,7 @@ Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), 
 | Slot | Email date | Newsletter date | Region | Slug | Status |
 |------|-----------|----------------|--------|------|--------|
 | A | 2026-07-07 | 2026-07-27 | Negev | `blog-negev` | **Published live (EN+HE) 2026-07-06** |
-| B | 2026-08-11 | 2026-08-25 | Galilee | `blog-galilee` | Drafted + registered, held |
+| B | 2026-08-11 | 2026-08-25 | Galilee | `blog-galilee` | In progress (drafted + registered) |
 | C | 2026-08-25 | 2026-09-23 | Central Mountains | `blog-central-mountains` | — |
 | D | 2026-10-20 | 2026-10-27 | Judea (Foothills) | `blog-judea` | — |
 | E | 2026-11-17 | 2026-11-24 | Coastal Plain | `blog-coastal-plain` | — |
