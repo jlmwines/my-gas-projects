@@ -140,64 +140,66 @@ When user assigns task via UI:
 
 ## 13. Content Production Workflow
 
-How a piece of editorial content gets produced — stage by stage, by whom, on which surface. §12 covers the assignment *mechanics* (flow patterns, due dates, routing); this section assembles them into the end-to-end editorial flow. Sources of truth: `CONTENT_STAGES` (`WebAppProjects.js`), per-type `flow_pattern` (`config/taskDefinitions.json`), the `slb_State` lifecycle (`DATA_MODEL.md`), and the task packs (`TaskPacks.html`).
+How a piece of editorial content gets produced — stage by stage, by whom, on which surface. §12 covers the assignment *mechanics* (flow patterns, due dates, routing); this section assembles them into the end-to-end editorial flow. Rewritten for the `CALENDAR_LIBRARY_LOOP_PLAN` design (shipped 2026-07-08, jlmops @443–451): no automatic entity pairing, entities created lazily, task-derived status instead of `slb_State` display. Sources of truth: `CONTENT_STAGES` (`WebAppProjects.js`), per-type `flow_pattern` (`config/taskDefinitions.json`), the content-status model (`DATA_MODEL.md`), and the task packs (`TaskPacks.html`).
 
 ### 13.1 Surfaces
 
 - **Admin** works content tasks in **AdminTasksView** — the task workbench (create / do / manage).
 - **Manager** works content tasks in the **Dashboard queue** — their only task surface; there is no separate manager workbench.
-- **Library** (both roles) is the entity catalog, not a task surface. Its **Deficiency** preset is the publication-calendar / demand view (pieces due within the rolling window plus overdue); its **entity drawer** shows a piece's Family, attached tasks, files (Open Doc), and admin lifecycle actions (spawn chain, Request Correction, Abandon).
+- **Calendar** (`PublishingView.html`'s Calendar tab, backed by the `JLMops_Publishing` sheet) is the authoritative schedule/demand view — "calendar is king." Every row shows a live task-derived status and clicks through to the earliest open task for that slug (role-aware: manager sees only tasks assigned to `'Manager'`), falling back to the entity drawer only when nothing qualifies. New content is always started by picking an existing calendar row (`ContentStreamModal.html`) — never by typing a free-text name — so a row's `cal_Slug` is the single authority a spawned chain's slug always matches.
+- **Library** (both roles) is the entity catalog, not a task surface and not the schedule view. Its **Deficiency** preset is a due/overdue list (pieces with a target date in the rolling window, or overdue and not yet done). Its **entity drawer** is deliberately minimal — header fields (title/slug/type/language/campaign/status), an actions bar (Open Doc, Attach new version, Create Content Tasks), and **Attached tasks** only. No Family, Files & URLs, References, State history, or Activity log sections — tasks tell the action story, the library just holds entities.
 
 Every content task renders the same shared **pack** (`TaskPacks`) wherever it appears, so the DO controls are identical on every surface.
 
-### 13.2 The blog chain
+### 13.2 The content chain
 
-Spawning a blog chain (admin: AdminTasks **+ Content**, or Library **Create Content Tasks**) creates an **EN + HE entity pair** at state `draft` and all stage tasks at once. Assignment is set automatically from each type's `flow_pattern`:
+Spawning a chain (admin: AdminTasks **+ Content**, Library **Create Content Tasks**, or a Calendar-row **Spawn** shortcut) picks an *existing calendar row* and creates **the task chain only** — every stage task at once, each carrying its stage-resolved slug (`baseSlug-en`/`baseSlug-he` per the stage's target language, or bare `baseSlug` for language-agnostic types) as its entity reference. **No `SysLibrary` entity row is created at spawn time, sibling or otherwise.**
 
 | # | Stage | Task type | Lang | Assignee | Pack action |
 |---|---|---|---|---|---|
-| 1 | Create WP Stubs | `content.create_wp_stubs` | EN+HE | Admin | skeleton |
-| 2 | Draft | `content.draft` | EN | Admin (Claude drafts) | Create/Open Doc → Lock + Version |
+| 1 | Create WP Stubs | `content.create_wp_stubs` | EN | Admin | skeleton |
+| 2 | Draft | `content.draft` | EN | Admin (Claude drafts) | Create/Attach Doc → Editing Done |
 | 3 | Admin Review | `content.admin_review` | EN | Admin | skeleton |
-| 4 | **Edit** | `content.edit` | EN | **Manager** | Open Doc → Lock + Version |
-| 5 | Translate | `content.translate` | HE | Admin | Open Doc (+EN source) → Lock + Version |
-| 6 | **Translate Edit** | `content.translate_edit` | HE | **Manager** | Open Doc (+EN source) → Lock + Version |
-| 7 | Images | `content.images` | EN | Admin | Open Doc → Lock + Version |
-| 8 | Blog Publish | `content.blog_publish` | EN+HE | Admin | External URL → Mark Published |
+| 4 | **Edit** | `content.edit` | EN | **Manager** | Open Doc → Editing Done |
+| 5 | Translate | `content.translate` | HE | Admin | **Create translation text** (when the EN peer has a Doc) → Editing Done |
+| 6 | **Translate Edit** | `content.translate_edit` | HE | **Manager** | Open Doc → Editing Done |
+| 7 | Images | `content.images` | EN | Admin | Open Doc → Editing Done |
+| 8 | Blog Publish | `content.blog_publish` | EN | Admin | External URL → Mark Published |
 
-The same EN/HE chain mechanics apply to all **sibling-language types** (`blog`, `news`, `mention`, `email`, `social`, `template`) — e.g. templates also spawn as `-en`/`-he` pairs. The **manager owns the two editorial passes** (Edit EN, Edit Translation HE); admin/Claude owns drafting, translating, images, and publishing. Companion stages (video, email, social, whatsapp, newsletter) can be added to the same chain and are admin-assigned distribution tasks.
+**An entity comes into being the first time a Doc is attached or created against its slug** (`createBlankDoc`/`attachExistingDoc` in `LibraryService.js`, auto-creating via `_ensureEntity` — type/language/title derived from the slug itself). Concretely: the EN entity appears whenever stage 1–4 work actually starts (whichever task first attaches a Doc); the HE entity appears when stage 5's "Create translation text" runs, which copies the EN Doc, prepends the Gemini prompt, and attaches the copy — the HE entity is a byproduct of that attach, not a separate creation step. This applies uniformly to every sibling-language type (`blog`, `news`, `mention`, `email`, `social`, `template`) — none are batch-provisioned as pairs, ever. The **manager owns the two editorial passes** (Edit EN, Edit Translation HE); admin/Claude owns drafting, translating, images, and publishing. Companion stages (video, email, social, whatsapp, newsletter) can be added to the same chain and are admin-assigned distribution tasks.
 
 ### 13.3 Manager turnaround (click-path)
 
 **Edit (EN):**
 1. Open the app → land on the **Dashboard**.
 2. Find the **"Edit: <title>"** row (assigned Manager, topic Content) → **click to expand**.
-3. The pack shows **Open Doc** (the EN draft), a Notes box, and **Lock + Version** (with the current `v… · state`).
+3. The pack shows **Open Doc** (or **Create/Attach Doc** if the entity doesn't exist yet — attaching one creates it) and a Notes box.
 4. Edit the draft in Google Docs.
-5. Click **Lock + Version** → answer the peer prompt *"does the Hebrew sibling need editing?"* — **No, just lock**, or **Yes, spawn realign** (auto-creates a realign task on the HE peer).
-6. This bumps `slb_Version`, sets the entity `locked`, and **closes the task**.
+5. Click **Editing Done** → a plain confirm ("Mark editing done for '\<slug>'?"), no peer prompt of any kind.
 
-**Translate Edit (HE):** identical, plus an **Open EN source** link (the locked English) for side-by-side reference; the peer prompt is about the EN sibling.
+**Translate Edit (HE):** identical — Open Doc → Editing Done. No "Open EN source" link; the manager already has direct Drive/Library/Task access if they want to look at the English side independently.
+
+**Translate (HE, usually admin, sometimes manager):** the pack shows **Create translation text** once the EN peer (a deterministic slug flip, `baseSlug-en`) has a Doc — copies it, prepends the Gemini translation prompt (`_getTranslationPrompt()`, Doc-sourced, editable without a deploy), and attaches the result as this entity's Doc, creating the entity if it didn't exist yet. Stays available regardless of whether the EN edit task was finished today or last week — no Done-status gate, so it's always reachable in the normal open-task queue.
 
 Content tasks have **no New/In-Progress/Done dropdown** (that control exists only for generic tasks) — a content task is either open or closed via its pack action. The manager can **Revert** a row to hand it back to admin.
 
 ### 13.4 Lifecycle and publishing
 
-State moves **only by completing the owning task** — there is no manual status-set, by design:
+Two different things now answer "how's this going," and they're not the same field:
 
-- edit / translate tasks → **Lock + Version** → `locked`, version +1 (`LibraryService.lockVersion`).
-- publish task → **Mark Published** (+ optional external URL) → `published` (`LibraryService.markPublished`).
-- admin drawer **Abandon** → `abandoned` (terminal; filtered out of the Deficiency view).
+- **Displayed status** (Library rows, entity drawer, Calendar rows) is computed live from open task status — never read from `slb_State`. Three tiers: **not started** (open tasks exist, all still `New`), **in progress** (an open task is `Assigned`/`Review`), **done** (every task `Done`/`Cancelled`, or none ever spawned). Computed fresh on every render (`TaskWidgets.deriveStatus`), never cached or persisted.
+- **`slb_State`** still exists as a column but only two of its values are ever written deliberately, and neither is displayed as "the state" anymore: **`abandoned`** (admin drawer action, terminal) and **`published`** (publish task's **Mark Published**, + optional external URL, `LibraryService.markPublished`). Both gate specific drawer actions (Request Correction shows only when `published`; Abandon hides once `published`/`abandoned`) but nothing shows the raw value as a status pill. `draft`/`locked` are set at creation and by `lockVersion` respectively but are never read anywhere — dead weight kept only because columns are append-only, never removed.
+- **`lockVersion`** ("Editing Done") no longer sets `slb_State` to `locked` in any way that matters for display — it closes the task and bumps `slb_LastTouched`, full stop. No peer-realignment branch exists (removed with auto-pairing).
 
-Full state reference: `DATA_MODEL.md` (`slb_State`: `draft → locked → published`, plus terminal `abandoned`).
+Full field reference: `DATA_MODEL.md`.
 
 ### 13.5 Correcting a published piece
 
-Admin opens the entity drawer → **Request Correction** (published pieces only) → spawns a fresh `content.edit` task; the piece stays `published` while it is open. **Known limitation (accepted — corrections are rare):** completing that edit Lock+Versions the entity to `locked` and no publish task is spawned, so it must be re-published manually. Revisit (spawn an edit+publish mini-chain) only if corrections become common.
+Admin opens the entity drawer → **Request Correction** (published pieces only) → spawns a fresh `content.edit` task; the piece stays `published` while it is open. **Known limitation (accepted — corrections are rare):** completing that edit task doesn't spawn a publish task, so it must be re-published manually. Revisit (spawn an edit+publish mini-chain) only if corrections become common.
 
 ### 13.6 Templates (email/WhatsApp) — Doc-sourced, edited like any content
 
-Templates are sibling-language content like blogs (EN/HE pairs) and are edited through the same Edit / Edit-Translation tasks. Their content lives in **Docs** (`slb_DocUrl`), not inline: a manager opens the Doc, edits, and finishes with **Editing Done**. The **system reads template content from the Doc at runtime** — the pending-payment follow-up send (`HousekeepingService`) resolves the email + first-time addendum via `LibraryService.getEntityContent` (Doc-first, inline-field fallback). So editing a template's Doc changes what the system sends; the legacy inline `slb_Subject`/`slb_Body` fields are a migration fallback only. Full content-source model: `DATA_MODEL.md` (`SysLibrary` → "Content source of truth"). Scaffolding still to retire once migration is fully confirmed: `createBlankDoc` seeding, the inline fields, and admin-gating the Create-Doc action (it isn't part of the manager's normal flow).
+Templates are a sibling-language type like blogs — **no longer auto-paired**, same as every other type (§13.2): each language's entity is created lazily on first Doc attach, independently. Edited through the same Edit / Edit-Translation tasks. Their content lives in **Docs** (`slb_DocUrl`), not inline: a manager opens the Doc, edits, and finishes with **Editing Done**. The **system reads template content from the Doc at runtime** — the pending-payment follow-up send (`HousekeepingService`) resolves the email + first-time addendum via `LibraryService.getEntityContent` (Doc-first, inline-field fallback). So editing a template's Doc changes what the system sends; the legacy inline `slb_Subject`/`slb_Body` fields are a migration fallback only. Full content-source model: `DATA_MODEL.md` (`SysLibrary` → "Content source of truth"). Scaffolding still to retire once migration is fully confirmed: `createBlankDoc` seeding, the inline fields, and admin-gating the Create-Doc action (it isn't part of the manager's normal flow).
 
 ---
 

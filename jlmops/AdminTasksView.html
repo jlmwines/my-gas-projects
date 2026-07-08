@@ -1,6 +1,7 @@
 <?!= include('TaskWidgets') ?>
 <?!= include('TaskPacks') ?>
 <?!= include('TaskDetail') ?>
+<?!= include('ContentStreamModal') ?>
 <style>
   /* Task row and header use flexbox to fill 100% width */
   .task-row, #subheader-tasks .row { display: flex; align-items: center; width: 100%; margin: 0; }
@@ -485,62 +486,6 @@
   </div>
 </div>
 
-<!-- Content Stream Modal -->
-<div class="modal-overlay" id="contentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Create Content Tasks</h6>
-    </div>
-    <div style="padding:15px;">
-      <div class="form-group">
-        <label class="small font-weight-bold">Entity Type</label>
-        <select class="form-control form-control-sm" id="content-entity-type">
-          <option value="blog">blog</option>
-          <option value="news">news</option>
-          <option value="mention">mention</option>
-          <option value="email">email</option>
-          <option value="print">print</option>
-          <option value="social">social</option>
-          <option value="image">image</option>
-          <option value="template">template</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Add to existing <small class="text-muted font-weight-normal">(optional)</small></label>
-        <select class="form-control form-control-sm" id="content-existing-entity">
-          <option value="">— New entity —</option>
-        </select>
-        <small class="text-muted">Pick an existing piece to add stages to it; leave as "New entity" to create one.</small>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Content Name</label>
-        <input type="text" class="form-control form-control-sm" id="content-name" placeholder="e.g., Intensity, About Page">
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Target Publish Date <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="date" class="form-control form-control-sm" id="content-target-date">
-        <small class="text-muted">Drives the deficiency view; leave blank if unscheduled.</small>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="content-stream-id" placeholder="e.g., INT, ABOUT">
-        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
-      </div>
-      <div class="form-group mb-0">
-        <label class="small font-weight-bold">Stages</label>
-        <div id="content-stages-checkboxes" class="d-flex flex-wrap">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-      <p class="small text-muted mt-2 mb-0">Drive URL added to each task when working on it.</p>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('contentStreamModal').style.display='none'">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="btn-create-content-stream">Create Tasks</button>
-    </div>
-  </div>
-</div>
-
 <!-- Content Import Modal -->
 <div class="modal-overlay" id="contentImportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div style="background:white;border-radius:4px;max-width:600px;width:90%;">
@@ -578,7 +523,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     statusOptions: ['New', 'Assigned', 'Review', 'Done', 'Closed'],
     priorityOptions: ['Critical', 'High', 'Normal', 'Low'],
     assignees: [],
-    contentStages: [],  // For content task creation
     mode: 'tasks',  // AdminTasksView is task-only; projects are a filter, not a mode (ADMIN_TASK_UI Deploy B)
     selectedProjectId: null,
     selectedTaskId: null,
@@ -611,7 +555,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
     populateFilterDropdowns();
     loadData();
     loadProjects();
-    loadContentStages();
     bindEventHandlers();
 
     // Wire the shared TaskDetail component (owns TaskPacks internally).
@@ -669,6 +612,7 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       refresh: render,
       reload:  loadData
     });
+    ContentStreamModal.configure({ reload: loadData });
 
     // Set initial panel state
     setPanelState(state.panelState);
@@ -690,22 +634,6 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
         }
       })
       .WebAppProjects_getAllProjects();
-  }
-
-  function loadContentStages() {
-    google.script.run
-      .withSuccessHandler(function(stages) {
-        state.contentStages = stages || [];
-        populateContentStagesCheckboxes();
-      })
-      .WebAppProjects_getContentStages();
-  }
-
-  function populateContentStagesCheckboxes() {
-    var container = document.getElementById('content-stages-checkboxes');
-    container.innerHTML = state.contentStages.map(function(s) {
-      return '<label class="mr-3 mb-1 small"><input type="checkbox" class="content-stage-cb mr-1" value="' + s.id + '">' + s.label + '</label>';
-    }).join('');
   }
 
   function checkDashboardNavigation() {
@@ -947,41 +875,9 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       });
     });
 
-    // Content stream buttons
+    // Content stream button — shared modal (CALENDAR_LIBRARY_LOOP_PLAN Phase 2)
     document.getElementById('btn-content-stream').addEventListener('click', function() {
-      var nameEl = document.getElementById('content-name');
-      var typeEl = document.getElementById('content-entity-type');
-      nameEl.value = ''; nameEl.disabled = false;
-      typeEl.value = 'blog'; typeEl.disabled = false;
-      document.getElementById('content-stream-id').value = '';
-      document.getElementById('content-target-date').value = '';
-      populateContentExistingEntities();
-      document.getElementById('content-existing-entity').value = '';
-      // Uncheck all stage checkboxes
-      document.querySelectorAll('.content-stage-cb').forEach(function(cb) { cb.checked = false; });
-      document.getElementById('contentStreamModal').style.display = 'flex';
-    });
-
-    document.getElementById('content-existing-entity').addEventListener('change', function() {
-      var opt = this.options[this.selectedIndex];
-      var nameEl = document.getElementById('content-name');
-      var typeEl = document.getElementById('content-entity-type');
-      if (this.value) {
-        typeEl.value = opt.getAttribute('data-type') || typeEl.value;
-        nameEl.value = opt.textContent;
-        nameEl.disabled = true;
-        typeEl.disabled = true;
-      } else {
-        nameEl.disabled = false;
-        typeEl.disabled = false;
-      }
-    });
-
-    // Re-filter the "add to existing" picker to the chosen type, and clear any
-    // prior selection so a stale cross-type pick can't linger.
-    document.getElementById('content-entity-type').addEventListener('change', function() {
-      populateContentExistingEntities();
-      document.getElementById('content-existing-entity').value = '';
+      ContentStreamModal.open();
     });
 
     document.getElementById('btn-content-import').addEventListener('click', function() {
@@ -990,95 +886,10 @@ Wine Basics,draft;edit;translate;video_create;video_publish"></textarea>
       document.getElementById('contentImportModal').style.display = 'flex';
     });
 
-    document.getElementById('btn-create-content-stream').addEventListener('click', createContentStream);
     document.getElementById('btn-import-content').addEventListener('click', importContentTasks);
   }
 
   // === CONTENT STREAM FUNCTIONS ===
-
-  // Populate the "Add to existing" picker from the already-loaded library list
-  // (state.library). Dedupe siblings to their base slug (strip -en/-he); picking
-  // an entity prefills + locks name/type and tasks attach to that base slug via
-  // spawnContentChain's slug dedup.
-  function populateContentExistingEntities() {
-    var sel = document.getElementById('content-existing-entity');
-    if (!sel) return;
-    var selectedType = document.getElementById('content-entity-type').value;
-    var seen = {};
-    var opts = ['<option value="">— New entity —</option>'];
-    (state.library || []).forEach(function(e) {
-      // Show only entities of the chosen type, so the picker isn't a flat dump of
-      // every entity (blogs/images/templates) regardless of the selected type.
-      // (Server field is contentType, not type.)
-      if (selectedType && e.contentType !== selectedType) return;
-      // Collapse EN/HE siblings to one base entry; the base slug is the value
-      // spawnContentChain re-suffixes per stage. Label with the language-stripped
-      // title so a pair reads as one piece, not "the EN one".
-      var base = String(e.slug || '').replace(/-(en|he)$/i, '');
-      if (!base || seen[base]) return;
-      seen[base] = true;
-      var label = String(e.title || base).replace(/\s*\((?:en|he)\)\s*$/i, '');
-      opts.push('<option value="' + TaskWidgets.escape(base) + '" data-type="' + TaskWidgets.escape(e.contentType || '') + '">' + TaskWidgets.escape(label) + '</option>');
-    });
-    sel.innerHTML = opts.join('');
-  }
-
-  function createContentStream() {
-    var entityType = document.getElementById('content-entity-type').value;
-    var existingBase = document.getElementById('content-existing-entity').value;
-    var name = document.getElementById('content-name').value.trim();
-    var targetDate = document.getElementById('content-target-date').value;
-    var customStreamId = document.getElementById('content-stream-id').value.trim().toUpperCase();
-
-    if (!name) {
-      TaskWidgets.toast('Please enter content name', 'warning');
-      return;
-    }
-
-    // Get selected stages
-    var stages = [];
-    document.querySelectorAll('.content-stage-cb:checked').forEach(function(cb) {
-      stages.push(cb.value);
-    });
-
-    if (stages.length === 0) {
-      TaskWidgets.toast('Please select at least one stage', 'warning');
-      return;
-    }
-
-    var btn = document.getElementById('btn-create-content-stream');
-    btn.disabled = true;
-    btn.textContent = 'Creating...';
-
-    var params = {
-      entityType: entityType,
-      contentName: name,
-      stages: stages,
-      streamId: customStreamId || null,
-      targetDate: targetDate || ''
-    };
-    if (existingBase) params.baseSlug = existingBase;
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        btn.disabled = false;
-        btn.textContent = 'Create Tasks';
-        if (!result || !result.ok) {
-          TaskWidgets.toast('Error: ' + ((result && result.error) || 'Failed'), 'error');
-          return;
-        }
-        document.getElementById('contentStreamModal').style.display = 'none';
-        var n = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
-        TaskWidgets.toast('Created ' + n + ' task(s) · stream ' + result.streamCode, 'success');
-        loadData();
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.textContent = 'Create Tasks';
-        TaskWidgets.toast('Error: ' + (err.message || 'Failed'), 'error');
-      })
-      .WebAppLibrary_spawnContentChain(params);
-  }
 
   function importContentTasks() {
     var csvData = document.getElementById('content-import-csv').value.trim();

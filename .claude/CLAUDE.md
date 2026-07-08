@@ -70,3 +70,20 @@ Friendly, personal, never talks down. Polite and earnest, never negative about c
 Blog posts have one canonical spec — don't restate it here, it drifts. Before touching any `.post.md` file or running `push-posts.js`, read: `content/_post-template.md` (the actual section order — start every post by copying it) and `content/CLAUDE.md` (full spec: required sections, parser dependencies, work order, file naming, library registration). Pipeline mechanics: `content/PUBLISHING.md`.
 
 The one fact worth repeating here because it's the constraint that keeps getting violated: **Body is the section right after Title, written and locked first.** Everything else in the template (Excerpt, Email fields, Newsletter Excerpt, Print Newsletter Body, CTA, Image Prompts) is derived from the locked body afterward, and a drafting session never adds HTML or a "Paste below" block — that's a separate publishing-session step.
+
+## Drive Asset Placement
+
+**Any Drive file a session creates that's destined for `SysLibrary`** (a post Doc, an image, a template — anything with or about to get a `slb_Slug`) goes in the canonical path, never wherever's convenient. This is not optional guidance — sessions have repeatedly created ad-hoc folders/files outside it, requiring manual cleanup (found 2026-07-08).
+
+The canonical path (exactly what `LibraryService._getCanonicalFolder`/`_deriveConcept`/`_versionedFileName` compute server-side for `attachExistingDoc`/`createBlankDoc` — jlmops config, `system.folder.library`):
+
+```
+<Library root>/<type>/<concept>/<full-slug> <yy-MM-dd-HH-mm>
+```
+
+- `<Library root>` — Drive folder `system.folder.library` in SysConfig (id `1AiIDEcg4cwBjRsh-bc60oRRl1q2st54L`).
+- `<type>` — the content type (`blog`, `image`, `email`, `template`, etc.).
+- `<concept>` — the slug with only the language suffix stripped; the type prefix stays (`blog-region-galilee-en` → `blog-region-galilee`). Fixed 2026-07-08 — an earlier version of this rule stripped the type prefix too, which never matched the folder-naming convention actually in use.
+- Filename — the **full** slug plus an Israel-local `yy-MM-dd-HH-mm` timestamp (e.g. `blog-region-galilee-en 26-07-08-14-30`).
+
+**A session cannot call `attachExistingDoc`/`createBlankDoc` directly** — they're Apps Script server functions, only reachable from a live browser via `google.script.run`. So a session replicates the same placement by hand via Drive MCP: search for the `<type>` folder under the Library root (create it if missing), search for `<concept>` under that (create if missing), then create the file there with the versioned name — same two-level walk `_getOrCreateChildFolder` does server-side. Never leave a library-bound file at the Library root or in an ad-hoc folder. If a Doc has to be drafted somewhere else first (e.g. shared for manager review before the slug/type is finalized), move it into the canonical location — or ask the admin to Attach it via the task pack, which performs the move automatically — before considering the asset "placed."

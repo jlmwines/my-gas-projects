@@ -4,6 +4,25 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-08 (cont'd) — AYIW loop test passed; Library folder convention corrected; plan archived (jlmops @455→@460)
+
+- End-to-end test (calendar row → task chain → lazy entity → Doc attach) passed live. In parallel the user manually cleaned `JLMops_Library`/Drive to remove duplicates and sync slugs — that cleanup revealed the app's own canonical-folder function (`_deriveConcept`) stripped the type prefix (`ayiw-2026-07`) while every real folder the user builds keeps it (`email-ayiw-2026-07`). Fixed the code to match the real convention rather than asking the user to keep re-conforming folders to it (`LibraryService.js`, all 3 call sites) — deployed @459.
+- Also fixed: `_ensureEntity` now sources a lazily-created entity's title from the spawning task's `st_LinkedEntityName` (the calendar row's `cal_Name`) instead of deriving one from the slug's own words — this is what produced the "— Galilee" mislabel on unrelated AYIW/print-newsletter rows (traced to a monthly "Slot" grouping comment in `content/register-library.js` misapplied as if it were subject matter). Deployed @458. `applyPendingCalendarUpdates` now re-sorts `JLMops_Publishing` by `cal_Date` after a merge (mixed date formats, parsed not raw-sorted) — @457. Removed the Calendar tab's `cal_Link` click-out icon, judged not useful in practice, and added "Create Content Tasks" to the Calendar/Tasks tabs (previously Library-tab-only) — @456/@460.
+- New reference doc: `jlmops/plans/CONTENT_CREATION_CHECKLIST.md` — the title-source rule (always `cal_Name`, never invented) and full creation sequence, written after repeated title/placement drift this session.
+- `CALENDAR_LIBRARY_LOOP_PLAN.md` archived (`_archive/`) — all 6 phases shipped and now live-confirmed; facts graduated into `WORKFLOWS.md` §13, `ARCHITECTURE.md`, `DATA_MODEL.md`.
+- Next: none outstanding from this thread. `.claude/CLAUDE.md`'s Drive Asset Placement section and the checklist doc both already reflect the corrected (type-prefix-kept) folder algorithm — don't re-introduce the stripped version from stale memory.
+
+---
+
+## 2026-07-08 — CALENDAR_LIBRARY_LOOP_PLAN fully implemented and documented (jlmops @443→@455)
+
+- Built all 6 phases: calendar staging/merge, `ContentStreamModal.html` (calendar-row picker replacing 3 duplicated modals), no more auto-paired EN/HE entities (lazy-created on first Doc attach via `_ensureEntity`), task-derived status everywhere (`TaskWidgets.deriveStatus`, drawer sections trimmed to identity+actions+tasks), translation flow revised twice same-day — first cut put the trigger on the EN edit task's Done state, reverted after it broke reachability (Done tasks drop from default queue filters) and drew user pushback for shipping a convention change without a separate check-in; final version lives on the translate task, gated on the EN peer having a Doc, no Done-status check anywhere. Rewrote `WORKFLOWS.md` §13, `ARCHITECTURE.md`, `DATA_MODEL.md` to match.
+- Found+fixed along the way: Calendar tab's `_onLoaded` race showed a false "no rows" before data loaded; Calendar row status/routing was keyed off entities (lazy, Phase 3) instead of tasks (always exist from spawn), so anything spawned after @449 with no Doc attached showed no status — both fixed. Removed `ContentStreamModal`'s campaign picker (silently broken since entities don't exist at spawn time; campaign stays entity-drawer-only, it's a URL-tagging concern with only 3 campaigns in existence). Added a Slug column to both Library and Calendar tabs for connection diagnosis. Added a Drive Asset Placement rule to `.claude/CLAUDE.md` — sessions have been creating library-bound Drive files outside the canonical `<type>/<concept>/<slug> <timestamp>` path with no routing back in.
+- End-to-end test in progress: staged a real AYIW July calendar row (`email-ayiw-2026-07`, matches pre-existing legacy entities with no Doc attached — a deliberate choice over a clean slug, confirmed with the user). Merged into `JLMops_Publishing`. Not yet spawned.
+- Next: user spawns the AYIW chain via "Create Content Tasks," verify task↔entity↔calendar resolve correctly end-to-end. Once Phases 3/4 are confirmed working live, `CALENDAR_LIBRARY_LOOP_PLAN.md` is ready to archive. `PROJ-CONTENT task routing` Inbox item's defer date (2026-07-08) hit today, untouched — still blocked on new-product smoke per its own note, unrelated to this session's work.
+
+---
+
 ## 2026-07-07 — jlmops content-publishing simplification fully designed (calendar/library/tasks); Negev URL corrections
 
 - Built and fully designed `jlmops/plans/CALENDAR_LIBRARY_LOOP_PLAN.md`: the calendar becomes a simple, manually-maintained sheet (no auto-derivation from SysLibrary); no automatic EN/HE sibling pairing anywhere; no lock/version/roll-forward machinery; one consolidated content-creation modal replacing three duplicated ones; progressive task-entity attachment (via a small `WebAppTasks_updateTask` allow-list addition, not a `TaskService.js` change); translation triggered by finishing the English edit task, not a separate guess-the-peer step.

@@ -1,0 +1,215 @@
+<!--
+  ContentStreamModal — shared "create content" modal (CALENDAR_LIBRARY_LOOP_PLAN
+  Phase 2). Replaces the three independently hand-copied implementations that
+  used to live in AdminTasksView.html, LibraryView.html, PublishingView.html.
+
+  Calendar-row picker only — no free-text content name, target date, or
+  references field. The slug always comes from the picked calendar row's
+  cal_Slug (assigned when the row was created), never derived here, so there
+  is no path left to invent an independent slug for the same real-world item.
+  spawnContentChain's own dedup (addEntity) means picking a row that already
+  has an entity just attaches new stage tasks to it — no separate "add to
+  existing" toggle needed.
+
+  No campaign picker (removed 2026-07-08): campaign only matters for URL
+  tagging at distribution time, not content creation, and the entity drawer's
+  Campaign field already does that job once the entity exists. Picking one
+  here never actually worked — spawnContentChain creates no entities (Phase
+  3), so there was nothing for the post-spawn setEntityCampaign call to
+  attach to.
+
+  Host contract — call once after the host page is ready:
+    ContentStreamModal.configure({
+      reload: function() { <full server reload, e.g. host's _loadData> }
+    });
+  Then wire an "open" button to ContentStreamModal.open(). Depends on the
+  shared TaskWidgets kit (toast, escape) and ModalOverlay.
+-->
+<div class="modal-overlay" id="contentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
+  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
+    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
+      <h6 class="mb-0">Create Content Tasks</h6>
+    </div>
+    <div style="padding:15px;">
+      <div class="form-group">
+        <label class="small font-weight-bold">Calendar row</label>
+        <select class="form-control form-control-sm" id="cs-calendar-row">
+          <option value="">Loading…</option>
+        </select>
+        <small class="text-muted">Content is always started from an existing calendar entry — add it to the Calendar tab first if it isn't listed.</small>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Type</label>
+        <select class="form-control form-control-sm" id="cs-entity-type">
+          <option value="blog">Blog</option>
+          <option value="news">News (newsletter)</option>
+          <option value="mention">Mention</option>
+          <option value="email">Email</option>
+          <option value="print">Print</option>
+          <option value="social">Social</option>
+          <option value="template">Template</option>
+          <option value="image">Image</option>
+          <option value="customer">Customer</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
+        <input type="text" class="form-control form-control-sm" id="cs-stream-id" placeholder="e.g., INT, ABOUT">
+        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
+      </div>
+      <div class="form-group mb-0">
+        <label class="small font-weight-bold">Stages</label>
+        <div id="cs-stages-checkboxes" class="d-flex flex-wrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together. Picking a row that already has an entity just adds the checked stages to it.</p>
+    </div>
+    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
+      <button type="button" class="btn btn-sm btn-light" onclick="ModalOverlay.close('contentStreamModal')">Cancel</button>
+      <button type="button" class="btn btn-sm btn-light" id="cs-btn-submit">Create Tasks</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.ContentStreamModal = (function() {
+    var cfg = {
+      reload: function() {}
+    };
+    var data = { calendarRows: [], stages: [] };
+
+    function configure(opts) {
+      if (!opts) return;
+      if (opts.reload) cfg.reload = opts.reload;
+    }
+
+    // opts: { baseSlug?, entityType? } — pre-select a calendar row / type, e.g.
+    // when spawning more stages onto an already-existing entity. Both optional.
+    function open(opts) {
+      opts = opts || {};
+      document.getElementById('cs-stream-id').value = '';
+      document.getElementById('cs-entity-type').value = opts.entityType || 'blog';
+      ModalOverlay.open('contentStreamModal');
+      _loadPickerData(opts.baseSlug || '');
+    }
+
+    function _loadPickerData(preselectSlug) {
+      var calSel = document.getElementById('cs-calendar-row');
+      calSel.innerHTML = '<option value="">Loading…</option>';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            calSel.innerHTML = '<option value="">Failed to load calendar rows</option>';
+            return;
+          }
+          data.calendarRows = (res.data.holidays || []).filter(function(h) {
+            return h.slug && ['holiday', 'blackout', 'note'].indexOf(h.type) === -1;
+          });
+          _populateCalendarPicker(preselectSlug);
+        })
+        .withFailureHandler(function(err) {
+          calSel.innerHTML = '<option value="">Failed to load calendar rows</option>';
+          TaskWidgets.toast(err && err.message ? err.message : 'Failed to load calendar rows', 'error');
+        })
+        .WebAppPublishing_getCampaignsAndProjects();
+
+      if (data.stages.length) {
+        _populateStagesCheckboxes();
+      } else {
+        google.script.run
+          .withSuccessHandler(function(stages) {
+            data.stages = stages || [];
+            _populateStagesCheckboxes();
+          })
+          .withFailureHandler(function() {})
+          .WebAppProjects_getContentStages();
+      }
+    }
+
+    function _populateCalendarPicker(preselectSlug) {
+      var sel = document.getElementById('cs-calendar-row');
+      var sorted = data.calendarRows.slice().sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
+      var opts = ['<option value="">— Pick a calendar row —</option>'].concat(sorted.map(function(h) {
+        return '<option value="' + TaskWidgets.escape(h.slug) + '">' +
+          TaskWidgets.escape(h.date) + ' — ' + TaskWidgets.escape(h.name) + ' (' + TaskWidgets.escape(h.type) + ')</option>';
+      }));
+      sel.innerHTML = opts.join('');
+      if (preselectSlug && sorted.some(function(h) { return h.slug === preselectSlug; })) {
+        sel.value = preselectSlug;
+      }
+    }
+
+    function _populateStagesCheckboxes() {
+      var container = document.getElementById('cs-stages-checkboxes');
+      container.innerHTML = data.stages.map(function(s) {
+        return '<label class="mr-3 mb-1 small"><input type="checkbox" class="cs-stage-cb mr-1" value="' +
+          TaskWidgets.escape(s.id) + '">' + TaskWidgets.escape(s.label) + '</label>';
+      }).join('');
+    }
+
+    function _submit() {
+      var calSlug = document.getElementById('cs-calendar-row').value;
+      if (!calSlug) { TaskWidgets.toast('Please pick a calendar row', 'warning'); return; }
+      var row = data.calendarRows.filter(function(h) { return h.slug === calSlug; })[0];
+      if (!row) { TaskWidgets.toast('Calendar row not found — reopen and try again', 'error'); return; }
+
+      var entityType = document.getElementById('cs-entity-type').value;
+      var streamId = document.getElementById('cs-stream-id').value.trim().toUpperCase();
+      var stages = [];
+      document.querySelectorAll('.cs-stage-cb:checked').forEach(function(cb) { stages.push(cb.value); });
+      if (stages.length === 0) { TaskWidgets.toast('Please select at least one stage', 'warning'); return; }
+
+      var btn = document.getElementById('cs-btn-submit');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+
+      function finish(result) {
+        btn.disabled = false;
+        btn.textContent = 'Create Tasks';
+        ModalOverlay.close('contentStreamModal');
+        var entityCount = (result.updated && result.updated.entities) ? result.updated.entities.length : 0;
+        var taskCount = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
+        TaskWidgets.toast('Created ' + entityCount + ' entity(ies) + ' + taskCount + ' task(s). Stream: ' + result.streamCode, 'success');
+        cfg.reload();
+      }
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result || !result.ok) {
+            btn.disabled = false;
+            btn.textContent = 'Create Tasks';
+            TaskWidgets.toast('Error: ' + ((result && result.error) || 'Failed'), 'error');
+            return;
+          }
+          finish(result);
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.textContent = 'Create Tasks';
+          TaskWidgets.toast('Error: ' + (err && err.message ? err.message : 'Failed'), 'error');
+        })
+        .WebAppLibrary_spawnContentChain({
+          entityType: entityType,
+          baseSlug: row.slug,
+          contentName: row.name,
+          targetDate: row.date,
+          stages: stages,
+          streamId: streamId || null
+        });
+    }
+
+    function _wire() {
+      var btn = document.getElementById('cs-btn-submit');
+      if (btn) btn.addEventListener('click', _submit);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _wire);
+    } else {
+      _wire();
+    }
+
+    return { configure: configure, open: open };
+  })();
+</script>

@@ -1,6 +1,7 @@
 <?!= include('TaskWidgets') ?>
 <?!= include('TaskPacks') ?>
 <?!= include('TaskDetail') ?>
+<?!= include('ContentStreamModal') ?>
 
 <style>
   /* PublishingView — layout; pv-tab handled entirely by AppView global ds-v2 */
@@ -40,8 +41,6 @@
     z-index: 1;
   }
   .pv-cal-table tr:hover td { background: #f8f9fa; }
-  .pv-cal-holiday td { background: #f0f0f0 !important; color: #6c757d; font-style: italic; }
-  .pv-cal-overdue td { color: #c9882c; font-weight: 600; }
 
   /* Library (catalog) — same as LibraryView */
   .pv-library-presets {
@@ -204,32 +203,6 @@
   }
   .pv-drawer-task-row:last-child { border-bottom: none; }
   .pv-drawer-task-title { flex: 1; color: #212529; }
-  .pv-drawer-activity-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 4px 0;
-    border-bottom: 1px solid #f8f9fa;
-    font-size: 12px;
-    color: #495057;
-  }
-  .pv-drawer-activity-row:last-child { border-bottom: none; }
-  .pv-drawer-activity-time { color: #6c757d; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
-  .pv-drawer-activity-action {
-    background: #e9ecef;
-    color: #495057;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 11px;
-  }
-
-  .pv-entity-chip {
-    cursor: pointer;
-    color: var(--ds-go, #4a7a3e);
-    border-color: rgba(74,122,62,0.3);
-  }
-  .pv-entity-chip:hover { background: rgba(74,122,62,0.08); }
 
   /* Campaigns tab */
   .pv-cmp-row {
@@ -267,24 +240,12 @@
     <div class="ds-section">
       <div class="ds-section-head">
         <h6>Calendar</h6>
+        <button class="btn btn-sm" id="pv-btn-open-content-stream-cal" data-roles="admin">Create Content Tasks</button>
+        <button class="btn btn-sm" id="pv-btn-apply-calendar-updates" data-roles="admin">Apply Pending Updates</button>
       </div>
       <div class="ds-section-actions">
         <div class="tw-filter-bar">
           <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
-          <select id="pv-cal-filter-campaign">
-            <option value="">All campaigns</option>
-            <option value="core-content">Core Content</option>
-            <option value="newsletter-print">Newsletter</option>
-            <option value="email-broadcast">Email</option>
-            <option value="flyer-acquisition">Flyer</option>
-          </select>
-          <select id="pv-cal-filter-state">
-            <option value="">All states</option>
-            <option value="draft">Draft</option>
-            <option value="locked">Locked</option>
-            <option value="published">Published</option>
-            <option value="abandoned">Abandoned</option>
-          </select>
         </div>
       </div>
       <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
@@ -295,8 +256,14 @@
 
   <!-- ===== TASKS TAB (manager: content tasks with entity context) ===== -->
   <div class="pv-panel" id="pv-panel-tasks">
-    <div id="pv-tasks-content">
-      <div class="pv-empty">Loading…</div>
+    <div class="ds-section">
+      <div class="ds-section-head">
+        <h6>Tasks</h6>
+        <button class="btn btn-sm" id="pv-btn-open-content-stream-tasks" data-roles="admin">Create Content Tasks</button>
+      </div>
+      <div id="pv-tasks-content">
+        <div class="pv-empty">Loading…</div>
+      </div>
     </div>
   </div>
 
@@ -395,7 +362,7 @@
         <div><label>Slug</label><div class="field-value mono" id="pv-drawer-slug">—</div></div>
         <div><label>Type</label><div class="field-value" id="pv-drawer-type">—</div></div>
         <div><label>Language</label><div class="field-value" id="pv-drawer-language">—</div></div>
-        <div><label>State</label><div class="field-value" id="pv-drawer-state">—</div></div>
+        <div><label>Status</label><div class="field-value" id="pv-drawer-state">—</div></div>
         <div><label>Target date</label><div class="field-value" id="pv-drawer-targetdate">—</div></div>
         <div><label>Campaign</label>
           <div class="field-value" id="pv-drawer-campaign">—</div>
@@ -411,61 +378,7 @@
         <h6>Distribute</h6>
         <div id="pv-drawer-distribute"></div>
       </div>
-      <div class="pv-drawer-section"><h6>Family</h6><div id="pv-drawer-family"><span class="placeholder">—</span></div></div>
-      <div class="pv-drawer-section"><h6>Files &amp; URLs</h6><div id="pv-drawer-files"><span class="placeholder">—</span></div></div>
       <div class="pv-drawer-section"><h6>Attached tasks</h6><div id="pv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
-      <div class="pv-drawer-section"><h6>References out</h6><div id="pv-drawer-refs-out"><span class="placeholder">—</span></div></div>
-      <div class="pv-drawer-section"><h6>References in</h6><div id="pv-drawer-refs-in"><span class="placeholder">—</span></div></div>
-      <div class="pv-drawer-section"><h6>State history</h6><div id="pv-drawer-state-history"><span class="placeholder">—</span></div></div>
-      <div class="pv-drawer-section"><h6>Activity log</h6><div id="pv-drawer-activity-log"><span class="placeholder">—</span></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- Content Stream Modal. Placed AFTER the entity drawer in the DOM (see the
-     Attach-new-version modal comment below for why: raw-toggled .modal-overlay
-     + static z-index means paint order decides stacking, not z-index). -->
-<div class="modal-overlay" id="pvContentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Create Content Tasks</h6>
-    </div>
-    <div style="padding:15px;">
-      <div class="form-group">
-        <label class="small font-weight-bold">Type</label>
-        <select class="form-control form-control-sm" id="pv-content-type">
-          <option value="blog">Blog</option>
-          <option value="email">Email</option>
-          <option value="news">News (newsletter)</option>
-          <option value="other">Other</option>
-          <option value="social">Social</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Content Name</label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-name" placeholder="e.g., Intensity, About Page">
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-stream-id" placeholder="e.g., INT, ABOUT">
-        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="pv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
-        <small class="text-muted">Comma-separated source slugs.</small>
-      </div>
-      <div class="form-group mb-0">
-        <label class="small font-weight-bold">Stages</label>
-        <div id="pv-content-stages-checkboxes" class="d-flex flex-wrap">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('pvContentStreamModal').style.display='none'">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="pv-btn-create-content-stream">Create Tasks</button>
     </div>
   </div>
 </div>
@@ -511,7 +424,6 @@
       campaigns: [],
       projects: [],
       shortUrls: [],
-      contentStages: [],
       activePreset: 'all',
       deficiencyWindowDays: 56,
       expandedCampaignId: null,
@@ -580,19 +492,20 @@
         refresh: function() { renderTasks(); },
         reload:  _loadData
       });
+      ContentStreamModal.configure({ reload: _loadData });
       _loadData();
-      ['pv-cal-search', 'pv-cal-filter-campaign', 'pv-cal-filter-state'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('input', renderCalendar);
-      });
+      var calSearchEl = document.getElementById('pv-cal-search');
+      if (calSearchEl) calSearchEl.addEventListener('input', renderCalendar);
       ['pv-search-library', 'pv-sort-library'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', renderLibrary);
       });
-      var openBtn = document.getElementById('pv-btn-open-content-stream');
-      if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
-      var submitBtn = document.getElementById('pv-btn-create-content-stream');
-      if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
+      ['pv-btn-open-content-stream', 'pv-btn-open-content-stream-cal', 'pv-btn-open-content-stream-tasks'].forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', function() { ContentStreamModal.open(); });
+      });
+      var applyCalBtn = document.getElementById('pv-btn-apply-calendar-updates');
+      if (applyCalBtn) applyCalBtn.addEventListener('click', applyPendingCalendarUpdates);
       var drawerAttachSubmitBtn = document.getElementById('pv-btn-drawer-attach-submit');
       if (drawerAttachSubmitBtn) drawerAttachSubmitBtn.addEventListener('click', submitDrawerAttachDoc);
 
@@ -624,7 +537,10 @@
       state.tasks = res.data.tasks || [];
       state.library = res.data.library || [];
       state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
-      renderCalendar();
+      // Calendar isn't rendered here — state.holidays isn't loaded yet
+      // (_loadCampaignsAndProjects, below, is a separate call). Rendering now
+      // would show a false "no calendar rows" instead of the correct
+      // "Loading…" placeholder already in the markup.
       renderLibrary();
       renderTasks();
       _loadCampaignsAndProjects();
@@ -632,6 +548,26 @@
 
     function _onError(err) {
       TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
+    }
+
+    function applyPendingCalendarUpdates() {
+      var btn = document.getElementById('pv-btn-apply-calendar-updates');
+      if (btn) btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (btn) btn.disabled = false;
+          if (!res || !res.success) {
+            TaskWidgets.toast((res && res.error) ? res.error : 'Failed to apply pending updates', 'error');
+            return;
+          }
+          TaskWidgets.toast(res.filesProcessed + ' file(s), ' + res.rowsMerged + ' row(s) merged', 'success');
+          _loadCampaignsAndProjects();
+        })
+        .withFailureHandler(function(err) {
+          if (btn) btn.disabled = false;
+          TaskWidgets.toast(err && err.message ? err.message : 'Network error', 'error');
+        })
+        .WebAppPublishing_applyPendingCalendarUpdates();
     }
 
     function _loadCampaignsAndProjects() {
@@ -674,72 +610,95 @@
 
     function renderCalendar() {
       var search = (document.getElementById('pv-cal-search').value || '').toLowerCase();
-      var filterCampaign = (document.getElementById('pv-cal-filter-campaign').value || '');
-      var filterState = (document.getElementById('pv-cal-filter-state').value || '');
-      var today = new Date();
-      var startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      var isManager = document.body.classList.contains('role-manager');
 
-      // Entity rows — apply all filters
-      var entityRows = (state.library || []).filter(function(e) {
-        if (!e.targetDate) return false;
-        var td = new Date(e.targetDate);
-        if (isNaN(td.getTime())) return false;
-        if (filterCampaign && e.campaignId !== filterCampaign) return false;
-        if (filterState && (e.state || '').toLowerCase() !== filterState) return false;
-        if (search) {
-          var hay = (String(e.title || '') + ' ' + String(e.slug || '')).toLowerCase();
-          if (hay.indexOf(search) === -1) return false;
-        }
-        return true;
-      }).map(function(e) { return { _kind: 'entity', _date: e.targetDate, _data: e }; });
-
-      // Holiday rows — always shown regardless of filters
-      var holidayRows = (state.holidays || []).map(function(h) {
-        return { _kind: 'holiday', _date: h.date, _data: h };
+      // Group tasks by base slug (strip -en/-he from entityId) — this is the
+      // primary calendar↔task connection. Tasks exist from the moment content
+      // is spawned (spawnContentChain); the entity doesn't exist until someone
+      // attaches a Doc (Phase 3 lazy-creation). Keying off entities first would
+      // show nothing for freshly-spawned content with no Doc yet — found live
+      // 2026-07-08 ("some have status, some don't").
+      var tasksByBase = {};
+      (state.tasks || []).forEach(function(t) {
+        var slug = t.entityId || '';
+        var isEn = slug.slice(-3) === '-en';
+        var isHe = slug.slice(-3) === '-he';
+        var base = (isEn || isHe) ? slug.slice(0, -3) : slug;
+        if (!base) return;
+        (tasksByBase[base] = tasksByBase[base] || []).push(t);
       });
 
-      var merged = entityRows.concat(holidayRows);
-      merged.sort(function(a, b) { return (a._date || '').localeCompare(b._date || ''); });
+      // Entities, same grouping — used only as the click fallback (open the
+      // drawer) when no open task qualifies, e.g. everything's done or nothing
+      // is assigned to this role.
+      var libGroupByBase = {};
+      (state.library || []).forEach(function(e) {
+        var slug = e.slug || '';
+        var isEn = slug.slice(-3) === '-en';
+        var isHe = slug.slice(-3) === '-he';
+        var base = (isEn || isHe) ? slug.slice(0, -3) : slug;
+        (libGroupByBase[base] = libGroupByBase[base] || []).push(e);
+      });
+
+      // Click target for a calendar row (CALENDAR_LIBRARY_LOOP_PLAN Calendar
+      // section, 2026-07-08 decision): route to the earliest-created open task —
+      // manager sees only tasks assigned to 'Manager' (matches renderTasks'
+      // filter), admin sees any assignee. Falls back to the entity drawer only
+      // when no qualifying open task exists (and an entity actually exists).
+      function _routeTarget(base) {
+        var open = (tasksByBase[base] || []).filter(function(t) {
+          return t.status !== 'Done' && t.status !== 'Cancelled';
+        });
+        if (isManager) open = open.filter(function(t) { return t.assignedTo === 'Manager'; });
+        if (open.length) {
+          open.sort(function(a, b) { return (a.createdDate || '').localeCompare(b.createdDate || ''); });
+          return { kind: 'task', id: open[0].id };
+        }
+        var group = libGroupByBase[base];
+        if (!group || !group.length) return null;
+        var rep = group.filter(function(e) { return e.slug.slice(-3) === '-en'; })[0] || group[0];
+        return { kind: 'entity', slug: rep.slug };
+      }
+
+      // JLMops_Publishing is the one calendar — library entities render in the Library tab, not here.
+      var rows = (state.holidays || []).filter(function(h) {
+        if (!search) return true;
+        var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
+        return hay.indexOf(search) !== -1;
+      });
+      rows.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
 
       var container = document.getElementById('pv-cal-table-wrap');
-      if (merged.length === 0) {
-        container.innerHTML = '<div class="pv-empty">No entities with target dates match the current filters.</div>';
+      if (rows.length === 0) {
+        container.innerHTML = '<div class="pv-empty">No calendar rows match the current search.</div>';
         return;
       }
 
       var html = '<table class="pv-cal-table responsive-stack"><thead><tr>';
-      html += '<th>Date</th><th>Campaign</th><th>Title</th><th>State</th><th>Tasks</th>';
+      html += '<th>Date</th><th>Type</th><th>Slug</th><th>Title</th><th>Status</th><th>Notes</th>';
       html += '</tr></thead><tbody>';
 
-      merged.forEach(function(row) {
-        if (row._kind === 'holiday') {
-          var h = row._data;
-          html += '<tr class="pv-cal-holiday">';
-          html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + '</td>';
-          html += '<td data-label="Campaign">—</td>';
-          html += '<td data-label="Title"><em>' + TaskWidgets.escape(h.name) + '</em>' +
-                  (h.notes ? ' <span class="text-muted" style="font-size:11px">— ' + TaskWidgets.escape(h.notes) + '</span>' : '') + '</td>';
-          html += '<td data-label="State"><span style="font-size:11px;color:#6c757d;">' + TaskWidgets.escape(h.type) + '</span></td>';
-          html += '<td data-label="Tasks">—</td>';
-          html += '</tr>';
-        } else {
-          var e = row._data;
-          var td = new Date(e.targetDate);
-          var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
-          var openTasks = (state.tasks || []).filter(function(t) {
-            return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
-          }).length;
-          var taskCell = openTasks > 0 ? (openTasks + ' open') : '—';
-          var rowCls = overdue ? 'pv-cal-overdue' : '';
-          html += '<tr class="' + rowCls + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')">';
-          html += '<td data-label="Date">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong style="color:#856404;">(overdue)</strong>' : '') + '</td>';
-          html += '<td data-label="Campaign">' + TaskWidgets.escape(CAMPAIGN_LABELS[e.campaignId] || e.campaignId || '—') + '</td>';
-          html += '<td data-label="Title"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong>' +
-                  (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="margin-left:6px">&#8599;</a>' : '') + '</td>';
-          html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
-          html += '<td data-label="Tasks">' + taskCell + '</td>';
-          html += '</tr>';
+      rows.forEach(function(h) {
+        var target = h.slug ? _routeTarget(h.slug) : null;
+        var rowAttrs = '';
+        if (target && target.kind === 'task') {
+          rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openAttachedTask(\'' + TaskWidgets.escape(target.id) + '\')"';
+        } else if (target && target.kind === 'entity') {
+          rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(target.slug) + '\')"';
         }
+        var statusCell = '—';
+        if (h.slug && tasksByBase[h.slug]) {
+          var status = TaskWidgets.deriveStatus(tasksByBase[h.slug]);
+          statusCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(status) + '">' + TaskWidgets.escape(status) + '</span>';
+        }
+        html += '<tr' + rowAttrs + '>';
+        html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + '</td>';
+        html += '<td data-label="Type"><span style="font-size:11px;color:#6c757d;">' + TaskWidgets.escape(h.type) + '</span></td>';
+        html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + (h.slug ? TaskWidgets.escape(h.slug) : '—') + '</span></td>';
+        html += '<td data-label="Title"><strong>' + TaskWidgets.escape(h.name) + '</strong></td>';
+        html += '<td data-label="Status">' + statusCell + '</td>';
+        html += '<td data-label="Notes">' + (h.notes ? TaskWidgets.escape(h.notes) : '—') + '</td>';
+        html += '</tr>';
       });
       html += '</tbody></table>';
       container.innerHTML = html;
@@ -806,8 +765,9 @@
         html += '<div class="small text-muted">No library entities assigned to this campaign.</div>';
       } else {
         entities.forEach(function(e) {
+          var rowStatus = _entityStatus(e);
           html += '<div class="pv-cmp-entity-row">';
-          html +=   '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
+          html +=   '<span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span>';
           html +=   '<span class="small">' + TaskWidgets.escape(e.title || e.slug) + '</span>';
           html +=   '<span class="small text-muted" style="margin-left:auto">' + TaskWidgets.escape(e.contentType || '') + '</span>';
           html += '</div>';
@@ -1132,6 +1092,16 @@
       renderLibrary();
     }
 
+    // Task-derived status for one entity (CALENDAR_LIBRARY_LOOP_PLAN Phase 5) —
+    // 'abandoned' stays a distinct, reliably-set flag; everything else is
+    // computed live from state.tasks, never read from slb_State.
+    function _entityStatus(e) {
+      if (!e) return 'done';
+      if (e.state === 'abandoned') return 'abandoned';
+      var tasksForEntity = (state.tasks || []).filter(function(t) { return t.entityId === e.slug; });
+      return TaskWidgets.deriveStatus(tasksForEntity);
+    }
+
     function renderLibrary() {
       var preset = state.activePreset;
       var searchTerm = (document.getElementById('pv-search-library').value || '').toLowerCase();
@@ -1185,7 +1155,7 @@
       }
 
       var html = '<table class="pv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Title</th><th>Type</th><th>EN</th><th>HE</th><th>Last touched</th>';
+      html += '<th>Title</th><th>Type</th><th>Slug</th><th>EN</th><th>HE</th><th>Last touched</th>';
       html += '</tr></thead><tbody>';
 
       order.forEach(function(base) {
@@ -1201,20 +1171,22 @@
         var enCell, heCell;
         if (g.neutral) {
           // Language-neutral entity: span both EN+HE columns
-          enCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.neutral.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.neutral.slug) + '\')">' + TaskWidgets.escape(g.neutral.state || '—') + '</span>';
+          var neutralStatus = _entityStatus(g.neutral);
+          enCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(neutralStatus) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.neutral.slug) + '\')">' + TaskWidgets.escape(neutralStatus) + '</span>';
           heCell = '—';
         } else {
           enCell = g.en
-            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.en.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.en.slug) + '\')">' + TaskWidgets.escape(g.en.state || '—') + '</span>'
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.en)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.en.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.en)) + '</span>'
             : '<span style="color:#adb5bd;">—</span>';
           heCell = g.he
-            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(g.he.state) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.he.slug) + '\')">' + TaskWidgets.escape(g.he.state || '—') + '</span>'
+            ? '<span class="tw-status-pill ' + TaskWidgets.statusClass(_entityStatus(g.he)) + '" style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(g.he.slug) + '\')">' + TaskWidgets.escape(_entityStatus(g.he)) + '</span>'
             : '<span style="color:#adb5bd;">—</span>';
         }
 
         html += '<tr>';
-        html += '<td data-label="Title">' + titleLink + docLink + '<div class="detail-meta">' + TaskWidgets.escape(base) + '</div></td>';
+        html += '<td data-label="Title">' + titleLink + docLink + '</td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(g.type || '—') + '</td>';
+        html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + TaskWidgets.escape(base) + '</span></td>';
         html += '<td data-label="EN">' + enCell + '</td>';
         html += '<td data-label="HE">' + heCell + '</td>';
         html += '<td data-label="Touched">' + (g.lastTouched ? TaskWidgets.formatDate(g.lastTouched) : '—') + '</td>';
@@ -1234,8 +1206,7 @@
         if (!e.targetDate) return false;
         var td = new Date(e.targetDate);
         if (isNaN(td.getTime())) return false;
-        var published = String(e.state).toLowerCase() === 'published';
-        var overdue = td < startOfToday && !published;
+        var overdue = td < startOfToday && _entityStatus(e) !== 'done';
         var inWindow = td >= startOfToday && td <= horizon;
         if (!(overdue || inWindow)) return false;
         if (searchTerm) {
@@ -1254,15 +1225,16 @@
       }
 
       var html = '<table class="pv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Tasks</th><th></th>';
+      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>Status</th><th>Tasks</th><th></th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         var td = new Date(e.targetDate);
-        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+        var status = _entityStatus(e);
+        var overdue = td < startOfToday && status !== 'done';
         var openCount = (state.tasks || []).filter(function(t) {
           return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
         }).length;
-        var taskCell = openCount > 0 ? (openCount + ' open') : '<span style="color:#856404;font-weight:600;" title="No open task — stalled">stalled</span>';
+        var taskCell = openCount > 0 ? (openCount + ' open') : '0 open';
         html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
         html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
         html += '<td data-label="Title"><a class="pv-entity-title-link" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' +
@@ -1270,7 +1242,7 @@
                 '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
-        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(status) + '">' + TaskWidgets.escape(status) + '</span></td>';
         html += '<td data-label="Tasks">' + taskCell + '</td>';
         html += '<td data-label=""><button class="btn btn-sm btn-light" data-roles="admin" onclick="PublishingView.spawnForEntity(\'' + TaskWidgets.escape(e.slug) + '\')" title="Create content tasks for this piece">Spawn</button></td>';
         html += '</tr>';
@@ -1281,81 +1253,8 @@
 
     function spawnForEntity(slug) {
       var e = (state.library || []).find(function(x) { return x.slug === slug; });
-      openContentStreamModal(e ? e.title : '');
-      if (e) {
-        var typeEl = document.getElementById('pv-content-type');
-        if (typeEl) typeEl.value = e.contentType || 'blog';
-      }
-    }
-
-    // ===== CONTENT STREAM MODAL =====
-
-    function openContentStreamModal(preFilledName) {
-      var typeEl = document.getElementById('pv-content-type');
-      if (typeEl) typeEl.value = 'blog';
-      document.getElementById('pv-content-name').value = preFilledName || '';
-      document.getElementById('pv-content-stream-id').value = '';
-      var refsEl = document.getElementById('pv-content-references');
-      if (refsEl) refsEl.value = '';
-      if (state.contentStages.length) {
-        _populateStagesCheckboxes();
-      } else {
-        _loadContentStages();
-      }
-      document.getElementById('pvContentStreamModal').style.display = 'flex';
-    }
-
-    function _loadContentStages() {
-      google.script.run
-        .withSuccessHandler(function(stages) {
-          state.contentStages = stages || [];
-          _populateStagesCheckboxes();
-        })
-        .withFailureHandler(_onError)
-        .WebAppProjects_getContentStages();
-    }
-
-    function _populateStagesCheckboxes() {
-      var container = document.getElementById('pv-content-stages-checkboxes');
-      container.innerHTML = state.contentStages.map(function(s) {
-        return '<label class="mr-3 mb-1 small"><input type="checkbox" class="pv-content-stage-cb mr-1" value="' +
-          TaskWidgets.escape(s.id) + '">' + TaskWidgets.escape(s.label) + '</label>';
-      }).join('');
-    }
-
-    function submitContentStream() {
-      var typeEl = document.getElementById('pv-content-type');
-      var entityType = typeEl ? typeEl.value : 'blog';
-      var name = document.getElementById('pv-content-name').value.trim();
-      var customStreamId = document.getElementById('pv-content-stream-id').value.trim().toUpperCase();
-      var refsRaw = (document.getElementById('pv-content-references').value || '').trim();
-      var references = refsRaw ? refsRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
-      if (!name) { TaskWidgets.toast('Please enter content name', 'warning'); return; }
-      var stages = [];
-      document.querySelectorAll('.pv-content-stage-cb:checked').forEach(function(cb) { stages.push(cb.value); });
-      if (stages.length === 0) { TaskWidgets.toast('Please select at least one stage', 'warning'); return; }
-
-      var btn = document.getElementById('pv-btn-create-content-stream');
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-
-      google.script.run
-        .withSuccessHandler(function(result) {
-          btn.disabled = false;
-          btn.textContent = 'Create Tasks';
-          if (!result || !result.ok) { TaskWidgets.toast('Error: ' + ((result && result.error) || 'Unknown'), 'error'); return; }
-          document.getElementById('pvContentStreamModal').style.display = 'none';
-          var entityCount = (result.updated && result.updated.entities) ? result.updated.entities.length : 0;
-          var taskCount = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
-          TaskWidgets.toast('Created ' + entityCount + ' entity(ies) + ' + taskCount + ' task(s). Stream: ' + result.streamCode, 'success');
-          _loadData();
-        })
-        .withFailureHandler(function(err) {
-          btn.disabled = false;
-          btn.textContent = 'Create Tasks';
-          TaskWidgets.toast('Error: ' + (err && err.message ? err.message : 'Failed'), 'error');
-        })
-        .WebAppLibrary_spawnContentChain({ entityType: entityType, contentName: name, stages: stages, streamId: customStreamId || null, references: references });
+      var base = slug.replace(/-(en|he)$/i, '');
+      ContentStreamModal.open({ baseSlug: base, entityType: e ? e.contentType : 'blog' });
     }
 
     // ===== ENTITY DRAWER =====
@@ -1363,13 +1262,6 @@
     function openEntityDrawer(slug) {
       if (!slug) return;
       state.entityStack = [];
-      _loadEntityDrawer(slug);
-    }
-
-    function navigateToEntity(slug) {
-      if (!slug) return;
-      if (slug === state.currentEntitySlug) return;
-      if (state.currentEntitySlug) state.entityStack.push(state.currentEntitySlug);
       _loadEntityDrawer(slug);
     }
 
@@ -1405,10 +1297,8 @@
         if (el) el.textContent = '…';
       });
       var ph = '<span class="placeholder">Loading…</span>';
-      ['pv-drawer-family', 'pv-drawer-files', 'pv-drawer-attached-tasks', 'pv-drawer-refs-out', 'pv-drawer-refs-in', 'pv-drawer-state-history', 'pv-drawer-activity-log'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = ph;
-      });
+      var attachedEl = document.getElementById('pv-drawer-attached-tasks');
+      if (attachedEl) attachedEl.innerHTML = ph;
       var actEl = document.getElementById('pv-drawer-actions');
       if (actEl) actEl.innerHTML = '';
       var distWrap = document.getElementById('pv-drawer-distribute-wrap');
@@ -1422,7 +1312,10 @@
       document.getElementById('pv-drawer-slug').textContent = entity.slug || '—';
       document.getElementById('pv-drawer-type').textContent = entity.contentType || '—';
       document.getElementById('pv-drawer-language').textContent = entity.language || '(none)';
-      document.getElementById('pv-drawer-state').textContent = entity.state || '—';
+      var derivedStatus = TaskWidgets.deriveStatus((data && data.attached_tasks) || []);
+      document.getElementById('pv-drawer-state').innerHTML = entity.state === 'abandoned'
+        ? '<span class="tw-status-pill">abandoned</span>'
+        : '<span class="tw-status-pill ' + TaskWidgets.statusClass(derivedStatus) + '">' + TaskWidgets.escape(derivedStatus) + '</span>';
       document.getElementById('pv-drawer-targetdate').textContent = entity.targetDate ? TaskWidgets.formatDate(entity.targetDate) : '—';
       document.getElementById('pv-drawer-campaign').textContent = CAMPAIGN_LABELS[entity.campaignId] || entity.campaignId || '—';
       document.getElementById('pv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
@@ -1438,15 +1331,9 @@
         });
       }
 
-      _renderDrawerFiles(entity);
       _renderDrawerActions(entity);
       _renderDistributePanel(entity);
-      _renderDrawerFamily(entity);
       _renderDrawerAttachedTasks((data && data.attached_tasks) || []);
-      _renderDrawerReferences((entity && entity.references) || [], 'pv-drawer-refs-out', 'No outgoing references.');
-      _renderDrawerReferences(((data && data.references_in) || []).map(function(e) { return e.slug; }), 'pv-drawer-refs-in', 'No incoming references.');
-      _renderDrawerActivityLog((data && data.activity_log) || []);
-      _renderDrawerStateHistory((data && data.activity_log) || []);
     }
 
     function openAttachedTask(id) {
@@ -1481,93 +1368,6 @@
           (t.assignedTo ? '<span class="detail-meta">' + TaskWidgets.escape(t.assignedTo) + '</span>' : '') +
           dueChip + '</div>';
       }).join('');
-    }
-
-    function _renderDrawerReferences(slugs, elId, emptyMsg) {
-      var el = document.getElementById(elId);
-      if (!el) return;
-      if (!slugs || !slugs.length) { el.innerHTML = '<span class="placeholder">' + emptyMsg + '</span>'; return; }
-      el.innerHTML = slugs.map(function(slug) {
-        var s = TaskWidgets.escape(slug);
-        return '<span class="tw-chip pv-entity-chip" onclick="PublishingView.navigateToEntity(\'' + s + '\')" style="margin-right:4px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px" title="Open entity: ' + s + '">' + s + '</span>';
-      }).join('');
-    }
-
-    function _renderDrawerActivityLog(entries) {
-      var el = document.getElementById('pv-drawer-activity-log');
-      if (!el) return;
-      if (!entries.length) { el.innerHTML = '<span class="placeholder">No activity entries.</span>'; return; }
-      var sorted = entries.slice().sort(function(a, b) { return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
-      el.innerHTML = sorted.map(function(e) {
-        return '<div class="pv-drawer-activity-row">' +
-          '<span class="pv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
-          '<span class="pv-drawer-activity-action">' + TaskWidgets.escape(e.actionType || '—') + '</span>' +
-          '<span>' + TaskWidgets.escape(e.summary || '—') + '</span>' +
-          '<span class="detail-meta">· ' + TaskWidgets.escape(e.actor || '—') + '</span>' +
-          '</div>';
-      }).join('');
-    }
-
-    function _renderDrawerStateHistory(entries) {
-      var el = document.getElementById('pv-drawer-state-history');
-      if (!el) return;
-      var stateEvents = entries.filter(function(e) { return e.actionType === 'version_lock' || e.actionType === 'state_change'; });
-      if (!stateEvents.length) { el.innerHTML = '<span class="placeholder">No state changes recorded.</span>'; return; }
-      var sorted = stateEvents.slice().sort(function(a, b) { return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
-      el.innerHTML = sorted.map(function(e) {
-        return '<div class="pv-drawer-activity-row">' +
-          '<span class="pv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
-          '<span>' + TaskWidgets.escape(e.summary || e.actionType) + '</span></div>';
-      }).join('');
-    }
-
-    function _renderDrawerFamily(entity) {
-      var el = document.getElementById('pv-drawer-family');
-      if (!el) return;
-      var lib = state.library || [];
-      var slug = entity && entity.slug;
-      if (!slug) { el.innerHTML = '<span class="placeholder">—</span>'; return; }
-      var base = String(slug).replace(/-(en|he)$/, '');
-      var sibSet = {}, memberSet = {};
-      lib.forEach(function(e) {
-        if (String(e.slug).replace(/-(en|he)$/, '') === base) { sibSet[e.slug] = true; memberSet[e.slug] = true; }
-      });
-      (entity.references || []).forEach(function(s) { memberSet[s] = true; });
-      lib.forEach(function(e) {
-        var refs = e.references || [];
-        for (var i = 0; i < refs.length; i++) { if (sibSet[refs[i]]) { memberSet[e.slug] = true; break; } }
-      });
-      var members = lib.filter(function(e) { return memberSet[e.slug]; });
-      if (members.length <= 1) { el.innerHTML = '<span class="placeholder">No related pieces.</span>'; return; }
-      var groups = {};
-      members.forEach(function(e) { var t = e.contentType || 'other'; (groups[t] = groups[t] || []).push(e); });
-      var order = ['blog', 'news', 'mention', 'email', 'social', 'image', 'template', 'other'];
-      var typeKeys = Object.keys(groups).sort(function(a, b) {
-        var ia = order.indexOf(a), ib = order.indexOf(b);
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-      });
-      el.innerHTML = typeKeys.map(function(t) {
-        var rows = groups[t].sort(function(a, b) { return String(a.slug).localeCompare(b.slug); }).map(function(e) {
-          var pill = '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
-          var name = TaskWidgets.escape(e.title || e.slug) + (e.language ? ' (' + TaskWidgets.escape(e.language) + ')' : '');
-          if (e.slug === slug) return '<div class="pv-drawer-task-row"><strong>' + name + '</strong> ' + pill + ' <span class="detail-meta">· this</span></div>';
-          return '<div class="pv-drawer-task-row" style="cursor:pointer;" onclick="PublishingView.navigateToEntity(\'' + TaskWidgets.escape(e.slug) + '\')">' + name + ' ' + pill + '</div>';
-        }).join('');
-        return '<div class="detail-meta" style="margin-top:4px;text-transform:capitalize;">' + TaskWidgets.escape(t) + '</div>' + rows;
-      }).join('');
-    }
-
-    function _renderDrawerFiles(entity) {
-      var el = document.getElementById('pv-drawer-files');
-      if (!el) return;
-      var chips = [];
-      if (entity.docUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">Open Doc</a>');
-      if (entity.canvaDesignUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.canvaDesignUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">Open Canva</a>');
-      if (entity.externalUrl) chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(entity.externalUrl) + '" target="_blank" rel="noopener" style="margin-right:6px">External</a>');
-      if (entity.mdUrl) chips.push('<span class="tw-chip" style="margin-right:6px">MD: ' + TaskWidgets.escape(entity.mdUrl) + '</span>');
-      if (entity.wpPostId) chips.push('<span class="tw-chip" style="margin-right:6px">WP post: ' + TaskWidgets.escape(entity.wpPostId) + '</span>');
-      if (entity.mailchimpCampaignId) chips.push('<span class="tw-chip" style="margin-right:6px">Mailchimp: ' + TaskWidgets.escape(entity.mailchimpCampaignId) + '</span>');
-      el.innerHTML = chips.length ? chips.join('') : '<span class="placeholder">No files or URLs attached.</span>';
     }
 
     function closeEntityDrawer() {
@@ -1641,7 +1441,8 @@
 
     function drawerCreateContentTasks() {
       if (!state.currentEntity) return;
-      openContentStreamModal(state.currentEntity.title || state.currentEntity.slug || '');
+      var base = String(state.currentEntity.slug || '').replace(/-(en|he)$/i, '');
+      ContentStreamModal.open({ baseSlug: base, entityType: state.currentEntity.contentType });
     }
 
     function drawerRequestCorrection() {
@@ -1702,7 +1503,6 @@
       spawnForEntity: spawnForEntity,
       openAttachedTask: openAttachedTask,
       openEntityDrawer: openEntityDrawer,
-      navigateToEntity: navigateToEntity,
       backEntityDrawer: backEntityDrawer,
       closeEntityDrawer: closeEntityDrawer,
       drawerOpenInDrive: drawerOpenInDrive,

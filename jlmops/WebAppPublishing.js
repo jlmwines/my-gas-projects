@@ -91,6 +91,8 @@ function _loadHolidays() {
     const nameIdx  = headers.indexOf('cal_Name');
     const typeIdx  = headers.indexOf('cal_Type');
     const notesIdx = headers.indexOf('cal_Notes');
+    const slugIdx  = headers.indexOf('cal_Slug');
+    const linkIdx  = headers.indexOf('cal_Link');
     if (dateIdx === -1 || nameIdx === -1) return [];
     return values.slice(1).map(function(row) {
       var d = row[dateIdx];
@@ -101,12 +103,33 @@ function _loadHolidays() {
         date:  dateStr,
         name:  String(row[nameIdx] || '').trim(),
         type:  typeIdx > -1 ? String(row[typeIdx] || '').trim() : 'holiday',
-        notes: notesIdx > -1 ? String(row[notesIdx] || '').trim() : ''
+        notes: notesIdx > -1 ? String(row[notesIdx] || '').trim() : '',
+        slug:  slugIdx  > -1 ? String(row[slugIdx]  || '').trim() : '',
+        link:  linkIdx  > -1 ? String(row[linkIdx]  || '').trim() : ''
       };
-    }).filter(function(r) { return r.date && r.name && ['holiday', 'blackout', 'note'].indexOf(r.type) > -1; });
+    }).filter(function(r) { return r.date && r.name; });
   } catch (e) {
     LoggerService.error('WebAppPublishing', '_loadHolidays', 'Could not load holidays: ' + e.message, e);
     return [];
+  }
+}
+
+/**
+ * On-demand merge of session-staged calendar updates into JLMops_Publishing.
+ * Driven by the Calendar tab's "Apply Pending Updates" button — same merge
+ * StatusReportService.applyPendingCalendarUpdates runs on the daily
+ * housekeeping cadence, just invoked immediately instead of waiting.
+ * @returns {Object} { success, filesProcessed, rowsMerged, rowsSkipped } or { success:false, error }.
+ */
+function WebAppPublishing_applyPendingCalendarUpdates() {
+  const serviceName = 'WebAppPublishing';
+  const functionName = 'applyPendingCalendarUpdates';
+  const sessionId = Utilities.getUuid();
+  try {
+    return StatusReportService.applyPendingCalendarUpdates(sessionId);
+  } catch (e) {
+    LoggerService.error(serviceName, functionName, e.message, e);
+    return { success: false, error: e.message };
   }
 }
 

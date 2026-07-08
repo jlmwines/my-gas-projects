@@ -601,89 +601,152 @@ const StatusReportService = (function() {
   }
 
   /**
-   * Write the merged publishing calendar back to JLMops_Publishing:
-   * keeps holiday/blackout/note rows (manually maintained), regenerates all
-   * other rows from SysLibrary entities that have a slb_TargetDate, sorts the
-   * whole sheet by date. Sessions read the result via Drive MCP. Never throws.
-   * @param {string} sessionId correlation id (CCP-2).
+   * Finds or creates the flat `_archive` subfolder under the calendar staging
+   * folder — mirrors LibraryService's `_getArchiveFolder` convention (a
+   * single dumping ground for processed files, not a dated tree).
+   * @private
    */
-  function refreshCalendarExport(sessionId) {
-    const fnName = 'refreshCalendarExport';
-    const MANUAL_TYPES = ['holiday', 'blackout', 'note'];
+  function _getCalendarArchiveFolder(stagingFolder) {
+    const matches = stagingFolder.getFoldersByName('_archive');
+    if (matches.hasNext()) return matches.next();
+    return stagingFolder.createFolder('_archive');
+  }
+
+  /**
+   * Scans the calendar staging folder (`system.folder.calendar`) for
+   * session-authored pending-update files (Sheets with the same
+   * cal_Date/cal_Name/cal_Type/cal_Notes/cal_Slug/cal_Link shape as
+   * JLMops_Publishing), upserts each row into JLMops_Publishing keyed on
+   * cal_Slug — no fallback matching, a row with no slug is skipped and
+   * logged — then archives the processed file into a flat `_archive`
+   * subfolder so it isn't reprocessed. Wired to daily housekeeping and the
+   * Calendar tab's on-demand "Apply pending calendar updates" button.
+   * Never throws: a merge failure degrades to "nothing merged this run,"
+   * not a broken calendar.
+   * @param {string} sessionId correlation id (CCP-2).
+   * @returns {Object} { success, filesProcessed, rowsMerged, rowsSkipped } or { success:false, error }.
+   */
+  /**
+   * Sorts JLMops_Publishing's data rows by cal_Date ascending in place.
+   * cal_Date is human-edited and shows up as a mix of Date objects and
+   * differently-shaped strings (`2026-07-28`, `4/21/2027`, with/without a
+   * time part) — a plain Range.sort() on the column would compare those
+   * inconsistently, so each cell is parsed to a timestamp first. Unparseable
+   * dates sort last rather than erroring, so a bad row doesn't block the rest.
+   * @private
+   */
+  function _sortCalendarByDate(calSheet, calHeaders) {
+    const dateIdx = calHeaders.indexOf('cal_Date');
+    if (dateIdx === -1) return;
+    const lastRow = calSheet.getLastRow();
+    if (lastRow < 3) return;
+    const range = calSheet.getRange(2, 1, lastRow - 1, calHeaders.length);
+    const values = range.getValues();
+    const toTime = function(v) {
+      if (v instanceof Date) return v.getTime();
+      if (!v) return null;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d.getTime();
+    };
+    values.sort(function(a, b) {
+      const ta = toTime(a[dateIdx]);
+      const tb = toTime(b[dateIdx]);
+      if (ta === null && tb === null) return 0;
+      if (ta === null) return 1;
+      if (tb === null) return -1;
+      return ta - tb;
+    });
+    range.setValues(values);
+  }
+
+  function applyPendingCalendarUpdates(sessionId) {
+    const fnName = 'applyPendingCalendarUpdates';
     try {
       const allConfig = ConfigService.getAllConfig();
-      const sheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
-      if (!sheetId) throw new Error('system.calendar.sheet_id not configured');
+      const calSheetId = allConfig['system.calendar.sheet_id'] && allConfig['system.calendar.sheet_id'].id;
+      const folderId = allConfig['system.folder.calendar'] && allConfig['system.folder.calendar'].id;
+      if (!calSheetId) throw new Error('system.calendar.sheet_id not configured');
+      if (!folderId) throw new Error('system.folder.calendar not configured');
 
-      const ss = SpreadsheetApp.openById(sheetId);
-      const sheet = ss.getSheets()[0];
-      if (!sheet) throw new Error('No sheet in JLMops_Publishing');
+      const calSs = SpreadsheetApp.openById(calSheetId);
+      const calSheet = calSs.getSheets()[0];
+      if (!calSheet) throw new Error('No sheet in JLMops_Publishing');
 
-      const existing = sheet.getDataRange().getValues();
-      if (existing.length < 1) throw new Error('Sheet has no header row');
-      const headers = existing[0].map(function(h) { return String(h).trim(); });
-      const dateIdx  = headers.indexOf('cal_Date'),  nameIdx  = headers.indexOf('cal_Name'),
-            typeIdx  = headers.indexOf('cal_Type'),  notesIdx = headers.indexOf('cal_Notes');
-      if (dateIdx === -1 || nameIdx === -1 || typeIdx === -1) throw new Error('Missing required headers');
+      const calValues = calSheet.getDataRange().getValues();
+      if (calValues.length < 1) throw new Error('JLMops_Publishing has no header row');
+      const calHeaders = calValues[0].map(function(h) { return String(h).trim(); });
+      const slugIdx = calHeaders.indexOf('cal_Slug');
+      if (slugIdx === -1) throw new Error('JLMops_Publishing missing cal_Slug column');
 
-      // Preserve manually-maintained rows
-      const manual = existing.slice(1).filter(function(row) {
-        return MANUAL_TYPES.indexOf(String(row[typeIdx] || '').trim().toLowerCase()) !== -1;
-      });
+      // Map existing slug -> sheet row number (1-based; data starts at row 2)
+      const slugToRow = {};
+      for (let r = 1; r < calValues.length; r++) {
+        const s = String(calValues[r][slugIdx] || '').trim();
+        if (s) slugToRow[s] = r + 1;
+      }
 
-      // Build entity rows from SysLibrary
-      const entityRows = [];
-      const libSheet = SheetAccessor.getLibrarySheet('SysLibrary');
-      if (libSheet) {
-        const lv = libSheet.getDataRange().getValues();
-        const LH = lv[0];
-        const slugC  = LH.indexOf('slb_Slug'),    titleC = LH.indexOf('slb_Title'),
-              typeC  = LH.indexOf('slb_ContentType'), stateC = LH.indexOf('slb_State'),
-              dateC  = LH.indexOf('slb_TargetDate'), campC  = LH.indexOf('slb_CampaignId');
-        if (slugC !== -1 && dateC !== -1) {
-          for (var i = 1; i < lv.length; i++) {
-            var row = lv[i];
-            var dv = row[dateC];
-            if (!dv) continue;
-            var d = dv instanceof Date ? dv : new Date(dv);
-            if (isNaN(d.getTime())) continue;
-            var slug  = String(row[slugC]  || '').trim(); if (!slug) continue;
-            var title = String(titleC > -1 ? row[titleC] : slug).trim() || slug;
-            var ctype = String(typeC  > -1 ? row[typeC]  : '').trim() || 'other';
-            var state = String(stateC > -1 ? row[stateC] : '').trim();
-            var camp  = String(campC  > -1 ? row[campC]  : '').trim();
-            var newRow = new Array(headers.length).fill('');
-            newRow[dateIdx]  = d;
-            newRow[nameIdx]  = title;
-            newRow[typeIdx]  = ctype;
-            if (notesIdx > -1) newRow[notesIdx] = state + (camp ? ' · ' + camp : '');
-            entityRows.push({ d: d, row: newRow });
+      const stagingFolder = DriveApp.getFolderById(folderId);
+      const archiveFolder = _getCalendarArchiveFolder(stagingFolder);
+      const files = stagingFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
+
+      let filesProcessed = 0;
+      let rowsMerged = 0;
+      let rowsSkipped = 0;
+
+      while (files.hasNext()) {
+        const file = files.next();
+        try {
+          const stagingSs = SpreadsheetApp.open(file);
+          const stagingSheet = stagingSs.getSheets()[0];
+          const stagingValues = stagingSheet ? stagingSheet.getDataRange().getValues() : [];
+          if (stagingValues.length < 2) { file.moveTo(archiveFolder); filesProcessed++; continue; }
+
+          const stagingHeaders = stagingValues[0].map(function(h) { return String(h).trim(); });
+          const stagingSlugIdx = stagingHeaders.indexOf('cal_Slug');
+
+          for (let i = 1; i < stagingValues.length; i++) {
+            const row = stagingValues[i];
+            const slug = stagingSlugIdx > -1 ? String(row[stagingSlugIdx] || '').trim() : '';
+            if (!slug) { rowsSkipped++; continue; }
+
+            // Map staging row into JLMops_Publishing's own column order (name lookup, not position)
+            const outRow = calHeaders.map(function(h) {
+              const srcIdx = stagingHeaders.indexOf(h);
+              return srcIdx > -1 ? row[srcIdx] : '';
+            });
+
+            const existingRowNum = slugToRow[slug];
+            if (existingRowNum) {
+              calSheet.getRange(existingRowNum, 1, 1, calHeaders.length).setValues([outRow]);
+            } else {
+              calSheet.appendRow(outRow);
+              slugToRow[slug] = calSheet.getLastRow();
+            }
+            rowsMerged++;
           }
+
+          file.moveTo(archiveFolder);
+          filesProcessed++;
+        } catch (fileErr) {
+          logger.error(SERVICE_NAME, fnName, 'Failed to merge staging file ' + file.getName() + ': ' + fileErr.message, fileErr, { sessionId: sessionId });
         }
       }
 
-      // Merge and sort
-      var allRows = manual.map(function(row) {
-        var dv = row[dateIdx];
-        var d = dv instanceof Date ? dv : new Date(String(dv));
-        return { d: isNaN(d) ? new Date(0) : d, row: row };
-      }).concat(entityRows);
-      allRows.sort(function(a, b) { return a.d.getTime() - b.d.getTime(); });
+      if (rowsSkipped > 0) {
+        logger.warn(SERVICE_NAME, fnName, rowsSkipped + ' staging row(s) skipped — missing cal_Slug', { sessionId: sessionId });
+      }
 
-      // Write back (clear data rows only, keep header)
-      var lastRow = sheet.getLastRow();
-      if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
-      if (allRows.length > 0) {
-        sheet.getRange(2, 1, allRows.length, headers.length).setValues(allRows.map(function(r) { return r.row; }));
+      if (rowsMerged > 0) {
+        _sortCalendarByDate(calSheet, calHeaders);
       }
 
       logger.info(SERVICE_NAME, fnName,
-        'Calendar refreshed: ' + manual.length + ' manual + ' + entityRows.length + ' entities = ' + allRows.length + ' rows',
+        'Calendar merge: ' + filesProcessed + ' file(s), ' + rowsMerged + ' row(s) merged, ' + rowsSkipped + ' skipped',
         { sessionId: sessionId });
-      return { success: true, rows: allRows.length };
+      return { success: true, filesProcessed: filesProcessed, rowsMerged: rowsMerged, rowsSkipped: rowsSkipped };
     } catch (e) {
-      NotificationService.reportFailure('status_export.calendar_refresh',
-        'Calendar export failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
+      NotificationService.reportFailure('status_export.calendar_merge',
+        'Calendar pending-updates merge failed: ' + e.message, 'Normal', { error: e.message }, sessionId);
       return { success: false, error: e.message };
     }
   }
@@ -691,7 +754,7 @@ const StatusReportService = (function() {
   return {
     refreshLiveBlocks: refreshLiveBlocks,
     refreshKpiBlock: refreshKpiBlock,
-    refreshCalendarExport: refreshCalendarExport
+    applyPendingCalendarUpdates: applyPendingCalendarUpdates
   };
 })();
 

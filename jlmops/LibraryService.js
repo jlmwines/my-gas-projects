@@ -192,32 +192,29 @@ const LibraryService = (function() {
     }
 
     /**
-     * Spawns a content task chain: entity rows + tasks attached polymorphically.
-     *
-     * For sibling-language types (blog/news/mention/email/social/template): creates
-     * two entity rows (`-en` + `-he` with HE referencing EN), then for each stage in
-     * `stages` creates a task attached to the sibling identified by
-     * `CONTENT_STAGES[stage].target_sibling`.
-     *
-     * For language-agnostic types (image): creates one entity row, all tasks
-     * attach to it.
+     * Spawns a content task chain: one ordered list of tasks for a slug, each
+     * carrying its stage-resolved entityId (`baseSlug-en`/`baseSlug-he` per
+     * `CONTENT_STAGES[stage].target_sibling` for sibling-language types, or
+     * `baseSlug` for language-agnostic types). Creates NO entity rows —
+     * CALENDAR_LIBRARY_LOOP_PLAN Phase 3: no automatic sibling pairing, no
+     * batch-provisioned entities. A task's entity comes into being lazily, the
+     * first time a Doc is attached/created against it (`createBlankDoc`/
+     * `attachExistingDoc` auto-create when the slug has no entity yet) — "each
+     * created when the work for it actually starts," including the EN side,
+     * which starts as soon as the chain's first task is actually worked.
      *
      * Stream code generation matches the existing WebAppProjects_createContentStream
      * logic (first 3 letters uppercase + random suffix), or accepts a user-supplied
      * streamId.
      *
-     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId?, targetDate? }
-     * @returns {Object} { entities, tasks, streamCode, deduplicated_entities }
+     * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId? }
+     * @returns {Object} { tasks, streamCode }
      */
     function spawnContentChain(params) {
         const entityType = params.entityType;
         const contentName = params.contentName;
         const stages = params.stages || [];
         const streamId = params.streamId;
-        const targetDate = params.targetDate || '';
-        const userRefs = Array.isArray(params.references)
-            ? params.references.map(r => String(r).trim()).filter(Boolean)
-            : [];
 
         if (!entityType) throw new Error('entityType is required');
         if (!contentName || !contentName.trim()) throw new Error('contentName is required');
@@ -242,40 +239,6 @@ const LibraryService = (function() {
 
         const isSiblingLanguage = SIBLING_LANGUAGE_TYPES.indexOf(entityType) > -1;
 
-        // 1. Create entity rows.
-        const entities = [];
-        const deduplicated_entities = [];
-
-        if (isSiblingLanguage) {
-            const enSlug = baseSlug + '-en';
-            const heSlug = baseSlug + '-he';
-
-            const enResult = addEntity({
-                slug: enSlug, type: entityType, language: 'en',
-                title: contentName, references: userRefs.slice(),
-                softReferences: true, targetDate: targetDate
-            });
-            entities.push(enResult.entity);
-            if (enResult.deduplicated) deduplicated_entities.push(enSlug);
-
-            const heResult = addEntity({
-                slug: heSlug, type: entityType, language: 'he',
-                title: contentName, references: [enSlug].concat(userRefs),
-                softReferences: true, targetDate: targetDate
-            });
-            entities.push(heResult.entity);
-            if (heResult.deduplicated) deduplicated_entities.push(heSlug);
-        } else {
-            const result = addEntity({
-                slug: baseSlug, type: entityType, language: null,
-                title: contentName, references: userRefs.slice(),
-                softReferences: true, targetDate: targetDate
-            });
-            entities.push(result.entity);
-            if (result.deduplicated) deduplicated_entities.push(baseSlug);
-        }
-
-        // 2. Spawn tasks per stage.
         const tasks = [];
         for (let i = 0; i < stages.length; i++) {
             const stageId = stages[i];
@@ -301,10 +264,8 @@ const LibraryService = (function() {
         }
 
         return {
-            entities: entities,
             tasks: tasks,
-            streamCode: streamCode,
-            deduplicated_entities: deduplicated_entities
+            streamCode: streamCode
         };
     }
 
@@ -320,6 +281,68 @@ const LibraryService = (function() {
             .replace(/^-+|-+$/g, '');
         if (!topic) throw new Error(`could not derive slug from contentName "${contentName}"`);
         return entityType + '-' + topic;
+    }
+
+    /**
+     * Reverses _deriveBaseSlug's shape to recover {type, language, title} from
+     * a bare slug, for lazily creating an entity that a task already references
+     * by slug but that doesn't exist yet (CALENDAR_LIBRARY_LOOP_PLAN Phase 3 —
+     * spawnContentChain no longer creates entities up front).
+     * @private
+     */
+    function _deriveEntityFieldsFromSlug(slug) {
+        const s = String(slug);
+        const language = s.slice(-3) === '-en' ? 'en' : (s.slice(-3) === '-he' ? 'he' : null);
+        const withoutLang = language ? s.slice(0, -3) : s;
+        const type = VALID_TYPES.filter(t => withoutLang === t || withoutLang.indexOf(t + '-') === 0)
+            .sort((a, b) => b.length - a.length)[0] || 'other';
+        let topic = withoutLang.indexOf(type + '-') === 0 ? withoutLang.slice(type.length + 1) : withoutLang;
+        const title = topic.split('-').filter(Boolean)
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || slug;
+        return { type: type, language: language, title: title };
+    }
+
+    /**
+     * Creates the entity for `slug` if it doesn't exist yet, deriving
+     * type/language/title from the slug itself (Phase 3 lazy-creation —
+     * see _deriveEntityFieldsFromSlug). No-op if the entity already exists.
+     * @returns {Object} the entity row (existing or newly created).
+     * @private
+     */
+    function _ensureEntity(slug) {
+        const existing = _getEntityRow(slug);
+        if (existing) return existing;
+        const fields = _deriveEntityFieldsFromSlug(slug);
+        const taskTitle = _findEntityNameFromTask(slug);
+        addEntity({ slug: slug, type: fields.type, language: fields.language, title: taskTitle || fields.title });
+        return _getEntityRow(slug);
+    }
+
+    /**
+     * Looks up the title a user actually supplied at task-spawn time for
+     * `slug`, from the originating task's st_LinkedEntityName (set by
+     * TaskService.createTask from spawnContentChain's contentName — the
+     * calendar row's cal_Name). _ensureEntity prefers this over deriving a
+     * title from the slug's own words, per CONTENT_CREATION_CHECKLIST.md's
+     * title rule: the Library title is always the user's input, never
+     * invented from the slug.
+     * @returns {string|null}
+     * @private
+     */
+    function _findEntityNameFromTask(slug) {
+        const tasksSheet = SheetAccessor.getDataSheet('SysTasks');
+        const tasksValues = tasksSheet.getDataRange().getValues();
+        const tasksHeaders = tasksValues[0] || [];
+        const entityIdIdx = tasksHeaders.indexOf('st_EntityId');
+        const nameIdx = tasksHeaders.indexOf('st_LinkedEntityName');
+        if (entityIdIdx === -1 || nameIdx === -1) return null;
+        for (let i = 1; i < tasksValues.length; i++) {
+            if (tasksValues[i][entityIdIdx] === slug) {
+                const name = tasksValues[i][nameIdx];
+                if (name) return String(name);
+            }
+        }
+        return null;
     }
 
     // ===== PHASE 7b ADDITIONS =====
@@ -372,14 +395,16 @@ const LibraryService = (function() {
 
     /**
      * Derives the concept folder name from a slug.
-     * Concept = slug with type prefix and language suffix stripped.
-     * `blog-context-en` → `context`. `blog-june-ayiw-en` → `june-ayiw`.
-     * `image-context-featured` → `context-featured` (no language suffix).
+     * Concept = slug with only the language suffix stripped; the type prefix
+     * stays (CONTENT_CREATION_CHECKLIST.md — matches the folder-naming
+     * convention actually in use in Drive as of 2026-07-08, e.g.
+     * `blog-region-negev`, `email-ayiw-2026-07`, not the type-stripped form).
+     * `blog-context-en` → `blog-context`. `image-context-featured` →
+     * `image-context-featured` (no language suffix).
      * @private
      */
-    function _deriveConcept(slug, type) {
+    function _deriveConcept(slug) {
         let s = String(slug);
-        if (s.indexOf(type + '-') === 0) s = s.slice(type.length + 1);
         if (s.endsWith('-en') || s.endsWith('-he')) s = s.slice(0, -3);
         return s;
     }
@@ -422,19 +447,6 @@ const LibraryService = (function() {
         } catch (e) {
             return 'system';
         }
-    }
-
-    /**
-     * Flips a sibling-language slug to its peer.
-     * `blog-context-en` → `blog-context-he` (and vice versa).
-     * Returns null if slug has no language suffix.
-     * @private
-     */
-    function _flipPeerSlug(slug) {
-        const s = String(slug);
-        if (s.endsWith('-en')) return s.slice(0, -3) + '-he';
-        if (s.endsWith('-he')) return s.slice(0, -3) + '-en';
-        return null;
     }
 
     /**
@@ -532,6 +544,8 @@ const LibraryService = (function() {
      * Creates a blank Google Doc at the canonical Drive path for this entity.
      * Refuses silent overwrite if a file already belongs to this slug (bare or
      * versioned) in the canonical folder. New files are named `<slug> <ts>`.
+     * Creates the entity first if it doesn't exist yet (Phase 3 lazy-creation —
+     * a task can reference a slug before any entity for it exists).
      * @param {Object} params - { entityId: slug }
      * @returns {Object} { entity: updatedRow, docUrl }
      */
@@ -539,11 +553,10 @@ const LibraryService = (function() {
         const entityId = params && params.entityId;
         if (!entityId) throw new Error('entityId is required');
 
-        const entity = _getEntityRow(entityId);
-        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+        const entity = _ensureEntity(entityId);
 
         const type = entity.slb_ContentType;
-        const concept = _deriveConcept(entityId, type);
+        const concept = _deriveConcept(entityId);
         const canonicalFolder = _getCanonicalFolder(type, concept);
 
         // Refuse silent overwrite — any file already belonging to this slug
@@ -610,8 +623,7 @@ const LibraryService = (function() {
         const fileId = _extractDriveFileId(driveUrl);
         if (!fileId) throw new Error(`Could not find a Drive file ID in "${driveUrl}". Paste the Doc's share link or open URL.`);
 
-        const entity = _getEntityRow(entityId);
-        if (!entity) throw new Error(`Entity "${entityId}" not found`);
+        const entity = _ensureEntity(entityId);
 
         // Capture the currently-current file so we can supersede it once the
         // new version is attached (Decision 7, Plan B — attach-to-replace).
@@ -619,10 +631,15 @@ const LibraryService = (function() {
         const oldFileId = oldMatch ? oldMatch[0] : '';
 
         const type = entity.slb_ContentType;
-        const concept = _deriveConcept(entityId, type);
+        const concept = _deriveConcept(entityId);
         const canonicalFolder = _getCanonicalFolder(type, concept);
 
         const file = DriveApp.getFileById(fileId);
+        // Ownership-transfer fix generalized from createTranslationDraft (which
+        // already does this after forking a Doc) — whoever pasted this URL may
+        // not be the admin, and only the admin can reliably reopen it later.
+        const adminEmail = TaskService.getUserByRole('admin');
+        if (adminEmail) file.setOwner(adminEmail);
         // Move if not already in canonical folder.
         const parents = file.getParents();
         let inCanonical = false;
@@ -672,13 +689,12 @@ const LibraryService = (function() {
      * version counter or sets a 'locked' state — versioning is file-based
      * (attach-to-replace). Name kept for the existing UI/wrapper call sites.
      *
-     * @param {Object} params - { entityId, taskId, peerNeedsRealignment }
-     * @returns {Object} { entity: updatedRow, task: closedTask, related_tasks: [...] }
+     * @param {Object} params - { entityId, taskId }
+     * @returns {Object} { entity: updatedRow, task: closedTask }
      */
     function lockVersion(params) {
         const entityId = params && params.entityId;
         const taskId = params && params.taskId;
-        const peerNeedsRealignment = !!(params && params.peerNeedsRealignment);
         if (!entityId) throw new Error('entityId is required');
         if (!taskId) throw new Error('taskId is required');
 
@@ -693,47 +709,16 @@ const LibraryService = (function() {
         // Close the originating task via existing TaskService surface.
         TaskService.completeTask(taskId);
 
-        // Optionally spawn realign task on peer.
-        let realignTask = null;
-        let peerSlug = null;
-        if (peerNeedsRealignment) {
-            peerSlug = _flipPeerSlug(entityId);
-            if (!peerSlug) {
-                throw new Error(`Entity "${entityId}" has no language suffix; cannot derive peer slug for realignment`);
-            }
-            const peer = _getEntityRow(peerSlug);
-            if (!peer) {
-                throw new Error(`Peer entity "${peerSlug}" not found; cannot spawn realign task`);
-            }
-            const peerLanguage = peer.slb_Language || '';
-            const realignLabel = peerLanguage === 'he' ? 'Update translation'
-                : peerLanguage === 'en' ? 'Update English version'
-                : 'Update peer version';
-            realignTask = TaskService.createTask(
-                'task.content.realign',
-                peerSlug,
-                peer.slb_Title || peerSlug,
-                realignLabel + ': ' + (peer.slb_Title || peerSlug),
-                '',
-                null,
-                { entityType: peer.slb_ContentType, entityId: peerSlug }
-            );
-        }
-
         // Activity log entry.
         logEntityActivity({
             entityId: entityId,
             actionType: 'version_lock',
-            details: {
-                peerRealignmentSpawned: !!realignTask
-            },
-            referencedEntities: realignTask && peerSlug ? [peerSlug] : []
+            details: {}
         });
 
         return {
             entity: updatedEntity,
-            task: { id: taskId, status: 'Done' },
-            related_tasks: realignTask ? [realignTask] : []
+            task: { id: taskId, status: 'Done' }
         };
     }
 
@@ -847,23 +832,6 @@ const LibraryService = (function() {
             actionType: 'published',
             details: externalUrl ? { externalUrl: externalUrl } : {}
         });
-
-        // Propagate URL stamp to entities that reference this slug.
-        if (externalUrl) {
-            const { rows } = _openLibrary();
-            rows.forEach(function(row) {
-                const refs = String(row.slb_References || '').split(',').map(function(s) { return s.trim(); });
-                if (refs.indexOf(entityId) > -1 && row.slb_Slug && row.slb_Slug !== entityId) {
-                    try {
-                        logEntityActivity({
-                            entityId: row.slb_Slug,
-                            actionType: 'url-stamped',
-                            details: { sourceSlug: entityId, externalUrl: externalUrl }
-                        });
-                    } catch (e) { /* non-fatal — don't block publish */ }
-                }
-            });
-        }
 
         return { entity: updated };
     }
@@ -1110,36 +1078,38 @@ const LibraryService = (function() {
     }
 
     /**
-     * Creates a fresh Hebrew translation draft for a sibling-language HE entity:
-     * copies the EN peer's current Doc, prepends the translation prompt, and
-     * attaches the copy as the HE entity's current version (superseding any
-     * existing HE draft, per attach-to-replace). The translator then opens the
-     * Doc and lets Gemini paraphrase in place.
-     * @param {Object} params - { heEntityId }
+     * Creates a fresh Hebrew translation draft from the just-finished EN entity:
+     * copies its current Doc, prepends the translation prompt, and attaches the
+     * copy as the HE entity's current version — creating that entity lazily if
+     * it doesn't exist yet (attachExistingDoc's Phase 3 auto-create), superseding
+     * any existing HE draft otherwise (attach-to-replace). The translator then
+     * opens the Doc and lets Gemini paraphrase in place.
+     *
+     * Input changed in Phase 4: takes the EN entity directly instead of a HE
+     * entity + _flipPeerSlug guess — the EN source is never guessed, it's
+     * literally the entity the just-finished edit task belongs to. The HE
+     * entity's slug is the mechanical forward flip (`-en` → `-he`) of the input,
+     * not a lookup.
+     * @param {Object} params - { enEntityId }
      * @returns {Object} { entity, docUrl, superseded }
      */
     function createTranslationDraft(params) {
-        const heEntityId = params && params.heEntityId;
-        if (!heEntityId) throw new Error('heEntityId is required');
+        const enEntityId = params && params.enEntityId;
+        if (!enEntityId) throw new Error('enEntityId is required');
+        if (enEntityId.slice(-3) !== '-en') throw new Error(`"${enEntityId}" is not an English entity (no -en suffix)`);
 
-        const heEntity = _getEntityRow(heEntityId);
-        if (!heEntity) throw new Error(`Entity "${heEntityId}" not found`);
-
-        const enSlug = _flipPeerSlug(heEntityId);
-        if (!enSlug) throw new Error(`"${heEntityId}" has no language suffix; cannot find an English peer`);
-        const enEntity = _getEntityRow(enSlug);
-        if (!enEntity) throw new Error(`English peer "${enSlug}" not found`);
+        const enEntity = _getEntityRow(enEntityId);
+        if (!enEntity) throw new Error(`Entity "${enEntityId}" not found`);
         const enFileId = _extractDriveFileId(enEntity.slb_DocUrl);
-        if (!enFileId) throw new Error(`English peer "${enSlug}" has no Doc to translate yet`);
+        if (!enFileId) throw new Error(`"${enEntityId}" has no Doc to translate yet`);
+
+        const heEntityId = enEntityId.slice(0, -3) + '-he';
 
         // Copy the EN Doc, prepend the prompt (line by line so each is its own
         // paragraph), then attach the copy as the HE entity's current version.
-        // executeAs:USER_ACCESSING means makeCopy() owns the file as whoever is
-        // clicked the button — transfer to the admin account so it lands back
-        // in the Library owner's reach regardless of who ran the translation.
+        // Ownership transfer now happens inside attachExistingDoc itself
+        // (generalized there in Phase 3); no need to set it here too.
         const copy = DriveApp.getFileById(enFileId).makeCopy();
-        const adminEmail = TaskService.getUserByRole('admin');
-        if (adminEmail) copy.setOwner(adminEmail);
         const copyDoc = DocumentApp.openById(copy.getId());
         const promptLines = _getTranslationPrompt().split('\n');
         for (let i = promptLines.length - 1; i >= 0; i--) {
@@ -1152,7 +1122,7 @@ const LibraryService = (function() {
         logEntityActivity({
             entityId: heEntityId,
             actionType: 'translation_draft_created',
-            details: { fromEntity: enSlug, fromFileId: enFileId }
+            details: { fromEntity: enEntityId, fromFileId: enFileId }
         });
 
         return result;
@@ -1231,7 +1201,7 @@ const LibraryService = (function() {
 
             let folder;
             try {
-                folder = _getCanonicalFolder(type, _deriveConcept(slug, type));
+                folder = _getCanonicalFolder(type, _deriveConcept(slug));
             } catch (e) { return; }
 
             // Files in the canonical folder belonging to this slug.

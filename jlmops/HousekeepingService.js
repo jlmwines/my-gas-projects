@@ -731,7 +731,7 @@ function HousekeepingService() {
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
       { name: 'refreshKpiBlock', fn: () => StatusReportService.refreshKpiBlock(sessionId) },
-      { name: 'refreshCalendarExport', fn: () => StatusReportService.refreshCalendarExport(sessionId) }
+      { name: 'applyPendingCalendarUpdates', fn: () => StatusReportService.applyPendingCalendarUpdates(sessionId) }
     ];
 
     for (const task of phase3Tasks) {
@@ -1099,43 +1099,6 @@ function HousekeepingService() {
       }
 
       const sheetNames = allConfig['system.sheet_names'];
-
-      // Peer-realignment guard per CONTENT_LIBRARY_PLAN §14: if any open
-      // `task.content.realign` task is attached to a pending_payment family
-      // template entity, pause the whole sweep until the realign closes.
-      const familySlugs = [
-        'template-pending-payment-email-en',
-        'template-pending-payment-email-he',
-        'template-pending-payment-addendum-en',
-        'template-pending-payment-addendum-he'
-      ];
-      try {
-        const tasksSheet = SheetAccessor.getDataSpreadsheet().getSheetByName(sheetNames.SysTasks);
-        if (tasksSheet && tasksSheet.getLastRow() > 1) {
-          const tasksValues = tasksSheet.getDataRange().getValues();
-          const tasksHeaders = tasksValues[0] || [];
-          const typeIdIdx = tasksHeaders.indexOf('st_TaskTypeId');
-          const entityIdIdx = tasksHeaders.indexOf('st_EntityId');
-          const statusIdx = tasksHeaders.indexOf('st_Status');
-          if (typeIdIdx > -1 && entityIdIdx > -1 && statusIdx > -1) {
-            for (let i = 1; i < tasksValues.length; i++) {
-              const tType = String(tasksValues[i][typeIdIdx] || '');
-              const tEntity = String(tasksValues[i][entityIdIdx] || '');
-              const tStatus = String(tasksValues[i][statusIdx] || '');
-              if (tType === 'task.content.realign' &&
-                  familySlugs.indexOf(tEntity) > -1 &&
-                  tStatus !== 'Done') {
-                logger.info('HousekeepingService', functionName,
-                  `Open peer-realignment task on pending_payment family (entity=${tEntity}); skipping sweep.`);
-                return true;
-              }
-            }
-          }
-        }
-      } catch (guardErr) {
-        logger.warn('HousekeepingService', functionName,
-          `Peer-realignment guard read failed (proceeding anyway): ${guardErr.message}`);
-      }
 
       const spreadsheet = SheetAccessor.getDataSpreadsheet();
       const orderSheet = spreadsheet.getSheetByName(sheetNames.WebOrdM);

@@ -203,11 +203,14 @@ function WebAppLibrary_addEntity(params) {
 }
 
 /**
- * Spawns a content task chain: entity rows + tasks attached via the polymorphic
- * SysTasks columns. For sibling-language types (blog/news/mention/email/social)
- * creates EN+HE entity rows; otherwise creates a single row.
- * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId, targetDate? }
- * @returns {Object} { ok, updated: { entities, tasks }, streamCode, deduplicated_entities, error? }
+ * Spawns a content task chain: one ordered list of tasks for a slug, each
+ * carrying its stage-resolved entityId. Creates no entity rows — a task's
+ * entity is created lazily on first Doc attach (CALENDAR_LIBRARY_LOOP_PLAN
+ * Phase 3). `updated.entities` is always empty; kept in the response shape
+ * for caller compatibility (e.g. ContentStreamModal's campaign-assignment
+ * step, which is a no-op here since there's no entity yet to assign to).
+ * @param {Object} params - { entityType, baseSlug, contentName, stages, streamId }
+ * @returns {Object} { ok, updated: { entities, tasks }, streamCode, error? }
  */
 function WebAppLibrary_spawnContentChain(params) {
   const serviceName = 'WebAppLibrary';
@@ -215,17 +218,15 @@ function WebAppLibrary_spawnContentChain(params) {
 
   try {
     const result = LibraryService.spawnContentChain(params || {});
-    const shapedEntities = _getLibraryEntities(result.entities);
     // Tasks come back from TaskService.createTask as {id}; UI re-fetches via
     // WebAppLibrary_getData to pick up the full queue shape.
     return {
       ok: true,
       updated: {
-        entities: shapedEntities,
+        entities: [],
         tasks: result.tasks
       },
-      streamCode: result.streamCode,
-      deduplicated_entities: result.deduplicated_entities
+      streamCode: result.streamCode
     };
   } catch (e) {
     LoggerService.error(serviceName, functionName, e.message, e);
@@ -334,9 +335,10 @@ function WebAppLibrary_attachExistingDoc(params) {
 }
 
 /**
- * Creates a fresh Hebrew translation draft (copy of the EN peer's Doc + prompt,
- * attached as the HE entity's current version).
- * @param {Object} params - { heEntityId }
+ * Creates a fresh Hebrew translation draft (copy of the just-finished EN
+ * entity's Doc + prompt, attached as the HE entity's current version — the HE
+ * entity is created lazily if it doesn't exist yet).
+ * @param {Object} params - { enEntityId }
  * @returns {Object} { ok, updated: { entity }, docUrl, superseded, error? }
  */
 function WebAppLibrary_createTranslationDraft(params) {
@@ -359,10 +361,9 @@ function WebAppLibrary_createTranslationDraft(params) {
 }
 
 /**
- * Locks the entity at next version, closes the originating task, optionally
- * spawns a realign task on the peer-language sibling, logs the lock.
- * @param {Object} params - { entityId, taskId, peerNeedsRealignment }
- * @returns {Object} { ok, updated: { entity, task, related_tasks }, error? }
+ * Locks the entity at next version, closes the originating task, logs the lock.
+ * @param {Object} params - { entityId, taskId }
+ * @returns {Object} { ok, updated: { entity, task }, error? }
  */
 function WebAppLibrary_lockVersion(params) {
   const serviceName = 'WebAppLibrary';
@@ -375,8 +376,7 @@ function WebAppLibrary_lockVersion(params) {
       ok: true,
       updated: {
         entity: shapedEntity,
-        task: result.task,
-        related_tasks: result.related_tasks
+        task: result.task
       }
     };
   } catch (e) {

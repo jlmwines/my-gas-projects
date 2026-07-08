@@ -584,6 +584,9 @@ function WebAppSystem_runUnitTests() {
  * On-demand refresh of the flat-file status export (reliability audit 3.2 /
  * OPS_SESSION_BRIDGE_PLAN). Pushes BOTH the health and KPI sections of
  * jlmops-status.md now, instead of waiting for the 15-min / daily cadences.
+ * Also applies any pending calendar staging updates now, instead of waiting
+ * for the daily housekeeping cadence (CALENDAR_LIBRARY_LOOP_PLAN Phase 1 —
+ * replaces the old wipe-and-rebuild refreshCalendarExport).
  * Driven by the Developer screen "Push Status Export" button.
  * @returns {Object} { success, fileId } or { success:false, error }.
  */
@@ -596,11 +599,11 @@ function WebAppSystem_refreshStatusExport() {
   try {
     const health = StatusReportService.refreshLiveBlocks(sessionId);
     const kpi = StatusReportService.refreshKpiBlock(sessionId);
-    const cal = StatusReportService.refreshCalendarExport(sessionId);
+    const cal = StatusReportService.applyPendingCalendarUpdates(sessionId);
     if (!health.success || !kpi.success) {
       return { success: false, error: 'health: ' + (health.error || 'ok') + ' · kpi: ' + (kpi.error || 'ok') };
     }
-    return { success: true, fileId: kpi.fileId, calRows: cal.rows };
+    return { success: true, fileId: kpi.fileId, calFilesProcessed: cal.filesProcessed, calRowsMerged: cal.rowsMerged };
   } catch (e) {
     LoggerService.error(serviceName, functionName, `Error refreshing status export: ${e.message}`, e);
     return { success: false, error: e.message };

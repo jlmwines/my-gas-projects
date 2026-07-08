@@ -1,7 +1,9 @@
-# UI Tier 2.4 — Content Stream modal merge (DEFERRED with reasoning)
+# UI Tier 2.4 — Content Stream modal merge (RESOLVED — merged, AdminProjectsView excluded as this doc predicted)
 
 **Session ID:** UI_T2_4
-**Status:** Plan v1 (2026-05-28). **DEFER decision banked.** The v0 audit assumption that the two Content Stream modals could cleanly merge into a shared include was based on the modals looking superficially similar. Side-by-side code reading shows the divergence is structural: LibraryView's modal carries fields (Type + References) that AdminProjectsView's modal cannot use without ambiguity. Forcing convergence now wastes work because `LIBRARY_VIEW_PLAN.md:194` documents AdminProjectsView's future retirement, after which the shared component would collapse back to a one-consumer kit.
+**Status:** Plan v1 (2026-05-28) deferred. **Resolved 2026-07-08:** `jlmops/plans/CALENDAR_LIBRARY_LOOP_PLAN.md` Phase 2 built the shared `ContentStreamModal.html`, triggered by unblock condition 2 below (a third consumer — actually three: `AdminTasksView.html`, `LibraryView.html`, `PublishingView.html` all had their own hand-copied "create content" modal by then). `AdminProjectsView.html` was deliberately excluded from the merge, exactly as this doc's Finding 2 recommended — and independently confirmed right: by 2026-07-08 its nav entry was already gone (`ADMIN_TASK_UI_PLAN.md`'s soak period had completed, undocumented until the same session caught it), so its modal fork is retiring with the file rather than needing to converge. The design that shipped is simpler than the `showType`/`showReferences`-flag sketch below — it doesn't need per-consumer field toggles because Phase 2 also dropped free-text content-name/references in favor of a calendar-row picker, a decision this 2026-05-28 doc predates.
+
+The original deferral reasoning (2026-05-28, still accurate as history):
 
 **Parent:** `UI_AUDIT.md` §5 Tier 2.4
 **Estimated effort:** 0 sessions. Session not opened.

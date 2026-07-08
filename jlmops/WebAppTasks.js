@@ -459,6 +459,18 @@ function WebAppTasks_updateTask(taskId, updates) {
       const typeCol = headers.indexOf('st_TaskTypeId');
       if (typeCol > -1) row[typeCol] = updates.taskTypeId || '';
     }
+    // Progressive task-entity attachment (CALENDAR_LIBRARY_LOOP_PLAN Phase 3) —
+    // lets a task's entity be filled in after creation, once the entity itself
+    // is lazily created (LibraryService._ensureEntity, called from
+    // createBlankDoc/attachExistingDoc). Same pattern as st_LinkedEntityId above.
+    if (updates.entityId !== undefined) {
+      const entityIdCol2 = headers.indexOf('st_EntityId');
+      if (entityIdCol2 > -1) row[entityIdCol2] = updates.entityId || '';
+    }
+    if (updates.entityType !== undefined) {
+      const entityTypeCol = headers.indexOf('st_EntityType');
+      if (entityTypeCol > -1) row[entityTypeCol] = updates.entityType || '';
+    }
 
     // Write back the row
     sheet.getRange(rowIndex + 1, 1, 1, row.length).setValues([row]);

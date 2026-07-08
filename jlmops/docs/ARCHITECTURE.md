@@ -132,7 +132,7 @@ Daily maintenance runs in three phases:
 - `backfillActivities()` - CRM activity backfill
 - `runCrmIntelligence()` - Generate campaign suggestions
 - `refreshKpiBlock()` - Regenerate KPI section of `jlmops-status.md`
-- `refreshCalendarExport()` - Merge SysLibrary entities + JLMops_Publishing holidays; write merged calendar back to `JLMops_Publishing` (sessions read via Drive MCP)
+- `applyPendingCalendarUpdates()` - Scans the `system.folder.calendar` staging folder for session-authored calendar-row files, upserts them into `JLMops_Publishing` keyed on `cal_Slug`, archives processed files (`StatusReportService.js`). `JLMops_Publishing` is otherwise directly admin-edited, never regenerated — CALENDAR_LIBRARY_LOOP_PLAN Phase 1, replaces the old `refreshCalendarExport` wipe-and-rebuild.
 
 ### 2.3. Data Adapters & Formatters
 

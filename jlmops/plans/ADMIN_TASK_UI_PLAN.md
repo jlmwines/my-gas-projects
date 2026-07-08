@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-01
 **Origin:** chavruta + a 4-lens design workflow (2026-06-01). Realizes the convergence in `plans/CONTENT_LIBRARY_PLAN.md` §18 "Task UI shape" and its 2026-06-01 "task administration + creation locus" refinement.
-**Status:** **Deploy A SHIPPED** 2026-06-01 (@189 deploy @193 — TaskPacks shared include). **Deploy B GO-LIVE** 2026-06-01 (@191 deploy @198 — `AdminTasksView` live in the admin nav after Dashboard; `AdminProjects` demoted to the bottom as the soak fallback). Polish follow-ups still open (see "Post-go-live follow-ups" at the bottom).
+**Status:** **Deploy A SHIPPED** 2026-06-01 (@189 deploy @193 — TaskPacks shared include). **Deploy B GO-LIVE** 2026-06-01 (@191 deploy @198 — `AdminTasksView` live in the admin nav after Dashboard). **Soak complete, confirmed 2026-07-08 (user):** `AdminProjectsView` is abandoned, not in use — nav entry gone (`AppView.html`'s `admin-nav` list has no Projects `<li>`) since the soak concluded, and LibraryView's in-view Tasks tab is gone too. Both "Later (after soak)" items below are done in practice, just undocumented until now. `WebApp.js`'s `AdminProjects` route still technically resolves the file (kept in-repo), but it's dead weight, not an active fallback — candidate for actual removal, not yet actioned. Polish follow-ups still open (see "Post-go-live follow-ups" at the bottom).
 
 ---
 
@@ -103,9 +103,9 @@ Entity catalog — presets (Library/Blog/Campaigns/Templates/Images), search, so
 - **Deploy unlinked** (no nav entry) and exercise the view directly until satisfied — users never see it.
 - **Go live (one reversible push):** add the **Tasks** nav entry; keep **Library**; move **Projects** to the bottom as the fallback; repoint `AdminDashboardView_v2`'s summary-card jump from AdminProjectsView to the Tasks view (`selectTaskId`/`selectProjectId` contract).
 
-### Later (after soak)
+### Later (after soak) — ✅ done, confirmed 2026-07-08
 
-Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the file in-repo). Gate: confirm `st_ProjectId` filtering fully replaces the project-container for every current admin flow first.
+Retired the in-LibraryView Tasks tab; removed **Projects** from the nav (file kept in-repo, per plan).
 
 ---
 
@@ -113,7 +113,7 @@ Retire the in-LibraryView Tasks tab; remove **Projects** from the nav (keep the 
 
 - ~~Does `WebAppLibrary_getEntityDetail.attached_tasks` include a stable task id?~~ **RESOLVED 2026-06-01: yes** — `_getQueueTasks` maps `id: st_TaskId` (`WebAppLibrary.js:72`). No server change; only the client `onclick` is needed.
 - ~~Free-form New Task — allow *no* entity/scope?~~ **DECIDED 2026-06-01: NO.** Tasks always require a project/scope; `WebAppTasks_createTask`'s mandatory `projectId` stays. No code change.
-- Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav (the "Later (after soak)" step).
+- ~~Confirm `st_ProjectId` filtering over the unified queue fully replaces the project-container for every current admin flow before retiring Projects from nav.~~ **RESOLVED 2026-07-08:** nav entry is gone; retirement already happened in practice.
 
 ---
 

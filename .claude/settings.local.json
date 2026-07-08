@@ -110,7 +110,9 @@
       "WebFetch(domain:midbar-winery.co.il)",
       "WebFetch(domain:nanawine.com)",
       "WebFetch(domain:www.rnwinery.co.il)",
-      "WebFetch(domain:tushia.co.il)"
+      "WebFetch(domain:tushia.co.il)",
+      "Bash(git mv *)",
+      "Bash(mv UI_T2_4_content_stream_modal.md _archive/UI_T2_4_content_stream_modal.md)"
     ],
     "deny": [
       "Bash(git -C:*)",

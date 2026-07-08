@@ -41,14 +41,6 @@
       }
       // Wire the modal buttons once (the modals live in this include's markup).
       if (!wired) {
-        var lockNoBtn = document.getElementById('lv-btn-lock-no');
-        if (lockNoBtn) lockNoBtn.addEventListener('click', function() { submitLock(false); });
-        var lockYesBtn = document.getElementById('lv-btn-lock-yes');
-        if (lockYesBtn) lockYesBtn.addEventListener('click', function() { submitLock(true); });
-        var lockCancelBtn = document.getElementById('lv-btn-lock-cancel');
-        if (lockCancelBtn) lockCancelBtn.addEventListener('click', function() {
-          document.getElementById('lvLockModal').style.display = 'none';
-        });
         var attachSubmitBtn = document.getElementById('lv-btn-attach-submit');
         if (attachSubmitBtn) attachSubmitBtn.addEventListener('click', submitAttachDoc);
         wired = true;
@@ -157,43 +149,42 @@
       }
 
       // Content edit pack — file link + lock; covers 8 content task types per
-      // LIBRARY_VIEW_PLAN Type packs table. Translate variants add an "Open EN
-      // source" link via slug-pair flip.
+      // LIBRARY_VIEW_PLAN Type packs table. Translate-stage tasks get a "Create
+      // translation text" trigger when their EN peer has a Doc and they don't
+      // yet (CALENDAR_LIBRARY_LOOP_PLAN Phase 4, revised 2026-07-08 — moved off
+      // the edit task's Done state after it turned out to break reachability:
+      // Done tasks drop out of the default queue view in both AdminTasksView and
+      // ManagerDashboardView_v2, so a trigger gated on Done was invisible to
+      // anyone returning later than the same session). No Done-status check
+      // anywhere in this pack now — disable-on-Done stays uniform. The EN peer
+      // is a deterministic slug flip (`this-slug-he` → `this-slug-en`, exactly
+      // how spawnContentChain names stage-resolved slugs), not a guess.
       if (kind === 'content_edit') {
         var entity = ctx.getEntity(t.entityId);
         var btnDisabledE = (t.status === 'Done') ? ' disabled' : '';
         var hE = '';
         hE += '  <div class="detail-row"' + stopProp + '>';
+        var isTranslateStage = (typeId === 'task.content.translate');
+        var slugStr = String(t.entityId || '');
+        var enPeerSlug = (isTranslateStage && slugStr.slice(-3) === '-he') ? slugStr.slice(0, -3) + '-en' : null;
+        var enPeer = enPeerSlug ? ctx.getEntity(enPeerSlug) : null;
         if (entity && entity.docUrl) {
           hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(entity.docUrl) + '" target="_blank" rel="noopener">Open Doc</a>';
           hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach new version</button>';
+        } else if (enPeerSlug && enPeer && enPeer.docUrl) {
+          hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createTranslationDraft(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create translation text</button>';
+          hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
+        } else if (enPeerSlug) {
+          hE += '    <span class="tw-file-link empty">EN source not attached yet</span>';
         } else {
           hE += '    <span class="tw-file-link empty">No Doc yet</span>';
           hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createBlankDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create Doc</button>';
           hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.attachExistingDoc(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Attach existing Doc</button>';
         }
-        // Translate variant — link to EN source (the peer entity).
-        if (typeId === 'task.content.translate' || typeId === 'task.content.translate_edit') {
-          var slugStr = String(t.entityId || '');
-          var enPeerSlug = null;
-          if (slugStr.length > 3 && slugStr.slice(-3) === '-he') enPeerSlug = slugStr.slice(0, -3) + '-en';
-          if (enPeerSlug) {
-            var enPeer = ctx.getEntity(enPeerSlug);
-            if (enPeer && enPeer.docUrl) {
-              hE += '    <a class="tw-file-link" href="' + TaskWidgets.escape(enPeer.docUrl) + '" target="_blank" rel="noopener">Open EN source</a>';
-              hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.createTranslationDraft(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Create translation text</button>';
-            } else {
-              hE += '    <span class="tw-file-link empty">EN source not attached yet</span>';
-            }
-          }
-        }
         hE += '  </div>';
         hE += notesBlock(t, stopProp, false);
         hE += '  <div class="detail-row"' + stopProp + '>';
         hE += '    <button type="button" class="btn btn-sm" onclick="TaskPacks.openLockModal(\'' + TaskWidgets.escape(t.id) + '\')"' + btnDisabledE + '>Editing Done</button>';
-        if (entity) {
-          hE += '    <span class="detail-meta">Status: ' + TaskWidgets.escape(entity.state || '—') + '</span>';
-        }
         hE += '  </div>';
         return hE;
       }
@@ -330,10 +321,16 @@
         .WebAppLibrary_attachExistingDoc({ entityId: task.entityId, driveUrl: url });
     }
 
+    // Triggered from the translate task (task.entityId is the HE slug) — the EN
+    // source is a deterministic flip of this task's own entityId, not a guess
+    // (CALENDAR_LIBRARY_LOOP_PLAN Phase 4, revised 2026-07-08 — moved here from
+    // the edit task's Done state, see the content_edit pack comment above).
     function createTranslationDraft(taskId) {
       var task = ctx.getTask(taskId);
       if (!task) { TaskWidgets.toast('Task not found', true); return; }
-      if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
+      var heSlug = String(task.entityId || '');
+      if (heSlug.slice(-3) !== '-he') { TaskWidgets.toast('Task has no Hebrew entity', true); return; }
+      var enSlug = heSlug.slice(0, -3) + '-en';
       TaskWidgets.confirm('Create a fresh Hebrew draft from the English Doc? Any current Hebrew draft is archived.', function() {
         TaskWidgets.toast('Creating translation draft...');
         google.script.run
@@ -348,70 +345,33 @@
           .withFailureHandler(function(err) {
             TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
           })
-          .WebAppLibrary_createTranslationDraft({ heEntityId: task.entityId });
+          .WebAppLibrary_createTranslationDraft({ enEntityId: enSlug });
       });
     }
 
+    // "Editing Done" — finishes the edit task (locks + versions the entity).
+    // No peer-realignment prompt: no automatic sibling pairing exists to realign
+    // (CALENDAR_LIBRARY_LOOP_PLAN Phase 3) — EN and HE are independent entities,
+    // each edited and finished on its own.
     function openLockModal(taskId) {
       var task = ctx.getTask(taskId);
       if (!task) { TaskWidgets.toast('Task not found', true); return; }
       if (!task.entityId) { TaskWidgets.toast('Task has no entity', true); return; }
-      var slug = String(task.entityId);
-      var peerSlug = null;
-      if (slug.length > 3 && slug.slice(-3) === '-en') peerSlug = slug.slice(0, -3) + '-he';
-      else if (slug.length > 3 && slug.slice(-3) === '-he') peerSlug = slug.slice(0, -3) + '-en';
-      // Name the peer's language (Hebrew/English) so the prompt + button read
-      // plainly in both directions — EN is the source, HE the translation, but the
-      // language name is correct whichever side is being edited.
-      var peerLang = peerSlug ? (peerSlug.slice(-3) === '-he' ? 'Hebrew' : 'English') : '';
-      var peerRow = document.getElementById('lv-lock-peer-row');
-      var yesBtn = document.getElementById('lv-btn-lock-yes');
-      var noBtn = document.getElementById('lv-btn-lock-no');
-      if (peerSlug) {
-        document.getElementById('lv-lock-peer-lang').textContent = peerLang;
-        yesBtn.textContent = 'Yes, update ' + peerLang;
-        noBtn.textContent = 'No, just finish';
-        peerRow.style.display = '';
-        yesBtn.style.display = '';
-      } else {
-        noBtn.textContent = 'Done';
-        peerRow.style.display = 'none';
-        yesBtn.style.display = 'none';
-      }
-      var modal = document.getElementById('lvLockModal');
-      modal.setAttribute('data-task-id', taskId);
-      modal.style.display = 'flex';
-    }
-
-    function submitLock(peerNeedsRealignment) {
-      var modal = document.getElementById('lvLockModal');
-      var taskId = modal.getAttribute('data-task-id');
-      var task = ctx.getTask(taskId);
-      if (!task) return;
-      var noBtn = document.getElementById('lv-btn-lock-no');
-      var yesBtn = document.getElementById('lv-btn-lock-yes');
-      noBtn.disabled = true; yesBtn.disabled = true;
-      google.script.run
-        .withSuccessHandler(function(result) {
-          noBtn.disabled = false; yesBtn.disabled = false;
-          if (!result || !result.ok) {
-            TaskWidgets.toast((result && result.error) || 'Lock failed', true);
-            return;
-          }
-          modal.style.display = 'none';
-          var relCount = (result.updated && result.updated.related_tasks) ? result.updated.related_tasks.length : 0;
-          TaskWidgets.toast('Editing done' + (relCount ? ' (+ update task created)' : ''));
-          ctx.reload();
-        })
-        .withFailureHandler(function(err) {
-          noBtn.disabled = false; yesBtn.disabled = false;
-          TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
-        })
-        .WebAppLibrary_lockVersion({
-          entityId: task.entityId,
-          taskId: task.id,
-          peerNeedsRealignment: !!peerNeedsRealignment
-        });
+      TaskWidgets.confirm('Mark editing done for "' + task.entityId + '"?', function() {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (!result || !result.ok) {
+              TaskWidgets.toast((result && result.error) || 'Lock failed', true);
+              return;
+            }
+            TaskWidgets.toast('Editing done');
+            ctx.reload();
+          })
+          .withFailureHandler(function(err) {
+            TaskWidgets.toast(err && err.message ? err.message : 'Failed', true);
+          })
+          .WebAppLibrary_lockVersion({ entityId: task.entityId, taskId: task.id });
+      });
     }
 
     function markPublished(taskId) {
@@ -487,33 +447,11 @@
       createTranslationDraft: createTranslationDraft,
       submitAttachDoc: submitAttachDoc,
       openLockModal: openLockModal,
-      submitLock: submitLock,
       markPublished: markPublished
     };
   })();
 </script>
 
-<!-- "Editing Done" modal — finishes the edit task (locks + versions the entity)
-     and, on Yes, creates an update task on the other-language sibling. Plain copy:
-     the buttons say what happens, so no explanatory paragraph. -->
-<div class="modal-overlay" id="lvLockModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:520px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Editing Done</h6>
-    </div>
-    <div style="padding:15px;">
-      <p class="mb-2 small">Save your changes and finish this task.</p>
-      <div id="lv-lock-peer-row">
-        <p class="mb-0">Did this edit also affect the <strong id="lv-lock-peer-lang"></strong> version?</p>
-      </div>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:flex-end;gap:8px;">
-      <button type="button" class="btn btn-sm" id="lv-btn-lock-cancel">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-no">No, just finish</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-lock-yes">Yes, update</button>
-    </div>
-  </div>
-</div>
 
 <!-- Attach existing Doc modal — paste Drive URL to link an existing file to entity. -->
 <div class="modal-overlay" id="lvAttachModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">

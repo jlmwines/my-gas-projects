@@ -243,6 +243,24 @@
     return String(status).toLowerCase().replace(/\s+/g, '-');
   };
 
+  // Task-derived three-tier status (CALENDAR_LIBRARY_LOOP_PLAN Phase 5) — replaces
+  // slb_State everywhere (Library rows, entity drawer, Calendar rows). Computed
+  // live from task status, never persisted: "not started" (open tasks exist, all
+  // still New), "in progress" (an open task is Assigned/Review), "done" (every
+  // task Done/Cancelled, or no tasks at all — vacuously done). Feed statusClass()
+  // the result for a pill CSS class ("in progress" -> .in-progress, etc). Takes
+  // a task array already scoped to the entity/entities in question — callers
+  // filter by entityId themselves (some already have a pre-scoped list, e.g.
+  // the drawer's attached_tasks; others filter a flat state.tasks by slug).
+  TaskWidgets.deriveStatus = function(tasksForEntity) {
+    var open = (tasksForEntity || []).filter(function(t) {
+      return t.status !== 'Done' && t.status !== 'Cancelled';
+    });
+    if (!open.length) return 'done';
+    var active = open.some(function(t) { return t.status === 'Assigned' || t.status === 'Review'; });
+    return active ? 'in progress' : 'not started';
+  };
+
   TaskWidgets.priorityClass = function(priority) {
     if (!priority) return 'normal';
     return String(priority).toLowerCase();

@@ -1,6 +1,7 @@
 <?!= include('TaskWidgets') ?>
 <?!= include('TaskPacks') ?>
 <?!= include('TaskDetail') ?>
+<?!= include('ContentStreamModal') ?>
 
 <style>
   /* LibraryView — layout */
@@ -159,33 +160,6 @@
   }
   .lv-drawer-task-row:last-child { border-bottom: none; }
   .lv-drawer-task-title { flex: 1; color: #212529; }
-  .lv-drawer-activity-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 4px 0;
-    border-bottom: 1px solid #f8f9fa;
-    font-size: 12px;
-    color: #495057;
-  }
-  .lv-drawer-activity-row:last-child { border-bottom: none; }
-  .lv-drawer-activity-time { color: #6c757d; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; }
-  .lv-drawer-activity-action {
-    background: #e9ecef;
-    color: #495057;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 11px;
-  }
-
-  /* Clickable entity chip in task rows (opens drawer) */
-  .lv-entity-chip {
-    cursor: pointer;
-    color: #4a7a3e;
-    border-color: rgba(74,122,62,0.3);
-  }
-  .lv-entity-chip:hover { background: rgba(74,122,62,0.08); }
 </style>
 
 <div class="lv-container">
@@ -219,10 +193,11 @@
 
 </div>
 
-<!-- Entity detail drawer (phase 9a) — right-side slide-in panel. Inspection only;
-     action buttons (Lock, Open in Drive, etc.) land in phase 9d. Sections
-     (Files & URLs, Attached tasks, Refs out/in, State history, Activity log)
-     content lands in phase 9b/9c; for now shows entity header + placeholders. -->
+<!-- Entity detail drawer — right-side slide-in panel. Header fields + action
+     buttons (Open Doc, Attach new version, Create Content Tasks, etc.) + one
+     content section, Attached tasks (CALENDAR_LIBRARY_LOOP_PLAN Phase 5 —
+     Family/Files & URLs/References/State history/Activity log all dropped,
+     "tasks tell the action story, library holds entities, calendar is king"). -->
 <div class="modal-overlay" id="lvEntityDrawer" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
   <div class="lv-drawer-panel">
     <div class="lv-drawer-toolbar">
@@ -235,65 +210,11 @@
         <div><label>Slug</label><div class="field-value mono" id="lv-drawer-slug">—</div></div>
         <div><label>Type</label><div class="field-value" id="lv-drawer-type">—</div></div>
         <div><label>Language</label><div class="field-value" id="lv-drawer-language">—</div></div>
-        <div><label>State</label><div class="field-value" id="lv-drawer-state">—</div></div>
+        <div><label>Status</label><div class="field-value" id="lv-drawer-state">—</div></div>
         <div><label>Last touched</label><div class="field-value" id="lv-drawer-lasttouched">—</div></div>
       </div>
       <div class="lv-drawer-actions" id="lv-drawer-actions"></div>
-      <div class="lv-drawer-section"><h6>Family</h6><div id="lv-drawer-family"><span class="placeholder">—</span></div></div>
-      <div class="lv-drawer-section"><h6>Files &amp; URLs</h6><div id="lv-drawer-files"><span class="placeholder">—</span></div></div>
       <div class="lv-drawer-section"><h6>Attached tasks</h6><div id="lv-drawer-attached-tasks"><span class="placeholder">—</span></div></div>
-      <div class="lv-drawer-section"><h6>References out</h6><div id="lv-drawer-refs-out"><span class="placeholder">—</span></div></div>
-      <div class="lv-drawer-section"><h6>References in</h6><div id="lv-drawer-refs-in"><span class="placeholder">—</span></div></div>
-      <div class="lv-drawer-section"><h6>State history</h6><div id="lv-drawer-state-history"><span class="placeholder">—</span></div></div>
-      <div class="lv-drawer-section"><h6>Activity log</h6><div id="lv-drawer-activity-log"><span class="placeholder">—</span></div></div>
-    </div>
-  </div>
-</div>
-
-<!-- Content Stream Modal — copied from AdminProjectsView.html:565, IDs prefixed
-     lv-. Placed AFTER the entity drawer in the DOM (see the Attach-new-version
-     modal comment below for why: raw-toggled .modal-overlay + static z-index
-     means paint order decides stacking, not z-index). -->
-<div class="modal-overlay" id="lvContentStreamModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1050;justify-content:center;align-items:center;">
-  <div style="background:white;border-radius:4px;max-width:500px;width:90%;">
-    <div style="padding:15px;border-bottom:1px solid #dee2e6;">
-      <h6 class="mb-0">Create Content Tasks</h6>
-    </div>
-    <div style="padding:15px;">
-      <div class="form-group">
-        <label class="small font-weight-bold">Type</label>
-        <select class="form-control form-control-sm" id="lv-content-type">
-          <option value="blog">Blog</option>
-          <option value="email">Email</option>
-          <option value="news">News (newsletter)</option>
-          <option value="social">Social</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Content Name</label>
-        <input type="text" class="form-control form-control-sm" id="lv-content-name" placeholder="e.g., Intensity, About Page">
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">Stream ID <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="lv-content-stream-id" placeholder="e.g., INT, ABOUT">
-        <small class="text-muted">Human-friendly code to link tasks. Auto-generated if blank.</small>
-      </div>
-      <div class="form-group">
-        <label class="small font-weight-bold">References <small class="text-muted font-weight-normal">(optional)</small></label>
-        <input type="text" class="form-control form-control-sm" id="lv-content-references" placeholder="e.g., blog-context-en, blog-context-he">
-        <small class="text-muted">Comma-separated source slugs. Mainly used by email/news/social linking back to source content.</small>
-      </div>
-      <div class="form-group mb-0">
-        <label class="small font-weight-bold">Stages</label>
-        <div id="lv-content-stages-checkboxes" class="d-flex flex-wrap">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-      <p class="small text-muted mt-2 mb-0">Library entities (EN+HE sibling pair for blog/email) + tasks created together.</p>
-    </div>
-    <div style="padding:10px 15px;border-top:1px solid #dee2e6;background:#f8f9fa;display:flex;justify-content:space-between;">
-      <button type="button" class="btn btn-sm btn-light" onclick="document.getElementById('lvContentStreamModal').style.display='none'">Cancel</button>
-      <button type="button" class="btn btn-sm btn-light" id="lv-btn-create-content-stream">Create Tasks</button>
     </div>
   </div>
 </div>
@@ -328,7 +249,6 @@
     var state = {
       tasks: [],
       library: [],
-      contentStages: [],
       activePreset: 'all',
       // Drawer back-stack (phase 9c): slugs of entities visited before the
       // current one in this open session. Fresh opens clear it; navigateToEntity
@@ -398,15 +318,14 @@
         refresh: renderLibrary,
         reload:  load
       });
+      ContentStreamModal.configure({ reload: load });
       load();
       ['lv-search-library', 'lv-sort-library'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', renderLibrary);
       });
       var openBtn = document.getElementById('lv-btn-open-content-stream');
-      if (openBtn) openBtn.addEventListener('click', openContentStreamModal);
-      var submitBtn = document.getElementById('lv-btn-create-content-stream');
-      if (submitBtn) submitBtn.addEventListener('click', submitContentStream);
+      if (openBtn) openBtn.addEventListener('click', function() { ContentStreamModal.open(); });
       var drawerAttachSubmitBtn = document.getElementById('lv-btn-drawer-attach-submit');
       if (drawerAttachSubmitBtn) drawerAttachSubmitBtn.addEventListener('click', submitDrawerAttachDoc);
 
@@ -435,8 +354,8 @@
           '<div class="lv-empty">' + TaskWidgets.escape(res && res.error ? res.error : 'Load failed') + '</div>';
         return;
       }
-      // state.tasks is still loaded — the Deficiency preset counts open tasks per
-      // entity from it (the "stalled" signal). The task LIST UI moved out.
+      // state.tasks is still loaded — Deficiency and the Status column both
+      // derive their status from it (entityStatus()). The task LIST UI moved out.
       state.tasks = res.data.tasks || [];
       state.library = res.data.library || [];
       state.deficiencyWindowDays = res.data.deficiencyWindowDays || 56;
@@ -445,6 +364,16 @@
 
     function onError(err) {
       TaskWidgets.toast(err && err.message ? err.message : 'Network error', true);
+    }
+
+    // Task-derived status for one entity (CALENDAR_LIBRARY_LOOP_PLAN Phase 5) —
+    // 'abandoned' stays a distinct, reliably-set flag; everything else is
+    // computed live from state.tasks, never read from slb_State.
+    function entityStatus(e) {
+      if (!e) return 'done';
+      if (e.state === 'abandoned') return 'abandoned';
+      var tasksForEntity = (state.tasks || []).filter(function(t) { return t.entityId === e.slug; });
+      return TaskWidgets.deriveStatus(tasksForEntity);
     }
 
     function switchPreset(preset) {
@@ -489,14 +418,16 @@
 
       // Columns: generic + sparse per-type extension
       var html = '<table class="lv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Last touched</th><th>Refs</th>';
+      html += '<th>Title</th><th>Type</th><th>Slug</th><th>Lang</th><th>Status</th><th>Last touched</th><th>Refs</th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
+        var rowStatus = entityStatus(e);
         html += '<tr>';
-        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' + (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') + '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
+        html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' + (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') + '</td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
+        html += '<td data-label="Slug"><span style="font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;color:#6c757d;">' + TaskWidgets.escape(e.slug) + '</span></td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
-        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span></td>';
         html += '<td data-label="Last touched">' + (e.lastTouched ? TaskWidgets.formatDate(e.lastTouched) : '—') + '</td>';
         html += '<td data-label="Refs">' + (e.references && e.references.length ? e.references.length : 0) + '</td>';
         html += '</tr>';
@@ -519,8 +450,7 @@
         if (!e.targetDate) return false;
         var td = new Date(e.targetDate);
         if (isNaN(td.getTime())) return false;
-        var published = String(e.state).toLowerCase() === 'published';
-        var overdue = td < startOfToday && !published;
+        var overdue = td < startOfToday && entityStatus(e) !== 'done';
         var inWindow = td >= startOfToday && td <= horizon;
         if (!(overdue || inWindow)) return false;
         if (searchTerm) {
@@ -539,23 +469,22 @@
       }
 
       var html = '<table class="lv-library-table responsive-stack"><thead><tr>';
-      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>State</th><th>Tasks</th><th></th>';
+      html += '<th>Target</th><th>Title</th><th>Type</th><th>Lang</th><th>Status</th><th>Tasks</th><th></th>';
       html += '</tr></thead><tbody>';
       rows.forEach(function(e) {
         var td = new Date(e.targetDate);
-        var overdue = td < startOfToday && String(e.state).toLowerCase() !== 'published';
+        var rowStatus = entityStatus(e);
+        var overdue = td < startOfToday && rowStatus !== 'done';
         var openCount = (state.tasks || []).filter(function(t) {
           return t.entityId === e.slug && t.status !== 'Done' && t.status !== 'Cancelled';
         }).length;
-        var taskCell = openCount > 0
-          ? (openCount + ' open')
-          : '<span style="color:#856404;font-weight:600;" title="No open task — stalled">stalled</span>';
+        var taskCell = openCount > 0 ? (openCount + ' open') : '0 open';
         html += '<tr' + (overdue ? ' style="background:#fff3cd;"' : '') + '>';
         html += '<td data-label="Target">' + TaskWidgets.formatDate(e.targetDate) + (overdue ? ' <strong>(overdue)</strong>' : '') + '</td>';
         html += '<td data-label="Title"><a class="lv-entity-title-link" onclick="LibraryView.openEntityDrawer(\'' + TaskWidgets.escape(e.slug) + '\')"><strong>' + TaskWidgets.escape(e.title || e.slug) + '</strong></a>' + (e.docUrl ? ' <a class="tw-file-link" href="' + TaskWidgets.escape(e.docUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open Doc" style="margin-left:6px">&#8599; Doc</a>' : '') + '<div class="detail-meta">' + TaskWidgets.escape(e.slug) + '</div></td>';
         html += '<td data-label="Type">' + TaskWidgets.escape(e.contentType || '—') + '</td>';
         html += '<td data-label="Lang">' + TaskWidgets.escape(e.language || '—') + '</td>';
-        html += '<td data-label="State"><span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span></td>';
+        html += '<td data-label="Status"><span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span></td>';
         html += '<td data-label="Tasks">' + taskCell + '</td>';
         html += '<td data-label=""><button class="btn btn-sm btn-light" data-roles="admin" onclick="LibraryView.spawnForEntity(\'' + TaskWidgets.escape(e.slug) + '\')" title="Create content tasks for this piece">Spawn</button></td>';
         html += '</tr>';
@@ -564,107 +493,11 @@
       container.innerHTML = html;
     }
 
-    // Deficiency-row "Spawn" → open the content-stream modal pre-filled from the entity.
+    // Deficiency-row "Spawn" → open the shared content-stream modal pre-filled from the entity.
     function spawnForEntity(slug) {
       var e = (state.library || []).find(function(x) { return x.slug === slug; });
-      openContentStreamModal(e ? e.title : '');
-      if (e) {
-        var typeEl = document.getElementById('lv-content-type');
-        if (typeEl) typeEl.value = e.contentType || 'blog';
-      }
-    }
-
-    // ===== CONTENT STREAM MODAL (CONTENT_LIBRARY_PLAN §17 phase 7a) =====
-
-    function openContentStreamModal(preFilledName) {
-      var typeEl = document.getElementById('lv-content-type');
-      if (typeEl) typeEl.value = 'blog';
-      document.getElementById('lv-content-name').value = preFilledName || '';
-      document.getElementById('lv-content-stream-id').value = '';
-      var refsEl = document.getElementById('lv-content-references');
-      if (refsEl) refsEl.value = '';
-      if (state.contentStages.length) {
-        populateContentStagesCheckboxes();
-      } else {
-        loadContentStages();
-      }
-      document.getElementById('lvContentStreamModal').style.display = 'flex';
-    }
-
-    function loadContentStages() {
-      google.script.run
-        .withSuccessHandler(function(stages) {
-          state.contentStages = stages || [];
-          populateContentStagesCheckboxes();
-        })
-        .withFailureHandler(onError)
-        .WebAppProjects_getContentStages();
-    }
-
-    function populateContentStagesCheckboxes() {
-      var container = document.getElementById('lv-content-stages-checkboxes');
-      container.innerHTML = state.contentStages.map(function(s) {
-        return '<label class="mr-3 mb-1 small"><input type="checkbox" class="lv-content-stage-cb mr-1" value="' +
-          TaskWidgets.escape(s.id) + '">' + TaskWidgets.escape(s.label) + '</label>';
-      }).join('');
-    }
-
-    function submitContentStream() {
-      var typeEl = document.getElementById('lv-content-type');
-      var entityType = typeEl ? typeEl.value : 'blog';
-      var name = document.getElementById('lv-content-name').value.trim();
-      var customStreamId = document.getElementById('lv-content-stream-id').value.trim().toUpperCase();
-      var refsRaw = (document.getElementById('lv-content-references').value || '').trim();
-      var references = refsRaw
-        ? refsRaw.split(',').map(function(s) { return s.trim(); }).filter(Boolean)
-        : [];
-      if (!name) {
-        TaskWidgets.toast('Please enter content name', 'warning');
-        return;
-      }
-      var stages = [];
-      document.querySelectorAll('.lv-content-stage-cb:checked').forEach(function(cb) {
-        stages.push(cb.value);
-      });
-      if (stages.length === 0) {
-        TaskWidgets.toast('Please select at least one stage', 'warning');
-        return;
-      }
-
-      var btn = document.getElementById('lv-btn-create-content-stream');
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-
-      google.script.run
-        .withSuccessHandler(function(result) {
-          btn.disabled = false;
-          btn.textContent = 'Create Tasks';
-          if (!result || !result.ok) {
-            TaskWidgets.toast('Error: ' + ((result && result.error) || 'Unknown'), 'error');
-            return;
-          }
-          document.getElementById('lvContentStreamModal').style.display = 'none';
-          var entityCount = (result.updated && result.updated.entities) ? result.updated.entities.length : 0;
-          var taskCount = (result.updated && result.updated.tasks) ? result.updated.tasks.length : 0;
-          var msg = 'Created ' + entityCount + ' entity(ies) + ' + taskCount + ' task(s). Stream: ' + result.streamCode;
-          if (result.deduplicated_entities && result.deduplicated_entities.length) {
-            msg += '\nReused existing: ' + result.deduplicated_entities.join(', ');
-          }
-          TaskWidgets.toast(msg, 'success');
-          load();
-        })
-        .withFailureHandler(function(err) {
-          btn.disabled = false;
-          btn.textContent = 'Create Tasks';
-          TaskWidgets.toast('Error: ' + (err && err.message ? err.message : 'Failed'), 'error');
-        })
-        .WebAppLibrary_spawnContentChain({
-          entityType: entityType,
-          contentName: name,
-          stages: stages,
-          streamId: customStreamId || null,
-          references: references
-        });
+      var base = slug.replace(/-(en|he)$/i, '');
+      ContentStreamModal.open({ baseSlug: base, entityType: e ? e.contentType : 'blog' });
     }
 
     // ===== ENTITY DETAIL DRAWER (phase 9a) =====
@@ -673,15 +506,6 @@
       if (!slug) return;
       // Fresh open from library list or task chip — clears any prior back-stack.
       state.entityStack = [];
-      _loadEntityDrawer(slug);
-    }
-
-    function navigateToEntity(slug) {
-      if (!slug) return;
-      // No-op if clicking a chip pointing at the entity already in the drawer.
-      if (slug === state.currentEntitySlug) return;
-      // Push the current entity to the stack before loading the new one.
-      if (state.currentEntitySlug) state.entityStack.push(state.currentEntitySlug);
       _loadEntityDrawer(slug);
     }
 
@@ -723,10 +547,8 @@
         if (el) el.textContent = '…';
       });
       var loadingPlaceholder = '<span class="placeholder">Loading…</span>';
-      ['lv-drawer-family', 'lv-drawer-files', 'lv-drawer-attached-tasks', 'lv-drawer-refs-out', 'lv-drawer-refs-in', 'lv-drawer-state-history', 'lv-drawer-activity-log'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.innerHTML = loadingPlaceholder;
-      });
+      var attachedEl = document.getElementById('lv-drawer-attached-tasks');
+      if (attachedEl) attachedEl.innerHTML = loadingPlaceholder;
       // Hide actions row during load (entity data not yet known)
       var actionsEl = document.getElementById('lv-drawer-actions');
       if (actionsEl) actionsEl.innerHTML = '';
@@ -739,17 +561,14 @@
       document.getElementById('lv-drawer-slug').textContent = entity.slug || '—';
       document.getElementById('lv-drawer-type').textContent = entity.contentType || '—';
       document.getElementById('lv-drawer-language').textContent = entity.language || '(none)';
-      document.getElementById('lv-drawer-state').textContent = entity.state || '—';
+      var derivedStatus = TaskWidgets.deriveStatus((data && data.attached_tasks) || []);
+      document.getElementById('lv-drawer-state').innerHTML = entity.state === 'abandoned'
+        ? '<span class="tw-status-pill">abandoned</span>'
+        : '<span class="tw-status-pill ' + TaskWidgets.statusClass(derivedStatus) + '">' + TaskWidgets.escape(derivedStatus) + '</span>';
       document.getElementById('lv-drawer-lasttouched').textContent = entity.lastTouched ? TaskWidgets.formatDate(entity.lastTouched) : '—';
 
-      renderDrawerFiles(entity);
       renderDrawerActions(entity);
-      renderDrawerFamily(entity);
       renderDrawerAttachedTasks((data && data.attached_tasks) || []);
-      renderDrawerReferences((entity && entity.references) || [], 'lv-drawer-refs-out', 'No outgoing references.');
-      renderDrawerReferences(((data && data.references_in) || []).map(function(e) { return e.slug; }), 'lv-drawer-refs-in', 'No incoming references.');
-      renderDrawerActivityLog((data && data.activity_log) || []);
-      renderDrawerStateHistory((data && data.activity_log) || []);
     }
 
     // Navigate from the entity drawer to a task. Manager task home is the
@@ -798,135 +617,6 @@
       el.innerHTML = html;
     }
 
-    function renderDrawerReferences(slugs, elId, emptyMsg) {
-      var el = document.getElementById(elId);
-      if (!el) return;
-      if (!slugs || !slugs.length) {
-        el.innerHTML = '<span class="placeholder">' + emptyMsg + '</span>';
-        return;
-      }
-      // 9c: chips are clickable → navigateToEntity pushes current entity onto
-      // the drawer back-stack and loads the referenced one.
-      var html = slugs.map(function(slug) {
-        var slugEsc = TaskWidgets.escape(slug);
-        return '<span class="tw-chip lv-entity-chip" onclick="LibraryView.navigateToEntity(\'' + slugEsc + '\')" style="margin-right:4px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px" title="Open entity: ' + slugEsc + '">' + slugEsc + '</span>';
-      }).join('');
-      el.innerHTML = html;
-    }
-
-    function renderDrawerActivityLog(entries) {
-      var el = document.getElementById('lv-drawer-activity-log');
-      if (!el) return;
-      if (!entries.length) {
-        el.innerHTML = '<span class="placeholder">No activity entries.</span>';
-        return;
-      }
-      var sorted = entries.slice().sort(function(a, b) {
-        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
-      });
-      var rows = sorted.map(function(e) {
-        return '<div class="lv-drawer-activity-row">' +
-          '<span class="lv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
-          '<span class="lv-drawer-activity-action">' + TaskWidgets.escape(e.actionType || '—') + '</span>' +
-          '<span>' + TaskWidgets.escape(e.summary || '—') + '</span>' +
-          '<span class="detail-meta">· ' + TaskWidgets.escape(e.actor || '—') + '</span>' +
-          '</div>';
-      }).join('');
-      el.innerHTML = rows;
-    }
-
-    function renderDrawerStateHistory(entries) {
-      var el = document.getElementById('lv-drawer-state-history');
-      if (!el) return;
-      var stateEvents = entries.filter(function(e) {
-        return e.actionType === 'version_lock' || e.actionType === 'state_change';
-      });
-      if (!stateEvents.length) {
-        el.innerHTML = '<span class="placeholder">No state changes recorded.</span>';
-        return;
-      }
-      var sorted = stateEvents.slice().sort(function(a, b) {
-        return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
-      });
-      var rows = sorted.map(function(e) {
-        return '<div class="lv-drawer-activity-row">' +
-          '<span class="lv-drawer-activity-time">' + (e.timestamp ? TaskWidgets.formatDate(e.timestamp) : '—') + '</span>' +
-          '<span>' + TaskWidgets.escape(e.summary || e.actionType) + '</span>' +
-          '</div>';
-      }).join('');
-      el.innerHTML = rows;
-    }
-
-    // Family roll-up (CONTENT_WORKFLOW_REDESIGN Decision 2 / Step 4): the top-down
-    // view of a piece and its companions, computed client-side from the cached
-    // entity list (state.library) — language siblings (shared base slug), pieces
-    // this one references, and pieces that reference it or a sibling. Grouped by
-    // type, each with a state pill and tap-to-open. No new surface, no container.
-    function renderDrawerFamily(entity) {
-      var el = document.getElementById('lv-drawer-family');
-      if (!el) return;
-      var lib = state.library || [];
-      var slug = entity && entity.slug;
-      if (!slug) { el.innerHTML = '<span class="placeholder">—</span>'; return; }
-      var base = String(slug).replace(/-(en|he)$/, '');
-
-      var sibSet = {};
-      var memberSet = {};
-      lib.forEach(function(e) {
-        if (String(e.slug).replace(/-(en|he)$/, '') === base) { sibSet[e.slug] = true; memberSet[e.slug] = true; }
-      });
-      (entity.references || []).forEach(function(s) { memberSet[s] = true; });
-      lib.forEach(function(e) {
-        var refs = e.references || [];
-        for (var i = 0; i < refs.length; i++) { if (sibSet[refs[i]]) { memberSet[e.slug] = true; break; } }
-      });
-
-      var members = lib.filter(function(e) { return memberSet[e.slug]; });
-      if (members.length <= 1) { el.innerHTML = '<span class="placeholder">No related pieces.</span>'; return; }
-
-      var groups = {};
-      members.forEach(function(e) { var t = e.contentType || 'other'; (groups[t] = groups[t] || []).push(e); });
-      var order = ['blog', 'news', 'mention', 'email', 'social', 'image', 'template'];
-      var typeKeys = Object.keys(groups).sort(function(a, b) {
-        var ia = order.indexOf(a), ib = order.indexOf(b);
-        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-      });
-      el.innerHTML = typeKeys.map(function(t) {
-        var rows = groups[t].sort(function(a, b) { return String(a.slug).localeCompare(b.slug); }).map(function(e) {
-          var pill = '<span class="tw-status-pill ' + TaskWidgets.statusClass(e.state) + '">' + TaskWidgets.escape(e.state || '—') + '</span>';
-          var name = TaskWidgets.escape(e.title || e.slug) + (e.language ? ' (' + TaskWidgets.escape(e.language) + ')' : '');
-          if (e.slug === slug) {
-            return '<div class="lv-drawer-task-row"><strong>' + name + '</strong> ' + pill + ' <span class="detail-meta">· this</span></div>';
-          }
-          return '<div class="lv-drawer-task-row" style="cursor:pointer;" title="Open ' + TaskWidgets.escape(e.slug) + '" onclick="LibraryView.navigateToEntity(\'' + TaskWidgets.escape(e.slug) + '\')">' + name + ' ' + pill + '</div>';
-        }).join('');
-        return '<div class="detail-meta" style="margin-top:4px;text-transform:capitalize;">' + TaskWidgets.escape(t) + '</div>' + rows;
-      }).join('');
-    }
-
-    function renderDrawerFiles(entity) {
-      var el = document.getElementById('lv-drawer-files');
-      if (!el) return;
-      var chips = [];
-      var addLink = function(label, url) {
-        chips.push('<a class="tw-file-link" href="' + TaskWidgets.escape(url) + '" target="_blank" rel="noopener" style="margin-right:6px">' + TaskWidgets.escape(label) + '</a>');
-      };
-      var addPlain = function(label) {
-        chips.push('<span class="tw-chip" style="margin-right:6px">' + TaskWidgets.escape(label) + '</span>');
-      };
-      if (entity.docUrl) addLink('Open Doc', entity.docUrl);
-      if (entity.canvaDesignUrl) addLink('Open Canva', entity.canvaDesignUrl);
-      if (entity.externalUrl) addLink('External', entity.externalUrl);
-      if (entity.mdUrl) addPlain('MD: ' + entity.mdUrl);
-      if (entity.wpPostId) addPlain('WP post: ' + entity.wpPostId);
-      if (entity.mailchimpCampaignId) addPlain('Mailchimp: ' + entity.mailchimpCampaignId);
-      if (chips.length === 0) {
-        el.innerHTML = '<span class="placeholder">No files or URLs attached.</span>';
-      } else {
-        el.innerHTML = chips.join('');
-      }
-    }
-
     function closeEntityDrawer() {
       document.getElementById('lvEntityDrawer').style.display = 'none';
       state.entityStack = [];
@@ -943,7 +633,7 @@
 
       // Open Doc — the most-likely action gets a prominent action-bar button,
       // first in the bar, shown only when a Doc exists (Step 9). Not role-gated:
-      // managers open files too. The Files & URLs "Open Doc" link stays as well.
+      // managers open files too.
       if (entity && entity.docUrl) {
         buttons.push('<button class="btn btn-sm btn-light" onclick="LibraryView.drawerOpenInDrive()">&#8599; Open Doc</button>');
         buttons.push('<button class="btn btn-sm btn-light" onclick="LibraryView.drawerAttachNewVersion()">Attach new version</button>');
@@ -1021,8 +711,8 @@
 
     function drawerCreateContentTasks() {
       if (!state.currentEntity) return;
-      var preName = state.currentEntity.title || state.currentEntity.slug || '';
-      openContentStreamModal(preName);
+      var base = String(state.currentEntity.slug || '').replace(/-(en|he)$/i, '');
+      ContentStreamModal.open({ baseSlug: base, entityType: state.currentEntity.contentType });
     }
 
     function drawerRequestCorrection() {
@@ -1099,7 +789,6 @@
       switchPreset: switchPreset,
       spawnForEntity: spawnForEntity,
       openEntityDrawer: openEntityDrawer,
-      navigateToEntity: navigateToEntity,
       backEntityDrawer: backEntityDrawer,
       closeEntityDrawer: closeEntityDrawer,
       drawerOpenInDrive: drawerOpenInDrive,
