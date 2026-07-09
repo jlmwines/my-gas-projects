@@ -556,6 +556,24 @@ add_filter('woocommerce_checkout_fields', function ($fields) {
         'priority'     => 60,
     ];
 
+    // Israel-only-shipping confirmation — always-shown required checkbox so a
+    // buyer entering a non-Israel address/phone has to consciously acknowledge
+    // it, without hard-blocking on phone format (gift senders frequently don't
+    // have the recipient's Israeli number yet and get contacted by staff after).
+    $fields['shipping']['shipping_israel_confirm'] = [
+        'type'     => 'checkbox',
+        'label'    => '<span class="il-ship-notice">' . (is_rtl()
+                ? 'משלוחים בכל רחבי ישראל — נדרש מספר טלפון ישראלי.'
+                : 'Delivery throughout Israel — Israel phone number required for driver.') . '</span>'
+            . '<br>'
+            . '<span class="il-ship-confirm-label">' . (is_rtl()
+                ? 'כתובת המשלוח ומספר הטלפון הם ישראליים'
+                : 'Shipping address and phone are both Israeli') . '</span>',
+        'required' => true,
+        'class'    => ['form-row-wide', 'il-ship-confirm'],
+        'priority' => 65,
+    ];
+
     // Order comments — gift-message framing
     if (isset($fields['order']['order_comments'])) {
         $fields['order']['order_comments']['label']       = is_rtl() ? 'הערות להזמנה/הודעת מתנה' : 'Order Notes/Gift Message';

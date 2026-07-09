@@ -1877,6 +1877,28 @@ body.age-gate-locked { overflow: hidden; }
   font-weight: 500;
 }
 
+/* Checkout: Israel-only-shipping confirmation checkbox (shipping_israel_confirm).
+   Always shown, not conditional — see inc/woocommerce.php. The two text
+   lines stay inline (not display:block) and share a <br> in the label
+   markup, so they remain inside WC's own <label><input>...<abbr>*</abbr>
+   </label> wrapper — block display here previously knocked the checkbox
+   and the required-field asterisk onto orphaned lines of their own. */
+.woocommerce-checkout .il-ship-confirm { margin-top: var(--s-2); }
+.woocommerce-checkout .il-ship-confirm label.checkbox { line-height: var(--lh-snug); }
+.woocommerce-checkout .il-ship-confirm input[type="checkbox"] {
+  vertical-align: text-top;
+  margin-inline-end: var(--s-2);
+}
+.il-ship-notice {
+  font-size: var(--t-small);
+  color: var(--c-warning);
+  font-weight: 500;
+}
+.il-ship-confirm-label {
+  font-size: var(--t-small);
+  color: var(--c-muted);
+}
+
 /* PDP description: starts in the right column area below summary, then
    continues full-width once it passes the image's bottom.
    `clear: right` drops the description below `.summary` (which is right-
