@@ -358,6 +358,8 @@ Hold by the stem to keep your hand from warming the wine—unless it's too cold,
 
 **Short:** Anywhere in Israel.
 
+**More:** We currently ship only within Israel—we don't offer international shipping. Sending a gift to someone in Israel from abroad? You're in exactly the right place, just enter their Israeli address and phone number at checkout.
+
 ---
 
 ### How long does delivery take?
