@@ -53,7 +53,7 @@ Phase 4 (trivial correction) → Phase 3 (additive, independent) → Phase 2 (ad
 - **Phase 3 (status filter):** Implemented — `#pv-cal-status-filter` select added next to search; `_calRowStatus(h)` is the single status-bucket definition, shared by the filter and the status pill (was previously computed inline, duplicated).
 - **Phase 4 (search placement):** Implemented — `#pv-cal-search` moved into `.ds-section-head`, empty `.ds-section-actions` wrapper removed.
 
-Phases 2–4 deployed live 2026-07-09, jlmops @461. **Not yet smoke-tested** by the user.
+Phases 2–4 deployed live 2026-07-09, jlmops @461. **Phase 3 (status filter) smoke-tested and confirmed working by the user, 2026-07-09.** Phases 2 (click-through) and 4 (search placement) not yet smoke-tested.
 
 ### Phase 1 investigation findings
 
