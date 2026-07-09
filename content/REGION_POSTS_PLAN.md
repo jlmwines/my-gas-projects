@@ -10,16 +10,18 @@ Six region posts complete the Regions spoke of the Israeli Wine Guide. Each maps
 
 ## Slot assignments
 
-Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), reshuffling the queue: Negev takes Slot A, Galilee moves to Slot B (inheriting the old Golan Heights dates), Central Mountains/Judea/Coastal Plain keep their original dates. **Golan Heights → Slot F is inferred, not confirmed** — the calendar sheet only names slots once they're imminent; C/D/E/F beyond Galilee are still generic "blog C/D/E/F" rows there, so Golan Heights landing at F is our best read of "whichever region got displaced," not a sheet-confirmed fact.
+Negev published out of sequence 2026-07-06 (ahead of its original Slot F date), reshuffling the queue: Negev takes Slot A, Galilee moves to Slot B. **Slots C–F are date placeholders only** — the live calendar sheet (source of truth) carries them as generic `blog C`/`blog D`/`blog E`/`blog F` rows, no region attached. An earlier version of this table named Central Mountains/Judea/Coastal Plain/Golan Heights against C/D/E/F as if decided (only F was flagged "inferred") — that was wrong for all four, corrected 2026-07-09. Assign a region to a slot at the point of actually drafting it, not before.
 
 | Slot | Email date | Newsletter date | Region | Slug | Status |
 |------|-----------|----------------|--------|------|--------|
 | A | 2026-07-07 | 2026-07-27 | Negev | `blog-negev` | **Published live (EN+HE) 2026-07-06** |
 | B | 2026-08-11 | 2026-08-25 | Galilee | `blog-galilee` | In progress (drafted + registered) |
-| C | 2026-08-25 | 2026-09-23 | Central Mountains | `blog-central-mountains` | — |
-| D | 2026-10-20 | 2026-10-27 | Judea (Foothills) | `blog-judea` | — |
-| E | 2026-11-17 | 2026-11-24 | Coastal Plain | `blog-coastal-plain` | — |
-| F | 2026-12-15 | 2026-12-29 | Golan Heights (inferred — confirm) | `blog-golan-heights` | — |
+| C | 2026-08-25 | 2026-09-23 | TBD | TBD | — |
+| D | 2026-10-20 | 2026-10-27 | TBD | TBD | — |
+| E | 2026-11-17 | 2026-11-24 | TBD | TBD | — |
+| F | 2026-12-15 | 2026-12-29 | TBD | TBD | — |
+
+**Remaining regions, no slot assigned yet:** Central Mountains, Judea (Foothills), Coastal Plain, Golan Heights.
 
 Email date = post publish + companion email send (separate from the monthly AYIW email, which runs on its own date). Newsletter date = print insert distribution.
 

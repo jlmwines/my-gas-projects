@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-09 — checkout now shows an always-required "shipping address and phone are both Israeli" confirmation checkbox (theme v1.2.31, live) to cut down on foreign visitors entering non-Israel addresses that have to be cancelled; doesn't validate phone format, just gates submission on acknowledgment. Found in the process: `website/deploy-theme.ps1` pushes straight to `ftp.jlmwines.com` — there is no staging environment, contrary to prior doc; `.claude/CLAUDE.md` corrected to treat every theme deploy as a live push requiring authorization. Negev region post remains live, both languages, wp-admin finishing (WPML link, SEO meta, focus keyword, winery verification) still pending.
+**Updated:** 2026-07-09 — jlmops @461 live: Calendar tab (`PublishingView.html`) redesigned so a row click shows the entity drawer (details) before advancing to a task, plus a status filter and a repositioned search box, none yet smoke-tested; checkout also shows an always-required "shipping address and phone are both Israeli" confirmation checkbox (theme v1.2.31, live) from earlier today. Negev region post remains live, both languages, wp-admin finishing (WPML link, SEO meta, focus keyword, winery verification) still pending.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @460, stable. Content-publishing pipeline settled and live-tested.
+- **jlmops** (GAS backend) — live @461, stable. Content-publishing pipeline settled and live-tested; Calendar tab UX redesign shipped, unsmoked.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -18,8 +18,8 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-08 |
 | Revenue | Steady |
-| Deploy Version | jlmops @460 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-08 · theme 2026-07-09 |
+| Deploy Version | jlmops @461 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-09 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (RankMath audit 2026-05-31, pre-dates the 2026-07-01 mixed-content fix below). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. HTTPS enforcement verified correct (clean single-hop 301); mixed-content HTTP images fixed on both homepages (9 images, EN+HE — was undersold as 1 image in the original ticket, see `.claude/bugs.md`). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
@@ -32,14 +32,15 @@ One current-state line per business area. The umbrella has no single phase label
 
 The live "what now" — daily review reads these first.
 
-1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) content in progress — finish drafting and send before month end.
+1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) content in progress — finish drafting and send before month end. August AYIW (`ayiw-2026-08`, target send 2026-09-08) also prepped 2026-07-09: calendar row merged, Doc placed at canonical Library path — ready for admin to attach/spawn when convenient.
 2. **Branded shipping cartons — art in review with vendor.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
 3. **Flyer advertising — printed; distribution scheduled after 9 Av to 5,000 Talbiye residences.** Vendor-owned execution. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-14`).
 4. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 5. **Negev region post — published live in both languages, 2026-07-06; promotional email sent 2026-07-07.** EN: https://jlmwines.com/negev-wine/ (post 67600). HE: https://jlmwines.com/he/blog-negev/ (post 67602). Slugs no longer match between languages (EN changed from the original `blog-negev` draft slug to `negev-wine` during wp-admin finishing). **Remaining wp-admin finishing:** (a) HE SEO meta description; (b) focus keyword both languages; (c) WPML-link the two posts as translations of each other (`push-posts.js` doesn't do this); (d) winery verification (confirm which Wineries to Visit entries JLM actually carries, add shop links).
 6. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
-7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-8. **Local file/folder cleanup** (`plans/FILE_CLEANUP_PLAN.md`) — six categories surveyed (screenshots, superseded CSV snapshots, tool-output folders, pre-cutover HTML mockups, jlmops CSV dumps, uncategorized remainder). Awaiting decision on which to act on before any files are touched.
+7. **Next region post (Slot C, target 2026-08-25) — region picked, drafting paused before it started.** `REGION_POSTS_PLAN.md`/`PUBLICATION_CALENDAR.md` corrected 2026-07-09 — Slots C–F never actually had a region assigned (live calendar sheet only carries generic `blog C`/`D`/`E`/`F` placeholders; the docs previously named specific regions as if decided, which was wrong). Central Mountains picked as the next region to draft, but paused before `content/guide/ISRAELI_WINE_GUIDE_PLAN.md` §Regions, the source PDFs/map, and `content/_post-template.md` were read, and before its calendar row was added — resume by closing those gaps first.
+8. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
+9. **Local file/folder cleanup** (`plans/FILE_CLEANUP_PLAN.md`) — six categories surveyed (screenshots, superseded CSV snapshots, tool-output folders, pre-cutover HTML mockups, jlmops CSV dumps, uncategorized remainder). Awaiting decision on which to act on before any files are touched.
 
 ## Active Plans
 
@@ -48,6 +49,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
 - **Bundles** (`jlmops/plans/BUNDLE_PLAN.md`) — Stages 1–7 + UI phases 1–5 shipped. Pending: composite-weight tuning (per-slot/per-bundle weight overrides).
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
+- **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461, unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
 
 ## Current State
 
@@ -55,6 +57,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Import system** — full Woo REST API pull (products + translations + orders); 30-day rolling window.
 - **CRM enrichment** — 548 contacts with dual-language preferences; `campaign.received` backfill manual only (daily auto-wiring deferred). Plans → `jlmops/plans/CONTACT_MANAGER_PLAN.md`, `CRM_PLAN.md`.
 - **Content Library** — entity/task model live (no auto-paired EN/HE entities, lazy entity creation on first Doc attach with title sourced from the spawning task's `cal_Name`, task-derived status everywhere, calendar-row-picker-only content creation). `PublishingView.html` (promoted from `LibraryView.html`) is the current UI: admin sees Calendar/Library/Campaigns/Projects tabs, manager sees Calendar/Tasks/Library, both with a "Create Content Tasks" entry point. Both Library and Calendar tabs show a Slug column for connection diagnosis. System doc → `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md` §13; drafting/placement procedure → `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`.
+- **Calendar tab UX** — row click now opens the entity drawer (details) before advancing to a task, plus a status filter (not started/in progress/done/no tasks yet) and a search box repositioned into the title bar. Live @461 (2026-07-09), not yet smoke-tested. Refresh after "Apply Pending Updates"/"Create Content Tasks" still doesn't fire on the client — investigated, no defect found in code, needs a live repro. Plan/investigation → `jlmops/plans/CALENDAR_TAB_UX_PLAN.md`.
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
 - **Bundles** — all stages (0–7) live; EN/HE export working; composite-weight tuning pending. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.

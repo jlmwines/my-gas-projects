@@ -242,10 +242,15 @@
         <h6>Calendar</h6>
         <button class="btn btn-sm" id="pv-btn-open-content-stream-cal" data-roles="admin">Create Content Tasks</button>
         <button class="btn btn-sm" id="pv-btn-apply-calendar-updates" data-roles="admin">Apply Pending Updates</button>
-      </div>
-      <div class="ds-section-actions">
         <div class="tw-filter-bar">
           <input type="search" id="pv-cal-search" placeholder="Search title / slug..." />
+          <select id="pv-cal-status-filter">
+            <option value="all">Status</option>
+            <option value="not started">Not started</option>
+            <option value="in progress">In progress</option>
+            <option value="done">Done</option>
+            <option value="none">No tasks yet</option>
+          </select>
         </div>
       </div>
       <div class="pv-cal-table-wrap" id="pv-cal-table-wrap">
@@ -496,6 +501,8 @@
       _loadData();
       var calSearchEl = document.getElementById('pv-cal-search');
       if (calSearchEl) calSearchEl.addEventListener('input', renderCalendar);
+      var calStatusEl = document.getElementById('pv-cal-status-filter');
+      if (calStatusEl) calStatusEl.addEventListener('change', renderCalendar);
       ['pv-search-library', 'pv-sort-library'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', renderLibrary);
@@ -610,6 +617,7 @@
 
     function renderCalendar() {
       var search = (document.getElementById('pv-cal-search').value || '').toLowerCase();
+      var statusFilter = document.getElementById('pv-cal-status-filter').value || 'all';
       var isManager = document.body.classList.contains('role-manager');
 
       // Group tasks by base slug (strip -en/-he from entityId) — this is the
@@ -628,9 +636,8 @@
         (tasksByBase[base] = tasksByBase[base] || []).push(t);
       });
 
-      // Entities, same grouping — used only as the click fallback (open the
-      // drawer) when no open task qualifies, e.g. everything's done or nothing
-      // is assigned to this role.
+      // Entities, same grouping — checked first for the row click target (see
+      // _routeTarget below): an entity's drawer is shown whenever one exists.
       var libGroupByBase = {};
       (state.library || []).forEach(function(e) {
         var slug = e.slug || '';
@@ -640,31 +647,46 @@
         (libGroupByBase[base] = libGroupByBase[base] || []).push(e);
       });
 
-      // Click target for a calendar row (CALENDAR_LIBRARY_LOOP_PLAN Calendar
-      // section, 2026-07-08 decision): route to the earliest-created open task —
-      // manager sees only tasks assigned to 'Manager' (matches renderTasks'
-      // filter), admin sees any assignee. Falls back to the entity drawer only
-      // when no qualifying open task exists (and an entity actually exists).
+      // Click target for a calendar row. Redesigned 2026-07-09 (CALENDAR_TAB_UX_PLAN.md
+      // Phase 2) — previously routed straight to the earliest open task with no
+      // confirmation step, so a wrong click cost a full round-trip out of the task
+      // pack. Now: show the entity drawer (details) first whenever an entity
+      // exists — its attached-tasks list is already independently clickable
+      // (TaskDetail.open) as the explicit "advance to task" action. Only route
+      // straight to a task when there's no entity yet to show (fresh spawn, no
+      // Doc attached — nothing to preview).
       function _routeTarget(base) {
+        var group = libGroupByBase[base];
+        if (group && group.length) {
+          var rep = group.filter(function(e) { return e.slug.slice(-3) === '-en'; })[0] || group[0];
+          return { kind: 'entity', slug: rep.slug };
+        }
         var open = (tasksByBase[base] || []).filter(function(t) {
           return t.status !== 'Done' && t.status !== 'Cancelled';
         });
         if (isManager) open = open.filter(function(t) { return t.assignedTo === 'Manager'; });
-        if (open.length) {
-          open.sort(function(a, b) { return (a.createdDate || '').localeCompare(b.createdDate || ''); });
-          return { kind: 'task', id: open[0].id };
-        }
-        var group = libGroupByBase[base];
-        if (!group || !group.length) return null;
-        var rep = group.filter(function(e) { return e.slug.slice(-3) === '-en'; })[0] || group[0];
-        return { kind: 'entity', slug: rep.slug };
+        if (!open.length) return null;
+        open.sort(function(a, b) { return (a.createdDate || '').localeCompare(b.createdDate || ''); });
+        return { kind: 'task', id: open[0].id };
+      }
+
+      // Row status bucket — shared by the status pill and the status filter so
+      // there's one definition of "what status is this row" (Calendar rows have
+      // no persisted status; it's task-derived, same three-tier model as
+      // deriveStatus, plus 'none' for a row with no tasks spawned yet).
+      function _calRowStatus(h) {
+        if (!h.slug || !tasksByBase[h.slug]) return 'none';
+        return TaskWidgets.deriveStatus(tasksByBase[h.slug]);
       }
 
       // JLMops_Publishing is the one calendar — library entities render in the Library tab, not here.
       var rows = (state.holidays || []).filter(function(h) {
-        if (!search) return true;
-        var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
-        return hay.indexOf(search) !== -1;
+        if (search) {
+          var hay = (String(h.name || '') + ' ' + String(h.slug || '')).toLowerCase();
+          if (hay.indexOf(search) === -1) return false;
+        }
+        if (statusFilter !== 'all' && _calRowStatus(h) !== statusFilter) return false;
+        return true;
       });
       rows.sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
 
@@ -687,9 +709,9 @@
           rowAttrs = ' style="cursor:pointer;" onclick="PublishingView.openEntityDrawer(\'' + TaskWidgets.escape(target.slug) + '\')"';
         }
         var statusCell = '—';
-        if (h.slug && tasksByBase[h.slug]) {
-          var status = TaskWidgets.deriveStatus(tasksByBase[h.slug]);
-          statusCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(status) + '">' + TaskWidgets.escape(status) + '</span>';
+        var rowStatus = _calRowStatus(h);
+        if (rowStatus !== 'none') {
+          statusCell = '<span class="tw-status-pill ' + TaskWidgets.statusClass(rowStatus) + '">' + TaskWidgets.escape(rowStatus) + '</span>';
         }
         html += '<tr' + rowAttrs + '>';
         html += '<td data-label="Date">' + TaskWidgets.escape(h.date) + '</td>';

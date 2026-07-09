@@ -1,6 +1,6 @@
 # Publication Calendar
 
-**Updated:** 2026-07-06 (Negev published out of sequence, reshuffling the region queue — see REGION_POSTS_PLAN.md)
+**Updated:** 2026-07-09 (Slots C–F corrected from named regions to TBD — see REGION_POSTS_PLAN.md "Slot assignments")
 
 One timeline coordinating blog posts, email sends, print newsletter, and flyer drops. Workflow stages (edit, translate, publish, promote) live in jlmops `SysTasks` per post — this calendar names the dates and dependencies. **Live source of truth is the [content calendar sheet](https://docs.google.com/spreadsheets/d/1xnhFKCPUkvVdMy7GWXDWwiipT6j028ZrZ_69GJ6HWjc)** (`cal_Date`/`cal_Name`/`cal_Type` rows, user-maintained) — this doc is a reconciled, human-readable mirror; re-check the sheet before trusting dates here if it's been a while.
 
@@ -34,13 +34,15 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 
 ### 2026-08 — August (Slot B: Galilee; Slot C begins)
 
+Slot C's region is undetermined — the live calendar sheet carries it as a generic `blog C` row, no region attached. See `REGION_POSTS_PLAN.md` "Slot assignments" (corrected 2026-07-09).
+
 | Channel | Item | Target | Status |
 |---|---|---|---|
 | Blog | `blog-galilee` — Galilee region post | 2026-08-11 | Drafted + registered, held |
 | Email (post companion) | Galilee companion email | 2026-08-11 | Not started |
 | Print Newsletter | Issue #4 | 2026-08-25 | Not started |
-| Blog | `blog-central-mountains` — Central Mountains post (Slot C) | 2026-08-25 | Not started |
-| Email (post companion) | Central Mountains companion email | 2026-08-25 | Not started |
+| Blog | Slot C region post — region TBD | 2026-08-25 | Not started |
+| Email (post companion) | Slot C companion email | 2026-08-25 | Not started |
 
 ### 2026-09 — September (Slot C continued)
 
@@ -49,31 +51,31 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 | Email (AYIW) | ayiw-aug | 2026-09-08 | Not started |
 | Print Newsletter | Issue #5 | 2026-09-23 | Not started |
 
-### 2026-10 — October (Slot D: Judea)
+### 2026-10 — October (Slot D — region TBD)
 
 | Channel | Item | Target | Status |
 |---|---|---|---|
 | Email (AYIW) | ayiw-sep | 2026-10-06 | Not started |
-| Blog | `blog-judea` — Judea (Foothills) post | 2026-10-20 | Not started |
-| Email (post companion) | Judea companion email | 2026-10-20 | Not started |
+| Blog | Slot D region post — region TBD | 2026-10-20 | Not started |
+| Email (post companion) | Slot D companion email | 2026-10-20 | Not started |
 | Print Newsletter | Issue #6 | 2026-10-27 | Not started |
 
-### 2026-11 — November (Slot E: Coastal Plain)
+### 2026-11 — November (Slot E — region TBD)
 
 | Channel | Item | Target | Status |
 |---|---|---|---|
 | Email (AYIW) | ayiw-oct | 2026-11-03 | Not started |
-| Blog | `blog-coastal-plain` — Coastal Plain post | 2026-11-17 | Not started |
-| Email (post companion) | Coastal Plain companion email | 2026-11-17 | Not started |
+| Blog | Slot E region post — region TBD | 2026-11-17 | Not started |
+| Email (post companion) | Slot E companion email | 2026-11-17 | Not started |
 | Print Newsletter | Issue #7 | 2026-11-24 | Not started |
 
-### 2026-12 — December (Slot F: Golan Heights — inferred, unconfirmed)
+### 2026-12 — December (Slot F — region TBD)
 
 | Channel | Item | Target | Status |
 |---|---|---|---|
 | Email (AYIW) | ayiw-nov | 2026-12-01 | Not started |
-| Blog | `blog-golan-heights` — Golan Heights post (region assignment inferred, not yet confirmed on the calendar sheet) | 2026-12-15 | Not started |
-| Email (post companion) | Golan Heights companion email | 2026-12-15 | Not started |
+| Blog | Slot F region post — region TBD | 2026-12-15 | Not started |
+| Email (post companion) | Slot F companion email | 2026-12-15 | Not started |
 | Print Newsletter | Issue #8 | 2026-12-29 | Not started |
 | Email (AYIW) | ayiw-dec | 2026-12-29 | Not started |
 

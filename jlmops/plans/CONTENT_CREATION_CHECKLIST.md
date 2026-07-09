@@ -19,6 +19,10 @@ Enforced in code as of jlmops @458: `_ensureEntity` (`LibraryService.js`) now lo
 
 Default to English only. Hebrew only when explicitly asked for, and even then it's a draft for review, never framed as ready to apply directly (see `feedback_hebrew_review_before_update` — AYIW/newsletter content is a documented exception where the manager does his own translation, see `feedback_ayiw_english_only_manager_translates`).
 
+## AYIW source
+
+The monthly AYIW email is not freshly drafted — it's extracted verbatim from the pre-written full-year master Doc "A Year in Wine: From Vine to Glass" (Drive id `1SPPfmN_9Ldz6ACvYw-pYVKRiRjZCB14a`), which has one `## <Month>` section per month plus the exact Subject/Preview/CTA to use (see the doc's own "Email:" section at the bottom). Pull the current month's section as-is — don't invent new prose.
+
 ## Sequence for a new piece of content
 
 1. Confirm the calendar row exists (`cal_Date`/`cal_Name`/`cal_Type`/`cal_Slug`). If not, that's step zero — get it added and merged first.

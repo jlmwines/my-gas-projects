@@ -12,6 +12,35 @@
     }
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__claude_ai_Google_Drive__create_file|mcp__claude_ai_Google_Drive__copy_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/require-data-model-read.js"
+            ],
+            "statusMessage": "Checking DATA_MODEL.md was read this session"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "C:/Users/B/projects/jlmwines/.claude/hooks/content-task-protocol-check.js"
+            ],
+            "statusMessage": "Checking content-task protocol"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [

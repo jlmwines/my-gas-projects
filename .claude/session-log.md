@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-09 (cont'd, part 2) — Calendar tab UX shipped (jlmops @461); two "read the reference" gaps found and closed with hooks, not more docs
+
+- AYIW workflow re-verified end to end: August row (`email-ayiw-2026-08`, send 2026-09-08) staged + merged, Doc placed at the canonical Library path — mirrors July's already-working pattern. Along the way, acted without reading `DATA_MODEL.md`'s calendar/library write-rules first (had only read the downstream plan doc) — user caught it twice in one session. Fix wasn't another doc: built two project-scoped hooks (`jlmops/.claude/hooks/require-data-model-read.js` — hard `PreToolUse` deny on Drive-write calls until `DATA_MODEL.md` is read this session; `content-task-protocol-check.js` — `UserPromptSubmit` reminder on content-task language). Both pipe-tested locally against a real dumped stdin schema before wiring, not assumed.
+- A second recall gap: the AYIW master source doc (file id, in `jlmops/plans/CONTENT_CREATION_CHECKLIST.md` now under "AYIW source") had been handed to sessions before without ever being written down anywhere — confirmed via grep (zero prior occurrences), unlike the calendar-sheet-ID case which turned out to already be documented twice and just needed consolidating to one place, not a third.
+- `REGION_POSTS_PLAN.md`/`PUBLICATION_CALENDAR.md` corrected — Slots C–F never had a real region assigned; the live calendar sheet only carries generic `blog C/D/E/F` placeholders. Both docs previously stated specific regions as if decided; now TBD. Central Mountains chosen as next-to-draft but paused before the guide-plan/source/template reads — resume there (`plans/STATUS.md` Next Action #7).
+- Calendar tab UX (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`): traced `PublishingView.html` before planning, found the search box already existed (mis-scoped in the original wishlist item, corrected) and the refresh-bug's obvious causes were all ruled out by tracing (client refresh calls + server reads are both clean — needs a live repro, not more reading). Shipped Phases 2–4 (entity-drawer-first click-through, status filter, search repositioned) live @461; Phase 1 (refresh) stays open.
+- Next: user smoke-tests the three Calendar changes; resume Central Mountains region-post prep; investigate the refresh bug live when convenient.
+
+---
+
 ## 2026-07-08 (cont'd) — AYIW loop test passed; Library folder convention corrected; plan archived (jlmops @455→@460)
 
 - End-to-end test (calendar row → task chain → lazy entity → Doc attach) passed live. In parallel the user manually cleaned `JLMops_Library`/Drive to remove duplicates and sync slugs — that cleanup revealed the app's own canonical-folder function (`_deriveConcept`) stripped the type prefix (`ayiw-2026-07`) while every real folder the user builds keeps it (`email-ayiw-2026-07`). Fixed the code to match the real convention rather than asking the user to keep re-conforming folders to it (`LibraryService.js`, all 3 call sites) — deployed @459.
