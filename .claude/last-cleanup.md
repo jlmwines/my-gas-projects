@@ -1,16 +1,14 @@
-2026-07-08 — project-scoped cleanup pass (jlmwines only).
+2026-07-09 — project-scoped cleanup pass (jlmwines only).
 
 Touched this pass:
-- `.claude/bugs.md` — 4 stale entries resolved/trimmed: PROJ-CONTENT task routing (trimmed to pointer, full analysis already in `WORKFLOWS.md` §12.0); `attachExistingDoc` Drive-ownership bug (fixed 2026-07-08 per `DATA_MODEL.md`, moved to Resolved); Bundles N+1 (fixed @228/@229 2026-06-05, moved to Resolved); Calendar-shows-library-entities bug (resolved as a side effect of the CALENDAR_LIBRARY_LOOP_PLAN rework, moved to Resolved).
-- `jlmops/plans/PERFORMANCE_OPTIMIZATION_PLAN.md` — fixed internal contradiction (header said "done," trailing `## Status` section still said "not implemented").
-- `marketing/FLYER_PLAN.md` — Status + Open Items updated to current reality (printed, distribution scheduled after 9 Av to 5,000 Talbiye residences; done items checked off).
-- `content/REGION_POSTS_PLAN.md` — Galilee slot status corrected from "held" to "in progress."
-- `plans/STATUS.md` — at-a-glance (marketing) and Next Action items 1/2/3/5/6 updated to current reality (newsletter cadence, cartons, flyer, Negev promo email, Galilee) earlier in this session.
-- `.claude/session-log.md` — pruned entries older than 30 days (2026-05-15 through 2026-06-07, ~620 lines) to a condensed pointer note; kept everything from 2026-06-08 forward plus two out-of-order 2026-06-23 entries that were sitting after the old block.
+- `.claude/bugs.md` — 1 stale entry fixed: PROJ-CONTENT task routing carried a `defer:2026-07-08` pointer that no longer matched `plans/STATUS.md` Inbox (the smoke-test gate cleared 2026-07-09, item is no longer deferred, just ready-to-schedule) — reworded to match.
+- `.claude/session-log.md` — pruned the 2026-06-08 entry cluster (3 entries, ~40 lines, now 31 days old) into the existing pruned-block note, extending its boundary from "before 2026-06-08" to "before 2026-06-09." Durable facts already graduated per the prior pass's own note.
+- Most of the usual cleanup surface (STATUS.md freshness, plan-doc reconciliation, memory reference consolidation) happened inline during the working session rather than as a separate pass, since the session itself surfaced the drift: `REGION_POSTS_PLAN.md`/`PUBLICATION_CALENDAR.md` corrected (Slots C–F had specific regions named as if decided; live calendar sheet only has generic placeholders), `WORKFLOWS.md` §13.1 updated to match the deployed Calendar click-through redesign, `CONTENT_CREATION_CHECKLIST.md` got the AYIW source-doc pointer, `plans/STATUS.md` fully refreshed (deploy version, Active Plans, Current State, Next Action). Two memory entries consolidated to zero/single-location during the session itself (calendar-sheet-ID pointer removed — already lived in `PUBLICATION_CALENDAR.md`'s own header; AYIW source-doc pointer moved from memory into `CONTENT_CREATION_CHECKLIST.md`, the doc a session is now hook-forced to read for content tasks).
 
 Audited, no change needed:
-- `plans/STATUS.md` Inbox — 2 items, both current (PROJ-CONTENT `defer:2026-07-08` still genuinely blocked; offline-attribution `defer:2026-07-14` future-valid).
-- `~/.claude/projects/.../memory/MEMORY.md` — no stale entries; `feedback_flag_convention_breaks_before_building` pattern recurred again this week (translation-trigger convention change), confirming it's still load-bearing.
-- Other open bugs (jlmops: KPI sk_Period Date bug, ConfigService second-param drop, Product Replacement dead columns, web-inventory-export race, Mailchimp activity-log gap, sync-hardening/timestamp/count-task audits; web: gift/accessory description blanking, RankMath auto-push) — checked against relevant plan docs, all still genuinely open, no drift found.
+- `plans/STATUS.md` Inbox — 2 items, both current (PROJ-CONTENT ready-to-schedule, no longer deferred; offline-attribution `defer:2026-07-14` not yet due).
+- `~/.claude/projects/.../memory/jlm_stable_deploy_id.md` — verified against today's actual deploy (jlmops @461): pinned ID matches exactly, no drift.
+- Other open bugs (jlmops: KPI sk_Period Date bug, ConfigService second-param drop, Product Replacement dead columns, web-inventory-export race, Mailchimp activity-log gap, sync-hardening/timestamp/count-task audits, Calendar-refresh bug; web: gift/accessory description blanking, RankMath auto-push) — not touched since yesterday's pass or today's session, no new drift found.
+- `.claude/wishlist.md` — 3 jlmops items were added and then removed within this same session (built + shipped @461 before this cleanup ran), net zero diff against the last commit; nothing left to groom.
 
 Out of scope this pass (project-scoped, not portfolio-wide): portfolio `CALENDAR.md`, VaadAi, AliyahNet.

@@ -602,34 +602,9 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - **Deferred next phase (agreed, not built):** inline-at-row bundle editor with per-bundle export attached inside it (batch sheet = fallback); single-bundle target for "Update Composition"; bundles missed-profit report (jlmops wishlist); website woosb bundle-explainer (theme wishlist). Captured in `ADMIN_BUNDLES_UI_PLAN.md`.
 - @282 confirmed live via `clasp deployments` (pinned ID carries the editor-deficiency description). Wrapper stamped `built` 21:09; in-file `VERSION.commit` was stale (Phase 1a-i) → corrected this wrap.
 
-## 2026-06-08 (cont 2) — packing-task bugs #1 + #2 resolved @274 + config
+## Pruned — entries before 2026-06-09 (cleanup 2026-07-09, extends the 2026-07-08 pass)
 
-- **#1 close-path gap (orphaned `task.order.packing_available` at 0 Ready):** sync drains Ready→Ineligible without a print; only PrintService closed the task. Fix @274 — `processStagedOrders` closes it after the SysOrdLog write when 0 Ready remain (runs every sync → self-heals). Added `reconcilePackingAvailableTask()` one-shot (OrderService.js) for on-demand clear; user ran it, phantom gone. Note: processStagedOrders early-returns on an empty staged set, but a draining order is always in a non-empty set, so the recurring path is covered.
-- **#2 overdue aging (same task):** `due_pattern: immediate` set due=today, never refreshed → overdue-red. Demoted to no-due nudge per PACKING_SLIP_REPRINT_PLAN — `due_pattern → manual` (calculateDueDate returns null). Config-only: taskDefinitions.json → generate-config → `clasp push` (no deploy/version) → user ran `rebuildSysConfigFromSource`. Verified live (new orders → legit packing task, no overdue).
-- Dispatch report file (`plans/DISPATCH_BUGS.md`) cleared earlier this session. Committed 6563791 (+ pushed); also pushed the dead-code cleanup 7c1a2ec.
-- Deferred (noted, not needed for symptoms): full PACKING_SLIP_REPRINT redesign (retire singleton); Bundles `getBundlesWithLowInventory` N+1 perf.
-
-## 2026-06-08 (cont) — Dispatch bugs + Admin Products lazy-load @271→@273
-
-- Dispatch report lived in `plans/DISPATCH_BUGS.md` (untracked; Dispatch can't write `.claude/`). Four items: #1 AdminSyncView scriptlet (already fixed @223 — verified not regressed), #2 packing_available orphan (already an open bugs.md item), #3 Admin Products no loading state, #4 Accepted blank-status tasks. Filed all into bugs.md, deleted DISPATCH_BUGS.md.
-- **#4 declined** — user confirmed NO blank-status rows exist; the bug that created them was fixed 2026-06-01, so hardening for an impossible state would be speculative. Dispatch's "repair to Accepted" was also wrong (those orphans were post-export → Done, not Accepted).
-- **#3 → @271** loading spinner. Then user hit the real problem: whole page "Failed to load," exec log still running = **getAdminViewData TIMEOUT** (11 sections every mount). @272 per-section resilience (didn't help — slowness not throw, but diagnostic). **@273 lazy-load redesign (user-directed):** mount loads only Card 1 (Detail Updates / approval workflow); Cards 2/3/4 (New Products, SKU Management, Lookups) collapse + lazy-load on first expand. Verified live — Card 1 incl. Accepted tasks loads fast.
-- Wishlist: dismissible bundle-explainer on website woosb pages (EN+HE copy pending, theme-side).
-- Note: misdiagnosed the bundles "Matches web" earlier (blamed overnight revert; was stale cache) — pattern: verify the actual mechanism before asserting. Also surfaced my #3 error-row made a previously-silent failure visible (good).
-
-## 2026-06-08 — Stage 7 rev 2.2 generator BUILT + SHIPPED @267→@270; BUNDLE_PLAN complete
-
-- Built the rev-2.2 rework per Dispatch's 7-step order (@267), then iterated live across @268–@270. `getBundleDeficiencies` (richer gate) drives `task.bundles.needs_update`; `maintainBundles`/`rerollBundles` replace `generateValueBundles`/`_isValueBundle`; extracted `_matchesSlotCriteria` + `_buildBundleInventoryContext` (no dup).
-- **`sb_MaxTotal` appended at END of SysBundles** (mid-insert would corrupt LastGenerated/GenFlags data — `syncHeaders` only writes row 1). User added the column manually + ran rebuild. Editor Run button can't pass args → use `syncAllHeaders()` not `syncHeaders('SysBundles')` (noted for next time).
-- Live-test fixes: qty-weighted fill + high-qty-first ordering (fixed below-min re-roll); flex (qty-0) slots reversed twice → final **two-tier** (in-budget first, ≤1.5× overage when needed, no price-pull); unfillable base slot keeps+flags (never cross-category); **name read-only** (web-derived, was getting blanked); reimport now **preserves band+gen fields**; **push-status cache refreshed on edit** (fixed stale "Matches web" — it's cache-only, was never refreshed by edits, NOT a revert).
-- Editor: band fields + gen-status line, category-in-row, open-all-details, per-bundle **EN/HE export-meta copy panel**. Single-reroll results card dropped (kept for Maintain).
-- **EN+HE woosb paste verified flawless live** — the dual-language faithfulness was the whole point; user very happy ("beyond initial scope"). Misdiagnosed the "Matches web" cause once (blamed overnight revert) — user corrected (no housekeeping ran); root cause was the stale cache.
-- Next: full editor smoke; tune composite weights; rough spots from live use. Deferred knobs unchanged (price-cohesion, reroll-preview, overnight Maintain).
-
-
-## Pruned — entries before 2026-06-08 (cleanup 2026-07-08)
-
-Entries from 2026-05-15 through 2026-06-07 were condensed out per this file's own header and the portfolio kernel's 30-day pruning default. Durable facts from that period (Content Library entity model, Bundle Plan stages 0-7, reliability audit tiers, UI mobile-responsiveness pass, notification-UX standard, PublishingView build) already graduated into `jlmops/docs/DATA_MODEL.md`, `ARCHITECTURE.md`, `WORKFLOWS.md`, and the relevant `jlmops/plans/*.md` / `_archive/*.md`. Full narrative detail, if ever needed, is in git history for that date range.
+Entries from 2026-05-15 through 2026-06-08 were condensed out per this file's own header and the portfolio kernel's 30-day pruning default (2026-06-08 entries were exactly 31 days old at this pass). Durable facts from that period (Content Library entity model, Bundle Plan stages 0-7 incl. the rev-2.2 generator + inline-at-row editor, reliability audit tiers, UI mobile-responsiveness pass, notification-UX standard, PublishingView build, packing-task close-path/overdue fixes) already graduated into `jlmops/docs/DATA_MODEL.md`, `ARCHITECTURE.md`, `WORKFLOWS.md`, and the relevant `jlmops/plans/*.md` / `_archive/*.md`. Full narrative detail, if ever needed, is in git history for that date range.
 
 ## 2026-06-23 — Unified Task UI Deploy E
 

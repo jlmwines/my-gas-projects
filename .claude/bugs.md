@@ -23,7 +23,7 @@ Projects: jlmops, web, marketing, content
 
 - [ ] 2026-06-14: **Web inventory export silently dropped — "no changes" reported while a real CSV was created** (SERIOUS, data-loss class; confirmed in SysLog 7:50:01–7:50:46). Concurrency lost-update on `system.sync.state`: `exportWebInventory` created `Inv-Web-06-14-07-50.csv` with real stock/price changes, but a concurrent `setSyncState`/triple `_checkAndAdvanceSyncState` clobbered `webExportFilename`; `generateWebExportBackend` re-read empty → declared no changes → COMPLETE → orphaned the file (user applied it by hand). **Silent-loss leg FIXED + DEPLOYED @289 2026-06-14** (`RELIABILITY_AUDIT.md` §1.4 — caller branches on the return value + clobber detector; pending live smoke). **Underlying race still open** → §1.3 (LockService + atomic read-modify-write + idempotent advance).
 
-- [ ] 2026-06-11: **Task→project routing incomplete** (`PROJ-CONTENT` not yet seeded; `Marketing`/`Data` topics unmapped). Full decided-fix analysis lives in `jlmops/docs/WORKFLOWS.md` §12.0 (not yet built). Pending-decision tracker: `plans/STATUS.md` Inbox (`defer:2026-07-08`).
+- [ ] 2026-06-11: **Task→project routing incomplete** (`PROJ-CONTENT` not yet seeded; `Marketing`/`Data` topics unmapped). Full decided-fix analysis lives in `jlmops/docs/WORKFLOWS.md` §12.0 (not yet built). Smoke-test gate cleared 2026-07-09 — ready to schedule, no longer deferred. Tracker: `plans/STATUS.md` Inbox.
 
 
 
