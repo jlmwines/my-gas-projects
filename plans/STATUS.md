@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-09 — jlmops @461 live: Calendar tab (`PublishingView.html`) redesigned so a row click shows the entity drawer (details) before advancing to a task, plus a status filter and a repositioned search box, none yet smoke-tested; checkout also shows an always-required "shipping address and phone are both Israeli" confirmation checkbox (theme v1.2.31, live) from earlier today. Negev region post remains live, both languages, wp-admin finishing (WPML link, SEO meta, focus keyword, winery verification) still pending.
+**Updated:** 2026-07-09 — jlmops @462 live: Calendar tab UX (entity-drawer click-through, status filter, repositioned search) shipped @461, status filter smoke-tested and confirmed working; Admin Dashboard Products card's New-Review/New-Edit miscount fixed @462 (`Assigned`-status add_product tasks were counted as awaiting admin review instead of awaiting manager edit); checkout Israel-shipping confirmation checkbox live (theme v1.2.31). Negev region post remains live, both languages, wp-admin finishing (WPML link, SEO meta, focus keyword, winery verification) still pending.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-08 |
 | Revenue | Steady |
-| Deploy Version | jlmops @461 · theme v1.2.31 |
+| Deploy Version | jlmops @462 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-09 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-09 (cont'd, part 3) — Central Mountains drafted; Admin Dashboard New-Review/New-Edit miscount fixed (jlmops @462)
+
+- Central Mountains region post (Slot C): closed the resumption gaps (guide plan §Regions, Montefiore PDF via `pdftotext`, map, `_post-template.md`), staged its calendar row (`blog-region-central-mountains`, 2026-08-25) and 1 Av/9 Av holiday rows via Drive MCP, drafted the body through Image Prompts (~830 words), placed the Drive doc at the canonical library path, mirrored to git. Found and fixed real staleness in `REGION_POSTS_PLAN.md` along the way: it linked a superseded pre-redesign planning sheet as "calendar source of truth" instead of the live `JLMops_Publishing`, carried a Mt. Carmel/Mt. Gilboa sourcing error, and used the wrong slug format (`blog-<name>` vs. the real `blog-region-<name>`, verified live against `JLMops_Library`).
+- User smoke-tested and confirmed the Calendar tab's status filter (Phase 3, shipped @461) works; `CALENDAR_TAB_UX_PLAN.md`/`STATUS.md` updated to reflect it specifically (click-through and search placement remain unsmoked).
+- Admin Dashboard Products card: user reported "New - Review" count included tasks that were actually awaiting manager edit. Root cause traced in `TaskService.createTask` — any task created with an assignee gets `st_Status='Assigned'` immediately (not `'New'`), so `task.onboarding.add_product` tasks awaiting the manager sit at `Assigned`, not `New`. `WebAppDashboardV2.js`'s bucket logic had `'Assigned'` in the Review count instead of the Edit count — fixed (moved to match the `vintageUpdate`/`newProductSuggestion` pattern already used elsewhere in the same function), deployed @462 (first attempt hit the 200-version cap, user cleared old versions, retry succeeded).
+- Next: none outstanding from this thread. Central Mountains still needs winery verification (Gvaot/Tura not confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push.
+
+---
+
 ## 2026-07-09 (cont'd, part 2) — Calendar tab UX shipped (jlmops @461); two "read the reference" gaps found and closed with hooks, not more docs
 
 - AYIW workflow re-verified end to end: August row (`email-ayiw-2026-08`, send 2026-09-08) staged + merged, Doc placed at the canonical Library path — mirrors July's already-working pattern. Along the way, acted without reading `DATA_MODEL.md`'s calendar/library write-rules first (had only read the downstream plan doc) — user caught it twice in one session. Fix wasn't another doc: built two project-scoped hooks (`jlmops/.claude/hooks/require-data-model-read.js` — hard `PreToolUse` deny on Drive-write calls until `DATA_MODEL.md` is read this session; `content-task-protocol-check.js` — `UserPromptSubmit` reminder on content-task language). Both pipe-tested locally against a real dumped stdin schema before wiring, not assumed.

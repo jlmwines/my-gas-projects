@@ -588,8 +588,8 @@ function _getProductsData(allTasks) {
       vintageUpdate: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['New', 'Assigned']),
       detailReview: _countTasksByTypeAndStatus(allTasks, 'task.validation.vintage_mismatch', ['Review']),
       newProductSuggestion: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.suggestion', ['New', 'Assigned']),
-      newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'In Progress']),
-      newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review', 'Assigned']),
+      newProductEdit: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['New', 'Assigned', 'In Progress']),
+      newProductReview: _countTasksByTypeAndStatus(allTasks, 'task.onboarding.add_product', ['Review']),
       // Bundle Critical / Bundle Low rows removed (ADMIN_BUNDLES_UI_PLAN Phase 1b, user call):
       // "Bundles: Needs Push" is the single bundle signal on the dashboard. Stage 7 (2026-06-08):
       // checkBundleHealth no longer creates per-bundle critical/low tasks — a single
