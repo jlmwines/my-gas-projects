@@ -64,7 +64,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
 - **Correct Product Name tool** — live (Admin → Products → SKU Management → Correct Product Name); edits WebProdM/WebDetM name fields and logs to Recent SKU Updates. Not yet smoke-tested from /dev. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
-- **New-product Products-view UX** — shipped and archived (`jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`); current behavior documented in `jlmops/docs/WORKFLOWS.md` §14.
+- **New-product Products-view UX** — shipped, archived, and smoke-tested/validated by the user 2026-07-09 (`jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`); current behavior documented in `jlmops/docs/WORKFLOWS.md` §14. Closes the smoke-test gate the PROJ-CONTENT Inbox item was waiting on.
 - **Verification reverted-task handling** — live; reverting a verify task routes it to Admin → Verification "Reverted — needs admin"; Close completes it, Pass to manager hands it off as an editable Detail-Updates task with findings intact. Not yet smoke-tested. Plan → `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`.
 - **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`.claude/bugs.md`).
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
@@ -102,7 +102,7 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Active
 
-- **PROJ-CONTENT task routing** `defer:2026-07-08` — decided June 11, not built (3rd review carry). Three-step fix in `.claude/bugs.md`. Schedule in next jlmops session after new-product smoke settles.
+- **PROJ-CONTENT task routing** — decided June 11, not built (3rd review carry). Three-step fix in `.claude/bugs.md`. New-product smoke gate cleared 2026-07-09; ready to schedule next jlmops session.
 
 ### Deferred
 
