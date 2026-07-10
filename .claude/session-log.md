@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-10 — Task-detail Done-button fix + Accept Suggestion modal rework (jlmops @463→@465)
+
+- User reported the Admin Dashboard task-detail modal's "Done" button had no effect. Traced to `AdminDashboardView_v2.html` being the only `TaskPacks`/`TaskDetail`-consuming view missing the `TaskWidgets` include; `TaskWidgets.confirm()`'s popup depends on a CSS class only defined there, so it rendered unstyled/out-of-flow and was never visible. Fixed @463. Also removed the leftover "No pack yet — actions land in subsequent build steps." skeleton-pack placeholder text (`TaskPacks.html`) @464 — both smoke-tested and confirmed by the user same day.
+- Reworked the Accept Suggestion modal (`AdminProductsView.html`) per user request: field order now matches real fill order (EN name → Woo Post ID → HE name, since the Woo ID is known before the HE draft/name), and added a required "I've marked this SKU 'Sold Online' in Comax" checkbox gating Submit — folds the old Stage 5 manual Comax-ERP update forward into Stage 1 acceptance. Acknowledgment only; JLMops still has no write-path to Comax itself. `WORKFLOWS.md` §14.1/§14.5 updated to match. Deployed @465, smoke-tested and confirmed.
+- Next: none outstanding from this thread.
+
+---
+
 ## 2026-07-09 (cont'd, part 3) — Central Mountains drafted; Admin Dashboard New-Review/New-Edit miscount fixed (jlmops @462)
 
 - Central Mountains region post (Slot C): closed the resumption gaps (guide plan §Regions, Montefiore PDF via `pdftotext`, map, `_post-template.md`), staged its calendar row (`blog-region-central-mountains`, 2026-08-25) and 1 Av/9 Av holiday rows via Drive MCP, drafted the body through Image Prompts (~830 words), placed the Drive doc at the canonical library path, mirrored to git. Found and fixed real staleness in `REGION_POSTS_PLAN.md` along the way: it linked a superseded pre-redesign planning sheet as "calendar source of truth" instead of the live `JLMops_Publishing`, carried a Mt. Carmel/Mt. Gilboa sourcing error, and used the wrong slug format (`blog-<name>` vs. the real `blog-region-<name>`, verified live against `JLMops_Library`).

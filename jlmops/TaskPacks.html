@@ -205,10 +205,10 @@
         return hP;
       }
 
-      // Skeleton fallback — read-only notes; no action.
+      // Skeleton fallback — read-only notes; no dedicated pack action (Done
+      // button in TaskDetail's action row handles completion).
       var h2 = '';
       h2 += notesBlock(t, stopProp, true);
-      h2 += '  <div class="detail-row detail-meta">No pack yet — actions land in subsequent build steps.</div>';
       return h2;
     }
 

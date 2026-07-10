@@ -211,7 +211,7 @@ Moves a product from Comax-only existence through data preparation, WooCommerce 
 
 Manager finds a Comax product not yet on the web store and submits it from ManagerProductsView → New Products tab. This creates a `task.onboarding.suggestion` task.
 
-Admin opens the suggestion in AdminProductsView → New Products → Candidates and clicks Accept. The accept dialog requires: EN name, HE name, and the EN Woo Post ID. **Admin must create the EN draft product in WooCommerce first, then use WPML "Create Translation" to get the HE draft, before accepting** — both Woo drafts must exist at accept time.
+Admin opens the suggestion in AdminProductsView → New Products → Candidates and clicks Accept. The accept dialog fields, in fill order: EN name, EN Woo Post ID, HE name, then a required "I've marked this SKU 'Sold Online' in Comax" checkbox. **Admin must create the EN draft product in WooCommerce first, then use WPML "Create Translation" to get the HE draft, before accepting** — both Woo drafts must exist at accept time. The checkbox is a manual acknowledgment only (JLMops has no write-path to the Comax ERP) — it gates Submit but doesn't itself update anything; the admin still has to flip the flag in Comax directly. This folds the old Stage 5 Comax update forward to acceptance time instead of leaving it for after publish.
 
 `acceptProductSuggestion` on accept atomically:
 - Completes the suggestion task
@@ -219,7 +219,7 @@ Admin opens the suggestion in AdminProductsView → New Products → Candidates 
 - Seeds **WebDetS** (staging) with EN/HE names
 - Inserts **WebProdM** row: SKU, EN name (`wpm_PostTitle`), price + stock from CmxProdM, Woo Post ID (`wpm_ID`)
 - Inserts **WebDetM** row: SKU, EN/HE names, `wdm_WebIdEn`
-- Sets `cpm_IsWeb=true` in CmxProdM
+- Sets `cpm_IsWeb=true` in CmxProdM (the JLMops-side mirror only — separate from the checkbox above, which covers the actual Comax ERP)
 
 ### 14.2 Stage 2 — Detail submission (manager)
 
@@ -233,9 +233,9 @@ Admin reviews submissions in AdminProductsView → Detail Updates. On accept, `a
 
 Admin exports product details (Detail export on AdminProductsView) to generate the WooCommerce update file. Admin publishes the EN and HE Woo products. Admin clicks "Confirm Published" in AdminProductsView → closes the `task.onboarding.add_product` task to Done.
 
-### 14.5 Stage 5 — Comax update (manual)
+### 14.5 Stage 5 — Comax update (manual, now normally pre-empted by Stage 1)
 
-Admin updates the product record in Comax to mark it active on the web store.
+Historically a separate step: admin updates the product record in Comax to mark it active on the web store. Now that Stage 1's accept dialog requires acknowledging this at acceptance, this stage should already be satisfied by the time a product reaches Stage 4/5 — kept here as a fallback check, not the primary trigger.
 
 ### 14.6 Next sync
 

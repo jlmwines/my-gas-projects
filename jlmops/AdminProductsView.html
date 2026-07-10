@@ -692,16 +692,20 @@
             <label>Product Name EN</label>
             <input type="text" class="form-control" id="sugg-name-en">
         </div>
+        <div class="alert alert-info small p-2 mb-2">
+          Create the EN product draft in WooCommerce first, then paste its Post ID below. Then use WPML "Create Translation" to get the HE draft before approving.
+        </div>
+        <div class="form-group">
+            <label>Woo Post ID (EN) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="sugg-woo-id" placeholder="e.g. 4821">
+        </div>
         <div class="form-group">
             <label>Product Name HE</label>
             <input type="text" class="form-control hebrew-text" id="sugg-name-he">
         </div>
-        <div class="alert alert-info small p-2 mb-2">
-          Create the EN product draft in WooCommerce first, then paste its Post ID below. After approving, create the HE draft and pair them in WPML.
-        </div>
-        <div class="form-group mb-0">
-            <label>Woo Post ID (EN) <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="sugg-woo-id" placeholder="e.g. 4821">
+        <div class="form-group form-check mb-0">
+            <input type="checkbox" class="form-check-input" id="sugg-comax-confirm">
+            <label class="form-check-label" for="sugg-comax-confirm">I've marked this SKU "Sold Online" in Comax</label>
         </div>
       </div>
       <div class="modal-footer bg-light">
@@ -1920,6 +1924,7 @@
         document.getElementById('sugg-name-he').value = comaxName;
         document.getElementById('sugg-price-meta').textContent = price ? '— ₪' + price : '';
         document.getElementById('sugg-woo-id').value = '';
+        document.getElementById('sugg-comax-confirm').checked = false;
         ModalOverlay.open('suggestion-modal');
     };
 
@@ -1927,12 +1932,17 @@
         const nameEn = document.getElementById('sugg-name-en').value.trim();
         const nameHe = document.getElementById('sugg-name-he').value.trim();
         const wooId = document.getElementById('sugg-woo-id').value.trim();
+        const comaxConfirmed = document.getElementById('sugg-comax-confirm').checked;
         if (!nameEn || !nameHe) {
             TaskWidgets.toast('Please provide both Product Name EN and Product Name HE.', 'warning');
             return;
         }
         if (!wooId) {
             TaskWidgets.toast('Please enter the Woo Post ID (EN) before approving.', 'warning');
+            return;
+        }
+        if (!comaxConfirmed) {
+            TaskWidgets.toast('Please confirm the SKU is marked "Sold Online" in Comax.', 'warning');
             return;
         }
         TaskWidgets.confirm(`Approve suggestion for ${nameEn}?`, function() {
