@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-10 (cont'd, part 3) — PROJ-CONTENT fact-check + exchange-folder cleanup (commits `efe5a11`, `f7a7d4d`)
+
+- Daily review flagged PROJ-CONTENT task routing as "stuck"; user pushed back twice, pointing first at a live `SysProjects.csv` export then at the bigger Calendar/Task/Library effort. Verified live: `PROJ-CONTENT` was already seeded and ACTIVE — `WORKFLOWS.md` §12.0, `bugs.md`, and `STATUS.md` Inbox were all stale, corrected in place. Lesson: a "3rd review carry" item should have been checked against live data, not re-asserted from doc text a third time.
+- Ran `plans/FILE_CLEANUP_PLAN.md` end-to-end (user: "do all, in safest sequence"): `jlmops/exchange/` fully cleared; root `exchange/` down from ~130 files to near-empty. Both theme zips removed (theme is fully git-tracked, so local zips were always redundant) — `CUTOVER_CHECKLIST.md` updated to build fresh from git at cutover time. Loose `.po` files removed (superseded by `strings/`). `content-production-guide.*` turned out to be real documentation (Manager/Admin task-workflow guide, not scratch) — moved to `content/PRODUCTION_GUIDE.*`. Found and fixed a dead-reference bug along the way: `EMAIL_GUIDELINES.md`/`marketing/CLAUDE.md` cited `exchange/pesach-email-*.html`, which no longer existed.
+- 10 of the removed exchange files turned out to be git-tracked (predating the `exchange/` gitignore rule) — confirmed with the user before committing; no loss.
+- Also cleaned up `vaadai/plans/STATUS.md` (separate repo) — stripped a version-history changelog from Current State and purged stale session-narrative from Inbox, per a `/review-claude` finding.
+- Next: none outstanding from this thread.
+
+---
+
 ## 2026-07-10 (cont'd, part 2) — Documentation reconciliation pass (no code changes)
 
 - User flagged general doc neglect ("this needs to be fixed now"). Verified facts against source before writing (plan docs, live code via grep, config files) rather than acting on the complaint alone — found real, specific drift, not just staleness-by-age (last cleanup was only yesterday, 2026-07-09).
