@@ -4,7 +4,7 @@
 
 Sequenced by readiness (concrete fix shape → diagnosis needed → larger scope → audits). Each session is one focused unit of work. Sessions A–E each end with: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
-**Progress 2026-05-28:** Sessions A, B, C, D SHIPPED. Sessions E–I remain.
+**Progress 2026-07-10:** Sessions A–E and G shipped/resolved. Open: F (sync hardening, needs staging repro), H (timestamp/date-format audit), I (count-task creation audit).
 
 ---
 
@@ -102,7 +102,7 @@ Items:
 
 ---
 
-## Session G — ManagerContactView search latency — RESOLVED 2026-05-29 (UI T3.2, @165 deploy @169)
+## ✅ Session G — ManagerContactView search latency — RESOLVED 2026-05-29 (UI T3.2, @165 deploy @169)
 
 Shipped via the UI audit's Tier 3.2 session (`jlmops/plans/UI_T3_2_manager_contact_load_once.md`), not this sequence. Load-once on mount + client-side filter (email + name); recent 50 render on load. Impl caught a latent crash: filtering `c.phone.toLowerCase()` threw because phone is stored numeric — fixed with `String()` guards. See `.claude/bugs.md` 2026-05-15.
 

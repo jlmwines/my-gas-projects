@@ -1,6 +1,6 @@
 # Publication Calendar
 
-**Updated:** 2026-07-09 (Slots C–F corrected from named regions to TBD — see REGION_POSTS_PLAN.md "Slot assignments")
+**Updated:** 2026-07-10 (Slot C reconciled with REGION_POSTS_PLAN.md — now Central Mountains, not TBD; Negev/Galilee slugs corrected to the `blog-region-<name>` convention)
 
 One timeline coordinating blog posts, email sends, print newsletter, and flyer drops. Workflow stages (edit, translate, publish, promote) live in jlmops `SysTasks` per post — this calendar names the dates and dependencies. **Live source of truth is the [content calendar sheet](https://docs.google.com/spreadsheets/d/1xnhFKCPUkvVdMy7GWXDWwiipT6j028ZrZ_69GJ6HWjc)** (`cal_Date`/`cal_Name`/`cal_Type` rows, user-maintained) — this doc is a reconciled, human-readable mirror; re-check the sheet before trusting dates here if it's been a while.
 
@@ -27,22 +27,20 @@ One timeline coordinating blog posts, email sends, print newsletter, and flyer d
 
 | Channel | Item | Target | Status |
 |---|---|---|---|
-| Blog | `blog-negev` — Negev region post | 2026-07-06 | **Published live (EN+HE)** |
+| Blog | `blog-region-negev` — Negev region post | 2026-07-06 | **Published live (EN+HE)** |
 | Email (post companion) | Negev companion email | 2026-07-07 | HTML built (EN+HE), `marketing/newsletter/issues/2026-07/` |
 | Print Newsletter | Issue #3 | 2026-07-27 | Not started |
 | Email (AYIW) | ayiw-july | 2026-07-28 | Not started |
 
-### 2026-08 — August (Slot B: Galilee; Slot C begins)
-
-Slot C's region is undetermined — the live calendar sheet carries it as a generic `blog C` row, no region attached. See `REGION_POSTS_PLAN.md` "Slot assignments" (corrected 2026-07-09).
+### 2026-08 — August (Slot B: Galilee; Slot C: Central Mountains)
 
 | Channel | Item | Target | Status |
 |---|---|---|---|
-| Blog | `blog-galilee` — Galilee region post | 2026-08-11 | Drafted + registered, held |
+| Blog | `blog-region-galilee` — Galilee region post | 2026-08-11 | Drafted + registered, held |
 | Email (post companion) | Galilee companion email | 2026-08-11 | Not started |
 | Print Newsletter | Issue #4 | 2026-08-25 | Not started |
-| Blog | Slot C region post — region TBD | 2026-08-25 | Not started |
-| Email (post companion) | Slot C companion email | 2026-08-25 | Not started |
+| Blog | `blog-region-central-mountains` — Central Mountains region post | 2026-08-25 | Body drafted through Image Prompts; calendar row staged |
+| Email (post companion) | Central Mountains companion email | 2026-08-25 | Not started |
 
 ### 2026-09 — September (Slot C continued)
 

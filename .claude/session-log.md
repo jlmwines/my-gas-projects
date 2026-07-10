@@ -4,6 +4,18 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-10 (cont'd, part 2) — Documentation reconciliation pass (no code changes)
+
+- User flagged general doc neglect ("this needs to be fixed now"). Verified facts against source before writing (plan docs, live code via grep, config files) rather than acting on the complaint alone — found real, specific drift, not just staleness-by-age (last cleanup was only yesterday, 2026-07-09).
+- **`jlmops/plans/BUG_FIX_SEQUENCE.md`**: header said "Sessions E–I remain" while the doc's own body already showed E and G resolved — fixed header + added missing ✅ to Session G's heading. **`plans/STATUS.md`** Active Plans had the same contradiction ("Sessions A–G resolved" while separately listing F as pending) — fixed to "A–E and G".
+- **`content/PUBLICATION_CALENDAR.md`** had gone stale within the same day it was last touched: written before Central Mountains got assigned to Slot C later on 2026-07-09 (still showed "Slot C region TBD"), and still used the pre-correction `blog-negev`/`blog-galilee` slugs after `REGION_POSTS_PLAN.md` fixed the convention to `blog-region-<name>` that same day. Reconciled both.
+- **`jlmwines/CALENDAR.md`** (project root) carried its own "2026 Content Calendar" table, untouched since 2026-06-21 — predated Negev jumping the queue out of sequence, so every date in it was wrong (e.g. showed Galilee's email as 2026-07-07, the date Negev's promo actually went out; didn't mention Negev at all). Retired the table in favor of `content/PUBLICATION_CALENDAR.md` (the doc actually being kept current) rather than re-deriving a second copy that will just drift again. Also fixed: UI_AUDIT summary still listed T2.4 as open (resolved 2026-07-08); Bundle-handling row pointed at an archived plan (`_archive/IMPLEMENTATION_PLAN.md`) and described pre-shipped stages; Housekeeping "2-arg setConfig" bug item verified against live code — no 2-arg `setConfig` calls exist anywhere in the codebase now, item was moot, removed.
+- Verified (no drift found): `jlm_stable_deploy_id` memory vs. live `config/system.json`/`.deployment-id` — pinned ID matches exactly despite @461→@468 deploys since the memory was last checked. `WORKFLOWS.md` §14.1/§14.5 (Accept Suggestion field order) — confirmed already correct. `RELIABILITY_AUDIT.md`/`UI_AUDIT.md` tier-completion claims spot-checked via grep — accurate.
+- Not done this pass: `.claude/session-log.md` pruning (oldest visible entry is right at the 30-day boundary, not clearly over); portfolio-root `CALENDAR.md` (out of scope for a project-scoped pass per existing convention).
+- Next: none outstanding from this thread.
+
+---
+
 ## 2026-07-10 (cont'd) — Manager product-editor spinner fixes (@466); unauthorized deploy incident (@467)
 
 - User reported no loading feedback (no spinner/disabled state) on the Manager product-editor modal's Submit/Save & revert/Done buttons — easy to miss on mobile, `submitChanges` also had no `.withFailureHandler()` at all (silent-stuck-forever on error). Explicitly authorized ("fix all"), fixed to match `TaskDetail.html`'s existing disable+spinner pattern, deployed @466, confirmed working.

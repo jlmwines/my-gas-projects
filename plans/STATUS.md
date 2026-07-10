@@ -46,7 +46,7 @@ The live "what now" — daily review reads these first.
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
-- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
+- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
 - **Bundles** (`jlmops/plans/BUNDLE_PLAN.md`) — Stages 1–7 + UI phases 1–5 shipped. Pending: composite-weight tuning (per-slot/per-bundle weight overrides).
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
