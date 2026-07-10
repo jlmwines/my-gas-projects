@@ -534,10 +534,10 @@
       <div class="modal-footer bg-light">
         <div id="modal-status" class="mr-auto text-muted small"></div>
         <button class="btn border edit-only" onclick="ManagerProductsView.closeModal()">Cancel</button>
-        <button class="btn edit-only" onclick="ManagerProductsView.submitChanges()">Submit</button>
+        <button class="btn edit-only" id="btn-submit-changes" onclick="ManagerProductsView.submitChanges()">Submit</button>
         <button class="btn border verify-action" onclick="ManagerProductsView.closeModal()">Close</button>
         <button class="btn verify-action" onclick="ManagerProductsView.openRevertPrompt()">Revert</button>
-        <button class="btn verify-action" onclick="ManagerProductsView.confirmVerify()">Done</button>
+        <button class="btn verify-action" id="btn-confirm-verify" onclick="ManagerProductsView.confirmVerify()">Done</button>
       </div>
     </div>
   </div>
@@ -556,7 +556,7 @@
       </div>
       <div class="modal-footer bg-light">
         <button class="btn border" onclick="ManagerProductsView.closeRevertPrompt()">Cancel</button>
-        <button class="btn" onclick="ManagerProductsView.doRevert()">Save &amp; revert</button>
+        <button class="btn" id="btn-save-revert" onclick="ManagerProductsView.doRevert()">Save &amp; revert</button>
       </div>
     </div>
   </div>
@@ -1449,7 +1449,11 @@
       const taskId = ManagerProductsView.currentTaskId;
       const sku = ManagerProductsView.currentSku;
       const status = document.getElementById('modal-status');
-      if (status) status.textContent = 'Saving…';
+      const btn = document.getElementById('btn-confirm-verify');
+      const prevHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+      if (status) status.textContent = '';
       google.script.run
         .withSuccessHandler(res => {
           if (res && res.success) {
@@ -1457,11 +1461,17 @@
             // (matches the button label; no longer auto-walks to the next task).
             ManagerProductsView.closeModal();
             ManagerProductsView.refreshView();
-          } else if (status) {
-            status.textContent = (res && res.message) || 'Failed to confirm.';
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = prevHtml;
+            TaskWidgets.toast((res && res.message) || 'Failed to confirm.', 'error');
           }
         })
-        .withFailureHandler(err => { if (status) status.textContent = 'Error: ' + (err && err.message); })
+        .withFailureHandler(err => {
+          btn.disabled = false;
+          btn.innerHTML = prevHtml;
+          TaskWidgets.toast('Error: ' + (err && err.message), 'error');
+        })
         .WebAppProducts_completeVerifyTask(taskId, sku);
     };
 
@@ -1480,7 +1490,12 @@
       const taskId = ManagerProductsView.currentTaskId;
       const notes = document.getElementById('verify-revert-notes').value || '';
       const st = document.getElementById('verify-revert-status');
-      st.textContent = 'Saving…';
+      const btn = document.getElementById('btn-save-revert');
+      const prevHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving…';
+      st.textContent = '';
+      const restore = function() { btn.disabled = false; btn.innerHTML = prevHtml; };
       // 1) save findings to task notes, then 2) reassign to admin (both existing backends).
       google.script.run
         .withSuccessHandler(() => {
@@ -1490,10 +1505,10 @@
               ManagerProductsView.closeModal();
               ManagerProductsView.refreshView();
             })
-            .withFailureHandler(err => { st.textContent = 'Revert failed: ' + (err && err.message); })
+            .withFailureHandler(err => { restore(); st.textContent = 'Revert failed: ' + (err && err.message); })
             .WebAppDashboardV2_revertTaskToAdmin(taskId);
         })
-        .withFailureHandler(err => { st.textContent = 'Saving notes failed: ' + (err && err.message); })
+        .withFailureHandler(err => { restore(); st.textContent = 'Saving notes failed: ' + (err && err.message); })
         .WebAppDashboardV2_updateManagerTask(taskId, { notes: notes });
     };
 
@@ -1788,14 +1803,24 @@
         wdm_KashrutK5: document.getElementById('edit-Kashrut5').value
       };
 
-      document.getElementById('modal-status').textContent = 'Submitting...';
+      const btn = document.getElementById('btn-submit-changes');
+      const prevHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting…';
+      document.getElementById('modal-status').textContent = '';
       google.script.run.withSuccessHandler(res => {
         if (res.success) {
           ManagerProductsView.closeModal();
           ManagerProductsView.refreshView();
         } else {
+          btn.disabled = false;
+          btn.innerHTML = prevHtml;
           TaskWidgets.toast('Error: ' + res.message, 'error');
         }
+      }).withFailureHandler(err => {
+        btn.disabled = false;
+        btn.innerHTML = prevHtml;
+        TaskWidgets.toast('Error: ' + (err && err.message), 'error');
       }).WebAppProducts_handleManagerSubmit(ManagerProductsView.currentTaskId, ManagerProductsView.currentSku, formData);
     };
 
