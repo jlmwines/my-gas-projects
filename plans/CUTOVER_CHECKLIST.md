@@ -124,7 +124,7 @@ Walk every critical flow on staging in **incognito** (no cached state):
 
 ### 1.2 — Confirm theme files on live
 - [ ] wp-admin (live) → Appearance → Themes → confirm `JLM Wines` theme is **installed but inactive**
-- [ ] If outdated (older than current staging deploy): re-upload latest zip from `exchange/zip/jlmwines-theme-vX.Y.Z.zip` to refresh
+- [ ] If outdated (older than current staging deploy): re-upload a fresh zip. Theme source is fully tracked in git (`website/jlmwines-theme/`), so build the zip from the current git checkout at cutover time — don't rely on a pre-staged zip sitting in `exchange/` (that pattern was retired 2026-07-10; local zip snapshots go stale and duplicate what git already has).
 
 ### 1.3 — Confirm settings carried from earlier work
 - [ ] **Site Icon** — Customize → Site Identity → confirms `jlm-wines-600-white-solid.jpg` (set 2026-05-03)

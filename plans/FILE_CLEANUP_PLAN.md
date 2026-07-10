@@ -1,6 +1,6 @@
 # File & Folder Cleanup Plan — Exchange Folders + Scratch Areas
 
-**Status: survey complete, no files touched.** Two gitignored scratch folders (`exchange/` at jlmwines root, `jlmops/exchange/`) have accumulated a large, mixed backlog with no consistent rule for what goes where or when it gets cleared. This is a real plan, not a quick pass — nothing gets deleted until each category below is reviewed and confirmed.
+**Status: executed 2026-07-10.** All 6 proposed categories were run, safest-first. `jlmops/exchange/` was fully cleared (20 files — confirmed zero doc references). `exchange/` (jlmwines root) went from ~130 items to ~19 — everything with zero doc references and served purpose is gone; load-bearing files (credentials, `seo-audit/`, `strings/`) were kept untouched per the original survey. A handful of ambiguous items were deliberately left for a decision rather than guessed — see "Remaining decision items" below.
 
 ## Why two folders exist and what each actually holds
 
@@ -20,7 +20,7 @@ Checked every `.md` doc that references an `exchange/` path (not just guessed) �
 | `exchange/rankmath-mcp.credentials.csv` | `plans/RANKMATH_WPML_AUDIT.md` | **Live credential**, actively used for RankMath MCP auth via curl. Keep, handle with care (rotate if stale, don't delete blind). |
 | `exchange/seo-audit/` | `plans/SEO_AUDIT_2026-05-06.md` | Explicitly "kept for re-audit reference." Keep. |
 | `exchange/strings/` (whole subfolder — 15 `.po`/`.txt` files + 2 lookup scripts) | `plans/CUTOVER_CHECKLIST.md` | Live WPML translation-string workspace, not incidental scratch. `jlmwines-he-draft.po` specifically is already flagged in the checklist as "optional: delete or keep as reference" — a decision already pending, not new. |
-| `exchange/zip/jlmwines-theme-v1.0.80.zip` | `plans/CUTOVER_CHECKLIST.md` | **Stale** — checklist assumes this gets refreshed to the current theme version when needed, but current live theme is v1.2.30 (per `plans/STATUS.md`) and this zip is v1.0.80, many versions behind. The checklist's "keep this current" intent isn't being maintained. |
+| `exchange/zip/jlmwines-theme-v1.0.80.zip` | `plans/CUTOVER_CHECKLIST.md` | **Removed 2026-07-10** — was many versions stale; theme is fully tracked in git, so no local zip is needed at all. Checklist updated accordingly (see "Remaining decision items"). |
 
 **Also found, and this is a real bug, not a cleanup item:** `marketing/EMAIL_GUIDELINES.md` references `exchange/pesach-email-en.html` and `exchange/pesach-email-he.html` as reference HTML — **neither file exists.** The doc is citing files that are already gone. This needs fixing in the doc regardless of what else happens here (either the files get restored from Drive/git history if they still matter, or the doc's reference gets removed).
 
@@ -50,6 +50,16 @@ Proposed, open for adjustment:
 - **Age-based default:** anything in either folder untouched for 60+ days and not referenced by a living doc is fair game for removal without asking each time — codify this as a recurring check in the portfolio kernel's existing Cleanup & Organization Session, rather than inventing a new cadence.
 - **Local folder naming should align with the system's own identifiers — slug, campaign, content type — not ad hoc names.** Already the emerging pattern for region posts (`content/regions/<region>/` matching the entity slug, holding that region's `.post.md` pair, images, and per-post script together). Extend this as the standard: a content piece's local folder is named/keyed by its slug, session working files for a given piece live alongside it rather than in a generic scratch folder, and where a campaign or content-type grouping is relevant (e.g., the monthly companion-email set), the folder structure reflects that grouping too — mirroring the same taxonomy `SysLibrary`/`SysMarketingCampaigns` already uses, so a human (or a session) can find a piece's files by the same name they'd look it up by in jlmops.
 
+## Remaining decision items (found during execution, not deleted)
+
+- **`.mc-credentials`** (root `exchange/`) — a live-looking Mailchimp credential file the original survey didn't catch. Same handling as `rankmath-mcp.credentials.csv`: keep, rotate-or-confirm only, never blind-delete.
+
+**Resolved 2026-07-10:**
+- No theme zip is needed at all — `website/jlmwines-theme/` is fully tracked in git (current through v1.2.31), so a local zip is always redundant with git history. Removed both `exchange/jlmwines-theme.zip` and the `exchange/zip/` folder (containing the stale `jlmwines-theme-v1.0.80.zip`). `CUTOVER_CHECKLIST.md` §1.2 updated to build a fresh zip from git at cutover time instead of expecting a pre-staged one in `exchange/`.
+- Removed the two loose `.po` files (`jlmwines-he-live.po`, `woocommerce-he.po`) — superseded by the live `strings/` WPML workspace, which stays.
+- `ds-preview.html` and the two recent CSVs (`editorial calendar - Sheet3.csv`, `JLM GA4 Weekly - *.csv`) removed on confirmation.
+- `content-production-guide.{html,md,pdf}` turned out NOT to be a duplicate — it's a distinct Manager/Admin-facing task-workflow guide (jlmops app UI steps), not overlapping content/CLAUDE.md's writing spec at all. Kept as real documentation and moved to `content/PRODUCTION_GUIDE.{md,html,pdf}`, referenced from `content/CLAUDE.md`.
+
 ## Next step
 
-Confirm which of the 6 categories above to act on (all at once, or one at a time), and whether the age-based default (60 days, no doc reference) is the right bar — then I'll go through file-by-file within approved categories and report exactly what's removed before doing it, not after.
+Everything is resolved except `.mc-credentials`, which stays as a live credential (rotate-or-confirm only). This plan can be archived.

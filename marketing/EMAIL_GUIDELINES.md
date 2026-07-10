@@ -42,9 +42,9 @@ Colors/fonts mirror the site's brand — source of truth is the theme CSS `:root
 
 ## File Structure
 
-- `exchange/pesach-email-en.html` — English email (full HTML for reference)
-- `exchange/pesach-email-he.html` — Hebrew email (RTL, full HTML for reference)
-- `content/pesach/` — Image assets (header, textures)
+- `marketing/newsletter/issues/2026-06/2026-06-handling-en.html` — English email (full HTML for reference)
+- `marketing/newsletter/issues/2026-06/2026-06-handling-he.html` — Hebrew email (RTL, full HTML for reference)
+- Per-issue image assets live alongside each issue's HTML under `marketing/newsletter/issues/<month>/`
 
 ## Hebrew Version Checklist
 
