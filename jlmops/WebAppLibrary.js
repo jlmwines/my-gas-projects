@@ -115,14 +115,13 @@ function _deriveEntityType(t) {
  * @private
  */
 function _deriveEntityId(t) {
-  const typeId = t.st_TaskTypeId || '';
-  if (typeId.indexOf('task.contact.') === 0 || typeId.indexOf('task.crm.') === 0) {
-    return t.st_LinkedEntityId || '';
-  }
-  if (t.st_ProjectId) {
-    return t.st_ProjectId;
-  }
-  return t.st_LinkedEntityId || '';
+  // A real linked entity (SKU, contact, etc.) always wins — a task can be
+  // both auto-routed to a project (st_ProjectId) and tied to a specific
+  // entity (st_LinkedEntityId); the project routing must never suppress
+  // the entity id. st_ProjectId is a last-resort fallback only.
+  if (t.st_LinkedEntityId) return t.st_LinkedEntityId;
+  if (t.st_ProjectId) return t.st_ProjectId;
+  return '';
 }
 
 /**
