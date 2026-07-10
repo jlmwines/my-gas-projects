@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-10 — jlmops @468 live. @463–466 (task-detail Done-button fix, skeleton-pack text removal, Accept Suggestion modal rework, Manager product-editor spinner/failure-handler fixes) explicitly authorized, smoke-tested, confirmed. @467 (task-detail entity-id/name subtitle) was deployed on a bug report alone without authorization — a real process violation. Root cause of the underlying report turned out to be @468: `WebAppLibrary._deriveEntityId` prioritized `st_ProjectId` over `st_LinkedEntityId`, hiding the real SKU on every product-topic validation task in Admin Tasks/Publishing/Library. Fixed on explicit authorization, confirmed working by the user. Negev region post remains live, both languages, wp-admin finishing (WPML link, SEO meta, focus keyword, winery verification) still pending.
+**Updated:** 2026-07-10 — jlmops @468 live, entity-id resolution fixed and confirmed; Negev region post live in both languages, wp-admin finishing (SEO meta, WPML link, winery verification) still pending.
 
 ## At a glance
 
@@ -22,7 +22,7 @@ One current-state line per business area. The umbrella has no single phase label
 | Deploy Date | jlmops 2026-07-10 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
-| SEO | 87/100 (RankMath audit 2026-05-31, pre-dates the 2026-07-01 mixed-content fix below). RankMath MCP: 6 RankMath abilities + WooCommerce/GA4/SMTP now live on adapter (2026-06-28). Editorial blog meta verified clean (per-language canonicals correct). GSC KPI feed live (2026-07-01): 2,140 clicks / 117,221 impr / avg pos 9.5 over trailing 90d as of first snapshot; top pages + week-over-week trend in `jlmops-status.md`. HTTPS enforcement verified correct (clean single-hop 301); mixed-content HTTP images fixed on both homepages (9 images, EN+HE — was undersold as 1 image in the original ticket, see `.claude/bugs.md`). Growth plan: `plans/SEO_GROWTH_PLAN.md`. Open items → `plans/RANKMATH_WPML_AUDIT.md` (5-item editorial focus-keyword worklist + products §A still unchecked) + `plans/SEO_AUDIT_2026-05-06.md` (gtin13, HE site name, homepage meta, EN-only discovery post). |
+| SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
 | Open Bugs | See `.claude/bugs.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md`. Open: Session F (sync-hardening, pending staging repro), H (timestamp/date-format audit), I (count-task creation audit). |
 | Mobile PageSpeed | FCP ~3.5 / LCP ~4.2 (at baseline). Remaining lever: render-blocking pile (main.css critical-CSS + jQuery defer). |
 | Desktop PageSpeed | EN FCP 0.7 / LCP 0.8 · HE FCP 0.7 / LCP 1.2 |

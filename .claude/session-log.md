@@ -335,6 +335,22 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 - Drive: user moved print newsletter Docs to `Library/print/`.
 - Next: AYIW email sends 2026-06-24; mark June entities published after send+distribute. Then CONTENT_DISTRIBUTION_PLAN Step 1 (add `print` to schemas.json).
 
+## 2026-06-23 — Content Distribution Plan complete @366
+
+- Verified CONTENT_DISTRIBUTION_PLAN against reality: Drive/register side done, GAS side not yet. Fixed plan header and Step 1/2 descriptions.
+- Added `print` to LibraryService VALID_TYPES and SIBLING_LANGUAGE_TYPES.
+- 6 new task types in taskDefinitions.json: print.create-en/he, print.distribute, email.create-en/he, email.send.
+- TaskPacks: print create/email create → content_edit; print.distribute → confirmation; email.send → content_publish.
+- WebAppProjects: 6 new CONTENT_STAGES for spawnContentChain.
+- markPublished: propagates url-stamped activity to referencing entities when externalUrl provided.
+- Next: run rebuildSysConfigFromSource() in GAS to pick up new task definitions; then spawn print/email chains for June entities.
+
+## 2026-06-23 — Unified Task UI Deploy E
+
+- Deploy E shipped @365: PublishingView Tasks tab `renderTasks()` refactored to iterate `TASK_COLUMNS` array (title/entity/assignee/status/due/doc). Header and body both driven by the array via `_renderPvTaskCell`. No behavior change.
+- AdminTasksView excluded from Deploy E (12-column/3-panel-state system too complex without regression risk). Deferred to future session if needed.
+- UNIFIED_TASK_UI_PLAN.md closed: Deploys A–E all shipped @354–@365. Future items (inline quick actions, mobile filter toggle) remain as "later" in the plan.
+
 ## 2026-06-23 — Unified Task UI Deploy D @364
 
 - ManagerDashboardView_v2.html: include('TaskPacks') → include('TaskDetail'); TaskPacks.configure → TaskDetail.configure with getTask (injects assignedTo:'Manager'), getEntity from libraryBySlug, saveTask/completeTask/revertTask via WebAppDashboardV2_* callbacks.
@@ -632,19 +648,3 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 ## Pruned — entries before 2026-06-09 (cleanup 2026-07-09, extends the 2026-07-08 pass)
 
 Entries from 2026-05-15 through 2026-06-08 were condensed out per this file's own header and the portfolio kernel's 30-day pruning default (2026-06-08 entries were exactly 31 days old at this pass). Durable facts from that period (Content Library entity model, Bundle Plan stages 0-7 incl. the rev-2.2 generator + inline-at-row editor, reliability audit tiers, UI mobile-responsiveness pass, notification-UX standard, PublishingView build, packing-task close-path/overdue fixes) already graduated into `jlmops/docs/DATA_MODEL.md`, `ARCHITECTURE.md`, `WORKFLOWS.md`, and the relevant `jlmops/plans/*.md` / `_archive/*.md`. Full narrative detail, if ever needed, is in git history for that date range.
-
-## 2026-06-23 — Unified Task UI Deploy E
-
-- Deploy E shipped @365: PublishingView Tasks tab `renderTasks()` refactored to iterate `TASK_COLUMNS` array (title/entity/assignee/status/due/doc). Header and body both driven by the array via `_renderPvTaskCell`. No behavior change.
-- AdminTasksView excluded from Deploy E (12-column/3-panel-state system too complex without regression risk). Deferred to future session if needed.
-- UNIFIED_TASK_UI_PLAN.md closed: Deploys A–E all shipped @354–@365. Future items (inline quick actions, mobile filter toggle) remain as "later" in the plan.
-
-## 2026-06-23 — Content Distribution Plan complete @366
-
-- Verified CONTENT_DISTRIBUTION_PLAN against reality: Drive/register side done, GAS side not yet. Fixed plan header and Step 1/2 descriptions.
-- Added `print` to LibraryService VALID_TYPES and SIBLING_LANGUAGE_TYPES.
-- 6 new task types in taskDefinitions.json: print.create-en/he, print.distribute, email.create-en/he, email.send.
-- TaskPacks: print create/email create → content_edit; print.distribute → confirmation; email.send → content_publish.
-- WebAppProjects: 6 new CONTENT_STAGES for spawnContentChain.
-- markPublished: propagates url-stamped activity to referencing entities when externalUrl provided.
-- Next: run rebuildSysConfigFromSource() in GAS to pick up new task definitions; then spawn print/email chains for June entities.
