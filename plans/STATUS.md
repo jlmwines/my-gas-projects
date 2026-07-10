@@ -105,7 +105,7 @@ _**Before adding:** bug? → `.claude/bugs.md`. Idea/feature? → `.claude/wishl
 
 ### Active
 
-- **PROJ-CONTENT task routing** — decided June 11, not built (3rd review carry). Three-step fix in `.claude/bugs.md`. New-product smoke gate cleared 2026-07-09; ready to schedule next jlmops session.
+_(none)_
 
 ### Deferred
 

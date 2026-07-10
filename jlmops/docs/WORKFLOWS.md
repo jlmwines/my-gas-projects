@@ -75,11 +75,7 @@ To change routing, edit `config/system.json` → `node generate-config.js` → `
 
 Campaign-type projects (e.g. Core Content, `PROJ-6878357E`) are created per program and carry a `spro_CampaignId`. Schema → `DATA_MODEL.md` (`SysProjects`).
 
-**Coverage gaps (current — a tracked fix closes these; see `.claude/bugs.md`).** Until that fix ships, some auto-created tasks do not resolve to a real project:
-
-- **`Content`** (16 task types) maps to `PROJ-CONTENT`, which is **not yet seeded** in `SysProjects`. These tasks are still tracked operationally via their Library entity (`st_EntityId`). Fix: seed `PROJ-CONTENT` as a user-managed project (plain id, not `PROJ-SYS_`, since users own its tasks).
-- **`Marketing`** (15 task types) has **no map entry**. Fix: fold into Content (add `Marketing → PROJ-CONTENT`).
-- **`Data`** (2 task types) has **no map entry**. Fix: re-topic per domain — `task.data.review` (cities lookup) → `CRM` (→ `PROJ-SYS_CRM`); `task.data.coupons_update` → `Marketing` (→ Content). The `Data` topic then retires.
+**Coverage — complete.** The topic-map fix shipped 2026-06-22 (@339): `Marketing` now maps to `PROJ-CONTENT` and the two `Data` task types were re-topiced (`task.data.review` → `CRM`; `task.data.coupons_update` → `Marketing`). `PROJ-CONTENT` itself is seeded in `SysProjects` (confirmed live 2026-07-10: `PROJ-CONTENT, Content, CAMPAIGN, ACTIVE`) — every topic in the map now resolves to a real project row.
 
 `Custom` (`task.project.custom`) is intentionally unmapped: user-created tasks require the user to choose a project (`WebAppTasks` rejects a missing one), so they already satisfy the rule.
 
