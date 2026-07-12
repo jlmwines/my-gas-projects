@@ -1046,6 +1046,43 @@ const ProductService = (function() {
     }
   }
 
+  /**
+   * Collects the SKUs of every currently-open product-related task, plus the
+   * requested SKU. Used to harvest per-SKU cache entries for the rest of the
+   * open task list while a sheet is already being read for one product, so
+   * later opens on the same list are cache hits instead of full re-reads.
+   * @param {string} includeSku - The SKU currently being fetched; always included.
+   * @returns {Set<string>} SKUs to harvest.
+   * @private
+   */
+  function _getOpenProductTaskSkus(includeSku) {
+    // Same task-type set WebAppProducts_getProductsWidgetData uses to classify product tasks.
+    const namedProductTaskTypes = new Set([
+      'task.validation.vintage_mismatch',
+      'task.onboarding.suggestion',
+      'task.onboarding.add_product'
+    ]);
+    const skus = new Set();
+    if (includeSku) skus.add(String(includeSku).trim());
+
+    try {
+      const openTasks = WebAppTasks.getOpenTasks();
+      openTasks.forEach(t => {
+        const type = t.st_TaskTypeId || '';
+        const isProductTask = namedProductTaskTypes.has(type) ||
+          (type.startsWith('task.validation.') && type !== 'task.validation.comax_internal_audit');
+        if (isProductTask && t.st_LinkedEntityId) {
+          skus.add(String(t.st_LinkedEntityId).trim());
+        }
+      });
+    } catch (e) {
+      LoggerService.warn('ProductService', '_getOpenProductTaskSkus',
+        `Failed to harvest open task SKUs: ${e.message}`);
+    }
+
+    return skus;
+  }
+
   function getProductDetails(sku) {
     const startTime = new Date();
     try {
@@ -1069,12 +1106,23 @@ const ProductService = (function() {
         webProd: allConfig['schema.data.WebProdM']
       };
 
-      // Helper to fetch row object with CacheService caching
+      const targetSku = String(sku).trim();
+      // SKUs to harvest into cache while we're already reading a sheet for targetSku —
+      // covers the rest of the open task list, not just this one product. Computed lazily
+      // (only on an actual cache miss) so a fully-warm call doesn't pay for a SysTasks read
+      // it never uses.
+      let harvestSkus = null;
+      const getHarvestSkus = () => {
+        if (!harvestSkus) harvestSkus = _getOpenProductTaskSkus(targetSku);
+        return harvestSkus;
+      };
+
+      // Helper to fetch a row with per-SKU CacheService caching (whole-sheet caching
+      // exceeded CacheService's 100KB-per-value limit and failed on every call).
       const getRowObject = (sheetName, schema, keyCol) => {
-        const cacheKey = `productData_${sheetName}`;
         const cache = CacheService.getScriptCache();
+        const cacheKey = `productData_${sheetName}_${targetSku}`;
         const now = Date.now();
-        const targetSku = String(sku).trim();
 
         // Try to get from CacheService
         try {
@@ -1084,16 +1132,9 @@ const ProductService = (function() {
             const cacheAge = Math.round((now - parsed.timestamp) / 1000);
 
             LoggerService.info('ProductService', 'getProductDetails',
-              `Using CacheService data for ${sheetName} (age: ${cacheAge}s)`);
+              `Using CacheService data for ${sheetName} SKU ${targetSku} (age: ${cacheAge}s)`);
 
-            // Reconstruct Map from cached entries array
-            const dataMap = new Map(parsed.entries);
-            const rowObj = dataMap.get(targetSku);
-            if (!rowObj) {
-              LoggerService.info('ProductService', 'getProductDetails',
-                `SKU ${targetSku} not found in cached ${sheetName}`);
-            }
-            return rowObj || null;
+            return parsed.row || null;
           }
         } catch (e) {
           LoggerService.warn('ProductService', 'getProductDetails',
@@ -1134,39 +1175,38 @@ const ProductService = (function() {
             return null;
         }
 
-        // Build map for entire sheet
-        const dataMap = new Map();
+        const headerIndexMap = headers.map(h => sheetHeaders.indexOf(h));
+
+        // Build + cache rows only for SKUs we actually care about (the requested SKU
+        // plus the rest of the open task list), not the whole sheet.
+        let targetRow = null;
+        let cachedCount = 0;
         for (let i = 1; i < data.length; i++) {
             const rowData = data[i];
             const key = String(rowData[keyIndex]).trim();
-            if (key) {
-                const rowObj = {};
-                headers.forEach((h, idx) => {
-                    const headerIdx = sheetHeaders.indexOf(h);
-                    if (headerIdx > -1) rowObj[h] = rowData[headerIdx];
-                });
-                dataMap.set(key, rowObj);
+            if (!key || !getHarvestSkus().has(key)) continue;
+
+            const rowObj = {};
+            headers.forEach((h, hIdx) => {
+                const headerIdx = headerIndexMap[hIdx];
+                if (headerIdx > -1) rowObj[h] = rowData[headerIdx];
+            });
+
+            if (key === targetSku) targetRow = rowObj;
+
+            try {
+              cache.put(`productData_${sheetName}_${key}`, JSON.stringify({ timestamp: now, row: rowObj }), 300); // 300 seconds = 5 minutes
+              cachedCount++;
+            } catch (e) {
+              LoggerService.warn('ProductService', 'getProductDetails',
+                `Failed to cache ${sheetName} SKU ${key}: ${e.message}`);
             }
         }
 
-        // Cache the map using CacheService (convert Map to array for JSON serialization)
-        const cacheData = {
-          timestamp: now,
-          entries: Array.from(dataMap.entries())  // Convert Map to array for JSON
-        };
+        LoggerService.info('ProductService', 'getProductDetails',
+          `Cached ${cachedCount} row(s) in CacheService for ${sheetName} (harvested from open task list)`);
 
-        try {
-          cache.put(cacheKey, JSON.stringify(cacheData), 300); // 300 seconds = 5 minutes
-          LoggerService.info('ProductService', 'getProductDetails',
-            `Cached ${dataMap.size} rows in CacheService for ${sheetName}`);
-        } catch (e) {
-          LoggerService.warn('ProductService', 'getProductDetails',
-            `Failed to cache ${sheetName}: ${e.message}`);
-        }
-
-        // Return the requested row
-        const rowObj = dataMap.get(targetSku);
-        return rowObj || null;
+        return targetRow;
       };
 
       let masterData = getRowObject(sheetNames.master, schemas.master, 'wdm_SKU');

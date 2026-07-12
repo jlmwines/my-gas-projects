@@ -4,7 +4,7 @@
 
 Sequenced by readiness (concrete fix shape → diagnosis needed → larger scope → audits). Each session is one focused unit of work. Sessions A–E each end with: commit → user OK → `clasp push` → user smoke → user OK → `deploy.ps1`.
 
-**Progress 2026-07-10:** Sessions A–E and G shipped/resolved. Open: F (sync hardening, needs staging repro), H (timestamp/date-format audit), I (count-task creation audit).
+**Progress 2026-07-12:** Sessions A–E and G shipped/resolved. Open: F (sync hardening, needs staging repro), H (timestamp/date-format audit), I (count-task creation audit), J (product-editor cache fix + manager submit hang, new 2026-07-12).
 
 ---
 
@@ -137,6 +137,29 @@ UX optimization, not a correctness bug. Last in the sequence intentionally — e
 2. Confirm correct-user assignment.
 3. Split data-validation tasks from count-validation tasks so they run as separate paths (don't require a count to do a data review).
 4. Produce audit + change list; fixes follow.
+
+---
+
+## Session J — Product-editor cache failure + manager submit hang
+
+**Bugs:** 2026-07-12. Two bugs found together while investigating one manager-reported incident (SKU 7290101582403 submit stuck on "Submitting…" for several minutes) — see `.claude/bugs.md`.
+
+**Progress:** Item 1 (cache fix) shipped 2026-07-12 @469, not yet smoke-tested. Items 2-4 (submit hang reassessment/diagnosis/defensive timeout) not started — depend on retesting after item 1.
+
+**Plan:**
+1. **Cache fix (concrete fix shape, do first).** Rejected a plain per-SKU reactive cache (cache only the SKU being opened, lazily) — that only speeds up *reopening the same SKU*, not the real workflow, which is walking a bounded list of distinct open tasks once each (manager: `WebAppProducts_getManagerProductTasks` typically returns single digits of tasks; admin: several card-scoped task lists, same order of magnitude). Reactive-only caching would leave every task's first open exactly as slow as today.
+
+   **Design: harvest-while-reading, keyed to the open task list (per-SKU cache entries, no separate prefetch round-trip).** `ProductService.getRowObject`'s cache-miss branch (`ProductService.js:1073-1170`) already pays for a full `getDataRange().getValues()` read of `WebDetM`/`CmxProdM`/`WebProdM` on every miss — that read is unavoidable for the first task opened. Instead of trying to cache the whole sheet as one blob (today's broken approach — exceeds CacheService's 100KB-per-value limit, `cache.put()` throws on every call, confirmed 100% miss rate) or caching only the requested SKU, use that same read to harvest rows for *every currently-open product task's SKU*, not just the one being viewed, and write each as its own small per-SKU cache entry (`productData_<sheetName>_<sku>`) — small enough to comfortably fit the 100KB cap.
+   - New helper in `ProductService` (e.g. `_getOpenProductTaskSkus()`): call `WebAppTasks.getOpenTasks()` (existing `SysTasks` read + Done/Cancelled filter, `WebAppTasks.js:88-121` — reuse, don't duplicate) and filter to the task-type set already established in `WebAppProducts_getProductsWidgetData` (`WebAppProducts.js:12-58`): `task.validation.vintage_mismatch`, `task.onboarding.suggestion`, `task.onboarding.add_product`, and `task.validation.*` generally except `task.validation.comax_internal_audit`. Collect their `st_LinkedEntityId` values into one small Set — confirmed the raw SKU field, no derivation-order risk (`WebAppProducts.js:203`, unlike the unrelated `WebAppLibrary._deriveEntityId` masking bug fixed 2026-07-10, which only affected a different feed). **Verified 2026-07-12: `WebAppTasks`'s cache is in-memory (`let taskCache`, `WebAppTasks.js:12-16`), not `CacheService` — it won't already be warm from an earlier request, so this harvest step pays for one extra small `SysTasks` read per cache-miss call, not a free reuse of a prior call's cache.**
+   - `getRowObject`'s cache-miss branch loops the harvested SKU set against the sheet Map it already built in memory, writing one small cache entry per SKU found (bounded by the open-task-list size, not the catalog size).
+   - Net effect: the first task opened in a session costs what it costs today (~15-18s, unavoidable); every other task already on the open list becomes a cache hit the moment its editor is opened, with no separate prefetch trigger or background call needed.
+
+   **Decision (2026-07-12): `_invalidateProductCache` stays as-is (whole-sheet key removal, now a no-op against the new per-SKU keys) — don't make it SKU-aware.** Let the 300s TTL be the staleness bound after a submit instead; low-stakes since it's the just-submitted product going briefly stale in its own cache. **Added benefit:** today, because caching is whole-sheet-scoped, `_invalidateProductCache`'s literal-key removal on every save wipes the cache for *all four sheets at once* — any save by anyone makes every other in-flight product editor cold again ("every product behaves as the first after save"). Per-SKU keys fix this as a side effect: the no-op invalidation only leaves the just-saved SKU briefly stale; every other product's cache stays warm.
+2. **Reassess the submit hang after #1 ships.** The cache fix removes most of the extra dwell-time in the modal; retest whether the submit-never-reaches-server issue still reproduces. If it clears up, it was likely time/exposure-window related (mobile connection drop, stale binding across a long-open modal).
+3. **If it still reproduces:** diagnosis-first, matching Session F's pattern — repro live with browser DevTools console open, capturing any client-side JS error at the moment of the stuck click. `SysLog` can't help further here since nothing ever left the browser for the failed attempt.
+4. **Defensive fix regardless of root cause:** add a client-side timeout on the Submit button (`ManagerProductsView.html` submit handler, ~line 1809-1824) — if neither the success nor failure handler fires within a bound (e.g. 30-45s), re-enable the button and surface an error toast so the manager can retry, instead of an indefinite silent hang. Cheap, ships independent of whether root cause is ever found.
+
+Sequencing: 1 → 2 → (3 if still reproducing) → 4. Item 4 doesn't need to wait on 3 — it's a safety net that can ship alongside 1.
 
 ---
 

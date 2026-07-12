@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-12 — Manager product-editor slow-load + submit-hang bug: cache fix shipped (jlmops @469)
+
+- Investigated a manager-reported stuck submit (SKU 7290101582403, "Submitting…" for several minutes). Cross-referencing `SysLog`, the Apps Script Executions view, and a manager screenshot found two separate bugs: `CacheService` caching for the big product sheets was failing 100% of the time (every editor open did 4 full uncached sheet reads, ~15-18s), and a distinct, still-unexplained submit-dispatch failure for that one product (request never reached the server at all, confirmed against sibling submits that succeeded in the same window).
+- User pushed back on an initial reactive per-SKU cache design (wouldn't actually speed up the real workflow — each open task is a different SKU visited once). Landed on a better fix: harvest cache entries for every SKU on the open task list during the one unavoidable first read, instead of caching only the SKU being viewed. Also surfaced that the old whole-sheet cache meant any save nuked every other product's cache too ("every product behaves as first after save") — fixed as a byproduct of the redesign.
+- Shipped @469. Documented in `.claude/bugs.md` + `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J (items 2-4 — submit-hang reassessment/diagnosis/defensive-timeout — pending the smoke test below).
+- Next: manager smoke-tests the cache fix 2026-07-13; if editor-open speed is confirmed better, proceed to Session J items 2-4 on the submit hang.
+
+---
+
 ## 2026-07-10 (cont'd, part 3) — PROJ-CONTENT fact-check + exchange-folder cleanup (commits `efe5a11`, `f7a7d4d`)
 
 - Daily review flagged PROJ-CONTENT task routing as "stuck"; user pushed back twice, pointing first at a live `SysProjects.csv` export then at the bigger Calendar/Task/Library effort. Verified live: `PROJ-CONTENT` was already seeded and ACTIVE — `WORKFLOWS.md` §12.0, `bugs.md`, and `STATUS.md` Inbox were all stale, corrected in place. Lesson: a "3rd review carry" item should have been checked against live data, not re-asserted from doc text a third time.
