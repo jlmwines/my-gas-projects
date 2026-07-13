@@ -1,6 +1,6 @@
-# File & Folder Cleanup Plan — Exchange Folders + Scratch Areas
+# File & Folder Cleanup Plan — Exchange Folders + Scratch Areas (ARCHIVED)
 
-**Status: executed 2026-07-10.** All 6 proposed categories were run, safest-first. `jlmops/exchange/` was fully cleared (20 files — confirmed zero doc references). `exchange/` (jlmwines root) went from ~130 items to ~19 — everything with zero doc references and served purpose is gone; load-bearing files (credentials, `seo-audit/`, `strings/`) were kept untouched per the original survey. A handful of ambiguous items were deliberately left for a decision rather than guessed — see "Remaining decision items" below.
+**Status: completed and archived 2026-07-13.** All 6 proposed categories were run, safest-first. The one remaining decision item (`.mc-credentials`) was confirmed OK by the user 2026-07-13 — nothing left open. `jlmops/exchange/` was fully cleared (20 files — confirmed zero doc references). `exchange/` (jlmwines root) went from ~130 items to ~19 — everything with zero doc references and served purpose is gone; load-bearing files (credentials, `seo-audit/`, `strings/`) were kept untouched per the original survey. A handful of ambiguous items were deliberately left for a decision rather than guessed — see "Remaining decision items" below.
 
 ## Why two folders exist and what each actually holds
 
