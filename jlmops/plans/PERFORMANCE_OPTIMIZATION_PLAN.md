@@ -380,7 +380,7 @@ function loadDashboard() {
 
 # Bundles Health Check — N+1 Sheet Reads (added 2026-06-01; **IMPLEMENTED 2026-06-05, @228→@229**)
 
-**Status: done.** Fix A (ctx hoist) + Fix B (healthAlerts off mount) shipped @228 (commit 4059723). A follow-up shipped @229 (commit 71d982d) for a transitive caller this diagnosis missed — see the ⚠ note in the Caller set below. Mount went 100s+ → ~23s (Fix A+B) → a few seconds (@229). Tracked in `jlmops/plans/BUNDLE_PLAN.md` Stage 1.
+**Status: done.** Fix A (ctx hoist) + Fix B (healthAlerts off mount) shipped @228 (commit 4059723). A follow-up shipped @229 (commit 71d982d) for a transitive caller this diagnosis missed — see the ⚠ note in the Caller set below. Mount went 100s+ → ~23s (Fix A+B) → a few seconds (@229). Tracked in `jlmops/plans/_archive/BUNDLE_PLAN.md` Stage 1 (Bundles since implemented and graduated to `jlmops/docs/WORKFLOWS.md` §15).
 
 ## Problem
 

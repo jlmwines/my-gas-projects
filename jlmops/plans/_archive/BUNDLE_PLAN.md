@@ -1,4 +1,6 @@
-# Bundle Handling — Master Plan
+# Bundle Handling — Master Plan — IMPLEMENTED, ARCHIVED
+
+**Archived 2026-07-13 — fully implemented.** Durable facts graduated to system docs: schema → `jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model"; behavior (Maintain/Re-roll, deficiency test, generator, self-check, export gate) → `jlmops/docs/WORKFLOWS.md` §15. This file is kept for its design history (the domain-model reasoning, the Stage 7 rev 1→2.2 review trail) — not current-state truth; read the system docs for that. Remaining open item: `GENERATOR_WEIGHTS` composite-scoring weights are one global tunable, not per-slot/per-bundle overrides — tracked in `CALENDAR.md`, not a plan of its own.
 
 **Created:** 2026-06-04 (consolidates `BUNDLE_AUTHORING_EXPORT_PLAN.md` + `BUNDLE_MANAGEMENT_REFINEMENTS_PLAN.md` into one staged plan).
 **Expanded:** 2026-06-05 — long planning chavruta added two north stars (ops-owns + suggestion view), the bundle/package domain model, the cost/profit data flow, a re-sequenced build order, and a capstone suggestion-engine stage.

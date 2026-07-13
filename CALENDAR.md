@@ -23,7 +23,7 @@ Superseded by `content/PUBLICATION_CALENDAR.md`, which is actively maintained an
 | — | jlmops | Comeback campaign test | After segments reviewed. |
 | — | jlmops | Year in Wine PDF research | PDF generation options. |
 | — | Marketing | Tuesday evening test send | After segments ready. |
-| — | jlmops | Bundle composite-weight tuning | Stages 0-7 + UI phases 1-5 of `jlmops/plans/BUNDLE_PLAN.md` are live; only per-slot/per-bundle weight overrides remain. |
+| — | jlmops | Bundle composite-weight tuning | Bundles implemented (`jlmops/docs/WORKFLOWS.md` §15); `GENERATOR_WEIGHTS` in `BundleService.js` is still one global tunable, not per-slot/per-bundle overrides. |
 | — | Website | Update bundle & package product images | Refresh / replace the product images for the bundle and package (woosb) products on the site. |
 
 ## Recurring

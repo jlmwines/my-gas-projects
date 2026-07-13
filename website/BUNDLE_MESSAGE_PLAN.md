@@ -4,7 +4,7 @@
 
 ## Why
 
-Bundles are customer-alterable by design: some wines are listed at qty 0 so the customer adjusts the mix to taste (`jlmops/plans/BUNDLE_PLAN.md` §1.1, `sb_Type`). The woosb quantity inputs make this possible, but nothing on the page tells the customer the qty field is theirs to change or that 0 removes an item. The message closes that gap.
+Bundles are customer-alterable by design: some wines are listed at qty 0 so the customer adjusts the mix to taste (`jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model", `sb_Type`). The woosb quantity inputs make this possible, but nothing on the page tells the customer the qty field is theirs to change or that 0 removes an item. The message closes that gap.
 
 ## Scope — all bundles
 

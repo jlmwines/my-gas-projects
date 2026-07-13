@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-10 — jlmops @468 live, entity-id resolution fixed and confirmed; Negev region post live in both languages, wp-admin finishing (SEO meta, WPML link, winery verification) still pending.
+**Updated:** 2026-07-13 — jlmops @470 live: Bundles Maintain/Re-roll now self-check against the real deficiency test and report the actual reason instead of a false "ok"; confirmed fixing bundles a prior run had left stuck.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @465, stable. Content-publishing pipeline, Calendar tab UX, task-detail UI, and new-product onboarding all current and live-tested.
+- **jlmops** (GAS backend) — live @470, stable.
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-10 |
+| Last Active | 2026-07-13 |
 | Revenue | Steady |
-| Deploy Version | jlmops @469 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-12 · theme 2026-07-09 |
+| Deploy Version | jlmops @470 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-13 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -46,7 +46,6 @@ The live "what now" — daily review reads these first.
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
 - **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit), J (product-editor cache fix + manager submit hang, found 2026-07-12).
-- **Bundles** (`jlmops/plans/BUNDLE_PLAN.md`) — Stages 1–7 + UI phases 1–5 shipped. Pending: composite-weight tuning (per-slot/per-bundle weight overrides).
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
 
@@ -58,7 +57,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Content Library** — entity/task model live (no auto-paired EN/HE entities, lazy entity creation on first Doc attach with title sourced from the spawning task's `cal_Name`, task-derived status everywhere, calendar-row-picker-only content creation). `PublishingView.html` (promoted from `LibraryView.html`) is the current UI: admin sees Calendar/Library/Campaigns/Projects tabs, manager sees Calendar/Tasks/Library, both with a "Create Content Tasks" entry point. Both Library and Calendar tabs show a Slug column for connection diagnosis. System doc → `jlmops/docs/DATA_MODEL.md`, `jlmops/docs/WORKFLOWS.md` §13; drafting/placement procedure → `jlmops/plans/CONTENT_CREATION_CHECKLIST.md`.
 - **Calendar tab UX** — row click now opens the entity drawer (details) before advancing to a task, plus a status filter (not started/in progress/done/no tasks yet) and a search box repositioned into the title bar. Live @461 (2026-07-09). Status filter smoke-tested and confirmed working 2026-07-09; click-through and search placement not yet smoke-tested. Refresh after "Apply Pending Updates"/"Create Content Tasks" still doesn't fire on the client — investigated, no defect found in code, needs a live repro. Plan/investigation → `jlmops/plans/CALENDAR_TAB_UX_PLAN.md`.
 - **Campaign system** — data model + UI live (`SysMarketingCampaigns` + `SysShortUrls`, UTM/short-URL/QR); short URLs pasted manually (auto-push deferred). Plan → `jlmops/plans/CAMPAIGN_ARCHITECTURE.md`.
-- **Bundles** — all stages (0–7) live; EN/HE export working; composite-weight tuning pending. Plans → `jlmops/plans/BUNDLE_PLAN.md`, `ADMIN_BUNDLES_UI_PLAN.md`.
+- **Bundles** — implemented; plan graduated to system docs (`jlmops/docs/DATA_MODEL.md` "Bundle Management Data Model", `jlmops/docs/WORKFLOWS.md` §15) and archived (`jlmops/plans/_archive/BUNDLE_PLAN.md`). Maintain/Re-roll now self-check their own result against the live deficiency test and record the real reason when a slot stays deficient, deployed jlmops @470 2026-07-13, confirmed fixing bundles a prior Maintain run had left stuck. Composite scoring weights (`GENERATOR_WEIGHTS` in `BundleService.js`) remain a single global tunable, not yet split per-slot/per-bundle — UI redesign tracked separately in `jlmops/plans/ADMIN_BUNDLES_UI_PLAN.md`.
 - **Ops↔session bridge** — OPS writes system-health (15-min) + KPI (daily) into `jlmops-status.md`; `/review-daily` reads it each run. Plan → `jlmops/plans/OPS_SESSION_BRIDGE_PLAN.md`.
 - **KPI Summary Tab** — live @440. All 6 `business/KPI.md` KPIs compute automatically: 4 jlmops-source ones (new customers EN/HE, first-order conversion+AOV, 90-day return rate, newsletter subscribers+engagement) via `SysKPISummary`, plus GA4 organic-traffic EN/HE split and organic-source engagement (bounce rate + pages/session) via a dedicated GA4 audience report. All surface in `jlmops-status.md`, no jlmops UI. Month-over-month trend surfacing also live (new customers, return rate, subscriber MoM vs. last closed month) — but the return-rate/subscriber deltas aren't trustworthy until a month closes naturally (next: 2026-08-01), since all 6 backfilled months share one retroactive snapshot; new-customers deltas are trustworthy now. Schema/system doc → `jlmops/docs/DATA_MODEL.md` (`SysKPISummary`); engineering history archived at `jlmops/plans/_archive/KPI_SUMMARY_TAB.md`. Found + worked around along the way: `ConfigService.loadConfig` silently drops a second param pair for non-schema settings, and `sk_Period` closed-month values get silently converted to Dates by Sheets (`.claude/bugs.md` 2026-07-02/03).
 - **Theme** — live v1.2.31; Homepage Phase 2 (Gutenberg blocks) queued → `website/HOMEPAGE_BLOCKS_PLAN.md`.

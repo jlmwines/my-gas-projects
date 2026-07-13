@@ -240,3 +240,40 @@ The next daily sync's EN pull finds the SKU already in WebProdM (seeded at accep
 ### 14.7 Translation validation
 
 The validation rule `master_translation_missing` checks that every WebProdM row has a matching WebXltM entry (`wxm_WpmlOriginalId = wpm_ID`). `acceptProductSuggestion` seeds the WebXltM row at accept time by fetching the EN product from the Woo REST API, reading `translations.he`, and upserting the row immediately. The daily sync still rebuilds WebXltM wholesale on each run. Refresh Translations (AdminProductsView → New Products tab) remains available for manual corrections.
+
+---
+
+## 15. Bundle Management Workflow
+
+JLMops authors bundle/package composition; WooCommerce (WPClever) is the published record. Schema → `DATA_MODEL.md` "Bundle Management Data Model". Code: `BundleService.js`, `AdminBundlesView.html`.
+
+### 15.1 Refresh cadence
+
+Three independent clocks: (1) **Pull Bundle Data** — on-demand button, WC REST `?type=woosb`, writes composition + WOOSB discount fields straight to `WebProdM`/`WebXltM` master (bundles are exempt from Comax validation, so this bypasses staging safely). (2) **Update Composition** — re-derives `SysBundles`/`SysBundleSlots` from master only, no WC pull; also runs daily via housekeeping (`refreshBundleComposition`), preserving the JLMops-owned fields (`sb_MinTotal`/`MaxTotal`/`LastGenerated`/`GenFlags`) across the rewrite. (3) **Export** — out-of-stock failsafe check runs just before producing the copy-paste `woosb_ids` meta; this is the only fresh-stock gate the export path itself needs, since everything upstream (Maintain/Re-roll) already worked from live data.
+
+### 15.2 Deficiency — the one test everything shares
+
+A **slot** is deficient if its current wine is: out/low-stock (available = Comax stock − on-hold quantity < `system.inventory.minimum_stock`), no longer satisfies its own criteria (category/price/attributes — including `sbs_PriceMax`, the "over-band" case), or (for a base, qty≥1 slot) has no wine assigned at all. A **bundle** is deficient if any slot is, or its base total (Σ price×qty over base slots; flexible qty-0 slots contribute 0) falls outside `[sb_MinTotal, sb_MaxTotal]`.
+
+This single definition (`BundleService._evaluateBundleDeficiency`) drives: the "Needs attention" list badge and `task.bundles.needs_update` (via `checkBundleHealth`, cached in `system.bundles.needs_update_status`), the editor's live "why" strip when a flagged bundle is opened (always a fresh check, not cached), and — since the fix below — Maintain/Re-roll's own self-check of its output.
+
+### 15.3 Maintain vs. Re-roll
+
+Both run the same structure-preserving generator (`_generateBundleComposition`) — it swaps the wine *in* a slot, never adds/removes slots; slot structure (count, criteria, flex vs. base) is authored by hand.
+
+- **Maintain (default).** Re-picks only slots the deficiency test currently flags; keeps every still-valid wine. One bundle (editor) or every deficient bundle (bulk, from the dashboard).
+- **Re-roll (explicit).** Re-picks every product slot regardless of current deficiency — higher churn, for a seasonal reset or "give me new wines."
+
+**Per-slot pick:** candidates = in-criteria, in-stock (live Comax stock − on-hold), not already used elsewhere in the bundle, not `sbs_Exclusive`-reserved to another bundle, ranked by profit (blank → neutral 0.25) + cross-bundle diversity (fewer other bundles using this SKU ranks higher) + stock, under a running per-slot price ceiling (`sbs_PriceMax`, else the remaining `sb_MaxTotal` ÷ remaining base slots). If no candidate clears the pool, the slot keeps its current wine rather than exporting blank or breaking category — this is a legitimate, expected outcome, not a bug, when nothing in stock fits.
+
+**Band enforcement**, after the per-slot fill: a top-up pass upgrades the cheapest-headroom slot while the base total is under `sb_MinTotal` (never breaching `sb_MaxTotal`); a symmetric down-pass downgrades the priciest slot while over `sb_MaxTotal`. Both are monotone (strictly better each step) and terminate.
+
+### 15.4 Self-check — the result is only "ok" if it actually is
+
+The generator's fill/top-up/down-pass loops keep their own internal bookkeeping while they run, but that bookkeeping is **not** the final word: after picks are final, the generator re-runs the same §15.2 deficiency test against its own result (no extra sheet reads — reuses the run's already-loaded inventory snapshot) and writes *that* verdict to `sb_GenFlags`, not its own narrower accounting. A run only reports clean when the real test agrees — including the case where nothing changed at all (a flexible add-on slot that found zero candidates used to fail silently, with no flag; it's now covered by the same check).
+
+`sb_GenFlags` format: `below_min:total=X,min=Y` / `above_max:total=X,max=Y` for a band miss; `<stock|criteria|empty>:<slotId>[:avail=N,min=M][:searched=N,cheapest=P,ceiling=C]` per still-deficient slot — real numbers, not a bare code. Rendered in the editor's generation-status line and the Maintain/Re-roll results table (`AdminBundlesView.html`).
+
+### 15.5 Export gate
+
+Nothing reaches the website until Export. Export selects every bundle whose serialized ops composition differs from the current web `woosb_ids` (a token/order/text-agnostic product-multiset comparison) — covering both "changed this session" and "already drifted, unnoticed" cases in one test. Delivered as a CSV (EN/HE `woosb_ids` cells) pasted into WPClever manually. Un-exported edits are volatile by design — the next Update Composition re-derives from master and, if the edit was never exported, it's gone; this is accepted (ops-as-source-of-truth, publish-or-lost).
