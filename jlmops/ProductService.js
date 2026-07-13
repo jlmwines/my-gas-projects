@@ -1350,65 +1350,64 @@ const ProductService = (function() {
     }
   }
 
+  // Upserts finalData into WebDetM for sku (matching wdm_ keys, falling back to wds_
+  // keys for callers that pass raw staging data). Used by acceptProductDetails
+  // (New Product Onboarding accept).
+  function _upsertMasterProductRow(sku, finalData) {
+    const allConfig = ConfigService.getAllConfig();
+    const masterSchema = allConfig['schema.data.WebDetM'];
+    const masterHeaders = masterSchema.headers.split(',');
+
+    const rowData = {};
+    masterHeaders.forEach(header => {
+      let value = finalData[header]; // Try wdm_ key
+      if (value === undefined) {
+           const stagingKey = header.replace('wdm_', 'wds_');
+           value = finalData[stagingKey]; // Try wds_ key
+      }
+      rowData[header] = value !== undefined ? value : '';
+    });
+    // Ensure SKU matches
+    rowData['wdm_SKU'] = sku;
+
+    const spreadsheet = SheetAccessor.getDataSpreadsheet();
+    const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
+
+    const existingData = masterSheet.getDataRange().getValues();
+    const skuIndex = masterHeaders.indexOf('wdm_SKU');
+    let rowIndex = -1;
+
+    if (existingData.length > 1) {
+      for (let i = 1; i < existingData.length; i++) {
+        if (String(existingData[i][skuIndex]) === String(sku)) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+    }
+
+    const rowValues = masterHeaders.map(h => rowData[h]);
+
+    if (rowIndex > 0) {
+      masterSheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      masterSheet.appendRow(rowValues);
+    }
+    ConfigService.forceReload(); // Force reload of config cache after updating master data
+
+    return { allConfig, spreadsheet };
+  }
+
   function acceptProductDetails(taskId, sku, finalData) {
     try {
       LoggerService.info('ProductService', 'acceptProductDetails', `Accepting details for SKU ${sku}, Task ${taskId}`);
 
-      const allConfig = ConfigService.getAllConfig();
-      const masterSchema = allConfig['schema.data.WebDetM'];
-      const masterHeaders = masterSchema.headers.split(',');
+      const { allConfig, spreadsheet } = _upsertMasterProductRow(sku, finalData);
 
-      // 1. Prepare row data for Master
-      const rowData = {};
-      masterHeaders.forEach(header => {
-        // Map wdm_ header to wds_ key to find value in finalData (assuming finalData comes from staging/admin UI with wds keys)
-        // Or if finalData uses wdm keys, use directly. 
-        // Given Admin UI likely mirrors Manager UI, let's assume it sends wdm_ keys for now to match submitProductDetails logic.
-        // But if it sends wds_ keys (raw staging data), we need to map.
-        // Let's support both for robustness.
-        
-        let value = finalData[header]; // Try wdm_ key
-        if (value === undefined) {
-             const stagingKey = header.replace('wdm_', 'wds_');
-             value = finalData[stagingKey]; // Try wds_ key
-        }
-        
-        rowData[header] = value !== undefined ? value : '';
-      });
-      // Ensure SKU matches
-      rowData['wdm_SKU'] = sku;
-
-      // 2. Upsert into WebDetM
-      const dataSpreadsheetId = allConfig['system.spreadsheet.data'].id;
-      const spreadsheet = SheetAccessor.getDataSpreadsheet();
-      const masterSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetM);
-
-      const existingData = masterSheet.getDataRange().getValues();
-      const skuIndex = masterHeaders.indexOf('wdm_SKU');
-      let rowIndex = -1;
-
-      if (existingData.length > 1) {
-        for (let i = 1; i < existingData.length; i++) {
-          if (String(existingData[i][skuIndex]) === String(sku)) {
-            rowIndex = i + 1;
-            break;
-          }
-        }
-      }
-
-      const rowValues = masterHeaders.map(h => rowData[h]);
-
-      if (rowIndex > 0) {
-        masterSheet.getRange(rowIndex, 1, 1, rowValues.length).setValues([rowValues]);
-      } else {
-        masterSheet.appendRow(rowValues);
-      }
-      ConfigService.forceReload(); // Force reload of config cache after updating master data
-
-      // 3. Update Task Status to "Accepted"
+      // Update Task Status to "Accepted"
       TaskService.updateTaskStatus(taskId, 'Accepted');
 
-      // 4. Clean up WebDetS row — staging no longer needed once details are in master
+      // Clean up WebDetS row — staging no longer needed once details are in master
       const stagingSheet = spreadsheet.getSheetByName(allConfig['system.sheet_names'].WebDetS);
       const stagingSchema = allConfig['schema.data.WebDetS'];
       if (stagingSheet && stagingSchema) {

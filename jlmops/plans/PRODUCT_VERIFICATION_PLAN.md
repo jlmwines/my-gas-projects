@@ -214,6 +214,29 @@ Closes the loop the original plan left implicit: a reverted `task.product.verify
 
 **Why reuse `vintage_mismatch` (user, 2026-06-17):** "vintage mismatch is the *reason*, but detail update is the *action*" — the vintage_mismatch path **is** the manager's product-detail edit action. Reusing it adds no task type and routes straight into the live Detail Updates surface. The misleading name is a future cleanup, not a different action. (Distinct from the settled no-image/media-task non-goal below: this is the detail-edit path; image remediation stays the manual admin Close.)
 
+## Reverted-task admin Task modal (SHIPPED @472, 2026-07-13)
+
+Smoke-testing the reverted-task admin handling above surfaced a gap: `AdminProductsView`'s reverted-verify row (`renderRevertedVerify`, `AdminProductsView.html`) showed only the SKU and the manager's raw notes text next to Close/Pass-to-manager — no way to revise the note, and no access to the app's standard task view. (An interim design reused the admin's New-Product-Onboarding editor-modal for viewing/editing the product description directly from the row; the user rejected this — row buttons are for row-level actions, not a stand-in for the task modal — so it was built, then removed the same session. Not documented further here; see git history if the shape is ever wanted again.)
+
+**Current design: a fourth row button, "Task," opens the shared `TaskDetail` component** — the same task modal used everywhere else in the app (`AdminDashboardView_v2`, `PublishingView`, `LibraryView`, `AdminTasksView`). `AdminProductsView` had never included `TaskDetail`/`TaskPacks` before this; both are now included at the top of the file.
+
+- **Fetch-on-open + cache**, matching `AdminDashboardView_v2`'s pattern: `AdminProductsView.openVerifyTaskDetail(taskId)` calls `WebAppTasks_getTaskById(taskId)`, caches the normalized task client-side, then `TaskDetail.open(taskId)`.
+- **`getAssignees()` returns the fixed two-role list `['Administrator', 'Manager']`** (per `TaskService.js`) rather than `[]` (the pattern `AdminDashboardView_v2` uses) — deriving from the currently-loaded task list would only ever yield `'Administrator'` here (`getRevertedVerifyTasks` filters to it), which would both hide `'Manager'` as a reassignment option and — the bug this fixed — leave the picker showing "- Unassigned -" instead of the task's real assignee, since `TaskDetail`'s bind logic only marks an option `selected` if it's present in the `getAssignees()` list.
+- **`saveTask`** → generic `WebAppTasks_updateTask(id, updates)` — covers editing/saving the notes field (and status/assignee/dates, `TaskDetail`'s standard fields).
+- **`completeTask`** → `WebAppProducts_completeVerifyTask(id, sku)`, **not** a generic complete — `sku` is read from the cached task's `entityId` (`task.product.verify`'s `entityId` is `st_LinkedEntityId`). This is deliberate: the Task modal's Done button must close the task the same way the row's own **Close** button does (stamps `pa_LastDetailAudit`), never the **Pass to manager** transform.
+- **`deleteTask`** → generic `WebAppTasks_deleteTask(id)`, matching every other `TaskDetail` host.
+- `TaskPacks` already has a `deeplink_products` pack defined for `task.product.verify` (an "Open Products" button) — unchanged by this addition.
+
+The row's own **Close** / **Pass to manager** buttons are untouched and remain row-level actions, separate from the Task modal.
+
+**Files:**
+
+| File | Change |
+|---|---|
+| `jlmops/AdminProductsView.html` | Add a Task button per reverted-verify row (`renderRevertedVerify`); include `TaskPacks`/`TaskDetail`; add `TaskDetail.configure(...)` + `openVerifyTaskDetail(taskId)` |
+
+No schema changes. No change to `completeVerifyTask` or `passVerifyToManager` — both keep working exactly as shipped @312 (the Task modal's Done button calls `completeVerifyTask` too).
+
 ## Out of scope
 
 - **Product-overview ops view** (Inbox 2026-05-14) — separate plan. Useful for ops triage but not the verification surface

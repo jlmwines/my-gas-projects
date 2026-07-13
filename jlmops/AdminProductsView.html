@@ -1,4 +1,6 @@
 <?!= include('TaskWidgets') ?>
+<?!= include('TaskPacks') ?>
+<?!= include('TaskDetail') ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -2481,6 +2483,62 @@
     };
 
 
+    // --- Task modal for a reverted verify task (edit/save notes, normal Done) ---
+    // Separate from the row's own Close/Pass to manager/View-Edit buttons (PRODUCT_VERIFICATION_PLAN.md,
+    // "Reverted-task admin View/Edit") — those stay row-level actions, not part of this modal.
+    // Follows the same fetch-on-open + cache pattern as AdminDashboardView_v2's TaskDetail wiring.
+    var _verifyTaskDetailCache = {};
+
+    TaskDetail.configure({
+      getTask: function(id) { return _verifyTaskDetailCache[id] || null; },
+      // Fixed two-role model (Administrator/Manager, per TaskService.js) — unlike
+      // LibraryView/PublishingView, deriving from the currently loaded task list would
+      // only ever yield 'Administrator' here (getRevertedVerifyTasks filters to it),
+      // which would hide 'Manager' as a reassignment option in the picker.
+      getAssignees: function() { return ['Administrator', 'Manager']; },
+      saveTask: function(id, fields, cb) {
+        var updates = { status: fields.status, assignedTo: fields.assignedTo || null,
+          startDate: fields.startDate || null, dueDate: fields.dueDate || null, notes: fields.notes };
+        google.script.run
+          .withSuccessHandler(function(r) { if (r && !r.error) delete _verifyTaskDetailCache[id]; cb(r); })
+          .withFailureHandler(function(e) { cb({ error: e.message || 'Failed to save' }); })
+          .WebAppTasks_updateTask(id, updates);
+      },
+      // Normal close (stamps pa_LastDetailAudit via completeVerifyTask) — NOT the row's
+      // Pass-to-manager transform. Needs the SKU, which for task.product.verify is entityId.
+      completeTask: function(id, cb) {
+        var task = _verifyTaskDetailCache[id];
+        var sku = task ? task.entityId : null;
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success) delete _verifyTaskDetailCache[id];
+            cb(!!(res && res.success));
+          })
+          .withFailureHandler(function() { cb(false); })
+          .WebAppProducts_completeVerifyTask(id, sku);
+      },
+      deleteTask: function(id, cb) {
+        google.script.run
+          .withSuccessHandler(function(r) { if (r && !r.error) delete _verifyTaskDetailCache[id]; cb(r); })
+          .withFailureHandler(function(e) { cb({ error: e.message || 'Failed' }); })
+          .WebAppTasks_deleteTask(id);
+      },
+      refresh: function() { AdminProductsView.loadRevertedVerify(); },
+      reload:  function() { AdminProductsView.loadRevertedVerify(); }
+    });
+
+    AdminProductsView.openVerifyTaskDetail = function(taskId) {
+      if (_verifyTaskDetailCache[taskId]) { TaskDetail.open(taskId); return; }
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result || !result.data) { TaskWidgets.toast('Could not load task', 'error'); return; }
+          _verifyTaskDetailCache[result.data.id] = result.data;
+          TaskDetail.open(taskId);
+        })
+        .withFailureHandler(function() { TaskWidgets.toast('Could not load task', 'error'); })
+        .WebAppTasks_getTaskById(taskId);
+    };
+
     // --- Reverted verify tasks (needs-admin queue at the top of the Verification card) ---
     AdminProductsView.loadRevertedVerify = function() {
       const tbody = document.getElementById('reverted-verify-body');
@@ -2510,6 +2568,11 @@
           '<td class="small">' + AdminProductsView._escapeHtml(t.notes || '') + '</td>' +
           '<td class="text-right" style="white-space:nowrap;"></td>';
         const actions = tr.querySelector('td:last-child');
+        const taskBtn = document.createElement('button');
+        taskBtn.className = 'btn btn-sm border mr-1';
+        taskBtn.textContent = 'Task';
+        taskBtn.title = 'Open the task — edit/save the note, or close normally';
+        taskBtn.addEventListener('click', function() { AdminProductsView.openVerifyTaskDetail(t.taskId); });
         const closeBtn = document.createElement('button');
         closeBtn.className = 'btn btn-sm border mr-1';
         closeBtn.textContent = 'Close';
@@ -2520,6 +2583,7 @@
         passBtn.textContent = 'Pass to manager';
         passBtn.title = 'Convert to a manager detail-edit task (keeps the findings note)';
         passBtn.addEventListener('click', function() { AdminProductsView.passRevertedToManager(t.taskId); });
+        actions.appendChild(taskBtn);
         actions.appendChild(closeBtn);
         actions.appendChild(passBtn);
         tbody.appendChild(tr);
