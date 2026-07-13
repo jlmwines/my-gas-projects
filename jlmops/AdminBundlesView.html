@@ -903,8 +903,36 @@
     renderGenStatus();
   }
 
-  // Last-generated time + any generation flags (min_total_unmet / max_total_exceeded / no_candidate:SLOT).
-  // Read from currentBundle (freshest backend load), not the possibly-frozen draft.
+  // One `genFlags` entry -> a readable label with the real numbers, not a bare code. Current format
+  // (BundleService._generateBundleComposition self-check, post the "system explains itself" fix):
+  //   below_min:total=X,min=Y / above_max:total=X,max=Y
+  //   stock:<slotId>:avail=N,min=M[:searched=N,cheapest=P,ceiling=C]
+  //   criteria:<slotId>[:searched=...]  /  empty:<slotId>[:searched=...]
+  // Falls back to the older bare-code vocabulary for any flag string written before this rolled out.
+  function formatGenFlag(f) {
+    var parts = f.split(':');
+    var kind = parts[0];
+    if (kind === 'below_min' || kind === 'above_max') {
+      var bandDetail = parts[1] || '';
+      return (kind === 'below_min' ? 'below min total' : 'over max total') + (bandDetail ? ' (' + bandDetail + ')' : '');
+    }
+    if (kind === 'stock' || kind === 'criteria' || kind === 'empty') {
+      var slotId = parts[1] || '';
+      var rest = parts.slice(2).join(' — ');
+      var label = kind === 'stock' ? 'out of stock' : kind === 'criteria' ? 'no longer matches slot criteria' : 'no wine assigned';
+      return 'slot ' + slotId + ': ' + label + (rest ? ' (' + rest + ')' : '');
+    }
+    // Legacy vocabulary (pre-fix flag strings still on a bundle that hasn't been re-generated since).
+    if (f === 'min_total_unmet') return 'below min total';
+    if (f === 'max_total_exceeded') return 'over max total';
+    if (f.indexOf('unfilled') === 0) return 'a slot’s category has no in-stock wine — restock or loosen criteria';
+    if (f.indexOf('over_ceiling') === 0) return 'a slot’s category has no wine within budget — widen the band';
+    if (f.indexOf('no_candidate') === 0) return 'a slot has no eligible wine';
+    return f;
+  }
+
+  // Last-generated time + any generation flags. Read from currentBundle (freshest backend load), not
+  // the possibly-frozen draft.
   function renderGenStatus() {
     var el = document.getElementById('hdr-gen-status');
     if (!el) return;
@@ -914,14 +942,7 @@
     var parts = [];
     if (when) parts.push('<span class="text-muted">Last generated ' + TaskWidgets.escape(when) + '</span>');
     if (flags.length) {
-      var labels = flags.map(function(f) {
-        if (f === 'min_total_unmet') return 'below min total';
-        if (f === 'max_total_exceeded') return 'over max total';
-        if (f.indexOf('unfilled') === 0) return 'a slot’s category has no in-stock wine — restock or loosen criteria';
-        if (f.indexOf('over_ceiling') === 0) return 'a slot’s category has no wine within budget — widen the band';
-        if (f.indexOf('no_candidate') === 0) return 'a slot has no eligible wine';
-        return f;
-      });
+      var labels = flags.map(formatGenFlag);
       parts.push('<span class="text-warning">&#9888; ' + TaskWidgets.escape(labels.join(', ')) + '</span>');
     }
     el.innerHTML = parts.length ? parts.join(' · ') : '<span class="text-muted">Not yet generated.</span>';
@@ -1532,16 +1553,10 @@
       if (r.error) {
         return '<tr><td>' + TaskWidgets.escape(r.bundleName || r.bundleId) + '</td><td colspan="3" class="text-danger">' + TaskWidgets.escape(r.error) + '</td></tr>';
       }
-      // Show ANY flag (band OR an unfilled/over-budget slot) — a bundle can be in-band yet still have a
-      // slot whose category couldn't be filled. Only "no flags at all" reads as success.
-      var fl = String(r.flags || '').split(';').filter(function(f) { return f; }).map(function(f) {
-        if (f === 'min_total_unmet') return 'below min';
-        if (f === 'max_total_exceeded') return 'over max';
-        if (f.indexOf('unfilled') === 0) return 'category out of stock';
-        if (f.indexOf('over_ceiling') === 0) return 'over budget';
-        if (f.indexOf('no_candidate') === 0) return 'slot unfilled';
-        return f;
-      });
+      // Show ANY flag (band OR a still-deficient slot) — this is the post-run self-check's verdict
+      // (r.stillDeficient / r.flags), not the generator's own narrower internal bookkeeping, so "ok"
+      // only appears when the real deficiency test agrees the bundle is actually fixed.
+      var fl = String(r.flags || '').split(';').filter(function(f) { return f; }).map(formatGenFlag);
       var status = fl.length
         ? '<span class="text-warning">' + TaskWidgets.escape(fl.join(', ')) + '</span>'
         : '<span class="text-success">ok</span>';

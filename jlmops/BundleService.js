@@ -1037,7 +1037,14 @@ const BundleService = (function () {
       }
 
       const price = Number(row[webCols.wpm_RegularPrice]) || 0;
-      const stock = Number(row[webCols.wpm_Stock]) || 0;
+      // Stock source: when the caller supplied ctx.comaxStockMap (Maintain/Re-roll, via
+      // _buildBundleInventoryContext), use the same live Comax-minus-on-hold figure
+      // _evaluateBundleDeficiency judges deficiency on — not WebProdM's wpm_Stock, which is only as
+      // fresh as the last stock sync. Falls back to wpm_Stock when ctx carries no Comax data (the
+      // interactive editor picker's no-ctx path, unchanged).
+      const stock = (ctx && ctx.comaxStockMap)
+        ? ((ctx.comaxStockMap[sku] || 0) - (ctx.onHoldMap[sku] || 0))
+        : (Number(row[webCols.wpm_Stock]) || 0);
       const name = String(row[webCols.wpm_PostTitle] || '');
       const categoriesStr = String(row[webCols.wpm_TaxProductCat] || '');
       const categories = categoriesStr.split(',').map(c => c.trim()).filter(c => c);
@@ -1206,6 +1213,10 @@ const BundleService = (function () {
 
     let changed = 0;
     const slotFlags = [];   // {slotId, flag:'no_candidate'}
+    // Search context per slot where the pool came up empty this run — {inCriteriaCount, cheapest,
+    // ceiling}. Captured for EVERY slot (base or flex), so a still-deficient flex slot's post-run
+    // report (below) can say what the search actually found, not just stay silent.
+    const searchStats = {};
 
     // ---- Fill phase ----
     // Budget already consumed by base slots we are NOT refilling (kept wines).
@@ -1260,6 +1271,11 @@ const BundleService = (function () {
         //   'unfilled'     — no in-stock wine matches the slot's category/criteria at all (stock-out).
         //   'over_ceiling' — in-criteria wines exist but all exceed the price ceiling (budget too tight).
         // (Flags are raised for BASE slots; an optional flex add-on going unfilled isn't a failure.)
+        searchStats[slot.slotId] = {
+          inCriteriaCount: inCriteria.length,
+          cheapest: inCriteria.length ? Math.min.apply(null, inCriteria.map(c => c.price)) : null,
+          ceiling: (usePull && isFinite(pullCeiling)) ? pullCeiling : null
+        };
         if (isBase) {
           slotFlags.push({ slotId: slot.slotId, flag: inCriteria.length ? 'over_ceiling' : 'unfilled' });
           if (currentSku[slot.slotId]) committedBaseTotal += (priceBySlot[slot.slotId] || 0) * q;
@@ -1337,22 +1353,50 @@ const BundleService = (function () {
       if (baseTotal > maxTotal) flagMaxExceeded = true;
     }
 
-    // ---- Flags + stamp ----
-    const flagsArr = [];
-    if (flagMinUnmet) flagsArr.push('min_total_unmet');
-    if (flagMaxExceeded) flagsArr.push('max_total_exceeded');
-    slotFlags.forEach(f => flagsArr.push(f.flag + ':' + f.slotId));
-    const flags = flagsArr.join(';');
+    // ---- Self-check + stamp ----
+    // Don't trust the bookkeeping above (flagMinUnmet/flagMaxExceeded/slotFlags) as the final word —
+    // it's the generator's own narrower internal accounting, and it can say "ok" on a pick that the
+    // system's REAL, authoritative deficiency test (_evaluateBundleDeficiency — the same one that
+    // drives "Needs attention" everywhere else) still fails. So re-run that exact test against this
+    // run's actual result (currentSku, updated in place above) and report ITS verdict, not our own.
+    // opts.inv is the full context maintainBundles/maintainBundle/rerollBundles already built; when a
+    // caller doesn't supply it (shouldn't happen post-rollout, kept as a safety fallback), fall back
+    // to the old internal-only accounting rather than throw.
+    let flags, stillDeficient, postCheck = null;
+    if (opts.inv) {
+      postCheck = _evaluateBundleDeficiency(bundle, opts.inv, currentSku);
+      const flagsArr = [];
+      postCheck.bandFlags.forEach(f => {
+        flagsArr.push(f + ':total=' + postCheck.baseTotal + ',' + (f === 'below_min' ? 'min=' + minTotal : 'max=' + maxTotal));
+      });
+      postCheck.deficientSlots.forEach(d => {
+        let entry = d.reason + ':' + d.slotId;
+        if (d.reason === 'stock') entry += ':avail=' + d.stock + ',min=' + opts.inv.threshold;
+        const s = searchStats[d.slotId];
+        if (s) entry += ':searched=' + s.inCriteriaCount + (s.cheapest != null ? ',cheapest=' + s.cheapest : '') + (s.ceiling != null ? ',ceiling=' + Math.round(s.ceiling) : '');
+        flagsArr.push(entry);
+      });
+      flags = flagsArr.join(';');
+      stillDeficient = postCheck.deficientSlots.length > 0 || postCheck.bandFlags.length > 0;
+    } else {
+      const flagsArr = [];
+      if (flagMinUnmet) flagsArr.push('min_total_unmet');
+      if (flagMaxExceeded) flagsArr.push('max_total_exceeded');
+      slotFlags.forEach(f => flagsArr.push(f.flag + ':' + f.slotId));
+      flags = flagsArr.join(';');
+      stillDeficient = flags !== '';
+    }
 
     updateBundle(bundle.bundleId, { lastGenerated: new Date().toISOString(), genFlags: flags });
 
-    const inBand = (minTotal == null || baseTotal >= minTotal) && (maxTotal == null || baseTotal <= maxTotal);
+    const inBand = postCheck ? (postCheck.bandFlags.length === 0)
+      : (minTotal == null || baseTotal >= minTotal) && (maxTotal == null || baseTotal <= maxTotal);
     return {
       bundleId: bundle.bundleId, bundleName: bundle.nameEn, mode: mode,
       productSlots: productSlots.length,
       refilled: productSlots.filter(s => refill[s.slotId]).length,
       changed: changed, baseTotal: Math.round(baseTotal),
-      minTotal: minTotal, maxTotal: maxTotal, inBand: inBand, flags: flags
+      minTotal: minTotal, maxTotal: maxTotal, inBand: inBand, flags: flags, stillDeficient: stillDeficient
     };
   }
 
@@ -1373,7 +1417,7 @@ const BundleService = (function () {
     deficiencies.forEach(d => {
       try {
         const ids = new Set((d.deficientSlots || []).map(ds => ds.slotId));
-        results.push(_generateBundleComposition(d.bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: genCtx }));
+        results.push(_generateBundleComposition(d.bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: genCtx, inv: inv }));
       } catch (e) {
         LoggerService.error(SERVICE_NAME, fnName, `Maintain failed for ${d.bundle.bundleId}: ${e.message}`, e);
         results.push({ bundleId: d.bundle.bundleId, bundleName: d.bundle.nameEn, error: e.message });
@@ -1404,7 +1448,7 @@ const BundleService = (function () {
     }
     try {
       const ids = new Set((d.deficientSlots || []).map(ds => ds.slotId));
-      const res = _generateBundleComposition(bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: inv.ctx });
+      const res = _generateBundleComposition(bundle, { mode: 'maintain', deficientSlotIds: ids, ctx: inv.ctx, inv: inv });
       LoggerService.info(SERVICE_NAME, fnName, `Maintained ${bundleId}`);
       return { totalBundles: 1, generated: res.error ? 0 : 1, results: [res] };
     } catch (e) {
@@ -1434,7 +1478,7 @@ const BundleService = (function () {
     const results = [];
     bundles.forEach(b => {
       try {
-        results.push(_generateBundleComposition(b, { mode: 'reroll', ctx: genCtx }));
+        results.push(_generateBundleComposition(b, { mode: 'reroll', ctx: genCtx, inv: inv }));
       } catch (e) {
         LoggerService.error(SERVICE_NAME, fnName, `Re-roll failed for ${b.bundleId}: ${e.message}`, e);
         results.push({ bundleId: b.bundleId, bundleName: b.nameEn, error: e.message });
@@ -1562,7 +1606,13 @@ const BundleService = (function () {
     const minStockConfig = allConfig['system.inventory.minimum_stock'];
     const eligibleMinStock = minStockConfig ? parseInt(minStockConfig.value, 10) : 6;
 
-    const ctx = { webData: webData, webCols: webCols, detailsMap: detailsMap, allSlots: allSlots, minStock: eligibleMinStock };
+    // comaxStockMap/onHoldMap ride along so getEligibleProducts can filter candidates on the same
+    // live Comax-minus-on-hold figure _evaluateBundleDeficiency uses, instead of WebProdM's own
+    // wpm_Stock (only as fresh as the last stock sync) — keeps "eligible" and "deficient" consistent.
+    const ctx = {
+      webData: webData, webCols: webCols, detailsMap: detailsMap, allSlots: allSlots, minStock: eligibleMinStock,
+      comaxStockMap: comaxStockMap, onHoldMap: onHoldMap
+    };
 
     return {
       threshold: threshold, allSlots: allSlots,
@@ -1648,7 +1698,10 @@ const BundleService = (function () {
    */
   // Evaluate ONE bundle's deficiency against a prebuilt inventory context. Shared by getBundleDeficiencies
   // (loop over all) and getBundleDeficiency (single, for the editor). Returns {deficientSlots, baseTotal, bandFlags}.
-  function _evaluateBundleDeficiency(bundle, inv) {
+  // activeSkuOverride (optional): {slotId: sku} — evaluate as if these slots carried these SKUs
+  // instead of `slot.activeSKU`, without a fresh sheet read. Used by _generateBundleComposition to
+  // self-check its own just-picked result against this same, real deficiency test (see call site).
+  function _evaluateBundleDeficiency(bundle, inv, activeSkuOverride) {
     const comaxStockMap = inv.comaxStockMap, onHoldMap = inv.onHoldMap, webAttrMap = inv.webAttrMap,
           detailsMap = inv.detailsMap, allSlots = inv.allSlots, threshold = inv.threshold;
     const bundleSlots = allSlots
@@ -1661,26 +1714,28 @@ const BundleService = (function () {
     for (const slot of bundleSlots) {
       const qty = (slot.defaultQty === '' || slot.defaultQty == null) ? 1 : Number(slot.defaultQty);
       const isBase = qty >= 1;
+      const activeSKU = (activeSkuOverride && Object.prototype.hasOwnProperty.call(activeSkuOverride, slot.slotId))
+        ? activeSkuOverride[slot.slotId] : slot.activeSKU;
 
-      if (!slot.activeSKU) {
+      if (!activeSKU) {
         if (isBase) deficientSlots.push({ slotId: slot.slotId, reason: 'empty', stock: null });
         continue;
       }
 
-      const attrs = webAttrMap[slot.activeSKU];
+      const attrs = webAttrMap[activeSKU];
       const price = attrs ? attrs.price : 0;
       if (isBase) baseTotal += price * qty;
 
       // (a) stock — available = Comax − on-hold; only assessable when the SKU is in Comax.
-      const comaxStock = comaxStockMap[slot.activeSKU];
-      const stock = (comaxStock === undefined) ? null : comaxStock - (onHoldMap[slot.activeSKU] || 0);
+      const comaxStock = comaxStockMap[activeSKU];
+      const stock = (comaxStock === undefined) ? null : comaxStock - (onHoldMap[activeSKU] || 0);
       let reason = null;
       if (stock !== null && stock < threshold) {
         reason = 'stock';
       } else if (attrs) {
         // (b) criteria recheck (includes price > slot.priceMax = over-band). Skip only when the wine
         //     has no web row at all (can't evaluate — leave it to the stock/export paths).
-        const det = detailsMap[slot.activeSKU] || {};
+        const det = detailsMap[activeSKU] || {};
         const matches = _matchesSlotCriteria({
           categories: attrs.categories, price: price, name: attrs.name,
           intensity: det.intensity, complexity: det.complexity, acidity: det.acidity
