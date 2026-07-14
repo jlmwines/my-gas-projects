@@ -246,7 +246,7 @@
       return copy;
     },
     getEntity: function(slug) { return state.libraryBySlug[slug] || null; },
-    getAssignees: function() { return []; },
+    getAssignees: function() { return ['Administrator', 'Manager']; },
     loadEntityDetail: function(slug, cb) { cb(null); },
     saveTask: function(id, fields, cb) {
       google.script.run

@@ -98,7 +98,7 @@
   TaskDetail.configure({
     getTask: function(id) { return _taskCache[id] || null; },
     getEntity: function(slug) { return _entityCache[slug] || null; },
-    getAssignees: function() { return []; },
+    getAssignees: function() { return ['Administrator', 'Manager']; },
     loadEntityDetail: function(slug, cb) { cb(null); },
     saveTask: function(id, fields, cb) {
       var task = _taskCache[id];
