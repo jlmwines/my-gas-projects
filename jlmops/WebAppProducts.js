@@ -1241,6 +1241,29 @@ function WebAppProducts_getRevertedVerifyTasks() {
 }
 
 /**
+ * The manager's currently open verify tasks (not yet submitted): open task.product.verify
+ * assigned to Manager. Surfaced read-only on AdminProductsView, between the reverted-tasks
+ * queue and the creation tool, so the admin can see the manager's existing backlog before
+ * generating more.
+ */
+function WebAppProducts_getManagerVerifyTasks() {
+  try {
+    return WebAppTasks.getOpenTasksByTypeId('task.product.verify')
+      .filter(function(t) { return String(t.st_AssignedTo || '').trim() === 'Manager'; })
+      .map(function(t) {
+        return {
+          taskId: t.st_TaskId,
+          sku: String(t.st_LinkedEntityId || '').trim(),
+          title: t.st_Title || ''
+        };
+      });
+  } catch (e) {
+    LoggerService.error('WebAppProducts', 'getManagerVerifyTasks', `Error: ${e.message}`, e);
+    return [];
+  }
+}
+
+/**
  * Transform a reverted verify task into a manager-editable detail-update task, in place.
  * The verify modal is read-only, so to let the manager actually fix the detail the task
  * TYPE must change — switch it onto the existing vintage_mismatch (Detail Updates) edit

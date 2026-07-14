@@ -153,6 +153,23 @@
             </table>
           </div>
         </div>
+
+        <!-- Manager's current open verify tasks (read-only) — so the admin can see the
+             existing backlog before creating more. -->
+        <div class="ds-section mb-3">
+          <div class="ds-section-head">
+            <h6>Manager — open</h6>
+            <span id="manager-verify-inline-count" class="badge badge-secondary badge-pill">0</span>
+          </div>
+          <div class="table-responsive ds-action" style="display:none;">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr><th class="border-top-0">SKU</th><th class="border-top-0">Product</th></tr>
+              </thead>
+              <tbody id="manager-verify-body"></tbody>
+            </table>
+          </div>
+        </div>
         <hr class="my-3">
 
         <h6 class="mb-2">Create verification tasks</h6>
@@ -890,6 +907,7 @@
       if (key === 'verify' && !AdminProductsView._cardLoaded.verify) {
         AdminProductsView._cardLoaded.verify = true;
         AdminProductsView.loadRevertedVerify();
+        AdminProductsView.loadManagerVerify();
         if (!AdminProductsView.verifyState.loaded) AdminProductsView.loadVerifyPlanning();
       } else if (key !== 'details' && !AdminProductsView._cardLoaded[key]) {
         AdminProductsView._cardLoaded[key] = true;
@@ -961,6 +979,7 @@
       if (tab && tab !== 'details') {
         if (tab === 'verify') {
           AdminProductsView.loadRevertedVerify();
+          AdminProductsView.loadManagerVerify();
           if (AdminProductsView.verifyState.loaded) AdminProductsView.loadVerifyPlanning();
         } else {
           AdminProductsView._loadCard(tab);
@@ -2586,6 +2605,36 @@
         actions.appendChild(taskBtn);
         actions.appendChild(closeBtn);
         actions.appendChild(passBtn);
+        tbody.appendChild(tr);
+      });
+    };
+
+    // --- Manager's open verify tasks (read-only, between reverted-tasks and create-tool) ---
+    AdminProductsView.loadManagerVerify = function() {
+      const tbody = document.getElementById('manager-verify-body');
+      if (tbody) { AdminProductsView._tableState(tbody, true); tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-2">Loading…</td></tr>'; }
+      google.script.run.withSuccessHandler(function(tasks) {
+        AdminProductsView.renderManagerVerify(tasks || []);
+      }).withFailureHandler(function(err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="2" class="text-danger py-2">Error: ' + AdminProductsView._escapeHtml(err.message) + '</td></tr>';
+      }).WebAppProducts_getManagerVerifyTasks();
+    };
+
+    AdminProductsView.renderManagerVerify = function(tasks) {
+      const tbody = document.getElementById('manager-verify-body');
+      const inline = document.getElementById('manager-verify-inline-count');
+      const n = tasks.length;
+      if (inline) inline.textContent = n;
+      if (!tbody) return;
+      AdminProductsView._tableState(tbody, true);
+      tbody.innerHTML = '';
+      if (!n) { AdminProductsView._tableState(tbody, false, 'None.'); return; }
+      tbody.innerHTML = '';
+      tasks.forEach(function(t) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + AdminProductsView._escapeHtml(t.sku) + '</td>' +
+          '<td class="small">' + AdminProductsView._escapeHtml(t.title || '') + '</td>';
         tbody.appendChild(tr);
       });
     };
