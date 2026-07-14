@@ -4,6 +4,14 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-14 — Reverted-verify Task modal (@471-@473); product-editor cache fix smoke-test found the real bottleneck is still open
+
+- Manager smoke-tested the @469 cache fix live: confirmed cache hits actually occur (SysLog), but total `getProductDetails` time was unchanged (~17-19s) regardless of hit/miss ratio — the sheet-reads were never the dominant cost, so item 1's premise needs re-examination before more cache tuning. Also confirmed the 07-12 submit-hang bug recurs on a *new-product* submission (not just existing-product updates), still no root cause — `SysLog` shows zero trace both times, consistent with the click never reaching the server. Next step: live repro with DevTools console open. Both findings written into `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J and `.claude/bugs.md`.
+- Separately, user smoke-tested the Product Verification reverted-task admin handling (shipped @312) and found the admin row had no way to view/revise the note or reach a normal task view. Built and shipped an interim design (reuse the admin's product editor-modal for in-row description editing) — user rejected it: row buttons are for row-level actions, not a substitute for the app's shared task modal. Removed same session; replaced with a **Task** button per row that opens the existing `TaskDetail`/`TaskPacks` component (first use in `AdminProductsView`, previously only in `AdminDashboardView_v2`/`PublishingView`/`LibraryView`/`AdminTasksView`) — edits/saves the note, and Done closes the task the same way the row's own Close button does (`completeVerifyTask`, stamps `pa_LastDetailAudit`), not a generic complete. Also fixed the assignee picker showing "Unassigned" regardless of actual assignee (`getAssignees()` needs real role values). Confirmed working. Shipped @471→@473; `PRODUCT_VERIFICATION_PLAN.md` updated to current-state only (no history chain).
+- Next: DevTools repro for the submit-hang; re-open the product-editor slow-load investigation now that the cache-hit theory is ruled out.
+
+---
+
 ## 2026-07-12 — Manager product-editor slow-load + submit-hang bug: cache fix shipped (jlmops @469)
 
 - Investigated a manager-reported stuck submit (SKU 7290101582403, "Submitting…" for several minutes). Cross-referencing `SysLog`, the Apps Script Executions view, and a manager screenshot found two separate bugs: `CacheService` caching for the big product sheets was failing 100% of the time (every editor open did 4 full uncached sheet reads, ~15-18s), and a distinct, still-unexplained submit-dispatch failure for that one product (request never reached the server at all, confirmed against sibling submits that succeeded in the same window).
