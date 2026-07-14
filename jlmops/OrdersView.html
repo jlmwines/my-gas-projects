@@ -44,6 +44,21 @@
           <div id="gift-result" class="mt-3"></div>
       </div>
     </div>
+
+    <!-- Log Reward modal (manager-only) — free-text note on the loyalty-reward gesture -->
+    <div class="modal-overlay" id="reward-modal" style="display:none;">
+      <div class="modal-container">
+        <div class="modal-header">Log Reward</div>
+        <div class="form-body">
+          <label for="reward-note">Note (which bottle, upgrade vs. add)</label>
+          <textarea id="reward-note"></textarea>
+        </div>
+        <div class="modal-footer bg-light">
+          <button class="btn btn-sm" type="button" onclick="ModalOverlay.close('reward-modal')">Cancel</button>
+          <button class="btn btn-sm" type="button" id="btn-reward-save">Log Reward</button>
+        </div>
+      </div>
+    </div>
 </div>
 
 <script>
@@ -87,6 +102,23 @@
     }
   }
 
+  // Tier badge — copied from AdminContactsView.html's getTypeBadge/getTypeBadgeClass to
+  // keep the vip/repeat/new/prospect/noncore color convention consistent across views.
+  function getTypeBadge(type) {
+    var cls = getTypeBadgeClass(type);
+    var label = type ? type.split('.').pop() : 'unknown';
+    return '<span class="badge ' + cls + '">' + label + '</span>';
+  }
+  function getTypeBadgeClass(type) {
+    if (!type) return 'badge-secondary';
+    if (type.indexOf('vip') >= 0) return 'badge-warning';
+    if (type.indexOf('repeat') >= 0) return 'badge-primary';
+    if (type.indexOf('new') >= 0) return 'badge-success';
+    if (type.indexOf('prospect') >= 0) return 'badge-info';
+    if (type.indexOf('noncore') >= 0) return 'badge-secondary';
+    return 'badge-light';
+  }
+
   function loadOpenOrdersData() {
     const openOrdersListDiv = document.getElementById('open-orders-list');
     openOrdersListDiv.innerHTML = 'Loading open orders...';
@@ -99,8 +131,9 @@
             return;
           }
 
-          let tableHtml = '<table class="table table-sm table-hover responsive-stack"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Billing Name</th><th>Shipping Name</th><th>Shipping City</th></tr></thead><tbody>';
+          let tableHtml = '<table class="table table-sm table-hover responsive-stack"><thead><tr><th>Order ID</th><th>Status</th><th>Order Date</th><th>Billing Name</th><th>Shipping Name</th><th>Shipping City</th><th>Tier</th><th>Last Order</th><th>Spend</th><th>Avg</th><th data-roles="manager"></th></tr></thead><tbody>';
           orders.forEach(order => {
+            const email = order.billingEmail || '';
             tableHtml += `<tr>
                             <td data-label="Order ID">${order.orderId}</td>
                             <td data-label="Status">${order.status}</td>
@@ -108,10 +141,48 @@
                             <td data-label="Billing">${order.billingName || ''}</td>
                             <td data-label="Shipping">${order.shippingName || ''}</td>
                             <td data-label="City">${order.shippingCity}</td>
+                            <td data-label="Tier" class="oo-tier" data-email="${TaskWidgets.escape(email)}">…</td>
+                            <td data-label="Last Order" class="oo-last-order" data-email="${TaskWidgets.escape(email)}">…</td>
+                            <td data-label="Spend" class="oo-spend" data-email="${TaskWidgets.escape(email)}">…</td>
+                            <td data-label="Avg" class="oo-avg" data-email="${TaskWidgets.escape(email)}">…</td>
+                            <td data-roles="manager" data-label="Actions">
+                              <button class="btn btn-sm oo-crm-link" data-email="${TaskWidgets.escape(email)}">CRM</button>
+                              <button class="btn btn-sm oo-reward-btn" data-email="${TaskWidgets.escape(email)}">Log Reward</button>
+                            </td>
                           </tr>`;
           });
           tableHtml += '</tbody></table>';
           openOrdersListDiv.innerHTML = tableHtml;
+
+          openOrdersListDiv.querySelectorAll('.oo-crm-link').forEach(btn => {
+            btn.addEventListener('click', () => viewContactCrm(btn.dataset.email));
+          });
+          openOrdersListDiv.querySelectorAll('.oo-reward-btn').forEach(btn => {
+            btn.addEventListener('click', () => openRewardModal(btn.dataset.email));
+          });
+
+          // Phase 2: fetch tier/spend for the emails now on screen and fill them in —
+          // deliberately separate from the order list itself so this doesn't delay it.
+          const emails = orders.map(o => o.billingEmail).filter(Boolean);
+          if (emails.length) {
+            google.script.run
+              .withSuccessHandler(summaries => {
+                Object.keys(summaries || {}).forEach(email => {
+                  const s = summaries[email];
+                  const sel = '[data-email="' + CSS.escape(email) + '"]';
+                  const tierEl = openOrdersListDiv.querySelector('.oo-tier' + sel);
+                  const lastEl = openOrdersListDiv.querySelector('.oo-last-order' + sel);
+                  const spendEl = openOrdersListDiv.querySelector('.oo-spend' + sel);
+                  const avgEl = openOrdersListDiv.querySelector('.oo-avg' + sel);
+                  if (tierEl) tierEl.innerHTML = getTypeBadge(s.tier);
+                  if (lastEl) lastEl.textContent = s.lastOrderDate || '—';
+                  if (spendEl) spendEl.textContent = '₪' + Math.round(s.totalSpend || 0).toLocaleString();
+                  if (avgEl) avgEl.textContent = '₪' + Math.round(s.avgOrderValue || 0).toLocaleString();
+                });
+              })
+              .withFailureHandler(() => { /* non-critical — leave placeholders as-is */ })
+              .WebAppOrders_getContactSummaries(emails);
+          }
         })
         .withFailureHandler(err => {
           openOrdersListDiv.innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
@@ -121,6 +192,45 @@
       TaskWidgets.toast('A client-side error occurred: ' + e.message, 'error');
     }
   }
+
+  // Deep-links to this contact's record in ManagerContactView (same sessionStorage
+  // handoff that view already reads on mount — ManagerContactView.html:635-640).
+  function viewContactCrm(email) {
+    if (!email) { TaskWidgets.toast('No email on this order.', 'warning'); return; }
+    sessionStorage.setItem('selectContactEmail', email);
+    loadView('ManagerContacts');
+  }
+
+  let rewardEmail = '';
+  function openRewardModal(email) {
+    if (!email) { TaskWidgets.toast('No email on this order.', 'warning'); return; }
+    rewardEmail = email;
+    document.getElementById('reward-note').value = '';
+    ModalOverlay.open('reward-modal');
+  }
+
+  document.getElementById('btn-reward-save').addEventListener('click', function() {
+    const note = document.getElementById('reward-note').value.trim();
+    if (!note) { TaskWidgets.toast('Enter a note describing the reward.', 'warning'); return; }
+    const btn = this;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        if (result && result.error) { TaskWidgets.toast(result.error, 'error'); return; }
+        ModalOverlay.close('reward-modal');
+        TaskWidgets.toast('Reward logged.', 'success');
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        TaskWidgets.toast('Failed to log reward: ' + (err && err.message), 'error');
+      })
+      .WebAppContacts_logActivity(rewardEmail, 'reward.given', note.slice(0, 80), note);
+  });
 
   function toggleAll(source) {
     const checkboxes = document.querySelectorAll('.order-checkbox');

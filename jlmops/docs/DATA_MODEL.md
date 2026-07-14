@@ -569,6 +569,7 @@ This section defines the sheets used for customer relationship management, conta
     *   `coupon.offered` - Coupon shared. Details: `{ code, channel, campaignName }`
     *   `coupon.used` - Coupon redeemed. Details: `{ code, orderId, discount }`
     *   `note.added` - Manual note. Details: `{ note }`
+    *   `reward.given` - Loyalty reward gesture logged by manager (extra/upgraded bottle, not a discount). Details: `{ note }` (free text — which bottle, upgrade vs. add)
     *   `mailchimp.subscribed` - New subscription detected.
     *   `mailchimp.unsubscribed` - Subscription removed.
 

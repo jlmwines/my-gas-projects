@@ -78,6 +78,7 @@ function WebAppOrders_getOpenOrdersForManager() {
           const shippingFirstName = orderInfo[womHeaderMap['wom_ShippingFirstName']] || '';
           const shippingLastName = orderInfo[womHeaderMap['wom_ShippingLastName']] || '';
           const shippingCity = orderInfo[womHeaderMap['wom_ShippingCity']];
+          const billingEmail = orderInfo[womHeaderMap['wom_BillingEmail']] || '';
 
           openOrders.push({
             orderId: orderId,
@@ -85,6 +86,7 @@ function WebAppOrders_getOpenOrdersForManager() {
             billingName: `${billingFirstName} ${billingLastName}`.trim(),
             shippingName: `${shippingFirstName} ${shippingLastName}`.trim(),
             shippingCity: shippingCity,
+            billingEmail: billingEmail,
             status: orderStatus // Add status for display
           });
         }
@@ -109,6 +111,41 @@ function WebAppOrders_getOpenOrdersForManager() {
     LoggerService.error('WebAppOrders', 'getOpenOrdersForManager', error.message, error);
     return [];
   }
+}
+
+/**
+ * Second-phase lookup for the manager's open-orders list: given the billing emails already
+ * on screen, returns each contact's tier/last-order/spend for display. Kept separate from
+ * WebAppOrders_getOpenOrdersForManager so the order list itself renders immediately and this
+ * fills in a beat later, rather than delaying the whole screen on every open.
+ * @param {Array<string>} emails
+ * @returns {Object} { [email]: { tier, lastOrderDate, totalSpend, avgOrderValue } }
+ */
+function WebAppOrders_getContactSummaries(emails) {
+  const summaries = {};
+  try {
+    const uniqueEmails = Array.from(new Set((emails || []).filter(Boolean)));
+    uniqueEmails.forEach(email => {
+      const contact = ContactService.getContactByEmail(email);
+      if (!contact) return;
+      let lastOrderDate = '';
+      if (contact.sc_LastOrderDate) {
+        const d = new Date(contact.sc_LastOrderDate);
+        if (!isNaN(d.getTime())) {
+          lastOrderDate = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        }
+      }
+      summaries[email] = {
+        tier: contact.sc_CustomerType || '',
+        lastOrderDate: lastOrderDate,
+        totalSpend: contact.sc_TotalSpend || 0,
+        avgOrderValue: contact.sc_AvgOrderValue || 0
+      };
+    });
+  } catch (error) {
+    LoggerService.error('WebAppOrders', 'getContactSummaries', error.message, error);
+  }
+  return summaries;
 }
 
 /**
