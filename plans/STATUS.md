@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-13 — jlmops @470 live: Bundles Maintain/Re-roll now self-check against the real deficiency test and report the actual reason instead of a false "ok"; confirmed fixing bundles a prior run had left stuck.
+**Updated:** 2026-07-14 — jlmops @473 live: reverted-verify tasks have a Task button opening the shared TaskDetail modal (edit/save note, close normally), smoke-tested and confirmed working.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @470, stable.
+- **jlmops** (GAS backend) — live @473, stable. Product-editor 15-18s load and an intermittent submit-hang remain open (`jlmops/plans/BUG_FIX_SEQUENCE.md` Session J).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -16,10 +16,10 @@ One current-state line per business area. The umbrella has no single phase label
 
 | Metric | Value |
 |--------|-------|
-| Last Active | 2026-07-13 |
+| Last Active | 2026-07-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @470 · theme v1.2.31 |
-| Deploy Date | jlmops 2026-07-13 · theme 2026-07-09 |
+| Deploy Version | jlmops @473 · theme v1.2.31 |
+| Deploy Date | jlmops 2026-07-14 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
 | SEO | 87/100 (pre-mixed-content-fix audit). GSC feed live in `jlmops-status.md`. Growth plan: `plans/SEO_GROWTH_PLAN.md`; open items: `plans/RANKMATH_WPML_AUDIT.md`, `plans/SEO_AUDIT_2026-05-06.md`. |
@@ -39,7 +39,7 @@ The live "what now" — daily review reads these first.
 5. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 6. **Central Mountains region post (Slot C) — body drafted through Image Prompts, 2026-07-09.** Calendar row staged (`blog-region-central-mountains`, cal_Date 2026-08-25, pending "Apply Pending Updates"); Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push — same checklist as Galilee (`content/REGION_POSTS_PLAN.md`).
 7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-8. **Product-editor cache fix (jlmops @469) — awaiting manager smoke test 2026-07-13.** Fixes the 15-18s uncached product-editor loads. See `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J; items 2-4 (manager submit-hang reassessment/diagnosis) pending this smoke test's result.
+8. **Product-editor 15-18s load still open — cache fix (@469) smoke-tested, didn't fix it.** Cache hits confirmed in SysLog, but total load time was unchanged, so the real bottleneck is elsewhere. Submit-hang bug also recurred (new-product submission this time). Next step: live repro with browser DevTools console open to catch the client-side error. See `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J.
 
 ## Active Plans
 
