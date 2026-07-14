@@ -651,6 +651,11 @@
     // openEditor() re-entry so a slow in-flight submit can't have its modal state
     // (fields, image) silently swapped out from under it (BUG_FIX_SEQUENCE Session J).
     ManagerProductsView._submitInFlight = false;
+    // Incremented on every openEditor() call; the load response captures its own value
+    // and discards itself if a newer openEditor() has since started, so an older/slower
+    // load can't land after a newer one and overwrite the modal with the wrong product's
+    // data (BUG_FIX_SEQUENCE Session J, load-vs-load race — distinct from _submitInFlight).
+    ManagerProductsView._loadToken = 0;
 
     // Verification (read-only review) batch-walk state
     ManagerProductsView.verifyMode = false;
@@ -1099,8 +1104,10 @@
       // Reset tab — Specs (Comax-vs-web comparison) in verify mode, else Descriptions
       ManagerProductsView.switchTab(ManagerProductsView.verifyMode ? 'specs' : 'desc');
 
+      const myLoadToken = ++ManagerProductsView._loadToken;
       google.script.run
             .withSuccessHandler(data => {
+               if (myLoadToken !== ManagerProductsView._loadToken) return; // stale response, a newer openEditor() has since started
                ManagerProductsView.currentSku = data.sku;
                ManagerProductsView.currentMasterData = data.masterData || {}; 
                ManagerProductsView.currentComaxData = data.comaxData || {}; // Store Comax Data
@@ -1143,6 +1150,7 @@
                           document.getElementById('modal-status').textContent = 'Error displaying data.';
                       }
                    })      .withFailureHandler(err => {
+          if (myLoadToken !== ManagerProductsView._loadToken) return; // stale response, a newer openEditor() has since started
           console.error('Failed to load editor data:', err);
           document.getElementById('modal-status').textContent = 'Error: ' + err.message;
       })
