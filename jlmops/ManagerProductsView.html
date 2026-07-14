@@ -537,7 +537,7 @@
         <button class="btn edit-only" id="btn-submit-changes" onclick="ManagerProductsView.submitChanges()">Submit</button>
         <button class="btn border verify-action" onclick="ManagerProductsView.closeModal()">Close</button>
         <button class="btn verify-action" onclick="ManagerProductsView.openRevertPrompt()">Revert</button>
-        <button class="btn verify-action" id="btn-confirm-verify" onclick="ManagerProductsView.confirmVerify()">Done</button>
+        <button class="btn verify-action" id="btn-confirm-verify" onclick="ManagerProductsView.confirmVerify()">Done &amp; Next</button>
       </div>
     </div>
   </div>
@@ -1050,7 +1050,7 @@
       const submitBtn = document.getElementById('btn-submit-changes');
       if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Submit'; }
       const verifyBtn = document.getElementById('btn-confirm-verify');
-      if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.innerHTML = 'Done'; }
+      if (verifyBtn) { verifyBtn.disabled = false; verifyBtn.innerHTML = 'Done &amp; Next'; }
 
       ManagerProductsView.verifyMode = !!verifyCtx;
       const editorModal = document.getElementById('editor-modal');
@@ -1100,7 +1100,19 @@
       // Clear preview boxes
       document.getElementById('preview-en').innerHTML = '';
       document.getElementById('preview-he').innerHTML = '';
-      
+
+      // Clear verify-mode display panel (image, web category, flags) — loadVerifyDetail()
+      // only clears these itself once the (slow) main load resolves, so without this the
+      // previous task's image/category/flags stay visible for the whole loading window.
+      const verifyImg = document.getElementById('verify-image');
+      const verifyImgNone = document.getElementById('verify-image-none');
+      const verifyCat = document.getElementById('verify-web-category');
+      const verifyFlags = document.getElementById('verify-flags');
+      if (verifyImg) { verifyImg.removeAttribute('src'); verifyImg.style.display = 'none'; }
+      if (verifyImgNone) verifyImgNone.style.display = 'none';
+      if (verifyCat) verifyCat.textContent = '…';
+      if (verifyFlags) verifyFlags.innerHTML = '';
+
       // Reset tab — Specs (Comax-vs-web comparison) in verify mode, else Descriptions
       ManagerProductsView.switchTab(ManagerProductsView.verifyMode ? 'specs' : 'desc');
 
@@ -1482,10 +1494,11 @@
         .withSuccessHandler(res => {
           ManagerProductsView._submitInFlight = false;
           if (res && res.success) {
-            // Confirm & close: close the editor and return to the refreshed list
-            // (matches the button label; no longer auto-walks to the next task).
-            ManagerProductsView.closeModal();
-            ManagerProductsView.refreshView();
+            // Confirm & advance: matches the "Done & Next" label — move straight to the
+            // next queued verification task (advanceVerify() closes + refreshes on its
+            // own once the queue is exhausted). Restored 2026-07-14; see BUG_FIX_SEQUENCE
+            // Session J for why this was removed and re-added.
+            ManagerProductsView.advanceVerify();
           } else {
             btn.disabled = false;
             btn.innerHTML = prevHtml;
