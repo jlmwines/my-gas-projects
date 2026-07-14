@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-14 — jlmops @477 live, stable; Product Verification plan fully shipped.
+**Updated:** 2026-07-14. jlmops @482 live, stable: manager submit/verify modal races and the 15-18s product-editor load root cause both found and fixed this session, pending live smoke-test confirmation.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @475, stable. Product-editor 15-18s load and an intermittent submit-hang remain open (`jlmops/plans/BUG_FIX_SEQUENCE.md` Session J).
+- **jlmops** (GAS backend) — live @482, stable. Session J's load-time and submit-hang bugs fixed, pending smoke-test (`jlmops/plans/BUG_FIX_SEQUENCE.md`).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -39,13 +39,14 @@ The live "what now" — daily review reads these first.
 5. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 6. **Central Mountains region post (Slot C) — body drafted through Image Prompts, 2026-07-09.** Calendar row staged (`blog-region-central-mountains`, cal_Date 2026-08-25, pending "Apply Pending Updates"); Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push — same checklist as Galilee (`content/REGION_POSTS_PLAN.md`).
 7. **Grapes anchor post** ("Grape Varieties in Israel") — drafted through Image Prompts + Notes at `content/grapes/grapes-en.post.md`, facts verified. Not yet registered in the library or flagged to anyone. Individual grape spoke posts deferred per `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`'s sequencing decision.
-8. **Product-editor 15-18s load still open — cache fix (@469) smoke-tested, didn't fix it.** Cache hits confirmed in SysLog, but total load time was unchanged, so the real bottleneck is elsewhere. Submit-hang bug also recurred (new-product submission this time). Next step: live repro with browser DevTools console open to catch the client-side error. See `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J.
+8. **Manager needs to live-smoke-test @482.** Session J's product-editor load time (real cause: `LookupService` searching Drive by filename instead of opening by ID, fixed @482) and the submit/verify modal race conditions (fixed @479-@481) both shipped today but aren't yet confirmed working live. See `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J.
 
 ## Active Plans
 
 Plans with code partially shipped and open implementation steps remaining. Session-end must update this list — add when a plan starts mid-implementation, strike or remove when fully done.
 
-- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit), J (product-editor cache fix + manager submit hang, found 2026-07-12).
+- **Bug fix sequence** (`jlmops/plans/BUG_FIX_SEQUENCE.md`) — Sessions A–E and G resolved. Session J (product-editor load time + manager submit/verify hang) root-caused and fixed today (@479-@482), pending live smoke-test. Still pending: F (sync hardening — 3 items, needs staging repro), H (timestamps + date-format audit), I (count-task creation audit).
+- **City-classification removal** (`jlmops/plans/CITY_CLASSIFICATION_REMOVAL_PLAN.md`) — code + config fully removed and live @479+. Two manual admin steps remain: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
 - **Wine Talk blog categories** (`website/BLOG_CATEGORIES_PLAN.md`) — Wine Basics renamed + Regions category created live in WP, manifest wiring done (steps 1-2, 4). Deferred trigger fired 2026-07-06 (Negev published) — tab-row UI + `All` view (step 3) still not built; user dual-categorizing region posts under Wine Basics as an interim workaround in the meantime.
 - **Calendar tab UX** (`jlmops/plans/CALENDAR_TAB_UX_PLAN.md`) — Phases 2–4 (click-through shows entity details before a task, status filter, search repositioned) shipped live 2026-07-09 @461. Phase 3 (status filter) smoke-tested and confirmed working; Phases 2 and 4 still unsmoked. Phase 1 (refresh doesn't fire after "Apply Pending Updates"/"Create Content Tasks") investigated, root cause still open — needs a live repro.
 

@@ -1,6 +1,6 @@
 # City Classification Removal Plan
 
-**What this is.** A plan to fully remove the SysLkp_Cities city-classification feature from jlmops. **Status: in progress** — code + config fully stripped locally and committed (not yet pushed/deployed); only the manual `SysLkp_Cities` sheet-tab deletion remains. Scope is a clean deletion, not a deprecation.
+**What this is.** A plan to fully remove the SysLkp_Cities city-classification feature from jlmops. **Status: in progress** — code + config fully stripped, committed, pushed, and live (shipped incidentally via the @479+ deploys that followed, since `clasp push` sends the full working tree). Two manual steps remain: run `rebuildSysConfigFromSource()` so the live `SysConfig` sheet picks up the stripped entries, and delete the `SysLkp_Cities` data tab. Scope is a clean deletion, not a deprecation.
 
 ## Why
 
@@ -39,7 +39,7 @@ Keep `task.data.review` — it is a generic task type used elsewhere. `DATA_MODE
 5. ~~Run `node jlmops/generate-config.js` to regenerate `SetupConfig.js`.~~ **Done** 2026-07-14 — confirmed zero `SysLkp_Cities`/`slc_`/`map.city_lookups` hits in the regenerated file.
 6. ~~Remove the `CRM_PLAN.md` sheet-inventory row.~~ **Done** 2026-07-14.
 7. ~~Grep the whole repo for `ContactAnalysisService`, `SysLkp_Cities`, `slc_`, `maintainCityLookup`, `extractOrderCities`, `generateCitySeedData`.~~ **Done** 2026-07-14 — zero hits in `.js`/`.html`; only expected doc mentions remain (this plan, `CODE_AUDIT_PLAN.md`, `TECH_DEBT_AUDIT.md`, archived `LOOKUP_ADMIN_UI_PLAN.md`) plus the already-flagged stale `SysConfigSnapshot.csv`.
-8. Committed locally 2026-07-14. **Not yet pushed or deployed** — `clasp push` (project-local auth, `accounts@jlmwines.com`) + user runs `rebuildSysConfigFromSource()` still pending.
+8. ~~Committed, pushed, `clasp push`.~~ **Done, live since @479 (2026-07-14)** — shipped incidentally via the next deploy's full-tree push, not a dedicated deploy for this change. **Still pending: user runs `rebuildSysConfigFromSource()`** so the live `SysConfig` sheet actually drops the stripped entries — pushing `SetupConfig.js` alone doesn't apply it.
 9. Manual in Sheets/UI: delete the `SysLkp_Cities` tab. **Pending — user action.**
 
 ## Verification

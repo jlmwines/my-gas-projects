@@ -4,6 +4,16 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-14 (cont'd) — Manager submit/verify hang + product-editor slow-load: both root-caused and fixed (@476-@482)
+
+- Killed 2 isolated bugs (@476: failed-jobs metric, KPI sk_Period Date bug) and a blank-assignee-dropdown bug on both dashboards (@477), all safe alongside live manager testing.
+- City-classification feature fully removed (task creation disabled @478, service/config/schema deleted and live since @479's push). Two manual admin steps left: run `rebuildSysConfigFromSource()`, delete the `SysLkp_Cities` sheet tab.
+- Manager submit/verify modal hang: chased and abandoned two wrong theories (request-never-reaches-server, stale `google.script.run` iframe bridge) before finding the real cause — `openEditor()` had no guard against re-entry while a submit/verify/revert call was in flight, silently swapping the modal's state. Fixed across 3 call sites (@479). Live smoke-testing then found a second, distinct load-vs-load race the first fix didn't cover (@480), then found the actual persistent symptom was simpler still: the verify-mode display panel only cleared once the slow load resolved (@481) — same deploy restored submit-triggers-next-task auto-advance per user request (relabeled "Done & Next" to avoid recreating the @208 label mismatch).
+- Product-editor 15-18s load (Session J item 1, open since 07-12): real cause found — `LookupService.getLookupMap`/`_openLookupSheet` search Drive by filename on every call instead of opening by known ID, 3x per load, completely untouched by the earlier @469 CacheService fix. Fixed @482.
+- Next: manager live-smokes @482 for actual load-time improvement and confirms the submit/verify fixes hold under real use. Full diagnosis trail, including the abandoned theories, is in `BUG_FIX_SEQUENCE.md` Session J — trust that over any earlier reasoning.
+
+---
+
 ## 2026-07-14 — Reverted-verify Task modal (@471-@473); product-editor cache fix smoke-test found the real bottleneck is still open
 
 - Manager smoke-tested the @469 cache fix live: confirmed cache hits actually occur (SysLog), but total `getProductDetails` time was unchanged (~17-19s) regardless of hit/miss ratio — the sheet-reads were never the dominant cost, so item 1's premise needs re-examination before more cache tuning. Also confirmed the 07-12 submit-hang bug recurs on a *new-product* submission (not just existing-product updates), still no root cause — `SysLog` shows zero trace both times, consistent with the click never reaching the server. Next step: live repro with DevTools console open. Both findings written into `jlmops/plans/BUG_FIX_SEQUENCE.md` Session J and `.claude/bugs.md`.
