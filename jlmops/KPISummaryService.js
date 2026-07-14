@@ -138,6 +138,14 @@ const KPISummaryService = (function() {
    * Insert or overwrite the row keyed by sk_Period. Returns the row's
    * previous values (for MoM deltas) or null if it didn't exist.
    */
+  // Sheets sometimes auto-converts a plain "YYYY-MM" string cell into a real
+  // Date (the 1st of that month) — normalize back to "YYYY-MM" before matching,
+  // don't rely on the stored type. See .claude/bugs.md 2026-07-03.
+  function _asPeriodKey(v) {
+    if (v instanceof Date) return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0');
+    return String(v);
+  }
+
   function _upsertRow(sheet, headers, period, metrics) {
     const HI = _headerIndex(headers);
     const lastRow = sheet.getLastRow();
@@ -146,7 +154,7 @@ const KPISummaryService = (function() {
     if (lastRow > 1) {
       const periods = sheet.getRange(2, HI.sk_Period + 1, lastRow - 1, 1).getValues();
       for (let i = 0; i < periods.length; i++) {
-        if (String(periods[i][0]) === period) { targetRow = i + 2; break; }
+        if (_asPeriodKey(periods[i][0]) === period) { targetRow = i + 2; break; }
       }
       if (targetRow !== -1) {
         previous = sheet.getRange(targetRow, 1, 1, headers.length).getValues()[0];
@@ -160,6 +168,11 @@ const KPISummaryService = (function() {
     Object.keys(metrics).forEach(function(k) {
       if (HI[k] !== undefined) out[HI[k]] = metrics[k];
     });
+    // sk_Period values like "2026-06" look date-like to Sheets' auto-detection,
+    // which silently converts them to a Date object and breaks the string dedup
+    // match above on any future re-run of an already-closed period. Plain-text
+    // format must be set before the value is written, or auto-detection still wins.
+    sheet.getRange(targetRow, HI.sk_Period + 1, 1, 1).setNumberFormat('@');
     sheet.getRange(targetRow, 1, 1, headers.length).setValues([out]);
     return previous;
   }
@@ -227,7 +240,7 @@ const KPISummaryService = (function() {
       if (lastRow > 1) {
         const periods = sheet.getRange(2, HI.sk_Period + 1, lastRow - 1, 1).getValues();
         for (let i = 0; i < periods.length; i++) {
-          if (String(periods[i][0]) === priorYm) {
+          if (_asPeriodKey(periods[i][0]) === priorYm) {
             priorSubs = sheet.getRange(i + 2, HI.sk_Subscribers + 1, 1, 1).getValues()[0][0];
             break;
           }

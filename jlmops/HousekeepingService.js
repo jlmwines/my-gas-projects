@@ -776,7 +776,8 @@ function HousekeepingService() {
             phase1_failures: phase1Failures.length > 0 ? phase1Failures : null,
             phase3_failures: phase3Failures.length > 0 ? phase3Failures : null,
             failed_job_count: failedJobsSummary ? failedJobsSummary.failedJobCount : null,
-            failed_job_oldest_age_days: failedJobsSummary ? failedJobsSummary.oldestAgeDays : null
+            failed_job_oldest_age_days: failedJobsSummary ? failedJobsSummary.oldestAgeDays : null,
+            failed_job_newest_age_days: failedJobsSummary ? failedJobsSummary.newestAgeDays : null
           }
         }
       );
@@ -1870,7 +1871,7 @@ function HousekeepingService() {
    * update one deduped task (CCP-1). Never throws — daily run must continue.
    *
    * @param {string} sessionId - correlation id (CCP-2).
-   * @returns {{failedJobCount:number, oldestAgeDays:?number, severity:?string}|null}
+   * @returns {{failedJobCount:number, oldestAgeDays:?number, newestAgeDays:?number, severity:?string}|null}
    */
   this.checkFailedJobs = function(sessionId) {
     const functionName = 'checkFailedJobs';
@@ -1904,7 +1905,7 @@ function HousekeepingService() {
 
       const jobData = jobQueueSheet.getDataRange().getValues();
       if (jobData.length <= 1) {
-        return { failedJobCount: 0, oldestAgeDays: 0, severity: null };
+        return { failedJobCount: 0, oldestAgeDays: 0, newestAgeDays: 0, severity: null };
       }
 
       const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -1934,11 +1935,12 @@ function HousekeepingService() {
 
       const failedJobCount = failed.length;
       if (failedJobCount === 0) {
-        return { failedJobCount: 0, oldestAgeDays: 0, severity: null };
+        return { failedJobCount: 0, oldestAgeDays: 0, newestAgeDays: 0, severity: null };
       }
 
       const agesKnown = failed.filter(f => f.ageDays !== null).map(f => f.ageDays);
       const oldestAgeDays = agesKnown.length ? Math.round(Math.max.apply(null, agesKnown)) : null;
+      const newestAgeDays = agesKnown.length ? Math.round(Math.min.apply(null, agesKnown)) : null;
 
       const recent = failed.filter(f => f.ageDays === null || f.ageDays <= RECENT_WINDOW_DAYS);
       const anyRecentOverHigh = recent.some(f => f.ageDays !== null && f.ageDays > HIGH_AGE_DAYS);
@@ -1957,8 +1959,8 @@ function HousekeepingService() {
       }
 
       logger.info('HousekeepingService', functionName,
-        `Failed-job sweep: ${failedJobCount} FAILED (oldest ${oldestAgeDays}d), severity ${severity}.`);
-      return { failedJobCount: failedJobCount, oldestAgeDays: oldestAgeDays, severity: severity };
+        `Failed-job sweep: ${failedJobCount} FAILED (oldest ${oldestAgeDays}d, newest ${newestAgeDays}d), severity ${severity}.`);
+      return { failedJobCount: failedJobCount, oldestAgeDays: oldestAgeDays, newestAgeDays: newestAgeDays, severity: severity };
 
     } catch (e) {
       logger.error('HousekeepingService', functionName, `Failed-job sweep error: ${e.message}`, e);

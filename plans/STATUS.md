@@ -1,6 +1,6 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-14 — jlmops @475 live: Product Verification plan fully shipped, count-flow strip complete.
+**Updated:** 2026-07-14 — jlmops @476 live: Product Verification plan fully shipped, count-flow strip complete; two isolated bugs killed (failed-jobs metric, KPI sk_Period Date bug) alongside live publishing/product-workflow testing.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @475 · theme v1.2.31 |
+| Deploy Version | jlmops @476 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-14 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |

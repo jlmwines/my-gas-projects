@@ -132,7 +132,8 @@ const StatusReportService = (function() {
         (hk.validation_issues != null ? hk.validation_issues : '?') +
         ' · Schema: ' + (hk.schema_status || '?') + ' (critical ' + (hk.schema_critical != null ? hk.schema_critical : '?') + ')',
       '- Failed jobs: ' + (hk.failed_job_count != null ? hk.failed_job_count : '?') +
-        (hk.failed_job_oldest_age_days != null ? ' (oldest ' + hk.failed_job_oldest_age_days + 'd)' : ''),
+        (hk.failed_job_oldest_age_days != null ? ' (oldest ' + hk.failed_job_oldest_age_days + 'd' +
+          (hk.failed_job_newest_age_days != null ? ', newest ' + hk.failed_job_newest_age_days + 'd' : '') + ')' : ''),
       ''
     ].join('\n');
   }
