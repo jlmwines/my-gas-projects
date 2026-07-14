@@ -729,7 +729,7 @@
       </div>
       <div class="modal-footer bg-light">
         <button class="btn btn-sm" onclick="ModalOverlay.close('suggestion-modal')">Cancel</button>
-        <button class="btn btn-sm" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
+        <button class="btn btn-sm" id="btn-approve-suggestion" onclick="AdminProductsView.submitSuggestionApproval()">Approve & Create Task</button>
       </div>
     </div>
   </div>
@@ -1967,15 +1967,25 @@
             return;
         }
         TaskWidgets.confirm(`Approve suggestion for ${nameEn}?`, function() {
+        const btn = document.getElementById('btn-approve-suggestion');
+        const prevHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Approving…';
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
                 ModalOverlay.close('suggestion-modal');
                 TaskWidgets.toast('Suggestion approved — onboarding task created.', 'success');
                 AdminProductsView.refreshView();
             } else {
+                btn.disabled = false;
+                btn.innerHTML = prevHtml;
                 TaskWidgets.toast('Error: ' + res.message, 'error');
             }
-        }).withFailureHandler(err => TaskWidgets.toast('Error: ' + err.message, 'error'))
+        }).withFailureHandler(err => {
+            btn.disabled = false;
+            btn.innerHTML = prevHtml;
+            TaskWidgets.toast('Error: ' + err.message, 'error');
+        })
         .WebAppProducts_acceptSuggestion(AdminProductsView.currentTaskId, AdminProductsView.currentSku, nameEn, nameHe, wooId);
         });
     };
