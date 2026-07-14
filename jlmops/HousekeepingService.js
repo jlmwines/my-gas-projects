@@ -727,7 +727,6 @@ function HousekeepingService() {
       { name: 'createWelcomeOutreachTasks', fn: () => this.createWelcomeOutreachTasks() },
       { name: 'runLibraryIntegrityReport', fn: () => this.runLibraryIntegrityReport() },
       { name: 'reconcileLibraryDuplicates', fn: () => LibraryService.reconcileLibraryDuplicates() },
-      { name: 'maintainCityLookup', fn: () => this.maintainCityLookup() },
       { name: 'backfillActivities', fn: () => this.backfillActivities() },
       { name: 'runCrmIntelligence', fn: () => this.runCrmIntelligence() },
       { name: 'refreshKpiBlock', fn: () => StatusReportService.refreshKpiBlock(sessionId) },
@@ -1394,32 +1393,6 @@ function HousekeepingService() {
       return { orphanEntities: orphanEntities.length, orphanFiles: orphanFiles.length };
     } catch (e) {
       logger.warn('HousekeepingService', functionName, `Report failed: ${e.message}`);
-      return false;
-    }
-  };
-
-  /**
-   * Checks for new cities that passed the order threshold.
-   * Auto-adds them to SysLkp_Cities and creates a task to categorize.
-   */
-  this.maintainCityLookup = function() {
-    const functionName = 'maintainCityLookup';
-
-    try {
-      if (typeof ContactAnalysisService === 'undefined' || !ContactAnalysisService.maintainCityLookup) {
-        logger.info('HousekeepingService', functionName, 'ContactAnalysisService not available. Skipping city maintenance.');
-        return true;
-      }
-
-      const result = ContactAnalysisService.maintainCityLookup();
-      if (result.added > 0) {
-        logger.info('HousekeepingService', functionName, `Added ${result.added} new cities: ${result.cities.join(', ')}`);
-      } else {
-        logger.info('HousekeepingService', functionName, 'No new cities to add.');
-      }
-      return true;
-    } catch (e) {
-      logger.warn('HousekeepingService', functionName, `City lookup maintenance failed: ${e.message}`);
       return false;
     }
   };
