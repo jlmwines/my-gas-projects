@@ -235,7 +235,7 @@ The row's own **Close** / **Pass to manager** buttons are untouched and remain r
 
 No schema changes. No change to `completeVerifyTask` or `passVerifyToManager` — both keep working exactly as shipped @312 (the Task modal's Done button calls `completeVerifyTask` too).
 
-## Manager open-queue visibility (SHIPPED @483, 2026-07-14)
+## Manager open-queue visibility (SHIPPED @483, 2026-07-14 — smoke-tested and confirmed live by the user)
 
 The Verification card's reverted-tasks list only ever showed tasks bounced *back* to the admin — nothing showed the admin the manager's *current* open queue before generating more tasks. Added a read-only "Manager — open" section between the reverted-tasks list and the creation tool: SKU + product title for every open `task.product.verify` assigned to Manager, via a new `WebAppProducts_getManagerVerifyTasks()` (same shape and pattern as `getRevertedVerifyTasks`, filtered to `'Manager'` instead of `'Administrator'`). No actions on the rows — visibility only. Loads on the same lifecycle as the reverted list (tab lazy-load + `refreshView`).
 
