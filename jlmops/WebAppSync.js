@@ -783,25 +783,21 @@ function updateSyncStateFromOrchestrator(sessionId, statusUpdate) {
 // =========================================================================
 
 /**
- * Retrieves invoice/receipt info for the pre-sync card.
- * @returns {object} { count, folderUrl, reviewCount }
+ * Retrieves pre-sync review-queue info for the pre-sync card.
+ * @returns {object} { reviewCount }
  */
 function getInventoryReceiptsInfo() {
   const serviceName = 'WebAppSync';
   const functionName = 'getInventoryReceiptsInfo';
   try {
-    const count = OrchestratorService.getInvoiceFileCount();
-    const allConfig = ConfigService.getAllConfig();
-    const receiptsFolderConfig = allConfig['system.folder.invoices'];
-    let folderUrl = null;
-    if (receiptsFolderConfig && receiptsFolderConfig.id) {
-      folderUrl = `https://drive.google.com/drive/folders/${receiptsFolderConfig.id}`;
-    }
+    // Invoice count/folder link dropped 2026-07-14 — the role responsible for
+    // invoices changed and this widget no longer needs to track them. Review
+    // count (task.validation.comax_internal_audit) is unrelated and stays.
     const reviewCount = WebAppTasks.getOpenTasksByTypeIdAndStatus('task.validation.comax_internal_audit', 'Review').length;
-    return { count: count, folderUrl: folderUrl, reviewCount: reviewCount };
+    return { reviewCount: reviewCount };
   } catch (e) {
     logger.error(serviceName, functionName, `Error getting inventory receipts info: ${e.message}`, e);
-    return { count: 0, folderUrl: null, reviewCount: 0, error: e.message };
+    return { reviewCount: 0, error: e.message };
   }
 }
 

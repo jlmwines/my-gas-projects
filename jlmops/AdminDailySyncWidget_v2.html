@@ -33,10 +33,8 @@
                         <h6 class="card-title sync-card-title">Pre-Sync</h6>
                         <div id="invoiceIcon" class="sync-icon">📁</div>
                         <div id="invoiceMessage" class="small">
-                            <div><span id="invoiceCount" class="fw-bold">...</span></div>
                             <div><span id="reviewCount" class="fw-bold">...</span></div>
                         </div>
-                        <div id="invoiceAction" class="mt-1"></div>
                     </div>
                 </div>
             </div>
@@ -204,7 +202,7 @@
         var step5Action = document.getElementById('step5Action');
         var fname = status.webExportFilename;
         if (fname && fname !== 'No Changes Detected') {
-            step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.viewCsv(); return false;" class="small fw-bold text-primary text-decoration-none">Open in Drive</a>';
+            step5Action.innerHTML = '<a href="#" onclick="window.SyncWidget.viewCsv(); return false;" class="fw-bold text-primary text-decoration-none">Open in Drive</a>';
         } else {
             step5Action.innerHTML = '';
         }
@@ -346,47 +344,25 @@
     function updateInvoiceFolder() {
         google.script.run
             .withSuccessHandler(function(info) {
-                var countEl = document.getElementById('invoiceCount');
                 var reviewEl = document.getElementById('reviewCount');
-                var actionEl = document.getElementById('invoiceAction');
                 var iconEl = document.getElementById('invoiceIcon');
                 var card = document.getElementById('invoiceCard');
 
                 card.className = 'card h-100';
-                var hasIssues = false;
-
-                if (info.count === 0) {
-                    countEl.innerHTML = '<span class="text-success">Invoices: 0</span>';
-                } else if (info.count > 0) {
-                    countEl.innerHTML = '<span class="text-warning">Invoices: ' + info.count + '</span>';
-                    hasIssues = true;
-                } else {
-                    countEl.innerHTML = '<span class="text-muted">Invoices: N/A</span>';
-                }
 
                 var reviewCount = info.reviewCount || 0;
                 if (reviewCount === 0) {
                     reviewEl.innerHTML = '<span class="text-success">Reviews: 0</span>';
-                } else {
-                    reviewEl.innerHTML = '<span class="text-warning">Reviews: ' + reviewCount + '</span>';
-                    hasIssues = true;
-                }
-
-                if (hasIssues) {
-                    iconEl.textContent = '⚠️';
-                    card.classList.add('border-warning');
-                    if (info.folderUrl) {
-                        actionEl.innerHTML = '<a href="' + info.folderUrl + '" target="_blank" class="small fw-bold text-primary text-decoration-none">Open Folder</a>';
-                    }
-                } else {
                     iconEl.textContent = '✅';
                     card.classList.add('border-primary');
-                    actionEl.innerHTML = '';
+                } else {
+                    reviewEl.innerHTML = '<span class="text-warning">Reviews: ' + reviewCount + '</span>';
+                    iconEl.textContent = '⚠️';
+                    card.classList.add('border-warning');
                 }
             })
             .withFailureHandler(function(err) {
                 console.error('Failed to load pre-sync info:', err);
-                document.getElementById('invoiceCount').innerHTML = '<span class="text-danger">Error</span>';
                 document.getElementById('reviewCount').innerHTML = '';
             })
             .getInventoryReceiptsInfo();
