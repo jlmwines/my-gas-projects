@@ -350,7 +350,6 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
   try {
     const inventoryManagementService = InventoryManagementService;
     let updatedCount = 0;
-    let vintageTasksCreated = 0;
 
     selectedCounts.forEach(item => {
       const updateResult = inventoryManagementService.updatePhysicalCounts(item);
@@ -359,37 +358,6 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
         updatedCount++;
       } else {
         LoggerService.warn('WebAppInventory', 'submitInventoryCounts', `Failed to update count for SKU ${item.sku}. Task ${item.taskId} not completed.`);
-        return;
-      }
-
-      const vintageActual = item.vintageActual ? String(item.vintageActual).trim() : '';
-      const vintageRef = item.vintageRef ? String(item.vintageRef).trim() : '';
-      const comment = item.comment ? String(item.comment).trim() : '';
-      const vintageMismatch = vintageActual && vintageActual !== vintageRef;
-
-      if (vintageMismatch || comment) {
-        let note;
-        if (vintageMismatch && comment) {
-          note = `Update Comax vintage to ${vintageActual}. ${comment}`;
-        } else if (vintageMismatch) {
-          note = `Update Comax vintage to ${vintageActual}`;
-        } else {
-          note = comment;
-        }
-        try {
-          TaskService.createTask(
-            'task.validation.vintage_mismatch',
-            item.sku,
-            item.productName || '',
-            'Vintage Update (Count)',
-            note,
-            null,
-            { allowDuplicate: true }
-          );
-          vintageTasksCreated++;
-        } catch (tErr) {
-          LoggerService.error('WebAppInventory', 'submitInventoryCounts', `Vintage task create failed for ${item.sku}: ${tErr.message}`, tErr);
-        }
       }
     });
 
@@ -397,7 +365,7 @@ function WebAppInventory_submitInventoryCounts(selectedCounts) {
       WebAppTasks.invalidateCache();
     }
 
-    return { success: true, updated: updatedCount, vintageTasksCreated: vintageTasksCreated };
+    return { success: true, updated: updatedCount };
   } catch (e) {
     LoggerService.error('WebAppInventory', 'submitInventoryCounts', e.message, e);
     throw e;
@@ -718,7 +686,7 @@ function WebAppInventory_exportCountsToSheet() {
     // Column layout (1-indexed):
     //  A SKU   B Product Name   C Vintage (ref)   D Product Page
     //  E Comax Qty   F Brurya Qty   G Storage Qty   H Office Qty   I Shop Qty
-    //  J Total Count   K Vintage (actual)   L Comments   M Task ID
+    //  J Total Count   K Task ID
     const headers = [
       "SKU",
       "Product Name",
@@ -730,8 +698,6 @@ function WebAppInventory_exportCountsToSheet() {
       "Office Quantity",
       "Shop Quantity",
       "Total Count",
-      "Vintage (actual)",
-      "Comments",
       "Task ID"
     ];
     sheet.appendRow(headers);
@@ -752,8 +718,6 @@ function WebAppInventory_exportCountsToSheet() {
         product.officeQty,
         product.shopQty,
         `=G${rowNum}+H${rowNum}+I${rowNum}+F${rowNum}`, // Brurya + Storage + Office + Shop
-        '', // Vintage (actual) - user input
-        '', // Comments - user input
         product.taskId
       ];
     });
@@ -764,10 +728,9 @@ function WebAppInventory_exportCountsToSheet() {
     sheet.setFrozenRows(1);
     sheet.autoResizeColumns(1, headers.length);
 
-    // Highlight input columns (light yellow): Storage/Office/Shop, Vintage (actual), Comments
+    // Highlight input columns (light yellow): Storage/Office/Shop
     const inputColor = '#FFF2CC';
     sheet.getRange(2, 7, data.length, 3).setBackground(inputColor);  // Storage/Office/Shop (G,H,I)
-    sheet.getRange(2, 11, data.length, 2).setBackground(inputColor); // Vintage (actual) + Comments (K,L)
 
     // Bold the Total column
     sheet.getRange(2, 10, data.length, 1).setFontWeight('bold'); // J
@@ -775,8 +738,7 @@ function WebAppInventory_exportCountsToSheet() {
     // Protection: lock everything except user-input columns
     const protection = sheet.protect().setDescription('System Data - Do Not Edit Locked Fields');
     const inputRangeQty = sheet.getRange(2, 7, data.length, 3);  // G-I
-    const inputRangeNotes = sheet.getRange(2, 11, data.length, 2); // K-L
-    protection.setUnprotectedRanges([inputRangeQty, inputRangeNotes]);
+    protection.setUnprotectedRanges([inputRangeQty]);
 
     // Move the new spreadsheet to the designated folder
     const file = DriveApp.getFileById(newSpreadsheet.getId());
@@ -849,13 +811,9 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
     const dataRows = values.slice(1);
 
     const skuCol = headers.indexOf("SKU");
-    const productNameCol = headers.indexOf("Product Name");
     const storageCol = headers.indexOf("Storage Quantity");
     const officeCol = headers.indexOf("Office Quantity");
     const shopCol = headers.indexOf("Shop Quantity");
-    const vintageRefCol = headers.indexOf("Vintage");
-    const vintageActualCol = headers.indexOf("Vintage (actual)");
-    const commentsCol = headers.indexOf("Comments");
     const taskIdCol = headers.indexOf("Task ID");
 
     if (skuCol === -1 || taskIdCol === -1 || storageCol === -1 || officeCol === -1 || shopCol === -1) {
@@ -873,21 +831,12 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
       const rawStorage = row[storageCol];
       const rawOffice = row[officeCol];
       const rawShop = row[shopCol];
-      const rawVintageActual = vintageActualCol !== -1 ? row[vintageActualCol] : '';
-      const rawComment = commentsCol !== -1 ? row[commentsCol] : '';
-      const vintageRef = vintageRefCol !== -1 ? row[vintageRefCol] : '';
 
       const anyQty = !isBlank(rawStorage) || !isBlank(rawOffice) || !isBlank(rawShop);
-      const anyAux = !isBlank(rawVintageActual) || !isBlank(rawComment);
 
-      if (!anyQty && !anyAux) return; // silently skipped — unchanged row
+      if (!anyQty) return; // silently skipped — unchanged row
 
       const sku = String(row[skuCol] || '').trim();
-
-      if (!anyQty && anyAux) {
-        preScanErrors.push({ row: rowNum, sku: sku, reason: 'Vintage or Comment entered without a quantity' });
-        return;
-      }
 
       const parsedStorage = isBlank(rawStorage) ? null : parseInt(rawStorage, 10);
       const parsedOffice = isBlank(rawOffice) ? null : parseInt(rawOffice, 10);
@@ -901,18 +850,13 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
       }
 
       const taskId = String(row[taskIdCol] || '').trim();
-      const productName = productNameCol !== -1 ? String(row[productNameCol] || '').trim() : '';
       parsedRows.push({
         rowNum: rowNum,
         sku: sku,
         taskId: taskId,
-        productName: productName,
         storageQty: parsedStorage,
         officeQty: parsedOffice,
-        shopQty: parsedShop,
-        vintageActual: String(rawVintageActual || '').trim(),
-        vintageRef: String(vintageRef || '').trim(),
-        comment: String(rawComment || '').trim()
+        shopQty: parsedShop
       });
     });
 
@@ -927,7 +871,6 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
 
     // --- Write phase ---
     let processed = 0;
-    let vintageTasksCreated = 0;
     const writeErrors = [];
 
     parsedRows.forEach(r => {
@@ -948,49 +891,17 @@ function WebAppInventory_importCountsFromSheet(sheetIdOrUrl) {
       } catch (e) {
         LoggerService.error('WebAppInventory', 'importCountsFromSheet', `SKU ${r.sku} row ${r.rowNum}: ${e.message}`, e);
         writeErrors.push({ row: r.rowNum, sku: r.sku, reason: e.message });
-        return;
-      }
-
-      const vintageMismatch = r.vintageActual && r.vintageActual !== r.vintageRef;
-      const hasComment = !!r.comment;
-
-      if (vintageMismatch || hasComment) {
-        let note;
-        if (vintageMismatch && hasComment) {
-          note = `Update Comax vintage to ${r.vintageActual}. ${r.comment}`;
-        } else if (vintageMismatch) {
-          note = `Update Comax vintage to ${r.vintageActual}`;
-        } else {
-          note = r.comment;
-        }
-        try {
-          TaskService.createTask(
-            'task.validation.vintage_mismatch',
-            r.sku,
-            r.productName || '',
-            'Vintage Update (Count)',
-            note,
-            null,
-            { allowDuplicate: true }
-          );
-          vintageTasksCreated++;
-        } catch (tErr) {
-          LoggerService.error('WebAppInventory', 'importCountsFromSheet', `Vintage task create failed for ${r.sku}: ${tErr.message}`, tErr);
-          writeErrors.push({ row: r.rowNum, sku: r.sku, reason: `Count saved; vintage task creation failed: ${tErr.message}` });
-        }
       }
     });
 
     SpreadsheetApp.flush();
-    LoggerService.info('WebAppInventory', 'importCountsFromSheet', `Imported ${processed} counts; ${vintageTasksCreated} vintage tasks; ${writeErrors.length} errors.`);
+    LoggerService.info('WebAppInventory', 'importCountsFromSheet', `Imported ${processed} counts; ${writeErrors.length} errors.`);
 
     return {
       success: true,
       processed: processed,
-      vintageTasksCreated: vintageTasksCreated,
       errors: writeErrors,
       message: `Imported ${processed} counts` +
-        (vintageTasksCreated ? `, created ${vintageTasksCreated} vintage task(s)` : '') +
         (writeErrors.length ? `, ${writeErrors.length} issue(s)` : '') + '.'
     };
   } catch (e) {

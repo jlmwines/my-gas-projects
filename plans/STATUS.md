@@ -1,12 +1,12 @@
 # JLM Wines — Current Status
 
-**Updated:** 2026-07-14 — jlmops @473 live: reverted-verify tasks have a Task button opening the shared TaskDetail modal (edit/save note, close normally), smoke-tested and confirmed working.
+**Updated:** 2026-07-14 — jlmops @475 live: Product Verification plan fully shipped, count-flow strip complete.
 
 ## At a glance
 
 One current-state line per business area. The umbrella has no single phase label — each area carries its own state.
 
-- **jlmops** (GAS backend) — live @473, stable. Product-editor 15-18s load and an intermittent submit-hang remain open (`jlmops/plans/BUG_FIX_SEQUENCE.md` Session J).
+- **jlmops** (GAS backend) — live @475, stable. Product-editor 15-18s load and an intermittent submit-hang remain open (`jlmops/plans/BUG_FIX_SEQUENCE.md` Session J).
 - **jlmwines.com** (storefront/theme) — live, theme v1.2.30; Wine Talk category taxonomy expanded (Wine Basics + Regions live in WP), tab UI pending first region post.
 - **content** — 11 editorial posts live (EN+HE); region-post series and a Grapes guide anchor in active drafting (`content/REGION_POSTS_PLAN.md`, `content/guide/ISRAELI_WINE_GUIDE_PLAN.md`).
 - **marketing** — flyer printed, distributing to Talbiye after 9 Av; newsletter cadence current (July print out, AYIW email drafting); calendar filled through December.
@@ -18,7 +18,7 @@ One current-state line per business area. The umbrella has no single phase label
 |--------|-------|
 | Last Active | 2026-07-14 |
 | Revenue | Steady |
-| Deploy Version | jlmops @473 · theme v1.2.31 |
+| Deploy Version | jlmops @475 · theme v1.2.31 |
 | Deploy Date | jlmops 2026-07-14 · theme 2026-07-09 |
 | CRM Contacts | 548 enriched |
 | Content | 11 editorial posts live (EN+HE); 2 in pipeline (Reds Guide, Whites Guide — awaiting editing + translation). |
@@ -33,8 +33,8 @@ One current-state line per business area. The umbrella has no single phase label
 The live "what now" — daily review reads these first.
 
 1. **July newsletter — print already in distribution (track only).** End-of-July AYIW email (`ayiw-2026-07`) content in progress — finish drafting and send before month end. August AYIW (`ayiw-2026-08`, target send 2026-09-08) also prepped 2026-07-09: calendar row merged, Doc placed at canonical Library path — ready for admin to attach/spawn when convenient.
-2. **Branded shipping cartons — art in review with vendor.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
-3. **Flyer advertising — printed; distribution scheduled after 9 Av to 5,000 Talbiye residences.** Vendor-owned execution. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-07-14`).
+2. **Branded shipping cartons — art confirmed with vendor; arrival date unknown.** Partner-owned. Track only: nudge in daily review; re-flag if production/delivery slips. No Claude action.
+3. **Flyer advertising — printed; distribution delayed until after the 9 Av fast day, likely last week of July, to 5,000 Talbiye residences.** Vendor-owned execution. Plan → `marketing/FLYER_PLAN.md`. Coupon rides the offline-attribution scheme (Inbox, `defer:2026-08-10`).
 4. **Ongoing operational cadence** (continuous): update products; validate web product data + image accuracy (`jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`); add products to fill category gaps; publish regularly (blog pipeline + monthly newsletter).
 5. **Galilee region post (Slot B, due 2026-08-11, see `content/REGION_POSTS_PLAN.md`)** — in progress; drafted + registered in the library (`blog-region-galilee-en`, state `draft`).
 6. **Central Mountains region post (Slot C) — body drafted through Image Prompts, 2026-07-09.** Calendar row staged (`blog-region-central-mountains`, cal_Date 2026-08-25, pending "Apply Pending Updates"); Drive doc placed at the canonical library path (`blog-region-central-mountains-en 26-07-09-12-05`); git source at `content/regions/central-mountains/central-mountains-en.post.md`. Remaining: winery verification (Gvaot/Tura not yet confirmed against JLM's carried wineries), Canva images, HE translation, library registration, WP push — same checklist as Galilee (`content/REGION_POSTS_PLAN.md`).
@@ -66,7 +66,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 - **Content-library versioning** — attach-to-replace + supersede→`_archive` confirmed live (Decision 7 / Plan B). Not yet smoke-tested: the **Create-translation-text** button (HE translate task with an EN Doc → copies EN + prompt, attaches as HE current, old HE archived); a messy/mobile-pasted URL through the hardened id extraction; `runLibraryDuplicateReconcile` from the editor.
 - **Correct Product Name tool** — live (Admin → Products → SKU Management → Correct Product Name); edits WebProdM/WebDetM name fields and logs to Recent SKU Updates. Not yet smoke-tested from /dev. Plan → `jlmops/plans/PRODUCT_NAME_CORRECTION_PLAN.md`.
 - **New-product Products-view UX** — shipped, archived, and smoke-tested/validated by the user 2026-07-09 (`jlmops/plans/_archive/NEW_PRODUCT_WORKFLOW_UX_PLAN.md`); current behavior documented in `jlmops/docs/WORKFLOWS.md` §14. Accept Suggestion modal field order (EN name → Woo Post ID → HE name) and its required Comax "Sold Online" confirmation checkbox smoke-tested 2026-07-10. Closes the smoke-test gate the PROJ-CONTENT Inbox item was waiting on.
-- **Verification reverted-task handling** — live and smoke-tested 2026-07-13; reverting a verify task routes it to Admin → Verification "Reverted — needs admin"; Close completes it, Pass to manager hands it off as an editable Detail-Updates task with findings intact. Smoke test surfaced a gap (no way to view/edit the note or reach the standard task view from the row) — fixed by adding a Task button that opens the shared TaskDetail modal (edit/save note, close normally), live @473. Plan → `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`.
+- **Product verification** — fully shipped end-to-end. Manager review surface + reverted-task admin handling (Close / Pass to manager / Task-modal edit-note-and-close-normally) live and smoke-tested. Count-flow strip also complete — Manager Inventory's Counts tab no longer does inline vintage/comment editing or spawns `vintage_mismatch` tasks (that's now verification-only). Plan → `jlmops/plans/PRODUCT_VERIFICATION_PLAN.md`.
 - **SKU management** — Vendor SKU Update and Trim Safety not yet tested; Product Replacement tested and working, though its product search reads dead WebProdM columns (`.claude/bugs.md`).
 - **UI T4.3 count-entry modal** — shipped, unsmoked; verify on a phone when count tasks next appear.
 - **`st_DoneDate` set without `st_Status='Done'`** — at least one Manager-assigned row carries a done date while still Assigned, so it surfaces as open. Watch whether the pattern spreads; if so, fix the write path or the dashboard filter.
@@ -81,6 +81,7 @@ Plans with code partially shipped and open implementation steps remaining. Sessi
 
 - **Year in Wine PDF** — needs PDF-generation research.
 - **Woo Brand + GTIN structured-data enrichment** — needs a jlmops-side data-shape change (new WC sync fields or CSV columns); deferred alongside cross-sell.
+- **Woo product attributes/descriptions via API push (not started)** — replace the current manual WooCommerce update process with a jlmops-driven API push for product attributes + descriptions; once that lands, extend the same push to carry upsell/cross-sell values. Next big plan after content publishing, Product Verification, and product-update/add workflows are running smoothly — no plan doc yet.
 - **Gift recipient campaigns** — lowest priority.
 - **VIP recognition + referral program** — after campaigns launch.
 
@@ -107,4 +108,4 @@ _(none)_
 
 ### Deferred
 
-- **Offline-channel attribution scheme** `defer:2026-07-14` — newsletter attribution confirmed, including QR-code tracking specifically (not just tagged links). Flyer not yet distributed; allow ~2 weeks post-drop to smoke results before reviewing naming convention + QR/coupon setup.
+- **Offline-channel attribution scheme** `defer:2026-08-10` — newsletter attribution confirmed, including QR-code tracking specifically (not just tagged links). Flyer distribution now expected last week of July (post-9-Av); defer date allows ~2 weeks post-drop to smoke results before reviewing naming convention + QR/coupon setup.

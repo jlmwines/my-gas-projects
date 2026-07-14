@@ -118,7 +118,7 @@
 
         /* T4.3 Stage B — Product Counts on mobile: collapse to a compact list
            (Product Name + SKU + status checkbox); tapping a row opens the
-           count-entry modal. Hide the read-only/input/toggle columns + detail row. */
+           count-entry modal. Hide the read-only/input columns. */
         @media (max-width: 768px) {
             .products-count-table th:nth-child(1),  .products-count-table td:nth-child(1),   /* Comax */
             .products-count-table th:nth-child(2),  .products-count-table td:nth-child(2),   /* Total */
@@ -127,12 +127,10 @@
             .products-count-table th:nth-child(5),  .products-count-table td:nth-child(5),   /* Office */
             .products-count-table th:nth-child(6),  .products-count-table td:nth-child(6),   /* Shop */
             .products-count-table th:nth-child(7),  .products-count-table td:nth-child(7),   /* Vintage */
-            .products-count-table th:nth-child(8),  .products-count-table td:nth-child(8),   /* Link */
-            .products-count-table th:nth-child(11), .products-count-table td:nth-child(11) { /* details toggle */
+            .products-count-table th:nth-child(8),  .products-count-table td:nth-child(8) {  /* Link */
                 display: none;
             }
             .products-count-table tbody tr[data-task-id] { cursor: pointer; }
-            .products-count-table .product-details-row { display: none !important; }
 
             /* Count-entry modal: give the footer breathing room on mobile so the
                Save / Save & next buttons aren't flush against the bottom edge and
@@ -225,14 +223,6 @@
         <label for="count-entry-shop">Shop</label>
         <input type="number" class="form-control" id="count-entry-shop" inputmode="numeric">
       </div>
-      <div class="form-group">
-        <label for="count-entry-vintage">Vintage (actual, if differs)</label>
-        <input type="text" class="form-control" id="count-entry-vintage">
-      </div>
-      <div class="form-group">
-        <label for="count-entry-comment">Comment</label>
-        <input type="text" class="form-control" id="count-entry-comment" placeholder="Note for admin">
-      </div>
     </div>
     <div class="modal-footer bg-light">
       <button type="button" class="btn" id="btn-count-entry-cancel">Cancel</button>
@@ -308,7 +298,6 @@
                                 <th class="text-center">Link</th>
                                 <th class="text-center">SKU</th>
                                 <th class="text-right">Product Name</th>
-                                <th class="text-center"></th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -325,10 +314,9 @@
                     const pageLink = item.pageUrl
                         ? `<a href="${escapeAttr(item.pageUrl)}" target="_blank" rel="noopener">view</a>`
                         : '';
-                    const vintageRef = escapeAttr(item.vintage || '');
 
                     tableHtml += `
-                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-vintage-ref="${vintageRef}" data-product-name="${escapeAttr(item.productName || '')}">
+                        <tr data-task-id="${item.taskId}" data-sku="${item.sku}" data-comax-qty="${item.comaxQty}" data-product-name="${escapeAttr(item.productName || '')}">
                             <td class="text-center">${item.comaxQty}</td>
                             <td class="text-center" id="total-qty-${item.sku}">${item.totalQty}</td>
                             <td class="text-center">${item.bruryaQty}</td>
@@ -339,22 +327,7 @@
                             <td class="text-center">${pageLink}</td>
                             <td class="text-center">${item.sku}</td>
                             <td class="text-right">${item.productName}</td>
-                            <td class="text-center"><button type="button" class="btn btn-light btn-sm product-details-toggle" data-sku="${item.sku}">…</button></td>
                             <td><input type="checkbox" class="product-count-checkbox" ${isChecked} disabled></td>
-                        </tr>
-                        <tr class="product-details-row" data-sku="${item.sku}" style="display: none; background: #fafafa;">
-                            <td colspan="12">
-                                <div class="form-row align-items-center">
-                                    <div class="col-auto">
-                                        <label class="small mb-0 mr-1">Vintage (actual):</label>
-                                        <input type="text" class="form-control form-control-sm product-vintage-input" data-sku="${item.sku}" style="width: 80px; display: inline-block;">
-                                    </div>
-                                    <div class="col">
-                                        <label class="small mb-0 mr-1">Comment:</label>
-                                        <input type="text" class="form-control form-control-sm product-comment-input" data-sku="${item.sku}" placeholder="Note for admin (creates vintage update task)">
-                                    </div>
-                                </div>
-                            </td>
                         </tr>
                     `;
                 });
@@ -363,36 +336,6 @@
                     </table>
                 `;
                 productCountsListDiv.innerHTML = tableHtml;
-
-                productCountsListDiv.querySelectorAll('.product-details-toggle').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const sku = e.target.dataset.sku;
-                        const detailRow = productCountsListDiv.querySelector(`tr.product-details-row[data-sku="${sku}"]`);
-                        if (detailRow) {
-                            detailRow.style.display = detailRow.style.display === 'none' ? '' : 'none';
-                        }
-                    });
-                });
-
-                productCountsListDiv.querySelectorAll('.product-vintage-input, .product-comment-input').forEach(input => {
-                    input.addEventListener('input', (e) => {
-                        const sku = e.target.dataset.sku;
-                        const mainRow = productCountsListDiv.querySelector(`tr[data-task-id][data-sku="${sku}"]`);
-                        if (!mainRow) return;
-                        const checkbox = mainRow.querySelector('.product-count-checkbox');
-                        const vintageVal = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`).value;
-                        const commentVal = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`).value;
-                        const storageInput = mainRow.querySelector('[data-qty-type="storage"]').value;
-                        const officeInput = mainRow.querySelector('[data-qty-type="office"]').value;
-                        const shopInput = mainRow.querySelector('[data-qty-type="shop"]').value;
-                        if (storageInput || officeInput || shopInput || vintageVal || commentVal) {
-                            checkbox.checked = true;
-                        } else {
-                            checkbox.checked = false;
-                        }
-                        updateSubmitButtonState();
-                    });
-                });
 
                 // Add event listeners for quantity input and checkboxes
                 productCountsListDiv.querySelectorAll('.product-count-input').forEach(input => {
@@ -449,8 +392,6 @@
             // --- T4.3 mobile count-entry modal ---
             function openCountEntryModal(row) {
                 const sku = row.dataset.sku;
-                const vintageEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
-                const commentEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
                 document.getElementById('count-entry-product-name').textContent = row.dataset.productName || row.cells[9].textContent.trim();
                 document.getElementById('count-entry-sku').textContent = sku;
                 document.getElementById('count-entry-comax').textContent = row.dataset.comaxQty || '—';
@@ -459,8 +400,6 @@
                 document.getElementById('count-entry-storage').value = row.querySelector('[data-qty-type="storage"]').value;
                 document.getElementById('count-entry-office').value = row.querySelector('[data-qty-type="office"]').value;
                 document.getElementById('count-entry-shop').value = row.querySelector('[data-qty-type="shop"]').value;
-                document.getElementById('count-entry-vintage').value = vintageEl ? vintageEl.value : '';
-                document.getElementById('count-entry-comment').value = commentEl ? commentEl.value : '';
                 document.getElementById('count-entry-modal').dataset.activeSku = sku;
                 ModalOverlay.open('count-entry-modal');          // CCP-UI-8: focus mgmt + Esc + scroll-lock
                 document.getElementById('count-entry-storage').focus();
@@ -475,14 +414,8 @@
                     storageEl.value = document.getElementById('count-entry-storage').value;
                     row.querySelector('[data-qty-type="office"]').value = document.getElementById('count-entry-office').value;
                     row.querySelector('[data-qty-type="shop"]').value = document.getElementById('count-entry-shop').value;
-                    const vintageEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
-                    if (vintageEl) vintageEl.value = document.getElementById('count-entry-vintage').value;
-                    const commentEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
-                    if (commentEl) commentEl.value = document.getElementById('count-entry-comment').value;
-                    // Fire the existing listeners: storage 'input' recomputes Total + checkbox (from qty
-                    // fields); vintage 'input' recomputes the checkbox including vintage/comment.
+                    // Fire the existing storage listener: recomputes Total + checkbox from qty fields.
                     storageEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    if (vintageEl) vintageEl.dispatchEvent(new Event('input', { bubbles: true }));
                 }
                 if (advanceToNext) {
                     const allRows = Array.from(productCountsListDiv.querySelectorAll('tr[data-task-id]'));
@@ -511,17 +444,11 @@
                         const sku = row.dataset.sku;
                         const productName = row.dataset.productName || '';
                         const comaxStock = parseInt(row.dataset.comaxQty, 10);
-                        const vintageRef = row.dataset.vintageRef || '';
                         const storageQty = parseInt(row.querySelector('[data-qty-type="storage"]').value, 10) || 0;
                         const officeQty = parseInt(row.querySelector('[data-qty-type="office"]').value, 10) || 0;
                         const shopQty = parseInt(row.querySelector('[data-qty-type="shop"]').value, 10) || 0;
 
-                        const vintageInput = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
-                        const commentInput = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
-                        const vintageActual = vintageInput ? vintageInput.value.trim() : '';
-                        const comment = commentInput ? commentInput.value.trim() : '';
-
-                        selectedCounts.push({ taskId, sku, productName, comaxStock, storageQty, officeQty, shopQty, vintageActual, vintageRef, comment });
+                        selectedCounts.push({ taskId, sku, productName, comaxStock, storageQty, officeQty, shopQty });
                     }
                 });
 
@@ -573,11 +500,7 @@
                         const s = row.querySelector('[data-qty-type="storage"]').value;
                         const o = row.querySelector('[data-qty-type="office"]').value;
                         const sh = row.querySelector('[data-qty-type="shop"]').value;
-                        const vEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
-                        const cEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
-                        const v = vEl ? vEl.value : '';
-                        const c = cEl ? cEl.value : '';
-                        if (s || o || sh || v || c) drafts[sku] = { s, o, sh, v, c };
+                        if (s || o || sh) drafts[sku] = { s, o, sh };
                     });
                     if (Object.keys(drafts).length) sessionStorage.setItem(COUNT_DRAFT_KEY, JSON.stringify(drafts));
                     else sessionStorage.removeItem(COUNT_DRAFT_KEY);
@@ -597,13 +520,8 @@
                         storageEl.value = d.s || '';
                         row.querySelector('[data-qty-type="office"]').value = d.o || '';
                         row.querySelector('[data-qty-type="shop"]').value = d.sh || '';
-                        const vEl = productCountsListDiv.querySelector(`.product-vintage-input[data-sku="${sku}"]`);
-                        if (vEl) vEl.value = d.v || '';
-                        const cEl = productCountsListDiv.querySelector(`.product-comment-input[data-sku="${sku}"]`);
-                        if (cEl) cEl.value = d.c || '';
-                        // reuse the existing input listeners to recompute Total + checkbox state
+                        // reuse the existing storage listener to recompute Total + checkbox state
                         storageEl.dispatchEvent(new Event('input', { bubbles: true }));
-                        if (vEl) vEl.dispatchEvent(new Event('input', { bubbles: true }));
                     });
                     persistCountDrafts(); // prune drafts whose tasks are no longer present
                 } catch (e) { /* corrupt/incompatible draft: ignore */ }

@@ -1,7 +1,7 @@
 # Product Verification — Plan
 
 **Created:** 2026-05-14
-**Status:** **SHIPPED 2026-06-02 (jlmops deploy @199).** Read-only review surface (look-and-note; two actions: Confirm & close / Revert to admin). All editing lives in the separate update-details task. Category check is show-don't-compare (no `SysLkp_Texts` join). Count-flow strip (below) intentionally NOT shipped — deferred until verification proves out ~1 cycle in production.
+**Status:** **Fully shipped.** Read-only review surface live since 2026-06-02 (jlmops deploy @199; look-and-note, two actions: Confirm & close / Revert to admin — all editing lives in the separate update-details task; category check is show-don't-compare, no `SysLkp_Texts` join). Reverted-task admin handling + Task modal live @312/@473. Count-flow strip live 2026-07-14 (see below) — the plan's last open item.
 
 **As-built deltas (vs this plan's pre-build text):**
 - **Everything product-side** (resolved during build): the creation card lives on `AdminProductsView`; planning/create/complete/stamp + a new `getVerifyDetail` all live in `ProductService` + `WebAppProducts` — `WebAppInventory`/`InventoryManagementService` untouched (the Files-table inventory-side entries were superseded).
@@ -11,7 +11,7 @@
 - **`pack_form: dedicated_view`** on the template (the field postdates this plan's template snippet).
 - **Read-only render:** `verifyMode` adds `#editor-modal.verify-mode` (CSS hides the Edit columns + Fill/Clear, single-column grid) and disables all `[id^="edit-"]` inputs; image tile at top of the modal, Web-categories + flags on the Specs Current column.
 
-**Post-ship UI refinements (2026-06-02, not yet deployed):**
+**Post-ship UI refinements (2026-06-02, live):**
 - **Admin `AdminProductsView`:** "Web only" filter removed from the Create Verification Tasks card (verification is web-only by definition — `webOnly` hardcoded `true`); the Verification card moved above New Products; the Lookups sections relabeled (Grape Varieties / Kashrut Certifications / Marketing Texts) and made collapsible via a ▸/▾ triangle toggle (`toggleLookupSection`, default collapsed). Also fixed a stray `</div>` that closed `container-fluid p-4` early (cards 3-5 were rendering full-bleed/wider than cards 1-2).
 - **Manager `ManagerProductsView` — open-verify-tasks list (the requested workflow surface):** new "Verification Tasks" card listing open `task.product.verify` via the existing `WebAppProducts_getOpenVerifyTasks()` (returns `{taskId, sku, title}`); each row's **Verify** button calls `startVerifyAt(index)`, which seeds `verifyQueue` from the rendered list and enters the existing read-only walk (Confirm & close advances through the rest). **Alongside** the dashboard deep-link, not replacing it (`startVerifyWalk` deep-link path unchanged). `loadVerifyList()` is hooked into `refreshView()`. No backend change — the list reuses functions already shipped @199.
 
@@ -183,18 +183,16 @@ No schema additions — `pa_LastDetailAudit` already exists.
 
 **Completion owner — RESOLVED 2026-06-01.** Counts have a dedicated stamp-on-close path in the inventory service (`InventoryManagementService` stamps `pa_LastCount` on count-task completion). Verification needs the **product-side equivalent** — a dedicated completion handler (product service, e.g. `ProductService`, NOT the inventory service, since this is product validation) that stamps `pa_LastDetailAudit` when a `task.product.verify` closes. It must own **both** close paths: (a) the manager's Mark-verified, and (b) the admin completing a reverted task. This replaces the earlier note that put the stamp helper in `InventoryManagementService.js` — move it product-side to match the AdminProductsView placement decision.
 
-## Strip verification from count flow (separate cleanup pass)
+## Strip verification from count flow (SHIPPED 2026-07-14)
 
-Decoupling from the user's "corrupted the count process" concern. Once verification is live, count flow returns to pure quantity work:
+Decoupling from the user's "corrupted the count process" concern. Count flow is now pure quantity work — no vintage/comment editing, no task creation:
 
-- `ManagerInventoryView.html` count row expansion: remove the inline vintage-actual and comment inputs that create `task.validation.vintage_mismatch`. Keep the read-only vintage/image/page-link references for the counter to validate they're counting the right product, but don't accept inline detail edits.
-- `WebAppInventory.exportCountsToSheet`: drop the "Vintage (actual)" editable column. Keep Vintage (ref) and Product Page link for orientation.
-- `WebAppInventory.importCountsFromSheet`: drop the post-import vintage-mismatch task creation. Counts and comments only.
-- `WebAppInventory.submitInventoryCounts`: drop the inline vintage/comment task creation.
+- `ManagerInventoryView.html`: removed the count-row "…" expansion (Vintage (actual) + Comment inputs) entirely, along with the matching fields in the T4.3 mobile count-entry modal, their draft-persistence handling, and the now-stale mobile CSS column-hide rule (`nth-child(11)` used to target the removed toggle column — left unfixed it would have hidden the status checkbox instead, since the checkbox shifted into that slot). The read-only Vintage (ref) and page-link columns were already in the main row (not the expansion) and are untouched.
+- `WebAppInventory.exportCountsToSheet`: dropped the "Vintage (actual)" and "Comments" editable columns. Vintage (ref) and Product Page link remain for orientation.
+- `WebAppInventory.importCountsFromSheet`: dropped the post-import vintage-mismatch task creation and its pre-scan validation rule (`Vintage or Comment entered without a quantity`) — sheet import now only processes Storage/Office/Shop quantities.
+- `WebAppInventory.submitInventoryCounts`: dropped the inline vintage/comment task creation; also removed the now-unused `vintageTasksCreated` counter from both functions' return payloads (no client ever read it).
 
-The `task.validation.vintage_mismatch` template itself stays — it still serves admin-driven validation flows (CSV import vintage drift detection, etc.).
-
-**Sequencing:** Verification track ships first and is verified working in production for ~1 cycle (1–2 weeks) before count flow is stripped. Don't remove the inline vintage path until the cadence-based verification has produced its first round of tasks and been worked through.
+The `task.validation.vintage_mismatch` template itself stays — it still serves admin-driven validation flows (CSV import vintage drift detection, etc.), and the Reverted-task admin Task modal above still routes through it via Pass to manager.
 
 ## Verification cadence surfacing — deliberate non-goal (2026-06-01)
 

@@ -1776,7 +1776,7 @@
                     <td>${t.sku}</td>
                     <td>${t.title}</td>
                     <td>${new Date(t.createdDate).toLocaleDateString()}</td>
-                    <td><button class="btn btn-sm" onclick="AdminProductsView.openEditor('${t.taskId}')">Review</button></td>
+                    <td><button class="btn btn-sm" onclick="AdminProductsView.openEditor('${t.taskId}', '${t.sku}')">Review</button></td>
                 `;
                 tbody.appendChild(tr);
             });
