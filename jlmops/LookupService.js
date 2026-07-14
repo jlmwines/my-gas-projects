@@ -26,7 +26,13 @@ const LookupService = (function() {
         }
 
         try {
-            const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+            // Was SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next()) — a
+            // Drive-wide filename search on every cold call (this in-memory _cache never
+            // survives across separate google.script.run invocations). system.spreadsheet.data
+            // is this same file's ID; SheetAccessor already opens it by ID and caches the
+            // handle. Confirmed the dominant cost in the 15-18s product-editor load
+            // (BUG_FIX_SEQUENCE Session J item 1).
+            const spreadsheet = SheetAccessor.getDataSpreadsheet();
             const sheet = spreadsheet.getSheetByName(mapConfig.sheet_name);
             if (!sheet) {
                 Logger.log(`Lookup sheet '${mapConfig.sheet_name}' not found.`);
@@ -179,7 +185,7 @@ const LookupService = (function() {
         if (!mapConfig || !mapConfig.sheet_name || !mapConfig.key_col) {
             throw new Error(`Lookup map configuration for '${mapName}' is invalid or missing.`);
         }
-        const spreadsheet = SpreadsheetApp.open(DriveApp.getFilesByName('JLMops_Data').next());
+        const spreadsheet = SheetAccessor.getDataSpreadsheet();
         const sheet = spreadsheet.getSheetByName(mapConfig.sheet_name);
         if (!sheet) {
             throw new Error(`Lookup sheet '${mapConfig.sheet_name}' not found.`);
