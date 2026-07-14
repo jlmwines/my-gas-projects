@@ -105,6 +105,7 @@
         </div>
         <div id="details-export-bar" style="display:none;">
           <div class="d-flex justify-content-end align-items-center p-2">
+            <span id="details-file-actions" class="mr-2"></span>
             <button id="btn-export-details" class="btn btn-sm mr-2" onclick="AdminProductsView.exportUpdates()">Export</button>
             <button id="btn-confirm-details" class="btn btn-sm" onclick="AdminProductsView.confirmUpdates()" disabled>Confirm</button>
           </div>
@@ -232,6 +233,7 @@
             <span id="stat-onboarding-export" class="badge badge-secondary badge-pill">0</span>
           </div>
           <div id="new-web-actions" class="ds-section-actions" style="display:none;">
+            <span id="new-file-actions" class="mr-2"></span>
             <button id="btn-export-new" class="btn btn-sm mr-2" onclick="AdminProductsView.exportNewProducts()">Export</button>
             <button id="btn-confirm-new" class="btn btn-sm mr-2" onclick="AdminProductsView.confirmNewProducts()" disabled>Confirm Published</button>
           </div>
@@ -1648,6 +1650,29 @@
         google.script.run.withSuccessHandler(render).WebAppProducts_getAcceptedTasks();
     };
 
+    // Shared by every export action on this page: renders "Open File" + "Copy Filename"
+    // buttons — same style as the surrounding Export/Confirm buttons — into containerId,
+    // right next to those buttons instead of a small link buried in a status line.
+    AdminProductsView._renderFileActions = function(containerId, fileUrl, fileName) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = '';
+        const openBtn = document.createElement('button');
+        openBtn.type = 'button';
+        openBtn.className = 'btn btn-sm mr-2';
+        openBtn.textContent = 'Open File';
+        openBtn.addEventListener('click', () => window.open(fileUrl, '_blank'));
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'btn btn-sm mr-2';
+        copyBtn.textContent = 'Copy Filename';
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(fileName || '').then(() => TaskWidgets.toast('Filename copied.', 'success'));
+        });
+        el.appendChild(openBtn);
+        el.appendChild(copyBtn);
+    };
+
     AdminProductsView.exportUpdates = function() {
         const count = document.getElementById('stat-accepted').textContent;
         TaskWidgets.confirm(`Export ${count} accepted update(s) to spreadsheet?`, function() {
@@ -1657,8 +1682,9 @@
 
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
+                statusDiv.textContent = 'Export created.';
                 statusDiv.className = 'text-right text-success mt-2';
+                AdminProductsView._renderFileActions('details-file-actions', res.fileUrl, res.fileName);
                 // Enable Confirm button after successful export
                 document.getElementById('btn-confirm-details').disabled = false;
             } else {
@@ -1848,8 +1874,9 @@
         
         google.script.run.withSuccessHandler(res => {
             if (res.success) {
-                statusDiv.innerHTML = `Export created. <a href="${res.fileUrl}" target="_blank">Open Sheet</a>`;
+                statusDiv.textContent = 'Export created.';
                 statusDiv.className = 'mt-2 small text-success';
+                AdminProductsView._renderFileActions('new-file-actions', res.fileUrl, res.fileName);
                 document.getElementById('btn-confirm-new').disabled = false;
             } else {
                 statusDiv.textContent = 'Export failed: ' + res.message;

@@ -4,6 +4,15 @@ _Claude-internal. Append session notes at session end (≤ 10 lines per entry: d
 
 ---
 
+## 2026-07-14 (cont'd 2) — Dashboard cleanup, Loyalty Rewards Phase 1, export button consistency (@483-@489)
+
+- Admin Products: added an open-manager-verification-tasks card (@483) and a spinner on Accept Suggestion (@484). Admin Dashboard: dropped the unused Projects card, merged Integrations into the freed row (@485/@486).
+- Loyalty Rewards Phase 1 shipped (@487) via Plan Mode: manager's Orders screen shows tier/last-order/spend/avg per row (second-phase fetch so it doesn't delay the order list), a CRM deep-link, and a "Log Reward" note action — no automated eligibility rule, pure manager judgment per user's explicit simplification. User confirmed working live ("looks good. book it"). Docs updated: `jlmops/docs/DATA_MODEL.md` (`reward.given` activity type), `marketing/REWARDS_PLAN.md`.
+- Fixed inconsistent generated-export file links across admin screens (user: "small, far from card action buttons... behave differently"). Sync widget: made "Open in Drive" text more visible, removed invoice tracking/display (role changed, cosmetic-only per user) (@488). Then added matching "Open File"/"Copy Filename" button pairs next to each card's action buttons for the three remaining flows — Detail Update export, New Product export (`AdminProductsView.html`, shared `_renderFileActions` helper), and Comax Inventory export (`AdminInventoryView.html`, local `renderComaxFileActions`, sourced from the confirmation task's `st_LinkedEntityId`/`st_LinkedEntityName` so the buttons persist across reloads, not just the initial response) (@489).
+- Next: manager live-smokes today's full run (@479-@489) — nothing past Loyalty Rewards has been confirmed live yet.
+
+---
+
 ## 2026-07-14 (cont'd) — Manager submit/verify hang + product-editor slow-load: both root-caused and fixed (@476-@482)
 
 - Killed 2 isolated bugs (@476: failed-jobs metric, KPI sk_Period Date bug) and a blank-assignee-dropdown bug on both dashboards (@477), all safe alongside live manager testing.

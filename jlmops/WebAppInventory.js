@@ -119,10 +119,14 @@ function WebAppInventory_getAdminComaxSyncData() {
       if (!task) return null;
       const idKey = Object.keys(task).find(k => k.trim() === 'st_TaskId');
       const notesKey = Object.keys(task).find(k => k.trim() === 'st_Notes');
-      
+      const fileIdKey = Object.keys(task).find(k => k.trim() === 'st_LinkedEntityId');
+      const fileNameKey = Object.keys(task).find(k => k.trim() === 'st_LinkedEntityName');
+
       return {
         id: (idKey && task[idKey]) ? String(task[idKey]) : '',
-        notes: (notesKey && task[notesKey]) ? String(task[notesKey]) : ''
+        notes: (notesKey && task[notesKey]) ? String(task[notesKey]) : '',
+        fileId: (fileIdKey && task[fileIdKey]) ? String(task[fileIdKey]) : '',
+        fileName: (fileNameKey && task[fileNameKey]) ? String(task[fileNameKey]) : ''
       };
     };
 

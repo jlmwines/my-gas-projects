@@ -1613,11 +1613,12 @@ const ProductService = (function() {
             returnMessage = 'No product data was successfully exported.';
         }
 
-        return { 
-            success: returnSuccess, 
-            message: returnMessage, 
+        return {
+            success: returnSuccess,
+            message: returnMessage,
             fileId: newSpreadsheet.getId(),
-            fileUrl: newSpreadsheet.getUrl()
+            fileUrl: newSpreadsheet.getUrl(),
+            fileName: newSpreadsheet.getName()
         };
 
     } catch (e) {

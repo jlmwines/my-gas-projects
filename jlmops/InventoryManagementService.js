@@ -1081,10 +1081,11 @@ const InventoryManagementService = (function() {
                 
                 const newTask = TaskService.createTask(taskTypeId, file.getId(), file.getName(), taskTitle, taskNotes);
 
-                return { 
-                  success: true, 
+                return {
+                  success: true,
                   message: `Export Comax adjustments created.`,
                   fileUrl: file.getUrl(),
+                  fileName: file.getName(),
                   taskId: newTask.st_TaskId
                 };
 
