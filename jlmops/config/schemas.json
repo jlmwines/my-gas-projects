@@ -524,21 +524,6 @@
         ""
     ],
     [
-        "schema.data.SysLkp_Cities",
-        "Lookup table for city normalization with geographic and targeting attributes.",
-        "stable",
-        "headers",
-        "slc_Code,slc_NameEN,slc_NameHE,slc_Aliases,slc_Type,slc_Region,slc_LanguageTend,slc_WineAccess",
-        "key_column",
-        "slc_Code",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
         "schema.data.SysBrands",
         "Reference table for brand/winery names with English and Hebrew translations.",
         "stable",

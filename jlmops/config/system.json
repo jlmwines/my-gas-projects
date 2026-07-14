@@ -480,21 +480,6 @@
         ""
     ],
     [
-        "system.sheet_names",
-        "Names of the sheets in the spreadsheets",
-        "stable",
-        "SysLkp_Cities",
-        "SysLkp_Cities",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-    ],
-    [
         "system.sync.state",
         "Persisted state for the Daily Sync session.",
         "stable",

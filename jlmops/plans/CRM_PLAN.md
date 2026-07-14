@@ -14,7 +14,6 @@ A relationship system that maintains a unified contact list from orders + subscr
 | `SysContactActivity` | Activity timeline | `sca_ActivityId` |
 | `SysCoupons` | Coupon reference | `sco_Code` |
 | `SysCampaigns` | Mailchimp campaign history (per-send) | `scm_CampaignId` |
-| `SysLkp_Cities` | City normalization | `slc_Code` |
 
 Full column schemas + the segmentation/enrichment derivation rules live in `../docs/DATA_MODEL.md`. Don't duplicate them here.
 
