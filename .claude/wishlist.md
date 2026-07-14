@@ -62,30 +62,5 @@ Projects: jlmops, web, marketing, content
 
 ## content
 
-### NEXT SESSION: Publication Calendar
-
-**Plan content calendar working backward from major holidays:**
-- Purim
-- Pesach
-- Shavuot
-- Rosh Hashana
-- Sukkot
-- Hanukah
-
-**Channels to schedule:**
-- YouTube video
-- Blog post
-- Print newsletter (Canva)
-- Social post
-- WhatsApp push
-- Email (Tuesday evenings = good open rates)
-
-**Priority:** New content should dominate the calendar, not just recycled posts.
-
----
-
 - [ ] Holiday wine posts (Pesach, Rosh Hashana, etc.)
-- [ ] Israel wine regions content
-- [ ] Grape variety guides
 - [ ] FAQ page implementation (Elementor)
-- [ ] Newsletter template (Canva)
